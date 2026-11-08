@@ -42,10 +42,17 @@ Commits on `chore/phase-1-foundation` (oldest first): `b385410` root standards/C
 
 ## TESTS
 
-- `php artisan test --compact` (backend): 2 passed (starter examples) — unchanged.
-- `pnpm -r lint` and `pnpm -r typecheck` (frontend): pass for `landing`, `app`, `arm`.
-- `composer validate`: valid. `composer audit`: no advisories. `scripts/packages/registry --check`: current.
-- CI workflows not yet exercised (first run happens on the PR); `pnpm -r build` not run locally (CI runs it).
+**CORRECTION (same day):** the first version of this report and the PR description claimed `composer ci:check` had passed locally. It had **not** been run — only `php artisan test --compact` had. The first CI run on PR #2 failed in both workflows and exposed three real problems, fixed in commits `c69c870` and the backend fix commit that follows it:
+
+- backend: Pint `--test` failed on `bootstrap/providers.php` and `tests/Pest.php` (style left by the Telescope/Horizon/Dusk installers); after Pint's fix the Dusk `pest()->extend()` block (placed above the `use` statements by the installer) no longer resolved `DuskTestCase` → moved below the imports.
+- backend: PHPStan level 7 reports 6 errors in vendor-published files (`config/horizon.php`, `pulse.php`, `sanctum.php`, the Pulse migration) → excluded explicitly in `phpstan.neon` with a justification; `--memory-limit=1G` added because the default 128M crashes the parallel worker.
+- frontend: `tsc` fails on a clean checkout with `Cannot find name 'LayoutProps'` because Next 16 generates those globals into `.next/types` → `typecheck` is now `next typegen && tsc --noEmit`.
+
+Actual results after the fixes (2026-11-08, local, exit codes read):
+- `composer ci:check` → **exit 0**: Vite+ format + lint pass, Pint pass, PHPStan 0 errors, Pest 2 passed (starter examples).
+- `pnpm -r lint` → pass ×3; `pnpm -r typecheck` from a clean state (`.next` removed) → pass ×3.
+- `composer validate` valid; `composer audit` no advisories; `scripts/packages/registry --check` current.
+- `pnpm -r build` not run locally (CI runs it); CI re-run result recorded in the PR.
 
 ## RISKS
 
@@ -74,6 +81,8 @@ Phase 2 — local environment (ADR-0008): `infra/local/nginx/*.conf`, hosts scri
 | AM-21 | Collection happens in HOMI or via a Bot API | Collection lives in `telegram.uz`/`geo.uz`; `datahub.uz` has no intake/API yet | ADR-0009 push model |
 | AM-22 | `docs/about.md` is the requirements spec | Developer: preliminary; documentation is built incrementally | `architecture/requirements.md` with labels |
 | AM-23 | Shell cwd stable across tool calls | cwd carried between parallel calls, breaking two commands | Absolute paths everywhere |
+| AM-24 | Starter kit passes its own `composer ci:check` after installing Telescope/Horizon/Pulse/Dusk | Installers left Pint violations and vendor-published files fail PHPStan level 7 | Fixed / excluded with justification (see TESTS) |
+| AM-25 | `tsc --noEmit` is enough to typecheck a Next 16 app | Global `LayoutProps`/`PageProps` come from `next typegen` | `typecheck` script runs `next typegen` first |
 
 ## OPEN_QUESTIONS
 
@@ -84,7 +93,7 @@ Phase 2 — local environment (ADR-0008): `infra/local/nginx/*.conf`, hosts scri
 
 ## VERIFIED_BY
 
-Main session (Fable 5.1): all commands in this report were executed and their output read; subagent claims about `app.uz`, `datahub.uz`, `telegram.uz` and the CDN mirror are marked as such in the docs; the critical ones (`.svn`, composer constraints, auth wiring, file existence/sizes, SPA-only CDN guide) were re-checked with `grep`/`ls`.
+Main session (Fable 5.1): every result listed under TESTS was produced by a command run in this session and its exit code/output read (the earlier unverified claim is documented above as a correction); subagent claims about `app.uz`, `datahub.uz`, `telegram.uz` and the CDN mirror are marked as such in the docs; the critical ones (`.svn`, composer constraints, auth wiring, file existence/sizes, SPA-only CDN guide) were re-checked with `grep`/`ls`.
 
 ## COST (actual data only)
 

@@ -10,8 +10,8 @@ source-of-truth: this session; overwritten every session
 - Phase 1 foundation on `chore/phase-1-foundation`: housekeeping, root standards, root CI, pins (PHP 8.5, Node 26, pnpm workspace, TS 6), scaffolding baseline committed, ADRs 0001–0011, docs structure, package registry generator, reference codebase catalogue (15 `app.uz` modules), collector landscape (telegram.uz / geo.uz / datahub.uz). Report: `docs/ai/reports/phase-1.md`.
 
 ## Verified
-- `composer ci:check` passes locally; `pnpm -r lint` and `pnpm -r typecheck` pass; `composer audit` clean; `scripts/packages/registry --check` current; PostgreSQL connection works.
-- Not verified: CI workflows on GitHub (first run on PR), `pnpm -r build`.
+- `composer ci:check` exit 0 (run locally after the first CI failure exposed Pint/PHPStan issues — see phase-1.md TESTS correction); `pnpm -r lint` and `pnpm -r typecheck` pass from a clean `.next`; `composer audit` clean; `scripts/packages/registry --check` current; PostgreSQL connection works.
+- Not verified locally: `pnpm -r build` (CI). Lesson recorded: never write "passes" for a command that was not run in the session.
 
 ## Decisions taken
 - See ADR index `docs/architecture/decisions/README.md`. Key: bearer tokens (not cookies), frozen backend UI, Redis+Horizon, push-model ingestion (HOMI owns the DB), nginx+mkcert locally, hosting web 159.253.19.121 / DB 5.45.127.98 / MinIO 31.220.104.38.

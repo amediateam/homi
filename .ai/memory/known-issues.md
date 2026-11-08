@@ -16,3 +16,6 @@ source-of-truth: docs/ai/reports/phase-0.md, phase-1.md; observed tool output
 | KI-7 | info | 2026-11-08 | GitHub free plan: branch protection/required checks unavailable (403) | ADR-0010 conventions + local hooks |
 | KI-8 | info | 2026-11-08 | Frozen starter UI still built in CI (`npm run check`, `tsc`, Vite build) — extra minutes, no value | Accept until the UI stack is removed by a future ADR |
 | KI-9 | info | 2026-11-08 | Bash tool: cwd carried between parallel calls in one turn; `index.lock` appeared briefly from the IDE's git | Always use absolute paths; retry git after a second |
+| KI-10 | info | 2026-11-08 | PHPStan level 7 fails on vendor-published files (`config/horizon.php`, `pulse.php`, `sanctum.php`, Pulse migration) | Excluded in `phpstan.neon` with justification; re-check when a package is removed or the file is rewritten by us |
+| KI-11 | low | 2026-11-08 | Next 16 global types (`LayoutProps`, `PageProps`) exist only after `next typegen`/`dev`/`build`; plain `tsc` fails on a clean checkout | `typecheck` = `next typegen && tsc --noEmit` in every app |
+| KI-12 | info | 2026-11-08 | Local php.ini `memory_limit=128M` crashes PHPStan's parallel worker | `types:check` passes `--memory-limit=1G` |

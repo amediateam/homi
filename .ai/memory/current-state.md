@@ -11,7 +11,7 @@ source-of-truth: git log, docs/ai/reports/phase-1.md, docs/architecture/decision
 
 ## Backend (`backend/`)
 - Laravel 13.40, PHP 8.5.12, `php ^8.5` + platform pin. Starter Inertia/React UI present and **frozen** (ADR-0002).
-- Works: `composer ci:check` locally (Pint, PHPStan 7, Vite+ check, tsc, 2 example tests). PostgreSQL connection works (`DB_CONNECTION=pgsql`, 7 migrations ran).
+- Works: `composer ci:check` exit 0 locally as of 2026-11-08 (Vite+ check, Pint, PHPStan 7 with four vendor-published files excluded, Pest 2 example tests). PostgreSQL connection works (`DB_CONNECTION=pgsql`, 7 migrations ran).
 - Not yet applied: `QUEUE_CONNECTION=redis` / `CACHE_STORE=redis` (ADR-0005) — `.env` still `database`, so Horizon under `artisan dev` processes nothing. `.env.example` stale (missing DB_*, REVERB_*).
 - No domain code, no API routes beyond `/api/user`.
 
