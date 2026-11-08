@@ -11,7 +11,9 @@
 
 - `telegram.uz` — Laravel 13 + MadelineProto; reads Telegram channels, has intra-source dedup, identity resolution and a REST API (`/v1/*`); a partner API is listed as planned.
 - `geo.uz` — Laravel 13; web sources (OLX, Uybor, Uysot, Birbir, Realt24, Elbozor …).
-- `datahub.uz` — Laravel 13 + PostGIS; the team's dedup/canonicalisation platform (raw → normalise → listing clusters → properties, confidence bands). Its intake pipeline is not built yet and it exposes no consumer API today.
+- `datahub.uz` — Laravel 13 + PostGIS; the team's dedup/canonicalisation platform (raw → normalise → listing clusters → properties, confidence bands). Its intake, normaliser and matcher are not built yet (plan P9–P12), it has no export/webhook/outbox and no consumer API today; service-token abilities (`ingest_write`, `search_read`, `export_read`) exist but no route uses them. Its own docs forbid external access to the database (PII/RLS).
+
+Facts about `telegram.uz` relevant to the contract (read-only audit, 2026-11-08): it already stores what HOMI needs — `listings` (public_id, posted_at, deal_type, property_type, price/currency/USD, rooms, area, floor, district_id, landmark, PostGIS `geom`, quality_score, duplicate_group_id, attributes/field_confidence jsonb), `listing_contacts` (raw phone + HMAC `phone_numbers`), `media_files` (file_unique_id, sha256, phash, path, disk `public`|`s3`). It exposes a token-gated `GET /api/public/v1/listings` (keys `tk_live_*`, ability `listings:read`, approved listings only, tenant metering) whose resource currently omits phones, photos and the source post id. Runs on PostgreSQL; both collectors sit on a private LAN with self-signed TLS.
 
 Options considered: HOMI pulls from `telegram.uz`; HOMI reads a shared DB/replica; HOMI waits for datahub canon; collectors push into HOMI. The developer chose the push model: **HOMI keeps its own listings database and the collectors push into it.**
 
