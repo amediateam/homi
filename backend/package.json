@@ -1,0 +1,49 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vp build",
+        "build:ssr": "vp build && vp build --ssr",
+        "dev": "vp dev",
+        "check": "vp check",
+        "check:fix": "vp check --fix",
+        "types:check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@inertiajs/react": "^3.11.0",
+        "@inertiajs/vite": "^3.11.0",
+        "@tailwindcss/vite": "^4.3.5",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^6.2.1",
+        "clsx": "^2.1.1",
+        "concurrently": "^10.0.7",
+        "laravel-vite-plugin": "^3.2",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
+        "tailwind-merge": "^3.7.0",
+        "tailwindcss": "^4.3.5",
+        "typescript": "^7.0.2",
+        "vite": "npm:@voidzero-dev/vite-plus-core@1.5.0"
+    },
+    "devDependencies": {
+        "@laravel/echo-react": "^2.6.3",
+        "@laravel/vite-plugin-wayfinder": "^0.1.11",
+        "@rolldown/plugin-babel": "^0.3.0",
+        "@types/node": "^26.6.6",
+        "babel-plugin-react-compiler": "^1.0.0",
+        "laravel-echo": "^2.6.3",
+        "pusher-js": "^8.6.0",
+        "vite-plus": "1.5.0"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.5",
+        "@rollup/rollup-linux-x64-gnu": "4.68.0",
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.3.5",
+        "lightningcss-linux-x64-gnu": "^1.33.0"
+    },
+    "overrides": {
+        "vite": "npm:@voidzero-dev/vite-plus-core@1.5.0"
+    }
+}
