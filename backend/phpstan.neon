@@ -10,4 +10,13 @@ parameters:
         - database/
         - routes/
 
+    # Files published verbatim from vendor packages (vendor:publish). Their authors own
+    # their types; at level 7 they trip env() bool|string and match-without-default rules.
+    # Re-check this list when a package is removed or its config is rewritten by us.
+    excludePaths:
+        - config/horizon.php
+        - config/pulse.php
+        - config/sanctum.php
+        - database/migrations/2026_11_08_132123_create_pulse_tables.php
+
     level: 7
