@@ -17,23 +17,20 @@ fi
 HOMI_ROOT="${HOMI_ROOT:-$_computed_root}"
 export HOMI_ROOT
 
-: "${HOMI_MINIO_PORT:=9500}"
-: "${HOMI_MINIO_CONSOLE_PORT:=9501}"
-: "${HOMI_MINIO_DATA:=$HOME/minio-data}"
 : "${HOMI_NEXT_PORT_LANDING:=3000}"
 : "${HOMI_NEXT_PORT_APP:=3001}"
 : "${HOMI_NEXT_PORT_ARM:=3002}"
 : "${NGINX_ETC:=/opt/homebrew/etc/nginx}"
-export HOMI_MINIO_PORT HOMI_MINIO_CONSOLE_PORT HOMI_MINIO_DATA HOMI_NEXT_PORT_LANDING HOMI_NEXT_PORT_APP HOMI_NEXT_PORT_ARM NGINX_ETC
+export HOMI_NEXT_PORT_LANDING HOMI_NEXT_PORT_APP HOMI_NEXT_PORT_ARM NGINX_ETC
 
 HOMI_HOSTS="homi.loc app.homi.loc arm.homi.loc api.homi.loc cdn.homi.loc hook.homi.loc"
 HOMI_VHOSTS="homi.conf app.homi.conf arm.homi.conf api.homi.conf cdn.homi.conf hook.homi.conf"
-HOMI_BUCKETS="homi-public homi-private homi-tmp"
 
 RUN_DIR="$HOMI_ROOT/infra/local/run"
 LOG_DIR="$HOMI_ROOT/infra/local/logs"
 CERT_DIR="$HOMI_ROOT/infra/local/certs"
 NGINX_SRC="$HOMI_ROOT/infra/local/nginx"
+MEDIA_DIR="$HOMI_ROOT/backend/storage/app/public"
 mkdir -p "$RUN_DIR" "$LOG_DIR" "$CERT_DIR"
 
 if [ -t 1 ]; then
@@ -69,7 +66,7 @@ read_pid() {
     [ -f "$RUN_DIR/$1.pid" ] && cat "$RUN_DIR/$1.pid"
 }
 
-# Only prints what sudo will run; the human sees every privileged command before it executes.
+# Prints every privileged command before it runs so the human sees exactly what sudo executes.
 sudo_run() {
     printf '%ssudo%s  %s\n' "$C_WARN" "$C_END" "$*"
     sudo "$@"

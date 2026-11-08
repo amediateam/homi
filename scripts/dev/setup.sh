@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dev:setup — one command from a fresh clone to a running local stack (ADR-0008). Idempotent.
+# dev:setup — one command from a fresh clone to a running local stack (ADR-0008, ADR-0012). Idempotent.
 # Privileged steps (sudo / system trust store) are announced before they run; `--no-sudo` skips them
 # and prints what to do manually.
 
@@ -10,10 +10,9 @@ NO_SUDO=0; [ "${1:-}" = "--no-sudo" ] && NO_SUDO=1
 
 info "1/8 Homebrew dependencies"
 need_cmd brew "https://brew.sh"
-for f in php composer node pnpm postgresql@18 redis nginx minio mkcert; do
+for f in php composer node pnpm postgresql@18 redis nginx mkcert; do
     if brew list --formula "$f" >/dev/null 2>&1; then ok "$f installed"; else info "installing $f"; brew install "$f"; fi
 done
-has_cmd mc || { info "installing MinIO client"; brew install minio/stable/mc >/dev/null 2>&1 || brew install minio-mc; }
 for s in php postgresql@18 redis; do
     brew services list | grep -E "^$s\s+started" >/dev/null 2>&1 || { info "starting $s"; brew services start "$s" >/dev/null; }
 done
@@ -28,7 +27,7 @@ fi
 if (cd backend && php artisan db:show --no-ansi >/dev/null 2>&1); then
     (cd backend && php artisan migrate --no-interaction --force >/dev/null) && ok "database migrated"
 else
-    warn "database not reachable yet — create it (createdb) and set DB_* in backend/.env, then: cd backend && php artisan migrate"
+    warn "database not reachable yet — create it (createdb homi) and set DB_* in backend/.env, then: cd backend && php artisan migrate"
 fi
 
 info "3/8 frontend"
@@ -52,9 +51,8 @@ if [ "$NO_SUDO" -eq 0 ]; then scripts/dev/nginx.sh test && scripts/dev/nginx.sh 
 info "6/8 /etc/hosts"
 if [ "$NO_SUDO" -eq 0 ]; then scripts/dev/hosts.sh check >/dev/null 2>&1 || scripts/dev/hosts.sh apply; else warn "skipped: scripts/dev/hosts.sh apply"; fi
 
-info "7/8 MinIO"
-scripts/dev/minio.sh start
-scripts/dev/minio.sh buckets
+info "7/8 media storage (local disk, ADR-0012)"
+scripts/dev/storage.sh prepare
 
 info "8/8 check"
 scripts/dev/check.sh || true

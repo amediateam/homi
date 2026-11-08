@@ -26,7 +26,6 @@ port_listening 9000 && ok "php-fpm on :9000" || fail "php-fpm not listening on :
 port_listening 5432 && ok "PostgreSQL on :5432" || fail "PostgreSQL not listening on :5432 → brew services start postgresql@18"
 port_listening 6379 && ok "Redis on :6379" || fail "Redis not listening on :6379 → brew services start redis"
 "$HOMI_ROOT/scripts/dev/nginx.sh" check || FAILS=$((FAILS + 1))
-"$HOMI_ROOT/scripts/dev/minio.sh" check || FAILS=$((FAILS + 1))
 
 info "application"
 code="$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' https://api.homi.loc/up 2>/dev/null || true)"
@@ -36,6 +35,7 @@ else
     if [ "$code_k" = "200" ]; then fail "api.homi.loc answers but the certificate is not trusted → scripts/dev/certs.sh install"
     else fail "https://api.homi.loc/up → ${code:-no response} → make dev-nginx; check infra/local/logs/api.error.log"; fi
 fi
+"$HOMI_ROOT/scripts/dev/storage.sh" check || FAILS=$((FAILS + 1))
 if (cd backend && php artisan migrate:status --no-ansi > "$LOG_DIR/migrate-status.txt" 2>&1); then
     pending="$(grep -c 'Pending' "$LOG_DIR/migrate-status.txt" || true)"
     [ "$pending" = "0" ] && ok "database reachable, no pending migrations" || warn "database reachable, $pending pending migration(s) → cd backend && php artisan migrate"

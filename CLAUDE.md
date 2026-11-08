@@ -57,9 +57,15 @@ There is no test setup in the Next.js apps yet. Known peer-dependency warnings (
 ### Repository tooling (root)
 
 ```bash
-scripts/packages/registry           # regenerate the Composer registry after any composer.lock change
-scripts/packages/registry --check   # CI check: registry matches composer.lock
+make help                           # all targets
+make dev-setup                      # fresh clone → running local stack (announces sudo steps)
+make dev-start | dev-stop | dev-status | dev-logs   # Horizon + Next dev servers behind nginx
+make dev-check                      # health check (DNS, TLS, ports, API, CDN, DB, Horizon, env keys)
+make ci-backend | ci-frontend       # the CI gates locally
+make registry | registry-check      # Composer registry after any composer.lock change
 ```
+
+Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, `https://api.homi.loc`, `https://cdn.homi.loc` (static `backend/storage/app/public`), `https://hook.homi.loc`. Details: `docs/infrastructure/local-development.md`. Never use `php artisan serve` (ports 8000/8001 are taken on the developer machines).
 
 ## Backend architecture and gotchas
 

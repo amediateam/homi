@@ -22,7 +22,7 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 | nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` |
 | PostgreSQL 18 | `127.0.0.1:5432` (Homebrew) | `5.45.127.98` (databases `homi_staging`, `homi_production`) |
 | Redis | `127.0.0.1:6379` | on the app host |
-| MinIO | `127.0.0.1:9500` (console `9501`) | `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`) |
+| Object storage | none — `backend/storage/app/public` served by `cdn.homi.loc` (ADR-0012) | MinIO on `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`) |
 | Telegram bots | dev bot | staging bot / production bot (all three exist) |
 
 ## Local port plan
@@ -33,10 +33,11 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 | 9000 | php-fpm | shared with other local projects |
 | 3000 / 3001 / 3002 | Next dev: landing / app / arm | HMR proxied by nginx |
 | 5432, 6379 | PostgreSQL, Redis | Homebrew services |
-| 9500 / 9501 | MinIO API / console | matches the `s3.app.loc` convention on this machine |
 | 8000, 8001 | **taken** by HTTP Toolkit | never use `php artisan serve` defaults |
 
-## Buckets and prefixes
+## Buckets and prefixes (staging / production)
+
+Locally the same key layout (`originals/`, `derived/`, …) lives on disk under `backend/storage/app/public` (ADR-0012); the `media_private` disk is `storage/app/private`.
 
 | Bucket | Access | Content |
 |---|---|---|
@@ -47,7 +48,7 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 ## Environment variables (names)
 
 Backend (`backend/.env.example` is the authoritative list; `dev:check` compares keys):
-`APP_URL`, `APP_LOCALE=ru`, `APP_FALLBACK_LOCALE=ru`, `APP_TIMEZONE=UTC`, `DB_*` (pgsql), `REDIS_*`, `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `SESSION_DRIVER=database`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT`, `AWS_USE_PATH_STYLE_ENDPOINT=true`, `AWS_URL` (CDN base), `MEDIA_PRIVATE_BUCKET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, `INTAKE_TOKENS_*` (per collector, issued as Sanctum tokens instead when Intake ships), `SANCTUM_TOKEN_EXPIRATION`, `HORIZON_*`.
+`APP_URL`, `APP_LOCALE=ru`, `APP_FALLBACK_LOCALE=ru`, `APP_TIMEZONE=UTC`, `DB_*` (pgsql), `REDIS_*`, `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `SESSION_DRIVER=database`, `MEDIA_PUBLIC_URL` (CDN base in every environment), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT`, `AWS_USE_PATH_STYLE_ENDPOINT=true`, `AWS_URL`, `MEDIA_PRIVATE_BUCKET`, `MEDIA_TMP_BUCKET` (all `AWS_*`/bucket keys blank locally — staging/production only), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_TOKEN_EXPIRATION`, `HORIZON_*`. Collector intake tokens are issued as Sanctum tokens (ADR-0009), not env values.
 
 Frontend (`frontend/*/.env.example`, Phase 2): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CDN_URL`, `NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `NEXT_PUBLIC_POSTHOG_KEY`/`HOST` (if PostHog is confirmed).
 

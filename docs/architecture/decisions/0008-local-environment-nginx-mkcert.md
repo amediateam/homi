@@ -1,6 +1,6 @@
 # ADR-0008: Local environment — Homebrew nginx + php-fpm + mkcert
 
-- Status: Accepted
+- Status: Accepted — MinIO parts amended by ADR-0012 (no local MinIO; media on disk behind `cdn.homi.loc`)
 - Date: 2026-11-08
 - Deciders: developer (Phase 0 checkpoint D1, 2D)
 - Source: `docs/ai/reports/phase-0.md` §2, §14; master prompt §6

@@ -1,4 +1,4 @@
-# HOMI — single entry point for the local environment (master prompt §6.4, ADR-0008).
+# HOMI — single entry point for the local environment (master prompt §6.4, ADR-0008, ADR-0012).
 # All targets delegate to scripts/dev/*.sh; run `make help`.
 
 SHELL := /bin/bash
@@ -6,19 +6,18 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-minio registry registry-check ci-backend ci-frontend
+        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-dev-setup: ## Fresh clone → running stack (brew deps, certs, nginx, hosts, MinIO, env files, migrate). Asks for sudo where needed
+dev-setup: ## Fresh clone → running stack (brew deps, certs, nginx, hosts, storage, env files, migrate). Asks for sudo where needed
 	@$(DEV)/setup.sh
 
 dev-start: ## Start Horizon and the three Next.js dev servers (detached; logs in infra/local/logs)
-	@$(DEV)/minio.sh start
 	@$(DEV)/services.sh start
 
-dev-stop: ## Stop Horizon and the Next.js dev servers (shared services keep running)
+dev-stop: ## Stop Horizon and the Next.js dev servers (shared Homebrew services keep running)
 	@$(DEV)/services.sh stop
 
 dev-restart: ## Restart application processes
@@ -27,10 +26,10 @@ dev-restart: ## Restart application processes
 dev-status: ## Show application process status
 	@$(DEV)/services.sh status
 
-dev-logs: ## Tail all local logs (nginx vhosts, Horizon, Next, MinIO)
+dev-logs: ## Tail all local logs (nginx vhosts, Horizon, Next)
 	@$(DEV)/services.sh logs
 
-dev-check: ## Health check: DNS, TLS, ports, API /up, DB + migrations, Horizon, S3, version pins, .env key parity
+dev-check: ## Health check: DNS, TLS, ports, API /up, DB + migrations, Horizon, CDN, version pins, .env key parity
 	@$(DEV)/check.sh
 
 dev-hosts: ## Write the managed homi.loc block into /etc/hosts (sudo)
@@ -45,9 +44,8 @@ dev-nginx: ## Link vhosts, test and reload nginx (sudo for test/reload)
 	@$(DEV)/nginx.sh test
 	@$(DEV)/nginx.sh reload
 
-dev-minio: ## Start MinIO (if not running) and ensure the HOMI buckets
-	@$(DEV)/minio.sh start
-	@$(DEV)/minio.sh buckets
+dev-storage: ## Prepare the local media directory served by cdn.homi.loc
+	@$(DEV)/storage.sh prepare
 
 dev-reset: ## DESTRUCTIVE (local only): stop processes, drop run/log state, migrate:fresh. Asks for confirmation
 	@read -r -p "This stops processes, clears infra/local/{run,logs} and runs 'php artisan migrate:fresh' on the LOCAL database. Type 'reset' to continue: " ans; \
