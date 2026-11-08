@@ -5,9 +5,11 @@ One canonical source, generated views per agent (master prompt §9–11). Nothin
 | Path | Tracked | Purpose |
 |---|---|---|
 | `memory/` | yes | Repository memory read at session start: `current-state.md`, `session-handoff.md`, `known-issues.md`, generated `package-capabilities.md` |
-| `skills/` | yes | **Canonical skills** — vendored third-party skills (`SOURCES.md` lists repo, commit, licence) and, later, HOMI's own skills |
+| `skills/` | yes | **Canonical skills** — vendored third-party skills (`SOURCES.md` lists repo, commit, licence) and HOMI's own (`save-session`); every skill must be listed in `backend/boost.json` to be synced |
+| `hooks/` | yes | Agent hooks wired in `.claude/settings.json`: path guard (reference codebases read-only, secrets never printed), session context, format-on-edit. Python 3.9+ stdlib, unit-tested (`make ai-hooks-test`). See `hooks/README.md` |
 | `rules/` | yes (when created) | Path-scoped project rules with `paths` frontmatter; indexed by `php artisan boost:index-rules` |
-| `agents/`, `tasks/` | yes (when created) | Subagent definitions and task contracts (Phase 4) |
+| `agents/` | yes | **Canonical subagent definitions** (Claude Code frontmatter). `.claude/agents` is a symlink to this directory, so Claude Code loads them without a copy; other agents get adapters in Phase 4 D6 |
+| `tasks/` | yes (when created) | Task contracts (Phase 4) |
 | `local.env.example` | yes | Template for `.ai/local.env` (gitignored): machine-specific paths (`APPUZ_ROOT`, nginx mirrors, ports) |
 
 How the views are produced

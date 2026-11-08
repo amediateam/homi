@@ -35,6 +35,13 @@ Adopted 2026-11-08 (Phase 4, developer-approved list). Install counts are from s
 | `programmatic-seo` | coreyhaines31/marketingskills | `96798cf38736` | MIT | 158k | listing/district pages at scale |
 | `schema` | coreyhaines31/marketingskills | `96798cf38736` | MIT | 87k | JSON-LD / structured data |
 | `site-architecture` | coreyhaines31/marketingskills | `96798cf38736` | MIT | 131k | URL hierarchy, internal linking, sitemaps |
+| `better-accessibility` | [jakubkrehel/skills](https://github.com/jakubkrehel/skills) | `157da6201633` | MIT | 11.7k ★ | WCAG 2.2 review of keyboard/focus, ARIA, forms, screen readers for the Next.js apps — the only accessibility guidance in the set (added 2026-11-08 from the app.uz inventory, card C3; `better-ui/typography/colors` deliberately not vendored — they overlap `frontend-design` and the Vercel skills) |
+
+HOMI's own skills (first-party, same directory, same sync)
+
+| Skill (directory) | Origin | Why |
+|---|---|---|
+| `save-session` | HOMI, 2026-11-08 (adapted from the idea of app.uz's `save-session.md`, no text reused) | the end-of-session routine: handoff, current state, known issues, phase document, numbering rules; written against a baseline run that produced unasked ADRs and `CLAUDE.md` edits |
 
 Notes
 - `asyrafhussin/laravel-best-practices` was installed and **removed**: it shares its name with the official Boost

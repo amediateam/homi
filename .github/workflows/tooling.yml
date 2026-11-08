@@ -1,0 +1,34 @@
+name: tooling
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - '.ai/hooks/**'
+      - '.claude/settings.json'
+      - '.github/workflows/tooling.yml'
+  pull_request:
+    paths:
+      - '.ai/hooks/**'
+      - '.claude/settings.json'
+      - '.github/workflows/tooling.yml'
+
+jobs:
+  agent-hooks:
+    name: Agent hooks (unit tests + settings sanity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hook unit tests (system python, standard library only)
+        run: python3 -m unittest discover -s .ai/hooks/tests -v
+
+      - name: settings.json is valid JSON and every hook script exists
+        run: |
+          jq -e . .claude/settings.json > /dev/null
+          jq -r '.hooks[][] | .hooks[] | select(.type == "command") | .command' .claude/settings.json \
+            | grep -o '\.ai/hooks/[a-z_]*\.py' | sort -u | while read -r script; do
+              test -f "$script" || { echo "missing hook script: $script"; exit 1; }
+              echo "ok $script"
+            done

@@ -35,6 +35,8 @@ Open `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`; API at 
 
 Start Claude Code (or Codex / Grok) **from the repository root**: the root `.mcp.json` declares the Laravel Boost MCP server, and the root `.claude/skills/` holds every skill. Those directories are generated — `make dev-setup` runs `php artisan boost:update`, and `make ai-sync` re-runs it after a `composer update` or after a skill is added to the canonical `.ai/skills/` (provenance in `.ai/skills/SOURCES.md`). `make ai-skills` lists what is available. Layout and rules: `.ai/README.md`.
 
+Copy `.ai/local.env.example` to `.ai/local.env` and fill in the paths of the sibling checkouts (`APPUZ_ROOT`, collectors, nginx mirrors). The committed `.claude/settings.json` wires hooks from `.ai/hooks/` that keep those checkouts read-only, refuse to print `.env*` files, inject the session handoff at start and format every edited file (Pint, eslint, Vite+). They need `python3` (3.9+) on `PATH` — the macOS system interpreter is enough. `make ai-hooks-test` runs their unit tests. Personal overrides go to `.claude/settings.local.json` (gitignored).
+
 ## Quality gates before a PR
 
 ```bash

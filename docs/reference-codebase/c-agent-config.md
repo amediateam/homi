@@ -54,10 +54,15 @@ Index and rules: [`../reference-codebase.md`](../reference-codebase.md). Read-on
 - `CLAUDE.md` (10 KB, RU): vault-first, multi-project, DB, auth, API format, SPA, stack, commands, red lines, defaults, context system. Rules that carry over (most already hold in HOMI): read a code map by module, never whole (context budget); architecture changes update the map/index in the same commit; Pint on explicit paths after PHP edits; Boost-generated files read-only; reusable-first shared packages; jsonb `{ru,uz,en}` from day one (ADR-0006); envelope via base `ApiController` (ADR-0007); canon in the repo, memory holds stubs (HOMI's model); never commit secrets, new vars go to `.env.example`. Product-only: SVN, icon source file, light theme, desktop-first.
 - `AGENTS.md` (2.5 KB) thin pointer; `.ai/` contains only `mcp/mcp.json` with absolute paths (NOT_PORTABLE); `backend/.mcp.json` = Boost (HOMI has it); `backend/GEMINI.md` is an older Boost generation; `frontend/lendo/CLAUDE.md` imports `AGENTS.md` (same pattern as HOMI's Next apps).
 
-## Recommendation for HOMI (needs the developer's go — see `docs/ai/reports/phase-4-plan.md` D5–D7)
+## Status (developer's go on 2026-11-08: "items 1–6, properly"; app.uz security findings deferred by the developer)
 
-1. **Now, hygiene**: `settings.local.json` gitignored (done); never copy any `settings.local.json`.
-2. **With the hooks/permissions batch (D7)**: adapted `settings.json` deny/ask baseline; `session-context.sh` → HOMI red lines + handoff; `format-on-edit.sh` → Pint/eslint. Drop sounds and md-structure checks.
-3. **Vendoring (approval)**: `better-accessibility` (and optionally `better-ui`) from `jakubkrehel/skills` via `boost:add-skill`.
-4. **Phase 4/5**: `save-session` skill adapted to HOMI; HOMI subagent definitions written from the four archive agents above (English, restricted tools, no anti-bot content).
-5. **Nothing else** from `app.uz/.claude` is worth copying.
+| # | Item | HOMI result |
+|---|---|---|
+| 1 | `settings.json` deny/ask baseline (C1) | **Applied** — `.claude/settings.json`: `ask` for sudo, force-push, hard reset, destructive artisan, dependency changes, kills, ssh/scp/rsync/psql; `deny` for `.env*`/`envprod*`/`key.md`/private-key reads, `php artisan serve`, `brew services start|restart nginx` (KI-13), edits of generated files; a small `allow` list of verification commands. No blanket allows. |
+| 2 | `session-context.sh` (C2) | **Applied as `.ai/hooks/session_context.py`** — injects the mandate rules tooling cannot enforce, git state, latest reports, high-severity known issues, next AM/KI numbers, environment warnings and `session-handoff.md` verbatim. |
+| 3 | `format-on-edit.sh` (C2) | **Applied as `.ai/hooks/format_on_edit.py`** — Pint for `backend/**/*.php`, `eslint --fix` for the three Next apps, `vp fmt` for the frozen Inertia UI; reports rewrites and failures to the model. Sounds and md-structure checks dropped. Plus `.ai/hooks/guard_paths.py` (PreToolUse): reference codebases read-only, secrets never printed — 46 unit tests, `make ai-hooks-test`, CI `tooling.yml`. |
+| 4 | `save-session` (C3) | **Applied as `.ai/skills/save-session/SKILL.md`** (HOMI's first first-party skill; synced by Boost like the vendored ones). |
+| 5 | `better-accessibility` (C3) | **Applied** — vendored from `jakubkrehel/skills` `157da6201633` (MIT) via `boost:add-skill`; `better-ui/typography/colors` not vendored (overlap). |
+| 6 | Archive personas as sources (C4) | **Applied** — `.ai/agents/{telegram-bot-engineer,intake-pipeline-engineer,listing-matching-engineer,postgis-geo-engineer,security-reviewer}.md` written in English from a read-only digest (no verbatim text), plus `reference-reader`. Evasion content excluded; nine bugs in the source samples corrected (see each agent's "Not inherited"). The source had no real PostGIS guidance — HOMI's PostGIS rules are marked "verify". |
+
+Nothing else from `app.uz/.claude` is worth copying. Never copy any `settings.local.json`.

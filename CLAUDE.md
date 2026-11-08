@@ -90,6 +90,13 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 - Inertia v3 has no axios: use the built-in client or `useHttp`. `Inertia::lazy()` is gone, so use `Inertia::optional()`. Use `router.cancelAll()` instead of `router.cancel()`. Deferred props need a skeleton empty state.
 - The Laravel Boost MCP server is declared in the root `.mcp.json` (`php backend/artisan boost:mcp`, project scope) and provides `search-docs`, `database-schema`, `database-query` and `browser-logs`. Use `search-docs` before relying on version-specific Laravel ecosystem APIs. It must be started from the repository root; `backend/.mcp.json` is not read by Claude Code sessions started here.
 
+## Agent guard rails (hooks, permissions, subagents)
+
+- `.claude/settings.json` (committed) wires three Python hooks from `.ai/hooks/` and the permission baseline. The **PreToolUse guard** denies writes and project tooling under the reference codebases (paths from `.ai/local.env`, fallback: folders named `app.uz`, `telegram.uz`, `datahub.uz`, `geo.uz`) and any read, print or copy of `.env*` (except `*.example`), `envprod*`, `key.md` and private keys — list key names with `grep -o '^[A-Z_]*=' backend/.env` instead. The **SessionStart hook** injects `.ai/memory/session-handoff.md`, high-severity known issues and the next `AM-`/`KI-` numbers. The **PostToolUse hook** runs Pint / `eslint --fix` / `vp fmt` on the edited file and tells you when it rewrote it (re-read before the next edit). Details and limits: `.ai/hooks/README.md`; tests: `make ai-hooks-test`.
+- Permission rules: `ask` for sudo, force-push, hard resets, destructive artisan commands, dependency changes, process kills, ssh/scp/rsync/psql; `deny` for `php artisan serve`, `brew services start|restart nginx` (KI-13) and edits of generated files (`backend/AGENTS.md`, Wayfinder output, `.claude/skills/**`, the package registry).
+- Subagent definitions live in `.ai/agents/` (`.claude/agents` is a symlink). Use the read-only `reference-reader` agent for anything in `app.uz`; the domain agents (Telegram bot, intake pipeline, listing matching, PostGIS, security review) carry the HOMI-specific rules distilled from the reference codebase.
+- Machine-specific paths belong in `.ai/local.env` (copy `.ai/local.env.example`; gitignored). Without it the hooks still run, but recognise reference codebases only by folder name.
+
 ## Next.js conventions
 
 Next.js 16.4 has breaking changes compared with older versions. Before writing Next.js code, read the relevant guide in that app's `node_modules/next/dist/docs/` (per `frontend/*/AGENTS.md`). `next dev` regenerates that AGENTS.md block.

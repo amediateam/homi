@@ -24,3 +24,7 @@ infra/local/certs/
 infra/local/nginx/snippets/paths.conf
 infra/local/run/
 infra/local/logs/
+
+# Python bytecode from the agent hooks (.ai/hooks)
+__pycache__/
+*.pyc
