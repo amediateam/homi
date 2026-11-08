@@ -18,9 +18,9 @@ cp .ai/local.env.example .ai/local.env      # optional: Next ports, NGINX_ETC, r
 make dev-setup                               # announces every sudo step before running it
 ```
 
-When `backend/.env` was just created, `dev-setup` warns, skips the migration and continues with the remaining steps: set `DB_*` and `REVERB_*` (and later `TELEGRAM_*`) there, then run `make dev-setup` again — it is idempotent. `make dev-check` also needs the PECL extensions `redis` and `imagick` and the keg-only `postgresql@18` tools on `PATH` (`docs/handoff/environment.md` §2). Afterwards build the frozen starter UI once — `make ci-backend` and the `home` test need it: `(cd backend && npm ci && npm run build)`.
+When `backend/.env` was just created, `dev-setup` warns, skips the migration and continues with the remaining steps: set `DB_*` and `REVERB_*` (and later `TELEGRAM_*`) there, then run `make dev-setup` again — it is idempotent. `make dev-check` also needs the PECL extensions `redis` and `imagick` and the keg-only `postgresql@18` tools on `PATH` (`docs/handoff/setup.md` §B). Afterwards build the frozen starter UI once — `make ci-backend` and the `home` test need it: `(cd backend && npm ci && npm run build)`.
 
-On a machine whose Homebrew nginx has no `sites-available`/`sites-enabled` layout yet, `dev-setup` stops at the nginx step; the one-time fix and a full clean-machine walkthrough with expected check results are in `docs/handoff/environment.md`.
+On a machine whose Homebrew nginx has no `sites-available`/`sites-enabled` layout yet, `dev-setup` stops at the nginx step; the one-time fix and a full clean-machine runbook with a check after every step are in `docs/handoff/setup.md`.
 
 ## Daily use
 

@@ -14,9 +14,9 @@ Written for the next **development-track** session (second developer, Codex). Th
 
 ## State at handoff
 - Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; its last commits are the AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`). Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
-- Entry points: `HANDOFF.md`, `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
+- Entry points: `HANDOFF.md`, `docs/handoff/setup.md` (runbook for a new machine), `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
 - Next task: T0 (set up and verify the second machine), then T1 Telegram webhook.
-- Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/environment.md` §3).
+- Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/setup.md` §D).
 
 ## Done this session
 - Handoff docs written and checked by an independent review agent (25 findings, confirmed ones fixed); links added to `CLAUDE.md`, `docs/README.md`, `getting-started.md`, `workflows.md`, `.ai/README.md`.
@@ -33,7 +33,7 @@ Written for the next **development-track** session (second developer, Codex). Th
 ## Gotchas learned this session
 - `codex debug prompt-input "ping"` renders what Codex would see (AGENTS.md, skill roots) without a model call. Codex does not load nested `AGENTS.md` files from the root — read `backend/AGENTS.md` / `frontend/<app>/AGENTS.md` yourself.
 - `php artisan boost:update` rewrites `backend/boost.json` with PHP's pretty-printer — never reformat it.
-- A fresh clone needs `npm ci && npm run build` in `backend/` before `make ci-backend`; `make dev-check` needs the PECL extensions `redis` and `imagick`; `postgresql@18` is keg-only (PATH); a fresh Homebrew nginx lacks the `sites-enabled` layout — all in `environment.md` §2.
+- A fresh clone needs `npm ci && npm run build` in `backend/` before `make ci-backend`; `make dev-check` needs the PECL extensions `redis` and `imagick`; `postgresql@18` is keg-only (PATH); a fresh Homebrew nginx lacks the `sites-enabled` layout — all in `docs/handoff/setup.md` §B–§C.
 - `POST /telegram/webhook` has no domain constraint (reachable through `api.*` too); `DatabaseSeeder` does not call `SourceSeeder`.
 - zsh: `echo =====` fails (`=` expansion) and `set -- $var` does not word-split.
 

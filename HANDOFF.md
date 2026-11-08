@@ -4,7 +4,7 @@ Purpose: everything the second developer and their AI agent need to continue dev
 
 | Track | Who | Scope |
 |---|---|---|
-| **Development** | second developer (+ Codex) | application code, tests, migrations, API docs, local tooling — the plan in §4 |
+| **Development** | second developer (+ Claude Code with Fable, or Codex) | application code, tests, migrations, API docs, local tooling — the plan in §4 |
 | **Production** | first developer (+ Claude Code) | staging/production servers, deploy pipeline, DNS/TLS, MinIO, server `.env`, staging/production bots — **not part of this plan** |
 
 Rules for working at the same time: [`docs/handoff/parallel-work.md`](docs/handoff/parallel-work.md). The first developer's standing rule «Пока я не скажу — не пиши код проекта» was a gate for their own agent; with this split (2026-11-09) application code is written on the development track, per §4.
@@ -16,9 +16,9 @@ Rules for working at the same time: [`docs/handoff/parallel-work.md`](docs/hando
    - a Mac with Apple Silicon and Homebrew in `/opt/homebrew` — the local stack assumes it (ADR-0008);
    - `brew install gh jq ripgrep && brew install --cask codex`, then `gh auth login` and `codex login` (optionally Claude Code ≥ 2.1.319);
    - your own **dev** Telegram bot from @BotFather — only needed from T1 on.
-2. **Set up** — run these yourself in a terminal (sudo prompts; not through the agent). Every step, including the manual nginx and PHP-extension prerequisites, is in [`docs/handoff/environment.md`](docs/handoff/environment.md) §2:
+2. **Set up** — run these yourself in a terminal (sudo prompts; not through the agent). The full runbook — every step with its check, who runs it, and the manual nginx, PHP-extension and PostgreSQL prerequisites — is **[`docs/handoff/setup.md`](docs/handoff/setup.md)**; the short version:
    ```bash
-   gh repo clone amediateam/homi homi.uz && cd homi.uz      # location notes (macOS privacy): environment.md §2
+   gh repo clone amediateam/homi homi.uz && cd homi.uz      # location notes (macOS privacy): setup.md B4
    git switch main                 # or chore/phase-4-ai-infra until §3 L1 is done
    cp .ai/local.env.example .ai/local.env
    make dev-setup                  # warns that backend/.env was just created and skips the migration → set DB_*, REVERB_*; createdb homi
@@ -86,7 +86,7 @@ All phase branches form one linear stack: `main` ⊂ `chore/phase-0-discovery` �
 
 **T0 — onboard and verify.** Read first: §1, `docs/handoff/environment.md`.
 Result: running local stack, Codex wired to the repository (instructions, skills, Boost MCP), a written record of the clean-machine install.
-Done when: every check in `environment.md` §3 and §4 gives the expected result; problems found are recorded as `KI-`/`AM-` rows (and fixed in the docs/scripts if small); the run is written down in a new `docs/testing/verification-log.md` as a **preliminary** scenario A record (one row per check: date, command, output excerpt, PASS/FAIL) — the formal Phase 7 run is done later by an independent verifier (mandate §23); your GitHub login is added next to `@amediateam` on each line of `.github/CODEOWNERS` (ADR-0010). All of it lands in one small PR.
+Done when: every check in `docs/handoff/setup.md` §B–§E gives the expected result; problems found are recorded as `KI-`/`AM-` rows (and fixed in the docs/scripts if small); the run is written down in a new `docs/testing/verification-log.md` as a **preliminary** scenario A record (one row per check: date, command, output excerpt, PASS/FAIL) — the formal Phase 7 run is done later by an independent verifier (mandate §23); your GitHub login is added next to `@amediateam` on each line of `.github/CODEOWNERS` (ADR-0010). All of it lands in one small PR.
 
 **T1 — Telegram webhook pipeline** (Phase 3 step 5–6). Read first: `.ai/agents/telegram-bot-engineer.md`, master prompt §8, `docs/reference-codebase/b-bot-i18n-geo-ops.md` §B1–B2 (the port plan: middleware, `insertOrIgnore` dedup, `telegram_updates` shape, tests to mirror), the porting caveats in `docs/ai/reports/phase-3-notes.md` §C, `backend/config/telegram.php`. Everything is built from these cards — no `app.uz` access is needed (the source dump mentioned in §C was temporary).
 Result: `VerifyTelegramSecretToken` compares `X-Telegram-Bot-Api-Secret-Token` with `config('telegram.webhook.secret')` in constant time; `TelegramWebhookController` stores the update atomically (`insertOrIgnore` on `telegram_updates`, unique bot + `update_id`), dispatches `ProcessTelegramUpdateJob` on queue `telegram` and answers 200 at once; `TelegramClient` / `TelegramBot` / `TelegramException`; `php artisan telegram:webhook set|info|delete` for the **local dev bot** that refuses staging/production; a scheduled prune of old updates. Decide and test whether the route is limited to the `hook.*` host: today `routes/hooks.php` has no domain constraint, so `POST /telegram/webhook` is also reachable through `api.*`.
@@ -125,10 +125,10 @@ Done when: report and ADR committed, `current-state.md` updated, PR merged.
 | Item | Needed for | How (never through git, chat, e-mail or an agent prompt) |
 |---|---|---|
 | GitHub access to `amediateam/homi` | everything | the owner of the `amediateam` account (a user account, not an organisation) adds your login as collaborator; then `gh auth login` |
-| PHP extensions `redis`, `imagick` | `make dev-check`, Redis queue/cache (`REDIS_CLIENT=phpredis`) | not files to copy — install them on your machine (`environment.md` §2 step 3) |
+| PHP extensions `redis`, `imagick` | `make dev-check`, Redis queue/cache (`REDIS_CLIENT=phpredis`) | not files to copy — install them on your machine (`setup.md` B2) |
 | Codex / OpenAI account | your agent | your own account; `codex login` |
 | Dev Telegram bot token + username, webhook secret | T1, T6 | create your own bot with @BotFather; generate the secret locally (`openssl rand -hex 32`); put both into your `backend/.env` only |
-| `backend/.env` values | local run | not transferred — `make dev-setup` creates the file from `.env.example`; `APP_KEY` is generated; `DB_*` and `REVERB_*` are yours (`environment.md` §2) |
+| `backend/.env` values | local run | not transferred — `make dev-setup` creates the file from `.env.example`; `APP_KEY` is generated; `DB_*` and `REVERB_*` are yours (`setup.md` C3) |
 | `.ai/local.env` | hooks, scripts | per machine, from `.ai/local.env.example` |
 | mkcert CA and certificates | local HTTPS | per machine (`make dev-certs`); a CA private key never leaves its machine |
 | Reference codebases (`app.uz`, `telegram.uz`, `datahub.uz`, `geo.uz`) and the nginx mirrors | only for porting details beyond `docs/reference-codebase/` | separate repositories/folders; ask the first developer for read access if a task needs them; read-only; paths into `.ai/local.env` |
@@ -159,12 +159,12 @@ Done when: report and ADR committed, `current-state.md` updated, PR merged.
 
 ## 7. First message for your AI agent
 
-Paste this into Codex started at the repository root (Russian version: in the handoff message from the first developer):
+Paste this into the agent started at the repository root — Claude Code (e.g. Fable) or Codex (Russian version: in the handoff message from the first developer). For the setup alone, the shorter message at the end of `docs/handoff/setup.md` is enough:
 
 ```text
 You are continuing development of HOMI (homi.uz) on a new machine; the previous sessions ran elsewhere and their context is in the repository, not in your memory.
-1. Read AGENTS.md, then HANDOFF.md, CLAUDE.md, docs/handoff/project-context.md, docs/handoff/parallel-work.md, docs/handoff/environment.md and .ai/memory/{current-state,known-issues,session-handoff}.md.
-2. Do task T0 from HANDOFF.md §4: go through docs/handoff/environment.md §2–§4 with me. Steps that need sudo or a password (make dev-setup, nginx, /etc/hosts, mkcert, pecl) I run myself in a terminal and paste the output; you run the read-only checks and the gates (ask me for approval when a command needs network or writes outside the repository). Report each check with its command and output. Do not fix anything outside the plan without asking me.
+1. Read AGENTS.md (Codex) or CLAUDE.md (Claude Code), then HANDOFF.md, docs/handoff/setup.md, docs/handoff/project-context.md, docs/handoff/parallel-work.md and .ai/memory/{current-state,known-issues,session-handoff}.md.
+2. Do task T0 from HANDOFF.md §4: walk me through docs/handoff/setup.md from the first unfinished step. Steps that need sudo or a password (make dev-setup, nginx, /etc/hosts, mkcert, pecl) I run myself in a terminal and paste the output; you run the read-only checks and the gates (ask me for approval when a command needs network or writes outside the repository). Report each check with its command and output. Do not fix anything outside the plan without asking me.
 3. Then propose a test-first plan for T1 and wait for my OK before writing code.
 Rules: the "Hard rules" in AGENTS.md are binding; staging/production work is out of scope; talk to me in Russian, write repository artifacts in English; never claim a check you did not run.
 ```

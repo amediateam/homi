@@ -26,7 +26,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 
 ## Infrastructure
 - Local (ADR-0008 + ADR-0012), **working on the first developer's machine** as of 2026-11-08: six `*.homi.loc` hosts in `/etc/hosts`; mkcert cert (valid to 2029-02-08) trusted by the system keychain; Homebrew nginx vhosts symlinked from `infra/local/nginx/`; nginx started by hand (`sudo nginx`, never `brew services` — KI-13); php-fpm :9000, PostgreSQL :5432, Redis :6379 as brew services; Horizon + Next dev servers via `make dev-start`; media on disk behind `cdn.homi.loc` (no local MinIO). `make dev-check` → 24 PASS / 0 WARN / 0 FAIL; HMR WebSocket (`/_next/hmr`) upgrades through nginx.
-- Not yet done locally: `make dev-setup` end-to-end on a clean machine; second developer's machine (`HANDOFF.md` T0). A fresh Homebrew nginx lacks the `sites-available`/`sites-enabled` layout `scripts/dev/nginx.sh` expects — manual step in `docs/handoff/environment.md` §2.
+- Not yet done locally: `make dev-setup` end-to-end on a clean machine; second developer's machine (`HANDOFF.md` T0). A fresh Homebrew nginx lacks the `sites-available`/`sites-enabled` layout `scripts/dev/nginx.sh` expects — manual step in `docs/handoff/setup.md` B1.
 - Staging/production: hosts known (web 159.253.19.121, DB 5.45.127.98, MinIO 31.220.104.38 via s3.hc.uz); nothing deployed; DNS for homi.uz not set up.
 - Telegram: three bots exist (dev/staging/prod); tokens not in repo; no webhook registered by us.
 
