@@ -133,7 +133,7 @@ Done when: report and ADR committed, `current-state.md` updated, PR merged.
 | mkcert CA and certificates | local HTTPS | per machine (`make dev-certs`); a CA private key never leaves its machine |
 | Reference codebases (`app.uz`, `telegram.uz`, `datahub.uz`, `geo.uz`) and the nginx mirrors | only for porting details beyond `docs/reference-codebase/` | separate repositories/folders; ask the first developer for read access if a task needs them; read-only; paths into `.ai/local.env` |
 | `BOOST_GITHUB_TOKEN` for `boost:add-skill` | adding skills | your own: `BOOST_GITHUB_TOKEN="$(gh auth token)"` for that one command, never stored |
-| Claude Code user-level setup of the first developer (plugins, user memory) | — | not transferable and not required; the project parts live in `.claude/` and `.ai/`, and the user-memory facts are already in these documents |
+| Claude Code user-level setup of the first developer (plugins, auto-memory) | — | plugins are personal and not required. The project memory travels with the repository (`CLAUDE.md` + the SessionStart hook injecting `.ai/memory/*`); a portable copy of the first developer's auto-memory is in `docs/handoff/claude-memory/` and is installed by `setup.md` E1.5 |
 | Staging/production credentials, SSH, DNS, MinIO keys, staging/production bot tokens | — | **not handed over** — production track only |
 | The first developer's agent conversations | — | not transferable; everything they produced is in the files listed in §1 step 4 |
 

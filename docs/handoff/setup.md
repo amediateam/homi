@@ -81,16 +81,25 @@ Some checks need network or reach outside the repository (HTTPS to `*.homi.loc`,
 |---|---|---|---|
 | E1.1 | you | Restart `claude` in the repository root so the SessionStart hook and the MCP server see the finished setup | the session-start context no longer lists missing local tooling |
 | E1.2 | you | Approve the project MCP server `laravel-boost` (prompt on start, or `/mcp`) | `/mcp` shows `laravel-boost` connected; **[agent]** calls its `search-docs` tool once |
-| E1.3 | agent | Confirm skills and subagents | `ls .claude/skills | wc -l` → 37; `ls .claude/agents/` lists six `.md` agents plus `README.md` |
+| E1.3 | agent | Confirm skills and subagents | `python3 -c 'import os; print(len(os.listdir(".claude/skills")))'` → 37; `ls .claude/agents/` lists six `.md` agents plus `README.md` |
 | E1.4 | you, then agent | Prove the guard: **[you]** `echo PROBE=dummy > backend/.env.probe`; **[agent]** tries `cat backend/.env.probe`; **[you]** `rm backend/.env.probe` | the agent's `cat` is refused by the PreToolUse hook (a refusal is the PASS) |
-| E1.5 | — | Optional | personal overrides go into `.claude/settings.local.json` (gitignored). If your user-level hooks handle `WorktreeCreate`, the Agent tool's worktree isolation fails (KI-18) — use `git worktree add --detach .worktrees/<name> HEAD`. The first developer's user-level plugins are not required |
+| E1.5 | agent | Seed Claude Code's auto-memory with the first developer's portable notes — the command block below the table (the project memory in the repo loads anyway; this adds the team conventions to the per-user memory; it writes outside the repository, so approve it; `cp -n` never overwrites) | `ls "$D"` shows `MEMORY.md`, `homi-project.md`, `homi-team-conventions.md`; after a restart `/memory` lists them |
+| E1.6 | — | Optional | personal overrides go into `.claude/settings.local.json` (gitignored). If your user-level hooks handle `WorktreeCreate`, the Agent tool's worktree isolation fails (KI-18) — use `git worktree add --detach .worktrees/<name> HEAD`. The first developer's user-level plugins are not required |
+
+E1.5 — run in the repository root:
+```bash
+D="$HOME/.claude/projects/$(pwd | sed 's#[/.]#-#g')/memory"
+ls "$(dirname "$D")"/*.jsonl          # must list this session's transcript — proves the folder name is right
+mkdir -p "$D" && cp -n docs/handoff/claude-memory/*.md "$D/" && ls "$D"
+```
+
 
 ### E2 Codex (instead of Claude Code)
 
 | # | Who | Do | Check |
 |---|---|---|---|
 | E2.1 | you | `codex mcp add homi-boost -- php "$PWD/backend/artisan" boost:mcp` (run in the repository root) | `codex mcp list` shows `homi-boost … enabled` |
-| E2.2 | agent | `codex debug prompt-input "ping" > /tmp/homi-codex-prompt.json` | `grep -c 'Reference codebases are read-only' /tmp/homi-codex-prompt.json` ≥ 1 (root `AGENTS.md` loaded); `grep -o 'homi.uz/.agents/skills' /tmp/homi-codex-prompt.json | head -1` prints a match |
+| E2.2 | agent | `codex debug prompt-input "ping" > /tmp/homi-codex-prompt.json` | `grep -c 'Reference codebases are read-only' /tmp/homi-codex-prompt.json` ≥ 1 (root `AGENTS.md` loaded); `grep -c 'homi.uz/.agents/skills' /tmp/homi-codex-prompt.json` ≥ 1 |
 | E2.3 | you | In a Codex session run `/mcp` | `homi-boost` lists nine tools (`search-docs`, `database-schema`, …) |
 
 Codex has no HOMI hooks: the hard rules in `AGENTS.md` are followed by hand (details: `environment.md` §4).
