@@ -1,0 +1,158 @@
+{
+  "fakerphp/faker": {
+    "status": "DEV",
+    "capabilities": "Fake data for factories and seeders (names, addresses, phone numbers, lorem, locale-aware generators incl. ru_RU).",
+    "reuse": "All model factories; realistic uz/ru listing fixtures for tests and local seeding.",
+    "boost_skill": "testing-best-practices"
+  },
+  "inertiajs/inertia-laravel": {
+    "status": "FROZEN",
+    "capabilities": "Server-driven SPA adapter (Inertia v3): page rendering, shared props, deferred/merge props, SSR.",
+    "reuse": "None — frozen starter UI (ADR-0002). Do not add Inertia pages.",
+    "boost_skill": "inertia-react-development (do not load for HOMI work)"
+  },
+  "larastan/larastan": {
+    "status": "DEV",
+    "capabilities": "PHPStan with Laravel awareness (Eloquent, facades, container). Level 7 configured in phpstan.neon.",
+    "reuse": "Quality gate in composer types:check / CI for all backend code.",
+    "boost_skill": "-"
+  },
+  "laravel/ai": {
+    "status": "ACTIVE",
+    "capabilities": "Official Laravel AI SDK: unified text/structured-output/embeddings/audio across providers (Gemini, OpenAI, Anthropic, Mistral, Groq, Ollama, OpenRouter, xAI, Bedrock, Azure OpenAI…), tools, agents, MCP integration.",
+    "reuse": "Owner/realtor classification, free-text radar query parsing, translations, voice transcription (about.md). Provider chosen later via env (checkpoint AI).",
+    "boost_skill": "ai-sdk-development"
+  },
+  "laravel/boost": {
+    "status": "DEV",
+    "capabilities": "AI-assisted development: MCP server (search-docs, database-schema, database-query, browser-logs, get-absolute-url), generated guidelines (AGENTS.md) and skills per installed package.",
+    "reuse": "Agents use its MCP and skills for every backend task; `php artisan boost:update` after dependency changes.",
+    "boost_skill": "-"
+  },
+  "laravel/dusk": {
+    "status": "DEV",
+    "capabilities": "Browser (ChromeDriver) end-to-end tests with Pest/PHPUnit; page objects, screenshots on failure.",
+    "reuse": "Only for the frozen backend UI or admin dashboards; Next.js apps use Playwright instead.",
+    "boost_skill": "-"
+  },
+  "laravel/framework": {
+    "status": "ACTIVE",
+    "capabilities": "Laravel 13: routing, Eloquent (PostgreSQL), validation, API Resources, queues, cache, events, notifications, filesystem (Flysystem), scheduler, broadcasting, rate limiting, encryption, HTTP client with retries, localization.",
+    "reuse": "Everything first: validation, authorization policies, API Resources, queues, cache, Storage, Http client, RateLimiter — before any package.",
+    "boost_skill": "laravel-best-practices"
+  },
+  "laravel/horizon": {
+    "status": "ACTIVE",
+    "capabilities": "Redis queue supervisor + dashboard: per-queue workers, auto-balancing, metrics, failed-job retry, tags, notifications.",
+    "reuse": "Queue worker for ingest, media variants, radar notifications, bot updates (ADR-0005). Dashboard at /horizon.",
+    "boost_skill": "configuring-horizon"
+  },
+  "laravel/mcp": {
+    "status": "UNUSED",
+    "capabilities": "Build MCP servers in Laravel (tools, resources, prompts) over HTTP or stdio with auth.",
+    "reuse": "Candidate for exposing HOMI data/tools to AI agents (e.g. listing search tool for the bot) — no decision yet.",
+    "boost_skill": "mcp-development"
+  },
+  "laravel/pail": {
+    "status": "DEV",
+    "capabilities": "Tail application logs in the terminal with filters; part of `php artisan dev`.",
+    "reuse": "Local debugging only.",
+    "boost_skill": "-"
+  },
+  "laravel/pao": {
+    "status": "DEV",
+    "capabilities": "Agent-optimized compact test output for Pest/PHPUnit (`php artisan test --compact`).",
+    "reuse": "Default test runner output for AI agents to save tokens.",
+    "boost_skill": "-"
+  },
+  "laravel/pennant": {
+    "status": "ACTIVE",
+    "capabilities": "Feature flags: class/closure features, per-scope values, database/array drivers, rich values, purging.",
+    "reuse": "Closed-beta gating (waitlist), gradual rollout of radar/AI features per user or segment.",
+    "boost_skill": "pennant-development"
+  },
+  "laravel/pint": {
+    "status": "DEV",
+    "capabilities": "Opinionated PHP code formatter (preset laravel).",
+    "reuse": "Mandatory after every PHP edit: `vendor/bin/pint --dirty --format agent`.",
+    "boost_skill": "-"
+  },
+  "laravel/pulse": {
+    "status": "ACTIVE",
+    "capabilities": "Real-time application performance dashboard: slow queries/requests/jobs, exceptions, cache hit rate, queue sizes, usage per user.",
+    "reuse": "Observability baseline (master prompt §17) at /pulse; disabled in tests.",
+    "boost_skill": "pulse-development"
+  },
+  "laravel/reverb": {
+    "status": "UNUSED",
+    "capabilities": "First-party WebSocket server for Laravel broadcasting (Pusher protocol), scaling via Redis.",
+    "reuse": "Candidate for live feed updates / radar pushes to the web app; Telegram remains the primary notification channel. Decide with the first real-time feature.",
+    "boost_skill": "-"
+  },
+  "laravel/sanctum": {
+    "status": "ACTIVE",
+    "capabilities": "API token authentication (personal access tokens with abilities and expiry) and optional SPA cookie auth.",
+    "reuse": "Bearer-token auth for all clients (ADR-0003); abilities per app (app:*, arm:*).",
+    "boost_skill": "-"
+  },
+  "laravel/sail": {
+    "status": "DEV",
+    "capabilities": "Docker Compose dev environment for Laravel.",
+    "reuse": "Not used — local env is Homebrew nginx/php-fpm (ADR-0008); Docker CLI absent.",
+    "boost_skill": "-"
+  },
+  "laravel/scout": {
+    "status": "UNUSED",
+    "capabilities": "Full-text search abstraction over Meilisearch/Typesense/Algolia/database drivers with model syncing.",
+    "reuse": "Candidate for listing search if PostgreSQL full-text/trigram is insufficient; measure first (master prompt §17).",
+    "boost_skill": "scout-development"
+  },
+  "laravel/socialite": {
+    "status": "UNUSED",
+    "capabilities": "OAuth 1/2 login providers (Google, GitHub, …) and community providers.",
+    "reuse": "Not needed for Telegram login (hash verification is custom, ported from app.uz); keep for possible Google/Apple login later.",
+    "boost_skill": "socialite-development"
+  },
+  "laravel/telescope": {
+    "status": "DEV",
+    "capabilities": "Local debug assistant: requests, queries, jobs, exceptions, logs, mail, cache, Redis, scheduled tasks.",
+    "reuse": "Local/staging debugging at /telescope; disabled in production and tests.",
+    "boost_skill": "telescope-debugging"
+  },
+  "laravel/tinker": {
+    "status": "DEV",
+    "capabilities": "REPL for the application container.",
+    "reuse": "Ad-hoc inspection (`php artisan tinker --execute`); prefer tests over tinker scripts.",
+    "boost_skill": "-"
+  },
+  "laravel/wayfinder": {
+    "status": "FROZEN",
+    "capabilities": "Generates TypeScript functions for Laravel routes/controllers for the Inertia front end.",
+    "reuse": "None — belongs to the frozen starter UI (ADR-0002). Next.js apps use the OpenAPI-generated client instead.",
+    "boost_skill": "wayfinder-development (do not load for HOMI work)"
+  },
+  "mockery/mockery": {
+    "status": "DEV",
+    "capabilities": "Mock objects for PHP tests.",
+    "reuse": "Mocking external HTTP (Telegram, S3) where Http::fake / Storage::fake are not enough.",
+    "boost_skill": "testing-best-practices"
+  },
+  "nunomaduro/collision": {
+    "status": "DEV",
+    "capabilities": "Readable console error reporting for artisan and tests.",
+    "reuse": "Default; no action.",
+    "boost_skill": "-"
+  },
+  "pestphp/pest": {
+    "status": "DEV",
+    "capabilities": "Pest 5 testing framework: expectations, datasets, architecture tests, parallel runs, snapshot/browser plugins.",
+    "reuse": "All backend tests (feature-first); architecture tests for module boundaries.",
+    "boost_skill": "testing-best-practices"
+  },
+  "pestphp/pest-plugin-laravel": {
+    "status": "DEV",
+    "capabilities": "Laravel helpers for Pest (`actingAs`, `get`, `postJson`, artisan test command).",
+    "reuse": "Feature tests for API endpoints.",
+    "boost_skill": "testing-best-practices"
+  }
+}
