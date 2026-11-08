@@ -28,7 +28,8 @@
 | 2026-11-09 | C4 side effect | `git status` after C2–C4 | `backend/boost.json` lost 3 skills (KI-22, fixed); `make dev-check` inside setup: false FAIL for pnpm, false PASS for Next servers (KI-21, fixed) | FAIL → fixed |
 | 2026-11-09 | C5 | `(cd backend && npm ci && npm run build)` | `found 0 vulnerabilities`; `✓ built in 2.51s`; exit 0; `public/build/manifest.json` present | PASS |
 | 2026-11-09 | C6 | `make dev-start`; `make dev-status` | four `PASS` lines: horizon, next-landing :3000, next-app :3001, next-arm :3002 | PASS |
-| 2026-11-09 | C6 side effect | `git status` after `make dev-start` | `next dev` appended a `nextjs-agent-feedback` block to `frontend/{landing,app,arm}/AGENTS.md` (KI-23, open; files left uncommitted) | open |
+| 2026-11-09 | C6 side effect | `git status` after `make dev-start` | `next dev` appended a `nextjs-agent-feedback` block to `frontend/{landing,app,arm}/AGENTS.md` (KI-23) | FAIL → fixed |
+| 2026-11-09 | C6 side effect, fix | `agentFeedback: false` in the three `next.config.ts`; `git checkout` the three `AGENTS.md`; `services.sh restart next-landing next-app next-arm`; `git status --short` | no `AGENTS.md` change; `grep -c agent-feedback frontend/*/AGENTS.md` → `0` ×3; hosts 200/200/200; `make ci-frontend` exit 0 (3 builds) | PASS |
 | 2026-11-09 | D | `make dev-check` (before the fix) | 23 PASS, `FAIL  pnpm 12 ≠ pnpm@11` (KI-21) | FAIL → fixed |
 | 2026-11-09 | D | `make dev-check` (after the fix) | 24 PASS, `dev:check OK (0 warning(s))` | PASS |
 | 2026-11-09 | D | `scripts/dev/check.sh` with `next-arm` stopped (negative test of the fix) | `WARN  Next dev servers not all running`, `FAIL  https://arm.homi.loc/ → 502` | PASS |
@@ -46,6 +47,7 @@
 | 2026-11-09 | E1.4 | probe `backend/.env.probe`, agent `cat` must be refused | _pending (hooks load at session start)_ | pending |
 | 2026-11-09 | E1.5 | `cp -n docs/handoff/claude-memory/*.md "$D/"; ls "$D"` | transcript `.jsonl` found in the project folder; `MEMORY.md homi-project.md homi-team-conventions.md` | PASS |
 | 2026-11-09 | E1.6 | — | optional; nothing changed | n/a |
+| 2026-11-09 | F3 | `gh api user --jq .login`; `gh api repos/amediateam/homi/collaborators --jq '.[].login'` | `amediateam` / `amediateam` — the second developer works under the owner account; `CODEOWNERS` unchanged (AM-38) | n/a (deviation) |
 
 ### Findings
 
@@ -53,6 +55,7 @@
 |---|---|---|
 | KI-21 | `dev-check`: false FAIL for a newer global pnpm; false PASS for Next servers that are not running (`services.sh status` exit code, single target) | fixed in `scripts/dev/check.sh`, `scripts/dev/services.sh` |
 | KI-22 | `dev-setup` ran `boost:update` before backend `npm ci` → 3 skills removed from `backend/boost.json` | fixed in `scripts/dev/setup.sh` |
-| KI-23 | `next dev` writes a Next.js agent-feedback block into the three tracked `AGENTS.md` files (`experimental.agentFeedback: true`) | open — developer decision |
+| KI-23 | `next dev` writes a Next.js agent-feedback block into the three tracked `AGENTS.md` files (`experimental.agentFeedback: true`) | fixed: `agentFeedback: false` (developer's decision) |
 | KI-24 | Homebrew's sample nginx server on :8080 collides with `REVERB_PORT=8080` (latent) | open — when realtime work starts |
 | AM-37 | `setup.md` B3 check assumed keg-only PostgreSQL client paths | fixed in `setup.md` |
+| AM-38 | The handoff assumed a separate GitHub login for the second developer; both tracks use `amediateam` | recorded; review sign-off is the first developer's call |

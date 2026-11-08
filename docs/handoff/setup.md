@@ -109,7 +109,7 @@ Codex has no HOMI hooks: the hard rules in `AGENTS.md` are followed by hand (det
 
 1. **[agent]** Create `docs/testing/verification-log.md` with one row per check from B–E: date, command, output excerpt, PASS/FAIL. Mark it as a **preliminary** scenario A record; the formal Phase 7 run is done later by an independent verifier.
 2. **[agent]** Every deviation from this runbook becomes a `KI-<next>` row in `.ai/memory/known-issues.md` (open problem with a workaround) or an `AM-<next>` line in the phase document (wrong assumption). Small fixes to this file or to `scripts/dev/*` go into the same PR.
-3. **[you]** Add your GitHub login next to `@amediateam` on each line of `.github/CODEOWNERS`.
+3. **[you]** Add your GitHub login next to `@amediateam` on each line of `.github/CODEOWNERS`. If you work under the `amediateam` account itself, skip this and record it (AM-38).
 4. **[agent]** Branch `chore/onboarding-second-machine` from the base (A5), commit (Conventional Commits, English), push, open a PR against that base. The first developer reviews it.
 5. Continue with `HANDOFF.md` §4 — T1, plan first, code after the developer's OK.
 
