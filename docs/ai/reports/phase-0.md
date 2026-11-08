@@ -274,3 +274,28 @@ COMMIT:            see git log — chore(phase-0): discovery report and master p
 REPORT_FILE:       docs/ai/reports/phase-0.md
 NEXT_ACTION:       human answers D1–D11 (or "go with recommendations"); meanwhile Phase 1 non-destructive items 1–5
 ```
+
+## 14. Checkpoint outcome (2026-11-08, answered by the developer)
+
+| # | Decision | Answer | Consequence |
+|---|---|---|---|
+| D1 | Local tooling | Homebrew nginx + php-fpm + `/etc/hosts` + **mkcert HTTPS** | ADR-0008; `mkcert -install` only after a separate OK |
+| D2 | Auth | **Sanctum bearer tokens** (app.uz pattern), Telegram as identity | ADR-0003; reuse `TokenController`, `frontend/lendo/lib/{api,auth}.ts`, `InitDataVerifier` |
+| D3 | Backend shape | **Keep Inertia+React stack installed, unused (frozen)** | ADR-0002; agents must not build UI in `backend/resources/js` |
+| D4 | JS tooling | **pnpm workspace** in `frontend/`, `packageManager` + `.node-version` pins | ADR-0004; Node 26 (Active LTS since 2026-10-28 per official schedule), pnpm 11.24 |
+| D5 | Drivers | **Redis queue + cache, Horizon**; session = database | ADR-0005 |
+| D6 | Protected main | **Conventions + CI + local hooks** (no paid plan) | ADR-0010; PR workflow, CODEOWNERS = `amediateam` |
+| D7 | Scaffolding commit | **Yes**, on a branch after pnpm conversion | Phase 1 |
+| D8 | External CLI smoke tests | **Yes** (codex / gemini / grok, 1 line each) | Phase 4 |
+| D9 | Listing ingestion | **HOMI owns its DB; sources push into it.** Collection lives outside this repo: `telegram.uz` (Laravel 13 + MadelineProto, REST `/v1`), `geo.uz` (web sources), `datahub.uz` (dedup/canon platform, intake not built yet, no consumer API today) | ADR-0009: authenticated, idempotent intake API in HOMI; `hook.homi.uz` scope widens to "inbound integrations" |
+| D10 | Root `prompt.md` | **Remove** (canonical copy is `docs/ai/master-prompt.md`) | Phase 1 housekeeping |
+| D11 | `server/` vs `infra/` | **Delete empty `server/`, use `infra/`** | ADR-0001 |
+| H | Hosting | Web server **159.253.19.121** (nginx mirror with PHP vhosts exists locally at `Server/nginx/159.253.19.121`), PostgreSQL **5.45.127.98**, MinIO **31.220.104.38** (`s3.hc.uz`) | ADR-0011; Phase 3/6 read that mirror |
+| B | Telegram bots | **All three exist** (dev / staging / prod) | names + token env keys in `.env.example`; prod webhook untouched without explicit OK |
+| AI | AI vendor | **Decide later**, before the first AI feature | `laravel/ai` stays; provider via env |
+| 2D | Second developer | **macOS with the same Homebrew stack** | `dev:setup` may rely on brew + `/etc/hosts` + `/opt/homebrew/etc/nginx` |
+| CO | CODEOWNERS | `amediateam` only for now | `.github/CODEOWNERS` |
+| L | Locale/currency | **ru default + fallback, UZS default**; UTC stored, `Asia/Tashkent` displayed; ru/uz/en jsonb translations | ADR-0006 |
+| A | `docs/about.md` | **Preliminary description**; real documentation is built incrementally — structure it for maximum effectiveness | Phase 1 docs skeleton, ADR-0001 |
+
+Supersedes the recommendations in §8 where they differ (D2, D3).
