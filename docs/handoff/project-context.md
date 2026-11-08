@@ -91,4 +91,4 @@ Assumption mismatches are numbered `AM-<n>` inside the phase reports (latest AM-
 - KI-20: `.ai/memory/session-handoff.md` is one file overwritten per session — with two tracks it conflicts; rule in `docs/handoff/parallel-work.md` §5.
 - KI-11/KI-12: Next typecheck needs `next typegen` first (built into `pnpm typecheck`); PHPStan needs `--memory-limit=1G` (built into `composer types:check`).
 - Tests run on in-memory SQLite (`phpunit.xml`) — PostgreSQL-specific SQL behaves differently there; check such code against the real database.
-- GitHub runs the backend/frontend workflows only on PRs and on `main`: phases 1–2 ran through PRs #2/#3, but the phase 3/4 code has never run on GitHub (the local gates did — `HANDOFF.md` §6).
+- GitHub runs the backend/frontend workflows only on PRs and on `main`: phases 1–2 ran through PRs #2/#3, the phase 3/4 code through PR #4 (backend + tooling green, 2026-11-09).

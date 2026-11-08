@@ -20,14 +20,14 @@ When production needs an application change (trusted proxies, a health check, a 
 
 ## 2. Branches and pull requests
 
-- Base: `main` once the existing stack is merged (`HANDOFF.md` §3); until then `chore/phase-4-ai-infra` — branch from it **and open PRs against it**. "Rebase on the base" below means that branch until L1, never the bare `main` (it holds only the initial commit).
+- Base: `main` (the phase stack was merged into it on 2026-11-09, `HANDOFF.md` §3). Branch from the latest `origin/main`, open PRs against `main`; the `chore/phase-*` branches are history.
 - One task = one branch from the latest base: `feat/<area>-<slug>`, `fix/…`, `docs/…`, `chore/…` (ADR-0010); production work uses `chore/infra-<slug>`.
 - **Never push to `main`** — PRs only. This is not blocked technically yet (KI-19), so it is on you.
 - Never force-push a branch someone else works on. Your own unshared feature branch may be rebased on `main` and pushed with `--force-with-lease`; with a shared branch merge `main` into it instead.
-- Merge method: **merge commit** (no squash, no rebase-merge). The current stack (#1 → #2 → #3 → phase 3/4) depends on it, and history keeps matching the phase reports. Revisit together if you want squash later.
+- Merge method: **merge commit** (no squash, no rebase-merge) — the phase stack #1 → #4 was merged that way, and history keeps matching the phase reports. Revisit together if you want squash later.
 - PRs stay small (one task, roughly ≤ 400 changed lines without generated files) with green CI. The other developer reviews every PR (CODEOWNERS paths always); the author merges after that approval. Generated files are committed together with the change that produced them.
 - Parallel agents on one machine: one worktree per agent under `.worktrees/<name>` (gitignored), one task each.
-- Before opening or updating a PR: `git fetch` and rebase your own branch on the current base (`origin/chore/phase-4-ai-infra` until L1, `origin/main` after), then run the gate for the side you touched (`make ci-backend` / `make ci-frontend`).
+- Before opening or updating a PR: `git fetch` and rebase your own branch on `origin/main`, then run the gate for the side you touched (`make ci-backend` / `make ci-frontend`).
 
 ## 3. Migrations
 

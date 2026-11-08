@@ -19,7 +19,6 @@ Rules for working at the same time: [`docs/handoff/parallel-work.md`](docs/hando
 2. **Set up** — run these yourself in a terminal (sudo prompts; not through the agent). The full runbook — every step with its check, who runs it, and the manual nginx, PHP-extension and PostgreSQL prerequisites — is **[`docs/handoff/setup.md`](docs/handoff/setup.md)**; the short version:
    ```bash
    gh repo clone amediateam/homi homi.uz && cd homi.uz      # location notes (macOS privacy): setup.md B4
-   git switch main                 # or chore/phase-4-ai-infra until §3 L1 is done
    cp .ai/local.env.example .ai/local.env
    make dev-setup                  # warns that backend/.env was just created and skips the migration → set DB_*, REVERB_*; createdb homi
    make dev-setup                  # second run migrates and completes (idempotent)
@@ -53,18 +52,9 @@ What the code does today and what is missing: [`project-context.md`](docs/handof
 
 ## 3. Start branch
 
-All phase branches form one linear stack: `main` ⊂ `chore/phase-0-discovery` ⊂ `phase-1` ⊂ `phase-2` ⊂ `phase-3-cdn-webhook` ⊂ `phase-4-ai-infra` (`git rev-list --count origin/main..origin/chore/phase-4-ai-infra`; PRs #1–#3 are open and mergeable). The AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`) are the last commits on `chore/phase-4-ai-infra`.
+**Done 2026-11-09:** the whole phase stack is in `main` — PRs #1 → #2 → #3 → #4 merged with merge commits (`98a2cac`, `8218c13`, `3bf945c`, `834d69d`); GitHub's backend and tooling workflows passed on PR #4, the first CI run for the Phase 3/4 code. **Branch every task from the latest `origin/main` and open PRs against `main`.** The `chore/phase-*` branches are history; do not commit to them.
 
-- **L1 — first developer, recommended before T0 ends:** merge the stack into `main` with **merge commits** (squash would orphan the commits the later branches are built on):
-  ```bash
-  gh pr merge 1 --merge
-  gh pr merge 2 --merge
-  gh pr edit 3 --base main && gh pr merge 3 --merge
-  gh pr create --base main --head chore/phase-4-ai-infra --title "chore(phase-3/4): media WIP, AI infrastructure, handoff"
-  # merge it once the backend/frontend/tooling CI runs are green
-  ```
-  Phase 3 code in that PR is tested and fail-closed (the webhook answers 403/501), so it is safe on `main`.
-- **Until L1 is done:** branch your tasks from `origin/chore/phase-4-ai-infra` and open your PRs **against `chore/phase-4-ai-infra`** (not `main`, which holds only the initial commit — a rebase onto it would rewrite the whole stack). After L1, retarget open PRs to `main` (`gh pr edit <n> --base main`); because the stack is merged with merge commits, nothing has to be rebased.
+- Open Dependabot PR #5 bumps TypeScript to 7.0.2 in `frontend/` — do **not** merge it: `typescript-eslint` 8.x rejects TS 7 (KI-4, ADR-0004 pin `^6`).
 - Reviews: the other developer reviews every PR (CODEOWNERS paths always); the author merges after the approval and green CI (`docs/handoff/parallel-work.md` §2).
 
 ## 4. Plan for the development track
@@ -152,10 +142,11 @@ Done when: report and ADR committed, `current-state.md` updated, PR merged.
 | `make ai-sync` after adding the root `AGENTS.md` | exit 0; root `AGENTS.md` and `backend/boost.json` unchanged (Boost writes only `backend/AGENTS.md`) |
 | Boost MCP via `php <repo>/backend/artisan boost:mcp` from another directory | `initialize` OK, `tools/list` → 9 tools |
 | `codex mcp add homi-boost -- php <repo>/backend/artisan boost:mcp` (throw-away `CODEX_HOME`) | entry written, listed as enabled |
-| Branch stack and PRs | linear stack confirmed with `git merge-base --is-ancestor`; PRs #1–#3 `MERGEABLE`/`CLEAN` |
+| Branch stack and PRs | linear stack confirmed with `git merge-base --is-ancestor`; PRs #1–#3 `MERGEABLE`/`CLEAN`; then #1–#4 merged into `main` with merge commits |
+| GitHub CI on PR #4 (phase 3/4 code) | `backend` and `tooling` workflows passed; `frontend` not triggered (no `frontend/` changes since `main`) |
 | Claude Code `claude mcp list` | `laravel-boost` "Pending approval" until approved in a session |
 
-**Not verified:** `make dev-setup` on a clean machine (T0 is the first run); a live Codex session calling the Boost tools; GitHub CI for the phase 3/4 code (it runs when the L1 pull request is opened); anything on staging/production.
+**Not verified:** `make dev-setup` on a clean machine (T0 is the first run); a live Codex session calling the Boost tools; anything on staging/production.
 
 ## 7. First message for your AI agent
 

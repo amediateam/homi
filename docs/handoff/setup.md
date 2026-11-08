@@ -16,7 +16,7 @@ Purpose: one file that takes a clean Mac to a running, verified HOMI environment
 | A2 | Install Homebrew from https://brew.sh and run the `eval "$(/opt/homebrew/bin/brew shellenv)"` line it prints | `brew --version`; `brew --prefix` → `/opt/homebrew` |
 | A3 | `brew install gh jq ripgrep git` and your agent: `brew install --cask claude-code` (or the native installer from https://claude.ai) **or** `brew install --cask codex` | `claude --version` ≥ 2.1.319 or `codex --version` ≥ 0.167 |
 | A4 | `gh auth login` (GitHub.com, HTTPS) — you need collaborator access to `amediateam/homi` first | `gh repo view amediateam/homi --json name` prints `{"name":"homi"}` |
-| A5 | Clone and pick the base branch: `gh repo clone amediateam/homi homi.uz && cd homi.uz && git switch main` — use `git switch chore/phase-4-ai-infra` instead while `main` still holds only the initial commit (`git log --oneline -1 origin/main`) | `ls HANDOFF.md docs/handoff/setup.md` |
+| A5 | Clone: `gh repo clone amediateam/homi homi.uz && cd homi.uz` — the default branch `main` holds everything | `ls HANDOFF.md docs/handoff/setup.md` |
 | A6 | Start the agent **in the repository root**: `claude` (trust the folder; choose the model with `/model`) or `codex` (trust the project). Then give it the first message from the end of this file | the agent answers after reading this file |
 
 On the first Claude Code start the SessionStart hook reports missing `.ai/local.env`, `backend/vendor`, `backend/.env` and `.claude/skills` — expected on a fresh clone; the next sections create them.

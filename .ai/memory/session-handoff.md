@@ -13,7 +13,7 @@ Written for the next **development-track** session (second developer, Codex). Th
 - 2026-11-08: «безопасность не важно сейчас» — do not re-raise the app.uz security findings (card C0) unprompted.
 
 ## State at handoff
-- Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; its last commits are the AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`). Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
+- `main` holds everything: the phase stack was merged 2026-11-09 (PRs #1–#4, merge commits, last `834d69d`; GitHub backend + tooling CI green on #4). Branch from `origin/main`, PRs against `main`. Dependabot PR #5 (TypeScript 7) stays unmerged (KI-4).
 - Entry points: `HANDOFF.md`, `docs/handoff/setup.md` (runbook for a new machine), `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
 - Next task: T0 (set up and verify the second machine), then T1 Telegram webhook.
 - Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/setup.md` §D).
@@ -26,7 +26,7 @@ Written for the next **development-track** session (second developer, Codex). Th
 - `environments.md` env-name list corrected. KI-19, KI-20 added.
 
 ## Waiting for the developer (do NOT start on your own)
-1. First developer: merge the stack (L1, `HANDOFF.md` §3) and grant GitHub access.
+1. First developer: grant GitHub access (the stack merge is done).
 2. First developer's answers on the gates: T1 tunnel tool, T5/T8 npm dependencies, T7 product questions OPQ-1…5, PostGIS, AI vendor, T9 Codex hook adapters (D6), T10 gitleaks, T11 items (D5, D8, `.ai/rules`, `.ai/tasks`, KI-18, KI-20 fix).
 3. Read access to `app.uz` only if a task needs more than the `docs/reference-codebase/` cards.
 
