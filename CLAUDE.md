@@ -14,14 +14,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 homi.uz aggregates housing rental and sale listings from public Telegram channels in Uzbekistan. It turns them into one deduplicated feed with filters and a map. It also sends "radar" alerts through a Telegram bot, uses Google Gemini to tag listings as owner or realtor, and flags listings priced about 20% below the district median. The UI is in ru/uz/en. `docs/about.md` (in Russian) is a product overview, not a technical spec. Parts of its "tech stack" section are guesses.
 
-**Current state: scaffolding only.** `backend/` is a fresh Laravel React starter kit (User model, one `welcome` page, example tests). Both Next.js apps are unmodified `create-next-app` output. No domain code exists yet, and the Next.js apps are not connected to the backend.
+**Current state: scaffolding + foundation.** `backend/` is a Laravel React starter kit (User model, one `welcome` page, example tests); its Inertia/React UI is **frozen** (ADR-0002) — the backend is developed as an API. The three Next.js apps are unmodified `create-next-app` output. No domain code exists yet. Decisions live in `docs/architecture/decisions/`; architecture in `docs/architecture/overview.md`.
 
 ## Layout
 
-One git repo at the root. Each subproject has its own dependencies and no root workspace tooling ties them together, so run commands from inside the subproject.
+One git repo at the root (`docs/architecture/decisions/0001-…` has the canonical layout). `backend/` and `frontend/` have separate toolchains; run commands from inside them.
 
-- `backend/`: Laravel 13 on PHP 8.5, with Inertia v3 + React 19 + TypeScript 7 + Tailwind 4. Installed packages: Horizon, Reverb, Sanctum, Scout, Socialite, Pennant, Pulse, Telescope, `laravel/ai`, `laravel/mcp`, Wayfinder, Dusk.
-- `frontend/app/` (web app) and `frontend/landing/` (landing site): two independent Next.js 16.4 App Router apps. They use Tailwind 4 through the turbopack loader, with `cacheComponents` and `partialPrefetching` enabled, and the `@/*` alias pointing to each app's root.
+- `backend/`: Laravel 13 on PHP 8.5 (pinned `^8.5`), with a frozen Inertia v3 + React 19 + TypeScript 7 + Tailwind 4 starter UI. Installed packages: Horizon, Reverb, Sanctum, Scout, Socialite, Pennant, Pulse, Telescope, `laravel/ai`, `laravel/mcp`, Wayfinder, Dusk. Full registry: `docs/backend/package-registry.md` (generated; compact index `.ai/memory/package-capabilities.md`).
+- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` for shared code (created in Phase 2).
 
 ## Commands
 
@@ -43,15 +43,23 @@ composer ci:check                 # what CI runs: npm check, tsc, pint --test, p
 
 If the UI doesn't reflect a frontend change, or you see "Unable to locate file in Vite manifest", run `npm run build` (or have the dev server running).
 
-### Next.js apps (`cd frontend/app` or `cd frontend/landing`)
+### Next.js apps (`cd frontend`)
 
 ```bash
-npm run dev      # both default to port 3000; start the second with `npm run dev -- -p 3001`
-npm run build
-npm run lint     # eslint (next core-web-vitals + typescript)
+pnpm install                        # whole workspace (frontend/pnpm-lock.yaml)
+pnpm --filter app dev               # landing → 3000, app → 3001 (`-- -p 3001`), arm → 3002
+pnpm -r lint                        # eslint (next core-web-vitals + typescript) in every app
+pnpm -r build
 ```
 
-There is no test setup in either Next.js app.
+There is no test setup in the Next.js apps yet. Known peer-dependency warnings (eslint 10 / TypeScript 7 vs `eslint-config-next` plugins) come from the create-next-app template.
+
+### Repository tooling (root)
+
+```bash
+scripts/packages/registry           # regenerate the Composer registry after any composer.lock change
+scripts/packages/registry --check   # CI check: registry matches composer.lock
+```
 
 ## Backend architecture and gotchas
 
