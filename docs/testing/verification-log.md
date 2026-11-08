@@ -42,9 +42,9 @@
 | 2026-11-09 | D | `curl -s -o /dev/null -w '%{http_code}' https://api.homi.loc/up` / `https://cdn.homi.loc/health.txt` | `200` / `200` | PASS |
 | 2026-11-09 | D | browser: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc` | _pending — developer_ | pending |
 | 2026-11-09 | E1.1 | restart Claude Code in the repository root | _pending_ | pending |
-| 2026-11-09 | E1.2 | `/mcp` → `laravel-boost` connected; one `search-docs` call | _pending_ | pending |
+| 2026-11-09 | E1.2 | `/mcp` → `laravel-boost` connected; one `search-docs` call | server side checked: `initialize` + `tools/list` piped into `php backend/artisan boost:mcp` → `Laravel Boost`, 9 tools (`search-docs`, `database-schema`, `database-query`, `browser-logs`, …); `claude mcp list` → `laravel-boost … ⏸ Pending approval`. Approval in an interactive session and the `search-docs` call: _pending_ | pending |
 | 2026-11-09 | E1.3 | `python3 -c '…len(os.listdir(".claude/skills"))'`; `ls .claude/agents/` | `37`; six agents (`intake-pipeline-engineer`, `listing-matching-engineer`, `postgis-geo-engineer`, `reference-reader`, `security-reviewer`, `telegram-bot-engineer`) + `README.md` | PASS |
-| 2026-11-09 | E1.4 | probe `backend/.env.probe`, agent `cat` must be refused | _pending (hooks load at session start)_ | pending |
+| 2026-11-09 | E1.4 | agent: Bash `cat backend/.env.probe` and the Read tool on the same path | both refused before execution: `PreToolUse:Bash hook error: HOMI guard: .env.probe holds secrets and is never printed, read or copied` (same for `PreToolUse:Read`). The guard matches the path, so the probe file was not created — nothing could have been read | PASS |
 | 2026-11-09 | E1.5 | `cp -n docs/handoff/claude-memory/*.md "$D/"; ls "$D"` | transcript `.jsonl` found in the project folder; `MEMORY.md homi-project.md homi-team-conventions.md` | PASS |
 | 2026-11-09 | E1.6 | — | optional; nothing changed | n/a |
 | 2026-11-09 | F3 | `gh api user --jq .login`; `gh api repos/amediateam/homi/collaborators --jq '.[].login'` | `amediateam` / `amediateam` — the second developer works under the owner account; `CODEOWNERS` unchanged (AM-38) | n/a (deviation) |
