@@ -13,7 +13,7 @@ Written for the next **development-track** session (second developer, Codex). Th
 - 2026-11-08: «безопасность не важно сейчас» — do not re-raise the app.uz security findings (card C0) unprompted.
 
 ## State at handoff
-- Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; the last commit holds this handoff and the AM-36 gate fix. Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
+- Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; its last commits are the AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`). Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
 - Entry points: `HANDOFF.md`, `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
 - Next task: T0 (set up and verify the second machine), then T1 Telegram webhook.
 - Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/environment.md` §3).

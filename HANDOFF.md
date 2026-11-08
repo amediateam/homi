@@ -53,7 +53,7 @@ What the code does today and what is missing: [`project-context.md`](docs/handof
 
 ## 3. Start branch
 
-All phase branches form one linear stack: `main` ⊂ `chore/phase-0-discovery` ⊂ `phase-1` ⊂ `phase-2` ⊂ `phase-3-cdn-webhook` ⊂ `phase-4-ai-infra` (`git rev-list --count origin/main..origin/chore/phase-4-ai-infra`; PRs #1–#3 are open and mergeable). This handoff and the AM-36 gate fix are the last commit on `chore/phase-4-ai-infra`.
+All phase branches form one linear stack: `main` ⊂ `chore/phase-0-discovery` ⊂ `phase-1` ⊂ `phase-2` ⊂ `phase-3-cdn-webhook` ⊂ `phase-4-ai-infra` (`git rev-list --count origin/main..origin/chore/phase-4-ai-infra`; PRs #1–#3 are open and mergeable). The AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`) are the last commits on `chore/phase-4-ai-infra`.
 
 - **L1 — first developer, recommended before T0 ends:** merge the stack into `main` with **merge commits** (squash would orphan the commits the later branches are built on):
   ```bash
