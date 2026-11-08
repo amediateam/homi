@@ -25,4 +25,4 @@ source-of-truth: this session; overwritten every session
 - See `.ai/memory/known-issues.md` (KI-1…KI-9). Most relevant for Phase 2: queue driver mismatch (KI-1), ports 8000/8001 taken (KI-5).
 
 ## Active subagent work at handoff
-- `telegramuz-intake-audit` (read-only audit of telegram.uz for the intake payload) — if its result is not yet reflected in ADR-0009 / `docs/api/intake.md`, rerun a focused audit in Phase 3 rather than trusting memory.
+- None. All six audits are reflected in the repo: `docs/reference-codebase*.md` (app.uz), `docs/api/intake-sources.md` (telegram.uz, datahub.uz), ADR-0009 (Accepted).

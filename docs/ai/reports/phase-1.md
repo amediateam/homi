@@ -2,7 +2,7 @@
 
 ```text
 PHASE:        1 — FOUNDATION
-STATUS:       COMPLETE (ADR-0009 payload details deferred to the Phase 3 API contract)
+STATUS:       COMPLETE (ADR-0009 Accepted; field-level intake contract is Phase 3 work)
 DATE:         2026-11-08
 SESSION:      Claude Code 2.1.319, main session on Claude Fable 5.1; 5 read-only Explore subagents (sonnet)
 BRANCH:       chore/phase-1-foundation (stacked on chore/phase-0-discovery, PR #1)
@@ -19,7 +19,7 @@ BRANCH:       chore/phase-1-foundation (stacked on chore/phase-0-discovery, PR #
 7. **Package registry (mandate §3.6–3.7)** — `scripts/packages/registry` (PHP, deterministic: `composer show/audit/outdated/licenses` + namespace usage scan; `[ai-summary]` columns from `summaries.json`; PROPOSED list from `proposed.json`; `--check` compares the `composer.lock` sha256) → `docs/backend/package-registry.md` (26 direct, 2 transitive-in-use, 6 proposed, 0 advisories) and `.ai/memory/package-capabilities.md`.
 8. **Documentation structure** — `docs/README.md` (map, reading order, rules), `architecture/overview.md` (context, containers, module boundaries, listing data flow), `architecture/requirements.md` (FR/NFR/entities labelled CONFIRMED/ASSUMED/OPEN), `infrastructure/environments.md` (domain matrix, hosts, ports, buckets, env var names), `development/{workflows,getting-started}.md`.
 9. **Reference codebase catalogue (mandate §4)** — `docs/reference-codebase.md` index + two card files covering 15 `app.uz` modules with status and port plans; critical claims spot-verified.
-10. **Collector landscape clarified** — `datahub.uz` (dedup/canon platform, intake not built, no consumer API), `telegram.uz` (Telegram collector with stored listings/phones/photos and a token-gated public API), `geo.uz` (web sources) — recorded in ADR-0009 and `architecture/overview.md`.
+10. **Collector landscape clarified** — `datahub.uz` (dedup/canon platform, intake not built, no consumer API), `telegram.uz` (Telegram collector: partitioned `listings` without title/description, phones via HMAC + raw, content-addressed media without variants, 12 Tashkent districts, no approval event, public API too thin for pull), `geo.uz` (web sources) — recorded in `docs/api/intake-sources.md` (incl. a source-mapped intake payload draft and the list of changes `telegram.uz` needs to push), ADR-0009 (Accepted) and `architecture/overview.md`.
 11. **CLAUDE.md** updated (mandate pointer, frozen backend UI, pnpm commands, registry tooling); first `.ai/memory/` files written (`current-state.md`, `session-handoff.md`, `known-issues.md`, generated `package-capabilities.md`).
 
 ## DECISIONS
@@ -80,7 +80,7 @@ Phase 2 — local environment (ADR-0008): `infra/local/nginx/*.conf`, hosts scri
 - OPQ from `requirements.md`: dedup thresholds, "below market" definition, launch cities, ARM roles, data retention.
 - Second developer's GitHub login (CODEOWNERS), PostHog account, DNS ownership for `homi.uz`.
 - Where Next.js SSR runs in production (Node/pm2 vs static export) — Phase 2/6.
-- Collector payload details → `docs/api/intake.md` in Phase 3 (telegram.uz audit attached to ADR-0009).
+- Field-level intake contract → `docs/api/intake.md` + OpenAPI in Phase 3 (inputs: `docs/api/intake-sources.md`). Who implements the push side in `telegram.uz` and when (outside this repo).
 
 ## VERIFIED_BY
 
@@ -88,7 +88,7 @@ Main session (Fable 5.1): all commands in this report were executed and their ou
 
 ## COST (actual data only)
 
-Subagents: 5 Explore runs on `sonnet` (app.uz overview, CDN guide, datahub.uz, app.uz auth/API/media, app.uz bot/i18n/geo/ops) + 1 telegram.uz intake audit. Token counts per agent are not exposed by the tool → left blank. External CLIs (codex/gemini/grok): not yet invoked (approved for Phase 4).
+Subagents: 6 Explore runs on `sonnet` (app.uz overview, CDN guide, datahub.uz, app.uz auth/API/media, app.uz bot/i18n/geo/ops, telegram.uz intake audit); two needed a follow-up message because their first reply was truncated. Token counts per agent are not exposed by the tool → left blank. External CLIs (codex/gemini/grok): not yet invoked (approved for Phase 4).
 
 ```text
 COMMIT:       see FILES_CHANGED; final commit of this phase adds docs/ai/reports/phase-1.md and .ai/memory/*

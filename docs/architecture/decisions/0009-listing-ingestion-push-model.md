@@ -1,6 +1,6 @@
 # ADR-0009: Listing ingestion — HOMI owns the data, collectors push
 
-- Status: Proposed (becomes Accepted when the intake payload is fixed after the `telegram.uz` audit)
+- Status: Accepted (2026-11-08, after the `telegram.uz` audit — see `docs/api/intake-sources.md`; the field-level contract is written in Phase 3 as `docs/api/intake.md` + OpenAPI)
 - Date: 2026-11-08
 - Deciders: developer (Phase 0 checkpoint D9 and Q16)
 - Source: `docs/ai/reports/phase-0.md` §5, §14; datahub.uz / telegram.uz overviews (read-only subagents)
@@ -44,8 +44,19 @@ Options considered: HOMI pulls from `telegram.uz`; HOMI reads a shared DB/replic
 - Shared PostgreSQL / read replica of datahub — rejected: hard coupling to a schema that is being redesigned (datahub DB v2).
 - Wait for datahub canon as the only source — rejected: not built yet; HOMI can start with raw-source pushes and switch trust later.
 
-## Open items (block "Accepted")
+## Contract principles fixed by the `telegram.uz` audit (details in `docs/api/intake-sources.md`)
 
-- Exact listing payload (fields, enums, geo representation) — from the `telegram.uz` model audit.
-- Photo transfer mode (URLs vs pre-upload) and size limits.
-- Update/delete semantics and how "already rented" from users feeds back to sources (if at all).
+- The public `telegram.uz` API cannot feed HOMI (no text, phones, media, geo, `updated_since`; only `listings:read`), so the push model is also the only workable one — not just the preferred one.
+- `external_id` = collector's `public_id`; HOMI enforces `(source_code, external_id)` uniqueness and orders events by `source_version` (collector `updated_at`).
+- Event types: `created`, `updated`, `withdrawn`, `duplicate_changed`, `media_added`; the collector emits them when a listing is **publishable** (after dedup/contacts/media), not at parse time.
+- Prices arrive as minor units + currency; HOMI computes UZS/USD with its own rates (collector USD values rest on placeholder rates).
+- Text (`description`) and media come from the collector's raw post; HOMI copies media bytes by URL into `homi-public`, derives WebP variants and dimensions, and verifies `sha256`.
+- Phones arrive as E.164 behind an explicit PII gate; HOMI hashes with its own key (collector HMACs are opaque). Owner/realtor roles and confidences are carried through.
+- Geo arrives as district slug (+ optional lat/lng, landmark); HOMI's Geo module owns regions/cities and the mapping.
+
+## Open items (Phase 3)
+
+- Field-level schema, versioning (`schema_version`) and OpenAPI for `/api/v1/intake/*`.
+- Photo size limits and the `homi-tmp` pre-upload path for collectors that cannot serve URLs.
+- Backfill of the existing approved pool and rate/volume estimates (with the `telegram.uz` owner).
+- Whether user feedback ("already rented") flows back to collectors — default no.
