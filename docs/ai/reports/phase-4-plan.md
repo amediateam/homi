@@ -1,0 +1,140 @@
+# Phase 4 — AI infrastructure: inventory and plan (proposal for discussion)
+
+Status: PARTIALLY APPLIED, 2026-11-08. Written at the developer's request ("настроить среду, установить все необходимые плагины и скиллы — skills.laravel.cloud") before any further application code. Facts below were verified in the session unless marked "inferred".
+
+Developer decisions (same day): D1 Tier 1 only + `vercel/next.js` `next-bundle-optimizer` + `coreyhaines31/marketingskills` (SEO core); D2/D3/D4 yes (root canonical `.ai/skills`, vendored with `SOURCES.md`, `backend/.ai → ../.ai`); D5–D8 and the Codex/Gemini/Grok setup, hooks and the rest of the SEO pack **wait for the developer's go**. No application code is written until the developer says so.
+
+Applied (commit on `chore/phase-4-ai-infra`): §4.1–4.2 MCP fix (root `.mcp.json`, broken entries removed, handshake verified); §5 layout (`.ai/README.md`, `.ai/skills/` with 18 vendored skills + `SOURCES.md`, `backend/.ai` symlink, `config/boost.php` agent paths, `backend/boost.json` tracked, root `.claude/skills` regenerated with 17 official + 18 vendored skills, `make ai-sync` / `make ai-skills`, `dev-setup` runs `boost:update`); docs (`CLAUDE.md`, `getting-started.md`, KI-2 resolved, KI-16/17).
+
+Applied, second batch (2026-11-08, developer: "items 1–6 of card C, properly"; app.uz security findings deferred by the developer): **D7 hooks** — `.ai/hooks/{guard_paths,session_context,format_on_edit}.py` (Python 3.9+ stdlib — the agent's choice over app.uz's bash + `jq` scripts: `jq` is not guaranteed on every machine and the path rules need unit tests; 46 unit tests, `make ai-hooks-test`, CI `tooling.yml`) wired in the committed `.claude/settings.json` together with the permission baseline (allow/ask/deny, no blanket allows); live-verified in the session (Read and `cat` of a `.env.probe` denied). **Agents** — `.ai/agents/` with six definitions (`reference-reader` + five domain agents distilled from the app.uz archive personas), `.claude/agents → ../.ai/agents` symlink verified with a one-shot session. **Skills** — `better-accessibility` vendored (C3); `save-session` written as HOMI's first first-party skill in `.ai/skills/`. Details: `docs/reference-codebase/c-agent-config.md` "Status".
+
+ASSUMPTION_MISMATCH AM-35: `.ai/local.env` was described as the home of machine-specific paths since Phase 1, but the file did not exist on the first developer's machine (only the template did); the tooling worked because `scripts/dev/lib.sh` falls back to defaults. Resolution: created locally (gitignored), `getting-started.md` now says to copy the template, the SessionStart hook warns when it is missing and the guard falls back to folder-name matching.
+
+Developer decision 2026-11-09: work is split into a **development track** (the second developer, with Codex, continues the unfinished development tasks) and a **production track** (the first developer prepares staging/production); the handoff must let the second developer restore the environment and the context on their own machine.
+
+Applied, third batch (2026-11-09, handoff): `HANDOFF.md` (quick start, plan T0–T11 with priorities, dependencies and done criteria, manual transfers, checks), `docs/handoff/{project-context,environment,parallel-work}.md`, and the **root `AGENTS.md`** — the one D6 item the handoff needs, because the second developer works with Codex (Codex 0.167 loads the root `AGENTS.md` and the 37 skills in `.agents/skills`; checked with `codex debug prompt-input`, no model call). The Boost MCP for Codex is a user-level `codex mcp add homi-boost -- php <repo>/backend/artisan boost:mcp` (documented, not committed — Codex keeps MCP servers in `~/.codex/config.toml`). KI-19 (pushes to `main` not blocked technically) and KI-20 (one `session-handoff.md` for two tracks) recorded.
+
+ASSUMPTION_MISMATCH AM-36: the first two batches assumed agent-tooling changes cannot affect the backend gate, and `composer ci:check` was not run after them. It had failed since `0f888d6` on three counts: Vite+ formatting of `backend/boost.json` (Boost rewrites it with PHP's pretty-printer on every `boost:update`, so a reformat does not last), Vite+ lint of a placeholder template in a vendored skill reached through the `backend/.ai` symlink, and PHPStan level 7 on the published `config/boost.php` (`env()` bool|string). GitHub never showed it because `backend.yml` runs only on PRs and `main`. Resolution: `boost.json` added to `fmt.ignorePatterns` and `.ai/**` to `lint.ignorePatterns` in `backend/vite.config.ts` (same reason as the existing `composer.json` entry), `config/boost.php` added to the vendor-published `excludePaths` in `backend/phpstan.neon` (KI-10 pattern); `make ci-backend` → exit 0, 47 tests.
+
+Still not applied (waiting for the developer's go; now tracked as `HANDOFF.md` T9–T11): §3 / D5 plugins (user-level), the rest of D6 (`GEMINI.md`, Grok, `boost:install --mcp`, hook adapters for Codex, smoke tests), D8 remaining `coreyhaines31/marketingskills`, `.ai/rules` + `boost:index-rules`, `.ai/tasks`, §7 steps 5–8.
+
+## 1. What exists today
+
+| Area | Verified state |
+|---|---|
+| Claude Code | 2.1.319. User-level plugins installed: `superpowers`, `code-review`, `feature-dev`, `playwright` (MCP), `typescript-lsp`, `context7` (MCP), `frontend-design`, `chrome-devtools-mcp`, `greptile`, `vercel`, `neon`, `ecc` (everything-claude-code), `tailwind-v4-shadcn`, `design-review`, `ui-ux-pro-max`, `document-skills`, `slack`, `ralph-loop`, `quarkus-agent`, `sap-cds-mcp`, `vue-skills-bundle`. No repository-level `.claude/` at the root yet. |
+| Laravel Boost | 2.10.4. 17 official skills in `backend/.claude/skills/` (gitignored; regenerated by `boost:update` after `composer update`) — incl. `scramble-development` added with the Scramble install. Commands: `boost:add-skill owner/repo [--skill=…] [--all] [--list] [--force] [--skip-audit]` → canonical dir **`.ai/skills/<name>`** (relative to `backend/`), `boost:list-skills`, `boost:install [--guidelines] [--skills] [--mcp]`, `boost:index-rules` (indexes path-scoped rules in `.ai/rules`), `boost:update`. Agents Boost can write for: Claude Code, Codex, Cursor, Copilot, Zed, Junie, Kiro, OpenCode, Amp, Antigravity, Factory, **Grok Build**, Pi — **not Gemini CLI**. Skills are synced per agent by copy/symlink into `.claude/skills`, `.agents/skills` (Codex), `.grok/skills`. Config (`config/boost.php`, not published): `rules.scoped_guidelines`, `guidelines.exclude`, `skills.exclude`, `executable_paths.*`. |
+| Boost MCP | Works: a JSON-RPC `initialize` against `php artisan boost:mcp` in `backend/` answers with tools/resources/prompts. **Fails in Claude Code** because the project entry in `~/.claude.json` runs `php artisan boost:mcp` from the repository root, where there is no `artisan` ("Could not open input file: artisan"). A second, global entry named `php` (`artisan boost:mcp`, no path) is broken everywhere outside a Laravel root. This is the real cause of KI-2. |
+| Other agent CLIs | `codex` 0.167 (`~/.codex/config.toml` has trust entries for app.uz/nom.uz/geo.uz, none for HOMI), `gemini` 0.67 (`~/.gemini/settings.json`, default context file `GEMINI.md`), `grok` 1.0.70 (`~/.grok`). None configured for this repository. |
+| skills.laravel.cloud | Open directory "powered by skills.sh"; **1,365 skills** indexed on 2026-11-08 (full catalogue scraped from the Inertia page props). Categories and the `is_official` flag are not populated. Install = `php artisan boost:add-skill owner/repo` (the page shows the exact command); listing requires three security audits (Gen Agent Trust Hub, Socket, Snyk) and Boost audits again on install. No update command or lockfile — updates are a manual re-run. |
+| skills.sh | The wider ecosystem (same `SKILL.md` format, `npx skills add owner/repo`); its search API answers JSON. Vercel's `vercel-labs/agent-skills` and Anthropic's `anthropics/skills` live there. |
+
+## 2. Proposed skill set
+
+Selection rules: relevant to **this** stack (Laravel 13 / Pest 4 / Sanctum / Horizon / PostgreSQL / Scramble; Next.js 16 / React 19 / TS / Tailwind 4; SEO-first SSR per ADR-0013), high adoption, maintained, no overlap with the version-matched official Boost skills, English. Install counts are the directory's numbers on 2026-11-08.
+
+### 2a. Backend — `php artisan boost:add-skill <repo> --skill=<name>`
+
+| Tier | Skill | Source | Installs | Why |
+|---|---|---|---|---|
+| 1 | `laravel-best-practices` | asyrafhussin/agent-skills | 2.3k | Laravel **13** conventions (controllers, models, requests, policies); complements Boost's official skill with concrete patterns |
+| 1 | `laravel-testing` | asyrafhussin/agent-skills | 972 | **Pest 4** / PHPUnit 12 feature tests, factories, HTTP/Sanctum testing |
+| 1 | `laravel-queues` | asyrafhussin/agent-skills | 739 | job design: idempotency, `ShouldBeUnique`, batching, failure handling — Media/Bot/Intake jobs |
+| 1 | `laravel-database-optimization` | asyrafhussin/agent-skills | 1.1k | indexes, N+1, chunking, query review — Listings/Stats modules |
+| 1 | `laravel-owasp-security` | asyrafhussin/agent-skills | 1.06k | OWASP Top 10 for Laravel + React/Inertia APIs (mandate §15) |
+| 1 | `php-best-practices` | asyrafhussin/agent-skills | 3.8k | PHP 8.x patterns, PSR, SOLID — review baseline |
+| 1 | `code-slop` | asyrafhussin/agent-skills | 831 | detects AI-generated anti-patterns in PHP/Laravel **and** TypeScript/React — fits the mandate's review gate |
+| 1 | `test-guard` | amelnagdy/guard-skills | 4.3k | reviews generated/changed tests against testing rules before they ship (rule 7: no fake green) |
+| 1 | `docs-guard` | amelnagdy/guard-skills | 4.1k | reviews READMEs/API docs/ADRs before they ship (documentation-as-code, §21) |
+| 2 | `laravel-security`, `laravel-patterns`, `laravel-tdd`, `laravel-verification` | affaan-m/everything-claude-code | 6.6k / 6.6k / 5.9k / 4.8k | most-installed Laravel set; broad and opinionated. The developer already has the `ecc` plugin — check overlap before adding |
+| 2 | `laravel-specialist`, `php-pro`, `postgres-pro` | jeffallan/claude-skills | 21.6k / 16k / — | persona-style, "Laravel 10+" (not version-pinned); `postgres-pro` is the only PostgreSQL-specific candidate of value |
+| 2 | `eloquent-best-practices` | iserter/laravel-claude-agents | 1.3k | Eloquent relationships/scopes/query patterns |
+| 2 | `spatie-laravel-php` | spatie/guidelines-skills | 1.3k | Spatie coding standards — may contradict our Pint/Boost conventions; evaluate before adopting |
+| skip | Filament, Livewire, Volt, Flux, WordPress, Bitrix, Magento, Craft, CodeIgniter, Yii | — | — | not our stack |
+| skip | `sentry-php-sdk` | getsentry | 1.7k | only if Sentry is adopted (PROPOSED, paid — Phase 6) |
+| skip | Telegram-bot skills (`telegram-bot`, `telegram-bot-builder`) | various | ≤6.4k | Node/Python-generic; HOMI writes its own `homi-telegram-webhook` project skill (mandate §10) |
+
+### 2b. Frontend — `npx skills add <repo>` (location: see D2)
+
+| Skill | Source | Installs | Why |
+|---|---|---|---|
+| `react-best-practices`, `composition-patterns`, `web-design-guidelines` | vercel-labs/agent-skills | 880k / 443k / — | React 19 + App Router idioms from the Next.js vendor; design-review checklist |
+| `nextjs-app-router-patterns` | wshobson/agents | 33.6k | App Router: layouts, server/client boundaries, streaming |
+| `nextjs-cache-architecture` | mohamed-hossam1/nextjs-skills | 5.1k | `cacheComponents`/revalidation — our apps already enable it |
+| `nextjs-performance` | giuseppe-trisciuoglio/developer-kit | 5.0k | Core Web Vitals, images, bundle budgets |
+| `tailwind-4-docs` | lombiq/tailwind-agent-skills | 18.5k | Tailwind **4** reference (Boost's `tailwindcss-development` is also v4 and already present — pick one) |
+| `playwright-cli` | microsoft/playwright-cli | 211k | E2E for Phase 6/7 (the `playwright` MCP plugin is already installed) |
+| `webapp-testing` | anthropics/skills | 200k | Anthropic's browser-testing skill |
+| `playwright-best-practices` | currents-dev | 104k | test design for Playwright |
+| optional: `setup-ts-deep-modules`, `migrate-to-shoehorn` | mattpocock/skills | 411k / 519k | TypeScript module design; opinionated |
+
+Source of truth for Next.js 16 itself remains the vendor docs in `node_modules/next/dist/docs/` (each app's `AGENTS.md` already points there).
+
+### 2c. SEO / GEO / AEO (new priority — ADR-0013)
+
+| Skill | Source | Installs | Why |
+|---|---|---|---|
+| `seo-audit` | coreyhaines31/marketingskills | 249k | technical SEO audit checklist for the SSR pages |
+| `ai-seo` | coreyhaines31/marketingskills | 160k | GEO/AEO: how answer engines cite pages — structured answers, entity clarity |
+| `programmatic-seo` | coreyhaines31/marketingskills | 158k | templates for thousands of listing/district pages — exactly HOMI's shape |
+| `schema` | coreyhaines31/marketingskills | 87k | JSON-LD (`RealEstateListing`, `Offer`, `BreadcrumbList`, `FAQPage`) |
+| `site-architecture` | coreyhaines31/marketingskills | 131k | URL/hierarchy design, internal linking, sitemaps |
+
+### 2d. Data and tooling
+
+| Skill | Source | Installs | Why |
+|---|---|---|---|
+| `supabase-postgres-best-practices` | supabase/agent-skills | 478k | the Postgres-generic parts (indexing, query plans, RLS concepts); Supabase-specific parts are noise |
+| `mcp-builder` | anthropics/skills | 139k | when HOMI exposes its own MCP tools (mandate §10, `laravel/mcp` is installed) |
+| `doc-coauthoring` | anthropics/skills | — | long-form docs with the developer |
+
+### 2e. Already covered — do not duplicate
+Official Boost skills (Laravel, Pest, Horizon, Pulse, Telescope, Scout, Socialite, Pennant, Wayfinder, Inertia React, Echo, Tailwind, Scramble, MCP, AI SDK), `superpowers` (TDD, debugging, brainstorming, planning), `code-review`/`feature-dev`, `frontend-design`, `skill-creator`, `context7` (docs lookup), `playwright` MCP.
+
+## 3. Claude Code plugins (user-level, official marketplace)
+
+- **Enable**: `php-lsp` (Intelephense code intelligence for `backend/`), `security-guidance` (pattern warnings on edits + diff review on stop — mandate §15), `hookify` (author the Phase 6 hooks from rules), `claude-md-management` (CLAUDE.md audits — Phase 5 memory hygiene).
+- **Optional**: `github` (GitHub MCP; `gh` CLI already works), `commit-commands`, `redis-development`, `pr-review-toolkit` (overlaps `code-review`).
+- **Not needed**: `laravel-boost` plugin — the project `.mcp.json` does the same once fixed (§4).
+- **Review** (irrelevant to HOMI, user's call): `slack`, `vercel`, `neon`, `sap-cds-mcp`, `quarkus-agent`, `vue-skills-bundle`, `ralph-loop`.
+
+## 4. MCP servers
+
+1. Replace the broken project entry with a committed root `.mcp.json`: `claude mcp remove laravel-boost -s local && claude mcp add laravel-boost -s project -- php backend/artisan boost:mcp` (Boost's own config path is `.mcp.json` at `base_path`, i.e. `backend/.mcp.json`, which Claude Code never reads when started at the repository root). Verify with `/mcp` and a `search-docs` call.
+2. Remove the stray global `php` server (`artisan boost:mcp` without a path) from `~/.claude.json`.
+3. Keep `context7`, `playwright`, `chrome-devtools`. A PostgreSQL MCP is unnecessary: Boost ships `database-schema` and `database-query`.
+4. Codex and Grok get the same Boost server through `boost:install --mcp` (`.codex/config.toml`, `.grok/config.toml`, both with `cwd`); Gemini CLI: `mcpServers` in `.gemini/settings.json` by hand.
+
+## 5. Repository layout for agents (mandate §9–11)
+
+- Root `AGENTS.md` — the cross-agent entry point (Codex and Grok read it natively; Boost regenerates `backend/AGENTS.md` only): short, links to `CLAUDE.md` sections, `.ai/`, `docs/ai/reports/`, and the hard rules (app.uz read-only, no secrets, commit per phase, rule 7).
+- Root `GEMINI.md` — same content for Gemini CLI, or `.gemini/settings.json` → `contextFileName: ["GEMINI.md", "AGENTS.md"]`.
+- Root `.ai/` (exists: `memory/`, `local.env.example`) gains `rules/` (path-scoped rules with `paths` frontmatter, indexed by `boost:index-rules`), `skills/` (canonical skills: vendored third-party + HOMI's own, e.g. `homi-intake-contract`, `homi-telegram-webhook`, `homi-media-pipeline`), `agents/` (subagent definitions, task contracts §10), `tasks/`.
+- Boost's `base_path()` is `backend/`, so `backend/.ai → ../.ai` (symlink) makes `boost:add-skill` and `boost:index-rules` write into the one canonical `.ai/`. Agent-specific dirs stay generated: `backend/.claude/skills` (official Boost skills), root `.claude/skills` (symlinks to `.ai/skills/*` for Claude Code), `.agents/skills` (Codex), `.grok/skills` (Grok).
+- **Vendoring policy (recommended)**: third-party skills are committed under `.ai/skills/` with `.ai/skills/SOURCES.md` (repo, commit SHA, date, install count at adoption, licence). Updates are explicit re-runs reviewed as diffs (Phase 5 dependency-change detection). Alternative: an install script (`make ai-skills`) — not reproducible over time.
+- Hooks needed before more coding (Phase 6 pulled forward): PreToolUse deny on writes under `$APPUZ_ROOT` and on reading `.env*`/`envprod`/`key.md`; PostToolUse Pint on edited PHP; `security-guidance` plugin.
+- Model routing (mandate §9): Claude Fable 5.1 drives; Sonnet 5.5 for test authoring/review passes (mandate §16); Codex/Gemini/Grok get read-only smoke tasks via task contracts in Phase 4 step 10.
+
+## 6. Decisions needed from the developer
+
+| # | Question | Recommendation |
+|---|---|---|
+| D1 | Backend skills: Tier 1 only, or Tier 1 + which Tier 2? | Tier 1 now; Tier 2 after reading them (overlap with Boost/ecc) |
+| D2 | Frontend/SEO skills location: root `.claude/skills` (visible everywhere) vs `frontend/.claude/skills` (scoped) | root via canonical `.ai/skills/` + symlinks |
+| D3 | Vendor third-party skills into git (with `SOURCES.md`) vs install script | vendor |
+| D4 | `backend/.ai → ../.ai` symlink so Boost writes into the root `.ai/` | yes |
+| D5 | Plugins to enable (`php-lsp`, `security-guidance`, `hookify`, `claude-md-management`) and which irrelevant ones to disable | enable the four; disabling is the developer's call |
+| D6 | Configure Codex/Gemini/Grok now (AGENTS.md, GEMINI.md, MCP, smoke tests) or after Phase 3 is finished | now — it is Phase 4's core |
+| D7 | Hooks blocking app.uz writes / `.env` reads now (Phase 6 pulled forward) | yes, minimal set |
+| D8 | SEO skill pack (§2c) — all five? | yes |
+
+## 7. Execution order once approved
+
+1. MCP fix (§4) → verify `search-docs`, `database-schema`, `browser-logs` from Claude Code.
+2. `.ai/` layout, symlink, root `AGENTS.md` + `GEMINI.md`, `.ai/rules` seed + `boost:index-rules`.
+3. `php artisan boost:install --guidelines --skills --mcp` for Claude Code, Codex, Grok (interactive, in `backend/`).
+4. `boost:add-skill` (backend list) and `npx skills add` (frontend/SEO/data) → vendored + `SOURCES.md`; read each skill once for conflicts with CLAUDE.md/ADRs.
+5. Plugins (§3) — developer runs `/plugin` or `claude plugin install …` (user scope).
+6. Minimal hooks (§5) in `.claude/settings.json` (project scope, committed).
+7. Smoke tests: codex / gemini / grok each run a read-only task contract (e.g. "list the ADR titles and the open questions") — results recorded.
+8. `docs/ai/reports/phase-4.md`, `.ai/memory/*`, CLAUDE.md pointers; commit on `chore/phase-4-ai-infra`.

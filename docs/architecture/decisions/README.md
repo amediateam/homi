@@ -18,5 +18,6 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0010](0010-git-workflow-conventions.md) | Git workflow without server-side branch protection | Accepted |
 | [0011](0011-hosting-topology.md) | Hosting topology for staging and production | Accepted |
 | [0012](0012-local-media-on-disk-no-minio.md) | Local media storage on disk — no MinIO in development | Accepted |
+| [0013](0013-nextjs-ssr-behind-nginx.md) | Next.js apps run as SSR servers behind nginx in production (SEO/GEO/AEO) | Accepted |
 
 Decisions were taken at the Phase 0 checkpoint on 2026-11-08 (`docs/ai/reports/phase-0.md` §14).

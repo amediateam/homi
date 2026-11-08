@@ -5,6 +5,7 @@ Purpose: how work moves through the repository for humans and AI agents. Rules c
 ## Branches, commits, PRs
 
 - Never commit to `main`. Branch from `main`: `feat/<area>-<slug>`, `fix/…`, `chore/…`, `docs/…`; phase work `chore/phase-<N>-<slug>`.
+- Two developers work in parallel (development and production track, since 2026-11-09): ownership of paths, merge method, migrations, lockfiles and shared memory files are in `docs/handoff/parallel-work.md`.
 - Conventional Commits in English: `feat(listings): add intake endpoint`, `chore(phase-1): foundation`. One logical change per commit; generated files committed together with the change that produced them.
 - Open a PR for every branch; CI (`.github/workflows/*.yml`) must be green; a human reviews paths listed in `.github/CODEOWNERS`. GitHub cannot enforce this on the current plan — the team does.
 - Destructive Git (`reset --hard`, `clean -f`, force-push, history rewrite on shared branches) needs explicit approval.

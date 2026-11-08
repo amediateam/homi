@@ -13,12 +13,14 @@ Everything else (`php`, `composer`, `node` 26, `pnpm`, `postgresql@18`, `redis`,
 ## Setup
 
 ```bash
-git clone git@github.com:amediateam/homi.git homi.uz && cd homi.uz
+gh repo clone amediateam/homi homi.uz && cd homi.uz   # HTTPS through gh; no SSH key needed
 cp .ai/local.env.example .ai/local.env      # optional: Next ports, NGINX_ETC, reference-project paths
 make dev-setup                               # announces every sudo step before running it
 ```
 
-`dev-setup` stops with a warning when `backend/.env` was just created: set `DB_*` (and later `TELEGRAM_*`) there, then run `make dev-setup` again — it is idempotent.
+When `backend/.env` was just created, `dev-setup` warns, skips the migration and continues with the remaining steps: set `DB_*` and `REVERB_*` (and later `TELEGRAM_*`) there, then run `make dev-setup` again — it is idempotent. `make dev-check` also needs the PECL extensions `redis` and `imagick` and the keg-only `postgresql@18` tools on `PATH` (`docs/handoff/setup.md` §B). Afterwards build the frozen starter UI once — `make ci-backend` and the `home` test need it: `(cd backend && npm ci && npm run build)`.
+
+On a machine whose Homebrew nginx has no `sites-available`/`sites-enabled` layout yet, `dev-setup` stops at the nginx step; the one-time fix and a full clean-machine runbook with a check after every step are in `docs/handoff/setup.md`.
 
 ## Daily use
 
@@ -30,6 +32,12 @@ make dev-stop
 ```
 
 Open `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`; API at `https://api.homi.loc` (`/up`, `/horizon`, `/telescope`, `/pulse`).
+
+## AI agents
+
+Start Claude Code (or Codex / Grok) **from the repository root**: the root `.mcp.json` declares the Laravel Boost MCP server, and the root `.claude/skills/` holds every skill. Those directories are generated — `make dev-setup` runs `php artisan boost:update`, and `make ai-sync` re-runs it after a `composer update` or after a skill is added to the canonical `.ai/skills/` (provenance in `.ai/skills/SOURCES.md`). `make ai-skills` lists what is available. Layout and rules: `.ai/README.md`. Codex and Grok read the root `AGENTS.md`; Codex gets its skills from `.agents/skills/` and the Boost MCP through `codex mcp add` (`docs/handoff/environment.md` §4).
+
+Copy `.ai/local.env.example` to `.ai/local.env` and fill in the paths of the sibling checkouts (`APPUZ_ROOT`, collectors, nginx mirrors). The committed `.claude/settings.json` wires hooks from `.ai/hooks/` that keep those checkouts read-only, refuse to print `.env*` files, inject the session handoff at start and format every edited file (Pint, eslint, Vite+). They need `python3` (3.9+) on `PATH` — the macOS system interpreter is enough. `make ai-hooks-test` runs their unit tests. Personal overrides go to `.claude/settings.local.json` (gitignored).
 
 ## Quality gates before a PR
 

@@ -48,12 +48,12 @@ Locally the same key layout (`originals/`, `derived/`, …) lives on disk under 
 ## Environment variables (names)
 
 Backend (`backend/.env.example` is the authoritative list; `dev:check` compares keys):
-`APP_URL`, `APP_LOCALE=ru`, `APP_FALLBACK_LOCALE=ru`, `APP_TIMEZONE=UTC`, `DB_*` (pgsql), `REDIS_*`, `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `SESSION_DRIVER=database`, `MEDIA_PUBLIC_URL` (CDN base in every environment), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_BUCKET`, `AWS_ENDPOINT`, `AWS_USE_PATH_STYLE_ENDPOINT=true`, `AWS_URL`, `MEDIA_PRIVATE_BUCKET`, `MEDIA_TMP_BUCKET` (all `AWS_*`/bucket keys blank locally — staging/production only), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_TOKEN_EXPIRATION`, `HORIZON_*`. Collector intake tokens are issued as Sanctum tokens (ADR-0009), not env values.
+`APP_URL`, `APP_LOCALE=ru`, `APP_FALLBACK_LOCALE=ru`, `APP_TIMEZONE=UTC`, `DB_*` (pgsql), `REDIS_*`, `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis`, `SESSION_DRIVER=database`, `MEDIA_PUBLIC_URL` (CDN base in every environment), `MEDIA_PUBLIC_DISK`, `MEDIA_PRIVATE_DISK`, `MEDIA_TMP_DISK`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINT`, `AWS_USE_PATH_STYLE_ENDPOINT=true`, `MEDIA_PUBLIC_BUCKET`, `MEDIA_PRIVATE_BUCKET`, `MEDIA_TMP_BUCKET` (all `AWS_*`/bucket keys blank locally — staging/production only), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `CORS_ALLOWED_ORIGINS`. Phase 3 removed `AWS_BUCKET`, `AWS_URL` and `SANCTUM_TOKEN_EXPIRATION` (a global expiry would kill collector tokens; expiry is set per token). Collector intake tokens are issued as Sanctum tokens (ADR-0009), not env values.
 
 Frontend (`frontend/*/.env.example`, Phase 2): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CDN_URL`, `NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `NEXT_PUBLIC_POSTHOG_KEY`/`HOST` (if PostHog is confirmed).
 
 ## Not decided yet
 
-- Where Next.js SSR runs in production (Node/pm2 vs static export per app) — Phase 2/6.
+- ~~Where Next.js SSR runs in production~~ — decided: SSR (`next start`) behind nginx, ports 3100–3102 (staging 3200–3202), ADR-0013; vhost templates and process manager in Phase 6.
 - Redis per environment: separate instances vs DB index — Phase 3.
 - DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer.

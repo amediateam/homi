@@ -6,7 +6,7 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend
+        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend ai-sync ai-skills ai-hooks-test
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -60,6 +60,15 @@ registry: ## Regenerate the Composer package registry (after any composer.lock c
 
 registry-check: ## Verify the package registry matches composer.lock
 	@scripts/packages/registry --check
+
+ai-sync: ## Regenerate per-agent skill directories and Boost guidelines from the canonical .ai/skills (see .ai/README.md)
+	@cd backend && php artisan boost:update --no-interaction
+
+ai-skills: ## List the skills Boost knows about (official + vendored in .ai/skills)
+	@cd backend && php artisan boost:list-skills --no-ansi
+
+ai-hooks-test: ## Unit-test the agent hooks in .ai/hooks (path guard, session context, format-on-edit)
+	@python3 -m unittest discover -s .ai/hooks/tests
 
 ci-backend: ## Run the backend CI gate locally (Pint, PHPStan, Vite+ check, tsc, Pest)
 	@cd backend && composer ci:check

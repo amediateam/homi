@@ -1,33 +1,41 @@
 ---
-updated: 2026-11-08 (end of Phase 2 session)
-source-of-truth: this session; overwritten every session
+updated: 2026-11-09 (handoff to the second developer prepared; backend gate fixed; root AGENTS.md)
+source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
 # Session handoff
 
+Written for the next **development-track** session (second developer, Codex). The first developer's own agent rules (production track) are not in this file and do not apply to you.
+
+## Developer's standing instruction
+- 2026-11-09, work split: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» — the plan is `HANDOFF.md` §4 (T0 → T1 → …). Production/staging work belongs to the first developer: «Не включай настройку production-среды в задачи коллеги».
+- Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, the items marked **gate** in `HANDOFF.md` §4.
+- 2026-11-08: «безопасность не важно сейчас» — do not re-raise the app.uz security findings (card C0) unprompted.
+
+## State at handoff
+- Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; its last commits are the AM-36 gate fix (`b62b53d`) and this handoff (`9284d7a`). Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
+- Entry points: `HANDOFF.md`, `docs/handoff/setup.md` (runbook for a new machine), `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
+- Next task: T0 (set up and verify the second machine), then T1 Telegram webhook.
+- Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/setup.md` §D).
+
 ## Done this session
-- Phase 2 — local environment, applied and verified on the first developer's machine: nginx vhosts + snippets, mkcert TLS, `/etc/hosts`, `scripts/dev/*`, `Makefile`, backend `.env.example`/`cors`/`filesystems`, frontend workspace packages and `.env.example`s, ADR-0012 (no local MinIO), ADR-0008 amended (`sudo nginx`). Report: `docs/ai/reports/phase-2.md`.
-- Incident: a `brew services restart nginx` step in `nginx.sh` created a launchd daemon that macOS TCC blocks from `~/Documents` and chowned nginx paths to root; the developer corrected the convention, removed the daemon and restored ownership. Never use `brew services` for nginx on these machines (KI-13). Ask before changing how a shared service is launched.
-- Probe bugs fixed: `lsof` as non-root cannot see root sockets, `pgrep -x nginx` never matches → `nc -z` + `pgrep -f` (KI-15); nginx `error_log` rejects variables (KI-14).
+- Handoff docs written and checked by an independent review agent (25 findings, confirmed ones fixed); links added to `CLAUDE.md`, `docs/README.md`, `getting-started.md`, `workflows.md`, `.ai/README.md`.
+- Root `AGENTS.md` for Codex/Grok: `codex debug prompt-input` (no model call) shows its hard rules and 37 skills from `.agents/skills`; `make ai-sync` leaves it and `boost.json` unchanged.
+- Backend gate (AM-36): `make ci-backend` had failed on three counts since `0f888d6`; fixed in `backend/vite.config.ts` and `backend/phpstan.neon` → exit 0, 47 tests, PHPStan 0.
+- Checks: `make dev-check` 24 PASS; `make ci-frontend` exit 0; `make ai-hooks-test` 46 OK; `make registry-check` current; `npm ci` on the backend lockfile (scratch copy) exit 0; Boost MCP via absolute artisan path → 9 tools; `codex mcp add` tested with a throw-away `CODEX_HOME`.
+- `environments.md` env-name list corrected. KI-19, KI-20 added.
 
-## Verified (commands run this session, exit codes read)
-- `make dev-check` exit 0: 24 PASS / 0 WARN / 0 FAIL. Six hosts answer over HTTPS with the trusted mkcert cert; `http://` → 301; `hook.` serves only `/telegram/*` + `/up`; HMR `101 Switching Protocols` on `/_next/hmr` through nginx.
-- `composer ci:check` exit 0; `pnpm -r lint` exit 0; `pnpm -r typecheck` exit 0; `make registry-check` exit 0; `bash -n scripts/dev/*.sh` ok.
-- PR #3 (`chore/phase-2-local-env` → `chore/phase-1-foundation`) opened; CI green on both workflows after adding a `postgres:18` service to `backend.yml` (AM-34: `.env.example` defaults to pgsql, so `composer setup` migrates against a real database in CI).
-- Not verified: `make dev-setup` end-to-end on a clean clone; `make dev-reset`; `pnpm -r build` (CI); second developer's machine.
+## Waiting for the developer (do NOT start on your own)
+1. First developer: merge the stack (L1, `HANDOFF.md` §3) and grant GitHub access.
+2. First developer's answers on the gates: T1 tunnel tool, T5/T8 npm dependencies, T7 product questions OPQ-1…5, PostGIS, AI vendor, T9 Codex hook adapters (D6), T10 gitleaks, T11 items (D5, D8, `.ai/rules`, `.ai/tasks`, KI-18, KI-20 fix).
+3. Read access to `app.uz` only if a task needs more than the `docs/reference-codebase/` cards.
 
-## Decisions taken
-- ADR-0012 (media on disk locally, `MEDIA_PUBLIC_URL` everywhere); ADR-0008 amendment (manual `sudo nginx`). See `docs/architecture/decisions/README.md`.
-
-## Remaining / next step
-1. Developer decision: merge order #1 → #2 → #3 (PR #3 is stacked on the phase-1 branch and retargets to `main` automatically). CI must stay green on each.
-2. Second developer: `make dev-setup` → `make dev-check`; record any FAIL as a KI.
-3. **Phase 3 — CDN, webhook, intake**: ask approval to install PROPOSED packages (`league/flysystem-aws-s3-v3`, `intervention/image`, `dedoc/scramble`); port the READY media code from the `app.uz` catalogue (`docs/reference-codebase.md`); Telegram webhook on `hook.` with the **dev** bot only, via an HTTPS tunnel; `/api/v1/intake/*` contract (`docs/api/intake.md` + OpenAPI) from `docs/api/intake-sources.md`. Report `docs/ai/reports/phase-3.md`.
-4. Phase 4 later: root `.claude/`, `.ai/{rules,skills,agents,tasks}`, `AGENTS.md`, `GEMINI.md`, hooks; fix Laravel Boost MCP (still CONNECTION_CLOSED); smoke-test codex/gemini/grok (approved).
-
-## Errors / gotchas observed
-- See `.ai/memory/known-issues.md` KI-13…KI-15 (nginx/TCC, `error_log` variables, `lsof`/`pgrep` on macOS). HTTP/2 has no `Upgrade`: test WebSockets with `curl --http1.1`. zsh has no `PIPESTATUS` (use `pipestatus` or avoid pipes when reading exit codes).
-- Ports 8000/8001 are taken by HTTP Toolkit (KI-5): never `php artisan serve`; `composer run dev` would start it.
+## Gotchas learned this session
+- `codex debug prompt-input "ping"` renders what Codex would see (AGENTS.md, skill roots) without a model call. Codex does not load nested `AGENTS.md` files from the root — read `backend/AGENTS.md` / `frontend/<app>/AGENTS.md` yourself.
+- `php artisan boost:update` rewrites `backend/boost.json` with PHP's pretty-printer — never reformat it.
+- A fresh clone needs `npm ci && npm run build` in `backend/` before `make ci-backend`; `make dev-check` needs the PECL extensions `redis` and `imagick`; `postgresql@18` is keg-only (PATH); a fresh Homebrew nginx lacks the `sites-enabled` layout — all in `docs/handoff/setup.md` §B–§C.
+- `POST /telegram/webhook` has no domain constraint (reachable through `api.*` too); `DatabaseSeeder` does not call `SourceSeeder`.
+- zsh: `echo =====` fails (`=` expansion) and `set -- $var` does not word-split.
 
 ## Active subagent work at handoff
 - None.

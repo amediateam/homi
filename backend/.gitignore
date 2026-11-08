@@ -39,6 +39,6 @@ yarn-error.log
 /.mcp.json
 /AGENTS.md
 /CLAUDE.md
-/boost.json
 /opencode.json
+# boost.json is tracked on purpose: it records the team's agent + skill selection for boost:update
 /opencode.jsonc

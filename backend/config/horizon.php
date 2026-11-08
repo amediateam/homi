@@ -196,35 +196,88 @@ return [
     |
     */
 
+    /*
+    | Queues (ADR-0005): `default` + `notifications` (latency-sensitive, simple balancing),
+    | `telegram` (webhook updates — short jobs, must never starve), `media` (image variants —
+    | CPU-bound, long timeout, few processes), `ingest` (collector payload normalisation).
+    | Local runs everything in one supervisor; staging mirrors production at a smaller scale.
+    */
     'defaults' => [
-        'supervisor-1' => [
+        'supervisor-default' => [
             'connection' => 'redis',
-            'queue' => ['default'],
-            'balance' => 'auto',
+            'queue' => ['default', 'notifications'],
+            'balance' => 'simple',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
             'maxTime' => 0,
             'maxJobs' => 0,
             'memory' => 128,
-            'tries' => 1,
+            'tries' => 3,
             'timeout' => 60,
             'nice' => 0,
+        ],
+        'supervisor-telegram' => [
+            'connection' => 'redis',
+            'queue' => ['telegram'],
+            'balance' => 'simple',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 30,
+            'nice' => 0,
+        ],
+        'supervisor-media' => [
+            'connection' => 'redis',
+            'queue' => ['media'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'size',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 3,
+            'timeout' => 300,
+            'nice' => 5,
+        ],
+        'supervisor-ingest' => [
+            'connection' => 'redis',
+            'queue' => ['ingest'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'size',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 5,
         ],
     ],
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
-                'maxProcesses' => 10,
-                'balanceMaxShift' => 1,
-                'balanceCooldown' => 3,
-            ],
+            'supervisor-default' => ['maxProcesses' => 4],
+            'supervisor-telegram' => ['maxProcesses' => 4],
+            'supervisor-media' => ['minProcesses' => 1, 'maxProcesses' => 3, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'supervisor-ingest' => ['minProcesses' => 1, 'maxProcesses' => 3, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+        ],
+
+        'staging' => [
+            'supervisor-default' => ['maxProcesses' => 2],
+            'supervisor-telegram' => ['maxProcesses' => 2],
+            'supervisor-media' => ['minProcesses' => 1, 'maxProcesses' => 2],
+            'supervisor-ingest' => ['minProcesses' => 1, 'maxProcesses' => 2],
         ],
 
         'local' => [
-            'supervisor-1' => [
-                'maxProcesses' => 3,
-            ],
+            // One worker per queue group is enough on a laptop; Horizon still shows every queue.
+            'supervisor-default' => ['maxProcesses' => 1],
+            'supervisor-telegram' => ['maxProcesses' => 1],
+            'supervisor-media' => ['maxProcesses' => 1],
+            'supervisor-ingest' => ['maxProcesses' => 1],
         ],
     ],
 

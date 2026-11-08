@@ -19,6 +19,8 @@ done
 
 info "2/8 backend"
 (cd backend && [ -d vendor ] || composer install --no-interaction)
+# Agent knowledge base: regenerate the per-agent skill directories from the canonical .ai/skills (see .ai/README.md)
+(cd backend && php artisan boost:update --no-interaction >/dev/null 2>&1) && ok "agent skills synced (boost:update)" || warn "boost:update failed — run: cd backend && php artisan boost:update"
 if [ ! -f backend/.env ]; then
     cp backend/.env.example backend/.env
     (cd backend && php artisan key:generate --no-interaction)

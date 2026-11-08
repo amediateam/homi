@@ -1,0 +1,2 @@
+- [HOMI project and tracks](homi-project.md) — setup state, development track (this developer, HANDOFF.md T0–T11) vs production track (first developer), gates, repo memory
+- [HOMI team conventions](homi-team-conventions.md) — Russian/English, rule 7, sudo nginx never brew services, no local MinIO, PR/merge rules, app.uz read-only, macOS probing pitfalls
