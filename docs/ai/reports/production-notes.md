@@ -20,6 +20,18 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: dry run only | §3c |
 | Backups, monitoring | not started | §5 |
 
+## Resume here (state at the end of 2026-11-09)
+
+- **Repository.** Branch `chore/infra-db-production`, last commit `01e1033`, PR #8 open. The development track reviews it. Until it is merged, `main` has neither this file nor `infra/production/`, `infra/staging/` or `docs/infrastructure/deployment.md`. Read them on the branch. Never push to `main`.
+- **Servers.** Production and staging are live at `591ceb4`; `homi-deploy` is installed; `/var/lib/homi-deploy/{production,staging}.sha` = `591ceb4`.
+- **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each prints "nothing to deploy" and 14 checks `ok`. That held on 2026-11-09 (§3c).
+- **Next, in this order.** Each item needs the developer's go.
+  1. The first real production run, `homi-deploy production --full`. It was offered on 2026-11-09 and is not yet approved; it also fixes AM-42 there.
+  2. Backups: database dumps off-host plus `storage/` (§5 item 9).
+  3. The rest of §5, in the order the developer picks: bot tokens (the developer writes them into `.env`), MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
+- **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
+- **Next numbers:** AM-44, KI-25. Check `main` first; the other track may have taken them.
+
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
 Both hosts are shared with other projects; nothing below was changed except what §2–§3 list.

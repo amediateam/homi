@@ -108,7 +108,10 @@ Done when: report and ADR committed, `current-state.md` updated, PR merged.
 
 **T11 — remaining items** (P3, each gated by the first developer): KI-20 per-track handoff files (needs a change in `.ai/hooks/session_context.py`); `.ai/rules` + `boost:index-rules` and `.ai/tasks` task contracts; Claude Code plugins (D5); `GEMINI.md` / Grok setup (D6); the rest of the SEO skill pack (D8); KI-18; Phase 5 (component registry, dependency-change detection); Phase 6 (frontend tests, dependency audits, migration-safety checks); Phase 7 verification log — scenarios D/E (media through real S3) need staging and are done together with the production track.
 
-**Production track (first developer — not yours):** `infra/{staging,production,server}/**`, nginx vhosts for `*.homi.uz`, MinIO buckets/users (`homi-public`, `homi-private`, `homi-tmp` + staging), DNS, TLS, deploy pipeline and process manager (ADR-0013), server `.env`, the Redis-per-environment decision, staging/production bot webhooks, backups, monitoring. Inputs: `docs/ai/reports/phase-3-notes.md` §A–§B, ADR-0011, ADR-0013. Progress log: `docs/ai/reports/production-notes.md` (2026-11-09 — the production and staging PostgreSQL databases and roles exist on the DB host; `DB_SSLMODE=disable` there).
+**Production track (first developer — not yours):** `infra/{staging,production,server}/**`, nginx vhosts for `*.homi.uz`, MinIO buckets/users (`homi-public`, `homi-private`, `homi-tmp` + staging), DNS, TLS, deploy pipeline and process manager (ADR-0013), server `.env`, the Redis-per-environment decision, staging/production bot webhooks, backups, monitoring. Inputs: `docs/ai/reports/phase-3-notes.md` §A–§B, ADR-0011, ADR-0013. Progress log: `docs/ai/reports/production-notes.md`. As of 2026-11-09:
+- production (`*.homi.uz`) and staging (`*.staging.homi.uz`) are live on `159.253.19.121`, with `DB_SSLMODE=disable`;
+- deploys run with `homi-deploy` (`docs/infrastructure/deployment.md`) — on production, new migrations need the production track's `--migrate` (`parallel-work.md` §3);
+- where the track stopped: that file, "Resume here".
 
 ## 5. What has to be handed over by hand
 
