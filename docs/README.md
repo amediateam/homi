@@ -26,7 +26,7 @@ Documentation is code: it lives next to the source, changes in the same PR as th
 | `infrastructure/local-development.md`, `cdn.md`, `telegram-webhook.md`, `deployment.md`, `backup-recovery.md` | Planned for Phases 2, 3, 6 — created only when the described setup exists | planned |
 | `api/` | OpenAPI spec + envelope examples — created with the first endpoint (Phase 3) | planned |
 | `testing/` | Test strategy and `verification-log.md` (Phase 7) | planned |
-| `reference-codebase.md` | Catalogue of reusable modules from `app.uz` with port plans | Phase 1 |
+| `reference-codebase.md` + `reference-codebase/*.md` | Index of reusable `app.uz` modules (status, HOMI use) and detailed cards with port plans | living |
 | `ai/master-prompt.md` | Engineering mandate v3.1 (changed only via PR + ADR) | fixed |
 | `ai/reports/phase-N.md` | Phase reports in the mandate's §26 format | append per phase |
 | `ai/orchestration.md`, `model-routing.md`, `skills.md`, `context-management.md` | Planned for Phase 4 | planned |
