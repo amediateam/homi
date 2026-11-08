@@ -19,7 +19,7 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 
 | Component | Local | Staging / Production |
 |---|---|---|
-| nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` |
+| nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` — production live since 2026-11-09 (`/var/www/homi.uz`, Next SSR on `127.0.0.1:3100–3102`, Horizon; `docs/infrastructure/deployment.md`); staging not deployed yet |
 | PostgreSQL 18 | `127.0.0.1:5432` (Homebrew) | `5.45.127.98:5432` — databases `homi_db` (production) and `homi_staging_db` (staging), each owned by a same-named role; `pg_hba` and both firewalls admit only `159.253.19.121`; `DB_SSLMODE=disable` (developer decision 2026-11-09); set up 2026-11-09, see `docs/ai/reports/production-notes.md` §2 |
 | Redis | `127.0.0.1:6379` | on the app host, `127.0.0.1:6379`, shared with other projects — DB index or a second instance, not decided |
 | Object storage | none — `backend/storage/app/public` served by `cdn.homi.loc` (ADR-0012) | MinIO on `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`) |
@@ -55,5 +55,5 @@ Frontend (`frontend/*/.env.example`, Phase 2): `NEXT_PUBLIC_API_URL`, `NEXT_PUBL
 ## Not decided yet
 
 - ~~Where Next.js SSR runs in production~~ — decided: SSR (`next start`) behind nginx, ports 3100–3102 (staging 3200–3202), ADR-0013; vhost templates and process manager in Phase 6.
-- Redis per environment: separate instances vs DB index — Phase 3.
-- DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer.
+- ~~Redis per environment: separate instances vs DB index~~ — decided 2026-11-09 (production track): DB indexes on the host's shared instance — production `REDIS_DB=3` / `REDIS_CACHE_DB=4`, staging 5 / 6, distinct `REDIS_PREFIX`.
+- DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer. As of 2026-11-09 every name (incl. `cdn` and `staging`) resolves to `159.253.19.121`; `cdn.homi.uz` must move to `31.220.104.38` when MinIO is provisioned.

@@ -2,82 +2,117 @@
 
 Purpose: the running log of the **production track** (first developer; staging and production servers). It replaces `session-handoff.md` for this track (`docs/handoff/parallel-work.md` §5, KI-20): a production-track session reads this file first and extends it; it never rewrites the development track's handoff. Facts only — every claim names the command that proved it or says `unverified`. No secrets: variable names, file paths and host names only.
 
-Reading order for a production-track session: `CLAUDE.md` → `HANDOFF.md` §4 "Production track" → this file → `docs/infrastructure/environments.md` → ADR-0011 (hosts), ADR-0013 (Next SSR on the servers) → `docs/ai/reports/phase-3-notes.md` §A–§B (CDN and webhook items handed to this track).
+Reading order for a production-track session: `CLAUDE.md` → `HANDOFF.md` §4 "Production track" → this file → `docs/infrastructure/deployment.md` → `docs/infrastructure/environments.md` → ADR-0011 (hosts), ADR-0013 (Next SSR on the servers) → `docs/ai/reports/phase-3-notes.md` §A (CDN / MinIO items).
 
-Rules that apply here in addition to the mandate: every action on a server, DNS, bucket or bot is approved by the developer **each time**; back up before editing a server file; validate before restarting; record the rollback; the development track owns application code — this track asks for changes instead of making them (`parallel-work.md` §1).
+Rules that apply here in addition to the mandate: every action on a server, DNS, bucket or bot is approved by the developer **each time** (batches of related steps may be approved together); back up before editing a server file; validate before restarting; record the rollback; the development track owns application code — this track asks for changes instead of making them (`parallel-work.md` §1).
 
 ## Status
 
 | Component | State (2026-11-09) | Where |
 |---|---|---|
 | PostgreSQL databases and roles | **done** — `homi_db` (production) and `homi_staging_db` (staging) on `5.45.127.98`, reachable from the app host | §2 |
-| App host (nginx, php-fpm, Redis, deploy layout) | surveyed only, nothing deployed | §1 |
-| DNS `homi.uz`, TLS, nginx vhosts, process manager | not started | — |
-| MinIO buckets and users (`31.220.104.38`, `s3.hc.uz`) | not started | — |
-| Server `.env` files, deploy pipeline | not started | §4 |
-| Staging and production Telegram bot webhooks | not started | — |
-| Backups, monitoring | not started | — |
+| Production code on the app host | **done** — `/var/www/homi.uz` = `main`, read-only deploy key, Node 26 + pnpm, composer, `.env`, migrations (23 tables) | §3 |
+| nginx vhosts + TLS: `homi.uz`, `app.`, `arm.`, `api.`, `hook.homi.uz` | **live** — Let's Encrypt to 2027-02-06, HTTP/2, HSTS; verified from outside | §3, §4 |
+| Processes: Horizon, three Next SSR servers | **running** under systemd as `www-data` | §3 |
+| Telegram production bot | token not on the server yet; webhook not registered | §5 |
+| MinIO buckets, `AWS_*`, `cdn.homi.uz` | not started — DNS for `cdn` still points at the app host | §5 |
+| Staging deployment (`*.staging.homi.uz`) | not started (database exists) | §5 |
+| Deploy script, backups, monitoring | not started | §5 |
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
-Both hosts are shared with other projects; nothing below was changed except what §2 lists.
+Both hosts are shared with other projects; nothing below was changed except what §2–§3 list.
 
 **App host `159.253.19.121`** (`sd420adbb.fastvps-server.com`, Debian 12 bookworm, 8 vCPU, 32 GB RAM, uptime 65 days):
-- nginx on 80/443 serving other projects; php-fpm pools run as `www-data` (home `/var/www`); PHP 8.5.12 with `pdo_pgsql`, `pgsql`, `redis`, `imagick` (`php -m`).
-- A **local** PostgreSQL 18.6 cluster listening on `127.0.0.1:5432` and `159.253.19.121:5432` with 13 other projects' databases — HOMI does not use it (ADR-0011 puts HOMI's database on `5.45.127.98`). Its `pg_hba.conf` ends with `reject` rules; ufw allows inbound 5432 — pre-existing, not touched.
-- Redis `127.0.0.1:6379`, shared with other projects — the "Redis per environment" decision (`environments.md`, not decided) must account for this: a DB index or a second instance.
-- `psql` client 18.6; `python3` present. `/root/.postgresql/root.crt` (dated Aug 20) exists from an earlier setup: under `root`, libpq's `sslmode=require` therefore behaves like `verify-ca`; `www-data` has no such file.
-- Round trip to the DB host: 0.5 ms average (`ping -c 5`); the route leaves through the gateway `10.0.128.1`, i.e. the hosts are **not** on a private network.
+- nginx 1.30.6 on 80/443 serving ~75 vhosts of other projects; `/etc/nginx` is an **SVN working copy** (`svn://159.253.19.121/server`) with its own `CLAUDE.md`: vhosts in `sites-available/<app>/<sub>.conf`, flat symlinks via `add.sh`, `nginx -t` before reload, certbot per host name. php-fpm pools run as `www-data` (`php8.5-fpm.sock` 32 children, `php8.4-fpm.sock`); PHP 8.5.12 CLI with `pdo_pgsql`, `pgsql`, `redis`, `imagick`.
+- Other projects are SVN checkouts under `/var/www/<domain>/` (root-owned, `www-data` runtime); Laravel workers run as systemd units (`horizon-appuz.service`, `octane.service`, `pulse-*`). Node 25.2.1 via nvm under `/root`, no pnpm; pm2 installed but never used (no dump) — the survey's `pm2 -v` accidentally spawned its daemon, killed again (`pm2 kill`, verified with `pgrep`).
+- A **local** PostgreSQL 18.6 cluster with 13 other databases listens on `127.0.0.1` and `159.253.19.121:5432` — HOMI does not use it (ADR-0011). Redis 8.10.3 on `127.0.0.1:6379`, no password, `databases 16`, DB 0–2 in use by others.
+- certbot 2.1.0 with `certbot.timer`, 87 certificates, ACME webroot `/var/www/letsencrypt` served by `acme-default.conf`, global deploy hook `renewal-hooks/deploy/reload-nginx.sh` (`nginx -t && systemctl reload nginx`).
+- ufw: default deny incoming; 80/443 open; inbound 5432 open (pre-existing, for the local cluster). `/root/.postgresql/root.crt` from an earlier setup makes libpq's `sslmode=require` verify certificates under `root` (irrelevant since TLS to the DB is off).
+- Round trip to the DB host 0.5 ms (`ping`); the route leaves through the gateway — the hosts are **not** on a private network.
+- DNS (`dig`, 2026-11-09): `homi.uz`, `www`, `app`, `arm`, `api`, `hook`, `cdn`, `staging` **all** resolve to `159.253.19.121` (NS fastdns24); `cdn` must move to `31.220.104.38` when MinIO is provisioned (developer owns DNS).
 
-**DB host `5.45.127.98`** (`s59a6108d.fastvps-server.com`, Debian 13 trixie, 8 vCPU, 32 GB RAM, 251 GB disk at 17 %, uptime 58 days):
-- PostgreSQL 18.6 (pgdg), cluster `18/main`, data `/var/lib/postgresql/18/main`, config `/etc/postgresql/18/main/`, `include_dir = 'conf.d'`. Other database on the cluster: `kc_db` (11 MB, one connection from `127.0.0.1`).
-- Settings: `max_connections 100`, `shared_buffers 128 MB` (default — low for 32 GB, tune later with the cluster owner), `password_encryption scram-sha-256`, `ssl on` with the distribution's self-signed certificate (`ssl-cert-snakeoil.pem`, CN `s59a6108d.fastvps-server.com`, valid to 2036), `log_statement none`, server timezone `Asia/Tashkent`.
-- Extensions available, none installed: `pg_trgm 1.6`, `citext 1.8`, `unaccent 1.1`, `btree_gist 1.8`. **PostGIS is not installed**; `postgresql-18-postgis-3` 3.7.0 is available from pgdg (`apt-cache policy`) — input for the T7 gate.
-- Firewalls: **two layers**. ufw (IP whitelist: ten addresses incl. `159.253.19.121` and `31.220.104.38` allowed on all ports; 80/443 public) **and** an nftables `inet filter` table (`/etc/nftables.conf`, policy drop, 22/80/443 public, 3306/6379/5672 from two cluster nodes, 3690). A packet must pass both. `nftables.service` is disabled yet the ruleset is loaded — what loads it at boot is `unverified`. fail2ban active (sshd, nginx jails).
+**DB host `5.45.127.98`** (`s59a6108d.fastvps-server.com`, Debian 13 trixie, 8 vCPU, 32 GB RAM, 251 GB disk at 17 %):
+- PostgreSQL 18.6 (pgdg), cluster `18/main`, config `/etc/postgresql/18/main/` with `include_dir = 'conf.d'`; other database `kc_db`. `max_connections 100`, `shared_buffers 128 MB` (default), `password_encryption scram-sha-256`, `ssl on` (self-signed snakeoil cert), `log_statement none`, server timezone `Asia/Tashkent`.
+- Extensions available, none installed: `pg_trgm 1.6`, `citext 1.8`, `unaccent 1.1`, `btree_gist 1.8`. **PostGIS not installed**; `postgresql-18-postgis-3` 3.7.0 available from pgdg — input for the T7 gate.
+- Two firewall layers: ufw (IP whitelist incl. `159.253.19.121` and `31.220.104.38`) **and** an nftables `inet filter` table (`/etc/nftables.conf`, policy drop). `nftables.service` is disabled yet the ruleset is loaded — what loads it at boot is `unverified`. fail2ban active.
 
-## 2. Done 2026-11-09 — PostgreSQL for HOMI
+**MinIO host `31.220.104.38`** (`srv740740`): reachable over SSH; `minio` active, `mcli RELEASE.2025-08-13`, vhosts `s3.hc`, `cdn.proagent`, `cdn.smartagent`, `cmd.hc`, `p.hc`, `img.elbozor` — matches `phase-3-notes.md` §A. Nothing done there yet.
 
-Developer's request: create the database for `DB_DATABASE=homi_db`, `DB_USERNAME=homi_db`. Steps, in order, each with its evidence:
+## 2. Done 2026-11-09 — PostgreSQL for HOMI (DB host)
 
-1. **Roles and databases** (as `postgres` via `sudo -u postgres psql`, `ON_ERROR_STOP`): `homi_db` and `homi_staging_db`, each `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION`, each owning the same-named database (`UTF8`, template1, `en_US.UTF-8`), `REVOKE CONNECT, TEMPORARY … FROM PUBLIC`, `GRANT … TO <owner>`, `ALTER DATABASE … SET timezone TO 'UTC'`. Proof: `pg_database.datacl = {homi_db=CTc/homi_db}` and `{homi_staging_db=CTc/homi_staging_db}`; `has_database_privilege('kc_db','homi_db','CONNECT')` → `false`; `show timezone` as `homi_db` → `UTC`.
-   - Passwords: neither plaintext was sent to the DB host. The production password (supplied by the developer) was hashed locally into a SCRAM-SHA-256 verifier (`pbkdf2 4096`) and only the verifier went into `CREATE ROLE`. The staging password was generated **on the app host** (`openssl rand -hex 20`) into `/root/.homi-secrets/staging-db.password` (mode 0600, root only) and hashed there; it has never been displayed. `pg_authid.rolpassword` starts with `SCRAM-SHA-256$` for both roles.
-2. **Listen on the public interface**: new file `/etc/postgresql/18/main/conf.d/homi.conf` with `listen_addresses = 'localhost,5.45.127.98'`. Validated with `pg_file_settings` (the only "error" was the expected `setting could not be applied` — restart required), then `systemctl restart postgresql@18-main` (approved; `kc_db`'s single connection dropped for about a second and reconnected — `pg_stat_activity` after). Proof: `ss -ltn` shows `5.45.127.98:5432`.
-3. **pg_hba** (`/etc/postgresql/18/main/pg_hba.conf`, appended lines 135–136, backups `pg_hba.conf.bak-*-homi*` next to it):
-   `host homi_db homi_db 159.253.19.121/32 scram-sha-256` and `host homi_staging_db homi_staging_db 159.253.19.121/32 scram-sha-256`. Applied with `pg_reload_conf()`; `pg_hba_file_rules` shows 0 errors. The first version used `hostssl`; it was changed to `host` after the developer's decision below.
-4. **nftables**: `nft add rule inet filter input tcp dport 5432 ip saddr 159.253.19.121 accept` (live, handle 15) and the same line in `/etc/nftables.conf` (backup `/etc/nftables.conf.bak-*-homi`, `nft -c -f` syntax OK, file **not** reloaded). ufw already allowed all ports from `159.253.19.121` (pre-existing rule 4).
+1. **Roles and databases** (`sudo -u postgres psql`, `ON_ERROR_STOP`): `homi_db` and `homi_staging_db`, each `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION`, owning the same-named database (`UTF8`, `en_US.UTF-8`), `REVOKE CONNECT, TEMPORARY … FROM PUBLIC`, `GRANT … TO <owner>`, `ALTER DATABASE … SET timezone TO 'UTC'`. Proof: `pg_database.datacl = {homi_db=CTc/homi_db}` / `{homi_staging_db=CTc/homi_staging_db}`; `has_database_privilege('kc_db','homi_db','CONNECT')` → `false`.
+   - Passwords: no plaintext reached the DB host. The production password (from the developer) was hashed locally into a SCRAM-SHA-256 verifier (`pbkdf2 4096`); the staging password was generated **on the app host** (`openssl rand -hex 20`) into `/root/.homi-secrets/staging-db.password` (0600) and hashed there. `pg_authid.rolpassword` starts with `SCRAM-SHA-256$` for both.
+2. **Listen on the public interface**: `/etc/postgresql/18/main/conf.d/homi.conf` with `listen_addresses = 'localhost,5.45.127.98'`; validated via `pg_file_settings`; `systemctl restart postgresql@18-main` (approved; `kc_db` reconnected). `ss -ltn` shows `5.45.127.98:5432`.
+3. **pg_hba** (`pg_hba.conf` lines 135–136, backups `pg_hba.conf.bak-*-homi*`): `host homi_db homi_db 159.253.19.121/32 scram-sha-256`, `host homi_staging_db homi_staging_db 159.253.19.121/32 scram-sha-256`; `pg_reload_conf()`, 0 errors in `pg_hba_file_rules`. First written as `hostssl`, changed to `host` after the no-TLS decision (§6).
+4. **nftables**: `nft add rule inet filter input tcp dport 5432 ip saddr 159.253.19.121 accept` (handle 15) and the same line in `/etc/nftables.conf` (backup `*.bak-*-homi`, `nft -c -f` OK, file not reloaded). ufw already allowed the app host.
 
-Verification from the app host (all on 2026-11-09, after step 4):
+Verified from the app host: `psql … sslmode=disable` as `homi_db` → `ssl=false`, `TimeZone=UTC`; PHP PDO as `www-data` → OK; wrong password → `FATAL: password authentication failed`; cross-database logins (`homi_db`→`postgres`, staging→production, production→staging) → `no pg_hba.conf entry`; before the nftables rule → `timeout expired`, after → connected.
 
-| Check | Command (on `159.253.19.121`) | Result |
-|---|---|---|
-| Production login without SSL | `psql "host=5.45.127.98 dbname=homi_db user=homi_db sslmode=disable"` | `homi_db / homi_db`, `ssl=false`, `TimeZone=UTC` |
-| Same path PHP uses | `runuser -u www-data -- php -r 'new PDO("pgsql:host=5.45.127.98;dbname=homi_db;sslmode=disable", …)'` | `pdo ok`, PostgreSQL 18.6 |
-| Staging login | same with `homi_staging_db`, password read from the 0600 file | `ssl=false`, `UTC` |
-| Wrong password | `PGPASSWORD=wrong psql …` | `FATAL: password authentication failed` |
-| Cross-database: `homi_db` → `postgres`, `homi_staging_db` → `homi_db`, `homi_db` → `homi_staging_db` | `psql …` | `FATAL: no pg_hba.conf entry` (all three) |
-| Firewall effect | `psql …` before the nftables rule, then after | `timeout expired` before; connected after |
-| Other tenants | `pg_stat_activity` on the DB host after restart and reload | `kc_db` connection present |
-| Latency | `ping -c 5 5.45.127.98` | 0.34 / 0.55 / 1.1 ms (min / avg / max) |
+Rollback: remove `conf.d/homi.conf`, restore `pg_hba.conf` from the oldest `*-homi` backup, restart; `nft delete rule inet filter input handle 15` + restore `/etc/nftables.conf`; `DROP DATABASE` / `DROP ROLE` (destructive — developer's approval).
 
-Rollback (all steps): remove `conf.d/homi.conf`, restore `pg_hba.conf` from the oldest `*-homi` backup, `systemctl restart postgresql@18-main`; `nft delete rule inet filter input handle 15` and restore `/etc/nftables.conf` from its backup; `DROP DATABASE homi_db, homi_staging_db; DROP ROLE homi_db, homi_staging_db` (destructive — developer's approval).
+## 3. Done 2026-11-09 — production bring-up on the app host
 
-## 3. Developer decisions
+Approved in four batches (database access, code + env + migrations, Horizon + api/hook vhosts + assets, Next builds + units + vhosts).
+
+1. **Code**: deploy key `/root/.ssh/homi_deploy_ed25519` (ed25519, generated on the server), public half registered via `gh repo deploy-key add` as **read-only** key id 169208854; GitHub's host key pinned by fingerprint (`SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`) in `/root/.ssh/known_hosts`; SSH alias `github.com-homi`. `git clone --branch main` → `/var/www/homi.uz` at `591ceb4` (7.6 MB). `git push --dry-run` is refused (read-only key).
+2. **Toolchain**: `nvm install 26` → Node 26.13.0 (npm 11.20.0) beside 25.2.1, default alias unchanged; `npm i -g pnpm@11.24.0` into that Node's `bin/`. Copy `/opt/node-v26.13.0` → symlink `/opt/node26` so systemd units running as `www-data` can execute it (`/root` is 0700). `composer install --no-dev --prefer-dist --optimize-autoloader` → Laravel 13.40.0 (`check-platform-reqs` all `success`). Backend starter UI built once (`npm ci && npm run build`, 10 assets, `public/build/manifest.json`) so `api.homi.uz/` renders instead of failing on the Vite manifest.
+3. **`backend/.env`** from `.env.example` (`root:www-data`, 0640): `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://api.homi.uz`, `LOG_STACK=daily`, `LOG_LEVEL=info`, `DB_HOST=5.45.127.98`, `DB_DATABASE=homi_db`, `DB_USERNAME=homi_db`, `DB_PASSWORD` (set), `DB_SSLMODE=disable`, `REDIS_DB=3`, `REDIS_CACHE_DB=4`, `REDIS_PREFIX=homi-production-`, `BROADCAST_CONNECTION=log`, `MEDIA_PUBLIC_URL=https://cdn.homi.uz`, `TELEGRAM_WEBHOOK_URL=https://hook.homi.uz/telegram/webhook`, `TELEGRAM_WEBHOOK_SECRET` (generated), `CORS_ALLOWED_ORIGINS=https://homi.uz,https://app.homi.uz,https://arm.homi.uz`, `REVERB_*` random, `APP_KEY` via `key:generate`. **Empty on purpose:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, all `AWS_*` and `MEDIA_*_BUCKET`. `storage/` and `bootstrap/cache` → `www-data:www-data`.
+4. **Migrations** as `www-data`: `php artisan migrate --force` → 13 migrations, `db:show` → 23 tables on `homi_db`; `php artisan about` → production, debug OFF, cache/queue redis, session database, logs stack/daily.
+5. **Horizon**: `/etc/systemd/system/horizon-homi.service` (copy in `infra/production/systemd/`, modelled on `horizon-appuz.service`), `enable --now` → `active`; `horizon:status` → `Horizon is running.`; Redis DB 3 holds its keys, DB 0 untouched (790 keys before and after).
+6. **Next.js**: `frontend/*/.env.local` with the public production URLs (`NEXT_PUBLIC_API_URL=https://api.homi.uz/api/v1`, `NEXT_PUBLIC_CDN_URL=https://cdn.homi.uz`, `NEXT_PUBLIC_APP_URL=https://app.homi.uz` for landing, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` empty); `pnpm install --frozen-lockfile` (345 packages), `pnpm -r build` → three `BUILD_ID`s; `.next` dirs → `www-data`. Units `homi-next-{landing,app,arm}.service` → `active`, `ss -ltn` shows `127.0.0.1:3100–3102`, `curl 127.0.0.1:310x/` → 200; RSS ≈ 125 MB each.
+7. **nginx**: `sites-available/homi/{homi,app.homi,arm.homi,api.homi,hook.homi}.conf` + flat symlinks (copies in `infra/production/nginx/`), logs `/var/log/nginx/homi/`. Two-phase: port-80 servers first (`nginx -t`, reload), `certbot certonly --webroot -w /var/www/letsencrypt` for five lineages (`homi.uz` + `www.homi.uz`, `app.homi.uz`, `arm.homi.uz`, `api.homi.uz`, `hook.homi.uz`; all `notAfter` 2027-02-06), then the TLS servers (`nginx -t`, reload). `svn add sites-available/homi` done; **`svn commit` failed** (`E170001: Can't get username or password`) — the files are in the working copy, uncommitted.
+
+Assumption mismatches found while doing it:
+- **AM-39** — `next start` ignores the `HOSTNAME` environment variable (that is for the standalone `server.js`): the first unit version listened on `*:310x`. ufw's default deny kept the ports closed externally (probed from outside: timeout), and the units were fixed within minutes to `next start -H 127.0.0.1 -p <port>`; `ss -ltn` now shows `127.0.0.1` only.
+- **AM-40** — the host's `nginx.conf` sets a global `fastcgi_temp_file_write_size` smaller than the `64k`/`32×32k` buffers copied from the house API vhost; `nginx -t` failed (`[emerg] "fastcgi_temp_file_write_size" must be equal to or greater than …`) until `fastcgi_temp_file_write_size 256k;` was added to the php location as the house file does. Because `-t` failed, the reload did not happen — nginx kept the port-80 bootstrap config, nothing broke.
+
+## 4. Verification (from outside, 2026-11-09)
+
+| Check | Result |
+|---|---|
+| `http://api.homi.uz/up`, `http://homi.uz/` | `301` → `https://…` |
+| `https://api.homi.uz/up`, `https://api.homi.uz/` | `200`, HTTP/2 |
+| `https://api.homi.uz/api/v1/nope` | `404` JSON envelope |
+| `https://hook.homi.uz/` → `404`; `/up` → `200`; `POST /telegram/webhook` with `{}` → `403` | fail-closed stub without the secret, as designed |
+| `https://www.homi.uz/` | `301` → `https://homi.uz/` |
+| `https://homi.uz/`, `https://app.homi.uz/`, `https://arm.homi.uz/` | `200`, HTTP/2 |
+| Headers | `strict-transport-security: max-age=31536000; includeSubDomains`, `x-content-type-options: nosniff`, `x-frame-options` (`DENY` on api/hook, `SAMEORIGIN` on the web apps), `x-robots-tag: noindex, nofollow` on arm only |
+| Certificates (`openssl s_client`) | Let's Encrypt, SANs as listed above, `notAfter` 2027-02-06 |
+| `159.253.19.121:3100–3102` from outside | closed (ufw) and bound to loopback |
+| `systemctl is-active` for the four units; `horizon:status` | `active` ×4; `Horizon is running.` |
+| `php artisan schedule:list` | no scheduled tasks → no cron yet |
+| `config:show telescope` / `pulse` | `enabled true` for both in production (defaults) — see §5 |
+
+## 5. Open items (need the developer's go — do not start alone)
+
+1. **SVN**: `cd /etc/nginx && svn commit -m "homi: production vhosts" sites-available/homi` with the owner's credentials (the files are added, not committed).
+2. **Telegram production bot**: the developer writes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` into `/var/www/homi.uz/backend/.env` (not via chat) and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` into `frontend/{landing,app}/.env.local` (then rebuild those two apps); registering the webhook (`setWebhook` to `https://hook.homi.uz/telegram/webhook` with the secret from `.env`) is a separate approved action — T1 of the development track decides what the handler does first.
+3. **MinIO** (ADR-0011): buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
+4. **Staging** on the same host: `/var/www/staging.homi.uz`, `*.staging.homi.uz` vhosts + certificates, ports 3200–3202, `homi_staging_db` (password in `/root/.homi-secrets/staging-db.password`), Redis DB 5/6, staging bot.
+5. **Deploy script** `infra/production/deploy.sh` from the sequence in `docs/infrastructure/deployment.md` (+ `php artisan optimize`, `pnpm` only when lockfiles changed), then a GitHub Actions deploy workflow or a manual trigger — decide.
+6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
+7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
+8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
+9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`).
+
+Decision already taken on the password question: the developer accepted that the production DB password passed through chat («ничего страшного»); no rotation planned.
+
+## 6. Developer decisions
 
 | Date | Decision | Consequence recorded |
 |---|---|---|
-| 2026-11-09 | **No TLS between app and database** («ssl mode не нужен, это тормозит потом работу приложения»; other projects run without it). `pg_hba` uses `host` (SSL optional), the application sets `DB_SSLMODE=disable` | Traffic between the two hosts crosses the public network unencrypted; SCRAM keeps the password itself off the wire. Measured TLS cost would have been about 1–3 ms per new connection, nothing per query. Certificate pinning (`verify-ca` with the DB host's certificate) was tested and works if ever wanted — it needs `'sslrootcert' => env('DB_SSLROOTCERT')` in `config/database.php` (development track). |
-| 2026-11-09 | `homi_db` is **production**; staging gets `homi_staging_db` on the same cluster now | `environments.md` hosts table updated (the earlier placeholder names `homi_staging` / `homi_production` are gone). |
+| 2026-11-09 | **No TLS between app and database** («ssl mode не нужен, это тормозит потом работу приложения»). `pg_hba` uses `host`, the app sets `DB_SSLMODE=disable` | Traffic between the hosts crosses the public network unencrypted; SCRAM keeps the password off the wire. Certificate pinning (`verify-ca`) was tested and works if ever wanted (needs `sslrootcert` support in `config/database.php`). |
+| 2026-11-09 | `homi_db` is **production**; staging gets `homi_staging_db` on the same cluster | placeholder names `homi_staging` / `homi_production` replaced in `environments.md` |
+| 2026-11-09 | Media in production on **MinIO `31.220.104.38`** per ADR-0011 (not on the app host's disk) | `cdn.homi.uz` has no vhost on the app host; DNS change pending |
+| 2026-11-09 | Code delivery by **git with a read-only deploy key** (not the host's SVN, not rsync) | `/var/www/homi.uz` is a git checkout; deploy = `git pull --ff-only` |
+| 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
+| 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
+| 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
 
-## 4. Open items (need the developer's go — do not start alone)
+## 7. Not verified
 
-1. **Rotate the production database password** when the server `.env` is written: it was shared in chat on 2026-11-09, which `parallel-work.md` §6 rules out as a channel. Pattern that keeps it off every screen: generate on the app host into `/root/.homi-secrets/`, hash there, `ALTER ROLE … PASSWORD '<verifier>'` on the DB host. Move both passwords into the password manager.
-2. Server `.env` for the backend (names only): `DB_HOST=5.45.127.98`, `DB_PORT=5432`, `DB_DATABASE=homi_db`, `DB_USERNAME=homi_db`, `DB_PASSWORD`, `DB_SSLMODE=disable`; staging the same with `homi_staging_db`. Without `DB_SSLMODE=disable` libpq's default `prefer` negotiates TLS anyway because the server has `ssl on`.
-3. App host layout: deploy user and directories, nginx vhosts for `*.homi.uz` (ADR-0013 ports 3100–3102 / 3200–3202), php-fpm pool per environment, Horizon under the process manager, Redis separation (shared instance — DB index or own instance), DNS and TLS. Each is a separate approved step.
-4. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
-5. MinIO buckets/users, bot webhooks, backups, monitoring — per `HANDOFF.md` §4 "Production track".
-
-## 5. Not verified
-
-- `/etc/nftables.conf` was syntax-checked but not reloaded; the live rule and the file are consistent by inspection only.
-- Behaviour after a reboot of either host (what loads nftables; whether PostgreSQL comes up with `conf.d/homi.conf`) — `unverified`.
-- Connection pooling and real application load against the remote database — nothing deployed yet.
+- A repeat deploy with the sequence in `deployment.md` (only the bring-up order ran once); `certbot renew --dry-run` for the new lineages.
+- Behaviour after a reboot of either host (units are `enabled`; nginx config is on disk; what loads nftables on the DB host is unknown).
+- `/etc/nftables.conf` was syntax-checked but not reloaded.
+- Real traffic: no load test, no Horizon jobs processed yet (queues are empty), no media upload through the API on this host.

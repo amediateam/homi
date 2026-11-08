@@ -1,0 +1,19 @@
+# HOMI production — Next.js SSR server for arm (arm.homi.uz), proxied by nginx (ADR-0013).
+[Unit]
+Description=HOMI Next.js SSR — arm (arm.homi.uz, port 3102)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/homi.uz/frontend/arm
+Environment=NODE_ENV=production
+ExecStart=/opt/node26/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3102
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
