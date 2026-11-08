@@ -25,6 +25,24 @@ jobs:
       run:
         working-directory: backend
 
+    # `.env.example` defaults to PostgreSQL (ADR-0006/0008), so `composer setup` runs `migrate`
+    # against a real PostgreSQL 18 — the same major as staging/production (ADR-0011).
+    # Tests keep using the in-memory SQLite from phpunit.xml.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: homi
+          POSTGRES_USER: homi
+          POSTGRES_PASSWORD: homi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U homi -d homi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,6 +63,13 @@ jobs:
 
       - name: Setup application
         run: composer setup
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_DATABASE: homi
+          DB_USERNAME: homi
+          DB_PASSWORD: homi
 
       - name: Lint, static analysis, tests
         run: composer ci:check

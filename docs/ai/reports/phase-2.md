@@ -88,6 +88,7 @@ None.
 | AM-31 | `create-next-app`'s `.gitignore` keeps `.env.example` | Its `.env*` rule ignores it | `!.env.example` in each app |
 | AM-32 | `allowedDevOrigins` can be confirmed with `rg` inside `node_modules` | pnpm's symlinked layout and ignore rules hid the file | Verified through `require.resolve` on Next's config schema and the bundled docs |
 | AM-33 | `check.sh` sub-scripts propagate their WARN/FAIL counts | Counts were lost across process boundaries | `run_sub` wrapper folds child PASS/WARN/FAIL into the parent totals |
+| AM-34 | Backend CI has no database dependency (Phase 1 `.env.example` defaulted to SQLite) | With `DB_CONNECTION=pgsql` in `.env.example`, `composer setup` → `migrate --force` failed on PR #3 ("connection to server at 127.0.0.1, port 5432 refused") | `postgres:18` service container in `backend.yml` + `DB_*` env on the setup step (same major as production, ADR-0011); tests still run on SQLite via `phpunit.xml` |
 
 ## OPEN_QUESTIONS
 
