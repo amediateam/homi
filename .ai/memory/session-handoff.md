@@ -32,4 +32,4 @@ source-of-truth: this session; overwritten every session
 - zsh: `$VAR="php artisan"` does not word-split — use a function.
 
 ## Active subagent work at handoff
-- `appuz-port-sources` (verbatim app.uz files for B2/B3 webhook + A4/A5) and `cdn-mirror-facts` (nginx mirror of 31.220.104.38): read-only; results to be captured in `docs/ai/reports/phase-3-notes.md` when they return.
+- None. Both read-only subagents returned; their facts are condensed in `docs/ai/reports/phase-3-notes.md` (CDN/MinIO host conventions, web host conventions, app.uz porting caveats). The verbatim app.uz dump lived only in the session scratchpad — re-fetch via a read-only subagent if needed.
