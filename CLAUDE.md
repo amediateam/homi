@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Mandate and session start
 
 - The engineering setup follows `docs/ai/master-prompt.md` (v3.1). It is the source mandate; it is not imported here. Changes to it go through a PR with a short ADR.
-- Phase reports live in `docs/ai/reports/phase-<N>.md`. Read the latest one first. Phases 0 (discovery), 1 (foundation) and 2 (local environment) are complete; the checkpoint decisions are recorded in `docs/architecture/decisions/`. Phase 3 (CDN, webhook, intake) is next and may install only the PROPOSED packages from `docs/backend/package-registry.md` after explicit approval. Session memory for agents: `.ai/memory/{current-state,session-handoff,known-issues}.md`.
+- Phase reports live in `docs/ai/reports/phase-<N>.md`. Read the latest one first. Phases 0 (discovery), 1 (foundation) and 2 (local environment) are complete; the checkpoint decisions are recorded in `docs/architecture/decisions/`. Phase 3 (CDN, webhook, intake) is in progress (paused WIP; its approved packages are installed) and Phase 4 (AI infrastructure) is partly applied (`docs/ai/reports/phase-4-plan.md`). Session memory for agents: `.ai/memory/{current-state,session-handoff,known-issues}.md`.
+- Since 2026-11-09 work runs on two tracks — **development** (second developer: application code, plan in `HANDOFF.md` §4) and **production** (first developer: staging/production). Read `HANDOFF.md` and `docs/handoff/parallel-work.md` before starting; they say who owns which paths and how branches, migrations and shared files are handled.
 - Talk to the developer in the language they write (Russian so far). Repository artifacts (docs, rules, code comments, commits) are in English.
 - `app.uz` (a sibling checkout; its path is `APPUZ_ROOT` in `.ai/local.env`, template in `.ai/local.env.example`) is a reference codebase: **read-only**, and read it only through read-only subagents, never in the main context. Never copy its `.env*` files or secrets. Machine-specific absolute paths never go into repository files.
 - Keep the main session's context small: delegate large reads to Explore subagents, and prefer `rg -n`/`sed -n` over printing whole files.
@@ -14,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 homi.uz aggregates housing rental and sale listings from public Telegram channels in Uzbekistan. It turns them into one deduplicated feed with filters and a map. It also sends "radar" alerts through a Telegram bot, uses Google Gemini to tag listings as owner or realtor, and flags listings priced about 20% below the district median. The UI is in ru/uz/en. `docs/about.md` (in Russian) is a product overview, not a technical spec. Parts of its "tech stack" section are guesses.
 
-**Current state: scaffolding + foundation.** `backend/` is a Laravel React starter kit (User model, one `welcome` page, example tests); its Inertia/React UI is **frozen** (ADR-0002) — the backend is developed as an API. The three Next.js apps are unmodified `create-next-app` output. No domain code exists yet. Decisions live in `docs/architecture/decisions/`; architecture in `docs/architecture/overview.md`.
+**Current state: foundation + Phase 3 WIP.** `backend/` started as a Laravel React starter kit; its Inertia/React UI is **frozen** (ADR-0002) — the backend is developed as an API. Phase 3 added the media module (`/api/v1/media*`), the API envelope, request ids, Horizon queues and the intake/Telegram tables; the Telegram webhook is a fail-closed stub (details: `.ai/memory/current-state.md`). The three Next.js apps are `create-next-app` output plus env/config. No other domain code exists yet. Decisions live in `docs/architecture/decisions/`; architecture in `docs/architecture/overview.md`.
 
 ## Layout
 
@@ -96,6 +97,7 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 - Permission rules: `ask` for sudo, force-push, hard resets, destructive artisan commands, dependency changes, process kills, ssh/scp/rsync/psql; `deny` for `php artisan serve`, `brew services start|restart nginx` (KI-13) and edits of generated files (`backend/AGENTS.md`, Wayfinder output, `.claude/skills/**`, the package registry).
 - Subagent definitions live in `.ai/agents/` (`.claude/agents` is a symlink). Use the read-only `reference-reader` agent for anything in `app.uz`; the domain agents (Telegram bot, intake pipeline, listing matching, PostGIS, security review) carry the HOMI-specific rules distilled from the reference codebase.
 - Machine-specific paths belong in `.ai/local.env` (copy `.ai/local.env.example`; gitignored). Without it the hooks still run, but recognise reference codebases only by folder name.
+- Agents other than Claude Code (Codex, Grok) start from the root `AGENTS.md`, which points at this file and restates the hard rules; the hooks and permission lists do not run there (`docs/handoff/environment.md` §4).
 
 ## Next.js conventions
 

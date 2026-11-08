@@ -6,8 +6,8 @@ Documentation is code: it lives next to the source, changes in the same PR as th
 
 | Who | Read first |
 |---|---|
-| New developer | `development/getting-started.md` → `architecture/overview.md` → `infrastructure/environments.md` |
-| AI agent starting a session | `/CLAUDE.md` → `.ai/memory/current-state.md` → `.ai/memory/session-handoff.md` → the ADR index |
+| New developer | `/HANDOFF.md` (quick start, plan, ownership) → `handoff/environment.md` → `development/getting-started.md` → `architecture/overview.md` → `infrastructure/environments.md` |
+| AI agent starting a session | `/CLAUDE.md` (Claude Code) or `/AGENTS.md` (Codex, Grok) → `/HANDOFF.md` → `.ai/memory/current-state.md` → `.ai/memory/session-handoff.md` → the ADR index |
 | Anyone changing architecture | `architecture/decisions/README.md` (write a new ADR, do not edit old ones) |
 | Anyone adding a backend dependency | `backend/package-registry.md` §Proposed, then master prompt §3 |
 
@@ -21,6 +21,7 @@ Documentation is code: it lives next to the source, changes in the same PR as th
 | `architecture/decisions/` | ADRs (index in its README) | living |
 | `development/getting-started.md` | Prerequisites and local setup | draft until Phase 2 ships `make dev-setup` |
 | `development/workflows.md` | Git, PR, commit, task and documentation workflows | living |
+| `handoff/project-context.md`, `handoff/environment.md`, `handoff/parallel-work.md` | Second-developer handoff (2026-11-09): project and decisions with reasons, reproducible environment incl. Codex, rules for the development and production tracks; entry point `/HANDOFF.md` | living |
 | `backend/package-registry.md` | **Generated** Composer registry (`scripts/packages/registry`) | generated |
 | `infrastructure/environments.md` | Domain matrix, hosts, ports, services per environment | living |
 | `infrastructure/local-development.md`, `cdn.md`, `telegram-webhook.md`, `deployment.md`, `backup-recovery.md` | Planned for Phases 2, 3, 6 — created only when the described setup exists | planned |

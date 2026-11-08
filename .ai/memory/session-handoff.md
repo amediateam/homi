@@ -1,42 +1,41 @@
 ---
-updated: 2026-11-08 (Phase 4 second batch: hooks, settings.json, six subagents, save-session + better-accessibility skills)
-source-of-truth: this session; overwritten every session
+updated: 2026-11-09 (handoff to the second developer prepared; backend gate fixed; root AGENTS.md)
+source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
 # Session handoff
 
+Written for the next **development-track** session (second developer, Codex). The first developer's own agent rules (production track) are not in this file and do not apply to you.
+
 ## Developer's standing instruction
-**"Пока я не скажу — не пиши код проекта."** No application code (PHP/TS) until the developer says so. Tooling, docs, ADRs and agent setup are allowed and were requested. On 2026-11-08: «безопасность не важно сейчас давай сделаем по пунктам 1–6 все грамотно» — do not re-raise the app.uz security findings (card C0) unprompted.
+- 2026-11-09, work split: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» — the plan is `HANDOFF.md` §4 (T0 → T1 → …). Production/staging work belongs to the first developer: «Не включай настройку production-среды в задачи коллеги».
+- Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, the items marked **gate** in `HANDOFF.md` §4.
+- 2026-11-08: «безопасность не важно сейчас» — do not re-raise the app.uz security findings (card C0) unprompted.
 
 ## State at handoff
-- Branch `chore/phase-4-ai-infra` (stacked on `chore/phase-3-cdn-webhook`, no PR yet). Open PRs: #1, #2, #3 (`gh pr list`). Phase 3 is **paused WIP** (remaining work: `git log -p -- .ai/memory/session-handoff.md`, `docs/ai/reports/phase-3-notes.md`).
-- Phase 4 status block, AM-35 and what is still open: `docs/ai/reports/phase-4-plan.md`. Card C status table: `docs/reference-codebase/c-agent-config.md`.
-- Verify the tooling state with `make ai-hooks-test` (46 tests) and `make ai-skills`.
+- Branch `chore/phase-4-ai-infra`, linear stack `main` ⊂ phase-0 ⊂ … ⊂ phase-4; the last commit holds this handoff and the AM-36 gate fix. Open PRs #1, #2, #3 (MERGEABLE/CLEAN); phase-3/phase-4 have no PR yet. Until the stack is merged, branch from and open PRs against `chore/phase-4-ai-infra`.
+- Entry points: `HANDOFF.md`, `AGENTS.md`, `docs/handoff/{project-context,environment,parallel-work}.md`.
+- Next task: T0 (set up and verify the second machine), then T1 Telegram webhook.
+- Verify with `make dev-check`, `make ci-backend`, `make ci-frontend`, `make ai-hooks-test` (expected results: `docs/handoff/environment.md` §3).
 
 ## Done this session
-- `.claude/settings.json` (committed): permissions allow/ask/deny, `worktree.baseRef: head`, three hooks. `jq -e` over every hook command → OK.
-- `.ai/hooks/guard_paths.py` (PreToolUse): reference codebases read-only, secrets never printed. Live in this session: Read and `cat` of a dummy `backend/.env.probe` were denied (probe removed).
-- `.ai/hooks/session_context.py` (SessionStart) and `format_on_edit.py` (PostToolUse: Pint / `eslint --fix` / `vp fmt`). Pipe-tested: Pint rewrote a probe class and reported it; eslint reported `react/jsx-key`.
-- Tests: `make ai-hooks-test` → OK, 46 tests on `/usr/bin/python3` 3.9 and Homebrew 3.15. CI workflow `.github/workflows/tooling.yml` added (not yet run on GitHub).
-- `.ai/agents/` with six subagents; `.claude/agents → ../.ai/agents`. A one-shot `claude -p` session listed all six, and this session picked them up live.
-- Skills: `better-accessibility` vendored (`jakubkrehel/skills` `157da6201633`, MIT); `save-session` written (HOMI's first own skill), tested baseline vs. with-skill (9 files incl. an unasked ADR → 4 files). `boost:list-skills`: no duplicate names. `.claude/skills` = 37 (17 official + 20 symlinks).
-- Docs: `CLAUDE.md` "Agent guard rails", `getting-started.md`, `.ai/README.md`, `.ai/hooks/README.md`, `.ai/agents/README.md`, `SOURCES.md`, catalogue rows C1–C4 marked applied; KI-18; AM-35.
+- Handoff docs written and checked by an independent review agent (25 findings, confirmed ones fixed); links added to `CLAUDE.md`, `docs/README.md`, `getting-started.md`, `workflows.md`, `.ai/README.md`.
+- Root `AGENTS.md` for Codex/Grok: `codex debug prompt-input` (no model call) shows its hard rules and 37 skills from `.agents/skills`; `make ai-sync` leaves it and `boost.json` unchanged.
+- Backend gate (AM-36): `make ci-backend` had failed on three counts since `0f888d6`; fixed in `backend/vite.config.ts` and `backend/phpstan.neon` → exit 0, 47 tests, PHPStan 0.
+- Checks: `make dev-check` 24 PASS; `make ci-frontend` exit 0; `make ai-hooks-test` 46 OK; `make registry-check` current; `npm ci` on the backend lockfile (scratch copy) exit 0; Boost MCP via absolute artisan path → 9 tools; `codex mcp add` tested with a throw-away `CODEX_HOME`.
+- `environments.md` env-name list corrected. KI-19, KI-20 added.
 
 ## Waiting for the developer (do NOT start on your own)
-1. D5 plugins (`php-lsp`, `security-guidance`, `hookify`, `claude-md-management`) — user-level.
-2. D6 Codex / Gemini / Grok: root `AGENTS.md`, `GEMINI.md`, `boost:install --mcp`, hook adapters, smoke tests.
-3. D8 remaining `coreyhaines31/marketingskills` skills.
-4. `.ai/rules` + `boost:index-rules`, `.ai/tasks` — not approved.
-5. KI-18: whether to drop `WorktreeCreate`/`WorktreeRemove` from the user-level sound hooks.
-6. Phase 3 application code — only when told. Merge order of PRs #1 → #2 → #3.
+1. First developer: merge the stack (L1, `HANDOFF.md` §3) and grant GitHub access.
+2. First developer's answers on the gates: T1 tunnel tool, T5/T8 npm dependencies, T7 product questions OPQ-1…5, PostGIS, AI vendor, T9 Codex hook adapters (D6), T10 gitleaks, T11 items (D5, D8, `.ai/rules`, `.ai/tasks`, KI-18, KI-20 fix).
+3. Read access to `app.uz` only if a task needs more than the `docs/reference-codebase/` cards.
 
 ## Gotchas learned this session
-- Hooks run with `python3` from `PATH`; keep them 3.9-compatible (no `match`, no runtime `X | Y`).
-- `boost:add-skill` adds the skill to `backend/boost.json` itself; a hand-written skill in `.ai/skills` is synced only after you add it there.
-- `.ai/local.env` did not exist on this machine (AM-35); without it the guard matches reference codebases by folder name only.
-- The Agent tool's `isolation: worktree` fails here (KI-18); use `git worktree add --detach .worktrees/<name> HEAD`.
-- Subagent and skill files added mid-session are picked up live; `.claude/settings.json` hooks were live once the file existed.
-- The app.uz archive personas have buggy samples (non-atomic dedup, unreachable branches); each agent's "Not inherited" section lists them. Their PostGIS guidance was empty — rules 11–17 in `postgis-geo-engineer` are HOMI's and marked "verify".
+- `codex debug prompt-input "ping"` renders what Codex would see (AGENTS.md, skill roots) without a model call. Codex does not load nested `AGENTS.md` files from the root — read `backend/AGENTS.md` / `frontend/<app>/AGENTS.md` yourself.
+- `php artisan boost:update` rewrites `backend/boost.json` with PHP's pretty-printer — never reformat it.
+- A fresh clone needs `npm ci && npm run build` in `backend/` before `make ci-backend`; `make dev-check` needs the PECL extensions `redis` and `imagick`; `postgresql@18` is keg-only (PATH); a fresh Homebrew nginx lacks the `sites-enabled` layout — all in `environment.md` §2.
+- `POST /telegram/webhook` has no domain constraint (reachable through `api.*` too); `DatabaseSeeder` does not call `SourceSeeder`.
+- zsh: `echo =====` fails (`=` expansion) and `set -- $var` does not word-split.
 
 ## Active subagent work at handoff
-- None. Reports used this session: Claude Code docs answers and the persona digest (folded into `.ai/agents/`).
+- None.
