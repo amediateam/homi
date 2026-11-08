@@ -5,3 +5,6 @@
 
 # Machine-specific AI/dev settings (template: .ai/local.env.example)
 .ai/local.env
+
+# Agent worktrees (ADR-0010)
+.worktrees/
