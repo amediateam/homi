@@ -16,7 +16,7 @@ Dependency overlap with HOMI: inertia-laravel, horizon, mcp, pennant, pulse, rev
 
 ## Module index
 
-Detailed cards: [A — auth, API, media](reference-codebase/a-auth-api-media.md) · [B — bot, i18n, geo, tests, ops](reference-codebase/b-bot-i18n-geo-ops.md).
+Detailed cards: [A — auth, API, media](reference-codebase/a-auth-api-media.md) · [B — bot, i18n, geo, tests, ops](reference-codebase/b-bot-i18n-geo-ops.md) · [C — agent configuration (.claude, hooks, settings, agent personas)](reference-codebase/c-agent-config.md).
 
 | # | Module | Key paths (under `backend/`) | Status | HOMI use (phase) |
 |---|---|---|---|---|
@@ -35,6 +35,10 @@ Detailed cards: [A — auth, API, media](reference-codebase/a-auth-api-media.md)
 | B7 | Geo: regions/districts + enums + seeder | `Models/SmartAgent/{Region,District}.php`; `database/migrations/smartagent/*100001*,*100002*`; `database/seeders/SmartAgent/SmartAgentGeoSeeder.php`; `Enums/SmartAgent/{DealType,PropertyType}.php` | READY (data incomplete: 14 regions ru/uz, 12 Tashkent districts) | Geo module (3) |
 | B8 | Testing & tooling shape (Pest bindings, arch test, pint, CI) | `tests/Pest.php`; `tests/Unit/Arch/ProductBoundariesTest.php`; `pint.json`; `.github/workflows/*.yml` | pint READY · CI NEEDS_ADAPTATION · arch test pattern · helpers NOT_PORTABLE | Phase 6 |
 | B9 | Ops shape (Horizon supervisors, schedule, logging, Sentry, backup) | `config/horizon.php`; `routes/console.php`; `config/{logging,sentry,backup}.php` | structure NEEDS_ADAPTATION · product wiring NOT_PORTABLE | Phases 3, 6 |
+| C1 | Claude Code project permissions (deny/ask baseline) | `.claude/settings.json` (repo root, not `backend/`) | NEEDS_ADAPTATION (git instead of SVN; add `.env*` denies; no blanket allows) | Phase 4 D7 |
+| C2 | Hooks: session context, format-on-edit, md structure, sounds | `.claude/hooks/*.sh`, `.claude/hooks/scripts/*` | session/format NEEDS_ADAPTATION · sounds NOT_PORTABLE | Phase 4 D7 |
+| C3 | Skills: `better-*` (third-party, hash-pinned), `save-session` routine | `.agents/skills/`, `.claude/skills/*.md` | `better-accessibility` READY (vendoring approval) · `save-session` NEEDS_ADAPTATION · product skills NOT_PORTABLE | Phase 4/5 |
+| C4 | Agent personas as sources (telegram bot, matching/dedup, ingestion, security, PostGIS) | `.claude/agents-archive/elmarket/*.md` | NEEDS_ADAPTATION (English, restricted tools, drop anti-bot content) | Phase 4 `.ai/agents` |
 
 ## Gaps in `app.uz` worth not inheriting
 

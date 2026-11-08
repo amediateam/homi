@@ -12,6 +12,10 @@
 .agents/skills/
 .grok/skills/
 
+# Per-machine Claude Code permissions accumulate secrets over time (seen in the reference codebase) — never commit
+.claude/settings.local.json
+**/.claude/settings.local.json
+
 # Agent worktrees (ADR-0010)
 .worktrees/
 
