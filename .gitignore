@@ -1,0 +1,7 @@
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Machine-specific AI/dev settings (template: .ai/local.env.example)
+.ai/local.env
