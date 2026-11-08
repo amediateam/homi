@@ -13,5 +13,6 @@ Copies of the staging files on the same web host `159.253.19.121` (ADR-0011: sta
 | `APP_ENV=production` | `APP_ENV=staging` (`APP_DEBUG=false` in both) |
 | logs `/var/log/nginx/homi/<name>.*.log` | `/var/log/nginx/homi/staging-<name>.*.log` |
 | media → MinIO `homi-*` buckets (pending) | → `homi-staging-*` buckets (pending); `cdn.staging.homi.uz` DNS still points at the web host |
+| `homi-deploy production` (new migrations need `--migrate`) | `homi-deploy staging` — the same script (`infra/production/bin/homi-deploy`), migrations run without the flag |
 
 The nginx files here were derived from the production files with name/port/path substitutions (`sed`) and then loaded by nginx (`nginx -t` OK); keep the two sets in step when one changes.

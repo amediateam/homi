@@ -11,6 +11,7 @@ Copies of the files that live on `159.253.19.121` (ADR-0011), owned by the produ
 | `nginx/arm.homi.conf` | same folder | `https://arm.homi.uz` — proxy to Next `arm` on `127.0.0.1:3102`, `X-Robots-Tag: noindex` |
 | `systemd/horizon-homi.service` | `/etc/systemd/system/` | Horizon queue supervisor, `User=www-data` |
 | `systemd/homi-next-{landing,app,arm}.service` | `/etc/systemd/system/` | `next start -H 127.0.0.1 -p 310x` with `/opt/node26/bin/node`, `User=www-data` |
+| `bin/homi-deploy` | `/usr/local/sbin/homi-deploy` (`root`, `0755`) | the deploy script for **both** environments (`homi-deploy production`, `homi-deploy staging`); state in `/var/lib/homi-deploy/`, logs in `/var/log/homi-deploy/` |
 
 Conventions these files follow (the host's own `/etc/nginx/CLAUDE.md`): one folder per application under `sites-available/`, flat symlinks in `sites-enabled/`, a `listen 80` server that answers ACME challenges from `/var/www/letsencrypt` and redirects everything else to HTTPS, Let's Encrypt certificates per host name under `/etc/letsencrypt/live/<name>/` (webroot renewal; the host's global deploy hook reloads nginx), php-fpm over the shared Unix socket, logs under `/var/log/nginx/homi/`.
 

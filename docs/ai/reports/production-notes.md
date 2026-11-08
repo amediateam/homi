@@ -17,7 +17,8 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Staging (`/var/www/staging.homi.uz`, `*.staging.homi.uz`, ports 3200–3202, `homi_staging_db`, Redis 5/6) | **live** — same recipe, all five hosts `noindex`; verified from outside | §3b, §4 |
 | Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
-| Deploy script, backups, monitoring | not started | §5 |
+| Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: dry run only | §3c |
+| Backups, monitoring | not started | §5 |
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
@@ -81,6 +82,46 @@ Assumption mismatch:
 
 Rollback (staging only): `systemctl disable --now horizon-homi-staging homi-staging-next-{landing,app,arm}`, remove the five `*.staging.homi.conf` symlinks, `nginx -t`, reload; `/var/www/staging.homi.uz` may stay.
 
+## 3c. Done 2026-11-09 — deploy script `homi-deploy`
+
+Approved as the next step («Дальше по очереди — deploy-скрипт по описанной последовательности»). `infra/production/bin/homi-deploy` (bash) implements the runbook sequence for both environments. How it works and its flags: `docs/infrastructure/deployment.md` "Deploy".
+
+Design choices (this track's, not ADR material):
+- **Only changed steps run.** The script runs a step only when that step's inputs changed since the last *successful* deploy (`/var/lib/homi-deploy/<env>.sha`, written only after the health checks pass), so a failed run is retried against the last good commit. `--full` runs everything.
+- **Production migration gate.** On production, migrations new in the deploy need `--migrate`; staging runs them automatically.
+- **One lock for the host**, because builds share the CPU with the other projects; the builds also run under `nice`.
+- **`umask 022`** (AM-41).
+- **`chown` of `storage/` and `bootstrap/cache/`** after the root-run steps (AM-42).
+- **Health checks through nginx on 127.0.0.1** (`curl --resolve`).
+- **Drift warnings** when a server copy differs from the checkout's `infra/` file.
+- **No php-fpm reload.** The pool is shared with other projects, and `opcache.validate_timestamps=On` with `revalidate_freq=2` (`php-fpm8.5 -i`) picks up changed files on its own.
+- **No `php artisan optimize` yet.** It would make the developer's coming `.env` edits for the bot tokens need a `config:cache`.
+
+Installed:
+- the script → `/usr/local/sbin/homi-deploy`: uploaded, `bash -n` OK (bash 5.2.15), `sha256` equal to the repository file. `shellcheck` is not installed on the host or on the developer machine, so it was not run.
+- state files: `/var/lib/homi-deploy/{production,staging}.sha` set by hand to `591ceb4`. The bring-up deployed that commit, the external checks passed, and `migrate:status --pending` printed `No pending migrations` in both environments.
+
+Checked before installing: all 18 repository copies in `infra/production/` and `infra/staging/` (nginx, systemd) match the server files (`sha256sum -c` → 18 × `OK`).
+
+Tests on the host, 2026-11-09:
+
+| Test | Result |
+|---|---|
+| `homi-deploy staging --dry-run` | plan "nothing to deploy", 14 checks `ok`, exit 0 |
+| `homi-deploy staging --full` — **first repeat deploy** | composer 3 s, migrate (nothing pending), `npm ci` + build 7 s, Horizon restarted (new PID), pnpm install 6 s, `pnpm -r build` 7 s (three new `BUILD_ID`s owned by `www-data`), three units restarted, 14 checks `ok`; 32 s in total. Afterwards no file under `storage/` or `bootstrap/cache/` is owned by anyone but `www-data`, and none under `public/build` or `.next` lacks world-read. |
+| Production during all staging runs | `MainPID` of `horizon-homi` and the three Next units unchanged (`117282 122057 122059 122060` before and after) — the staging `horizon:terminate` does not reach the production master |
+| Rollback `homi-deploy staging --ref 591ceb4^1` (= `aa8149e`) | plan `checkout pnpm-build next-restart` (PR #7 touched only `frontend/` among the deployed trees), detached HEAD, checks `ok`, recorded `aa8149e` |
+| Forward `homi-deploy staging` | back on `main` (`## main...origin/main`); the first run failed one check (AM-43), recorded nothing, printed nothing about a rollback (fixed); after the fix: forward, rollback, forward again → exit 0 each; then "nothing to deploy" |
+| Lock: `flock /run/lock/homi-deploy.lock homi-deploy staging --dry-run` | `ERROR: another homi-deploy is running`, exit 1 |
+| Production gate: `HOMI_DEPLOY_STATE_DIR=<temp dir with 8ddeacf> homi-deploy production --dry-run` | lists the six Phase 3 migrations, `ERROR: production runs new migrations only with --migrate`, exit 1; with `--migrate` the plan is complete, `no changes made`, exit 0 (dry runs record nothing; the temp dir was removed) |
+| `homi-deploy prod`, `--ref nosuchref` | exit 2 (usage), `ERROR: unknown ref`, exit 1 |
+| `homi-deploy production --dry-run` | "nothing to deploy", 14 checks `ok` |
+| From outside afterwards | `https://staging.homi.uz/`, `app.`, `arm.` → 200; `api.staging…/up` → 200; `hook.staging…/` → 404; production `homi.uz`, `app.`, `arm.`, `api…/up`, `hook…/up` → 200 (HTTP/2) |
+
+Assumption mismatches:
+- **AM-42** — "root-run deploy steps leave no runtime files behind" was wrong. The survey for the script found compiled Blade views owned by `root:root` in `storage/framework/views` (three files in each environment) from artisan commands run as root at bring-up. Which command created them is unknown (`unverified`). php-fpm (`www-data`) could not have rewritten them once a view changed. `homi-deploy` now `chown`s `storage/` and `bootstrap/cache/` after composer and after the asset build. Staging is fixed by the deploys above. **Production still has the three files until its first `homi-deploy` run.** Harmless until then: a view is recompiled only when its source changes, which only a deploy does.
+- **AM-43** — "a Next unit is listening once `systemctl restart` returns" was wrong (`Type=simple` units are `active` before the port is bound). The loopback-binding check ran right after the restart and saw no listener on `:3200`, while the HTTP check a moment later got 200. The check now retries for up to 60 s, like the HTTP checks. A failed check now also prints the rollback command.
+
 ## 4. Verification (from outside, 2026-11-09)
 
 | Check | Result |
@@ -112,7 +153,11 @@ Rollback (staging only): `systemctl disable --now horizon-homi-staging homi-stag
 2. **Telegram production bot**: the developer writes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` into `/var/www/homi.uz/backend/.env` (not via chat) and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` into `frontend/{landing,app}/.env.local` (then rebuild those two apps); registering the webhook (`setWebhook` to `https://hook.homi.uz/telegram/webhook` with the secret from `.env`) is a separate approved action — T1 of the development track decides what the handler does first.
 3. **MinIO** (ADR-0011): buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
 4. **Staging follow-ups**: the staging bot's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` in `/var/www/staging.homi.uz/backend/.env` (+ rebuild of landing/app) and its webhook (separate approval); `homi-staging-*` buckets and `cdn.staging.homi.uz` DNS together with item 3; decide whether production keeps following `main` or moves to a release tag (both checkouts are on `main` today).
-5. **Deploy script** `infra/production/deploy.sh` from the sequence in `docs/infrastructure/deployment.md` (+ `php artisan optimize`, `pnpm` only when lockfiles changed), then a GitHub Actions deploy workflow or a manual trigger — decide.
+5. **Deploy follow-ups** (the script itself is done, §3c):
+   - the first production run of `homi-deploy production` (it also fixes AM-42 there);
+   - a trigger — GitHub Actions over SSH, or manual only — decide;
+   - atomic releases (release directories plus a `current` symlink) so that `next build` and `composer install` no longer run under the live servers (`deployment.md` "Deploy" limits);
+   - after PR #8 is merged, the next deploy brings `infra/` into the checkouts and the drift check starts reporting.
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
@@ -134,8 +179,16 @@ Decision already taken on the password question: the developer accepted that the
 
 ## 7. Not verified
 
-- A repeat deploy with the sequence in `deployment.md` (only the bring-up order ran once); `certbot renew --dry-run` for the new lineages.
+- A deploy that carries real changes:
+  - Staging has only redeployed `591ceb4` (`--full`) and rolled back to `aa8149e` and forward again, with no backend or migration changes in that diff. The composer and migration steps ran but had nothing to do.
+  - Production has had dry runs only.
+  - Behaviour under live traffic while `next build` runs is unobserved.
+- `certbot renew --dry-run` for the new lineages.
 - Behaviour after a reboot of either host (units are `enabled`; nginx config is on disk; what loads nftables on the DB host is unknown).
 - `/etc/nftables.conf` was syntax-checked but not reloaded.
 - Real traffic: no load test, no Horizon jobs processed yet (queues are empty), no media upload through the API on this host — production and staging alike.
 - Staging was brought up by the same sequence, not by a script; differences between the two trees are only what §3b lists (`diff -r` of the two checkouts not run).
+- `homi-deploy`: not linted (no `shellcheck`). Untested paths:
+  - a failure in the middle of a backend step;
+  - a Horizon master that takes longer than 120 s to finish its jobs;
+  - an `npm ci` triggered by a real lockfile change.
