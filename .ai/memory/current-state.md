@@ -6,7 +6,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 # Current state (facts only)
 
 ## Repository
-- Branches: `main` (README only), `chore/phase-0-discovery` (PR #1 → main), `chore/phase-1-foundation` (PR #2 → main), `chore/phase-2-local-env` (PR #3 → `chore/phase-1-foundation`), `chore/phase-3-cdn-webhook` (paused WIP, no PR), `chore/phase-4-ai-infra` (stacked on phase-3, no PR). One linear stack (`git rev-list --count origin/main..origin/chore/phase-4-ai-infra`); PRs #1–#3 MERGEABLE/CLEAN (2026-11-09). No branch protection (free GitHub plan) and no local push guard yet (KI-19).
+- Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. Open: Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4). No branch protection (free GitHub plan) and no local push guard yet (KI-19).
 - Two tracks since 2026-11-09: development (second developer, Codex) and production (first developer) — `HANDOFF.md`, `docs/handoff/parallel-work.md`.
 - Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013, `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
 - Gitignored machine files: `infra/local/certs/`, `infra/local/nginx/snippets/paths.conf`, `infra/local/{run,logs}/`, `.ai/local.env`, `backend/.env`, `frontend/*/.env.local`.
@@ -30,7 +30,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Staging/production: hosts known (web 159.253.19.121, DB 5.45.127.98, MinIO 31.220.104.38 via s3.hc.uz); nothing deployed; DNS for homi.uz not set up.
 - Telegram: three bots exist (dev/staging/prod); tokens not in repo; no webhook registered by us.
 
-## AI tooling (Phase 4 in progress, branch `chore/phase-4-ai-infra`)
+## AI tooling (Phase 4 in progress)
 - Claude Code 2.1.319; Agent models sonnet/opus/haiku/fable. codex 0.167, gemini 0.67, grok 1.0.70 present. Codex: root `AGENTS.md` (2026-11-09) is loaded and the 37 skills in `.agents/skills` are listed (`codex debug prompt-input`); Boost MCP for Codex is a user-level `codex mcp add` (`docs/handoff/environment.md` §4), not committed. Gemini/Grok not configured (waiting).
 - Laravel Boost 2.10.4 MCP: root `.mcp.json` runs `php backend/artisan boost:mcp` (project scope); the server answers `initialize` + `tools/list` (9 tools), also with the absolute artisan path from another directory. Claude Code asks each user to approve the project server once (`claude mcp list` → "Pending approval" on 2026-11-09). Sessions must start at the repository root.
 - One knowledge base: canonical skills in `.ai/skills/` (19 vendored third-party skills + HOMI's own `save-session`, `SOURCES.md`), `backend/.ai → ../.ai`, `backend/boost.json` tracked (every skill must be listed there), `config/boost.php` agent paths; `php artisan boost:update` (`make ai-sync`) regenerates gitignored `.claude/skills` (37 = 17 official + 20 symlinks), `.agents/skills`, `.grok/skills`. Claude Code discovers the root skills.
