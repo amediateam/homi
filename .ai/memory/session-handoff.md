@@ -1,33 +1,35 @@
 ---
-updated: 2026-11-08 (end of Phase 2 session)
+updated: 2026-11-08 (Phase 3 started, paused by the developer)
 source-of-truth: this session; overwritten every session
 ---
 
 # Session handoff
 
-## Done this session
-- Phase 2 — local environment, applied and verified on the first developer's machine: nginx vhosts + snippets, mkcert TLS, `/etc/hosts`, `scripts/dev/*`, `Makefile`, backend `.env.example`/`cors`/`filesystems`, frontend workspace packages and `.env.example`s, ADR-0012 (no local MinIO), ADR-0008 amended (`sudo nginx`). Report: `docs/ai/reports/phase-2.md`.
-- Incident: a `brew services restart nginx` step in `nginx.sh` created a launchd daemon that macOS TCC blocks from `~/Documents` and chowned nginx paths to root; the developer corrected the convention, removed the daemon and restored ownership. Never use `brew services` for nginx on these machines (KI-13). Ask before changing how a shared service is launched.
-- Probe bugs fixed: `lsof` as non-root cannot see root sockets, `pgrep -x nginx` never matches → `nc -z` + `pgrep -f` (KI-15); nginx `error_log` rejects variables (KI-14).
+## State at handoff
+- Phases 0–2 complete (PR #1, #2, #3 open; CI green on #3). Phase 2 report: `docs/ai/reports/phase-2.md`.
+- **Phase 3 (CDN & webhook) is IN PROGRESS on `chore/phase-3-cdn-webhook`** (stacked on phase-2). The developer approved the PROPOSED packages and then asked to pause: "закончи потом остановись — у нас много дел до написания кодов". Next session starts with that conversation, not with code.
 
-## Verified (commands run this session, exit codes read)
-- `make dev-check` exit 0: 24 PASS / 0 WARN / 0 FAIL. Six hosts answer over HTTPS with the trusted mkcert cert; `http://` → 301; `hook.` serves only `/telegram/*` + `/up`; HMR `101 Switching Protocols` on `/_next/hmr` through nginx.
-- `composer ci:check` exit 0; `pnpm -r lint` exit 0; `pnpm -r typecheck` exit 0; `make registry-check` exit 0; `bash -n scripts/dev/*.sh` ok.
-- PR #3 (`chore/phase-2-local-env` → `chore/phase-1-foundation`) opened; CI green on both workflows after adding a `postgres:18` service to `backend.yml` (AM-34: `.env.example` defaults to pgsql, so `composer setup` migrates against a real database in CI).
-- Not verified: `make dev-setup` end-to-end on a clean clone; `make dev-reset`; `pnpm -r build` (CI); second developer's machine.
+## Done in Phase 3 so far (committed as WIP)
+- Packages installed (approved): `league/flysystem-aws-s3-v3` 3.35, `intervention/image` 4.4, `dedoc/scramble` 0.13.53; registry regenerated.
+- Config: `filesystems.php` (disks `local`/`public`/`tmp` + `s3_public`/`s3_private`/`s3_tmp`), `media.php`, `telegram.php`, `intake.php`, `horizon.php` (queues `default+notifications`, `telegram`, `media`, `ingest`; `staging` env added), `scramble.php` (`api_path api/v1`, export to `docs/api/openapi.json`). `.env.example` + local `.env` keys: `MEDIA_*_DISK`, `MEDIA_PUBLIC_BUCKET`; removed `AWS_BUCKET`, `AWS_URL`, `SANCTUM_TOKEN_EXPIRATION` (global Sanctum expiry would kill collector tokens — per-token `expires_at` instead).
+- Schema (migrated locally): `media_files`, `telegram_updates`, `sources`, `source_listings`, `intake_requests`, `intake_events`; models, factories, `SourceSeeder`, enums in `app/Enums`.
+- Implemented with tests (47/47 green, PHPStan clean): `AssignRequestId` middleware (global, `X-Request-Id`, `Log::shareContext`), `ApiController` envelope + `paginated()` (ADR-0007), `ApiExceptionRenderer` (401/403/404/422/429/500 envelopes for `api/*`), Media module: `HashedUploader` (sniff → decode → orient → re-encode → `originals/{sha256}.{ext}`), `GenerateImageVariantsJob` (`derived/{sha}/{w}.webp`, queue `media`, tries 3), `MediaUrlBuilder` (CDN URL or signed temporary URL), `MediaController` (store/show/destroy), `PresignController` (presign on S3 disks only → 409 locally; `register` promotes tmp uploads), `MediaFileResource`, routes `/api/v1/media*` (Sanctum + `ability:media:write` + `throttle:uploads`), rate limiters `api|uploads|intake|telegram-webhook`, `routes/hooks.php` (group `hooks`, route `POST /telegram/webhook` → stub controller + stub middleware).
+- `User` now uses `HasApiTokens`; `Source` is a Sanctum tokenable.
 
-## Decisions taken
-- ADR-0012 (media on disk locally, `MEDIA_PUBLIC_URL` everywhere); ADR-0008 amendment (manual `sudo nginx`). See `docs/architecture/decisions/README.md`.
+## Not done (Phase 3 remaining)
+1. Telegram webhook: `VerifyTelegramSecretToken`, `TelegramWebhookController` (insertOrIgnore dedup → `telegram` queue), `ProcessTelegramUpdateJob`, `TelegramClient`/`TelegramBot`/`TelegramException`, `telegram:webhook set|info|delete` with production guard, prune schedule — tests first (see plan below).
+2. Intake accept layer: `StoreIntakeListingsRequest` (payload v1 from `docs/api/intake-sources.md`), `IntakeListingController` (batch 1–100, `Idempotency-Key` → `intake_requests` replay, `source_listings` upsert, `intake_events` raw store, 202), `IntakeEventController`, `SourceListingResource`, `intake:token` command, routes under `/api/v1/intake/*` (`ability:intake:write`, `throttle:intake`).
+3. OpenAPI: `scramble:export` → `docs/api/openapi.json` + CI drift check; Gate `viewApiDocs`.
+4. Infra: `infra/server/nginx/{cdn,hook}.homi.uz.conf` templates + MinIO provisioning script (needs the CDN mirror facts — subagent `cdn-mirror-facts` was running at handoff; its report, if captured, is in `docs/ai/reports/phase-3-notes.md`).
+5. Docs: `docs/infrastructure/cdn.md`, `telegram-webhook.md`, `docs/api/intake.md`, ADR-0013 (media stack + Scramble), overview/environments updates, `docs/ai/reports/phase-3.md`; `make dev-check` additions (media health, Horizon queues).
+6. Local `.env`: `TELEGRAM_*` values are still empty — set the dev bot token/secret before webhook tests (never commit).
 
-## Remaining / next step
-1. Developer decision: merge order #1 → #2 → #3 (PR #3 is stacked on the phase-1 branch and retargets to `main` automatically). CI must stay green on each.
-2. Second developer: `make dev-setup` → `make dev-check`; record any FAIL as a KI.
-3. **Phase 3 — CDN, webhook, intake**: ask approval to install PROPOSED packages (`league/flysystem-aws-s3-v3`, `intervention/image`, `dedoc/scramble`); port the READY media code from the `app.uz` catalogue (`docs/reference-codebase.md`); Telegram webhook on `hook.` with the **dev** bot only, via an HTTPS tunnel; `/api/v1/intake/*` contract (`docs/api/intake.md` + OpenAPI) from `docs/api/intake-sources.md`. Report `docs/ai/reports/phase-3.md`.
-4. Phase 4 later: root `.claude/`, `.ai/{rules,skills,agents,tasks}`, `AGENTS.md`, `GEMINI.md`, hooks; fix Laravel Boost MCP (still CONNECTION_CLOSED); smoke-test codex/gemini/grok (approved).
-
-## Errors / gotchas observed
-- See `.ai/memory/known-issues.md` KI-13…KI-15 (nginx/TCC, `error_log` variables, `lsof`/`pgrep` on macOS). HTTP/2 has no `Upgrade`: test WebSockets with `curl --http1.1`. zsh has no `PIPESTATUS` (use `pipestatus` or avoid pipes when reading exit codes).
-- Ports 8000/8001 are taken by HTTP Toolkit (KI-5): never `php artisan serve`; `composer run dev` would start it.
+## Gotchas learned this session
+- Intervention Image 4.4: `new ImageManager(new Gd\Driver)`, `decodeBinary()`, `encode(new WebpEncoder(quality:))` — no `read()`/`toJpeg()`/`ImageManager::gd()`.
+- `Storage::fake()` replaces `temporaryUrl()` with a dummy `?expiration=` URL; test signed local URLs with the real `local` driver on a temp root (see `PrivateMediaAccessTest`).
+- `Log::withContext` is per-channel; use `Log::shareContext` for request ids.
+- Pest `--compact` prints one JSON line; errored tests are not listed under `failures` — run plain `php artisan test` when counts don't add up.
+- zsh: `$VAR="php artisan"` does not word-split — use a function.
 
 ## Active subagent work at handoff
-- None.
+- `appuz-port-sources` (verbatim app.uz files for B2/B3 webhook + A4/A5) and `cdn-mirror-facts` (nginx mirror of 31.220.104.38): read-only; results to be captured in `docs/ai/reports/phase-3-notes.md` when they return.
