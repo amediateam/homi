@@ -8,3 +8,9 @@
 
 # Agent worktrees (ADR-0010)
 .worktrees/
+
+# Local environment (generated, machine-specific)
+infra/local/certs/
+infra/local/nginx/snippets/paths.conf
+infra/local/run/
+infra/local/logs/

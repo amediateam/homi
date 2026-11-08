@@ -1,0 +1,16 @@
+{
+  "name": "@homi/types",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"@homi/types: no lint rules yet\""
+  },
+  "devDependencies": {
+    "typescript": "^6"
+  }
+}
