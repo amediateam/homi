@@ -22,7 +22,8 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 
 ## Resume here (state at the end of 2026-11-09)
 
-- **Repository.** Branch `chore/infra-db-production`, last commit `01e1033`, PR #8 open. The development track reviews it. Until it is merged, `main` has neither this file nor `infra/production/`, `infra/staging/` or `docs/infrastructure/deployment.md`. Read them on the branch. Never push to `main`.
+- **Repository.** Everything is on `main`. PR #8 (`chore/infra-db-production`) was merged on 2026-11-09 at the developer's request («commit push main»). New work on this track branches from `origin/main` and goes through a PR.
+- **Server checkouts.** The checkouts are still at `591ceb4`. The next `homi-deploy` only checks out the merge: it touches docs and `infra/` only, so no backend or frontend step runs. After that the drift check has `infra/` to compare against.
 - **Servers.** Production and staging are live at `591ceb4`; `homi-deploy` is installed; `/var/lib/homi-deploy/{production,staging}.sha` = `591ceb4`.
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each prints "nothing to deploy" and 14 checks `ok`. That held on 2026-11-09 (§3c).
 - **Next, in this order.** Each item needs the developer's go.
