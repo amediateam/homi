@@ -1,6 +1,6 @@
 ---
-updated: 2026-11-09 (handoff to the second developer; backend gate fixed, root AGENTS.md)
-source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
+updated: 2026-11-09 (production track: PostgreSQL databases on the DB host; Infrastructure section)
+source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
 # Current state (facts only)
@@ -27,7 +27,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 ## Infrastructure
 - Local (ADR-0008 + ADR-0012), **working on the first developer's machine** as of 2026-11-08: six `*.homi.loc` hosts in `/etc/hosts`; mkcert cert (valid to 2029-02-08) trusted by the system keychain; Homebrew nginx vhosts symlinked from `infra/local/nginx/`; nginx started by hand (`sudo nginx`, never `brew services` — KI-13); php-fpm :9000, PostgreSQL :5432, Redis :6379 as brew services; Horizon + Next dev servers via `make dev-start`; media on disk behind `cdn.homi.loc` (no local MinIO). `make dev-check` → 24 PASS / 0 WARN / 0 FAIL; HMR WebSocket (`/_next/hmr`) upgrades through nginx.
 - Not yet done locally: `make dev-setup` end-to-end on a clean machine; second developer's machine (`HANDOFF.md` T0). A fresh Homebrew nginx lacks the `sites-available`/`sites-enabled` layout `scripts/dev/nginx.sh` expects — manual step in `docs/handoff/setup.md` B1.
-- Staging/production: hosts known (web 159.253.19.121, DB 5.45.127.98, MinIO 31.220.104.38 via s3.hc.uz); nothing deployed; DNS for homi.uz not set up.
+- Staging/production (production track, 2026-11-09): PostgreSQL 18.6 on `5.45.127.98` has `homi_db` (production) and `homi_staging_db` (staging) with same-named owner roles, reachable only from the app host `159.253.19.121` (`pg_hba` + ufw + nftables), `DB_SSLMODE=disable` by the developer's decision — verified with `psql` and PHP PDO from `159.253.19.121`. The app host (Debian 12) already runs nginx, PHP 8.5.12 (`pdo_pgsql`, `redis`, `imagick`) and a shared Redis for other projects; PostGIS is not installed on the DB host. Nothing deployed; DNS for homi.uz not set up; MinIO 31.220.104.38 via s3.hc.uz untouched. Log: `docs/ai/reports/production-notes.md`.
 - Telegram: three bots exist (dev/staging/prod); tokens not in repo; no webhook registered by us.
 
 ## AI tooling (Phase 4 in progress)
