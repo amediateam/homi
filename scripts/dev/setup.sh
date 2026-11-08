@@ -19,6 +19,9 @@ done
 
 info "2/8 backend"
 (cd backend && [ -d vendor ] || composer install --no-interaction)
+# boost:update detects the npm packages (Inertia React, Echo) from backend/node_modules; without them it
+# drops their skills from the tracked backend/boost.json (KI-22), so install the npm packages first.
+(cd backend && [ -d node_modules ] || npm ci --no-audit --no-fund >/dev/null) && ok "backend npm packages installed"
 # Agent knowledge base: regenerate the per-agent skill directories from the canonical .ai/skills (see .ai/README.md)
 (cd backend && php artisan boost:update --no-interaction >/dev/null 2>&1) && ok "agent skills synced (boost:update)" || warn "boost:update failed — run: cd backend && php artisan boost:update"
 if [ ! -f backend/.env ]; then

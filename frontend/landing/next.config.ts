@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    agentFeedback: true,
+    // Off by the developer's decision (KI-23): when on, `next dev` writes an AGENTS.md block that
+    // asks coding agents to report feedback to the Next.js team.
+    agentFeedback: false,
   },
   cacheComponents: true,
   partialPrefetching: true,

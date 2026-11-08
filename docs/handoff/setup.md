@@ -27,7 +27,7 @@ On the first Claude Code start the SessionStart hook reports missing `.ai/local.
 ```bash
 mkdir -p /opt/homebrew/etc/nginx/sites-available /opt/homebrew/etc/nginx/sites-enabled
 ```
-Edit `/opt/homebrew/etc/nginx/nginx.conf`: inside `http { … }` add `include sites-enabled/*.conf;`, and set the worker user at the top. The first developer's file has `user root staff;`; `user <your-macOS-user> staff;` should also work and is less privileged, but was not tested. The default `#user nobody;` cannot read a checkout in your home folder. Never start nginx with `brew services` (KI-13).
+Edit `/opt/homebrew/etc/nginx/nginx.conf`: inside `http { … }` add `include sites-enabled/*.conf;`, and set the worker user at the top. Prefer `user <your-macOS-user> staff;` — less privileged; verified on the second machine 2026-11-09 with the checkout under `~/Documents` (all six vhosts, 24/24 `dev-check`). The first developer's file has `user root staff;`, which also works. The default `#user nobody;` cannot read a checkout in your home folder. Never start nginx with `brew services` (KI-13). Homebrew's sample `server { listen 8080; }` in the same file can stay for now, but it occupies Reverb's port (KI-24).
 **[agent] check:** `grep -nE '^\s*user |include sites-enabled' /opt/homebrew/etc/nginx/nginx.conf` shows both lines; `ls -d /opt/homebrew/etc/nginx/sites-enabled`.
 
 **B2 PHP and its extensions.**
@@ -43,7 +43,8 @@ brew services restart php
 brew install postgresql@18
 echo 'export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"' >> ~/.zshrc && exec zsh
 ```
-**[agent] check:** `command -v createdb psql` prints two paths under `/opt/homebrew/opt/postgresql@18/bin`.
+If `postgresql@18` is already linked (`brew link --force`), `createdb`/`psql` are in `/opt/homebrew/bin` and the PATH line is not needed (AM-37).
+**[agent] check:** `for c in createdb psql; do readlink -f "$(command -v $c)"; done` prints two paths inside the `postgresql@18` keg (`/opt/homebrew/Cellar/postgresql@18/…/bin`).
 
 **B4 macOS privacy.** If the checkout is under `~/Documents`, `~/Desktop` or `~/Downloads`, the terminal that runs `sudo nginx` needs access to that folder (macOS asks once; System Settings → Privacy & Security → Files and Folders). Elsewhere nothing is needed.
 
@@ -52,7 +53,7 @@ echo 'export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"' >> ~/.zshrc && ex
 | # | Who | Do | Check |
 |---|---|---|---|
 | C1 | agent | `cp .ai/local.env.example .ai/local.env` — keep the `/path/to/...` placeholders for reference checkouts you do not have | `test -f .ai/local.env && echo ok` |
-| C2 | you | `make dev-setup` in your terminal. It installs/starts the Homebrew services, `composer install`, syncs agent skills, installs the pnpm workspace, creates `frontend/*/.env.local`, makes the mkcert certificate (CA install asks for your password), links nginx, writes `/etc/hosts`, prepares media storage. The first run creates `backend/.env`, **warns** and skips the migration — that is expected | output ends with the `dev-check` summary and "next: make dev-start" |
+| C2 | you | `make dev-setup` in your terminal. It installs/starts the Homebrew services, `composer install`, `npm ci` in `backend/` (before the skill sync, KI-22), syncs agent skills, installs the pnpm workspace, creates `frontend/*/.env.local`, makes the mkcert certificate (CA install asks for your password), links nginx, writes `/etc/hosts`, prepares media storage. The first run creates `backend/.env`, **warns** and skips the migration — that is expected | output ends with the `dev-check` summary and "next: make dev-start" |
 | C3 | you | Edit `backend/.env`: `DB_USERNAME` = your macOS user, `DB_PASSWORD` empty (Homebrew default) or your role's password, `REVERB_APP_ID` / `REVERB_APP_KEY` / `REVERB_APP_SECRET` = random strings (`php -r 'echo bin2hex(random_bytes(16)), PHP_EOL;'`). Leave `TELEGRAM_*` empty until task T1. Then `createdb homi` | **[agent]** names only, never values: `for k in DB_USERNAME REVERB_APP_ID REVERB_APP_KEY REVERB_APP_SECRET; do printf '%s %s\n' "$k" "$(grep -cE "^$k=.+" backend/.env)"; done` → `1` for each |
 | C4 | you | `make dev-setup` again (idempotent) — this time it migrates | output contains "database migrated" |
 | C5 | agent | `(cd backend && npm ci && npm run build)` — the frozen starter UI build that `make ci-backend` needs | exit 0; `ls backend/public/build/manifest.json` |
@@ -108,7 +109,7 @@ Codex has no HOMI hooks: the hard rules in `AGENTS.md` are followed by hand (det
 
 1. **[agent]** Create `docs/testing/verification-log.md` with one row per check from B–E: date, command, output excerpt, PASS/FAIL. Mark it as a **preliminary** scenario A record; the formal Phase 7 run is done later by an independent verifier.
 2. **[agent]** Every deviation from this runbook becomes a `KI-<next>` row in `.ai/memory/known-issues.md` (open problem with a workaround) or an `AM-<next>` line in the phase document (wrong assumption). Small fixes to this file or to `scripts/dev/*` go into the same PR.
-3. **[you]** Add your GitHub login next to `@amediateam` on each line of `.github/CODEOWNERS`.
+3. **[you]** Add your GitHub login next to `@amediateam` on each line of `.github/CODEOWNERS`. If you work under the `amediateam` account itself, skip this and record it (AM-38).
 4. **[agent]** Branch `chore/onboarding-second-machine` from the base (A5), commit (Conventional Commits, English), push, open a PR against that base. The first developer reviews it.
 5. Continue with `HANDOFF.md` §4 — T1, plan first, code after the developer's OK.
 
