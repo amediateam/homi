@@ -24,7 +24,8 @@ Documentation is code: it lives next to the source, changes in the same PR as th
 | `handoff/setup.md`, `handoff/project-context.md`, `handoff/environment.md`, `handoff/parallel-work.md` | Second-developer handoff (2026-11-09): step-by-step setup runbook for the developer and their agent, project and decisions with reasons, reproducible environment incl. Codex and Claude Code, rules for the development and production tracks; entry point `/HANDOFF.md` | living |
 | `backend/package-registry.md` | **Generated** Composer registry (`scripts/packages/registry`) | generated |
 | `infrastructure/environments.md` | Domain matrix, hosts, ports, services per environment | living |
-| `infrastructure/local-development.md`, `cdn.md`, `telegram-webhook.md`, `deployment.md`, `backup-recovery.md` | Planned for Phases 2, 3, 6 — created only when the described setup exists | planned |
+| `infrastructure/deployment.md` | Production web host: layout, deploy sequence, checks, rollback (production track; copies of the server files in `infra/production/`) | living |
+| `infrastructure/cdn.md`, `telegram-webhook.md`, `backup-recovery.md` | Planned for Phases 3, 6 — created only when the described setup exists | planned |
 | `api/intake-sources.md` | What the collectors (`telegram.uz`, `datahub.uz`, `geo.uz`) store and expose; source-mapped intake payload draft | living |
 | `api/intake.md`, `api/openapi.json` | Intake contract and the OpenAPI spec — created with the first endpoint (Phase 3) | planned |
 | `testing/` | Test strategy and `verification-log.md` (Phase 7) | planned |

@@ -1,0 +1,457 @@
+#!/usr/bin/env bash
+#
+# homi-deploy — deploy one HOMI environment on the web host 159.253.19.121.
+#
+#   Reviewed source: infra/production/bin/homi-deploy (this file)
+#   Installed copy:  /usr/local/sbin/homi-deploy (root, 0755)
+#   Runbook:         docs/infrastructure/deployment.md
+#
+# Runs the runbook's deploy sequence: fetch → checkout → composer → migrations
+# → backend assets → Horizon restart → pnpm build → Next restarts → health
+# checks. A step runs only when its inputs changed since the last successful
+# deploy of that environment (git diff against the recorded commit); --full
+# runs every step. Nothing is recorded unless the health checks pass.
+
+set -Eeuo pipefail
+umask 022 # build output must stay readable for www-data (AM-41)
+
+export PATH=/opt/node26/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export COMPOSER_ALLOW_SUPERUSER=1 NEXT_TELEMETRY_DISABLED=1
+
+STATE_DIR=${HOMI_DEPLOY_STATE_DIR:-/var/lib/homi-deploy} # override only to test the plan
+LOG_DIR=/var/log/homi-deploy
+LOCK_FILE=/run/lock/homi-deploy.lock # one deploy at a time on the host, any environment
+INSTALLED=/usr/local/sbin/homi-deploy
+BRANCH=main # both environments follow main; release tags are an open decision
+
+usage() {
+    cat <<'EOF'
+Usage: homi-deploy <production|staging> [options]
+
+  --dry-run    fetch, print the plan and run the health checks; change nothing
+  --full       run every step even if its inputs did not change (after editing
+               frontend/*/.env.local or backend/.env, or to repair a checkout)
+  --migrate    production only: approve the new migrations the plan lists
+  --ref <ref>  deploy this commit or tag (detached HEAD) instead of origin/main;
+               used for rollbacks
+
+State /var/lib/homi-deploy/<env>.{sha,history}, log /var/log/homi-deploy/<env>.log
+EOF
+}
+
+log() { printf '%s [%s] %s\n' "$(date '+%F %T')" "${ENV_NAME:-homi-deploy}" "$*"; }
+rollback_hint() {
+    if ((${STARTED:-0})) && [[ -n ${BASE:-} ]]; then
+        log "nothing recorded; last successful deploy: $BASE — roll back with: homi-deploy $ENV_NAME --ref $BASE"
+    fi
+}
+die() {
+    log "ERROR: $*"
+    rollback_hint
+    exit 1
+}
+step() {
+    CURRENT_STEP=$*
+    log "==> $*"
+}
+
+on_error() {
+    local rc=$?
+    log "FAILED (exit $rc) in step: ${CURRENT_STEP:-preflight}"
+    rollback_hint
+    exit "$rc"
+}
+
+git_() { git -C "$ROOT" "$@" </dev/null; }
+artisan() { (cd "$ROOT/backend" && runuser -u www-data -- php artisan "$@"); }
+
+# changed <prefix>... — true when a path changed since the last deploy starts with a prefix.
+changed() {
+    local path prefix
+    for path in "${CHANGED[@]}"; do
+        for prefix in "$@"; do
+            if [[ $path == "$prefix"* ]]; then
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+
+configure() {
+    case $ENV_NAME in
+    production)
+        ROOT=/var/www/homi.uz
+        DOMAIN=homi.uz
+        UNIT_PREFIX=homi-next
+        HORIZON_UNIT=horizon-homi
+        NEXT_PORT_BASE=3100
+        MIGRATION_GATE=1 # new migrations need --migrate (docs/handoff/parallel-work.md §3)
+        ;;
+    staging)
+        ROOT=/var/www/staging.homi.uz
+        DOMAIN=staging.homi.uz
+        UNIT_PREFIX=homi-staging-next
+        HORIZON_UNIT=horizon-homi-staging
+        NEXT_PORT_BASE=3200
+        MIGRATION_GATE=0
+        ;;
+    esac
+    APPS=(landing app arm) # Next.js apps; port = NEXT_PORT_BASE + index
+    NEXT_UNITS=("${APPS[@]/#/$UNIT_PREFIX-}")
+    STATE_FILE=$STATE_DIR/$ENV_NAME.sha
+    HISTORY_FILE=$STATE_DIR/$ENV_NAME.history
+    LOG_FILE=$LOG_DIR/$ENV_NAME.log
+}
+
+preflight() {
+    [[ $EUID -eq 0 ]] || die "run as root (deploys run as root, the runtime is www-data)"
+    [[ -d $ROOT/.git ]] || die "$ROOT is not a git checkout"
+    [[ -f $ROOT/backend/.env ]] || die "$ROOT/backend/.env is missing"
+    local tool
+    for tool in git composer php node npm pnpm curl flock runuser ss systemctl; do
+        command -v "$tool" >/dev/null || die "$tool not found in PATH"
+    done
+}
+
+plan() {
+    step "fetch origin"
+    git_ fetch --quiet --prune --tags origin
+    HEAD_SHA=$(git_ rev-parse HEAD)
+    if [[ -n $REF ]]; then
+        git_ rev-parse --verify --quiet "$REF^{commit}" >/dev/null || die "unknown ref: $REF"
+        TARGET=$(git_ rev-parse "$REF^{commit}")
+    else
+        TARGET=$(git_ rev-parse "origin/$BRANCH")
+    fi
+
+    BASE=$(cat "$STATE_FILE" 2>/dev/null || true)
+    if [[ -n $BASE ]] && ! git_ cat-file -e "$BASE^{commit}" 2>/dev/null; then
+        log "recorded commit $BASE is unknown to the checkout — ignoring it"
+        BASE=
+    fi
+    if [[ -z $BASE ]]; then
+        log "no record of a previous deploy in $STATE_FILE — every step runs"
+        FULL=1
+    fi
+
+    local dirty
+    dirty=$(git_ status --porcelain --untracked-files=no)
+    [[ -z $dirty ]] || die "tracked files are modified in $ROOT (git status) — resolve that first"
+
+    local diff_base=${BASE:-$HEAD_SHA} out
+    CHANGED=()
+    out=$(git_ diff --name-only "$diff_base" "$TARGET")
+    if [[ -n $out ]]; then
+        mapfile -t CHANGED <<<"$out"
+    fi
+
+    log "last deploy: ${BASE:-none}"
+    log "checkout:    $HEAD_SHA"
+    log "target:      $(git_ log -1 --format='%H %s' "$TARGET")"
+    out=$(git_ log --oneline --no-decorate -n 20 "$diff_base..$TARGET")
+    if [[ -n $out ]]; then
+        log "new commits (up to 20):"
+        printf '%s\n' "$out" | sed 's/^/    /'
+    fi
+    log "changed files: ${#CHANGED[@]}"
+
+    DO_BACKEND=0 DO_ASSETS=0 DO_FRONTEND=0
+    if ((FULL)) || changed backend/; then
+        DO_BACKEND=1
+    fi
+    # The frozen Inertia starter UI (ADR-0002) is rebuilt only when its inputs change.
+    if ((FULL)) || changed backend/resources/ backend/package.json backend/package-lock.json \
+        backend/vite.config.ts backend/tsconfig.json ||
+        [[ ! -f $ROOT/backend/public/build/manifest.json ]]; then
+        DO_BACKEND=1 DO_ASSETS=1
+    fi
+    if ((FULL)) || changed frontend/; then
+        DO_FRONTEND=1
+    fi
+    local app
+    for app in "${APPS[@]}"; do
+        if [[ ! -f $ROOT/frontend/$app/.next/BUILD_ID ]]; then
+            DO_FRONTEND=1
+        fi
+    done
+
+    NEW_MIGRATIONS=()
+    out=$(git_ diff --name-only --diff-filter=AR "$diff_base" "$TARGET" -- backend/database/migrations/)
+    if [[ -n $out ]]; then
+        mapfile -t NEW_MIGRATIONS <<<"$out"
+    fi
+    out=$(git_ diff --name-only --diff-filter=MD "$diff_base" "$TARGET" -- backend/database/migrations/)
+    if [[ -n $out ]]; then
+        log "WARNING: migrations edited or absent in the target — they are neither re-run nor rolled back:"
+        printf '%s\n' "$out" | sed 's/^/    /'
+    fi
+    if ((${#NEW_MIGRATIONS[@]})); then
+        log "new migrations (migrate --force will run them):"
+        printf '    %s\n' "${NEW_MIGRATIONS[@]}"
+        if ((MIGRATION_GATE && !MIGRATE_OK)); then
+            die "production runs new migrations only with --migrate — read their PRs for downtime or backfill notes first (docs/handoff/parallel-work.md §3)"
+        fi
+    fi
+
+    local steps=()
+    if [[ $HEAD_SHA != "$TARGET" ]]; then
+        steps+=(checkout)
+    fi
+    if ((DO_BACKEND)); then
+        steps+=(composer migrate)
+        if ((DO_ASSETS)); then
+            steps+=(backend-assets)
+        fi
+        steps+=(horizon-restart)
+    fi
+    if ((DO_FRONTEND)); then
+        steps+=(pnpm-build next-restart)
+    fi
+    NOTHING_TO_DO=0
+    if ((${#steps[@]} == 0)); then
+        NOTHING_TO_DO=1
+        log "plan: nothing to deploy — $TARGET is live"
+    else
+        log "plan: ${steps[*]} → health checks"
+    fi
+}
+
+checkout() {
+    step "checkout ${TARGET:0:12}"
+    if [[ -n $REF ]]; then
+        git_ checkout --quiet --detach "$TARGET"
+    else
+        git_ checkout --quiet "$BRANCH"
+        git_ merge --quiet --ff-only "origin/$BRANCH"
+    fi
+    [[ $(git_ rev-parse HEAD) == "$TARGET" ]] || die "HEAD is not $TARGET after the checkout"
+}
+
+# composer, artisan and the Vite build run as root and may create files under
+# storage/ or bootstrap/cache/ that php-fpm and Horizon (www-data) must rewrite.
+fix_ownership() {
+    chown -R www-data:www-data "$ROOT/backend/storage" "$ROOT/backend/bootstrap/cache"
+}
+
+horizon_running() {
+    local out
+    out=$(artisan horizon:status 2>&1 || true)
+    [[ $out == *"is running"* ]]
+}
+
+restart_horizon() {
+    step "restart Horizon ($HORIZON_UNIT)"
+    local old new
+    old=$(systemctl show -p MainPID --value "$HORIZON_UNIT")
+    if [[ $old == 0 ]]; then
+        systemctl start "$HORIZON_UNIT"
+    else
+        artisan horizon:terminate # graceful: running jobs finish, systemd starts the new master
+    fi
+    for _ in {1..60}; do
+        new=$(systemctl show -p MainPID --value "$HORIZON_UNIT")
+        if [[ $new != 0 && $new != "$old" ]] && horizon_running; then
+            log "    Horizon restarted (pid $old → $new)"
+            return 0
+        fi
+        sleep 2
+    done
+    die "Horizon did not come back within 120 s (journalctl -u $HORIZON_UNIT)"
+}
+
+deploy_backend() {
+    cd "$ROOT/backend"
+    step "composer install --no-dev"
+    nice composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+    fix_ownership
+    step "migrate --force"
+    artisan migrate --force --no-interaction
+    if ((DO_ASSETS)); then
+        step "backend assets (npm ci, npm run build)"
+        nice npm ci --no-audit --no-fund
+        nice npm run build
+        fix_ownership
+    fi
+    restart_horizon
+}
+
+deploy_frontend() {
+    cd "$ROOT/frontend"
+    step "pnpm install --frozen-lockfile"
+    CI=true nice pnpm install --frozen-lockfile # CI: no TTY prompt if node_modules must be rebuilt
+    step "pnpm -r build (the running Next servers read the same .next — pages may fail until the restart)"
+    nice pnpm -r build
+    step "restart ${NEXT_UNITS[*]}"
+    local app
+    for app in "${APPS[@]}"; do
+        chown -R www-data:www-data "$app/.next" # next start writes its cache there
+    done
+    systemctl restart "${NEXT_UNITS[@]}"
+}
+
+http_status() {
+    curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve "$1:443:127.0.0.1" "https://$1$2" || true
+}
+
+# expect_http <host> <path> <status> — retried for up to 60 s while services start.
+expect_http() {
+    local code
+    for _ in {1..30}; do
+        code=$(http_status "$1" "$2")
+        if [[ $code == "$3" ]]; then
+            log "    ok    https://$1$2 → $code"
+            return 0
+        fi
+        sleep 2
+    done
+    log "    FAIL  https://$1$2 → $code (expected $3)"
+    return 1
+}
+
+# expect_loopback <app> <port> — the Next server listens, on 127.0.0.1 only;
+# retried for up to 60 s because a restarted server binds its port a moment later.
+expect_loopback() {
+    local listeners=
+    for _ in {1..30}; do
+        listeners=$(ss -ltnH "sport = :$2" | awk '{print $4}')
+        if [[ -n $listeners ]]; then
+            break
+        fi
+        sleep 2
+    done
+    if [[ -n $listeners ]] && ! grep -qv '^127\.0\.0\.1:' <<<"$listeners"; then
+        log "    ok    $1 listens on 127.0.0.1:$2 only"
+        return 0
+    fi
+    log "    FAIL  $1 listeners on :$2: ${listeners:-none}"
+    return 1
+}
+
+checks() {
+    step "health checks"
+    local failed=0 unit i host
+    for unit in "$HORIZON_UNIT" "${NEXT_UNITS[@]}"; do
+        if systemctl is-active --quiet "$unit"; then
+            log "    ok    $unit active"
+        else
+            log "    FAIL  $unit not active"
+            failed=1
+        fi
+    done
+    if horizon_running; then
+        log "    ok    horizon:status running"
+    else
+        log "    FAIL  horizon:status not running"
+        failed=1
+    fi
+    for i in "${!APPS[@]}"; do
+        expect_loopback "${APPS[i]}" $((NEXT_PORT_BASE + i)) || failed=1
+    done
+    expect_http "api.$DOMAIN" /up 200 || failed=1
+    expect_http "hook.$DOMAIN" /up 200 || failed=1
+    expect_http "hook.$DOMAIN" / 404 || failed=1
+    for host in "$DOMAIN" "app.$DOMAIN" "arm.$DOMAIN"; do
+        expect_http "$host" / 200 || failed=1
+    done
+    ((failed == 0)) || die "health checks failed"
+}
+
+record() {
+    printf '%s\n' "$TARGET" >"$STATE_FILE.tmp"
+    mv "$STATE_FILE.tmp" "$STATE_FILE"
+    printf '%s %s %s\n' "$(date -Is)" "$TARGET" "${REF:-origin/$BRANCH}" >>"$HISTORY_FILE"
+}
+
+# same_file <repository copy> <server path> — warn when the server copy drifted.
+same_file() {
+    if [[ -e $1 ]] && ! cmp -s "$1" "$2"; then
+        log "WARNING: $2 differs from ${1#"$ROOT"/} in the checkout — install the reviewed copy (deployment.md)"
+    fi
+}
+
+drift() {
+    local dir=$ROOT/infra/$ENV_NAME f
+    if [[ ! -d $dir ]]; then
+        log "no infra/$ENV_NAME in this checkout — drift check skipped"
+        return 0
+    fi
+    for f in "$dir"/nginx/*.conf; do
+        same_file "$f" "/etc/nginx/sites-available/homi/${f##*/}"
+    done
+    for f in "$dir"/systemd/*.service; do
+        same_file "$f" "/etc/systemd/system/${f##*/}"
+    done
+    same_file "$ROOT/infra/production/bin/homi-deploy" "$INSTALLED"
+}
+
+main() {
+    local invocation="homi-deploy $*"
+    ENV_NAME=${1:-}
+    case $ENV_NAME in
+    production | staging) shift ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+    DRY_RUN=0 FULL=0 MIGRATE_OK=0 REF=
+    while (($#)); do
+        case $1 in
+        --dry-run) DRY_RUN=1 ;;
+        --full) FULL=1 ;;
+        --migrate) MIGRATE_OK=1 ;;
+        --ref)
+            (($# >= 2)) || die "--ref needs a commit or tag"
+            REF=$2
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+        esac
+        shift
+    done
+
+    configure
+    preflight
+    mkdir -p "$STATE_DIR" "$LOG_DIR"
+    exec > >(tee -a "$LOG_FILE") 2>&1
+    exec 9>"$LOCK_FILE"
+    flock -n 9 || die "another homi-deploy is running (lock $LOCK_FILE)"
+    trap on_error ERR
+
+    log "$invocation"
+    plan
+    if ((DRY_RUN || NOTHING_TO_DO)); then
+        checks
+        drift
+        log "no changes made"
+        return 0
+    fi
+
+    STARTED=1
+    checkout
+    if ((DO_BACKEND)); then
+        deploy_backend
+    fi
+    if ((DO_FRONTEND)); then
+        deploy_frontend
+    fi
+    checks
+    record
+    drift
+    log "deployed $TARGET in ${SECONDS}s"
+}
+
+# One line: bash reads scripts incrementally, so a copy replaced mid-run is never read further.
+main "$@"; exit

@@ -1,0 +1,20 @@
+# HOMI production — Laravel Horizon queue supervisor (same shape as horizon-appuz.service on this host).
+[Unit]
+Description=Laravel Horizon (staging.homi.uz)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/staging.homi.uz/backend
+Restart=always
+RestartSec=3
+ExecStart=/usr/bin/php /var/www/staging.homi.uz/backend/artisan horizon
+ExecStop=/usr/bin/php /var/www/staging.homi.uz/backend/artisan horizon:terminate
+TimeoutStopSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

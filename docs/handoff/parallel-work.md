@@ -31,7 +31,7 @@ When production needs an application change (trusted proxies, a health check, a 
 
 ## 3. Migrations
 
-- Only the development track writes migrations (`php artisan make:migration`); production only runs them (`php artisan migrate --force` in the deploy).
+- Only the development track writes migrations (`php artisan make:migration`); production only runs them (`php artisan migrate --force` in the deploy). The deploy script runs new migrations on staging automatically. On production it stops until the production track approves them with `homi-deploy production --migrate` (`docs/infrastructure/deployment.md`).
 - Never edit a migration once it is merged into `main` — add a new one.
 - Before merging: rebase on `main`, then locally `php artisan migrate:fresh --seed` and `php artisan test` (destructive for your local database only; agents must ask before running it).
 - Tables that will grow (listings, `intake_events`, `telegram_updates`): additive changes first, backfills in queued jobs, indexes and constraints that do not lock — see `.ai/agents/postgis-geo-engineer.md`.
