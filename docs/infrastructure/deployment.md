@@ -17,9 +17,13 @@ Purpose: how HOMI is laid out and operated on `159.253.19.121`, and the exact se
 | Database | `homi_db` on `5.45.127.98` (`docs/infrastructure/environments.md`) |
 | Media | `backend/storage/app/public` on disk until the MinIO buckets exist; `cdn.homi.uz` is not served from this host |
 
+## Staging on the same host
+
+Same layout under `/var/www/staging.homi.uz` with staging names: hosts `staging.homi.uz`, `app.`, `arm.`, `api.`, `hook.staging.homi.uz` (all `noindex`), Next on `127.0.0.1:3200–3202`, units `horizon-homi-staging.service` and `homi-staging-next-{landing,app,arm}.service`, database `homi_staging_db`, `REDIS_DB=5` / `REDIS_CACHE_DB=6`, `APP_ENV=staging`, logs `/var/log/nginx/homi/staging-*.log`. Files: `infra/staging/`. The deploy sequence below is the same with `/var/www/staging.homi.uz` and the staging unit names. Both checkouts follow `main` today; a release branch or tag for production is an open decision.
+
 ## Deploy sequence
 
-The bring-up on 2026-11-09 ran these steps once in this order; as a *repeat* deploy the sequence is not yet exercised (`unverified`) and not yet scripted.
+The bring-up on 2026-11-09 ran these steps once in this order (production, then staging); as a *repeat* deploy the sequence is not yet exercised (`unverified`) and not yet scripted.
 
 ```bash
 export PATH=/opt/node26/bin:$PATH COMPOSER_ALLOW_SUPERUSER=1

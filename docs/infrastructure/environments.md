@@ -19,7 +19,7 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 
 | Component | Local | Staging / Production |
 |---|---|---|
-| nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` — production live since 2026-11-09 (`/var/www/homi.uz`, Next SSR on `127.0.0.1:3100–3102`, Horizon; `docs/infrastructure/deployment.md`); staging not deployed yet |
+| nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` — production and staging live since 2026-11-09 (`/var/www/homi.uz` with Next SSR on `127.0.0.1:3100–3102`; `/var/www/staging.homi.uz` on `3200–3202`; one Horizon unit each; `docs/infrastructure/deployment.md`) |
 | PostgreSQL 18 | `127.0.0.1:5432` (Homebrew) | `5.45.127.98:5432` — databases `homi_db` (production) and `homi_staging_db` (staging), each owned by a same-named role; `pg_hba` and both firewalls admit only `159.253.19.121`; `DB_SSLMODE=disable` (developer decision 2026-11-09); set up 2026-11-09, see `docs/ai/reports/production-notes.md` §2 |
 | Redis | `127.0.0.1:6379` | on the app host, `127.0.0.1:6379`, shared with other projects — DB index or a second instance, not decided |
 | Object storage | none — `backend/storage/app/public` served by `cdn.homi.loc` (ADR-0012) | MinIO on `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`) |

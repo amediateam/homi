@@ -14,9 +14,9 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Production code on the app host | **done** — `/var/www/homi.uz` = `main`, read-only deploy key, Node 26 + pnpm, composer, `.env`, migrations (23 tables) | §3 |
 | nginx vhosts + TLS: `homi.uz`, `app.`, `arm.`, `api.`, `hook.homi.uz` | **live** — Let's Encrypt to 2027-02-06, HTTP/2, HSTS; verified from outside | §3, §4 |
 | Processes: Horizon, three Next SSR servers | **running** under systemd as `www-data` | §3 |
-| Telegram production bot | token not on the server yet; webhook not registered | §5 |
-| MinIO buckets, `AWS_*`, `cdn.homi.uz` | not started — DNS for `cdn` still points at the app host | §5 |
-| Staging deployment (`*.staging.homi.uz`) | not started (database exists) | §5 |
+| Staging (`/var/www/staging.homi.uz`, `*.staging.homi.uz`, ports 3200–3202, `homi_staging_db`, Redis 5/6) | **live** — same recipe, all five hosts `noindex`; verified from outside | §3b, §4 |
+| Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
+| MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
 | Deploy script, backups, monitoring | not started | §5 |
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
@@ -67,6 +67,20 @@ Assumption mismatches found while doing it:
 - **AM-39** — `next start` ignores the `HOSTNAME` environment variable (that is for the standalone `server.js`): the first unit version listened on `*:310x`. ufw's default deny kept the ports closed externally (probed from outside: timeout), and the units were fixed within minutes to `next start -H 127.0.0.1 -p <port>`; `ss -ltn` now shows `127.0.0.1` only.
 - **AM-40** — the host's `nginx.conf` sets a global `fastcgi_temp_file_write_size` smaller than the `64k`/`32×32k` buffers copied from the house API vhost; `nginx -t` failed (`[emerg] "fastcgi_temp_file_write_size" must be equal to or greater than …`) until `fastcgi_temp_file_write_size 256k;` was added to the php location as the house file does. Because `-t` failed, the reload did not happen — nginx kept the port-80 bootstrap config, nothing broke.
 
+## 3b. Done 2026-11-09 — staging bring-up on the same host
+
+Approved as one batch («Дальше по очереди: staging»). DNS checked first: `staging.homi.uz`, `app.`, `arm.`, `api.`, `hook.`, `cdn.staging.homi.uz` all resolve to `159.253.19.121` (`dig`).
+
+1. **Code and backend**: `git clone --branch main` through the same deploy key → `/var/www/staging.homi.uz` at `591ceb4`; `composer install --no-dev`; `backend/.env` from `.env.example` with `APP_ENV=staging`, `APP_DEBUG=false`, `APP_URL=https://api.staging.homi.uz`, `DB_DATABASE=homi_staging_db`, `DB_USERNAME=homi_staging_db`, `DB_PASSWORD` read from `/root/.homi-secrets/staging-db.password` on the host (never displayed), `DB_SSLMODE=disable`, `REDIS_DB=5`, `REDIS_CACHE_DB=6`, `REDIS_PREFIX=homi-staging-`, `BROADCAST_CONNECTION=log`, `MEDIA_PUBLIC_URL=https://cdn.staging.homi.uz`, `TELEGRAM_WEBHOOK_URL=https://hook.staging.homi.uz/telegram/webhook`, generated `TELEGRAM_WEBHOOK_SECRET` / `REVERB_*` / `APP_KEY`, staging `CORS_ALLOWED_ORIGINS`; bot token and `AWS_*` empty. `migrate --force` as `www-data` → `db:show`: `homi_staging_db`, 23 tables; `about` → `staging`, debug OFF. Backend assets built (`manifest.json`).
+2. **Horizon**: `horizon-homi-staging.service` (production unit with the staging path) → `active`, `horizon:status` → `Horizon is running.`; Redis DB 5 holds its keys, DB 3 (production) unchanged at 8 keys.
+3. **Next.js**: `frontend/*/.env.local` with the staging public URLs (`NEXT_PUBLIC_APP_ENV=staging`), `pnpm install --frozen-lockfile` (store reused, 1.7 s), `pnpm -r build` → three `BUILD_ID`s, `.next` → `www-data`; units `homi-staging-next-{landing,app,arm}.service` (`next start -H 127.0.0.1 -p 320x`) → `active`, `ss -ltn` shows `127.0.0.1:3200–3202`, loopback `curl` → 200 ×3.
+4. **nginx**: `sites-available/homi/{staging,app.staging,arm.staging,api.staging,hook.staging}.homi.conf` (copies in `infra/staging/nginx/`) derived from the production files by `sed` (names, ports, paths, upstream and unit names, log names `staging-*`); `X-Robots-Tag: noindex, nofollow` added to all five; the `www` blocks dropped (no `www.staging` DNS). Two-phase as before: port-80 bootstrap → `certbot certonly --webroot` for five lineages (all `notAfter` 2027-02-06) → TLS servers; `nginx -t` OK both times. `svn add` done for the whole `sites-available/homi` (10 files `A`), still uncommitted (credentials).
+
+Assumption mismatch:
+- **AM-41** — the staging backend script set `umask 027` for the `.env` and never reset it, so `npm ci`, the asset build and the Wayfinder output were created without world-read bits; `https://api.staging.homi.uz/` answered **500** (`Vite manifest not found` — the file existed but `www-data` could not read `public/build`). Found by the external check, fixed with `chmod -R o+rX public/build resources/js node_modules`; afterwards `find -not -perm -o=r` lists only `.env` (intentional) and `www-data`'s own compiled views, same as production. The production tree had been unaffected because its `.env` step ran in a separate shell.
+
+Rollback (staging only): `systemctl disable --now horizon-homi-staging homi-staging-next-{landing,app,arm}`, remove the five `*.staging.homi.conf` symlinks, `nginx -t`, reload; `/var/www/staging.homi.uz` may stay.
+
 ## 4. Verification (from outside, 2026-11-09)
 
 | Check | Result |
@@ -83,13 +97,21 @@ Assumption mismatches found while doing it:
 | `systemctl is-active` for the four units; `horizon:status` | `active` ×4; `Horizon is running.` |
 | `php artisan schedule:list` | no scheduled tasks → no cron yet |
 | `config:show telescope` / `pulse` | `enabled true` for both in production (defaults) — see §5 |
+| **Staging** `http://staging.homi.uz/`, `http://api.staging.homi.uz/up` | `301` → `https://…` |
+| `https://staging.homi.uz/`, `app.staging`, `arm.staging` | `200`, HTTP/2 |
+| `https://api.staging.homi.uz/up` → `200`; `/` → `200` after AM-41 (was `500`) | |
+| `https://hook.staging.homi.uz/` → `404`; `/up` → `200`; `POST /telegram/webhook` → `403` | fail-closed, as production |
+| Headers on all five staging hosts | HSTS + `x-robots-tag: noindex, nofollow` |
+| Staging certificates | Let's Encrypt, `notAfter` 2027-02-06 |
+| Production re-checked after the staging reloads | `https://homi.uz/` 200, `https://api.homi.uz/up` 200 |
+| Host memory after both environments | `free -h`: 12 GB used, 19 GB available (32 GB) |
 
 ## 5. Open items (need the developer's go — do not start alone)
 
 1. **SVN**: `cd /etc/nginx && svn commit -m "homi: production vhosts" sites-available/homi` with the owner's credentials (the files are added, not committed).
 2. **Telegram production bot**: the developer writes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` into `/var/www/homi.uz/backend/.env` (not via chat) and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` into `frontend/{landing,app}/.env.local` (then rebuild those two apps); registering the webhook (`setWebhook` to `https://hook.homi.uz/telegram/webhook` with the secret from `.env`) is a separate approved action — T1 of the development track decides what the handler does first.
 3. **MinIO** (ADR-0011): buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
-4. **Staging** on the same host: `/var/www/staging.homi.uz`, `*.staging.homi.uz` vhosts + certificates, ports 3200–3202, `homi_staging_db` (password in `/root/.homi-secrets/staging-db.password`), Redis DB 5/6, staging bot.
+4. **Staging follow-ups**: the staging bot's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` in `/var/www/staging.homi.uz/backend/.env` (+ rebuild of landing/app) and its webhook (separate approval); `homi-staging-*` buckets and `cdn.staging.homi.uz` DNS together with item 3; decide whether production keeps following `main` or moves to a release tag (both checkouts are on `main` today).
 5. **Deploy script** `infra/production/deploy.sh` from the sequence in `docs/infrastructure/deployment.md` (+ `php artisan optimize`, `pnpm` only when lockfiles changed), then a GitHub Actions deploy workflow or a manual trigger — decide.
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
@@ -115,4 +137,5 @@ Decision already taken on the password question: the developer accepted that the
 - A repeat deploy with the sequence in `deployment.md` (only the bring-up order ran once); `certbot renew --dry-run` for the new lineages.
 - Behaviour after a reboot of either host (units are `enabled`; nginx config is on disk; what loads nftables on the DB host is unknown).
 - `/etc/nftables.conf` was syntax-checked but not reloaded.
-- Real traffic: no load test, no Horizon jobs processed yet (queues are empty), no media upload through the API on this host.
+- Real traffic: no load test, no Horizon jobs processed yet (queues are empty), no media upload through the API on this host — production and staging alike.
+- Staging was brought up by the same sequence, not by a script; differences between the two trees are only what §3b lists (`diff -r` of the two checkouts not run).

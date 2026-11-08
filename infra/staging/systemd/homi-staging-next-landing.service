@@ -1,0 +1,19 @@
+# HOMI staging — Next.js SSR server for landing (homi.uz), proxied by nginx (ADR-0013).
+[Unit]
+Description=HOMI Next.js SSR — landing staging (staging.homi.uz, port 3200)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/staging.homi.uz/frontend/landing
+Environment=NODE_ENV=production
+ExecStart=/opt/node26/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3200
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

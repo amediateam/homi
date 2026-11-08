@@ -16,4 +16,4 @@ Conventions these files follow (the host's own `/etc/nginx/CLAUDE.md`): one fold
 
 Not in this directory on purpose: `backend/.env` and `frontend/*/.env.local` (server-only; key names in `docs/infrastructure/environments.md`), certificates, the deploy key. `cdn.homi.uz` is not an nginx vhost on this host — media goes to MinIO on `31.220.104.38` (ADR-0011; not provisioned yet).
 
-Staging (`*.staging.homi.uz`, ports 3200–3202, database `homi_staging_db`, Redis DB 5/6) is not deployed yet; it will reuse these files with the staging names.
+Staging (`*.staging.homi.uz`, ports 3200–3202, database `homi_staging_db`, Redis DB 5/6) runs on the same host from `/var/www/staging.homi.uz`; its files are the staging-named twins of these in `infra/staging/`.
