@@ -1,21 +1,24 @@
 ---
-updated: 2026-11-08 (Phase 1)
-source-of-truth: docs/ai/reports/phase-0.md, phase-1.md; observed tool output
+updated: 2026-11-08 (Phase 2)
+source-of-truth: docs/ai/reports/phase-0.md, phase-1.md, phase-2.md; observed tool output
 ---
 
 # Known issues
 
 | # | Severity | Found | Issue | Workaround / owner |
 |---|---|---|---|---|
-| KI-1 | medium | 2026-11-08 | Local `backend/.env` has `QUEUE_CONNECTION=database` while `artisan dev` runs Horizon (Redis only) → queued jobs never run in dev | Phase 2 sets redis per ADR-0005 |
+| KI-1 | resolved | 2026-11-08 | Local `backend/.env` had `QUEUE_CONNECTION=database` while Horizon consumes Redis only → queued jobs never ran in dev | **Resolved in Phase 2**: `.env` and `.env.example` set `redis`; `dev-check` fails on any other value |
 | KI-2 | medium | 2026-11-08 | Laravel Boost MCP (`php artisan boost:mcp`) failed to connect (CONNECTION_CLOSED) | Phase 4: run manually, check PHP path/timeout; until then use `composer show`/docs |
 | KI-3 | low | 2026-11-08 | `pnpm peers check`: `eslint-config-next` plugins declare peer `eslint ≤9`, installed eslint 10 — warning only, lint works | Watch on eslint-config-next upgrades |
 | KI-4 | low | 2026-11-08 | `create-next-app` 16.4 writes `typescript ^7`; `typescript-eslint` 8.x rejects TS 7.0 | Pinned `^6` (ADR-0004); revisit when typescript-eslint supports ≥7.1 |
 | KI-5 | low | 2026-11-08 | Ports 8000/8001 are taken by HTTP Toolkit on the developer machine → `php artisan serve` default collides | Use nginx + php-fpm (ADR-0008) |
-| KI-6 | low | 2026-11-08 | `backend/.env.example` missing `DB_*`, `REVERB_*` keys present in `.env` | Phase 2 `.env.example` sync + `dev-check` key parity |
+| KI-6 | resolved | 2026-11-08 | `backend/.env.example` was missing `DB_*`, `REVERB_*` keys present in `.env` | **Resolved in Phase 2**: `.env.example` rewritten as the authoritative key list; `dev-check` verifies key parity (names only) for backend and the three apps |
 | KI-7 | info | 2026-11-08 | GitHub free plan: branch protection/required checks unavailable (403) | ADR-0010 conventions + local hooks |
 | KI-8 | info | 2026-11-08 | Frozen starter UI still built in CI (`npm run check`, `tsc`, Vite build) — extra minutes, no value | Accept until the UI stack is removed by a future ADR |
 | KI-9 | info | 2026-11-08 | Bash tool: cwd carried between parallel calls in one turn; `index.lock` appeared briefly from the IDE's git | Always use absolute paths; retry git after a second |
 | KI-10 | info | 2026-11-08 | PHPStan level 7 fails on vendor-published files (`config/horizon.php`, `pulse.php`, `sanctum.php`, Pulse migration) | Excluded in `phpstan.neon` with justification; re-check when a package is removed or the file is rewritten by us |
 | KI-11 | low | 2026-11-08 | Next 16 global types (`LayoutProps`, `PageProps`) exist only after `next typegen`/`dev`/`build`; plain `tsc` fails on a clean checkout | `typecheck` = `next typegen && tsc --noEmit` in every app |
 | KI-12 | info | 2026-11-08 | Local php.ini `memory_limit=128M` crashes PHPStan's parallel worker | `types:check` passes `--memory-limit=1G` |
+| KI-13 | high | 2026-11-08 | nginx must NOT be run via `brew services`/launchd on the developer machines: launch daemons are denied access to `~/Documents` by macOS TCC ("Operation not permitted" on the vhost symlinks). A `sudo brew services restart nginx` run during Phase 2 created `/Library/LaunchDaemons/sh.brew.nginx.plist` (retry loop) and chowned nginx paths to root | Start with `sudo nginx` from a terminal (`make dev-nginx`); remove the daemon (`sudo brew services stop nginx` or `launchctl bootout`), restore ownership with `chown` (see phase-2 report) |
+| KI-14 | low | 2026-11-08 | nginx `error_log` does not accept `$variables`; `$approot`-based log paths broke `nginx -t` | Absolute paths `/opt/homebrew/var/log/nginx/homi.<host>.*.log` |
+| KI-15 | low | 2026-11-08 | On macOS a non-root `lsof -iTCP:443 -sTCP:LISTEN` does not see sockets owned by root, and `pgrep -x nginx` never matches nginx's rewritten title `nginx: master process` → `make dev-nginx` reported "not listening" while nginx was serving, and `reload` would have run `sudo nginx` against a running instance | `lib.sh`: `port_listening` probes with `nc -z 127.0.0.1 <port>` (lsof fallback); `nginx_running` uses `pgrep -f '^nginx: master process'` |

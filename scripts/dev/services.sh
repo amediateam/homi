@@ -81,6 +81,6 @@ case "${1:-status}" in
     stop)    for s in $targets; do stop_one "$s"; done ;;
     restart) for s in $targets; do stop_one "$s"; start_one "$s"; done ;;
     status)  for s in $targets; do status_one "$s"; done; [ "$FAILS" -eq 0 ] ;;
-    logs)    exec tail -n 40 -F "$LOG_DIR"/*.log ;;
+    logs)    exec tail -n 40 -F "$LOG_DIR"/*.log /opt/homebrew/var/log/nginx/homi.*.log ;;
     *)       die "usage: services.sh start|stop|restart|status|logs [service ...]" ;;
 esac

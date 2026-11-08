@@ -12,13 +12,13 @@ browser ── https://cdn.homi.loc ─────────────▶ n
 Laravel  ─ Horizon (Redis :6379) · PostgreSQL :5432 · `public` disk = storage/app/public (no MinIO locally)
 ```
 
-- nginx, php-fpm, PostgreSQL 18 and Redis are Homebrew services shared with the other projects on the machine. nginx runs as root (`sudo brew services`), which is why `nginx -t`/reload ask for sudo.
+- php-fpm, PostgreSQL 18 and Redis are Homebrew services shared with the other projects on the machine. **nginx is started by hand as root from a terminal** (`sudo nginx`, reload with `sudo nginx -s reload`) — never through `brew services`/launchd: macOS TCC denies launch daemons access to `~/Documents`, where the project (and the vhost symlinks) live, so a daemon-launched nginx fails with "Operation not permitted" while a terminal-launched one inherits the terminal's Documents access. `make dev-nginx` follows this convention.
 - HOMI's vhosts live in `infra/local/nginx/*.conf` and are **symlinked** into `/opt/homebrew/etc/nginx/sites-enabled/`; shared snippets are reached through the `sites-available/homi` symlink. The only machine-specific file is `infra/local/nginx/snippets/paths.conf` (gitignored, generated from `paths.conf.example` with the absolute checkout path and certificate paths).
 - TLS: one mkcert certificate for the six hosts in `infra/local/certs/` (gitignored). `mkcert -install` once per machine adds the local CA to the system keychain.
 - DNS: a managed block in `/etc/hosts` between `# >>> homi.uz local` markers (idempotent).
 - Media: the Laravel `public` disk writes to `backend/storage/app/public`; `cdn.homi.loc` serves it read-only with immutable caching for `originals/` and `derived/`. `MEDIA_PUBLIC_URL=https://cdn.homi.loc` makes generated URLs identical in shape to production (ADR-0012). MinIO exists only in staging/production.
-- Ports: 80/443 nginx, 9000 php-fpm, 3000–3002 Next, 5432, 6379. **8000/8001 are taken by HTTP Toolkit on the developer machine**, so `php artisan serve` is not used.
-- Application processes started by `make dev-start`: Horizon and the three Next dev servers, detached, pid files in `infra/local/run/`, logs in `infra/local/logs/` (both gitignored).
+- Ports: 80/443 nginx, 9000 php-fpm, 3000–3002 Next, 5432, 6379. **8000/8001 are taken by HTTP Toolkit on the developer machine**, so `php artisan serve` is not used. The scripts probe ports with a TCP connect (`nc -z`), not `lsof`: on macOS a non-root `lsof` cannot see sockets owned by root, and nginx runs as root here (KI-15). Likewise nginx is detected with `pgrep -f '^nginx: master process'`, because nginx rewrites its process title and `pgrep -x nginx` never matches.
+- Application processes started by `make dev-start`: Horizon and the three Next dev servers, detached, pid files in `infra/local/run/`, logs in `infra/local/logs/` (both gitignored). nginx writes its per-vhost logs as root to `/opt/homebrew/var/log/nginx/homi.<host>.{access,error}.log` (`error_log` cannot take `$variables`, so these paths are absolute); `make dev-logs` tails both locations.
 
 ## Commands
 
@@ -51,6 +51,8 @@ Version pins (`.node-version`, `packageManager`, composer platform, PHP extensio
 |---|---|
 | Browser warns about the certificate | `scripts/dev/certs.sh install` (mkcert CA), then restart the browser |
 | `nginx -t` fails on `ssl_certificate` | run `make dev-certs` before `make dev-nginx` |
+| `make dev-nginx` reports "not listening" right after `sudo nginx` | check `curl -sI https://api.homi.loc/up`; if it answers, the port probe is at fault (`nc` missing?) — see KI-15. If not, `sudo nginx -t` and `sudo tail /opt/homebrew/var/log/nginx/error.log` |
+| nginx error.log shows "Operation not permitted" on the vhost symlinks | nginx was started by launchd (`brew services`), which macOS TCC blocks from `~/Documents`. `sudo brew services stop nginx`, remove `/Library/LaunchDaemons/sh.brew.nginx.plist` if it remains, restore ownership of `/opt/homebrew/opt/nginx`, `/opt/homebrew/var/homebrew/linked/nginx` and `/opt/homebrew/Cellar/nginx/<ver>/bin` to your user, then `sudo nginx` (KI-13) |
 | `https://api.homi.loc` → 502 | php-fpm not running (`brew services start php`) or wrong `$approot` in `snippets/paths.conf` (`scripts/dev/nginx.sh paths`) |
 | `https://cdn.homi.loc/...` → 404 | file not under `backend/storage/app/public`; `make dev-storage` recreates the directory and `health.txt` |
 | Queued jobs never run | `.env` still has `QUEUE_CONNECTION=database`; Horizon consumes Redis only (ADR-0005) |

@@ -2,8 +2,9 @@
 # Wire infra/local/nginx into the Homebrew nginx (ADR-0008).
 #   scripts/dev/nginx.sh paths    → write snippets/paths.conf (absolute checkout path; gitignored)
 #   scripts/dev/nginx.sh link     → symlink sites-available/homi and the 6 vhosts into sites-enabled (no sudo)
-#   scripts/dev/nginx.sh test     → `nginx -t` (nginx runs as root here, so this asks for sudo)
-#   scripts/dev/nginx.sh reload   → reload if running, else `brew services start nginx` (sudo)
+#   scripts/dev/nginx.sh test     → `sudo nginx -t` (nginx runs as root here)
+#   scripts/dev/nginx.sh reload   → `sudo nginx -s reload` if running, else `sudo nginx` (never brew services — see below)
+#   scripts/dev/nginx.sh stop     → `sudo nginx -s quit`
 #   scripts/dev/nginx.sh unlink   → remove the symlinks
 #   scripts/dev/nginx.sh check    → links present, config test passes, 443 listening
 
@@ -39,14 +40,32 @@ test_conf() {
     sudo_run nginx -t
 }
 
+# nginx is started by hand with `sudo nginx` from a terminal (the developers' convention). A launchd
+# daemon cannot be used here: macOS TCC denies daemons access to ~/Documents, where the vhost symlinks
+# and the project root live ("Operation not permitted" in error.log), while a terminal-launched root
+# process inherits the terminal's Documents access. Never use `brew services` for nginx on these machines.
 reload() {
-    if pgrep -x nginx >/dev/null 2>&1; then
+    if nginx_running; then
         sudo_run nginx -s reload
         ok "nginx reloaded"
+        return
+    fi
+    info "nginx is not running; starting it the way the other local projects do"
+    sudo_run nginx
+    for _ in 1 2 3 4 5; do
+        if port_listening 443; then ok "nginx is listening on 443"; return; fi
+        sleep 1
+    done
+    fail "nginx not listening on 443 → sudo nginx -t; sudo tail -n 20 /opt/homebrew/var/log/nginx/error.log"
+    exit 1
+}
+
+stop() {
+    if nginx_running; then
+        sudo_run nginx -s quit
+        ok "nginx stopped"
     else
-        info "nginx is not running; starting it as a root launch daemon (how the other local projects run it)"
-        sudo_run brew services start nginx
-        ok "nginx started"
+        info "nginx not running"
     fi
 }
 
@@ -64,7 +83,9 @@ case "${1:-check}" in
     link)   write_paths; link ;;
     test)   test_conf ;;
     reload) reload ;;
+    start)  reload ;;
+    stop)   stop ;;
     unlink) unlink_all ;;
     check)  check; [ "$FAILS" -eq 0 ] ;;
-    *)      die "usage: nginx.sh paths|link|test|reload|unlink|check" ;;
+    *)      die "usage: nginx.sh paths|link|test|reload|start|stop|unlink|check" ;;
 esac

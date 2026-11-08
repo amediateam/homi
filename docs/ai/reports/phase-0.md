@@ -15,7 +15,7 @@ Mandate: `docs/ai/master-prompt.md` (v3.1). Phase 0 is overview-depth by design 
 
 | Item | Finding |
 |---|---|
-| Root | `/Users/shohsanam/Documents/Development/Server/local/homi.uz` — confirmed |
+| Root | this checkout (`…/Server/local/homi.uz` on the developer machine; absolute paths live only in `.ai/local.env`) — confirmed |
 | Git | 1 commit (`f8f9564 Initial commit`, README.md only). Branch `main`. Remote `github.com/amediateam/homi` (private) |
 | Index | `docs/about.md` and `prompt.md` are **staged** (A) and modified since (M) |
 | Untracked | `backend/`, `frontend/`, `.idea/`, `CLAUDE.md` |

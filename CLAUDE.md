@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Mandate and session start
 
 - The engineering setup follows `docs/ai/master-prompt.md` (v3.1). It is the source mandate; it is not imported here. Changes to it go through a PR with a short ADR.
-- Phase reports live in `docs/ai/reports/phase-<N>.md`. Read the latest one first; Phase 0 (discovery) is complete and its section 8 lists decisions that are still waiting for a human. Do not start Phase 2 (local environment) or change dependencies until those are answered.
+- Phase reports live in `docs/ai/reports/phase-<N>.md`. Read the latest one first. Phases 0 (discovery), 1 (foundation) and 2 (local environment) are complete; the checkpoint decisions are recorded in `docs/architecture/decisions/`. Phase 3 (CDN, webhook, intake) is next and may install only the PROPOSED packages from `docs/backend/package-registry.md` after explicit approval. Session memory for agents: `.ai/memory/{current-state,session-handoff,known-issues}.md`.
 - Talk to the developer in the language they write (Russian so far). Repository artifacts (docs, rules, code comments, commits) are in English.
-- `/Users/shohsanam/Documents/Development/Server/app.uz` is a reference codebase: **read-only**, and read it only through read-only subagents, never in the main context. Never copy its `.env*` files or secrets.
+- `app.uz` (a sibling checkout; its path is `APPUZ_ROOT` in `.ai/local.env`, template in `.ai/local.env.example`) is a reference codebase: **read-only**, and read it only through read-only subagents, never in the main context. Never copy its `.env*` files or secrets. Machine-specific absolute paths never go into repository files.
 - Keep the main session's context small: delegate large reads to Explore subagents, and prefer `rg -n`/`sed -n` over printing whole files.
 
 ## Project
@@ -21,7 +21,7 @@ homi.uz aggregates housing rental and sale listings from public Telegram channel
 One git repo at the root (`docs/architecture/decisions/0001-…` has the canonical layout). `backend/` and `frontend/` have separate toolchains; run commands from inside them.
 
 - `backend/`: Laravel 13 on PHP 8.5 (pinned `^8.5`), with a frozen Inertia v3 + React 19 + TypeScript 7 + Tailwind 4 starter UI. Installed packages: Horizon, Reverb, Sanctum, Scout, Socialite, Pennant, Pulse, Telescope, `laravel/ai`, `laravel/mcp`, Wayfinder, Dusk. Full registry: `docs/backend/package-registry.md` (generated; compact index `.ai/memory/package-capabilities.md`).
-- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` for shared code (created in Phase 2).
+- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` with the shared workspace packages `@homi/config` (locales, currencies, defaults), `@homi/types` (API envelope, pagination), `@homi/utils` (formatting), `@homi/api-client` (`createApiClient`, `ApiError`) and `@homi/ui` (`cn`). Apps import them as workspace dependencies; each package has `lint`/`typecheck` scripts so `pnpm -r` covers them.
 
 ## Commands
 
@@ -75,8 +75,9 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 - **JS tooling:** `vite` is aliased to Vite+ (`@voidzero-dev/vite-plus-core`) through npm `overrides`. The `lint` and `fmt` sections of `vite.config.ts` replace ESLint and Prettier: 4-space indent, single quotes, 80 columns, Tailwind class sorting for `clsx`/`cn`/`cva`. The React Compiler is enabled through a babel preset. `.npmrc` sets `ignore-scripts=true`.
 - **Realtime:** broadcasting goes through Reverb, and Echo is configured in `resources/js/app.tsx`.
 - **Defaults in `AppServiceProvider`:** dates are `CarbonImmutable`. Destructive DB commands are blocked in production. Strict password rules apply only in production.
-- **DB mismatch:** local `.env` uses PostgreSQL, while `.env.example` still has SQLite defaults. Tests run on in-memory SQLite (`phpunit.xml`, with Pulse and Telescope disabled), so Postgres-specific SQL behaves differently in tests. Feature tests get `RefreshDatabase` automatically (`tests/Pest.php`).
-- **Queue gotcha:** `php artisan dev` replaces `queue:listen` with Horizon, but Horizon only consumes **Redis** queues (`config/horizon.php`). `.env` has `QUEUE_CONNECTION=database`, so queued jobs will sit unprocessed in local dev unless you switch to `redis` or run `php artisan queue:listen` yourself.
+- **Databases:** `.env.example` and the local `.env` use PostgreSQL (`DB_CONNECTION=pgsql`). Tests run on in-memory SQLite (`phpunit.xml`, with Pulse and Telescope disabled), so Postgres-specific SQL behaves differently in tests. Feature tests get `RefreshDatabase` automatically (`tests/Pest.php`).
+- **Queues:** Horizon only consumes **Redis** queues (`config/horizon.php`); `.env.example` and the local `.env` set `QUEUE_CONNECTION=redis` and `CACHE_STORE=redis` (ADR-0005). `make dev-start` runs Horizon; `make dev-check` fails if the queue driver is not `redis`. An old `.env` with `QUEUE_CONNECTION=database` leaves queued jobs unprocessed.
+- **Media:** the `public` disk writes to `storage/app/public`, served locally by nginx as `https://cdn.homi.loc` (`MEDIA_PUBLIC_URL`, ADR-0012). MinIO/S3 exists only in staging and production; `AWS_*` stays blank locally.
 - **Local dashboards:** `/horizon`, `/telescope`, `/pulse`.
 
 ## Backend conventions (Laravel Boost)

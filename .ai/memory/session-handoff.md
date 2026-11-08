@@ -1,28 +1,32 @@
 ---
-updated: 2026-11-08 (end of Phase 1 session)
+updated: 2026-11-08 (end of Phase 2 session)
 source-of-truth: this session; overwritten every session
 ---
 
 # Session handoff
 
 ## Done this session
-- Phase 0 discovery + checkpoint (16 developer answers) → `docs/ai/reports/phase-0.md` (§14 has the answers). PR #1 open (`chore/phase-0-discovery` → `main`).
-- Phase 1 foundation on `chore/phase-1-foundation`: housekeeping, root standards, root CI, pins (PHP 8.5, Node 26, pnpm workspace, TS 6), scaffolding baseline committed, ADRs 0001–0011, docs structure, package registry generator, reference codebase catalogue (15 `app.uz` modules), collector landscape (telegram.uz / geo.uz / datahub.uz). Report: `docs/ai/reports/phase-1.md`.
+- Phase 2 — local environment, applied and verified on the first developer's machine: nginx vhosts + snippets, mkcert TLS, `/etc/hosts`, `scripts/dev/*`, `Makefile`, backend `.env.example`/`cors`/`filesystems`, frontend workspace packages and `.env.example`s, ADR-0012 (no local MinIO), ADR-0008 amended (`sudo nginx`). Report: `docs/ai/reports/phase-2.md`.
+- Incident: a `brew services restart nginx` step in `nginx.sh` created a launchd daemon that macOS TCC blocks from `~/Documents` and chowned nginx paths to root; the developer corrected the convention, removed the daemon and restored ownership. Never use `brew services` for nginx on these machines (KI-13). Ask before changing how a shared service is launched.
+- Probe bugs fixed: `lsof` as non-root cannot see root sockets, `pgrep -x nginx` never matches → `nc -z` + `pgrep -f` (KI-15); nginx `error_log` rejects variables (KI-14).
 
-## Verified
-- `composer ci:check` exit 0 (run locally after the first CI failure exposed Pint/PHPStan issues — see phase-1.md TESTS correction); `pnpm -r lint` and `pnpm -r typecheck` pass from a clean `.next`; `composer audit` clean; `scripts/packages/registry --check` current; PostgreSQL connection works.
-- Not verified locally: `pnpm -r build` (CI). Lesson recorded: never write "passes" for a command that was not run in the session.
+## Verified (commands run this session, exit codes read)
+- `make dev-check` exit 0: 24 PASS / 0 WARN / 0 FAIL. Six hosts answer over HTTPS with the trusted mkcert cert; `http://` → 301; `hook.` serves only `/telegram/*` + `/up`; HMR `101 Switching Protocols` on `/_next/hmr` through nginx.
+- `composer ci:check` exit 0; `pnpm -r lint` exit 0; `pnpm -r typecheck` exit 0; `make registry-check` exit 0; `bash -n scripts/dev/*.sh` ok.
+- Not verified: `make dev-setup` end-to-end on a clean clone; `make dev-reset`; `pnpm -r build` (CI); second developer's machine.
 
 ## Decisions taken
-- See ADR index `docs/architecture/decisions/README.md`. Key: bearer tokens (not cookies), frozen backend UI, Redis+Horizon, push-model ingestion (HOMI owns the DB), nginx+mkcert locally, hosting web 159.253.19.121 / DB 5.45.127.98 / MinIO 31.220.104.38.
+- ADR-0012 (media on disk locally, `MEDIA_PUBLIC_URL` everywhere); ADR-0008 amendment (manual `sudo nginx`). See `docs/architecture/decisions/README.md`.
 
 ## Remaining / next step
-1. Merge PR #1, then open the PR for `chore/phase-1-foundation` (rebase if needed).
-2. **Phase 2 — local environment** (ADR-0008, `docs/infrastructure/environments.md`): `infra/local/nginx/*.conf` (api, hook, cdn, landing, app, arm), `scripts/dev/hosts.sh`, mkcert certs (developer runs `mkcert -install` once), MinIO on 9500 with buckets `homi-public|private|tmp`, backend `.env` → redis drivers + `.env.example` sync, frontend `.env.example` files, `frontend/packages/{ui,api-client,types,utils,config}` skeletons, `Makefile` `dev-*` targets, `scripts/dev/check.sh` (§6.6). Report `docs/ai/reports/phase-2.md`, commit per phase.
-3. Phase 3 will install PROPOSED packages after approval (`league/flysystem-aws-s3-v3`, `intervention/image`, `dedoc/scramble`) and port the READY modules listed in `docs/reference-codebase.md`.
+1. Push `chore/phase-2-local-env`; open its PR against `chore/phase-1-foundation` (stacked). Merge order #1 → #2 → phase-2 PR; CI must stay green on each.
+2. Second developer: `make dev-setup` → `make dev-check`; record any FAIL as a KI.
+3. **Phase 3 — CDN, webhook, intake**: ask approval to install PROPOSED packages (`league/flysystem-aws-s3-v3`, `intervention/image`, `dedoc/scramble`); port the READY media code from the `app.uz` catalogue (`docs/reference-codebase.md`); Telegram webhook on `hook.` with the **dev** bot only, via an HTTPS tunnel; `/api/v1/intake/*` contract (`docs/api/intake.md` + OpenAPI) from `docs/api/intake-sources.md`. Report `docs/ai/reports/phase-3.md`.
+4. Phase 4 later: root `.claude/`, `.ai/{rules,skills,agents,tasks}`, `AGENTS.md`, `GEMINI.md`, hooks; fix Laravel Boost MCP (still CONNECTION_CLOSED); smoke-test codex/gemini/grok (approved).
 
 ## Errors / gotchas observed
-- See `.ai/memory/known-issues.md` (KI-1…KI-9). Most relevant for Phase 2: queue driver mismatch (KI-1), ports 8000/8001 taken (KI-5).
+- See `.ai/memory/known-issues.md` KI-13…KI-15 (nginx/TCC, `error_log` variables, `lsof`/`pgrep` on macOS). HTTP/2 has no `Upgrade`: test WebSockets with `curl --http1.1`. zsh has no `PIPESTATUS` (use `pipestatus` or avoid pipes when reading exit codes).
+- Ports 8000/8001 are taken by HTTP Toolkit (KI-5): never `php artisan serve`; `composer run dev` would start it.
 
 ## Active subagent work at handoff
-- None. All six audits are reflected in the repo: `docs/reference-codebase*.md` (app.uz), `docs/api/intake-sources.md` (telegram.uz, datahub.uz), ADR-0009 (Accepted).
+- None.

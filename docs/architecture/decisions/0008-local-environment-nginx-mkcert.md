@@ -15,7 +15,7 @@ Both developers use macOS with the same Homebrew stack. The machine already runs
 - TLS: one mkcert certificate for the six names in `infra/local/certs/` (gitignored); vhosts listen on 443 and redirect 80→443. `mkcert -install` (system trust store) is run by the developer once.
 - nginx vhosts live in `infra/local/nginx/*.conf` and are symlinked into `/opt/homebrew/etc/nginx/sites-enabled/`; they use the `$approot` convention so no absolute path is committed.
 - Routing: `api.`/`hook.` → php-fpm `127.0.0.1:9000` with `backend/public` as root (no `artisan serve`); `homi.`/`app.`/`arm.` → Next dev servers on `3000`/`3001`/`3002` with WebSocket upgrade for HMR; `cdn.` → MinIO `127.0.0.1:9500` (bucket `homi-public`), console `9501`.
-- Services: PostgreSQL 18, Redis, MinIO, php-fpm, nginx via `brew services`; Horizon + Next dev servers via `make dev-start` (a `Makefile` at the root wraps `dev-setup|start|stop|restart|status|logs|check|reset`).
+- Services: PostgreSQL 18, Redis, php-fpm via `brew services`; **nginx started manually as root from a terminal (`sudo nginx`)** — launchd daemons cannot read `~/Documents` under macOS TCC, so `brew services` is not usable for nginx on these machines (found in Phase 2); Horizon + Next dev servers via `make dev-start` (a `Makefile` at the root wraps `dev-setup|start|stop|restart|status|logs|check|reset`). MinIO removed from the local stack by ADR-0012.
 - Next.js: `allowedDevOrigins` includes the `.homi.loc` hosts; `images.remotePatterns` lists `cdn.homi.loc` only.
 
 ## Consequences

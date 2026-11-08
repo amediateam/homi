@@ -54,8 +54,19 @@ need_cmd() {
 
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+# Probe the port with a TCP connect instead of lsof: on macOS, lsof run as a normal user cannot see
+# sockets owned by other users, and nginx runs as root here (KI-15). Falls back to lsof without nc.
 port_listening() {
-    lsof -nP -iTCP:"$1" -sTCP:LISTEN -t >/dev/null 2>&1
+    if command -v nc >/dev/null 2>&1; then
+        nc -z -w 1 127.0.0.1 "$1" >/dev/null 2>&1
+    else
+        lsof -nP -iTCP:"$1" -sTCP:LISTEN -t >/dev/null 2>&1
+    fi
+}
+
+# nginx rewrites its process title to "nginx: master process ...", so `pgrep -x nginx` never matches.
+nginx_running() {
+    pgrep -f '^nginx: master process' >/dev/null 2>&1
 }
 
 pid_alive() {

@@ -8,13 +8,13 @@ Purpose: from clone to a running stack on macOS with Homebrew (ADR-0008). Detail
 - Access to the private repository `github.com/amediateam/homi` and `gh` logged in (for PRs).
 - A local PostgreSQL role that can create the `homi` database (Homebrew's `postgresql@18` makes your user a superuser by default).
 
-Everything else (`php`, `composer`, `node` 26, `pnpm`, `postgresql@18`, `redis`, `nginx`, `minio`, `mkcert`) is installed by the setup command if missing.
+Everything else (`php`, `composer`, `node` 26, `pnpm`, `postgresql@18`, `redis`, `nginx`, `mkcert`) is installed by the setup command if missing. There is no MinIO locally: media lives on disk behind `https://cdn.homi.loc` (ADR-0012). nginx is started by hand with `sudo nginx` (`make dev-nginx` does it), never with `brew services` — see `docs/infrastructure/local-development.md`.
 
 ## Setup
 
 ```bash
 git clone git@github.com:amediateam/homi.git homi.uz && cd homi.uz
-cp .ai/local.env.example .ai/local.env      # optional: MinIO credentials, ports, paths
+cp .ai/local.env.example .ai/local.env      # optional: Next ports, NGINX_ETC, reference-project paths
 make dev-setup                               # announces every sudo step before running it
 ```
 
