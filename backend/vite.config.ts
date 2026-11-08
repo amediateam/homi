@@ -45,6 +45,8 @@ export default defineConfig({
             'node_modules/**',
             'public/**',
             'bootstrap/ssr/**',
+            // Symlink to the root .ai/ (agent skills, hooks, memory) — vendored skill templates are not app code.
+            '.ai/**',
             'tailwind.config.js',
             'resources/js/actions/**',
             'resources/js/components/ui/*',
@@ -66,6 +68,8 @@ export default defineConfig({
         ignorePatterns: [
             '.github/**',
             'composer.json',
+            // Written by `php artisan boost:update` with PHP's JSON pretty-printer on every sync.
+            'boost.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],
