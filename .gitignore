@@ -6,6 +6,12 @@
 # Machine-specific AI/dev settings (template: .ai/local.env.example)
 .ai/local.env
 
+# Agent skill directories are generated from the canonical .ai/skills by `php artisan boost:update`
+# (Claude Code, Codex, Grok). Only .ai/skills is the source of truth and is committed.
+.claude/skills/
+.agents/skills/
+.grok/skills/
+
 # Agent worktrees (ADR-0010)
 .worktrees/
 

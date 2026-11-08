@@ -1,0 +1,18 @@
+# `.ai/` — the shared knowledge base for every agent
+
+One canonical source, generated views per agent (master prompt §9–11). Nothing here is duplicated by hand.
+
+| Path | Tracked | Purpose |
+|---|---|---|
+| `memory/` | yes | Repository memory read at session start: `current-state.md`, `session-handoff.md`, `known-issues.md`, generated `package-capabilities.md` |
+| `skills/` | yes | **Canonical skills** — vendored third-party skills (`SOURCES.md` lists repo, commit, licence) and, later, HOMI's own skills |
+| `rules/` | yes (when created) | Path-scoped project rules with `paths` frontmatter; indexed by `php artisan boost:index-rules` |
+| `agents/`, `tasks/` | yes (when created) | Subagent definitions and task contracts (Phase 4) |
+| `local.env.example` | yes | Template for `.ai/local.env` (gitignored): machine-specific paths (`APPUZ_ROOT`, nginx mirrors, ports) |
+
+How the views are produced
+- `backend/.ai` is a symlink to this directory, so Laravel Boost (run from `backend/`) reads and writes the canonical store.
+- `cd backend && php artisan boost:update` regenerates the agent directories at the repository root: `.claude/skills` (Claude Code), `.agents/skills` (Codex), `.grok/skills` (Grok Build), plus `backend/.cursor`, `backend/.junie`, … for the agents selected in `backend/boost.json`. Official Boost skills are copied from `vendor/`; skills from `.ai/skills` are symlinked. All generated directories are gitignored.
+- Boost's Laravel guidelines are regenerated into `backend/AGENTS.md` (gitignored). Repository-wide instructions live in `CLAUDE.md` (and, once Phase 4 continues, root `AGENTS.md` / `GEMINI.md`).
+- Adding a skill: `BOOST_GITHUB_TOKEN="$(gh auth token)" php artisan boost:add-skill owner/repo --skill=name` (in `backend/`), then `boost:update`, then record it in `skills/SOURCES.md`.
+- MCP: the Boost server is declared once in the root `.mcp.json` (`php backend/artisan boost:mcp`), the file every agent started at the repository root reads.

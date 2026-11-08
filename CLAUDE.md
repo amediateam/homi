@@ -82,13 +82,13 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 
 ## Backend conventions (Laravel Boost)
 
-`backend/AGENTS.md` holds the full Laravel Boost guidelines. Boost generates it with `php artisan boost:update`, which also runs after `composer update`, and the file is gitignored. Boost skills live in `backend/.claude/skills/` (for example `inertia-react-development`, `wayfinder-development`, `tailwindcss-development`, `testing-best-practices`, `laravel-best-practices`). Read the relevant skill before working in its area. Key rules:
+`backend/AGENTS.md` holds the full Laravel Boost guidelines. Boost generates it with `php artisan boost:update`, which also runs after `composer update`, and the file is gitignored. Skills follow one canonical store: third-party skills are vendored in `.ai/skills/` (provenance in `.ai/skills/SOURCES.md`), and `php artisan boost:update` (run in `backend/`; `backend/.ai` is a symlink to `.ai/`) regenerates the gitignored per-agent directories at the repository root — `.claude/skills/` for Claude Code (official Boost skills such as `laravel-best-practices`, `testing-best-practices`, `configuring-horizon`, `scramble-development` plus symlinks to `.ai/skills/*`), `.agents/skills` for Codex, `.grok/skills` for Grok. `backend/boost.json` (tracked) records the agent and skill selection. Read the relevant skill before working in its area; `.ai/README.md` explains the layout. Key rules:
 
 - Create files with `php artisan make:* --no-interaction`, and use `make:class` for plain classes. New models get a factory and a seeder. Create tests with `php artisan make:test --pest Name` (add `--unit` for unit tests). Prefer feature tests that use factories.
 - PHP style: always use curly braces, constructor property promotion, explicit parameter and return types, TitleCase enum keys, and PHPDoc (with array shapes) instead of inline comments.
 - Don't add or change dependencies, or create new top-level folders, without approval. Don't delete tests without approval.
 - Inertia v3 has no axios: use the built-in client or `useHttp`. `Inertia::lazy()` is gone, so use `Inertia::optional()`. Use `router.cancelAll()` instead of `router.cancel()`. Deferred props need a skeleton empty state.
-- The Laravel Boost MCP server (`backend/.mcp.json`, which runs `php artisan boost:mcp`) provides `search-docs`, `database-schema`, `database-query` and `browser-logs`. Use `search-docs` before relying on version-specific Laravel ecosystem APIs.
+- The Laravel Boost MCP server is declared in the root `.mcp.json` (`php backend/artisan boost:mcp`, project scope) and provides `search-docs`, `database-schema`, `database-query` and `browser-logs`. Use `search-docs` before relying on version-specific Laravel ecosystem APIs. It must be started from the repository root; `backend/.mcp.json` is not read by Claude Code sessions started here.
 
 ## Next.js conventions
 

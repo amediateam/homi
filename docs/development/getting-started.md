@@ -31,6 +31,10 @@ make dev-stop
 
 Open `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`; API at `https://api.homi.loc` (`/up`, `/horizon`, `/telescope`, `/pulse`).
 
+## AI agents
+
+Start Claude Code (or Codex / Grok) **from the repository root**: the root `.mcp.json` declares the Laravel Boost MCP server, and the root `.claude/skills/` holds every skill. Those directories are generated — `make dev-setup` runs `php artisan boost:update`, and `make ai-sync` re-runs it after a `composer update` or after a skill is added to the canonical `.ai/skills/` (provenance in `.ai/skills/SOURCES.md`). `make ai-skills` lists what is available. Layout and rules: `.ai/README.md`.
+
 ## Quality gates before a PR
 
 ```bash

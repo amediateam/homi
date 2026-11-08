@@ -61,6 +61,12 @@ registry: ## Regenerate the Composer package registry (after any composer.lock c
 registry-check: ## Verify the package registry matches composer.lock
 	@scripts/packages/registry --check
 
+ai-sync: ## Regenerate per-agent skill directories and Boost guidelines from the canonical .ai/skills (see .ai/README.md)
+	@cd backend && php artisan boost:update --no-interaction
+
+ai-skills: ## List the skills Boost knows about (official + vendored in .ai/skills)
+	@cd backend && php artisan boost:list-skills --no-ansi
+
 ci-backend: ## Run the backend CI gate locally (Pint, PHPStan, Vite+ check, tsc, Pest)
 	@cd backend && composer ci:check
 

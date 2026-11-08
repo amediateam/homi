@@ -1,6 +1,10 @@
 # Phase 4 — AI infrastructure: inventory and plan (proposal for discussion)
 
-Status: PROPOSAL, 2026-11-08. Written at the developer's request ("настроить среду, установить все необходимые плагины и скиллы — skills.laravel.cloud") before any further application code. Nothing in this document has been applied yet; §6 lists the decisions needed. Facts below were verified in the session unless marked "inferred".
+Status: PARTIALLY APPLIED, 2026-11-08. Written at the developer's request ("настроить среду, установить все необходимые плагины и скиллы — skills.laravel.cloud") before any further application code. Facts below were verified in the session unless marked "inferred".
+
+Developer decisions (same day): D1 Tier 1 only + `vercel/next.js` `next-bundle-optimizer` + `coreyhaines31/marketingskills` (SEO core); D2/D3/D4 yes (root canonical `.ai/skills`, vendored with `SOURCES.md`, `backend/.ai → ../.ai`); D5–D8 and the Codex/Gemini/Grok setup, hooks and the rest of the SEO pack **wait for the developer's go**. No application code is written until the developer says so.
+
+Applied (commit on `chore/phase-4-ai-infra`): §4.1–4.2 MCP fix (root `.mcp.json`, broken entries removed, handshake verified); §5 layout (`.ai/README.md`, `.ai/skills/` with 18 vendored skills + `SOURCES.md`, `backend/.ai` symlink, `config/boost.php` agent paths, `backend/boost.json` tracked, root `.claude/skills` regenerated with 17 official + 18 vendored skills, `make ai-sync` / `make ai-skills`, `dev-setup` runs `boost:update`); docs (`CLAUDE.md`, `getting-started.md`, KI-2 resolved, KI-16/17). Not applied: §3 plugins (user-level, developer's call), §5 AGENTS.md/GEMINI.md/`.ai/rules`/hooks, §7 steps 3, 5–8.
 
 ## 1. What exists today
 
