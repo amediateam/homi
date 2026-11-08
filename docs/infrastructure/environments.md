@@ -54,6 +54,6 @@ Frontend (`frontend/*/.env.example`, Phase 2): `NEXT_PUBLIC_API_URL`, `NEXT_PUBL
 
 ## Not decided yet
 
-- Where Next.js SSR runs in production (Node/pm2 vs static export per app) — Phase 2/6.
+- ~~Where Next.js SSR runs in production~~ — decided: SSR (`next start`) behind nginx, ports 3100–3102 (staging 3200–3202), ADR-0013; vhost templates and process manager in Phase 6.
 - Redis per environment: separate instances vs DB index — Phase 3.
 - DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer.
