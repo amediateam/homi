@@ -12,14 +12,14 @@ Purpose: the one page that explains how HOMI is put together. Details live in AD
                  └──────┬────────┘                  └──────┬───────┘
                         │ bearer token (ADR-0003)          │
                         ▼                                  ▼
-   homi.uz (landing) ──▶  api.homi.uz  ◀── hook.homi.uz (Telegram webhooks, collector pushes)
+   homi.uz (landing) ──▶  api.homi.uz  ◀── hook.homi.uz (third-party webhooks: Telegram Bot API)
                            Laravel 13 API + Horizon workers (Redis)
                            │            │              │
                            ▼            ▼              ▼
                      PostgreSQL 18   MinIO (S3)     AI provider (via laravel/ai, TBD)
                                      cdn.homi.uz
 
-   Collectors (outside this repo) ──push──▶ api/hook (ADR-0009):
+   Collectors (outside this repo) ──push──▶ api.homi.uz /api/v1/intake/* (ADR-0009):
      telegram.uz  — Telegram channels (MadelineProto)
      geo.uz       — web sources (OLX, Uybor, …)
      datahub.uz   — dedup/canon platform (intake not built yet)

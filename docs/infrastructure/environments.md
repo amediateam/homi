@@ -11,9 +11,9 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 | Admin | `https://arm.homi.loc` | `https://arm.staging.homi.uz` | `https://arm.homi.uz` | `frontend/arm` |
 | API | `https://api.homi.loc` | `https://api.staging.homi.uz` | `https://api.homi.uz` | `backend` (`/api/v1`) |
 | CDN (public media) | `https://cdn.homi.loc` | `https://cdn.staging.homi.uz` | `https://cdn.homi.uz` | MinIO public bucket via nginx |
-| Hooks (Telegram, collectors) | `https://hook.homi.loc` | `https://hook.staging.homi.uz` | `https://hook.homi.uz` | `backend` (webhook + intake routes) |
+| Hooks (third-party webhooks) | `https://hook.homi.loc` | `https://hook.staging.homi.uz` | `https://hook.homi.uz` | `backend` (Telegram webhook route group only) |
 
-`hook.*` is a second vhost in front of the same Laravel app, restricted to the webhook/intake route group (no `/api/v1` browsing). Telegram cannot reach `.loc`; local webhook tests use the dev bot plus an HTTPS tunnel when needed.
+`hook.*` is a second vhost in front of the same Laravel app, restricted to third-party webhook routes (Telegram Bot API; no `/api/v1` browsing). First-party collectors (`telegram.uz`, `geo.uz`, `datahub.uz`) push to `api.*` under `/api/v1/intake/*` with their own tokens (ADR-0009). Telegram cannot reach `.loc`; local webhook tests use the dev bot plus an HTTPS tunnel when needed.
 
 ## Hosts (ADR-0011)
 
