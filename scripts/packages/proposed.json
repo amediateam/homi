@@ -1,0 +1,44 @@
+[
+  {
+    "name": "league/flysystem-aws-s3-v3",
+    "why": "Required by the built-in `s3` filesystem disk; MinIO at s3.hc.uz is S3-compatible. No S3 adapter is installed today.",
+    "origin": "app.uz backend/composer.json `^3.34.0`; Laravel docs (filesystem)",
+    "phase": "Phase 3 (CDN)",
+    "alternatives": "Custom S3 client — rejected (master prompt §7.3)"
+  },
+  {
+    "name": "intervention/image",
+    "why": "Image variants (320/640/1024/1920 WebP), EXIF strip, orientation normalisation; GD and Imagick extensions are present.",
+    "origin": "app.uz `^4.1` (Services/Media/HashedUploader, Jobs/Media/GenerateImageVariantsJob)",
+    "phase": "Phase 3 (CDN)",
+    "alternatives": "spatie/laravel-medialibrary — heavier, app.uz uses it only for 4 models; raw GD — more code"
+  },
+  {
+    "name": "dedoc/scramble",
+    "why": "OpenAPI generation from routes/Resources/FormRequests for the contract-first TypeScript client (ADR-0007).",
+    "origin": "app.uz `^0.13.28`",
+    "phase": "Phase 3 (first API endpoints)",
+    "alternatives": "knuckleswtf/scribe (annotation-heavy), hand-written spec (drifts)"
+  },
+  {
+    "name": "spatie/laravel-permission",
+    "why": "Roles/permissions for the ARM admin (data steward, manager…).",
+    "origin": "app.uz `^8.0`; datahub.uz uses it too",
+    "phase": "With the first ARM feature",
+    "alternatives": "Gates/Policies only — sufficient if ARM has one role"
+  },
+  {
+    "name": "spatie/laravel-backup",
+    "why": "PostgreSQL + storage backups with restore drills (master prompt §18).",
+    "origin": "app.uz `^10.3`",
+    "phase": "Phase 6 / ops",
+    "alternatives": "pg_dump cron on the DB host (5.45.127.98) — may already exist for other products"
+  },
+  {
+    "name": "sentry/sentry-laravel",
+    "why": "Error monitoring for API, queues and webhook processing (master prompt §17).",
+    "origin": "app.uz `^4.26`",
+    "phase": "Phase 6 / ops (paid service — needs approval)",
+    "alternatives": "Pulse + log alerts only"
+  }
+]

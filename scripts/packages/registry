@@ -1,0 +1,372 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * HOMI package registry generator (master prompt §3.6–3.7).
+ *
+ * Deterministic facts come from Composer; the only hand-written input is
+ * scripts/packages/summaries.json ([ai-summary] columns) and proposed.json.
+ *
+ *   scripts/packages/registry            regenerate both output files
+ *   scripts/packages/registry --check    exit 1 if composer.lock changed since the last run
+ *
+ * Outputs:
+ *   docs/backend/package-registry.md      full registry
+ *   .ai/memory/package-capabilities.md    compact index for agents
+ */
+
+$root = dirname(__DIR__, 2);
+$backend = $root.'/backend';
+$registryFile = $root.'/docs/backend/package-registry.md';
+$indexFile = $root.'/.ai/memory/package-capabilities.md';
+$summariesFile = __DIR__.'/summaries.json';
+$proposedFile = __DIR__.'/proposed.json';
+
+$lockFile = $backend.'/composer.lock';
+if (! is_file($lockFile)) {
+    fwrite(STDERR, "composer.lock not found at {$lockFile}\n");
+    exit(2);
+}
+$lockHash = hash_file('sha256', $lockFile);
+
+if (in_array('--check', $argv, true)) {
+    exit(check($registryFile, $indexFile, $lockHash));
+}
+
+$composerJson = json_decode((string) file_get_contents($backend.'/composer.json'), true, 512, JSON_THROW_ON_ERROR);
+$constraints = [];
+foreach (($composerJson['require'] ?? []) as $name => $constraint) {
+    $constraints[$name] = ['constraint' => $constraint, 'group' => 'runtime'];
+}
+foreach (($composerJson['require-dev'] ?? []) as $name => $constraint) {
+    $constraints[$name] = ['constraint' => $constraint, 'group' => 'dev'];
+}
+
+$installed = composer($backend, 'show --format=json')['installed'] ?? [];
+$audit = composer($backend, 'audit --format=json', allowFailure: true);
+$outdated = composer($backend, 'outdated --direct --format=json')['installed'] ?? [];
+$licenses = composer($backend, 'licenses --format=json')['dependencies'] ?? [];
+
+$outdatedByName = [];
+foreach ($outdated as $row) {
+    $outdatedByName[$row['name']] = $row;
+}
+$advisories = $audit['advisories'] ?? [];
+$abandoned = $audit['abandoned'] ?? [];
+
+$summaries = is_file($summariesFile)
+    ? json_decode((string) file_get_contents($summariesFile), true, 512, JSON_THROW_ON_ERROR)
+    : [];
+$proposed = is_file($proposedFile)
+    ? json_decode((string) file_get_contents($proposedFile), true, 512, JSON_THROW_ON_ERROR)
+    : [];
+
+$scanDirs = ['app', 'bootstrap', 'config', 'database', 'routes', 'tests'];
+$sourceFiles = collectPhpFiles($backend, $scanDirs);
+
+$rows = [];
+foreach ($installed as $package) {
+    $name = $package['name'];
+    if (! isset($constraints[$name])) {
+        continue; // transitive: listed only when used directly in code (below)
+    }
+    $rows[$name] = buildRow($name, $package, $constraints[$name], $licenses, $outdatedByName, $advisories, $abandoned, $sourceFiles, $backend, $summaries);
+}
+ksort($rows);
+
+// Transitive packages referenced directly from first-party code.
+$transitive = [];
+foreach ($installed as $package) {
+    $name = $package['name'];
+    if (isset($constraints[$name]) || str_starts_with($name, 'php') || ! str_contains($name, '/')) {
+        continue;
+    }
+    $usage = usageFor($name, $sourceFiles, $backend);
+    if ($usage['count'] > 0) {
+        $transitive[$name] = ['version' => $package['version'], 'usage' => $usage];
+    }
+}
+ksort($transitive);
+
+$missingSummaries = array_values(array_filter(array_keys($rows), fn (string $n) => ! isset($summaries[$n])));
+
+file_put_contents($registryFile, renderRegistry($rows, $transitive, $proposed, $advisories, $abandoned, $lockHash, $missingSummaries));
+file_put_contents($indexFile, renderIndex($rows, $proposed, $lockHash));
+
+fwrite(STDOUT, sprintf("registry: %d direct packages, %d transitive-in-use, %d proposed, %d advisories, %d missing summaries\n",
+    count($rows), count($transitive), count($proposed), count($advisories), count($missingSummaries)));
+fwrite(STDOUT, "wrote {$registryFile}\nwrote {$indexFile}\n");
+exit(0);
+
+// ---------------------------------------------------------------------------
+
+/** @return array<string, mixed> */
+function composer(string $cwd, string $args, bool $allowFailure = false): array
+{
+    $cmd = sprintf('cd %s && composer %s --no-interaction --no-ansi 2>/dev/null', escapeshellarg($cwd), $args);
+    $out = shell_exec($cmd);
+    if ($out === null || trim((string) $out) === '') {
+        if ($allowFailure) {
+            return [];
+        }
+        fwrite(STDERR, "composer {$args} produced no output\n");
+        exit(2);
+    }
+    $decoded = json_decode((string) $out, true);
+    if (! is_array($decoded)) {
+        if ($allowFailure) {
+            return [];
+        }
+        fwrite(STDERR, "composer {$args} returned non-JSON output\n");
+        exit(2);
+    }
+
+    return $decoded;
+}
+
+/** @return list<string> absolute paths */
+function collectPhpFiles(string $backend, array $dirs): array
+{
+    $files = [];
+    foreach ($dirs as $dir) {
+        $path = $backend.'/'.$dir;
+        if (! is_dir($path)) {
+            continue;
+        }
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $file) {
+            // bootstrap/cache holds generated manifests, not first-party code
+            if ($file->getExtension() === 'php' && ! str_contains($file->getPathname(), '/bootstrap/cache/')) {
+                $files[] = $file->getPathname();
+            }
+        }
+    }
+    sort($files);
+
+    return $files;
+}
+
+/** @return list<string> */
+function namespacesFor(string $package, string $backend): array
+{
+    $file = $backend.'/vendor/'.$package.'/composer.json';
+    if (! is_file($file)) {
+        return [];
+    }
+    $json = json_decode((string) file_get_contents($file), true);
+    $namespaces = array_keys($json['autoload']['psr-4'] ?? []);
+
+    return array_values(array_filter(array_map(fn ($ns) => rtrim((string) $ns, '\\'), $namespaces)));
+}
+
+/** @return array{count:int, files:list<string>} */
+function usageFor(string $package, array $sourceFiles, string $backend): array
+{
+    $namespaces = namespacesFor($package, $backend);
+    if ($namespaces === []) {
+        return ['count' => 0, 'files' => []];
+    }
+    $hits = [];
+    foreach ($sourceFiles as $file) {
+        $content = (string) file_get_contents($file);
+        foreach ($namespaces as $ns) {
+            if (str_contains($content, $ns.'\\')) {
+                $hits[] = substr($file, strlen($backend) + 1);
+                break;
+            }
+        }
+    }
+
+    return ['count' => count($hits), 'files' => array_slice($hits, 0, 3)];
+}
+
+/** @return array<string, mixed> */
+function buildRow(string $name, array $package, array $constraint, array $licenses, array $outdated, array $advisories, array $abandoned, array $sourceFiles, string $backend, array $summaries): array
+{
+    $summary = $summaries[$name] ?? [];
+    $usage = usageFor($name, $sourceFiles, $backend);
+    $latest = $outdated[$name]['latest'] ?? null;
+
+    return [
+        'name' => $name,
+        'version' => $package['version'],
+        'constraint' => $constraint['constraint'],
+        'group' => $constraint['group'],
+        'license' => implode(', ', $licenses[$name]['license'] ?? ['?']),
+        'latest' => $latest,
+        'latest_status' => $outdated[$name]['latest-status'] ?? null,
+        'advisories' => count($advisories[$name] ?? []),
+        'abandoned' => array_key_exists($name, $abandoned),
+        'usage' => $usage,
+        'status' => $summary['status'] ?? 'TODO',
+        'capabilities' => $summary['capabilities'] ?? 'TODO [ai-summary missing]',
+        'reuse' => $summary['reuse'] ?? 'TODO',
+        'boost_skill' => $summary['boost_skill'] ?? '-',
+        'docs' => $summary['docs'] ?? '',
+        'description' => $package['description'] ?? '',
+    ];
+}
+
+function renderRegistry(array $rows, array $transitive, array $proposed, array $advisories, array $abandoned, string $lockHash, array $missing): string
+{
+    $md = [];
+    $md[] = '# Backend Package Registry';
+    $md[] = '';
+    $md[] = '<!-- GENERATED by scripts/packages/registry — do not edit by hand. Edit scripts/packages/summaries.json / proposed.json and rerun. -->';
+    $md[] = "<!-- composer.lock sha256: {$lockHash} -->";
+    $md[] = '';
+    $md[] = 'Deterministic columns come from `composer show/audit/outdated/licenses` and a namespace scan of `backend/{app,bootstrap,config,database,routes,tests}`. Columns marked `[ai-summary]` are hand-maintained in `scripts/packages/summaries.json`.';
+    $md[] = '';
+    $md[] = '`composer.lock` sha256: `'.substr($lockHash, 0, 16).'…` — run `scripts/packages/registry --check` to verify the registry is current.';
+    $md[] = '';
+    $md[] = 'Status legend: `ACTIVE` used by HOMI · `FROZEN` installed, not to be extended (ADR-0002) · `DEV` development tooling · `UNUSED` installed, no decision yet · `PROPOSED` not installed, candidate (REVIEW-level install).';
+    $md[] = '';
+
+    foreach (['runtime' => '## Direct runtime dependencies', 'dev' => '## Direct development dependencies'] as $group => $title) {
+        $md[] = $title;
+        $md[] = '';
+        $md[] = '| Package | Installed | Constraint | License | Latest | Advisories | Used in (files) | Status |';
+        $md[] = '|---|---|---|---|---|---|---|---|';
+        foreach ($rows as $row) {
+            if ($row['group'] !== $group) {
+                continue;
+            }
+            $latest = $row['latest'] ? "{$row['latest']} ({$row['latest_status']})" : 'up to date';
+            $abandonedMark = $row['abandoned'] ? ' ⚠ abandoned' : '';
+            $md[] = sprintf('| `%s` | %s | `%s` | %s | %s | %s | %d | %s%s |',
+                $row['name'], $row['version'], $row['constraint'], $row['license'], $latest,
+                $row['advisories'] > 0 ? "**{$row['advisories']}**" : '0', $row['usage']['count'], $row['status'], $abandonedMark);
+        }
+        $md[] = '';
+    }
+
+    $md[] = '## Capabilities and reuse `[ai-summary]`';
+    $md[] = '';
+    foreach ($rows as $row) {
+        $md[] = sprintf('### `%s` %s', $row['name'], $row['version']);
+        $md[] = '';
+        $md[] = '- Composer description: '.$row['description'];
+        $md[] = '- Capabilities: '.$row['capabilities'];
+        $md[] = '- Reuse in HOMI: '.$row['reuse'];
+        $md[] = '- Boost skill: '.$row['boost_skill'];
+        if ($row['docs'] !== '') {
+            $md[] = '- Docs: '.$row['docs'];
+        }
+        if ($row['usage']['count'] > 0) {
+            $md[] = '- Used in: `'.implode('`, `', $row['usage']['files']).'`'.($row['usage']['count'] > 3 ? sprintf(' (+%d more)', $row['usage']['count'] - 3) : '');
+        }
+        $md[] = '';
+    }
+
+    $md[] = '## Transitive packages referenced directly by first-party code';
+    $md[] = '';
+    if ($transitive === []) {
+        $md[] = '_None._';
+    } else {
+        $md[] = '| Package | Installed | Used in (files) | Example |';
+        $md[] = '|---|---|---|---|';
+        foreach ($transitive as $name => $t) {
+            $md[] = sprintf('| `%s` | %s | %d | `%s` |', $name, $t['version'], $t['usage']['count'], $t['usage']['files'][0] ?? '');
+        }
+    }
+    $md[] = '';
+
+    $md[] = '## Security advisories (`composer audit`)';
+    $md[] = '';
+    if ($advisories === [] && $abandoned === []) {
+        $md[] = '_No advisories, no abandoned packages._';
+    } else {
+        foreach ($advisories as $name => $list) {
+            foreach ($list as $adv) {
+                $md[] = sprintf('- `%s`: %s — %s (%s)', $name, $adv['advisoryId'] ?? '', $adv['title'] ?? '', $adv['link'] ?? '');
+            }
+        }
+        foreach ($abandoned as $name => $replacement) {
+            $md[] = sprintf('- `%s` is abandoned%s', $name, $replacement ? ", use `{$replacement}`" : '');
+        }
+    }
+    $md[] = '';
+
+    $md[] = '## Proposed packages (not installed — REVIEW-level decision required)';
+    $md[] = '';
+    if ($proposed === []) {
+        $md[] = '_None._';
+    } else {
+        $md[] = '| Package | Why | Origin / evidence | Phase | Alternatives considered |';
+        $md[] = '|---|---|---|---|---|';
+        foreach ($proposed as $p) {
+            $md[] = sprintf('| `%s` | %s | %s | %s | %s |', $p['name'], $p['why'], $p['origin'], $p['phase'], $p['alternatives'] ?? '-');
+        }
+    }
+    $md[] = '';
+
+    if ($missing !== []) {
+        $md[] = '## Missing summaries';
+        $md[] = '';
+        $md[] = 'Add entries to `scripts/packages/summaries.json` for: `'.implode('`, `', $missing).'`.';
+        $md[] = '';
+    }
+
+    return implode("\n", $md);
+}
+
+function renderIndex(array $rows, array $proposed, string $lockHash): string
+{
+    $md = [];
+    $md[] = '---';
+    $md[] = 'updated: generated by scripts/packages/registry';
+    $md[] = 'source-of-truth: docs/backend/package-registry.md (composer.lock sha256 '.substr($lockHash, 0, 16).'…)';
+    $md[] = '---';
+    $md[] = '';
+    $md[] = '# Package capabilities (compact index)';
+    $md[] = '';
+    $md[] = 'Before writing backend code: check this list, then the full registry, then Laravel built-ins. Do not add a package that duplicates a row below.';
+    $md[] = '';
+    foreach ($rows as $row) {
+        $md[] = sprintf('- `%s` %s — %s — %s', $row['name'], $row['version'], $row['status'], firstSentence($row['capabilities']));
+    }
+    if ($proposed !== []) {
+        $md[] = '';
+        $md[] = 'Proposed (not installed): '.implode(', ', array_map(fn ($p) => '`'.$p['name'].'`', $proposed)).' — see registry §Proposed.';
+    }
+    $md[] = '';
+
+    return implode("\n", $md);
+}
+
+function firstSentence(string $text): string
+{
+    // Cut at the first ". " that starts a new sentence (next char is uppercase), so "incl. ru_RU" survives.
+    if (preg_match('/^(.+?\S)\. (?=[A-Z])/u', $text, $m)) {
+        return $m[1];
+    }
+
+    return rtrim($text, '.');
+}
+
+function check(string $registryFile, string $indexFile, string $lockHash): int
+{
+    foreach ([$registryFile, $indexFile] as $file) {
+        if (! is_file($file)) {
+            fwrite(STDERR, "missing {$file}; run scripts/packages/registry\n");
+
+            return 1;
+        }
+    }
+    $registry = (string) file_get_contents($registryFile);
+    if (! preg_match('/composer\.lock sha256: ([0-9a-f]{64})/', $registry, $m)) {
+        fwrite(STDERR, "no checksum header in {$registryFile}; regenerate\n");
+
+        return 1;
+    }
+    if ($m[1] !== $lockHash) {
+        fwrite(STDERR, "package registry is stale: composer.lock changed (".substr($m[1], 0, 12)."… → ".substr($lockHash, 0, 12)."…). Run scripts/packages/registry\n");
+
+        return 1;
+    }
+    fwrite(STDOUT, "package registry is current\n");
+
+    return 0;
+}

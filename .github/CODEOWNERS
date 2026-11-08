@@ -1,0 +1,19 @@
+# Code owners (ADR-0010). GitHub cannot enforce review on this plan yet;
+# the list documents who must review critical paths. Add the second
+# developer's login on each line when known.
+
+*                                   @amediateam
+
+# Critical paths — never merged without a human owner's review
+backend/database/migrations/        @amediateam
+backend/composer.json               @amediateam
+backend/composer.lock               @amediateam
+frontend/pnpm-lock.yaml             @amediateam
+frontend/packages/                  @amediateam
+infra/                              @amediateam
+.github/                            @amediateam
+.claude/                            @amediateam
+.ai/rules/                          @amediateam
+docs/api/                           @amediateam
+docs/architecture/decisions/        @amediateam
+docs/ai/master-prompt.md            @amediateam
