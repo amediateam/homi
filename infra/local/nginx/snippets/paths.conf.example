@@ -1,0 +1,12 @@
+# Machine-specific paths for the HOMI local vhosts (ADR-0001 §0.5, ADR-0008).
+# `make dev-setup` writes infra/local/nginx/snippets/paths.conf (gitignored) from this
+# template with the absolute checkout path; every HOMI vhost includes that file.
+# Never commit paths.conf.
+
+set $approot __HOMI_ROOT__;
+
+# mkcert certificate covering homi.loc, app.homi.loc, arm.homi.loc, api.homi.loc,
+# cdn.homi.loc, hook.homi.loc (scripts/dev/certs.sh). ssl_* directives do not accept
+# $variables reliably, so the absolute paths live here too.
+ssl_certificate     __HOMI_ROOT__/infra/local/certs/homi.loc.pem;
+ssl_certificate_key __HOMI_ROOT__/infra/local/certs/homi.loc-key.pem;
