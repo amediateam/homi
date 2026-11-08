@@ -19,8 +19,9 @@ node_major="$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')"
 node_pin="$(cat .node-version 2>/dev/null | tr -d '[:space:]')"
 [ "$node_major" = "$node_pin" ] && ok "node v$node_major matches .node-version ($node_pin)" || fail "node v${node_major:-?} ≠ .node-version ($node_pin) → install Node $node_pin"
 pnpm_pin="$(grep -oE '"packageManager": *"pnpm@[0-9]+' frontend/package.json | grep -oE '[0-9]+$')"
-pnpm_major="$(pnpm -v 2>/dev/null | cut -d. -f1)"
-[ "$pnpm_major" = "$pnpm_pin" ] && ok "pnpm $pnpm_major matches packageManager (pnpm@$pnpm_pin)" || fail "pnpm ${pnpm_major:-missing} ≠ pnpm@$pnpm_pin → brew install pnpm"
+# Measured inside frontend/: pnpm switches itself to the packageManager version there, so a newer global pnpm is fine (KI-21).
+pnpm_major="$(cd frontend && pnpm -v 2>/dev/null | cut -d. -f1)"
+[ "$pnpm_major" = "$pnpm_pin" ] && ok "pnpm $pnpm_major matches packageManager (pnpm@$pnpm_pin)" || fail "pnpm ${pnpm_major:-missing} ≠ pnpm@$pnpm_pin in frontend/ → brew install pnpm (it switches to packageManager by itself)"
 php_pin="$(grep -oE '"php": *"[0-9]+\.[0-9]+' backend/composer.json | tail -1 | grep -oE '[0-9]+\.[0-9]+')"
 php_ver="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)"
 [ "$php_ver" = "$php_pin" ] && ok "php $php_ver matches composer platform ($php_pin)" || fail "php ${php_ver:-missing} ≠ platform $php_pin"
@@ -53,7 +54,9 @@ else
 fi
 if (cd backend && php artisan horizon:status 2>/dev/null | grep -q 'running'); then ok "Horizon is running"; else warn "Horizon not running → make dev-start"; fi
 grep -qE '^QUEUE_CONNECTION=redis' backend/.env 2>/dev/null && ok "QUEUE_CONNECTION=redis (ADR-0005)" || fail "backend/.env QUEUE_CONNECTION is not redis → Horizon processes nothing (ADR-0005)"
-if "$HOMI_ROOT/scripts/dev/services.sh" status next-landing next-app next-arm >/dev/null 2>&1; then ok "Next dev servers running on 3000/3001/3002"; else warn "Next dev servers not all running → make dev-start"; fi
+# `services.sh status` exits 0 when a service is merely not running (that is a WARN line), so read its output (KI-21).
+next_status="$("$HOMI_ROOT/scripts/dev/services.sh" status next-landing next-app next-arm 2>&1 || true)"
+if printf '%s\n' "$next_status" | grep -qE '^(WARN|FAIL)  '; then warn "Next dev servers not all running → make dev-start"; else ok "Next dev servers running on 3000/3001/3002"; fi
 for pair in homi.loc:landing app.homi.loc:app arm.homi.loc:arm; do
     host="${pair%%:*}"; app="${pair##*:}"
     code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "https://$host/" 2>/dev/null || true)"

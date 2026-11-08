@@ -75,8 +75,10 @@ status_one() {
     fi
 }
 
-targets="${2:-$SERVICES}"
-case "${1:-status}" in
+cmd="${1:-status}"
+[ "$#" -gt 0 ] && shift
+targets="${*:-$SERVICES}"
+case "$cmd" in
     start)   for s in $targets; do start_one "$s"; done ;;
     stop)    for s in $targets; do stop_one "$s"; done ;;
     restart) for s in $targets; do stop_one "$s"; start_one "$s"; done ;;
