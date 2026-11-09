@@ -1,0 +1,2314 @@
+[
+  {
+    "id": "BOT-001",
+    "kind": "system",
+    "trigger": "Bot profile: name and username",
+    "summary": "Display name `kvadro² · поиск жилья`, username `@KvadroAppBot` (same value as `GET /api/bot` → `username`). Per-language names unknown (Q-BOT-019).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §1 l.37"
+  },
+  {
+    "id": "BOT-002",
+    "kind": "system",
+    "trigger": "Empty chat before the first /start (description + description picture)",
+    "summary": "Trilingual description TXT-BOT-001 with banner TXT-BOT-002, shown with the client's Start button. Per-language variants not checked (Q-BOT-019).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.52-68"
+  },
+  {
+    "id": "BOT-003",
+    "kind": "system",
+    "trigger": "Bot profile bio (short description)",
+    "summary": "Short description TXT-BOT-003 (RU line + support bot + site). Per-language variants not checked (Q-BOT-019).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.70-76"
+  },
+  {
+    "id": "BOT-004",
+    "kind": "system",
+    "trigger": "Chat menu button (left of the input field)",
+    "summary": "Label `Открыть`, type web_app, opens the Mini App. Label localisation not checked (Q-BOT-020); URL not visible (Q-BOT-011).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.82"
+  },
+  {
+    "id": "BOT-005",
+    "kind": "system",
+    "trigger": "Bot profile → `OPEN APP` (Main Mini App)",
+    "summary": "Main Mini App is configured and opens the Mini App from the profile. URL not visible (Q-BOT-011).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.83"
+  },
+  {
+    "id": "BOT-006",
+    "kind": "system",
+    "trigger": "Bot profile → Privacy Policy link",
+    "summary": "A privacy-policy link exists; its target was not opened (Q-BOT-021). In chat the policy is `/privacy` (BOT-020).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.84"
+  },
+  {
+    "id": "BOT-007",
+    "kind": "system",
+    "trigger": "Command menu (`/`)",
+    "summary": "10 commands (BOT-012…BOT-021), descriptions TXT-BOT-005; the menu switches with the user's bot language (observed), probably via setMyCommands with a per-chat scope (inference). UZ descriptions not captured (Q-BOT-014).",
+    "buttons": [],
+    "backend_effects": [
+      "Per-chat command list set on language change (mechanism inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §3 l.85, l.91-105; §6.2 l.233"
+  },
+  {
+    "id": "BOT-008",
+    "kind": "system",
+    "trigger": "Inline query `@KvadroAppBot …`",
+    "summary": "Inline mode is off: typing the username shows no hint and no results.",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §2 l.86"
+  },
+  {
+    "id": "BOT-009",
+    "kind": "system",
+    "trigger": "Bot profile avatar",
+    "summary": "Avatar is a bot asset to carry over together with the description picture. Not described in telegram-bot.md.",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "about.md §8.4 l.416, l.424"
+  },
+  {
+    "id": "BOT-010",
+    "kind": "system",
+    "trigger": "sendSticker in /start and after a radar is saved",
+    "summary": "Welcome sticker with the mascot (BOT-012) and a sticker after saving a radar (BOT-051). Sticker set / file_id unknown (Q-BOT-022).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.1 l.193; §6.4 l.537; about.md §8.4 l.424"
+  },
+  {
+    "id": "BOT-011",
+    "kind": "system",
+    "trigger": "Links to `@KvadroSupportBot` (url buttons, texts)",
+    "summary": "Support is a separate bot (`GET /api/bot` → `support`) linked from /help, the not-understood reply, /privacy, description and bio. Not researched (Q-BOT-016).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §1 l.48"
+  },
+  {
+    "id": "BOT-012",
+    "kind": "command",
+    "trigger": "`/start` without payload (also the client Start button)",
+    "summary": "Two messages: welcome sticker (BOT-010), then TXT-BOT-006 (bold active count and heading) with live counters and buttons BTN-001, BTN-002, BTN-003. Repeating /start resends both and resets nothing. Payloads: BOT-027…BOT-034.",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "Reads live counters: active listings, new in 24 h",
+      "Creates the bot user on first contact (implied)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.1 l.191-224"
+  },
+  {
+    "id": "BOT-013",
+    "kind": "command",
+    "trigger": "`/app`",
+    "summary": "TXT-BOT-009 with web_app button BTN-005.",
+    "buttons": [
+      "BTN-005"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.3 l.238-244"
+  },
+  {
+    "id": "BOT-014",
+    "kind": "command",
+    "trigger": "`/new`",
+    "summary": "Starts the radar wizard as a NEW message at step 1 (BOT-036, BOT-037). Same entry as BTN-002 and BTN-030.",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state created"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §3 l.98; §6.4 l.248-250"
+  },
+  {
+    "id": "BOT-015",
+    "kind": "command",
+    "trigger": "`/subs`",
+    "summary": "Radar list BOT-064 or empty state BOT-063 as a new message.",
+    "buttons": [
+      "BTN-049",
+      "BTN-030"
+    ],
+    "backend_effects": [
+      "Reads the user's radars (≈ `GET /api/subscriptions`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.674-694"
+  },
+  {
+    "id": "BOT-016",
+    "kind": "command",
+    "trigger": "`/fav`",
+    "summary": "Favourites list BOT-073 or empty state BOT-072.",
+    "buttons": [
+      "BTN-066"
+    ],
+    "backend_effects": [
+      "Reads favourites (≈ `GET /api/favorites`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.8 l.749-766"
+  },
+  {
+    "id": "BOT-017",
+    "kind": "command",
+    "trigger": "`/settings`",
+    "summary": "Settings panel TXT-BOT-074 in one message (bold heading and values, italic last line); headers BTN-067, option rows BTN-068…BTN-072, current value prefixed `✅ `. Changes: BOT-074, BOT-025.",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Reads settings: quiet, digest, locale, currency, service-news flag"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.768-803"
+  },
+  {
+    "id": "BOT-018",
+    "kind": "command",
+    "trigger": "`/owner`",
+    "summary": "Branches on verification state: not verified → BOT-075 (intro + reply keyboard); verified → BOT-078.",
+    "buttons": [
+      "BTN-073",
+      "BTN-074",
+      "BTN-075"
+    ],
+    "backend_effects": [
+      "Reads owner-verification state"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.815-834"
+  },
+  {
+    "id": "BOT-019",
+    "kind": "command",
+    "trigger": "`/help`",
+    "summary": "TXT-BOT-082 with url button BTN-034 (primary).",
+    "buttons": [
+      "BTN-034"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.11 l.839-845"
+  },
+  {
+    "id": "BOT-020",
+    "kind": "command",
+    "trigger": "`/privacy`",
+    "summary": "Full policy TXT-BOT-083 with callback button BTN-076. The text is a set of promises (retention, deletion, processors) HOMI must keep or replace (BR-BOT-085…BR-BOT-094).",
+    "buttons": [
+      "BTN-076"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.12 l.847-869"
+  },
+  {
+    "id": "BOT-021",
+    "kind": "command",
+    "trigger": "`/ping`",
+    "summary": "Replies TXT-BOT-085: database health and PostGIS version. Answers any user (LB-BOT-027).",
+    "buttons": [],
+    "backend_effects": [
+      "DB health check; reads the PostGIS version"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.13 l.871-877"
+  },
+  {
+    "id": "BOT-022",
+    "kind": "system",
+    "trigger": "Unknown command (checked `/foo`)",
+    "summary": "No reply at all (waited 13 s). See LB-BOT-014.",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §3 l.107; §5 l.184"
+  },
+  {
+    "id": "BOT-023",
+    "kind": "system",
+    "trigger": "Callback from a wizard message started earlier",
+    "summary": "Any button → alert TXT-BOT-039 (`show_alert`) and the keyboard is removed from that message. What makes a wizard stale (superseded or TTL) is unknown (Q-BOT-018).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §5 l.172-173, l.179-180"
+  },
+  {
+    "id": "BOT-024",
+    "kind": "system",
+    "trigger": "Callback from an older copy of a listing card",
+    "summary": "Old copies keep working: the action applies to the current server state; only the pressed copy is re-rendered; other copies and an open /fav list stay stale (LB-BOT-007).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §5 l.180-181; §6.6 l.670-672"
+  },
+  {
+    "id": "BOT-025",
+    "kind": "scenario-step",
+    "trigger": "Language button BTN-003 (welcome) or BTN-070 (/settings); Mini App `PUT /api/settings` with `locale` (inferred)",
+    "summary": "Saves the language and re-renders the current message in it (welcome: no toast; /settings: toast TXT-BOT-075 in the new language); switches the command menu; later replies use the new language.",
+    "buttons": [
+      "BTN-003",
+      "BTN-070"
+    ],
+    "backend_effects": [
+      "User locale saved (`ru` / `uz_Latn` / `en`)",
+      "Command menu switched for the chat (mechanism inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.2 l.226-236"
+  },
+  {
+    "id": "BOT-026",
+    "kind": "system",
+    "trigger": "First contact of a new user",
+    "summary": "How the initial bot language is chosen (Telegram `language_code` or default `ru`) is not documented (Q-BOT-035).",
+    "buttons": [],
+    "backend_effects": [
+      "Initial locale stored"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §13 l.1066"
+  },
+  {
+    "id": "BOT-027",
+    "kind": "deep-link",
+    "trigger": "`/start s_web`",
+    "summary": "From every landing button. Expected: ordinary welcome; source stored for attribution (inferred from /privacy). Link format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:30-37`).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "Attribution source stored (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.1004"
+  },
+  {
+    "id": "BOT-028",
+    "kind": "deep-link",
+    "trigger": "`/start s_web_<tag>`",
+    "summary": "Landing opened with `?s=<tag>` or `?utm_source=<tag>`; tag lower-cased, `[a-z0-9_-]{1,40}`. Expected as BOT-027. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:33-37`).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "Attribution source + tag stored (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.1005"
+  },
+  {
+    "id": "BOT-029",
+    "kind": "deep-link",
+    "trigger": "Suffix `--v<visit>` on any `s_…` payload",
+    "summary": "10-char `[a-z0-9]` visit id appended on click by `stats.js`; the part before it is cut to 49 chars. Expected: joins the site visit (PostHog) to the bot user. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/stats.js:18-20`, `$KVADRO_ROOT/demo/landing/site/landing.js:36`).",
+    "buttons": [],
+    "backend_effects": [
+      "Visit id stored and linked to the user (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.1006"
+  },
+  {
+    "id": "BOT-030",
+    "kind": "deep-link",
+    "trigger": "`/start s_seo[_<lang>][_<slice>]`",
+    "summary": "SEO pages' «Открыть в Telegram» button, slices per seo-pages.md §9 (e.g. `s_seo_tashkent_yunusobod_2k`, `s_seo_uz_kv_yunusobod-minor`). Bot response not recorded; expected as BOT-027.",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "Attribution source stored (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "seo-pages.md §9 l.353-371"
+  },
+  {
+    "id": "BOT-031",
+    "kind": "deep-link",
+    "trigger": "`/start s_<source>--l<id>`",
+    "summary": "Observed with `s_web--l51358`: sticker + welcome, then a third message TXT-BOT-008 with BTN-004. Built by the Mini App no-access screen; `<source>` is `web`, a campaign code (`fb12`, `tg3`, `ig5`), `seo` or `share`. Format CONFIRMED (`$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:26-27, 66`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-42`).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003",
+      "BTN-004"
+    ],
+    "backend_effects": [
+      "Reads the listing title (rooms · district · price)",
+      "Attribution source stored (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §10 l.1007, l.1011-1017"
+  },
+  {
+    "id": "BOT-032",
+    "kind": "deep-link",
+    "trigger": "`/start s_friend`",
+    "summary": "Share link from the Mini App «Нашли жильё?» sheet. Expected: ordinary welcome, referral attribution. Format CONFIRMED (`$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:119`).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "Referral source stored (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.1008"
+  },
+  {
+    "id": "BOT-033",
+    "kind": "deep-link",
+    "trigger": "`/start l_<id>`",
+    "summary": "The Mini App payload format sent to the bot: ordinary welcome, the listing is not recognised (LB-BOT-028).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §10 l.1009"
+  },
+  {
+    "id": "BOT-034",
+    "kind": "deep-link",
+    "trigger": "`/start <unknown or malformed payload>`",
+    "summary": "Not tested; presumably ordinary welcome (Q-BOT-032).",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.999-1000"
+  },
+  {
+    "id": "BOT-035",
+    "kind": "deep-link",
+    "trigger": "`t.me/<support bot>?start=l_<id>` (support bot, not @KvadroAppBot)",
+    "summary": "Built by the Mini App listing actions sheet for the SUPPORT bot; handling belongs there (Q-BOT-016). Format CONFIRMED (`$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:161`).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:161"
+  },
+  {
+    "id": "BOT-036",
+    "kind": "scenario-step",
+    "trigger": "Wizard start: `/new`, BTN-002, BTN-030",
+    "summary": "Each start sends a NEW message; later steps edit it in place. Frame TXT-BOT-010: `📡 Новый радар · шаг N из M`, context `🏠 <deal> · <object or «любой объект»>[ · <rooms>]`, question, optional hint. `◀️ Назад` on every step except 1, `✖️ Отмена` everywhere.",
+    "buttons": [
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Server-side wizard state (TTL unknown, Q-BOT-018)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.248-277"
+  },
+  {
+    "id": "BOT-037",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 1 — deal",
+    "summary": "TXT-BOT-012 `Что ищете?` under `шаг 1 из 7`; one button per row: BTN-006, BTN-007, BTN-008, BTN-025.",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: deal; M = 8 / 7 / 6"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.279-287"
+  },
+  {
+    "id": "BOT-038",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 2 — object",
+    "summary": "TXT-BOT-013 `Какой объект?`, context `🏠 Аренда · любой объект` / `🏠 Посуточно · любой объект` / `🏠 Покупка · любой объект`; options by deal (BR-BOT-021) via BTN-009.",
+    "buttons": [
+      "BTN-009",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: types"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.289-297"
+  },
+  {
+    "id": "BOT-039",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 3 — rooms (apartment, house, apartment-or-house only)",
+    "summary": "TXT-BOT-014 `Сколько комнат?`; BTN-010 laid out `1` · `2` · `3` · `4+` / `1–2` · `2–3` · `✅ Не важно`; context gains `· 2 комн.` / `· 2–3 комн.`.",
+    "buttons": [
+      "BTN-010",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: rooms_min / rooms_max (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.299-308"
+  },
+  {
+    "id": "BOT-040",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 4 — city, zones, districts (multi-select)",
+    "summary": "TXT-BOT-015 + city hint TXT-BOT-016 / TXT-BOT-017. Keyboard: 6 cities (BTN-011, current one `✅`), Tashkent zones BTN-012…BTN-014, districts two per row alphabetically (BTN-015), `✅ Весь <город>` (BTN-016), `Готово (N)` (BTN-017), Back/Cancel. Districts toggle in place; city and zone buttons jump to step 5 (LB-BOT-001, LB-BOT-002).",
+    "buttons": [
+      "BTN-011",
+      "BTN-012",
+      "BTN-013",
+      "BTN-014",
+      "BTN-015",
+      "BTN-016",
+      "BTN-017",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: city, districts, zones, near_metro"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.310-371"
+  },
+  {
+    "id": "BOT-041",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 5 — budget",
+    "summary": "Question by deal (TXT-BOT-018), median line (TXT-BOT-019; rent_long and sale), below-market paragraph (TXT-BOT-020; only where the button exists). Presets by city/deal/rooms + `✅ Не важно` (BTN-018), `✍️ Своя сумма` (BTN-019), `📊 Не дороже рынка` toggle (BTN-020).",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: price_max, below_median",
+      "Reads city median and preset amounts"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.373-411"
+  },
+  {
+    "id": "BOT-042",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 5a — typed-amount prompt (after BTN-019)",
+    "summary": "Same message replaced by TXT-BOT-021 with `◀️ Назад` · `✖️ Отмена`; the bot now waits for text, and all text goes to BOT-043 instead of free-text parsing.",
+    "buttons": [
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: awaiting amount"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.412-418"
+  },
+  {
+    "id": "BOT-043",
+    "kind": "scenario-step",
+    "trigger": "Text received while waiting for an amount",
+    "summary": "Not a number (`примерно шестьсот`) → NEW message TXT-BOT-022, still waiting. A number (`650`) → keyboard removed from the prompt; step 6 arrives as a NEW message that is edited from then on. Formats and limits unknown (Q-BOT-024).",
+    "buttons": [
+      "BTN-021",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: price_max = number, USD"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.418-422"
+  },
+  {
+    "id": "BOT-044",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 6 — listings from whom",
+    "summary": "TXT-BOT-023; BTN-021 (`✅ Все объявления` / `Без риелторов` / `Только хозяева`); next: step 7 (rent) or review (sale).",
+    "buttons": [
+      "BTN-021",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: owner"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.424-432"
+  },
+  {
+    "id": "BOT-045",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 7 — who will live (rent_long, rent_daily)",
+    "summary": "TXT-BOT-024; BTN-022; next: step 8 (rent_long) or review (rent_daily).",
+    "buttons": [
+      "BTN-022",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: tenant"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.434-442"
+  },
+  {
+    "id": "BOT-046",
+    "kind": "scenario-step",
+    "trigger": "Wizard step 8 — pets (rent_long only)",
+    "summary": "TXT-BOT-025 (question prefixed `🆕`); BTN-023; next: review.",
+    "buttons": [
+      "BTN-023",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: pets / pets_only (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.444-452"
+  },
+  {
+    "id": "BOT-047",
+    "kind": "scenario-step",
+    "trigger": "Review screen (after the last step, or after free text BOT-054)",
+    "summary": "TXT-BOT-027: summary rows `🏠` `📍` `💰` `👤` `👥` (+ pets), flow estimate TXT-BOT-028, conditional paragraphs TXT-BOT-029…TXT-BOT-031, closing TXT-BOT-032. Keyboard: relax buttons BTN-027 (if any), `✏️` buttons of the branch two per row (BTN-026), `✅ Сохранить` (BTN-028), `✖️ Отмена` (BTN-025). Pets row format unknown (Q-BOT-010).",
+    "buttons": [
+      "BTN-027",
+      "BTN-026",
+      "BTN-028",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Reads the flow estimate for the last week (≈ `GET /api/feed/flow`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.454-510"
+  },
+  {
+    "id": "BOT-048",
+    "kind": "scenario-step",
+    "trigger": "In-place edit of one step from review or the edit screen (BTN-026)",
+    "summary": "Opens that step in the same message (same «шаг N из M» header; `Изменение радара · …` for an existing radar). A choice or `◀️ Назад` returns to the review; deal change resets the budget; an object not allowed for the new deal sends the user to step 2 instead. Estimate recomputed (but see LB-BOT-005).",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-009",
+      "BTN-010",
+      "BTN-011",
+      "BTN-015",
+      "BTN-017",
+      "BTN-018",
+      "BTN-021",
+      "BTN-022",
+      "BTN-023",
+      "BTN-024"
+    ],
+    "backend_effects": [
+      "Wizard state updated"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.512-515"
+  },
+  {
+    "id": "BOT-049",
+    "kind": "scenario-step",
+    "trigger": "Relax option on the review (BTN-027)",
+    "summary": "Applies the weakening (`✅ Вместе с риелторами` → `👤 все объявления`), recomputes the screen, the button disappears.",
+    "buttons": [
+      "BTN-027"
+    ],
+    "backend_effects": [
+      "Wizard state: weakened filter"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.495-498"
+  },
+  {
+    "id": "BOT-050",
+    "kind": "scenario-step",
+    "trigger": "Cancel (BTN-025) on any step, the amount prompt, the review or the edit screen",
+    "summary": "Message edited to TXT-BOT-026 `Отменил. Новый радар — /new, список — /subs`; keyboard removed; no toast; nothing saved.",
+    "buttons": [
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state discarded"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.269-275; §7 l.906"
+  },
+  {
+    "id": "BOT-051",
+    "kind": "scenario-step",
+    "trigger": "Save a new radar (BTN-028)",
+    "summary": "Toast TXT-BOT-075; message edited to TXT-BOT-034 with BTN-029 · BTN-030; then NEW messages: sticker (BOT-010), starter list BOT-052 (if N > 0), first-radar tip BOT-053 (first radar only).",
+    "buttons": [
+      "BTN-029",
+      "BTN-030"
+    ],
+    "backend_effects": [
+      "Radar created: filters, mode instant, active (≈ `POST /api/subscriptions`, inferred)",
+      "Starter matches recorded as delivered (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.517-566"
+  },
+  {
+    "id": "BOT-052",
+    "kind": "scenario-step",
+    "trigger": "Starter list after save",
+    "summary": "TXT-BOT-035 `🗂 Уже есть за последние 3 дня: N — свежие сверху`, numbered rows, number buttons BTN-031 five per row. A number sends the card (BOT-059) as a new message; the list does not change; buttons keep working after the radar is deleted. Held an out-of-window item (LB-BOT-003).",
+    "buttons": [
+      "BTN-031"
+    ],
+    "backend_effects": [
+      "Reads matches of the last 3 days"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.538-551"
+  },
+  {
+    "id": "BOT-053",
+    "kind": "scenario-step",
+    "trigger": "First-radar tip (only after the user's first radar)",
+    "summary": "TXT-BOT-036 with BTN-032 · BTN-033. `⚡ Сразу` removes the keyboard and replaces the last paragraph with TXT-BOT-037; `📬 Подборкой` not checked (Q-BOT-010).",
+    "buttons": [
+      "BTN-032",
+      "BTN-033"
+    ],
+    "backend_effects": [
+      "Radar delivery mode set (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.552-566"
+  },
+  {
+    "id": "BOT-054",
+    "kind": "free-text",
+    "trigger": "Text that is not a command and not an awaited amount — understood",
+    "summary": "Reaction 👌 on the user's message and the review screen titled TXT-BOT-040, with parse notes TXT-BOT-041 (deal defaulted to rent_long) or TXT-BOT-042 (unknown place → `весь Ташкент`). Keyboard as BOT-047. Parsed by Google Gemini per /privacy.",
+    "buttons": [
+      "BTN-027",
+      "BTN-026",
+      "BTN-028",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "LLM call; phones and @handles masked; text not stored",
+      "Wizard state created from the parsed filters",
+      "setMessageReaction 👌"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.5 l.571-597; §5 l.182-183"
+  },
+  {
+    "id": "BOT-055",
+    "kind": "free-text",
+    "trigger": "Free text — not understood (`привет`)",
+    "summary": "No reaction; reply TXT-BOT-043 with BTN-030 and BTN-034.",
+    "buttons": [
+      "BTN-030",
+      "BTN-034"
+    ],
+    "backend_effects": [
+      "LLM call"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.5 l.599-605"
+  },
+  {
+    "id": "BOT-056",
+    "kind": "free-text",
+    "trigger": "Voice message",
+    "summary": "Per /privacy, voice is parsed like text by Gemini and the audio is not stored. Not tested (Q-BOT-005).",
+    "buttons": [],
+    "backend_effects": [
+      "Speech-to-text + parse (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.5 l.607; §6.12 l.854"
+  },
+  {
+    "id": "BOT-057",
+    "kind": "system",
+    "trigger": "Non-text messages: photo, sticker, location, document, forwarded post, contact outside /owner",
+    "summary": "Not tested (Q-BOT-013).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §12 l.1059"
+  },
+  {
+    "id": "BOT-058",
+    "kind": "system",
+    "trigger": "Bot added to a group chat",
+    "summary": "Not tested; behaviour and BotFather group settings unknown (Q-BOT-013).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §12 l.1058"
+  },
+  {
+    "id": "BOT-059",
+    "kind": "scenario-step",
+    "trigger": "Listing card (from BTN-031, BTN-066; inferred also from a radar push, BOT-081)",
+    "summary": "Photo message with caption when photos exist, otherwise text. HTML: bold title and price, italic source line, original post in an expandable blockquote; body TXT-BOT-044. Rows: [BTN-035][BTN-036 if coordinates] / [BTN-037][BTN-038 if photos] / [BTN-039][BTN-041] / [BTN-042][BTN-044].",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [
+      "Reads listing details incl. market comparison, metro, merged duplicates"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.609-653"
+  },
+  {
+    "id": "BOT-060",
+    "kind": "scenario-step",
+    "trigger": "Card in state «rented by me» (after BTN-042)",
+    "summary": "Line TXT-BOT-046 prepended; the two lower rows become `⭐ В избранное` · `↩️ Не сдано`.",
+    "buttons": [
+      "BTN-039",
+      "BTN-040",
+      "BTN-043"
+    ],
+    "backend_effects": [
+      "Listing hidden for this user"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.664-665"
+  },
+  {
+    "id": "BOT-061",
+    "kind": "scenario-step",
+    "trigger": "Card hide-similar submenu (after BTN-044)",
+    "summary": "Keyboard replaced by `📢 Канал @<канал>` / `📍 Район <район>` / `✖️ Отмена`; a realtor row is promised by the tip text but was never shown.",
+    "buttons": [
+      "BTN-045",
+      "BTN-046",
+      "BTN-047",
+      "BTN-048"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.666-668"
+  },
+  {
+    "id": "BOT-062",
+    "kind": "scheduled-message",
+    "trigger": "Listing taken down (author request, rented, sold, deleted)",
+    "summary": "Per /privacy, already-sent cards are edited to «Объявление снято». Text, buttons and triggers unknown (Q-BOT-031).",
+    "buttons": [],
+    "backend_effects": [
+      "Edits delivered cards (needs a sent-message log)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.12 l.862, l.867-869"
+  },
+  {
+    "id": "BOT-063",
+    "kind": "scenario-step",
+    "trigger": "/subs — no radars",
+    "summary": "TXT-BOT-057 with BTN-030.",
+    "buttons": [
+      "BTN-030"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.676-682"
+  },
+  {
+    "id": "BOT-064",
+    "kind": "scenario-step",
+    "trigger": "/subs — radar list (also BTN-029, BTN-060, after BTN-058)",
+    "summary": "TXT-BOT-058 `📡 Радар (k из 10)` + explanation; one BTN-049 per radar (`▶️`/`⏸` + title TXT-BOT-059), then BTN-030.",
+    "buttons": [
+      "BTN-049",
+      "BTN-030"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.684-694"
+  },
+  {
+    "id": "BOT-065",
+    "kind": "scenario-step",
+    "trigger": "Radar card (BTN-049; edits the list message)",
+    "summary": "TXT-BOT-060: title, status line (3 variants), summary rows, optional `🙈 скрыто: …`. Buttons: `⏸ Пауза`/`▶️ Включить`, `✏️ Изменить`, `📬 Присылать подборкой`/`📡 Присылать сразу`, `🙉 Показать скрытое` (only with hide rules), `🗑 Удалить`, `◀️ К списку`.",
+    "buttons": [
+      "BTN-050",
+      "BTN-051",
+      "BTN-052",
+      "BTN-053",
+      "BTN-054",
+      "BTN-055",
+      "BTN-057",
+      "BTN-060"
+    ],
+    "backend_effects": [
+      "Reads the radar"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.696-725"
+  },
+  {
+    "id": "BOT-066",
+    "kind": "scenario-step",
+    "trigger": "Edit radar screen «Радар — что изменить?» (BTN-055)",
+    "summary": "TXT-BOT-033 + summary, the same `✏️` buttons as the review, `✅ Сохранить`, `✖️ Отмена`; steps use header TXT-BOT-011 `Изменение радара · шаг N из M`.",
+    "buttons": [
+      "BTN-026",
+      "BTN-056",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state seeded from the radar"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.721"
+  },
+  {
+    "id": "BOT-067",
+    "kind": "scenario-step",
+    "trigger": "Save an edited radar (BTN-056)",
+    "summary": "As BOT-051: toast, `✅ Радар включён`, starter list with only listings not sent before (2 three-room flats after `2 комн.` → `2–3 комн.`).",
+    "buttons": [
+      "BTN-029",
+      "BTN-030",
+      "BTN-031"
+    ],
+    "backend_effects": [
+      "Radar filters replaced (≈ `PUT /api/subscriptions/:id`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.568-569; §6.7 l.721"
+  },
+  {
+    "id": "BOT-068",
+    "kind": "scenario-step",
+    "trigger": "Delete confirmation (BTN-057)",
+    "summary": "TXT-BOT-061 `Удалить радар «<название>»?` with `🗑 Да, удалить` (danger) · `✖️ Отмена`.",
+    "buttons": [
+      "BTN-058",
+      "BTN-059"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.722-724"
+  },
+  {
+    "id": "BOT-069",
+    "kind": "scenario-step",
+    "trigger": "Poll «Нашли жильё?» — new message after pause (after delete: not observed)",
+    "summary": "TXT-BOT-068 with BTN-061 · BTN-062 / BTN-063 · BTN-064.",
+    "buttons": [
+      "BTN-061",
+      "BTN-062",
+      "BTN-063",
+      "BTN-064"
+    ],
+    "backend_effects": [
+      "ask_found decision; suppressed shortly after an answer (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.716, l.723, l.727-735"
+  },
+  {
+    "id": "BOT-070",
+    "kind": "scenario-step",
+    "trigger": "Poll step «Где нашли?» (BTN-062)",
+    "summary": "Message edited to TXT-BOT-069 with 7 options BTN-065; any option → TXT-BOT-070 without buttons (only `Другое` was pressed).",
+    "buttons": [
+      "BTN-065"
+    ],
+    "backend_effects": [
+      "Answer `elsewhere` + where stored (≈ `POST /api/found`, `POST /api/found/where`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.737-746"
+  },
+  {
+    "id": "BOT-071",
+    "kind": "scenario-step",
+    "trigger": "Poll answers `🎉 Да, через kvadro²`, `🔎 Ещё ищу`, `🙅 Больше не ищу`",
+    "summary": "Replies not checked (Q-BOT-006).",
+    "buttons": [
+      "BTN-061",
+      "BTN-063",
+      "BTN-064"
+    ],
+    "backend_effects": [
+      "Poll answer stored (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.7 l.747; §12 l.1050"
+  },
+  {
+    "id": "BOT-072",
+    "kind": "scenario-step",
+    "trigger": "/fav — empty",
+    "summary": "TXT-BOT-072.",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.8 l.751-755"
+  },
+  {
+    "id": "BOT-073",
+    "kind": "scenario-step",
+    "trigger": "/fav — list",
+    "summary": "TXT-BOT-073 `⭐ Избранное (N)` + numbered rows; one BTN-066 per item → card as a new message. Later toggles do not refresh the list.",
+    "buttons": [
+      "BTN-066"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.8 l.757-766; §6.6 l.672"
+  },
+  {
+    "id": "BOT-074",
+    "kind": "scenario-step",
+    "trigger": "/settings option pressed (BTN-068…BTN-072)",
+    "summary": "Toast TXT-BOT-075; panel re-rendered in place (`✅` moves, the text line changes); the current option also toasts, without change. Language: BOT-025.",
+    "buttons": [
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Settings updated (≈ `PUT /api/settings`, inferred; service news is bot-only)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.805-813"
+  },
+  {
+    "id": "BOT-075",
+    "kind": "scenario-step",
+    "trigger": "/owner — not verified",
+    "summary": "TXT-BOT-076 and a reply keyboard `📱 Поделиться номером` (request_contact) / `Отмена`.",
+    "buttons": [
+      "BTN-073",
+      "BTN-074"
+    ],
+    "backend_effects": [
+      "Owner flow state (implied)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.815-827"
+  },
+  {
+    "id": "BOT-076",
+    "kind": "scenario-step",
+    "trigger": "/owner — `Отмена` pressed (arrives as text)",
+    "summary": "TXT-BOT-077; reply keyboard removed.",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.831"
+  },
+  {
+    "id": "BOT-077",
+    "kind": "scenario-step",
+    "trigger": "/owner — contact received (BTN-073)",
+    "summary": "Telegram asks the user to confirm; the contact stays in the chat. Observed outcome (no listings with that number): TXT-BOT-078. «Listings found», refusals (≥3 flats, realtor number) and foreign contacts not checked (Q-BOT-008).",
+    "buttons": [],
+    "backend_effects": [
+      "Phone hash + verification date stored",
+      "Owner badge applied to matching listings, «обычно за несколько минут»"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.832, l.836-837"
+  },
+  {
+    "id": "BOT-078",
+    "kind": "scenario-step",
+    "trigger": "/owner — already verified",
+    "summary": "TXT-BOT-079 with inline BTN-075.",
+    "buttons": [
+      "BTN-075"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.833"
+  },
+  {
+    "id": "BOT-079",
+    "kind": "scenario-step",
+    "trigger": "Remove number (BTN-075)",
+    "summary": "No confirmation; TXT-BOT-080.",
+    "buttons": [],
+    "backend_effects": [
+      "Phone hash deleted; owner badge removed"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.834"
+  },
+  {
+    "id": "BOT-080",
+    "kind": "scenario-step",
+    "trigger": "Delete my data (BTN-076)",
+    "summary": "Not pressed (irreversible). Confirmation step, reply and scope unknown (Q-BOT-001). Promised by TXT-BOT-083: gone from the bot DB at once, from backups in ~2 weeks; PostHog person deletion requested.",
+    "buttons": [],
+    "backend_effects": [
+      "Deletes all user data (promised)",
+      "PostHog person deletion request (promised)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.12 l.864, l.867"
+  },
+  {
+    "id": "BOT-081",
+    "kind": "scheduled-message",
+    "trigger": "New listing matches an active radar in instant mode",
+    "summary": "Expected: listing card (BOT-059) pushed to the chat. Not observed in ~13 min; whether the radar name is shown is unknown (Q-BOT-002).",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [
+      "Delivered-card log written (dedup, takedown edits)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §5 l.186-187; §6.6 l.611; §12 l.1046"
+  },
+  {
+    "id": "BOT-082",
+    "kind": "scheduled-message",
+    "trigger": "Digest time of the user (09:00 / 19:00 / 12:00 / 20:00) for radars in digest mode",
+    "summary": "A list of new listings at the chosen times (Asia/Tashkent). Format not observed (Q-BOT-003).",
+    "buttons": [],
+    "backend_effects": [
+      "Digest queue drained; delivered log written (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.9 l.777; §12 l.1047"
+  },
+  {
+    "id": "BOT-083",
+    "kind": "scheduled-message",
+    "trigger": "End of the user's quiet hours",
+    "summary": "No cards during quiet hours; everything that appeared overnight comes as one morning digest. Not observed (Q-BOT-003).",
+    "buttons": [],
+    "backend_effects": [
+      "Deferred cards flushed as a digest (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.9 l.775; §12 l.1047"
+  },
+  {
+    "id": "BOT-084",
+    "kind": "scheduled-message",
+    "trigger": "Service-news broadcast",
+    "summary": "Users with `📰 Новости сервиса: Присылать` receive service news. None observed; sender tool unknown (Q-BOT-004).",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.9 l.783; §12 l.1048"
+  },
+  {
+    "id": "BTN-001",
+    "kind": "callback",
+    "trigger": "web_app, primary button: `📱 Открыть kvadro²` · EN `📱 Open kvadro²`",
+    "summary": "Welcome (/start) row 1 → Opens the Mini App (client side; no update reaches the bot)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.1 l.216; §13 l.1087"
+  },
+  {
+    "id": "BTN-002",
+    "kind": "callback",
+    "trigger": "callback button: `📡 Включить радар` · EN `📡 Turn on radar`",
+    "summary": "Welcome row 2 → NEW message: wizard step 1 (BOT-037); the welcome is unchanged",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state created"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.1 l.217; §7 l.887"
+  },
+  {
+    "id": "BTN-003",
+    "kind": "callback",
+    "trigger": "callback button: Two of `🇷🇺 Русский` · `🇺🇿 Oʻzbekcha` · `🇬🇧 English` (always the two other languages)",
+    "summary": "Welcome row 3 → Language switched; the same welcome re-rendered in the new language (BOT-025); command menu switched",
+    "buttons": [
+      "BTN-001",
+      "BTN-002",
+      "BTN-003"
+    ],
+    "backend_effects": [
+      "User locale updated (≈ `PUT /api/settings`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.1 l.218; §6.2 l.231-234; §7 l.888"
+  },
+  {
+    "id": "BTN-004",
+    "kind": "callback",
+    "trigger": "web_app, primary button: `🏠 Открыть квартиру`",
+    "summary": "Third message of `s_<source>--l<id>` (BOT-031) → Opens the Mini App on that listing (URL and start_param inferred)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §10 l.1017; §7 l.889; §9 l.993"
+  },
+  {
+    "id": "BTN-005",
+    "kind": "callback",
+    "trigger": "web_app button: `📱 Открыть приложение`",
+    "summary": "/app → Opens the Mini App",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.3 l.244; §7 l.890"
+  },
+  {
+    "id": "BTN-006",
+    "kind": "callback",
+    "trigger": "callback button: `🔑 Снять надолго`",
+    "summary": "Wizard step 1; `✏️ Сделка` → deal = rent_long, M = 8; edits to step 2 (rent_long objects); in edit mode budget reset and back to review, or step 2 if the object is not allowed",
+    "buttons": [
+      "BTN-009",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: deal"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.264, l.287; §7 l.891"
+  },
+  {
+    "id": "BTN-007",
+    "kind": "callback",
+    "trigger": "callback button: `🌙 Снять посуточно`",
+    "summary": "Wizard step 1; `✏️ Сделка` → deal = rent_daily, M = 7; step 2 (daily objects); edit mode as BTN-006",
+    "buttons": [
+      "BTN-009",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: deal"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.264, l.287"
+  },
+  {
+    "id": "BTN-008",
+    "kind": "callback",
+    "trigger": "callback button: `🏷 Купить`",
+    "summary": "Wizard step 1; `✏️ Сделка` → deal = sale, M = 6; step 2 (sale objects); edit mode as BTN-006 (room → sale forces step 2)",
+    "buttons": [
+      "BTN-009",
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: deal"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.264, l.287, l.514-515"
+  },
+  {
+    "id": "BTN-009",
+    "kind": "callback",
+    "trigger": "callback button: `Квартира`, `Дом`, `Квартира или дом`, `Комната / подселение`, `Помещение`, `Участок` (set per deal, BR-BOT-021)",
+    "summary": "Wizard step 2; `✏️ Объект` → types set; next step 3 (apartment, house, both) or step 4 (room, commercial, land); in edit mode back to review",
+    "buttons": [
+      "BTN-010",
+      "BTN-011",
+      "BTN-015",
+      "BTN-016",
+      "BTN-017"
+    ],
+    "backend_effects": [
+      "Wizard state: types (`apartment` / `house` / both / `room` / `commercial` / `land`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.293-297; §7 l.892"
+  },
+  {
+    "id": "BTN-010",
+    "kind": "callback",
+    "trigger": "callback button: `1` `2` `3` `4+` `1–2` `2–3` `Не важно` (default `✅ Не важно`)",
+    "summary": "Wizard step 3; `✏️ Комнаты` → rooms set; context line gains `· N комн.`; next step 4 (edit mode: review)",
+    "buttons": [
+      "BTN-011",
+      "BTN-015",
+      "BTN-016",
+      "BTN-017"
+    ],
+    "backend_effects": [
+      "Wizard state: rooms_min / rooms_max (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.308; §7 l.893"
+  },
+  {
+    "id": "BTN-011",
+    "kind": "callback",
+    "trigger": "callback button: `Ташкент` `Ташкентская область` `Андижан` / `Наманган` `Коканд` `Фергана` (current one `✅`)",
+    "summary": "Wizard step 4 → City chosen with `Весь <город>` and the wizard jumps straight to step 5 with that city's budget (LB-BOT-002)",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [
+      "Wizard state: city, districts cleared"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.321-322, l.369; §7 l.894"
+  },
+  {
+    "id": "BTN-012",
+    "kind": "callback",
+    "trigger": "callback button: `🏛 Центр`",
+    "summary": "Wizard step 4, Tashkent only → Toggles zone `center` (on or off), clears districts already ticked, jumps to step 5 (LB-BOT-001)",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [
+      "Wizard state: zones (center), districts cleared"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.370; §7 l.895; §11 l.1023-1025"
+  },
+  {
+    "id": "BTN-013",
+    "kind": "callback",
+    "trigger": "callback button: `🏙 Ближе к центру`",
+    "summary": "Wizard step 4, Tashkent only → Not pressed; inferred to behave like `🏛 Центр`; toast/alert: none (inferred)",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [
+      "Wizard state: zones (near_center, inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.4 l.371"
+  },
+  {
+    "id": "BTN-014",
+    "kind": "callback",
+    "trigger": "callback button: `🚇 Рядом с метро (до ~1 км)`",
+    "summary": "Wizard step 4, Tashkent only → Toggles near-metro (on or off), keeps ticked districts, jumps to step 5 (LB-BOT-001)",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [
+      "Wizard state: near_metro"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.370; §7 l.895"
+  },
+  {
+    "id": "BTN-015",
+    "kind": "callback",
+    "trigger": "callback button: District name (per-city list, tb l.351-358; two per row, alphabetical)",
+    "summary": "Wizard step 4 → Toggles `✅` in place; `Весь <город>` loses `✅`; `Готово (N)` counter updated; stays on step 4",
+    "buttons": [
+      "BTN-015",
+      "BTN-016",
+      "BTN-017"
+    ],
+    "backend_effects": [
+      "Wizard state: districts"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.366; §7 l.896"
+  },
+  {
+    "id": "BTN-016",
+    "kind": "callback",
+    "trigger": "callback button: `Весь <город>` (e.g. `✅ Весь Ташкент`, `Весь Фергана`)",
+    "summary": "Wizard step 4 → Whole city; inferred to clear ticked districts (not pressed)",
+    "buttons": [
+      "BTN-015",
+      "BTN-016",
+      "BTN-017"
+    ],
+    "backend_effects": [
+      "Wizard state: districts cleared (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.4 l.368; §7 l.897"
+  },
+  {
+    "id": "BTN-017",
+    "kind": "callback",
+    "trigger": "callback button: `Готово (N)`",
+    "summary": "Wizard step 4 → Step 5; N = 0 with `✅ Весь <город>` means the whole city; in edit mode back to review",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.367; §7 l.898"
+  },
+  {
+    "id": "BTN-018",
+    "kind": "callback",
+    "trigger": "callback button: `до $<amount>` presets (per city/deal/rooms, §3.6) and `✅ Не важно`",
+    "summary": "Wizard step 5; `✏️ Бюджет` → price_max set (or none); step 6 (edit mode: review)",
+    "buttons": [
+      "BTN-021"
+    ],
+    "backend_effects": [
+      "Wizard state: price_max"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.385-409; §7 l.899"
+  },
+  {
+    "id": "BTN-019",
+    "kind": "callback",
+    "trigger": "callback button: `✍️ Своя сумма`",
+    "summary": "Wizard step 5 → Same message replaced by TXT-BOT-021 with Back/Cancel; bot waits for a number (BOT-042)",
+    "buttons": [
+      "BTN-024",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: awaiting amount"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.412-418; §7 l.900"
+  },
+  {
+    "id": "BTN-020",
+    "kind": "callback",
+    "trigger": "callback button: `📊 Не дороже рынка`",
+    "summary": "Wizard step 5 (Tashkent, Tashkent region; rent_long and sale) → Toggles `✅`, stays on step 5; combinable with an amount (`💰 до $100 000, не дороже рынка`)",
+    "buttons": [
+      "BTN-018",
+      "BTN-019",
+      "BTN-020"
+    ],
+    "backend_effects": [
+      "Wizard state: below_median"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.399-411; §7 l.901"
+  },
+  {
+    "id": "BTN-021",
+    "kind": "callback",
+    "trigger": "callback button: `Все объявления` (default `✅`) · `Без риелторов` · `Только хозяева`",
+    "summary": "Wizard step 6; `✏️ Риелторы` → owner set; next step 7 (rent) or review (sale)",
+    "buttons": [
+      "BTN-022",
+      "BTN-026",
+      "BTN-028"
+    ],
+    "backend_effects": [
+      "Wizard state: owner (`any` / `no_agents` / `owners`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.432; §7 l.902"
+  },
+  {
+    "id": "BTN-022",
+    "kind": "callback",
+    "trigger": "callback button: `👨‍👩‍👧 Семья` · `👨 Парень / парни` · `👩 Девушка / девушки` · `✅ Не важно`",
+    "summary": "Wizard step 7; `✏️ Кто живёт` → tenant set; next step 8 (rent_long) or review (rent_daily)",
+    "buttons": [
+      "BTN-023",
+      "BTN-026",
+      "BTN-028"
+    ],
+    "backend_effects": [
+      "Wizard state: tenant (`family` / `men` / `women` / null, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.442; §7 l.903"
+  },
+  {
+    "id": "BTN-023",
+    "kind": "callback",
+    "trigger": "callback button: `🐾 Не запрещены` · `🐾 Разрешены` · `✅ Не важно`",
+    "summary": "Wizard step 8; `✏️ Животные` → pets set; review",
+    "buttons": [
+      "BTN-026",
+      "BTN-028",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state: pets / pets_only (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.452; §7 l.904"
+  },
+  {
+    "id": "BTN-024",
+    "kind": "callback",
+    "trigger": "callback button: `◀️ Назад`",
+    "summary": "Wizard steps 2-8, typed-amount prompt, edit steps → Previous step with the earlier choice marked `✅`; from an edited step back to the review / edit screen unchanged; from the amount prompt presumably step 5 (not stated)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.267-268, l.418, l.512-513; §7 l.905"
+  },
+  {
+    "id": "BTN-025",
+    "kind": "callback",
+    "trigger": "callback button: `✖️ Отмена`",
+    "summary": "Every wizard step, amount prompt, review, «Радар — что изменить?», edit steps → Message edited to TXT-BOT-026; keyboard removed; nothing saved (BOT-050)",
+    "buttons": [],
+    "backend_effects": [
+      "Wizard state discarded"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.269-275; §7 l.906"
+  },
+  {
+    "id": "BTN-026",
+    "kind": "callback",
+    "trigger": "callback button: `✏️ Сделка` `✏️ Объект` `✏️ Комнаты` `✏️ Районы` `✏️ Бюджет` `✏️ Риелторы` `✏️ Кто живёт` `✏️ Животные` (only the branch's steps, two per row)",
+    "summary": "Review; «Радар — что изменить?» → Opens that step in the same message (BOT-048)",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-009",
+      "BTN-010",
+      "BTN-015",
+      "BTN-018",
+      "BTN-021",
+      "BTN-022",
+      "BTN-023",
+      "BTN-024"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.500-515; §7 l.907"
+  },
+  {
+    "id": "BTN-027",
+    "kind": "callback",
+    "trigger": "callback button: Relax option, e.g. `✅ Вместе с риелторами` (others unknown, Q-BOT-039)",
+    "summary": "Review, when broadening options exist → Applies the weakening, recomputes the review, the button disappears (BOT-049)",
+    "buttons": [
+      "BTN-026",
+      "BTN-028",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state weakened (≈ flow `options` / `POST /api/subscriptions/:id/relax`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.495-498; §7 l.908; §9 l.983"
+  },
+  {
+    "id": "BTN-028",
+    "kind": "callback",
+    "trigger": "callback button: `✅ Сохранить` (primary)",
+    "summary": "Review of a new radar (wizard or free text) → Message edited to TXT-BOT-034; then sticker, starter list, first-radar tip as new messages (BOT-051); toast/alert: TXT-BOT-075 `Сохранил ✅`",
+    "buttons": [
+      "BTN-029",
+      "BTN-030",
+      "BTN-031",
+      "BTN-032",
+      "BTN-033"
+    ],
+    "backend_effects": [
+      "Radar created (≈ `POST /api/subscriptions`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.519-566; §7 l.909"
+  },
+  {
+    "id": "BTN-029",
+    "kind": "callback",
+    "trigger": "callback button: `📡 Радар`",
+    "summary": "«✅ Радар включён» → The same message becomes the /subs list (BOT-064)",
+    "buttons": [
+      "BTN-049",
+      "BTN-030"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.533; §7 l.910"
+  },
+  {
+    "id": "BTN-030",
+    "kind": "callback",
+    "trigger": "callback button: `➕ Новый радар`",
+    "summary": "«✅ Радар включён», /subs list, /subs empty, not-understood reply → NEW message: wizard step 1",
+    "buttons": [
+      "BTN-006",
+      "BTN-007",
+      "BTN-008",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state created"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.248-249; §7 l.911"
+  },
+  {
+    "id": "BTN-031",
+    "kind": "callback",
+    "trigger": "callback button: `1` … `N` (five per row)",
+    "summary": "Starter list «🗂 Уже есть…» → Card (BOT-059) as a NEW message; list unchanged; works after the radar is deleted",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.550-551; §7 l.912"
+  },
+  {
+    "id": "BTN-032",
+    "kind": "callback",
+    "trigger": "callback button: `⚡ Сразу`",
+    "summary": "First-radar tip → Keyboard removed; last paragraph replaced with TXT-BOT-037; toast/alert: none observed",
+    "buttons": [],
+    "backend_effects": [
+      "Radar mode instant (≈ `PATCH /api/subscriptions/:id` mode, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.564-565; §7 l.913"
+  },
+  {
+    "id": "BTN-033",
+    "kind": "callback",
+    "trigger": "callback button: `📬 Подборкой`",
+    "summary": "First-radar tip → Not checked; inferred to set digest mode; toast/alert: unknown",
+    "buttons": [],
+    "backend_effects": [
+      "Radar mode digest (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.4 l.564-566"
+  },
+  {
+    "id": "BTN-034",
+    "kind": "callback",
+    "trigger": "url button: `✉️ Написать в поддержку` (primary)",
+    "summary": "/help; not-understood reply → Opens `https://t.me/KvadroSupportBot`",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.5 l.605; §6.11 l.845; §7 l.938"
+  },
+  {
+    "id": "BTN-035",
+    "kind": "callback",
+    "trigger": "web_app, primary button: `📱 Открыть в приложении` (primary)",
+    "summary": "Listing card row 1 → Opens the listing in the Mini App (URL inferred, not visible)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.657; §7 l.914"
+  },
+  {
+    "id": "BTN-036",
+    "kind": "callback",
+    "trigger": "callback button: `📍 На карте`",
+    "summary": "Listing card row 1, only with coordinates → Venue message as a reply to the card: title `3-комн. квартира · Чиланзар · $600`, address `Чиланзар · Чиланзар-19` (TXT-BOT-045)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.658; §7 l.915"
+  },
+  {
+    "id": "BTN-037",
+    "kind": "callback",
+    "trigger": "url button: `🔗 Открыть оригинал`",
+    "summary": "Listing card row 2 → Opens `https://t.me/<канал>/<id поста>`",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.659; §7 l.916"
+  },
+  {
+    "id": "BTN-038",
+    "kind": "callback",
+    "trigger": "callback button: `📷 Ещё N фото`",
+    "summary": "Listing card row 2, if the post has photos → Album (media group) of N photos without captions, as a reply; button stays. No photos → no album; toast/alert: on failure TXT-BOT-050 `Фото больше недоступны`",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.660; §7 l.917; §11 l.1032"
+  },
+  {
+    "id": "BTN-039",
+    "kind": "callback",
+    "trigger": "callback button: `⭐ В избранное`",
+    "summary": "Listing card row 3 (also in rented state) → Pressed copy's button → `★ В избранном`; toast/alert: TXT-BOT-048 `Добавил в избранное ⭐ — список: /fav`",
+    "buttons": [
+      "BTN-040"
+    ],
+    "backend_effects": [
+      "Favourite toggled on server (≈ `POST /api/listings/:id/favorite`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.661; §7 l.918; §9 l.986"
+  },
+  {
+    "id": "BTN-040",
+    "kind": "callback",
+    "trigger": "callback button: `★ В избранном`",
+    "summary": "Listing card row 3 → Pressed copy's button → `⭐ В избранное`; on a stale copy the server toggle can ADD instead (LB-BOT-007); toast/alert: TXT-BOT-049 `Убрал из избранного`",
+    "buttons": [
+      "BTN-039"
+    ],
+    "backend_effects": [
+      "Favourite toggled on server (≈ `POST /api/listings/:id/favorite`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.662, l.670-672"
+  },
+  {
+    "id": "BTN-041",
+    "kind": "callback",
+    "trigger": "callback button: `Это риелтор`",
+    "summary": "Listing card row 3 → Label unchanged; no undo (LB-BOT-008); toast/alert: TXT-BOT-053; repeat → TXT-BOT-054 `Уже отмечено`",
+    "buttons": [],
+    "backend_effects": [
+      "Phone marked as realtor's for all its listings (≈ `POST /api/listings/:id/report` reason `agent`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.663; §7 l.919; §9 l.988"
+  },
+  {
+    "id": "BTN-042",
+    "kind": "callback",
+    "trigger": "callback button: `Уже сдано`",
+    "summary": "Listing card row 4 → Line TXT-BOT-046 prepended; lower two rows → `⭐ В избранное` · `↩️ Не сдано` (BOT-060); toast/alert: TXT-BOT-055",
+    "buttons": [
+      "BTN-039",
+      "BTN-043"
+    ],
+    "backend_effects": [
+      "Rented vote; listing hidden for the voter (≈ `POST /api/listings/:id/report` reason `rented`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.664; §7 l.920; §9 l.987"
+  },
+  {
+    "id": "BTN-043",
+    "kind": "callback",
+    "trigger": "callback button: `↩️ Не сдано`",
+    "summary": "Card in rented state → Text and keyboard restored; toast/alert: TXT-BOT-056 `Вернул объявление`",
+    "buttons": [
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [
+      "Rented vote withdrawn (≈ `DELETE /api/listings/:id/hide`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.665; §9 l.987"
+  },
+  {
+    "id": "BTN-044",
+    "kind": "callback",
+    "trigger": "callback button: `Скрыть похожие`",
+    "summary": "Listing card row 4 → Keyboard → submenu (BOT-061); toast/alert: TXT-BOT-051 `Что скрыть?`",
+    "buttons": [
+      "BTN-045",
+      "BTN-046",
+      "BTN-047",
+      "BTN-048"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.666; §7 l.921"
+  },
+  {
+    "id": "BTN-045",
+    "kind": "callback",
+    "trigger": "callback button: `📢 Канал @<канал>`",
+    "summary": "Hide-similar submenu → Card keyboard restored; rule shown as `🙈 скрыто: @<канал>` on the radar card; toast/alert: TXT-BOT-052",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [
+      "Hide rule (channel) stored in the radar (≈ `POST /api/listings/:id/block-author` kind source, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.667; §7 l.922; §9 l.989"
+  },
+  {
+    "id": "BTN-046",
+    "kind": "callback",
+    "trigger": "callback button: `📍 Район <район>`",
+    "summary": "Hide-similar submenu → As BTN-045 with a district rule; toast/alert: TXT-BOT-052",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [
+      "Hide rule (district) stored in the radar"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.667; §7 l.922"
+  },
+  {
+    "id": "BTN-047",
+    "kind": "callback",
+    "trigger": "callback button: Realtor row (label unknown; «этого риелтора» in the tip text)",
+    "summary": "Hide-similar submenu (never shown) → Unknown; toast/alert: unknown",
+    "buttons": [],
+    "backend_effects": [
+      "Hide rule (phone/author), inferred"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.4 l.557; §6.6 l.666; §12 l.1054"
+  },
+  {
+    "id": "BTN-048",
+    "kind": "callback",
+    "trigger": "callback button: `✖️ Отмена`",
+    "summary": "Hide-similar submenu → Card keyboard restored",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.6 l.668"
+  },
+  {
+    "id": "BTN-049",
+    "kind": "callback",
+    "trigger": "callback button: `▶️ <название>` / `⏸ <название>` (TXT-BOT-059)",
+    "summary": "/subs list → The list message becomes the radar card (BOT-065)",
+    "buttons": [
+      "BTN-050",
+      "BTN-051",
+      "BTN-052",
+      "BTN-053",
+      "BTN-054",
+      "BTN-055",
+      "BTN-057",
+      "BTN-060"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.692-693; §7 l.923"
+  },
+  {
+    "id": "BTN-050",
+    "kind": "callback",
+    "trigger": "callback button: `⏸ Пауза`",
+    "summary": "Radar card (active) → Status «на паузе», button → `▶️ Включить`; poll BOT-069 as a NEW message; toast/alert: TXT-BOT-062 `На паузе ⏸`",
+    "buttons": [
+      "BTN-051",
+      "BTN-061",
+      "BTN-062",
+      "BTN-063",
+      "BTN-064"
+    ],
+    "backend_effects": [
+      "Radar active = false (≈ `PATCH /api/subscriptions/:id`)",
+      "ask_found evaluated"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.716; §7 l.924; §9 l.978"
+  },
+  {
+    "id": "BTN-051",
+    "kind": "callback",
+    "trigger": "callback button: `▶️ Включить`",
+    "summary": "Radar card (paused) → Status back to active; toast/alert: TXT-BOT-063 (variant with new matches unknown, Q-BOT-045)",
+    "buttons": [
+      "BTN-050"
+    ],
+    "backend_effects": [
+      "Radar active = true (≈ `PATCH /api/subscriptions/:id`; `starter`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.717; §9 l.978"
+  },
+  {
+    "id": "BTN-052",
+    "kind": "callback",
+    "trigger": "callback button: `📬 Присылать подборкой`",
+    "summary": "Radar card (instant) → Status «📬 Подборкой…», button → `📡 Присылать сразу`; toast/alert: TXT-BOT-064",
+    "buttons": [
+      "BTN-053"
+    ],
+    "backend_effects": [
+      "Radar mode digest (≈ `PATCH /api/subscriptions/:id`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.718; §7 l.925; §9 l.979"
+  },
+  {
+    "id": "BTN-053",
+    "kind": "callback",
+    "trigger": "callback button: `📡 Присылать сразу`",
+    "summary": "Radar card (digest) → Button → `📬 Присылать подборкой`; toast/alert: TXT-BOT-065 `Теперь — сразу`",
+    "buttons": [
+      "BTN-052"
+    ],
+    "backend_effects": [
+      "Radar mode instant (≈ `PATCH /api/subscriptions/:id`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.719; §9 l.979"
+  },
+  {
+    "id": "BTN-054",
+    "kind": "callback",
+    "trigger": "callback button: `🙉 Показать скрытое`",
+    "summary": "Radar card, only with hide rules → `🙈` line and the button disappear; toast/alert: TXT-BOT-066",
+    "buttons": [],
+    "backend_effects": [
+      "All hide rules of the radar removed (≈ `PATCH /api/subscriptions/:id` unhide)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.720; §7 l.926; §9 l.980"
+  },
+  {
+    "id": "BTN-055",
+    "kind": "callback",
+    "trigger": "callback button: `✏️ Изменить`",
+    "summary": "Radar card → Message → «Радар — что изменить?» (BOT-066)",
+    "buttons": [
+      "BTN-026",
+      "BTN-056",
+      "BTN-025"
+    ],
+    "backend_effects": [
+      "Wizard state seeded from the radar"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.721; §7 l.927"
+  },
+  {
+    "id": "BTN-056",
+    "kind": "callback",
+    "trigger": "callback button: `✅ Сохранить` (primary)",
+    "summary": "«Радар — что изменить?» → As BTN-028; starter list only with listings not sent before (BOT-067); toast/alert: TXT-BOT-075 `Сохранил ✅`",
+    "buttons": [
+      "BTN-029",
+      "BTN-030",
+      "BTN-031"
+    ],
+    "backend_effects": [
+      "Radar filters replaced (≈ `PUT /api/subscriptions/:id`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.4 l.568-569; §6.7 l.721; §7 l.909; §9 l.981"
+  },
+  {
+    "id": "BTN-057",
+    "kind": "callback",
+    "trigger": "callback button: `🗑 Удалить`",
+    "summary": "Radar card → Message → TXT-BOT-061 confirmation (BOT-068)",
+    "buttons": [
+      "BTN-058",
+      "BTN-059"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.722; §7 l.928"
+  },
+  {
+    "id": "BTN-058",
+    "kind": "callback",
+    "trigger": "callback button: `🗑 Да, удалить` (danger)",
+    "summary": "Delete confirmation → Message → /subs list, or «Радаров пока нет…» at zero; the poll did not come this time; toast/alert: TXT-BOT-067 `Радар удалён`",
+    "buttons": [
+      "BTN-049",
+      "BTN-030"
+    ],
+    "backend_effects": [
+      "Radar deleted (≈ `DELETE /api/subscriptions/:id`; ask_found)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.723; §7 l.928; §9 l.982"
+  },
+  {
+    "id": "BTN-059",
+    "kind": "callback",
+    "trigger": "callback button: `✖️ Отмена`",
+    "summary": "Delete confirmation → Back to the radar card",
+    "buttons": [
+      "BTN-050",
+      "BTN-051",
+      "BTN-052",
+      "BTN-053",
+      "BTN-054",
+      "BTN-055",
+      "BTN-057",
+      "BTN-060"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.724"
+  },
+  {
+    "id": "BTN-060",
+    "kind": "callback",
+    "trigger": "callback button: `◀️ К списку`",
+    "summary": "Radar card → Message → /subs list",
+    "buttons": [
+      "BTN-049",
+      "BTN-030"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.725; §7 l.929"
+  },
+  {
+    "id": "BTN-061",
+    "kind": "callback",
+    "trigger": "callback button: `🎉 Да, через kvadro²`",
+    "summary": "Poll «Нашли жильё?» → Not checked; toast/alert: none (tb §8)",
+    "buttons": [],
+    "backend_effects": [
+      "Answer `kvadro` (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.7 l.735, l.747; §9 l.985"
+  },
+  {
+    "id": "BTN-062",
+    "kind": "callback",
+    "trigger": "callback button: `🏠 Да, в другом месте`",
+    "summary": "Poll «Нашли жильё?» → Message edited to TXT-BOT-069 (BOT-070)",
+    "buttons": [
+      "BTN-065"
+    ],
+    "backend_effects": [
+      "Answer `elsewhere` (inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.737-745; §7 l.930"
+  },
+  {
+    "id": "BTN-063",
+    "kind": "callback",
+    "trigger": "callback button: `🔎 Ещё ищу`",
+    "summary": "Poll «Нашли жильё?» → Not checked; toast/alert: none (tb §8)",
+    "buttons": [],
+    "backend_effects": [
+      "Answer `searching` (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.7 l.735, l.747"
+  },
+  {
+    "id": "BTN-064",
+    "kind": "callback",
+    "trigger": "callback button: `🙅 Больше не ищу`",
+    "summary": "Poll «Нашли жильё?» → Not checked; toast/alert: none (tb §8)",
+    "buttons": [],
+    "backend_effects": [
+      "Answer `stopped` (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.7 l.735, l.747"
+  },
+  {
+    "id": "BTN-065",
+    "kind": "callback",
+    "trigger": "callback button: `📢 Telegram-канал` · `🛒 OLX` / `🌐 Uybor, Uysot…` · `🤝 Риелтор` / `👥 Знакомые` · `🪧 На доме, на улице` / `Другое`",
+    "summary": "Poll «Где нашли?» → Message edited to TXT-BOT-070 without buttons (only `Другое` pressed)",
+    "buttons": [],
+    "backend_effects": [
+      "Where stored (`telegram` / `olx` / `site` / `agent` / `friends` / `street` / `other`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.7 l.745-746; §7 l.931; §12 l.1050"
+  },
+  {
+    "id": "BTN-066",
+    "kind": "callback",
+    "trigger": "callback button: `<n>. <комнаты>-комн. квартира · <район> · $<цена>`",
+    "summary": "/fav list → Card (BOT-059) as a NEW message",
+    "buttons": [
+      "BTN-035",
+      "BTN-036",
+      "BTN-037",
+      "BTN-038",
+      "BTN-039",
+      "BTN-041",
+      "BTN-042",
+      "BTN-044"
+    ],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.8 l.766; §7 l.932"
+  },
+  {
+    "id": "BTN-067",
+    "kind": "callback",
+    "trigger": "callback button: `🌙 Тихие часы` `📬 Время подборок` `🌐 Язык` `💱 Валюта` `📰 Новости сервиса` · EN `🌙 Quiet hours` `📬 Digest times` `🌐 Language` `💱 Currency` `📰 Service news` · UZ `🌙 Sokinlik soatlari` `📬 Toʻplamlar vaqti` `🌐 Til` `💱 Valyuta` `📰 Xizmat yangiliklari`",
+    "summary": "/settings section headers → Nothing: no edit (LB-BOT-026)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.805-806; §7 l.934; §13 l.1107-1132"
+  },
+  {
+    "id": "BTN-068",
+    "kind": "callback",
+    "trigger": "callback button: `выкл` `22:00–08:00` `23:00–08:00` / `00:00–09:00` `23:00–07:00` · EN `off` · UZ `oʻch.`",
+    "summary": "/settings quiet hours → `✅` moves; line becomes e.g. `🌙 Тихие часы: 23:00–08:00. В это время…`; toast/alert: TXT-BOT-075",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Quiet hours saved (≈ `PUT /api/settings` quiet `off`/`22-08`/`23-08`/`00-09`/`23-07`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.792-793, l.807-808; §9 l.990"
+  },
+  {
+    "id": "BTN-069",
+    "kind": "callback",
+    "trigger": "callback button: `09:00` `09:00 и 19:00` / `12:00 и 20:00` `19:00` · EN `and` · UZ `va`",
+    "summary": "/settings digest times → `✅` moves; line becomes e.g. `📬 Подборки: 19:00 — …`; toast/alert: TXT-BOT-075",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Digest times saved (≈ `PUT /api/settings` digest `09`/`09,19`/`12,20`/`19`, inferred)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.795-796, l.808; §9 l.990"
+  },
+  {
+    "id": "BTN-070",
+    "kind": "callback",
+    "trigger": "callback button: `🇷🇺 Русский` `🇺🇿 Oʻzbekcha` `🇬🇧 English`",
+    "summary": "/settings language → Panel re-rendered in the new language; command menu switched (BOT-025); toast/alert: TXT-BOT-075 in the new language",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Locale saved"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.2 l.231-234; §6.9 l.798"
+  },
+  {
+    "id": "BTN-071",
+    "kind": "callback",
+    "trigger": "callback button: `Доллары, $` `Сумы` · EN `Dollars, $` `Soʻm` · UZ `Dollar, $` `Sumi`",
+    "summary": "/settings currency → `✅` moves; line `💱 Валюта: Сумы`; toast/alert: TXT-BOT-075",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Currency saved (`USD` / `UZS`)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.800, l.808; §13 l.1109, l.1131"
+  },
+  {
+    "id": "BTN-072",
+    "kind": "callback",
+    "trigger": "callback button: `Присылать` `Не присылать` · EN `Send` `Don’t send` · UZ `Yuborish` `Yubormaslik`",
+    "summary": "/settings service news → `✅` moves; line `📰 Новости сервиса: Не присылать`; toast/alert: TXT-BOT-075",
+    "buttons": [
+      "BTN-067",
+      "BTN-068",
+      "BTN-069",
+      "BTN-070",
+      "BTN-071",
+      "BTN-072"
+    ],
+    "backend_effects": [
+      "Service-news opt-in saved (bot-only field)"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.9 l.802, l.809; §9 l.991"
+  },
+  {
+    "id": "BTN-073",
+    "kind": "callback",
+    "trigger": "request_contact button: `📱 Поделиться номером`",
+    "summary": "/owner reply keyboard → Telegram asks to confirm; the user's contact is sent; reply TXT-BOT-078 in the no-listings case (BOT-077)",
+    "buttons": [],
+    "backend_effects": [
+      "Phone hash + date stored; badge matching"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.827, l.832; §7 l.935"
+  },
+  {
+    "id": "BTN-074",
+    "kind": "callback",
+    "trigger": "reply button: `Отмена`",
+    "summary": "/owner reply keyboard → Reply TXT-BOT-077; reply keyboard removed (BOT-076)",
+    "buttons": [],
+    "backend_effects": [],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.831; §7 l.936"
+  },
+  {
+    "id": "BTN-075",
+    "kind": "callback",
+    "trigger": "callback button: `🗑 Убрать номер`",
+    "summary": "/owner when verified → No confirmation; TXT-BOT-080 (edit or new message not recorded) (BOT-079)",
+    "buttons": [],
+    "backend_effects": [
+      "Phone hash removed; badge removed"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "source": "telegram-bot.md §6.10 l.833-834; §7 l.937"
+  },
+  {
+    "id": "BTN-076",
+    "kind": "callback",
+    "trigger": "callback button: `🗑 Удалить мои данные`",
+    "summary": "/privacy → Not pressed; confirmation and reply unknown (BOT-080); toast/alert: unknown",
+    "buttons": [],
+    "backend_effects": [
+      "All user data deleted (promised)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "telegram-bot.md §6.12 l.867; §7 l.939; §12 l.1045"
+  }
+]

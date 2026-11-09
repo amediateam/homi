@@ -1,0 +1,799 @@
+[
+  {
+    "id": "API-001",
+    "method": "GET",
+    "path": "/api/meta",
+    "auth": "tma <initData> required",
+    "access": "any user; closed-beta gate: 403 detail private|invite|full|blocked|join",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:104, :64-72, :416-466",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/meta.js:5",
+      "$KVADRO_ROOT/demo/app/src/main.jsx:24",
+      "$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:70",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:234",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:257"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Prefetched before render; retries 1,3,7,15,30 s on non-403; 403 re-check 3x2.5 s except blocked. server logic DOCUMENTED_ONLY. LB-API-002, -018, -019, -021, -048, -051, -053; Q-API-002..006, -026, -047, -054."
+  },
+  {
+    "id": "API-002",
+    "method": "GET",
+    "path": "/api/cities",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:105, :468-487",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/meta.js:8",
+      "$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:125",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:169"
+    ],
+    "status": "CONFIRMED",
+    "notes": "CityStats[]: code, counts{rent_long,rent_daily,sale}, presets, typical (USD). Errors ignored. server logic DOCUMENTED_ONLY. Q-API-016."
+  },
+  {
+    "id": "API-003",
+    "method": "GET",
+    "path": "/api/bot",
+    "auth": "none (no Authorization header)",
+    "access": "public, works outside Telegram and for gated users",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:106, :38-39, :489-505",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/meta.js:15-23",
+      "$KVADRO_ROOT/demo/app/index.html:94-102",
+      "$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:31",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:65",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:46"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{username, support}; non-2xx -> client fallback {username:null}. server logic DOCUMENTED_ONLY. Q-API-056."
+  },
+  {
+    "id": "API-004",
+    "method": "GET",
+    "path": "/api/feed",
+    "auth": "tma <initData> required",
+    "access": "authenticated; 403 -> 'Нет доступа'",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:107, :188-225, :355-366, :507-522",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js:75-93",
+      "$KVADRO_ROOT/demo/app/src/main.jsx:25",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:36",
+      "$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:42"
+    ],
+    "status": "CONFIRMED",
+    "notes": "FilterQuery + limit=20, sort (cheap|expensive|deal|center|ppm), opaque cursor; repeated types/districts/renovation/appliances/zones. FeedPage with next_cursor strictly null at end. server logic DOCUMENTED_ONLY. LB-API-004, -005, -006, -009, -029; Q-API-007, -008, -010..014, -022, -036."
+  },
+  {
+    "id": "API-005",
+    "method": "GET",
+    "path": "/api/feed/count",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:108, :524-534",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js:100-103",
+      "$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js:16",
+      "$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:52"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{count}; debounced 250 ms with abort; once per radar on radar tab. server logic DOCUMENTED_ONLY. LB-API-052; Q-API-012."
+  },
+  {
+    "id": "API-006",
+    "method": "GET",
+    "path": "/api/feed/flow",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:109, :536-556",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js:110-113",
+      "$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js:38",
+      "$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:59",
+      "$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:63"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{week, days>0, options?[{code,label,rate,filters(25 keys)}]}; option code goes as 'relaxed' in POST/PUT subscriptions. server logic DOCUMENTED_ONLY. LB-API-005, -006, -007, -036, -038, -052."
+  },
+  {
+    "id": "API-007",
+    "method": "GET",
+    "path": "/api/map",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:110, :558-585",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js:119",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/useMapPoints.js:15",
+      "$KVADRO_ROOT/demo/app/src/features/map/leaflet/MapView.jsx:154"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{points[{id,lat,lon,label,tone?,priced?,usd?}], total?}; label inserted as HTML (XSS risk). Errors never shown. server logic DOCUMENTED_ONLY. LB-API-008; Q-API-015."
+  },
+  {
+    "id": "API-008",
+    "method": "GET",
+    "path": "/api/listings/:id",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:111, :227-353, :589-608",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:10-17",
+      "$KVADRO_ROOT/demo/app/src/main.jsx:38",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js:47",
+      "$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx:29"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Optional ?preview=1 (map card). ListingDetails; id must be a JSON number; may return another (merged) listing id. 404 -> 'Объявление не загрузилось'. server logic DOCUMENTED_ONLY. LB-API-009..012, -029..031; Q-API-019, -021..024, -035."
+  },
+  {
+    "id": "API-009",
+    "method": "GET",
+    "path": "/api/listings/:id/call",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:112, :610-624",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:23",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:26"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{url} to /call/<token>; client assumes 10 min TTL, refreshes at 8 min; first link comes from call_url. server logic DOCUMENTED_ONLY. LB-API-016, -045; Q-API-042."
+  },
+  {
+    "id": "API-010",
+    "method": "POST",
+    "path": "/api/listings/:id/translate",
+    "auth": "tma <initData> required",
+    "access": "authenticated; offered only when UI locale != ru",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:113, :626-634",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:29-32",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:32"
+    ],
+    "status": "CONFIRMED",
+    "notes": "No body; target language from profile; {text}; Gemini call. server logic DOCUMENTED_ONLY. LB-API-032; Q-API-025."
+  },
+  {
+    "id": "API-011",
+    "method": "POST",
+    "path": "/api/listings/:id/favorite",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:114, :636-647",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:38-41",
+      "$KVADRO_ROOT/demo/app/src/components/FavButton.jsx:27"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Server toggle, returns {favorite} used as truth; 204/error rolls back. Shared with bot. server logic DOCUMENTED_ONLY. LB-API-039; Q-API-038."
+  },
+  {
+    "id": "API-012",
+    "method": "POST",
+    "path": "/api/listings/:id/hide",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:115, :649-651",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:47-50",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:71"
+    ],
+    "status": "CONFIRMED",
+    "notes": "No body; response unread (204 recommended); undo = DELETE hide. server logic DOCUMENTED_ONLY. LB-API-041, -043; Q-API-036, -038."
+  },
+  {
+    "id": "API-013",
+    "method": "DELETE",
+    "path": "/api/listings/:id/hide",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:116, :653-655, :700-702",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:56-59",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js:51",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js:62",
+      "$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:53"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Undo of hide and of fraud-report hide; return from 'Скрытое'. Response unread. server logic DOCUMENTED_ONLY. LB-API-040; Q-API-040."
+  },
+  {
+    "id": "API-014",
+    "method": "POST",
+    "path": "/api/listings/:id/block-author",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:117, :657-669",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:65-68",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:79"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{listing_ids[], label} (listing_ids must be an array). Author = phone or source channel. server logic DOCUMENTED_ONLY. LB-API-040, -043; Q-API-036, -038."
+  },
+  {
+    "id": "API-015",
+    "method": "DELETE",
+    "path": "/api/listings/:id/block-author",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:118, :671-673",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:74-77",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js:59"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Undo of block (author resolved from listing). Duplicate of DELETE /api/hidden/:id. server logic DOCUMENTED_ONLY. LB-API-040."
+  },
+  {
+    "id": "API-016",
+    "method": "POST",
+    "path": "/api/listings/:id/report",
+    "auth": "tma <initData> required",
+    "access": "authenticated; anti-abuse weighting",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:119, :675-705",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:89"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {reason: rented|agent|wrong_data|fraud}; must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY. LB-API-015, -042, -043; Q-API-038..040."
+  },
+  {
+    "id": "API-017",
+    "method": "POST",
+    "path": "/api/listings/:id/share",
+    "auth": "tma <initData> required",
+    "access": "authenticated; only with WebApp.shareMessage (Telegram >= 8.0)",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:120, :707-717",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:97-100",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:35"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{id} of a prepared Telegram message (probably savePreparedInlineMessage); fallback share link t.me/<bot>?startapp=l_<id>. Server logic UNVERIFIED. LB-API-046; Q-API-044."
+  },
+  {
+    "id": "API-018",
+    "method": "GET",
+    "path": "/api/subscriptions",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:121, :368-378, :721-729",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:5",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:175",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:95",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:58",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:60"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Bare array of Subscription; filters must have all 25 keys; types valid per deal. server logic DOCUMENTED_ONLY. LB-API-005, -006, -038; Q-API-013, -032."
+  },
+  {
+    "id": "API-019",
+    "method": "POST",
+    "path": "/api/subscriptions",
+    "auth": "tma <initData> required",
+    "access": "authenticated; bot must be able to write (409 no_chat); limit max_subscriptions (default 10)",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:122, :731-754, :76-85",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:13-21",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:131"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {filters, entry: filters|empty|few|prompt, relaxed?}; 409 no_chat before any write; 409 limit without no_chat. SubscriptionMutationResult with relaxed[] always. server logic DOCUMENTED_ONLY. LB-API-013, -014, -033..037; Q-API-027, -031, -033, -034."
+  },
+  {
+    "id": "API-020",
+    "method": "PUT",
+    "path": "/api/subscriptions/:id",
+    "auth": "tma <initData> required",
+    "access": "radar owner; no_chat applies",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:123, :756-767",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:29-36",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:163"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {filters, relaxed?} full replacement; SubscriptionMutationResult. server logic DOCUMENTED_ONLY. LB-API-013, -014, -035, -036; Q-API-031."
+  },
+  {
+    "id": "API-021",
+    "method": "PATCH",
+    "path": "/api/subscriptions/:id",
+    "auth": "tma <initData> required",
+    "access": "radar owner; no_chat applies to {active:true}",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:124, :769-808",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:56-60",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:108",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:99",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:134",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:151"
+    ],
+    "status": "CONFIRMED",
+    "notes": "One of {active:true|false}, {mode:instant|digest}, {unhide:true}; returns {subscription, starter?, ask_found?}. server logic DOCUMENTED_ONLY. LB-API-013, -033, -034; Q-API-030, -032, -033."
+  },
+  {
+    "id": "API-022",
+    "method": "DELETE",
+    "path": "/api/subscriptions/:id",
+    "auth": "tma <initData> required",
+    "access": "radar owner",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:125, :810-820",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:66-69",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:172"
+    ],
+    "status": "CONFIRMED",
+    "notes": "200 {ask_found?} or 204. server logic DOCUMENTED_ONLY. Q-API-030, -031."
+  },
+  {
+    "id": "API-023",
+    "method": "POST",
+    "path": "/api/subscriptions/:id/relax",
+    "auth": "tma <initData> required",
+    "access": "radar owner; no_chat applies",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:126, :822-838",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:43-49",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:72"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {code} from SubscriptionMutationResult.options; returns {starter}. server logic DOCUMENTED_ONLY. LB-API-013, -036; Q-API-034."
+  },
+  {
+    "id": "API-024",
+    "method": "GET",
+    "path": "/api/settings",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:127, :842-855",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/settings.js:5",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:59",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx:52"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{quiet, digest, locale, currency, locales[], currencies[], quiet_presets[], digest_presets[]}; preset lists differ between docs and bot. server logic DOCUMENTED_ONLY. LB-API-050; Q-API-029."
+  },
+  {
+    "id": "API-025",
+    "method": "PUT",
+    "path": "/api/settings",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:128, :857-897",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/settings.js:11-15",
+      "$KVADRO_ROOT/demo/app/src/features/onboarding/LanguagePicker.jsx:32",
+      "$KVADRO_ROOT/demo/app/src/lib/city.js:23",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:91",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:105",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:119",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:301",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:387",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:395"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Partial body (city|theme|locale|currency|quiet|digest); returns full SettingsResponse; must be reflected in /api/meta (locale_chosen/city_chosen). server logic DOCUMENTED_ONLY. LB-API-018, -049, -050; Q-API-057."
+  },
+  {
+    "id": "API-026",
+    "method": "GET",
+    "path": "/api/hidden",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:129, :901-915",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:5",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:64"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{listings: ListingPreview[], authors: [{id,kind,label,count}]}, both arrays always present. server logic DOCUMENTED_ONLY. LB-API-040; Q-API-037."
+  },
+  {
+    "id": "API-027",
+    "method": "DELETE",
+    "path": "/api/hidden/:id",
+    "auth": "tma <initData> required",
+    "access": "entry owner",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:130, :917-920",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:11-14",
+      "$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:45"
+    ],
+    "status": "CONFIRMED",
+    "notes": ":id = author entry id (not a listing id); response unread. server logic DOCUMENTED_ONLY. LB-API-040."
+  },
+  {
+    "id": "API-028",
+    "method": "DELETE",
+    "path": "/api/hidden",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:131, :922-924",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:17-20",
+      "$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:62"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Clears hidden listings and blocked authors; response unread. server logic DOCUMENTED_ONLY. Q-API-037."
+  },
+  {
+    "id": "API-029",
+    "method": "GET",
+    "path": "/api/favorites",
+    "auth": "tma <initData> required",
+    "access": "authenticated; 403 -> 'Нет доступа'",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:132, :926-941",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:23",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:33"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{items, next_cursor: null} whole list in one page; client never sends cursor. server logic DOCUMENTED_ONLY. LB-API-004, -024; Q-API-009."
+  },
+  {
+    "id": "API-030",
+    "method": "GET",
+    "path": "/api/history",
+    "auth": "tma <initData> required",
+    "access": "authenticated; 403 -> 'Нет доступа'",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:133, :926-941",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:26",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:35"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{items, next_cursor: null}; which action records history is unknown. server logic DOCUMENTED_ONLY. LB-API-004, -024; Q-API-009, -035."
+  },
+  {
+    "id": "API-031",
+    "method": "DELETE",
+    "path": "/api/history",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:134, :943-945",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/user.js:29-32",
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:96"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Clears view history; response unread. server logic DOCUMENTED_ONLY. Q-API-035."
+  },
+  {
+    "id": "API-032",
+    "method": "POST",
+    "path": "/api/found",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:135, :949-958",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/found.js:9-16",
+      "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:95"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {answer: kvadro|elsewhere|searching|stopped, trigger: pause|delete}; response ignored. server logic DOCUMENTED_ONLY. Q-API-030."
+  },
+  {
+    "id": "API-033",
+    "method": "POST",
+    "path": "/api/found/where",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:136, :960-968",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/found.js:22-28",
+      "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:112"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Body {where: telegram|olx|site|agent|friends|street|other}; only after answer=elsewhere. server logic DOCUMENTED_ONLY."
+  },
+  {
+    "id": "API-034",
+    "method": "POST",
+    "path": "/api/events",
+    "auth": "tma <initData>; empty 'tma ' arrives from React app_error and must be rejected silently",
+    "access": "any; fire-and-forget",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:137, :970-1046",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35",
+      "$KVADRO_ROOT/demo/app/index.html:76-88",
+      "$KVADRO_ROOT/demo/app/src/lib/errors.js:80",
+      "$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:54",
+      "$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:101",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:110",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:609",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:624",
+      "$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:27",
+      "$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:74",
+      "$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:66",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:36",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:40",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:30",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:141",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:71",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:75",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:84"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{name, ...props} at top level; React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046."
+  },
+  {
+    "id": "RES-001",
+    "method": "GET",
+    "path": "/media/<listing_id>/<n>.jpg?e=<unix>&s=<32hex>",
+    "auth": "URL signature (no Authorization)",
+    "access": "public with valid signature",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:1054, :1061-1063; $KVADRO_ROOT/docs/seo-pages.md:379-390; $KVADRO_ROOT/docs/about.md:305-307",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/images.js:9-60",
+      "$KVADRO_ROOT/demo/app/src/main.jsx:26-33"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "800 px photo; Cache-Control public max-age=86400 + ETag; missing e/s -> 422, bad/expired -> 404. Served by app.kvadro.app and kvadro.app. LB-API-023, -031; Q-API-024."
+  },
+  {
+    "id": "RES-002",
+    "method": "GET",
+    "path": "/media/<listing_id>/<n>.s.jpg?e=<unix>&s=<32hex>",
+    "auth": "URL signature",
+    "access": "public with valid signature",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:1055, :1061; $KVADRO_ROOT/docs/seo-pages.md:383",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/images.js:9-14"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "480 px thumbnail derived client-side from relative /media/<digits>/<digits>.jpg? URLs only. LB-API-031."
+  },
+  {
+    "id": "RES-003",
+    "method": "GET",
+    "path": "meta.tiles (PMTiles file or /tiles/{z}/{x}/{y} template)",
+    "auth": "none",
+    "access": "public; Range + CORS required",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:443, :1056, :1065-1074",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/style.js:491-513",
+      "$KVADRO_ROOT/demo/app/src/features/map/engine.js:54-59",
+      "$KVADRO_ROOT/demo/app/src/features/map/tilePrefetch.js:101",
+      "$KVADRO_ROOT/demo/app/src/app/useMapTilePrefetch.js:15-27"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Protomaps basemap schema, maxzoom 15, 512 px; hosting UNVERIFIED. Q-API-053."
+  },
+  {
+    "id": "RES-004",
+    "method": "GET",
+    "path": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "auth": "none",
+    "access": "external",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:1057",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/features/map/leaflet/basemap.js:13",
+      "$KVADRO_ROOT/demo/app/src/features/map/engine.js:14-28",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/style.js:516-526"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Fallback when meta.tiles is null; GL fetch sets referrerPolicy strict-origin-when-cross-origin."
+  },
+  {
+    "id": "RES-005",
+    "method": "GET",
+    "path": "/call/<token>",
+    "auth": "token",
+    "access": "holder of a fresh link (opened in external browser)",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:610-624; $KVADRO_ROOT/docs/about.md:237-241, :303",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:59"
+    ],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "Temporary call page, ~10 min; content, single-use and binding unknown. LB-API-016, -045; Q-API-042."
+  },
+  {
+    "id": "RES-006",
+    "method": null,
+    "path": "PostHog ingestion at meta.analytics.host; https://eu.i.posthog.com; https://eu-assets.i.posthog.com/static/<v>/array.js",
+    "auth": "PostHog project key (not reproduced)",
+    "access": "external",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:1058; $KVADRO_ROOT/docs/about.md:115, :375-376",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/analytics.js:122-199",
+      "$KVADRO_ROOT/demo/landing/site/stats.js:30-33"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Mini App: memory persistence, web vitals, exceptions, optional autocapture/replay, distinct id = meta.analytics.id. Q-API-046, -047."
+  },
+  {
+    "id": "RES-007",
+    "method": "GET",
+    "path": "https://telegram.org/js/telegram-web-app.js",
+    "auth": "none",
+    "access": "external",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:1059",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/index.html:151-152"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Async, crossorigin; app waits <= 3 s."
+  },
+  {
+    "id": "RES-008",
+    "method": "GET",
+    "path": "/ , /assets/*, /maplibre-gl.mjs, /favicon.svg, /favicon.ico (app.kvadro.app)",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/app/docs/RECOVERY.md:30, :39-40; $KVADRO_ROOT/docs/about.md:351, :455",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/index.html:1-162",
+      "$KVADRO_ROOT/demo/app/src/features/map/engine.js:4-36"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Mini App shell with CSP sha256 hashes of inline scripts; /maplibre-gl.mjs undocumented in api.md."
+  },
+  {
+    "id": "RES-009",
+    "method": "GET",
+    "path": "/ , /uz/, /en/, /privacy.html and landing static files (kvadro.app)",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25-34, :52-59",
+    "client_call_sites": [],
+    "status": "CONFIRMED",
+    "notes": "uz/en generated by backend from index.html + landing-i18n.js; /uz -> 308, /index.html -> 301; CSP report-uri /api/csp-report."
+  },
+  {
+    "id": "RES-010",
+    "method": "GET",
+    "path": "/data/live.json?v=202610171944",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61, :68-69",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/landing/site/landing.js:63-72",
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1112"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Backend job output; max-age=1800; shape {now, day, week, since, latest[], sheet{all,demo}}. LB-API-017; Q-API-051."
+  },
+  {
+    "id": "RES-011",
+    "method": "GET",
+    "path": "/data/pins-rent.json?v=202610171944",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1040",
+      "$KVADRO_ROOT/demo/landing/site/landing.js:2242"
+    ],
+    "status": "CONFIRMED",
+    "notes": "{pins[], dots[], medians[], bargains_week}; x/y are % of the static map image. Q-API-051."
+  },
+  {
+    "id": "RES-012",
+    "method": "GET",
+    "path": "/data/pins-sale.json?v=202610171944",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1040"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Same shape as pins-rent; dots/medians empty, bargains_week null in fixture."
+  },
+  {
+    "id": "RES-013",
+    "method": "GET",
+    "path": "/img/snap/<listing_id>.webp",
+    "auth": "none",
+    "access": "public (robots disallow)",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61; $KVADRO_ROOT/docs/seo-pages.md:133-134",
+    "client_call_sites": [],
+    "status": "CONFIRMED",
+    "notes": "Unsigned copies of channel photos used by landing pins. LB-API-054."
+  },
+  {
+    "id": "RES-014",
+    "method": "GET",
+    "path": "/stats.js?v=20261020b",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:33; $KVADRO_ROOT/docs/seo-pages.md:368-369",
+    "client_call_sites": [],
+    "status": "CONFIRMED",
+    "notes": "Server-templated PostHog config (key not reproduced) + visit id kv-visit -> --v<visit> on bot links."
+  },
+  {
+    "id": "RES-015",
+    "method": "POST",
+    "path": "/api/csp-report",
+    "auth": "none",
+    "access": "browser-originated",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:56-57; $KVADRO_ROOT/docs/seo-pages.md:376-377; $KVADRO_ROOT/docs/about.md:304",
+    "client_call_sites": [],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "CSP report-uri of landing, privacy and SEO pages; behaviour unknown. Q-API-050."
+  },
+  {
+    "id": "RES-016",
+    "method": "GET",
+    "path": "/api/landing/live, /api/landing/pins",
+    "auth": "unknown",
+    "access": "unknown",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/site/index.html:67, :195, :295, :340 (comments only)",
+    "client_call_sites": [],
+    "status": "UNVERIFIED",
+    "notes": "Referenced in HTML comments, never requested by the page; possibly obsolete (DEPRECATED_CANDIDATE). Q-API-049."
+  },
+  {
+    "id": "RES-017",
+    "method": "GET",
+    "path": "/{arenda|prodazha|novostrojki}/..., /uz/{ijara|sotuv|novostroyka}/..., /en/{rent|sale|new-builds}/...",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/docs/seo-pages.md:44-146, :373-390",
+    "client_call_sites": [],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "1008 server-rendered SEO pages; s-maxage=300; 308 to slash; noindex for thin pages and ?sort. Owned by 03b."
+  },
+  {
+    "id": "RES-018",
+    "method": "GET",
+    "path": "/arenda/indeks/kvadro-rent-index.csv, /prodazha/ceny/kvadro-sale-prices.csv",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/docs/seo-pages.md:325-345",
+    "client_call_sites": [],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "text/csv; fixed column sets."
+  },
+  {
+    "id": "RES-019",
+    "method": "GET",
+    "path": "/sitemap.xml",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/docs/seo-pages.md:46-47, :135-137",
+    "client_call_sites": [],
+    "status": "DOCUMENTED_ONLY",
+    "notes": "Dynamic, s-maxage=300, 1012 URLs with hreflang."
+  },
+  {
+    "id": "RES-020",
+    "method": "GET",
+    "path": "/robots.txt",
+    "auth": "none",
+    "access": "public",
+    "doc_ref": "$KVADRO_ROOT/docs/seo-pages.md:133-134; $KVADRO_ROOT/demo/landing/site/robots.txt",
+    "client_call_sites": [],
+    "status": "CONFIRMED",
+    "notes": "Disallow /api/, /media/, /img/snap/, /*/img/snap/."
+  },
+  {
+    "id": "RES-021",
+    "method": "GET",
+    "path": "/cdn-cgi/l/email-protection, Cloudflare email-decode.min.js",
+    "auth": "none",
+    "access": "edge-injected",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:85-87; $KVADRO_ROOT/docs/seo-pages.md:378",
+    "client_call_sites": [],
+    "status": "CONFIRMED",
+    "notes": "Cloudflare Email Obfuscation on privacy.html and methodology page."
+  },
+  {
+    "id": "RES-022",
+    "method": null,
+    "path": "bot update endpoint (webhook URL or getUpdates) - unknown",
+    "auth": "Telegram secret (unknown)",
+    "access": "Telegram only",
+    "doc_ref": "$KVADRO_ROOT/docs/about.md:408-411",
+    "client_call_sites": [],
+    "status": "UNVERIFIED",
+    "notes": "Needed for cut-over; see 04-telegram-bot-audit.md. Q-API-055."
+  }
+]

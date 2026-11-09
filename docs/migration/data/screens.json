@@ -1,0 +1,1043 @@
+[
+  {
+    "id": "SCR-001",
+    "name": "Boot failure screen «Обновите Telegram»",
+    "kind": "state",
+    "entry_points": [
+      "bundle script fails to load",
+      "uncaught error before window.__kvBoot.ok",
+      "nomodule browser"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/index.html"
+    ],
+    "apis": [
+      "POST /api/events",
+      "GET /api/bot"
+    ],
+    "storage_keys": [
+      "kv-locale"
+    ],
+    "analytics_events": [
+      "app_error"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-002",
+    "name": "Outside Telegram: «Откройте приложение через бота»",
+    "kind": "state",
+    "entry_points": [
+      "page opened without initData"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-003",
+    "name": "No-access screen (403 from /api/meta)",
+    "kind": "screen",
+    "entry_points": [
+      "GET /api/meta answers 403 (private|invite|full|blocked|join)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js"
+    ],
+    "apis": [
+      "GET /api/meta",
+      "GET /api/bot"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-004",
+    "name": "Language picker (first launch)",
+    "kind": "screen",
+    "entry_points": [
+      "meta.locale_chosen === false"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/onboarding/LanguagePicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [
+      "kv-locale"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-005",
+    "name": "First-launch city picker (blocking)",
+    "kind": "sheet",
+    "entry_points": [
+      "more than one city and meta.city_chosen === false and no listing open"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/city/CityPicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/city.js",
+      "$KVADRO_ROOT/demo/app/src/lib/geo/location.js"
+    ],
+    "apis": [
+      "PUT /api/settings",
+      "GET /api/cities"
+    ],
+    "storage_keys": [
+      "kv-city"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-006",
+    "name": "App shell: top bar, tab bar, collapsed chrome, view toggle",
+    "kind": "screen",
+    "entry_points": [
+      "app start after gates"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/TopBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/TabBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/tabs.js",
+      "$KVADRO_ROOT/demo/app/src/app/ViewToggle.jsx",
+      "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js"
+    ],
+    "apis": [
+      "GET /api/subscriptions",
+      "GET /api/cities"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-007",
+    "name": "Search feed (list)",
+    "kind": "screen",
+    "entry_points": [
+      "default start",
+      "Список toggle",
+      "tab Поиск"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/FeedHeader.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js",
+      "$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/PhotoStrip.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/Photo.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/FavButton.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js",
+      "$KVADRO_ROOT/demo/app/src/main.jsx"
+    ],
+    "apis": [
+      "GET /api/feed",
+      "POST /api/listings/:id/favorite"
+    ],
+    "storage_keys": [
+      "kv-city"
+    ],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-008",
+    "name": "Feed loading and error states",
+    "kind": "state",
+    "entry_points": [
+      "first page loading",
+      "request error in feed, favorites or history"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/ListingCardSkeleton.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/ErrorState.jsx"
+    ],
+    "apis": [
+      "GET /api/feed",
+      "GET /api/favorites",
+      "GET /api/history"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-009",
+    "name": "Feed empty and few-results states",
+    "kind": "state",
+    "entry_points": [
+      "feed finished with 0 items",
+      "feed finished with fewer than 10 items and no active filters"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/FewResultsNote.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js"
+    ],
+    "apis": [
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-010",
+    "name": "Pull-to-refresh",
+    "kind": "overlay",
+    "entry_points": [
+      "pull down at scrollY 0 on search list, favorites, history or radar"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/components/PullToRefresh.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
+    ],
+    "apis": [
+      "GET /api/feed",
+      "GET /api/favorites",
+      "GET /api/history",
+      "GET /api/subscriptions"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-011",
+    "name": "Search map (MapLibre GL or Leaflet)",
+    "kind": "screen",
+    "entry_points": [
+      "Карта toggle",
+      "Своя область chip",
+      "Обвести на карте in filters"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/map/MapScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/engine.js",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/MapViewGL.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/leaflet/MapView.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/pins.js",
+      "$KVADRO_ROOT/demo/app/src/features/map/tilePrefetch.js",
+      "$KVADRO_ROOT/demo/app/src/app/useMapTilePrefetch.js"
+    ],
+    "apis": [
+      "GET /api/map",
+      "GET /api/listings/:id?preview=1"
+    ],
+    "storage_keys": [
+      "kv-map-v2",
+      "kv-map-fit:<lat>,<lon>",
+      "kv-graphics",
+      "kv-graphics-measured"
+    ],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-012",
+    "name": "Map area drawing (lasso)",
+    "kind": "state",
+    "entry_points": [
+      "lasso button on map",
+      "Своя область pill",
+      "Обвести на карте in filters sheet"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/map/LassoOverlay.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/GlLasso.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/leaflet/lassoHandlers.js",
+      "$KVADRO_ROOT/demo/app/src/lib/geo/polygon.js",
+      "$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js",
+      "$KVADRO_ROOT/demo/app/src/app/TopBar.jsx"
+    ],
+    "apis": [
+      "GET /api/map",
+      "GET /api/feed"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-013",
+    "name": "Map selection card (single or stack)",
+    "kind": "overlay",
+    "entry_points": [
+      "tap on pin, stack or max-zoom cluster"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/useClusterMarkers.js",
+      "$KVADRO_ROOT/demo/app/src/features/map/leaflet/listingLayer.js"
+    ],
+    "apis": [
+      "GET /api/listings/:id?preview=1",
+      "POST /api/listings/:id/favorite"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-014",
+    "name": "Full filters sheet (search mode)",
+    "kind": "sheet",
+    "entry_points": [
+      "filters chip",
+      "map filters button",
+      "Другой город in few-results note",
+      "?news=pets on start"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/DealSections.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/LocationSections.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/PreferenceSections.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/ExtraSections.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/SheetFooter.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/PriceSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/RoomsPicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/model.js",
+      "$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js"
+    ],
+    "apis": [
+      "GET /api/feed/count",
+      "GET /api/feed/flow",
+      "GET /api/cities",
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id",
+      "PUT /api/settings"
+    ],
+    "storage_keys": [
+      "kv-new-pets",
+      "kv-city"
+    ],
+    "analytics_events": [
+      "$pageview",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-015",
+    "name": "Quick filter sheet (rooms, price, owner)",
+    "kind": "sheet",
+    "entry_points": [
+      "rooms, price or owner header chip"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/filters/QuickFilterSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/PriceSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/RoomsPicker.jsx"
+    ],
+    "apis": [
+      "GET /api/feed/count"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-016",
+    "name": "Sort sheet",
+    "kind": "sheet",
+    "entry_points": [
+      "sort header chip"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/sort/SortSheet.jsx"
+    ],
+    "apis": [
+      "GET /api/feed"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-017",
+    "name": "City picker sheet",
+    "kind": "sheet",
+    "entry_points": [
+      "city header chip",
+      "city field in filters sheet"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/city/CityPicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/geo/location.js",
+      "$KVADRO_ROOT/demo/app/src/lib/city.js"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [
+      "kv-city"
+    ],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-018",
+    "name": "Listing screen",
+    "kind": "screen",
+    "entry_points": [
+      "tap on any listing card",
+      "map card",
+      "radar find",
+      "hidden list item",
+      "start_param l_<id>",
+      "?listing=<id>"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingHero.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/format.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/HistorySection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/LocationSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/NearbySection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/AuthorSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/SourcesSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx"
+    ],
+    "apis": [
+      "GET /api/listings/:id",
+      "GET /api/listings/:id/call",
+      "POST /api/listings/:id/translate",
+      "POST /api/listings/:id/favorite",
+      "POST /api/listings/:id/share"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview",
+      "listing_shared",
+      "original_opened",
+      "original_copied",
+      "contact_call",
+      "contact_write"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-019",
+    "name": "Listing loading and error states",
+    "kind": "state",
+    "entry_points": [
+      "listing opened without preview",
+      "GET /api/listings/:id fails"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingSkeleton.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/ErrorState.jsx"
+    ],
+    "apis": [
+      "GET /api/listings/:id"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-020",
+    "name": "Photo viewer",
+    "kind": "overlay",
+    "entry_points": [
+      "tap on listing photo"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/PhotoViewer.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ZoomableImage.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-021",
+    "name": "Spot map fullscreen",
+    "kind": "overlay",
+    "entry_points": [
+      "tap on listing mini-map"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMapFullscreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/spotGL.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/spotLeaflet.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/spotGeometry.js"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-022",
+    "name": "Market explanation sheet «Откуда эта цифра»",
+    "kind": "sheet",
+    "entry_points": [
+      "info button in market block"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/MarketSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-023",
+    "name": "Listing actions sheet (menu and report reasons)",
+    "kind": "sheet",
+    "entry_points": [
+      "⋯ button on listing title row"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js"
+    ],
+    "apis": [
+      "POST /api/listings/:id/hide",
+      "DELETE /api/listings/:id/hide",
+      "POST /api/listings/:id/block-author",
+      "DELETE /api/listings/:id/block-author",
+      "POST /api/listings/:id/report",
+      "GET /api/bot"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-024",
+    "name": "Favorites",
+    "kind": "screen",
+    "entry_points": [
+      "tab Избранное, sub-tab Избранное"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js",
+      "$KVADRO_ROOT/demo/app/src/app/TopBar.jsx"
+    ],
+    "apis": [
+      "GET /api/favorites",
+      "POST /api/listings/:id/favorite"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-025",
+    "name": "History «Смотрели»",
+    "kind": "screen",
+    "entry_points": [
+      "tab Избранное, sub-tab Смотрели"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js"
+    ],
+    "apis": [
+      "GET /api/history",
+      "DELETE /api/history"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-026",
+    "name": "Radar tab (subscription list)",
+    "kind": "screen",
+    "entry_points": [
+      "tab Радар",
+      "Back from radar feed (resume)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarTiles.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/radar/subscriptionStatus.js",
+      "$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js"
+    ],
+    "apis": [
+      "GET /api/subscriptions",
+      "GET /api/feed",
+      "GET /api/feed/count",
+      "GET /api/feed/flow",
+      "PATCH /api/subscriptions/:id"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-027",
+    "name": "Radar empty state",
+    "kind": "state",
+    "entry_points": [
+      "GET /api/subscriptions returns []"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarEmptyState.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-028",
+    "name": "Radar subscription sheet",
+    "kind": "sheet",
+    "entry_points": [
+      "tap on radar tile",
+      "return from radar feed"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarStrip.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx"
+    ],
+    "apis": [
+      "GET /api/settings",
+      "PATCH /api/subscriptions/:id",
+      "DELETE /api/subscriptions/:id"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-029",
+    "name": "Radar editor (filters sheet, edit mode)",
+    "kind": "sheet",
+    "entry_points": [
+      "Изменить условия in radar sheet"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js"
+    ],
+    "apis": [
+      "PUT /api/subscriptions/:id",
+      "POST /api/subscriptions/:id/relax",
+      "GET /api/feed/count",
+      "GET /api/feed/flow"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-030",
+    "name": "New radar (filters sheet, create mode)",
+    "kind": "sheet",
+    "entry_points": [
+      "+ on radar tab",
+      "Включить радар on radar empty state"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js"
+    ],
+    "apis": [
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id",
+      "POST /api/subscriptions/:id/relax",
+      "GET /api/feed/count",
+      "GET /api/feed/flow"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-031",
+    "name": "«Нашли жильё?» survey",
+    "kind": "sheet",
+    "entry_points": [
+      "ask_found after radar pause",
+      "ask_found after radar delete"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/api/found.js"
+    ],
+    "apis": [
+      "POST /api/found",
+      "POST /api/found/where"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-032",
+    "name": "Settings",
+    "kind": "screen",
+    "entry_points": [
+      "tab Настройки",
+      "Telegram SettingsButton"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/AboutGroup.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsGroup.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsRow.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/useHomeScreenStatus.js"
+    ],
+    "apis": [
+      "GET /api/settings",
+      "GET /api/subscriptions",
+      "GET /api/hidden",
+      "GET /api/bot",
+      "PUT /api/settings"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-033",
+    "name": "Settings › Theme",
+    "kind": "screen",
+    "entry_points": [
+      "Тема row in settings"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/ChoiceList.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/theme.js"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [
+      "kv-theme"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-034",
+    "name": "Settings › Graphics",
+    "kind": "screen",
+    "entry_points": [
+      "Графика row in settings (Android or changed before)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/graphics.js"
+    ],
+    "apis": [],
+    "storage_keys": [
+      "kv-graphics",
+      "kv-graphics-measured"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-035",
+    "name": "Settings › Language",
+    "kind": "screen",
+    "entry_points": [
+      "Язык row in settings"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [
+      "kv-locale"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-036",
+    "name": "Settings › Currency",
+    "kind": "screen",
+    "entry_points": [
+      "Валюта row in settings"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-037",
+    "name": "Settings › Quiet hours",
+    "kind": "screen",
+    "entry_points": [
+      "Тихие часы row in settings"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/format.js"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-038",
+    "name": "Settings › Digest time",
+    "kind": "screen",
+    "entry_points": [
+      "Время подборок row in settings"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/format.js"
+    ],
+    "apis": [
+      "PUT /api/settings"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-039",
+    "name": "Settings › Hidden «Скрытое»",
+    "kind": "screen",
+    "entry_points": [
+      "Скрытое row in settings (only when something is hidden)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx"
+    ],
+    "apis": [
+      "DELETE /api/hidden/:id",
+      "DELETE /api/listings/:id/hide",
+      "DELETE /api/hidden"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-040",
+    "name": "Radar follow nudge",
+    "kind": "overlay",
+    "entry_points": [
+      "1.8 s after applying custom filters on search list"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js",
+      "$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
+    ],
+    "apis": [
+      "GET /api/feed/flow",
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id"
+    ],
+    "storage_keys": [
+      "kv-nudge"
+    ],
+    "analytics_events": [
+      "follow_prompt_shown",
+      "follow_prompt_expired",
+      "follow_prompt_closed",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-041",
+    "name": "Home-screen nudge",
+    "kind": "overlay",
+    "entry_points": [
+      "4 s calm on search list after 3+ visit days, status missed (Telegram 8.0+)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js"
+    ],
+    "apis": [],
+    "storage_keys": [
+      "kv-home"
+    ],
+    "analytics_events": [
+      "home_screen_offered",
+      "home_screen_closed",
+      "home_screen_added"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-042",
+    "name": "Toast",
+    "kind": "overlay",
+    "entry_points": [
+      "results of actions (radar, hide, block, report, errors)",
+      "pets tips inside filters sheet"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/components/Toast.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-043",
+    "name": "Confirm dialogs (showConfirm / window.confirm)",
+    "kind": "modal",
+    "entry_points": [
+      "clear history",
+      "delete radar",
+      "return all hidden",
+      "bot cannot write after 409 no_chat"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/dialogs.js",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-044",
+    "name": "Telegram system sheets triggered by the app",
+    "kind": "modal",
+    "entry_points": [
+      "requestWriteAccess after 409 no_chat",
+      "shareMessage",
+      "addToHomeScreen",
+      "location permission",
+      "openLink / openTelegramLink"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/share.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js",
+      "$KVADRO_ROOT/demo/app/src/lib/geo/location.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/links.js",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js"
+    ],
+    "apis": [
+      "POST /api/listings/:id/share"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "chat_access_declined",
+      "chat_access_allowed",
+      "home_screen_added"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-045",
+    "name": "Crash screen (ErrorBoundary)",
+    "kind": "state",
+    "entry_points": [
+      "render exception anywhere under App"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/ErrorBoundary.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/errors.js"
+    ],
+    "apis": [
+      "POST /api/events"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "app_error"
+    ],
+    "status": "CONFIRMED"
+  }
+]
