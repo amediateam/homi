@@ -1437,7 +1437,7 @@ decision. All recommendations are `PROPOSED`.
 ## 9. Proposed updates to `HANDOFF.md` §4
 
 A proposal only; `HANDOFF.md` is a shared file changed by its own small PR (`docs/handoff/parallel-work.md` §1).
-The migration plan (`21-development-master-plan.md`, still to be written) becomes the plan for application work; T0–T11
+The migration plan ([`21-development-master-plan.md`](21-development-master-plan.md)) becomes the plan for application work; T0–T11
 stay as the foundation track.
 
 | Task | Verdict | Change |
