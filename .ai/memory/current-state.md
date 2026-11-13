@@ -1,14 +1,14 @@
 ---
-updated: 2026-11-09 (production track: production + staging live, `homi-deploy`; development track: kvadro² migration plan in PR #9, KI-25/26)
+updated: 2026-11-14 (development track: PR #9 merged, three-wave migration order proposed in PR #25; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
 # Current state (facts only)
 
 ## Repository
-- Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. PRs #6–#8 merged later the same day (`main` at `bb844ca`). Open: Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4); PR #9 (`docs/kvadro-migration-audit`: `docs/migration/` + `scripts/migration/`, the kvadro² audit and migration plan — not on `main` yet). No branch protection (free GitHub plan) and no local push guard yet (KI-19).
+- Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. PRs #6–#8 merged later the same day. On 2026-11-14 `main` is at `596d0db` (last merge PR #24); PR #9 (`docs/migration/` + `scripts/migration/`, the kvadro² audit and migration plan) is merged as `b583d3d`. Open (`gh pr list`, 2026-11-14): Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4); PR #25 (`docs/three-wave-plan`: the three-wave strategy and the Wave 1 plan — not on `main` yet). No branch protection (free GitHub plan) and no local push guard yet (KI-19).
 - Two tracks since 2026-11-09: development (second developer, Codex) and production (first developer) — `HANDOFF.md`, `docs/handoff/parallel-work.md`.
-- Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013, `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
+- Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013 and 0015, `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
 - Gitignored machine files: `infra/local/certs/`, `infra/local/nginx/snippets/paths.conf`, `infra/local/{run,logs}/`, `.ai/local.env`, `backend/.env`, `frontend/*/.env.local`.
 
 ## Backend (`backend/`)
@@ -44,4 +44,6 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 
 ## kvadro² (the legacy product being migrated)
 - Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
-- The audit and plan are in `docs/migration/` on PR #9 (start: `22-agent-handoff.md`). No migration code exists yet.
+- The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
+- The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
+- A three-wave order (the Mini App on Next.js against the legacy API first, then the API route by route behind a gateway, then decommissioning) is `PROPOSED` in `docs/migration/24-three-wave-strategy.md` and `25-wave-1-frontend-plan.md`, on PR #25.

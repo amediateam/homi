@@ -74,7 +74,9 @@ See [`21-development-master-plan.md`](21-development-master-plan.md) §1 for the
 - **Audit:** complete for every legacy source we have, independently re-checked ([`23-coverage-audit.md`](23-coverage-audit.md)).
 - **Plan:** written: features, rules, architecture, roadmaps, tasks.
 - **Code:** none yet.
-- **Waiting for people:** see [`20-open-questions.md`](20-open-questions.md) §1 and `10` §8 (`DEC-01` … `DEC-30`).
+- **Three-wave amendment (2026-11-14):** written as 24 and 25, `PROPOSED`, in review. Next step: stage W1-0 of 25.
+- **Waiting for people:** see [`20-open-questions.md`](20-open-questions.md) §1 and `10` §8 (`DEC-01` … `DEC-30`);
+  for the amendment, `24` §8 (`DEC-31` … `DEC-39`).
 
 ## 6. How to continue
 

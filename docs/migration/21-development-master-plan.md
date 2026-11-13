@@ -302,6 +302,10 @@ Proposal from [10](10-target-architecture.md) §9, for the first developer's rev
 
 ## 20. Next concrete task
 
+> Under the amendment of 2026-11-14 the next step of the migration is stage W1-0 of
+> [`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md) (§10, §15). The task below stays valid as an
+> independent fix of HOMI's own code; it is no longer the first step of the migration.
+
 **KV-BE-002 — Media ownership fix** ([task file](tasks/backend/KV-BE-002-media-ownership-fix.md)).
 
 - **Why first:**
