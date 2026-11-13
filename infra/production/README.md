@@ -15,6 +15,6 @@ Copies of the files that live on `159.253.19.121` (ADR-0011), owned by the produ
 
 Conventions these files follow (the host's own `/etc/nginx/CLAUDE.md`): one folder per application under `sites-available/`, flat symlinks in `sites-enabled/`, a `listen 80` server that answers ACME challenges from `/var/www/letsencrypt` and redirects everything else to HTTPS, Let's Encrypt certificates per host name under `/etc/letsencrypt/live/<name>/` (webroot renewal; the host's global deploy hook reloads nginx), php-fpm over the shared Unix socket, logs under `/var/log/nginx/homi/`.
 
-Not in this directory on purpose: `backend/.env` and `frontend/*/.env.local` (server-only; key names in `docs/infrastructure/environments.md`), certificates, the deploy key. `cdn.homi.uz` is not an nginx vhost on this host — media goes to MinIO on `31.220.104.38` (ADR-0011; not provisioned yet).
+Not in this directory on purpose: `backend/.env` and `frontend/*/.env.local` (server-only; key names in `docs/infrastructure/environments.md`), certificates, the deploy key. `cdn.homi.uz` is not an nginx vhost on this host: media is in MinIO on `31.220.104.38` (ADR-0011), and its vhost, bucket policies and user policy are in `minio-host/`, installed on that host (`docs/infrastructure/cdn.md`). They are not under `nginx/` because `homi-deploy` compares that folder with this host.
 
 Staging (`*.staging.homi.uz`, ports 3200–3202, database `homi_staging_db`, Redis DB 5/6) runs on the same host from `/var/www/staging.homi.uz`; its files are the staging-named twins of these in `infra/staging/`.

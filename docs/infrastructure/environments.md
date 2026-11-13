@@ -22,7 +22,7 @@ Purpose: the single table of domains, hosts, ports and services per environment.
 | nginx + php-fpm + Node (Next.js) + Horizon | this machine (Homebrew) | `159.253.19.121` — production and staging live since 2026-11-09 (`/var/www/homi.uz` with Next SSR on `127.0.0.1:3100–3102`; `/var/www/staging.homi.uz` on `3200–3202`; one Horizon unit each; `docs/infrastructure/deployment.md`) |
 | PostgreSQL 18 | `127.0.0.1:5432` (Homebrew) | `5.45.127.98:5432` — databases `homi_db` (production) and `homi_staging_db` (staging), each owned by a same-named role; `pg_hba` and both firewalls admit only `159.253.19.121`; `DB_SSLMODE=disable` (developer decision 2026-11-09); set up 2026-11-09, see `docs/ai/reports/production-notes.md` §2 |
 | Redis | `127.0.0.1:6379` | on the app host, `127.0.0.1:6379`, shared with other projects (they use DB 0–2). HOMI uses DB indexes (decided 2026-11-09): production `REDIS_DB=3` / `REDIS_CACHE_DB=4`, staging 5 / 6. The instance has no `maxmemory` and the default `noeviction` policy, and persists through RDB snapshots only, with AOF off (checked 2026-11-12, `production-notes.md` §8). HOMI never runs `CONFIG SET` on it |
-| Object storage | none — `backend/storage/app/public` served by `cdn.homi.loc` (ADR-0012) | MinIO on `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`) |
+| Object storage | none — `backend/storage/app/public` served by `cdn.homi.loc` (ADR-0012) | MinIO on `31.220.104.38` via `https://s3.hc.uz` (path-style, `us-east-1`); live since 2026-11-13, users `homi-app` / `homi-staging-app`, the `.env` values are in `docs/infrastructure/cdn.md` |
 | Telegram bots | dev bot | staging bot / production bot (all three exist) |
 
 ## Local port plan
@@ -56,4 +56,4 @@ Frontend (`frontend/*/.env.example`, Phase 2): `NEXT_PUBLIC_API_URL`, `NEXT_PUBL
 
 - ~~Where Next.js SSR runs in production~~ — decided: SSR (`next start`) behind nginx, ports 3100–3102 (staging 3200–3202), ADR-0013; vhost templates and process manager in Phase 6.
 - ~~Redis per environment: separate instances vs DB index~~ — decided 2026-11-09 (production track): DB indexes on the host's shared instance — production `REDIS_DB=3` / `REDIS_CACHE_DB=4`, staging 5 / 6, distinct `REDIS_PREFIX`.
-- DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer. As of 2026-11-09 every name (incl. `cdn` and `staging`) resolves to `159.253.19.121`; `cdn.homi.uz` must move to `31.220.104.38` when MinIO is provisioned.
+- DNS ownership for `homi.uz` and `*.staging.homi.uz` — developer. As of 2026-11-13 `cdn.homi.uz` and `cdn.staging.homi.uz` are explicit A records → `31.220.104.38`, and the rest resolves to `159.253.19.121`. The staging names need their own `staging` and `*.staging` records, because the explicit `cdn.staging` record shadows the `*.homi.uz` wildcard below `staging.homi.uz` (AM-46, `cdn.md` "DNS").

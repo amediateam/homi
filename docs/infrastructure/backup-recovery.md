@@ -14,7 +14,7 @@ Not backed up here:
 - `backend/.env`, including `APP_KEY`, and `frontend/*/.env.local`. They hold secrets, so the developer keeps a copy outside the servers. Without `APP_KEY`, encrypted values and sessions cannot be read after a rebuild.
 - Redis: queues and cache must be rebuildable from PostgreSQL (ADR-0005, ADR-0015).
 - nginx and systemd: the reviewed copies are in `infra/`.
-- The MinIO media buckets do not exist yet.
+- The MinIO media buckets (`homi-public`, `homi-private` and the staging twins, live since 2026-11-13). Versioning keeps deleted or overwritten objects for 30 days, but there is no copy off the MinIO disk yet (`docs/infrastructure/cdn.md` "Not covered").
 
 The dumps are **not encrypted**. The developer decided this on 2026-11-13 («шифрование бэкапов не нужно!»), and it was not made conditional on the amount of personal data. The bucket is private, the user has no delete right, and the transfer uses TLS.
 

@@ -14,6 +14,7 @@
           - https://arm.homi.uz/
           - https://api.homi.uz/up
           - https://hook.homi.uz/up
+          - https://cdn.homi.uz/_probe/ok.txt
         labels:
           project: homi
           env: production
@@ -23,6 +24,7 @@
           - https://arm.staging.homi.uz/
           - https://api.staging.homi.uz/up
           - https://hook.staging.homi.uz/up
+          - https://cdn.staging.homi.uz/_probe/ok.txt
         labels:
           project: homi
           env: staging

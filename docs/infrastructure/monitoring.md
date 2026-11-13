@@ -1,12 +1,12 @@
 # Monitoring and alerts (staging and production)
 
-Purpose: what watches HOMI, where the alerts go, and how to check or change it. The production track owns this file; the development track reads it (`docs/handoff/parallel-work.md` §1). HOMI has no monitoring stack of its own. It adds jobs, rule files and one route to two existing stacks that other projects run on the same servers. Every change there is additive, backed up first, validated with `promtool` / `amtool`, and approved by the first developer. History and evidence: `docs/ai/reports/production-notes.md` §12.
+Purpose: what watches HOMI, where the alerts go, and how to check or change it. The production track owns this file; the development track reads it (`docs/handoff/parallel-work.md` §1). HOMI has no monitoring stack of its own. It adds jobs, rule files and one route to two existing stacks that other projects run on the same servers. Every change there is additive, backed up first, validated with `promtool` / `amtool`, and approved by the first developer. History and evidence: `docs/ai/reports/production-notes.md` §12 (CDN probes and MinIO-disk alerts: §14).
 
 ## Overview
 
 | Layer | Runs on | Stack | Checks | Alerts go to |
 |---|---|---|---|---|
-| External | MinIO host `31.220.104.38` | "mars": Prometheus 2.42, Alertmanager 0.25, plus `prometheus-blackbox-exporter` 0.23 (Debian package, added for HOMI, `127.0.0.1:9115` only) | HTTPS probes of the 10 HOMI hosts (200 expected), TLS expiry | route `project="homi"` → receiver `homi` → the elmarket ops chat |
+| External | MinIO host `31.220.104.38` | "mars": Prometheus 2.42, Alertmanager 0.25, plus `prometheus-blackbox-exporter` 0.23 (Debian package, added for HOMI, `127.0.0.1:9115` only) | HTTPS probes of the 12 HOMI hosts (200 expected), TLS expiry; free disk of the MinIO host | route `project="homi"` → receiver `homi` → the elmarket ops chat |
 | Internal | app host `159.253.19.121` | "elmarket-prod": Prometheus 3.14, Alertmanager 0.34, node_exporter 1.12 | systemd state of the HOMI units, age of the last successful backup; from `homi-metrics` (every minute): shared Redis (up, memory, evictions, RDB), queue lengths, Horizon running/paused, failed jobs, Laravel log errors | the existing severity routes → the elmarket ops chat (bot @nimaqattabot) |
 
 All alerts go to one chat, the elmarket ops chat, by the developer's decision of 2026-11-13. External probes run from another host, so they also report the whole app host going down. The internal checks cannot do that, because their Prometheus runs on the host they watch.
@@ -19,6 +19,7 @@ All alerts go to one chat, the elmarket ops chat, by the developer's decision of
 | `HomiStagingEndpointDown` | external | a staging URL is not 200 for 10 min | warning |
 | `HomiCertExpiringSoon` / `HomiCertExpiryCritical` | external | certificate expires in < 14 days (1 h) / < 3 days (10 min). certbot renews at 30 days, so either one means renewal is failing | warning / critical |
 | `HomiProbesMissing` | external | no `probe_success{project="homi"}` for 15 min (blackbox exporter or job gone) | warning |
+| `HomiMinioDiskLow` / `HomiMinioDiskCritical` | external | `/` of the MinIO host (MinIO data; the media buckets have no quotas) has < 15 % free for 15 min / < 5 % for 5 min | warning / critical |
 | `HomiProductionUnitDown` | internal | `horizon-homi` or `homi-next-{landing,app,arm}` not active for 3 min | critical |
 | `HomiStagingUnitDown` | internal | the staging equivalents not active for 10 min | warning |
 | `HomiBackupFailed` | internal | `homi-backup.service` in the failed state for 5 min | warning |
@@ -37,8 +38,10 @@ All alerts go to one chat, the elmarket ops chat, by the developer's decision of
 The thresholds above are starting values, set when Redis held 4.8 MB and every queue was empty. Change them in `app-host/homi.yml` and here. Staging's queue and log values are exported but raise no alert.
 
 Probed URLs:
-- production: `https://homi.uz/`, `https://app.homi.uz/`, `https://arm.homi.uz/`, `https://api.homi.uz/up`, `https://hook.homi.uz/up`;
-- staging: the same paths on `staging.homi.uz` and its `app.`, `arm.`, `api.` and `hook.` subdomains.
+- production: `https://homi.uz/`, `https://app.homi.uz/`, `https://arm.homi.uz/`, `https://api.homi.uz/up`, `https://hook.homi.uz/up`, `https://cdn.homi.uz/_probe/ok.txt`;
+- staging: the same paths on `staging.homi.uz` and its `app.`, `arm.`, `api.`, `hook.` and `cdn.` subdomains.
+
+The CDN probe fetches `_probe/ok.txt` from the public bucket. The vhost never caches that path, so a 200 means nginx and MinIO on `31.220.104.38` both answer (`docs/infrastructure/cdn.md`).
 
 The probe module is `homi_https`: IPv4, TLS required, no redirects followed, timeout 10 s, every 60 s.
 
@@ -51,7 +54,7 @@ How `homi-metrics` measures. It is read-only, needs no new package and never rea
 - **Constants:** the Redis DB numbers and prefixes are constants in the script and must match each `backend/.env` (`environments.md`).
 
 Not covered yet:
-- The MinIO bucket `homi-backups` itself. ILM keeps it small, and the mars stack watches MinIO's disk.
+- The size of single MinIO buckets (`homi-backups`, the media buckets). ILM keeps backups and tmp small, and `HomiMinioDisk*` watch the disk they share.
 - HTTP 5xx rates from the nginx logs, and job wait times. Horizon's own metrics need `horizon:snapshot` on a scheduler, and no scheduler runs yet.
 
 ## Files (reviewed copies in `infra/production/monitoring/`)

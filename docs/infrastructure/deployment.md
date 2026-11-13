@@ -15,7 +15,7 @@ Purpose: how HOMI is laid out and operated on `159.253.19.121`, and the exact se
 | nginx | `/etc/nginx/sites-available/homi/*.conf` (copies: `infra/production/nginx/`), logs `/var/log/nginx/homi/`; the directory is an SVN working copy (`svn://159.253.19.121/server`) — commit new files there too |
 | TLS | Let's Encrypt, one lineage per host name (`homi.uz` + `www.homi.uz` share one), webroot `/var/www/letsencrypt`, renewal by `certbot.timer`, deploy hook reloads nginx |
 | Database | `homi_db` on `5.45.127.98` (`docs/infrastructure/environments.md`) |
-| Media | `backend/storage/app/public` on disk until the MinIO buckets exist; `cdn.homi.uz` is not served from this host |
+| Media | MinIO buckets `homi-{public,private,tmp}` on `31.220.104.38` since 2026-11-13; `cdn.homi.uz` is served by that host, not this one (`docs/infrastructure/cdn.md`) |
 | Deploy script | `/usr/local/sbin/homi-deploy` (reviewed source `infra/production/bin/homi-deploy`, both environments); state `/var/lib/homi-deploy/<env>.{sha,history}`, log `/var/log/homi-deploy/<env>.log` |
 
 ## Staging on the same host
