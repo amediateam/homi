@@ -3,6 +3,12 @@
 **This is the document to steer by.** It summarises the audit and the plan and points to the detail. Conventions:
 [`README.md`](README.md). State on **2026-11-09**: audit and plan complete, no migration code written.
 
+> **Amended on 2026-11-14 (`PROPOSED`).** The developer changed the order of work to three waves: frontend first,
+> then the API route by route, then decommissioning. Sections 5, 6, 10, 11 and 20 below describe the earlier
+> "compatibility first" order. Read [`24-three-wave-strategy.md`](24-three-wave-strategy.md) §7 for what moves, and
+> [`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md) for the first wave. Sections 1–4, 8, 9 and 12–18 stay
+> valid.
+
 ## 1. Executive summary
 
 - **What the product is.** kvadro² is a running Telegram product:

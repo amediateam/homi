@@ -3,6 +3,12 @@
 Read this first if you are an engineer or an agent (Claude Code, Codex, Gemini…) picking up the migration. It tells
 you where everything is and how to continue **without re-auditing the legacy system**.
 
+> **Amended on 2026-11-14 (`PROPOSED`).** The order of work is now three waves
+> ([`24-three-wave-strategy.md`](24-three-wave-strategy.md)); the first target is the Wave 1 exit of
+> [`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md), not stage S1. Until 24 §9 item 2 (the ADR) and DEC-33
+> are settled, every prohibition of section 4 applies as written. After DEC-33, the second prohibition has one
+> exception: a developer's manual `live` mode under 25 §6.3. Agents, tests and CI never call production.
+
 ## 1. Goal
 
 Move the running product **kvadro²** onto the HOMI stack in this repository, 1:1 in capabilities, data and public
