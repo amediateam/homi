@@ -17,25 +17,24 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Staging (`/var/www/staging.homi.uz`, `*.staging.homi.uz`, ports 3200–3202, `homi_staging_db`, Redis 5/6) | **live** — same recipe, all five hosts `noindex`; verified from outside | §3b, §4 |
 | Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
-| Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: dry run only | §3c |
+| Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
 | Backups, monitoring | not started | §5 |
 
-## Resume here (state at 2026-11-12)
+## Resume here (state at 2026-11-13)
 
-- **2026-11-12.**
+- **2026-11-12/13.**
   - The shared Redis was checked (§8): `noeviction`, no `maxmemory`, RDB only.
   - The development track's PR #9 (kvadro² plan) was reviewed: the production parts, as a PR comment.
-  - PR #10 (`chore/infra-review-fixes`: the fixes to the vhost and unit copies and to `homi-deploy`) and PR #11 (ADR-0015) were merged into `main` on 2026-11-13 at the developer's request («смёржи #10 и #11»), without the second developer's review (§6).
-  - The servers still run the old copies. They need the apply batch in §8 (developer's go).
+  - PRs #10 (infra fixes) and #11 (ADR-0015) were merged on 2026-11-13 at the developer's request, without the second developer's review (§6).
+  - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
   - Open decision: which bot gets `hook.homi.uz` (§8).
-- **Repository.** Everything is on `main`. PR #8 (`chore/infra-db-production`) was merged on 2026-11-09 at the developer's request («commit push main»). New work on this track branches from `origin/main` and goes through a PR.
-- **Server checkouts.** The checkouts are still at `591ceb4`. The next `homi-deploy` only checks out the merge: it touches docs and `infra/` only, so no backend or frontend step runs. After that the drift check has `infra/` to compare against.
-- **Servers.** Production and staging are live at `591ceb4`; `homi-deploy` is installed; `/var/lib/homi-deploy/{production,staging}.sha` = `591ceb4`.
-- **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each prints "nothing to deploy" and 14 checks `ok`. That held on 2026-11-09 (§3c).
+- **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
+- **Servers.** Production and staging are live at `e654925`, and `/var/lib/homi-deploy/{production,staging}.sha` = `e654925`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, both Horizon units and the script; all are the same today. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
+- **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
-  1. The first real production run, `homi-deploy production --full`. It was offered on 2026-11-09 and is not yet approved; it also fixes AM-42 there. Combine it with the apply batch in §8 once `chore/infra-review-fixes` is merged.
+  1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
   2. Backups: database dumps off-host plus `storage/` (§5 item 9).
-  3. The rest of §5, in the order the developer picks: bot tokens (the developer writes them into `.env`), MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
+  3. The rest of §5, in the order the developer picks: MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
 - **Next numbers:** AM-46, KI-27. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
 
@@ -173,10 +172,10 @@ Assumption mismatches:
 3. **MinIO** (ADR-0011): buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
 4. **Staging follow-ups**: the staging bot's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` in `/var/www/staging.homi.uz/backend/.env` (+ rebuild of landing/app) and its webhook (separate approval); `homi-staging-*` buckets and `cdn.staging.homi.uz` DNS together with item 3; decide whether production keeps following `main` or moves to a release tag (both checkouts are on `main` today).
 5. **Deploy follow-ups** (the script itself is done, §3c):
-   - the first production run of `homi-deploy production` (it also fixes AM-42 there);
+   - ~~the first production run of `homi-deploy production`~~ done 2026-11-13 (`--full`, AM-42 fixed there, §9);
    - a trigger — GitHub Actions over SSH, or manual only — decide;
    - atomic releases (release directories plus a `current` symlink) so that `next build` and `composer install` no longer run under the live servers (`deployment.md` "Deploy" limits);
-   - after PR #8 is merged, the next deploy brings `infra/` into the checkouts and the drift check starts reporting.
+   - ~~the drift check starts reporting once `infra/` is in the checkouts~~ done 2026-11-13: it compares 10 vhosts, both Horizon units and the script, and all were the same after the apply batch (§9).
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
@@ -202,7 +201,7 @@ Decision already taken on the password question: the developer accepted that the
 
 - A deploy that carries real changes:
   - Staging has only redeployed `591ceb4` (`--full`) and rolled back to `aa8149e` and forward again, with no backend or migration changes in that diff. The composer and migration steps ran but had nothing to do.
-  - Production has had dry runs only.
+  - Production has had one real run, `--full` on 2026-11-13. Every step ran (composer, migrate, backend assets, Horizon restart, `pnpm -r build`, Next restarts), but the diff had no backend or migration changes (§9).
   - Behaviour under live traffic while `next build` runs is unobserved.
 - `certbot renew --dry-run` for the new lineages.
 - Behaviour after a reboot of either host (units are `enabled`; nginx config is on disk; what loads nftables on the DB host is unknown).
@@ -272,3 +271,47 @@ To apply, after the merge. This is one batch and needs the developer's go:
    - `curl -sI` of one `/_next/static/` file on `app.homi.uz` shows HSTS and `nosniff`;
    - `homi-deploy <env> --dry-run` shows no drift warnings.
 6. Rollback: restore the `*.bak-*-homi` copies, `nginx -t`, reload; restore the old units, `daemon-reload`.
+
+## 9. Done 2026-11-13 — apply batch (§8)
+
+The developer approved this batch («да, запускай пакет»). All commands ran over `ssh root@159.253.19.121`.
+
+1. **Pre-checks.**
+   - Both environments were at `591ceb4` (`/var/lib/homi-deploy/*.sha`, `git log -1`).
+   - The `telegram`, `media`, `ingest` and `default` queues were empty in Redis DB 3 and DB 5.
+   - `nginx -t` passed.
+   - The 10 vhosts, both Horizon units and `/usr/local/sbin/homi-deploy` matched their reviewed copies at `bb844ca` (sha256 compared), so nothing had been edited by hand.
+   - Range `591ceb4..e654925`: no file under `backend/` or `frontend/`, and no migration.
+2. **`homi-deploy staging`.**
+   - Plan: `checkout → health checks`. Result: 14 checks `ok`, deployed `e654925` in 3 s.
+   - Drift warnings for the 5 staging vhosts, `horizon-homi-staging.service` and the script, as expected.
+3. **`homi-deploy production --full`.**
+   - Plan: `checkout composer migrate backend-assets horizon-restart pnpm-build next-restart`. Result: 14 checks `ok`, deployed `e654925` in 31 s.
+   - Horizon restarted at 04:43:31 UTC.
+   - `migrate:status` shows 13 migrations, all ran. AM-42 is fixed: `find storage bootstrap/cache -user root` finds 0 files.
+   - Drift warnings for the 5 production vhosts, `horizon-homi.service` and the script, as expected.
+4. **Vhosts, staging first, then production.**
+   - The old files were copied to `/root/.homi-backups/20261113/nginx/*.bak-20261113-homi` (10 files). They are kept outside `/etc/nginx`, so the SVN working copy stays clean.
+   - The new files were installed with `install -m 0644 -o root -g root` from each checkout's `infra/<env>/nginx/`.
+   - `nginx -t` passed, then `systemctl reload nginx`, once per environment.
+   - Checked from outside after each reload:
+     - `hook[.staging]/index.php` → 404, `/up` → 200, `/` → 404;
+     - an unsigned `POST /telegram/webhook` → 403;
+     - `api /up` → 200;
+     - landing, app and arm → 200, and `www` → 301.
+     - On a real `/_next/static/chunks/*.js` (landing, app, arm, both environments): one `Cache-Control` plus `nosniff` and HSTS, and `X-Robots-Tag` on `arm` and on staging.
+     - api `/build/assets/*.css`: `nosniff` and HSTS.
+5. **Units.**
+   - The old units were copied to `/root/.homi-backups/20261113/systemd/`.
+   - The new units were installed, then `systemctl daemon-reload` ran.
+   - `TimeoutStopUSec=5min 30s` on both. The MainPIDs did not change, so nothing restarted.
+   - `systemd-analyze verify` printed one warning, about another project's `memcached.service`.
+6. **Script.**
+   - The old copy went to `/root/.homi-backups/20261113/bin/`.
+   - Installed with `install -m 0755 …/infra/production/bin/homi-deploy /usr/local/sbin/homi-deploy`; `bash -n` passes.
+7. **Final check.** `homi-deploy staging --dry-run` and `homi-deploy production --dry-run` each give exit 0, 14 checks `ok`, 0 `WARNING`, "nothing to deploy — e654925 is live". `svn status sites-available/homi` still lists only the HOMI files as `A` (§5 item 1).
+
+Rollback, if ever needed:
+- Copy `/root/.homi-backups/20261113/nginx/<file>.bak-20261113-homi` back to `/etc/nginx/sites-available/homi/<file>`, run `nginx -t`, then reload.
+- Do the same for the units, followed by `systemctl daemon-reload`, and for the script.
+- Code: `homi-deploy <env> --ref 591ceb4`. The range has no backend changes, so only the checkout moves.
