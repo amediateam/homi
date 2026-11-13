@@ -30,11 +30,13 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
   - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
   - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. A test alert went through both Alertmanagers, with firing and resolved both delivered (§12 item 6).
-  - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments are at `05a7354`, and the new `homi-deploy` is installed.
+  - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments were then at `05a7354`, and the new `homi-deploy` was installed.
   - Runtime monitoring is live (§13): the shared Redis, queues, Horizon, failed jobs and Laravel log errors, through `homi-metrics` every minute.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
-- **Servers.** Production and staging are live at `1ff5896` since 2026-11-13 («давай, сделай checkout»), and `/var/lib/homi-deploy/{production,staging}.sha` = `1ff5896`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup and metrics units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. Until the branch `chore/infra-monitoring-runtime` is merged and deployed, it reports `homi-metrics` (installed from that branch) and the old installed `homi-deploy`. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
+- **Servers.** Production and staging are live at `fc6e4b6` since 2026-11-13. That commit is PR #17, merged and deployed at the developer's request («смёржи #17 и сделай шаг на сервере», §13 item 8). `/var/lib/homi-deploy/{production,staging}.sha` = `fc6e4b6`.
+  - The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup and metrics units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. All are the same: both dry runs show 14 `ok` and 0 `WARNING`.
+  - Backups of the replaced files are in `/root/.homi-backups/20261113/` on each host (§9, §12, §13).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
@@ -487,3 +489,8 @@ The developer asked for this («Добавить мониторинг памят
 7. **Rollback:**
    - `systemctl disable --now homi-metrics.timer`, then remove the three installed files, `homi.prom` and the `homi-runtime` group (or restore `homi.yml.bak-20261113b-homi`);
    - `promtool check config`, then reload.
+8. **After the merge of PR #17** (`fc6e4b6`, the developer's go):
+   - `homi-deploy staging` and then `homi-deploy production`: a checkout only, 3 s each. The only drift warning was the outdated installed `homi-deploy`.
+   - The old script was copied to `/root/.homi-backups/20261113/bin/homi-deploy.bak-20261113c-homi`, and the new one was installed from the production checkout (`bash -n` ok; it now checks `homi-metrics`).
+   - Both dry runs: exit 0, 14 `ok`, 0 `WARNING`, "nothing to deploy — fc6e4b6 is live".
+   - `homi.prom` was 58 s old, and all 18 HOMI rules were inactive.
