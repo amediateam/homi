@@ -80,3 +80,45 @@ Verbatim dump (2063 lines, 14 items) was written to the session scratchpad `appu
 - Middleware depends on `GramirResponse` and `Account.credentials['webhook_secret']` → HOMI reads the secret from `config('telegram.webhook.secret')`.
 - app.uz `configureRateLimiting` is ~320 lines / ~50 limiters; only `api`, `api-login`, `uploads`, `bot-webhook`, `smartagent-tg-auth`, `gramir-webhook` were fetched (HOMI's four limiters already defined).
 - Test fixtures in the dump (`'super-secret-32-bytes-min-token'`, `'t:ok'`, `'sec'`) are fake values, not secrets. Docblocks are Russian → rewrite in English when porting.
+
+## D. Development track, 2026-11-09 — kvadro² migration audit and plan
+
+The developer set a new goal for the development track: move the running product kvadro² onto HOMI. The master prompt is kept local as `writing-block.md` and is not committed (machine paths). The remaining Phase 3 work (T1 webhook, T2 intake, T3 OpenAPI, T4 close + ADR-0014) is kept and extended by the migration tasks. The mapping is in `docs/migration/10-target-architecture.md` §9.
+
+Status:
+- **Applied** on branch `docs/kvadro-migration-audit`, PR #9, not merged:
+  - `docs/migration/`: the audit, the plan (01–23), 383 task files and the registers in `data/`;
+  - `scripts/migration/`: the ID, open-question and task-graph checks. They are written in Python 3 with the standard library only, so they need no new dependency.
+- **Not applied:**
+  - no application code;
+  - the `HANDOFF.md` §4 changes (`10` §9);
+  - the plan's ADRs: KV-BE-001, KV-DB-004, KV-DB-005, KV-BE-120;
+  - the guard key for the legacy tree (KI-26);
+  - the Media ownership fix (KI-25, task KV-BE-002).
+
+Developer decisions (2026-11-09):
+- Audit the legacy product and write the full plan before any migration code. The legacy tree is read-only: «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.»
+- «в homi.uz мы будем исправлят старые ошибки и логические не верные решение». This became the migration policy in `docs/migration/README.md`: parity covers capabilities, data and public links, and every behaviour change is a DEV item that needs approval. No separate ADR was written; the plan's ADR tasks above carry the policy.
+- «да, закоммить и открой PR, writing-block.md не коммить». Done as `b6aa0e6`, PR #9.
+
+ASSUMPTION_MISMATCH AM-44 (2026-11-09):
+- **Assumption.** ADR-0009 and `.ai/memory/current-state.md` (Collectors) assume collectors push listings into HOMI's intake.
+- **What was found** (reported by `reference-reader`, not re-run):
+  - `telegram.uz` offers only a pull API (`/api/public/v1/listings`) and pushes nothing to HOMI;
+  - its production use is not confirmed;
+  - `geo.uz` is not a housing source;
+  - none of the collectors mentions kvadro.
+- **Resolution.** Recorded as CF-007 / DEC-02 in `docs/migration/10`: our own channel reader first, `telegram.uz` after a side-by-side run. ADR-0009 stays unchanged until DEC-02 is answered.
+
+ASSUMPTION_MISMATCH AM-45 (2026-11-09):
+- **Assumption.** The migration docs were written before PR #8 landed. They assumed nothing was deployed and used the ADR-0011 database names `homi_staging` / `homi_production`.
+- **What PR #8 brought:**
+  - live staging and production, with the databases `homi_db` / `homi_staging_db`;
+  - Redis DB indexes on a shared instance;
+  - Horizon units;
+  - `homi-deploy`.
+- **Resolution, before the commit:**
+  - names corrected;
+  - DEC-27 recorded as answered;
+  - reconciliation notes added to KV-INF-015, KV-INF-019 and KV-INF-023;
+  - `collect_ids.py --check` and `task_graph.py --check` re-run, exit 0.

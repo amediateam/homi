@@ -1,0 +1,384 @@
+id,track,title,status,complexity,depth,features,deps,blockers,path
+KV-BE-001,backend,ADR: kvadro² compatibility surface,TODO,S,1,F-ACCESS-001 F-COMPAT-001 F-LOCALE-001 F-LOCALE-003,,CF-001 CF-002 CF-006 CF-017 CF-018 CF-020 DEC-01,tasks/backend/KV-BE-001-compatibility-surface-adr.md
+KV-BE-002,backend,"Media ownership fix (SEC-026, SEC-027)",TODO,M,1,F-MEDIA-001,,,tasks/backend/KV-BE-002-media-ownership-fix.md
+KV-BE-003,backend,Media uploader: dimensions checked before decoding (SEC-028),TODO,S,1,F-MEDIA-001,,,tasks/backend/KV-BE-003-media-dimension-check.md
+KV-BE-004,backend,ADR-0014 extension: listing photos and signed legacy URLs,TODO,S,2,F-LISTING-002 F-MEDIA-001,KV-BE-002,CF-012,tasks/backend/KV-BE-004-adr-0014-listing-photos.md
+KV-BE-005,backend,"Legacy route group, host binding and the `{detail}` renderer",TODO,M,2,F-COMPAT-001,KV-BE-001,,tasks/backend/KV-BE-005-legacy-route-group.md
+KV-BE-006,backend,Telegram `initData` verifier,TODO,M,2,F-ACCESS-001,KV-QA-003,,tasks/backend/KV-BE-006-initdata-verifier.md
+KV-BE-007,backend,`tma` guard and Telegram user resolution,TODO,M,3,F-ACCESS-001 F-ACCESS-003,KV-BE-005 KV-BE-006 KV-DB-007,,tasks/backend/KV-BE-007-tma-guard-user-resolution.md
+KV-BE-008,backend,Log and Telescope redaction,TODO,S,1,F-ACCESS-001 F-PRIVACY-004,,,tasks/backend/KV-BE-008-log-redaction.md
+KV-BE-009,backend,Access gate (closed-beta reasons),TODO,M,4,F-ACCESS-002,KV-BE-007 KV-DB-007,,tasks/backend/KV-BE-009-access-gate.md
+KV-BE-010,backend,Legacy rate limiters and trusted proxies,TODO,M,4,F-COMPAT-002,KV-BE-005 KV-BE-007,,tasks/backend/KV-BE-010-legacy-rate-limits.md
+KV-BE-011,backend,Access administration commands,TODO,S,5,F-ADMIN-001,KV-BE-009,,tasks/backend/KV-BE-011-access-admin-commands.md
+KV-BE-012,backend,"Legacy OpenAPI document, part 1",TODO,M,2,F-COMPAT-001,KV-BE-001,,tasks/backend/KV-BE-012-legacy-openapi-part1.md
+KV-BE-013,backend,"Legacy OpenAPI document, part 2",TODO,M,3,F-COMPAT-001,KV-BE-012,,tasks/backend/KV-BE-013-legacy-openapi-part2.md
+KV-BE-014,backend,Domain value objects and enums,TODO,M,2,F-FILTER-001 F-LISTING-001 F-LOCALE-001,KV-DB-004,CF-003 CF-005 CF-006 CF-016,tasks/backend/KV-BE-014-domain-value-objects.md
+KV-BE-015,backend,Gazetteer service and dictionary code resolution,TODO,M,5,F-FILTER-004 F-ONBOARD-001 F-PIPELINE-004,KV-BE-014 KV-DB-006 KV-DB-034,Q-API-012 Q-API-026 Q-DATA-028,tasks/backend/KV-BE-015-gazetteer-service.md
+KV-BE-016,backend,"`SearchFilters` value object, normaliser and canonical hash",TODO,L,6,F-FILTER-001 F-FILTER-006,KV-BE-014 KV-BE-015,Q-API-007 Q-API-013 Q-API-014,tasks/backend/KV-BE-016-search-filters-normaliser.md
+KV-BE-017,backend,Legacy filter query parsing and form-request base,TODO,M,7,F-COMPAT-001 F-FILTER-001,KV-BE-005 KV-BE-016,Q-API-007 Q-API-008 Q-API-012,tasks/backend/KV-BE-017-legacy-filter-query.md
+KV-BE-018,backend,Listing number resolver and alias redirect,TODO,S,5,F-LISTING-001 F-SHARE-002,KV-BE-014 KV-DB-004 KV-DB-008,CF-003,tasks/backend/KV-BE-018-listing-number-resolver.md
+KV-BE-019,backend,"Exchange rates: CBU fetch, `RateService`, staleness alert",TODO,M,6,F-FILTER-006 F-PIPELINE-007 F-SETTINGS-004,KV-DB-004 KV-DB-011,CF-005 DEC-10 Q-API-054,tasks/backend/KV-BE-019-exchange-rates.md
+KV-BE-020,backend,Server display catalogues and the money/price formatter,TODO,L,7,F-FILTER-006 F-LOCALE-003 F-SETTINGS-004,KV-BE-014 KV-BE-019 KV-QA-006,CF-017 Q-API-022,tasks/backend/KV-BE-020-money-price-formatter.md
+KV-BE-021,backend,"Time, age, distance and title formatters",TODO,M,8,F-LISTING-006 F-LISTING-007 F-LOCALE-003,KV-BE-020 KV-QA-006,Q-API-022,tasks/backend/KV-BE-021-time-distance-formatters.md
+KV-BE-022,backend,API-003 `GET /api/bot`,TODO,S,5,F-ACCESS-002 F-TMA-002,KV-BE-005 KV-BE-010,CF-009 Q-API-056,tasks/backend/KV-BE-022-api-bot.md
+KV-BE-023,backend,Listing search predicates and per-user exclusions,TODO,L,7,F-FEED-001 F-FILTER-001 F-HIDE-001 F-HIDE-002 F-MAP-002,KV-BE-016 KV-DB-005 KV-DB-008 KV-DB-010,,tasks/backend/KV-BE-023-listing-search-predicates.md
+KV-BE-024,backend,`below_median` predicate and market availability rule,TODO,S,8,F-FILTER-007,KV-BE-016 KV-BE-023 KV-DB-011,Q-API-011 Q-API-021,tasks/backend/KV-BE-024-below-median-filter.md
+KV-BE-025,backend,Owner badge resolver,TODO,S,6,F-OWNER-002,KV-DB-008 KV-DB-010,DEC-29 Q-API-041 Q-DATA-019,tasks/backend/KV-BE-025-owner-badges.md
+KV-BE-026,backend,"Listing photo store, legacy renditions and signed photo URLs",TODO,M,6,F-LISTING-002 F-MEDIA-001,KV-BE-002 KV-BE-004 KV-DB-033,CF-012 Q-APP-001,tasks/backend/KV-BE-026-listing-photo-store.md
+KV-BE-027,backend,RES-001 / RES-002 legacy media route,TODO,M,7,F-LISTING-002 F-MEDIA-001,KV-BE-004 KV-BE-005 KV-BE-010 KV-BE-026,CF-012,tasks/backend/KV-BE-027-legacy-media-route.md
+KV-BE-028,backend,`ListingPreview` legacy serializer,TODO,M,9,F-FEED-001 F-LOCALE-003 F-OWNER-002,KV-BE-020 KV-BE-021 KV-BE-025 KV-BE-026 KV-DB-010 KV-QA-002 KV-QA-007,,tasks/backend/KV-BE-028-listing-preview-serializer.md
+KV-BE-029,backend,`MetaService` and API-001 `GET /api/meta`,TODO,L,8,F-ACCESS-002 F-ANALYTICS-002 F-LOCALE-001 F-MEDIA-002 F-ONBOARD-001 F-ONBOARD-002 F-SETTINGS-004,KV-BE-009 KV-BE-010 KV-BE-015 KV-BE-019 KV-BE-020 KV-DB-007 KV-DB-011,DEC-26,tasks/backend/KV-BE-029-api-meta.md
+KV-BE-030,backend,API-002 `GET /api/cities`,TODO,M,8,F-FILTER-004 F-FILTER-006 F-ONBOARD-003,KV-BE-010 KV-BE-015 KV-BE-023 KV-DB-011,,tasks/backend/KV-BE-030-api-cities.md
+KV-BE-031,backend,API-004 `GET /api/feed` with keyset cursor and sorts,TODO,M,10,F-FEED-001 F-FILTER-001 F-FILTER-003,KV-BE-010 KV-BE-017 KV-BE-023 KV-BE-028 KV-DB-004 KV-DB-008,,tasks/backend/KV-BE-031-api-feed.md
+KV-BE-032,backend,API-005 `GET /api/feed/count` and API-006 `GET /api/feed/flow`,TODO,M,9,F-COMPAT-002 F-FILTER-005,KV-BE-010 KV-BE-016 KV-BE-021 KV-BE-023,,tasks/backend/KV-BE-032-api-feed-count-flow.md
+KV-BE-033,backend,API-007 `GET /api/map`,TODO,M,8,F-MAP-001 F-MAP-002,KV-BE-010 KV-BE-020 KV-BE-023 KV-DB-005,,tasks/backend/KV-BE-033-api-map.md
+KV-BE-034,backend,`ListingDetails` legacy serializer,TODO,L,10,F-CONTACT-002 F-LISTING-001 F-LISTING-004 F-LISTING-006 F-LISTING-007,KV-BE-028 KV-DB-011 KV-DB-032,,tasks/backend/KV-BE-034-listing-details-serializer.md
+KV-BE-035,backend,Phone-disclosure quota,TODO,S,4,F-CONTACT-001 F-LISTING-001,KV-BE-007 KV-DB-007,DEC-19 Q-SEC-003,tasks/backend/KV-BE-035-phone-disclosure-quota.md
+KV-BE-036,backend,API-008 `GET /api/listings/:id`,TODO,M,11,F-HISTORY-001 F-LISTING-001 F-MAP-003 F-SHARE-002,KV-BE-010 KV-BE-018 KV-BE-034 KV-BE-035 KV-DB-010,,tasks/backend/KV-BE-036-api-listing-details.md
+KV-BE-037,backend,Call links: API-009 and RES-005 `/call/<token>`,TODO,M,11,F-CONTACT-001 F-MEDIA-003,KV-BE-005 KV-BE-010 KV-BE-034 KV-BE-035,CF-013,tasks/backend/KV-BE-037-call-links.md
+KV-BE-038,backend,Favourites: API-011 toggle and API-029 list,TODO,M,10,F-FAV-001,KV-BE-010 KV-BE-018 KV-BE-028 KV-DB-010 KV-QA-008,,tasks/backend/KV-BE-038-favourites.md
+KV-BE-039,backend,View history: API-030 and API-031,TODO,S,12,F-HISTORY-001,KV-BE-010 KV-BE-036 KV-DB-010,,tasks/backend/KV-BE-039-view-history.md
+KV-BE-040,backend,Hidden listings: API-012 and API-013,TODO,S,8,F-HIDE-001,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-BE-018 KV-BE-023 KV-DB-010,,tasks/backend/KV-BE-040-hidden-listings.md
+KV-BE-041,backend,Blocked authors: API-014 and API-015,TODO,M,8,F-HIDE-002,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-BE-018 KV-BE-023 KV-DB-008 KV-DB-010,,tasks/backend/KV-BE-041-blocked-authors.md
+KV-BE-042,backend,"«Скрытое»: API-026, API-027, API-028",TODO,M,10,F-HIDE-003,KV-BE-028 KV-BE-040 KV-BE-041,,tasks/backend/KV-BE-042-hidden-management.md
+KV-BE-043,backend,Votes and reports: API-016,TODO,L,9,F-REPORT-001 F-REPORT-003,KV-BE-040 KV-DB-007 KV-DB-008 KV-DB-010 KV-DB-032,DEC-10 Q-API-039,tasks/backend/KV-BE-043-votes-reports.md
+KV-BE-044,backend,Found survey: API-032 and API-033,TODO,S,6,F-DELIVERY-007,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-DB-010,,tasks/backend/KV-BE-044-found-survey.md
+KV-BE-045,backend,Settings: API-024 and API-025,TODO,M,9,F-LOCALE-001 F-ONBOARD-002 F-ONBOARD-003 F-SETTINGS-001 F-SETTINGS-004 F-SETTINGS-005,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-BE-014 KV-BE-015 KV-BE-029 KV-DB-007,,tasks/backend/KV-BE-045-settings.md
+KV-BE-046,backend,Share: API-017 prepared inline messages,BLOCKED,M,12,F-SHARE-001,KV-BE-020 KV-BE-021 KV-BE-036 KV-QA-003,,tasks/backend/KV-BE-046-share.md
+KV-BE-047,backend,LLM gateway with PII masking and spend controls,TODO,M,1,F-LISTING-005 F-PRIVACY-004,,DEC-03 Q-SEC-006,tasks/backend/KV-BE-047-llm-gateway-pii-masking.md
+KV-BE-048,backend,Translation: API-010,BLOCKED,M,10,F-LISTING-005,KV-BE-018 KV-BE-045 KV-BE-047 KV-DB-033,,tasks/backend/KV-BE-048-translation.md
+KV-BE-049,backend,ADR: data retention and deletion,TODO,S,1,F-PRIVACY-002 F-PRIVACY-003,,CF-019 DEC-12,tasks/backend/KV-BE-049-retention-deletion-adr.md
+KV-BE-050,backend,`ErasureService`: one deletion procedure,TODO,L,6,F-PRIVACY-002,KV-BE-047 KV-BE-049 KV-DB-007 KV-DB-009 KV-DB-010 KV-DB-033 KV-QA-001,,tasks/backend/KV-BE-050-erasure-service.md
+KV-BE-100,backend,"`RadarService` core: create-or-reactivate, update, limit under lock, `no_chat` first",TODO,M,7,F-FILTER-006 F-RADAR-002 F-RADAR-003 F-RADAR-008,KV-BE-014 KV-BE-016 KV-DB-007 KV-DB-009 KV-QA-008,Q-DATA-015,tasks/backend/KV-BE-100-radar-service-core.md
+KV-BE-101,backend,`Subscription` legacy serializer and API-018 `GET /api/subscriptions`,TODO,S,10,F-RADAR-001,KV-BE-005 KV-BE-007 KV-BE-013 KV-BE-100 KV-BE-106 KV-QA-002 KV-QA-004,Q-API-013 Q-API-032,tasks/backend/KV-BE-101-api-subscriptions-list.md
+KV-BE-102,backend,"Starter selection, radar relax options and `relaxed` hints",TODO,M,10,F-DELIVERY-005 F-FILTER-005 F-RADAR-002 F-RADAR-006,KV-BE-021 KV-BE-023 KV-BE-032 KV-BE-100 KV-BE-109,Q-API-031 Q-API-033 Q-API-034,tasks/backend/KV-BE-102-radar-starter-and-options.md
+KV-BE-103,backend,API-019 `POST` and API-020 `PUT /api/subscriptions`,TODO,M,11,F-RADAR-002 F-RADAR-003 F-RADAR-008,KV-BE-010 KV-BE-017 KV-BE-100 KV-BE-101 KV-BE-102 KV-QA-004,Q-API-031 Q-API-034,tasks/backend/KV-BE-103-api-subscriptions-create-update.md
+KV-BE-104,backend,"API-021 `PATCH` and API-022 `DELETE /api/subscriptions/:id`, `ask_found`",TODO,M,11,F-DELIVERY-007 F-HIDE-004 F-RADAR-004 F-RADAR-005,KV-BE-044 KV-BE-100 KV-BE-101 KV-BE-102 KV-BE-106,Q-API-030 Q-API-031 Q-DATA-015,tasks/backend/KV-BE-104-api-subscriptions-patch-delete.md
+KV-BE-105,backend,API-023 `POST /api/subscriptions/:id/relax`,TODO,S,12,F-RADAR-006,KV-BE-100 KV-BE-102 KV-BE-103,Q-API-034,tasks/backend/KV-BE-105-api-subscriptions-relax.md
+KV-BE-106,backend,Radar hide rules service and the `hidden` count,TODO,M,9,F-HIDE-004 F-RADAR-004,KV-BE-023 KV-BE-041 KV-BE-100 KV-DB-009,Q-API-032 Q-BOT-028 Q-DATA-012,tasks/backend/KV-BE-106-radar-hide-rules.md
+KV-BE-107,backend,Inverse matching predicate: the radars one listing matches,TODO,L,8,F-DELIVERY-001 F-HIDE-001 F-HIDE-002,KV-BE-016 KV-BE-023 KV-DB-005 KV-DB-009 KV-QA-001 KV-QA-005,Q-API-014 Q-API-027,tasks/backend/KV-BE-107-radar-match-predicate.md
+KV-BE-108,backend,"`MatchListingAgainstRadars`: triggers, exclusions, idempotent fan-in",TODO,M,13,F-DELIVERY-001 F-HIDE-004,KV-BE-009 KV-BE-106 KV-BE-107 KV-BE-109 KV-BE-110 KV-BE-134,DEC-20 Q-API-027 Q-BOT-012 Q-BOT-033,tasks/backend/KV-BE-108-radar-match-job.md
+KV-BE-109,backend,"Delivered set («only new»), merge re-pointing and the re-send dry-run",TODO,M,6,F-DELIVERY-005,KV-BE-018 KV-DB-009,Q-API-031 Q-DATA-013,tasks/backend/KV-BE-109-delivery-ledger.md
+KV-BE-110,backend,"Quiet hours, digest slots and the `DeliveryPlanner`",TODO,M,10,F-DELIVERY-002 F-DELIVERY-003 F-DELIVERY-004 F-SETTINGS-005,KV-BE-045 KV-DB-009 KV-QA-006,DEC-20 Q-BOT-002 Q-BOT-003 Q-DATA-014,tasks/backend/KV-BE-110-delivery-planner.md
+KV-BE-111,backend,"Radar and delivery listeners: withdrawal, deletion, chat loss, erasure registry",TODO,S,14,F-DELIVERY-006 F-PRIVACY-002 F-RADAR-008,KV-BE-050 KV-BE-109 KV-BE-110 KV-BE-137,Q-BOT-012 Q-BOT-031,tasks/backend/KV-BE-111-radar-lifecycle-listeners.md
+KV-BE-120,backend,ADRs: listing acquisition after the migration (CF-007) and LLM data-processing rules,TODO,S,1,F-PIPELINE-001 F-PIPELINE-002,,CF-007 CF-016 DEC-02 DEC-03 Q-SEC-006 Q-SEC-007,tasks/backend/KV-BE-120-acquisition-llm-adrs.md
+KV-BE-121,backend,"Intake payload v2: raw posts, channel and post id, `rent_period`, sources",TODO,M,2,F-PIPELINE-001 F-PIPELINE-003,KV-BE-120,CF-016,tasks/backend/KV-BE-121-intake-contract-v2.md
+KV-BE-122,backend,`IntakeAcceptService` and `POST /api/v1/intake/listings`,TODO,L,5,F-PIPELINE-001,KV-BE-121 KV-DB-008,,tasks/backend/KV-BE-122-intake-accept-listings.md
+KV-BE-123,backend,"Intake lifecycle events, reconciliation read and `intake:token`",TODO,M,6,F-PIPELINE-001 F-PIPELINE-006,KV-BE-122,,tasks/backend/KV-BE-123-intake-events-reconciliation.md
+KV-BE-124,backend,`ProcessIntakeEvent` state machine and the ingest job chain,TODO,M,7,F-PIPELINE-001 F-PIPELINE-002 F-PIPELINE-003,KV-BE-122 KV-BE-123,,tasks/backend/KV-BE-124-ingest-orchestration.md
+KV-BE-125,backend,Collectors: reader of public channel pages,TODO,L,7,F-PIPELINE-001,KV-BE-120 KV-BE-122 KV-BE-126,CF-007 DEC-02,tasks/backend/KV-BE-125-public-channel-reader.md
+KV-BE-126,backend,"Channel registry, channel-list import and channel opt-outs",TODO,M,6,F-ADMIN-002 F-PIPELINE-001,KV-BE-122 KV-DB-008,Q-API-017 Q-DATA-033,tasks/backend/KV-BE-126-channel-registry-opt-outs.md
+KV-BE-127,backend,Post photo fetching under SEC-REQ-023 and perceptual hashes,TODO,M,8,F-MEDIA-001 F-PIPELINE-003,KV-BE-003 KV-BE-026 KV-BE-124,,tasks/backend/KV-BE-127-post-photo-fetcher.md
+KV-BE-128,backend,"Deterministic pre-parser: phones, owner hashtags, demand posts, price hints",TODO,M,8,F-OWNER-002 F-PIPELINE-002 F-PRIVACY-004,KV-BE-025 KV-BE-047 KV-BE-124,,tasks/backend/KV-BE-128-rules-preparser-owner-flag.md
+KV-BE-129,backend,"`ListingExtractor`: LLM extraction, schema validation, budget fallback",TODO,L,9,F-PIPELINE-002 F-PRIVACY-004,KV-BE-047 KV-BE-128,DEC-03,tasks/backend/KV-BE-129-llm-listing-extractor.md
+KV-BE-130,backend,Extraction golden set and benchmark command,TODO,M,10,F-PIPELINE-002,KV-BE-129,DEC-03 Q-SYS-002,tasks/backend/KV-BE-130-extraction-benchmark.md
+KV-BE-131,backend,"Normalisation: deal and rent period, price basis, USD conversion, dictionary codes",TODO,M,10,F-PIPELINE-004 F-PIPELINE-007,KV-BE-014 KV-BE-015 KV-BE-019 KV-BE-129,,tasks/backend/KV-BE-131-listing-normaliser.md
+KV-BE-132,backend,"`GeoResolver`: point, uncertainty, district, zone, metro and centre distances",TODO,L,11,F-LISTING-007 F-PIPELINE-004,KV-BE-015 KV-BE-131 KV-DB-005 KV-DB-006 KV-DB-034,Q-API-020,tasks/backend/KV-BE-132-geo-resolver.md
+KV-BE-133,backend,Nearby parks and schools per listing,TODO,S,12,F-LISTING-007,KV-BE-132 KV-DB-034,Q-API-020 Q-SEO-015,tasks/backend/KV-BE-133-nearby-places.md
+KV-BE-134,backend,"`ListingIngestService`: publish, publications, price history, authors, events",TODO,L,12,F-LISTING-006 F-OWNER-002 F-PIPELINE-003,KV-BE-018 KV-BE-025 KV-BE-131 KV-BE-132 KV-DB-008 KV-DB-029 KV-DB-032,,tasks/backend/KV-BE-134-listing-ingest-publish.md
+KV-BE-135,backend,"`DuplicateMatcher`: killer words, tiers, price gate, review queue",TODO,L,13,F-PIPELINE-003,KV-BE-127 KV-BE-134,Q-API-019,tasks/backend/KV-BE-135-duplicate-matcher.md
+KV-BE-136,backend,"`MergeService` and `UnmergeService`: survivor, aliases, re-pointing, shadow log",TODO,L,14,F-LISTING-001 F-PIPELINE-003,KV-BE-018 KV-BE-109 KV-BE-135 KV-DB-008 KV-DB-010,Q-API-019,tasks/backend/KV-BE-136-merge-unmerge.md
+KV-BE-137,backend,"Listing status machine, post deletion and `ListingWithdrawn`",TODO,M,13,F-DELIVERY-006 F-PIPELINE-006,KV-BE-043 KV-BE-134 KV-DB-032,Q-API-023 Q-BOT-031,tasks/backend/KV-BE-137-listing-status-machine.md
+KV-BE-138,backend,Takedowns and the phone opt-out list,TODO,M,14,F-ADMIN-002 F-PIPELINE-006,KV-BE-026 KV-BE-126 KV-BE-137 KV-DB-032,Q-SEC-007,tasks/backend/KV-BE-138-takedowns.md
+KV-BE-139,backend,District and city medians for rent and sale,TODO,M,13,F-PIPELINE-005,KV-BE-134 KV-DB-011,Q-API-021 Q-DATA-031 Q-SEO-018,tasks/backend/KV-BE-139-district-medians.md
+KV-BE-140,backend,"Near medians and the per-listing market comparison (`listing_market`, tones)",TODO,L,14,F-LISTING-004 F-PIPELINE-005,KV-BE-024 KV-BE-132 KV-BE-139,Q-API-011 Q-API-021 Q-SEO-018,tasks/backend/KV-BE-140-market-comparison.md
+KV-BE-141,backend,Source-language detection and translation pre-warm,TODO,S,13,F-LISTING-005,KV-BE-048 KV-BE-134,DEC-03,tasks/backend/KV-BE-141-translation-prewarm.md
+KV-BE-142,backend,"Ingestion freshness, parse-failure and LLM-cost metrics",TODO,S,10,F-PIPELINE-001 F-PIPELINE-002,KV-BE-124 KV-BE-129,CF-007,tasks/backend/KV-BE-142-ingest-observability.md
+KV-BE-143,backend,Side-by-side run of `telegram.uz` against the in-repo reader and the source switch,BLOCKED,M,8,F-PIPELINE-001,KV-BE-123 KV-BE-125,DEC-02 Q-DATA-045,tasks/backend/KV-BE-143-telegram-uz-side-by-side.md
+KV-BE-150,backend,`user_action_log` partitions and the `ActionLogger`,TODO,M,7,F-ANALYTICS-003,KV-BE-049 KV-DB-007 KV-DB-028 KV-DB-035,DEC-12,tasks/backend/KV-BE-150-action-log.md
+KV-BE-151,backend,API-034 `POST /api/events`,TODO,M,8,F-ANALYTICS-001,KV-BE-005 KV-BE-007 KV-BE-010 KV-BE-150,Q-API-045 Q-API-046,tasks/backend/KV-BE-151-api-events.md
+KV-BE-152,backend,PostHog server capture and person deletion,TODO,M,9,F-ANALYTICS-002 F-PRIVACY-002,KV-BE-007 KV-BE-050 KV-BE-151,DEC-26 Q-API-046 Q-SEC-006,tasks/backend/KV-BE-152-posthog-server.md
+KV-BE-153,backend,RES-015 `POST /api/csp-report`,TODO,S,3,F-LANDING-007,KV-BE-005,DEC-08 Q-API-050,tasks/backend/KV-BE-153-csp-report.md
+KV-BE-154,backend,Landing `live.json` builder and publication,TODO,M,15,F-LANDING-003 F-PIPELINE-008,KV-BE-023 KV-BE-026 KV-BE-032 KV-BE-140,Q-API-051 Q-LND-002 Q-LND-007,tasks/backend/KV-BE-154-landing-live-json.md
+KV-BE-155,backend,Landing `pins-rent.json` and `pins-sale.json` builder,TODO,M,16,F-LANDING-003 F-PIPELINE-008,KV-BE-139 KV-BE-140 KV-BE-154 KV-BE-156,Q-API-051 Q-LND-010,tasks/backend/KV-BE-155-landing-pins-json.md
+KV-BE-156,backend,Landing photo snapshots from the media pipeline,TODO,M,15,F-MEDIA-004,KV-BE-002 KV-BE-026 KV-BE-138,,tasks/backend/KV-BE-156-landing-snapshots.md
+KV-BE-157,backend,SEO slice catalogue and slice aggregates,TODO,L,14,F-SEO-001 F-SEO-002 F-SEO-005 F-SEO-008,KV-BE-015 KV-BE-139 KV-DB-006 KV-DB-011 KV-DB-034,DEC-30 Q-SEO-001 Q-SEO-002 Q-SEO-008 Q-SEO-016,tasks/backend/KV-BE-157-seo-slice-catalogue.md
+KV-BE-158,backend,"Quarter, metro and owner statistics and the district rank",TODO,L,15,F-SEO-002 F-SEO-003 F-SEO-004,KV-BE-133 KV-BE-140 KV-BE-157 KV-DB-034,Q-SEO-006 Q-SEO-015 Q-SEO-016 Q-SEO-018,tasks/backend/KV-BE-158-seo-place-statistics.md
+KV-BE-159,backend,Public statistics API for the landing app,TODO,M,17,F-SEO-001 F-SEO-002 F-SEO-003 F-SEO-004 F-SEO-005 F-SEO-009 F-SEO-012,KV-BE-157 KV-BE-158 KV-BE-160 KV-BE-164,CF-010 DEC-14 DEC-15,tasks/backend/KV-BE-159-public-statistics-api.md
+KV-BE-160,backend,"SEO slice cards: sorts, badges, signed photos, deep links",TODO,M,15,F-SEO-007 F-SEO-010,KV-BE-020 KV-BE-021 KV-BE-026 KV-BE-140 KV-BE-157,Q-SEO-007 Q-SEO-016,tasks/backend/KV-BE-160-seo-slice-cards.md
+KV-BE-161,backend,Rent index and sale price series with frozen history,TODO,L,13,F-SEO-006,KV-BE-019 KV-BE-134 KV-DB-011 KV-DB-021,Q-API-054 Q-DATA-032 Q-SEO-013 Q-SEO-014,tasks/backend/KV-BE-161-price-index-series.md
+KV-BE-162,backend,RES-018 CSV exports,TODO,S,14,F-SEO-006,KV-BE-161,Q-SEO-009 Q-SEO-013,tasks/backend/KV-BE-162-csv-exports.md
+KV-BE-163,backend,RES-019 sitemap data source,TODO,S,18,F-SEO-008,KV-BE-157 KV-BE-159,DEC-30 Q-SEO-001 Q-SEO-002 Q-SEO-003,tasks/backend/KV-BE-163-sitemap-data.md
+KV-BE-164,backend,Interlinking blocks data,TODO,S,16,F-SEO-011,KV-BE-157 KV-BE-158,Q-SEO-017,tasks/backend/KV-BE-164-seo-interlinking.md
+KV-BE-165,backend,"Retention and erasure registry for the M4, M6 and M7 tables",TODO,M,15,F-PRIVACY-002 F-PRIVACY-003,KV-BE-047 KV-BE-049 KV-BE-050 KV-BE-110 KV-BE-125 KV-BE-135 KV-BE-136 KV-BE-150 KV-BE-153 KV-BE-156 KV-DB-028,DEC-12,tasks/backend/KV-BE-165-retention-m4-m6-m7.md
+KV-BE-166,backend,`stats.js` for the legacy landing mirror from configuration,TODO,S,10,F-ANALYTICS-004,KV-BE-152,DEC-15 DEC-26 Q-LND-008 Q-SEO-005,tasks/backend/KV-BE-166-landing-stats-js.md
+KV-DB-001,database,Obtain the legacy schema and counts,BLOCKED,S,1,F-ACCESS-003 F-DELIVERY-005 F-FAV-001 F-HIDE-003 F-LISTING-001 F-MEDIA-001 F-RADAR-002 F-SETTINGS-001,,Q-DATA-001 Q-DATA-002,tasks/database/KV-DB-001-legacy-schema-counts.md
+KV-DB-002,database,Profile a sanitised sample,BLOCKED,M,2,F-FILTER-001 F-LISTING-001 F-OWNER-001 F-PIPELINE-004 F-RADAR-002 F-SETTINGS-005,KV-DB-001,Q-DATA-003,tasks/database/KV-DB-002-sample-profiling.md
+KV-DB-003,database,Legal basis and data-handling agreement,BLOCKED,S,1,F-ACCESS-003 F-ANALYTICS-002 F-DELIVERY-005 F-FAV-001 F-HIDE-003 F-HISTORY-001 F-OWNER-001 F-RADAR-001 F-REPORT-001 F-SETTINGS-001,,DEC-13 Q-DATA-004 Q-DATA-005 Q-DATA-044,tasks/database/KV-DB-003-legal-basis.md
+KV-DB-004,database,Record the identifier and money decisions for migrated entities,TODO,M,1,F-FEED-001 F-FILTER-006 F-HIDE-003 F-LISTING-001 F-PIPELINE-007 F-RADAR-003 F-SHARE-002,,CF-003 CF-004 CF-005 CF-016 DEC-10 DEC-11,tasks/database/KV-DB-004-id-money-decisions.md
+KV-DB-005,database,Enable PostGIS in HOMI environments,TODO,M,2,F-FILTER-001 F-LISTING-007 F-MAP-002 F-PIPELINE-004 F-PIPELINE-005,KV-QA-001,CF-014 DEC-09 DEC-23,tasks/database/KV-DB-005-postgis.md
+KV-DB-006,database,Geo dictionaries and code aliases,TODO,L,3,F-FILTER-001 F-FILTER-004 F-ONBOARD-001 F-ONBOARD-003 F-PIPELINE-004 F-SEO-001,KV-DB-005,Q-DATA-028,tasks/database/KV-DB-006-geo-dictionaries.md
+KV-DB-007,database,Identity schema,TODO,M,2,F-ACCESS-002 F-ACCESS-003 F-ANALYTICS-002 F-ONBOARD-002 F-ONBOARD-005 F-PRIVACY-002 F-SETTINGS-001 F-SETTINGS-004 F-SETTINGS-005,KV-DB-004,CF-015,tasks/database/KV-DB-007-identity-schema.md
+KV-DB-008,database,Listings schema,TODO,L,4,F-FEED-001 F-FILTER-001 F-FILTER-003 F-FILTER-006 F-HIDE-002 F-LISTING-001 F-MAP-001 F-MAP-002 F-OWNER-002 F-PIPELINE-003 F-PIPELINE-004 F-SHARE-002,KV-DB-004 KV-DB-005 KV-DB-006,,tasks/database/KV-DB-008-listings-schema.md
+KV-DB-009,database,Radar and delivery schema,TODO,L,5,F-DELIVERY-001 F-DELIVERY-004 F-DELIVERY-005 F-DELIVERY-006 F-HIDE-004 F-RADAR-001 F-RADAR-002 F-RADAR-003 F-RADAR-004 F-RADAR-005,KV-DB-007 KV-DB-008 KV-DB-035,,tasks/database/KV-DB-009-radar-delivery-schema.md
+KV-DB-010,database,Personal lists schema,TODO,M,5,F-DELIVERY-007 F-FAV-001 F-FAV-002 F-HIDE-001 F-HIDE-002 F-HIDE-003 F-HISTORY-001 F-OWNER-001 F-OWNER-002 F-REPORT-001 F-REPORT-002 F-REPORT-003,KV-DB-007 KV-DB-008,,tasks/database/KV-DB-010-personal-lists-schema.md
+KV-DB-011,database,Derived-data schema,TODO,M,5,F-FILTER-004 F-FILTER-006 F-FILTER-007 F-LISTING-004 F-PIPELINE-005 F-PIPELINE-007 F-SEO-002 F-SEO-006 F-SEO-008,KV-DB-008,,tasks/database/KV-DB-011-derived-data-schema.md
+KV-DB-012,database,Import area,BLOCKED,M,2,F-ACCESS-003 F-DELIVERY-005 F-FAV-001 F-LISTING-001 F-MEDIA-001 F-RADAR-001 F-SETTINGS-001,KV-DB-001 KV-DB-003,,tasks/database/KV-DB-012-import-area.md
+KV-DB-013,database,Migration framework,TODO,L,3,F-ACCESS-003 F-DELIVERY-005 F-FAV-001 F-LISTING-001 F-MEDIA-001 F-RADAR-001,KV-DB-007 KV-DB-012,,tasks/database/KV-DB-013-migration-framework.md
+KV-DB-014,database,"Load users, settings, access, attribution, analytics ids",BLOCKED,M,4,F-ACCESS-002 F-ACCESS-003 F-ANALYTICS-002 F-ONBOARD-005 F-SETTINGS-001 F-SETTINGS-005,KV-DB-007 KV-DB-013,,tasks/database/KV-DB-014-load-identity.md
+KV-DB-015,database,Load dictionaries mapping,BLOCKED,M,4,F-FILTER-001 F-FILTER-004 F-ONBOARD-001 F-PIPELINE-004 F-SEO-001,KV-DB-006 KV-DB-013,,tasks/database/KV-DB-015-load-dictionary-aliases.md
+KV-DB-016,database,"Load listings, aliases, authors, statuses, takedowns",BLOCKED,L,5,F-ADMIN-002 F-HIDE-002 F-LISTING-001 F-PIPELINE-003 F-PIPELINE-006 F-SHARE-002,KV-DB-008 KV-DB-015,,tasks/database/KV-DB-016-load-listings.md
+KV-DB-017,database,Migrate photos,BLOCKED,L,6,F-LISTING-002 F-MEDIA-001,KV-BE-026 KV-DB-016,Q-DATA-026,tasks/database/KV-DB-017-migrate-photos.md
+KV-DB-018,database,Load radars and hide rules,BLOCKED,L,7,F-FILTER-001 F-HIDE-004 F-RADAR-001 F-RADAR-002 F-RADAR-003 F-RADAR-004 F-RADAR-005 F-RADAR-006,KV-BE-016 KV-DB-009 KV-DB-015,,tasks/database/KV-DB-018-load-radars.md
+KV-DB-019,database,Load delivered cards and pending deliveries,BLOCKED,M,8,F-DELIVERY-004 F-DELIVERY-005 F-DELIVERY-006,KV-DB-016 KV-DB-018,Q-DATA-013 Q-DATA-014,tasks/database/KV-DB-019-load-deliveries.md
+KV-DB-020,database,"Load personal lists, votes, verifications, answers",BLOCKED,M,6,F-DELIVERY-007 F-FAV-001 F-HIDE-001 F-HIDE-002 F-HIDE-003 F-HISTORY-001 F-OWNER-001 F-OWNER-002 F-REPORT-001,KV-DB-010 KV-DB-016,,tasks/database/KV-DB-020-load-personal-lists.md
+KV-DB-021,database,Rebuild derived data and compare,BLOCKED,M,7,F-LANDING-003 F-LISTING-004 F-LISTING-007 F-PIPELINE-005 F-SEO-006,KV-BE-019 KV-DB-011 KV-DB-016 KV-DB-017,,tasks/database/KV-DB-021-rebuild-derived-data.md
+KV-DB-022,database,Validation suite,TODO,L,4,F-ACCESS-003 F-ANALYTICS-002 F-DELIVERY-005 F-FAV-001 F-HIDE-001 F-HIDE-003 F-HISTORY-001 F-LISTING-001 F-LISTING-006 F-MEDIA-001 F-RADAR-001 F-REPORT-001 F-SETTINGS-001,KV-DB-013,,tasks/database/KV-DB-022-validation-suite.md
+KV-DB-023,database,Delta extraction,BLOCKED,M,4,F-ACCESS-003 F-DELIVERY-005 F-FAV-001 F-LISTING-001 F-RADAR-001 F-SETTINGS-001,KV-DB-013,Q-DATA-043,tasks/database/KV-DB-023-delta-extraction.md
+KV-DB-024,database,Rehearsal R1,BLOCKED,M,7,F-ACCESS-003 F-DELIVERY-005 F-FAV-001 F-HIDE-001 F-HIDE-003 F-HISTORY-001 F-LISTING-001 F-LISTING-006 F-MEDIA-001 F-OWNER-002 F-RADAR-001 F-REPORT-001 F-SETTINGS-001,KV-DB-014 KV-DB-036 KV-DB-037,,tasks/database/KV-DB-024-rehearsal-r1.md
+KV-DB-025,database,Rehearsals R2 and R3,BLOCKED,M,8,F-BOT-012 F-DELIVERY-005,KV-DB-023 KV-DB-024,,tasks/database/KV-DB-025-rehearsals-r2-r3.md
+KV-DB-026,database,Cut-over and rollback runbook,BLOCKED,M,9,F-BOT-012 F-DELIVERY-005 F-PRIVACY-002,KV-DB-025,,tasks/database/KV-DB-026-cutover-runbook.md
+KV-DB-027,database,Erasure handling during the window,BLOCKED,M,7,F-ANALYTICS-002 F-PRIVACY-002,KV-BE-050 KV-DB-014,Q-DATA-042,tasks/database/KV-DB-027-erasure-during-window.md
+KV-DB-028,database,Retention jobs in HOMI,TODO,M,6,F-ANALYTICS-003 F-MEDIA-001 F-PRIVACY-003,KV-BE-049 KV-DB-008 KV-DB-009,,tasks/database/KV-DB-028-retention-jobs.md
+KV-DB-029,database,Link migrated publications to the new ingestion,BLOCKED,M,6,F-LISTING-006 F-PIPELINE-001 F-PIPELINE-003,KV-DB-016,CF-007 CF-016,tasks/database/KV-DB-029-link-publications-intake.md
+KV-DB-030,database,Owner re-verification campaign,BLOCKED,S,7,F-OWNER-001 F-OWNER-002,KV-DB-020,DEC-29,tasks/database/KV-DB-030-owner-reverification.md
+KV-DB-031,database,Decommission and destruction record,BLOCKED,S,10,F-PRIVACY-002 F-PRIVACY-003,KV-DB-026,Q-DATA-044,tasks/database/KV-DB-031-decommission-record.md
+KV-DB-032,database,"Publications, price events, status events and takedowns schema",TODO,M,5,F-ADMIN-002 F-CONTACT-002 F-DELIVERY-006 F-LISTING-006 F-PIPELINE-003 F-PIPELINE-006,KV-DB-008,,tasks/database/KV-DB-032-listing-history-schema.md
+KV-DB-033,database,Listing photos and translations schema,TODO,S,5,F-LISTING-002 F-LISTING-005 F-MEDIA-001 F-PRIVACY-003,KV-BE-002 KV-DB-008,,tasks/database/KV-DB-033-listing-photos-translations-schema.md
+KV-DB-034,database,"Gazetteer seeds: metro, quarters, city centres, boundaries import",TODO,M,4,F-FILTER-001 F-LISTING-007 F-MAP-001 F-PIPELINE-004 F-SEO-003,KV-DB-005 KV-DB-006,Q-API-020,tasks/database/KV-DB-034-gazetteer-seeds.md
+KV-DB-035,database,Monthly partition manager,TODO,S,2,F-ANALYTICS-003 F-DELIVERY-005 F-DELIVERY-006,KV-QA-001,,tasks/database/KV-DB-035-partition-manager.md
+KV-DB-036,database,Load publications and price history,BLOCKED,M,6,F-CONTACT-002 F-LISTING-006 F-PIPELINE-003,KV-DB-016 KV-DB-032,,tasks/database/KV-DB-036-load-publications-history.md
+KV-DB-037,database,Business-level and API-level validation checks,BLOCKED,M,5,F-ANALYTICS-002 F-DELIVERY-005 F-FAV-001 F-HIDE-001 F-HIDE-002 F-LISTING-001 F-OWNER-002 F-PIPELINE-005 F-RADAR-001 F-SEO-006 F-SETTINGS-001 F-SHARE-002,KV-DB-022,,tasks/database/KV-DB-037-business-validation-checks.md
+KV-FE-001,frontend,Browser-floor data and legacy startup baseline,TODO,S,1,F-MAP-001 F-TMA-001 F-TMA-002,,DEC-06 DEC-26 Q-APP-001 Q-APP-018 Q-APP-022,tasks/frontend/KV-FE-001-browser-floor-data.md
+KV-FE-002,frontend,CF-011 spike: Next 16.4 client route group on old WebViews,TODO,M,6,F-TMA-001,KV-FE-001 KV-INF-001,DEC-06,tasks/frontend/KV-FE-002-cf011-webview-spike.md
+KV-FE-003,frontend,"ADR draft: Mini App rendering, browser floor and CSP",TODO,S,7,F-TMA-001 F-TMA-002,KV-FE-001 KV-FE-002,CF-011 DEC-06 Q-APP-001 Q-SEC-012,tasks/frontend/KV-FE-003-miniapp-rendering-adr.md
+KV-FE-004,frontend,Mini App data contract and transport decision,TODO,S,4,F-ACCESS-001 F-COMPAT-001 F-COMPAT-002,KV-BE-012 KV-BE-013,CF-002 DEC-01 DEC-06,tasks/frontend/KV-FE-004-data-contract-transport.md
+KV-FE-005,frontend,Frontend dependency approval request,TODO,S,1,F-ANALYTICS-002 F-MAP-001 F-TMA-001,,DEC-23,tasks/frontend/KV-FE-005-dependency-approvals.md
+KV-FE-006,frontend,Landing and SEO CSP spike: SRI vs `'unsafe-inline'`,TODO,S,1,F-LANDING-007 F-SEO-009,,DEC-08 Q-SEC-013,tasks/frontend/KV-FE-006-landing-csp-spike.md
+KV-FE-007,frontend,SEO archive: templates and fixtures from the legacy crawl,BLOCKED,M,1,F-SEO-001 F-SEO-002 F-SEO-003 F-SEO-004 F-SEO-005 F-SEO-006 F-SEO-007 F-SEO-008 F-SEO-009 F-SEO-010 F-SEO-011 F-SEO-012,,Q-SEO-001 Q-SEO-002 Q-SEO-003 Q-SEO-004 Q-SEO-009 Q-SEO-010 Q-SEO-011 Q-SEO-016 Q-SEO-020,tasks/frontend/KV-FE-007-seo-archive-templates.md
+KV-FE-010,frontend,Test runner and frontend CI wiring,BLOCKED,M,3,,KV-FE-005 KV-QA-010,DEC-23,tasks/frontend/KV-FE-010-test-runner-ci.md
+KV-FE-011,frontend,Design tokens and the brand layer in `@homi/ui`,TODO,M,1,F-SETTINGS-002 F-SETTINGS-003,,CF-008 DEC-04,tasks/frontend/KV-FE-011-design-tokens.md
+KV-FE-012,frontend,Shared UI primitives,TODO,M,2,F-FEED-001 F-TMA-005,KV-FE-005 KV-FE-011,,tasks/frontend/KV-FE-012-ui-primitives.md
+KV-FE-013,frontend,Sheet and sub-page primitives with gestures,TODO,M,3,F-FILTER-001 F-TMA-004,KV-FE-011 KV-FE-012,,tasks/frontend/KV-FE-013-sheet-subpage-gestures.md
+KV-FE-014,frontend,Toast and confirm dialog,TODO,S,3,F-TMA-005,KV-FE-012 KV-FE-024,,tasks/frontend/KV-FE-014-toast-confirm.md
+KV-FE-015,frontend,"i18n runtime: `t()` that never throws, plurals, locale codes",TODO,M,1,F-LOCALE-001 F-LOCALE-002,,CF-006,tasks/frontend/KV-FE-015-i18n-runtime.md
+KV-FE-016,frontend,Mini App catalogues: 461 keys × ru/uz/en,TODO,M,2,F-LOCALE-002,KV-FE-015,,tasks/frontend/KV-FE-016-miniapp-catalogues.md
+KV-FE-017,frontend,Money and number formatting,TODO,M,2,F-FILTER-006 F-LOCALE-002 F-SETTINGS-004,KV-FE-015 KV-QA-006,,tasks/frontend/KV-FE-017-money-number-format.md
+KV-FE-018,frontend,"Date, age, distance and flow formatters",TODO,S,2,F-FILTER-005 F-LISTING-006 F-LISTING-007,KV-FE-015 KV-QA-006,,tasks/frontend/KV-FE-018-date-distance-flow-format.md
+KV-FE-019,frontend,Filter model and query builder (`@homi/search`),TODO,M,8,F-FILTER-001 F-FILTER-003,KV-BE-016 KV-BE-017 KV-QA-002,,tasks/frontend/KV-FE-019-filter-model-query.md
+KV-FE-020,frontend,"Filter transitions, sort availability and summaries",TODO,M,9,F-FILTER-001 F-FILTER-003 F-FILTER-004 F-RADAR-001,KV-FE-016 KV-FE-017 KV-FE-019,,tasks/frontend/KV-FE-020-filter-rules-summaries.md
+KV-FE-021,frontend,Legacy-contract API client,TODO,M,5,F-ACCESS-001 F-COMPAT-001 F-COMPAT-002,KV-BE-012 KV-BE-013 KV-FE-004 KV-FE-024,,tasks/frontend/KV-FE-021-legacy-api-client.md
+KV-FE-022,frontend,Contract mocks from the golden fixtures,TODO,M,6,F-COMPAT-001,KV-FE-021 KV-QA-002,,tasks/frontend/KV-FE-022-contract-mocks.md
+KV-FE-023,frontend,"Request cache, boot prefetch and session maps",TODO,M,6,F-FEED-001 F-ONBOARD-001,KV-FE-005 KV-FE-021,,tasks/frontend/KV-FE-023-request-cache-prefetch.md
+KV-FE-024,frontend,Telegram adapter core,TODO,M,2,F-TMA-002 F-TMA-003,KV-QA-003,,tasks/frontend/KV-FE-024-telegram-adapter-core.md
+KV-FE-025,frontend,"Navigation: tabs, layer stack, BackButton, SettingsButton",TODO,M,3,F-TMA-004,KV-FE-024,,tasks/frontend/KV-FE-025-navigation-layer-stack.md
+KV-FE-026,frontend,"Theme, safe areas and fullscreen",TODO,S,4,F-SETTINGS-002 F-TMA-003,KV-FE-011 KV-FE-024 KV-FE-028,,tasks/frontend/KV-FE-026-theme-safe-areas.md
+KV-FE-027,frontend,Graphics lite mode,TODO,S,4,F-SETTINGS-003,KV-FE-011 KV-FE-028,,tasks/frontend/KV-FE-027-graphics-lite-mode.md
+KV-FE-028,frontend,Client storage and the DeviceStorage policy,TODO,S,3,F-TMA-007,KV-FE-024,,tasks/frontend/KV-FE-028-client-storage.md
+KV-FE-029,frontend,"Links, haptics, calls and closing",TODO,S,3,F-CONTACT-001 F-TMA-005 F-TMA-006,KV-FE-024,,tasks/frontend/KV-FE-029-links-haptics-calls.md
+KV-FE-030,frontend,Share and chat-access flows,TODO,M,10,F-RADAR-008 F-SHARE-001 F-TMA-006,KV-FE-014 KV-FE-024 KV-FE-029 KV-FE-034,,tasks/frontend/KV-FE-030-share-chat-access.md
+KV-FE-031,frontend,Location service and nearest city,TODO,S,3,F-ONBOARD-003 F-PRIVACY-004,KV-FE-024,,tasks/frontend/KV-FE-031-location-service.md
+KV-FE-032,frontend,Pre-hydration boot shell and the «Обновите Telegram» screen,BLOCKED,M,10,F-TMA-001,KV-FE-002 KV-FE-003 KV-FE-023 KV-FE-024 KV-FE-026 KV-FE-027 KV-FE-034,DEC-06,tasks/frontend/KV-FE-032-boot-shell.md
+KV-FE-033,frontend,Mini App CSP and security headers,BLOCKED,M,11,F-TMA-001,KV-BE-153 KV-FE-003 KV-FE-032 KV-INF-010 KV-INF-024,DEC-06 Q-SEC-012,tasks/frontend/KV-FE-033-miniapp-csp-headers.md
+KV-FE-034,frontend,Event journal and global error reporting,TODO,S,9,F-ANALYTICS-001 F-TMA-009,KV-BE-151 KV-FE-021,,tasks/frontend/KV-FE-034-event-journal-errors.md
+KV-FE-035,frontend,PostHog analytics and screen tracking,BLOCKED,M,10,F-ANALYTICS-002,KV-BE-152 KV-FE-005 KV-FE-025 KV-FE-027 KV-FE-034,DEC-26,tasks/frontend/KV-FE-035-posthog-screen-tracking.md
+KV-FE-036,frontend,"Error boundary, crash screen and session-expired state",TODO,S,10,F-ACCESS-001 F-TMA-009,KV-FE-012 KV-FE-016 KV-FE-021 KV-FE-025 KV-FE-029 KV-FE-034,,tasks/frontend/KV-FE-036-error-boundary-session.md
+KV-FE-037,frontend,"Deep-link router: `start_param`, `?listing=`, `?news=`",TODO,S,3,F-SHARE-002 F-TMA-001,KV-FE-024,Q-APP-019,tasks/frontend/KV-FE-037-deep-link-router.md
+KV-FE-038,frontend,Dev-only Telegram emulator,TODO,S,6,F-TMA-010,KV-FE-024 KV-INF-001 KV-INF-002,,tasks/frontend/KV-FE-038-dev-telegram-emulator.md
+KV-FE-040,frontend,Bootstrap provider and render gating,TODO,M,11,F-ACCESS-002 F-LOCALE-001 F-ONBOARD-001,KV-BE-029 KV-BE-030 KV-FE-015 KV-FE-017 KV-FE-021 KV-FE-023 KV-FE-024 KV-FE-026 KV-FE-028 KV-FE-034 KV-FE-035 KV-FE-037,,tasks/frontend/KV-FE-040-bootstrap-render-gating.md
+KV-FE-041,frontend,Outside-Telegram state,TODO,S,12,F-TMA-002,KV-BE-022 KV-FE-015 KV-FE-016 KV-FE-024 KV-FE-038 KV-FE-040,,tasks/frontend/KV-FE-041-outside-telegram.md
+KV-FE-042,frontend,No-access screen,TODO,M,12,F-ACCESS-002,KV-BE-009 KV-BE-022 KV-FE-016 KV-FE-029 KV-FE-034 KV-FE-037 KV-FE-040,Q-APP-014,tasks/frontend/KV-FE-042-no-access-screen.md
+KV-FE-043,frontend,First-launch language picker,TODO,S,12,F-LOCALE-001 F-ONBOARD-002,KV-BE-045 KV-FE-012 KV-FE-014 KV-FE-015 KV-FE-029 KV-FE-040,Q-APP-013,tasks/frontend/KV-FE-043-language-picker.md
+KV-FE-044,frontend,City picker sheet and the first-launch variant,TODO,M,12,F-FILTER-004 F-ONBOARD-003,KV-BE-030 KV-BE-045 KV-FE-013 KV-FE-020 KV-FE-031 KV-FE-040,Q-APP-004 Q-APP-013,tasks/frontend/KV-FE-044-city-picker.md
+KV-FE-045,frontend,"App shell: top bar, tab bar, view toggle, collapsing chrome",TODO,M,10,F-TMA-004,KV-FE-012 KV-FE-016 KV-FE-020 KV-FE-025 KV-FE-026,,tasks/frontend/KV-FE-045-app-shell.md
+KV-FE-046,frontend,Pull-to-refresh,TODO,S,11,F-FEED-003,KV-FE-013 KV-FE-029 KV-FE-045,,tasks/frontend/KV-FE-046-pull-to-refresh.md
+KV-FE-047,frontend,Listing card and photo strip,TODO,M,10,F-FAV-001 F-FEED-001 F-MEDIA-001 F-OWNER-002,KV-BE-027 KV-BE-028 KV-FE-012 KV-FE-016 KV-FE-017 KV-FE-018,Q-API-024 Q-APP-011,tasks/frontend/KV-FE-047-listing-card.md
+KV-FE-048,frontend,Search feed list with header chips and paging,TODO,M,13,F-FEED-001,KV-BE-031 KV-FE-019 KV-FE-023 KV-FE-042 KV-FE-045 KV-FE-047,Q-API-008,tasks/frontend/KV-FE-048-search-feed.md
+KV-FE-049,frontend,Feed empty and few-results states,TODO,S,14,F-FEED-002,KV-FE-020 KV-FE-040 KV-FE-048 KV-FE-074,,tasks/frontend/KV-FE-049-feed-empty-few.md
+KV-FE-050,frontend,"Filters sheet: shell, footer, live count and flow",TODO,M,10,F-FILTER-001 F-FILTER-005,KV-BE-032 KV-FE-013 KV-FE-014 KV-FE-018 KV-FE-020,Q-APP-005,tasks/frontend/KV-FE-050-filters-sheet-shell.md
+KV-FE-051,frontend,"Filters: deal, city, housing, rent term, rooms",TODO,M,13,F-FILTER-001,KV-FE-020 KV-FE-044 KV-FE-050,,tasks/frontend/KV-FE-051-filters-deal-city-rooms.md
+KV-FE-052,frontend,Filters: price section and «Не дороже рынка»,TODO,M,11,F-FILTER-006 F-FILTER-007,KV-BE-024 KV-FE-017 KV-FE-050,DEC-10 Q-API-011,tasks/frontend/KV-FE-052-filters-price.md
+KV-FE-053,frontend,"Filters: «Где искать» — area, zones, metro, districts",TODO,M,11,F-FILTER-001 F-MAP-002,KV-FE-020 KV-FE-050,Q-API-013,tasks/frontend/KV-FE-053-filters-where.md
+KV-FE-054,frontend,"Filters: owner, tenant, pets, furniture, renovation, floor, area, market, appliances, posted",TODO,M,12,F-FILTER-001,KV-FE-028 KV-FE-050 KV-FE-052,,tasks/frontend/KV-FE-054-filters-preferences.md
+KV-FE-055,frontend,"Quick filter sheet: rooms, price, owner",TODO,S,14,F-FILTER-002,KV-FE-013 KV-FE-048 KV-FE-050 KV-FE-051 KV-FE-052,,tasks/frontend/KV-FE-055-quick-filter-sheet.md
+KV-FE-056,frontend,Sort sheet,TODO,S,11,F-FILTER-003,KV-BE-031 KV-FE-013 KV-FE-020,Q-API-010,tasks/frontend/KV-FE-056-sort-sheet.md
+KV-FE-057,frontend,Map engine selection and loader,BLOCKED,M,9,F-MAP-001 F-MEDIA-002,KV-BE-029 KV-FE-005 KV-FE-027 KV-FE-028 KV-INF-009 KV-INF-021,Q-API-053 Q-APP-015 Q-APP-018 Q-APP-022,tasks/frontend/KV-FE-057-map-engine-loader.md
+KV-FE-058,frontend,"Search map view: points, clusters, stacks, pins, camera",BLOCKED,L,10,F-MAP-001,KV-BE-033 KV-FE-019 KV-FE-031 KV-FE-057,Q-APP-012,tasks/frontend/KV-FE-058-search-map-view.md
+KV-FE-059,frontend,Leaflet fallback map,BLOCKED,M,1,F-MAP-001,,Q-APP-018,tasks/frontend/KV-FE-059-leaflet-fallback.md
+KV-FE-060,frontend,Lasso area drawing,BLOCKED,M,11,F-MAP-002,KV-FE-025 KV-FE-045 KV-FE-053 KV-FE-058,,tasks/frontend/KV-FE-060-lasso-drawing.md
+KV-FE-061,frontend,Map selection card,BLOCKED,S,12,F-MAP-003,KV-BE-036 KV-FE-047 KV-FE-058,,tasks/frontend/KV-FE-061-map-selection-card.md
+KV-FE-062,frontend,Map tile prefetch and preload,BLOCKED,S,14,F-MAP-001 F-MEDIA-002,KV-FE-027 KV-FE-028 KV-FE-048 KV-FE-057,Q-API-053 Q-APP-015,tasks/frontend/KV-FE-062-map-tile-prefetch.md
+KV-FE-063,frontend,"Listing screen: shell, hero, title row, key facts, loading and errors",TODO,L,12,F-LISTING-001 F-LISTING-002,KV-BE-018 KV-BE-036 KV-FE-013 KV-FE-023 KV-FE-025 KV-FE-047,Q-API-023 Q-API-035,tasks/frontend/KV-FE-063-listing-screen-shell.md
+KV-FE-064,frontend,"Listing: facts, stats, history, description",TODO,M,13,F-LISTING-001 F-LISTING-006,KV-FE-018 KV-FE-063,,tasks/frontend/KV-FE-064-listing-facts-history.md
+KV-FE-065,frontend,"Listing: source, original text and translation",TODO,M,13,F-CONTACT-002 F-LISTING-005,KV-BE-048 KV-FE-029 KV-FE-063,,tasks/frontend/KV-FE-065-listing-source-translation.md
+KV-FE-066,frontend,Listing: market block and «Откуда эта цифра»,TODO,M,13,F-LISTING-004,KV-FE-013 KV-FE-017 KV-FE-063,Q-API-021 Q-APP-007,tasks/frontend/KV-FE-066-listing-market.md
+KV-FE-067,frontend,"Listing: location, nearby and the fullscreen spot map",BLOCKED,M,13,F-LISTING-003 F-LISTING-007,KV-FE-029 KV-FE-031 KV-FE-057 KV-FE-063,Q-APP-008,tasks/frontend/KV-FE-067-listing-location-spot-map.md
+KV-FE-068,frontend,Listing: CTA bar and contact,TODO,M,13,F-CONTACT-001 F-CONTACT-002,KV-BE-035 KV-BE-037 KV-FE-029 KV-FE-034 KV-FE-063,DEC-19 Q-APP-017,tasks/frontend/KV-FE-068-listing-cta-contact.md
+KV-FE-069,frontend,Listing share,TODO,S,13,F-SHARE-001,KV-BE-046 KV-FE-030 KV-FE-063,,tasks/frontend/KV-FE-069-listing-share.md
+KV-FE-070,frontend,Photo viewer,TODO,M,13,F-LISTING-002,KV-FE-025 KV-FE-063,,tasks/frontend/KV-FE-070-photo-viewer.md
+KV-FE-071,frontend,"Listing actions sheet: hide, block, report, support",TODO,M,13,F-HIDE-001 F-HIDE-002 F-REPORT-001,KV-BE-022 KV-BE-040 KV-BE-041 KV-BE-043 KV-FE-013 KV-FE-014 KV-FE-063,,tasks/frontend/KV-FE-071-listing-actions-sheet.md
+KV-FE-072,frontend,Saved tab: favourites,TODO,S,14,F-FAV-001,KV-BE-038 KV-FE-045 KV-FE-047 KV-FE-048,Q-APP-009,tasks/frontend/KV-FE-072-favourites.md
+KV-FE-073,frontend,History «Смотрели»,TODO,S,15,F-HISTORY-001,KV-BE-039 KV-FE-014 KV-FE-072,Q-API-035,tasks/frontend/KV-FE-073-history.md
+KV-FE-074,frontend,"Radar subscribe flow (create, reactivate, widen, `no_chat`)",TODO,M,13,F-RADAR-002 F-RADAR-006 F-RADAR-008,KV-BE-101 KV-BE-102 KV-BE-103 KV-BE-104 KV-BE-105 KV-FE-014 KV-FE-019 KV-FE-021 KV-FE-030,Q-API-031 Q-API-034 Q-APP-006,tasks/frontend/KV-FE-074-radar-subscribe-flow.md
+KV-FE-075,frontend,"Radar tab: list, tiles, previews",TODO,M,14,F-FILTER-005 F-RADAR-001,KV-BE-032 KV-BE-101 KV-FE-018 KV-FE-045 KV-FE-047 KV-FE-074,Q-APP-005 Q-APP-010,tasks/frontend/KV-FE-075-radar-tab.md
+KV-FE-076,frontend,Radar empty state,TODO,S,15,F-RADAR-001,KV-FE-075,,tasks/frontend/KV-FE-076-radar-empty-state.md
+KV-FE-077,frontend,Radar subscription sheet,TODO,M,15,F-RADAR-004 F-RADAR-005,KV-BE-045 KV-BE-104 KV-BE-106 KV-FE-013 KV-FE-014 KV-FE-047 KV-FE-075 KV-FE-079,Q-API-030 Q-API-032,tasks/frontend/KV-FE-077-radar-sheet.md
+KV-FE-078,frontend,New radar and radar editor sheets,TODO,M,14,F-RADAR-002 F-RADAR-003,KV-BE-032 KV-BE-103 KV-BE-105 KV-FE-050 KV-FE-054 KV-FE-074,Q-API-031 Q-APP-006,tasks/frontend/KV-FE-078-radar-create-edit.md
+KV-FE-079,frontend,«Нашли жильё?» survey,TODO,S,11,F-DELIVERY-007,KV-BE-044 KV-FE-013 KV-FE-030,Q-API-030,tasks/frontend/KV-FE-079-found-survey.md
+KV-FE-080,frontend,Radar follow nudge,TODO,S,14,F-RADAR-007,KV-FE-028 KV-FE-034 KV-FE-048 KV-FE-074,Q-APP-005,tasks/frontend/KV-FE-080-follow-nudge.md
+KV-FE-081,frontend,Settings screen and «О приложении»,TODO,M,11,F-SETTINGS-001,KV-BE-022 KV-BE-042 KV-BE-045 KV-BE-101 KV-FE-012 KV-FE-013 KV-FE-045 KV-FE-086,Q-API-029,tasks/frontend/KV-FE-081-settings-screen.md
+KV-FE-082,frontend,Settings › Theme and Graphics,TODO,S,12,F-SETTINGS-002 F-SETTINGS-003,KV-BE-045 KV-FE-026 KV-FE-027 KV-FE-081,,tasks/frontend/KV-FE-082-settings-theme-graphics.md
+KV-FE-083,frontend,"Settings › Language and Currency, without a reload",TODO,S,12,F-LOCALE-001 F-SETTINGS-004,KV-BE-020 KV-BE-045 KV-FE-015 KV-FE-017 KV-FE-023 KV-FE-081,Q-APP-011,tasks/frontend/KV-FE-083-settings-language-currency.md
+KV-FE-084,frontend,Settings › Quiet hours and Digest time,TODO,S,12,F-SETTINGS-005,KV-BE-045 KV-FE-081,Q-API-029,tasks/frontend/KV-FE-084-settings-quiet-digest.md
+KV-FE-085,frontend,Settings › «Скрытое»,TODO,M,12,F-HIDE-003,KV-BE-042 KV-FE-014 KV-FE-047 KV-FE-081,Q-API-032 Q-API-037,tasks/frontend/KV-FE-085-settings-hidden.md
+KV-FE-086,frontend,Home-screen nudge and settings row,TODO,S,11,F-TMA-008,KV-FE-014 KV-FE-028 KV-FE-034 KV-FE-045,,tasks/frontend/KV-FE-086-home-screen-nudge.md
+KV-FE-100,frontend,"Landing routing: language prefixes, trailing slash, legacy redirects, localised 404",TODO,M,7,F-LANDING-001 F-LANDING-009 F-SEO-001 F-SEO-012,KV-INF-016,CF-010 Q-LND-006,tasks/frontend/KV-FE-100-landing-routing-404.md
+KV-FE-101,frontend,SEO path parser and builder,TODO,M,18,F-SEO-001,KV-BE-157 KV-BE-159 KV-DB-006 KV-DB-034 KV-FE-100,Q-SEO-010 Q-SEO-020,tasks/frontend/KV-FE-101-seo-path-parser.md
+KV-FE-102,frontend,Landing and SEO catalogues and formatters,TODO,M,18,F-LANDING-006 F-SEO-002,KV-BE-159 KV-DB-034 KV-FE-007 KV-FE-015 KV-FE-017,Q-LND-010 Q-SEO-004,tasks/frontend/KV-FE-102-landing-seo-i18n.md
+KV-FE-103,frontend,"Head metadata, JSON-LD, manifest, icons and og images",TODO,M,19,F-LANDING-007 F-SEO-008,KV-FE-100 KV-FE-101 KV-FE-102,DEC-14 Q-LND-006 Q-SEO-004,tasks/frontend/KV-FE-103-head-metadata-assets.md
+KV-FE-104,frontend,Landing and SEO CSP and security headers,BLOCKED,S,8,F-LANDING-007 F-SEO-009,KV-BE-153 KV-FE-006 KV-FE-100 KV-INF-024,DEC-08 Q-LND-007 Q-SEC-013,tasks/frontend/KV-FE-104-landing-csp-headers.md
+KV-FE-105,frontend,Site analytics loader and visit id,TODO,S,9,F-ANALYTICS-004,KV-FE-104,DEC-26 Q-LND-008 Q-SEO-005,tasks/frontend/KV-FE-105-site-analytics.md
+KV-FE-106,frontend,Bot and Mini App link builders for landing and SEO,TODO,S,19,F-LANDING-005 F-SEO-010,KV-BE-154 KV-BE-155 KV-BE-159 KV-BE-160 KV-FE-101 KV-FE-105 KV-TG-015,Q-LND-004 Q-LND-005 Q-SEO-012,tasks/frontend/KV-FE-106-bot-link-builders.md
+KV-FE-107,frontend,Landing data contract and snapshot rendering,TODO,M,19,F-LANDING-003 F-MEDIA-004 F-PIPELINE-008,KV-BE-154 KV-BE-155 KV-BE-156 KV-FE-100 KV-FE-102,Q-LND-002 Q-LND-010,tasks/frontend/KV-FE-107-landing-data-snapshot.md
+KV-FE-108,frontend,"Landing page frame: header, language menu, final block, footer, QR, dock",TODO,M,20,F-LANDING-001 F-LANDING-004 F-LANDING-005 F-LANDING-006,KV-FE-100 KV-FE-102 KV-FE-103 KV-FE-106,DEC-04 DEC-21,tasks/frontend/KV-FE-108-landing-frame.md
+KV-FE-109,frontend,"Landing display versions, motion and responsive behaviour",TODO,M,21,F-LANDING-002 F-LANDING-008,KV-FE-104 KV-FE-108,DEC-08 Q-LND-011,tasks/frontend/KV-FE-109-landing-display-versions.md
+KV-FE-110,frontend,Landing hero scene and the phone demo,TODO,L,22,F-LANDING-002,KV-FE-045 KV-FE-047 KV-FE-107 KV-FE-109,DEC-04 Q-LND-008,tasks/frontend/KV-FE-110-landing-hero-phone.md
+KV-FE-111,frontend,Landing live map in the phone,TODO,M,23,F-LANDING-003,KV-FE-106 KV-FE-107 KV-FE-110,Q-LND-010,tasks/frontend/KV-FE-111-landing-live-map.md
+KV-FE-112,frontend,"Landing live pushes, owner/agent switch, savings block, FAQ",TODO,M,22,F-LANDING-003 F-LANDING-004,KV-FE-107 KV-FE-108 KV-FE-109,DEC-04 Q-LND-010,tasks/frontend/KV-FE-112-landing-live-owner-savings-faq.md
+KV-FE-113,frontend,Privacy pages,TODO,S,20,F-LANDING-010 F-PRIVACY-001,KV-BE-049 KV-FE-100 KV-FE-102 KV-FE-103 KV-TG-048,DEC-03 DEC-12 DEC-21,tasks/frontend/KV-FE-113-privacy-pages.md
+KV-FE-114,frontend,"SEO page frame: breadcrumbs, counters, CTA, footer",TODO,M,20,F-SEO-002,KV-BE-157 KV-BE-159 KV-FE-101 KV-FE-102 KV-FE-103 KV-FE-106,DEC-10 DEC-14 DEC-15 Q-SEO-001 Q-SEO-004 Q-SEO-011,tasks/frontend/KV-FE-114-seo-page-frame.md
+KV-FE-115,frontend,"SEO listing cards, sorting and photos",TODO,M,21,F-SEO-007,KV-BE-026 KV-BE-160 KV-FE-106 KV-FE-114,DEC-14 Q-SEO-007 Q-SEO-016,tasks/frontend/KV-FE-115-seo-cards-sorting.md
+KV-FE-116,frontend,SEO section hubs,TODO,S,22,F-SEO-002,KV-BE-157 KV-BE-159 KV-FE-114 KV-FE-115,Q-SEO-001 Q-SEO-004,tasks/frontend/KV-FE-116-seo-section-hubs.md
+KV-FE-117,frontend,SEO city pages,TODO,M,22,F-SEO-002,KV-BE-157 KV-BE-159 KV-FE-114 KV-FE-115,DEC-30 Q-SEO-004 Q-SEO-020,tasks/frontend/KV-FE-117-seo-city-pages.md
+KV-FE-118,frontend,"SEO rooms pages: city + rooms, district + rooms",TODO,M,24,F-SEO-002,KV-BE-157 KV-BE-159 KV-FE-117 KV-FE-119,DEC-30 Q-SEO-004,tasks/frontend/KV-FE-118-seo-rooms-pages.md
+KV-FE-119,frontend,SEO district pages,TODO,M,23,F-SEO-002,KV-BE-157 KV-BE-158 KV-BE-159 KV-FE-117,Q-SEO-004 Q-SEO-016 Q-SEO-020,tasks/frontend/KV-FE-119-seo-district-pages.md
+KV-FE-120,frontend,SEO quarter pages,TODO,M,24,F-SEO-003,KV-BE-157 KV-BE-158 KV-BE-159 KV-FE-119,Q-SEO-004 Q-SEO-006 Q-SEO-015,tasks/frontend/KV-FE-120-seo-quarter-pages.md
+KV-FE-121,frontend,SEO metro hub and station pages,TODO,M,22,F-SEO-003,KV-BE-157 KV-BE-158 KV-BE-159 KV-FE-114 KV-FE-115,Q-SEO-004 Q-SEO-006 Q-SEO-010,tasks/frontend/KV-FE-121-seo-metro-pages.md
+KV-FE-122,frontend,SEO by-owner pages,TODO,S,24,F-SEO-004,KV-BE-157 KV-BE-158 KV-BE-159 KV-FE-119,Q-SEO-004,tasks/frontend/KV-FE-122-seo-by-owner-pages.md
+KV-FE-123,frontend,SEO new-builds pages,TODO,M,25,F-SEO-005,KV-BE-157 KV-BE-159 KV-FE-117 KV-FE-118 KV-FE-119,Q-SEO-004,tasks/frontend/KV-FE-123-seo-new-builds-pages.md
+KV-FE-124,frontend,Rent index page,TODO,L,21,F-SEO-006,KV-BE-159 KV-BE-161 KV-BE-162 KV-FE-114,Q-SEO-004 Q-SEO-009 Q-SEO-013 Q-SEO-014,tasks/frontend/KV-FE-124-seo-rent-index.md
+KV-FE-125,frontend,Sale prices page,TODO,M,22,F-SEO-006,KV-BE-159 KV-BE-161 KV-BE-162 KV-FE-124,Q-SEO-004 Q-SEO-009 Q-SEO-013,tasks/frontend/KV-FE-125-seo-sale-prices.md
+KV-FE-126,frontend,Methodology page,TODO,S,21,F-LANDING-010 F-SEO-006,KV-BE-159 KV-FE-114,DEC-03 Q-SEO-004 Q-SEO-021,tasks/frontend/KV-FE-126-seo-methodology.md
+KV-FE-127,frontend,SEO interlinking blocks,TODO,M,26,F-SEO-011,KV-BE-159 KV-BE-164 KV-FE-101 KV-FE-116 KV-FE-123,DEC-30 Q-SEO-017,tasks/frontend/KV-FE-127-seo-interlinking.md
+KV-FE-128,frontend,"Indexing rules, sitemap and robots",BLOCKED,M,20,F-SEO-008,KV-BE-159 KV-BE-163 KV-FE-101 KV-FE-103,DEC-30 Q-SEO-001 Q-SEO-002 Q-SEO-003 Q-SEO-008,tasks/frontend/KV-FE-128-seo-sitemap-robots.md
+KV-FE-129,frontend,"SEO caching, revalidation and HTTP headers",TODO,S,21,F-PIPELINE-008 F-SEO-009,KV-BE-159 KV-FE-104 KV-FE-114 KV-INF-024,DEC-15 DEC-16,tasks/frontend/KV-FE-129-seo-caching-headers.md
+KV-FE-150,frontend,"ARM foundation: Telegram sign-in, TOTP, roles, layout",BLOCKED,M,3,F-ADMIN-001,KV-FE-011 KV-FE-012 KV-FE-015,DEC-22,tasks/frontend/KV-FE-150-arm-foundation.md
+KV-FE-151,frontend,ARM access administration,BLOCKED,M,6,F-ADMIN-001,KV-BE-009 KV-BE-011 KV-FE-150,DEC-22 DEC-25 Q-API-006,tasks/frontend/KV-FE-151-arm-access-admin.md
+KV-FE-152,frontend,ARM takedowns and channel opt-outs,BLOCKED,M,15,F-ADMIN-002 F-PIPELINE-001,KV-BE-126 KV-BE-138 KV-FE-150,DEC-22 Q-SEC-007,tasks/frontend/KV-FE-152-arm-takedowns-sources.md
+KV-FE-153,frontend,ARM report and vote moderation,BLOCKED,M,10,F-ADMIN-003 F-REPORT-003,KV-BE-043 KV-FE-150,DEC-22 Q-API-058,tasks/frontend/KV-FE-153-arm-moderation.md
+KV-FE-154,frontend,ARM service-news broadcasts,BLOCKED,M,4,F-DELIVERY-008,KV-FE-150,DEC-22,tasks/frontend/KV-FE-154-arm-broadcasts.md
+KV-FE-170,frontend,Mini App E2E suite with a fake Telegram,BLOCKED,L,7,F-FEED-001 F-RADAR-002 F-TMA-001 F-TMA-002 F-TMA-003 F-TMA-004 F-TMA-005 F-TMA-006 F-TMA-007 F-TMA-008 F-TMA-009,KV-FE-010 KV-FE-022 KV-FE-038 KV-QA-003,,tasks/frontend/KV-FE-170-miniapp-e2e.md
+KV-FE-171,frontend,Visual comparison against the legacy baselines,TODO,M,8,F-FEED-001 F-LISTING-001 F-TMA-004,KV-FE-005 KV-FE-170 KV-QA-019,,tasks/frontend/KV-FE-171-miniapp-visual-comparison.md
+KV-FE-172,frontend,Behaviour comparison with the legacy reference client,TODO,M,8,F-COMPAT-001 F-FILTER-001 F-MAP-001,KV-FE-170 KV-INF-010 KV-QA-010 KV-QA-011 KV-QA-012,,tasks/frontend/KV-FE-172-miniapp-behaviour-comparison.md
+KV-FE-173,frontend,Mini App performance budgets,TODO,M,10,F-FEED-001 F-MAP-001 F-TMA-001,KV-FE-001 KV-FE-003 KV-FE-010 KV-FE-034,,tasks/frontend/KV-FE-173-miniapp-performance.md
+KV-FE-174,frontend,Old-WebView and device pass,TODO,M,10,F-TMA-001 F-TMA-002 F-TMA-003 F-TMA-004 F-TMA-005 F-TMA-006 F-TMA-007 F-TMA-008 F-TMA-009,KV-FE-003 KV-INF-001 KV-INF-017 KV-QA-022,,tasks/frontend/KV-FE-174-webview-device-pass.md
+KV-FE-175,frontend,Landing parity run and performance,TODO,M,24,F-LANDING-001 F-LANDING-002 F-LANDING-003 F-LANDING-004 F-LANDING-005 F-LANDING-006 F-LANDING-007 F-LANDING-008 F-LANDING-009 F-LANDING-010,KV-FE-108 KV-FE-109 KV-FE-110 KV-FE-111 KV-FE-112 KV-FE-113 KV-QA-013,,tasks/frontend/KV-FE-175-landing-parity.md
+KV-FE-176,frontend,SEO crawl parity gate,TODO,M,22,F-SEO-001 F-SEO-002 F-SEO-003 F-SEO-004 F-SEO-005 F-SEO-006 F-SEO-007 F-SEO-008 F-SEO-009 F-SEO-010 F-SEO-011 F-SEO-012,KV-FE-007 KV-FE-114 KV-FE-129 KV-QA-014,DEC-15,tasks/frontend/KV-FE-176-seo-crawl-parity.md
+KV-FE-177,frontend,S4 canary and switch readiness,TODO,M,25,F-LANDING-001 F-SHARE-002 F-TMA-001,KV-FE-170 KV-FE-171 KV-FE-172 KV-FE-173 KV-FE-174 KV-FE-175 KV-INF-023,,tasks/frontend/KV-FE-177-s4-switch-readiness.md
+KV-INF-001,infrastructure,Dev bot per developer and the tunnel live check,TODO,S,5,F-BOT-012,KV-INF-002 KV-TG-005,DEC-24,tasks/infrastructure/KV-INF-001-dev-bot-and-tunnel.md
+KV-INF-002,infrastructure,"Local legacy-host aliases `kvadro.homi.loc`, `kvadro-app.homi.loc`",TODO,M,4,F-COMPAT-001 F-MEDIA-001 F-MEDIA-003,KV-QA-010 KV-QA-013,CF-008 DEC-07,tasks/infrastructure/KV-INF-002-local-legacy-host-aliases.md
+KV-INF-003,infrastructure,Environment variable names per feature and `.env.example` parity,TODO,S,1,,,,tasks/infrastructure/KV-INF-003-env-names-and-example-parity.md
+KV-INF-004,infrastructure,`security:check` secret inventory (names only),TODO,S,2,F-ACCESS-001 F-BOT-012,KV-INF-003,,tasks/infrastructure/KV-INF-004-secret-inventory-check.md
+KV-INF-005,infrastructure,PostGIS locally and in `make dev-check`,TODO,S,1,F-FILTER-001 F-MAP-002 F-PIPELINE-004 F-PIPELINE-005 F-RADAR-002,,CF-014 DEC-09,tasks/infrastructure/KV-INF-005-local-postgis-and-dev-check.md
+KV-INF-006,infrastructure,Horizon supervisors per workload,TODO,S,1,F-BOT-012 F-DELIVERY-001 F-DELIVERY-002 F-PIPELINE-002,,,tasks/infrastructure/KV-INF-006-horizon-supervisors-per-workload.md
+KV-INF-007,infrastructure,Scheduler foundation and heartbeat,TODO,S,1,F-DELIVERY-003 F-DELIVERY-004 F-PIPELINE-007 F-PRIVACY-003,,,tasks/infrastructure/KV-INF-007-scheduler-foundation-and-heartbeat.md
+KV-INF-008,infrastructure,Trusted proxies and real client IPs for limiters,DROPPED,S,1,F-COMPAT-002,,CF-018 DEC-16,tasks/infrastructure/KV-INF-008-trusted-proxies-client-ip.md
+KV-INF-009,infrastructure,Local `/media` internal location and PMTiles Range/CORS,TODO,M,5,F-MEDIA-001 F-MEDIA-002,KV-INF-002,CF-012 Q-API-053,tasks/infrastructure/KV-INF-009-local-media-and-tiles-serving.md
+KV-INF-010,infrastructure,"Legacy artefact manifest, CSP hashes and the integrity CI job",TODO,M,5,F-LANDING-007 F-TMA-001,KV-INF-002 KV-QA-010 KV-QA-013,DEC-07 Q-APP-016 Q-SEC-012 Q-SEC-015,tasks/infrastructure/KV-INF-010-legacy-artefact-manifest-and-csp.md
+KV-INF-011,infrastructure,Application metrics for the production monitor,TODO,M,2,F-BOT-012 F-COMPAT-001 F-DELIVERY-002 F-PIPELINE-001,KV-INF-006,,tasks/infrastructure/KV-INF-011-app-metrics-endpoint.md
+KV-INF-012,infrastructure,Dashboard gates and Telescope posture,TODO,S,1,F-PRIVACY-004,,DEC-22 Q-SEC-019,tasks/infrastructure/KV-INF-012-dashboards-and-telescope-posture.md
+KV-INF-013,infrastructure,Dependency audit gates in CI,TODO,S,1,,,,tasks/infrastructure/KV-INF-013-ci-dependency-audit.md
+KV-INF-014,infrastructure,"Custody of `@KvadroAppBot`, the kvadro domains and accounts",BLOCKED,M,1,F-BOT-001 F-BOT-012 F-COMPAT-001 F-LANDING-009,,DEC-04 DEC-05 DEC-16 Q-SEC-001,tasks/infrastructure/KV-INF-014-custody-bot-and-domains.md
+KV-INF-015,infrastructure,"HOMI hosts, TLS and the hook vhost on staging and production",TODO,M,3,F-BOT-012 F-COMPAT-001 F-MEDIA-002,KV-TG-001,,tasks/infrastructure/KV-INF-015-homi-hosts-tls-and-hook-vhost.md
+KV-INF-016,infrastructure,Staging legacy-host aliases and path routing,TODO,M,6,F-COMPAT-001 F-LANDING-009 F-MEDIA-001 F-MEDIA-003 F-TMA-001,KV-INF-002 KV-INF-009 KV-INF-010 KV-INF-015,CF-008 DEC-07,tasks/infrastructure/KV-INF-016-staging-legacy-host-routing.md
+KV-INF-017,infrastructure,"Staging bot, BotFather settings and webhook",TODO,S,9,F-BOT-001 F-BOT-012,KV-INF-015 KV-INF-016 KV-TG-001 KV-TG-003 KV-TG-056,CF-009 Q-BOT-019 Q-BOT-020 Q-BOT-022,tasks/infrastructure/KV-INF-017-staging-bot-and-webhook.md
+KV-INF-018,infrastructure,PostGIS on the shared PostgreSQL server,TODO,S,3,F-MAP-002 F-PIPELINE-004,KV-DB-005 KV-INF-005,CF-014 DEC-09,tasks/infrastructure/KV-INF-018-postgis-shared-server.md
+KV-INF-019,infrastructure,"Redis per environment, Horizon under systemd, capacity",TODO,M,4,F-BOT-012 F-DELIVERY-002,KV-INF-006 KV-INF-015,DEC-27 DEC-28,tasks/infrastructure/KV-INF-019-redis-horizon-workers-capacity.md
+KV-INF-020,infrastructure,Buckets and the private listing-photo route,TODO,M,7,F-MEDIA-001 F-MEDIA-004,KV-INF-009 KV-INF-015 KV-INF-016,CF-012,tasks/infrastructure/KV-INF-020-object-storage-private-media.md
+KV-INF-021,infrastructure,PMTiles on `cdn.*` with Range and CORS,TODO,S,8,F-MEDIA-002,KV-INF-009 KV-INF-015 KV-INF-020,Q-API-053,tasks/infrastructure/KV-INF-021-pmtiles-cdn-range-cors.md
+KV-INF-022,infrastructure,Scheduler cron and heartbeat on staging and production,TODO,S,5,F-DELIVERY-003 F-DELIVERY-004 F-PIPELINE-007 F-PRIVACY-003,KV-INF-007 KV-INF-015 KV-INF-019,,tasks/infrastructure/KV-INF-022-scheduler-cron-servers.md
+KV-INF-023,infrastructure,"Deploy pipeline, smoke tests and release rollback",TODO,L,7,,KV-INF-015 KV-INF-016 KV-INF-019 KV-INF-022 KV-QA-022,,tasks/infrastructure/KV-INF-023-deploy-pipeline-and-smoke.md
+KV-INF-024,infrastructure,Security headers and CSP on every vhost,TODO,M,7,F-LANDING-007 F-MEDIA-001 F-MEDIA-003 F-TMA-001,KV-INF-010 KV-INF-015 KV-INF-016,DEC-08 Q-APP-016 Q-SEC-012,tasks/infrastructure/KV-INF-024-security-headers-csp-servers.md
+KV-INF-025,infrastructure,Monitoring and alerting,TODO,M,6,F-BOT-012 F-COMPAT-001 F-DELIVERY-002 F-DELIVERY-003 F-DELIVERY-006 F-PIPELINE-001,KV-INF-006 KV-INF-011 KV-INF-022 KV-TG-059,,tasks/infrastructure/KV-INF-025-monitoring-and-alerting.md
+KV-INF-026,infrastructure,Backups and restore drills,TODO,M,8,F-PRIVACY-002 F-PRIVACY-003,KV-INF-018 KV-INF-020,DEC-12 Q-SEC-005 Q-SEC-011,tasks/infrastructure/KV-INF-026-backups-and-restore-drills.md
+KV-INF-027,infrastructure,"LLM keys, spend caps and PostHog projects per environment",BLOCKED,S,1,F-ANALYTICS-002 F-BOT-009 F-LISTING-005 F-PIPELINE-002,,DEC-03 DEC-26 Q-SEC-006,tasks/infrastructure/KV-INF-027-llm-and-posthog-accounts.md
+KV-INF-028,infrastructure,Staging rehearsal environment and reset,TODO,M,9,,KV-DB-012 KV-DB-024 KV-DB-025 KV-INF-016 KV-INF-017 KV-INF-023 KV-INF-026,DEC-13,tasks/infrastructure/KV-INF-028-staging-rehearsal-environment.md
+KV-INF-029,infrastructure,Certificates and vhosts for `kvadro.app` and `app.kvadro.app`,TODO,M,8,F-COMPAT-001 F-LANDING-009 F-MEDIA-001 F-MEDIA-003 F-SEO-001,KV-INF-014 KV-INF-016 KV-INF-024,DEC-15 DEC-16,tasks/infrastructure/KV-INF-029-kvadro-hosts-certificates-vhosts.md
+KV-INF-030,infrastructure,Cut-over runbook automation and dry runs,TODO,M,10,F-BOT-012,KV-DB-026 KV-INF-022 KV-INF-023 KV-INF-028 KV-TG-059 KV-TG-060,DEC-17 DEC-18,tasks/infrastructure/KV-INF-030-cutover-runbook-automation.md
+KV-INF-031,infrastructure,Production bot token rotation and webhook switch,TODO,S,11,F-ACCESS-001 F-BOT-012,KV-INF-014 KV-INF-015 KV-INF-030 KV-TG-001 KV-TG-003 KV-TG-060,DEC-05 DEC-17 Q-SEC-017,tasks/infrastructure/KV-INF-031-bot-token-rotation-webhook-switch.md
+KV-INF-032,infrastructure,DNS and edge switch for the kvadro hosts,TODO,M,11,F-COMPAT-001 F-COMPAT-002 F-LANDING-009 F-MEDIA-001,KV-INF-014 KV-INF-029 KV-INF-030,DEC-15 DEC-16,tasks/infrastructure/KV-INF-032-dns-edge-switch.md
+KV-INF-033,infrastructure,Legacy decommissioning and destruction records,TODO,S,12,F-PRIVACY-002 F-PRIVACY-003,KV-DB-030 KV-DB-031 KV-INF-026 KV-INF-031 KV-INF-032,DEC-18 DEC-21 Q-DATA-044 Q-SEC-011,tasks/infrastructure/KV-INF-033-legacy-decommissioning.md
+KV-QA-001,qa,PostgreSQL + PostGIS test database for feature tests,TODO,M,1,F-FILTER-001 F-MAP-002 F-PIPELINE-004 F-PIPELINE-005 F-RADAR-002,,CF-014,tasks/qa/KV-QA-001-postgres-postgis-test-db.md
+KV-QA-002,qa,Golden fixtures and model shapes from 08 and the parity mocks,TODO,L,1,F-ANALYTICS-001 F-COMPAT-001 F-CONTACT-001 F-DELIVERY-007 F-FAV-001 F-FEED-001 F-FILTER-001 F-FILTER-007 F-HIDE-001 F-HIDE-003 F-HISTORY-001 F-LISTING-001 F-LISTING-005 F-MAP-001 F-MAP-003 F-ONBOARD-001 F-RADAR-001 F-RADAR-006 F-RADAR-008 F-REPORT-001 F-SETTINGS-001 F-SHARE-001,,,tasks/qa/KV-QA-002-golden-fixtures.md
+KV-QA-003,qa,"Telegram test kit: initData signer, update factory, fake Bot API",TODO,M,1,F-ACCESS-001 F-BOT-012 F-BOT-015,,,tasks/qa/KV-QA-003-telegram-test-kit.md
+KV-QA-004,qa,Contract test harness for the legacy `/api/*` surface,TODO,M,2,F-COMPAT-001 F-COMPAT-002,KV-QA-002 KV-QA-003,CF-001 CF-002,tasks/qa/KV-QA-004-legacy-contract-harness.md
+KV-QA-005,qa,Legacy-shaped coverage dataset seeder,BLOCKED,M,6,F-ACCESS-002 F-FEED-001 F-FILTER-001 F-LISTING-001 F-PIPELINE-003 F-PIPELINE-006 F-RADAR-002,KV-DB-006 KV-DB-007 KV-DB-008 KV-DB-009 KV-DB-010,,tasks/qa/KV-QA-005-coverage-dataset-seeder.md
+KV-QA-006,qa,Time and money case matrix with clock helpers,TODO,M,1,F-BOT-005 F-DELIVERY-003 F-DELIVERY-004 F-FILTER-006 F-LISTING-006 F-LOCALE-002 F-LOCALE-003 F-MEDIA-001 F-SETTINGS-004 F-SETTINGS-005,,,tasks/qa/KV-QA-006-time-money-matrix.md
+KV-QA-007,qa,i18n completeness and enum-safety tests,TODO,S,2,F-LOCALE-001 F-LOCALE-002 F-LOCALE-003 F-LOCALE-004 F-ONBOARD-002 F-SETTINGS-001,KV-QA-002,CF-006,tasks/qa/KV-QA-007-i18n-enum-safety.md
+KV-QA-008,qa,Concurrency and idempotency kit,TODO,M,2,F-BOT-012 F-DELIVERY-005 F-FAV-001 F-HIDE-001 F-RADAR-002 F-REPORT-003,KV-QA-001,,tasks/qa/KV-QA-008-concurrency-kit.md
+KV-QA-009,qa,Bot conversation test kit and golden transcripts,TODO,L,2,F-BOT-001 F-BOT-015 F-DELIVERY-002 F-DELIVERY-007 F-FAV-002 F-LOCALE-004 F-ONBOARD-004 F-ONBOARD-005 F-OWNER-001 F-PRIVACY-002 F-REPORT-002 F-SETTINGS-006,KV-QA-003,Q-BOT-017,tasks/qa/KV-QA-009-bot-conversation-kit.md
+KV-QA-010,qa,Reference-client runner spike: legacy Mini App build against HOMI,TODO,L,2,F-COMPAT-001 F-FEED-001 F-ONBOARD-001 F-TMA-001,KV-QA-001 KV-QA-003,CF-001 CF-002,tasks/qa/KV-QA-010-reference-client-runner-spike.md
+KV-QA-011,qa,Reference-client base scenarios with the mock-equivalent seed,TODO,L,3,F-ACCESS-002 F-CONTACT-002 F-DELIVERY-007 F-FAV-001 F-FEED-001 F-HIDE-001 F-HIDE-003 F-HISTORY-001 F-LISTING-001 F-LISTING-007 F-LOCALE-001 F-LOCALE-003 F-ONBOARD-001 F-RADAR-001 F-RADAR-006 F-REPORT-001 F-SETTINGS-001 F-SHARE-001 F-SHARE-002 F-TMA-004,KV-QA-010,,tasks/qa/KV-QA-011-reference-client-base-scenarios.md
+KV-QA-012,qa,Reference-client filter and map scenarios,TODO,L,4,F-FAV-001 F-FEED-002 F-FILTER-001 F-FILTER-007 F-HISTORY-001 F-MAP-001 F-MAP-002 F-MAP-003 F-MEDIA-002,KV-QA-001 KV-QA-011,,tasks/qa/KV-QA-012-reference-client-filter-map-scenarios.md
+KV-QA-013,qa,Landing reference scenarios against the new landing,TODO,M,3,F-ANALYTICS-004 F-LANDING-001 F-LANDING-007 F-LANDING-009 F-MEDIA-004 F-PRIVACY-001,KV-QA-010,CF-010,tasks/qa/KV-QA-013-landing-reference-scenarios.md
+KV-QA-014,qa,Public-URL and deep-link regression suite,TODO,L,4,F-LANDING-005 F-LANDING-007 F-LANDING-009 F-MEDIA-001 F-MEDIA-003 F-ONBOARD-005 F-PRIVACY-001 F-SEO-001 F-SEO-012 F-SHARE-002,KV-DB-006 KV-QA-003,Q-SYS-006,tasks/qa/KV-QA-014-public-url-regression-suite.md
+KV-QA-015,qa,"Security suite 1: authentication, access gate, IDOR matrix, rate limits",TODO,L,3,F-ACCESS-001 F-ACCESS-002 F-ACCESS-003 F-COMPAT-002 F-CONTACT-001 F-FAV-001 F-HIDE-003 F-RADAR-002 F-RADAR-005 F-SETTINGS-001,KV-QA-003 KV-QA-004 KV-QA-008,CF-001 CF-002,tasks/qa/KV-QA-015-security-auth-idor-limits.md
+KV-QA-016,qa,"Security suite 2: webhook, bot input, injection, media and call URLs",TODO,L,3,F-ANALYTICS-001 F-BOT-012 F-BOT-013 F-DELIVERY-002 F-LANDING-007 F-LISTING-005 F-MAP-001 F-MEDIA-001 F-MEDIA-003 F-OWNER-001 F-PIPELINE-002 F-SEO-006,KV-QA-003 KV-QA-008 KV-QA-009,CF-012,tasks/qa/KV-QA-016-security-webhook-injection-media.md
+KV-QA-017,qa,"Security suite 3: privacy, logging, retention, deletion",TODO,L,4,F-ACCESS-003 F-ANALYTICS-001 F-ANALYTICS-003 F-BOT-012 F-PRIVACY-002 F-PRIVACY-003 F-PRIVACY-004,KV-DB-007 KV-DB-013 KV-QA-001 KV-QA-003,CF-019,tasks/qa/KV-QA-017-security-privacy-retention.md
+KV-QA-018,qa,Tests for the migration validators,TODO,M,5,F-ANALYTICS-002 F-DELIVERY-005 F-FAV-001 F-HIDE-001 F-HIDE-002 F-HISTORY-001 F-MEDIA-001 F-PIPELINE-003 F-RADAR-002 F-SETTINGS-001,KV-DB-013 KV-DB-022 KV-QA-001,,tasks/qa/KV-QA-018-migration-validator-tests.md
+KV-QA-019,qa,Visual baseline of legacy key states,TODO,M,3,F-ACCESS-002 F-DELIVERY-007 F-FAV-001 F-FEED-001 F-FEED-002 F-FILTER-001 F-FILTER-004 F-HIDE-003 F-HISTORY-001 F-LISTING-001 F-LISTING-004 F-MAP-001 F-MAP-003 F-ONBOARD-002 F-ONBOARD-003 F-RADAR-001 F-RADAR-003 F-SETTINGS-001 F-TMA-004 F-TMA-005,KV-QA-010,,tasks/qa/KV-QA-019-visual-baseline.md
+KV-QA-020,qa,Performance baseline and budgets,TODO,L,3,F-COMPAT-002 F-DELIVERY-001 F-DELIVERY-002 F-DELIVERY-003 F-DELIVERY-008 F-FEED-001 F-FILTER-005 F-LISTING-001 F-MAP-001 F-MAP-002,KV-QA-001 KV-QA-008,Q-BOT-034 Q-DATA-002,tasks/qa/KV-QA-020-performance-baseline.md
+KV-QA-021,qa,"CI integration: gates, nightly suite, quarantine, denominators",TODO,M,3,,KV-QA-001 KV-QA-004 KV-QA-006 KV-QA-010,,tasks/qa/KV-QA-021-ci-integration.md
+KV-QA-022,qa,Smoke tests per environment and the device pass,TODO,M,5,F-BOT-001 F-BOT-012 F-COMPAT-001 F-MEDIA-001 F-MEDIA-002 F-ONBOARD-001 F-TMA-001 F-TMA-009,KV-QA-014,,tasks/qa/KV-QA-022-smoke-and-device-pass.md
+KV-QA-023,qa,Parity-gate tracking,TODO,S,1,F-ACCESS-001 F-SUPPORT-001,,,tasks/qa/KV-QA-023-parity-gate-tracking.md
+KV-TG-001,telegram,"Webhook authenticity: secret header, hook host, body limits",TODO,S,2,F-BOT-012,KV-QA-003,CF-009,tasks/telegram/KV-TG-001-webhook-secret-and-host.md
+KV-TG-002,telegram,"Update ledger: `update_id` dedup, fast ack, `telegram` queue, atomic claim",TODO,M,3,F-BOT-012,KV-QA-003 KV-QA-008 KV-TG-001,,tasks/telegram/KV-TG-002-update-ledger-dedup-queue.md
+KV-TG-003,telegram,"Update ledger privacy: redaction, encryption, `allowed_updates`, scheduled prune",TODO,M,4,F-BOT-012 F-PRIVACY-003 F-PRIVACY-004,KV-INF-007 KV-TG-002,CF-019 DEC-12 DEC-29,tasks/telegram/KV-TG-003-update-ledger-privacy-and-prune.md
+KV-TG-004,telegram,In-house Bot API client with error classes and token redaction,TODO,M,2,F-BOT-012 F-BOT-015,KV-QA-003,DEC-23,tasks/telegram/KV-TG-004-bot-api-client.md
+KV-TG-005,telegram,`telegram:webhook set|info|delete` for the dev bot only,TODO,S,5,F-BOT-012,KV-TG-003 KV-TG-004,DEC-24,tasks/telegram/KV-TG-005-webhook-command-dev-bot.md
+KV-TG-006,telegram,"Update router, actor resolution, access guard, per-user limits",TODO,M,4,F-ACCESS-003 F-BOT-012 F-BOT-015,KV-DB-007 KV-TG-002 KV-TG-004,,tasks/telegram/KV-TG-006-update-router-and-actor.md
+KV-TG-007,telegram,"Bot locale resolution, translator wrapper, HTML escaping and number formatting",TODO,M,5,F-BOT-015 F-LOCALE-004,KV-TG-006,CF-006 CF-017 Q-BOT-035,tasks/telegram/KV-TG-007-bot-locale-and-html-helpers.md
+KV-TG-008,telegram,Russian bot text catalogue and the TXT-BOT key map,TODO,M,6,F-BOT-015 F-LOCALE-004,KV-QA-007 KV-QA-009 KV-TG-007,Q-BOT-014,tasks/telegram/KV-TG-008-ru-text-catalogue.md
+KV-TG-009,telegram,Uzbek and English bot texts and the glossary fixes,TODO,M,7,F-LOCALE-004,KV-DB-006 KV-QA-007 KV-TG-008,Q-BOT-014,tasks/telegram/KV-TG-009-uz-en-texts-and-glossary.md
+KV-TG-010,telegram,"Reply conventions: edit vs new, toast / alert / silent, ✅ marks, button styles",TODO,S,6,F-BOT-015,KV-TG-004 KV-TG-007,,tasks/telegram/KV-TG-010-reply-conventions-and-keyboards.md
+KV-TG-011,telegram,Versioned `callback_data` codec and the «Форма устарела» catch-all,TODO,M,7,F-BOT-013,KV-TG-006 KV-TG-008 KV-TG-010,CF-003 Q-BOT-017,tasks/telegram/KV-TG-011-callback-codec-and-stale-catch-all.md
+KV-TG-012,telegram,Server-side conversation state with TTL and staleness,TODO,S,8,F-BOT-003 F-BOT-013,KV-TG-006 KV-TG-011,Q-BOT-018,tasks/telegram/KV-TG-012-conversation-state-store.md
+KV-TG-013,telegram,Per-bot sticker and asset registry,TODO,S,3,F-BOT-001,KV-TG-004,Q-BOT-022,tasks/telegram/KV-TG-013-sticker-and-asset-registry.md
+KV-TG-014,telegram,"`/start` welcome: sticker, live counters, buttons",TODO,M,7,F-ONBOARD-004,KV-DB-006 KV-TG-008 KV-TG-010 KV-TG-013 KV-TG-021,Q-BOT-036,tasks/telegram/KV-TG-014-start-welcome.md
+KV-TG-015,telegram,`/start` payload parser and attribution,TODO,M,8,F-LANDING-005 F-ONBOARD-005 F-SEO-010,KV-DB-007 KV-TG-014,Q-API-006 Q-BOT-032,tasks/telegram/KV-TG-015-start-payload-attribution.md
+KV-TG-016,telegram,Listing hand-off message for `s_<source>--l<id>` and `l_<id>`,TODO,S,9,F-ONBOARD-005,KV-TG-015,CF-003,tasks/telegram/KV-TG-016-listing-handoff-message.md
+KV-TG-017,telegram,Language switch and per-chat command menus,TODO,M,9,F-LOCALE-004,KV-DB-007 KV-TG-009 KV-TG-014 KV-TG-056,Q-BOT-014 Q-BOT-043,tasks/telegram/KV-TG-017-language-switch-and-command-scopes.md
+KV-TG-018,telegram,`/app` and `/help`,TODO,S,7,F-BOT-002 F-SUPPORT-001,KV-TG-008 KV-TG-010,DEC-21,tasks/telegram/KV-TG-018-app-and-help-commands.md
+KV-TG-019,telegram,"`/ping`: `pong` for everyone, details for admins only",TODO,S,9,F-BOT-002,KV-TG-006 KV-TG-056,DEC-22,tasks/telegram/KV-TG-019-ping-admin-only.md
+KV-TG-020,telegram,"Unknown commands, non-text messages and group chats",TODO,S,7,F-BOT-002 F-BOT-014,KV-TG-006 KV-TG-008,Q-BOT-013,tasks/telegram/KV-TG-020-unknown-commands-non-text-groups.md
+KV-TG-021,telegram,"Chat reachability: `my_chat_member`, blocked bot, `409 no_chat` source",TODO,S,5,F-DELIVERY-002 F-RADAR-008,KV-DB-007 KV-TG-006,Q-BOT-012,tasks/telegram/KV-TG-021-chat-reachability.md
+KV-TG-022,telegram,Listing card renderer and `CardSender` with the delivered-card log,TODO,L,6,F-BOT-011 F-OWNER-002,KV-DB-009 KV-TG-010 KV-TG-011,CF-003 CF-017 Q-BOT-002,tasks/telegram/KV-TG-022-listing-card-renderer-and-sender.md
+KV-TG-023,telegram,Card buttons «На карте» and «Ещё N фото»,TODO,S,7,F-BOT-011,KV-TG-022,,tasks/telegram/KV-TG-023-card-map-and-photos.md
+KV-TG-024,telegram,Card buttons: favourite set/unset and «Уже сдано» with undo,TODO,M,7,F-FAV-002 F-REPORT-002,KV-DB-010 KV-TG-022,,tasks/telegram/KV-TG-024-card-favourite-and-rented.md
+KV-TG-025,telegram,Card button «Это риелтор» with undo and weighted vote,TODO,S,7,F-REPORT-002 F-REPORT-003,KV-TG-022,Q-BOT-029,tasks/telegram/KV-TG-025-card-realtor-vote.md
+KV-TG-026,telegram,Card submenu «Скрыть похожие»,TODO,M,7,F-HIDE-004,KV-DB-009 KV-TG-022,Q-BOT-009 Q-BOT-028,tasks/telegram/KV-TG-026-card-hide-similar.md
+KV-TG-027,telegram,`/fav` list,TODO,S,7,F-FAV-002,KV-DB-010 KV-TG-010 KV-TG-022,Q-BOT-038,tasks/telegram/KV-TG-027-fav-command.md
+KV-TG-028,telegram,"Radar wizard engine: frame, step graph, Back, Cancel, entry points",TODO,M,9,F-BOT-003 F-BOT-013,KV-TG-011 KV-TG-012,,tasks/telegram/KV-TG-028-wizard-engine.md
+KV-TG-029,telegram,"Wizard steps 1–3: deal, object, rooms",TODO,S,10,F-BOT-003,KV-TG-028,,tasks/telegram/KV-TG-029-wizard-steps-deal-object-rooms.md
+KV-TG-030,telegram,"Wizard step 4: city, zones, metro, districts",TODO,M,11,F-BOT-004,KV-DB-006 KV-TG-028 KV-TG-029,Q-BOT-010 Q-BOT-044,tasks/telegram/KV-TG-030-wizard-step-area.md
+KV-TG-031,telegram,"Wizard step 5: budget presets, median line, «Не дороже рынка»",TODO,M,12,F-BOT-005 F-FILTER-007,KV-TG-030,Q-BOT-044,tasks/telegram/KV-TG-031-wizard-step-budget.md
+KV-TG-032,telegram,Wizard step 5a: typed budget amount,TODO,S,13,F-BOT-005,KV-TG-006 KV-TG-031,Q-BOT-024,tasks/telegram/KV-TG-032-wizard-typed-amount.md
+KV-TG-033,telegram,"Wizard steps 6–8: owner, tenant, pets",TODO,S,11,F-BOT-006,KV-TG-028 KV-TG-029,Q-BOT-027,tasks/telegram/KV-TG-033-wizard-steps-owner-tenant-pets.md
+KV-TG-034,telegram,"Review screen: summary, flow estimate, warnings, relax",TODO,M,12,F-BOT-007 F-RADAR-006,KV-TG-033,Q-BOT-010 Q-BOT-039,tasks/telegram/KV-TG-034-wizard-review-flow-relax.md
+KV-TG-035,telegram,In-place step edit from the review,TODO,S,13,F-BOT-007,KV-TG-029 KV-TG-033 KV-TG-034,Q-BOT-041,tasks/telegram/KV-TG-035-wizard-review-step-edit.md
+KV-TG-036,telegram,"Save a new radar: limit, twins, confirmation, sticker",TODO,M,13,F-BOT-008 F-RADAR-002,KV-TG-013 KV-TG-021 KV-TG-034,Q-BOT-007,tasks/telegram/KV-TG-036-radar-save.md
+KV-TG-037,telegram,Starter list after save and the first-radar tip,TODO,M,14,F-BOT-008 F-DELIVERY-005,KV-DB-009 KV-TG-022 KV-TG-036,Q-BOT-010 Q-BOT-038,tasks/telegram/KV-TG-037-radar-starter-list-and-tip.md
+KV-TG-038,telegram,Free-text radar queries through the LLM parser,TODO,M,13,F-BOT-009 F-PRIVACY-004,KV-INF-006 KV-TG-028 KV-TG-034,DEC-03 Q-BOT-023,tasks/telegram/KV-TG-038-free-text-query.md
+KV-TG-039,telegram,Voice radar queries,TODO,S,14,F-BOT-009,KV-TG-004 KV-TG-038,DEC-03 Q-BOT-005,tasks/telegram/KV-TG-039-voice-query.md
+KV-TG-040,telegram,Poll «Нашли жильё?»,TODO,M,6,F-DELIVERY-007,KV-DB-010 KV-TG-011,Q-BOT-006,tasks/telegram/KV-TG-040-found-poll.md
+KV-TG-041,telegram,`/subs`: radar list and radar card,TODO,M,13,F-BOT-010 F-RADAR-001,KV-TG-011 KV-TG-034,,tasks/telegram/KV-TG-041-subs-list-and-radar-card.md
+KV-TG-042,telegram,"Radar card: pause, resume, delivery mode",TODO,S,15,F-BOT-010 F-RADAR-004,KV-TG-037 KV-TG-040 KV-TG-041,Q-BOT-045,tasks/telegram/KV-TG-042-radar-pause-resume-mode.md
+KV-TG-043,telegram,Radar card: hidden rules one by one and delete with confirmation,TODO,M,14,F-BOT-010 F-HIDE-004 F-RADAR-005,KV-TG-026 KV-TG-040 KV-TG-041,,tasks/telegram/KV-TG-043-radar-hidden-rules-and-delete.md
+KV-TG-044,telegram,Edit an existing radar,TODO,M,15,F-BOT-010 F-RADAR-003,KV-TG-035 KV-TG-037 KV-TG-041,Q-BOT-026 Q-BOT-030,tasks/telegram/KV-TG-044-radar-edit-existing.md
+KV-TG-045,telegram,`/settings` panel,TODO,M,10,F-SETTINGS-004 F-SETTINGS-005 F-SETTINGS-006,KV-TG-010 KV-TG-011 KV-TG-017,Q-BOT-015 Q-BOT-040,tasks/telegram/KV-TG-045-settings-panel.md
+KV-TG-046,telegram,`/owner`: share the number and verify,TODO,M,9,F-OWNER-001 F-OWNER-002,KV-DB-008 KV-DB-010 KV-TG-003 KV-TG-006 KV-TG-010 KV-TG-012,DEC-29 Q-BOT-008 Q-BOT-037 Q-BOT-042,tasks/telegram/KV-TG-046-owner-verify-contact.md
+KV-TG-047,telegram,`/owner` when verified: status and removal with confirmation,TODO,S,10,F-OWNER-001,KV-TG-011 KV-TG-046,,tasks/telegram/KV-TG-047-owner-status-and-remove.md
+KV-TG-048,telegram,`/privacy` policy text,TODO,S,8,F-PRIVACY-001,KV-TG-008 KV-TG-009,CF-019 DEC-12,tasks/telegram/KV-TG-048-privacy-policy-text.md
+KV-TG-049,telegram,«Удалить мои данные» with confirmation,TODO,M,11,F-PRIVACY-002,KV-DB-007 KV-TG-011 KV-TG-012 KV-TG-048 KV-TG-057,DEC-12 Q-BOT-001 Q-DATA-042 Q-SEC-016,tasks/telegram/KV-TG-049-privacy-data-deletion.md
+KV-TG-050,telegram,"Outbound send pacing: global and per-chat limits, `retry_after`, circuit breaker",TODO,M,6,F-DELIVERY-002 F-DELIVERY-008,KV-INF-006 KV-TG-004 KV-TG-021,DEC-20 Q-BOT-034,tasks/telegram/KV-TG-050-outbound-send-pacer.md
+KV-TG-051,telegram,Delivery outbox and instant radar pushes,TODO,M,9,F-DELIVERY-002 F-DELIVERY-005,KV-DB-009 KV-DB-019 KV-TG-021 KV-TG-022 KV-TG-050,Q-API-031 Q-BOT-002 Q-BOT-033,tasks/telegram/KV-TG-051-delivery-outbox-instant-push.md
+KV-TG-052,telegram,Quiet hours: hold and morning release,TODO,M,10,F-DELIVERY-004,KV-INF-007 KV-TG-051,Q-BOT-003 Q-DATA-014,tasks/telegram/KV-TG-052-quiet-hours-hold-and-release.md
+KV-TG-053,telegram,Digest at the user's digest times,TODO,M,11,F-DELIVERY-003,KV-TG-022 KV-TG-050 KV-TG-052,Q-BOT-003,tasks/telegram/KV-TG-053-digest-delivery.md
+KV-TG-054,telegram,«Объявление снято» edits of delivered cards,TODO,M,12,F-DELIVERY-006,KV-DB-019 KV-TG-013 KV-TG-022 KV-TG-050 KV-TG-051 KV-TG-053,Q-BOT-031,tasks/telegram/KV-TG-054-withdrawn-card-edits.md
+KV-TG-055,telegram,Service-news broadcasts,TODO,M,11,F-DELIVERY-008,KV-TG-021 KV-TG-045 KV-TG-050,DEC-22 Q-BOT-004,tasks/telegram/KV-TG-055-service-news-broadcast.md
+KV-TG-056,telegram,BotFather settings as code: `telegram:profile sync`,TODO,M,8,F-BOT-001,KV-TG-004 KV-TG-009,Q-BOT-014 Q-BOT-019 Q-BOT-020 Q-BOT-022,tasks/telegram/KV-TG-056-botfather-profile-sync.md
+KV-TG-057,telegram,Reset of per-chat command menus and menu buttons,TODO,S,10,F-BOT-001 F-BOT-002,KV-TG-017 KV-TG-050 KV-TG-056,Q-BOT-014 Q-BOT-020,tasks/telegram/KV-TG-057-command-scope-reset.md
+KV-TG-058,telegram,Legacy `callback_data` decoder for old cards and keyboards,BLOCKED,M,15,F-BOT-013,KV-DB-004 KV-DB-013 KV-TG-011 KV-TG-022 KV-TG-024 KV-TG-027 KV-TG-037,CF-003 Q-BOT-017 Q-DATA-041,tasks/telegram/KV-TG-058-legacy-callback-decoder.md
+KV-TG-059,telegram,Scheduled webhook health check and bot metrics,TODO,S,4,F-BOT-012,KV-INF-007 KV-INF-011 KV-TG-002 KV-TG-004,,tasks/telegram/KV-TG-059-webhook-health-monitor.md
+KV-TG-060,telegram,"Cut-over switches: pause update processing, send cap, ordered drain",TODO,M,7,F-BOT-012 F-DELIVERY-002,KV-TG-002 KV-TG-050,DEC-17 DEC-18,tasks/telegram/KV-TG-060-cutover-switches.md
+KV-TG-061,telegram,Bot action log events,TODO,S,7,F-ANALYTICS-003,KV-DB-028 KV-TG-006,,tasks/telegram/KV-TG-061-bot-action-log-events.md

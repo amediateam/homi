@@ -1,0 +1,857 @@
+[
+  {
+    "id": "URL-001",
+    "pattern": "/",
+    "example": "https://kvadro.app/",
+    "kind": "landing",
+    "languages": [
+      "ru"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:1-434; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25"
+  },
+  {
+    "id": "URL-002",
+    "pattern": "/uz/",
+    "example": "https://kvadro.app/uz/",
+    "kind": "landing",
+    "languages": [
+      "uz"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/uz/index.html:1-30; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
+  },
+  {
+    "id": "URL-003",
+    "pattern": "/en/",
+    "example": "https://kvadro.app/en/",
+    "kind": "landing",
+    "languages": [
+      "en"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/en/index.html:1-30; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
+  },
+  {
+    "id": "URL-004",
+    "pattern": "/uz and /en without trailing slash -> 308 to /uz/ and /en/ (query preserved)",
+    "example": "https://kvadro.app/uz -> /uz/",
+    "kind": "landing",
+    "languages": [
+      "uz",
+      "en"
+    ],
+    "count_estimate": 2,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:54; $KVADRO_ROOT/demo/landing/tools/lib/server.mjs:47-50"
+  },
+  {
+    "id": "URL-005",
+    "pattern": "/index.html -> 301 / (query preserved)",
+    "example": "https://kvadro.app/index.html?s=x -> /?s=x",
+    "kind": "landing",
+    "languages": [
+      "ru"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:54; $KVADRO_ROOT/demo/landing/tools/lib/server.mjs:43-46"
+  },
+  {
+    "id": "URL-006",
+    "pattern": "{landing}?s=<tag> | {landing}?utm_source=<tag> (tag lowercased, [a-z0-9_-]{1,40})",
+    "example": "https://kvadro.app/?s=insta_1",
+    "kind": "landing",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": null,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-44; $KVADRO_ROOT/docs/about.md:258"
+  },
+  {
+    "id": "URL-007",
+    "pattern": "{landing}?lang=ru|uz|en",
+    "example": "https://kvadro.app/?lang=uz",
+    "kind": "landing",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:2328-2337; $KVADRO_ROOT/demo/landing/site/privacy.html:172-175"
+  },
+  {
+    "id": "URL-008",
+    "pattern": "{landing}?v=1|2 (display version override)",
+    "example": "https://kvadro.app/?v=2",
+    "kind": "landing",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 2,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:39-46"
+  },
+  {
+    "id": "URL-009",
+    "pattern": "{landing}?motion=raw | ?touch=1 | ?glass=off | ?anim=on|off | ?bench=1[&off=anim,phone,sb] | ?debug=vh",
+    "example": "https://kvadro.app/?bench=1&off=anim",
+    "kind": "landing",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 7,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:132,364,368,387-462,1419"
+  },
+  {
+    "id": "URL-010",
+    "pattern": "/privacy.html[?lang=uz|en]",
+    "example": "https://kvadro.app/privacy.html?lang=uz",
+    "kind": "landing",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:1-180; $KVADRO_ROOT/demo/landing/site/landing.js:2432"
+  },
+  {
+    "id": "URL-011",
+    "pattern": "/robots.txt",
+    "example": "https://kvadro.app/robots.txt",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/robots.txt:1-10; $KVADRO_ROOT/docs/seo-pages.md:133-134"
+  },
+  {
+    "id": "URL-012",
+    "pattern": "/sitemap.xml",
+    "example": "https://kvadro.app/sitemap.xml",
+    "kind": "seo",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:46-47,135-136"
+  },
+  {
+    "id": "URL-013",
+    "pattern": "/site.webmanifest",
+    "example": "https://kvadro.app/site.webmanifest",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/site.webmanifest; $KVADRO_ROOT/demo/landing/site/index.html:36"
+  },
+  {
+    "id": "URL-014",
+    "pattern": "/logo.svg | /favicon-32.png | /apple-touch-icon.png | /icon-192.png | /icon-512.png",
+    "example": "https://kvadro.app/icon-512.png",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 5,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:29,33-35"
+  },
+  {
+    "id": "URL-015",
+    "pattern": "/favicon.ico",
+    "example": "https://kvadro.app/favicon.ico",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "UNVERIFIED",
+    "source": "$KVADRO_ROOT/demo/landing/tools/sync/config.mjs:40-43 (optional; not among the 35 mirrored files)"
+  },
+  {
+    "id": "URL-016",
+    "pattern": "/og-ru.jpg | /og-uz.jpg | /og-en.jpg",
+    "example": "https://kvadro.app/og-uz.jpg",
+    "kind": "asset",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:14; $KVADRO_ROOT/docs/seo-pages.md:139-140"
+  },
+  {
+    "id": "URL-017",
+    "pattern": "/{landing.js|landing-i18n.js|miniapp-i18n.js|stats.js|landing.css|miniapp.css}?v=<stamp>",
+    "example": "https://kvadro.app/landing.js?v=7385730cf1",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 6,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:47-48,429-432; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:58-59"
+  },
+  {
+    "id": "URL-018",
+    "pattern": "/map-tashkent.webp | /img/*.webp | /img/*.svg (landing illustrations, QR)",
+    "example": "https://kvadro.app/img/qr-bot.svg",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 15,
+    "owner_after_migration": "landing app",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/img/; $KVADRO_ROOT/demo/landing/site/index.html:155,245-290,349,416"
+  },
+  {
+    "id": "URL-019",
+    "pattern": "/data/{live,pins-rent,pins-sale}.json?v=<DATA_V>",
+    "example": "https://kvadro.app/data/live.json?v=202610171944",
+    "kind": "asset",
+    "languages": [],
+    "count_estimate": 3,
+    "owner_after_migration": "backend",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:58-72; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61,66-77"
+  },
+  {
+    "id": "URL-020",
+    "pattern": "/img/snap/<listing_id>.webp",
+    "example": "https://kvadro.app/img/snap/<id>.webp",
+    "kind": "media",
+    "languages": [],
+    "count_estimate": 316,
+    "owner_after_migration": "backend",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/pins-rent.json; $KVADRO_ROOT/demo/landing/site/robots.txt:6-8"
+  },
+  {
+    "id": "URL-021",
+    "pattern": "POST /api/csp-report",
+    "example": "https://kvadro.app/api/csp-report",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "backend",
+    "must_keep": false,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/demo/landing/tools/sync/release.json (csp); $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:56-57; $KVADRO_ROOT/docs/seo-pages.md:376-377"
+  },
+  {
+    "id": "URL-022",
+    "pattern": "/cdn-cgi/l/email-protection#<hex>",
+    "example": "https://kvadro.app/cdn-cgi/l/email-protection#<hex>",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 2,
+    "owner_after_migration": "external",
+    "must_keep": false,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:85-87; $KVADRO_ROOT/docs/seo-pages.md:378"
+  },
+  {
+    "id": "URL-023",
+    "pattern": "/{arenda|prodazha|novostrojki}/ | /uz/{ijara|sotuv|novostroyka}/ | /en/{rent|sale|new-builds}/",
+    "example": "https://kvadro.app/en/new-builds/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 9,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:49-60,76,92-96"
+  },
+  {
+    "id": "URL-024",
+    "pattern": "/{section}/{city}/  city in tashkent|tashkent-region|andijan|namangan|kokand|fergana",
+    "example": "https://kvadro.app/en/rent/kokand/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 54,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:52,77,103"
+  },
+  {
+    "id": "URL-025",
+    "pattern": "/{section}/{city}/{N}-{komnatnye|xonali|room}/  (rent N=1-3, sale/new N=1-4)",
+    "example": "https://kvadro.app/arenda/tashkent/2-komnatnye/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 174,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:53,78,97,108"
+  },
+  {
+    "id": "URL-026",
+    "pattern": "/{section}/{city}/{district}/",
+    "example": "https://kvadro.app/uz/ijara/tashkent/yunusobod/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 138,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:54,65-71,79"
+  },
+  {
+    "id": "URL-027",
+    "pattern": "/{section}/{city}/{district}/{N}-{komnatnye|xonali|room}/",
+    "example": "https://kvadro.app/en/rent/tashkent/yunusobod/2-room/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 372,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:55,80,105-106"
+  },
+  {
+    "id": "URL-028",
+    "pattern": "/{arenda|uz/ijara|en/rent}/tashkent/{district}/{quarter}/",
+    "example": "https://kvadro.app/arenda/tashkent/yunusobod/minor/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 135,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:56,81,110-113"
+  },
+  {
+    "id": "URL-029",
+    "pattern": "/{arenda|uz/ijara|en/rent}/tashkent/metro/",
+    "example": "https://kvadro.app/arenda/tashkent/metro/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:57,82"
+  },
+  {
+    "id": "URL-030",
+    "pattern": "/{arenda|uz/ijara|en/rent}/tashkent/metro/{station}/",
+    "example": "https://kvadro.app/arenda/tashkent/metro/abdulla-qodiriy/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 105,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:57,83,103-104"
+  },
+  {
+    "id": "URL-031",
+    "pattern": "/{arenda/tashkent/bez-posrednikov|uz/ijara/tashkent/maklersiz|en/rent/tashkent/by-owner}/",
+    "example": "https://kvadro.app/en/rent/tashkent/by-owner/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:58,84,98"
+  },
+  {
+    "id": "URL-032",
+    "pattern": "/{arenda|uz/ijara|en/rent}/tashkent/{district}/{bez-posrednikov|maklersiz|by-owner}/",
+    "example": "https://kvadro.app/arenda/tashkent/sergeli/bez-posrednikov/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 6,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:58,85,364"
+  },
+  {
+    "id": "URL-033",
+    "pattern": "/arenda/indeks/ | /uz/ijara/indeks/ | /en/rent/index/",
+    "example": "https://kvadro.app/arenda/indeks/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,99; $KVADRO_ROOT/demo/landing/site/en/index.html:406"
+  },
+  {
+    "id": "URL-034",
+    "pattern": "/arenda/metodika/ | /uz/ijara/metodika/ | /en/rent/methodology/",
+    "example": "https://kvadro.app/arenda/metodika/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,100"
+  },
+  {
+    "id": "URL-035",
+    "pattern": "/prodazha/ceny/ | /uz/sotuv/narxlar/ | /en/sale/prices/",
+    "example": "https://kvadro.app/prodazha/ceny/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,101; $KVADRO_ROOT/demo/landing/site/en/index.html:407"
+  },
+  {
+    "id": "URL-036",
+    "pattern": "thin slices: same patterns as URL-024..URL-032 with too few listings -> 200 + noindex,follow, not in sitemap",
+    "example": "(data-driven)",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": null,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:123,137-138"
+  },
+  {
+    "id": "URL-037",
+    "pattern": "{seo page}?sort=cheap|expensive|below#cards",
+    "example": "https://kvadro.app/arenda/tashkent/?sort=cheap#cards",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 3024,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:124,143,212-213"
+  },
+  {
+    "id": "URL-038",
+    "pattern": "{seo page}?page=N and any other ignored parameter (utm_*, ...)",
+    "example": "https://kvadro.app/arenda/tashkent/?page=2",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": null,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:125,432"
+  },
+  {
+    "id": "URL-039",
+    "pattern": "{seo page without trailing slash} -> 308 to the slashed URL",
+    "example": "https://kvadro.app/arenda/tashkent -> /arenda/tashkent/",
+    "kind": "seo",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 1008,
+    "owner_after_migration": "landing app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:119"
+  },
+  {
+    "id": "URL-040",
+    "pattern": "/arenda/indeks/kvadro-rent-index.csv",
+    "example": "https://kvadro.app/arenda/indeks/kvadro-rent-index.csv",
+    "kind": "csv",
+    "languages": [
+      "ru"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "backend",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:87,325-336"
+  },
+  {
+    "id": "URL-041",
+    "pattern": "/prodazha/ceny/kvadro-sale-prices.csv",
+    "example": "https://kvadro.app/prodazha/ceny/kvadro-sale-prices.csv",
+    "kind": "csv",
+    "languages": [
+      "ru"
+    ],
+    "count_estimate": 1,
+    "owner_after_migration": "backend",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:87,338-345"
+  },
+  {
+    "id": "URL-042",
+    "pattern": "/media/<listing_id>/<n>.jpg?e=<unix>&s=<32 hex>  (kvadro.app and app.kvadro.app)",
+    "example": "https://kvadro.app/media/<id>/0.jpg?e=<unix>&s=<sig>",
+    "kind": "media",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "backend",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:218,379-387; $KVADRO_ROOT/docs/about.md:305-307"
+  },
+  {
+    "id": "URL-043",
+    "pattern": "/media/<listing_id>/<n>.s.jpg?e=<unix>&s=<32 hex>",
+    "example": "https://kvadro.app/media/<id>/0.s.jpg?e=<unix>&s=<sig>",
+    "kind": "media",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "backend",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:383"
+  },
+  {
+    "id": "URL-044",
+    "pattern": "/call/<token>  (Mini App host, TTL about 10 min)",
+    "example": "https://app.kvadro.app/call/<token>",
+    "kind": "call",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "backend",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/about.md:237-241,303"
+  },
+  {
+    "id": "URL-045",
+    "pattern": "https://t.me/KvadroAppBot",
+    "example": "https://t.me/KvadroAppBot",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "bot",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:29,109,343,423; $KVADRO_ROOT/demo/landing/site/img/qr-bot.svg (decoded); $KVADRO_ROOT/demo/app/src/lib/chatAccess.js:51"
+  },
+  {
+    "id": "URL-046",
+    "pattern": "https://t.me/KvadroAppBot?start=s_web[_<tag>][--v<visit>]",
+    "example": "https://t.me/KvadroAppBot?start=s_web_insta_1--v<visit>",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "bot",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-44; $KVADRO_ROOT/demo/landing/site/stats.js:15-24; $KVADRO_ROOT/docs/telegram-bot.md:1004-1006"
+  },
+  {
+    "id": "URL-047",
+    "pattern": "https://t.me/KvadroAppBot?start=s_seo[_uz|_en][_<slice>][--v<visit>]",
+    "example": "https://t.me/KvadroAppBot?start=s_seo_uz_tashkent_yunusobod",
+    "kind": "bot-deeplink",
+    "languages": [
+      "ru",
+      "uz",
+      "en"
+    ],
+    "count_estimate": 1008,
+    "owner_after_migration": "bot",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:353-371"
+  },
+  {
+    "id": "URL-048",
+    "pattern": "https://t.me/KvadroAppBot?start=s_<source>--l<id>",
+    "example": "https://t.me/KvadroAppBot?start=s_web--l<id>",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "bot",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:66; $KVADRO_ROOT/docs/telegram-bot.md:1007,1011-1017"
+  },
+  {
+    "id": "URL-049",
+    "pattern": "https://t.me/KvadroAppBot?start=s_friend",
+    "example": "https://t.me/KvadroAppBot?start=s_friend",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "bot",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:119; $KVADRO_ROOT/docs/telegram-bot.md:1008"
+  },
+  {
+    "id": "URL-050",
+    "pattern": "https://t.me/KvadroSupportBot",
+    "example": "https://t.me/KvadroSupportBot",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "external",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365; $KVADRO_ROOT/demo/landing/site/privacy.html:68-70; $KVADRO_ROOT/docs/seo-pages.md:184"
+  },
+  {
+    "id": "URL-051",
+    "pattern": "https://t.me/KvadroSupportBot?start=l_<id>",
+    "example": "https://t.me/KvadroSupportBot?start=l_<id>",
+    "kind": "bot-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "external",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:161"
+  },
+  {
+    "id": "URL-052",
+    "pattern": "https://t.me/KvadroAppBot?startapp=l_<id>",
+    "example": "https://t.me/KvadroAppBot?startapp=l_<id>",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:49; $KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:14-41; $KVADRO_ROOT/docs/about.md:243-246"
+  },
+  {
+    "id": "URL-053",
+    "pattern": "https://t.me/KvadroAppBot?startapp=l_<id>-web",
+    "example": "https://t.me/KvadroAppBot?startapp=l_<id>-web",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/live.json; $KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:37-39"
+  },
+  {
+    "id": "URL-054",
+    "pattern": "https://t.me/KvadroAppBot?startapp=l_<id>-seo-<channel>-<post>",
+    "example": "https://t.me/KvadroAppBot?startapp=l_<id>-seo-<channel>-<post>",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "DOCUMENTED_ONLY",
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:216,349-351; $KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:41-54"
+  },
+  {
+    "id": "URL-055",
+    "pattern": "https://t.me/KvadroAppBot?startapp=l_<id>-(fb|tg|ig)<1-4 digits>",
+    "example": "https://t.me/KvadroAppBot?startapp=l_<id>-fb12",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:40; $KVADRO_ROOT/docs/about.md:259"
+  },
+  {
+    "id": "URL-056",
+    "pattern": "https://t.me/KvadroAppBot?startapp=l_<id>-<channel>-<post> (without seo; accepted by the parser, emitter unknown)",
+    "example": "https://t.me/KvadroAppBot?startapp=l_<id>-<channel>-<post>",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "UNVERIFIED",
+    "source": "$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:45-54"
+  },
+  {
+    "id": "URL-057",
+    "pattern": "https://app.kvadro.app/[?listing=<id>][?news=<code>] (Main Mini App URL, menu button, web_app buttons in sent messages)",
+    "example": "https://app.kvadro.app/?listing=<id>",
+    "kind": "miniapp-deeplink",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "app",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:14-25; $KVADRO_ROOT/docs/about.md:261; $KVADRO_ROOT/docs/telegram-bot.md:82,216,657"
+  },
+  {
+    "id": "URL-058",
+    "pattern": "https://t.me/share/url?url=<encoded link>&text=<text>",
+    "example": "https://t.me/share/url?url=https%3A%2F%2Ft.me%2FKvadroAppBot%3Fstartapp%3Dl_<id>&text=<text>",
+    "kind": "share",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "external",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:51-57"
+  },
+  {
+    "id": "URL-059",
+    "pattern": "https://t.me/<channel>/<post>",
+    "example": "https://t.me/<channel>/<post>",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": null,
+    "owner_after_migration": "external",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:44-54; $KVADRO_ROOT/docs/telegram-bot.md:659; $KVADRO_ROOT/docs/about.md:388"
+  },
+  {
+    "id": "URL-060",
+    "pattern": "https://www.instagram.com/kvadro.app/",
+    "example": "https://www.instagram.com/kvadro.app/",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "external",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365; $KVADRO_ROOT/docs/seo-pages.md:184"
+  },
+  {
+    "id": "URL-061",
+    "pattern": "mailto:<project mailbox on kvadro.app>",
+    "example": "mailto:hello@…",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "external",
+    "must_keep": false,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:68-70; $KVADRO_ROOT/demo/landing/site/index.html:29"
+  },
+  {
+    "id": "URL-062",
+    "pattern": "https://www.openstreetmap.org/copyright",
+    "example": "https://www.openstreetmap.org/copyright",
+    "kind": "other",
+    "languages": [],
+    "count_estimate": 1,
+    "owner_after_migration": "external",
+    "must_keep": true,
+    "status": "CONFIRMED",
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365"
+  }
+]
