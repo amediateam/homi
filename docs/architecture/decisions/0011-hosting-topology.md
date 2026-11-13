@@ -1,6 +1,6 @@
 # ADR-0011: Hosting topology for staging and production
 
-- Status: Accepted
+- Status: Accepted — database names, Redis layout and the per-environment user amended by ADR-0015
 - Date: 2026-11-08
 - Deciders: developer (Phase 0 checkpoint H)
 - Source: `docs/ai/reports/phase-0.md` §7, §14; local nginx mirrors under `Server/nginx/<ip>/` (read-only reference)

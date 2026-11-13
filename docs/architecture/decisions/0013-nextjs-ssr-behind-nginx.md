@@ -1,6 +1,6 @@
 # ADR-0013: Next.js apps run as SSR servers behind nginx in production
 
-- Status: Accepted
+- Status: Accepted — process manager settled by ADR-0015 (systemd)
 - Date: 2026-11-08
 - Deciders: developer ("Next.js в проде — SSR за nginx! так как нам важен очень SEO, GEO, AEO")
 - Source: Phase 1 open question (where Next.js SSR runs), `docs/ai/reports/phase-3-notes.md` §B (web-host conventions)
