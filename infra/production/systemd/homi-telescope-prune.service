@@ -1,0 +1,15 @@
+# HOMI — drop Telescope entries older than 24 hours in both environments
+# (docs/infrastructure/deployment.md "Dashboards"). Started every hour by homi-telescope-prune.timer.
+# There is no Laravel scheduler on the host, so this unit runs the command itself.
+[Unit]
+Description=HOMI Telescope prune, production and staging (24 h)
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/php /var/www/homi.uz/backend/artisan telescope:prune --hours=24
+ExecStart=/usr/bin/php /var/www/staging.homi.uz/backend/artisan telescope:prune --hours=24
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=300

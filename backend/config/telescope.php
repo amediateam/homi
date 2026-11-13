@@ -20,6 +20,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Record Everything Outside Local (HOMI)
+    |--------------------------------------------------------------------------
+    |
+    | Outside the local environment, TelescopeServiceProvider records only
+    | exceptions, failed requests and jobs, scheduled tasks and monitored
+    | tags. While HOMI is in development, staging and production set this
+    | to true to record everything. Turn it off before real user traffic,
+    | because entries then carry personal data.
+    |
+    */
+
+    'record_all' => (bool) env('TELESCOPE_RECORD_ALL', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Telescope Domain
     |--------------------------------------------------------------------------
     |
@@ -118,6 +133,8 @@ return [
         'pulse*',
         '_boost*',
         '.well-known*',
+        'up',
+        'horizon*',
     ],
 
     'ignore_commands' => [

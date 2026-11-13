@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\DashboardAccess;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\IncomingEntry;
@@ -21,8 +22,9 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         $isLocal = $this->app->environment('local');
 
-        Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
+        Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
             return $isLocal ||
+                   (bool) config('telescope.record_all') ||
                    $entry->isReportableException() ||
                    $entry->isFailedRequest() ||
                    $entry->isFailedJob() ||
@@ -47,20 +49,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             'set-cookie',
             'x-csrf-token',
             'x-xsrf-token',
+            'x-telegram-bot-api-secret-token',
         ]);
     }
 
     /**
      * Register the Telescope gate.
      *
-     * This gate determines who can access Telescope in non-local environments.
+     * This gate determines who can access Telescope in non-local environments. There are no
+     * dashboard users in the database: nginx basic auth decides (DashboardAccess).
      */
     protected function gate(): void
     {
-        Gate::define('viewTelescope', function (User $user) {
-            return in_array($user->email, [
-                //
-            ]);
-        });
+        Gate::define('viewTelescope', fn (?User $user = null): bool => DashboardAccess::allows(request()));
     }
 }

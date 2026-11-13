@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Http\DashboardAccess;
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
@@ -23,14 +25,11 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     /**
      * Register the Horizon gate.
      *
-     * This gate determines who can access Horizon in non-local environments.
+     * This gate determines who can access Horizon in non-local environments. There are no
+     * dashboard users in the database: nginx basic auth decides (DashboardAccess).
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                //
-            ]);
-        });
+        Gate::define('viewHorizon', fn (?User $user = null): bool => DashboardAccess::allows(request()));
     }
 }
