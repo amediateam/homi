@@ -132,21 +132,28 @@ systemctl restart homi-next-landing homi-next-app homi-next-arm
 
 ## PostgreSQL extensions (DB host `5.45.127.98`)
 
-The DB host runs PostgreSQL 18.6 (pgdg, Debian 13), cluster `18/main`. It is shared with another product's `kc_db` (ADR-0011). It is reached only through the app host: `ssh root@159.253.19.121 'ssh root@5.45.127.98 …'`.
+The DB host runs PostgreSQL **18.7** (pgdg, Debian 13; upgraded from 18.6 on 2026-11-13), cluster `18/main`. It is shared with another product's `kc_db` (ADR-0011). It is reached only through the app host: `ssh root@159.253.19.121 'ssh root@5.45.127.98 …'`.
 
-Inventory of 2026-11-13, read-only (step 1 of `docs/migration/tasks/infrastructure/KV-INF-018-postgis-shared-server.md`):
-
-| | State |
+| Database | Extensions (2026-11-13) |
 |---|---|
-| Installed per database | `homi_db`, `homi_staging_db`, `kc_db` and `postgres` have `plpgsql 1.0` only. No database pins a PostGIS version. |
-| Available without new packages | `btree_gist 1.8`, `citext 1.8`, `pg_trgm 1.6`, `unaccent 1.1` |
-| PostGIS | **not installed**. The candidate is `postgresql-18-postgis-3` `3.7.0+dfsg-1.pgdg13+2` (pgdg; apt lists of 2026-11-12). |
-| Simulated install (`apt-get -s`) | 50 new packages: GDAL 3.13, PROJ 9.9, GEOS 3.15, SFCGAL 2.3 and their Debian libraries (10 of the 50 come from pgdg). 0 upgraded, 0 removed, and `postgresql-18` (`18.6-1.pgdg13+2`) is untouched. |
-| Restart | Not needed: installing the package does not restart PostgreSQL, and the library loads on `CREATE EXTENSION`. |
-| Local machines | Homebrew `postgis` 3.7.0, built for `postgresql@18`, which is the same version as the server candidate. kvadro² runs 3.5.2. |
-| Who can create it | The 3.7.0 `postgis.control` (local copy) has no `trusted = true`, so `CREATE EXTENSION postgis` needs a superuser, and the `NOSUPERUSER` application roles cannot run it. `postgres` creates it once per database, and the HOMI migration uses `CREATE EXTENSION IF NOT EXISTS`, which is then a no-op. The server's control file is to be confirmed after the install. |
+| `homi_staging_db` | `plpgsql`, **`postgis 3.7.0`** (DEC-09, created by `postgres`) |
+| `homi_db` | `plpgsql`. PostGIS is added before the first production deploy with geography columns, which needs its own go |
+| `kc_db`, `postgres` | `plpgsql` only, unchanged |
 
-Installing PostGIS needs DEC-09 (`docs/migration/10-target-architecture.md` §8) and the developer's go. Install `homi_staging_db` first, then `homi_db` before the first deploy with geography columns. The owner of the other product on this server gets a maintenance note.
+- **Packages.** `postgresql-18-postgis-3` and `-scripts` `3.7.0+dfsg-1.pgdg13+2` plus 48 libraries (GDAL 3.13, PROJ 9.9, GEOS 3.15, SFCGAL 2.3, …). The install log is in `/root/postgis-install-20261113.log` on the DB host.
+- **Upgrade PostgreSQL and PostGIS together.** A pgdg PostGIS build is linked against the PostgreSQL minor current at build time.
+  - The `+2` build needs `heap_datum_check`, which first appears in 18.7. Under 18.6, `CREATE EXTENSION` failed with `undefined symbol: heap_datum_check` (AM-48, `production-notes.md` §17).
+  - Upgrade `postgresql-18` together with `postgresql-18-postgis-3`, and never the PostGIS package alone.
+  - A minor upgrade restarts the cluster for every database on the host. It took about 3 s on 2026-11-13.
+  - Automatic upgrades do not touch these packages: `apt-daily-upgrade.timer` is masked, and unattended-upgrades only takes Debian origins.
+- **Who creates the extension.** On the server `pg_available_extension_versions` shows `trusted = f`, `superuser = t`.
+  - `postgres` creates PostGIS once per database: `sudo -u postgres psql -d <db> -c 'CREATE EXTENSION IF NOT EXISTS postgis;'`.
+  - The application roles cannot create it, so HOMI migrations use `CREATE EXTENSION IF NOT EXISTS postgis` (a no-op once it exists). For `migrate:fresh`, Laravel's Postgres schema builder keeps `spatial_ref_sys`.
+- **Check.** As the application role: `select postgis_full_version();` and a geography query, for example `ST_Distance` between two `SRID=4326` points.
+- **Local machines.** Homebrew `postgis` 3.7.0 for `postgresql@18` is the same PostGIS version as the server.
+- **Backups.** Dumps contain `CREATE EXTENSION postgis` and the `spatial_ref_sys` data entry.
+  - The restore drill as `postgres` works unchanged.
+  - An in-place restore as the application role needs a filtered list (`backup-recovery.md` "Restore", item 3).
 
 ## Rollback
 

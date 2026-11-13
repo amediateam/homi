@@ -73,12 +73,18 @@ Every restore needs the developer's approval. A production restore overwrites li
    sudo -u postgres createdb homi_restore_drill
    sudo -u postgres pg_restore --no-owner --no-acl --exit-on-error --dbname=homi_restore_drill /tmp/homi-restore-drill/<file>.dump
    ```
+   - With PostGIS in the source database, this works unchanged: `postgres` creates the extension from the dump. Tested on 2026-11-13 with a staging dump: exit 0, `postgis 3.7.0`, 24 tables.
    - **Compare with the live database.** Run the same exact per-table row count on both databases: `select count(*)` over every `public` table, for example through `query_to_xml`. Also compare the counts from `pg_indexes`, `pg_constraint` and `pg_sequences`, and `md5(string_agg(migration, ',' order by id))` from `migrations`. Rows written after the backup show up as expected differences.
    - **Clean up.** `sudo -u postgres dropdb homi_restore_drill`, `rm -rf /tmp/homi-restore-drill /root/restore-drill` on the DB host, and `rm -rf` of the download on the app host. The dump holds personal data once real users exist.
 3. **Production database**, a disaster restore (app host):
    - Run `php artisan down` as `www-data` in `/var/www/homi.uz/backend`, then `systemctl stop horizon-homi`.
    - Restore as the owner role, with the password taken from the environment's `.env` and never typed into a chat:
      `PGPASSWORD=… PGSSLMODE=disable /usr/lib/postgresql/18/bin/pg_restore --host=5.45.127.98 --username=homi_db --dbname=homi_db --clean --if-exists --no-owner --single-transaction <file>.dump`.
+   - **A database with PostGIS** (staging since 2026-11-13; production once it gets the extension).
+     - The plain command above fails: the owner role may not `DROP EXTENSION postgis`, and it may not write `spatial_ref_sys`.
+     - Restore without those entries: `pg_restore --list <file>.dump | grep -v -E ' EXTENSION | COMMENT - EXTENSION | TABLE DATA public spatial_ref_sys ' > list.txt`, then the same command with `--use-list=list.txt`.
+     - The extension stays as `postgres` created it.
+     - Tested on 2026-11-13 into a scratch database owned by `homi_staging_db` (`pg_restore --role=homi_staging_db`): exit 0, the same tables and `migrations` rows as the live database, and a second run on top also exit 0 (`production-notes.md` §17).
    - Then `systemctl start horizon-homi` and `php artisan up`.
    - Check: `homi-deploy production --dry-run`.
    - Staging is the same, with `homi_staging_db`, `/var/www/staging.homi.uz` and `horizon-homi-staging`.
