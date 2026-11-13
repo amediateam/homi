@@ -36,18 +36,18 @@ translation, share, hide, block and report.
 
 ## Decisions that bind this package
 
-| Decision | Consequence here |
-| -------- | ---------------- |
-| DEC-32, 25 §2 rule 3 | Rebuilt from the audit; no legacy code or CSS is copied |
-| DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and stay off; `dev014TashkentDates`, `dev016ErrorToastOnFailure`, `dev019OneDistanceFormatter`, `dev001AnyForbiddenShowsAccess` are consumed through the helpers of WP-22 and WP-23 |
-| DEC-44, 25 §3.1 | The server part fetches with the session cookie and passes `initial` to one Client Component, which fetches for itself when the server had no session |
-| 25 §3.2 | `/listing/[number]` is a page opened over the page below; `photos`, `market`, `actions` are its own addresses; Back closes viewer or sheet first, then the listing |
-| 25 §3.4 | Cookie mode and header mode use the same screen code; mutations are Server Actions that take the token as an argument in header mode |
-| 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
-| 25 §4.2, DEC-48 | Methods used: `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The view is recorded by the API on the read; the client sends nothing for it |
-| 25 §8.1, Q-APP-024 | The report-detail step and the `price_kind: business` label come from the re-baselined audit of WP-02 (see "Behaviour to reproduce") |
-| DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
-| DEC-46 | Acceptance is the functional checklist below |
+| Topic | Source | Consequence here |
+| ----- | ------ | ---------------- |
+| Rebuild | DEC-32, 25 §2 rule 3 | Built from the audit; no legacy code or CSS is copied |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and stay off; `dev014TashkentDates`, `dev016ErrorToastOnFailure`, `dev019OneDistanceFormatter`, `dev001AnyForbiddenShowsAccess` are consumed through the helpers of WP-22 and WP-23 |
+| Rendering | DEC-44, 25 §3.1 | The server part fetches with the session cookie and passes `initial` to one Client Component, which fetches for itself when the server had no session |
+| Routes | 25 §3.2 | `/listing/[number]` is a page opened over the page below; `photos`, `market`, `actions` are its own addresses; Back closes viewer or sheet first, then the listing |
+| Session modes | 25 §3.4 | Cookie mode and header mode use the same screen code; mutations are Server Actions that take the token as an argument in header mode |
+| API conventions | 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
+| Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The API records the view on the read; the client sends nothing for it |
+| Baseline | 25 §8.1, Q-APP-024 | The report-detail step and the `price_kind: business` label come from the re-baselined audit of WP-02 (see "Behaviour to reproduce") |
+| Brand | DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
+| Acceptance | DEC-46, 25 §9 | The functional checklist below, in three locales and two themes |
 
 ## Design
 

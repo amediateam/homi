@@ -9,8 +9,8 @@ whoever holds the relay takes the first package that is not `DONE` and continues
 
 ## State of the specifications (2026-11-14)
 
-Written: WP-00, WP-01, WP-02, WP-03, WP-20, WP-23, WP-25, WP-27, WP-30. They were drafted by subagents and have
-**not been reviewed** by the main session yet. The other 35 files linked below do **not exist yet**; writing and
+Written: WP-00, WP-01, WP-02, WP-03, WP-20, WP-23, WP-25, WP-26, WP-27, WP-30 (WP-26 may be incomplete). They were drafted by subagents and have
+**not been reviewed** by the main session yet. The other 34 files linked below do **not exist yet**; writing and
 reviewing them is the next step before any package after WP-03 is started. The brief for each group of
 specifications is in `docs/ai/reports/phase-3-notes.md` §F and `25`.
 
