@@ -1,223 +1,219 @@
 # 24 — Three-wave migration strategy
 
-Conventions: [`README.md`](README.md). Status: **`PROPOSED`** — the developer's direction of 2026-11-14, binding once
-the ADR of section 9 is accepted. This document **amends** the order of work in
-[`21-development-master-plan.md`](21-development-master-plan.md) §5–§6, the stages of
-[`18-release-and-rollback.md`](18-release-and-rollback.md) §2 and two rules of
-[`22-agent-handoff.md`](22-agent-handoff.md) §1 and §4. The audit (01–09), the target architecture (10), the tasks
-and the registers stay valid; section 7 says what moves. The detailed plan of the first wave is
-[`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md).
+Conventions: [`README.md`](README.md). Status: **decided by the developer on 2026-11-14** (the three-wave direction
+and the answer round recorded in [`decisions/2026-11-14-developer-answers.md`](decisions/2026-11-14-developer-answers.md));
+`PROPOSED` towards the first developer until the ADRs of section 9 are accepted. This document **replaces** the
+order of work in [`21-development-master-plan.md`](21-development-master-plan.md) §5–§6 and the release stages of
+[`18-release-and-rollback.md`](18-release-and-rollback.md) §2. The audit (01–09) stays the description of what the
+product does. The plan of the first wave is [`25-wave-1-plan.md`](25-wave-1-plan.md); its work queue is
+[`wave-1/README.md`](wave-1/README.md).
 
 ## 1. What changed
 
-Developer's direction, 2026-11-14: «Разработку разделим на три волны. Основной принцип — постепенный переход на
-новую архитектуру без остановки работающего сайта и нарушения существующей функциональности.»
+Two steps on the same day.
 
-| | Plan of 2026-11-09 (21 §5, "compatibility first") | Three waves |
-| - | ------------------------------------------------- | ----------- |
-| First | HOMI backend and bot serve the **unchanged legacy Mini App** on staging (S1) | The **Mini App is ported to Next.js** and talks to the **legacy production backend** through a proxy |
-| Switch | One cut-over of data, bot and both hosts (S2), with a point of no return | The API moves **route by route** behind a gateway; each route can go back |
-| Last | New frontends (S4) | Remaining routes, the bot, decommissioning |
-| Oracle for parity | The legacy client run against the new backend | The legacy client **and** the legacy backend, compared with the new client and, route by route, the new backend |
+1. **The direction.** «Разработку разделим на три волны. Основной принцип — постепенный переход на новую
+   архитектуру без остановки работающего сайта и нарушения существующей функциональности.» Frontend first, then the
+   API method by method, then the full switch.
+2. **The answer round.** HOMI does not take over the legacy bot and hosts. It ships a **new, permanent product**
+   under its own bot and brand, and uses legacy only as a source of listings until it has its own.
 
-Principles, as given:
+| | Plan of 2026-11-09 (21 §5) | Now |
+| - | -------------------------- | --- |
+| Product | The same bot, hosts and users, moved onto HOMI | A new bot, HOMI hosts, HOMI's own users; legacy keeps running beside it |
+| First deliverable | HOMI backend serving the unchanged legacy Mini App | The whole new product at functional parity, with listings read from legacy |
+| Client | Legacy Mini App until the last stage | A Mini App rebuilt on Next.js from the start |
+| Contract | Legacy `/api/*` on a compatibility surface | `/api/v1` only; legacy shapes never reach the frontend |
+| Switch | One cut-over of data, bot and DNS with a point of no return | A flag per API method: stub → legacy → own code, each reversible |
+| Users' data | Migrated from the legacy database | Not migrated; users start empty in the new bot |
 
-1. **Zero downtime.** No step stops the running product.
-2. **Backward compatibility.** Every existing function keeps working at every step.
-3. **Incremental migration.** Small independent parts.
-4. **Rollback.** Any API route can be returned to the legacy backend quickly.
-5. **One API layer.** The frontend does not know which backend answers.
+Principles, as given: zero downtime; backward compatibility; incremental migration; rollback of any API route; one
+API layer so that the frontend does not know which backend answers.
 
-Unchanged from 21 §5: legacy defects are fixed, not copied (with the Wave 1 rule of DEC-36); the data is migrated,
-not re-read; a feature is "migrated" only after its parity gate (15 §4).
+Unchanged from 21 §5: legacy defects are fixed, not copied; nothing counts as done without evidence (section 7 says
+what replaces the parity gate).
 
-## 2. The waves
+## 2. The product and the waves
+
+**The new product.**
+
+| Part | Where | Notes |
+| ---- | ----- | ----- |
+| Bot | HOMI's own bot per environment (dev, staging, production already exist, `10` §1.2) | Signs `initData`; HOMI holds its token |
+| Mini App | `frontend/app` → `app.homi.loc`, `app.staging.homi.uz`, `app.homi.uz` | Brand HOMI, same interface as legacy (DEC-40) |
+| Landing | `frontend/landing` → `homi.uz` | Full landing without the SEO pages (DEC-38) |
+| API | `backend/` → `api.*`, `/api/v1` | The only interface of the frontend and the bot's Mini App |
+| Webhook | `hook.*` | Updates of HOMI's bot only |
+
+**Legacy** stays as it is: `@KvadroAppBot`, `app.kvadro.app`, `kvadro.app` and the operator's backend. HOMI does not
+serve its users, does not hold its bot token and does not touch its hosts. At the end the old bot announces the move
+and the operator closes it.
 
 | Wave | Content | Result | Exit |
 | ---- | ------- | ------ | ---- |
-| **1. Frontend** | Port the Mini App from `$KVADRO_ROOT/demo/app` to `frontend/app` (Next.js 16.4), 1:1 in interface and behaviour. Every request goes through the gateway to the legacy backend. Built and tested on HOMI hosts, apart from the running product | A working copy of today's Mini App on Next.js that uses the legacy API | Parity evidence on every screen (25 §9), device pass, then the client switch with a tested way back (25 §10, stage W1-9) |
-| **2. Backend, route by route** | For each API route: build it on HOMI's legacy compatibility surface (CF-001), prove it against the legacy answer, switch the route in the gateway, keep the rest on legacy | Both backends run side by side; the share served by HOMI grows | Every route the product needs is served by HOMI, each after its own check |
-| **3. Full switch** | Move the remaining traffic and the bot, remove the dependency on the legacy API, regression and integration tests, performance, security, stability, decommission legacy | One architecture | The checks of 18 §11 and the legacy copies destroyed |
+| **1. The new product on legacy listings** | Contract stubs, then the Mini App, then the API, then the bot, then the landing (in this order, DEC-45). Personal data, radars and the bot are HOMI's own code; listings, map points, cards, contacts and photos come from legacy through a service key | A complete product a user of the legacy bot would recognise function by function | The functional checklist of every screen and bot scenario passes on production with no method left on a stub (25 §9) |
+| **2. Own listings, method by method** | Listings arrive from the `telegram.uz` collector through HOMI's intake (DEC-39). Each shared-data method moves from the legacy driver to HOMI's own code behind its flag, a cohort first | Legacy answers fewer and fewer methods | No method reads legacy |
+| **3. Full switch** | The service key is retired; SEO pages and the admin panel are built on HOMI's data; regression, performance and security passes; the old bot announces the move and is closed by its operator | One architecture | Legacy is no longer called by anything |
 
-Only Wave 1 is planned in detail now. Sections 5 and 6 outline Waves 2 and 3 far enough to show that the Wave 1
-choices do not have to be redone, and to name what must be answered before Wave 2 can be planned.
+## 3. One API layer: `/api/v1` with a source per method
 
-## 3. One API layer: the gateway
+**What the frontend and the bot see.** Only `/api/v1` in the HOMI envelope (ADR-0007) with HOMI's own session
+(ADR-0003). No legacy path, error shape or credential leaves the backend.
 
-**What the browser does.** The legacy client calls relative paths on its own origin: `/api/*`, `/media/*`,
-`/tiles/*` and `/call/*` (BR-API-001; `$KVADRO_ROOT/demo/app/vite.config.js:51-64`,
-`$KVADRO_ROOT/demo/app/src/lib/api/client.js:74-86`). The new client keeps exactly that. It never holds a backend
-address, so no client release is needed to move a route.
+**What the backend does.** Every capability sits behind an interface with up to three drivers. A Pennant feature per
+method names the driver; changing it needs no deploy and can be scoped to a cohort of users.
 
-**What the gateway does.** One table maps *method + path pattern → upstream*. The default upstream is legacy. A route
-moves to HOMI by one line in the table and a graceful reload; it moves back the same way.
+| Driver | Answers with | Used |
+| ------ | ------------ | ---- |
+| `stub` | Fixtures that satisfy the contract | From the first day, so the frontend can be built; removed method by method |
+| `legacy` | The legacy API, called with the operator's service key and translated to the v1 shape | Shared listing data during Waves 1 and 2 |
+| `native` | HOMI's own tables and services | Personal data and radars from Wave 1; listing data from Wave 2 |
 
-| Property | Rule |
-| -------- | ---- |
-| Unit of switching | One method and path pattern (for example `GET /api/cities`), never "the API" |
-| Default | Legacy, for anything the table does not name — including routes legacy adds later |
-| Cohorts | A request can be forced to one upstream by a header or cookie that only testers have; on production the value is a secret. Used to try a route before everyone gets it |
-| Evidence | A response header names the upstream that answered, and the access log records it; the log never stores `Authorization` (SEC-REQ-047) |
-| Shadow (Wave 2) | For read routes the gateway can copy a request to the other upstream and discard the answer, so answers can be compared before a switch |
-| Scope | Routing only. No translation of shapes: CF-001 already rejected a translating proxy, and HOMI implements the legacy shapes itself |
+| Data | Methods | Wave 1 driver | After Wave 2 |
+| ---- | ------- | ------------- | ------------ |
+| Identity, profile, settings, access | sign-in, me, settings | native | native |
+| Personal lists | favourites, history, hidden, blocked authors, reports, surveys | native | native |
+| Radars | CRUD, relax, matching, delivery | native (matching reads the listing source) | native |
+| Reference data | directories, cities, rates, tiles | legacy, cached | native |
+| Listings | feed, count, flow, map, card, contact, translation, photos | legacy with HOMI's per-user overlay | native |
+| Bot | every update | native | native |
+| Landing data | live numbers, pins, snapshots | legacy | native |
 
-**Where it lives.** Two candidates, both `PROPOSED` (DEC-35):
+**How the principles are met.**
 
-| Option | How | For | Against |
-| ------ | --- | --- | ------- |
-| **H — HOMI nginx** on the Mini App origin | `location` blocks for the four prefixes; a `map` on method and path picks the upstream; the table is a generated include | Fully in the team's hands; the same shape locally, on staging and on production; nginx already fronts every HOMI app (ADR-0013); reload is graceful | Every user request to legacy then arrives from one HOMI address: unknown legacy rate limits and edge rules (Q-API-059); HOMI servers carry real users' `initData` and personal data before Wave 2 (Q-SEC-021, SEC-005) |
-| **E — the edge** in front of `app.kvadro.app` | Path rules of the existing edge send the page and its static files to HOMI and leave the four prefixes on the legacy origin; later single paths go to HOMI | Users keep the address every old bot button already carries (`04-telegram-bot-audit.md:108-109`); legacy still sees real client addresses; no personal data crosses HOMI servers in Wave 1 | Needs the edge account or the operator's cooperation (Q-SEC-001, DEC-16, Q-SYS-009); not available for local or staging hosts |
+- *Rollback:* a method goes back to its previous driver by its flag. Personal data never leaves HOMI, so no write is
+  lost when a listing method goes back to legacy.
+- *One layer:* the frontend is built once on the final contract. A driver change is invisible to it.
+- *Zero downtime:* legacy is not touched; HOMI's own switch is a flag.
 
-The host name matters as much as the place. Client settings live in `localStorage`, which belongs to an origin, and
-every old bot message carries the old address. A production client on `app.kvadro.app` (through E, or through H
-after a DNS change) keeps both; a client on a HOMI host name keeps neither (25 §5.5, §10).
-
-Recommendation: build **H** in Wave 1, because local and staging need it in any case, and choose between H and E for
-production at the switch (stage W1-9), when the custody questions are answered.
-
-**Why not inside Next.js.** Next can proxy with `rewrites` to an external URL, with `NextResponse.rewrite` in
-`proxy.ts`, or with a catch-all Route Handler
-(`frontend/app/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/rewrites.md:328-396`,
-`…/01-app/02-guides/backend-for-frontend.md:443-505`, `:684-771`). All three put the Node process in the path of
-every API call, photo and map tile, and make a route switch a change of the application rather than of a table.
-`proxy.ts` also buffers request bodies (`…/05-config/01-next-config-js/proxyClientMaxBodySize.md`). The gateway is
-therefore kept out of the app; `proxy.ts` stays free for the CSP nonce (KV-FE-033).
-
-**What contract flows through it.** The legacy contract of 08, unchanged, for all of Waves 1 and 2 (FD-2, option A).
-HOMI implements each route on its legacy compatibility surface, so a switch is invisible to the client. Moving the
-client to `/api/v1` (ADR-0007) is a separate, later step behind the same typed client port (25 §3.5).
+**What this costs.** CF-001 rejected a translating layer because it "duplicates validation and still needs every
+legacy rule" (`10-target-architecture.md:417-419`). The decision of 2026-11-14 accepts that cost for the shared-data
+group only — about a dozen methods — because the personal methods are native and need no translation.
 
 ## 4. Wave 1 in one paragraph
 
-Port the recovered Mini App sources module by module into TypeScript inside a client-rendered route group of
-`frontend/app`, keep its structure, CSS, texts, storage keys and analytics names, and prove parity with a run that
-drives the legacy production build and the new build through the same fake Telegram and the same mocked API. The
-existing 87 frontend tasks of milestones FE-0, FE-1, FE-2 and FE-5 (12) are the specification; their 38 backend
-prerequisites are replaced by the legacy API. Details, inventory, proxy, sequence and exit criteria: 25.
+Fix the `/api/v1` contract as Laravel stub routes that export OpenAPI and generated TypeScript types. Build the whole
+Mini App on those stubs: App Router with a route per screen, locale in the address, server rendering through a
+session cookie with a header fallback, Tailwind tokens and shadcn/ui components. Replace the stubs: sign-in, personal
+data and radars as HOMI's own code, listing data through a legacy adapter. Build the bot at full parity, then the
+landing. Every merge is deployed to staging and production. Details: 25.
 
 ## 5. Wave 2 in outline
 
-**Unit of work per route.**
+**Unit of work per method.** Implement the native driver → contract tests against the same fixtures as the stub and
+the legacy driver → run native and legacy side by side for a cohort and compare answers → switch the flag for
+everyone → remove the legacy driver after a soak period.
 
-1. Implement the route on HOMI's legacy surface (the KV-BE tasks of M0–M4 and M7 in 11 and 11a stay the specification).
-2. Contract tests and golden fixtures (15 §2.1, §2.4).
-3. Shadow comparison against legacy answers for read routes; scripted comparison on a test account for write routes.
-4. Switch for the tester cohort, then for everyone; watch error budgets.
-5. Remove the legacy entry after a soak period. Rollback at any time before that: one line in the table.
+**Prerequisites.**
 
-**The open problem: routes share data.** A route can only move when HOMI holds the data it reads and writes, and
-when the side that did not move still sees the same data. No document of this plan covers that state; the existing
-plan has one cut-over with a freeze (14 §7.6, 18 §6) and rules out a reverse sync (DEC-18).
+- The `telegram.uz` collector pushes listings into HOMI's intake. Today it pushes nothing and offers a pull API only
+  (AM-44, `.ai/memory/current-state.md`); its owner and the first developer have to agree (DEC-02).
+- The processing chain of 11a (intake, extraction, normalisation, geo, deduplication, statuses, medians) exists in
+  HOMI, because the listing methods need its output.
+- **Identity.** HOMI users' favourites, history, hidden items and radar deliveries point at legacy listing numbers.
+  Native listings will have other identities. A mapping by source channel and post is needed, which is why Wave 1
+  stores both from the first day (Q-API-063). The operator's dump and schema help to build and check it (DEC-39).
 
-| Group | Routes | What moving them needs |
-| ----- | ------ | ---------------------- |
-| No shared state | `/api/bot`; the event journal and CSP reports if both sides may receive them; static tiles | Nothing from legacy. These can move first and prove the gateway |
-| Shared listing data | cities, feed, count, flow, map, listing, call, translate, photos (API-002, API-004 … API-010, RES-001, RES-002) | The same listings, numbers, statuses and medians in HOMI, kept current: a legacy dump plus a continuous feed, or HOMI's own ingestion at parity (M6) |
-| Per-user state | meta with the profile and the access gate (API-001); favourites, hidden, blocked authors, history, settings, radars, votes, surveys (API-011 … API-016, API-018 … API-033) | The user's rows in HOMI **and** agreement with the bot, which reads and writes the same favourites and radars and delivers radar cards from the legacy database |
-| The bot | all updates | Cannot be split: one bot has one webhook (`01-legacy-system-map.md:107-109`). It moves in one step, together with radar delivery |
-
-Options for the data strategy (DEC-39), to be worked out in the Wave 2 plan:
-
-- **D1 — shared database.** HOMI's legacy surface reads and writes the legacy PostgreSQL directly. Route-by-route
-  switching and rollback then work as described, including writes. Needs database access and the schema.
-- **D2 — replication and per-domain switches.** Legacy data flows one way into HOMI; reads move route by route; the
-  writes of one domain (for example favourites) move together in one small cut-over. Rollback of a write domain
-  needs a replay or is a one-way door.
-- **D3 — stateless routes only** until the single cut-over of the old plan. This is what remains if no access to
-  legacy data is granted.
-
-All three wait for answers the plan has been asking for since 2026-11-09: the legacy source, schema, a data sample
-and an access path (Q-SYS-001, Q-SYS-002, Q-DATA-001 … Q-DATA-005). **Without them Wave 2 stops after the first
-group** (RK-24).
-
-**Authentication.** A route served by HOMI must accept the `initData` that `@KvadroAppBot` signs. Today's plan gives
-HOMI the bot token only at the single cut-over and rotates it there (DEC-05, SEC-REQ-012). Wave 2 needs either the
-token on HOMI servers earlier, shared with the legacy operator for the whole wave, or a validation that needs no
-token (Q-API-061).
-
-**Rollback of writes.** Returning a write route to legacy loses what HOMI stored meanwhile unless D1 is chosen or the
-writes are replayed. DEC-18 ("no reverse sync") has to be revisited with DEC-39.
+**Order.** Reference data and cities first, then feed, count, flow and map together (they must agree with each
+other), then the card with contact and translation, then photos, then the landing data.
 
 ## 6. Wave 3 in outline
 
-The remaining routes and resources, the bot webhook with the token rotation, the DNS and edge of both kvadro hosts,
-landing and SEO pages if DEC-38 left them on legacy, then the regression, performance and security passes and the
-decommissioning records. This is what remains of stages S2, S3 and S5 of 18 once Waves 1 and 2 have taken their
-parts; the runbooks of 18 §6–§11 apply to the pieces that are still single switches.
+Every method native; the service key and the legacy drivers removed; SEO pages (the FE-3 tasks) and the admin panel
+(FE-4) built on HOMI's own data; regression, performance and security passes; the announcement in the old bot. Closing
+the old bot and its backend is the operator's act.
 
 ## 7. How this maps onto the existing plan
 
-| Existing element | Under three waves |
-| ---------------- | ----------------- |
-| 21 §5 item 1–2 ("compatibility first", "one change at a time: backend at S2, frontends at S4") | Replaced by section 2. "One change at a time" becomes "one route at a time" |
-| 21 §6 milestone M9, frontend milestones FE-0, FE-1, FE-2, FE-5 (Mini App part, 87 tasks) | **Wave 1**, moved to the front |
-| Milestones M0–M4 and M7 (legacy surface, per-user API, radars, landing data) | **Wave 2**, delivered route by route instead of all before S1 |
-| M5 (bot), M6 (ingestion), M8 (data migration) | Wave 2 and 3; their order follows DEC-39 |
-| FE-3 (SEO, landing), FE-4 (ARM) | Not in Wave 1 (DEC-38); planned separately |
-| Stage S1 (legacy client against HOMI on staging) | Kept as a **method**: the per-route check of Wave 2 runs the legacy client and the new client against the route |
-| Stage S2 (single cut-over) | Split: API routes move in Wave 2; the bot, the token and DNS remain single switches in Wave 3 |
-| Stage S4 (new frontends) | Becomes the Wave 1 switch (25 §10, W1-9) |
-| CF-011, "the original legacy build is served unchanged in S1–S3" | The new client replaces it at the Wave 1 switch; the original build stays the rollback target and the parity reference |
-| DEC-06 / FD-1 (Next route group or Vite SPA) | Answered by the direction: Next.js. The browser-floor gate stays (RK-07, KV-FE-001, KV-FE-002) and is now on the critical path |
-| FD-2 (transport) | Option A confirmed: the legacy `/api/*` with `tma` on the same origin |
-| 22 §4 "Never call the production API" and 15 §"Production" | Amended by DEC-33 for the `live` mode of 25 §6; tests, CI and agents still never call production |
-| KV-FE-038 and SEC-REQ-034 ("no production `initData` locally") | Amended by DEC-33: allowed for an owner-approved test account, held by a developer, never stored in the repository or shown to an agent |
-| The 38 backend prerequisites in the Wave 1 frontend tasks (`data/tasks.csv`) | Satisfied by the legacy API through the gateway and by contract mocks; the `Dependencies` cells are updated when the tasks are picked up (25 §11) |
-| 21 §20 next task (KV-BE-002, Media ownership) | Still worth doing on its own: it is a defect in HOMI's own code (KI-25). It is no longer the first step of the migration; the first step is stage W1-0 |
-| DEC-05 (rotate the token at S2), DEC-18 (no reverse sync) | Revisit in the Wave 2 plan (section 5) |
-| `HANDOFF.md` §4: T8 (frontend foundation) | Moves forward as the base of Wave 1; T5 (generated client) is not needed for Wave 1. Change by a separate shared-file PR |
+| Existing element | Now |
+| ---------------- | --- |
+| 21 §5 "compatibility first", §6 milestones, §20 next task | Replaced by sections 2–6 and by the queue in `wave-1/README.md`. KV-BE-002 is the first item of that queue |
+| The legacy compatibility surface (CF-001, CF-002) and its tasks (legacy route group, `tma` guard, legacy serializers, legacy OpenAPI) | **Not built.** No legacy client talks to HOMI. The business rules those tasks cite still define the behaviour of the v1 methods |
+| Hosts and bot identity (CF-008, CF-009), the cut-over tasks KV-INF-014, KV-INF-029, KV-INF-031, KV-INF-032, KV-TG-057, KV-TG-058, KV-TG-060 | **Not needed.** HOMI does not take over the legacy hosts, bot or old messages |
+| Mini App rendering (CF-011, DEC-06, FD-1 … FD-3) | Answered by DEC-44 |
+| Transport (FD-2) | Answered by DEC-41: `/api/v1`, not the legacy contract |
+| Data migration (14, milestone M8, most KV-DB tasks) | **Not done.** Users' data is not moved (DEC-40). The dump serves Wave 2 as an archive and a reference |
+| Backend milestones M0–M4 | Their rules feed the Wave 1 work packages: personal data and radars as native code, listing reads as the legacy adapter |
+| M5 bot (KV-TG tasks) | Wave 1, full parity (DEC-43) |
+| M6 ingestion | Wave 2, with `telegram.uz` as the source instead of an in-repo reader (KV-BE-125 is not planned; KV-BE-121 … KV-BE-124 and KV-BE-143 are) |
+| M7 landing data and analytics | Landing data and the action log in Wave 1; SEO aggregates in Wave 3 |
+| Frontend milestones | FE-1 and FE-2 are the behaviour reference of the Wave 1 screens; FE-3b landing is in Wave 1; FE-3a SEO in Wave 3; FE-4 ARM after Wave 1 |
+| 15, reference-client runs against HOMI | Not applicable: the legacy client never runs against HOMI. The golden fixtures of 08 become the contract tests of the legacy adapter |
+| 15 §4, the parity gate | Replaced for Wave 1 by the functional checklist per screen and per bot scenario (DEC-46, 25 §9) |
+| 18, stages S0–S6, freeze, point of no return, rollback window | Replaced by continuous deployment to staging and production and by per-method flags |
+| DEC-01, DEC-05, DEC-07, DEC-15 … DEC-18, DEC-24, DEC-29 | No longer needed |
+| DEC-02, DEC-04, DEC-06, DEC-23, DEC-25, DEC-26 | Answered: `telegram.uz`; brand HOMI; DEC-44; DEC-49; open access; own PostHog projects |
+| DEC-13 (legal basis for personal data) | **Still open and now earlier:** HOMI collects its own users' personal data from the first production deploy (Q-SEC-021) |
+| 22 §4 "Never call the production API" | Stands for people, tests, CI and agents. Only HOMI's servers call legacy, with the service key |
+| `HANDOFF.md` §4 | T3 (OpenAPI) and T5 (generated client) open Wave 1; T6 (sign-in), T8 (frontend) and T1 (webhook) are inside it; T2 (intake) is Wave 2. Change by a separate shared-file PR |
+| `docs/handoff/parallel-work.md` §2, PR size | For Wave 1: one PR per work package, reviewed before merge (DEC-45). Change by a separate shared-file PR |
 
-## 8. New decisions, questions and risks
-
-All `PROPOSED`. "Who decides" follows 10 §8.
+## 8. Decisions, questions and risks
 
 ### 8.1 Decisions
 
-| ID | Decision | Options | Recommendation | Who decides | Blocks |
-| -- | -------- | ------- | -------------- | ----------- | ------ |
-| DEC-31 | Order of the migration | A: compatibility first (21 §5) / B: three waves | B — given by the developer on 2026-11-14; recorded by the ADR of section 9 | developer (given), first developer (ADR review), product owner (informed: users see a new client earlier) | everything below; 21 §5–§6, 18 §2 |
-| DEC-32 | Porting mode of Wave 1 | A: port the recovered sources module by module into TypeScript, same structure and CSS / B: re-implement each screen from the audit on new primitives, as the FE-1 and FE-2 task texts were first written | A; the refactors of B after the Wave 1 exit, protected by the parity run (25 §8) | developer | stages W1-1 … W1-7 |
-| DEC-33 | Use of the legacy production API from development and staging | none (mocks only) / read-only under the rules of 15 §1.6 / reads plus writes on owner-approved test accounts | reads plus test-account writes, in `live` mode only, under 25 §6.3; CI and agents stay on mocks | product owner (their production), developer, first developer | live checks, W1-8, W1-9 |
-| DEC-34 | How the new client is opened inside Telegram with production-signed `initData` before the switch | A: a second Mini App with a direct link on `@KvadroAppBot`, pointing at the preview host / B: a per-chat menu button for a test cohort / C: browser emulator only | A for testers, B for the canary | product owner and the holder of the bot's owner account (Q-SEC-001) | device pass (W1-8), W1-9 |
-| DEC-35 | Where the production gateway lives | H: HOMI nginx / E: the edge in front of `app.kvadro.app` (section 3) | build H in Wave 1; choose for production at W1-9 from the answers to Q-SYS-009, Q-API-059 and Q-SEC-021 | first developer, product owner (custody) | W1-9, all of Wave 2 |
-| DEC-36 | Legacy client defects during Wave 1 | A: port everything as it is / B: fix crash- and security-class defects that leave intended behaviour unchanged, keep every `DEV` flag off / C: apply all `LB` fixes as 12 planned | B, with the list agreed in W1-0 (25 §8.3) | developer | W1-1 … W1-7; the expected-difference list of the parity run |
-| DEC-37 | Legacy Mini App releases during and after Wave 1 | A: port every legacy release until the switch, then freeze legacy client releases / B: freeze now | A (25 §8.4) | product owner, developer | the Wave 1 exit date |
-| DEC-38 | Landing and SEO pages in Wave 1 | A: stay on legacy; planned as their own step / B: port in parallel | A — the SEO pages are rendered from the legacy database (RES-017), so there is no API to proxy to | product owner, developer | FE-3 |
-| DEC-39 | Data strategy of Wave 2 | D1 shared database / D2 replication plus per-domain write switches / D3 stateless routes only (section 5) | decide in the Wave 2 plan; needs Q-SYS-001, Q-SYS-002 and Q-DATA-001 … Q-DATA-005 | product owner, first developer | Wave 2 beyond the routes without shared state |
+All answered by the developer on 2026-11-14 unless the row says otherwise. Verbatim answers:
+`decisions/2026-11-14-developer-answers.md`.
+
+| ID | Decision | Answer | Still needs | Shapes |
+| -- | -------- | ------ | ----------- | ------ |
+| DEC-31 | Order of the migration | Three waves as in section 2 | First developer: ADR review | everything |
+| DEC-32 | How the Mini App is moved | Rebuilt from the audit; the recovered legacy code is read as a reference, never copied | — | 25 §3 |
+| DEC-33 | Access of people and tools to legacy production | None. Development, tests, CI and agents use stubs; only HOMI servers call legacy with the service key | — | 25 §4 |
+| DEC-34 | A launch path on the legacy bot | Not needed: the product has its own bot | — | — |
+| DEC-35 | Where the per-method switch lives | In Laravel: a source driver per method, selected by a Pennant feature | First developer: ADR review | section 3 |
+| DEC-36 | Legacy client defects | Every `LB` fix of 03, 04 and 02 is made; every `DEV` behaviour change stays behind a flag that is off | — | all work packages |
+| DEC-37 | Legacy releases during the work | Followed until HOMI no longer depends on legacy: each release is read from its sync report and becomes a queue item | — | 25 §8 |
+| DEC-38 | Landing and SEO | Full landing on `homi.uz` in Wave 1; SEO pages in Wave 3 | — | 25 §7 |
+| DEC-39 | Data from legacy and listings after legacy | The operator gives a dump and a schema; listings after legacy come from `telegram.uz` | Collector's owner and first developer (DEC-02) | section 5 |
+| DEC-40 | Bot, brand and users | A new permanent product under HOMI's bot and brand; the old bot stays on legacy; no user data is moved | Product owner: informed | section 2 |
+| DEC-41 | Contract | `/api/v1` from the first day; fixed as Laravel stub routes → OpenAPI → generated types | — | 25 §4 |
+| DEC-42 | What legacy supplies | Shared listing data only, live, through a service key the operator adds | Operator (Q-SYS-009) | section 3 |
+| DEC-43 | Scope of Wave 1 | Radars with delivery and the bot at full parity are in; the admin panel is out; access is open to everyone | — | 25 §2 |
+| DEC-44 | Frontend architecture | App Router with a route per screen; server rendering through a session cookie with a header fallback for Telegram Web; next-intl with the locale in the address; Tailwind 4 with tokens; shadcn/ui and Radix; both map engines; the Next.js default browser floor with an update screen | First developer: ADR review (amends ADR-0013) | 25 §3 |
+| DEC-45 | Process | One queue worked in relay by two full-stack developers with agents; order: stubs → frontend → API → bot → landing; one PR per work package, reviewed before merge; every merge deployed to staging and production; checks inside Telegram on those environments; no deadline; KV-BE-002 first | First developer: agrees to the PR size rule and the deploy cadence | `wave-1/README.md` |
+| DEC-46 | Proof of "1:1" | Functional parity: the same screens, texts and scenarios; small visual differences are accepted | — | 25 §9 |
+| DEC-47 | Analytics | HOMI's own action log and its own PostHog projects per environment | PostHog account and keys | 25 §3.9 |
+| DEC-48 | Reports and votes | Stored and applied in HOMI only | — | 25 §5 |
+| DEC-49 | Dependencies | Approved as one batch: the map packages, `posthog-js`, `lucide-react`, the test tools, `openapi-typescript`, next-intl, shadcn/ui with Radix | First developer: confirms in the install PR (`docs/handoff/parallel-work.md` §4) | 25 §10 |
 
 ### 8.2 Questions
 
 | ID | Question | Check that closes it | Who can answer |
 | -- | -------- | -------------------- | -------------- |
-| `Q-SYS-009` | Who operates the legacy backend, its edge and the bot's owner account today, and will they add a test launch path (DEC-34), state the limits of Q-API-059, and agree on edge rules or an origin host name for the gateway (DEC-35)? `UNVERIFIED` | A named contact and a written answer | Product owner |
-| `Q-API-059` | Does the legacy edge or backend accept the whole user base arriving from one server address? Rate limits and their key are unknown (Q-API-001); whether a forwarded client address is trusted is not stated anywhere. `UNVERIFIED` | The operator's answer; then a measured ramp through the staging gateway, with approval | Legacy operator |
-| `Q-API-060` | Does any legacy route depend on `Origin`, `Referer` or `Host`? The legacy dev proxy rewrites only `Host` (`$KVADRO_ROOT/demo/app/vite.config.js:51-64`) and the legacy README describes development against production; neither was run by us. `UNVERIFIED` | One read and one test-account write through the local gateway (needs DEC-33) | Developer |
-| `Q-API-061` | Can HOMI validate production `initData` without holding the bot token (Telegram's validation for third parties with the `signature` field)? `UNVERIFIED` | Telegram's Mini Apps documentation and a test with a dev bot | Developer (Wave 2 plan) |
-| `Q-APP-023` | Does the CSS pipeline of `frontend/app` (the Tailwind loader for every `*.css`, `frontend/app/next.config.ts`) leave the legacy global CSS unchanged in effect at the chosen browser floor? `UNVERIFIED` | Computed-style comparison of key elements in the KV-FE-002 spike | Developer |
-| `Q-APP-024` | Which legacy release is the port baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`, `$KVADRO_ROOT/demo/app/docs/releases/`). `CONFIRMED` drift | Re-baseline 03 and 08 in stage W1-0 and pin the release | Developer |
-| `Q-SEC-021` | With gateway option H, do HOMI servers become a processor of real users' personal data during Wave 1, so that the legal basis of DEC-13 is needed before the Wave 1 switch rather than before the data migration? `UNVERIFIED` | Lawyer's note | Product owner |
+| `Q-SYS-009` | Who is the operator's contact, and by when will the operator deliver the service key, the dump and the schema, and later the announcement in the old bot? `UNVERIFIED` | A named contact and dates in writing | Product owner |
+| `Q-API-059` | Which limits apply to the service key? Legacy rate limits are unknown (Q-API-001), and HOMI will add load of its own: every user's search plus the radar matcher's polling. `UNVERIFIED` | The operator's numbers; a measured ramp on staging | Operator |
+| `Q-API-060` | The service-key contract: header name, which routes it opens, whether it replaces the user's identity entirely. `UNVERIFIED` | The operator's specification; contract tests of the legacy driver | Operator |
+| `Q-API-061` | Can production `initData` of the legacy bot be validated without its token? `DEPRECATED_CANDIDATE`: not needed, HOMI has its own bot (DEC-40) | — | — |
+| `Q-API-062` | Legacy formats many strings on the server per user locale and currency (CF-017). How does a service-key request choose locale and currency, and which per-user fields (`favorite`, `viewed`) does it still return? `UNVERIFIED` | The operator's specification; if raw values are not available, HOMI formats from what it gets and the gap is listed per field | Operator |
+| `Q-API-063` | How does a legacy listing number map to a listing from `telegram.uz`? Candidate key: source channel and post (the legacy deep link carries both, TMA-011). `UNVERIFIED` | A join on the dump once it arrives | Developer (Wave 2 plan) |
+| `Q-APP-023` | Effect of the CSS pipeline on copied legacy CSS. `DEPRECATED_CANDIDATE`: the legacy CSS is not copied (DEC-44) | — | — |
+| `Q-APP-024` | Which legacy release is the behaviour baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`). `CONFIRMED` drift | Re-baseline 03 and 08 in the first stage of the queue and pin the release | Developer |
+| `Q-SEC-021` | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008)? `UNVERIFIED` | Lawyer's note; the privacy page of the landing | Product owner |
 
 ### 8.3 Risks
 
 | ID | Risk | L | I | Area | Mitigation | Owner | Linked |
 | -- | ---- | - | - | ---- | ---------- | ----- | ------ |
-| RK-24 | **Wave 2 stalls after the stateless routes.** Routes share data with each other and with the bot; the legacy database and source are not available | H | H | data, backend | Ask now for database access, schema and source; choose the data strategy before planning Wave 2; keep the single cut-over of 18 as the fallback | product owner; first developer | DEC-39, Q-SYS-001, Q-SYS-002, RK-02 |
-| RK-25 | **The legacy edge or backend throttles or blocks the gateway**, because all users arrive from one address | M | H | infrastructure | Ask the operator first; ramp on staging; keep option E, where clients reach legacy directly | first developer | DEC-35, Q-API-059, SEC-017 |
-| RK-26 | **The target moves during the port.** The legacy client ships a release every one to three days, and the contract with it | H | M | frontend | Pin a baseline, port each release from its sync report within an agreed time, freeze legacy client releases at the switch | developer; product owner | DEC-37, Q-APP-024, RK-05 |
-| RK-27 | **Development traffic changes production data or analytics** | M | M | security, data | `live` mode only on test accounts, analytics and the event journal suppressed outside production, mocks for CI and agents | developer | DEC-33, 25 §6.3 |
-| RK-28 | **The launch path, the canary and the switch depend on the bot's owner**, whom the team does not control | M | H | release | Ask in W1-0; until then test in the emulator and in Telegram Web with a pasted launch link | product owner | DEC-34, Q-SYS-009, Q-SEC-001 |
+| RK-24 | **Wave 2 stalls.** The collector does not push into HOMI yet, the processing chain is large, and listing identities change | H | H | data, backend | Agree with the collector's owner during Wave 1; store channel and post with every personal reference from day one; keep the legacy driver until each method is proven | first developer; developer | DEC-39, Q-API-063, AM-44 |
+| RK-25 | **Legacy throttles or blocks the service key** under user traffic and radar polling | M | H | backend | Ask for limits first; cache reference data; group radar polls by identical filters; back off and serve the last good answer | developer | Q-API-059, DEC-42 |
+| RK-26 | **The behaviour baseline moves.** The legacy client and its API change every one to three days | H | M | all | Pin a baseline; each legacy release becomes a queue item; the legacy driver has contract tests that fail when the legacy shape changes | developer | DEC-37, Q-APP-024, RK-05 |
+| RK-27 | **Stub data is visible to real users on production**, because every merge is deployed and access is open | H | M | product | A visible "demo data" marker driven by the driver flag; stub sections are named in the bot's welcome text until they are real | developer | DEC-43, DEC-45 |
+| RK-28 | **The service key arrives late or never.** It is a change in legacy, and the operator offered only a dump and a schema | M | H | backend | The frontend and every native part do not wait for it; the listing methods stay on stubs; the fallback is importing dumps into HOMI | product owner | DEC-42, Q-SYS-009, Q-API-060 |
+| RK-29 | **Wave 1 is a whole product**: 45 screens, the v1 surface, radars with delivery, 84 bot handlers and the landing, built by two developers in relay | H | M | plan | One ordered queue, one work package per PR, a handoff after every stop; no date pressure (DEC-45) | developer | `wave-1/README.md` |
+| RK-30 | **The cookie session fails inside frames** (Telegram Web), or the two session modes drift apart | M | M | frontend | One screen code path with optional server-fetched data; both modes in the end-to-end suite; checked on staging in three browsers | developer | DEC-44, 25 §3.4 |
+| RK-31 | **"Functional parity" is judged differently by different people** | M | M | acceptance | A written checklist per screen and per bot scenario, taken from the audit, signed in the PR | developer | DEC-46, 25 §9 |
 
-Risks of 19 that change weight: RK-07 (old WebViews) moves onto the critical path of Wave 1; RK-01 (hidden server
-behaviour) and RK-09 (stale feed) are relieved for as long as legacy serves the routes; RK-06 changes its subject,
-because the client that must not crash is now the new one.
+Risks of 19 that change: RK-02 (data migration), RK-03, RK-04, RK-06 and RK-19 no longer apply; RK-07 (old WebViews)
+is accepted by DEC-44; RK-11 (personal data) grows, because HOMI now has users of its own from the first deploy.
 
 ## 9. What happens next
 
-1. Review of this document and of 25 by both developers.
-2. An ADR "Three-wave migration of kvadro²" (next free number, 0016 today) that records DEC-31 and DEC-35 and amends
-   ADR-0013 for the client-rendered Mini App route group (KV-FE-003). Shared file: its own small PR.
-3. Answers to DEC-32 … DEC-38; the requests to the product owner of Q-SYS-009 and DEC-34 go out at once, because
-   they have the longest lead time.
-4. Stage W1-0 of 25 starts. Three of its items need no decision: the re-baseline (Q-APP-024), the dependency request
-   (KV-FE-005) and the spike (KV-FE-002).
-5. The Wave 2 plan is written when the prerequisites of DEC-39 are known.
+1. Review of this document, of 25 and of the queue by both developers (PR #25).
+2. ADRs, each as its own small PR, written in the first stage of the queue: the new product and the three waves
+   (DEC-31, DEC-40); the v1 facade with source drivers (DEC-35, DEC-41, DEC-42); the Mini App architecture (DEC-44,
+   amends ADR-0013); the frontend UI stack (Tailwind tokens, shadcn/ui, next-intl). Next free numbers: 0016–0019.
+3. The request to the operator goes out at once: contact, service key and its contract, limits, dump and schema
+   (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062).
+4. The queue starts with KV-BE-002 (`wave-1/README.md`).
+5. The Wave 2 plan is written when the collector's owner has answered and the dump has arrived.

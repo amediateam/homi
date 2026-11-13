@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (development track: PR #9 merged, three-wave migration order proposed in PR #25; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-14 (development track: PR #9 merged; new-product course decided, strategy, Wave 1 plan and work queue in PR #25; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -46,4 +46,5 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
 - The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
 - The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
-- A three-wave order (the Mini App on Next.js against the legacy API first, then the API route by route behind a gateway, then decommissioning) is `PROPOSED` in `docs/migration/24-three-wave-strategy.md` and `25-wave-1-frontend-plan.md`, on PR #25.
+- Course decided by the developer on 2026-11-14 (PR #25, not merged): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (44 work packages, none started), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
+- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` is still the starter page.

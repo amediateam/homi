@@ -3,11 +3,12 @@
 **This is the document to steer by.** It summarises the audit and the plan and points to the detail. Conventions:
 [`README.md`](README.md). State on **2026-11-09**: audit and plan complete, no migration code written.
 
-> **Amended on 2026-11-14 (`PROPOSED`).** The developer changed the order of work to three waves: frontend first,
-> then the API route by route, then decommissioning. Sections 5, 6, 10, 11 and 20 below describe the earlier
-> "compatibility first" order. Read [`24-three-wave-strategy.md`](24-three-wave-strategy.md) §7 for what moves, and
-> [`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md) for the first wave. Sections 1–4, 8, 9 and 12–18 stay
-> valid.
+> **Superseded as the plan to steer by on 2026-11-14.** The developer decided that HOMI ships a new product under
+> its own bot instead of taking over the legacy one, in three waves. Steer by
+> [`24-three-wave-strategy.md`](24-three-wave-strategy.md), [`25-wave-1-plan.md`](25-wave-1-plan.md) and the queue
+> [`wave-1/README.md`](wave-1/README.md). Of this document, sections 2 and 3 (scale and modules of the legacy
+> product) stay valid as description; sections 4–20 describe the earlier "compatibility first" plan with its single
+> cut-over and data migration, which is not followed. 24 §7 maps every element.
 
 ## 1. Executive summary
 
@@ -302,9 +303,8 @@ Proposal from [10](10-target-architecture.md) §9, for the first developer's rev
 
 ## 20. Next concrete task
 
-> Under the amendment of 2026-11-14 the next step of the migration is stage W1-0 of
-> [`25-wave-1-frontend-plan.md`](25-wave-1-frontend-plan.md) (§10, §15). The task below stays valid as an
-> independent fix of HOMI's own code; it is no longer the first step of the migration.
+> Since 2026-11-14 the next task is the first package of [`wave-1/README.md`](wave-1/README.md) that is not done.
+> The task below is that queue's first package (WP-00).
 
 **KV-BE-002 — Media ownership fix** ([task file](tasks/backend/KV-BE-002-media-ownership-fix.md)).
 

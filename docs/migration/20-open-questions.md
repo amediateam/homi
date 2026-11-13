@@ -53,12 +53,12 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 
 <!-- generated:start -->
 
-242 questions, generated from `data/ids.csv`.
+244 questions, generated from `data/ids.csv`.
 
 | Area | Questions |
 | ---- | --------: |
 | System and scope (01) | 9 |
-| API and server behaviour (02, 08) | 61 |
+| API and server behaviour (02, 08) | 63 |
 | Mini App (03) | 24 |
 | Landing (03b) | 11 |
 | SEO pages (03b) | 21 |
@@ -78,7 +78,7 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `01-legacy-system-map.md:147` | Q-SYS-006 | Brand and domains after the migration (`kvadro.app` vs `homi.uz`); fate of the SEO addresses and of `@KvadroAppBot` — Product owner |
 | `01-legacy-system-map.md:148` | Q-SYS-007 | Which fields land plots, commercial premises and daily-rent listings carry. The contract only describes the common field set (`$KVADRO_ROOT/docs/api.md:1118`). This blocks the per-type validation and card layout — Legacy team (DB sample) |
 | `01-legacy-system-map.md:149` | Q-SYS-008 | Legal right to copy and re-host photos from third-party Telegram channels (`$KVADRO_ROOT/docs/about.md:566-567`). Affects the media migration and the landing photo snapshots — Product owner (lawyer) |
-| `24-three-wave-strategy.md:192` | Q-SYS-009 | Who operates the legacy backend, its edge and the bot's owner account today, and will they add a test launch path (DEC-34), state the limits of Q-API-059, and agree on edge rules or an origin host name for the gateway (DEC-35)? `UNVERIFIED` — A named contact and a written answer — Product owner |
+| `24-three-wave-strategy.md:184` | Q-SYS-009 | Who is the operator's contact, and by when will the operator deliver the service key, the dump and the schema, and later the announcement in the old bot? `UNVERIFIED` — A named contact and dates in writing — Product owner |
 
 ### API and server behaviour (02, 08)
 
@@ -142,9 +142,11 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `02-legacy-backend-audit.md:781` | Q-API-056 | Which cache headers does `/api/*` send (none, `private`, `no-store`), including the public `GET /api/bot`? *Check:* `curl -i` each GET endpoint with a test account. |
 | `02-legacy-backend-audit.md:803` | Q-API-057 | Is the language one field for bot and Mini App, and does a Mini App locale change re-localise the bot commands? *Check:* change language in the Mini App with a test account and open the bot menu. |
 | `02-legacy-backend-audit.md:733` | Q-API-058 | Which admin and moderation tools exist (beta seats and invites, takedowns, channel opt-outs, «Новости сервиса» broadcasts, blocking users)? *Check:* owner interview (About:584-585). |
-| `24-three-wave-strategy.md:193` | Q-API-059 | Does the legacy edge or backend accept the whole user base arriving from one server address? Rate limits and their key are unknown (Q-API-001); whether a forwarded client address is trusted is not stated anywhere. `UNVERIFIED` — The operator's answer; then a measured ramp through the staging gateway |
-| `24-three-wave-strategy.md:194` | Q-API-060 | Does any legacy route depend on `Origin`, `Referer` or `Host`? The legacy dev proxy rewrites only `Host` (`$KVADRO_ROOT/demo/app/vite.config.js:51-64`) and the legacy README describes development against production; neither was run by us. `UNVERIFIED` — One read and one test-account write through th |
-| `24-three-wave-strategy.md:195` | Q-API-061 | Can HOMI validate production `initData` without holding the bot token (Telegram's validation for third parties with the `signature` field)? `UNVERIFIED` — Telegram's Mini Apps documentation and a test with a dev bot — Developer (Wave 2 plan) |
+| `24-three-wave-strategy.md:185` | Q-API-059 | Which limits apply to the service key? Legacy rate limits are unknown (Q-API-001), and HOMI will add load of its own: every user's search plus the radar matcher's polling. `UNVERIFIED` — The operator's numbers; a measured ramp on staging — Operator |
+| `24-three-wave-strategy.md:186` | Q-API-060 | The service-key contract: header name, which routes it opens, whether it replaces the user's identity entirely. `UNVERIFIED` — The operator's specification; contract tests of the legacy driver — Operator |
+| `24-three-wave-strategy.md:187` | Q-API-061 | Can production `initData` of the legacy bot be validated without its token? `DEPRECATED_CANDIDATE`: not needed, HOMI has its own bot (DEC-40) — — — — |
+| `24-three-wave-strategy.md:188` | Q-API-062 | Legacy formats many strings on the server per user locale and currency (CF-017). How does a service-key request choose locale and currency, and which per-user fields (`favorite`, `viewed`) does it still return? `UNVERIFIED` — The operator's specification; if raw values are not available, HOMI format |
+| `24-three-wave-strategy.md:189` | Q-API-063 | How does a legacy listing number map to a listing from `telegram.uz`? Candidate key: source channel and post (the legacy deep link carries both, TMA-011). `UNVERIFIED` — A join on the dump once it arrives — Developer (Wave 2 plan) |
 
 ### Mini App (03)
 
@@ -172,8 +174,8 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `03-legacy-frontend-audit.md:2044` | Q-APP-020 | Do the parity mocks match real API shapes for every state above? — Record real responses for each endpoint on a test account and diff them against `tools/parity/mocks*.mjs`. |
 | `03-legacy-frontend-audit.md:2045` | Q-APP-021 | Does `GET /api/bot` return `support`, and which account? — Call `GET /api/bot`. |
 | `03-legacy-frontend-audit.md:2046` | Q-APP-022 | Do support staff use `?map=gl — leaflet — auto` overrides? — Ask the operators; otherwise treat it as a debug-only feature. |
-| `24-three-wave-strategy.md:196` | Q-APP-023 | Does the CSS pipeline of `frontend/app` (the Tailwind loader for every `*.css`, `frontend/app/next.config.ts`) leave the legacy global CSS unchanged in effect at the chosen browser floor? `UNVERIFIED` — Computed-style comparison of key elements in the KV-FE-002 spike — Developer |
-| `24-three-wave-strategy.md:197` | Q-APP-024 | Which legacy release is the port baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`, `$KVADRO_ROOT/demo/app/docs/releases/`). `CONFIRMED` drift — Re |
+| `24-three-wave-strategy.md:190` | Q-APP-023 | Effect of the CSS pipeline on copied legacy CSS. `DEPRECATED_CANDIDATE`: the legacy CSS is not copied (DEC-44) — — — — |
+| `24-three-wave-strategy.md:191` | Q-APP-024 | Which legacy release is the behaviour baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`). `CONFIRMED` drift — Re-baseline 03 and 08 in the first st |
 
 ### Landing (03b)
 
@@ -346,6 +348,6 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `16-security-review.md:1109` | Q-SEC-018 | Which Telegram accounts become ARM admins and moderators, and is TOTP acceptable to them? Is the legacy owner list (`private` mode) imported? — SEC-REQ-046, Q-SYS-004 — Named list approved by the product owner — product owner |
 | `16-security-review.md:1110` | Q-SEC-019 | How do admins reach Horizon, Telescope and Pulse in staging and production, given that gates check e-mail and users sign in with Telegram only? — SEC-REQ-046, SEC-034 — Prod-track decision (gate by role, or SSH tunnel only) — prod track |
 | `16-security-review.md:1111` | Q-SEC-020 | Is `@KvadroSupportBot` migrated (GAP-026)? If yes, it needs its own review (texts with names, LLM translation, 90-day mapping). — SEC-018, BR-BOT-091 — Product decision; then a review — product owner |
-| `24-three-wave-strategy.md:198` | Q-SEC-021 | With gateway option H, do HOMI servers become a processor of real users' personal data during Wave 1, so that the legal basis of DEC-13 is needed before the Wave 1 switch rather than before the data migration? `UNVERIFIED` — Lawyer's note — Product owner |
+| `24-three-wave-strategy.md:192` | Q-SEC-021 | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008) |
 
 <!-- generated:end -->

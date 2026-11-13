@@ -1,0 +1,180 @@
+# WP-00 — Media ownership fix
+
+| Field | Value |
+| ----- | ----- |
+| Stage | 0 |
+| Status | TODO |
+| Depends on | — |
+| Size | about 500 changed lines, S |
+| Behaviour reference | Task `tasks/backend/KV-BE-002-media-ownership-fix.md`; `16` §3.2 (SEC-026, SEC-027), §4.3 (SEC-REQ-014, SEC-REQ-016), §5.2 row "Media"; `15` §3.1 row 13; known issue KI-25 in `.ai/memory/known-issues.md` |
+| Needs from the production track | Approve the new migration on production (`homi-deploy production --migrate`, `docs/handoff/parallel-work.md` §3): one additive table plus a small backfill, no lock concern, no downtime. Until it is deployed, keep issuing `media:write` tokens only to first-party clients (KI-25) |
+
+## Goal
+
+A media file can be read or deleted only by an actor that holds a reference to it. Ownership is a reference table
+separate from the content-addressed object, so two uploaders of the same bytes delete independently and the bytes go
+away only with the last reference. A user and a source with the same numeric id can never collide.
+
+## Scope
+
+In: the reference table and model, owner-scoped loading in `MediaController`, the policy, the upload prefix with the
+actor type, reference-counted deletion, tests, the KI-25 row.
+
+Out: listing photos as a third kind of reference (Wave 2, with HOMI's own listings); ARM roles in the policy (after
+Wave 1); the media dimension check (`KV-BE-003`, not in this queue); any change to `/api/v1/media*` shapes.
+
+## Decisions that bind this package
+
+- Order of work (DEC-45): this is the first package of the queue; the defect is live on `main`, staging and production.
+- Defects are fixed, not copied (DEC-36); this one is HOMI's own.
+- Envelope and errors stay as ADR-0007 defines them. A foreign media id answers exactly like an unknown id
+  (SEC-REQ-014): same status, same body, same number of queries.
+
+## Design
+
+**Table `media_file_references`** (new):
+
+| Column | Type | Notes |
+| ------ | ---- | ----- |
+| `id` | `bigIncrements` | |
+| `media_file_id` | `foreignUlid` → `media_files.id`, `cascadeOnDelete` | |
+| `owner_type` | `string(16)` | `user` or `source` |
+| `owner_id` | `string(32)` | the actor's key as text, so ULID owners fit later |
+| `created_at` | `timestampTz` | no `updated_at` |
+
+Unique (`media_file_id`, `owner_type`, `owner_id`); index (`owner_type`, `owner_id`). The same migration backfills one
+`user` reference for every existing `media_files` row with a non-null `uploaded_by`.
+
+**Owner type without a global morph map.** `App\Enums\MediaOwnerType` (`User = 'user'`, `Source = 'source'`) with
+`fromActor(Model $actor): self` (a `match` on the class; any other class throws `LogicException`). The earlier task
+proposed `Relation::enforceMorphMap`. Do not use it: a global morph map changes `personal_access_tokens.tokenable_type`
+for every new Sanctum token (both `User` and `Source` use `HasApiTokens`), so `$user->tokens()` would stop finding the
+tokens that exist today. The reference table stores plain columns and needs no polymorphic relation.
+
+**Model `App\Models\MediaFileReference`** (`$timestamps = false`, `created_at` cast to immutable datetime, factory).
+On `MediaFile`:
+
+- `references(): HasMany`;
+- `scopeOwnedBy(Builder $query, Model $actor): void` — `whereHas('references', …)` on the actor's type and id;
+- `attachOwner(Model $actor): MediaFileReference` — `createOrFirst` on the unique key (race-safe);
+- `isReferencedBy(Model $actor): bool` and `isReferenced(): bool` (the method Wave 2 extends for listing photos).
+
+`uploaded_by` stays for history only; nothing reads it for authorisation.
+
+**Loading and authorising.** `show` and `destroy` take the id as a string and load
+`MediaFile::query()->ownedBy($actor)->findOrFail($id)` — one query for an owner, a stranger and an unknown id, so the
+three cases cannot be told apart by timing class or query count. `App\Policies\MediaFilePolicy` (`view`, `delete`)
+returns `Response::allow()` when `isReferencedBy` is true and `Response::denyAsNotFound('Resource not found.')`
+otherwise; the controller calls `Gate::authorize` after the scoped load. Today the policy always allows what the scope
+found; it is the single place where ARM roles are added later (SEC-REQ-016).
+
+**Uploads.** `MediaController::store` and `PresignController::register` run `MediaFile::fromStored()` and
+`attachOwner($actor)` in one transaction that locks the media row (`lockForUpdate`), so a concurrent last-reference
+delete cannot remove the row between the two statements. The presign key becomes
+`uploads/{owner_type}/{owner_id}/{ulid}.{ext}`; `register` checks the same prefix for the authenticated actor.
+
+**Delete.** In one transaction: lock the row, delete the caller's reference, and when `isReferenced()` is false delete
+the row. Storage objects (the original and every variant) are deleted in `DB::afterCommit()`. `GenerateImageVariantsJob`
+re-reads the row at the start and stops when it is gone.
+
+**API contract.** Unchanged shapes. Changes in behaviour:
+
+| Request | Before | After |
+| ------- | ------ | ----- |
+| `GET /api/v1/media/{id}` by an actor without a reference | `200` with URLs | `404 {"success": false, "message": "Resource not found."}` |
+| `DELETE /api/v1/media/{id}` by an actor without a reference | `204`, object deleted | the same `404`; nothing changes |
+| `DELETE` by one of two owners | `204`, object deleted for both | `204`; the file stays readable for the other owner |
+| `POST /api/v1/media/presign` | key `uploads/{id}/…` | key `uploads/{owner_type}/{owner_id}/…` |
+| `POST /api/v1/media/register` with a key under another actor's prefix | accepted when the numeric ids match | `403` `forbidden_upload` (existing `MediaException::foreignUpload`) |
+
+## Files
+
+- `backend/database/migrations/<date>_create_media_file_references_table.php` (new)
+- `backend/app/Enums/MediaOwnerType.php` (new)
+- `backend/app/Models/MediaFileReference.php`, `backend/database/factories/MediaFileReferenceFactory.php` (new)
+- `backend/app/Policies/MediaFilePolicy.php` (new)
+- `backend/app/Models/MediaFile.php`, `backend/app/Http/Controllers/Api/V1/Media/MediaController.php`,
+  `backend/app/Http/Controllers/Api/V1/Media/PresignController.php`,
+  `backend/app/Jobs/Media/GenerateImageVariantsJob.php` (changed)
+- `backend/tests/Feature/Media/MediaOwnershipTest.php` (new); `backend/tests/Feature/Media/MediaApiTest.php` only
+  where it asserts the old upload prefix
+- `.ai/memory/known-issues.md` (KI-25 → resolved; shared file, see step 9)
+
+## Steps
+
+1. Read `.claude/skills/laravel-best-practices/`, `.claude/skills/laravel-owasp-security/`,
+   `.claude/skills/laravel-testing/` and rule 6 of `.ai/agents/security-reviewer.md`.
+2. `php artisan make:test --pest Media/MediaOwnershipTest --no-interaction`; write the cases of "Tests" first and see
+   them fail.
+3. `php artisan make:migration create_media_file_references_table --no-interaction`: the table above and the backfill
+   (`insertUsing` from `media_files` where `uploaded_by` is not null). `down()` drops the table.
+4. `php artisan make:enum Enums/MediaOwnerType --no-interaction` (string-backed) and
+   `php artisan make:model MediaFileReference --factory --no-interaction`; add the relation, the scope and the three
+   methods to `MediaFile`.
+5. `php artisan make:policy MediaFilePolicy --model=MediaFile --no-interaction`; keep only `view` and `delete`, typed
+   on `Illuminate\Database\Eloquent\Model` for the actor (users and sources both authenticate through Sanctum).
+6. `MediaController`: change `show` and `destroy` to the scoped load plus `Gate::authorize`; change `store` to the
+   transaction with `attachOwner`. The route parameter stays `{media}`; the methods take `string $media`.
+7. `PresignController`: build and check the prefix with `MediaOwnerType::fromActor()`; `register` attaches the owner
+   in the same transaction as `fromStored()`.
+8. `GenerateImageVariantsJob`: stop when the row no longer exists.
+9. Run `vendor/bin/pint --dirty --format agent`, `composer types:check`, `php artisan test --compact`. Mark KI-25
+   resolved in `.ai/memory/known-issues.md` in a **separate small PR** (shared file) that merges right after this one.
+10. Ask `.ai/agents/security-reviewer.md` for a review of the diff before the PR leaves draft.
+
+## Behaviour to reproduce
+
+No legacy behaviour: the module is HOMI's own. Rules that must hold:
+
+- Foreign equals unknown (SEC-REQ-014): identical status, identical body bytes, identical query count.
+- One `media_files` row per (`disk`, `sha256`), any number of references; the object lives while one reference exists
+  (SEC-REQ-016).
+- A private temporary URL is issued only to an actor that holds a reference (closes SEC-026).
+- The actor type is part of the upload prefix and of the reference (closes SEC-027).
+
+Edge cases:
+
+- A row uploaded before the migration with `uploaded_by = null` has no reference; nobody can read or delete it through
+  the API. List such rows in the PR description (count only).
+- Deleting while variants are being generated: the job stops; no orphan variant is written after the delete commits.
+- Re-uploading bytes after their deletion creates the object again with a fresh reference.
+
+## Tests
+
+`backend/tests/Feature/Media/MediaOwnershipTest.php` (Pest, factories, `Storage::fake`):
+
+- `it('returns 404 when another user shows a private media file')` and the same for a public one.
+- `it('returns 404 when another user deletes a media file and keeps it intact')` — row, reference, original and
+  variants asserted.
+- `it('answers foreign and unknown ids with identical status, body and query count')` — `DB::enableQueryLog()`.
+- `it('creates one row and two references when two actors upload identical bytes')`.
+- `it('deletes only the caller reference when two owners share the bytes')`;
+  `it('deletes the object and its variants after the last reference')`.
+- `it('refuses to register an upload under another actor type prefix')` — `User` 5 and `Source` 5 from factories, both
+  directions.
+- `it('issues presign keys under the actor type prefix')`.
+- `it('backfills a user reference for rows that existed before the migration')` — insert a row, roll the migration
+  back one step and forward again.
+- `it('stops the variants job when the media row is gone')`.
+- `it('creates one reference under concurrent identical uploads')` — skipped unless the connection is PostgreSQL
+  (`->skip(fn () => DB::getDriverName() !== 'pgsql')`); it runs once WP-03 adds the `pgsql` group to CI.
+
+The existing media suites stay green; only assertions on the old key prefix change.
+
+## Acceptance checklist
+
+- [ ] User B cannot read or delete user A's media: `404`, and A's row, reference, original and variants are unchanged.
+- [ ] Two actors uploading the same bytes produce one row and two references; the first `DELETE` returns `204` and
+      the file stays readable for the other; the object disappears after the second.
+- [ ] A source token with id 5 cannot register a key under `uploads/user/5/…`, and a user cannot register one under
+      `uploads/source/5/…`.
+- [ ] Foreign and unknown ids give byte-identical bodies and the same query count.
+- [ ] No global morph map was registered; existing Sanctum tokens still resolve (`$user->tokens()->count()` in a test).
+- [ ] `make ci-backend` is green; Pint and PHPStan level 7 are clean.
+- [ ] The PR description names the migration, the backfill and the count of rows without an owner.
+- [ ] KI-25 is marked resolved in a separate shared-file PR.
+- [ ] Deployed to staging and production; `GET` of a foreign id on staging answers `404`.
+
+## Handoff
+
+Empty.
