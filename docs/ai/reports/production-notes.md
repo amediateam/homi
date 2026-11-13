@@ -20,18 +20,24 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: dry run only | §3c |
 | Backups, monitoring | not started | §5 |
 
-## Resume here (state at the end of 2026-11-09)
+## Resume here (state at 2026-11-12)
 
+- **2026-11-12.**
+  - The shared Redis was checked (§8): `noeviction`, no `maxmemory`, RDB only.
+  - The development track's PR #9 (kvadro² plan) was reviewed: the production parts, as a PR comment.
+  - Branch `chore/infra-review-fixes` holds the fixes to the vhost and unit copies and to `homi-deploy`.
+  - When it merges, the servers need the apply batch in §8 (developer's go).
+  - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. PR #8 (`chore/infra-db-production`) was merged on 2026-11-09 at the developer's request («commit push main»). New work on this track branches from `origin/main` and goes through a PR.
 - **Server checkouts.** The checkouts are still at `591ceb4`. The next `homi-deploy` only checks out the merge: it touches docs and `infra/` only, so no backend or frontend step runs. After that the drift check has `infra/` to compare against.
 - **Servers.** Production and staging are live at `591ceb4`; `homi-deploy` is installed; `/var/lib/homi-deploy/{production,staging}.sha` = `591ceb4`.
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each prints "nothing to deploy" and 14 checks `ok`. That held on 2026-11-09 (§3c).
 - **Next, in this order.** Each item needs the developer's go.
-  1. The first real production run, `homi-deploy production --full`. It was offered on 2026-11-09 and is not yet approved; it also fixes AM-42 there.
+  1. The first real production run, `homi-deploy production --full`. It was offered on 2026-11-09 and is not yet approved; it also fixes AM-42 there. Combine it with the apply batch in §8 once `chore/infra-review-fixes` is merged.
   2. Backups: database dumps off-host plus `storage/` (§5 item 9).
   3. The rest of §5, in the order the developer picks: bot tokens (the developer writes them into `.env`), MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
-- **Next numbers:** AM-44, KI-25. Check `main` first; the other track may have taken them.
+- **Next numbers:** AM-46, KI-27. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
@@ -174,7 +180,8 @@ Assumption mismatches:
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
-9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`).
+9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). The ADR amendments were proposed on 2026-11-12 in their own PR (branch `docs/adr-0011-0013-amend`). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
+10. **Decision: which bot gets `hook.homi.uz`.** Item 2 plans the existing HOMI production bot there. The kvadro² plan (PR #9, `18` T0.4) puts `@KvadroAppBot` on the same URL at the cut-over. One URL with one secret serves one bot.
 
 Decision already taken on the password question: the developer accepted that the production DB password passed through chat («ничего страшного»); no rotation planned.
 
@@ -203,5 +210,64 @@ Decision already taken on the password question: the developer accepted that the
 - Staging was brought up by the same sequence, not by a script; differences between the two trees are only what §3b lists (`diff -r` of the two checkouts not run).
 - `homi-deploy`: not linted (no `shellcheck`). Untested paths:
   - a failure in the middle of a backend step;
-  - a Horizon master that takes longer than 120 s to finish its jobs;
+  - a Horizon master that takes longer than 360 s to finish its jobs (120 s until 2026-11-12, §8);
   - an `npm ci` triggered by a real lockfile change.
+
+## 8. 2026-11-12 — Redis check, PR #9 review, repository fixes
+
+**Redis on the app host** (developer approved this read-only check; `ssh root@159.253.19.121` with `redis-cli CONFIG GET …` and `INFO memory|stats|persistence|server|keyspace`):
+- The server runs Redis 8.10.3 from `/etc/redis/redis.conf`, up 11 days. Among the memory and persistence keys, that file sets only `appendonly no`.
+- Memory and eviction:
+  - `maxmemory 0` and `maxmemory-policy noeviction` (the default), with `evicted_keys 0`;
+  - `used_memory_human 4.63M` on a host with 32 GB.
+- Persistence: AOF is off. RDB snapshots run with `save "3600 1 300 100 60 10000"`, and `rdb_last_bgsave_status` is `ok`.
+- Keyspace: DB 0–2 belong to other projects (807, 13 and 2 keys). HOMI has DB 3 with 8 keys, DB 5 with 8 and DB 6 with 1. DB 4 is empty.
+- What follows from this:
+  - Redis never evicts, so eviction cannot drop queue keys.
+  - Memory growth has no limit. A memory alert belongs to the monitoring task.
+  - A crash loses the jobs queued since the last snapshot. HOMI jobs must be re-dispatchable from PostgreSQL.
+- HOMI never runs `CONFIG SET` on this instance (`maxmemory`, policy, `appendonly`, `requirepass`): every setting there applies to every project on the host.
+
+**PR #9 review** (development track's kvadro² plan):
+- The review is posted as a comment on PR #9 and covers only the production parts: `17`, `18`, `11b` §3 and §7, the 33 `KV-INF-*` tasks, and the shared-file edits.
+- It has seven must-fix items: the deploy steps, a Horizon pause that is lost on restart, pgBackRest on the shared cluster, Redis hardening, the staging reset, truncating production tables, and the `cdn.*` vhost location.
+- It also re-scopes KV-INF-023 on top of `homi-deploy`.
+- Open decision for the developer: which bot is registered on `hook.homi.uz`. The options are the HOMI production bot (§5 item 2) or `@KvadroAppBot` at the kvadro² cut-over (PR #9, `18` T0.4). One URL with one secret serves one bot.
+
+**Repository fixes** (branch `chore/infra-review-fixes`). Servers are unchanged; the steps to apply them are below.
+- **`hook[.staging].homi.conf`.** `location ~ \.php$` became `location = /index.php { internal; … }`. Before, a direct `GET /index.php` reached Laravel's `/` route on the webhook host.
+- **Static locations in both environments** (`/_next/static/` for landing, app and arm; the asset regex for api).
+  - Their own `add_header Cache-Control` dropped the server-level security headers: nginx does not inherit `add_header` into a location that sets one.
+  - The headers are now repeated there.
+  - The duplicate `expires 1y` is gone; it produced a second `Cache-Control` header.
+- **`horizon-homi[-staging].service`.** `TimeoutStopSec` went from 60 to 330. The `media` supervisor's `timeout` is 300 s, so the `systemctl restart` after an `.env` edit used to SIGKILL running jobs at 60 s.
+- **`homi-deploy`.** It now waits up to 360 s instead of 120 s for the new Horizon master, because `horizon:terminate` lets running jobs finish first.
+- **`environments.md`.** The Redis row records the decision and the facts above.
+
+Verification:
+- **Test harness.** Local Homebrew nginx 1.31.8 ran copies of the vhosts with a throw-away certificate on `127.0.0.1:18443` and no PHP upstream, so a 502 means "reached PHP".
+- **`nginx -t` on all 10 vhost copies:** ok.
+- **hook, before:** `GET /index.php` → 502.
+- **hook, after:**
+  - `GET /index.php` → 404, on staging too;
+  - `/up` and `/telegram/webhook` (GET and POST) → 502, so they still reach PHP;
+  - `/` and `/foo.php` → 404.
+- **app `/_next/static/t.js`, before:** two `Cache-Control` headers and no security headers.
+- **app `/_next/static/t.js`, after:** one `Cache-Control` plus `nosniff`, `X-Frame-Options`, `Referrer-Policy` and HSTS.
+- **api and `arm.staging` static files:** HSTS and `nosniff` present, plus `X-Robots-Tag` on staging.
+- **`homi-deploy`:** `bash -n` ok. It is still not linted (no `shellcheck`), and the 360 s path is untested.
+- **Stray requests to live hosts.** A typo in one probe (the port was missing from the URL) sent three GET requests to the live hosts: `api.homi.uz/t.css`, `api.staging.homi.uz/t.css` and `arm.staging.homi.uz/_next/static/t.js`. All three returned 404 and changed nothing.
+
+To apply, after the merge. This is one batch and needs the developer's go:
+1. Run `homi-deploy staging`, then `homi-deploy production --full`. The checkout brings in the new `infra/`, and the drift check then reports all 10 vhosts, both Horizon units and the script as different from the installed copies.
+2. For each environment, install the vhosts:
+   - back up `/etc/nginx/sites-available/homi/*.conf` (`*.bak-<date>-homi`);
+   - copy the reviewed vhosts;
+   - `nginx -t`, then `systemctl reload nginx`.
+3. Copy the two Horizon units, then run `systemctl daemon-reload`. No restart is needed: systemd reads `TimeoutStopSec` at the next stop.
+4. Install the script: `install -m 0755 /var/www/homi.uz/infra/production/bin/homi-deploy /usr/local/sbin/homi-deploy`.
+5. Check from outside:
+   - `https://hook.homi.uz/index.php` → 404, and `/up` → 200, on both hosts;
+   - `curl -sI` of one `/_next/static/` file on `app.homi.uz` shows HSTS and `nosniff`;
+   - `homi-deploy <env> --dry-run` shows no drift warnings.
+6. Rollback: restore the `*.bak-*-homi` copies, `nginx -t`, reload; restore the old units, `daemon-reload`.
