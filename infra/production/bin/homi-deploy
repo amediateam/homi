@@ -380,10 +380,11 @@ drift() {
     for f in "$dir"/nginx/*.conf; do
         same_file "$f" "/etc/nginx/sites-available/homi/${f##*/}"
     done
-    for f in "$dir"/systemd/*.service; do
+    for f in "$dir"/systemd/*.service "$dir"/systemd/*.timer; do
         same_file "$f" "/etc/systemd/system/${f##*/}"
     done
     same_file "$ROOT/infra/production/bin/homi-deploy" "$INSTALLED"
+    same_file "$ROOT/infra/production/bin/homi-backup" /usr/local/sbin/homi-backup
 }
 
 main() {
