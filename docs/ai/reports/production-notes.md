@@ -20,6 +20,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
 | Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill from the MinIO copy passed on 2026-11-13 | §10, §11, `docs/infrastructure/backup-recovery.md` |
 | Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts (12 with the CDN hosts since §14) from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; Telegram delivery tested end to end on both paths | §12, `docs/infrastructure/monitoring.md` |
+| Dashboards: Telescope, Horizon (both environments) | **done** 2026-11-13: `/telescope` and `/horizon` on `api.*` behind nginx basic auth (user `homi`, a password per environment); Telescope records everything except `/up` (`TELESCOPE_RECORD_ALL=true`), pruned to 24 h every hour | §15, `docs/infrastructure/deployment.md` "Dashboards" |
 
 ## Resume here (state at 2026-11-13)
 
@@ -40,10 +41,13 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - **Staging was unreachable from outside on 2026-11-13 from about 13:18 to 15:21 UTC (AM-46), and that is resolved.**
     - The new explicit DNS record `cdn.staging.homi.uz` had shadowed the `*.homi.uz` wildcard for every other `*.staging.homi.uz` name.
     - The developer then added explicit A records for each staging name. `HomiStagingEndpointDown` cleared by 15:21:27 UTC (§14 item 7).
+  - **The Telescope and Horizon dashboards are open behind nginx basic auth on both environments (§15).**
+    - Telescope records everything while HOMI is in development.
+    - **Set `TELESCOPE_RECORD_ALL=false` before real user traffic**, because entries then carry personal data.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
-- **Servers.** Production and staging are live at `490dab9` since 2026-11-13. That commit is PR #19, merged at the developer's request («commit push main») and checked out on both hosts on their go («1 и 2 да», §14 item 11). `/var/lib/homi-deploy/{production,staging}.sha` = `490dab9`.
-  - The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup and metrics units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. All are the same: both dry runs show 14 `ok` and 0 `WARNING`.
+- **Servers.** Production and staging are live at `d9a5328` since 2026-11-13. That commit is PR #21, merged and applied at the developer's request («смержи #21 и примени 1–6», §15). `/var/lib/homi-deploy/{production,staging}.sha` = `d9a5328`.
+  - The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup, metrics and Telescope-prune units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. All are the same: both dry runs show 14 `ok` and 0 `WARNING`.
   - Backups of the replaced files are in `/root/.homi-backups/20261113/` on each host (§9, §12, §13).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
@@ -57,7 +61,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   3. The rest of §5, in the order the developer picks:
      - ~~MinIO and `cdn` DNS~~ done 2026-11-13 (§14);
      - the SVN commit on the app host, which needs the owner's credentials. The MinIO host's commit was done on 2026-11-13 as r76 (§14 item 11);
-     - `TELESCOPE_ENABLED`;
+     - ~~`TELESCOPE_ENABLED`~~ done 2026-11-13: Telescope stays on, behind basic auth (§15);
      - a deploy trigger and atomic releases;
      - release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
@@ -201,7 +205,7 @@ Assumption mismatches:
    - a trigger — GitHub Actions over SSH, or manual only — decide;
    - atomic releases (release directories plus a `current` symlink) so that `next build` and `composer install` no longer run under the live servers (`deployment.md` "Deploy" limits);
    - ~~the drift check starts reporting once `infra/` is in the checkouts~~ done 2026-11-13: it compares 10 vhosts, both Horizon units and the script, and all were the same after the apply batch (§9).
-6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
+6. ~~**Telescope in production**~~ done 2026-11-13 (§15). The developer kept Telescope on during development, with basic auth, full recording and pruning to 24 h. Before real traffic, `TELESCOPE_RECORD_ALL=false`. (This item had said "records every request". In fact the filter outside `local` recorded only failures.) Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
 9. ~~Backups (database dumps off-host; `storage/`)~~ done 2026-11-13 (§10). ~~Monitoring~~ done 2026-11-13 (§12). ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
@@ -220,6 +224,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | **Telescope on the servers while HOMI is in development** («пока идет разработка включать на проде Telescope»). Access: **basic auth in nginx**. Recording: **everything except `/up`**. Retention: **24 h**. **Horizon** is behind the same auth. PR #21 merged and applied on request («смержи #21 и примени 1–6») without the second developer's review | §15. PR #21 changed development-track files (`backend/app`, `config/telescope.php`, tests) at the developer's request. `TELESCOPE_RECORD_ALL=false` before real traffic |
 | 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
 | 2026-11-13 | MinIO + CDN: packages 1–6 approved together («1-6»); **no quotas** on the media buckets; **versioning** on public and private with noncurrent versions kept **30 days** | §14; the disk is the limit, so `HomiMinioDiskLow` / `HomiMinioDiskCritical` were added |
 | 2026-11-13 | **Backup encryption is not needed** («шифрование бэкапов не нужно!»), with no condition attached (it supersedes «пока без шифрования» from the same day) | `docs/infrastructure/backup-recovery.md` updated; the follow-up was removed from "Resume here" |
@@ -648,3 +653,57 @@ The developer chose this item («MinIO + cdn»), then approved packages 1–6 to
       - `svn commit sites-available/homi` gave **r76**.
       - The working copy had been at r74, so r75 came from another working copy.
       - Only that path was committed. The host's other uncommitted changes stay as they were: `M server/scripts/deploy-server-etc.sh` and 35 unversioned paths, which belong to other tenants and their owner.
+
+## 15. Done 2026-11-13 — Telescope and Horizon dashboards (staging and production)
+
+The developer asked: «Надо пока идет разработка включать на проде Telescope на серверах». They chose:
+- basic auth in nginx;
+- recording everything except `/up`;
+- keeping entries for 24 h;
+- Telescope and Horizon together.
+
+How it works: `docs/infrastructure/deployment.md` "Dashboards".
+
+1. **Survey (read-only).**
+   - **Config.** `enabled true` in both environments, with no `TELESCOPE_*` keys in `.env`. Outside `local` the filter recorded only failures: staging held 24 entries, production 0.
+   - **Access.** There was no login route and there were 0 users, and both gates had an empty email list. No one could open `/telescope` or `/horizon`.
+   - **Pruning.** There was no Laravel scheduler (`schedule:run`) on the host, so nothing pruned.
+   - **Assets.** Telescope and Horizon inline their assets (`Telescope::css()` / `Horizon::css()`), so no `public/vendor` is needed.
+2. **PR #21** (`d9a5328`).
+   - `App\Http\DashboardAccess`: both gates allow a request only when nginx set `HOMI_DASHBOARD_USER`.
+   - `TELESCOPE_RECORD_ALL`; `ignore_paths` gains `up` and `horizon*`; the Telegram secret header is hidden.
+   - The basic-auth location in both api vhosts, and `homi-telescope-prune.{service,timer}`.
+   - 9 tests. `make ci-backend` exit 0 (56 tests); GitHub CI passed.
+3. **Deploy.** `homi-deploy staging`, then `homi-deploy production`.
+   - Plan: checkout, composer (nothing to install), migrate (nothing to migrate), Horizon restart. Staging took 12 s, production 13 s.
+   - The only warnings were the expected drift lines: the api vhost, plus the prune units on production.
+4. **Credentials.**
+   - `/etc/homi` (0750, `root:www-data`).
+   - Per environment: `/root/.homi-secrets/dashboards-<env>.password` (0600, `openssl rand -hex 16`) and `/etc/homi/dashboards-<env>.htpasswd` (0640, `homi:$6$…`).
+   - The passwords differ between the environments, and neither was printed.
+5. **`.env`.** `TELESCOPE_RECORD_ALL=true` was appended in both environments: the key was absent before and occurs once after. `.env` stays `640 root:www-data`.
+   - `config:show telescope` shows `record_all true`.
+   - `horizon:terminate` started new masters: staging 1516165 → 1518207, production 1522809 → 1523347. Both report "Horizon is running".
+   - The first staging attempt stopped before touching `.env`: `grep` with no match returns 1 under `set -o pipefail`. The retry used `|| true`.
+6. **nginx.** The previous vhosts are in `/root/.homi-backups/20261113/nginx/api{,.staging}.homi.conf.bak-20261113d-homi`.
+   - The new copies are byte-identical to the checkout.
+   - `nginx -t` passed, then a reload.
+7. **Pruning.** Both units were installed from the production checkout (identical bytes), followed by `daemon-reload` and `enable --now homi-telescope-prune.timer`.
+   - The first manual run: `Result=success`. Production pruned 0 entries; staging pruned 24, all from 2026-11-08.
+   - Next run 18:03 UTC.
+8. **Verification**, both environments:
+   - from outside, `/telescope` and `/horizon` give 401 `Basic realm="HOMI dashboards"`, and `/index.php/telescope` and `/index.php/horizon` give 403 from the gates;
+   - a wrong password gives 401, and the staging password on production gives 401;
+   - with the password, `/telescope`, `/horizon` and `/horizon/api/stats` give 200, and `POST /telescope/telescope-api/requests` with the page's CSRF token gives 200 with entries;
+   - three `/up` requests added no request entry, while one API request (`/api/v1/telescope-check`, a 404) was recorded, which only full recording does;
+   - the tinker calls used for counting are themselves recorded (command and query entries);
+   - `homi-deploy --dry-run` for staging and production: exit 0, 14 `ok`, 0 `WARNING`, "nothing to deploy — d9a5328 is live".
+9. **Found on the way.** Staging's oldest exceptions (2026-11-08, `GET /` → 500, "Vite manifest not found") came from the bring-up before the backend asset build was part of the deploy. They are gone with the prune.
+10. **Not done or not verified:**
+    - the SVN commit of the changed api vhosts on the app host, which needs the owner's credentials;
+    - the dashboards in a real browser: the check used curl only;
+    - Pulse access, which is out of scope;
+    - an alert when `homi-telescope-prune.service` fails.
+11. **Follow-ups.**
+    - Developers add `TELESCOPE_RECORD_ALL=false` to their local `backend/.env`. Until then `make dev-check` fails on the missing key.
+    - Before real user traffic, set `TELESCOPE_RECORD_ALL=false` on both servers.
