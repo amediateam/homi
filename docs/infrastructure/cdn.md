@@ -121,8 +121,9 @@ A request that is already being served can still get the old file once, because 
 - **Pitfall (AM-46).** Until 2026-11-13 the staging names had no records of their own: `*.homi.uz` covered them.
   - The explicit `cdn.staging.homi.uz` record made `staging.homi.uz` an existing, empty node. A wildcard does not apply below an existing node (RFC 4592).
   - So `staging.homi.uz` answered with no address, and `app.`, `api.`, `arm.` and `hook.staging.homi.uz` answered NXDOMAIN.
-  - The fix is two explicit records: `staging.homi.uz A 159.253.19.121` and `*.staging.homi.uz A 159.253.19.121`. The explicit `cdn.staging` record still wins over that wildcard.
-  - The zone's negative TTL is 3600 s, so resolvers can keep a cached NXDOMAIN for up to an hour.
+  - **The fix, the same day.** Every staging name now has its own explicit A record → `159.253.19.121`: `staging`, `app.staging`, `api.staging`, `arm.staging` and `hook.staging`.
+  - **There is no `*.staging` wildcard**, so a new staging subdomain needs its own record.
+  - The zone's negative TTL is 3600 s, so resolvers can keep a cached NXDOMAIN for up to an hour after a fix. The external probes came back about 2 h after the first failure (`production-notes.md` §14 item 7).
 - The developer owns DNS (panel of fastdns24 / fastvps).
 
 ## Not covered
@@ -131,7 +132,7 @@ A request that is already being served can still get the old file once, because 
   - Versioning protects against a delete for 30 days. It does not protect against losing the single MinIO disk or host.
   - This is the open "second off-host copy" item (`production-notes.md` "Resume here").
 - **Presigned `PUT` does not bind the content type.** The URL signs only the `Host` header, so a client can upload any `Content-Type`. `register` reads the bytes, validates the image and re-encodes it, so the stored original is safe. A note for the development track.
-- **SVN on the MinIO host.** `/etc/nginx` there is an SVN working copy (`file:///var/repository/server.uz`). `sites-available/homi/` is `svn add`ed but not committed. The symlinks in `sites-enabled/` are not versioned on that host.
+- **SVN on the MinIO host.** `/etc/nginx` there is an SVN working copy (`file:///var/repository/server.uz`). `sites-available/homi/` was committed as r76 on 2026-11-13. A change to these vhosts needs its own `svn commit sites-available/homi` with only that path, because the host's working copy holds other tenants' uncommitted changes. The symlinks in `sites-enabled/` are not versioned on that host.
 
 ## Rollback
 
