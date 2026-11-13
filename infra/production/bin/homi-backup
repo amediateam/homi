@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+#
+# homi-backup — back up HOMI's databases and storage/app to MinIO.
+#
+#   Reviewed source: infra/production/bin/homi-backup (this file)
+#   Installed copy:  /usr/local/sbin/homi-backup (root, 0755)
+#   Schedule:        homi-backup.timer → homi-backup.service (infra/production/systemd/)
+#   Runbook:         docs/infrastructure/backup-recovery.md
+#
+# Per environment: pg_dump (custom format) as the database's owner role, read
+# back completely with pg_restore; storage/app as tar + zstd; SHA256SUMS; upload
+# to s3://homi-backups/<env>/<UTC stamp>/ and compare the remote sizes. The
+# bucket expires objects after 14 days (ILM); local copies stay 3 days. The
+# MinIO user cannot delete objects. Nothing is recorded unless every step passed.
+
+set -Eeuo pipefail
+umask 077
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+PG_BIN=/usr/lib/postgresql/18/bin # must be >= the server version (PostgreSQL 18 on 5.45.127.98)
+LOCAL_DIR=/var/backups/homi
+STATE_DIR=/var/lib/homi-backup
+LOCAL_KEEP_DAYS=3
+S3_HOST=s3.hc.uz
+S3_BUCKET=homi-backups
+S3_ACCESS_KEY=homi-backup
+S3_SECRET_FILE=/root/.homi-secrets/backup-s3.secret
+LOCK_FILE=/run/lock/homi-backup.lock
+
+usage() {
+    cat <<'EOF'
+Usage: homi-backup [all|production|staging]
+
+  Backs up the database and backend/storage/app of each environment to
+  s3://homi-backups/<env>/<UTC stamp>/ (default: all). Local copies in
+  /var/backups/homi/<env>/, last success in /var/lib/homi-backup/<env>.last-success.
+EOF
+}
+
+log() { printf '%s [homi-backup] %s\n' "$(date -u '+%F %T')" "$*"; }
+die() {
+    log "ERROR: $*"
+    exit 1
+}
+
+env_root() {
+    case $1 in
+        production) echo /var/www/homi.uz ;;
+        staging) echo /var/www/staging.homi.uz ;;
+        *) die "unknown environment: $1" ;;
+    esac
+}
+
+# Reads one key from a Laravel .env without sourcing it: values may contain
+# shell metacharacters, and sourcing would run them.
+env_value() {
+    local file=$1 key=$2 line
+    line=$(grep -m1 -E "^${key}=" "$file") || die "$key is missing in $file"
+    line=${line#*=}
+    line=${line%$'\r'}
+    if [[ $line == \"*\" ]]; then
+        line=${line#\"}
+        line=${line%\"}
+    elif [[ $line == \'*\' ]]; then
+        line=${line#\'}
+        line=${line%\'}
+    fi
+    printf '%s' "$line"
+}
+
+mcli_() { mcli --quiet --no-color "$@"; }
+
+remote_size() {
+    mcli_ stat --json "homibk/$1" | python3 -I -c 'import json, sys; print(json.load(sys.stdin)["size"])'
+}
+
+backup_env() {
+    local env=$1 root envfile stamp dir prefix db host port user pass dump storage rc tables f size
+    root=$(env_root "$env")
+    envfile=$root/backend/.env
+    [[ -r $envfile ]] || die "$envfile is not readable"
+    stamp=$(date -u +%Y%m%dT%H%M%SZ)
+    dir=$LOCAL_DIR/$env/$stamp
+    prefix=$S3_BUCKET/$env/$stamp
+    install -d -m 0700 "$dir"
+
+    db=$(env_value "$envfile" DB_DATABASE)
+    host=$(env_value "$envfile" DB_HOST)
+    port=$(env_value "$envfile" DB_PORT)
+    user=$(env_value "$envfile" DB_USERNAME)
+    pass=$(env_value "$envfile" DB_PASSWORD)
+    dump=$dir/$env-db-$db-$stamp.dump
+    log "$env: pg_dump $db@$host"
+    # TLS to the database is off by the developer's decision (ADR-0015).
+    PGPASSWORD=$pass PGSSLMODE=disable PGCONNECT_TIMEOUT=10 PGAPPNAME=homi-backup \
+        "$PG_BIN/pg_dump" --host="$host" --port="$port" --username="$user" --dbname="$db" \
+        --format=custom --no-password --file="$dump"
+    # Reading the whole archive back proves every data block decompresses.
+    "$PG_BIN/pg_restore" --file=/dev/null "$dump"
+    tables=$("$PG_BIN/pg_restore" --list "$dump" | grep -c ' TABLE DATA ' || true)
+    ((tables > 0)) || die "$env: the dump of $db has no table data"
+    log "$env: dump ok ($tables tables with data, $(du -h "$dump" | cut -f1))"
+
+    storage=$dir/$env-storage-$stamp.tar.zst
+    rc=0
+    # GNU tar exits 1 when a file changed while it was read; that copy is still usable.
+    tar --warning=no-file-changed -C "$root/backend/storage" -cf "$dir/storage.tar" app || rc=$?
+    ((rc <= 1)) || die "$env: tar of storage/app failed (exit $rc)"
+    zstd -q -19 --rm -o "$storage" "$dir/storage.tar"
+    zstd -q -t "$storage"
+    log "$env: storage/app ok ($(du -h "$storage" | cut -f1))"
+
+    (cd "$dir" && sha256sum -- *.dump *.tar.zst >SHA256SUMS)
+
+    log "$env: upload to s3://$prefix/"
+    for f in "$dir"/*; do
+        mcli_ cp "$f" "homibk/$prefix/${f##*/}" >/dev/null
+        size=$(remote_size "$prefix/${f##*/}")
+        [[ $size == "$(stat -c %s "$f")" ]] || die "$env: ${f##*/} is $size bytes in MinIO, $(stat -c %s "$f") locally"
+    done
+
+    find "$LOCAL_DIR/$env" -mindepth 1 -maxdepth 1 -type d -mtime +"$LOCAL_KEEP_DAYS" -exec rm -rf -- {} +
+    printf '%s s3://%s/\n' "$(date -u +%FT%TZ)" "$prefix" >"$STATE_DIR/$env.last-success"
+    log "$env: done"
+}
+
+main() {
+    local target=${1:-all} envs e rc failed=0
+    case $target in
+        all) envs=(production staging) ;;
+        production | staging) envs=("$target") ;;
+        -h | --help)
+            usage
+            return 0
+            ;;
+        *)
+            usage >&2
+            return 2
+            ;;
+    esac
+    ((EUID == 0)) || die "run as root"
+    [[ -r $S3_SECRET_FILE ]] || die "$S3_SECRET_FILE is missing (docs/infrastructure/backup-recovery.md)"
+    exec 9>"$LOCK_FILE"
+    flock -n 9 || die "another homi-backup is running"
+    install -d -m 0700 "$LOCAL_DIR" "$STATE_DIR"
+
+    # mcli reads the alias from the environment; nothing is written to ~/.mcli.
+    MC_HOST_homibk="https://$S3_ACCESS_KEY:$(<"$S3_SECRET_FILE")@$S3_HOST"
+    export MC_HOST_homibk
+
+    for e in "${envs[@]}"; do
+        # A subshell per environment: a failure in one still backs up the other.
+        # set -e is re-enabled inside, because the parent runs it with errexit off.
+        set +e
+        (
+            set -Eeuo pipefail
+            backup_env "$e"
+        )
+        rc=$?
+        set -e
+        if ((rc != 0)); then
+            log "$e: FAILED (exit $rc)"
+            failed=1
+        fi
+    done
+    return "$failed"
+}
+
+main "$@"

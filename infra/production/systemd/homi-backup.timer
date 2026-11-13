@@ -1,0 +1,11 @@
+# HOMI — nightly backup at 02:30 Asia/Tashkent (21:30 UTC; the host clock is UTC).
+[Unit]
+Description=Nightly HOMI backup
+
+[Timer]
+OnCalendar=*-*-* 21:30:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

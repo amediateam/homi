@@ -1,0 +1,15 @@
+# HOMI — backup of both environments' databases and storage/app to MinIO (docs/infrastructure/backup-recovery.md).
+# Started by homi-backup.timer; run by hand with `systemctl start homi-backup.service`.
+[Unit]
+Description=HOMI backup (databases + storage/app → s3://homi-backups)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homi-backup all
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=1h
+StandardOutput=journal
+StandardError=journal

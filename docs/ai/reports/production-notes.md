@@ -18,7 +18,8 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
-| Backups, monitoring | not started | §5 |
+| Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill into a database not run yet | §10, `docs/infrastructure/backup-recovery.md` |
+| Monitoring | not started | §5 |
 
 ## Resume here (state at 2026-11-13)
 
@@ -27,13 +28,19 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - The development track's PR #9 (kvadro² plan) was reviewed: the production parts, as a PR comment.
   - PRs #10 (infra fixes) and #11 (ADR-0015) were merged on 2026-11-13 at the developer's request, without the second developer's review (§6).
   - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
+  - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
+  - The backup files were installed from the branch `chore/infra-backups`, so until that PR is merged and deployed, the server has files the checkout lacks. After the merge, `homi-deploy` checks them out, and the updated `/usr/local/sbin/homi-deploy` must be installed from the checkout, because the drift check now covers `homi-backup` and `*.timer`.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
 - **Servers.** Production and staging are live at `e654925`, and `/var/lib/homi-deploy/{production,staging}.sha` = `e654925`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, both Horizon units and the script; all are the same today. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
-  2. Backups: database dumps off-host plus `storage/` (§5 item 9).
+  2. ~~Backups~~ done 2026-11-13 (§10). Follow-ups:
+     - a restore drill into a scratch database on the DB host (needs `postgres`, developer's go);
+     - encryption before the kvadro² personal data arrives;
+     - a second off-host copy;
+     - an alert when `homi-backup.service` fails, as part of monitoring.
   3. The rest of §5, in the order the developer picks: MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
 - **Next numbers:** AM-46, KI-27. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
@@ -179,7 +186,7 @@ Assumption mismatches:
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
-9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
+9. ~~Backups (database dumps off-host; `storage/`)~~ done 2026-11-13 (§10). Still open: monitoring (`/up` probes, unit failures including `homi-backup.service`), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
 10. **Decision: which bot gets `hook.homi.uz`.** Item 2 plans the existing HOMI production bot there. The kvadro² plan (PR #9, `18` T0.4) puts `@KvadroAppBot` on the same URL at the cut-over. One URL with one secret serves one bot.
 
 Decision already taken on the password question: the developer accepted that the production DB password passed through chat («ничего страшного»); no rotation planned.
@@ -195,6 +202,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | Backups per the plan in §10 («да, запускай»). **Dumps not encrypted for now** («пока без шифрования»): encryption comes before the kvadro² personal data | `docs/infrastructure/backup-recovery.md`; encryption is a follow-up in "Resume here" |
 | 2026-11-13 | PRs #10 and #11 merged without the second developer's review («смёржи #10 и #11») | `parallel-work.md` §2 asks for the other developer's review; the second developer can still comment after the merge |
 
 ## 7. Not verified
@@ -315,3 +323,45 @@ Rollback, if ever needed:
 - Copy `/root/.homi-backups/20261113/nginx/<file>.bak-20261113-homi` back to `/etc/nginx/sites-available/homi/<file>`, run `nginx -t`, then reload.
 - Do the same for the units, followed by `systemctl daemon-reload`, and for the script.
 - Code: `homi-deploy <env> --ref 591ceb4`. The range has no backend changes, so only the checkout moves.
+
+## 10. Done 2026-11-13 — backups
+
+The developer approved the plan («да, запускай») and chose no encryption for now («пока без шифрования»). The runbook is `docs/infrastructure/backup-recovery.md`.
+
+1. **Survey** (read-only):
+   - App host: `pg_dump` 18.6 in `/usr/lib/postgresql/18/bin`, plus `mcli`, `zstd`, `gpg`, `flock` and `python3`, so no new package was needed. The clock is UTC. 188 GB are free.
+   - Sizes: `homi_db` 840 KB and `homi_staging_db` 0.97 MB (`artisan db:show`); `storage/app` is 24 K per environment.
+   - MinIO host: alias `s3hc`, 227 GB free. The house pattern comes from `appuz-db-backups` and `elmarket-pgbackrest`: versioning, an ILM rule that expires noncurrent versions after 14 days, and one user with a per-bucket policy.
+2. **MinIO** (`31.220.104.38`):
+   - `mcli mb --with-versioning s3hc/homi-backups`.
+   - ILM rule 1 expires current objects after 14 days and noncurrent versions after 7. Rule 2 removes expired delete markers.
+   - Policy `homi-backups-append` (`/root/homi-backups-append.json` on that host): `GetBucketLocation`, `ListBucket` and `ListBucketMultipartUploads` on the bucket; `PutObject`, `AbortMultipartUpload`, `GetObject` and `ListMultipartUploadParts` on its objects. It has no `DeleteObject`.
+   - User `homi-backup`, enabled, with that policy.
+   - The secret was generated on the app host (`openssl rand -hex 24` into `/root/.homi-secrets/backup-s3.secret`, 0600) and piped from ssh to ssh. It never appeared in output.
+3. **Access test** from the app host. The alias comes from `MC_HOST_homibk` in the environment, so nothing is written to `~/.mcli`.
+   - `ls` works.
+   - A put and get of `_probe/20261113T052443Z.txt` (25 bytes) works. The object stays until ILM removes it.
+   - `rm` gets `Access Denied`, and so does `ls` of `appuz-db-backups`.
+4. **Install** from the branch `chore/infra-backups`:
+   - `/usr/local/sbin/homi-backup` (0755);
+   - `/etc/systemd/system/homi-backup.{service,timer}` (0644);
+   - then `systemctl daemon-reload`. `systemd-analyze verify` had no remarks on these units; its only warning was about another project's `memcached.service`.
+5. **Runs.**
+   - `homi-backup staging`: exit 0 in 5 s. Dump 68 K with 23 tables of data; storage 4 K.
+   - `systemctl start homi-backup.service`: `Result=success`.
+     - production: dump 64 K (62 669 bytes), 23 tables;
+     - staging: dump 66 795 bytes;
+     - both environments uploaded, and `*.last-success` was written.
+   - MinIO side (`mcli ls --recursive`, `mcli du`): 10 objects, 193 KiB.
+6. **Round trip.** The latest production prefix was downloaded to a temp directory. `sha256sum -c SHA256SUMS` passed for both files, and `pg_restore --list` lists the 23 tables (`migrations`, `users`, `media_files`, `telegram_updates` and the rest). The storage archive is readable with `zstd -dc | tar -t`.
+7. **Timer.** `systemctl enable --now homi-backup.timer`: enabled and active, first run Fri 2026-11-13 21:31:56 UTC.
+8. **`homi-deploy` drift check** (repository): it now also compares `infra/<env>/systemd/*.timer` and `/usr/local/sbin/homi-backup`. The installed `homi-deploy` is still the `e654925` version and gets replaced from the checkout after the merge.
+
+Not verified:
+- A restore into a database (the drill in the runbook needs `postgres` on the DB host);
+- a run that fails on purpose (the per-environment subshell and the exit code are reasoned from the script, not tested);
+- ILM expiry in practice (first due 2026-11-27).
+
+Rollback:
+- `systemctl disable --now homi-backup.timer`, then remove the three installed files and run `systemctl daemon-reload`.
+- On MinIO, the bucket and user can only be removed with the developer's go, because removing them deletes backups.
