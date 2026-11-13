@@ -45,7 +45,8 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
     - Telescope records everything while HOMI is in development.
     - **Set `TELESCOPE_RECORD_ALL=false` before real user traffic**, because entries then carry personal data.
   - The kvadro² migration plan is on `main` (PR #9, `docs/migration/`), and the development track owns it.
-    - PostGIS 3.7.0 is ready to install on the DB host. It is waiting for DEC-09 (§16).
+    - **PostGIS 3.7.0 is installed (DEC-09, §17).** It is enabled in `homi_staging_db`; `homi_db` gets it before the first production deploy with geography columns.
+    - The DB host now runs PostgreSQL 18.7. Upgrade PostgreSQL and PostGIS together (AM-48).
   - Open decision: which bot gets `hook.homi.uz` (§8). Since PR #9 this is DEC-05 (bot custody).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
 - **Servers.** Production and staging are live at `d9a5328` since 2026-11-13. That commit is PR #21, merged and applied at the developer's request («смержи #21 и примени 1–6», §15). `/var/lib/homi-deploy/{production,staging}.sha` = `d9a5328`.
@@ -67,7 +68,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
      - a deploy trigger and atomic releases;
      - release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
-- **Next numbers:** AM-48, KI-27. AM-46 and AM-47 are in §14. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
+- **Next numbers:** AM-49, KI-27. AM-46 and AM-47 are in §14, and AM-48 is in §17. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
@@ -209,7 +210,7 @@ Assumption mismatches:
    - ~~the drift check starts reporting once `infra/` is in the checkouts~~ done 2026-11-13: it compares 10 vhosts, both Horizon units and the script, and all were the same after the apply batch (§9).
 6. ~~**Telescope in production**~~ done 2026-11-13 (§15). The developer kept Telescope on during development, with basic auth, full recording and pruning to 24 h. Before real traffic, `TELESCOPE_RECORD_ALL=false`. (This item had said "records every request". In fact the filter outside `local` recorded only failures.) Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
-8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
+8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, ~~PostGIS install~~ done 2026-11-13: DEC-09, PostgreSQL 18.7 with PostGIS 3.7.0 (§17).
 9. ~~Backups (database dumps off-host; `storage/`)~~ done 2026-11-13 (§10). ~~Monitoring~~ done 2026-11-13 (§12). ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
 10. **Decision: which bot gets `hook.homi.uz`.** Item 2 plans the existing HOMI production bot there. The kvadro² plan (PR #9, `18` T0.4) puts `@KvadroAppBot` on the same URL at the cut-over. One URL with one secret serves one bot.
 
@@ -226,6 +227,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | **DEC-09: adopt PostGIS** («PostGIS ставим»). The DB host's PostgreSQL went **18.6 → 18.7** («Обновить PostgreSQL до 18.7»), which restarted the shared cluster for about 3 s, rather than staying on the older `+1` PostGIS build | §17. PostgreSQL and PostGIS are upgraded together from now on. `homi_db` gets the extension with its own go |
 | 2026-11-13 | PR #9, the kvadro² audit and migration plan (~72k lines, docs only), was merged as one PR («смержи #9 и проверь PostGIS»). The development track writes the development plan («план разработки будет писать коллега») | §16. `docs/migration/` and `HANDOFF.md` §4 belong to the development track |
 | 2026-11-13 | **Telescope on the servers while HOMI is in development** («пока идет разработка включать на проде Telescope»). Access: **basic auth in nginx**. Recording: **everything except `/up`**. Retention: **24 h**. **Horizon** is behind the same auth. PR #21 merged and applied on request («смержи #21 и примени 1–6») without the second developer's review | §15. PR #21 changed development-track files (`backend/app`, `config/telescope.php`, tests) at the developer's request. `TELESCOPE_RECORD_ALL=false` before real traffic |
 | 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
@@ -732,3 +734,48 @@ How it works: `docs/infrastructure/deployment.md` "Dashboards".
      - verify with `postgis_full_version()` under the application role;
      - add the extension check to the deploy checks;
      - make sure the restore drill still passes with the extension.
+
+## 17. Done 2026-11-13 — PostGIS on the DB host (DEC-09); PostgreSQL 18.6 → 18.7
+
+The developer decided DEC-09: «PostGIS ставим». When the first build would not load, they chose «Обновить PostgreSQL до 18.7» over keeping 18.6 with the older `+1` build. The runbook is `docs/infrastructure/deployment.md` "PostgreSQL extensions".
+
+1. **Package.** `apt-get install postgresql-18-postgis-3` installed 50 packages, as the simulation of §16 said, with no upgrade and no removal.
+   - PostgreSQL kept running: `pg_postmaster_start_time()` was unchanged.
+   - The server reports `trusted = f`, `superuser = t` for `postgis`, `postgis_raster` and `postgis_topology`.
+2. **First `CREATE EXTENSION postgis` in `homi_staging_db` failed:** `could not load library "…/postgis-3.so": undefined symbol: heap_datum_check`.
+   - It ran in a transaction, so nothing was left behind: still only `plpgsql`, and 0 `postgis*` functions.
+   - **AM-48.** §16 assumed that the pgdg candidate builds for the installed server minor. In fact `3.7.0+dfsg-1.pgdg13+2` needs `heap_datum_check`, which the 18.6 binary does not export and 18.7 does.
+     - This was checked with `nm -D` on downloaded `.deb`s in a temp dir, which was removed afterwards.
+     - The older `+1` build does not need the symbol.
+     - The package's `Depends: postgresql-18` carries no minimum version, so apt allowed the mismatch.
+   - Automatic upgrades cannot repeat this: `apt-daily-upgrade.timer` is masked, and unattended-upgrades only takes Debian origins.
+3. **Pre-check before the upgrade.**
+   - Sessions: `kc_db` 1, HOMI 0.
+   - Last backups: production and staging at 07:11 UTC that day.
+   - Simulation: 3 packages upgraded (`libpq5`, `postgresql-18`, `postgresql-client-18`), nothing installed or removed.
+4. **Upgrade** (`apt-get install --only-upgrade postgresql-18 postgresql-client-18`).
+   - `apt` ran from 18:01:29 to 18:01:40 UTC with exit 0. The server is now `18.7 (Debian 18.7-1.pgdg13+2)`, restarted at 18:01:36 UTC.
+   - `pg_isready` every 0.2 s saw the server down from 18:01:33.5 to 18:01:36.8, about 3.3 s.
+   - Afterwards the cluster was online and the `kc_db` session had reconnected.
+   - The probe ran `pg_isready` as `root`, so each sample left `FATAL: role "root" does not exist` in the shared server's log: 41 lines between 18:01:28.994 and 18:01:42.026 UTC (`grep -c` on `postgresql-18-main.log`). They are harmless noise. Next time use `pg_isready -U postgres`.
+   - Logs on the DB host: `/root/pg-upgrade-20261113.{log,ready.log}`.
+5. **`CREATE EXTENSION IF NOT EXISTS postgis` in `homi_staging_db`** as `postgres` succeeded.
+   - `homi_db` and `kc_db` still have only `plpgsql`.
+   - Checked as the application role through staging Laravel:
+     - `postgis 3.7.0` and `postgis_lib_version() 3.7.0`;
+     - `spatial_ref_sys` holds 8500 rows;
+     - `ST_Distance` between two Tashkent points is 3558 m, and `ST_DWithin(…, 5000)` is true;
+     - `postgis_full_version()` shows GEOS 3.15.0 and PROJ 9.9.0.
+   - Production Laravel connects to 18.7 normally. Both `homi-deploy --dry-run`: 14 `ok`, 0 `WARNING`.
+6. **Backups with the extension.** `homi-backup staging` finished at 18:02 UTC (24 tables with data). The dump contains `EXTENSION postgis`, `COMMENT - EXTENSION postgis` and `TABLE DATA public spatial_ref_sys`.
+   - **Restore-drill path** (`postgres`, scratch database): exit 0, `postgis 3.7.0`, 24 tables, the same as live.
+   - **In-place path** as the owner role (`pg_restore --role=homi_staging_db --clean --if-exists --single-transaction` into a scratch database with the extension):
+     - the plain command fails with `must be owner of extension postgis`;
+     - without the two `EXTENSION` entries it fails with `permission denied for table spatial_ref_sys`;
+     - without those 3 entries it gives exit 0, 24 tables, and 13 `migrations` rows as on live, and a second run on top also gives exit 0.
+   - `backup-recovery.md` now gives that procedure. The scratch databases and temp files were removed (0 `homi_restore%` databases left).
+7. **Not done:**
+   - `homi_db` gets PostGIS before the first production deploy with geography columns, with its own go;
+   - the deploy checks do not yet verify the extension (KV-INF-023);
+   - CI (KV-QA-001) and local machines (KV-INF-005) need PostGIS 3.7 to match, which is development-track work;
+   - telling the owner of `kc_db` about the restart and the new packages is the developer's job.
