@@ -130,6 +130,24 @@ systemctl restart homi-next-landing homi-next-app homi-next-arm
   - Then rewrite the htpasswd: `printf 'homi:%s\n' "$(openssl passwd -6 -stdin < …password)" > /etc/homi/dashboards-<env>.htpasswd`.
   - The file keeps its owner and mode.
 
+## PostgreSQL extensions (DB host `5.45.127.98`)
+
+The DB host runs PostgreSQL 18.6 (pgdg, Debian 13), cluster `18/main`. It is shared with another product's `kc_db` (ADR-0011). It is reached only through the app host: `ssh root@159.253.19.121 'ssh root@5.45.127.98 …'`.
+
+Inventory of 2026-11-13, read-only (step 1 of `docs/migration/tasks/infrastructure/KV-INF-018-postgis-shared-server.md`):
+
+| | State |
+|---|---|
+| Installed per database | `homi_db`, `homi_staging_db`, `kc_db` and `postgres` have `plpgsql 1.0` only. No database pins a PostGIS version. |
+| Available without new packages | `btree_gist 1.8`, `citext 1.8`, `pg_trgm 1.6`, `unaccent 1.1` |
+| PostGIS | **not installed**. The candidate is `postgresql-18-postgis-3` `3.7.0+dfsg-1.pgdg13+2` (pgdg; apt lists of 2026-11-12). |
+| Simulated install (`apt-get -s`) | 50 new packages: GDAL 3.13, PROJ 9.9, GEOS 3.15, SFCGAL 2.3 and their Debian libraries (10 of the 50 come from pgdg). 0 upgraded, 0 removed, and `postgresql-18` (`18.6-1.pgdg13+2`) is untouched. |
+| Restart | Not needed: installing the package does not restart PostgreSQL, and the library loads on `CREATE EXTENSION`. |
+| Local machines | Homebrew `postgis` 3.7.0, built for `postgresql@18`, which is the same version as the server candidate. kvadro² runs 3.5.2. |
+| Who can create it | The 3.7.0 `postgis.control` (local copy) has no `trusted = true`, so `CREATE EXTENSION postgis` needs a superuser, and the `NOSUPERUSER` application roles cannot run it. `postgres` creates it once per database, and the HOMI migration uses `CREATE EXTENSION IF NOT EXISTS`, which is then a no-op. The server's control file is to be confirmed after the install. |
+
+Installing PostGIS needs DEC-09 (`docs/migration/10-target-architecture.md` §8) and the developer's go. Install `homi_staging_db` first, then `homi_db` before the first deploy with geography columns. The owner of the other product on this server gets a maintenance note.
+
 ## Rollback
 
 - Code: `homi-deploy <env> --ref <commit>`. The previous good commits are in `/var/lib/homi-deploy/<env>.history`, and a failed run prints the last one. Afterwards a plain `homi-deploy <env>` returns to the tip of `main`. Migrations are not rolled back without a decision (`parallel-work.md` §3); the plan warns when the target lacks migrations that already ran.

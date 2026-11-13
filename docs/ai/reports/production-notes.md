@@ -44,7 +44,9 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - **The Telescope and Horizon dashboards are open behind nginx basic auth on both environments (§15).**
     - Telescope records everything while HOMI is in development.
     - **Set `TELESCOPE_RECORD_ALL=false` before real user traffic**, because entries then carry personal data.
-  - Open decision: which bot gets `hook.homi.uz` (§8).
+  - The kvadro² migration plan is on `main` (PR #9, `docs/migration/`), and the development track owns it.
+    - PostGIS 3.7.0 is ready to install on the DB host. It is waiting for DEC-09 (§16).
+  - Open decision: which bot gets `hook.homi.uz` (§8). Since PR #9 this is DEC-05 (bot custody).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
 - **Servers.** Production and staging are live at `d9a5328` since 2026-11-13. That commit is PR #21, merged and applied at the developer's request («смержи #21 и примени 1–6», §15). `/var/lib/homi-deploy/{production,staging}.sha` = `d9a5328`.
   - The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup, metrics and Telescope-prune units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. All are the same: both dry runs show 14 `ok` and 0 `WARNING`.
@@ -224,6 +226,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | PR #9, the kvadro² audit and migration plan (~72k lines, docs only), was merged as one PR («смержи #9 и проверь PostGIS»). The development track writes the development plan («план разработки будет писать коллега») | §16. `docs/migration/` and `HANDOFF.md` §4 belong to the development track |
 | 2026-11-13 | **Telescope on the servers while HOMI is in development** («пока идет разработка включать на проде Telescope»). Access: **basic auth in nginx**. Recording: **everything except `/up`**. Retention: **24 h**. **Horizon** is behind the same auth. PR #21 merged and applied on request («смержи #21 и примени 1–6») without the second developer's review | §15. PR #21 changed development-track files (`backend/app`, `config/telescope.php`, tests) at the developer's request. `TELESCOPE_RECORD_ALL=false` before real traffic |
 | 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
 | 2026-11-13 | MinIO + CDN: packages 1–6 approved together («1-6»); **no quotas** on the media buckets; **versioning** on public and private with noncurrent versions kept **30 days** | §14; the disk is the limit, so `HomiMinioDiskLow` / `HomiMinioDiskCritical` were added |
@@ -707,3 +710,25 @@ How it works: `docs/infrastructure/deployment.md` "Dashboards".
 11. **Follow-ups.**
     - Developers add `TELESCOPE_RECORD_ALL=false` to their local `backend/.env`. Until then `make dev-check` fails on the missing key.
     - Before real user traffic, set `TELESCOPE_RECORD_ALL=false` on both servers.
+
+## 16. Done 2026-11-13 — PR #9 merged; PostGIS inventory (read-only)
+
+1. **PR #9 merged** at the developer's request («смержи #9 и проверь PostGIS»).
+   - It is the development track's kvadro² audit and migration plan: `docs/migration/`, 383 task files, docs only.
+   - It is about 72k lines, far over the PR size guideline. The developer accepted it as one PR.
+   - The development plan itself stays with the development track: «план разработки будет писать коллега». This track does not edit `docs/migration/` or `HANDOFF.md` §4.
+2. **PostGIS inventory.** This is step 1 of KV-INF-018 and answers the facts behind DEC-09.
+   - Access: `ssh app 'ssh root@5.45.127.98 …'`, read-only queries as `postgres`.
+   - Commands: `apt-cache policy`, and `apt-get -s` (simulation only).
+   - Result: `docs/infrastructure/deployment.md` "PostgreSQL extensions".
+     - PostgreSQL 18.6, and no extension other than `plpgsql` in any database.
+     - The candidate is PostGIS 3.7.0 from pgdg. Installing it means 50 new packages, with no upgrades or removals and no restart.
+     - Locally, Homebrew has PostGIS 3.7.0 for PostgreSQL 18.
+     - PostGIS is not a trusted extension, so `postgres` creates it per database.
+   - Nothing was installed or changed.
+3. **Next.** The developer decides DEC-09.
+   - On «adopt»: install `postgresql-18-postgis-3`, then `CREATE EXTENSION postgis` in `homi_staging_db`. `homi_db` follows before the first deploy with geography columns. Each step needs its own go.
+   - Then:
+     - verify with `postgis_full_version()` under the application role;
+     - add the extension check to the deploy checks;
+     - make sure the restore drill still passes with the extension.
