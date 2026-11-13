@@ -111,9 +111,32 @@ systemctl restart homi-next-landing homi-next-app homi-next-arm
 
 `homi-deploy` prints a `WARNING … differs` line for every server copy that no longer matches the checkout it deployed.
 
+## Dashboards (Telescope, Horizon)
+
+- **URLs.** `https://api.homi.uz/telescope` and `https://api.homi.uz/horizon`. Staging uses the same paths on `api.staging.homi.uz`. Pulse is not covered here.
+- **Access.** HTTP basic auth in the api vhost. The user is `homi`.
+  - Each environment has its own password in `/root/.homi-secrets/dashboards-<env>.password` on the app host (0600).
+  - Read it in your own terminal over ssh, never through a chat or a log.
+  - nginx checks it against `/etc/homi/dashboards-<env>.htpasswd` (`root:www-data`, 0640, SHA-512 crypt). It reads that file on every request, so a new password needs no reload.
+- **How it is enforced.** Only the dashboards' location block passes `HOMI_DASHBOARD_USER` (`$remote_user`) to PHP-FPM.
+  - The gates `viewTelescope` and `viewHorizon` allow only a request that carries it (`backend/app/Http/DashboardAccess.php`). A request that bypasses that block, such as `/index.php/telescope`, gets 403.
+  - Never set `HOMI_DASHBOARD_USER` in `.env`: dotenv copies `.env` keys into `$_SERVER`, which would open the dashboards to everyone.
+- **What is recorded.** Both `.env` files set `TELESCOPE_RECORD_ALL=true` while HOMI is in development (the developer's decision of 2026-11-13).
+  - That covers requests, queries, jobs, logs, commands, cache and Redis.
+  - `/up`, `/horizon*` and Telescope's own requests are not recorded (`config/telescope.php` `ignore_paths`).
+  - Set it to `false` before real user traffic, because entries then carry personal data. php-fpm picks the change up on the next request; Horizon picks it up after `horizon:terminate`.
+- **Retention: 24 hours.** `homi-telescope-prune.timer` runs `telescope:prune --hours=24` every hour, as `www-data`, for both environments. There is no Laravel scheduler on the host.
+- **New password.** Write a new password into the env's file (`umask 077; openssl rand -hex 16 > …password`).
+  - Then rewrite the htpasswd: `printf 'homi:%s\n' "$(openssl passwd -6 -stdin < …password)" > /etc/homi/dashboards-<env>.htpasswd`.
+  - The file keeps its owner and mode.
+
 ## Rollback
 
 - Code: `homi-deploy <env> --ref <commit>`. The previous good commits are in `/var/lib/homi-deploy/<env>.history`, and a failed run prints the last one. Afterwards a plain `homi-deploy <env>` returns to the tip of `main`. Migrations are not rolled back without a decision (`parallel-work.md` §3); the plan warns when the target lacks migrations that already ran.
 - A vhost: remove its symlink in `sites-enabled/`, `nginx -t`, reload. Certificates may stay.
 - A unit: `systemctl disable --now <unit>`.
+- Dashboards:
+  - `TELESCOPE_RECORD_ALL=false` in `.env` stops the full recording;
+  - the previous api vhost from `/root/.homi-backups/` plus `nginx -t` and a reload removes the basic auth block. The dashboards are then closed again: the gates still need `HOMI_DASHBOARD_USER`;
+  - `systemctl disable --now homi-telescope-prune.timer` stops the pruning.
 - Everything HOMI on the host: the three Next units and Horizon disabled, the five symlinks removed, `/var/www/homi.uz` left in place; the DNS still points at the host, so pages answer 404/502 from nginx until re-enabled.
