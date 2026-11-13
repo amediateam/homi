@@ -249,7 +249,8 @@ restart_horizon() {
     else
         artisan horizon:terminate # graceful: running jobs finish, systemd starts the new master
     fi
-    for _ in {1..60}; do
+    # horizon:terminate lets running jobs finish (supervisor-media: up to 300 s), so wait up to 360 s
+    for _ in {1..180}; do
         new=$(systemctl show -p MainPID --value "$HORIZON_UNIT")
         if [[ $new != 0 && $new != "$old" ]] && horizon_running; then
             log "    Horizon restarted (pid $old → $new)"
@@ -257,7 +258,7 @@ restart_horizon() {
         fi
         sleep 2
     done
-    die "Horizon did not come back within 120 s (journalctl -u $HORIZON_UNIT)"
+    die "Horizon did not come back within 360 s (journalctl -u $HORIZON_UNIT)"
 }
 
 deploy_backend() {

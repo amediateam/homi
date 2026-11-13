@@ -12,7 +12,9 @@ Restart=always
 RestartSec=3
 ExecStart=/usr/bin/php /var/www/staging.homi.uz/backend/artisan horizon
 ExecStop=/usr/bin/php /var/www/staging.homi.uz/backend/artisan horizon:terminate
-TimeoutStopSec=60
+# Longer than the longest Horizon job timeout (supervisor-media: 300 s, config/horizon.php), so a
+# stop or restart lets running jobs finish instead of killing them.
+TimeoutStopSec=330
 StandardOutput=journal
 StandardError=journal
 
