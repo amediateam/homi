@@ -16,10 +16,10 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Processes: Horizon, three Next SSR servers | **running** under systemd as `www-data` | §3 |
 | Staging (`/var/www/staging.homi.uz`, `*.staging.homi.uz`, ports 3200–3202, `homi_staging_db`, Redis 5/6) | **live** — same recipe, all five hosts `noindex`; verified from outside | §3b, §4 |
 | Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
-| MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
+| MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | **done** 2026-11-13: six `homi-*` buckets, two scoped users, CDN vhosts with TLS on `31.220.104.38`, both environments write media to MinIO; the application path (upload → WebP variants → CDN) tested end to end on both | §14, `docs/infrastructure/cdn.md` |
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
 | Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill from the MinIO copy passed on 2026-11-13 | §10, §11, `docs/infrastructure/backup-recovery.md` |
-| Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; Telegram delivery tested end to end on both paths | §12, `docs/infrastructure/monitoring.md` |
+| Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts (12 with the CDN hosts since §14) from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; Telegram delivery tested end to end on both paths | §12, `docs/infrastructure/monitoring.md` |
 
 ## Resume here (state at 2026-11-13)
 
@@ -32,6 +32,14 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. A test alert went through both Alertmanagers, with firing and resolved both delivered (§12 item 6).
   - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments were then at `05a7354`, and the new `homi-deploy` was installed.
   - Runtime monitoring is live (§13): the shared Redis, queues, Horizon, failed jobs and Laravel log errors, through `homi-metrics` every minute.
+  - **Media on MinIO is live (§14).**
+    - Buckets `homi-{public,private,tmp}` and `homi-staging-*` exist, with users `homi-app` and `homi-staging-app`.
+    - `cdn.homi.uz` and `cdn.staging.homi.uz` run on the MinIO host with TLS.
+    - Both `backend/.env` files point the media disks at S3.
+    - The CDN probes and the MinIO-disk alerts are in the monitoring.
+  - **Staging is unreachable from outside since the first failed external probe at about 13:18 UTC on 2026-11-13 (AM-46).**
+    - The new explicit DNS record `cdn.staging.homi.uz` shadows the `*.homi.uz` wildcard for every other `*.staging.homi.uz` name.
+    - The developer has to add `staging.homi.uz` and `*.staging.homi.uz` A records → `159.253.19.121` (§14 item 7).
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
 - **Servers.** Production and staging are live at `fc6e4b6` since 2026-11-13. That commit is PR #17, merged and deployed at the developer's request («смёржи #17 и сделай шаг на сервере», §13 item 8). `/var/lib/homi-deploy/{production,staging}.sha` = `fc6e4b6`.
@@ -39,15 +47,21 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - Backups of the replaced files are in `/root/.homi-backups/20261113/` on each host (§9, §12, §13).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
+  0. **DNS, developer:** `staging.homi.uz A 159.253.19.121` and `*.staging.homi.uz A 159.253.19.121`, so that staging resolves again (AM-46, §14 item 7). Then check that `HomiStagingEndpointDown` resolves.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
   2. ~~Backups~~ done 2026-11-13 (§10). Follow-ups:
      - ~~a restore drill into a scratch database~~ passed 2026-11-13 (§11);
      - ~~encryption~~ not needed: the developer's decision of 2026-11-13 (§6);
-     - a second off-host copy;
+     - a second off-host copy. Since §14 it should also cover the media buckets, which `homi-backup` does not copy and which live on MinIO's single disk;
      - ~~an alert when `homi-backup.service` fails~~ done 2026-11-13 (`HomiBackupFailed`, `HomiBackupStale`, §12).
-  3. The rest of §5, in the order the developer picks: MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
+  3. The rest of §5, in the order the developer picks:
+     - ~~MinIO and `cdn` DNS~~ done 2026-11-13 (§14);
+     - the SVN commits: the app host needs the owner's credentials; on the MinIO host `sites-available/homi/` is `svn add`ed, and its local `file://` repository needs only the go;
+     - `TELESCOPE_ENABLED`;
+     - a deploy trigger and atomic releases;
+     - release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
-- **Next numbers:** AM-46, KI-27. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
+- **Next numbers:** AM-48, KI-27. AM-46 and AM-47 are in §14. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
 
 ## 1. Servers as found (survey 2026-11-09, read-only)
 
@@ -180,8 +194,8 @@ Assumption mismatches:
 
 1. **SVN**: `cd /etc/nginx && svn commit -m "homi: production vhosts" sites-available/homi` with the owner's credentials (the files are added, not committed).
 2. **Telegram production bot**: the developer writes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` into `/var/www/homi.uz/backend/.env` (not via chat) and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` into `frontend/{landing,app}/.env.local` (then rebuild those two apps); registering the webhook (`setWebhook` to `https://hook.homi.uz/telegram/webhook` with the secret from `.env`) is a separate approved action — T1 of the development track decides what the handler does first.
-3. **MinIO** (ADR-0011): buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
-4. **Staging follow-ups**: the staging bot's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` in `/var/www/staging.homi.uz/backend/.env` (+ rebuild of landing/app) and its webhook (separate approval); `homi-staging-*` buckets and `cdn.staging.homi.uz` DNS together with item 3; decide whether production keeps following `main` or moves to a release tag (both checkouts are on `main` today).
+3. ~~**MinIO**~~ done 2026-11-13 (§14, `docs/infrastructure/cdn.md`). The original plan: (ADR-0011) buckets `homi-public`, `homi-private`, `homi-tmp` (+ staging), user `homi-app`, anonymous `GetObject` on the public bucket, `cdn.homi.uz` edge-cache vhost on `31.220.104.38` (`phase-3-notes.md` §A), then `AWS_*` / `MEDIA_*_BUCKET` / disk names in `.env`, and **DNS `cdn.homi.uz` → `31.220.104.38`** (developer). Until then `MEDIA_PUBLIC_URL` points at a name that resolves to the app host and serves nothing.
+4. **Staging follow-ups**: the staging bot's `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` in `/var/www/staging.homi.uz/backend/.env` (+ rebuild of landing/app) and its webhook (separate approval); ~~`homi-staging-*` buckets and `cdn.staging.homi.uz` DNS together with item 3~~ done 2026-11-13 (§14); decide whether production keeps following `main` or moves to a release tag (both checkouts are on `main` today).
 5. **Deploy follow-ups** (the script itself is done, §3c):
    - ~~the first production run of `homi-deploy production`~~ done 2026-11-13 (`--full`, AM-42 fixed there, §9);
    - a trigger — GitHub Actions over SSH, or manual only — decide;
@@ -207,6 +221,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
 | 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
+| 2026-11-13 | MinIO + CDN: packages 1–6 approved together («1-6»); **no quotas** on the media buckets; **versioning** on public and private with noncurrent versions kept **30 days** | §14; the disk is the limit, so `HomiMinioDiskLow` / `HomiMinioDiskCritical` were added |
 | 2026-11-13 | **Backup encryption is not needed** («шифрование бэкапов не нужно!»), with no condition attached (it supersedes «пока без шифрования» from the same day) | `docs/infrastructure/backup-recovery.md` updated; the follow-up was removed from "Resume here" |
 | 2026-11-13 | Backups per the plan in §10 («да, запускай»), not encrypted («пока без шифрования») | `docs/infrastructure/backup-recovery.md` |
 | 2026-11-13 | PRs #10 and #11 merged without the second developer's review («смёржи #10 и #11») | `parallel-work.md` §2 asks for the other developer's review; the second developer can still comment after the merge |
@@ -494,3 +509,126 @@ The developer asked for this («Добавить мониторинг памят
    - The old script was copied to `/root/.homi-backups/20261113/bin/homi-deploy.bak-20261113c-homi`, and the new one was installed from the production checkout (`bash -n` ok; it now checks `homi-metrics`).
    - Both dry runs: exit 0, 14 `ok`, 0 `WARNING`, "nothing to deploy — fc6e4b6 is live".
    - `homi.prom` was 58 s old, and all 18 HOMI rules were inactive.
+
+## 14. Done 2026-11-13 — media on MinIO and the CDN (staging and production)
+
+The developer chose this item («MinIO + cdn»), then approved packages 1–6 together («1-6»), with no quotas and versioning for 30 days (§6). The runbook is `docs/infrastructure/cdn.md`; the reviewed copies are in `infra/{production,staging}/minio-host/`.
+
+1. **Survey** (read-only).
+   - **MinIO host:**
+     - versions: MinIO `RELEASE.2025-09-07`, `mcli` `2025-08-13`, nginx 1.31.2, certbot 2.1.0;
+     - 227 GB free on `/`, 41 % used;
+     - before this change there were six buckets, including `homi-backups`, with one user per bucket;
+     - global CORS `cors_allow_origin=*`.
+   - **MinIO host nginx:**
+     - `/etc/nginx` is an SVN working copy of `file:///var/repository/server.uz` (last revision r74);
+     - snippets `proxy-buffers-minio.conf` and `security-headers.conf` are there, the `s3_cache` zone is in `nginx.conf`, the ACME webroot is `/var/www/certbot`;
+     - per-vhost logs are rotated by `/etc/logrotate.d/nginx-vhosts.conf` (`/var/log/nginx/*/*.log`);
+     - the host's `HostDiskSpaceLow` / `Critical` rules exist but route to another chat.
+   - **App host:**
+     - all 11 media and S3 keys exist in both `.env` files (names only, `grep -o`);
+     - `artisan tinker` showed the disks `public` / `local` / `tmp` and `media_files` = 0 in both databases;
+     - there is no config cache (`bootstrap/cache` holds only `packages.php` and `services.php`);
+     - `https://s3.hc.uz/` answers 403 from the app host, so it is reachable.
+   - **DNS:** `cdn.homi.uz` and `cdn.staging.homi.uz` already resolved to `31.220.104.38` at the authoritative name server (TTL 3600). The developer had switched them, so plan step 3 was already done.
+   - **Repository:**
+     - `league/flysystem-aws-s3-v3` is installed and the `s3_*` disks are configured;
+     - the three Next apps already allow both CDN hosts in `images.remotePatterns`;
+     - no application change was needed.
+2. **MinIO** (package 1).
+   - **Buckets:**
+     - `mcli mb --with-versioning` for `homi-public`, `homi-private`, `homi-staging-public` and `homi-staging-private`;
+     - `mcli mb` for `homi-tmp` and `homi-staging-tmp`.
+   - **ILM:**
+     - the four versioned buckets got `--noncurrent-expire-days 30` and `--expire-delete-marker`;
+     - the two tmp buckets got `--expire-days 1`.
+   - **Policies:**
+     - `homi-app-rw` and `homi-staging-app-rw` were created from the repository files; the sha256 of the copies on the host matched;
+     - `mcli anonymous set-json` gives `GetObject` on the two public buckets.
+   - **Users:**
+     - the secrets were generated on the app host with `openssl rand -hex 24` into `/root/.homi-secrets/s3-app-{production,staging}.secret` (0600);
+     - they were piped from ssh to ssh into `mcli admin user add`, checked for length there and never printed;
+     - the policies were attached.
+   - `_probe/ok.txt` was put in both public buckets.
+   - **Access matrix** from the app host (alias through `MC_HOST_*`, nothing written to `~/.mcli`):
+     - each user could put, cat and ls in its three buckets, and rm in tmp;
+     - the other environment's buckets, `homi-backups`, `telegram-media` and `mb` were refused (`Access Denied` / `Insufficient permissions`, exit 1).
+   - **Anonymous access** through `s3.hc.uz`:
+     - the probe answered 200;
+     - listing the public bucket gave 403, and a missing key in it gave 404 (AM-47);
+     - keys in the private and tmp buckets gave 403.
+   - The test objects were removed with `mcli rm --versions --force`. The buckets then held only the two probes.
+3. **CDN vhosts** (packages 2 and 4) on the MinIO host.
+   - **Files:** `sites-available/homi/cdn{,.staging}.homi.conf`, flat symlinks in `sites-enabled/`, and the log directory `/var/log/nginx/homi/`.
+   - **Install sequence:**
+     - a port-80 bootstrap first, then `nginx -t` and reload;
+     - `certbot certonly --webroot -w /var/www/certbot` for both names (ECDSA, `notAfter` 2027-02-11, webroot renewal);
+     - then the reviewed files (sha256 equal to the repository), `nginx -t` and reload.
+   - **From outside**, both hosts (staging also sends `X-Robots-Tag: noindex, nofollow` everywhere):
+     - HTTP/2, `31.220.104.38`;
+     - the probe gives 200 with `no-store`;
+     - a test object under `originals/` gave 200 `immutable`, `X-Cache-Status` MISS, then HIT, and HIT again with `?versionId=x&acl`;
+     - a missing key, `/` and `/homi-private/x` give an nginx 404 without MinIO XML;
+     - `POST` gives 404, `/minio/admin/…` gives 403, and HTTP gives a 301 to HTTPS.
+   - **Cleanup:**
+     - the test object was removed with all its versions, and its cache file was deleted (key `md5("https" + host + uri)`);
+     - right after that, one staging request still got a 200, and the next one got a 404 (a worker still had the file open).
+   - `svn add sites-available/homi` was run, but there was no commit (§5).
+4. **Application** (package 5), staging first, then production.
+   - **`.env`:**
+     - the 11 keys were each checked to occur exactly once, then set with `sed -i`; the secret came from the file;
+     - `.env` stays `640 root:www-data`;
+     - `tinker` confirmed the disks `s3_*`, the endpoint, the key name, a secret length of 48 and the buckets.
+   - **Horizon:** `horizon:terminate` started a new master (staging pid 140462 → 1455310, production 1314689 → 1460497). `horizon:status` shows it running, with 3 supervisors.
+   - **Smoke test.** A scratch script ran through `tinker` as `www-data`, with its state in a 0700 temp directory; signed URLs were not printed.
+     - `HashedUploader` stored a public and a private original (PNG 1200×800 in random colours).
+     - `GenerateImageVariantsJob` ran through Horizon's `media` queue.
+     - A presigned `PUT` went to tmp.
+   - **Results, both environments:**
+     - the public original through the CDN gave 200 `image/png`;
+     - the private `temporaryUrl` gave 200; unsigned, the same object gave 403;
+     - the presigned `PUT` gave 200;
+     - the variants 320, 640 and 1024 (`image/webp`, immutable) gave 200 through the CDN; 1920 was skipped, because originals are never upscaled;
+     - `queue:failed` stayed empty.
+   - **Smoke-test cleanup:**
+     - rows and objects were deleted through the disks, as `MediaController::destroy` does;
+     - then all versions on MinIO and the CDN cache entries were removed;
+     - `media_files` = 0 in both databases.
+   - **`homi-deploy --dry-run`, both environments:** 14 `ok`, 0 `WARNING`. The plan is "checkout → health checks", because `main` has the docs PR #18 beyond the servers' `fc6e4b6`.
+5. **Monitoring** (package 6) on the MinIO host. Backups: `/root/.homi-backups/20261113/{prometheus.yml,homi.rules.yml}.bak-20261113b-homi`.
+   - **Targets:** `prometheus.yml` gained `https://cdn.homi.uz/_probe/ok.txt` and `https://cdn.staging.homi.uz/_probe/ok.txt` in the `homi-blackbox` job (12 targets). They were inserted by a script that asserts one anchor each; the diff is 2 lines.
+   - **Rules:**
+     - `homi.rules.yml` now names the MinIO host in the descriptions for `cdn.*`;
+     - it gained the group `homi-storage`: `HomiMinioDiskLow` (< 15 % free for 15 min, warning) and `HomiMinioDiskCritical` (< 5 % for 5 min, critical), with `project=homi`.
+   - **Validation:**
+     - `promtool check config` found 4 rule files, 7 rules in `homi.rules.yml`;
+     - then `systemctl reload prometheus`, with `reloadConfigSuccess: true`.
+   - **After the first scrape:**
+     - both CDN probes are 1, and their certificates have 90 days left;
+     - 12 targets are up, and the disk is 57.5 % free;
+     - the new rules are `ok` and inactive.
+6. **Assumption mismatches.**
+   - **AM-46.** Planning assumed that moving the `cdn` names was independent of the other names.
+     - In fact the staging names had no records of their own and resolved only through the `*.homi.uz` wildcard.
+     - An explicit `cdn.staging.homi.uz` record makes `staging.homi.uz` an existing, empty node. Under RFC 4592 the wildcard then no longer applies to any name below it.
+     - The result: `staging.homi.uz` answers NOERROR with no address, and `app.`, `api.`, `arm.` and `hook.staging.homi.uz` answer NXDOMAIN (authoritative, serial 2026111302).
+     - Production is unaffected: `cdn.homi.uz` sits directly below `homi.uz`.
+   - **AM-47.** `phase-3-notes.md` §A says that MinIO answers 403 for a missing key when the anonymous policy is `GetObject` only.
+     - On 2026-11-13 it answered **404** for `homi-public/_test/missing.txt`, and 403 only where no anonymous policy applies (private, tmp, listing).
+     - The CDN vhost maps both to 404, so nothing depends on it.
+7. **Staging DNS incident (AM-46).**
+   - The first failed external probe was at about 13:18 UTC; the earlier DNS change was hidden by the one-hour record TTL.
+   - `HomiStagingEndpointDown` started firing at 13:28:46–13:30:31 UTC for the five staging URLs and went to the elmarket chat. `cdn.staging.homi.uz` stays up.
+   - From the app host, `homi-deploy` still sees staging as 200: its health checks do not go through public DNS.
+   - Needed, from the developer: `staging.homi.uz A 159.253.19.121` and `*.staging.homi.uz A 159.253.19.121`. After that, resolvers may keep the cached NXDOMAIN for up to the zone's 3600 s negative TTL.
+8. **Notes for the development track** (not production faults):
+   - `temporaryUploadUrl` signs only `Host`, so the presigned `PUT` does not bind `Content-Type`. The first staging test stored `application/x-www-form-urlencoded` (curl's default), and with the header it stored `image/png`. `register` re-reads and re-encodes the bytes.
+   - MinIO accepts `PutObject` with `visibility: public` (the `x-amz-acl` header) from `HashedUploader`.
+9. **Not verified:**
+   - a browser upload from `app.homi.uz` (CORS) — there is no upload UI yet;
+   - caching under real traffic;
+   - `certbot renew --dry-run` for the two new lineages;
+   - ILM expiry in practice (tmp after 1 day, noncurrent after 30);
+   - restoring a noncurrent version;
+   - `HomiMinioDisk*` actually firing.
+10. **Rollback:** `docs/infrastructure/cdn.md` "Rollback". Removing buckets or users needs the developer's go, because it deletes media.
