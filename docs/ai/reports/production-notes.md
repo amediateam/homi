@@ -29,10 +29,10 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - PRs #10 (infra fixes) and #11 (ADR-0015) were merged on 2026-11-13 at the developer's request, without the second developer's review (§6).
   - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
   - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
-  - The backup files were installed from the branch `chore/infra-backups`, so until that PR is merged and deployed, the server has files the checkout lacks. After the merge, `homi-deploy` checks them out, and the updated `/usr/local/sbin/homi-deploy` must be installed from the checkout, because the drift check now covers `homi-backup` and `*.timer`.
+  - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments are at `05a7354`, and the new `homi-deploy` is installed.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
-- **Servers.** Production and staging are live at `e654925`, and `/var/lib/homi-deploy/{production,staging}.sha` = `e654925`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, both Horizon units and the script; all are the same today. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
+- **Servers.** Production and staging are live at `05a7354`, and `/var/lib/homi-deploy/{production,staging}.sha` = `05a7354`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon and backup units, the backup timer, `homi-deploy` and `homi-backup`; all are the same today. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
@@ -356,6 +356,12 @@ The developer approved the plan («да, запускай») and chose no encryp
 6. **Round trip.** The latest production prefix was downloaded to a temp directory. `sha256sum -c SHA256SUMS` passed for both files, and `pg_restore --list` lists the 23 tables (`migrations`, `users`, `media_files`, `telegram_updates` and the rest). The storage archive is readable with `zstd -dc | tar -t`.
 7. **Timer.** `systemctl enable --now homi-backup.timer`: enabled and active, first run Fri 2026-11-13 21:31:56 UTC.
 8. **`homi-deploy` drift check** (repository): it now also compares `infra/<env>/systemd/*.timer` and `/usr/local/sbin/homi-backup`. The installed `homi-deploy` is still the `e654925` version and gets replaced from the checkout after the merge.
+9. **After the merge of PR #13** (`05a7354`, the developer's go):
+   - `homi-deploy staging` and then `homi-deploy production`: plan `checkout → health checks`, 14 `ok` each, 3 s each. The only drift warning was `/usr/local/sbin/homi-deploy`.
+   - The old script was copied to `/root/.homi-backups/20261113/bin/homi-deploy.bak-20261113b-homi`, and the new one was installed from `/var/www/homi.uz/infra/production/bin/homi-deploy` (`bash -n` ok).
+   - Both dry runs: exit 0, 14 `ok`, 0 `WARNING`, "nothing to deploy — 05a7354 is live".
+   - `cmp` against the checkout shows `homi-backup` and its service and timer are the same.
+   - The timer is unchanged: next run Fri 2026-11-13 21:31:56 UTC.
 
 Not verified:
 - A restore into a database (the drill in the runbook needs `postgres` on the DB host);
