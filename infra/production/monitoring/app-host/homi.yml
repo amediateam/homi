@@ -1,0 +1,73 @@
+# HOMI (homi.uz) — internal checks, evaluated by the Prometheus on the app host 159.253.19.121
+# (the elmarket-prod stack; its Alertmanager routes by severity to the elmarket ops chat).
+# Installed as /etc/prometheus/rules/homi.yml (root:root 0644).
+# Source: github.com/amediateam/homi infra/production/monitoring/app-host/homi.yml
+# Runbook: docs/infrastructure/monitoring.md
+groups:
+  - name: homi-app-host
+    rules:
+      - alert: HomiProductionUnitDown
+        expr: node_systemd_unit_state{name=~"horizon-homi\\.service|homi-next-(landing|app|arm)\\.service", state="active"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $labels.name }} is not active"
+          description: "systemd has reported {{ $labels.name }} as not active for 3 minutes. Check: systemctl status {{ $labels.name }}; journalctl -u {{ $labels.name }} -n 100."
+
+      - alert: HomiStagingUnitDown
+        expr: node_systemd_unit_state{name=~"horizon-homi-staging\\.service|homi-staging-next-(landing|app|arm)\\.service", state="active"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI staging: {{ $labels.name }} is not active"
+          description: "systemd has reported {{ $labels.name }} as not active for 10 minutes. Check: systemctl status {{ $labels.name }}."
+
+      - alert: HomiBackupFailed
+        expr: node_systemd_unit_state{name="homi-backup.service", state="failed"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI: the last homi-backup run failed"
+          description: "homi-backup.service is in the failed state. Check: journalctl -u homi-backup.service --since today; docs/infrastructure/backup-recovery.md."
+
+      - alert: HomiBackupStale
+        expr: time() - homi_backup_last_success_timestamp_seconds{env="production"} > 26 * 3600
+        for: 15m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: no successful backup for {{ $value | humanizeDuration }}"
+          description: "The nightly homi-backup runs at 21:30 UTC. Check: cat /var/lib/homi-backup/production.last-success; journalctl -u homi-backup.service."
+
+      - alert: HomiStagingBackupStale
+        expr: time() - homi_backup_last_success_timestamp_seconds{env="staging"} > 26 * 3600
+        for: 15m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI staging: no successful backup for {{ $value | humanizeDuration }}"
+          description: "Check: cat /var/lib/homi-backup/staging.last-success; journalctl -u homi-backup.service."
+
+      - alert: HomiMonitoringMetricsMissing
+        expr: absent(node_systemd_unit_state{name="horizon-homi.service"}) or absent(homi_backup_last_success_timestamp_seconds{env="production"})
+        for: 30m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI: unit or backup metrics are missing"
+          description: "node_exporter no longer exports node_systemd_unit_state for the HOMI units, or homi_backup.prom is missing from /var/lib/prometheus/node-exporter. The checks above are blind until this is fixed (docs/infrastructure/monitoring.md)."

@@ -19,7 +19,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
 | Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill from the MinIO copy passed on 2026-11-13 | §10, §11, `docs/infrastructure/backup-recovery.md` |
-| Monitoring | not started | §5 |
+| Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; end-to-end delivery not tested yet | §12, `docs/infrastructure/monitoring.md` |
 
 ## Resume here (state at 2026-11-13)
 
@@ -29,6 +29,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - PRs #10 (infra fixes) and #11 (ADR-0015) were merged on 2026-11-13 at the developer's request, without the second developer's review (§6).
   - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
   - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
+  - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. Pending: a test alert to confirm Telegram delivery end to end (it posts in a shared chat, so it waits for the developer's go).
   - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments are at `05a7354`, and the new `homi-deploy` is installed.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
@@ -40,7 +41,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
      - ~~a restore drill into a scratch database~~ passed 2026-11-13 (§11);
      - encryption before the kvadro² personal data arrives;
      - a second off-host copy;
-     - an alert when `homi-backup.service` fails, as part of monitoring.
+     - ~~an alert when `homi-backup.service` fails~~ done 2026-11-13 (`HomiBackupFailed`, `HomiBackupStale`, §12).
   3. The rest of §5, in the order the developer picks: MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
 - **Who.** This is the first developer's track. SSH, DNS and server credentials are not handed over to the second developer (`HANDOFF.md` §5), so the developer has to hand over access before the colleague can continue here.
 - **Next numbers:** AM-46, KI-27. PR #9 takes AM-44, AM-45, KI-25 and KI-26. Check `main` first; the other track may have taken more.
@@ -186,7 +187,7 @@ Assumption mismatches:
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
-9. ~~Backups (database dumps off-host; `storage/`)~~ done 2026-11-13 (§10). Still open: monitoring (`/up` probes, unit failures including `homi-backup.service`), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
+9. ~~Backups (database dumps off-host; `storage/`)~~ done 2026-11-13 (§10). ~~Monitoring~~ done 2026-11-13 (§12). ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
 10. **Decision: which bot gets `hook.homi.uz`.** Item 2 plans the existing HOMI production bot there. The kvadro² plan (PR #9, `18` T0.4) puts `@KvadroAppBot` on the same URL at the cut-over. One URL with one secret serves one bot.
 
 Decision already taken on the password question: the developer accepted that the production DB password passed through chat («ничего страшного»); no rotation planned.
@@ -202,6 +203,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
 | 2026-11-13 | Backups per the plan in §10 («да, запускай»). **Dumps not encrypted for now** («пока без шифрования»): encryption comes before the kvadro² personal data | `docs/infrastructure/backup-recovery.md`; encryption is a follow-up in "Resume here" |
 | 2026-11-13 | PRs #10 and #11 merged without the second developer's review («смёржи #10 и #11») | `parallel-work.md` §2 asks for the other developer's review; the second developer can still comment after the merge |
 
@@ -397,3 +399,50 @@ Approved by the developer («давай, сделай тестовое восс�
    - `rm -rf /tmp/homi-restore-drill /root/restore-drill` on the DB host and `/root/restore-drill` on the app host. `ls` confirms all three are gone.
 
 Not done: a staging drill (same format; not needed for this proof), and a restore of `storage/app` (its archive was tested with `zstd -dc | tar -t` in §10).
+
+## 12. Done 2026-11-13 — monitoring
+
+The developer said «давай, настрой мониторинг» and chose two things: alerts **to the elmarket ops chat**, and **external plus internal** checks. The runbook is `docs/infrastructure/monitoring.md`, and the reviewed copies are in `infra/production/monitoring/`.
+
+1. **Survey** (read-only). HOMI had no monitoring.
+   - The app host runs the **elmarket-prod** stack:
+     - Prometheus 3.14 on `127.0.0.1:9090` with `--web.enable-lifecycle`;
+     - Alertmanager 0.34 on `127.0.0.1:9093`, routing by severity to three receivers. All three use one chat and `bot_token_file`, bot @nimaqattabot (from `getMe`; only the username was printed);
+     - Grafana;
+     - node_exporter 1.12 on `*:9100`, which ufw closes to the outside. Its textfile collector is in `/var/lib/prometheus/node-exporter`, from elmarket's drop-in `textfile.conf`.
+     - A `blackbox_exporter` 0.25 binary exists there but does not run.
+   - The MinIO host runs the **mars** stack:
+     - Prometheus 2.42 under `/prom`;
+     - Alertmanager 0.25 under `/am`, with one inline-token receiver for another chat (`chat_id` hashes compared, not printed) and a Watchdog route;
+     - node exporter;
+     - ufw allows only 22, 80, 443 and 3690.
+     - `prometheus-blackbox-exporter` 0.23 was available but not installed.
+   - The app host's `ServiceDown` rule waits `for: 3m`, so a node_exporter restart does not fire it.
+2. **App host.** Backups of every changed file are in `/root/.homi-backups/20261113/`.
+   - **`homi-backup`** now writes `homi_backup.prom` (`homi_backup_last_success_timestamp_seconds{env}`) after every run. The old copy was backed up and the new one installed. A run through `systemctl start homi-backup.service` gave `Result=success`; the metric is exported, with `node_textfile_scrape_error 0`.
+   - **node_exporter drop-in `textfile.conf`.** Two comment lines plus `--collector.systemd --collector.systemd.unit-include=(…HOMI units…)[.]service`, inserted with a textual edit; nothing else changed (diff checked).
+     - `systemd-analyze verify` had no remarks.
+     - `daemon-reload`, then a restart, then active.
+     - The 9 HOMI units are exported, and `node_scrape_collector_success` is 1 for both `systemd` and `textfile`.
+   - **`/etc/prometheus/rules/homi.yml`**, 6 rules.
+     - `promtool check rules` and `promtool check config` passed, then `systemctl reload prometheus`.
+     - `reloadConfigSuccess: true`; all 6 rules `ok` and `inactive`.
+     - Prometheus sees 8 active HOMI units (the oneshot `homi-backup` is inactive between runs) and a backup age of about 330 s.
+3. **MinIO host.** Backups are in `/root/.homi-backups/20261113/`.
+   - **Blackbox exporter.** `apt-get install --no-install-recommends prometheus-blackbox-exporter` installed one package, 0.23.0.
+     - `ARGS` gained `--web.listen-address=127.0.0.1:9115`, and the `homi_https` module was appended to `/etc/prometheus/blackbox.yml`.
+     - `--config.check` ok, restart, active, listening on `127.0.0.1:9115` only.
+     - Manual probes of `homi.uz/`, `hook.homi.uz/up` and `api.staging.homi.uz/up`: 200, `probe_success 1`, 86 days left on the certificates.
+   - **Prometheus.** The `homi-blackbox` job (10 targets, labels `project=homi`, `env`) was appended to `prometheus.yml`, and `rules/homi.rules.yml` (5 rules) installed.
+     - `promtool check config` passed (4 rule files), then reload; `reloadConfigSuccess: true`.
+     - After one minute, all 10 targets are `up`, there are 10 `probe_success` series and all are 1. The earliest certificate expiry is 85.6 days away.
+     - All 5 rules `ok` and `inactive`.
+   - **Alertmanager.** Added a first child route `project = "homi"` → receiver `homi`, plus the receiver itself. The token and `chat_id` were read on the app host, piped from ssh to ssh into a script on the MinIO host, and checked for shape there. They were never printed, and the script was deleted afterwards.
+     - The file stays `0640 root:prometheus`. `amtool check-config`: SUCCESS, 2 receivers.
+     - `amtool config routes test`: `project=homi` goes to `homi`; another critical alert and `Watchdog` still go to `telegram`.
+     - `systemctl reload prometheus-alertmanager`: `alertmanager_config_last_reload_successful 1`, and the API lists the receivers `telegram` and `homi`.
+4. **Not verified:**
+   - **Telegram delivery end to end**: no test alert was sent, because it would post in a shared chat; it waits for the developer's go.
+   - **An alert actually firing**: every rule is `inactive` because everything is healthy.
+   - **Coverage gaps**: Redis memory, Laravel errors and queue depth are not covered (runbook "Not covered yet").
+5. **Rollback.** Restore the backups in `/root/.homi-backups/20261113/` on each host, then validate and reload (runbook "Rollback"). Removing the blackbox package needs the developer's go.

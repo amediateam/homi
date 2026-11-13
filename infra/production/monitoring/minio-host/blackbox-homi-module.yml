@@ -1,0 +1,11 @@
+  # HOMI (homi.uz) — module used by the homi-blackbox job: HTTPS only, IPv4, 200 expected.
+  # Added under `modules:` in /etc/prometheus/blackbox.yml on 31.220.104.38.
+  # Source: github.com/amediateam/homi infra/production/monitoring/minio-host/blackbox-homi-module.yml
+  homi_https:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      valid_status_codes: [200]
+      fail_if_not_ssl: true
+      follow_redirects: false
