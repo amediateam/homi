@@ -31,15 +31,16 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
   - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. A test alert went through both Alertmanagers, with firing and resolved both delivered (§12 item 6).
   - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments are at `05a7354`, and the new `homi-deploy` is installed.
+  - Runtime monitoring is live (§13): the shared Redis, queues, Horizon, failed jobs and Laravel log errors, through `homi-metrics` every minute.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
-- **Servers.** Production and staging are live at `05a7354`, and `/var/lib/homi-deploy/{production,staging}.sha` = `05a7354`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon and backup units, the backup timer, `homi-deploy` and `homi-backup`; all are the same today. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
+- **Servers.** Production and staging are live at `1ff5896` since 2026-11-13 («давай, сделай checkout»), and `/var/lib/homi-deploy/{production,staging}.sha` = `1ff5896`. The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup and metrics units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. Until the branch `chore/infra-monitoring-runtime` is merged and deployed, it reports `homi-metrics` (installed from that branch) and the old installed `homi-deploy`. Backups of the replaced files are in `/root/.homi-backups/20261113/` (§9).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
   2. ~~Backups~~ done 2026-11-13 (§10). Follow-ups:
      - ~~a restore drill into a scratch database~~ passed 2026-11-13 (§11);
-     - encryption before the kvadro² personal data arrives;
+     - ~~encryption~~ not needed: the developer's decision of 2026-11-13 (§6);
      - a second off-host copy;
      - ~~an alert when `homi-backup.service` fails~~ done 2026-11-13 (`HomiBackupFailed`, `HomiBackupStale`, §12).
   3. The rest of §5, in the order the developer picks: MinIO and `cdn` DNS, the SVN commit, `TELESCOPE_ENABLED`, a deploy trigger and atomic releases, release tag vs `main`.
@@ -204,7 +205,8 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
 | 2026-11-13 | Monitoring: **alerts to the elmarket ops chat** (bot @nimaqattabot), not a new HOMI chat. **External + internal checks**, built on the existing stacks | §12; the MinIO host's Alertmanager got a `homi` receiver with that bot and chat |
-| 2026-11-13 | Backups per the plan in §10 («да, запускай»). **Dumps not encrypted for now** («пока без шифрования»): encryption comes before the kvadro² personal data | `docs/infrastructure/backup-recovery.md`; encryption is a follow-up in "Resume here" |
+| 2026-11-13 | **Backup encryption is not needed** («шифрование бэкапов не нужно!»), with no condition attached (it supersedes «пока без шифрования» from the same day) | `docs/infrastructure/backup-recovery.md` updated; the follow-up was removed from "Resume here" |
+| 2026-11-13 | Backups per the plan in §10 («да, запускай»), not encrypted («пока без шифрования») | `docs/infrastructure/backup-recovery.md` |
 | 2026-11-13 | PRs #10 and #11 merged without the second developer's review («смёржи #10 и #11») | `parallel-work.md` §2 asks for the other developer's review; the second developer can still comment after the merge |
 
 ## 7. Not verified
@@ -451,3 +453,37 @@ The developer said «давай, настрой мониторинг» and chose
    - `alertmanager_notifications_total{integration="telegram"}`, firing and resolved: app host 632 → 633 → 634, MinIO host 57 → 58 → 59, rising by exactly 2 each.
    - `alertmanager_notifications_failed_total` stayed 0 on both, and `amtool alert query` afterwards shows no test alert left.
    - The message in the chat itself was not seen by the agent. The developer can confirm it.
+
+## 13. Done 2026-11-13 — Redis, queue, Horizon and Laravel-error monitoring
+
+The developer asked for this («Добавить мониторинг памяти Redis, ошибок Laravel и очередей») and decided the same day that backup encryption is not needed (§6). The runbook is `docs/infrastructure/monitoring.md` ("Alerts", "How homi-metrics measures"). No new package was installed: only `redis-cli`, `gawk`, `tail` and the textfile collector from §12 are used.
+
+1. **Survey** (read-only; `.env` values were not read, because the guard hook blocked a first attempt that would have printed them):
+   - `artisan tinker` (production) printed the config:
+     - `app.timezone` = UTC; queue connection `redis` on the `default` Redis connection (DB 3); Redis prefix `homi-production-`; Horizon prefix `homi_horizon:`; failed driver `database-uuids`;
+     - Horizon queues `default`, `notifications`, `telegram`, `media`, `ingest`; `failed_jobs` = 0.
+   - `horizon:status` was "running" in both environments.
+   - The key names in DB 3–6 match: `homi_horizon:*` in DB 3 and DB 5, cache keys `homi-<env>-homi-cache-*` in DB 4 and DB 6, and no queue keys, because every queue is empty.
+   - Horizon's source (`RedisJobRepository`, `RedisMasterSupervisorRepository`, `StatusCommand`) gives the keys `failed_jobs` and `masters` and the 14 s master window.
+   - The staging log `laravel-2026-11-08.log` shows the line format, with 12 old `staging.ERROR: Vite manifest not found` entries. Production has no log file yet.
+2. **`homi-metrics`** (`infra/production/bin/homi-metrics` → `/usr/local/sbin/homi-metrics`):
+   - It writes `homi.prom` atomically and keeps a value only if it is numeric, because one bad line would make node_exporter drop the whole file.
+   - A manual run took 0.21 s, exit 0, and produced 26 samples: Redis up, 4 853 744 bytes, maxmemory 0, 0 evictions, RDB ok; DB keys 8/1/8/1; every queue 0; failed 0/0; Horizon running 1/1; log errors 0/0.
+   - node_exporter exports 48 `homi_` series (including backups and the delayed/reserved states), with `node_textfile_scrape_error 0`.
+   - The log-error `awk` was tested locally on a synthetic log. It counted 3 of 3 expected entries (ERROR, CRITICAL, ERROR with JSON), and skipped the 20-minute-old ERROR, the INFO, the WARNING and the stack-trace line.
+3. **Timer.**
+   - `homi-metrics.{service,timer}` installed; `systemd-analyze verify` had no remarks; `daemon-reload`; `enable --now`.
+   - It runs every minute (last 09:21:01, next 09:22:00 UTC), and the file stays under 60 s old.
+   - The journal shows nothing beyond start and finish.
+4. **Rules.** `homi.yml` gained the group `homi-runtime` with 12 rules (the file now holds 18). The old file was kept as `/root/.homi-backups/20261113/homi.yml.bak-20261113b-homi`.
+   - `promtool check rules` and `check config` passed, then `systemctl reload prometheus`, with `reloadConfigSuccess: true`.
+   - Both groups are `ok`, and nothing is pending or firing.
+   - Prometheus queries return `homi_redis_up` 1, `homi_horizon_running` 1/1, log errors 0/0 and a queue sum of 0.
+5. **`homi-deploy`** (repository): the drift check also compares `homi-metrics`. Its timer and service are covered by the existing `*.service` / `*.timer` globs.
+6. **Not verified:**
+   - an alert from these rules actually firing (everything is healthy);
+   - a paused Horizon, a real backlog or real failed jobs (none could be produced without touching the environments);
+   - the thresholds: 2 / 8 GiB for Redis and 100 / 1000 ready jobs are starting values.
+7. **Rollback:**
+   - `systemctl disable --now homi-metrics.timer`, then remove the three installed files, `homi.prom` and the `homi-runtime` group (or restore `homi.yml.bak-20261113b-homi`);
+   - `promtool check config`, then reload.

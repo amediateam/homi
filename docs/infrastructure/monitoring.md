@@ -7,7 +7,7 @@ Purpose: what watches HOMI, where the alerts go, and how to check or change it. 
 | Layer | Runs on | Stack | Checks | Alerts go to |
 |---|---|---|---|---|
 | External | MinIO host `31.220.104.38` | "mars": Prometheus 2.42, Alertmanager 0.25, plus `prometheus-blackbox-exporter` 0.23 (Debian package, added for HOMI, `127.0.0.1:9115` only) | HTTPS probes of the 10 HOMI hosts (200 expected), TLS expiry | route `project="homi"` → receiver `homi` → the elmarket ops chat |
-| Internal | app host `159.253.19.121` | "elmarket-prod": Prometheus 3.14, Alertmanager 0.34, node_exporter 1.12 | systemd state of the HOMI units, age of the last successful backup | the existing severity routes → the elmarket ops chat (bot @nimaqattabot) |
+| Internal | app host `159.253.19.121` | "elmarket-prod": Prometheus 3.14, Alertmanager 0.34, node_exporter 1.12 | systemd state of the HOMI units, age of the last successful backup; from `homi-metrics` (every minute): shared Redis (up, memory, evictions, RDB), queue lengths, Horizon running/paused, failed jobs, Laravel log errors | the existing severity routes → the elmarket ops chat (bot @nimaqattabot) |
 
 All alerts go to one chat, the elmarket ops chat, by the developer's decision of 2026-11-13. External probes run from another host, so they also report the whole app host going down. The internal checks cannot do that, because their Prometheus runs on the host they watch.
 
@@ -24,6 +24,17 @@ All alerts go to one chat, the elmarket ops chat, by the developer's decision of
 | `HomiBackupFailed` | internal | `homi-backup.service` in the failed state for 5 min | warning |
 | `HomiBackupStale` / `HomiStagingBackupStale` | internal | last successful backup older than 26 h | critical / warning |
 | `HomiMonitoringMetricsMissing` | internal | the unit metrics or `homi_backup.prom` are missing for 30 min | warning |
+| `HomiRedisDown` | internal | the shared Redis does not answer `PING` for 2 min | critical |
+| `HomiRedisMemoryHigh` / `HomiRedisMemoryCritical` | internal | the instance's `used_memory` > 2 GiB for 15 min / > 8 GiB for 5 min (all projects together; nothing caps or evicts it) | warning / critical |
+| `HomiRedisEvicting` | internal | any `evicted_keys` in 15 min (the policy was `noeviction`; eviction can drop queued jobs) | critical |
+| `HomiRedisSnapshotFailing` | internal | the last RDB snapshot failed, for 10 min (RDB is the only persistence) | warning |
+| `HomiHorizonNotRunning` / `HomiStagingHorizonNotRunning` | internal | no live Horizon master, or a paused one (the `horizon:status` logic), for 5 / 15 min | critical / warning |
+| `HomiQueueBacklog` / `HomiQueueBacklogCritical` | internal | > 100 / > 1000 ready jobs on one production queue for 10 min | warning / critical |
+| `HomiJobsFailing` | internal | Horizon's failed-job set grew in 15 min (production) | warning |
+| `HomiLaravelErrors` | internal | ≥ 1 production log entry at ERROR or above in the last 15 min | warning |
+| `HomiMetricsStale` | internal | `homi.prom` not rewritten for 5 min, or missing | warning |
+
+The thresholds above are starting values, set when Redis held 4.8 MB and every queue was empty. Change them in `app-host/homi.yml` and here. Staging's queue and log values are exported but raise no alert.
 
 Probed URLs:
 - production: `https://homi.uz/`, `https://app.homi.uz/`, `https://arm.homi.uz/`, `https://api.homi.uz/up`, `https://hook.homi.uz/up`;
@@ -31,10 +42,17 @@ Probed URLs:
 
 The probe module is `homi_https`: IPv4, TLS required, no redirects followed, timeout 10 s, every 60 s.
 
+How `homi-metrics` measures. It is read-only, needs no new package and never reads `.env`.
+- **Redis:** one `INFO` on the instance gives `used_memory`, `maxmemory`, `evicted_keys`, `rdb_last_bgsave_status` and the key counts of DB 3–6.
+- **Queues:** `LLEN <prefix>queues:<q>` (ready), plus `ZCARD` of `:delayed` and `:reserved`, for `default`, `notifications`, `telegram`, `media` and `ingest`. The prefix is `homi-production-` (DB 3) or `homi-staging-` (DB 5).
+- **Failed jobs:** `ZCARD homi_horizon:failed_jobs`. This is Horizon's 7-day set; the `failed_jobs` table holds the same failures.
+- **Horizon status:** live masters are the entries in `homi_horizon:masters` from the last 14 s, and `HGET …:master:<name> status`.
+- **Laravel errors:** lines that match `[YYYY-MM-DD HH:MM:SS] <env>.(ERROR|CRITICAL|ALERT|EMERGENCY):` in the last 15 min (UTC, the app timezone) in yesterday's and today's `laravel-<date>.log`, reading at most the last 20 MB of each.
+- **Constants:** the Redis DB numbers and prefixes are constants in the script and must match each `backend/.env` (`environments.md`).
+
 Not covered yet:
-- Redis memory: there is no exporter. Host memory and disk are covered by the stacks' own `LowMemory` / `LowDiskSpace` / `Host*` alerts.
-- Laravel errors and queue depth.
 - The MinIO bucket `homi-backups` itself. ILM keeps it small, and the mars stack watches MinIO's disk.
+- HTTP 5xx rates from the nginx logs, and job wait times. Horizon's own metrics need `horizon:snapshot` on a scheduler, and no scheduler runs yet.
 
 ## Files (reviewed copies in `infra/production/monitoring/`)
 
@@ -43,6 +61,7 @@ Not covered yet:
 | `app-host/homi.yml` | `/etc/prometheus/rules/homi.yml` (root 0644) on `159.253.19.121` |
 | `app-host/node_exporter-textfile.conf` | `/etc/systemd/system/node_exporter.service.d/textfile.conf`. The drop-in is **shared**: elmarket added the textfile collector, and HOMI added the systemd collector, limited to the HOMI units. |
 | — (written by `homi-backup`) | `/var/lib/prometheus/node-exporter/homi_backup.prom` → `homi_backup_last_success_timestamp_seconds{env}` |
+| `../bin/homi-metrics`, `../systemd/homi-metrics.{service,timer}` | `/usr/local/sbin/homi-metrics`, `/etc/systemd/system/homi-metrics.{service,timer}` (every minute) → `/var/lib/prometheus/node-exporter/homi.prom`. The `homi-deploy` drift check compares all three. |
 | `minio-host/homi.rules.yml` | `/etc/prometheus/rules/homi.rules.yml` (root 0644) on `31.220.104.38` |
 | `minio-host/prometheus-homi-blackbox.yml` | appended to `scrape_configs` in `/etc/prometheus/prometheus.yml` |
 | `minio-host/blackbox-homi-module.yml` | appended to `modules:` in `/etc/prometheus/blackbox.yml`; `ARGS` in `/etc/default/prometheus-blackbox-exporter` adds `--web.listen-address=127.0.0.1:9115` |

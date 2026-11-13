@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+#
+# homi-metrics — export HOMI's Redis, queue, Horizon and Laravel-log metrics to
+# node_exporter's textfile collector on the app host.
+#
+#   Reviewed source: infra/production/bin/homi-metrics (this file)
+#   Installed copy:  /usr/local/sbin/homi-metrics (root, 0755)
+#   Schedule:        homi-metrics.timer (every minute) → homi-metrics.service
+#   Alerts:          infra/production/monitoring/app-host/homi.yml
+#   Runbook:         docs/infrastructure/monitoring.md
+#
+# Read-only towards everything it measures:
+# - redis-cli INFO / LLEN / ZCARD / ZREVRANGEBYSCORE / HGET on the shared instance;
+# - the tail of storage/logs/laravel-*.log.
+# It never reads a .env file. It writes /var/lib/prometheus/node-exporter/homi.prom
+# atomically, and the file always carries homi_metrics_last_run_timestamp_seconds,
+# so a stale file is visible.
+
+set -Euo pipefail
+umask 022
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+TEXTFILE_DIR=/var/lib/prometheus/node-exporter
+OUT=$TEXTFILE_DIR/homi.prom
+# The queues of the Horizon supervisors in backend/config/horizon.php.
+QUEUES=(default notifications telegram media ingest)
+HORIZON_PREFIX=homi_horizon: # config('horizon.prefix'), on the default Redis connection
+HORIZON_MASTER_TTL=14        # seconds; MasterSupervisorRepository::names() treats older masters as gone
+ERROR_WINDOW_SECONDS=900
+LOG_TAIL_BYTES=20000000
+# Each value must match that environment's backend/.env (docs/infrastructure/environments.md).
+declare -A ROOT=([production]=/var/www/homi.uz [staging]=/var/www/staging.homi.uz)
+declare -A REDIS_DB=([production]=3 [staging]=5)
+declare -A PREFIX=([production]=homi-production- [staging]=homi-staging-)
+
+lines=()
+metric() { lines+=("$1"); }
+# Adds "<series> <value>" only when the value is a number: one bad line would make
+# node_exporter reject the whole file.
+sample() { [[ $2 =~ ^[0-9]+$ ]] && lines+=("$1 $2") || echo "homi-metrics: skipped $1 (value: ${2:-empty})" >&2; }
+
+rcli() { redis-cli --no-auth-warning -n "$1" "${@:2}"; }
+
+redis_metrics() {
+    local info key value db
+    metric '# HELP homi_redis_up 1 if the shared Redis instance answers PING.'
+    metric '# TYPE homi_redis_up gauge'
+    if [[ $(rcli 0 PING 2>/dev/null) != PONG ]]; then
+        metric 'homi_redis_up 0'
+        return 1
+    fi
+    metric 'homi_redis_up 1'
+    info=$(rcli 0 INFO 2>/dev/null | tr -d '\r') || return 1
+    value() { awk -F: -v k="$1" '$1 == k { print $2; exit }' <<<"$info"; }
+    metric '# HELP homi_redis_used_memory_bytes used_memory of the shared Redis instance (all projects).'
+    metric '# TYPE homi_redis_used_memory_bytes gauge'
+    sample homi_redis_used_memory_bytes "$(value used_memory)"
+    metric '# HELP homi_redis_maxmemory_bytes maxmemory of the shared instance (0 = no limit).'
+    metric '# TYPE homi_redis_maxmemory_bytes gauge'
+    sample homi_redis_maxmemory_bytes "$(value maxmemory)"
+    metric '# HELP homi_redis_evicted_keys_total evicted_keys of the shared instance.'
+    metric '# TYPE homi_redis_evicted_keys_total counter'
+    sample homi_redis_evicted_keys_total "$(value evicted_keys)"
+    metric '# HELP homi_redis_rdb_last_bgsave_ok 1 if the last RDB snapshot succeeded.'
+    metric '# TYPE homi_redis_rdb_last_bgsave_ok gauge'
+    [[ $(value rdb_last_bgsave_status) == ok ]] && metric 'homi_redis_rdb_last_bgsave_ok 1' || metric 'homi_redis_rdb_last_bgsave_ok 0'
+    metric '# HELP homi_redis_db_keys Keys in the Redis databases HOMI uses (3/4 production, 5/6 staging).'
+    metric '# TYPE homi_redis_db_keys gauge'
+    for db in 3 4 5 6; do
+        key=$(awk -F'[:=,]' -v d="db$db" '$1 == d { print $3; exit }' <<<"$info")
+        sample "homi_redis_db_keys{db=\"$db\"}" "${key:-0}"
+    done
+}
+
+queue_metrics() {
+    local env db prefix q masters name status running cutoff
+    metric '# HELP homi_queue_jobs Jobs in a HOMI Redis queue, by state (ready = waiting, delayed, reserved = running).'
+    metric '# TYPE homi_queue_jobs gauge'
+    for env in production staging; do
+        db=${REDIS_DB[$env]}
+        prefix=${PREFIX[$env]}
+        for q in "${QUEUES[@]}"; do
+            sample "homi_queue_jobs{env=\"$env\",queue=\"$q\",state=\"ready\"}" "$(rcli "$db" LLEN "${prefix}queues:$q")"
+            sample "homi_queue_jobs{env=\"$env\",queue=\"$q\",state=\"delayed\"}" "$(rcli "$db" ZCARD "${prefix}queues:$q:delayed")"
+            sample "homi_queue_jobs{env=\"$env\",queue=\"$q\",state=\"reserved\"}" "$(rcli "$db" ZCARD "${prefix}queues:$q:reserved")"
+        done
+    done
+    metric '# HELP homi_horizon_failed_jobs Failed jobs Horizon keeps (trim.failed in config/horizon.php, 7 days).'
+    metric '# TYPE homi_horizon_failed_jobs gauge'
+    for env in production staging; do
+        sample "homi_horizon_failed_jobs{env=\"$env\"}" "$(rcli "${REDIS_DB[$env]}" ZCARD "${HORIZON_PREFIX}failed_jobs")"
+    done
+    metric '# HELP homi_horizon_running 1 if Horizon has a live master and none is paused (the logic of artisan horizon:status).'
+    metric '# TYPE homi_horizon_running gauge'
+    cutoff=$(($(date +%s) - HORIZON_MASTER_TTL))
+    for env in production staging; do
+        db=${REDIS_DB[$env]}
+        masters=$(rcli "$db" ZREVRANGEBYSCORE "${HORIZON_PREFIX}masters" +inf "$cutoff")
+        running=0
+        if [[ -n $masters ]]; then
+            running=1
+            while IFS= read -r name; do
+                status=$(rcli "$db" HGET "${HORIZON_PREFIX}master:$name" status)
+                [[ $status == running ]] || running=0
+            done <<<"$masters"
+        fi
+        metric "homi_horizon_running{env=\"$env\"} $running"
+    done
+}
+
+# Laravel's daily log lines start with "[YYYY-MM-DD HH:MM:SS] <env>.<LEVEL>:" in
+# config('app.timezone'), which is UTC in both environments.
+log_metrics() {
+    local env logs since count f
+    since=$(date -u -d "@$(($(date +%s) - ERROR_WINDOW_SECONDS))" '+%Y-%m-%d %H:%M:%S')
+    metric "# HELP homi_laravel_log_errors Laravel log entries at ERROR or above in the last $((ERROR_WINDOW_SECONDS / 60)) minutes."
+    metric '# TYPE homi_laravel_log_errors gauge'
+    for env in production staging; do
+        logs=${ROOT[$env]}/backend/storage/logs
+        count=0
+        for f in "$logs/laravel-$(date -u -d yesterday +%F).log" "$logs/laravel-$(date -u +%F).log" "$logs/laravel.log"; do
+            [[ -r $f ]] || continue
+            count=$((count + $(tail -c "$LOG_TAIL_BYTES" "$f" | awk -v since="$since" '
+                /^\[[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]\] [A-Za-z0-9_-]+\.(ERROR|CRITICAL|ALERT|EMERGENCY):/ \
+                    && substr($0, 2, 19) >= since { n++ }
+                END { print n + 0 }')))
+        done
+        sample "homi_laravel_log_errors{env=\"$env\"}" "$count"
+    done
+}
+
+main() {
+    local tmp
+    [[ -d $TEXTFILE_DIR ]] || {
+        echo "homi-metrics: $TEXTFILE_DIR is missing" >&2
+        exit 1
+    }
+    if redis_metrics; then
+        queue_metrics
+    fi
+    log_metrics
+    metric '# HELP homi_metrics_last_run_timestamp_seconds Unix time homi-metrics last wrote this file.'
+    metric '# TYPE homi_metrics_last_run_timestamp_seconds gauge'
+    sample homi_metrics_last_run_timestamp_seconds "$(date +%s)"
+    tmp=$(mktemp "$TEXTFILE_DIR/.homi.XXXXXX")
+    printf '%s\n' "${lines[@]}" >"$tmp"
+    chmod 0644 "$tmp"
+    mv -f -- "$tmp" "$OUT"
+}
+
+main "$@"
