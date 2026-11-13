@@ -25,8 +25,8 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 - **2026-11-12.**
   - The shared Redis was checked (§8): `noeviction`, no `maxmemory`, RDB only.
   - The development track's PR #9 (kvadro² plan) was reviewed: the production parts, as a PR comment.
-  - Branch `chore/infra-review-fixes` holds the fixes to the vhost and unit copies and to `homi-deploy`.
-  - When it merges, the servers need the apply batch in §8 (developer's go).
+  - PR #10 (`chore/infra-review-fixes`: the fixes to the vhost and unit copies and to `homi-deploy`) and PR #11 (ADR-0015) were merged into `main` on 2026-11-13 at the developer's request («смёржи #10 и #11»), without the second developer's review (§6).
+  - The servers still run the old copies. They need the apply batch in §8 (developer's go).
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. PR #8 (`chore/infra-db-production`) was merged on 2026-11-09 at the developer's request («commit push main»). New work on this track branches from `origin/main` and goes through a PR.
 - **Server checkouts.** The checkouts are still at `591ceb4`. The next `homi-deploy` only checks out the merge: it touches docs and `infra/` only, so no backend or frontend step runs. After that the drift check has `infra/` to compare against.
@@ -180,7 +180,7 @@ Assumption mismatches:
 6. **Telescope in production**: `TELESCOPE_ENABLED` defaults to `true` and records every request into `homi_db`; set `TELESCOPE_ENABLED=false` (or gate + prune) before real traffic — a one-line `.env` change, developer's call. Pulse: enabled; its `pulse:check` worker is not running (the house runs one per project).
 7. Scheduler cron for `www-data` once `schedule:list` is non-empty; `php artisan optimize` in the deploy; log rotation of `storage/logs` (daily driver, no retention set).
 8. DB host follow-ups with the cluster owner: `shared_buffers` (128 MB default on 32 GB), who loads `/etc/nftables.conf` at boot, PostGIS install if T7 adopts it (ADR first).
-9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). The ADR amendments were proposed on 2026-11-12 in their own PR (branch `docs/adr-0011-0013-amend`). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
+9. Backups (database dumps off-host; `storage/`), monitoring (`/up` probes, unit failures), ADR amendments: ADR-0011 (Redis = DB indexes on the shared instance; `homi_db` naming), ADR-0013 (process manager = systemd, `/opt/node26`). **Done for the ADRs:** ADR-0015 records both amendments (PR #11, merged 2026-11-13). ADRs are shared files, so they never go into an infra PR (`parallel-work.md` §1).
 10. **Decision: which bot gets `hook.homi.uz`.** Item 2 plans the existing HOMI production bot there. The kvadro² plan (PR #9, `18` T0.4) puts `@KvadroAppBot` on the same URL at the cut-over. One URL with one secret serves one bot.
 
 Decision already taken on the password question: the developer accepted that the production DB password passed through chat («ничего страшного»); no rotation planned.
@@ -196,6 +196,7 @@ Decision already taken on the password question: the developer accepted that the
 | 2026-11-09 | Redis: **DB indexes on the shared instance** (production 3/4, staging 5/6) | closes the "Redis per environment" question of `environments.md` |
 | 2026-11-09 | Process manager: **systemd** (pm2 unused on the host; its stray daemon removed) | ADR-0013's open choice settled for production |
 | 2026-11-09 | Batches 3 and 4 approved together ("продолжать без паузы") | recorded here; the per-action rule still applies to new work |
+| 2026-11-13 | PRs #10 and #11 merged without the second developer's review («смёржи #10 и #11») | `parallel-work.md` §2 asks for the other developer's review; the second developer can still comment after the merge |
 
 ## 7. Not verified
 
