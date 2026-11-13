@@ -37,17 +37,17 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
     - `cdn.homi.uz` and `cdn.staging.homi.uz` run on the MinIO host with TLS.
     - Both `backend/.env` files point the media disks at S3.
     - The CDN probes and the MinIO-disk alerts are in the monitoring.
-  - **Staging is unreachable from outside since the first failed external probe at about 13:18 UTC on 2026-11-13 (AM-46).**
-    - The new explicit DNS record `cdn.staging.homi.uz` shadows the `*.homi.uz` wildcard for every other `*.staging.homi.uz` name.
-    - The developer has to add `staging.homi.uz` and `*.staging.homi.uz` A records → `159.253.19.121` (§14 item 7).
+  - **Staging was unreachable from outside on 2026-11-13 from about 13:18 to 15:21 UTC (AM-46), and that is resolved.**
+    - The new explicit DNS record `cdn.staging.homi.uz` had shadowed the `*.homi.uz` wildcard for every other `*.staging.homi.uz` name.
+    - The developer then added explicit A records for each staging name. `HomiStagingEndpointDown` cleared by 15:21:27 UTC (§14 item 7).
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
-- **Servers.** Production and staging are live at `fc6e4b6` since 2026-11-13. That commit is PR #17, merged and deployed at the developer's request («смёржи #17 и сделай шаг на сервере», §13 item 8). `/var/lib/homi-deploy/{production,staging}.sha` = `fc6e4b6`.
+- **Servers.** Production and staging are live at `490dab9` since 2026-11-13. That commit is PR #19, merged at the developer's request («commit push main») and checked out on both hosts on their go («1 и 2 да», §14 item 11). `/var/lib/homi-deploy/{production,staging}.sha` = `490dab9`.
   - The checkouts contain `infra/`, so the drift check compares 10 vhosts, the Horizon, backup and metrics units, their timers, `homi-deploy`, `homi-backup` and `homi-metrics`. All are the same: both dry runs show 14 `ok` and 0 `WARNING`.
   - Backups of the replaced files are in `/root/.homi-backups/20261113/` on each host (§9, §12, §13).
 - **Check in one command:** `ssh root@159.253.19.121 'homi-deploy staging --dry-run && homi-deploy production --dry-run'`. Each should print "nothing to deploy", 14 checks `ok` and no `WARNING`. That held on 2026-11-13 (§9).
 - **Next, in this order.** Each item needs the developer's go.
-  0. **DNS, developer:** `staging.homi.uz A 159.253.19.121` and `*.staging.homi.uz A 159.253.19.121`, so that staging resolves again (AM-46, §14 item 7). Then check that `HomiStagingEndpointDown` resolves.
+  0. ~~DNS for the staging names~~ done 2026-11-13. The developer added the records, and `HomiStagingEndpointDown` cleared (AM-46, §14 item 7).
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
   2. ~~Backups~~ done 2026-11-13 (§10). Follow-ups:
      - ~~a restore drill into a scratch database~~ passed 2026-11-13 (§11);
@@ -56,7 +56,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
      - ~~an alert when `homi-backup.service` fails~~ done 2026-11-13 (`HomiBackupFailed`, `HomiBackupStale`, §12).
   3. The rest of §5, in the order the developer picks:
      - ~~MinIO and `cdn` DNS~~ done 2026-11-13 (§14);
-     - the SVN commits: the app host needs the owner's credentials; on the MinIO host `sites-available/homi/` is `svn add`ed, and its local `file://` repository needs only the go;
+     - the SVN commit on the app host, which needs the owner's credentials. The MinIO host's commit was done on 2026-11-13 as r76 (§14 item 11);
      - `TELESCOPE_ENABLED`;
      - a deploy trigger and atomic releases;
      - release tag vs `main`.
@@ -573,7 +573,7 @@ The developer chose this item («MinIO + cdn»), then approved packages 1–6 to
    - **Cleanup:**
      - the test object was removed with all its versions, and its cache file was deleted (key `md5("https" + host + uri)`);
      - right after that, one staging request still got a 200, and the next one got a 404 (a worker still had the file open).
-   - `svn add sites-available/homi` was run, but there was no commit (§5).
+   - `svn add sites-available/homi` was run. The commit followed after the merge, as r76 (item 11).
 4. **Application** (package 5), staging first, then production.
    - **`.env`:**
      - the 11 keys were each checked to occur exactly once, then set with `sed -i`; the secret came from the file;
@@ -620,7 +620,15 @@ The developer chose this item («MinIO + cdn»), then approved packages 1–6 to
    - The first failed external probe was at about 13:18 UTC; the earlier DNS change was hidden by the one-hour record TTL.
    - `HomiStagingEndpointDown` started firing at 13:28:46–13:30:31 UTC for the five staging URLs and went to the elmarket chat. `cdn.staging.homi.uz` stays up.
    - From the app host, `homi-deploy` still sees staging as 200: its health checks do not go through public DNS.
-   - Needed, from the developer: `staging.homi.uz A 159.253.19.121` and `*.staging.homi.uz A 159.253.19.121`. After that, resolvers may keep the cached NXDOMAIN for up to the zone's 3600 s negative TTL.
+   - **The fix.** The developer added explicit A records → `159.253.19.121`. There is no `*.staging` wildcard, so `x.staging.homi.uz` is still NXDOMAIN.
+     - First for `app.`, `api.`, `arm.` and `hook.staging.homi.uz` (serial 2026111306).
+     - Then for `staging.homi.uz` itself (serial 2026111307).
+   - **Recovery.**
+     - The MinIO host's resolver `82.197.81.10` kept the NXDOMAIN with the old serial 2026111302 until its negative cache ran out.
+     - The probes came back between 15:18:57 and 15:21:27 UTC, and the alert's last firing sample is at 15:21:27.
+     - Afterwards Prometheus and Alertmanager showed no `Homi*` alert, and `alertmanager_notifications_failed_total{integration="telegram"}` was 0 (64 sent since the Alertmanager started).
+     - Whether the "resolved" messages reached the chat was not checked.
+     - At about 15:24 UTC `1.1.1.1` and `8.8.8.8` resolved the four subdomains but still served a cached empty answer for `staging.homi.uz`. That clears within the 3600 s negative TTL.
 8. **Notes for the development track** (not production faults):
    - `temporaryUploadUrl` signs only `Host`, so the presigned `PUT` does not bind `Content-Type`. The first staging test stored `application/x-www-form-urlencoded` (curl's default), and with the header it stored `image/png`. `register` re-reads and re-encodes the bytes.
    - MinIO accepts `PutObject` with `visibility: public` (the `x-amz-acl` header) from `HashedUploader`.
@@ -632,3 +640,11 @@ The developer chose this item («MinIO + cdn»), then approved packages 1–6 to
    - restoring a noncurrent version;
    - `HomiMinioDisk*` actually firing.
 10. **Rollback:** `docs/infrastructure/cdn.md` "Rollback". Removing buckets or users needs the developer's go, because it deletes media.
+11. **After the merge of PR #19** (`490dab9`). The developer asked for the merge («commit push main») and approved the server steps («1 и 2 да»).
+    - **Checkout.** `homi-deploy staging`, then `homi-deploy production`. Each was a checkout only (17 changed files, plan "checkout → health checks") and took 3 s.
+      - There was no drift warning: the reviewed copies of the app host's files did not change in PR #19.
+      - Both dry runs afterwards: exit 0, 14 `ok`, 0 `WARNING`, "nothing to deploy — 490dab9 is live".
+    - **SVN on the MinIO host.** Before the commit, both vhosts' sha256 matched `infra/{production,staging}/minio-host/nginx/`.
+      - `svn commit sites-available/homi` gave **r76**.
+      - The working copy had been at r74, so r75 came from another working copy.
+      - Only that path was committed. The host's other uncommitted changes stay as they were: `M server/scripts/deploy-server-etc.sh` and 35 unversioned paths, which belong to other tenants and their owner.
