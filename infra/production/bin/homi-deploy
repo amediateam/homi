@@ -385,6 +385,7 @@ drift() {
     done
     same_file "$ROOT/infra/production/bin/homi-deploy" "$INSTALLED"
     same_file "$ROOT/infra/production/bin/homi-backup" /usr/local/sbin/homi-backup
+    same_file "$ROOT/infra/production/bin/homi-metrics" /usr/local/sbin/homi-metrics
 }
 
 main() {

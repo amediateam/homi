@@ -71,3 +71,136 @@ groups:
         annotations:
           summary: "HOMI: unit or backup metrics are missing"
           description: "node_exporter no longer exports node_systemd_unit_state for the HOMI units, or homi_backup.prom is missing from /var/lib/prometheus/node-exporter. The checks above are blind until this is fixed (docs/infrastructure/monitoring.md)."
+
+  # Runtime checks from homi-metrics (infra/production/bin/homi-metrics, every minute → homi.prom).
+  # Thresholds are starting values; change them here and in docs/infrastructure/monitoring.md.
+  - name: homi-runtime
+    rules:
+      - alert: HomiRedisDown
+        expr: homi_redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "Shared Redis on the app host does not answer PING"
+          description: "HOMI queues and cache (and the other projects on this instance) are down. Check: systemctl status redis-server; redis-cli PING."
+
+      - alert: HomiRedisMemoryHigh
+        expr: homi_redis_used_memory_bytes > 2 * 1024 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "Shared Redis uses {{ $value | humanize1024 }}B"
+          description: "The instance has no maxmemory and evicts nothing, so it grows until the host runs short of memory. Check which DB grows: redis-cli INFO keyspace (HOMI: 3/4 production, 5/6 staging)."
+
+      - alert: HomiRedisMemoryCritical
+        expr: homi_redis_used_memory_bytes > 8 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "Shared Redis uses {{ $value | humanize1024 }}B"
+          description: "A quarter of the host's 32 GB. Find the growing DB with redis-cli INFO keyspace before the host starts swapping."
+
+      - alert: HomiRedisEvicting
+        expr: increase(homi_redis_evicted_keys_total[15m]) > 0
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "Shared Redis evicted {{ $value }} keys in 15 minutes"
+          description: "The policy was noeviction with no maxmemory (ADR-0015); eviction can silently drop queued jobs. Check: redis-cli CONFIG GET maxmemory-policy; CONFIG GET maxmemory."
+
+      - alert: HomiRedisSnapshotFailing
+        expr: homi_redis_rdb_last_bgsave_ok == 0
+        for: 10m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "Shared Redis: the last RDB snapshot failed"
+          description: "Without AOF, the RDB snapshot is the only persistence. Check: redis-cli INFO persistence; disk space; journalctl -u redis-server."
+
+      - alert: HomiHorizonNotRunning
+        expr: homi_horizon_running{env="production"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: Horizon is inactive or paused"
+          description: "No live Horizon master, or a paused one, although the unit may be active. Check: sudo -u www-data php artisan horizon:status in /var/www/homi.uz/backend; artisan horizon:continue if paused on purpose earlier."
+
+      - alert: HomiStagingHorizonNotRunning
+        expr: homi_horizon_running{env="staging"} == 0
+        for: 15m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI staging: Horizon is inactive or paused"
+          description: "Check: sudo -u www-data php artisan horizon:status in /var/www/staging.homi.uz/backend."
+
+      - alert: HomiQueueBacklog
+        expr: homi_queue_jobs{env="production", state="ready"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $value }} jobs waiting on queue {{ $labels.queue }}"
+          description: "The queue has not drained for 10 minutes. Check Horizon (https://api.homi.uz/horizon, or artisan horizon:status) and the supervisor of this queue in config/horizon.php."
+
+      - alert: HomiQueueBacklogCritical
+        expr: homi_queue_jobs{env="production", state="ready"} > 1000
+        for: 10m
+        labels:
+          severity: critical
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $value }} jobs waiting on queue {{ $labels.queue }}"
+          description: "Workers are not keeping up or are stuck. Check Horizon and journalctl -u horizon-homi."
+
+      - alert: HomiJobsFailing
+        expr: delta(homi_horizon_failed_jobs{env="production"}[15m]) > 0
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $value }} jobs failed in the last 15 minutes"
+          description: "Failed jobs are listed in Horizon (Failed jobs) and in the failed_jobs table; artisan queue:failed shows them, queue:retry re-runs them."
+
+      - alert: HomiLaravelErrors
+        expr: homi_laravel_log_errors{env="production"} > 0
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $value }} Laravel errors in the last 15 minutes"
+          description: "Entries at ERROR or above in /var/www/homi.uz/backend/storage/logs/laravel-<date>.log. Check: grep -E '\\] production\\.(ERROR|CRITICAL|ALERT|EMERGENCY):' on today's file."
+
+      - alert: HomiMetricsStale
+        expr: time() - homi_metrics_last_run_timestamp_seconds > 300 or absent(homi_metrics_last_run_timestamp_seconds)
+        for: 5m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI: homi-metrics has not written homi.prom for 5 minutes"
+          description: "The Redis, queue, Horizon and log checks are blind. Check: systemctl status homi-metrics.timer homi-metrics.service; journalctl -u homi-metrics.service."

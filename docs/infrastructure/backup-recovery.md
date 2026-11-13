@@ -16,7 +16,7 @@ Not backed up here:
 - nginx and systemd: the reviewed copies are in `infra/`.
 - The MinIO media buckets do not exist yet.
 
-The dumps are **not encrypted**. This was the developer's decision on 2026-11-13, and it holds while there is almost no personal data. Public-key encryption comes before the kvadro² data is moved.
+The dumps are **not encrypted**. The developer decided this on 2026-11-13 («шифрование бэкапов не нужно!»), and it was not made conditional on the amount of personal data. The bucket is private, the user has no delete right, and the transfer uses TLS.
 
 ## Where and how long
 

@@ -1,0 +1,10 @@
+# HOMI — run homi-metrics every minute.
+[Unit]
+Description=HOMI metrics every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

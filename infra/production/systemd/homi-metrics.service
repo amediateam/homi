@@ -1,0 +1,11 @@
+# HOMI — export Redis, queue, Horizon and Laravel-log metrics for the app-host Prometheus
+# (docs/infrastructure/monitoring.md). Started every minute by homi-metrics.timer.
+[Unit]
+Description=HOMI metrics for node_exporter's textfile collector
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homi-metrics
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=50
