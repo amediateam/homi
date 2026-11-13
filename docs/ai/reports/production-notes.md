@@ -18,7 +18,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | Telegram production and staging bots | tokens not on the server yet; webhooks not registered | §5 |
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
-| Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill into a database not run yet | §10, `docs/infrastructure/backup-recovery.md` |
+| Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill from the MinIO copy passed on 2026-11-13 | §10, §11, `docs/infrastructure/backup-recovery.md` |
 | Monitoring | not started | §5 |
 
 ## Resume here (state at 2026-11-13)
@@ -37,7 +37,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 - **Next, in this order.** Each item needs the developer's go.
   1. Decide which bot gets `hook.homi.uz` (§5 item 10). Then: the bot tokens, which the developer writes into `.env`, and the webhooks.
   2. ~~Backups~~ done 2026-11-13 (§10). Follow-ups:
-     - a restore drill into a scratch database on the DB host (needs `postgres`, developer's go);
+     - ~~a restore drill into a scratch database~~ passed 2026-11-13 (§11);
      - encryption before the kvadro² personal data arrives;
      - a second off-host copy;
      - an alert when `homi-backup.service` fails, as part of monitoring.
@@ -364,10 +364,36 @@ The developer approved the plan («да, запускай») and chose no encryp
    - The timer is unchanged: next run Fri 2026-11-13 21:31:56 UTC.
 
 Not verified:
-- A restore into a database (the drill in the runbook needs `postgres` on the DB host);
+- ~~A restore into a database~~: done on 2026-11-13 (§11);
 - a run that fails on purpose (the per-environment subshell and the exit code are reasoned from the script, not tested);
 - ILM expiry in practice (first due 2026-11-27).
 
 Rollback:
 - `systemctl disable --now homi-backup.timer`, then remove the three installed files and run `systemctl daemon-reload`.
 - On MinIO, the bucket and user can only be removed with the developer's go, because removing them deletes backups.
+
+## 11. Done 2026-11-13 — restore drill (production backup)
+
+Approved by the developer («давай, сделай тестовое восстановление бэкапа»). The procedure is in `docs/infrastructure/backup-recovery.md` "Restore" step 2. The live databases were only read.
+
+1. **Access path to the DB host.**
+   - From the developer machine, `ssh root@5.45.127.98` timed out, and `nc -z` failed on 22 and 5432. That machine's current IP is not in the DB host's whitelist; whether it ever was is `unverified`.
+   - `ssh -J` through the app host failed with `administratively prohibited`: the app host's sshd forbids forwarding.
+   - The app host's root key is authorised on the DB host, and its host key is in `known_hosts` (`StrictHostKeyChecking=yes` passed). So every DB-host command ran as `ssh app 'ssh root@5.45.127.98 …'`.
+2. **Pre-check** on the DB host: PostgreSQL 18.6 with `pg_restore` 18; databases `homi_db`, `homi_staging_db`, `kc_db` and the system ones, so `homi_restore_drill` was free; 208 GB free; `homi_db` at 9 342 kB with no sessions.
+3. **Source: the MinIO copy**, not the local one.
+   - On the app host, `mcli cp --recursive` fetched `s3://homi-backups/production/20261113T053043Z/`, and `sha256sum -c SHA256SUMS` passed for both files.
+   - `scp` copied the dump (62 669 bytes) to the DB host, where its sha256 `889790b9…0661` matched `SHA256SUMS`.
+4. **Restore.**
+   - `postgres` got a private copy in `/tmp/homi-restore-drill` (0700 postgres).
+   - `createdb homi_restore_drill`, then `pg_restore --no-owner --no-acl --exit-on-error`: exit 0 in 0.19 s.
+5. **Comparison with live `homi_db`** (exact `count(*)` per `public` table through `query_to_xml`):
+   - 23 tables on both sides, no table with a different row count, 74 rows in total on both;
+   - 62 indexes, 155 constraints and 13 sequences on both;
+   - the same `md5(string_agg(migration …))`, `2212027a…8122`.
+   - The data is tiny (empty queues and almost no users). The drill proves the procedure and the archive, not the timing for a real data volume.
+6. **Clean-up.**
+   - `dropdb homi_restore_drill`; the database list is back to `homi_db homi_staging_db kc_db postgres template0 template1`.
+   - `rm -rf /tmp/homi-restore-drill /root/restore-drill` on the DB host and `/root/restore-drill` on the app host. `ls` confirms all three are gone.
+
+Not done: a staging drill (same format; not needed for this proof), and a restore of `storage/app` (its archive was tested with `zstd -dc | tar -t` in §10).

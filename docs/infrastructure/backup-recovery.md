@@ -60,15 +60,19 @@ Every restore needs the developer's approval. A production restore overwrites li
    mcli cp --recursive homibk/homi-backups/production/<stamp>/ ./
    sha256sum -c SHA256SUMS
    ```
-2. **Restore drill**, without touching live data:
+2. **Restore drill**, without touching live data. The first one ran on 2026-11-13 (`production-notes.md` §11).
    - `pg_hba` admits only `homi_db` and `homi_staging_db` from the app host, so the drill runs on the DB host `5.45.127.98`, over the local socket.
-   - Copy the `.dump` file there first, for example with `scp` from the app host to `/root/restore/`.
+   - **Reaching the DB host.** SSH from the developer machine timed out on 2026-11-13: its firewall whitelists the app and MinIO hosts. The app host's sshd refuses forwarding, so `ssh -J` does not work either. Run the commands from the app host instead: `ssh root@5.45.127.98 …`, which uses the app host's root key, already authorised.
+   - **Copy the dump there.** From the app host: `scp <file>.dump root@5.45.127.98:/root/restore-drill/`. Check `sha256sum` against `SHA256SUMS`.
+   - `postgres` cannot read `/root`, so give it a private copy:
    ```bash
+   install -d -m 0700 -o postgres -g postgres /tmp/homi-restore-drill
+   install -m 0600 -o postgres -g postgres /root/restore-drill/<file>.dump /tmp/homi-restore-drill/
    sudo -u postgres createdb homi_restore_drill
-   sudo -u postgres pg_restore --no-owner --no-acl --dbname=homi_restore_drill /root/restore/<file>.dump
-   sudo -u postgres psql -d homi_restore_drill -c "select count(*) from migrations"
-   sudo -u postgres dropdb homi_restore_drill
+   sudo -u postgres pg_restore --no-owner --no-acl --exit-on-error --dbname=homi_restore_drill /tmp/homi-restore-drill/<file>.dump
    ```
+   - **Compare with the live database.** Run the same exact per-table row count on both databases: `select count(*)` over every `public` table, for example through `query_to_xml`. Also compare the counts from `pg_indexes`, `pg_constraint` and `pg_sequences`, and `md5(string_agg(migration, ',' order by id))` from `migrations`. Rows written after the backup show up as expected differences.
+   - **Clean up.** `sudo -u postgres dropdb homi_restore_drill`, `rm -rf /tmp/homi-restore-drill /root/restore-drill` on the DB host, and `rm -rf` of the download on the app host. The dump holds personal data once real users exist.
 3. **Production database**, a disaster restore (app host):
    - Run `php artisan down` as `www-data` in `/var/www/homi.uz/backend`, then `systemctl stop horizon-homi`.
    - Restore as the owner role, with the password taken from the environment's `.env` and never typed into a chat:
@@ -93,4 +97,4 @@ Every restore needs the developer's approval. A production restore overwrites li
 
 - The off-host copy lives on a single host, `31.220.104.38`, which is also shared. Losing it while the DB host is also lost would lose everything. A second copy elsewhere is open (`production-notes.md` §5).
 - The dumps are logical, so a restore returns to the last nightly run. Point-in-time recovery (WAL archiving) needs the agreement of the shared cluster's owner (ADR-0015).
-- A restore drill into a database has not been run yet. Every backup run reads the whole archive back (`pg_restore --file=/dev/null`), and a download from MinIO was verified with `sha256sum -c` on 2026-11-13.
+- Every backup run reads the whole archive back (`pg_restore --file=/dev/null`). One restore drill into a database ran on 2026-11-13, from the MinIO copy; the result matched the live database (`production-notes.md` §11). Repeat it before the kvadro² rehearsals and after any change to `homi-backup`. It is not scheduled.
