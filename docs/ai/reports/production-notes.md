@@ -19,7 +19,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
 | MinIO buckets, `AWS_*`, `cdn.homi.uz` / `cdn.staging.homi.uz` | not started — DNS for both `cdn` names still points at the app host | §5 |
 | Deploy script `homi-deploy` (both environments) | **done** — installed on the app host; staging: full repeat deploy, rollback and forward deploys; production: first real run `--full` on 2026-11-13 | §3c, §9 |
 | Backups | **done** 2026-11-13: nightly `homi-backup` of both databases and `storage/app` to MinIO `homi-backups` (14 days); restore drill from the MinIO copy passed on 2026-11-13 | §10, §11, `docs/infrastructure/backup-recovery.md` |
-| Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; end-to-end delivery not tested yet | §12, `docs/infrastructure/monitoring.md` |
+| Monitoring | **done** 2026-11-13: external HTTPS/TLS probes of the 10 hosts from the MinIO host, systemd-unit and backup-age checks on the app host, alerts to the elmarket ops chat; Telegram delivery tested end to end on both paths | §12, `docs/infrastructure/monitoring.md` |
 
 ## Resume here (state at 2026-11-13)
 
@@ -29,7 +29,7 @@ Rules that apply here in addition to the mandate: every action on a server, DNS,
   - PRs #10 (infra fixes) and #11 (ADR-0015) were merged on 2026-11-13 at the developer's request, without the second developer's review (§6).
   - The apply batch ran the same day (§9): both environments are at `e654925`, with the reviewed vhosts, units and script installed, and there is no drift.
   - Backups are live (§10). `homi-backup.timer` runs nightly to MinIO `homi-backups`. The first runs for both environments were verified, including a download checked with `sha256sum -c`.
-  - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. Pending: a test alert to confirm Telegram delivery end to end (it posts in a shared chat, so it waits for the developer's go).
+  - Monitoring is live (§12). It is built on two existing stacks: external probes on the MinIO host and internal checks on the app host. Alerts go to the elmarket ops chat. A test alert went through both Alertmanagers, with firing and resolved both delivered (§12 item 6).
   - PR #13 (backups) was merged on 2026-11-13 at the developer's request («смёржи #13 и сделай шаг на сервере»), followed by the post-merge step (§10 item 9): both environments are at `05a7354`, and the new `homi-deploy` is installed.
   - Open decision: which bot gets `hook.homi.uz` (§8).
 - **Repository.** Everything is on `main`. New work on this track branches from `origin/main` and goes through a PR.
@@ -442,7 +442,12 @@ The developer said «давай, настрой мониторинг» and chose
      - `amtool config routes test`: `project=homi` goes to `homi`; another critical alert and `Watchdog` still go to `telegram`.
      - `systemctl reload prometheus-alertmanager`: `alertmanager_config_last_reload_successful 1`, and the API lists the receivers `telegram` and `homi`.
 4. **Not verified:**
-   - **Telegram delivery end to end**: no test alert was sent, because it would post in a shared chat; it waits for the developer's go.
-   - **An alert actually firing**: every rule is `inactive` because everything is healthy.
+   - ~~Telegram delivery end to end~~: tested on 2026-11-13 with the developer's go (item 6).
+   - **A real rule actually firing**: every rule is `inactive` because everything is healthy.
    - **Coverage gaps**: Redis memory, Laravel errors and queue depth are not covered (runbook "Not covered yet").
 5. **Rollback.** Restore the backups in `/root/.homi-backups/20261113/` on each host, then validate and reload (runbook "Rollback"). Removing the blackbox package needs the developer's go.
+6. **Delivery test** (the developer's go: «да, отправь тестовые алерты»). One `HomiMonitoringTest` alert went to each Alertmanager through `amtool alert add`, with `severity=warning`, `project=homi`, a "TEST … Please ignore" summary and `--end` = now + 90 s.
+   - The routing test on the MinIO host sent it to `homi`. On the app host it took the `warning` severity route.
+   - `alertmanager_notifications_total{integration="telegram"}`, firing and resolved: app host 632 → 633 → 634, MinIO host 57 → 58 → 59, rising by exactly 2 each.
+   - `alertmanager_notifications_failed_total` stayed 0 on both, and `amtool alert query` afterwards shows no test alert left.
+   - The message in the chat itself was not seen by the agent. The developer can confirm it.
