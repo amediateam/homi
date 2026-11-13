@@ -1,0 +1,27 @@
+# HOMI (homi.uz) — Alertmanager additions on 31.220.104.38 (/etc/alertmanager/alertmanager.yml).
+# Source: github.com/amediateam/homi infra/production/monitoring/minio-host/alertmanager-homi.yml
+# The two placeholders are filled on the server from the app host's Alertmanager
+# (bot @nimaqattabot, the elmarket ops chat — developer's decision 2026-11-13) and
+# never committed. Alertmanager 0.25 has no bot_token_file for Telegram, so the
+# token sits in the file like the existing "telegram" receiver (0640 root:prometheus).
+
+# 1) First child route, directly under `route.routes:`
+    # HOMI external probes → the elmarket ops chat (docs/infrastructure/monitoring.md in the homi repo)
+    - matchers:
+        - project = "homi"
+      receiver: homi
+      continue: false
+
+# 2) Appended to `receivers:`
+  - name: homi
+    telegram_configs:
+      - send_resolved: true
+        bot_token: <@nimaqattabot token from the app host>
+        chat_id: <the elmarket ops chat id from the app host>
+        api_url: https://api.telegram.org
+        parse_mode: ''
+        message: |-
+          {{ if eq .Status "firing" }}🛑{{ else }}✅{{ end }} HOMI {{ .Status | toUpper }} — {{ .GroupLabels.alertname }}
+          {{ range .Alerts }}[{{ .Labels.severity }}] {{ .Labels.instance }}: {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}

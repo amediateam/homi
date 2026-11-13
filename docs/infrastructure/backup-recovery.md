@@ -40,7 +40,9 @@ journalctl -u homi-backup.service --since today  # per-environment log lines
 cat /var/lib/homi-backup/*.last-success          # "<time> s3://homi-backups/<env>/<stamp>/" per environment
 ```
 
-Run one by hand: `homi-backup staging`, `homi-backup production`, or `systemctl start homi-backup.service` for both. A failed environment does not stop the other one. The command exits 1, and the unit shows `failed`. No alert is wired yet: that is the monitoring task (`production-notes.md` §5 item 9).
+Run one by hand: `homi-backup staging`, `homi-backup production`, or `systemctl start homi-backup.service` for both. A failed environment does not stop the other one. The command exits 1, and the unit shows `failed`. Both cases raise alerts (`docs/infrastructure/monitoring.md`):
+- `HomiBackupFailed` fires when the unit fails.
+- `HomiBackupStale` fires when there has been no success for 26 h. `homi-backup` writes `homi_backup_last_success_timestamp_seconds{env}` to `/var/lib/prometheus/node-exporter/homi_backup.prom` after every run.
 
 List what is in the bucket. On the MinIO host: `mcli ls --recursive s3hc/homi-backups`. On the app host:
 

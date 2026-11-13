@@ -27,6 +27,9 @@ S3_BUCKET=homi-backups
 S3_ACCESS_KEY=homi-backup
 S3_SECRET_FILE=/root/.homi-secrets/backup-s3.secret
 LOCK_FILE=/run/lock/homi-backup.lock
+# node_exporter's textfile collector on the app host (drop-in textfile.conf); the
+# HomiBackupStale alert reads homi_backup.prom (docs/infrastructure/monitoring.md).
+TEXTFILE_DIR=/var/lib/prometheus/node-exporter
 
 usage() {
     cat <<'EOF'
@@ -125,6 +128,29 @@ backup_env() {
     log "$env: done"
 }
 
+# Rewrites homi_backup.prom from the *.last-success files, so the metric always
+# shows the last success per environment, whatever this run's outcome. Written
+# to a temp name without the .prom suffix and renamed, so node_exporter never
+# reads half a file.
+write_metrics() {
+    local out=$TEXTFILE_DIR/homi_backup.prom tmp f e t
+    [[ -d $TEXTFILE_DIR ]] || return 0
+    tmp=$(mktemp "$TEXTFILE_DIR/.homi_backup.XXXXXX")
+    {
+        echo '# HELP homi_backup_last_success_timestamp_seconds Unix time of the last successful homi-backup run.'
+        echo '# TYPE homi_backup_last_success_timestamp_seconds gauge'
+        for f in "$STATE_DIR"/*.last-success; do
+            [[ -e $f ]] || continue
+            e=${f##*/}
+            e=${e%.last-success}
+            t=$(date -u -d "$(cut -d' ' -f1 "$f")" +%s)
+            echo "homi_backup_last_success_timestamp_seconds{env=\"$e\"} $t"
+        done
+    } >"$tmp"
+    chmod 0644 "$tmp"
+    mv -f -- "$tmp" "$out"
+}
+
 main() {
     local target=${1:-all} envs e rc failed=0
     case $target in
@@ -164,6 +190,7 @@ main() {
             failed=1
         fi
     done
+    write_metrics || log "WARNING: could not write $TEXTFILE_DIR/homi_backup.prom"
     return "$failed"
 }
 

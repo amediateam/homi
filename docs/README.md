@@ -26,6 +26,7 @@ Documentation is code: it lives next to the source, changes in the same PR as th
 | `infrastructure/environments.md` | Domain matrix, hosts, ports, services per environment | living |
 | `infrastructure/deployment.md` | Production web host: layout, deploy sequence, checks, rollback (production track; copies of the server files in `infra/production/`) | living |
 | `infrastructure/backup-recovery.md` | Backups of both environments (databases + `storage/app` → MinIO `homi-backups`), checks, restore and secret rotation (production track) | living |
+| `infrastructure/monitoring.md` | Monitoring and alerts: external HTTPS/TLS probes from the MinIO host, systemd and backup checks on the app host, routing to the ops chat, change and rollback (production track) | living |
 | `infrastructure/cdn.md`, `telegram-webhook.md` | Planned for Phases 3, 6 — created only when the described setup exists | planned |
 | `api/intake-sources.md` | What the collectors (`telegram.uz`, `datahub.uz`, `geo.uz`) store and expose; source-mapped intake payload draft | living |
 | `api/intake.md`, `api/openapi.json` | Intake contract and the OpenAPI spec — created with the first endpoint (Phase 3) | planned |

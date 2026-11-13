@@ -1,0 +1,59 @@
+# HOMI (homi.uz) — external HTTPS checks, evaluated by the Prometheus on the MinIO host 31.220.104.38
+# (the "mars" stack). The probes run from there, so they also catch the whole app host going down.
+# Alerts carry project="homi"; Alertmanager routes them to the elmarket ops chat (receiver "homi").
+# Installed as /etc/prometheus/rules/homi.rules.yml (root:root 0644).
+# Source: github.com/amediateam/homi infra/production/monitoring/minio-host/homi.rules.yml
+# Runbook: docs/infrastructure/monitoring.md
+groups:
+  - name: homi-external
+    rules:
+      - alert: HomiEndpointDown
+        expr: probe_success{project="homi", env="production"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: homi
+        annotations:
+          summary: "HOMI production: {{ $labels.instance }} does not answer 200"
+          description: "The external probe from 31.220.104.38 has failed for 3 minutes (see probe_http_status_code for this instance). Check: homi-deploy production --dry-run on 159.253.19.121."
+
+      - alert: HomiStagingEndpointDown
+        expr: probe_success{project="homi", env="staging"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: homi
+        annotations:
+          summary: "HOMI staging: {{ $labels.instance }} does not answer 200"
+          description: "The external probe has failed for 10 minutes. Check: homi-deploy staging --dry-run on 159.253.19.121."
+
+      - alert: HomiCertExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry{project="homi"} - time() < 14 * 86400
+        for: 1h
+        labels:
+          severity: warning
+          service: homi
+        annotations:
+          summary: "HOMI: the TLS certificate of {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+          description: "certbot renews 30 days before expiry, so this means renewal has failed. Check: certbot renew --dry-run on 159.253.19.121."
+
+      - alert: HomiCertExpiryCritical
+        expr: probe_ssl_earliest_cert_expiry{project="homi"} - time() < 3 * 86400
+        for: 10m
+        labels:
+          severity: critical
+          service: homi
+        annotations:
+          summary: "HOMI: the TLS certificate of {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+          description: "Renew now: certbot renew --cert-name <host> on 159.253.19.121."
+
+      - alert: HomiProbesMissing
+        expr: absent(probe_success{project="homi"})
+        for: 15m
+        labels:
+          severity: warning
+          project: homi
+          service: homi
+        annotations:
+          summary: "HOMI: no external probe results"
+          description: "The homi-blackbox job on 31.220.104.38 returns nothing (blackbox exporter down or job removed). HOMI is not watched from outside until this is fixed."
