@@ -11,7 +11,7 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0003](0003-auth-sanctum-bearer-tokens.md) | Authentication: Sanctum bearer tokens, Telegram as identity | Accepted |
 | [0004](0004-toolchain-pins-pnpm-node-php.md) | Toolchain pins: pnpm workspace, Node 26, PHP 8.5 | Accepted |
 | [0005](0005-redis-queue-cache-horizon.md) | Redis for queue and cache, Horizon as worker | Accepted |
-| [0006](0006-time-locale-i18n-currency.md) | Time, locale, translations and currency defaults | Accepted |
+| [0006](0006-time-locale-i18n-currency.md) | Time, locale, translations and currency defaults | Accepted, amended by 0019 |
 | [0007](0007-api-v1-response-envelope-pagination.md) | API versioning, response envelope, pagination | Accepted |
 | [0008](0008-local-environment-nginx-mkcert.md) | Local environment: Homebrew nginx + php-fpm + mkcert | Accepted |
 | [0009](0009-listing-ingestion-push-model.md) | Listing ingestion: HOMI owns the data, collectors push | Accepted |
@@ -20,5 +20,6 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0012](0012-local-media-on-disk-no-minio.md) | Local media storage on disk — no MinIO in development | Accepted |
 | [0013](0013-nextjs-ssr-behind-nginx.md) | Next.js apps run as SSR servers behind nginx in production (SEO/GEO/AEO) | Accepted, amended by 0015 |
 | [0015](0015-server-runtime-as-deployed.md) | Server runtime as deployed: databases, Redis, process manager, code delivery | Accepted |
+| [0019](0019-frontend-ui-stack.md) | Frontend UI stack: Tailwind 4 tokens, shadcn/ui with Radix, next-intl | Proposed |
 
 Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it.
