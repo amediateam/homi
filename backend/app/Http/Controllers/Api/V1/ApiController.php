@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\SourceDriver;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -15,6 +17,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * Base controller for /api/v1: the response envelope of ADR-0007.
  *
  * Success: {"success": true, "message"?: string, "data": mixed, "meta"?: object, "links"?: object}
+ * Sourced: `meta.source` names the driver that produced `data` (ADR-0017); a cursor list adds `meta.next_cursor`.
  * Error:   {"success": false, "message": string, "code": string, "errors"?: object}
  */
 abstract class ApiController extends Controller
@@ -37,6 +40,34 @@ abstract class ApiController extends Controller
         }
 
         return response()->json($body, $status);
+    }
+
+    /**
+     * An answer produced by a source driver: `meta.source` is the driver that answered, never the configured one,
+     * and a `source` key in `$meta` cannot replace it.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    protected function sourced(mixed $data, SourceDriver $source, array $meta = [], int $status = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => ['source' => $source->value] + $meta,
+        ], $status);
+    }
+
+    /**
+     * A cursor list (ADR-0017): `meta.next_cursor` is always present and `null` ends the list.
+     *
+     * @param  iterable<int, mixed>  $items
+     */
+    protected function cursorPage(iterable $items, ?string $nextCursor, SourceDriver $source): JsonResponse
+    {
+        // A resource collection writes a list itself; anything else is re-indexed so gaps in keys stay a JSON list.
+        $data = $items instanceof ResourceCollection ? $items : array_values(is_array($items) ? $items : iterator_to_array($items, false));
+
+        return $this->sourced($data, $source, ['next_cursor' => $nextCursor]);
     }
 
     /**

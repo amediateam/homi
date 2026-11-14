@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SourceDriver;
 use App\Http\Controllers\Api\V1\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,6 +33,18 @@ function apiControllerForTest(): ApiController
         public function failedWithCode(): JsonResponse
         {
             return $this->error('Gone', 410, code: 'listing_gone');
+        }
+
+        /** @param  array<string, mixed>  $meta */
+        public function fromSource(mixed $data, SourceDriver $source, array $meta = [], int $status = 200): JsonResponse
+        {
+            return $this->sourced($data, $source, $meta, $status);
+        }
+
+        /** @param  iterable<int, mixed>  $items */
+        public function cursor(iterable $items, ?string $next, SourceDriver $source): JsonResponse
+        {
+            return $this->cursorPage($items, $next, $source);
         }
 
         public function page(): JsonResponse
@@ -91,4 +104,48 @@ it('paginates with the ADR-0007 meta and links shape', function (): void {
         ->and($data['meta'])->toBe(['page' => 2, 'size' => 20, 'total' => 45, 'last_page' => 3])
         ->and($data['links']['next'])->toContain('page%5Bnumber%5D=3')
         ->and($data['links']['prev'])->toContain('page%5Bnumber%5D=1');
+});
+
+it('says which driver produced the data', function (): void {
+    $response = apiControllerForTest()->fromSource(['a' => 1], SourceDriver::Stub);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getData(true))->toBe(['success' => true, 'data' => ['a' => 1], 'meta' => ['source' => 'stub']]);
+});
+
+it('adds meta and a status to a sourced answer and keeps the driver honest', function (): void {
+    $response = apiControllerForTest()->fromSource(['id' => 1], SourceDriver::Legacy, ['source' => 'native', 'total' => 3], 201);
+
+    expect($response->getStatusCode())->toBe(201)
+        ->and($response->getData(true))->toBe(['success' => true, 'data' => ['id' => 1], 'meta' => ['source' => 'legacy', 'total' => 3]]);
+});
+
+it('resolves a resource in a sourced answer', function (): void {
+    $data = apiControllerForTest()->fromSource(new JsonResource(['id' => 9]), SourceDriver::Native)->getData(true);
+
+    expect($data)->toBe(['success' => true, 'data' => ['id' => 9], 'meta' => ['source' => 'native']]);
+});
+
+it('ends a cursor list with a null next cursor', function (): void {
+    $data = apiControllerForTest()->cursor([['id' => 1], ['id' => 2]], null, SourceDriver::Stub)->getData(true);
+
+    expect($data)->toBe(['success' => true, 'data' => [['id' => 1], ['id' => 2]], 'meta' => ['source' => 'stub', 'next_cursor' => null]]);
+});
+
+it('pages a cursor list of resources or of a generator', function (): void {
+    $resources = apiControllerForTest()->cursor(JsonResource::collection([['id' => 1]]), 'c2', SourceDriver::Legacy)->getData(true);
+    $generated = apiControllerForTest()->cursor((function (): Generator {
+        yield 5 => ['id' => 3];
+    })(), 'c3', SourceDriver::Stub)->getData(true);
+
+    expect($resources)->toBe(['success' => true, 'data' => [['id' => 1]], 'meta' => ['source' => 'legacy', 'next_cursor' => 'c2']])
+        ->and($generated['data'])->toBe([['id' => 3]]);
+});
+
+it('writes a cursor list as a JSON list even when the keys have gaps', function (): void {
+    $fromArray = apiControllerForTest()->cursor([3 => ['id' => 3], 7 => ['id' => 7]], null, SourceDriver::Stub);
+    $fromCollection = apiControllerForTest()->cursor(collect([['id' => 1], null, ['id' => 2]])->filter(), null, SourceDriver::Stub);
+
+    expect($fromArray->getContent())->toContain('"data":[{"id":3},{"id":7}]')
+        ->and($fromCollection->getContent())->toContain('"data":[{"id":1},{"id":2}]');
 });
