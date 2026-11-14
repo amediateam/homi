@@ -413,7 +413,7 @@ developer's review.
     inference);
   - `resources/fixtures/v1` and `resources/fixtures/media` are empty until WP-11 and WP-12.
 - **Merged** on 2026-11-15 on «сливай #42» (merge commit `70d5e56`; `backend` run 43652932665 and `frontend` run
-  43652932624 green on `main`). The `CLAUDE.md` update and this status are in the follow-up docs PR. The env key is in
+  43652932624 green on `main`). The `CLAUDE.md` update and this status are in the follow-up docs PR #44. The env key is in
   PR #43.
 - **Next:**
   1. ~~review and merge~~ (done);

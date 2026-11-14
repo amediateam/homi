@@ -15,7 +15,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## State at handoff
 - `main` = `70d5e56`: #42 (WP-10) merged on «сливай #42», and `backend` and `frontend` are green on `main` (runs 43652932665, 43652932624). WP-03 is `WAITING (merged in #39; deploy with the production track)`.
-- WP-10 is `WAITING (merged in #42; production track …)`. The follow-up docs PR `docs/wp-10-after-merge` carries the status and the `CLAUDE.md` commands; the working tree is on that branch. PR #43 (`SOURCES_ALLOW_STUB` in `backend/.env.example`) is open, with CI green.
+- WP-10 is `WAITING (merged in #42; production track …)`. The follow-up docs PR #44 (`docs/wp-10-after-merge`) carries the status and the `CLAUDE.md` commands; the working tree is on that branch. PR #43 (`SOURCES_ALLOW_STUB` in `backend/.env.example`) is open, with CI green.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged. Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-backend` → exit 0; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
 
@@ -25,7 +25,7 @@ Written for whoever continues the **development track** (the second developer, a
 - Spec corrected (rule 6); AM-52 in `docs/ai/reports/phase-3-notes.md` §M; the spec's Handoff filled.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Merge of the follow-up docs PR** (`docs/wp-10-after-merge`). Then the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
+1. **Merge of the follow-up docs PR #44** (`docs/wp-10-after-merge`). Then the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
 2. **Shared-file PR #43** for `backend/.env.example` (`SOURCES_ALLOW_STUB=true`). After its merge every `backend/.env` needs the key, or `make dev-check` reports it missing.
 3. **WP-03:** the deploy with the production track (a no-op for users), then `DONE`.
 4. **Operator request:** from the project's own mailbox (WP-02 Part A; never the connected Gmail); then "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and WP-02 `DONE`.
