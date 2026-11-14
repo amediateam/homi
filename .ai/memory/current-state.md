@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (development track: PR #9 merged; new-product course decided, strategy, Wave 1 plan and work queue in PR #25; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-14 (development track: WP-00 media ownership fix in PR #27, not merged; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -18,7 +18,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Local `.env`: `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` (ADR-0005 applied), `MEDIA_PUBLIC_URL=https://cdn.homi.loc`, blank `AWS_*` and `TELEGRAM_*`. `.env.example` is the authoritative key list; `dev-check` enforces key parity.
 - `config/cors.php` env-driven; `config/filesystems.php` `public` disk URL from `MEDIA_PUBLIC_URL`; `storage/app/public/{health.txt,originals,derived}` exist locally.
 - **Phase 3 WIP (branch `chore/phase-3-cdn-webhook`, paused by the developer on 2026-11-08):** packages added with approval — `league/flysystem-aws-s3-v3`, `intervention/image` 4.4, `dedoc/scramble` (registry regenerated). Media module implemented and tested (`/api/v1/media*`: upload, show, delete, presign/register; `HashedUploader`, `GenerateImageVariantsJob` on queue `media`, CDN/temporary URLs); `ApiController` envelope + `ApiExceptionRenderer`; `AssignRequestId`; rate limiters `api|uploads|intake|telegram-webhook`; Horizon queues `default+notifications|telegram|media|ingest`; tables `media_files`, `telegram_updates`, `sources`, `source_listings`, `intake_requests`, `intake_events` (migrated locally). Webhook route `POST /telegram/webhook` exists but is fail-closed (403/501 stubs). Intake endpoints, Telegram pipeline, OpenAPI export and Phase 3 docs are NOT done — the plan is `HANDOFF.md` §4 T1–T4 (development track), re-planned by the kvadro² migration tasks (PR #9, `docs/migration/10` §9). 47 tests green, PHPStan clean.
-- `MediaController` `show`/`destroy` check no ownership: any Sanctum token can read, any `media:write` token can delete another owner's file (KI-25; code re-read 2026-11-09). This code is on `main`, so production and staging run it too.
+- Media ownership: on `main` (and so on staging and production) `MediaController` `show`/`destroy` still check no ownership (KI-25). The fix is WP-00, PR #27 (`media_file_references`, owner-scoped load and policy, actor-typed upload prefix; CI pass), not merged or deployed on 2026-11-14. Before it, a `Source` token got `500` on every upload route (AM-50).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).

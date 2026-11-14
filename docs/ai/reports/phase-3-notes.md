@@ -238,3 +238,37 @@ of radars on staging is allowed for the check of WP-46, never on production.
 Checks at the commit: 45 files with the template (script); `collect_ids.py --check` → exit 0;
 `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; repository paths named exist or are
 created by a package (script); address and phone scan → only synthetic numbers.
+
+## I. Development track, 2026-11-14 (late night) — WP-00, media ownership fix
+
+Developer's go: «Возьми первый пакет очереди со статусом не DONE. Сейчас это WP-00 …; добро на него дано.» Rules of
+that prompt kept: one package = one branch = one PR; no dependency, staging or production changes; legacy untouched.
+
+**Applied** (branch `feat/wp-00-media-ownership-fix`, PR #27, CI `ci` pass; companion draft PR #28 for
+`.ai/memory/known-issues.md`):
+
+- `media_file_references` (owner type and id as text, no global morph map), owner-scoped show and delete with
+  `MediaFilePolicy`, uploads that attach the owner under the row lock, reference-counted delete, actor-typed presign
+  prefix, the variants job dropping itself or its own variants when its row is gone; backfill of one user reference
+  per row with an uploader.
+- After the `security-reviewer` pass: `whereUlid('media')` on show and destroy, `throttle:api` on the v1 group (the
+  limiter was defined but not attached), `$/D` in the register key pattern, re-dispatch of the variants job for a
+  `failed` row, `uploaded_by` cleared when the uploader lets go.
+- Own choices: `MediaFile::recordFor()` as the one upload entry point, `const UPDATED_AT = null` on the reference
+  model, a Source signs in with a real token in tests (`Sanctum::actingAs()` needs an `Authenticatable`).
+- Checks: RED first (media suite 27 of 54 passed before the code); `make ci-backend` exit 0 with Pest 92 of 92,
+  PHPStan 0 errors; `collect_ids.py --check` and `task_graph.py --check` exit 0.
+
+**Not applied:** the migration was not run on PostgreSQL (SQLite tests; `php artisan migrate --pretend` SQL read;
+the checkout's database is not on this machine). Not deployed. KI-27 (object deletion is one attempt, failures
+swallowed) and KI-28 (presign without a size bound) are open, filed in PR #28.
+
+ASSUMPTION_MISMATCH AM-50 (2026-11-14):
+- **Assumption.** The WP-00 specification assumed an upload by a `Source` token could have written a `media_files` row
+  that stores the source's number as `uploaded_by`, and made the backfill depend on a count of source tokens.
+- **What was found.** A `Source` is not `Authenticatable`. `AppServiceProvider::actorKey()` (the `throttle:uploads`
+  key) and both media controllers called `getAuthIdentifier()`, so every source request to the upload routes ended in
+  `BadMethodCallException` → `500` before any row was written (the source cases of the new tests failed that way on
+  the old code).
+- **Resolution.** The backfill is unconditional; the source-token count was dropped from "Needs from the production
+  track"; `actorKey()` uses the model class and key; the specification was corrected in PR #27.
