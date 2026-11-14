@@ -259,8 +259,9 @@ that prompt kept: one package = one branch = one PR; no dependency, staging or p
 - Checks: RED first (media suite 27 of 54 passed before the code); `make ci-backend` exit 0 with Pest 92 of 92,
   PHPStan 0 errors; `collect_ids.py --check` and `task_graph.py --check` exit 0.
 
-**Not applied:** the migration was not run on PostgreSQL (SQLite tests; `php artisan migrate --pretend` SQL read;
-the checkout's database is not on this machine). Not deployed. KI-27 (object deletion is one attempt, failures
+On the developer's go («да, это моя dev-база, прогони migrate») the migration ran on the dev database (PostgreSQL
+18.6); backfill, `down()`/`up()`, a double `attachOwner()` and the owner scope under `FOR UPDATE` were checked there in
+a rolled-back transaction. **Not applied:** not deployed; the parallel-upload race on PostgreSQL is not tested. KI-27 (object deletion is one attempt, failures
 swallowed) and KI-28 (presign without a size bound) are open, filed in PR #28.
 
 ASSUMPTION_MISMATCH AM-50 (2026-11-14):

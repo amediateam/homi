@@ -272,8 +272,9 @@ The existing media suites stay green; only assertions on the old key prefix chan
   `register` reads the whole object into memory before the size check (review N4, existed before: KI-28). A second
   uploader of identical bytes learns that they were uploaded before, and when (review N1; matters once private
   documents arrive). References have no foreign key to their owner; the erasure package (WP-47) must delete them.
-- **Not verified:** the migration has not run on PostgreSQL (SQLite tests; `migrate --pretend` SQL read). Staging runs
-  it on deploy. The parallel-upload race test is WP-03's first `pgsql` test.
+- **PostgreSQL:** the migration ran on the developer's dev database (PostgreSQL 18.6); `down()`, backfill and `up()`,
+  a double `attachOwner()` and the owner scope under `FOR UPDATE` were checked there in a rolled-back transaction.
+  **Not verified:** the parallel-upload race; it is WP-03's first `pgsql` test.
 - **Next step:** review and merge of the PR by the other developer; the production track reports the two counts,
   approves the migration on production and deploys; then `GET` of a foreign id on staging must answer `404`, the
   queue row becomes `DONE`, and the KI-25 PR merges.
