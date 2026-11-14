@@ -11,7 +11,7 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0003](0003-auth-sanctum-bearer-tokens.md) | Authentication: Sanctum bearer tokens, Telegram as identity | Accepted, amended by 0018 |
 | [0004](0004-toolchain-pins-pnpm-node-php.md) | Toolchain pins: pnpm workspace, Node 26, PHP 8.5 | Accepted |
 | [0005](0005-redis-queue-cache-horizon.md) | Redis for queue and cache, Horizon as worker | Accepted |
-| [0006](0006-time-locale-i18n-currency.md) | Time, locale, translations and currency defaults | Accepted |
+| [0006](0006-time-locale-i18n-currency.md) | Time, locale, translations and currency defaults | Accepted, amended by 0019 |
 | [0007](0007-api-v1-response-envelope-pagination.md) | API versioning, response envelope, pagination | Accepted, amended by 0017 |
 | [0008](0008-local-environment-nginx-mkcert.md) | Local environment: Homebrew nginx + php-fpm + mkcert | Accepted |
 | [0009](0009-listing-ingestion-push-model.md) | Listing ingestion: HOMI owns the data, collectors push | Accepted |
@@ -23,5 +23,6 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0016](0016-new-product-three-waves.md) | HOMI ships a new product; the migration runs in three waves | Proposed |
 | [0017](0017-api-v1-source-drivers.md) | `/api/v1` is the only contract; a source driver per method selected by a Pennant feature | Proposed |
 | [0018](0018-mini-app-architecture.md) | Mini App: App Router with a route per screen, server rendering through a session cookie with a header fallback | Proposed |
+| [0019](0019-frontend-ui-stack.md) | Frontend UI stack: Tailwind 4 tokens, shadcn/ui with Radix, next-intl | Proposed |
 
 Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it. 0016–0019 record the kvadro² migration decisions of 2026-11-14 (`docs/migration/24-three-wave-strategy.md` §8.1).
