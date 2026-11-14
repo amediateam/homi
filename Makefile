@@ -73,8 +73,8 @@ ai-hooks-test: ## Unit-test the agent hooks in .ai/hooks (path guard, session co
 ci-backend: ## Run the backend CI gate locally (Pint, PHPStan, Vite+ check, tsc, Pest)
 	@cd backend && composer ci:check
 
-ci-frontend: ## Run the frontend CI gate locally (lint, typecheck, build, unit tests)
-	@cd frontend && pnpm -r lint && pnpm -r typecheck && pnpm -r build && pnpm test
+ci-frontend: ## Run the frontend CI gate locally (generated API types, lint, typecheck, build, unit tests)
+	@cd frontend && pnpm types:check && pnpm -r lint && pnpm -r typecheck && pnpm -r build && pnpm test
 
 e2e: ## Run the Playwright suite (builds and starts app on :3001 unless E2E_BASE_URL is set)
 	@cd frontend && pnpm test:e2e

@@ -13,7 +13,9 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "types:generate": "pnpm --filter @homi/types generate",
+    "types:check": "pnpm types:generate && git ls-files --error-unmatch packages/types/src/generated/api.ts && git diff --exit-code -- packages/types/src/generated"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",

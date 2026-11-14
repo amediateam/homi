@@ -1,8 +1,13 @@
 /**
- * Hand-written contract types that exist before the OpenAPI spec (ADR-0007).
- * Resource/DTO types are GENERATED into this package from docs/api/openapi.json in Phase 3;
- * only the envelope and pagination shapes below are maintained by hand.
+ * Contract types of /api/v1 (ADR-0007, ADR-0017). `paths` and `components` are generated from
+ * docs/api/openapi.json into ./generated/api.ts (`pnpm types:generate`; CI fails when the file is stale);
+ * only the envelope below is maintained by hand.
  */
+
+export type { components, operations, paths } from "./generated/api";
+
+/** The driver that produced `data` (`meta.source`); `stub` shows the client's "demo data" marker. */
+export type SourceDriver = "stub" | "legacy" | "native";
 
 export interface PaginationMeta {
   page: number;
@@ -20,17 +25,18 @@ export interface ApiSuccess<T> {
   success: true;
   data: T;
   message?: string;
-  meta?: PaginationMeta & Record<string, unknown>;
+  /** Page-number lists fill the pagination keys; source methods `source`; cursor lists `next_cursor` (`null` ends the list). */
+  meta?: Partial<PaginationMeta> & { source?: SourceDriver; next_cursor?: string | null } & Record<string, unknown>;
   links?: PaginationLinks;
 }
 
 export interface ApiFailure {
   success: false;
   message: string;
+  /** Stable machine-readable code, snake_case (docs/api/README.md). */
+  code: string;
   /** Laravel validation errors: field → messages (HTTP 422). */
   errors?: Record<string, string[]>;
-  /** Stable machine-readable code, snake_case. */
-  code?: string;
 }
 
 export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;

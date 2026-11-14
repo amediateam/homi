@@ -3,16 +3,17 @@ import { isApiFailure, type ApiEnvelope, type ApiSuccess } from "@homi/types";
 /**
  * Minimal typed client for the HOMI API envelope (ADR-0003 bearer tokens, ADR-0007 envelope).
  * Modelled on the port plan for app.uz `frontend/lendo/lib/api.ts` (docs/reference-codebase, A3):
- * native fetch, envelope unwrapping, ApiError with status + validation errors, no refresh logic.
- * Typed resource methods are generated from the OpenAPI spec in Phase 3 and layered on top of this.
+ * native fetch, envelope unwrapping, ApiError with status, code and validation errors, no refresh logic.
+ * `createTypedClient` (./typed) types calls from the generated OpenAPI paths on top of this.
  */
 
 export class ApiError extends Error {
   readonly status: number;
-  readonly code?: string;
+  /** The envelope's `code`; `unknown` when the answer had no envelope (an nginx 502 page, a network proxy). */
+  readonly code: string;
   readonly errors?: Record<string, string[]>;
 
-  constructor(message: string, status: number, code?: string, errors?: Record<string, string[]>) {
+  constructor(message: string, status: number, code = "unknown", errors?: Record<string, string[]>) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -58,6 +59,7 @@ export interface ApiClient {
   request<T>(path: string, options?: RequestOptions): Promise<ApiSuccess<T>>;
   get<T>(path: string, options?: Omit<RequestOptions, "method" | "body">): Promise<ApiSuccess<T>>;
   post<T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<ApiSuccess<T>>;
+  put<T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<ApiSuccess<T>>;
   patch<T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<ApiSuccess<T>>;
   delete<T>(path: string, options?: Omit<RequestOptions, "method" | "body">): Promise<ApiSuccess<T>>;
 }
@@ -91,6 +93,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       signal: req.signal,
     });
 
+    // 204 No Content (a DELETE) has no envelope to unwrap.
+    if (response.status === 204) {
+      return { success: true, data: null as T };
+    }
+
     const payload = await parseJson<ApiEnvelope<T>>(response);
 
     if (!response.ok || payload === null || isApiFailure(payload)) {
@@ -111,6 +118,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     request,
     get: (path, o) => request(path, { ...o, method: "GET" }),
     post: (path, body, o) => request(path, { ...o, method: "POST", body }),
+    put: (path, body, o) => request(path, { ...o, method: "PUT", body }),
     patch: (path, body, o) => request(path, { ...o, method: "PATCH", body }),
     delete: (path, o) => request(path, { ...o, method: "DELETE" }),
   };
