@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | REVIEW |
+| Status | WAITING (PR #27 merged; the production track's counts, migration approval and deploy) |
 | Depends on | — |
 | Size | about 500 changed lines, S |
 | Behaviour reference | Task `tasks/backend/KV-BE-002-media-ownership-fix.md`; `16` §3.2 (SEC-026, SEC-027), §4.3 (SEC-REQ-014, SEC-REQ-016), §5.2 row "Media"; `15` §3.1 row 13; known issue KI-25 in `.ai/memory/known-issues.md` |
