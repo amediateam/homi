@@ -17,6 +17,7 @@ Written for whoever continues the **development track** (the second developer, a
 - `main` = `2b4b97d` (#39 and #41 merged). WP-03 is `WAITING (merged in #39; deploy with the production track)`.
 - **WP-10** was taken on «бери WP-04» (there is no WP-04; WP-10 is next). Branch `feat/wp-10-api-framework`, **PR #42**, `REVIEW (#42)`; the working tree is on it.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged. Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
+- CI on `31dc1a4` green (backend 43652536647, frontend 43652536633, frontend-e2e 43652536550); the first round failed in `openapi:export` without `DB_*` in the `ci:check` step, fixed there. PR #43 `backend` green.
 - Verify: `make ci-backend` → exit 0; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
 
 ## Done this session
@@ -38,6 +39,7 @@ Written for whoever continues the **development track** (the second developer, a
 - Source feature names contain dots: read `config('sources.features')` whole; a dotted key reads a nested array.
 - Scramble documents array literals, enums and spreads, but an array `+` union becomes a bare `array` and a ternary over two shapes an `anyOf`; the server URL comes from `APP_URL` unless a transformer replaces it; in-process exports fill static caches (one per test process).
 - Pennant: its retry of a lost insert cannot run inside a PostgreSQL transaction (store the default row first); its events carry the `GlobalScope` object.
+- Scramble types model attributes from the migrated database of the default connection: `openapi:export` needs it (CI passes `DB_*` to `ci:check`).
 - Pest: global functions and `const` in test files collide across files (use `Tests\Support` classes); `Request::create()` sends `Accept-Language: en-us` unless removed. Vitest runs `@ts-expect-error` calls (put them in an uncalled function).
 - Check `gh api repos/amediateam/homi/pulls/<n> --jq .merged` before acting on "слит". Next numbers: AM-53, KI-29, ADR 0020.
 
