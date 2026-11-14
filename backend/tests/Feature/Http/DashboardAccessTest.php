@@ -51,3 +51,18 @@ it('records an ordinary request outside local only with TELESCOPE_RECORD_ALL', f
     'record all' => [true],
     'failures only' => [false],
 ]);
+
+it('refuses the API docs outside local without the nginx basic-auth user', function () {
+    $this->get('/docs/api')->assertForbidden();
+    $this->get('/docs/api.json')->assertForbidden();
+});
+
+it('lets the API docs gate follow nginx basic auth', function (array $server, bool $allowed) {
+    $this->app->instance('request', Request::create('/docs/api', 'GET', server: $server));
+
+    expect(Gate::allows('viewApiDocs'))->toBe($allowed);
+})->with([
+    'no nginx user' => [[], false],
+    'empty nginx user' => [[DashboardAccess::SERVER_VARIABLE => ''], false],
+    'nginx user' => [[DashboardAccess::SERVER_VARIABLE => 'homi'], true],
+]);

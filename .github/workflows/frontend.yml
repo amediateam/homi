@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'frontend/**'
+      - 'docs/api/openapi.json'
       - '.node-version'
       - '.github/workflows/frontend.yml'
   pull_request:
     paths:
       - 'frontend/**'
+      - 'docs/api/openapi.json'
       - '.node-version'
       - '.github/workflows/frontend.yml'
 
@@ -43,6 +45,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # @homi/types is generated from docs/api/openapi.json; a stale or uncommitted file fails here (WP-10).
+      - name: Generated API types are current
+        run: pnpm types:check
 
       - name: Lint
         run: pnpm -r lint

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\SourceDriver;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -15,7 +17,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * Base controller for /api/v1: the response envelope of ADR-0007.
  *
  * Success: {"success": true, "message"?: string, "data": mixed, "meta"?: object, "links"?: object}
- * Error:   {"success": false, "message": string, "errors"?: object}
+ * Sourced: `meta.source` names the driver that produced `data` (ADR-0017); a cursor list adds `meta.next_cursor`.
+ * Error:   {"success": false, "message": string, "code": string, "errors"?: object}
  */
 abstract class ApiController extends Controller
 {
@@ -40,11 +43,36 @@ abstract class ApiController extends Controller
     }
 
     /**
+     * An answer produced by a source driver: `meta.source` is the driver that answered, never the configured one,
+     * and a `source` key in `$meta` cannot replace it. The enum itself goes into the body (JSON writes its value), so
+     * the OpenAPI export documents `meta.source` as the enum of the three drivers.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    protected function sourced(mixed $data, SourceDriver $source, array $meta = [], int $status = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => [...$meta, 'source' => $source],
+        ], $status);
+    }
+
+    /**
+     * A cursor list (ADR-0017): `meta.next_cursor` is always present and `null` ends the list. The items are a
+     * resource collection, so the list is written as a JSON list and documented as a list of that resource.
+     */
+    protected function cursorPage(ResourceCollection $items, ?string $nextCursor, SourceDriver $source): JsonResponse
+    {
+        return $this->sourced($items, $source, ['next_cursor' => $nextCursor]);
+    }
+
+    /**
      * @param  array<string, array<int, string>>|null  $errors
      */
-    protected function error(string $message, int $status = 400, ?array $errors = null): JsonResponse
+    protected function error(string $message, int $status = 400, ?array $errors = null, string $code = 'error'): JsonResponse
     {
-        $body = ['success' => false, 'message' => $message];
+        $body = ['success' => false, 'message' => $message, 'code' => $code];
 
         if ($errors !== null) {
             $body['errors'] = $errors;

@@ -115,7 +115,7 @@ it('returns 404 when another user shows a media file', function (string $visibil
     actAsMediaUser(User::factory()->create());
     $this->getJson("/api/v1/media/{$media->id}")
         ->assertNotFound()
-        ->assertExactJson(['success' => false, 'message' => 'Resource not found.']);
+        ->assertExactJson(['success' => false, 'message' => 'Resource not found.', 'code' => 'not_found']);
 
     actAsMediaUser($owner);
     $this->getJson("/api/v1/media/{$media->id}")
@@ -131,7 +131,7 @@ it('returns 404 when another user deletes a media file and keeps it intact', fun
     actAsMediaUser(User::factory()->create());
     $this->deleteJson("/api/v1/media/{$media->id}")
         ->assertNotFound()
-        ->assertExactJson(['success' => false, 'message' => 'Resource not found.']);
+        ->assertExactJson(['success' => false, 'message' => 'Resource not found.', 'code' => 'not_found']);
 
     expect(MediaFile::query()->find($media->id))->not->toBeNull()
         ->and($media->isReferencedBy($owner))->toBeTrue();
@@ -280,7 +280,8 @@ it('refuses to register an upload under another actor type prefix', function ():
     actAsMediaUser($user);
     $this->postJson('/api/v1/media/register', ['key' => $sourceKey])
         ->assertForbidden()
-        ->assertJsonPath('reason', 'forbidden_upload');
+        ->assertJsonPath('reason', 'forbidden_upload')
+        ->assertJsonPath('code', 'forbidden_upload');
 
     actAsMediaSource($source);
     $this->postJson('/api/v1/media/register', ['key' => $userKey])
@@ -455,7 +456,7 @@ it('answers a malformed media id like an unknown one without touching the databa
     $queries = count(DB::getQueryLog());
     DB::disableQueryLog();
 
-    $response->assertNotFound()->assertExactJson(['success' => false, 'message' => 'Resource not found.']);
+    $response->assertNotFound()->assertExactJson(['success' => false, 'message' => 'Resource not found.', 'code' => 'not_found']);
     expect($queries)->toBe(0);
 })->with(['GET', 'DELETE'])->with(['not-a-ulid', '%00', '01JTESTULIDTOOLONGXXXXXXXXXX']);
 

@@ -58,7 +58,7 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => 'HOMI API v1. Every response uses the `{success, data, meta?}` envelope; errors use `{success: false, message, errors?}` (ADR-0007). Authentication: Sanctum bearer tokens (ADR-0003). Collector intake: see docs/api/intake.md.',
+        'description' => 'HOMI API v1. Every response uses the `{success, data, meta?}` envelope; errors use `{success: false, message, code, errors?}` (ADR-0007, ADR-0017); every answer of a source method carries `meta.source` (`stub`, `legacy` or `native`), and cursor lists `meta.next_cursor` (docs/api/README.md). Authentication: Sanctum bearer tokens (ADR-0003). Collector intake: see docs/api/intake.md.',
     ],
 
     'ui' => [

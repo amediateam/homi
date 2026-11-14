@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'docs/api/openapi.json'
       - '.github/workflows/backend.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'docs/api/openapi.json'
       - '.github/workflows/backend.yml'
 
 permissions:
@@ -71,8 +73,17 @@ jobs:
           DB_USERNAME: homi
           DB_PASSWORD: homi
 
+      # `ci:check` ends with `composer openapi:check`. Scramble types model attributes from the columns of the migrated
+      # database on the default connection, so the export needs the same connection as the setup step.
       - name: Lint, static analysis, tests
         run: composer ci:check
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_DATABASE: homi
+          DB_USERNAME: homi
+          DB_PASSWORD: homi
 
       # The pgsql group (tests/Pgsql): PostgreSQL-specific SQL and concurrent writes. Its base
       # class refuses any database whose name does not end with `_test`.

@@ -404,3 +404,38 @@ ASSUMPTION_MISMATCH AM-51 (2026-11-15):
   - `fsevents` 2.3.3 has no install script; its binary ships in the package.
 - **Resolution.** `frontend/pnpm-workspace.yaml` lists the three real scripts in `allowBuilds`, all set to `false`.
   The specification and the PR description were corrected.
+
+## M. Development track, 2026-11-15 — WP-10, API v1 framework
+
+Taken on «бери WP-04». There is no WP-04, and WP-10 is the next package. What it needs from WP-03 (openapi-typescript,
+the test runners, the `pgsql` group) is on `main`; WP-03 itself waits only for its deploy. Branch
+`feat/wp-10-api-framework`. The corrections are recorded in the specification (rule 6); the facts that the
+specification had assumed differently are below.
+
+ASSUMPTION_MISMATCH AM-52 (2026-11-15):
+- **Assumption.** The WP-10 specification assumed four things:
+  - Scramble documents `sourced()` and `cursorPage()` from the helper bodies as written;
+  - the export of `docs/api/openapi.json` is the same on every machine;
+  - `git diff --exit-code` catches a missing generated file;
+  - two parallel `sources:set` calls are enough to show a lost update.
+- **What was found.**
+  - Scramble documented `['source' => $source->value] + $meta` as a bare `array`. The plain-iterable branch of
+    `cursorPage()` made `data` an `anyOf` with `array`.
+  - The server URL comes from `APP_URL`.
+  - `git diff` passes an untracked file.
+  - Inside a PostgreSQL transaction, Pennant's retry of a lost insert of the default row cannot work, because the
+    failed insert aborts the transaction first.
+  - The in-process export left the test suite at about 160M, over PHP's 128M default.
+- **Resolution.**
+  - `sourced()` writes the enum after the spread of `$meta`, and `cursorPage()` takes a `ResourceCollection`.
+  - A document transformer names the server relatively.
+  - Both checks also run `git ls-files --error-unmatch`.
+  - `SourceRuleStore` reads the rule once before its transaction.
+  - The race test runs one share and five users and fails without the lock.
+  - `phpunit.xml` sets `memory_limit` 512M.
+
+Also found and fixed: `@homi/api-client` threw `ApiError` on every `204` (`DELETE /media/{media}` included). It now
+answers `{success: true, data: null}`.
+
+Left as found: Scramble documents the media answers built by `success()` with `message: null` and `meta: string`
+(pre-existing), so the generated media types carry them. The typed client reads only `data`.
