@@ -115,8 +115,9 @@ it('rejects tokens without the media:write ability', function (): void {
 });
 
 it('shows a media file with its variant urls', function (): void {
-    uploaderUser();
+    $user = uploaderUser();
     $media = MediaFile::factory()->ready()->create();
+    $media->attachOwner($user);
 
     $this->getJson("/api/v1/media/{$media->id}")
         ->assertOk()
@@ -135,8 +136,9 @@ it('returns a 404 envelope for an unknown media id', function (): void {
 });
 
 it('deletes the original, its variants and the row', function (): void {
-    uploaderUser();
+    $user = uploaderUser();
     $media = MediaFile::factory()->ready()->create();
+    $media->attachOwner($user);
     $disk = Storage::disk('public');
     $disk->put($media->key, 'original');
     foreach ($media->variants as $key) {
@@ -163,7 +165,7 @@ it('reports that presigned uploads are unavailable on local disks', function ():
 it('registers an object uploaded to the tmp disk as a public original', function (): void {
     $user = uploaderUser();
     $bytes = UploadedFile::fake()->image('pre.jpg', 500, 300)->getContent();
-    $key = "uploads/{$user->id}/01JTESTULID.jpg";
+    $key = "uploads/user/{$user->id}/01JTESTULID.jpg";
     Storage::disk('tmp')->put($key, $bytes);
 
     $response = $this->postJson('/api/v1/media/register', ['key' => $key, 'visibility' => 'public']);
@@ -177,9 +179,9 @@ it('registers an object uploaded to the tmp disk as a public original', function
 
 it('refuses to register a key that belongs to another user', function (): void {
     uploaderUser();
-    Storage::disk('tmp')->put('uploads/999/x.jpg', 'whatever');
+    Storage::disk('tmp')->put('uploads/user/999/x.jpg', 'whatever');
 
-    $this->postJson('/api/v1/media/register', ['key' => 'uploads/999/x.jpg'])
+    $this->postJson('/api/v1/media/register', ['key' => 'uploads/user/999/x.jpg'])
         ->assertForbidden()
         ->assertJsonPath('success', false);
 });

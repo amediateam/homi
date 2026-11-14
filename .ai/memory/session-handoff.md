@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (new-product course; Wave 1 plan and a queue of 45 work packages, all specified and verified; second answer round DEC-50 … DEC-56; PR #25 open; next step package WP-00)
+updated: 2026-11-15 (WP-01 and WP-02 merged into main, both WAITING; WP-00 PR #27 open; next in queue WP-03 waits for WP-00)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -8,46 +8,48 @@ source-of-truth: this session; overwritten every session — owned by the develo
 Written for whoever continues the **development track** (the second developer, a colleague, Codex or Claude Code). The production track's state is in `docs/ai/reports/production-notes.md`, not here.
 
 ## Developer's standing instruction
-- 2026-11-09, work split: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» Production/staging belongs to the first developer: «Не включай настройку production-среды в задачи коллеги».
-- 2026-11-09: «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» Plan before code; no real passwords, tokens or personal data in docs or tests. «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
-- 2026-11-14, three waves (prompt kept local as `prompt.md`): «Основной принцип — постепенный переход на новую архитектуру без остановки работающего сайта и нарушения существующей функциональности.»
-- 2026-11-14, answer round (43 answers, verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`). The ones that shape everything: «Пока будет новый бот с нашим backend старый бот будет работат в старом»; «Постоянный новый продукт»; «Сразу новый /api/v1»; «Laravel как шлюз»; «Пересборка по аудиту»; «Полный App Router»; «На сервере через cookie-сессию»; «Сначала весь фронтенд на моках»; «Крупные PR по модулям»; «фуллстак только по очереди там где ты остоновился он продолжит или там где он остоновился ты продоожиш»; «Всё сразу на prod»; «Срока нет, важнее полнота».
-- 2026-11-14: «у нас план должен быть детальным чтобы у разработчика не возникола вопросов и чтобы быстро безостоновки все сделал»; «Переписать план в этом же PR».
-- 2026-11-14, second round (answers 44–51, DEC-50 … DEC-56): demo marker kept; radars switched off until WP-57; «Номер после нажатия»; «Постранично, по 20»; «<Город> целиком»; «Будет все модели мы сами переключим»; «Свой бот поддержки», operators in «Личный чат оператора».
-- Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, `HANDOFF.md` §4 items marked **gate**.
+- 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
+- 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
+- 2026-11-14, queue prompt: «Возьми первый пакет очереди со статусом не DONE. … тесты сначала, затем код, затем чек-лист приёмки.» «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
+- 2026-11-14: «бери следующий пакет WP-01»; «#29 слит, сливай #32 и бери WP-02» (#29 was still open; the developer then chose «Слить #29, потом #32»); «сделай все сам»; «продолжай, открой PR когда агент закончит»; 2026-11-15: «сливай #37 и все PR WP-01».
 
 ## State at handoff
-- **Where to continue:** read `docs/migration/25-wave-1-plan.md` once, then take the first package of `docs/migration/wave-1/README.md` that is not `DONE` — today **WP-00** (Media ownership fix, KI-25). Strategy and decisions: `docs/migration/24-three-wave-strategy.md`. Start code only after the developer's OK.
-- The course: HOMI ships a new product under its own bot and brand; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through the operator's service key, or from HOMI's own code (a Pennant flag per method). The legacy bot, hosts and users are not taken over; nothing is migrated.
-- Branch `docs/three-wave-plan`, **PR #25** (github.com/amediateam/homi/pull/25), open, docs only, no review yet, no CI on it. `main` is at `596d0db`. Until the PR is merged the plan is read from the branch.
-- No application code has changed. `make ci-backend`, `make ci-frontend`, `make dev-check` were not run this session.
-- `prompt.md` and `writing-block.md` stay untracked on purpose (machine paths); unstage them if they appear staged.
-- Verify the plan: `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` (both exit 0 at the last commit).
+- `main` = `3bced89`. Merged on 2026-11-15 with merge commits: #30 `5b6377a`, #31 `ada15b9`, #33 `c0e8732`, #34 `f893d08`, #35 `a70179d`, #36 `77e0c6d`, #37 `3bced89`. Before each ADR merge, `main` was merged into the ADR branch to fix the index-row conflicts.
+- The shared working tree is on `feat/wp-00-media-ownership-fix`, with `main` merged in (`dc055cf`).
+- **WP-00** — PR #27 `REVIEW`; #28 waits until #27 is deployed.
+- **WP-01** — `WAITING`: ADR-0016 … 0019 are on `main` with `Status: Proposed`. The first developer has to accept them; then each needs a one-line `Status` change (header and index row) in a small PR. The DEC-45 answers asked in #30 are still open.
+- **WP-02** — `WAITING`: the baseline is on `main` and the audit describes `index-DY_DH7h-.js`. The operator request is an unsent Gmail draft, so WP-02 is not `DONE` until it is sent.
+- **Next in the queue: WP-03.** It depends on WP-00, which is not merged. It also installs dependencies, which needs the first developer's approval.
+- Verify:
+  - `make ai-hooks-test` → 55 OK;
+  - `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` → 0 and 0 on the #37 branch before the merge;
+  - `make ci-backend` on WP-00 → exit 0 at its last code change.
 
 ## Done this session
-- `24` rewritten, `25-wave-1-plan.md` written, `wave-1/README.md` (one ordered queue) and 45 specifications `wave-1/WP-NN-*.md` (about 18 400 lines), drafted by subagents; WP-59 (support bot) written by the main session.
-- **Verification pass.** WP-00 … WP-03 read by the main session against the code they change (WP-00: four defects fixed). The other 40 read in full by three agents against the repository, each other, `25` and for executability: 58 + 81 + 71 corrections (reported); 26 of their claims sampled by the main session against framework source, application code and the bundled Next.js docs → 26 confirmed.
-- Settled for all packages: tests of concurrent writes live in `backend/tests/Pgsql/` (own base class, only a database named `*_test`, helper `concurrently()`), built by WP-03.
-- Second answer round carried through 32 specifications by one agent (reported), seams and `24`/`25`/queue aligned by the main session (`phase-3-notes.md` §H lists the defaults it chose).
-- Checks at the last commit: template of all 45 files (script); `collect_ids.py --check` exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` exit 0; every repository path named exists or is created by a package (script); address and token scan → no hit.
-- **Not covered:** nothing was executed; texts, constants and thresholds were not compared line by line with the audit; behaviour of packages not installed yet and of the Telegram Bot API is worded "verify before writing" (`wave-1/README.md`, "State of the specifications").
-- Legacy tree only read; legacy production not called.
+- **Live hook probe before the merge** (#29's guard placed temporarily in the working tree): Edit and Write under `kvadro.uz` refused, `npm` and `svn commit` refused, Read, rg and cat allowed. Recorded in #29 and in the WP-01 Handoff.
+- **Merged #29 and #32** (merge commits), then merged `main` into WP-00. The queue-row conflict was resolved. Afterwards `make ai-hooks-test` → 55 OK, `collect_ids --check` → 0, `task_graph --check` → 0.
+- **WP-02 baseline:** `index-DY_DH7h-.js`, SVN r27. Releases read: Dbpp463V, BNLZFfL0, DY_DH7h- (new feature: return banner + `GET /api/feed/new` + in-feed radar card).
+- **WP-02 audit and specifications** done in three subagent passes, reviewed by me:
+  - claims spot-checked in the code (SCR-018 share-only label; LB-APP-048 crash on a missing `count`);
+  - all remapped line references checked by content;
+  - 06 completed by hand.
+- **WP-02 registers:** `collect_ids.py` (+ `--check`), `build_open_questions.py` and `task_graph.py --check` all exit 0. The diff of 20 holds exactly 4 new questions plus Q-APP-024 answered.
+- **Operator request:** an unsent Gmail draft with the full text. The recipient is unknown; it is the operator's contact, which only the product owner has (Q-SYS-009).
 
 ## Waiting for the developer (do NOT start on your own)
-1. First developer: review PR #25. It changes three project rules: PR size (one PR per work package), the dependency batch (DEC-49), a production deploy on every merge. Technical points for him are listed in the PR description (OpenAPI UI and `/pulse` behind nginx, Redis in CI, the API server of the end-to-end CI job).
-2. Developer: OK to start WP-00. Then WP-01 (four ADRs 0016–0019, each its own PR), WP-02 (send the request to the operator — the text is in the specification — and pin the legacy baseline), WP-03 (dependencies, test tooling).
-3. Product owner: the operator's contact, the service key and its contract, limits, a batch read for saved lists, dump and schema (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062); HOMI's own artwork (Q-APP-025); the legal basis and privacy text before real users arrive (DEC-13, Q-SEC-021); a PostHog account (DEC-47); proofreading of uz and en texts (Q-BOT-014).
-4. Product owner, for the support bot (WP-59): who the operators are (their Telegram ids); the production track creates one support bot per environment.
-5. Still open and needed inside Wave 1: DEC-08 (landing CSP), DEC-12 (retention periods), DEC-19 (thresholds of the phone-disclosure quota), DEC-20 (cap on instant cards) — each package has a configurable default (`24` §7).
+1. **Send the operator request.** Add the recipient (the operator's contact, which only the product owner has, Q-SYS-009) to the Gmail draft and send it. Then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` (date and sender) in a small PR, and set WP-02 to `DONE`.
+2. **First developer:** accept ADR-0016 … 0019. After that, a small PR changes `Status: Proposed` → `Accepted` in each file header and index row. They also answer the PR-size and deploy-cadence questions of #30; quote the answers here, then set WP-01 to `DONE`.
+3. **WP-00:** review and merge #27, then #28 after the production track's counts, migration approval and deploy.
+4. **Production track:** the outbound addresses of the API hosts go to the operator directly (asked in #37).
+5. **Reviewer decisions taken in #37** (listed in its body): `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding the banner and the feed card, and whether WP-30 (about 3 700 lines) is split before it starts.
+6. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
 
 ## Gotchas learned this session
-- The earlier task files (`docs/migration/tasks/**`) and `21`, `18`, `14` describe the abandoned plan. They are behaviour reference only; `24` §7 maps what still applies.
-- A specification is a checked starting point: when it disagrees with `25`, the audit or the code, those win and the specification is fixed in the same PR.
-- `backend/app/Enums` exists, so `make:enum Name` already lands there (no `Enums/` prefix); `tests/Unit` has no application (Pest binds `TestCase` to `Feature` only); CI has PostgreSQL but no Redis.
-- Legacy production ships a Mini App release every one to three days; the audit trails it by two (Q-APP-024). WP-02 pins the baseline.
-- In `docs/migration/**` no table row, heading or bold list item may start with an existing identifier (prefix "Ref. "). Run `collect_ids.py`, then `build_open_questions.py`.
-- Subagents hit the usage limit twice earlier; resume them with SendMessage and tell them not to fan out.
-- `$PIPESTATUS` is empty in zsh; there is no `timeout` command on this machine. Next numbers: AM-50, KI-27, ADR 0016.
+- The developer twice said a PR was merged when GitHub still showed it open. Check `gh api repos/amediateam/homi/pulls/<n> --jq .merged` before acting on "слит".
+- Any insert into 02, 03, 06 or 08 shifts `path:line` references elsewhere (07, 09, `features.csv`, 14, 24, `tasks/**`, short forms like `06:930`). Remap them by matching the old line's content (`git show HEAD:<file>`), and watch for times such as `06:59` in the quiet-hours text.
+- `collect_ids.py` without `--check` rewrites `data/ids.csv` (about 1 700 lines, mostly moved locations); commit the regenerated file once at the end.
+- `rm -rf` under the scratchpad was refused by the permission rules: the probe folder `<scratchpad>/probe` stays.
+- Next numbers: AM-51, KI-29 (PR #28 takes KI-27/28), ADR 0020; audit ids are in `docs/migration/data/ids.csv` on the #37 branch.
 
 ## Active subagent work at handoff
-- None.
+- None. All three WP-02 passes are merged with #37.

@@ -18,6 +18,9 @@ use Throwable;
  * Derive WebP variants `derived/{sha256}/{width}.webp` for every configured width that does
  * not exceed the original (no upscaling). Idempotent: existing variants are kept.
  * Ported from app.uz `Jobs/Media/GenerateImageVariantsJob` (catalogue A6).
+ *
+ * A row deleted before the job starts drops the job quietly; a row deleted while it runs makes
+ * it remove the variants it wrote, unless the same bytes were recorded again (WP-00).
  */
 class GenerateImageVariantsJob implements ShouldQueue
 {
@@ -28,6 +31,8 @@ class GenerateImageVariantsJob implements ShouldQueue
     public int $backoff = 30;
 
     public int $timeout = 300;
+
+    public bool $deleteWhenMissingModels = true;
 
     public function __construct(public MediaFile $file)
     {
@@ -54,6 +59,7 @@ class GenerateImageVariantsJob implements ShouldQueue
         $originalWidth = $images->decodeBinary($original)->width();
         $quality = (int) config('media.webp_quality', 80);
         $variants = [];
+        $written = [];
 
         /** @var int $width */
         foreach (config('media.variants', []) as $width) {
@@ -72,9 +78,18 @@ class GenerateImageVariantsJob implements ShouldQueue
                     'ContentType' => 'image/webp',
                     'CacheControl' => 'public, max-age=31536000, immutable',
                 ]);
+                $written[] = $key;
             }
 
             $variants[$width] = $key;
+        }
+
+        if (! MediaFile::query()->whereKey($this->file->id)->exists()) {
+            if (! $this->file->contentIsRecorded()) {
+                $disk->delete($written);
+            }
+
+            return;
         }
 
         $this->file->forceFill(['variants' => $variants, 'status' => MediaStatus::Ready])->save();
