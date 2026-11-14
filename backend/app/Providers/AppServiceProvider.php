@@ -57,8 +57,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Named limiters (app.uz catalogue A5, adapted): `api` applies to every /api route through the
-     * default `api` middleware group; the others are attached per route group.
+     * Named limiters (app.uz catalogue A5, adapted): `api` is attached to the whole /api/v1 group in
+     * routes/api.php; the others are attached per route group.
      */
     protected function configureRateLimiting(): void
     {

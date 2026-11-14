@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Media;
 
+use App\Enums\MediaOwnerType;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Media\StoreMediaRequest;
 use App\Http\Resources\Api\V1\MediaFileResource;
 use App\Jobs\Media\GenerateImageVariantsJob;
 use App\Models\MediaFile;
 use App\Services\Media\HashedUploader;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -39,7 +41,7 @@ class MediaController extends ApiController
         $stored = $uploader->storeUploadedFile($upload, $visibility);
         $media = MediaFile::recordFor($this->actor($request), $stored, $visibility);
 
-        if ($media->wasRecentlyCreated) {
+        if ($media->needsVariants()) {
             GenerateImageVariantsJob::dispatch($media)->afterCommit();
         }
 
@@ -74,6 +76,8 @@ class MediaController extends ApiController
             $file->references()->heldBy($actor)->delete();
 
             if ($file->isReferenced()) {
+                $this->forgetUploader($file, $actor);
+
                 return;
             }
 
@@ -82,6 +86,18 @@ class MediaController extends ApiController
         });
 
         return $this->noContent();
+    }
+
+    /**
+     * A file that stays for other owners no longer names the user who let go of it.
+     */
+    private function forgetUploader(MediaFile $file, Model $actor): void
+    {
+        $uploaderId = MediaOwnerType::uploaderId($actor);
+
+        if ($uploaderId !== null && $file->uploaded_by === $uploaderId) {
+            $file->forceFill(['uploaded_by' => null])->save();
+        }
     }
 
     /**

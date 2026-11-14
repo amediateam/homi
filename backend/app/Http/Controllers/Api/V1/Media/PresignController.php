@@ -80,7 +80,7 @@ class PresignController extends ApiController
         $media = MediaFile::recordFor($actor, $stored, $visibility);
         $tmp->delete($key);
 
-        if ($media->wasRecentlyCreated) {
+        if ($media->needsVariants()) {
             GenerateImageVariantsJob::dispatch($media)->afterCommit();
         }
 

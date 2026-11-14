@@ -60,6 +60,7 @@ class MediaFile extends Model
             'bytes' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
+            'uploaded_by' => 'integer',
             'visibility' => MediaVisibility::class,
             'status' => MediaStatus::class,
             'variants' => 'array',
@@ -154,6 +155,15 @@ class MediaFile extends Model
     public function isReferenced(): bool
     {
         return $this->references()->exists();
+    }
+
+    /**
+     * Whether the variants job must run: the row is new, or an earlier run failed (for example
+     * because a concurrent delete removed the original before these bytes arrived again).
+     */
+    public function needsVariants(): bool
+    {
+        return $this->wasRecentlyCreated || $this->status === MediaStatus::Failed;
     }
 
     /**

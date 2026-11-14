@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\MediaOwnerType;
+use App\Enums\MediaStatus;
 use App\Enums\MediaVisibility;
+use App\Http\Requests\Api\V1\Media\RegisterUploadRequest;
 use App\Jobs\Media\GenerateImageVariantsJob;
 use App\Models\MediaFile;
 use App\Models\MediaFileReference;
@@ -15,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Laravel\Sanctum\Sanctum;
@@ -441,4 +444,61 @@ it('does not bring a deleted row back when the variants job fails', function ():
     $job->failed(new RuntimeException('decoder exploded'));
 
     expect(MediaFile::query()->count())->toBe(0);
+});
+
+it('answers a malformed media id like an unknown one without touching the database', function (string $method, string $id): void {
+    actAsMediaUser(User::factory()->create());
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $response = $this->json($method, "/api/v1/media/{$id}");
+    $queries = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $response->assertNotFound()->assertExactJson(['success' => false, 'message' => 'Resource not found.']);
+    expect($queries)->toBe(0);
+})->with(['GET', 'DELETE'])->with(['not-a-ulid', '%00', '01JTESTULIDTOOLONGXXXXXXXXXX']);
+
+it('rejects a register key with a trailing newline', function (): void {
+    $rules = (new RegisterUploadRequest)->rules();
+
+    expect(Validator::make(['key' => "uploads/user/5/01JTESTULID.jpg\n"], $rules)->fails())->toBeTrue()
+        ->and(Validator::make(['key' => 'uploads/user/5/01JTESTULID.jpg'], $rules)->fails())->toBeFalse();
+});
+
+it('derives the variants again when the same bytes arrive for a failed row', function (): void {
+    Queue::fake();
+    actAsMediaUser(User::factory()->create());
+    $bytes = imageBytes();
+
+    $this->postJson('/api/v1/media', ['file' => UploadedFile::fake()->createWithContent('a.jpg', $bytes)])->assertCreated();
+    MediaFile::query()->sole()->forceFill(['status' => MediaStatus::Failed])->save();
+    $this->postJson('/api/v1/media', ['file' => UploadedFile::fake()->createWithContent('a.jpg', $bytes)])->assertCreated();
+
+    Queue::assertPushed(GenerateImageVariantsJob::class, 2);
+});
+
+it('clears the uploader when the uploader leaves and another owner stays', function (): void {
+    $uploader = User::factory()->create();
+    $other = User::factory()->create();
+    $media = MediaFile::factory()->ready()->create(['uploaded_by' => $uploader->id]);
+    $media->attachOwner($uploader);
+    $media->attachOwner($other);
+
+    actAsMediaUser($uploader);
+    $this->deleteJson("/api/v1/media/{$media->id}")->assertNoContent();
+
+    expect($media->refresh()->uploaded_by)->toBeNull()
+        ->and($media->isReferencedBy($other))->toBeTrue();
+});
+
+it('throttles reads of media files per actor', function (): void {
+    actAsMediaUser(User::factory()->create());
+    $unknown = (string) Str::ulid();
+
+    foreach (range(1, 120) as $attempt) {
+        $this->getJson("/api/v1/media/{$unknown}")->assertNotFound();
+    }
+
+    $this->getJson("/api/v1/media/{$unknown}")->assertTooManyRequests();
 });
