@@ -140,6 +140,7 @@
       "$KVADRO_ROOT/demo/app/src/features/feed/FeedHeader.jsx",
       "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js",
       "$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/format.js",
       "$KVADRO_ROOT/demo/app/src/components/PhotoStrip.jsx",
       "$KVADRO_ROOT/demo/app/src/components/Photo.jsx",
       "$KVADRO_ROOT/demo/app/src/components/FavButton.jsx",
@@ -530,14 +531,15 @@
   },
   {
     "id": "SCR-023",
-    "name": "Listing actions sheet (menu and report reasons)",
+    "name": "Listing actions sheet (menu, report reasons and wrong-data detail)",
     "kind": "sheet",
     "entry_points": [
       "⋯ button on listing title row"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx",
-      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js"
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js",
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js"
     ],
     "apis": [
       "POST /api/listings/:id/hide",

@@ -29,7 +29,7 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | API methods the client uses | 34 (API-001 … API-034) | `08` §2 |
 | Bot handlers, buttons, texts | 84, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 472 keys per locale in the current legacy tree; the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 482 keys per locale at the baseline `index-DY_DH7h-.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
 The audit describes legacy release `index-DY_DH7h-.js`, pinned by WP-02 in `wave-1/baseline.md` (Q-APP-024). Each
 later release is read into the audit as described in section 8.

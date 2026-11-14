@@ -91,7 +91,7 @@ behaviour in §1–§4 stays exact.
   - PhotoViewer (`.../listing/PhotoViewer.jsx:20`)
   - MarketSheet (`MarketSheet.jsx:74`)
   - SpotMapFullscreen (`.../listing/spot/SpotMapFullscreen.jsx:23`)
-  - ListingActionsSheet, where Back on the report view returns to the menu (`.../listing/ListingActionsSheet.jsx:33-39`)
+  - ListingActionsSheet: Back steps detail → reasons → menu → close (`.../listing/ListingActionsSheet.jsx:36-45`)
   - RadarSheet (`.../radar/RadarSheet.jsx:43`) and FoundSheet (`FoundSheet.jsx:88`)
   - SubPage, i.e. all settings sub-pages (`.../settings/SubPage.jsx:17`)
   - Drawing mode (`$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:37-44`)
@@ -354,18 +354,26 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Layout:** `main.lang-pick` with a Lock icon, h1, text, an optional «checking» line and a list of large buttons
   (`$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:41-87`).
 - **Reasons:** `private | invite | full | blocked | join`; anything else renders as `private` (`NoAccessScreen.jsx:13,22`).
-- **Titles and texts** (ru):
+- **Titles and texts** (ru, `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js:28-37`):
 
   | Reason | Title (`noAccess.title.*`) | Text (`noAccess.text.*`) |
   | ------ | -------------------------- | ------------------------ |
   | `private` | «Бот приватный» | «Приложение сейчас доступно только владельцу.» |
-  | `invite` | «Закрытая бета» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
-  | `full` | «Мест пока нет» | «Все места в бете заняты. Попробуйте позже.» |
+  | `invite` | «Вход по приглашению» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
+  | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
   | `join` | «Сначала — бот» | «Нажмите «Старт» в боте — после этого приложение откроется.» |
 
-  The uz and en equivalents are in the locale files, e.g. en «This bot is private», «Closed beta», «No spots yet»,
+  The uz and en equivalents are in the locale files, e.g. en «This bot is private», «Invite only», «No spots yet»,
   «No access», «Start with the bot».
+- **No beta wording since release `index-Dbpp463V.js`:** two texts were reworded, the reason codes and the gate logic
+  stayed (`ru.js:29,35`; `uz_Latn.js:27,33`; `en.js:27,33`;
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:20-22`):
+  - `noAccess.title.invite`: «Закрытая бета» / «Yopiq beta-talqin» / «Closed beta» became «Вход по приглашению» /
+    «Taklif orqali kirish» / «Invite only»;
+  - `noAccess.text.full`: «Все места в бете заняты. Попробуйте позже.» / «Betada joy qolmadi. Keyinroq urinib koʻring.»
+    / «All beta spots are taken. Please try again later.» became «Сейчас все места заняты. Попробуйте позже.» /
+    «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
 - **Checking line:** `noAccess.checking` «Только что нажали «Старт»? Подождите пару секунд — проверяем доступ…».
   Shown while an automatic re-check is pending: 3 tries at 2.5 s, never for `blocked`.
 - **Actions:**
@@ -483,7 +491,13 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Cards** (`$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx:32-93`):
   - photo strip with scroll-snap and dots; lazy slide mounting; a ▶ badge for video;
   - badge tag (BR-APP-026), favourite heart, «viewed» eye (aria `card.viewedTitle`), `status_text` warning tag;
-  - price `main` + `period` + «· первый взнос» (`card.downPayment`), or «Цена договорная» (`card.negotiable`);
+  - price `main` + `period` + the price-kind label, or «Цена договорная» (`card.negotiable`). The label
+    (`priceKindLabel`, `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43`; `ListingCard.jsx:74`) is
+    «· первый взнос» (`card.downPayment`) for `price_kind: "down_payment"` and, since release `index-Dbpp463V.js`,
+    «· цена за бизнес, помещение в аренде» / «biznes narxi, joy ijarada» / «business price, premises rented»
+    (`card.businessPrice`, `ru.js:103`, `uz_Latn.js:101`, `en.js:101`) for `"business"`; any other value has no
+    label (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:14-15`). The same card, and so
+    the label, appears in favourites, history and the compact map card (SCR-013);
   - market delta chip (`listing.marketDelta` «{delta} к рынку», or the short verdict);
   - facts line `title · area · floor · market · 🐾`, then age;
   - location line `district · landmark · metro|center distance`.
@@ -840,7 +854,13 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - «Написать» opens `contact_url`.
 - **Share:** a prepared message (`POST /api/listings/:id/share` → `shareMessage(id)`), else
   `t.me/share/url?url=https://t.me/<bot>?startapp=l_<id>&text=<title · price · kind · district>`. Repeat taps are
-  locked during sharing and for 1.5 s after (`ListingTitleRow.jsx:28-63`).
+  locked during sharing and for 1.5 s after (`ListingTitleRow.jsx:28-63`). `kind` is the price-kind label of the
+  card (SCR-007): «первый взнос», or «цена за бизнес, помещение в аренде» since release `index-Dbpp463V.js`
+  (`ListingTitleRow.jsx:40-49`). This share text is the only place the label appears on the listing screen: the
+  title row and the CTA bar do not render it (`ListingTitleRow.jsx:64-89`, `ListingCtaBar.jsx:17-83`), although the
+  sync report and the changelog say the label shows "in the title row" / "on the listing screen"
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:15`,
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:53`).
 - **Actions menu:** SCR-023.
 - **Overlays:** PhotoViewer (SCR-020), MarketSheet (SCR-022), SpotMapFullscreen (SCR-021).
 - **APIs:**
@@ -918,12 +938,23 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Edge case:** a `median_rooms` value that is not 1–3 or ≥ 4 throws (LB-APP-015).
 - **Status:** CONFIRMED.
 
-### SCR-023 — Listing actions sheet: menu and report (`sheet`)
+### SCR-023 — Listing actions sheet: menu, report and report detail (`sheet`)
 
 - **Purpose:** hide, block the author, report, or contact support.
-- **Opens:** «⋯» in the title row. **Closes:** ×, backdrop, drag, Telegram Back (Back on the report view returns to the
-  menu), or a successful action.
-- **Menu view** (`$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:129-166`), title «Объявление»:
+- **Opens:** «⋯» in the title row. **Closes:** ×, backdrop or drag from any view, Telegram Back on the menu view, or a
+  successful action.
+- **Views and Back** (`$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:30-45,108-134`): `menu` →
+  `report` → `detail`; the third view exists since release `index-BNLZFfL0.js`
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:13-20`).
+  - Back goes one step: detail → reasons → menu → close (`goBack`, `ListingActionsSheet.jsx:36-44`). Telegram Back
+    (`pushBackHandler(goBack)`, `:45`) and the header back button (ChevronLeft, aria `actions.back` «Назад») call the
+    same `goBack`.
+  - The header back button is shown on every view except the menu (`:123-129`). Before `index-BNLZFfL0.js` it existed
+    only on the report view and went straight to the menu.
+  - Title, also the dialog `aria-label` (`:108-110,116`): menu `actions.title` «Объявление» / «Eʼlon» / «Listing»;
+    report `report.title` «Что не так?» / «Nima notoʻgʻri?» / «What's wrong?»; detail `report.detailTitle`
+    «Что именно неверно?» / «Aynan nima notoʻgʻri?» / «What exactly is wrong?».
+- **Menu view** (`ListingActionsSheet.jsx:137-174`), title «Объявление»:
   - «Скрыть объявление» — «Больше не покажем ни его, ни его копии»;
   - «Заблокировать автора» — «Не показывать объявления с номера {label}» / «… из {label}» / «Не показывать его
     объявления», plus « — скроет N объявлений» when the author has 20 or more listings. Phone hints are masked for
@@ -931,11 +962,28 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - «Пожаловаться» › «Сдано, риелтор, ошибка или обман»;
   - «Написать в поддержку» — «Уже сдано, мошенник или это ваше объявление — разберёмся», only when `/api/bot` returns
     `support`; opens `t.me/<support>?start=l_<id>`.
-- **Report view**, title «Что не так?»:
+- **Report view** (`ListingActionsSheet.jsx:175-191`), title «Что не так?»:
   - «Уже сдано» / «Объявление больше не актуально»;
   - «Это риелтор, а не хозяин» / «Отметим номер как риелторский» (hidden when `is_owner === false`);
-  - «Неверные данные» / «Цена, район или комнаты не совпадают»;
+  - «Неверные данные» / «Цена, район или комнаты не совпадают» — since `index-BNLZFfL0.js` with a › arrow; a tap
+    gives a light haptic and opens the detail view, nothing is sent;
   - «Мошенничество или спам» / «Просят предоплату, чужие фото, реклама».
+
+  The other three reasons are sent at once with `{reason}`.
+- **Detail view** «Что именно неверно?» (`ListingActionsSheet.jsx:13-14,192-200`; since `index-BNLZFfL0.js`): five
+  rows from `REPORT_DETAILS`, no icons, no arrows. A tap sends `reason: "wrong_data"` with the row's `detail` code
+  (`ru.js:201-211`, `uz_Latn.js:194-204`, `en.js:195-205`):
+
+  | `detail` | Title `report.d_<code>` (ru / uz_Latn / en) | Hint `report.d_<code>Hint` (ru / uz_Latn / en) |
+  | -------- | ------------------------------------------- | ---------------------------------------------- |
+  | `price` | «Цена» / «Narx» / «Price» | «Другая сумма или валюта» / «Summa yoki valyuta boshqa» / «Different amount or currency» |
+  | `rooms` | «Комнаты, площадь или этаж» / «Xonalar, maydon yoki qavat» / «Rooms, area or floor» | «Не совпадают с постом или квартирой» / «Post yoki kvartiraga mos emas» / «Don't match the post or the flat» |
+  | `place` | «Район или место на карте» / «Tuman yoki xaritadagi joy» / «District or map location» | «Квартира в другом районе» / «Kvartira boshqa tumanda» / «The flat is in another district» |
+  | `photos` | «Фото» / «Rasmlar» / «Photos» | «Фото не от этой квартиры» / «Rasmlar bu kvartiraniki emas» / «Photos are from another flat» |
+  | `other` | «Другое» / «Boshqa» / «Other» | «Тип жилья, ремонт, условия» / «Uy turi, taʼmir, shartlar» / «Property type, renovation, terms» |
+
+  This client never sends `wrong_data` without a `detail` (BR-APP-036). The release added 11 i18n keys and no
+  analytics event.
 - **Results** (`$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`):
 
   | Action | Effect | Toast |
@@ -945,13 +993,20 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   | Report `fraud` with `hidden: true` | hide | «Спасибо, посмотрим. Это объявление у вас скрыли» + undo |
   | Report `rented` | hide and close, no undo | «Отметили: уже сдано» |
   | Report `agent` | — | «Отметили номер как риелторский» |
-  | Other reports | — | «Спасибо! Посмотрим» |
+  | Other reports, including `wrong_data` with any `detail` | — | «Спасибо! Посмотрим» |
   | Any failure | — | «Не получилось сохранить» |
   | Undo failure | re-hides | «Не получилось сохранить» |
 
 - **APIs:** `POST /api/listings/:id/hide`, `POST /api/listings/:id/block-author`, `POST /api/listings/:id/report`
-  `{reason}`, `GET /api/bot`, `DELETE /api/listings/:id/hide`, `DELETE /api/listings/:id/block-author`.
-- **States:** `busy` ignores taps while a request runs. Haptics: success or error.
+  `{reason}` or `{reason: "wrong_data", detail}` (`detail` only when truthy,
+  `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90`), `GET /api/bot`, `DELETE /api/listings/:id/hide`,
+  `DELETE /api/listings/:id/block-author`.
+- **States:** `busy` ignores taps on every view while a request runs. Haptics: light when the report or detail view
+  opens and when an action starts; success or error after it.
+- **Legacy parity scenarios** (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:281-293`): `listing-report-wrong` (the
+  detail view, no request), `listing-report-wrong-price` (body `{"reason":"wrong_data","detail":"price"}`, toast),
+  `listing-report-wrong-back` (header back from the detail view to the reasons), `listing-report-204` (`wrong_data`
+  with `detail: "photos"`).
 - **Status:** CONFIRMED.
 
 ### SCR-024 — Favourites (`screen`)
@@ -1294,13 +1349,21 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
 
 - **Locales:** `ru`, `uz_Latn`, `en`. Intl locales are `ru-RU`, `uz-Latn-UZ`, `en-GB`. Numbers in `uz_Latn` are
   formatted with `ru-RU` (space thousands separator, decimal comma) (`$KVADRO_ROOT/demo/app/src/i18n/index.js:16-74`).
-- **Keys:** **461 top-level keys in each locale**, 461 in the union. No key is missing in any locale (CONFIRMED).
-  - 14 keys are plural objects: `listings`, `listing.rooms`, `details.daysOnMarket`, `details.publications`,
-    `details.channels`, `details.views`, `actions.blockCount`, `map.missing`, `market.info.agoMin`,
-    `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`, `market.v3.city`.
+- **Keys:** **482 top-level keys in each locale** at the pinned release, 482 in the union. No key is missing in any
+  locale (CONFIRMED). A plural object counts as one key.
+  - Per release: 461 at `index-plF_TOcT.js` (the audit), 462 after `index-Dbpp463V.js` (`card.businessPrice`), 473
+    after `index-BNLZFfL0.js` (`report.detailTitle` and ten `report.d_*` keys), 482 after `index-DY_DH7h-.js` (nine
+    keys, recorded with that release).
+  - Method: the object literal of each locale file is parsed and its depth-1 keys counted, per SVN revision of the
+    locale files (r9, r24, r25, r27). Counting quoted key lines (`^  '`) gives one less, because the plural key
+    `listings` is unquoted; the 472 of `25` §1 matches that line count at `index-BNLZFfL0.js`.
+  - 14 keys are plural objects up to `index-BNLZFfL0.js`: `listings`, `listing.rooms`, `details.daysOnMarket`,
+    `details.publications`, `details.channels`, `details.views`, `actions.blockCount`, `map.missing`,
+    `market.info.agoMin`, `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`,
+    `market.v3.city`.
   - In ru they have `one / few / many / other`, except `map.missing`, which has `one / other`. In uz_Latn and en they
     have `one / other`.
-- **Key families by prefix:**
+- **Key families by prefix** (as of `index-BNLZFfL0.js`):
 
   | Prefix | Keys | Prefix | Keys | Prefix | Keys |
   | ------ | ---- | ------ | ---- | ------ | ---- |
@@ -1310,7 +1373,7 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `noAccess` | 14 | `radar` | 14 | `map` | 13 |
   | `notify` | 12 | `subs` | 12 | `sum` | 12 |
   | `details` | 10 | `hidden` | 10 | `sort` | 10 |
-  | `report` | 9 | `card` | 8 | `city` | 7 |
+  | `report` | 20 | `card` | 9 | `city` | 7 |
   | `app` | 5 | `type` | 5 | others | ≤ 4 each |
 
 - **Keys built at runtime** (every value must exist, or `t()` throws):
@@ -1323,6 +1386,7 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `sort.${sort}` | local | local |
   | `subs.mode.${mode}` | **server** subscription | server-driven |
   | `report.${reason}`, `report.${reason}Hint` | local | local |
+  | `report.d_${detail}`, `report.d_${detail}Hint` | local (`REPORT_DETAILS`, since `index-BNLZFfL0.js`) | local |
   | `found.*`, `found.where.*` | local | local |
   | `noAccess.title.*`, `noAccess.text.*` | guarded by a whitelist | none |
   | `settings.theme.*`, `settings.graphics.*`, `sheet.market.*`, `sheet.posted.*`, `app.saved.*` | local | local |
@@ -1342,8 +1406,11 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   - the methodology URLs (`MarketSheet.jsx:37-41`);
   - Uzbek short month names `yan … dek` (`i18n/index.js:76`).
 - **Release history:** 2026-11-06 changed three uz strings (`details.facts` «Xususiyatlar», `details.publications`
-  «nashr», `details.channels` «kanal») and added `sum.zonesBoth`. 2026-11-07 added `card.ownerVerified`
-  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:27,41,50`).
+  «nashr», `details.channels` «kanal») and added `sum.zonesBoth`. 2026-11-07 added `card.ownerVerified`. 2026-11-11
+  (`index-Dbpp463V.js`) added `card.businessPrice` and reworded `noAccess.title.invite` and `noAccess.text.full`
+  (SCR-003). 2026-11-12 (`index-BNLZFfL0.js`) added `report.detailTitle` and the pairs `report.d_<code>` /
+  `report.d_<code>Hint` for `price`, `rooms`, `place`, `photos`, `other` (SCR-023)
+  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:38,54,59,84,99,107`).
 
 ### 3.2 Client storage: localStorage `kv-*` and Telegram DeviceStorage
 
@@ -1597,7 +1664,7 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-023 | **Sort options:** `new`, `cheap` and `expensive` always. `deal` for non-daily apartment-only searches where `city.median !== false`. `center` when the city has zones. `ppm` for sale. An unavailable sort falls back to `new`. `new` is never sent to the API. | `$KVADRO_ROOT/demo/app/src/features/sort/SortSheet.jsx:17-34`; `App.jsx:259-263`; `$KVADRO_ROOT/demo/app/src/lib/api/feed.js:78` |
 | BR-APP-024 | **Feed paging:** `limit=20` with an opaque `cursor`, which ends when `next_cursor === null`. Items are de-duplicated by `id` across pages. | `feed.js:75-85`; `$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:31-42` |
 | BR-APP-025 | **The few-results note** appears only when the list is fully loaded with fewer than 10 items, there are no active filters, and city stats and name are known. «Смотреть продажу / аренду · N» is offered only when the other deal has more listings in the city. | `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:89-92`; `App.jsx:420-439`; `$KVADRO_ROOT/demo/app/src/app/FewResultsNote.jsx:39` |
-| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Хозяин ✓» (`owner_verified`) > «Ниже рынка» (`good`) > «Хозяин» (`is_owner`). | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:250-279` |
+| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Хозяин ✓» (`owner_verified`) > «Хозяин» (`is_owner`) > «Ниже рынка» (`good`). Since release `index-Dbpp463V.js`; before it «Ниже рынка» ranked above «Хозяин». | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:253-283`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:12-13` |
 | BR-APP-027 | **Market verdict wording** depends on `median_tone`: `check` (above or below), `suspicious`, `same`, `mixed`, `no_repair`, `good`. Otherwise the text says "pricier"; from +90 % it says «В {x} раза дороже рынка». Percentages are rounded `abs(delta)·100`. | `format.js:142-217` |
 | BR-APP-028 | **The market block shows** only when a verdict exists and `median_value`, `median_delta` and `median` are present. The scale is linear with ±40 % at the edges, clamped to 4–96 %. | `$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx:105,177-179` |
 | BR-APP-029 | **Metro on cards:** shown only within 1.5 km. Under 50 m only the name is shown; otherwise «{metro} · {m} м», with metres rounded to 100. | `format.js:76-87` |
@@ -1607,9 +1674,9 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-033 | **Calling.** On Android, `tel:` is tried first; if the app is not left within 1.2 s, the call page opens. Elsewhere the call page (`call_url`, about 10 min TTL) opens directly, refreshed when it is older than 8 min. | `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:14-40`; `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:54-81` |
 | BR-APP-034 | **Machine translation** of the original text is offered only when the interface locale is not `ru`. The first tap fetches, later taps toggle; the result is labelled «Перевод сделан ИИ». | `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22-39`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:78-80` |
 | BR-APP-035 | **Phone numbers in the original text** are detected as Uzbek numbers (`[+998] XX XXX XX XX` with a known operator or city code). Only the number that equals the listing's `phone` becomes a call button. | `$KVADRO_ROOT/demo/app/src/lib/phone.js:4-89`; `OriginalText.jsx:32-38` |
-| BR-APP-036 | **Moderation effects on the client:** hide → hidden with undo; block → all `listing_ids` hidden with undo; `fraud` with `hidden` → hidden with undo; `rented` → hidden without undo. The `agent` reason is not offered when `is_owner === false`. | `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:168` |
-| BR-APP-037 | **The block hint** appends «скроет N объявлений» only when the author has 20 or more listings. | `ListingActionsSheet.jsx:97-101` |
-| BR-APP-038 | **Share** is shown only when `bot_username` is known. It uses a prepared message (Telegram 8.0+); otherwise `t.me/share/url` with `https://t.me/<bot>?startapp=l_<id>` and text `title · price · down payment · district`. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-50,71` |
+| BR-APP-036 | **Moderation effects on the client:** hide → hidden with undo; block → all `listing_ids` hidden with undo; `fraud` with `hidden` → hidden with undo; `rented` → hidden without undo. The `agent` reason is not offered when `is_owner === false`. Since release `index-BNLZFfL0.js` `wrong_data` is sent only together with a `detail` (`price`, `rooms`, `place`, `photos`, `other`) picked on a third view; the other reasons are sent at once and without `detail`. | `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200`; `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:13-23` |
+| BR-APP-037 | **The block hint** appends «скроет N объявлений» only when the author has 20 or more listings. | `ListingActionsSheet.jsx:103-107` |
+| BR-APP-038 | **Share** is shown only when `bot_username` is known. It uses a prepared message (Telegram 8.0+); otherwise `t.me/share/url` with `https://t.me/<bot>?startapp=l_<id>` and text `title · price · price-kind label · district`; the label is «первый взнос» (`down_payment`) or, since release `index-Dbpp463V.js`, «цена за бизнес, помещение в аренде» (`business`), and is left out for other values. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-50,71`; `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43` |
 | BR-APP-039 | **Favourite toggle** is optimistic; the server toggle response (`favorite`) wins, and a failure rolls back. The favourites list hides items un-favourited this session. | `$KVADRO_ROOT/demo/app/src/components/FavButton.jsx:19-34`; `ListingFeed.jsx:81-84` |
 | BR-APP-040 | **The «viewed» eye** is `seen[id] ?? item.viewed`; it is not shown in history or on compact map cards. | `ListingFeed.jsx:120`; `ListingCard.jsx:61` |
 | BR-APP-041 | **Turning on a radar.** The client re-fetches the subscriptions. If an identical one is active → «Радар по этому поиску уже включён». If it exists but is inactive → `PATCH {active:true}`. Otherwise `POST` with `entry` = `filters` / `few` / `prompt` / `empty`. `409` (not `no_chat`) → the limit toast with `max_subscriptions ?? 10`. | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:94-158` |
@@ -1941,8 +2008,8 @@ are proposals.
 #### LB-APP-037 — Most layers are not tracked as screens (`decision`, CONFIRMED)
 
 - **Symptom:** these layers never produce a `$pageview`: language picker, no-access screen, first-launch city picker,
-  map card, actions sheet, report view, photo viewer, market sheet, fullscreen map, radar sheet, survey, settings
-  sub-pages, hidden list.
+  map card, actions sheet, report view, report detail view, photo viewer, market sheet, fullscreen map, radar sheet,
+  survey, settings sub-pages, hidden list.
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:26-44`.
 - **Proposed fix:** derive screen names from routes or layers; keep the existing names for continuity.
 
@@ -2050,7 +2117,7 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 | Kind | Count | Status |
 | ---- | ----- | ------ |
 | Screens and states (SCR) | 45: 17 `screen`, 11 `sheet`, 7 `overlay`, 2 `modal`, 8 `state` | 45 CONFIRMED (SCR-011 contains 2 inferred style details) |
-| i18n keys | 461 per locale (ru, uz_Latn, en); 0 missing; 14 plural; 6 unused | CONFIRMED |
+| i18n keys | 482 per locale (ru, uz_Latn, en) at the pinned release, 461 at the audit (§3.1); 0 missing; 14 plural up to `index-BNLZFfL0.js`; 6 unused | CONFIRMED |
 | Client storage keys | 10 `kv-*` (5 mirrored to DeviceStorage, 3 restored) + 1 dev-only | CONFIRMED |
 | Analytics | 16 journal events (`POST /api/events`) + PostHog `$pageview` with 16 screen names, autocapture, web vitals, exceptions, replay | CONFIRMED |
 | Business rules (BR-APP) | 69 | CONFIRMED |

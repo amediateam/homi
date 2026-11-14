@@ -20,7 +20,7 @@ updates) and the production backups implement one rule set.
   then phone, text, photos erased; support links 90 days and summaries 1 year; «Удалить мои данные» immediately from
   the database, from backups after about two weeks, plus PostHog person deletion); `/privacy` text
   `$KVADRO_ROOT/demo/landing/site/privacy.html`.
-- Rules: `02-legacy-backend-audit.md:658-669` (§16: BR-API-129…132, Q-API-048), BR-API-065, BR-API-125, BR-API-128,
+- Rules: `02-legacy-backend-audit.md:670-681` (§16: BR-API-129…132, Q-API-048), BR-API-065, BR-API-125, BR-API-128,
   BR-DATA-004, BR-DATA-006, BR-DATA-021, BR-DATA-031, BR-DATA-039; bot `/privacy` and BTN-076 (`04` §3.16).
 - Decisions: CF-019 option A (`10-target-architecture.md` §2.1, §3.19), DEC-12, OPQ-5 (`10` §1.14), GAP-019, GAP-022.
 - Security: SEC-030, SEC-REQ-036…039, SEC-REQ-041 (`16-security-review.md:844-893`); `14` §7.9 (erasure during the

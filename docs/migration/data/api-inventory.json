@@ -232,13 +232,14 @@
     "path": "/api/listings/:id/report",
     "auth": "tma <initData> required",
     "access": "authenticated; anti-abuse weighting",
-    "doc_ref": "$KVADRO_ROOT/docs/api.md:119, :675-705",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:119, :675-705 (audited tree); current :707-758, :1171-1172, :1198-1199",
     "client_call_sites": [
-      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90",
-      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:89"
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:93-102",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200"
     ],
     "status": "CONFIRMED",
-    "notes": "Body {reason: rented|agent|wrong_data|fraud}; must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY. LB-API-015, -042, -043; Q-API-038..040."
+    "notes": "Body {reason: rented|agent|wrong_data|fraud}; since index-BNLZFfL0.js wrong_data carries detail: price|rooms|place|photos|other (key present only when detail is set, never with another reason); older bundles still send wrong_data without detail, both accepted. Must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY (detail handling UNVERIFIED). LB-API-015, -042, -043; Q-API-038..040, -064."
   },
   {
     "id": "API-017",

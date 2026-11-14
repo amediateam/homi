@@ -165,7 +165,10 @@ must be present even when empty.
 
 **`ListingPreview`** (`$KVADRO_ROOT/docs/api.md:227-273`): `id: number`! (compared with `===`/`!==`),
 `title: string` (part before the first ` · ` is shown), `short_title?: string`, `price: string|null` (pre-formatted;
-parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the period), `price_kind: "down_payment"|null`,
+parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the period),
+`price_kind: "down_payment"|"business"|null` (label after the price: «первый взнос» /
+«цена за бизнес, помещение в аренде»; any other value gets no label; `"business"` since release `index-Dbpp463V.js`
+— `src/features/listing/format.js:35-43`, current `$KVADRO_ROOT/docs/api.md:239`; BR-API-156, Q-API-065),
 `favorite: boolean`!, `viewed?: boolean`, `district_name: string|null`, `place?: string`, `landmark: string|null`,
 `metro: string|null`, `metro_km: number|null`!, `center_km: number|null`!, `area_total: number|null`,
 `floor: number|null`, `floors_total: number|null`, `rooms: number|null`, `pets_ok: boolean`, `is_owner?: boolean`,
@@ -272,8 +275,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   also for `blocked` (`useAppBootstrap.js:26`, `:130-139`, `:150-157`). Any other failure (network, `401`, `5xx`) →
   retries after 1, 3, 7, 15, 30 s, then the app stays without meta and without an error screen
   (`useAppBootstrap.js:24`, `:141-143`). A failed prefetch adds one immediate repeat (`client.js:56-60`). Telegram
-  user-facing texts: «Бот приватный», «Закрытая бета», «Мест пока нет», «Нет доступа», «Сначала — бот»
-  (`src/i18n/locales/ru.js:28-32`).
+  user-facing texts: «Бот приватный», «Вход по приглашению», «Мест пока нет», «Нет доступа», «Сначала — бот»
+  (`src/i18n/locales/ru.js:28-32`); release `index-Dbpp463V.js` renamed «Закрытая бета» and dropped the beta from
+  the `full` text (`03` SCR-003). The `detail` codes did not change.
 - **Legacy Source:** Doc:104 (registry), Doc:64-72 (403 handling), Doc:416-466 (§4);
   `$KVADRO_ROOT/docs/about.md:248-252`; client `src/lib/api/meta.js:5`, `src/main.jsx:24` (prefetch),
   `src/app/useAppBootstrap.js:70`, `src/app/App.jsx:234`, `:252`, `:257`; parity mock
@@ -692,33 +696,49 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Roles/access mode:** authenticated; anti-abuse weighting applies (`02 §11`).
 - **Input:** path `id`; body `{"reason": "rented"|"agent"|"wrong_data"|"fraud"}` (`Content-Type: application/json`).
   `agent` is not offered when the card says `is_owner: false`
-  (`src/features/listing/ListingActionsSheet.jsx:12`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:20`).
-- **Validation:** `reason` from the four literals (Pydantic `Literal` assumed → `422` otherwise). — UNVERIFIED
+  (`src/features/listing/ListingActionsSheet.jsx:12`, `:176`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:77`).
+  Since release `index-BNLZFfL0.js` a `wrong_data` report carries
+  `"detail": "price"|"rooms"|"place"|"photos"|"other"`, picked on the detail view of the actions sheet (`03` SCR-023):
+  `{"reason": "wrong_data", "detail": "price"}`. The client adds the key only when `detail` is truthy and only the
+  detail view passes one, so the other reasons keep the old body without the key (not `null`, not `""`)
+  (`src/lib/api/listings.js:86-90`; `src/features/listing/ListingActionsSheet.jsx:93-102`, `:176-200`). This client
+  no longer sends `wrong_data` without `detail`; older cached bundles still can, and the legacy contract requires the
+  server to accept both bodies (current `$KVADRO_ROOT/docs/api.md:724-744`, `:1171-1172`).
+- **Validation:** `reason` from the four literals (Pydantic `Literal` assumed → `422` otherwise). `detail` is optional;
+  the answer to `detail` with another reason or to an unknown code is unknown (Q-API-064). — UNVERIFIED
 - **Business Logic:** records the vote. `rented`: hidden for the voter at once, for everybody after more
   confirmations; `agent`: the phone is remembered as a realtor's and marked in all its listings; `wrong_data`:
   recorded; `fraud`: may hide the listing for the reporter immediately (`$KVADRO_ROOT/docs/about.md:221-228`). —
-  DOCUMENTED_ONLY (thresholds 🔶, Q-API-039)
-- **DB Changes:** insert a vote/report row; possibly update listing status, realtor mark on the phone, hidden row. —
-  UNVERIFIED
+  DOCUMENTED_ONLY (thresholds 🔶, Q-API-039). Whether `detail` is only stored for moderation or also affects `hidden`
+  is open in the legacy contract itself (current `$KVADRO_ROOT/docs/api.md:1198-1199`). — UNVERIFIED (Q-API-064)
+- **DB Changes:** insert a vote/report row (with `detail` when sent); possibly update listing status, realtor mark on
+  the phone, hidden row. — UNVERIFIED
 - **Side Effects:** global effects on other users (status after confirmations, realtor badge, `owner` filter
   results, owner-verification eligibility).
 - **Response:** `200 {"hidden": boolean}` **for every reason** — a `204` makes the client show
   «Не получилось сохранить» although the report was accepted (Doc:704-705; mock `tools/parity/mocks.mjs:175-177`).
   Client toasts: `rented` → «Отметили: уже сдано» (listing hidden locally, card closed, no undo); `agent` →
   «Отметили номер как риелторский»; `fraud` with `hidden: true` → «Спасибо, посмотрим. Это объявление у вас скрыли»
-  with undo via API-013; others → «Спасибо! Посмотрим» (`useListingActions.js:61-77`, `ru.js:217-220`).
+  with undo via API-013; others, including `wrong_data` with any `detail` → «Спасибо! Посмотрим»
+  (`useListingActions.js:61-77`, `ru.js:229-232`; audited tree `ru.js:217-220`).
 - **Errors:** any error → «Не получилось сохранить».
 - **Legacy Source:** Doc:119, Doc:675-705; `$KVADRO_ROOT/docs/about.md:219-228`; client
   `src/lib/api/listings.js:84-90`, `src/features/listing/ListingActionsSheet.jsx:89-95`,
-  `src/app/useListingActions.js:61-77`.
+  `src/app/useListingActions.js:61-77` (audited tree). Release `index-BNLZFfL0.js`: `src/lib/api/listings.js:79-90`,
+  `src/features/listing/ListingActionsSheet.jsx:13-14`, `:93-102`, `:175-200`; current
+  `$KVADRO_ROOT/docs/api.md:707-758`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:22-24`;
+  parity scenarios `tools/parity/mocks.mjs:281-293`.
 - **Migration Target:** legacy `POST /api/listings/:id/report` byte-compatible. Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — each reason returns JSON `{hidden}` (never `204`); `fraud` returns `hidden: true` when the
   listing was hidden for the reporter; `rented` hides for the voter; `agent` marks the phone (per threshold);
-  negative — `reason: "spam"` → `422`, missing body → `422`; repeat — same user, same reason twice is counted once
-  (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-015, LB-API-042, LB-API-043;
-  Q-API-038 … Q-API-040.
+  `wrong_data` with each of `price`, `rooms`, `place`, `photos`, `other` → `200 {hidden}`, the `detail` kept with the
+  report; compatibility — `{"reason": "wrong_data"}` without `detail` (older bundle) → `200 {hidden}`; the other
+  reasons without the key → `200`; negative — `reason: "spam"` → `422`, missing body → `422`; an unknown `detail` code
+  and a `detail` with another reason → per Q-API-064 (record legacy first); repeat — same user, same reason twice is
+  counted once (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (`detail` handling `UNVERIFIED`). Related:
+  LB-API-015, LB-API-042, LB-API-043; Q-API-038 … Q-API-040, Q-API-064.
 
 ### API-017 — `POST /api/listings/:id/share`
 

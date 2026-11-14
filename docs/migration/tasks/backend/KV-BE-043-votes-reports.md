@@ -17,7 +17,7 @@ switch. The same `VoteService` serves the bot's «Уже сдано» / «Это
 
 ## Legacy reference
 
-- API-016 (`08-api-inventory.md:687-721`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90`,
+- API-016 (`08-api-inventory.md:691-725`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90`,
   `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:12` (`agent` hidden when `is_owner: false`),
   `:89-95`, `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:61-77` (toasts, undo for `fraud`), toasts in
   `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js:217-220`; mock `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:175-177`;

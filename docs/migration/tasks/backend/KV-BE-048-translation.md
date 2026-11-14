@@ -16,7 +16,7 @@ budget, and bounded by a per-user quota and the gateway's spend cap.
 
 ## Legacy reference
 
-- API-010 (`08-api-inventory.md:539-561`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:29-32` (bodiless
+- API-010 (`08-api-inventory.md:543-565`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:29-32` (bodiless
   `POST`), `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22` (offered only when the UI
   locale is not `ru`), `:32`, `:34-35` (inline failed state, retry); `$KVADRO_ROOT/docs/api.md:626-634`;
   `$KVADRO_ROOT/docs/about.md:111`, `:179`.
