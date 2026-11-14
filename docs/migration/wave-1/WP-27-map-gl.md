@@ -35,8 +35,10 @@ and on the PMTiles file as soon as the production track hosts it.
 
 **Out.**
 
-- Leaflet engine, lasso drawing and its entry points, the listing's spot map: WP-28. Until WP-28 the lasso button of
-  the top bar and «Обвести на карте» of the filters sheet stay disabled.
+- Leaflet engine, lasso drawing and the listing's spot map: WP-28. Drawing is a pushed `draw` layer that the lasso
+  button, the «Своя область» pill and the filters hand-off (`requestDraw()` of `lib/ui/shellState.ts`) open. Until
+  WP-28, `MapScreen` closes that layer as soon as it opens and discards a pending draw request with
+  `consumeDrawRequest()`, so every entry point lands on the plain map and no dead drawing mode reaches production.
 - Top bar (map variant), view toggle, area pill and its ×: built by WP-23; this package only feeds them.
 - Filters, sort and city sheets opened from the map: WP-25. Listing opened from the card: WP-26.
 - Screen tracking `search/map`: WP-32. Bundle-size gate and the pass inside Telegram: WP-33.
@@ -46,10 +48,10 @@ and on the PMTiles file as soon as the production track hosts it.
 
 | Decision | Consequence here |
 | -------- | ---------------- |
-| DEC-44, `25` §3.8 | Both engines exist; GL is the main one and is chosen by the legacy rule of `03` §1.8. Both are client-only and loaded on demand |
-| DEC-36, vocabulary A.1 | The six defects above are fixed without a flag; "Back closes the card" is DEV-013 and ships off |
+| Ref. DEC-44, `25` §3.8 | Both engines exist; GL is the main one and is chosen by the legacy rule of `03` §1.8. Both are client-only and loaded on demand |
+| Ref. DEC-36 (fixes without a `DEV` row are made; `DEV` rows ship off) | The six defects above are fixed without a flag; "Back closes the card" is DEV-013 and ships off |
 | Ref. DEC-46 | Functional parity: palette, label font and animation timing may differ slightly; states, texts, tap rules and constants may not |
-| DEC-49, `25` §10 | `maplibre-gl` 6.11.2, `pmtiles`, `supercluster` at the versions WP-03 installed. No other map package is added; the vector style is written by hand |
+| Ref. DEC-49, `25` §10 | `maplibre-gl` 6.11.2, `pmtiles`, `supercluster` at the versions WP-03 installed. No other map package is added; the vector style is written by hand |
 | Ref. DEC-45 | Every merge reaches production: the "map unavailable" state is visible to real users on non-GL devices until WP-28 merges, so WP-28 follows immediately |
 | `25` §3.5 | Map points are a browser read through `/bff/*` in both session modes; no Server Component fetches them |
 | `25` §3.8, §3.10 | `tiles` comes from reference data and is empty in Wave 1 until KV-INF-021; tile hosts are allowed by the CSP of WP-21 through `CSP_TILE_HOSTS` |
@@ -227,9 +229,11 @@ type MapViewProps = {
 New, under `frontend/app/`:
 
 - `app/[locale]/(main)/map/page.tsx` (replaces the placeholder of WP-20).
-- `features/map/{MapScreen,MapUnavailable,MapStatusPill,MapNote,LocateButton,MapAttribution,MapSelectionCard,MapWarmup}.tsx`
+- `features/map/{MapScreen,MapUnavailable,MapStatusPill,MapNote,LocateButton,MapAttribution}.tsx`,
+  `features/map/{MapSelectionCard,MapWarmup}.tsx`
 - `features/map/{types,engine,useMapPoints,pins,camera,mask,tiles,palette,tilePrefetch,useLocate}.ts`
-- `features/map/gl/{MapViewGL.tsx,useMapInstance.ts,style.ts,fonts.ts,useClusterIndex.ts,useClusterMarkers.ts,markerElements.ts,useAreaMask.ts,useMeLayer.ts}`
+- `features/map/gl/{MapViewGL.tsx,useMapInstance.ts,style.ts,fonts.ts,useClusterIndex.ts}`,
+  `features/map/gl/{useClusterMarkers.ts,markerElements.ts,useAreaMask.ts,useMeLayer.ts}`
 - `public/map-fonts/*.woff2` (12 files) and `public/map-fonts/OFL.txt`.
 - `tests/map/{engine,pins,camera,mask,tiles,tilePrefetch,style,markerElements,useMapPoints}.test.ts`,
   `tests/map/{MapScreen,MapSelectionCard,MapWarmup}.test.tsx`, `e2e/map.spec.ts`.
@@ -240,6 +244,7 @@ Changed:
 - `features/shell/ViewToggle.tsx`: `onIntent` (only if missing).
 - `lib/api/bffAllowList.ts`, `lib/deeplinks/parse.ts`, `lib/storage.ts` (keys `homi-map-engine`, `homi-map-fit:*`):
   only if the entries are missing.
+- `lib/ui/shellState.ts`: `requestDraw()` and `consumeDrawRequest()` (only if WP-23 or WP-25 have not added them).
 - `eslint.config.mjs` (the HTML-injection rule), `.env.example` (`CSP_TILE_HOSTS`).
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the new keys of "Behaviour to reproduce".
 
@@ -345,7 +350,8 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 
 - `MapScreen.test.tsx`: engine → view; `onFail` switches to the fallback, the second mount goes straight to it and
   one error is reported; pills for loading, empty, error and retry; note timing with fake timers; card closes on
-  new filters; selection cleared when the view effect re-runs.
+  new filters; selection cleared when the view effect re-runs; an opened `draw` layer is closed at once and a
+  pending draw request is discarded (replaced by WP-28).
 - `MapSelectionCard.test.tsx`: single and stack layouts; a 7-listing stack requests indexes 0 and 1, then 2, 3, 4
   after a swipe to 3, and nothing twice; failed slot retry; external index scroll; both branches of
   `dev013BackClosesMapCard` with `withDevFlags`.

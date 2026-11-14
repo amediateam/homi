@@ -21,7 +21,9 @@ case asks for write access to HOMI's own bot.
 
 ## Scope
 
-**In.**
+**In.** Owned audit items: screens SCR-026, SCR-027, SCR-028, SCR-029, SCR-030, SCR-031 and SCR-040; rules
+BR-APP-041, BR-APP-042, BR-APP-043, BR-APP-046, BR-APP-047, BR-APP-048, BR-APP-049 and BR-APP-063; defects
+LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 
 - The subscribe flow (create, reactivate, already on, limit, widen) and the chat-access flow.
 - The radar tab, its empty state, tiles, status lines and previews; pull-to-refresh on the tab.
@@ -42,14 +44,14 @@ case asks for write access to HOMI's own bot.
 
 | Decision | Consequence here |
 | -------- | ---------------- |
-| DEC-32, DEC-46 | Rebuilt from the audit; the checklist below is the proof of parity |
-| Ref. DEC-36 | LB-APP-005, LB-APP-006, LB-APP-014 and LB-APP-036 are fixed. LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
-| DEC-40, 25 §2 rule 5 | The bot is HOMI's own. Every bot link and every text with the brand name goes through `lib/brand` and the `homi` catalogue layer |
-| Ref. DEC-43 | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
-| DEC-44, 25 §3.2 | Sheets are intercepting routes in the `@sheet` slot; Back closes editor, then radar sheet, then nothing (root tab) |
-| 25 §3.4 | Every read works with `initial` data from the server (cookie mode) and through `/bff` (header mode); every mutation is a Server Action that takes the token as an argument in header mode |
-| 25 §4.2 | Methods used: `GET /radars`, `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow`, `GET /listings/count`, `GET /listings` (previews, only if the contract has no preview field) and `GET /settings` (digest hours) |
-| 25 §4.4 | A radar answer with `meta.source = stub` shows the demo marker through `reportSource()` |
+| Rebuild and parity (DEC-32, DEC-46) | Rebuilt from the audit; the checklist below is the proof of parity |
+| Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014 and LB-APP-036 are fixed. LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
+| Brand (DEC-40, 25 §2 rule 5) | The bot is HOMI's own. Every bot link and every text with the brand name goes through `lib/brand` and the `homi` catalogue layer |
+| Scope of Wave 1 (DEC-43) | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
+| Routing (DEC-44, 25 §3.2) | Sheets are intercepting routes in the `@sheet` slot; Back closes editor, then radar sheet, then nothing (root tab) |
+| Session modes (25 §3.4) | Every read works with `initial` data from the server (cookie mode) and through `/bff` (header mode); every mutation is a Server Action that takes the token as an argument in header mode |
+| API methods (25 §4.2) | Methods used: `GET /radars`, `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow`, `GET /listings/count`, `GET /listings` (previews, only if the contract has no preview field) and `GET /settings` (digest hours) |
+| Demo marker (25 §4.4) | A radar answer with `meta.source = stub` shows the demo marker through `reportSource()` |
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`, "Closing the
 modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of hidden routes),
@@ -280,9 +282,11 @@ Actions:
   switch is its sibling, a separate focus stop (fix of LB-APP-014).
 - Switch: light haptic, optimistic flip. On → `withChatAccess(patchRadar(id, { active: true }))`; off → plain
   `patchRadar`. Success replaces the radar with the answer. Turning on with `starter > 0` → toast `subs.resumed`
-  «Радар снова включён. {count}, которые вы не видели, — в чате с ботом». `ask_found` → the survey with trigger
-  `pause`. Failure reverts: `no_chat` → `toast.noChat`; otherwise `failed()` (haptic only; with
-  `dev016ErrorToastOnFailure` also «Не получилось сохранить»).
+  «Радар снова включён. {count}, которые вы не видели, — в чате с ботом». Turning off with `ask_found` → the
+  survey with trigger `pause`: from a tile `router.push(routes.radarFound({ trigger: 'pause' }))`, from the radar
+  sheet `router.replace(…)`, so the sheet gives way to the survey and Back lands on the tab. Failure reverts:
+  `no_chat` → `toast.noChat`; otherwise `failed()` (haptic only; with `dev016ErrorToastOnFailure` also «Не
+  получилось сохранить»).
 - «+» in the top bar (aria `sheet.createTitle` «Новый радар») and «Включить радар» of the empty state:
   `router.push(routes.radarNew(q))`, `q` = the last search filters.
 - Pull-to-refresh reloads the list (BR-APP-058, WP-23); the previews follow the new list.
@@ -352,8 +356,9 @@ backdrop, drag, Telegram Back, a final answer. Steps are component state, not hi
 
 Every answer of step 1 calls `submitFound({ answer, trigger })`, every row of step 2 `submitFoundWhere({ where })`;
 both are fire-and-forget: not awaited, errors swallowed, rows never disabled. The answer codes are the contract's
-enum (legacy: `kvadro`, `elsewhere`, `searching`, `stopped`; seven `where` codes). A missing or unknown `trigger`
-in the address → `router.replace(routes.radars())`.
+enum (legacy: `kvadro`, `elsewhere`, `searching`, `stopped`; seven `where` codes). The address carries `trigger`
+and, only if the contract's body asks for it, the radar id as `radar`. A missing or unknown `trigger` in the
+address → `router.replace(routes.radars())`. A second `ask_found` while the survey is open replaces the trigger.
 
 ### Follow nudge (SCR-040, BR-APP-043, BR-APP-046)
 

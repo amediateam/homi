@@ -70,16 +70,16 @@ frontend/app/app/
 │   │   ├── saved/page.tsx  saved/history/page.tsx           saved           WP-29
 │   │   ├── radars/page.tsx  radars/new/page.tsx  radars/found/page.tsx      WP-30
 │   │   ├── radars/[id]/layout.tsx  page.tsx  edit/page.tsx                  WP-30
-│   │   ├── settings/page.tsx                                                WP-31
+│   │   ├── settings/layout.tsx  page.tsx                                    WP-31
 │   │   ├── settings/{theme,graphics,language,currency,quiet-hours,digest,hidden}/page.tsx   WP-31
 │   │   ├── filters/page.tsx  filters/[kind]/page.tsx  sort/page.tsx  city/page.tsx          WP-25
 │   │   ├── listing/[number]/layout.tsx  page.tsx  photos/  market/  actions/                WP-26
 │   │   ├── listing/[number]/location/page.tsx                                               WP-28
-│   │   ├── @sheet/default.tsx  @sheet/[...catchAll]/page.tsx                null
+│   │   ├── @sheet/default.tsx  @sheet/page.tsx  @sheet/[...catchAll]/page.tsx          null
 │   │   ├── @sheet/(.)filters/page.tsx  (.)filters/[kind]/page.tsx  (.)sort/page.tsx  (.)city/page.tsx
 │   │   ├── @sheet/(.)radars/new/page.tsx  (.)radars/found/page.tsx
 │   │   ├── @sheet/(.)radars/[id]/layout.tsx  page.tsx  edit/page.tsx
-│   │   ├── @overlay/default.tsx  @overlay/[...catchAll]/page.tsx            null
+│   │   ├── @overlay/default.tsx  @overlay/page.tsx  @overlay/[...catchAll]/page.tsx    null
 │   │   └── @overlay/(.)listing/[number]/layout.tsx  page.tsx  photos/  location/  market/  actions/
 │   ├── welcome/language/page.tsx  welcome/city/page.tsx                     WP-23
 │   └── no-access/page.tsx  outside/page.tsx                                 WP-23
@@ -96,9 +96,10 @@ Rules of the tree:
    `params` is a promise (`LayoutProps<'/[locale]'>`).
 2. **Slots.** `(main)/layout.tsx` receives `children`, `sheet`, `overlay` and renders them in this DOM order:
    children, overlay, sheet — the legacy stacking (listing layer below sheets, `03` §3.6). Each slot has
-   `default.tsx` and a catch-all page returning `null`, so a hard load shows no layer and a soft navigation to an
-   unrelated address closes the layer (`parallel-routes.md`, "Closing the modal"). `children` also has
-   `default.tsx`.
+   `default.tsx`, a `page.tsx` for the root address and a catch-all page, all returning `null`, so a hard load
+   shows no layer and a soft navigation to an unrelated address — the root included — closes the layer
+   (`parallel-routes.md`, "Closing the modal", shows the slot page for the root next to the catch-all).
+   `children` also has `default.tsx`.
 3. **Interception.** `@sheet/(.)filters` and its siblings intercept soft navigations from any page under `(main)`;
    a hard load of the same address renders the page of the same name outside the slot (`intercepting-routes.md`).
    The bundled documentation says `(.)` ignores `@slot` folders; it does not say the same about route groups.
@@ -106,8 +107,9 @@ Rules of the tree:
    matcher that does and record it in "Handoff".
 4. **Layouts that keep a layer mounted.** `listing/[number]/layout.tsx` (in both trees) will render the listing
    and `{children}`; `page.tsx` renders `null`; `photos`, `location`, `market`, `actions` are its children. The
-   same shape is used for `radars/[id]` and its `edit` child. In this package these layouts render a placeholder
-   plus `{children}` so the nesting is proven.
+   same shape is used for `radars/[id]` with its `edit` child and for `settings` with its seven sub-pages (the
+   settings screen stays under a sub-page). In this package these layouts render a placeholder plus `{children}`
+   so the nesting is proven.
 5. **Placeholders.** Every `page.tsx` renders `RoutePlaceholder` (`frontend/app/features/shell/RoutePlaceholder.tsx`)
    with the route name, the locale, a translated string and one `Button`. A later package replaces the import and
    nothing else. `filters/[kind]` accepts `rooms`, `price`, `owner` and calls `notFound()` for anything else;
@@ -131,7 +133,8 @@ Pure helpers in the same file, used by WP-21 and WP-32:
 | Helper | Result |
 | ------ | ------ |
 | `isRootTab(pathname)` | true for `/`, `/map`, `/saved`, `/saved/history`, `/radars`, `/settings` |
-| `parentOf(pathname)` | `null` for root tabs and gates; `/` for `/filters`, `/filters/<kind>`, `/sort`, `/city`, `/listing/<n>`; `/listing/<n>` for its four children; `/radars` for `/radars/new`, `/radars/<id>`, `/radars/found`; `/radars/<id>` for its `edit`; `/settings` for the seven sub-pages |
+| `parentOf(pathname, searchParams)` | an address or `null`, decided in this order: (1) a layer parameter is present (`pick`, `draw`, `pin`, `step`) → the same address without it (`step=detail` → `step=report`); (2) `/filters`, `/filters/<kind>`, `/sort`, `/city` → `/map` when `from=map`, else `/`, carrying the search state (the 25 filter keys and `sort`) and nothing else; (3) `/listing/<n>` → `/`; its four children → `/listing/<n>`; `/radars/new`, `/radars/<id>`, `/radars/found` → `/radars`; `/radars/<id>/edit` → `/radars/<id>`; the seven settings sub-pages → `/settings`; (4) `null` for root tabs and for the gates (`/welcome/*`, `/no-access`, `/outside`) |
+| `RESERVED_PARAMS`, `searchStateOf(searchParams)` | the parameters that are never filter keys — `from`, `focus`, `pick`, `draw`, `pin`, `step`, `i`; `searchStateOf` returns the parameters without them |
 | `screenNameOf(pathname, searchParams)` | the 16 legacy analytics names (`03` §3.3): `search/list`, `search/map`, `map/draw` (`/map` with `draw=1`), `saved/favorites`, `saved/history`, `subs`, `settings`, `listing`, `radar/edit`, `radar/new`, `filters`, `filters/rooms`, `filters/price`, `filters/owner`, `sort`, `city`; any other address returns its route pattern until WP-32 completes the table |
 
 ### `proxy.ts` (locale only in this package)
@@ -182,9 +185,13 @@ frontend/packages/i18n/
 
 1. `uz_Latn` becomes `uz`. Keys keep their names; a dotted key becomes a nested path (`sheet.title` →
    `sheet` → `title`), which is how next-intl addresses it (`t('sheet.title')`).
-2. A key that is both a leaf and a prefix of another key stops the import with a list. Resolve each by moving the
-   leaf to `<key>._` and listing it in `scripts/import-legacy.mjs` under `LEAF_AND_PREFIX`; call sites then use
-   `<key>._`. (Whether any exists is not known from the audit.)
+2. **Leaf-and-prefix rule (one rule for every package).** A nested catalogue cannot hold a key that is both a
+   message and the prefix of other keys. The importer maps every such leaf to `<key>._` automatically and writes
+   the list to `messages/legacy/leaf-and-prefix.json`. Known from the audit and the earlier tasks: `sheet.market`
+   («Дом») → `sheet.market._` next to `sheet.market.new`; `sheet.posted` → `sheet.posted._` next to
+   `sheet.posted.1`; `settings.theme` → `settings.theme._` next to `settings.theme.auto`; `settings.graphics` →
+   `settings.graphics._` next to `settings.graphics.hint`. Code and specifications use the mapped name; the
+   legacy name stays in `keys.json` so a release diff still matches. No other renaming is allowed.
 3. The 14 plural objects (`03` §3.1) become ICU plural messages selected by the argument `n`, with the forms the
    locale has (`one/few/many/other` in ru, `one/other` in uz and en, `map.missing` `one/other` everywhere).
    Placeholders `{name}` are already ICU arguments.
@@ -272,7 +279,8 @@ catalogues or under `frontend/app` outside `lib/brand`.
 ### Flags and facades
 
 - `frontend/app/lib/flags.ts`: `devFlags` (`as const`, all `false`) and `DevFlags`: `dev001AnyForbiddenShowsAccess`,
-  `dev005RadarDropsPostedDays`, `dev010RealtorVoteWording`, `dev013BackClosesMapCard`, `dev014TashkentDates`,
+  `dev003PaginatedLists`, `dev005RadarDropsPostedDays`, `dev010RealtorVoteWording`, `dev013BackClosesMapCard`,
+  `dev014TashkentDates`,
   `dev015NeutralWholeCity`, `dev016ErrorToastOnFailure`, `dev017TenantPetsDailyRule`, `dev018ResetKeepsDaily`,
   `dev019OneDistanceFormatter`, `dev020OneLanguageDetector`, `dev021OneFlowVocabulary`, `dev022RadarCountLabel`,
   `dev023CityCountsIncludeDaily`, `dev024ResetOnlyWithActiveFilters`, `dev025ValidateRanges`, `dev051RentedUndo`,
@@ -302,7 +310,8 @@ catalogues or under `frontend/app` outside `lib/brand`.
   `app/favicon.ico`, `public/{file,globe,next,vercel,window}.svg`.
 - `frontend/app/{proxy.ts,next.config.ts}`, `frontend/app/i18n/{routing,request,navigation}.ts`,
   `frontend/app/styles/app.css`, `frontend/app/public/brand/*`.
-- `frontend/app/lib/{brand/index.ts,flags.ts,navigation/routes.ts,analytics/events.ts,errors/report.ts,data/sources.ts}`.
+- `frontend/app/lib/`: `brand/index.ts`, `flags.ts`, `navigation/routes.ts`, `analytics/events.ts`,
+  `errors/report.ts`, `data/sources.ts`.
 - `frontend/app/features/shell/{RoutePlaceholder,SourceReporter,DemoDataMarker}.tsx`.
 - `frontend/app/tests/{navigation,i18n,shell}/*.test.ts(x)`, `frontend/app/tests/helpers/flags.ts`,
   `frontend/app/e2e/foundation.spec.ts`.
@@ -342,8 +351,8 @@ catalogues or under `frontend/app` outside `lib/brand`.
 
 **Localisation.** Three locales `ru`, `uz`, `en` in the address. `<html lang>` follows the segment. All legacy
 keys of the pinned release exist with their legacy values except brand words; plural keys select the form by
-`Intl` rules of the locale (ru: 1 → one, 2 → few, 5 → many, 11 → many, 21 → one). The rules table above replaces
-the legacy `t()` that throws (LB-APP-002): a changed server enum can no longer white-screen the app (`03` §0
+`Intl` rules of the locale (ru: 1 → one, 2 → few, 5 → many, 11 → many, 21 → one). The rules table above
+replaces the legacy `t()` that throws (LB-APP-002): a changed server enum can no longer white-screen the app (`03` §0
 finding 4).
 
 **Themes** (`03` §3.6, TMA-019, TMA-021; the attributes are set by WP-21 and WP-31):
@@ -364,7 +373,8 @@ variables.
 
 **Addresses.**
 
-- `/` → `/ru` (or the cookie's locale) with the query and the fragment intact; `/listing/5?x=1` → `/ru/listing/5?x=1`.
+- `/` → `/ru` (or the cookie's locale) with the query and the fragment intact; `/listing/5?x=1` →
+  `/ru/listing/5?x=1`.
 - `/de/…` and any unknown address → the not-found placeholder with status 404.
 - Every address of the tree answers 200 on a direct load in three locales.
 - A soft navigation to a sheet or overlay address keeps the page below mounted; Back removes the layer; a reload
@@ -378,7 +388,8 @@ navigation; never intercepts taps.
 **Unit (Vitest).**
 
 - `packages/i18n/tests/import.test.ts`: dotted key → nested path; plural object → ICU plural with the right forms
-  per locale; escaping of apostrophes and stray braces; a leaf-and-prefix collision fails with the key list; the
+  per locale; escaping of apostrophes and stray braces; a leaf that is also a prefix moves to `<key>._` and is
+  listed in `leaf-and-prefix.json`; the
   six dead keys are absent; `uz_Latn` → `uz`.
 - `packages/i18n/tests/catalogue.test.ts`: the three merged catalogues have identical key sets; the 14 plural keys
   are plural messages; every message formats without an error; ru plural matrix for 1, 2, 5, 11, 12, 14, 21, 22,
@@ -387,7 +398,9 @@ navigation; never intercepts taps.
   give `fallback.other` and one report.
 - `packages/ui/tests/tokens.test.ts`: every role, radius, inset and ladder value equals a table typed from `03`
   §3.6; the dark and explicit-light selectors exist; no `prefers-color-scheme` and no `env(safe-area` in the CSS.
-- `app/tests/navigation/routes.test.ts`: each builder; `parentOf` and `isRootTab` for every address of the tree;
+- `app/tests/navigation/routes.test.ts`: each builder; `parentOf` and `isRootTab` for every address of the tree,
+  plus `/filters?city=x&from=map` → `/map?city=x`, `/sort?rooms_min=2&focus=pets` → `/?rooms_min=2`,
+  `/map?draw=1&city=x` → `/map?city=x`, `/listing/5/actions?step=detail` → the same with `step=report`;
   `screenNameOf` for the 16 legacy names including the precedence of `03` §1.1.
 
 **Component (Vitest + Testing Library).**
@@ -423,6 +436,8 @@ Run in ru, uz and en, and in light, explicit light and dark where a line is visu
 - [ ] The interception matcher used with the `(main)` group is recorded in "Handoff".
 - [ ] The catalogues are generated from the release pinned by WP-02; the importer's report is attached to the PR.
 - [ ] No legacy brand word is visible in any locale; the brand test is green.
+- [ ] `messages/legacy/leaf-and-prefix.json` is committed; every listed key is used as `<key>._` and nowhere else
+      is a key renamed.
 - [ ] A missing key shows its key path and reports once; nothing throws (fix of LB-APP-002).
 - [ ] An unknown server enum value shows «Другое» / «Boshqa» / «Other».
 - [ ] Token values equal the table of `03` §3.6 in all three theme states.

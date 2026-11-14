@@ -53,8 +53,8 @@ translation, share, hide, block and report.
 
 Read before coding (`frontend/app/node_modules/next/dist/docs/01-app/`):
 `03-api-reference/03-file-conventions/{parallel-routes,intercepting-routes,layout,dynamic-routes,default}.md`,
-`02-guides/{authentication-with-cache-components,preserving-ui-state,preventing-flash-before-hydration,lazy-loading}.md`,
-`03-api-reference/04-functions/{use-params,use-search-params}.md`.
+`02-guides/{authentication-with-cache-components,preserving-ui-state,lazy-loading}.md`,
+`02-guides/preventing-flash-before-hydration.md`, `03-api-reference/04-functions/{use-params,use-search-params}.md`.
 
 ### Routes
 
@@ -77,8 +77,8 @@ Why a layout and not a page:
 - `parallel-routes.md`: on soft navigation a slot keeps its active subpage. `intercepting-routes.md`: the
   intercepted tree is used on soft navigation, the plain tree on a hard load of the same address. Whether `(.)`
   counts the `(main)` group as a level is checked in WP-20 (verify before use).
-- `dynamic-routes.md`: with Cache Components a layout must not await `params` at its top level. The layout passes
-  the `params` promise to `ListingServer`, which awaits it inside the `<Suspense>` boundary.
+- `dynamic-routes.md`: with Cache Components a layout should not await `params` at its top level (that prevents
+  prerendering). The layout passes the `params` promise to `ListingServer`, which awaits it inside `<Suspense>`.
 - `layout.md`: layouts cannot read search parameters. The photo index `i` and the actions step are read in Client
   Components with `useSearchParams()`.
 - Whether a `[number]` layout is remounted when the number changes is not stated in the bundled docs (verify before
@@ -92,12 +92,14 @@ Why a layout and not a page:
    preview from the cache at once, or `ListingSkeleton` when there is none (deep link, direct load). It never
    fetches.
 3. `ListingServer` (async Server Component): awaits `params`; with a session cookie calls
-   `serverApi()` → `GET /listings/{number}` and renders `<ListingScreen key number initial={result} />`; without a
-   cookie (header mode, first request of a launch) renders it with `initial={null}`.
-4. `useListing(number, initial)` in the resolved instance: `initial.ok` → details; `initial === null` → fetch through
-   `bffFetch('listings/<number>')` with `useResource(['listing', number], …)`; `initial.ok === false` → the error
-   state. «Повторить» always refetches through `bffFetch` (both modes). The answer is also written to the resource
-   cache so `photos`, `market` and `actions` children read it without a second request.
+   `serverApi()` → `GET /listings/{number}` and renders
+   `<ListingScreen key={number} number={number} initial={result} />`; without a cookie (header mode, first request
+   of a launch) it renders the same with `initial={null}`.
+4. `useListing(number, initial)` in the resolved instance: `initial.ok` → details; `initial === null` or an
+   `unauthorized` result → fetch through `bffFetch('listings/<number>')` with `useResource(['listing', number], …)`
+   (it re-authenticates once, WP-21); any other failed result → its error state. «Повторить» always refetches
+   through `bffFetch`, in both modes. The answer is written to the resource cache, so the `photos`, `market` and
+   `actions` children read it without a second request.
 5. The swap from the fallback instance to the resolved one must not move anything: hero photo index and scroll
    offset are kept per number in `features/listing/viewState.ts` and restored in a layout effect.
 6. A different number in the answer (legacy merge redirect, `useListingLoader` behaviour of SCR-018): seed the
@@ -197,7 +199,8 @@ New unless marked.
 - `frontend/packages/utils/src/phone.ts`, `frontend/packages/utils/src/index.ts` (changed),
   `frontend/packages/utils/tests/phone.test.ts`
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (changed: four keys)
-- `frontend/app/tests/listing/*.test.ts(x)`, `frontend/app/e2e/{listing-open,listing-contact,listing-actions,photo-viewer}.spec.ts`
+- `frontend/app/tests/listing/*.test.ts(x)`
+- `frontend/app/e2e/{listing-open,listing-contact,listing-actions,photo-viewer}.spec.ts`
 
 ## Steps
 
@@ -367,7 +370,7 @@ or lite).
   otherwise plural `market.v3.district` or `market.v3.city`. A null sample size counts as 0.
 - Rooms phrase, fix of LB-APP-015 — a total function: 1, 2, 3 → `market.v3.rooms1…3`; ≥ 4 → `market.v3.rooms4`;
   0 → `market.v3.rooms0`; any other number → `market.v3.roomsN` with `n` rounded; null → omitted. An unexpected
-  value is reported once per launch with `reportError(…, { kind: 'data' })`.
+  value is reported once per launch through `reportError` with the non-fatal kind that WP-32 defines.
 - Paragraph 2, the median: `market.v3.half` or `market.v3.halfM2` (`market.v3.perM2`, `market.v3.perM2Month`).
 - Paragraph 3, own price and conclusion: `market.v3.own` / `ownM2` plus one of `mixed`, `suspicious`, `check`
   (with the server note), `same`, `noRepair`, `pricier`, `cheaper`; «в N раза» (`market.v3.times`) from +90 %, else
@@ -406,7 +409,7 @@ Detail step (`step=detail`): added by a legacy release after the audited one (25
 written by WP-02; take from it, without guessing: which reasons open the step and whether it can be skipped; the
 title, field label, placeholder, button and error texts with their keys; the length limits and trimming of
 `detail`; what Back and a drag do with typed text; the toasts. The request is `reportListing(number, { reason,
-detail })`. If WP-02 is not merged when this step is reached, stop at step 13 of "Steps" and write the Handoff.
+detail })`. If the audit rows are missing, the audit is completed first, in the same PR (queue rule 6).
 
 The same release adds the `price_kind: business` label. Its text, key and placement on the CTA bar and in the share
 text come from the re-baselined SCR-018 section; the card half is WP-24's.
@@ -424,8 +427,8 @@ Results (`useListingActions`):
 | Any failure | nothing changes, sheet stays | `common.saveFailed` «Не получилось сохранить» |
 | Undo | removes the numbers from `hidden` at once; on failure puts them back | on failure `common.saveFailed` |
 
-Hidden numbers disappear from the feed, favourites and the map of this launch (their packages read the map); the
-history list keeps them. A result always applies to the number the sheet was opened for.
+Hidden numbers disappear from the feed, the favourites and the search map of this launch (those packages read the
+`hidden` session map); the history list keeps them. A result always applies to the number the sheet was opened for.
 
 ### Events and privacy
 
@@ -440,59 +443,53 @@ is WP-21's (SEC-REQ-019).
 **Unit (Vitest).**
 
 - `frontend/packages/utils/tests/phone.test.ts`: `+998 90 123 45 67`, `(90) 123-45-67`, `901234567`,
-  `998901234567`, `90.123.45.67`, `90_123_45_67`; unknown code `12 345 67 89`; long digit runs; two numbers in one
-  line.
+  `998901234567`, `90.123.45.67`, `90_123_45_67`; unknown code `12 345 67 89`; long digit runs; two numbers in a line.
 - `tests/listing/useListing.test.ts`: `initial.ok`; `initial === null` fetches once; each `UiError` → its state;
-  redirect seeds the new number and sends no second request; late answer dropped; retry uses `bffFetch`.
+  redirect seeds the new number without a second request; late answer dropped; retry uses `bffFetch`.
 - `tests/listing/marketText.test.ts`: marker 4 % for −0.6, 50 % for 0, 75 % for +0.2, 96 % for +0.5; context-line
   branches; rooms 0, 1, 2.5, 4, 7, null; radius 0.05 / 0.34 / 1.26 km; ago at 1 min, 5 min, 3 h, 49 h, future.
 - `tests/listing/gestures.test.ts`: scale clamp 1–4; pan clamp; double-tap window and distance; close at 110 px.
-- `tests/listing/useContact.test.ts` (fake timers, visibility): refresh at 8 min only when visible; refresh by
-  contract expiry; refresh error keeps the link; on-demand fetch; failure sends no event; both Android outcomes.
-- `tests/listing/useShareListing.test.ts`: prepared path; old client; action failure; `shareMessage` false; lock
-  with fake timers; fallback text for rent, sale with a price kind, no price.
-- `tests/listing/useListingActions.test.ts`: each row of the results table; undo failure; both flag branches
-  (`withDevFlags`); `todo` for the vote withdrawal.
+- `tests/listing/useContact.test.ts` (fake timers, visibility): refresh at 8 min only when visible and by contract
+  expiry; refresh error keeps the link; on-demand fetch; failure sends no event; both Android outcomes.
+- `tests/listing/useShareListing.test.ts`: prepared path; old client; action failure; `shareMessage` false; lock;
+  fallback text for rent, sale with a price kind, no price.
+- `tests/listing/useListingActions.test.ts`: each row of the results table; undo failure; both branches of both
+  flags (`withDevFlags`); `todo` for the vote withdrawal.
 - `tests/listing/useTranslation.test.ts`: not offered in ru; fetch then toggle; failure then retry; keyed by number
   and locale; empty text is a failure.
 
-**Component (Vitest + Testing Library).**
+**Component (Vitest + Testing Library), in `frontend/app/tests/listing/`.**
 
-- `ListingScreen.test.tsx`: skeleton, preview, loaded, not found, offline, server; video tap with and without a
-  deleted post; share hidden without a bot name; no `h1` without titles.
-- `KeyFacts.test.tsx`, `StatsSection.test.tsx`: ru plurals for 1, 2, 5, 11, 21; 0 days; channels 1 and 2; views 0.
-- `FactsSection.test.tsx`: icon table, unknown key, duplicate keys, 18 and 19 characters.
-- `HistorySection.test.tsx`: none, one with and without a link, several with −, 0, +, null; both date flags.
-- `NearbySection.test.tsx`: metro at 1.5 and 1.51 km; kind `hospital`; two `school`; `~` at radius 500, not at 300.
-- `MarketBlock.test.tsx`: visibility rules; no marker without an own value; animation once per number.
-- `MarketSheet.test.tsx`: every conclusion branch; no × button; «Подробнее» absent with a `null` link, present and
-  opening the link with a value.
-- `OriginalText.test.tsx`: only the matching number is a button; copy event; `ph-mask` present.
-- `ListingCtaBar.test.tsx`: the priority table of BR-APP-032; negotiable; note.
-- `PhotoViewer.test.tsx`: start index, counter, `locked` class, replaced `onClose` is honoured (LB-APP-004).
-- `ListingActionsSheet.test.tsx`: hint variants (phone, source, none, 19 and 20 listings); support row with and
-  without an account; `agent` filter; busy guard; step order with Back.
+- `ListingScreen`: skeleton, preview, loaded, not found, offline, server; video tap with and without a deleted
+  post; share hidden without a bot name; no `h1` without titles.
+- `KeyFacts`, `StatsSection`: ru plurals for 1, 2, 5, 11, 21; 0 days; channels 1 and 2; views 0.
+- `FactsSection`: icon table, unknown key, duplicate keys, 18 and 19 characters.
+- `HistorySection`: none; one with and without a link; several with −, 0, +, null; both date-flag branches.
+- `NearbySection`: metro at 1.5 and 1.51 km; kind `hospital`; two `school`; `~` at radius 500, not at 300.
+- `MarketBlock`: visibility rules; no marker without an own value; animation once per number.
+- `MarketSheet`: every conclusion branch; no ×; «Подробнее» absent with a `null` link, opens the link otherwise.
+- `OriginalText`: only the matching number is a button; copy event; `ph-mask` present.
+- `ListingCtaBar`: the priority table of BR-APP-032; negotiable; note.
+- `PhotoViewer`: start index, counter, `locked` class, a replaced `onClose` is honoured (LB-APP-004).
+- `ListingActionsSheet`: hint variants (phone, source, none, 19 and 20 listings); support row with and without an
+  account; `agent` filter; busy guard; step order with Back.
 
-**End to end (Playwright, fake Telegram, stubs, cookie mode and header mode).**
+**End to end (Playwright, fake Telegram, stubs; every spec in cookie mode and header mode).**
 
-- `listing-open.spec.ts`: feed card → listing over the feed → Back to the same scroll position; direct load of the
-  address; redirect fixture; not-found fixture; `503` fixture then retry; uz: translate and toggle; Settings button
-  closes the listing.
+- `listing-open.spec.ts`: feed card → listing over the feed → Back to the same scroll position; direct load;
+  redirect, not-found and `503` fixtures with retry; uz: translate and toggle; Settings button closes the listing.
 - `photo-viewer.spec.ts` (touch): open photo 3 of 7, page, double tap, swipe down closes; Back closes the viewer
   before the listing; direct load of `photos?i=2`.
-- `listing-contact.spec.ts`: iOS platform opens the call link; Android with a staying app opens it after 1.2 s;
-  no link → one contact request; events recorded by the fake.
+- `listing-contact.spec.ts`: iOS opens the call link; Android with a staying app opens it after 1.2 s; no link →
+  one contact request; events recorded by the fake.
 - `listing-actions.spec.ts`: hide → toast → «Вернуть»; block; report `fraud` hidden; report failure; Back from the
-  report step returns to the menu; after hide the feed shows without the card and history length is unchanged.
+  report step returns to the menu; after hide the feed lacks the card and the history length is unchanged.
 
 ## Acceptance checklist
 
 Run every line in ru, uz and en, in light and dark, on staging; attach screenshots to the PR.
 
-Opening and states
-
-- [ ] A feed card opens the listing over the feed with its preview at once; details replace it without moving the
-      hero, the title or the scroll position.
+- [ ] A feed card opens the listing over the feed with its preview at once; details replace it with no jump.
 - [ ] The listing opens the same way from the map card, favourites, history, a radar strip and the hidden list.
 - [ ] A direct load of the listing address shows the skeleton, then the listing; Back goes to the feed.
 - [ ] Not found shows only «Объявление не загрузилось»; Back closes it.
@@ -500,10 +497,7 @@ Opening and states
 - [ ] A redirected number shows the surviving listing with one request and no leftover state.
 - [ ] The demo-data marker is visible while the answer comes from a stub.
 - [ ] The opened listing has the «viewed» eye in the feed afterwards.
-
-Blocks
-
-- [ ] Hero: counter «N / M», photo swipe, video label; a video tap opens the post, or the viewer for a deleted post.
+- [ ] Hero: counter «N / M», photo swipe, video label; a video tap opens the post, or the viewer if it is deleted.
 - [ ] Status banner shows the server text when present.
 - [ ] Title row: title, «district · landmark», share (only with a bot name), favourite toggles, «⋯» opens the sheet.
 - [ ] Key facts show rooms, m², floor, building; nothing when all are absent.
@@ -521,35 +515,26 @@ Blocks
 - [ ] Translation: absent in ru; in uz and en «Перевести» → «Перевожу…» → text with «Перевод сделан ИИ» →
       «Показать оригинал»; a failure shows «Не получилось перевести» and the next tap retries.
 - [ ] Opening another listing never shows the previous translation or an open original text.
-
-Contact and share
-
 - [ ] CTA shows «Позвонить», «Написать», «Номер платный», «Открыть пост» or nothing, by the priority rule.
 - [ ] «Позвонить» on Android tries the dialer, then the call page; elsewhere the call page opens.
 - [ ] After 8 minutes on the screen a call still opens a working link; a listing without a link fetches one on tap.
 - [ ] A failed link fetch gives the error haptic and no `contact_call` event.
 - [ ] «Написать» opens the chat once on a double tap.
 - [ ] Share opens Telegram's picker; on an old client or a failure the share link opens; a double tap shares once.
-
-Viewer and sheets
-
 - [ ] The viewer opens at the tapped photo; pinch to 4×, double tap 2.5×, pan when zoomed, no paging while zoomed.
 - [ ] Swipe down past 110 px closes; less springs back; × and Back close the viewer and leave the listing open.
-- [ ] The market sheet opens from ⓘ, has no ×, closes by backdrop, drag and Back; all three paragraphs and the
-      footer read correctly; «Подробнее» is absent while the methodology link is not set.
+- [ ] The market sheet opens from ⓘ, has no ×, closes by backdrop, drag and Back; three paragraphs and the footer
+      read correctly; «Подробнее» is absent while the methodology link is not set.
 - [ ] Actions menu shows hide, block (right hint, count from 20 listings), report, support (only with an account).
 - [ ] Hide closes the listing, removes the card, shows «Объявление скрыто»; «Вернуть» brings it back.
 - [ ] Block hides all the author's listings, shows «Автор … заблокирован»; «Вернуть» restores them.
-- [ ] Report step lists four reasons («Это риелтор…» absent for a non-owner listing); each gives its toast; `rented`
-      and a hidden `fraud` close the listing.
+- [ ] The report step lists four reasons («Это риелтор…» absent for a non-owner listing); each gives its toast;
+      `rented` and a hidden `fraud` close the listing.
 - [ ] The detail step behaves as the re-baselined audit describes.
 - [ ] Any failed action shows «Не получилось сохранить» and changes nothing.
 - [ ] Back order: detail → report → menu → listing → page below; the Settings button closes everything.
 - [ ] Swipe right closes the listing on iOS and desktop, never on Android, and not while a layer is open.
 - [ ] Viewer and sheets are above the CTA bar and the tab bar; the toast is above the sheets.
-
-Flags, modes, quality
-
 - [ ] With `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with `dev010RealtorVoteWording` on
       the realtor hint and toast use the review wording. Both are off in the merged build.
 - [ ] Every scenario above passes in cookie mode and in header mode.

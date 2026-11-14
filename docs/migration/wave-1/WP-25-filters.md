@@ -71,12 +71,13 @@ filters button (WP-27); lasso drawing (WP-28); mounting the radar modes, the sub
   `[locale]` root parameter, and whether `notFound()` behaves inside a slot page, is **verify before use**; the
   fallback is `null` in the slot and the 404 on the direct-load page.
 - Reserved, non-filter parameters used here: `from` (`map` when the opener is the map), `focus` (`pets`), `pick`
-  (`city`, the nested picker layer). `fromSearchParams` must ignore them and `toSearchParams` output is merged with
-  them only when opening a sheet, never when applying.
-- A direct load renders the same form through `RouteSheet` in its standalone presentation (no page below, no
-  drag-to-close). Leaving it lands on the parent with the search state intact: `/map` when `from=map`, else `/`. If
-  `parentOf` in `lib/navigation/routes.ts` knows only path names, extend it to `parentOf(pathname, searchParams)` for
-  these four addresses in this PR and say so in the PR description (queue rule 6).
+  (`city`, the nested picker layer). They belong to `RESERVED_PARAMS` of `lib/navigation/routes.ts` (WP-20);
+  `fromSearchParams` reads only the 25 filter keys and `sort` and ignores everything else (WP-22), and
+  `toSearchParams` output is merged with a reserved parameter only when opening a sheet, never when applying.
+- A direct load renders the same form through `RouteSheet` with `presentation="standalone"` (WP-23: no page below,
+  no backdrop tap, no drag-to-close). Leaving it lands on the parent with the search state intact:
+  `parentOf(pathname, searchParams)` of WP-20 returns `/map` when `from=map`, else `/`, with the 25 filter keys and
+  `sort` carried over and the reserved parameters dropped.
 
 ### State and navigation
 
@@ -105,8 +106,12 @@ filters button (WP-27); lasso drawing (WP-28); mounting the radar modes, the sub
 - Nested city picker inside the full sheet: `useLayerState('pick')`. It pushes `pick=city` with
   `window.history.pushState` (documented as integrated with the router in `single-page-applications.md`); Back closes
   the picker first, then the sheet.
-- «Обвести на карте»: save the city if it changed, then `closeThen(routes.map({ …q, draw: 1 }))` with districts and
-  zones cleared. How `draw=1` becomes a layer that Back cancels is WP-28's; until then the map placeholder ignores it.
+- «Обвести на карте» (the draw hand-off): save the city if it changed, call `requestDraw()` of
+  `lib/ui/shellState.ts` (add it there if WP-23 did not), then `closeThen(routes.map(q))` with districts and zones
+  cleared. The navigation carries **no** `draw` parameter: `closeThen` lands at an unchanged history depth, where a
+  `draw=1` would leave the BackButton hidden and Back unable to cancel drawing as legacy does. The map screen
+  consumes the request once and opens drawing as a pushed layer (`useLayerState('draw')`, WP-28); until WP-28 lands
+  the request is simply not consumed and the user sees the map.
 
 ### Components
 
@@ -169,9 +174,9 @@ New, under `frontend/app/`:
 New, under `frontend/packages/ui/`: `src/components/IntInput.tsx`, `src/components/PriceInput.tsx`, exports in
 `src/index.ts`, `tests/inputs.test.tsx`.
 
-Changed: `features/radars/subscribe.ts` (only if `useHasActiveRadar` is missing); `lib/navigation/routes.ts` (only if
-`parentOf` needs the search parameters); `lib/api/bffAllowList.ts` (only if `listings/count`, `listings/flow` or
-`cities` are not yet allowed for `GET`).
+Changed: `features/radars/subscribe.ts` (only if `useHasActiveRadar` is missing); `lib/ui/shellState.ts` (only if
+`requestDraw` / `consumeDrawRequest` are missing); `lib/api/bffAllowList.ts` (only if `listings/count`,
+`listings/flow` or `cities` are not yet allowed for `GET`).
 
 ## Steps
 
@@ -198,9 +203,9 @@ Changed: `features/radars/subscribe.ts` (only if `useHasActiveRadar` is missing)
 
 ## Behaviour to reproduce
 
-Texts are quoted in Russian with their key; uz and en come from the same keys. Where a legacy key is both a leaf and
-a prefix (`sheet.market` and `sheet.market.new`, `sheet.posted` and `sheet.posted.1`), use the name WP-20's importer
-gives it.
+Texts are quoted in Russian with their key; uz and en come from the same keys. A legacy key that is both a message
+and a prefix is addressed as `<key>._` (the one rule of WP-20's importer): the section titles below are
+`sheet.market._` and `sheet.posted._`, their options stay `sheet.market.new`, `sheet.posted.1` and so on.
 
 ### Full filters sheet (SCR-014)
 
@@ -225,9 +230,9 @@ Header: × (aria `common.close`), title `sheet.title` «Фильтры», `sheet
 | 11 | Furniture | always | `sheet.furniture` «Мебель»; `sheet.any` «Не важно» / `sheet.furnished` «С мебелью» / `sheet.unfurnished` «Без мебели» | `furnished` = `null` / `true` / `false` |
 | 12 | Renovation | always | `sheet.renovation` «Ремонт»; chips from the reference list for the draft's deal (server names) | multi-select |
 | 13 | Floor | always | `sheet.floor` «Этаж»; `sheet.notFirst` «Не первый», `sheet.notLast` «Не последний» | two independent toggles |
-| 14 | Area and market | sale only (BR-APP-020) | `sheet.area` «Площадь, м²» with `sheet.from` / `sheet.to`, placeholders «0» and `sheet.anyArea` «любая»; `sheet.market` «Дом»: `sheet.any` / `sheet.market.new` «Новостройка» / `sheet.market.secondary` «Вторичка» | `IntInput`: non-digits stripped, 0 → no filter, capped at 10 000 |
+| 14 | Area and market | sale only (BR-APP-020) | `sheet.area` «Площадь, м²» with `sheet.from` / `sheet.to`, placeholders «0» and `sheet.anyArea` «любая»; `sheet.market._` «Дом»: `sheet.any` / `sheet.market.new` «Новостройка» / `sheet.market.secondary` «Вторичка» | `IntInput`: non-digits stripped, 0 → no filter, capped at 10 000 |
 | 15 | Appliances | rent only, daily included (BR-APP-020) | `sheet.appliances` «Техника»; chips from the reference list (server names) | multi-select |
-| 16 | Posted | search mode only (BR-APP-021) | `sheet.posted` «Опубликовано»; `sheet.posted.1` «За сутки», `sheet.posted.3` «За 3 дня», `sheet.posted.7` «За неделю»; hint `sheet.postedHint` «Только для ленты: в чат и так приходят лишь новые.» while a value is set | single choice; tapping the selected chip clears it |
+| 16 | Posted | search mode only (BR-APP-021) | `sheet.posted._` «Опубликовано»; `sheet.posted.1` «За сутки», `sheet.posted.3` «За 3 дня», `sheet.posted.7` «За неделю»; hint `sheet.postedHint` «Только для ленты: в чат и так приходят лишь новые.» while a value is set | single choice; tapping the selected chip clears it |
 
 Price section (also the body of the price quick sheet):
 
@@ -340,7 +345,7 @@ Opens from the sort chip. Closes by pick, ×, backdrop, drag, Telegram Back. Com
 - Rows come from `sortOptions(filters, city)`. With an unknown city (reference not loaded or a stale city code) only
   the first three are offered and nothing throws (fix of LB-APP-023, owned by WP-22).
 - Pick: light haptic, `closeThen(routes.feed({ …q, sort }))`, scroll to top; the feed re-creates itself. `new`
-  removes the `sort` parameter.
+  removes the `sort` parameter. This equals `setSort` followed by closing, done as one navigation instead of two.
 
 ### City picker sheet (SCR-017)
 
@@ -459,8 +464,9 @@ Full filters sheet:
       the rent or the sale hint.
 - [ ] Test: `dev052UnifiedBelowMedianRule` on changes availability as `belowMedianAvailable` says.
 - [ ] Inverted price or area range is applied as typed (flag off). Test: `dev025ValidateRanges` on swaps the bounds.
-- [ ] «Обвести на карте» closes the sheet and opens the map address with `draw=1`, districts and zones cleared; with
-      an area set, «Своя область на карте» removes it.
+- [ ] «Обвести на карте» closes the sheet and opens the map with districts and zones cleared and a pending draw
+      request (no `draw` parameter in that navigation; from WP-28 on the map then enters drawing as a layer that
+      Back cancels); with an area set, «Своя область на карте» removes it.
 - [ ] Zones keep the order centre, nearer-centre and clear districts; a district clears zones; «Рядом с метро» is
       independent and absent in a city without metro; the districts caption matches the city kind.
 - [ ] Who posts, furniture, floor behave as three-way and toggle controls; tenant chip clears on a second tap.

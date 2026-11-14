@@ -126,7 +126,9 @@ TabBar
   `map` (`/map`), `map-drawing` (`/map` with `draw=1`), `saved`, `radars`, `settings`, `none` (`/listing/…`:
   the listing covers the chrome). The active tab follows the same mapping.
 - `lib/ui/shellState.ts` (module store): `lastSearchHref`, `lastSavedHref` (written by `AppShell` whenever the
-  address is a search or saved root), `areaTooSmall` (written by WP-28), `refreshHandlers` (pull-to-refresh).
+  address is a search or saved root), `areaTooSmall` (written by WP-28), `refreshHandlers` (pull-to-refresh),
+  and the one-shot draw request `requestDraw()` / `consumeDrawRequest()` (set by the filters sheet of WP-25,
+  consumed by the map of WP-28, which then opens drawing as a pushed `draw=1` layer so Back can cancel it).
   Legacy keeps filters, sort and the list/map choice in memory across tabs; here the search tab returns to
   `lastSearchHref`, and the radar «+» passes the query of `lastSearchHref` to `routes.radarNew(q)`.
 - `TopBar` holds no data: it reads `useSearchState()` (WP-22) for the deal, polygon and active-filter count and
@@ -134,6 +136,11 @@ TabBar
 - The search-list variant has a `chips` region that renders nothing here; WP-24 mounts `FeedHeader` in it.
 - `RouteSheet`, `RouteOverlay` and `SubPage` are wrappers that later route files use around their content; they
   connect the `@homi/ui` primitives to `useBack()`, `tg.haptic` and the platform check of WP-21.
+- `RouteSheet` takes `presentation: 'layer' | 'standalone'`. `layer` (default) is the sheet in the `@sheet` slot:
+  backdrop, drag-to-close, × and Back all call `back()`. `standalone` is the same content on a direct load of a
+  sheet address (`/filters`, `/filters/<kind>`, `/sort`, `/city`, the radar sheets): there is no page below, so no
+  backdrop tap and no drag-to-close; × and Back go to `parentOf(pathname, searchParams)` of WP-20, which keeps the
+  search state and returns `/map` when `from=map`, else `/`. `RouteOverlay` has the same two presentations.
 
 ### Primitives (`frontend/packages/ui/src/`)
 
@@ -183,9 +190,11 @@ New, under `frontend/packages/ui/src/`:
 
 New, under `frontend/app/`:
 
-- `features/shell/{AppShell,TopBar,TabBar,ViewToggle,MiniTitle,PullToRefresh,RouteSheet,RouteOverlay,SubPage,ToastHost}.tsx`
+- `features/shell/{AppShell,TopBar,TabBar,ViewToggle,MiniTitle,PullToRefresh}.tsx`
+- `features/shell/{RouteSheet,RouteOverlay,SubPage,ToastHost}.tsx`
 - `features/shell/{useMiniChrome,usePullToRefresh,shellVariant}.ts`
-- `features/gates/{GateRedirector,OutsideScreen,NoAccessScreen,LanguagePicker,WelcomeCity,SessionExpiredScreen,CrashScreen}.tsx`
+- `features/gates/{GateRedirector,OutsideScreen,NoAccessScreen,LanguagePicker,WelcomeCity}.tsx`
+- `features/gates/{SessionExpiredScreen,CrashScreen}.tsx`
 - `features/gates/{resolveGate,gateState,accessReason,useBootRetry}.ts`
 - `features/city/CityList.tsx`, `features/city/nearestCity.ts`
 - `lib/ui/{toast,feedback,confirm,shellState}.ts`, `lib/actions/settings.ts`
@@ -523,6 +532,8 @@ Shell
 - [ ] Pull-to-refresh arms at 72 px with one haptic, spins at least 0.7 s, and does nothing on the map, on
       settings and under any sheet or listing.
 - [ ] A sheet closes by ×, backdrop, drag and BackButton; the page under it does not scroll.
+- [ ] A sheet address loaded directly shows the standalone presentation: no backdrop tap, no drag; × and Back go to
+      the parent address with the search parameters kept.
 - [ ] A sub-page closes by BackButton and by swipe back on iOS and Desktop; no swipe back on Android.
 - [ ] Lite graphics: the chrome collapses without the morph and without the mini title.
 
