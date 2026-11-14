@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (three-wave migration order set by the developer; strategy and Wave 1 plan written, PR #25 open; next step stage W1-0)
+updated: 2026-11-14 (new-product course decided by the developer; strategy, Wave 1 plan, queue of 44 work packages and their specifications written, PR #25 open; next step package WP-00)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -9,48 +9,41 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## Developer's standing instruction
 - 2026-11-09, work split: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» Production/staging belongs to the first developer: «Не включай настройку production-среды в задачи коллеги».
-- 2026-11-09, goal: move kvadro² (`@KvadroAppBot`, `app.kvadro.app`, `kvadro.app`) onto HOMI 1:1. «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» Plan before code; no real passwords, tokens or personal data in docs or tests.
-- 2026-11-09: «в homi.uz мы будем исправлят старые ошибки и логические не верные решение» — legacy bugs and wrong decisions are fixed, not ported (`docs/migration/README.md`, Migration policy).
-- 2026-11-14, new order (prompt kept local as `prompt.md`): «Разработку разделим на три волны. Основной принцип — постепенный переход на новую архитектуру без остановки работающего сайта и нарушения существующей функциональности.» Wave 1: «переносим весь существующий фронтенд на Next.js (React)», «Полностью сохранить текущий интерфейс — максимально близко к оригиналу (1:1)», «Не менять поведение сайта на этом этапе», «Все API-запросы направлять через прокси к существующему Production Backend». Wave 2: «метод за методом», «API Gateway / Proxy Layer с возможностью переключения каждого endpoint отдельно». Wave 3: full switch, legacy retired.
-- 2026-11-14: «да, закоммить и открой PR»; «да, сохрани сессию».
-- Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, `HANDOFF.md` §4 items marked **gate**. 2026-11-08: «безопасность не важно сейчас» — about the app.uz findings (card C0) only.
+- 2026-11-09: «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» Plan before code; no real passwords, tokens or personal data in docs or tests. «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
+- 2026-11-14, three waves (prompt kept local as `prompt.md`): «Основной принцип — постепенный переход на новую архитектуру без остановки работающего сайта и нарушения существующей функциональности.»
+- 2026-11-14, answer round (43 answers, verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`). The ones that shape everything: «Пока будет новый бот с нашим backend старый бот будет работат в старом»; «Постоянный новый продукт»; «Сразу новый /api/v1»; «Laravel как шлюз»; «Пересборка по аудиту»; «Полный App Router»; «На сервере через cookie-сессию»; «Сначала весь фронтенд на моках»; «Крупные PR по модулям»; «фуллстак только по очереди там где ты остоновился он продолжит или там где он остоновился ты продоожиш»; «Всё сразу на prod»; «Срока нет, важнее полнота».
+- 2026-11-14: «у нас план должен быть детальным чтобы у разработчика не возникола вопросов и чтобы быстро безостоновки все сделал»; «Переписать план в этом же PR».
+- Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, `HANDOFF.md` §4 items marked **gate**.
 
 ## State at handoff
-- **Where to continue (changed later on 2026-11-14 — this bullet overrides the older lines below):** the developer answered 43 questions (`docs/migration/decisions/2026-11-14-developer-answers.md`) and the plan was rewritten: HOMI ships a NEW product under its own bot and brand, frontend → `/api/v1` only, a source driver per method (stub / legacy via service key / native). Read `docs/migration/24-three-wave-strategy.md`, then `25-wave-1-plan.md`, then the queue `docs/migration/wave-1/README.md`. `25-wave-1-frontend-plan.md`, stages W1-0…W1-9 and the nginx gateway no longer exist.
-- **Unfinished:** only 9 of 44 work-package specifications are written (WP-00…03, 20, 23, 25, 27, 30), drafted by subagents and NOT reviewed; the session hit the usage limit. Next step: write the other 35 (`wave-1/README.md` lists them; template there), review all 44 against `25`, run the three scripts, then rewrite this handoff fully with `save-session`. No code before that and before the developer's OK.
-- Branch `docs/three-wave-plan`: `cf4d325` plus this save commit, on top of `main` `596d0db`. **PR #25** (github.com/amediateam/homi/pull/25) is open, `MERGEABLE`, and waits for the first developer's review. Docs only; no CI runs on it (`gh pr checks 25` → none).
-- `main` is at `596d0db` (last merge PR #24). PR #9, the audit and plan, is merged (`b583d3d`).
-- `prompt.md` and `writing-block.md` stay untracked on purpose (machine paths). Both were found staged at session start (cause unverified) and were unstaged before the commit.
-- The legacy checkout `kvadro.uz` (SVN) is read through `KVADRO_ROOT` in `.ai/local.env`. The guard hook does not protect that tree (KI-26).
-- No application code has changed. `make ci-backend`, `make ci-frontend` and `make dev-check` were not run this session.
-- Verify the plan: `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` (both exit 0 at this commit).
+- **Where to continue:** read `docs/migration/25-wave-1-plan.md` once, then take the first package of `docs/migration/wave-1/README.md` that is not `DONE` — today **WP-00** (Media ownership fix, KI-25). Strategy and decisions: `docs/migration/24-three-wave-strategy.md`. Start code only after the developer's OK.
+- The course: HOMI ships a new product under its own bot and brand; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through the operator's service key, or from HOMI's own code (a Pennant flag per method). The legacy bot, hosts and users are not taken over; nothing is migrated.
+- Branch `docs/three-wave-plan`, **PR #25** (github.com/amediateam/homi/pull/25), open, docs only, waits for the first developer's review. No CI runs on it. `main` is at `596d0db`.
+- No application code has changed. `make ci-backend`, `make ci-frontend`, `make dev-check` were not run this session.
+- `prompt.md` and `writing-block.md` stay untracked on purpose (machine paths); unstage them if they appear staged.
+- Verify the plan: `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` (both exit 0 at the last commit).
 
 ## Done this session
-- Local `main` fast-forwarded from `bb844ca` to `596d0db` (42 commits, `git pull --ff-only`).
-- `24`: the three waves, the gateway (one route table, default legacy, per-route switch and rollback), the mapping onto 21 / 18 / 22, DEC-31…DEC-39, seven questions, RK-24…RK-28.
-- `25`: the Wave 1 plan — client-rendered route group `(miniapp)`, `frontend/app/miniapp/` mirroring the legacy `src/`, inventory by stage, proxy and `live`-mode rules, the parity run, stages W1-0…W1-9 with exit criteria. It reuses 87 KV-FE tasks (weight 147) and replaces their 38 KV-BE prerequisites by the legacy API (counted from `data/tasks.csv`).
-- Notes in `README.md`, `21` (top and §20) and `22` (top and §5) point at the amendment.
-- Facts came from three Explore subagents. Spot-checked in the legacy tree: the dev proxy (`vite.config.js:51-64`), the dependency list, 177 modules / 18 330 lines / 27 CSS files, 472 i18n keys per locale, and every cited line number.
-- Checks: `collect_ids.py --check` → exit 0, 2 209 IDs (21 new); `build_open_questions.py` → 242 questions; `task_graph.py --check` → exit 0; path and IP scan of 24 and 25 → no hits.
-- Legacy tree only read: no `svn`, `npm` or build command was run there, and legacy production was not called. `find -newermt` for today lists only `.svn/wc.db*` and `.idea/workspace.xml` (IDE metadata).
+- Local `main` fast-forwarded to `596d0db`. First draft of the three-wave plan committed (`cf4d325`), then replaced after the answer round.
+- `24` rewritten: the new product, `/api/v1` with a source driver per method, DEC-31…DEC-49 answered, questions for the operator, RK-24…RK-32. `25-wave-1-plan.md` written (replaces `25-wave-1-frontend-plan.md`). `wave-1/README.md`: one ordered queue of 44 work packages; 44 specifications `wave-1/WP-NN-*.md` (about 17 000 lines).
+- The specifications were drafted by three subagents (and their sub-agents) from the audit and the earlier task files. Checked by the main session: structure of all 44 (script), `collect_ids.py --check` exit 0, v1 method names against `25` §4.2 (script: no undefined method), the authors' coverage totals (45/45 screens, 69/69 rules, 47/47 client defects, 84/84 bot handlers, 76/76 buttons, 88/88 texts — reported, not re-counted), the contradictions the authors reported (settled in the files). Read in full: WP-02, WP-10 and the changed parts of WP-13, 40, 45, 46, 48, 54, 57. **Everything else was not read line by line.**
+- Checks at the last commit: `collect_ids.py --check` exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` exit 0; path and address scan of the new files → no hits.
+- Legacy tree only read (changelog, sources at cited lines); legacy production not called.
 
 ## Waiting for the developer (do NOT start on your own)
-1. First developer: review PR #25; the author merges after approval. Then an ADR for DEC-31 and DEC-35 (next free number 0016; it amends ADR-0013) in its own small PR.
-2. Developer: DEC-32 (port the recovered code or rebuild from the audit), DEC-33 (rules for reaching legacy production from development; until it is answered the prohibitions of `22` §4 stand), DEC-36 (which legacy defects are fixed in Wave 1), DEC-37, DEC-38.
-3. Product owner: operator contact, a launch path on `@KvadroAppBot`, limits and custody (Q-SYS-009, DEC-34, DEC-35); legacy database, schema and source (DEC-39, RK-24) — Wave 2 cannot be planned without them.
-4. First developer: dependency approvals (KV-FE-005, DEC-23): eight runtime packages and the test runners (`25` §12).
-5. After the plan is approved: task files for N1…N9 (`25` §11), the `Dependencies` cells of the 87 tasks, the rewrite of KV-FE-177.
-6. Possible without a decision, but only after the developer's OK (`25` §15): baseline pin (N3), guard for the legacy tree (N4, KI-26), KV-FE-005, the KV-FE-002 spike.
-7. Still open from before: KV-BE-002 (KI-25; independent of the waves), the M0 ADR batch, DEC-01…30, the shared-file PRs (`HANDOFF.md` §4, a `CLAUDE.md` pointer to `docs/migration/`), T1 tunnel tool, T9–T11.
+1. First developer: review PR #25. It changes three project rules and he has to agree: PR size (one PR per work package), the dependency batch (DEC-49), a production deploy on every merge. The author merges after approval.
+2. Developer: OK to start WP-00. Then WP-01 (four ADRs, numbers 0016–0019, each its own PR), WP-02 (send the request to the operator — the text is in the specification — and pin the legacy baseline), WP-03 (dependencies).
+3. Product owner: the operator's contact, the service key and its contract, limits, dump and schema (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062); HOMI's own artwork (Q-APP-025); the legal basis and privacy text before real users arrive (DEC-13, Q-SEC-021); a PostHog account (DEC-47).
+4. Developers together: RK-32 — radars can be created before the bot can deliver them; RK-27 — stub data is visible on production (a "demo data" marker is planned); the phone number on the card stays as in legacy while SEC-REQ-036 asks to hide it (DEV-007, off).
+5. Still open and needed inside Wave 1: DEC-03 (LLM vendor for the bot's free-text queries), DEC-08, DEC-12, DEC-19, DEC-20, DEC-21 (`24` §7).
 
 ## Gotchas learned this session
-- Legacy production ships a Mini App release every one to three days. The audit describes `index-plF_TOcT.js`; the legacy tree already holds two later ones (Q-APP-024). Read `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md` before trusting 03 or 08.
-- `12` §1 rule 5 says "port behaviour, not code"; `25` §8.1 recommends the opposite for Wave 1. Do not start porting before DEC-32 is answered.
-- The handoff can be days old: PR #9 was merged and `main` moved 42 commits between sessions. `git fetch` first.
-- Unstage `prompt.md` and `writing-block.md` before every commit (`git restore --staged`); neither is ignored by git.
-- A new migration document must not start a table row, heading or bold list item with an existing ID. After adding questions run `collect_ids.py`, then `build_open_questions.py`.
-- `$PIPESTATUS` is empty in zsh: read `$?` of the script itself, not of a pipe.
-- Next numbers: AM-50, KI-27 (the production track used AM-46…49), ADR 0016. Check `main` first.
+- The earlier task files (`docs/migration/tasks/**`) and `21`, `18`, `14` describe the abandoned plan (taking over the legacy bot, a legacy-shaped `/api/*`, data migration). They are behaviour reference only; `24` §7 maps what still applies.
+- A specification is a subagent's draft: when it disagrees with `25` or the audit, those win and the specification is fixed in the same PR.
+- Legacy production ships a Mini App release every one to three days; the audit trails it by two (Q-APP-024). WP-02 pins the baseline.
+- In `docs/migration/**` no table row, heading or bold list item may start with an existing identifier; `perl` one-liner used here prefixes such cells with "Ref. ". Run `collect_ids.py`, then `build_open_questions.py`.
+- Subagents hit the usage limit twice; resume them with SendMessage instead of starting new ones, and tell them not to fan out.
+- `$PIPESTATUS` is empty in zsh. Next numbers: AM-50, KI-27, ADR 0016.
 
 ## Active subagent work at handoff
 - None.

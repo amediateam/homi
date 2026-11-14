@@ -163,8 +163,9 @@ Both migrations are additive and are created with `php artisan make:migration â€
 One class answers "can the bot write to this user". The radar service of WP-45 reads the state before a write (rule
 of KV-BE-100, expected `App\Services\Radar\ChatReachability::canWrite`). If that class exists, add `markActive` and
 `markBlocked` to it and bind nothing new; if it does not, create `App\Services\Telegram\ChatReachability` with all
-three methods. Never keep two classes of that name. `App\Events\Telegram\ChatUnreachable` is the event of WP-51 that
-`Responder` dispatches when a send is refused; `MarkChatBlocked` listens to it.
+three methods. Never keep two classes of that name. `App\Events\Telegram\ChatUnreachable` is the event that
+`Responder` of WP-51 dispatches when a send is refused (the class itself is created earlier, by WP-46, whose
+listener drops the user's pending deliveries); `MarkChatBlocked` listens to it.
 
 `BotCommandList` in detail:
 

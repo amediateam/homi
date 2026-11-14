@@ -113,8 +113,9 @@ Table `user_settings`: `user_id` (primary key, foreign key, cascade), `locale` (
 `currency` (string 3), `theme` (string 8), `city` (string 64, nullable), `city_chosen_at`, `quiet_start`,
 `quiet_end` (`time`, both null = off), `digest_hours` (`json`, sorted unique integers), timestamps.
 
-- Defaults on creation (`config/settings.php`, `defaults`): locale `uz` when `language_code` starts with `uz`, else
-  `ru` (BR-APP-050), not marked chosen; currency `USD`; theme `auto`; city `null`; quiet hours 23–8; digest hours
+- Defaults on creation (`config/settings.php`, `defaults`): locale `uz` when `language_code` starts with `uz`, `en` when it
+  starts with `en`, else `ru` — one resolver for the Mini App and the bot (BR-APP-050 names only the `uz` and `ru`
+  branches for the client; the bot of `04` also answers English users in English), not marked chosen; currency `USD`; theme `auto`; city `null`; quiet hours 23–8; digest hours
   `[9]`. The last two are a specification choice: the legacy default is unknown.
 - `App\Services\Identity\SettingsService`: `get(User): UserSettingsData`; `patch(User, array $changes):
   UserSettingsData` updates only the sent keys in one `UPDATE` per key set, sets `locale_chosen_at` or

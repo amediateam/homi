@@ -61,14 +61,14 @@ second service.
 
 | Need | Package | Call expected |
 | ---- | ------- | ------------- |
-| The user's radars in creation order, with filters, `active`, `mode`, the hide rules | WP-45 | `RadarService::listFor(User)`; `findForUser(User, string $key)` with the short callback key of WP-54 |
-| Pause, resume, mode | WP-45 (rules of KV-BE-104) | `setActive(Radar, bool)` → result with `askFound` (pause) or the unseen listing numbers (resume); `setMode(Radar, RadarMode)` |
-| Clear hide rules | WP-45 (rules of KV-BE-106) | `RadarHideRuleService::clear(Radar)`; `remove(Radar, rule)` for DEV-033; `rulesOf(Radar)` with kind and display value |
-| Replace filters | WP-45 (rules of KV-BE-100) | `RadarService::update(Radar, SearchFilters)` → `updated`; throws `RadarDuplicate` |
-| Delete | WP-45 | `RadarService::delete(Radar)` → result with `askFound` |
+| The user's radars in creation order, with filters, `active`, `mode`, the hide rules | WP-45 | `$user->radars()` in creation order; one radar by its ULID through the same relation (the ULID is the callback key, WP-51) |
+| Pause, resume, mode | WP-45 | `RadarService::setActive(User, Radar, bool)` → `RadarMutation` of kind `paused` or `resumed` (the `Starter` of a resume holds the unseen numbers); `setMode(User, Radar, RadarMode)`; whether to ask the poll: `FoundAskPolicy::shouldAsk(User, 'pause' or 'delete')`, called once per pause or delete |
+| Clear hide rules | WP-45 | `RadarHideRuleService::clearAll(Radar)`; `rulesFor(Radar)` for the `🙈` line. Removing one rule (DEV-033) has no method in WP-45: this package adds `removeOne(Radar, int $ruleId)` with the flagged branch |
+| Replace filters | WP-45 | `RadarService::update(User, Radar, SearchFilters, null)` → `RadarMutation` of kind `updated` with its `Starter`; throws `RadarDuplicate` |
+| Delete | WP-45 | `RadarService::delete(User, Radar)`, then `FoundAskPolicy::shouldAsk()` |
 | Radar limit | WP-11 through `WizardReference::radarLimit()` of WP-54 | |
 | Store a poll answer | WP-44 | `FoundSurveyService::answer(User, FoundAnswerType, FoundTrigger)`, `where(User, FoundPlace)` |
-| Summary rows, wizard engine, review, starter list | WP-54 | `RadarSummaryRenderer`, `Wizard` in mode `edit_radar`, `ReviewStep`, `SendStarterList`, `StarterListRenderer` |
+| Summary rows, wizard engine, review, starter list | WP-54 | `RadarSummaryRenderer`, `Wizard` in mode `edit_radar`, `ReviewStep`, the job `SendStarterList`, `BotRadarWrite::run()` around every call of the radar service |
 | Radar title | this package | `App\Telegram\Rendering\RadarTitle` — if WP-53 already created it for the hide-rule radar choice, extend that class |
 | Voice file | WP-50 | `TelegramBot::getFile()` and `downloadFile()`; the file address is never built outside the client (SEC-REQ-013) |
 | Text and voice redaction in `telegram_updates` | WP-50 | the ledger keeps no `text` and no `voice` after processing |
@@ -110,8 +110,8 @@ Edit of an existing radar:
 - Keys the wizard cannot show (`price_min`, `polygon`, `furnished`, `renovation`, floors, area, `market`,
   `appliances`, …) stay in the draft untouched and are saved back byte-equal (Q-BOT-026, closed by specification).
 - Save in `edit_radar` mode is handled by `RadarEdit::save()`, called by `SaveRadar` of WP-54 when the conversation
-  kind is `WizardEdit`. After the message is edited it dispatches `RadarSavedByBot` with `edited: true`; the
-  listener of WP-54 then sends the list of listings not delivered before, without sticker and without tip.
+  kind is `WizardEdit`. After the message is edited it dispatches the job `SendStarterList` of WP-54 with the
+  starter numbers of the mutation (listings not delivered before), without sticker and without tip.
 
 ### LLM gateway and query parser
 
@@ -134,8 +134,8 @@ Edit of an existing radar:
 - Table `llm_calls`: `id` (ULID), `task` (string 32), `prompt_version` (string 16), `provider`, `model` (string
   64), `masked_input_sha256` (char 64), `input_tokens`, `output_tokens` (integers), `cost_micro_usd` (bigint),
   `status` (string 16: `ok`, `invalid_output`, `unavailable`), `error_code` (string 32, nullable), `created_at`.
-  No text column of any kind. Model `LlmCall` with a factory, prunable after 180 days (the daily prune of WP-47, or
-  `model:prune` in `routes/console.php` if WP-47 has none).
+  No text column of any kind. Model `LlmCall` with a factory; an entry in `config/retention.php` of WP-47 deletes
+  rows after 180 days. The table has no user link, so the erasure registry lists it as exempt.
 - Config `backend/config/ai.php` (published from the package, config only): `default` from `AI_DEFAULT_PROVIDER`
   (default `gemini`), plus `daily_spend_limit`, `request_timeout`. Env names go to `backend/.env.example` in a
   separate small PR (shared file) and to `docs/infrastructure/environments.md`.
@@ -255,12 +255,15 @@ TXT-BOT-033, TXT-BOT-040 … TXT-BOT-043, TXT-BOT-057 … TXT-BOT-071. Brand wor
 | - | ----- | ----- | ---- |
 | 1 | `⏸ Пауза` | `На паузе ⏸` (TXT-BOT-062) | Card re-rendered: paused status, button `▶️ Включить`. When the service says `ask_found`, the poll arrives as a new message (BR-BOT-067) |
 | 2 | `▶️ Включить`, nothing unseen | `Радар снова включён ▶️ Нового подходящего пока нет — пришлю, как появится` (TXT-BOT-063) | Card re-rendered |
-| 3 | `▶️ Включить`, K unseen matches | `subs.resumed_found` — «Радар снова включён ▶️ {K}, которые вы не видели, — ниже» (Q-BOT-045, closed by specification) | Card re-rendered; the starter list of WP-54 with those K rows as a new message; they are recorded as delivered (BR-API-089) |
+| 3 | `▶️ Включить`, K unseen matches | `subs.resumed_found` — «Радар снова включён ▶️ {K}, которые вы не видели, — ниже» (Q-BOT-045, closed by specification) | Card re-rendered; the job `SendStarterList` of WP-54 sends those K rows as a new message; they are recorded as delivered (BR-API-089) |
 | 4 | `📬 Присылать подборкой` | `Теперь — подборкой в заданное время` (TXT-BOT-064) | Status `📬 Подборкой …`, button `📡 Присылать сразу` |
 | 5 | `📡 Присылать сразу` | `Теперь — сразу` (TXT-BOT-065) | Button `📬 Присылать подборкой` |
 | 6 | `🙉 Показать скрытое` | `Скрытое снова показывается` (TXT-BOT-066) | All hide rules of the radar are removed; the `🙈` line and the button disappear (BR-BOT-063) |
 
 - A mode change never changes `active`; a pause never changes the mode.
+- WP-45 counts the radar limit on active radars. `▶️ Включить` beyond the limit throws `RadarLimitReached`: alert
+  `radar.limit_reached` (key of WP-54), the radar stays paused. In `📡 Радар (k из 10)`, k is the number of active
+  radars, so it never exceeds the limit; paused radars are listed all the same.
 - Radar writes count against the per-user radar-write limit of the bot limiter (SEC-REQ-027).
 - With `bot.dev033` on (DEV-033, tests `todo`): the button reads `🙈 Скрытое (N)` and opens a list with one `✖`
   button per rule, «Показать всё скрытое» behind a confirmation, and a way back to the card.

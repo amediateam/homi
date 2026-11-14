@@ -7,7 +7,7 @@
 | Depends on | WP-53, WP-45 |
 | Size | about 4 500 changed lines, L. Above the 3 000-line guide: two PRs. Part A = steps 1–9 (engine and wizard steps 1–8, reachable only in tests: `new` stays in the interim list). Part B = steps 10–16 (review, step edit, save, starter list, tip, `new` leaves the interim list). Production works after either part |
 | Behaviour reference | `04` §2 (rows BOT-014, BOT-036 … BOT-053), §3.4 … §3.8, §4.1 (BTN-006 … BTN-033), §4.2, §4.3, §8 (BR-BOT-016 … BR-BOT-050, BR-BOT-104), §9 (LB-BOT-001, LB-BOT-002, LB-BOT-003, LB-BOT-005, LB-BOT-009, LB-BOT-015, LB-BOT-016, LB-BOT-018, LB-BOT-019, LB-BOT-030, LB-BOT-031); `09` §4.2 and §4.3; `11b` §2.3 rows 1 and 4; task files KV-TG-028 … KV-TG-037; rules of KV-BE-100, KV-BE-102, KV-BE-105 |
-| Needs from the production track | (1) Approval of one migration: `users.first_radar_tip_sent_at` (nullable timestamp, additive). (2) After the deploy, `php artisan telegram:assets:refresh` on staging and on production so the post-save sticker resolves for each bot (WP-51). (3) Nothing else: no new env key, queue or cron entry |
+| Needs from the production track | (1) Approval of one migration: `users.first_radar_tip_sent_at` (nullable timestamp, additive). (2) After the deploy of part B, `php artisan telegram:assets:refresh` on staging and on production so the post-save sticker resolves for each bot (WP-51). (3) With the deploy of part B, in the server env of staging and production: `RADAR_STARTER_ENABLED=true` and `RADAR_REQUIRE_CHAT=true` (WP-45 left both `false` and planned them for WP-57; the starter list is sent from this package on, so they move here). No new queue or cron entry |
 
 ## Goal
 
@@ -67,11 +67,11 @@ second service.
 | Radar limit | the same | `ReferenceData->limits->radars` |
 | Weekly flow and relax options of a draft | `ListingSource` (WP-10, WP-12; legacy driver WP-42), feature `source.listings.flow` | `flow(SearchFilters, SourceContext)` → `FlowEstimate` (`week`, `days`, `options[]` with `code`, `count`, `filters`) |
 | Starter rows | `ListingSource`, feature `source.listings.card` | `previews(list<int>, SourceContext)` → `ListingSummary` per number |
-| Create a radar | WP-45 (rules of KV-BE-100) | `RadarService::create(User, SearchFilters, entry)` → result with `radar`, `kind`, the starter numbers; throws `RadarLimitReached` |
-| Starter selection | WP-45 (rules of KV-BE-102) | `StarterSelector::for(Radar)` → listing numbers, newest first: last 72 hours, not hidden, author not blocked, no hide rule, not delivered to this user |
-| Delivery mode | WP-45 | `RadarService::setMode(Radar, RadarMode)` |
-| Short radar key for callbacks | WP-45 | a key of at most 20 characters of `[A-Za-z0-9_-]` per radar (the integer primary key in base 36; the ULID of the API does not fit the codec of WP-51), and `RadarService::findForUser(User, string $key): ?Radar` |
-| Record "delivered" | WP-46 (rules of KV-BE-109) | `DeliveryLedger::recordDelivered(User, Radar, list<listing reference>)` for starter rows |
+| Create a radar | WP-45 | `RadarService::create(User, SearchFilters, RadarCreateContext)` with entry `bot_wizard` → `RadarMutation` (`radar`, `kind`, `Starter` with `count` and `numbers`); throws `RadarLimitReached` |
+| Starter selection | WP-45 | the `Starter` of the mutation: at most one page of 20 numbers, newest first, last 3 days, not hidden, author not blocked, no hide rule, not delivered to this user. Empty while `config('radar.starter_enabled')` is false |
+| Delivery mode | WP-45 | `RadarService::setMode(User, Radar, RadarMode)` |
+| Radar key in callbacks | WP-45, WP-51 | the radar's ULID (26 characters; the codec of WP-51 allows it). The radar is always loaded through `$user->radars()`, so a foreign key is an unknown one |
+| Record "delivered" | WP-46 | `DeliveryLedger::claim(User, ListingPointer, ?Radar, DeliveryOrigin::Starter)` per listed number before the send, `attachMessage()` after it, `release()` when the send failed |
 | Open a card by number | WP-53 | `OpenListingByNumber`, data `k1:ln:<n>:s:<radar key>`, origin `Starter` |
 | Stickers, replies, codec, conversation store | WP-51 | `StickerRegistry`, `Responder`, `CallbackCodec`, `ConversationStore` |
 | Settings (digest hours, currency, locale) | WP-40 | `SettingsService::get(User)` |
@@ -184,21 +184,29 @@ longer shown are dropped by the normaliser, never kept silently.
 
 | Outcome | Bot answer |
 | ------- | ---------- |
-| `created` or `reactivated` | toast TXT-BOT-075; the review is edited into TXT-BOT-034 with `📡 Радар` (`k1:sb:0:ls`) · `➕ Новый радар` (`k1:nw`); the conversation is forgotten; the sticker `radar_saved` is sent; then `RadarSavedByBot` is dispatched after commit |
+| `created` or `reactivated` | toast TXT-BOT-075; the review is edited into TXT-BOT-034 with `📡 Радар` (`k1:sb:0:ls`) · `➕ Новый радар` (`k1:nw`); the conversation is forgotten; the sticker `radar_saved` is sent; then the job `SendStarterList` is dispatched with the starter numbers of the mutation |
 | `existing` (an active radar with the same filters) | toast `bot.radar.twin_exists`; the review is edited into the same text with the button `📡 Открыть радар` (`k1:sb:<radar key>:op`); no sticker, no list |
 | `RadarLimitReached` | alert `bot.radar.limit_reached` with the limit; the review stays and can be saved after a radar is deleted (Q-BOT-007, closed by specification) |
 | any other failure | toast `bot.common.error`; the review stays; nothing is written |
 
 - Until WP-55 lands, the action `sb` has no handler. This package registers `sb` with `InterimHandler` (WP-52), as
   WP-52 did for `nw`; WP-55 replaces the registration.
-- `App\Listeners\Telegram\SendStarterList` (queued on `telegram`) handles `RadarSavedByBot`: starter list, then the
-  tip, in that order, in one job, so they never interleave and always follow the sticker.
-- The same listener handles the radar-saved event of WP-45 for radars created, edited, switched on or relaxed
-  through the API (the `starter` number of the v1 answer is "listings sent to the chat now", WP-13): the list only,
-  no sticker and no tip. If WP-45 already sends that list itself, this listener is bound to the bot event only.
+- Job `App\Jobs\Telegram\SendStarterList` (queue `telegram`; user, radar, numbers, `withTip`): the starter list,
+  then the tip, in that order, in one job, so they never interleave. After a save in the bot the handler dispatches
+  it itself, after the sticker.
+- For radars created, edited, switched on or relaxed through the API, the `starter` number of the v1 answer means
+  "listings sent to the chat now" (WP-13, BR-API-079). `App\Listeners\Telegram\QueueStarterListOnRadarSaved`, a
+  synchronous listener on `RadarSaved` of WP-45, dispatches the same job without the tip when the mutation carries
+  starter numbers. Bot handlers call the radar service inside `App\Support\Telegram\BotRadarWrite::run()`, a
+  scope guard the listener checks, so a save made in the bot is not listed twice.
+- **Division with WP-46.** WP-46 does not plan or send starter listings: its outbox carries instant and digest
+  items only. The legacy bot sends the starter as one list («Уже есть за последние 3 дня: N», BOT-052, BR-API-079),
+  and that is the job above. Starter listings reach the delivered set through its ledger claims with origin
+  `starter`, so the matcher never sends them again.
 - `App\Telegram\Keyboards\NumberGridKeyboard::for(list<int> $numbers, string $origin, ?string $radarKey)` — five
   buttons per row, labels `1` … `N`, data `k1:ln:<n>:s:<radar key>`.
-- Starter rows are recorded through the delivered set of WP-46 only for a message that was actually sent.
+- The job claims each number in the ledger of WP-46 before the send and leaves out a number whose claim is refused;
+  when the send fails for good it releases the claims, so nothing counts as delivered that never reached the chat.
 - `App\Telegram\Handlers\FirstRadarTip` handles `k1:tp:<radar key>:<in or dg>`.
 
 ### Configuration
@@ -217,13 +225,12 @@ longer shown are dropped by the normaliser, never kept silently.
 | `dev052` | `false` | one availability rule for «Не дороже рынка» |
 | `review.too_broad_per_day` | 20 | |
 | `review.base_scarce_per_week` | 2 | |
-| `starter.max_rows` | 30 | Q-BOT-038 |
 | `amount.max_usd` | 10 000 000 | Q-BOT-024 |
 
 New catalogue keys (ru, uz, en; legacy has no such texts): `wizard.frame.step_first`, `wizard.area.whole_city_f`
 (feminine form for the fix of LB-BOT-009), `wizard.area.zone_cleared_districts`, `wizard.object.new_builds`,
 `summary.pets.not_forbidden`, `summary.pets.allowed`, `summary.extra_filters`, `review.relax.<code>`,
-`radar.saved_none`, `radar.limit_reached`, `radar.twin_exists`, `radar.open`, `starter.more`, `tip.digest_chosen`.
+`radar.saved_none`, `radar.limit_reached`, `radar.twin_exists`, `radar.open`, `tip.digest_chosen`.
 
 ## Files
 
@@ -235,7 +242,8 @@ All paths under `backend/`.
 - `app/Telegram/Keyboards/{AreaKeyboard,BudgetKeyboard,ReviewKeyboard,NumberGridKeyboard}.php`
 - `app/Telegram/Rendering/{RadarSummaryRenderer,FlowLine,StarterListRenderer}.php`
 - `app/Services/Telegram/WizardReference.php`
-- `app/Events/Telegram/RadarSavedByBot.php`, `app/Listeners/Telegram/SendStarterList.php`
+- `app/Jobs/Telegram/SendStarterList.php`, `app/Listeners/Telegram/QueueStarterListOnRadarSaved.php`,
+  `app/Support/Telegram/BotRadarWrite.php`
 - `app/Providers/TelegramServiceProvider.php` (registrations: command `new`, actions `nw`, `wz`, `tp`, interim `sb`,
   the awaited input `amount`)
 - `config/bot.php` (keys above; `new` removed from `interim_commands`), `lang/{ru,uz,en}/bot.php` (new keys),
@@ -274,9 +282,8 @@ Part B.
 11. `ReviewStep`, `ReviewKeyboard`, relax; `ReviewTest`.
 12. Step edit from the review (`ed`), snapshot and return rules, the deal-change rules; `ReviewStepEditTest`. The
     `edit_radar` mode is exercised with a fake return target.
-13. `SaveRadar`, `RadarSavedByBot`, the interim registration of `sb`; `RadarSaveTest` including the double press.
-14. The migration, `SendStarterList`, `StarterListRenderer`, `NumberGridKeyboard`, `FirstRadarTip`;
-    `StarterListTest`.
+13. `SaveRadar`, `BotRadarWrite`, the interim registration of `sb`; `RadarSaveTest` including the double press.
+14. The migration, the job `SendStarterList`, `QueueStarterListOnRadarSaved`, `StarterListRenderer`, `NumberGridKeyboard`, `FirstRadarTip`; `StarterListTest`.
 15. `NewRadarCommand` takes over `new` and `nw`; remove `new` from the interim list; update `InterimHandlerTest` of
     WP-52. Transcripts of the three deal branches end to end.
 16. Registry rows in `docs/infrastructure/telegram-webhook.md`; the uz and en keys added to the translation status
@@ -465,9 +472,7 @@ Rules:
 4. The starter list, when `N > 0`.
 5. The tip, after the user's first radar only (BR-BOT-047).
 
-The radar is created with mode `instant`, active, and an entry value of its own (`bot`; the API enum of WP-13 has
-`filters`, `empty`, `few`, `prompt`, so WP-45 must accept one more value for the action log). Two presses create one
-radar. The 11th radar gets the
+The radar is created with mode `instant`, active, entry `bot_wizard` (WP-45). Two presses create one radar. The 11th radar gets the
 alert (BR-BOT-064; the limit is `limits.radars` of the reference data). `📡 Радар` turns the same message into the
 radar list (WP-55); `➕ Новый радар` starts a new wizard message.
 
@@ -480,8 +485,8 @@ radar list (WP-55); `➕ Новый радар` starts a new wizard message.
   a re-post of an old listing is not "new".
 - Number buttons `1` … `N`, five per row (BTN-031). A number sends the card as a new message through WP-53; the list
   is not edited; the buttons work after the radar is deleted (BR-BOT-048).
-- More than `starter.max_rows` matches: 30 rows, the header keeps the full N, and a last row `starter.more` with a
-  `web_app` button to the Mini App feed (Q-BOT-038, closed by specification).
+- The list holds what the `Starter` of WP-45 holds: at most one page of 20 listings, and N is its count (Q-BOT-038,
+  closed by the choice of WP-45).
 - Every listed listing is recorded as delivered for the user, so no radar pushes it later (BR-BOT-049, BR-API-079).
 - A row whose listing was withdrawn meanwhile opens the withdrawn variant of the card (WP-53, WP-57). Rows built
   from stub data carry no marker of their own; the card they open does (WP-53).
@@ -536,8 +541,8 @@ Feature and conversation (Pest):
 | 6 | `OwnerTenantPetsTest` | labels and defaults; rent_long shows all three; rent_daily ends after tenant; sale ends after owner; `Разрешены` sets `pets_only` only; forged `s8:al` under sale → alert |
 | 7 | `ReviewTest` | the fixture review equals the sample; the three flow wordings; TXT-BOT-029 at 140 per week and not at 133; TXT-BOT-030; relax block and button; relax applied → `👤 все объявления`, recomputed, button gone; `✏️` sets of the six branches; flow source down → no flow lines, save works |
 | 8 | `ReviewStepEditTest` | `✏️ Комнаты` → `3` → review; `✏️ Бюджет` → Back → byte-equal review; rent_long room → `✏️ Сделка` → `🏷 Купить` → object step → `Квартира` → review `Покупка · квартира`, `любой бюджет`, no `👥`; rent_long → `🌙 Снять посуточно` keeps the object and drops pets; `✏️ Районы` → tick → `Готово (2)`; stale `ed:pets` after a deal change |
-| 9 | `RadarSaveTest` | one press → toast, edit to TXT-BOT-034 with `N`, two buttons, `sendSticker`, event after the sticker; two callback ids within 50 ms → one radar, one edit; limit → alert, review intact; `N = 0` paragraph; `existing` → toast and `📡 Открыть радар`; `reactivated` → as created; service throws → `bot.common.error`; save on an outdated review → alert; `📡 Радар` before WP-55 → interim reply |
-| 10 | `StarterListTest` | 11 matches → list with a 5/5/1 grid, then the tip (first radar); a number → card as a new message with origin `Starter`, list unchanged; radar deleted, number still opens; `⚡ Сразу`; `📬 Подборкой` → mode `digest` and the text with the user's hours; second radar → no tip; a listing published four days ago is not listed; 45 matches → 30 rows and the `starter.more` row; listed listings are in the delivered set; a `403` on the list → nothing recorded; API-created radar → list only |
+| 9 | `RadarSaveTest` | one press → toast, edit to TXT-BOT-034 with `N`, two buttons, `sendSticker`, the starter job dispatched after the sticker; two callback ids within 50 ms → one radar, one edit; limit → alert, review intact; `N = 0` paragraph; `existing` → toast and `📡 Открыть радар`; `reactivated` → as created; service throws → `bot.common.error`; save on an outdated review → alert; `📡 Радар` before WP-55 → interim reply |
+| 10 | `StarterListTest` | 11 matches → list with a 5/5/1 grid, then the tip (first radar); a number → card as a new message with origin `Starter`, list unchanged; radar deleted, number still opens; `⚡ Сразу`; `📬 Подборкой` → mode `digest` and the text with the user's hours; second radar → no tip; 20 matches → a 5/5/5/5 grid; a number whose ledger claim is refused is left out and N follows; listed listings are in the delivered set; a `403` on the list → claims released; a radar created through the API → the list only, once; a save in the bot → one list, not two; no row of kind `starter` appears in the outbox of WP-46 |
 
 Transcripts: the three deal branches from `/new` to the tip, in ru, with uz and en variants of the first and last
 message. Security cases: every option value is from a closed set; the `sid` binds a press to the actor's own

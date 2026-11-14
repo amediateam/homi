@@ -9,10 +9,23 @@ whoever holds the relay takes the first package that is not `DONE` and continues
 
 ## State of the specifications (2026-11-14)
 
-Written: WP-00, WP-01, WP-02, WP-03, WP-20, WP-23, WP-25, WP-26, WP-27, WP-30 (WP-26 may be incomplete). They were drafted by subagents and have
-**not been reviewed** by the main session yet. The other 34 files linked below do **not exist yet**; writing and
-reviewing them is the next step before any package after WP-03 is started. The brief for each group of
-specifications is in `docs/ai/reports/phase-3-notes.md` §F and `25`.
+All 44 specifications are written (about 17 000 lines). They were drafted by subagents from the audit and the
+earlier task files. What the main session checked:
+
+- structure: every file has the field table and the ten sections of the template, in order;
+- identifiers: `collect_ids.py --check` exits 0 — every cited identifier exists and none is defined twice;
+- the v1 methods named in the specifications against the table of `25` §4.2: no method is used that the contract
+  packages do not define;
+- coverage as reported by the authors: 45 of 45 screens, 69 of 69 client rules, 47 of 47 client defects, 45 of 45
+  Telegram points; 84 of 84 bot handlers, 76 of 76 buttons, 88 of 88 texts; 50 security requirements classified;
+- the contradictions the authors reported between packages and with `25` — settled in the specifications and in `25`
+  (radar starter list, deferral and queue of the delivery job, when matching is switched on, default locale,
+  whole-list favourites and history, public methods, stub scenarios).
+
+Read in full by the main session: WP-02, WP-10, and the parts of WP-13, WP-40, WP-45, WP-46, WP-48, WP-54 and WP-57
+that were changed in that reconciliation. **The rest was not read line by line.** Treat a specification as the
+starting point: when it disagrees with `25` or with the audit, `25` and the audit win, and the specification is
+corrected in the same PR (rule 6 below).
 
 ## How to work the queue
 
@@ -90,10 +103,10 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
-| [WP-50](WP-50-bot-webhook-client.md) | Webhook, update ledger, Bot API client | WP-40 | TODO |
+| [WP-50](WP-50-bot-webhook-client.md) | Webhook, update ledger, Bot API client | WP-40, WP-43 | TODO |
 | [WP-51](WP-51-bot-core.md) | Router, locale, texts, reply conventions, callbacks, state, assets | WP-50 | TODO |
 | [WP-52](WP-52-bot-start-commands.md) | Start, commands, language, reachability | WP-51 | TODO |
-| [WP-53](WP-53-bot-cards.md) | Listing cards and card actions | WP-52, WP-42, WP-44 | TODO |
+| [WP-53](WP-53-bot-cards.md) | Listing cards and card actions | WP-52, WP-42, WP-44, WP-45 | TODO |
 | [WP-54](WP-54-bot-radar-wizard.md) | Radar wizard | WP-53, WP-45 | TODO |
 | [WP-55](WP-55-bot-radar-screens.md) | Free text and voice, poll, radar list and card, edit | WP-54 | TODO |
 | [WP-56](WP-56-bot-settings-owner-privacy.md) | Settings, owner verification, privacy, erasure | WP-52, WP-47 | TODO |

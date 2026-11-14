@@ -7,7 +7,7 @@
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
-| Needs from the production track | Approve two migrations on production (`radars`, `radar_hide_rules`, new and empty). Server env: leave `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are switched to `true` when the bot's sending package (WP-57) is deployed |
+| Needs from the production track | Approve two migrations on production (`radars`, `radar_hide_rules`, new and empty). Server env: leave `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are switched to `true` when the bot's radar wizard package (WP-54) is deployed: it sends the starter list, and the bot's reachability tracking (WP-52) is live by then |
 
 ## Goal
 

@@ -117,8 +117,8 @@ After group 3 has soaked on production:
 2. After its deploy: `php artisan sources:reset <f> --all …` for the nine features, staging then production, so the
    configured default is what runs and no override is left. `sources:list` must show empty rules.
 3. The production track sets `SOURCES_ALLOW_STUB=false` (staging, then production) and runs `sources:check`.
-4. The production track sets `RADAR_MATCHING_ENABLED=true`; `php artisan radar:status` shows sets being polled.
-   Deliveries still wait in the outbox until the bot's sender exists (WP-57).
+4. `RADAR_MATCHING_ENABLED` stays `false`. Matching is switched on by the bot's sending package (WP-57), when a
+   sender exists; switching it on here would only build a backlog nobody can send.
 
 From step 3 on, a rollback of a listing feature no longer shows stub data: the user sees the "could not load" state
 (`503 source_unavailable`) until legacy is back. That is intended.
@@ -180,7 +180,7 @@ Screenshots of the feed, a card and the radar tab from each client go into the P
 2. Tick the preconditions with the production track. If the key is missing, stop here with `WAITING (service key)`.
 3. Staging: groups 1, 2, 3 through steps a and c; run part D after each group; soak 24 hours after group 3.
 4. Production: groups 1, 2, 3 through steps a, b and c; part D after each group; soak 7 days after group 3.
-5. The defaults PR (PR 2), its deploy, the resets, `SOURCES_ALLOW_STUB=false`, `RADAR_MATCHING_ENABLED=true`.
+5. The defaults PR (PR 2), its deploy, the resets, `SOURCES_ALLOW_STUB=false`.
 6. Final part D run on production; records; `save-session`.
 
 ## Behaviour to reproduce
@@ -208,7 +208,7 @@ Screenshots of the feed, a card and the radar tab from each client go into the P
 - [ ] `SOURCES_ALLOW_STUB=false` is set on staging and production; `sources:check` exits 0 there.
 - [ ] No answer of a Mini App method on production carries `meta.source = stub`; native-only methods answer `native`.
 - [ ] The "demo data" marker is not shown on any screen in any of the four Telegram clients on production.
-- [ ] `RADAR_MATCHING_ENABLED=true` on production and `radar:status` shows polling.
+- [ ] `RADAR_MATCHING_ENABLED` is still `false` on production (the bot's sending package, WP-57, switches it on).
 - [ ] The checklist of part D was run on iOS, Android, Desktop and Web, in cookie mode and header mode, with
       screenshots in the PR, and the reviewer signed it.
 - [ ] `docs/api/README.md` and the queue reflect the new state; the landing features are named as still pending

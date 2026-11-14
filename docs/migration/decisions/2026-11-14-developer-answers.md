@@ -41,7 +41,7 @@ The decisions are registered as `DEC-31` … `DEC-49` in [`../24-three-wave-stra
 | 26 | Proof of "1:1" | «Функциональное совпадение» | DEC-46 | Same screens, texts and scenarios; small visual differences are accepted |
 | 27 | Moving the old bot's users | «Без переноса данных» | DEC-40 | Users start empty in the new bot; the old bot only announces the move |
 | 28 | Analytics | «Свой журнал + свой PostHog» | DEC-47 | New PostHog projects for staging and production |
-| 29 | Landing | «Полный лендинг как у legacy» | DEC-38 | On `homi.uz`, without the SEO pages; live blocks read legacy through the service key |
+| 29 | Landing | «Полный лендинг как у legacy» | DEC-38 | On `homi.uz`, without the SEO pages; the live blocks read the public data files of the legacy landing, which need no key |
 | 30 | Testing inside Telegram during development | «сразу в staging и prod» | DEC-45 | No tunnel tool; DEC-24 is no longer needed |
 | 31 | Telegram Web | «Поддерживаем, с запасным путём» | DEC-44 | Partitioned cookie; if the browser refuses it, a header token and client rendering |
 | 32 | Source of listings after legacy | «Коллектор telegram.uz» | DEC-39 | Answers DEC-02 for the development track; the collector's owner and the first developer still have to agree |

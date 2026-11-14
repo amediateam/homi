@@ -225,9 +225,11 @@ and the `expandable_blockquote` entity (`04` §1 names them as Bot API 9.x featu
 The token is read from config at call time. It is never a constructor argument, a property or part of a serialised
 job. A transport exception is caught and rethrown as `TransportError` with the URL rewritten to `/bot***/`.
 
-**If WP-43 already created `App\Telegram\Client\TelegramClient`** for `savePreparedInlineMessage`, this package
-extends that class and keeps its public signature; it does not create a second client, and the share service is
-not changed. If WP-43 called the Bot API in another way, its call is moved onto `TelegramBot` in this PR.
+**WP-43 created a minimal client first**: `App\Services\Telegram\TelegramClient` with `call(string $method, array
+$params): array`, and `App\Exceptions\TelegramException`, for `savePreparedInlineMessage`. This package moves that
+class to `App\Telegram\Client\TelegramClient`, keeps `call()` with the same signature, grows it into the client
+described here, makes the exception of WP-43 the base class of the error classes, and updates the import in the
+share service. There is one client and one exception hierarchy afterwards; the tests of WP-43 stay green.
 
 | Group | Methods of `TelegramBot` | First used by |
 | ----- | ------------------------ | ------------- |

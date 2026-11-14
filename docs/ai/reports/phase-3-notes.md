@@ -182,3 +182,5 @@ Choices made while writing the plan (the developers can change them in the revie
 - every per-user table stores the source channel and post next to the listing number, to survive the change of listing identity in Wave 2 (Q-API-063);
 - the two session modes (cookie, header) share one screen implementation;
 - the specifications of the work packages were drafted by three subagents from the audit and the earlier task files, then checked by the main session (see the handoff for what was checked).
+
+Checks at the last commit of this section: 44 specification files, each with the template's field table and ten sections (shell loop); `collect_ids.py --check` → exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; the v1 methods named in the specifications against `25` §4.2 → none undefined (script); path and address scan → no hits. Coverage totals (45/45 screens, 69/69 client rules, 47/47 client defects, 84/84 bot handlers, 76/76 buttons, 88/88 texts) are the authors' reports, not re-counted. The subagents hit the usage limit twice and were resumed.

@@ -178,8 +178,8 @@ helper of WP-51, and a row whose value is missing is left out, never printed emp
 | radar title | callback | radar choice | the pressed rule with the radar: `k1:cd:<n>:hc:<r>`, `…:hd:<r>`, `…:ha:<r>` |
 | `<n>. <title> · <district> · <price>` (BTN-066) | callback | `/fav` list | `k1:ln:<n>:f` |
 
-`<n>` is the listing number in base 36; `<r>` is the radar's public key as WP-45 exposes it (it must fit one codec
-argument of twenty characters; numeric keys in base 36). The channel, the district and the author are never taken
+`<n>` is the listing number in base 36; `<r>` is the radar's ULID, the primary key of WP-45 (26 characters; the
+codec of WP-51 allows an argument of that length). The channel, the district and the author are never taken
 from callback data: the handler reads them from the listing (SEC-REQ-011).
 
 ### Callback handlers
@@ -215,9 +215,9 @@ Two action codes are registered with the codec of WP-51.
   photo message with `editMessageCaption`, a text message with `editMessageText`, both with the new keyboard. Whether
   the copy is a photo is read from the callback's message. "Message is not modified" counts as success; an edit
   Telegram refuses is logged at `info` and changes nothing else.
-- `App\Enums\Delivery\CardOrigin`: `Instant`, `Digest`, `Starter`, `Fav`, `Number`. WP-46 may already have created
-  the enum for `DeliveryLedger` (rule of KV-BE-109: whoever lands first creates it) — then use it and add what is
-  missing. Only radar origins enter the delivered set of WP-46; `Fav` and `Number` cards are logged here and never
+- `App\Enums\Delivery\CardOrigin`: `Instant`, `Digest`, `Starter`, `Fav`, `Number` — the origin of a row of the
+  card log. WP-46 has its own enum `DeliveryOrigin` (`instant`, `digest`, `starter`) for the delivered set; the two
+  are kept apart. Only radar origins enter the delivered set of WP-46; `Fav` and `Number` cards are logged here and never
   claimed there.
 
 ### Photos

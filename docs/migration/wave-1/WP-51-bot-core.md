@@ -403,11 +403,12 @@ keyboard is built. `App\Telegram\Keyboards\ReplyKeyboard`: `requestContact(label
 ```text
 k1:<action>[:<arg>]{0,4}      whole string at most 64 bytes (UTF-8)
 action  [a-z]{2,4}
-arg     [A-Za-z0-9_-]{1,20}
+arg     [A-Za-z0-9_-]{1,26}
 ```
 
 - The prefix `k1` is the grammar version, `:` the only separator. One regular expression checks the whole string
-  before any split. Listing numbers, radar numbers, dictionary ids and amounts travel in base 36.
+  before any split. Listing numbers, dictionary ids and amounts travel in base 36; a radar travels as its ULID (26
+  characters, the primary key of WP-45), which is why an argument may be 26 characters long.
 - `App\Telegram\Callbacks\CallbackCodec`: `encode(action, ...args): string`, `decode(string): ?CallbackPayload`,
   `toBase36(int)`, `fromBase36(string)`. `CallbackPayload` holds the action and the arguments.
 - An action belongs to exactly one handler, registered with `HandlerRegistry::callback()`. A handler never trusts an

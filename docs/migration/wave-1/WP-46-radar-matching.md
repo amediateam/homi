@@ -7,7 +7,7 @@
 | Depends on | WP-45 |
 | Size | about 2 600 changed lines, L |
 | Behaviour reference | `25` §5 (matching and delivery planning), §4.5 (limits); `24` §8.3 (RK-25); `15` §3.5, §3.6 rows 6–9, §3.10 (time zones); `16` SEC-REQ-014, SEC-REQ-029; tasks `tasks/backend/KV-BE-108-radar-match-job.md` (exclusions, one delivery per user), `KV-BE-109-delivery-ledger.md` (claim and release), `KV-BE-110-delivery-planner.md` (quiet hours, digest slots), `KV-BE-111-radar-lifecycle-listeners.md` (what drops pending items). The SQL match predicate of `KV-BE-107` is not built in Wave 1; `backend/config/horizon.php` (queues) |
-| Needs from the production track | 1. Review the small shared-file PR that adds `supervisor-radar` (queue `radar`) to `backend/config/horizon.php`; Horizon restarts with the deploy. 2. Confirm the Laravel scheduler runs every minute on staging and production. 3. Approve three migrations on production (`radar_filter_sets`, `radar_deliveries`, `radar_outbox`, new and empty). 4. Server env: `RADAR_MATCHING_ENABLED=false` now; it becomes `true` in WP-48, when the feed feature is on a real source. Leave `RADAR_POLL_INTERVAL` and `RADAR_POLL_BUDGET_PER_MINUTE` blank (defaults 300 and 60) unless the operator's limits say otherwise |
+| Needs from the production track | 1. Review the small shared-file PR that adds `supervisor-radar` (queue `radar`) to `backend/config/horizon.php`; Horizon restarts with the deploy. 2. Confirm the Laravel scheduler runs every minute on staging and production. 3. Approve three migrations on production (`radar_filter_sets`, `radar_deliveries`, `radar_outbox`, new and empty). 4. Server env: `RADAR_MATCHING_ENABLED=false` now; it becomes `true` with the bot's sending package (WP-57), when the feed feature is on a real source and a sender exists. Leave `RADAR_POLL_INTERVAL` and `RADAR_POLL_BUDGET_PER_MINUTE` blank (defaults 300 and 60) unless the operator's limits say otherwise |
 
 ## Goal
 
@@ -115,16 +115,17 @@ user's settings (`QuietWindow`, `DigestSchedule` of WP-40):
 | `digest` | any | `digest` | the next digest hour at or after now; if that hour lies inside quiet hours, the end of the window |
 
 A digest radar of a user without digest hours uses `config('delivery.default_digest_hours')` (`[9]`). The quiet
-window is half-open `[start, end)`; a window of 24 hours counts as off. `planStarter(User, Radar, list<ListingPointer>,
-$now)` writes `starter` rows released at once: they answer something the user just did, so quiet hours do not hold
-them (a specification choice). `replanForUser(User)` recomputes `release_at` of the user's unreleased `quiet_hold`
+window is half-open `[start, end)`; a window of 24 hours counts as off. Starter listings are **not** planned here:
+legacy sends them as one list message right after a radar is saved (BR-API-079, BOT-052), which is the wizard package
+of the bot (WP-54). That package claims each starter listing in the delivered set with origin `starter`
+(`DeliveryLedger::claim()`), so the matcher never sends it again. `replanForUser(User)` recomputes `release_at` of the user's unreleased `quiet_hold`
 and `digest` rows; it runs on `SettingsChanged` when quiet or digest hours changed. After commit, a row with
 `release_at <= now` raises `App\Events\Delivery\DeliveryDue` (user id).
 
 ### Outbox — the seam for the bot (WP-57)
 
 Table `radar_outbox`: `id`, `user_id` (foreign key, cascade), `radar_id` (ULID, nullable), `listing_number`,
-`source_channel`, `source_post_id`, `kind` (`instant`, `quiet_hold`, `digest`, `starter`), `matched_at`,
+`source_channel`, `source_post_id`, `kind` (`instant`, `quiet_hold`, `digest`), `matched_at`,
 `release_at`, `claimed_at`, `sent_at`, `failed_at` (`timestampTz`, nullable), `fail_reason` (string 32, nullable),
 `attempts` (small integer). Unique (`user_id`, `listing_number`); index (`sent_at`, `failed_at`, `release_at`);
 index (`user_id`, `release_at`).
@@ -140,10 +141,12 @@ interface RadarOutbox {
     public function claim(OutboxItem $item): bool;
     public function markSent(OutboxItem $item, int $chatId, int $messageId): void;
     public function markFailed(OutboxItem $item, string $reason, bool $permanent): void;
+    /** Pacing: release the item again after $seconds; no attempt is counted. */
+    public function defer(OutboxItem $item, int $seconds): void;
 }
 
 interface RadarSender {
-    public function sendCard(User $user, OutboxItem $item): SentMessage;              // instant, starter
+    public function sendCard(User $user, OutboxItem $item): SentMessage;              // instant
     /** @param list<OutboxItem> $items */
     public function sendDigest(User $user, array $items): SentMessage;                // quiet_hold, digest of one slot
 }
@@ -151,7 +154,10 @@ interface RadarSender {
 
 - `OutboxItem` (readonly): `id`, `userId`, `radarId`, `ListingPointer $listing`, `kind`, `matchedAt`, `releaseAt`.
   `SentMessage`: `chatId`, `messageId`. A sender signals failure with `App\Exceptions\Delivery\SendFailed`
-  (`reason`, `permanent`).
+  (`reason`, `permanent`), and "not now" with its subclass `App\Exceptions\Delivery\SendDeferred` (`retryIn`
+  seconds): a send limit or a `retry_after` from Telegram. The job answers a deferral with `defer()` for the item
+  (for a digest, every item of the group), stops the loop for this user and dispatches itself again with that
+  delay, so pacing never uses up attempts. The limits themselves are WP-57.
 - `claim()`, in one transaction: lock the row; refuse when it is sent, failed, or claimed less than
   `config('delivery.claim_timeout')` (300 s) ago; run `DeliveryEligibility::check()` — the radar still exists and is
   active, the user is not blocked, the chat is reachable (when required), the listing is not hidden, its author not
@@ -163,8 +169,9 @@ interface RadarSender {
   1, 5 or 15 minutes; the fifth attempt becomes permanent.
 - `App\Services\Delivery\DatabaseRadarOutbox` implements `RadarOutbox`.
 
-Job `App\Jobs\Radar\DeliverRadarItems` (queue `telegram`, unique per user id, one try): reads `dueFor()`, sends
-`instant` and `starter` items one by one through `sendCard()`, and groups `quiet_hold` and `digest` items that share
+Job `App\Jobs\Radar\DeliverRadarItems` (queue `notifications` — outbound sending must not wait behind incoming
+updates on `telegram`; unique per user id, one try): reads `dueFor()`, sends `instant` items one by one through
+`sendCard()`, and groups `quiet_hold` and `digest` items that share
 a `release_at` into one `sendDigest()` call — one digest per user and slot. Each item is claimed before sending and
 marked after. The job is dispatched by a listener on `DeliveryDue` and by the command `radar:release` (scheduled
 every minute, iterates `dueUsers()`).
@@ -176,7 +183,6 @@ items wait untouched. WP-57 binds its sender and changes nothing else here.
 
 | Event | Effect |
 | ----- | ------ |
-| `RadarSaved` with starter numbers | `planStarter()` for those listings |
 | `RadarSaved` (any kind), `RadarDeleted` | `FilterSetRegistry::sync()` for the old and new hash |
 | `RadarSaved` with kind `paused`, `RadarDeleted` | delete the radar's unsent outbox rows (a paused radar sends nothing, including what was held for the morning) |
 | `SettingsChanged` with quiet or digest hours | `replanForUser()` |
@@ -246,7 +252,7 @@ or failed — check `radar:status` before turning matching on.
   quiet hours; digest hours `[9]`, `[9, 19]`, `[12, 20]`, `[19]` with the next-day wrap at 19:00 UTC; a digest hour
   inside quiet hours moves to the window end; no digest hours → default; results identical under process time zones
   `UTC` and `Asia/Tashkent`.
-- Planner: `plan` twice → one row; digest row upgraded by an instant radar; starter rows released now; replan after
+- Planner: `plan` twice → one row; digest row upgraded by an instant radar; replan after
   quiet hours are switched off makes held rows due; `DeliveryDue` only after commit.
 - Ledger: `claim` true once and false afterwards; `delivered` subset; `release` allows a new claim; rows of user A
   never answer for user B.
@@ -255,17 +261,20 @@ or failed — check `radar:status` before turning matching on.
   rule) → `false` and reason; duplicate in the ledger → `false`; transient failure backs off 1, 5, 15 minutes and
   becomes permanent on the fifth; a permanent failure releases the claim.
 - Delivery job (`FakeRadarSender`): two instant items → two cards; three held items of one slot → one digest with
-  three items; `SendFailed` transient and permanent; with `NullRadarSender` nothing is claimed.
+  three items; `SendFailed` transient and permanent; `SendDeferred` defers the item (every item of a digest group),
+  counts no attempt, stops the loop for that user and dispatches the job again after the delay; with
+  `NullRadarSender` nothing is claimed.
 - Poller (fake `ListingSource`): first poll baselines and plans nothing; a later poll plans only unseen numbers,
   oldest first; a fully new page pulls the next, up to three; the ring is cut to 200; source unavailable → back-off
   and no failed job; `radar:poll` stops when matching is off, when the feed driver is `stub`, and when the breaker
   is open; the budget limits the number of dispatched jobs; two users with equal filters cause one source call.
 - Matcher: each exclusion row; `hidden_count` incremented by a hide rule; one listing in two sets of one user →
   one outbox row; chunking over 1 200 radars.
-- Listeners: starter numbers planned; pause and delete drop unsent rows; filter set created and pruned; chat
-  unreachable drops the user's rows; replays are harmless.
-- `pgsql` group: a radar deleted while its poll job runs → nothing sent after the delete commits; a starter plan
-  racing a poll of the same listing → one row; two workers claiming one item → one wins.
+- Listeners: pause and delete drop unsent rows; filter set created and pruned; chat unreachable drops the user's
+  rows; replays are harmless.
+- `pgsql` group: a radar deleted while its poll job runs → nothing sent after the delete commits; a starter claim
+  in the ledger racing a poll of the same listing → the poll plans nothing for it; two workers claiming one item →
+  one wins.
 
 ## Acceptance checklist
 
@@ -276,7 +285,7 @@ or failed — check `radar:status` before turning matching on.
       delivers cards and digests in tests; the null sender leaves rows untouched.
 - [ ] Pause, delete, settings changes and an unreachable chat adjust the outbox as specified.
 - [ ] `supervisor-radar` is in Horizon (shared-file PR merged); the three commands are scheduled; `radar:status` works.
-- [ ] The PR names the migrations, the env keys and the fact that `RADAR_MATCHING_ENABLED` stays false until WP-48.
+- [ ] The PR names the migrations, the env keys and the fact that `RADAR_MATCHING_ENABLED` stays false until the bot's sending package (WP-57) is deployed.
 - [ ] `make ci-backend` and the `pgsql` group are green.
 - [ ] On staging with matching switched on for a test (feed feature on the fixture-backed legacy driver or a real
       key): a radar gets outbox rows for new listings, visible in `radar:status`; then matching is switched off again.

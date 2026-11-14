@@ -28,7 +28,7 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | Telegram integration points | 45, of which 39 in use (TMA-001 … TMA-045) | `05` |
 | API methods the client uses | 34 (API-001 … API-034) | `08` §2 |
 | Bot handlers, buttons, texts | 84, 76, 88 | `04`, `data/bot-handlers.json` |
-| Landing items | 39 (`LND`) | `03b` |
+| Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
 | Texts | 472 keys per locale in the current legacy tree; the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
 The audit describes legacy release `index-plF_TOcT.js`. Two later releases are in the legacy tree and not in the
@@ -276,7 +276,7 @@ frontend/
 | `POST /surveys/found`, `POST /surveys/found/where` | API-032, API-033 | native |
 | `GET /radars`, `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax` | API-018 … API-023 | native |
 | `POST /events` | API-034 | native |
-| `GET /landing/live`, `GET /landing/pins` | landing data files (RES-010 … RES-012) | legacy, cached |
+| `GET /landing/live`, `GET /landing/pins` | public data files and photo snapshots of the legacy landing (RES-010 … RES-013) | legacy, cached; no service key needed |
 
 Notes on the table:
 
