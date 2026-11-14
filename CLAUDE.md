@@ -16,14 +16,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 homi.uz aggregates housing rental and sale listings from public Telegram channels in Uzbekistan. It turns them into one deduplicated feed with filters and a map. It also sends "radar" alerts through a Telegram bot, uses Google Gemini to tag listings as owner or realtor, and flags listings priced about 20% below the district median. The UI is in ru/uz/en. `docs/about.md` (in Russian) is a product overview, not a technical spec. Parts of its "tech stack" section are guesses.
 
-**Current state: foundation + Phase 3 WIP.** `backend/` started as a Laravel React starter kit; its Inertia/React UI is **frozen** (ADR-0002) — the backend is developed as an API. Phase 3 added the media module (`/api/v1/media*`), the API envelope, request ids, Horizon queues and the intake/Telegram tables; the Telegram webhook is a fail-closed stub (details: `.ai/memory/current-state.md`). The three Next.js apps are `create-next-app` output plus env/config. No other domain code exists yet. Decisions live in `docs/architecture/decisions/`; architecture in `docs/architecture/overview.md`.
+**Current state: foundation + Phase 3 WIP.** `backend/` started as a Laravel React starter kit; its Inertia/React UI is **frozen** (ADR-0002) — the backend is developed as an API. Phase 3 added the media module (`/api/v1/media*`), the API envelope, request ids, Horizon queues and the intake/Telegram tables; the Telegram webhook is a fail-closed stub (details: `.ai/memory/current-state.md`). WP-10 added the `/api/v1` framework: an error `code` on every error body, source drivers (`stub`/`legacy`/`native`) chosen per method by Pennant rules (`config/sources.php`, `php artisan sources:*`), stub fixtures, and the committed OpenAPI contract (`docs/api/openapi.json`, conventions in `docs/api/README.md`). The three Next.js apps are `create-next-app` output plus env/config. No other domain code exists yet. Decisions live in `docs/architecture/decisions/`; architecture in `docs/architecture/overview.md`.
 
 ## Layout
 
 One git repo at the root (`docs/architecture/decisions/0001-…` has the canonical layout). `backend/` and `frontend/` have separate toolchains; run commands from inside them.
 
 - `backend/`: Laravel 13 on PHP 8.5 (pinned `^8.5`), with a frozen Inertia v3 + React 19 + TypeScript 7 + Tailwind 4 starter UI. Installed packages: Horizon, Reverb, Sanctum, Scout, Socialite, Pennant, Pulse, Telescope, `laravel/ai`, `laravel/mcp`, Wayfinder, Dusk. Full registry: `docs/backend/package-registry.md` (generated; compact index `.ai/memory/package-capabilities.md`).
-- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` with the shared workspace packages `@homi/config` (locales, currencies, defaults), `@homi/types` (API envelope, pagination), `@homi/utils` (formatting), `@homi/api-client` (`createApiClient`, `ApiError`), `@homi/ui` (`cn`) and the dev-only `@homi/testing` (fake Telegram, synthetic `initData`, `freezeClock`, API fixtures; `@homi/testing/playwright` for specs — ESLint forbids it outside test files). Apps import them as workspace dependencies; each package has `lint`/`typecheck`/`test` scripts so `pnpm -r` covers them. The Wave 1 npm packages (WP-03) are installed, but no product code uses them yet.
+- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` with the shared workspace packages `@homi/config` (locales, currencies, defaults), `@homi/types` (API envelope; `paths`/`components` generated from `docs/api/openapi.json`), `@homi/utils` (formatting), `@homi/api-client` (`createApiClient`, `createTypedClient`, `ApiError`), `@homi/ui` (`cn`) and the dev-only `@homi/testing` (fake Telegram, synthetic `initData`, `freezeClock`, API fixtures; `@homi/testing/playwright` for specs — ESLint forbids it outside test files). Apps import them as workspace dependencies; each package has `lint`/`typecheck`/`test` scripts so `pnpm -r` covers them. The Wave 1 npm packages (WP-03) are installed, but no product code uses them yet.
 
 ## Commands
 
@@ -40,7 +40,9 @@ vendor/bin/pint --dirty --format agent   # format changed PHP files — run afte
 composer types:check              # PHPStan/Larastan level 7 (app, config, database, routes, bootstrap/app.php)
 npm run check                     # Vite+ (`vp`) lint + format check, warnings are errors; `check:fix` to fix
 npm run types:check               # tsc --noEmit
-composer ci:check                 # what CI runs: npm check, tsc, pint --test, phpstan, tests
+composer openapi:export           # docs/api/openapi.json from routes, form requests, resources (reads the migrated DB)
+php artisan sources:list          # source driver per /api/v1 method; sources:set|reset (--by= --reason=) change it, sources:check
+composer ci:check                 # what CI runs: npm check, tsc, pint --test, phpstan, tests, openapi:check (fails on a stale file)
 ```
 
 If the UI doesn't reflect a frontend change, or you see "Unable to locate file in Vite manifest", run `npm run build` (or have the dev server running).
@@ -55,6 +57,7 @@ pnpm -r build
 pnpm test                           # Vitest, every project (frontend/vitest.config.mts); TZ=UTC unless set
 pnpm --filter @homi/utils test      # one package; `pnpm test:watch` for watch mode
 pnpm test:e2e                       # Playwright (builds + starts app on :3001; E2E_BASE_URL=https://app.homi.loc to reuse the dev server)
+pnpm types:generate                 # @homi/types from docs/api/openapi.json; `pnpm types:check` (in make ci-frontend) fails on a stale file
 ```
 
 Unit tests reject any unmocked `fetch` (`frontend/vitest.setup.ts`); Playwright specs import `test`/`expect` from `@homi/testing/playwright`, whose guard fails a test after a request to an external host. Run `pnpm exec playwright install chromium` once per machine. Dependency install scripts are decided in `allowBuilds` of `frontend/pnpm-workspace.yaml` (pnpm 11 fails an install while one is undecided); never commit a `minimumReleaseAgeExclude` entry. Known peer-dependency warnings (eslint 10 / TypeScript 7 vs `eslint-config-next` plugins; `openapi-typescript` wants TypeScript 5) are expected.
@@ -77,7 +80,7 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 ## Backend architecture and gotchas
 
 - **Inertia SPA:** `routes/web.php` renders pages from `resources/js/pages/*.tsx` (for example `Route::inertia('/', 'welcome')`). Shared props (`name`, `auth.user`) are set in `app/Http/Middleware/HandleInertiaRequests.php`. The root template is `resources/views/app.blade.php`.
-- **API:** `routes/api.php` is guarded by Sanctum. `bootstrap/app.php` renders exceptions as JSON for `api/*` and for requests that expect JSON.
+- **API:** `routes/api.php` is guarded by Sanctum. `bootstrap/app.php` renders exceptions as JSON for `api/*` and for requests that expect JSON; `App\Http\ApiExceptionRenderer` writes `code` on every error body. A method with a source feature resolves its driver through `SourceManager` and answers with `sourced()`/`cursorPage()` of `ApiController`, which write `meta.source` (and `meta.next_cursor`). Feature names contain dots: read `config('sources.features')` whole. After changing a route, form request or resource run `composer openapi:export`, then `pnpm types:generate` in `frontend/`.
 - **Wayfinder:** generates typed TS helpers for routes and controllers into `resources/js/{actions,routes,wayfinder}`. These files are gitignored, regenerated by the Vite plugin, and must not be hand-edited. Import from `@/actions/...` or `@/routes/...` instead of hardcoding URLs.
 - **JS tooling:** `vite` is aliased to Vite+ (`@voidzero-dev/vite-plus-core`) through npm `overrides`. The `lint` and `fmt` sections of `vite.config.ts` replace ESLint and Prettier: 4-space indent, single quotes, 80 columns, Tailwind class sorting for `clsx`/`cn`/`cva`. The React Compiler is enabled through a babel preset. `.npmrc` sets `ignore-scripts=true`.
 - **Realtime:** broadcasting goes through Reverb, and Echo is configured in `resources/js/app.tsx`.

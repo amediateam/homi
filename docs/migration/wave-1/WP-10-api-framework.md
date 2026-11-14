@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | REVIEW (#42) |
+| Status | WAITING (merged in #42 on 2026-11-15; production track: migration approval, deploy, `/docs/api` in nginx basic auth, `sources:list` on staging) |
 | Depends on | WP-03 (`openapi-typescript`, the test runners and the `pgsql` group are installed) |
 | Size | about 2 400 changed lines without generated files, L |
 | Behaviour reference | `25` §4.1, §4.3, §4.4, §4.6; `24` §3; ADR-0003, ADR-0007 and ADR-0017 (written by WP-01); `HANDOFF.md` T3 and T5; skills `.claude/skills/pennant-development/`, `.claude/skills/scramble-development/` |
@@ -412,8 +412,11 @@ developer's review.
   - the media answers built by `success()` are documented with `message: null` and `meta: string` (pre-existing Scramble
     inference);
   - `resources/fixtures/v1` and `resources/fixtures/media` are empty until WP-11 and WP-12.
+- **Merged** on 2026-11-15 on «сливай #42» (merge commit `70d5e56`; `backend` run 43652932665 and `frontend` run
+  43652932624 green on `main`). The `CLAUDE.md` update and this status are in the follow-up docs PR. The env key is in
+  PR #43.
 - **Next:**
-  1. review and merge;
+  1. ~~review and merge~~ (done);
   2. the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production,
      deploys, and adds `/docs/api` to the nginx basic-auth locations;
   3. run `php artisan sources:list` on staging;
