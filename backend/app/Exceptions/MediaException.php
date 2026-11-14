@@ -8,7 +8,9 @@ use RuntimeException;
 
 /**
  * A media request that cannot be fulfilled; rendered as the API error envelope with a
- * machine-readable `reason`. Validation-type failures (422) also fill `errors.file`.
+ * machine-readable `reason`, repeated as `code` (ADR-0017). Validation-type failures (422) also fill
+ * `errors.file`. The framework calls `render()` before any render callback, so `ApiExceptionRenderer`
+ * never sees this exception.
  */
 class MediaException extends RuntimeException
 {
@@ -63,7 +65,7 @@ class MediaException extends RuntimeException
 
     public function render(Request $request): JsonResponse
     {
-        $body = ['success' => false, 'message' => $this->getMessage(), 'reason' => $this->reason];
+        $body = ['success' => false, 'message' => $this->getMessage(), 'code' => $this->reason, 'reason' => $this->reason];
 
         if ($this->status === 422) {
             $body['errors'] = [$this->field => [$this->getMessage()]];

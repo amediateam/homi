@@ -29,6 +29,11 @@ function apiControllerForTest(): ApiController
             return $this->error('Nope', 404, ['field' => ['is wrong']]);
         }
 
+        public function failedWithCode(): JsonResponse
+        {
+            return $this->error('Gone', 410, code: 'listing_gone');
+        }
+
         public function page(): JsonResponse
         {
             $paginator = new LengthAwarePaginator(
@@ -64,11 +69,18 @@ it('includes meta only when provided', function (): void {
     expect($data)->toBe(['success' => true, 'data' => [1, 2], 'meta' => ['count' => 2]]);
 });
 
-it('formats errors with success false, message and errors', function (): void {
+it('formats errors with success false, message, the default code and errors', function (): void {
     $response = apiControllerForTest()->failed();
 
     expect($response->getStatusCode())->toBe(404)
-        ->and($response->getData(true))->toBe(['success' => false, 'message' => 'Nope', 'errors' => ['field' => ['is wrong']]]);
+        ->and($response->getData(true))->toBe(['success' => false, 'message' => 'Nope', 'code' => 'error', 'errors' => ['field' => ['is wrong']]]);
+});
+
+it('writes the given error code', function (): void {
+    $response = apiControllerForTest()->failedWithCode();
+
+    expect($response->getStatusCode())->toBe(410)
+        ->and($response->getData(true))->toBe(['success' => false, 'message' => 'Gone', 'code' => 'listing_gone']);
 });
 
 it('paginates with the ADR-0007 meta and links shape', function (): void {

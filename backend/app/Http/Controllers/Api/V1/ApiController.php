@@ -15,7 +15,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * Base controller for /api/v1: the response envelope of ADR-0007.
  *
  * Success: {"success": true, "message"?: string, "data": mixed, "meta"?: object, "links"?: object}
- * Error:   {"success": false, "message": string, "errors"?: object}
+ * Error:   {"success": false, "message": string, "code": string, "errors"?: object}
  */
 abstract class ApiController extends Controller
 {
@@ -42,9 +42,9 @@ abstract class ApiController extends Controller
     /**
      * @param  array<string, array<int, string>>|null  $errors
      */
-    protected function error(string $message, int $status = 400, ?array $errors = null): JsonResponse
+    protected function error(string $message, int $status = 400, ?array $errors = null, string $code = 'error'): JsonResponse
     {
-        $body = ['success' => false, 'message' => $message];
+        $body = ['success' => false, 'message' => $message, 'code' => $code];
 
         if ($errors !== null) {
             $body['errors'] = $errors;
