@@ -22,7 +22,8 @@ right day count, and only when it was really shown.
 ## Scope
 
 **In.** Owned audit items: screens SCR-032, SCR-033, SCR-034, SCR-035, SCR-036, SCR-037, SCR-038, SCR-039 and
-SCR-041; rules BR-APP-045, BR-APP-051, BR-APP-052 and BR-APP-053; defects LB-APP-010, LB-APP-040 and LB-APP-041.
+SCR-041; rules BR-APP-045, BR-APP-051, BR-APP-052 and BR-APP-053; defects LB-APP-010, LB-APP-040 and LB-APP-041,
+and the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
 
 - The settings screen with its groups, values, loading and error states.
 - The seven sub-pages and their save rules; the hidden list with its three "return" actions.
@@ -150,10 +151,15 @@ the next load; it never rolls the setting back.
   `@homi/config` (Asia/Tashkent) — the fix of LB-APP-010.
 - `useHomeScreenOffer` (mounted by `NudgeHost`): calls `recordVisitDay()` once per launch when the session is
   `ready`. It offers when all hold: `tg.isVersionAtLeast('8.0')`; `days.length ≥ 3`; `offered === false`; the host's
-  rule for the home slot (feed list, nothing open, no follow nudge or candidate, no toast). Then it waits 4 s of
-  the same calm, asks `tg.homeScreen.status()` (1.5 s limit → `unknown`), and only for `missed` shows the card,
-  calls `track('home_screen_offered')` and then writes `offered: true`. Any other status leaves `offered` false —
-  the fix of LB-APP-040.
+  rule for the home slot (feed list, nothing open, no follow nudge or candidate, no return banner or pending return
+  check, no toast; BR-APP-046 as of legacy release `index-DY_DH7h-.js`). Then it waits 4 s of the same calm, asks
+  `tg.homeScreen.status()` (1.5 s limit → `unknown`), and only for `missed` shows the card, calls
+  `track('home_screen_offered')` and then writes `offered: true`. Any other status leaves `offered` false — the fix
+  of LB-APP-040.
+- A return banner or a follow nudge that takes the slot while the card is on screen hides it without an event and
+  writes `offered: false` again, so the offer comes back at a later calm moment — the home part of the fix of
+  LB-APP-049 (legacy lets the banner cover the card, which is then used up unseen). The priority itself is
+  `NudgeHost`'s (WP-30).
 - `tg.homeScreen.onAdded` (registered once): `track('home_screen_added')`, hide the card, status `added`, toast
   `home.added`.
 
@@ -294,10 +300,12 @@ does not close it.
 | 10 s | hide, no event |
 | × | hide, `track('home_screen_closed')` |
 | «Добавить» | medium haptic, hide, `tg.homeScreen.add()` |
+| A return banner or a follow nudge takes the slot | hide, no event, `offered: false` again (LB-APP-049) |
 | Telegram reports "added" (from the card, the settings row or Telegram's own menu) | `track('home_screen_added')`, card and settings row disappear, toast `home.added` «Значок HOMI добавлен на экран телефона» |
 
 Nothing renders and no home-screen call is made below Telegram 8.0 or outside Telegram. The offer waits while a
-follow nudge, its candidate or a toast is present (BR-APP-046, owned by WP-30).
+follow nudge, its candidate, a return banner, a pending return check or a toast is present (BR-APP-046, owned by
+WP-30).
 
 ### New and overridden texts
 
@@ -334,7 +342,8 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
 - `HiddenPage`: authors only, listings only, both, empty, unknown kind; plural forms 1, 3, 5; rollback of one row;
   confirm cancel.
 - `HomeScreenNudge`: 10 s timeout without event; × event; «Добавить» calls the adapter; refused while a follow
-  nudge is pending.
+  nudge or a return check is pending; displaced by a return banner or a follow nudge → hidden, no event,
+  `offered: false`, offered again at the next calm moment.
 
 **End to end (Playwright, fake Telegram, cookie mode and header mode).**
 
@@ -383,7 +392,8 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
       are empty; the about text names HOMI.
 - [ ] Home-screen row shows «Добавить» while the icon is missing and disappears after adding.
 - [ ] Home-screen nudge: appears once, after three visit days, 4 s after the feed is calm; hides after 10 s; never
-      together with the follow nudge or a toast; not on Telegram below 8.0.
+      together with the follow nudge, the return banner or a toast, and a card they push away comes back later;
+      not on Telegram below 8.0.
 - [ ] After adding the icon the toast «Значок HOMI добавлен на экран телефона» shows once.
 - [ ] A launch at 02:00 Tashkent time counts for that Tashkent day.
 - [ ] No text shows the legacy brand name; the demo marker is visible while settings come from stubs.

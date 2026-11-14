@@ -12,7 +12,7 @@
 ## Goal
 
 The whole Mini App, still answering from stubs, is proven before the API work starts: one Playwright suite runs
-every scenario in cookie mode and in header mode; the consolidated checklist of all 45 screens is ticked and
+every scenario in cookie mode and in header mode; the consolidated checklist of all 47 screens is ticked and
 signed; the app has been used inside Telegram on iOS, Android, Desktop and Web on staging and on production; a
 performance budget and a bundle check guard every later merge. Every screen, rule, defect and Telegram point of
 the audit is traced to the package that owns it.
@@ -44,8 +44,8 @@ the audit is traced to the package that owns it.
 | Proof of parity | DEC-46, `25` §9, RK-31 | Acceptance is the written checklist per screen, ticked in the PR with staging screenshots and signed by the reviewer. A difference is accepted only as a defect fix or a visual detail |
 | Process | DEC-45 | Checks inside Telegram happen on staging and then on production after the deploy; there is no tunnel to a developer machine |
 | Session modes | DEC-44, `25` §3.4, RK-30 | Every end-to-end scenario runs in cookie mode and in header mode; the pass on Telegram Web records which mode each browser ended in |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 34 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main` |
-| Decided behaviour changes | DEC-51 … DEC-54 | Four differences from legacy are behaviour of the build, not flags, and are checked as such: radars are switched off on staging and production until WP-57 and the app says "soon"; the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 37 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54, and LB-APP-048 … LB-APP-050 of the pinned release; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main` |
+| Decided behaviour changes | DEC-51 … DEC-54 | Four differences from legacy are behaviour of the build, not flags, and are checked as such: radars are switched off on staging and production until WP-57 and the app says "soon" and offers no radar anywhere — no follow nudge, no return banner (SCR-046), no radar card in the search list (SCR-047); the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
 | No legacy access | DEC-33 | The suite, CI and the pass never reach legacy; `@homi/testing` blocks external hosts |
 | Stubs and the marker | `25` §4.4, RK-27 | Stub answers are deterministic and mutations do not persist: assertions target what the interface does, never stored state. The demo-data marker is asserted on every stub-backed screen |
 | Scope of the wave | DEC-43 | The access gate is open, so the no-access screen is accepted on stubs only |
@@ -144,6 +144,8 @@ header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves th
 | 18 | GL engine and Leaflet engine | headless Chromium falls to Leaflet by the legacy rule; `?map=gl` forces GL (WP-27) | end to end |
 | 19 | Radars switched off on the server | not a scenario: the API's env value `RADAR_CREATION_ENABLED=false`, in the workflow step that runs the specs tagged `@radars-off` against a rebuilt app (WP-30). The cached reference call never forwards the scenario cookie | end to end |
 | 20 | A second page of favourites and of history | the default fixtures of WP-13, 25 entries each | end to end |
+| 21 | Return banner: a previous visit 7 h back; nothing new; one new; a visit too recent | `homi-visits` (and `homi-nudge`) seeded in local storage before launch; `new_none`, `new_one` and the default answer of `GET /listings/new` (WP-12) | end to end |
+| 22 | Radar card in the search list after the 8th card and after a short list; snoozed | the default feed; `few` with custom filters; `homi-nudge.feedOff` seeded | end to end |
 
 States that can be checked only below the end-to-end layer (they are listed in the PR with the test that covers
 each): the 15 s request timeout; the scroll measurement that turns lite mode on; an engine truly below the floor
@@ -151,7 +153,8 @@ each): the 15 s request timeout; the scroll measurement that turns lite mode on;
 two-finger cancel of the lasso; Android `tel:` detection; the DeviceStorage restore race; visit days around
 midnight in Tashkent; an absent flow answer and a radar save answer without options (fixtures are always
 complete); unknown server values for verdict tone, nearby kind, comparison rooms, radar mode and housing type;
-every flagged branch. Persistence of any save is not checkable on stubs at all — it is proven by the API tests of
+every flagged branch; a `GET /listings/new` answer without a positive integer `count` (the contract never sends
+one, LB-APP-048) and a nudge dropped before its first render (LB-APP-050). Persistence of any save is not checkable on stubs at all — it is proven by the API tests of
 stage C and by the second run in WP-48.
 
 ### Specs
@@ -159,7 +162,7 @@ stage C and by the second run in WP-48.
 Existing specs keep their files and owners: `smoke`, `foundation`, `launch`, `session`, `back`, `boot-failure`,
 `csp`, `gates`, `shell`, `crash`, `feed`, `filters`, `city`, `listing-open`, `listing-contact`, `listing-actions`,
 `photo-viewer`, `map`, `map-leaflet`, `map-lasso`, `spot-map`, `saved`, `radars`, `radar-subscribe`, `radar-forms`,
-`follow-nudge`, `radars-soon`, `settings`, `settings-language`, `settings-hidden`, `home-nudge`, `journal`,
+`follow-nudge`, `return-nudge`, `feed-radar`, `radars-soon`, `settings`, `settings-language`, `settings-hidden`, `home-nudge`, `journal`,
 `errors`, `analytics` (plus those of WP-22). This package adds tags (`@smoke`, `@gesture`, `@gates`, `@render`;
 `@radars-off` exists since WP-30 and stays excluded from the default projects), the screen annotation, and what
 is missing against the checklists of the owning specifications.
@@ -262,9 +265,10 @@ no-access screen (gate open, DEC-43); the write-access prompt after `no_chat` an
 radar limit; the prepared-message share window and a real call page; a session that expires by age. On staging a
 tester on Telegram Web may set `homi_stub_scenario` in the browser to see these; on production nothing can.
 
-Not reachable inside Telegram at all in this package: the radar screens beyond their "soon" state. Staging and
-production keep radars switched off until WP-57 (DEC-51), and the switch is not a stub scenario. Rows 26 … 31 of
-the screen table are therefore proven by the suite and on the local stack here, the "soon" state is checked inside
+Not reachable inside Telegram at all in this package: the radar screens beyond their "soon" state and the three
+nudges and cards that offer a radar. Staging and production keep radars switched off until WP-57 (DEC-51), and the
+switch is not a stub scenario. Rows 26 … 31, 40, 46 and 47 of the screen table are therefore proven by the suite
+and on the local stack here, the "soon" state is checked inside
 Telegram, and the full radar pass inside Telegram is part of WP-57.
 
 Evidence for the PR: the filled record (date, client and version, device, system, mode, pass or fail per row of
@@ -329,7 +333,7 @@ Nothing new is built: the behaviour is that of the owning specifications. The ta
 audit to those owners; each identifier appears once. "Proved by" names the lowest layer that proves it; the
 screen table under "Acceptance checklist" is the user-visible proof.
 
-### Rules (69)
+### Rules (73)
 
 | # | Rules | Package | Proved by |
 | - | ----- | ------- | --------- |
@@ -344,10 +348,10 @@ screen table under "Acceptance checklist" is the user-visible proof.
 | 9 | BR-APP-062 | WP-27 | `map.spec.ts` |
 | 10 | BR-APP-061 | WP-28 | `map-lasso.spec.ts`; polygon unit tests |
 | 11 | BR-APP-067 | WP-29 | `saved.spec.ts` |
-| 12 | BR-APP-041 … BR-APP-043, BR-APP-046 … BR-APP-049, BR-APP-063 | WP-30 | the four radar specs, journey 3 |
+| 12 | BR-APP-041 … BR-APP-043, BR-APP-046 … BR-APP-049, BR-APP-063, BR-APP-070 … BR-APP-073 | WP-30 | the six radar and nudge specs, journey 3 |
 | 13 | BR-APP-045, BR-APP-051 … BR-APP-053 | WP-31 | `settings.spec.ts`, `home-nudge.spec.ts`, journey 5 |
 
-### Defects (47)
+### Defects (50)
 
 "Fixed" means fixed without a switch and checked as such. "Flagged" means both branches exist, the flag is off,
 the legacy branch is what the checklist sees and the other branch is proven by a unit or component test.
@@ -401,8 +405,11 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 45 | LB-APP-045 | refusal inside the feed shows a retry | WP-22 | flagged `dev001AnyForbiddenShowsAccess` (DEV-001) |
 | 46 | LB-APP-046 | Settings button leaves sheets open | WP-21 | fixed |
 | 47 | LB-APP-047 | expired session blamed on the server | WP-21 | fixed (the screen is WP-23's) |
+| 48 | LB-APP-048 | return banner crashes on an answer without `count` | WP-30 | fixed (and never sent by the contract, WP-12) |
+| 49 | LB-APP-049 | return banner and home offer on screen together | WP-30 | fixed (one slot with a priority; the home half is WP-31's) |
+| 50 | LB-APP-050 | nudges counted as shown before they render | WP-30 | fixed |
 
-Totals: 34 fixed, 13 flagged. Four more flags exist without a client defect behind them, all off (paged saved
+Totals: 37 fixed, 13 flagged. Four more flags exist without a client defect behind them, all off (paged saved
 lists, the paging part of DEV-003, are not among them: DEC-53 made them plain behaviour):
 
 | # | Flag | Deviation | Package |
@@ -451,11 +458,11 @@ The suite is the deliverable; these are the tests of the suite and its tools.
 
 ## Acceptance checklist
 
-Run rows 1–45 on staging in ru, uz and en and in light and dark; tick each in the PR with a screenshot. The states
+Run rows 1–47 on staging in ru, uz and en and in light and dark; tick each in the PR with a screenshot. The states
 named here are the minimum; the full list for a screen is the checklist of its owning specification, which is
 ticked there and re-read here. Texts must be the legacy ones with HOMI in place of the legacy brand.
 
-### Screens (45)
+### Screens (47)
 
 | # | Screen | Name | Package | Address or trigger | States to tick |
 | - | ------ | ---- | ------- | ------------------ | -------------- |
@@ -504,22 +511,26 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 43 | SCR-043 | Confirm | WP-23 | clear history, delete radar, return all, restart bot | native on current clients, browser dialog on old ones; cancel changes nothing |
 | 44 | SCR-044 | Telegram system sheets | WP-21 | write access, share, home screen, location, links | each result handled; real clients only |
 | 45 | SCR-045 | Crash screen | WP-23 | `error.tsx`, `global-error.tsx` | three texts per locale; «Обновить» reloads; one report |
+| 46 | SCR-046 | Return banner | WP-30 | card on `/` after a visit ≥ 6 h ago | «С вашего прошлого захода — N новых» only for N > 0; «Включить» or «Настроить» by the filters; 15 s; ×; once per filters in 2 days; never with another nudge; absent while radars are off |
+| 47 | SCR-047 | Radar card in the search list | WP-30 | inside the list on `/` | after the 8th card or after a short complete list without the note; rent and sale titles; «Включить радар» or «Настроить радар»; × for 7 days; absent with a radar for the search and while radars are off |
 
 ### Statements
 
-- [ ] Rows 1–45 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
-      Rows 26 … 31 carry the staging screenshot of the "soon" state and local screenshots of the radar screens,
-      and are ticked inside Telegram in WP-57 (DEC-51).
+- [ ] Rows 1–47 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
+      Rows 26 … 31 carry the staging screenshot of the "soon" state and local screenshots of the radar screens;
+      rows 40, 46 and 47 a staging screenshot of the feed without them and local screenshots of each; all of them
+      are ticked inside Telegram in WP-57 (DEC-51).
 - [ ] Every line of the acceptance checklists of WP-20 … WP-32 is ticked in its own PR or re-ticked here.
 - [ ] `miniapp-cookie` and `miniapp-header` run every spec; a spec cannot opt out of a mode.
 - [ ] The mode assertions pass after every test: cookie attributes in cookie mode; bearer header and no stored
       token in header mode.
 - [ ] `e2e-coverage.mjs` reports no screen without a test; the tables of this file name every rule, defect and
-      Telegram point once (the check of step 10 and a count: 45, 69, 47, 45).
-- [ ] The 34 fixed defects each have a passing test that would fail on the legacy behaviour; the 13 flagged ones
+      Telegram point once (the check of step 10 and a count: 47, 73, 50, 45).
+- [ ] The 37 fixed defects each have a passing test that would fail on the legacy behaviour; the 13 flagged ones
       and the 4 other flags each have tests for both branches; `lib/flags.ts` on `main` has 17 flags, all `false`.
-- [ ] The four decided differences from legacy hold on the merged build: the "soon" state with radars off, no
-      phone number before a tap, saved lists paged by 20, «{city} целиком».
+- [ ] The four decided differences from legacy hold on the merged build: the "soon" state with radars off — and with
+      it no follow nudge, no return banner and no radar card in the search list —, no phone number before a tap,
+      saved lists paged by 20, «{city} целиком».
 - [ ] The eight journeys pass in both modes; the state table has a scenario or a named lower-layer test per row.
 - [ ] No test reaches an external host; no test contains real launch data, a real phone or a real name.
 - [ ] `render.spec.ts` finds no raw key, no missing-message report and no legacy brand word in three locales.

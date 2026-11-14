@@ -19,7 +19,7 @@ can no longer appear for a real user.
 ## Scope
 
 In: contract tests across drivers and against the OpenAPI file; a source-honesty test; the switching procedure for
-the nine features of reference and listing data, on staging and then production; the change of configured defaults;
+the ten features of reference and listing data, on staging and then production; the change of configured defaults;
 forbidding stubs on the servers; the checks inside Telegram; the records. Radar matching is not switched on here,
 and neither is radar creation (WP-57 does both, when a sender exists; DEC-51).
 
@@ -40,8 +40,8 @@ queue continue with stage D. Part B starts when the key arrives.
   deadline, so every step may wait as long as it needs.
 - Stub data must never look real to a user (RK-27): while any method is on a stub the marker shows; when none is,
   stubs are forbidden on the servers.
-- Order of methods (`24` §5): reference data and cities; then feed, count, flow and map together, because they must
-  agree; then the card with contact and translation.
+- Order of methods (`24` §5): reference data and cities; then feed, count, new-since count, flow and map together,
+  because they must agree; then the card with contact and translation.
 
 ## Design
 
@@ -57,6 +57,7 @@ All in `backend/tests/Feature/Contract/`, run by `make ci-backend`; every file p
    | `source.reference`, `source.cities` | `GET /reference`, `GET /cities` | `ru`, `uz`, `en` |
    | `source.listings.feed` | `GET /listings` | default filters; page 2; an empty result |
    | `source.listings.count`, `.flow`, `.map` | the three reads | default filters; a narrow filter with flow options |
+   | `source.listings.new` | `GET /listings/new` | default filters with `since` a day ago; a narrow filter; `since` in the future (`0` without a source call) |
    | `source.listings.card` | `GET /listings/{number}` | one card per deal and type fixture; `preview=1`; a merged number; an unknown number |
    | `source.listings.contact`, `.translation` | the two `POST` methods | a listing with a phone; link-only; `uz`; `en` |
 
@@ -67,7 +68,7 @@ All in `backend/tests/Feature/Contract/`, run by `make ci-backend`; every file p
    samples one more assertion per driver (DEC-52): the serialised answer holds none of the synthetic phone numbers
    of the stub catalogue and of the golden cards, only their masked form; the contact samples are the one place
    where a number appears.
-2. **`OpenApiConformanceTest`.** For each of the 38 methods of `25` §4.2: call it (native methods against real code
+2. **`OpenApiConformanceTest`.** For each of the 39 methods of `25` §4.2: call it (native methods against real code
    with factories; flagged methods once per bound driver) and validate the answer against its schema in
    `docs/api/openapi.json` with `Tests\Support\OpenApiSchema` — a small validator written here (types, `required`,
    `enum`, `nullable`, `$ref`, arrays, nested objects; no formats). No new dependency. Error answers are validated
@@ -96,7 +97,7 @@ Groups, switched in this order, each group completely before the next:
 | Group | Features |
 | ----- | -------- |
 | 1 | `source.reference`, `source.cities` |
-| 2 | `source.listings.feed`, `source.listings.count`, `source.listings.flow`, `source.listings.map` |
+| 2 | `source.listings.feed`, `source.listings.count`, `source.listings.new`, `source.listings.flow`, `source.listings.map` |
 | 3 | `source.listings.card`, `source.listings.contact`, `source.listings.translation` |
 
 Steps per group and environment (`<f>` stands for each feature of the group, `<who>` for the person running it):
@@ -115,10 +116,10 @@ group back, record the release (`25` §8) and fix the translator first.
 
 After group 3 has soaked on production:
 
-1. A PR changes `config/sources.php`: the default of the nine features becomes `legacy` for `staging` and
+1. A PR changes `config/sources.php`: the default of the ten features becomes `legacy` for `staging` and
    `production` (`local` and `testing` stay `stub`); `ServerDefaultsTest` is added; `docs/api/README.md` gets the
    driver of every method.
-2. After its deploy: `php artisan sources:reset <f> --all …` for the nine features, staging then production, so the
+2. After its deploy: `php artisan sources:reset <f> --all …` for the ten features, staging then production, so the
    configured default is what runs and no override is left. `sources:list` must show empty rules.
 3. The production track sets `SOURCES_ALLOW_STUB=false` (staging, then production) and runs `sources:check`. It
    exits 0: the command looks only at whether the resolved driver is bound (WP-10), so the two landing features,
@@ -161,7 +162,7 @@ Desktop and Web clients; on Web once with third-party cookies blocked (header mo
 | Share | Telegram's share sheet opens; the shared message opens the listing in HOMI's Mini App |
 | Overlay | a favourite set on the card shows on the feed; a hidden listing leaves feed and map and returns on undo; a blocked author's listings leave; "viewed" eyes appear |
 | Personal | favourites, history and «Скрытое» survive a relaunch; with more than 20 favourites the list continues on scroll |
-| Radars | still switched off on the servers (DEC-51): the tab shows the "soon" state, neither the few-results note nor the filters offer a radar, and a radar sheet address returns to the tab. Creating a radar from the filters, previews of real listings, pause, resume, edit and delete are checked in WP-57, right after it switches radars on |
+| Radars | still switched off on the servers (DEC-51): the tab shows the "soon" state, neither the few-results note nor the filters offer a radar, no follow nudge, no return banner and no radar card appear in the feed, and a radar sheet address returns to the tab. The new-since count is therefore not visible here; its driver is proven by part A. Creating a radar from the filters, previews of real listings, pause, resume, edit and delete are checked in WP-57, right after it switches radars on |
 | Failure | with the group rolled back for the tester's account only (`--user`), the marker returns for that account |
 
 Screenshots of the feed, a card and the radar tab (its "soon" state) from each client go into the PR.
@@ -210,7 +211,7 @@ Screenshots of the feed, a card and the radar tab (its "soon" state) from each c
 ## Acceptance checklist
 
 - [ ] `DriverParityTest`, `OpenApiConformanceTest`, `SourceHonestyTest` and `StubIsolationTest` are green on `main`.
-- [ ] On staging and on production the nine features run on `legacy` by configured default, with empty stored rules.
+- [ ] On staging and on production the ten features run on `legacy` by configured default, with empty stored rules.
 - [ ] Every flag change of this package has a row in `source_flag_changes` with who and why, and a line in "Handoff".
 - [ ] `SOURCES_ALLOW_STUB=false` is set on staging and production; `sources:check` exits 0 there.
 - [ ] No answer of a Mini App method on production carries `meta.source = stub`; native-only methods answer `native`.

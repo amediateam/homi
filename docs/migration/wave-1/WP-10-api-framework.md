@@ -106,6 +106,8 @@ interface ReferenceSource {
 interface ListingSource {                                                             // WP-12
     public function feed(ListingQuery $query, SourceContext $context): ListingPage;
     public function count(SearchFilters $filters, SourceContext $context): int;
+    /** @param int $since Unix seconds @return int ≥ 0, listings of the filters that appeared after $since */
+    public function newSince(SearchFilters $filters, int $since, SourceContext $context): int;
     public function flow(SearchFilters $filters, SourceContext $context): FlowEstimate;
     public function map(SearchFilters $filters, SourceContext $context): MapPoints;
     public function details(int $number, SourceContext $context): ListingDetails;     // throws SourceNotFound
@@ -157,9 +159,9 @@ return [
 ```
 
 `default` is a map of `APP_ENV` name to driver; `*` is the fallback. The full list, filled by the contract packages:
-`source.reference`, `source.cities`, `source.listings.feed`, `source.listings.count`, `source.listings.flow`,
-`source.listings.map`, `source.listings.card`, `source.listings.contact`, `source.listings.translation`,
-`source.landing.live`, `source.landing.pins`. Native-only methods have no feature (`25` §4.3).
+`source.reference`, `source.cities`, `source.listings.feed`, `source.listings.count`, `source.listings.new`,
+`source.listings.flow`, `source.listings.map`, `source.listings.card`, `source.listings.contact`,
+`source.listings.translation`, `source.landing.live`, `source.landing.pins`. Native-only methods have no feature (`25` §4.3).
 
 **How the value is stored.** Pennant's database store keeps what a resolver returned for each scope, so a default
 resolved once per user would go stale when the default changes. To avoid that, each feature has exactly one stored

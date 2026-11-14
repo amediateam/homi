@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
-| Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
+| Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `02` BR-API-086; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063, BR-APP-073); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
 | Needs from the production track | Approve two migrations on production (`radars`, `radar_hide_rules`, new and empty). Server env: leave `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are switched to `true` when the bot's radar wizard package (WP-54) is deployed: it sends the starter list, and the bot's reachability tracking (WP-52) is live by then. `RADAR_CREATION_ENABLED` (key of WP-11) stays **unset** on staging and production: radars cannot be created or changed there until the bot's sending package sets it (WP-57, DEC-51) |
 
 ## Goal
@@ -65,9 +65,10 @@ public function relax(User $user, Radar $radar, string $code): RadarMutation;
 public function delete(User $user, Radar $radar): void;
 ```
 
-`RadarCreateContext`: `entry` (`filters`, `empty`, `few`, `prompt`, and for the bot later `bot_wizard`, `bot_text`),
-`relaxed`, `locale`, `currency`. `RadarMutation`: the radar, `kind` (`created`, `existing`, `reactivated`, `updated`,
-`resumed`, `paused`), the `Starter`, the options and the `relaxed` hints.
+`RadarCreateContext`: `entry` (`filters`, `empty`, `few`, `prompt`, `feed`, `return` — the last two from the radar
+card in the feed and the return banner of legacy release `index-DY_DH7h-.js`, BR-API-086, BR-APP-073 — and for the
+bot later `bot_wizard`, `bot_text`), `relaxed`, `locale`, `currency`. `RadarMutation`: the radar, `kind` (`created`,
+`existing`, `reactivated`, `updated`, `resumed`, `paused`), the `Starter`, the options and the `relaxed` hints.
 
 Every write follows this order:
 
@@ -238,7 +239,7 @@ filters); a daily-rent radar gets daily options because the source computes them
 - Service (SQLite): `no_chat` before any write for chat states `never` and `blocked` when the flag is on, and not
   checked for pause, mode and delete; with the flag off nothing is refused; limit counts active radars only; the
   eleventh active radar and a resume at the limit are refused; active twin → `existing` without a write; paused twin
-  → `reactivated` with the new `entry`; update into a twin → `radar_duplicate`; update keeps `active`; hash ignores
+  → `reactivated` with the new `entry`; `entry` `feed` and `return` are stored as given; update into a twin → `radar_duplicate`; update keeps `active`; hash ignores
   `posted_days`; stored filters have 25 keys; events only after commit, none on rollback.
 - Starter (fake `ListingSource`): window and sort passed to the source; hidden, blocked, vote-marked, hide-ruled and
   delivered listings removed; resume removes viewed ones; `count` equals the numbers returned; disabled switch →

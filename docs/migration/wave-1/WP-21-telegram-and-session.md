@@ -135,7 +135,7 @@ member is a no-op or returns `null` / `false` and never throws.
 | 26 | TMA-036 | `tg.homeScreen.status()`, `.add()`, `.onAdded(cb)` | 8.0 | status with a 1.5 s timeout → `unknown` |
 | 27 | TMA-037 | `tg.deviceStorage` (used only by `lib/storage.ts`) | 9.0 | `getItem`, `setItem`, `removeItem` |
 | 28 | TMA-039 | `tg.close()` | none | no closing confirmation |
-| 29 | TMA-040 | `tg.onVisible(cb)` | — | `document.visibilitychange`, not Telegram's activity events |
+| 29 | TMA-040 | `tg.onVisible(cb)`, `tg.onHidden(cb)` | — | `document.visibilitychange`, not Telegram's activity events; since legacy release `index-DY_DH7h-.js` it also drives the visit sessions of the return banner (BR-APP-070, WP-30): hidden on the search tab records a visit, visible after ≥ 6 h starts a new session |
 | 30 | TMA-041 | `tg.platform()`, `tg.version()`, `isAndroid()`, `performanceClass()` | — | platform from the SDK; the `Telegram-Android/… (…; LOW\|AVERAGE\|HIGH)` class from the User-Agent |
 | 31 | TMA-042 | `tg.isVersionAtLeast(v)`, `supports(feature)` | — | the single table of gates; an unparsable version opens only the "none" row |
 | 32 | TMA-043 | whole facade | — | the outside-Telegram fallbacks named in each row |
@@ -161,7 +161,8 @@ on an old segment. The first-launch choice itself is WP-23.
 | Key | Format | Policy |
 | --- | ------ | ------ |
 | `homi-city` | city code | mirrored and restored |
-| `homi-nudge` | JSON `{ asked: string[≤40], closed, quietUntil, lastShown }` | mirrored and restored |
+| `homi-nudge` | JSON `{ asked: string[≤40], closed, quietUntil, lastShown, back, feedOff }`; since legacy release `index-DY_DH7h-.js` `back` is `{ <filters hash>: ms }` with at most 40 entries (the last return banner per filter set) and `feedOff` the end of the radar card's snooze in ms | mirrored and restored |
+| `homi-visits` | JSON `{ <filters hash>: ms }`, the last search visit per filter set, the 40 newest kept (BR-APP-070); since legacy release `index-DY_DH7h-.js` | mirrored and restored (TMA-037) |
 | `homi-home` | JSON `{ days: ['YYYY-MM-DD' ×≤10], offered }` | mirrored and restored |
 | `homi-new-<feature>` | `'1'` (only `pets` in use) | mirrored and restored |
 | `homi-theme` | `auto` / `light` / `dark` | local |
@@ -174,7 +175,10 @@ on an old segment. The first-launch choice itself is WP-23.
   with storage disabled reads give `null`, writes are ignored and the app still starts.
 - Fix of LB-APP-012: a key is mirrored to DeviceStorage (9.0+) only if it is also restored.
 - Fix of LB-APP-021: `restoreFromDeviceStorage()` fills missing local keys, 1.5 s per key, all in parallel, never
-  rejects; the session bootstrap awaits it together with the SDK wait, i.e. before the first data request.
+  rejects; the session bootstrap awaits it together with the SDK wait, i.e. before the first data request. Since
+  legacy release `index-DY_DH7h-.js` the same race also loses `kv-visits` (no previous visit, no return banner, and
+  a single-entry write over the DeviceStorage copy); awaiting the restore before the first data request fixes it
+  for `homi-visits` too, because no visit is recorded before the reference data has loaded (WP-30).
 - There is no stored locale key: the locale is the address segment plus next-intl's cookie.
 - A guard refuses any value that looks like launch data (`hash=`, `auth_date=`, `query_id=`) or a bearer token.
 
@@ -472,8 +476,9 @@ constants exported for tests.
   without a request; 7.10 → browser path; a second call while pending shares the promise.
 - `telegram/language.test.ts`: `uz-UZ`, `uz-Cyrl`, `en`, `en-GB`, `kk`, empty — for both flag states.
 - `telegram/safeCallback.test.ts`: a throwing handler does not break the next event and rethrows once.
-- `storage.test.ts`: policy per key; storage throwing; restore fills only missing keys, honours the 1.5 s cap,
-  survives `getItem` throwing; no DeviceStorage call below 9.0; launch-data-shaped values refused.
+- `storage.test.ts`: policy per key (`homi-visits` mirrored and restored); storage throwing; restore fills only
+  missing keys, honours the 1.5 s cap, survives `getItem` throwing; a `homi-visits` value in DeviceStorage and none
+  locally is restored before the bootstrap resolves; no DeviceStorage call below 9.0; launch-data-shaped values refused.
 - `graphics.test.ts`: User-Agent classes; cores and memory; 30 of 150 slow frames → lite, 29 → unchanged; `auto`
   clears both keys; the ES5 copy in `boot.js` gives the same answers.
 - `boot/boot.test.ts` (jsdom): engine probe false → screen; language matrix; source stripping keeps `:line:col`

@@ -6,7 +6,7 @@
 | Owner | Frontend (track: development) |
 | Complexity | S |
 | Milestone | FE-2 (M9, stage S4) |
-| Feature IDs | F-RADAR-007 |
+| Feature IDs | F-RADAR-007 F-RADAR-009 F-RADAR-010 |
 | Dependencies | KV-FE-028 (`kv-nudge` storage and DeviceStorage restore), KV-FE-034 (journal events), KV-FE-048 (search list, apply hook), KV-FE-074 (radar actions, list store); decisions: DEV-021 `PROPOSED`; Q-APP-005 |
 
 ## Goal
@@ -14,6 +14,11 @@
 1.8 s after the user applies custom filters on the search list, the Mini App offers «Включить радар по этому поиску?»
 with the expected flow (SCR-040), under the legacy frequency rules stored in `kv-nudge`, and never crashes when the flow
 answer is empty (LB-APP-006).
+
+Since the pinned release `index-DY_DH7h-.js` (`wave-1/baseline.md`) the same nudge family also has the return
+banner «С вашего прошлого захода — N новых» (SCR-046, API-035, F-RADAR-009) and the radar card inside the search feed
+(SCR-047, F-RADAR-010). In Wave 1 they are built by WP-30 on the contract of WP-12 (`GET /listings/new`); the
+line references below are those of the audited release.
 
 ## Legacy reference
 

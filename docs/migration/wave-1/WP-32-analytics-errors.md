@@ -12,7 +12,7 @@
 ## Goal
 
 The two facades that every earlier package already calls — `track()` and `reportError()` — start doing real work:
-the 16 legacy journal events reach `POST /api/v1/events`, uncaught errors and render crashes are reported with the
+the 21 legacy journal events reach `POST /api/v1/events`, uncaught errors and render crashes are reported with the
 legacy filtering and limits, and the boot guard of WP-21 has an endpoint to report to. PostHog loads lazily under
 the legacy rules into HOMI's own project, with screen names derived from routes: the 16 legacy names are kept and
 every layer legacy never tracked gets a name. Nothing personal — no `initData`, token, phone or address query —
@@ -33,8 +33,8 @@ leaves the browser through either channel.
 
 **Out.**
 
-- The places that call `track()`: WP-21 (`app_launch`, `app_opened`), WP-26 (listing events), WP-30 (follow prompt
-  and chat access), WP-31 (home screen). This package only verifies them.
+- The places that call `track()`: WP-21 (`app_launch`, `app_opened`), WP-26 (listing events), WP-30 (follow prompt,
+  return banner, radar card in the feed, chat access), WP-31 (home screen). This package only verifies them.
 - The boot guard, its inline script and the update screen — WP-21. Crash screen, `error.tsx`, `global-error.tsx`
   and the session-expired screen — WP-23 (they call `reportError`).
 - The server side of the journal, server-side PostHog capture and person deletion — WP-47. Until then
@@ -71,7 +71,7 @@ legacy client (`posthog-js` 1.434.15, `03` §3.3 and KV-FE-035); confirm each ag
 
 | Module | Role |
 | ------ | ---- |
-| `lib/analytics/events.ts` | Exists since WP-20 (typed map of the 16 events, `track(name, props)`). The no-op body is replaced by a call to the journal; the in-memory record of the last 20 calls stays for tests |
+| `lib/analytics/events.ts` | Exists since WP-20 (typed map of the 21 events, `track(name, props)`). The no-op body is replaced by a call to the journal; the in-memory record of the last 20 calls stays for tests |
 | `lib/analytics/journal.ts` | Queue and transport: `enqueue(event)`, `flush()`, `discard()`; posts `/bff/events` |
 | `lib/analytics/scrub.ts` | `scrubText(value)`, `scrubDeep(value, depth = 6)`, `stripUrl(url)`; one implementation for the journal, PostHog and the route handler |
 | `lib/analytics/buildVersion.ts` | `BUILD_VERSION` from `NEXT_PUBLIC_BUILD_VERSION`, at most 40 characters, `dev` when unset; reuse the constant of WP-21 if the boot script already defines one |
@@ -248,7 +248,7 @@ Changed:
 2. `lib/analytics/scrub.ts` and `lib/errors/sanitize.ts` with their unit tests (pure functions first).
 3. `lib/analytics/journal.ts`: queue, flush, discard, size cap, both session modes; unit tests with a fake `fetch`.
 4. Replace the body of `track()`; add `events` to the allow-list; `tests/analytics/callsites.test.ts` (every one of
-   the 16 names is called somewhere outside tests, and no other name is).
+   the 21 names is called somewhere outside tests, and no other name is).
 5. `app/bff/boot-error/route.ts` with its handler tests; reserve the name in the allow-list.
 6. Replace the body of `reportError()`; de-duplication, caps, `stage`; unit tests.
 7. `lib/errors/global.ts` and `instrumentation-client.ts`; check in the browser that a thrown error during
@@ -276,7 +276,7 @@ Names and property names are unchanged. `listing_id` is the listing number.
 | 1 | `app_launch` | `entry` (`link` / `news` / `menu`), `ms`, `v`, `sdk?`, `js`, `platform` | once per launch when `initData` exists; queued until the session is ready | WP-21 |
 | 2 | `app_opened` | `entry: 'link', listing_id, ms` or `entry: 'news' / 'menu', ms` | session and `GET /me` succeeded; never after a refusal | WP-21 |
 | 3 | `app_error` | `v`, `error {kind, name, message, source, stage, screen, tg, platform}` | boot guard (`boot`), global handlers (`error`, `rejection`), error files (`render`), missing catalogue keys (sent as `error`) | WP-21 guard through `/bff/boot-error`; this package; WP-23; WP-20 |
-| 4 | `follow_prompt_shown` | — | follow nudge shown | WP-30 |
+| 4 | `follow_prompt_shown` | — | follow nudge shown, on its first render (fix of LB-APP-050; legacy sends it when the nudge is scheduled) | WP-30 |
 | 5 | `follow_prompt_expired` | — | follow nudge timed out after 10 s | WP-30 |
 | 6 | `follow_prompt_closed` | — | follow nudge closed with × | WP-30 |
 | 7 | `home_screen_offered` | — | home-screen nudge shown | WP-31 |
@@ -289,6 +289,15 @@ Names and property names are unchanged. `listing_id` is the listing number.
 | 14 | `original_copied` | `listing_id` | copy event on the original text | WP-26 |
 | 15 | `contact_call` | `listing_id`, `via` (`tel` / `browser`), `src?` (`text`; the contract also allows `author`) | a call attempt that opened something | WP-26 |
 | 16 | `contact_write` | `listing_id` | «Написать» link opened | WP-26 |
+| 17 | `return_prompt_shown` | `n` (the `count` of `GET /listings/new`), `custom` | return banner shown, on its first render (LB-APP-050) | WP-30 |
+| 18 | `return_prompt_expired` | `custom` | return banner hidden after 15 s | WP-30 |
+| 19 | `return_prompt_closed` | `custom` | return banner closed with × | WP-30 |
+| 20 | `feed_radar_shown` | `custom` | radar card in the search list 60 % visible, once per launch per filter set | WP-30 |
+| 21 | `feed_radar_closed` | `custom` | radar card in the search list closed with × | WP-30 |
+
+Rows 17 … 21 come with legacy release `index-DY_DH7h-.js` (API-034, BR-API-123); `custom` says whether the filters
+differ from the defaults of their deal and city (BR-APP-013). While radars are switched off (DEC-51) the return
+banner and the radar card are never shown, so these five are not sent.
 
 Rules: fire-and-forget; survives the app closing (`keepalive`); never read, never retried; nothing is sent
 without a session (legacy sent an empty credential that the server rejected); the UI never waits for it.
@@ -377,7 +386,7 @@ rendered in place and keeps the name of its address.
 - `journal.test.ts`: body shape; `keepalive`; queue of 20 before `ready` with order kept; `discard()` on `denied`;
   `ms` unchanged by a late flush; `Authorization` only in header mode; `401`, a network error and a thrown `fetch`
   are swallowed; no re-authentication is started; 8 KB cut and drop.
-- `callsites.test.ts`: the 16 names each have a call site; an unknown name fails type checking (`@ts-expect-error`).
+- `callsites.test.ts`: the 21 names each have a call site; an unknown name fails type checking (`@ts-expect-error`).
 - `report.test.ts`: de-duplication; the cap of 5; the separate cap of 3 for missing messages and their mapping to
   `kind: 'error'`, `name: 'MissingMessage'`; `stage` before and after `markAppStarted()`; render hook called for
   `render` only; `screen` taken from `currentScreen()`.
@@ -421,7 +430,7 @@ rendered in place and keeps the name of its address.
 
 ## Acceptance checklist
 
-- [ ] Each of the 16 journal events is sent once at its trigger with exactly the listed property names, in cookie
+- [ ] Each of the 21 journal events is sent once at its trigger with exactly the listed property names, in cookie
       mode and in header mode.
 - [ ] No journal request is made before the session is ready, outside Telegram, after a refusal or after expiry.
 - [ ] A journal failure (network off, `401`, `500`) changes nothing on screen and starts no re-authentication.

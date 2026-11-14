@@ -18,7 +18,7 @@ of the remaining queue (`README.md` rule 7).
 
 | Release | Production Last-Modified | Synced | Sync report | Changes |
 | ------- | ------------------------ | ------ | ----------- | ------- |
-| `index-Dbpp463V.js` | Mon, 09 Nov 2026 22:41:17 GMT | 2026-11-11 | `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md` | `price_kind: 'business'` with the label `card.businessPrice` on the feed card and the listing title row. The card badge «Хозяин» now ranks above «Ниже рынка». The no-access texts `noAccess.title.invite` and `noAccess.text.full` no longer mention the beta. No API, CSS or asset change |
+| `index-Dbpp463V.js` | Mon, 09 Nov 2026 22:41:17 GMT | 2026-11-11 | `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md` | `price_kind: 'business'` with the label `card.businessPrice` on the feed card. On the listing screen the code puts it only into the share text; the sync report says "title row" (`03` SCR-018). The card badge «Хозяин» now ranks above «Ниже рынка». The no-access texts `noAccess.title.invite` and `noAccess.text.full` no longer mention the beta. No API, CSS or asset change |
 | `index-BNLZFfL0.js` | Wed, 11 Nov 2026 21:35:40 GMT | 2026-11-12 | `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md` | The listing actions sheet gains a third view "Что именно неверно?" after the reason `wrong_data`, with five details (`price`, `rooms`, `place`, `photos`, `other`). `POST /api/listings/:id/report` takes an optional `detail`. Back walks the views step by step. 11 new i18n keys |
 | `index-DY_DH7h-.js` | Fri, 13 Nov 2026 22:05:41 GMT | 2026-11-14 | `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md` | See below |
 
