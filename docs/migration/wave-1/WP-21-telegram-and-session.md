@@ -371,7 +371,8 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
 
 1. **CSP and Cache Components spike** (one day at most). Build the smallest page with a nonce from `proxy.ts`
    under `cacheComponents`, an inline script and a Suspense boundary; observe what the browser blocks. Choose
-   (a), (b) or (c), write the choice into the Mini App architecture ADR of WP-01 and into "Handoff".
+   (a), (b) or (c), write the choice into a short ADR that amends ADR-0018 (accepted ADRs are not edited,
+   `docs/architecture/decisions/README.md`) and into "Handoff".
 2. `lib/telegram/{sdk,types,gates,wait,init}.ts` with unit tests on a fake `window.Telegram`.
 3. `lib/storage.ts`, `lib/graphics.ts`, `lib/telegram/theme.ts` with tests.
 4. `boot/boot.js`, its build script, the layout tags, `BootGuard`; the boot-failure e2e cases.
