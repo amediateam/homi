@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-03 merged in #39, WAITING for the deploy; step 11 in PR #41; WP-00/01/02 WAITING)
+updated: 2026-11-15 (WP-10 IN_PROGRESS on feat/wp-10-api-framework; WP-03 merged in #39 + #41, WAITING for the deploy; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,10 +11,11 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40»; «потверждаю» (the WP-03 package list of #39); «сливай #39».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40»; «потверждаю» (the WP-03 package list of #39); «сливай #39»; «сливай #41»; «бери WP-04».
 
 ## State at handoff
-- `main` = `3af66f9` (#39 merged on «сливай #39»; `frontend` and `backend` green on `main`; the WP-03 branch is deleted). Follow-up **PR #41** (`docs/wp-03-after-merge`): `CLAUDE.md` (step 11), WP-03 status `WAITING (merged in #39; deploy with the production track)` in the spec and the queue row. The shared working tree is on that branch.
+- `main` = `2b4b97d` (#39 merged on «сливай #39», #41 on «сливай #41»; `frontend` and `backend` green on `main` after #39; #41 is docs only). WP-03 is `WAITING (merged in #39; deploy with the production track)`.
+- **WP-10** taken on «бери WP-04» (there is no WP-04; WP-10 is the next package, and what it needs from WP-03 is on `main`). Branch `feat/wp-10-api-framework`, status `IN_PROGRESS`.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged (see the list below).
 - Local only: database `homi_test` on this machine's Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-frontend` → exit 0; `cd frontend && pnpm test:e2e` → 2 passed; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 3 passed; `make ci-backend` → exit 0; `make registry-check` → current.
@@ -35,12 +36,12 @@ Written for whoever continues the **development track** (the second developer, a
 - **Spec WP-03 corrected** (rule 6), Handoff filled; phase notes §L extended with AM-51.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Merge of PR #41** (`docs/wp-03-after-merge`: `CLAUDE.md` step 11 + status). Then WP-03 `DONE` after the production track's deploy (a no-op for users).
+1. **WP-03 deploy** with the production track (a no-op for users); then WP-03 `DONE`.
 2. **Send the operator request** from the project's own mailbox (WP-02 spec, Part A; never the connected Gmail); then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and set WP-02 to `DONE`.
 3. **First developer:** accept ADR-0016 … 0019 (then a `Status` PR) and answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
 4. **WP-00 (production track):** counts, migration approval, deploy, staging check; then `DONE`. Outbound addresses to the operator (#37).
 5. Reviewer decisions of #37: `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding, a WP-30 split. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
-6. The next queue package after WP-03 only on the developer's word.
+6. The queue package after WP-10 only on the developer's word.
 
 ## Gotchas learned this session
 - pnpm 11: `strictDepBuilds` fails an install while an install script is undecided; decide each one in `allowBuilds` (`true`/`false`). The minimum release age (24 h) also applies to transitive packages, and CI re-applies it to every lockfile entry.

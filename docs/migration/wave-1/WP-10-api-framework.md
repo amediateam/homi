@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | TODO |
+| Status | IN_PROGRESS (`feat/wp-10-api-framework`) |
 | Depends on | WP-03 (`openapi-typescript`, the test runners and the `pgsql` group are installed) |
 | Size | about 2 400 changed lines without generated files, L |
 | Behaviour reference | `25` §4.1, §4.3, §4.4, §4.6; `24` §3; ADR-0003, ADR-0007 and ADR-0017 (written by WP-01); `HANDOFF.md` T3 and T5; skills `.claude/skills/pennant-development/`, `.claude/skills/scramble-development/` |
