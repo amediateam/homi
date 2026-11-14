@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41; `main` = `2b4b97d`), WAITING for the deploy; WP-10 on branch `feat/wp-10-api-framework`, not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, `main` = `70d5e56`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -19,13 +19,14 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - `config/cors.php` env-driven; `config/filesystems.php` `public` disk URL from `MEDIA_PUBLIC_URL`; `storage/app/public/{health.txt,originals,derived}` exist locally.
 - **Phase 3 WIP (branch `chore/phase-3-cdn-webhook`, paused by the developer on 2026-11-08):** packages added with approval — `league/flysystem-aws-s3-v3`, `intervention/image` 4.4, `dedoc/scramble` (registry regenerated). Media module implemented and tested (`/api/v1/media*`: upload, show, delete, presign/register; `HashedUploader`, `GenerateImageVariantsJob` on queue `media`, CDN/temporary URLs); `ApiController` envelope + `ApiExceptionRenderer`; `AssignRequestId`; rate limiters `api|uploads|intake|telegram-webhook`; Horizon queues `default+notifications|telegram|media|ingest`; tables `media_files`, `telegram_updates`, `sources`, `source_listings`, `intake_requests`, `intake_events` (migrated locally). Webhook route `POST /telegram/webhook` exists but is fail-closed (403/501 stubs). Intake endpoints, Telegram pipeline, OpenAPI export and Phase 3 docs are NOT done — the plan is `HANDOFF.md` §4 T1–T4 (development track), re-planned by the kvadro² migration tasks (PR #9, `docs/migration/10` §9). 47 tests green, PHPStan clean.
 - Media ownership: the fix WP-00 is on `main` since PR #27 (merged 2026-11-15): `media_file_references`, owner-scoped load and policy, actor-typed upload prefix, migration `2026_11_14_150551_create_media_file_references_table` (run on the developer's dev database only). Staging and production still run the old code (KI-25) until the production track deploys it and approves the migration on production. KI-27 and KI-28 are open (PR #28, merged).
-- **WP-10, on branch `feat/wp-10-api-framework` (not on `main`):**
+- **Since WP-10 (#42, merged 2026-11-15; staging and production do not run it yet):**
   - **Errors:** every `/api/v1` error body has `code` (`ApiException`, the renderer table, `SourceUnavailable` 503, `SourceNotFound` 404).
   - **Source drivers:** `config/sources.php` (no features yet), `SourceConfig`, `SourceSelector`, `SourceManager`, Pennant rules in the global scope, and `meta.source` in every sourced answer.
-  - **Commands and audit:** `sources:list|set|reset|check|publish-stub-media`; the audit table `source_flag_changes` (migration `2026_11_14_224945_…`, run on the local test databases only).
+  - **Commands and audit:** `sources:list|set|reset|check|publish-stub-media`; the audit table `source_flag_changes` (migration `2026_11_14_224945_…`, run on the local test databases only; production approval pending).
   - **Stubs:** `FixtureStore` over `resources/fixtures/v1` (empty) with the `X-Stub-Scenario` header.
   - **OpenAPI:** the committed `docs/api/openapi.json`, `composer openapi:check` in `ci:check`, and `/docs/api` behind `viewApiDocs`.
-  - **Tests:** `make ci-backend` → exit 0 (215 passed, 4 skipped); `make test-pgsql` → 4 passed.
+  - **Tests:** `make ci-backend` → exit 0 (215 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and `frontend` green on `main` after the merge (runs 43652932665, 43652932624).
+  - `backend/.env.example` gains `SOURCES_ALLOW_STUB` only with PR #43 (open).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).
@@ -36,7 +37,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **`@homi/testing`** is a dev-only package. `@homi/testing/playwright` provides the fake Telegram and the external-request guard.
   - **End to end:** Playwright 1.65.1 runs `frontend/playwright.config.ts`, with the `app/e2e/smoke.spec.ts` test. `pnpm test:e2e` → 2 passed.
   - **Gates:** `make ci-frontend` includes `pnpm test`, and `make e2e` is new. The workflow `frontend-e2e.yml` is new.
-- WP-10, on the branch (not on `main`):
+- Since WP-10 (#42):
   - `@homi/types` generates `src/generated/api.ts` from `docs/api/openapi.json`, and `pnpm types:check` runs in CI and in `make ci-frontend`.
   - `@homi/api-client` gains `put`, a required `ApiError.code`, `null` data for a `204`, and `createTypedClient`.
 - `next.config.ts`: `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.

@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-10 in REVIEW, PR #42; WP-03 merged in #39 + #41, WAITING for the deploy; WP-00/01/02 WAITING)
+updated: 2026-11-15 (WP-10 merged in #42, WAITING for the production track; follow-up docs PR; #43 open; WP-03 WAITING deploy; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,13 +11,12 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40»; «потверждаю» (the WP-03 package list of #39); «сливай #39»; «сливай #41»; «бери WP-04».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40»; «потверждаю» (the WP-03 package list of #39); «сливай #39»; «сливай #41»; «бери WP-04»; «сливай #42»; «погнали» (the follow-up docs PR).
 
 ## State at handoff
-- `main` = `2b4b97d` (#39 and #41 merged). WP-03 is `WAITING (merged in #39; deploy with the production track)`.
-- **WP-10** was taken on «бери WP-04» (there is no WP-04; WP-10 is next). Branch `feat/wp-10-api-framework`, **PR #42**, `REVIEW (#42)`; the working tree is on it.
+- `main` = `70d5e56`: #42 (WP-10) merged on «сливай #42», and `backend` and `frontend` are green on `main` (runs 43652932665, 43652932624). WP-03 is `WAITING (merged in #39; deploy with the production track)`.
+- WP-10 is `WAITING (merged in #42; production track …)`. The follow-up docs PR #44 (`docs/wp-10-after-merge`) carries the status and the `CLAUDE.md` commands; the working tree is on that branch. PR #43 (`SOURCES_ALLOW_STUB` in `backend/.env.example`) is open, with CI green.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged. Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
-- CI on `31dc1a4` green (backend 43652536647, frontend 43652536633, frontend-e2e 43652536550); the first round failed in `openapi:export` without `DB_*` in the `ci:check` step, fixed there. PR #43 `backend` green.
 - Verify: `make ci-backend` → exit 0; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
 
 ## Done this session
@@ -26,7 +25,7 @@ Written for whoever continues the **development track** (the second developer, a
 - Spec corrected (rule 6); AM-52 in `docs/ai/reports/phase-3-notes.md` §M; the spec's Handoff filled.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Review and merge of PR #42.** Then the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
+1. **Merge of the follow-up docs PR #44** (`docs/wp-10-after-merge`). Then the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
 2. **Shared-file PR #43** for `backend/.env.example` (`SOURCES_ALLOW_STUB=true`). After its merge every `backend/.env` needs the key, or `make dev-check` reports it missing.
 3. **WP-03:** the deploy with the production track (a no-op for users), then `DONE`.
 4. **Operator request:** from the project's own mailbox (WP-02 Part A; never the connected Gmail); then "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and WP-02 `DONE`.
