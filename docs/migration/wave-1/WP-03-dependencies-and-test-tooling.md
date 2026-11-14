@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | WAITING (draft PR: the first developer confirms the package list; the backend `pgsql` group is done) |
+| Status | WAITING (draft PR #39: the first developer confirms the package list; the backend `pgsql` group is done) |
 | Depends on | WP-01 (ADR-0019 names the UI stack; the PR size rule is agreed); WP-00 (the first test of the `pgsql` group exercises its reference table) |
 | Size | about 900 changed lines without `pnpm-lock.yaml`, M |
 | Behaviour reference | `25` §9, §10; `24` §8.1 (DEC-49); tasks `tasks/frontend/KV-FE-005-dependency-approvals.md` (versions, vetting) and `tasks/frontend/KV-FE-010-test-runner-ci.md` (runner, fake Telegram); `15` §2.7, §5.4, §5.5; `docs/handoff/parallel-work.md` §4; `HANDOFF.md` T8; Next.js guides `frontend/app/node_modules/next/dist/docs/01-app/02-guides/testing/{vitest,playwright}.md` |
@@ -268,7 +268,7 @@ WP-44 … WP-47, WP-50, WP-51). This package builds the one place for them; late
 
 ## Handoff
 
-**2026-11-15, development track (Claude Code).** Branch `feat/wp-03-dependencies-and-test-tooling`, draft PR.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-03-dependencies-and-test-tooling`, draft PR #39.
 
 - **Done — backend `pgsql` group (step 10), without any new dependency:** `PgsqlTestCase`, the Pest binding,
   `concurrently()`, the test suite, the CI steps and `make test-pgsql`; tests `ConcurrentlyTest`,
