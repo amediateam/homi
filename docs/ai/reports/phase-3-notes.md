@@ -346,3 +346,26 @@ On «сделай все сам»: the request to the operator was put into an u
 product owner knows the operator's contact (Q-SYS-009). The outbound addresses are asked for in #37.
 
 **Not applied:** the request is not sent; WP-02 is not `DONE`.
+
+## L. Development track, 2026-11-15 — WP-03, package list and the pgsql test group
+
+The developer: «бери WP-03». WP-03 depends on WP-01, which is `WAITING` (ADR-0019 `Proposed`, #30 unanswered); the
+package list needs the first developer's confirmation anyway (DEC-49), so both can come together.
+
+**Applied** (draft PR #39, branch `feat/wp-03-dependencies-and-test-tooling`):
+
+- Backend `pgsql` test group: `tests/PgsqlTestCase.php` (truncation; skips unless `pgsql` and a `_test` database,
+  checked from the environment and from the booted configuration), `concurrently()` in `tests/Pest.php` (unbinds
+  each task from the generated Pest class), suite `Pgsql`, CI steps with `--fail-on-skipped`, `make test-pgsql`.
+  First members: `ConcurrentlyTest`, `MediaOwnershipRaceTest` (WP-00, KI-25), `Unit/PgsqlGuardTest`. Verified red
+  first, then `make test-pgsql` → 3 passed on a local `homi_test`, and `make ci-backend` → exit 0.
+- Own choices: `PgsqlTestCase::refusal()` as a static rule with a unit test; the second check in
+  `createApplication()`; `PGSQL_TEST_DATABASE` in the Makefile; the local `homi_test` on this machine's Homebrew
+  PostgreSQL rather than on the LAN database host of `.env`.
+- The package table (31 packages) with licence, release dates, transitive counts and audit is in the PR body. It
+  comes from a scratch resolution outside the repository (`pnpm install --lockfile-only --ignore-scripts`).
+- The specification was corrected against the registry: `vite` added as Vitest 5's peer; `vite-tsconfig-paths`
+  dropped; `oxc` instead of `esbuild`; the real install scripts; peers of `openapi-typescript` and Radix; pnpm 11's
+  minimum release age.
+
+**Not applied:** no npm package is installed; steps 3–9 wait for the confirmation in #39.

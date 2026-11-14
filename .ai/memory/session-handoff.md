@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-00, WP-01, WP-02 merged into main, all WAITING; the shared tree is on main; next in queue WP-03 needs dependency approval)
+updated: 2026-11-15 (WP-03 taken: draft PR #39 with the npm package list for confirmation and the backend pgsql group; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -10,50 +10,37 @@ Written for whoever continues the **development track** (the second developer, a
 ## Developer's standing instruction
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
-- 2026-11-14, queue prompt: «Возьми первый пакет очереди со статусом не DONE. … тесты сначала, затем код, затем чек-лист приёмки.» «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-14: «бери следующий пакет WP-01»; «#29 слит, сливай #32 и бери WP-02» (#29 was still open; the developer then chose «Слить #29, потом #32»); «сделай все сам»; «продолжай, открой PR когда агент закончит»; 2026-11-15: «сливай #37 и все PR WP-01».
+- 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03».
 
 ## State at handoff
-- `main` = `aac219b` (#27 WP-00 `06be11d` and #28 known issues `aac219b` merged on 2026-11-15, after the WP-01/WP-02 merges). Merged on 2026-11-15 with merge commits: #30 `5b6377a`, #31 `ada15b9`, #33 `c0e8732`, #34 `f893d08`, #35 `a70179d`, #36 `77e0c6d`, #37 `3bced89`. Before each ADR merge, `main` was merged into the ADR branch to fix the index-row conflicts.
-- The shared working tree is on `main` (the WP-00 branch is merged); this handoff comes from the small PR `docs/memory-after-wp00-merge`.
-- **WP-00** — merged (#27), `WAITING` for the production track: the two counts, approval of the migration on production (`homi-deploy production --migrate`), the deploy, and a foreign media id answering `404` on staging. KI-25 is resolved in code, and the deploy is pending (#28 merged: KI-27, KI-28 open).
-- **WP-01** — `WAITING`: ADR-0016 … 0019 are on `main` with `Status: Proposed`. The first developer has to accept them; then each needs a one-line `Status` change (header and index row) in a small PR. The DEC-45 answers asked in #30 are still open.
-- **WP-02** — `WAITING`: the baseline is on `main` and the audit describes `index-DY_DH7h-.js`. The operator request is not sent, so WP-02 is not `DONE`.
-- **Next in the queue: WP-03** (dependencies and test tooling). Its dependencies WP-00 and WP-01 are merged, but WP-01 still waits for ADR acceptance, and WP-03 installs new dependencies, which needs the first developer's confirmation (DEC-49, `parallel-work.md` §4). Do not start it without the developer's go.
-- Verify:
-  - `make ai-hooks-test` → 55 OK;
-  - `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` → 0 and 0 on the #37 branch before the merge;
-  - `make ci-backend` on WP-00 → exit 0 at its last code change.
+- `main` = `3876d9b` (#38). WP-03 branch `feat/wp-03-dependencies-and-test-tooling` (pushed), **draft PR #39**, 3 commits on `main`. The shared working tree is on that branch.
+- **WP-03** — `WAITING (draft PR #39)` in the spec and the queue row of the branch; `main` still shows `TODO` until #39 merges. Done on the branch: the backend `pgsql` group (step 10) and the package table with vetting in the PR body (step 2). **Nothing is installed**: `frontend/pnpm-lock.yaml`, `composer.lock` unchanged.
+- WP-00, WP-01, WP-02 — `WAITING`, unchanged (see the list below).
+- Local only: database `homi_test` on this machine's Homebrew PostgreSQL (`127.0.0.1`, owner = the OS user). The `.env` database host of this machine is another LAN host; it was not touched.
+- Verify: `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 3 passed; `make ci-backend` → exit 0 (103 tests: 100 passed, 3 skipped); `collect_ids.py --check` and `task_graph.py --check` → 0; `make registry-check` → current.
 
 ## Done this session
-- **2026-11-15, «сливай #27 и #28»** (no deploy workflow exists, so merging deploys nothing):
-  - #27 was merged after a commit that set WP-00 to `WAITING`; CI on its head passed;
-  - #28 was taken out of draft, `main` was merged into it (the KI-25/KI-26 rows conflicted; the KI-25 row now says the deploy is pending), and then it was merged.
-  - On «Удали черновик gmail это не та почта…» the Gmail draft was deleted; the log no longer mentions it.
-- **Live hook probe before the merge** (#29's guard placed temporarily in the working tree): Edit and Write under `kvadro.uz` refused, `npm` and `svn commit` refused, Read, rg and cat allowed. Recorded in #29 and in the WP-01 Handoff.
-- **Merged #29 and #32** (merge commits), then merged `main` into WP-00. The queue-row conflict was resolved. Afterwards `make ai-hooks-test` → 55 OK, `collect_ids --check` → 0, `task_graph --check` → 0.
-- **WP-02 baseline:** `index-DY_DH7h-.js`, SVN r27. Releases read: Dbpp463V, BNLZFfL0, DY_DH7h- (new feature: return banner + `GET /api/feed/new` + in-feed radar card).
-- **WP-02 audit and specifications** done in three subagent passes, reviewed by me:
-  - claims spot-checked in the code (SCR-018 share-only label; LB-APP-048 crash on a missing `count`);
-  - all remapped line references checked by content;
-  - 06 completed by hand.
-- **WP-02 registers:** `collect_ids.py` (+ `--check`), `build_open_questions.py` and `task_graph.py --check` all exit 0. The diff of 20 holds exactly 4 new questions plus Q-APP-024 answered.
-- **Operator request:** a Gmail draft was made and, on the developer's instruction, deleted on 2026-11-15 (wrong mailbox). The text is in the WP-02 spec, Part A.
+- **pgsql group** (`backend/tests/PgsqlTestCase.php`, `tests/Pest.php` binding + `concurrently()`, suite `Pgsql`, `make test-pgsql`, CI steps in `backend.yml`): red first (class, helper, binding missing), then green. `MediaOwnershipRaceTest` fails when `MediaFile::fromStored()` is made `first() ?? create()` (tried, reverted with `git checkout`). Guard: `PgsqlGuardTest` (8 cases); `DB_DATABASE=homi_guard_probe` → 3 skipped, exit 1 with `--fail-on-skipped`.
+- **Package vetting** without installing: `npm view` metadata; a scratch resolution outside the repository (`pnpm install --lockfile-only --ignore-scripts`); `pnpm audit --prod` → no known vulnerabilities; `pnpm audit` → 1 moderate (`minimatch` via `eslint`), the same on `main`'s lockfile; lockfile 417 → 665 packages.
+- **Spec WP-03 corrected** (rule 6): `vite` is a required peer of Vitest 5 (added); `vite-tsconfig-paths` not needed (Vite 8 `resolve.tsconfigPaths`); `esbuild` key → `oxc`; no `esbuild` build script, install scripts are `@swc/core`, `@parcel/watcher` (via `next-intl` 4.15) and `fsevents`; `openapi-typescript` peer `typescript ^5`; `react-dom` peer for `@homi/ui`; pnpm 11 minimum release age; backend details (unbinding, `--fail-on-skipped`, booted-config check).
+- I told the developer mid-session that `php artisan test` drops a shell `DB_CONNECTION`; a run disproved it (Dotenv only clears what it loaded) and I corrected it in chat. The spec states the checked behaviour.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Send the operator request** from the project's own mailbox: the text of the WP-02 spec, Part A, to the operator's contact (only the product owner has it, Q-SYS-009). Never use the Gmail connected to Claude. Then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` (date and sender) in a small PR, and set WP-02 to `DONE`.
-2. **First developer:** accept ADR-0016 … 0019. After that, a small PR changes `Status: Proposed` → `Accepted` in each file header and index row. They also answer the PR-size and deploy-cadence questions of #30; quote the answers here, then set WP-01 to `DONE`.
-3. **WP-00 (production track):** counts, migration approval, deploy, staging check. Then set WP-00 to `DONE`.
-4. **Production track:** the outbound addresses of the API hosts go to the operator directly (asked in #37).
-5. **Reviewer decisions taken in #37** (listed in its body): `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding the banner and the feed card, and whether WP-30 (about 3 700 lines) is split before it starts.
-6. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
+1. **First developer:** confirm the package table of PR #39 (31 packages; the points `vite`, `@vitejs/plugin-react`, `next-intl`'s native packages, no build scripts allowed). Then WP-03 steps 3–9 on the same branch.
+2. **Main's queue row:** WP-03 shows `TODO` on `main` until #39 merges; ask the developer whether a one-line status PR to `main` is wanted.
+3. **Send the operator request** from the project's own mailbox (WP-02 spec, Part A; never the connected Gmail); then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and set WP-02 to `DONE`.
+4. **First developer:** accept ADR-0016 … 0019 (then a `Status` PR) and answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
+5. **WP-00 (production track):** counts, migration approval, deploy, staging check; then `DONE`. Outbound addresses to the operator (#37).
+6. Reviewer decisions of #37: `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding, a WP-30 split. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
 
 ## Gotchas learned this session
-- The developer twice said a PR was merged when GitHub still showed it open. Check `gh api repos/amediateam/homi/pulls/<n> --jq .merged` before acting on "слит".
-- Any insert into 02, 03, 06 or 08 shifts `path:line` references elsewhere (07, 09, `features.csv`, 14, 24, `tasks/**`, short forms like `06:930`). Remap them by matching the old line's content (`git show HEAD:<file>`), and watch for times such as `06:59` in the quiet-hours text.
-- `collect_ids.py` without `--check` rewrites `data/ids.csv` (about 1 700 lines, mostly moved locations); commit the regenerated file once at the end.
-- `rm -rf` under the scratchpad was refused by the permission rules: the probe folder `<scratchpad>/probe` stays.
-- Next numbers: AM-51, KI-29 (PR #28 takes KI-27/28), ADR 0020; audit ids are in `docs/migration/data/ids.csv` on the #37 branch.
+- The PostToolUse Pint hook removes imports that are unused at the moment of an edit: add the `use` lines in the same edit as their first use, or re-add them.
+- A closure written inside a Pest test carries the generated test class as scope; unbind it before `Concurrency` (done in `concurrently()`). The serialiser cannot tell two closures on one line apart.
+- `ProcessDriver` rethrows a child's exception by class; a `QueryException` turns into an `ArgumentCountError` naming it.
+- pnpm 11 silently writes `minimumReleaseAgeExclude` entries for pinned versions younger than its release age; never commit them.
+- The local PostgreSQL has a database named `:memory:` (someone ran pgsql with phpunit's SQLite name) — not ours to drop.
+- Check `gh api repos/amediateam/homi/pulls/<n> --jq .merged` before acting on "слит". Next numbers: AM-51, KI-29, ADR 0020.
 
 ## Active subagent work at handoff
-- None. All three WP-02 passes are merged with #37.
+- None. CI of PR #39 was still running when this was written.
