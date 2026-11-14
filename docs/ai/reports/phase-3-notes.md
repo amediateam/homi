@@ -315,3 +315,34 @@ its own git worktree. The shared working tree stayed on the WP-00 branch.
 - No ADR is accepted.
 - The live-session hook probe has not been done: it is only possible after #29 merges.
 - The first developer has not yet answered on the PR size or on the deploy cadence (asked in #30).
+
+## K. Development track, 2026-11-14 (night) — WP-01 merges, WP-02
+
+Developer: «#29 слит, проверь хук в живой сессии». GitHub said #29 was still open, so the developer chose «Проверить до
+слияния». With #29's guard placed temporarily in the working tree, the live probe on a throwaway `kvadro.uz` folder
+gave:
+
+- `Edit` and `Write` refused with the legacy reason;
+- `npm` and `svn commit` refused;
+- `Read`, `rg` and `cat` allowed.
+
+Then «#29 слит, сливай #32 и бери WP-02»: #29 was still open, and the developer chose «Слить #29, потом #32». Both
+were merged with merge commits (`8aa422f`, `6286ef4`), and `main` was merged into the WP-00 branch.
+
+**WP-02 applied** (PR #37, open):
+
+- `KVADRO_ROOT` is set in this machine's `.ai/local.env`; the legacy checkout is in a `local/smart/kvadro.uz` folder.
+- The baseline pins `index-DY_DH7h-.js` (SVN r27). It is the third release after the audited one, and it is a new
+  feature: the return banner with `GET /api/feed/new` and the radar card in the feed.
+- Audit, registers and 24 specifications are brought up to the pin, in three subagent passes. The main session
+  reviewed and verified each pass:
+  - spot checks in the code (SCR-018, LB-APP-048);
+  - every remapped line reference checked by content;
+  - `task_graph` fixed by covering F-RADAR-009 and F-RADAR-010 in KV-FE-080.
+- Own choices, all listed in #37: the new v1 method `GET /listings/new`; a malformed legacy `count` becomes `503`;
+  the banner and the card stay hidden while radars are off (DEC-51).
+
+On «сделай все сам»: the request to the operator exists as an unsent Gmail draft. It cannot be sent, because only the
+product owner knows the operator's contact (Q-SYS-009). The outbound addresses are asked for in #37.
+
+**Not applied:** the request is not sent; WP-02 is not `DONE`.
