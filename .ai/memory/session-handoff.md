@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-03 merged in #39, WAITING for the deploy; step 11 in PR docs/wp-03-after-merge; WP-00/01/02 WAITING)
+updated: 2026-11-15 (WP-03 merged in #39, WAITING for the deploy; step 11 in PR #41; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -14,7 +14,7 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40»; «потверждаю» (the WP-03 package list of #39); «сливай #39».
 
 ## State at handoff
-- `main` = `3af66f9` (#39 merged on «сливай #39»; `frontend` and `backend` green on `main`; the WP-03 branch is deleted). Follow-up branch `docs/wp-03-after-merge`: `CLAUDE.md` (step 11), WP-03 status `WAITING (merged in #39; deploy with the production track)` in the spec and the queue row. The shared working tree is on that branch.
+- `main` = `3af66f9` (#39 merged on «сливай #39»; `frontend` and `backend` green on `main`; the WP-03 branch is deleted). Follow-up **PR #41** (`docs/wp-03-after-merge`): `CLAUDE.md` (step 11), WP-03 status `WAITING (merged in #39; deploy with the production track)` in the spec and the queue row. The shared working tree is on that branch.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged (see the list below).
 - Local only: database `homi_test` on this machine's Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-frontend` → exit 0; `cd frontend && pnpm test:e2e` → 2 passed; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 3 passed; `make ci-backend` → exit 0; `make registry-check` → current.
@@ -35,7 +35,7 @@ Written for whoever continues the **development track** (the second developer, a
 - **Spec WP-03 corrected** (rule 6), Handoff filled; phase notes §L extended with AM-51.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Merge of the follow-up PR** (`docs/wp-03-after-merge`: `CLAUDE.md` step 11 + status). Then WP-03 `DONE` after the production track's deploy (a no-op for users).
+1. **Merge of PR #41** (`docs/wp-03-after-merge`: `CLAUDE.md` step 11 + status). Then WP-03 `DONE` after the production track's deploy (a no-op for users).
 2. **Send the operator request** from the project's own mailbox (WP-02 spec, Part A; never the connected Gmail); then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and set WP-02 to `DONE`.
 3. **First developer:** accept ADR-0016 … 0019 (then a `Status` PR) and answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
 4. **WP-00 (production track):** counts, migration approval, deploy, staging check; then `DONE`. Outbound addresses to the operator (#37).

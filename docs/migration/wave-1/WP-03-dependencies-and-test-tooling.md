@@ -313,5 +313,5 @@ the other developer's review.
   - **No Testing Library cleanup.** Vitest runs without globals, so the first component test (WP-20) adds `afterEach(cleanup)` in a setup file for the `jsdom` projects.
   - **The positive path of `fixture()` is untested.** It is exercised with the first fixture of WP-10.
 - **Merged** on 2026-11-15 (#39, merge commit `3af66f9`; `frontend` and `backend` green on `main`). Step 11, the
-  `CLAUDE.md` update, is in the small follow-up PR `docs/wp-03-after-merge`.
+  `CLAUDE.md` update, is in the small follow-up PR #41.
 - **Next:** the deploy with the production track (a no-op for users), then `DONE`.
