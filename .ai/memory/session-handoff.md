@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-01 and WP-02 merged into main, both WAITING; WP-00 PR #27 open; next in queue WP-03 waits for WP-00)
+updated: 2026-11-15 (WP-00, WP-01, WP-02 merged into main, all WAITING; the shared tree is on main; next in queue WP-03 needs dependency approval)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -14,18 +14,22 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-14: «бери следующий пакет WP-01»; «#29 слит, сливай #32 и бери WP-02» (#29 was still open; the developer then chose «Слить #29, потом #32»); «сделай все сам»; «продолжай, открой PR когда агент закончит»; 2026-11-15: «сливай #37 и все PR WP-01».
 
 ## State at handoff
-- `main` = `3bced89`. Merged on 2026-11-15 with merge commits: #30 `5b6377a`, #31 `ada15b9`, #33 `c0e8732`, #34 `f893d08`, #35 `a70179d`, #36 `77e0c6d`, #37 `3bced89`. Before each ADR merge, `main` was merged into the ADR branch to fix the index-row conflicts.
-- The shared working tree is on `feat/wp-00-media-ownership-fix`, with `main` merged in (`dc055cf`).
-- **WP-00** — PR #27 `REVIEW`; #28 waits until #27 is deployed.
+- `main` = `aac219b` (#27 WP-00 `06be11d` and #28 known issues `aac219b` merged on 2026-11-15, after the WP-01/WP-02 merges). Merged on 2026-11-15 with merge commits: #30 `5b6377a`, #31 `ada15b9`, #33 `c0e8732`, #34 `f893d08`, #35 `a70179d`, #36 `77e0c6d`, #37 `3bced89`. Before each ADR merge, `main` was merged into the ADR branch to fix the index-row conflicts.
+- The shared working tree is on `main` (the WP-00 branch is merged); this handoff comes from the small PR `docs/memory-after-wp00-merge`.
+- **WP-00** — merged (#27), `WAITING` for the production track: the two counts, approval of the migration on production (`homi-deploy production --migrate`), the deploy, and a foreign media id answering `404` on staging. KI-25 is resolved in code, and the deploy is pending (#28 merged: KI-27, KI-28 open).
 - **WP-01** — `WAITING`: ADR-0016 … 0019 are on `main` with `Status: Proposed`. The first developer has to accept them; then each needs a one-line `Status` change (header and index row) in a small PR. The DEC-45 answers asked in #30 are still open.
-- **WP-02** — `WAITING`: the baseline is on `main` and the audit describes `index-DY_DH7h-.js`. The operator request is an unsent Gmail draft, so WP-02 is not `DONE` until it is sent.
-- **Next in the queue: WP-03.** It depends on WP-00, which is not merged. It also installs dependencies, which needs the first developer's approval.
+- **WP-02** — `WAITING`: the baseline is on `main` and the audit describes `index-DY_DH7h-.js`. The operator request is not sent, so WP-02 is not `DONE`.
+- **Next in the queue: WP-03** (dependencies and test tooling). Its dependencies WP-00 and WP-01 are merged, but WP-01 still waits for ADR acceptance, and WP-03 installs new dependencies, which needs the first developer's confirmation (DEC-49, `parallel-work.md` §4). Do not start it without the developer's go.
 - Verify:
   - `make ai-hooks-test` → 55 OK;
   - `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` → 0 and 0 on the #37 branch before the merge;
   - `make ci-backend` on WP-00 → exit 0 at its last code change.
 
 ## Done this session
+- **2026-11-15, «сливай #27 и #28»** (no deploy workflow exists, so merging deploys nothing):
+  - #27 was merged after a commit that set WP-00 to `WAITING`; CI on its head passed;
+  - #28 was taken out of draft, `main` was merged into it (the KI-25/KI-26 rows conflicted; the KI-25 row now says the deploy is pending), and then it was merged.
+  - On «Удали черновик gmail это не та почта…» the Gmail draft was deleted; the log no longer mentions it.
 - **Live hook probe before the merge** (#29's guard placed temporarily in the working tree): Edit and Write under `kvadro.uz` refused, `npm` and `svn commit` refused, Read, rg and cat allowed. Recorded in #29 and in the WP-01 Handoff.
 - **Merged #29 and #32** (merge commits), then merged `main` into WP-00. The queue-row conflict was resolved. Afterwards `make ai-hooks-test` → 55 OK, `collect_ids --check` → 0, `task_graph --check` → 0.
 - **WP-02 baseline:** `index-DY_DH7h-.js`, SVN r27. Releases read: Dbpp463V, BNLZFfL0, DY_DH7h- (new feature: return banner + `GET /api/feed/new` + in-feed radar card).
@@ -34,12 +38,12 @@ Written for whoever continues the **development track** (the second developer, a
   - all remapped line references checked by content;
   - 06 completed by hand.
 - **WP-02 registers:** `collect_ids.py` (+ `--check`), `build_open_questions.py` and `task_graph.py --check` all exit 0. The diff of 20 holds exactly 4 new questions plus Q-APP-024 answered.
-- **Operator request:** an unsent Gmail draft with the full text. The recipient is unknown; it is the operator's contact, which only the product owner has (Q-SYS-009).
+- **Operator request:** a Gmail draft was made and, on the developer's instruction, deleted on 2026-11-15 (wrong mailbox). The text is in the WP-02 spec, Part A.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Send the operator request.** Add the recipient (the operator's contact, which only the product owner has, Q-SYS-009) to the Gmail draft and send it. Then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` (date and sender) in a small PR, and set WP-02 to `DONE`.
+1. **Send the operator request** from the project's own mailbox: the text of the WP-02 spec, Part A, to the operator's contact (only the product owner has it, Q-SYS-009). Never use the Gmail connected to Claude. Then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` (date and sender) in a small PR, and set WP-02 to `DONE`.
 2. **First developer:** accept ADR-0016 … 0019. After that, a small PR changes `Status: Proposed` → `Accepted` in each file header and index row. They also answer the PR-size and deploy-cadence questions of #30; quote the answers here, then set WP-01 to `DONE`.
-3. **WP-00:** review and merge #27, then #28 after the production track's counts, migration approval and deploy.
+3. **WP-00 (production track):** counts, migration approval, deploy, staging check. Then set WP-00 to `DONE`.
 4. **Production track:** the outbound addresses of the API hosts go to the operator directly (asked in #37).
 5. **Reviewer decisions taken in #37** (listed in its body): `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding the banner and the feed card, and whether WP-30 (about 3 700 lines) is split before it starts.
 6. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.

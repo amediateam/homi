@@ -259,7 +259,8 @@ Done:
 - **Checks:** `collect_ids.py` with `--check`, `build_open_questions.py` and `task_graph.py --check` exit 0, and
   their output is committed. F-RADAR-009 and F-RADAR-010 are covered by KV-FE-080.
 - **Part A, the request:**
-  - the text is ready as an unsent mail draft for the developer;
+  - the text is ready in Part A; it is sent from the project's own mailbox (a draft made in another mailbox was
+    deleted on 2026-11-15);
   - the outbound addresses are asked of the production track in the PR description;
   - `GET /api/feed/new` was added to point 2b.
 
