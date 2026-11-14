@@ -31,8 +31,8 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
 | Texts | 472 keys per locale in the current legacy tree; the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-plF_TOcT.js`. Two later releases are in the legacy tree and not in the
-audit (Q-APP-024); the queue starts by bringing the audit up to a pinned release (section 8).
+The audit describes legacy release `index-DY_DH7h-.js`, pinned by WP-02 in `wave-1/baseline.md` (Q-APP-024). Each
+later release is read into the audit as described in section 8.
 
 ## 2. Scope and rules
 
@@ -400,8 +400,9 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
 ## 8. Legacy baseline and release intake
 
 1. **Pin.** The first stage of the queue names the legacy release the work describes and brings 03, 08, 04 and the
-   registers up to it. Already missing: the report-detail step with the `detail` field, the `price_kind: business`
-   label, the badge order and the no-access text (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-24`).
+   registers up to it. Done by WP-02 on 2026-11-14 (`wave-1/baseline.md`): the report-detail step with the `detail`
+   field, the `price_kind: business` label, the badge order, the no-access text, and the "new since your last
+   visit" banner with the radar card in the feed (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-61`).
 2. **Intake.** Each later legacy release is read from its sync report (`$KVADRO_ROOT/demo/app/docs/releases/`) and
    becomes one queue item: update the audit, the affected specification, the stub fixtures, the legacy translator.
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
