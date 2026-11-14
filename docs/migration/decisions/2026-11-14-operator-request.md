@@ -11,10 +11,10 @@ No key, address, phone number or contact detail is written here: a value is name
 | Item | State |
 | ---- | ----- |
 | Text prepared | 2026-11-14, the WP-02 specification, Part A (with `GET /api/feed/new` added to point 2b, see below) |
-| Handed to the product owner | pending: the developer hands it over and fills in the date |
+| Handed to the product owner | 2026-11-14: the text is prepared as an unsent mail draft for the developer. The operator's contact is known only to the product owner (Q-SYS-009), so the recipient is still to be filled in |
 | Sent to the operator's contact | pending: date and sender (the product owner) to be filled in |
 | Text as sent | unchanged from the specification unless pasted below |
-| Outbound addresses of the staging and production API hosts | pending: asked of the production track, which gives them to the operator directly. This file only records that this was done |
+| Outbound addresses of the staging and production API hosts | 2026-11-14: asked of the production track in the description of the WP-02 pull request ("Needs from the production track"). The production track gives them to the operator directly; this file only records that they were asked for |
 
 **Change to the text before sending.** The legacy release `index-DY_DH7h-.js` (the baseline, see
 [`../wave-1/baseline.md`](../wave-1/baseline.md)) added `GET /api/feed/new`, which the feed's "new since your last
