@@ -26,6 +26,7 @@ When production needs an application change (trusted proxies, a health check, a 
 - Never force-push a branch someone else works on. Your own unshared feature branch may be rebased on `main` and pushed with `--force-with-lease`; with a shared branch merge `main` into it instead.
 - Merge method: **merge commit** (no squash, no rebase-merge) — the phase stack #1 → #4 was merged that way, and history keeps matching the phase reports. Revisit together if you want squash later.
 - PRs stay small (one task, roughly ≤ 400 changed lines without generated files) with green CI. The other developer reviews every PR (CODEOWNERS paths always); the author merges after that approval. Generated files are committed together with the change that produced them.
+- Wave 1 of the migration (`docs/migration/wave-1/README.md`, DEC-45) is the exception: one PR per work package, about 1 500–3 000 changed lines without generated files, branch `feat/wp-<number>-<slug>`, reviewed by the other developer before merge. The two developers work one queue in relay, so a package branch is a shared branch: merge `main` into it, never force-push. Shared files still travel in small separate PRs.
 - Parallel agents on one machine: one worktree per agent under `.worktrees/<name>` (gitignored), one task each.
 - Before opening or updating a PR: `git fetch` and rebase your own branch on `origin/main`, then run the gate for the side you touched (`make ci-backend` / `make ci-frontend`).
 
@@ -64,3 +65,5 @@ When production needs an application change (trusted proxies, a health check, a 
 ## 8. Telling the other track
 
 Put in the PR description whatever the other side must act on: new env keys, queues, scheduled commands, migrations with data impact, deploy-time commands, changed ports or hosts. Decisions you need from the first developer go into the PR and into the "Waiting for the developer" section of `session-handoff.md`.
+
+A Wave 1 package lists what it needs from the production track in its specification; copy that list into the PR description.
