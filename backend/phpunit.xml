@@ -21,6 +21,9 @@
         </include>
     </source>
     <php>
+        <!-- The OpenAPI tests export the document in the test process, and Scramble keeps the parsed code of
+             every class it reads in static caches; the suite needs about 160M, PHP's CLI default is 128M (WP-10). -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

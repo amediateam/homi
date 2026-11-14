@@ -77,7 +77,16 @@
             "Composer\\Config::disableProcessTimeout",
             "npm run check",
             "npm run types:check",
-            "@test"
+            "@test",
+            "@openapi:check"
+        ],
+        "openapi:export": [
+            "@php artisan scramble:export"
+        ],
+        "openapi:check": [
+            "@openapi:export",
+            "git ls-files --error-unmatch ../docs/api/openapi.json",
+            "git diff --exit-code -- ../docs/api/openapi.json"
         ],
         "types:check": [
             "phpstan analyse --memory-limit=1G"

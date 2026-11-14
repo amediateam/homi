@@ -44,7 +44,8 @@ abstract class ApiController extends Controller
 
     /**
      * An answer produced by a source driver: `meta.source` is the driver that answered, never the configured one,
-     * and a `source` key in `$meta` cannot replace it.
+     * and a `source` key in `$meta` cannot replace it. The enum itself goes into the body (JSON writes its value), so
+     * the OpenAPI export documents `meta.source` as the enum of the three drivers.
      *
      * @param  array<string, mixed>  $meta
      */
@@ -53,21 +54,17 @@ abstract class ApiController extends Controller
         return response()->json([
             'success' => true,
             'data' => $data,
-            'meta' => ['source' => $source->value] + $meta,
+            'meta' => [...$meta, 'source' => $source],
         ], $status);
     }
 
     /**
-     * A cursor list (ADR-0017): `meta.next_cursor` is always present and `null` ends the list.
-     *
-     * @param  iterable<int, mixed>  $items
+     * A cursor list (ADR-0017): `meta.next_cursor` is always present and `null` ends the list. The items are a
+     * resource collection, so the list is written as a JSON list and documented as a list of that resource.
      */
-    protected function cursorPage(iterable $items, ?string $nextCursor, SourceDriver $source): JsonResponse
+    protected function cursorPage(ResourceCollection $items, ?string $nextCursor, SourceDriver $source): JsonResponse
     {
-        // A resource collection writes a list itself; anything else is re-indexed so gaps in keys stay a JSON list.
-        $data = $items instanceof ResourceCollection ? $items : array_values(is_array($items) ? $items : iterator_to_array($items, false));
-
-        return $this->sourced($data, $source, ['next_cursor' => $nextCursor]);
+        return $this->sourced($items, $source, ['next_cursor' => $nextCursor]);
     }
 
     /**

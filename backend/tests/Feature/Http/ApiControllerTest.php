@@ -4,6 +4,7 @@ use App\Enums\SourceDriver;
 use App\Http\Controllers\Api\V1\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 function apiControllerForTest(): ApiController
@@ -41,8 +42,7 @@ function apiControllerForTest(): ApiController
             return $this->sourced($data, $source, $meta, $status);
         }
 
-        /** @param  iterable<int, mixed>  $items */
-        public function cursor(iterable $items, ?string $next, SourceDriver $source): JsonResponse
+        public function cursor(ResourceCollection $items, ?string $next, SourceDriver $source): JsonResponse
         {
             return $this->cursorPage($items, $next, $source);
         }
@@ -127,24 +127,20 @@ it('resolves a resource in a sourced answer', function (): void {
 });
 
 it('ends a cursor list with a null next cursor', function (): void {
-    $data = apiControllerForTest()->cursor([['id' => 1], ['id' => 2]], null, SourceDriver::Stub)->getData(true);
+    $data = apiControllerForTest()->cursor(JsonResource::collection([['id' => 1], ['id' => 2]]), null, SourceDriver::Stub)->getData(true);
 
-    expect($data)->toBe(['success' => true, 'data' => [['id' => 1], ['id' => 2]], 'meta' => ['source' => 'stub', 'next_cursor' => null]]);
+    expect($data)->toBe(['success' => true, 'data' => [['id' => 1], ['id' => 2]], 'meta' => ['next_cursor' => null, 'source' => 'stub']]);
 });
 
-it('pages a cursor list of resources or of a generator', function (): void {
-    $resources = apiControllerForTest()->cursor(JsonResource::collection([['id' => 1]]), 'c2', SourceDriver::Legacy)->getData(true);
-    $generated = apiControllerForTest()->cursor((function (): Generator {
-        yield 5 => ['id' => 3];
-    })(), 'c3', SourceDriver::Stub)->getData(true);
+it('carries the next cursor of a cursor list', function (): void {
+    $data = apiControllerForTest()->cursor(JsonResource::collection([['id' => 1]]), 'c2', SourceDriver::Legacy)->getData(true);
 
-    expect($resources)->toBe(['success' => true, 'data' => [['id' => 1]], 'meta' => ['source' => 'legacy', 'next_cursor' => 'c2']])
-        ->and($generated['data'])->toBe([['id' => 3]]);
+    expect($data)->toBe(['success' => true, 'data' => [['id' => 1]], 'meta' => ['next_cursor' => 'c2', 'source' => 'legacy']]);
 });
 
 it('writes a cursor list as a JSON list even when the keys have gaps', function (): void {
-    $fromArray = apiControllerForTest()->cursor([3 => ['id' => 3], 7 => ['id' => 7]], null, SourceDriver::Stub);
-    $fromCollection = apiControllerForTest()->cursor(collect([['id' => 1], null, ['id' => 2]])->filter(), null, SourceDriver::Stub);
+    $fromArray = apiControllerForTest()->cursor(JsonResource::collection([3 => ['id' => 3], 7 => ['id' => 7]]), null, SourceDriver::Stub);
+    $fromCollection = apiControllerForTest()->cursor(JsonResource::collection(collect([['id' => 1], null, ['id' => 2]])->filter()), null, SourceDriver::Stub);
 
     expect($fromArray->getContent())->toContain('"data":[{"id":3},{"id":7}]')
         ->and($fromCollection->getContent())->toContain('"data":[{"id":1},{"id":2}]');

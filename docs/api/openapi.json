@@ -1,0 +1,521 @@
+{
+    "openapi": "3.1.2",
+    "info": {
+        "title": "HOMI",
+        "version": "1.0.0",
+        "description": "HOMI API v1. Every response uses the `{success, data, meta?}` envelope; errors use `{success: false, message, code, errors?}` (ADR-0007, ADR-0017); every answer of a source method carries `meta.source` (`stub`, `legacy` or `native`), and cursor lists `meta.next_cursor` (docs/api/README.md). Authentication: Sanctum bearer tokens (ADR-0003). Collector intake: see docs/api/intake.md."
+    },
+    "servers": [
+        {
+            "url": "/api/v1"
+        }
+    ],
+    "paths": {
+        "/media/{media}": {
+            "get": {
+                "operationId": "v1.media.show",
+                "summary": "Show a media file with its public or temporary URLs",
+                "tags": [
+                    "Media"
+                ],
+                "parameters": [
+                    {
+                        "name": "media",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MediaFileResource"
+                                        },
+                                        "meta": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.media.destroy",
+                "description": "The original, its variants and the record go with the last reference; while another owner\nholds the file it stays readable for them.",
+                "summary": "Delete the caller's reference to a media file",
+                "tags": [
+                    "Media"
+                ],
+                "parameters": [
+                    {
+                        "name": "media",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/media": {
+            "post": {
+                "operationId": "v1.media.store",
+                "description": "Stores the original under a content-addressed key and queues WebP variants; uploading the\nsame bytes again returns the existing media file and makes the caller one of its owners.",
+                "summary": "Upload an image",
+                "tags": [
+                    "Media"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreMediaRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MediaFileResource"
+                                        },
+                                        "meta": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/media/presign": {
+            "post": {
+                "operationId": "v1.media.presign",
+                "summary": "Create a presigned PUT URL on the tmp disk",
+                "tags": [
+                    "Presign"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PresignRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "method": {
+                                                    "type": "string",
+                                                    "const": "PUT"
+                                                },
+                                                "url": {
+                                                    "type": "string"
+                                                },
+                                                "headers": {
+                                                    "type": "string"
+                                                },
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "method",
+                                                "url",
+                                                "headers",
+                                                "key",
+                                                "expires_at"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/media/register": {
+            "post": {
+                "operationId": "v1.media.register",
+                "summary": "Register an object uploaded through a presigned URL as a media file",
+                "tags": [
+                    "Presign"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterUploadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MediaFileResource"
+                                        },
+                                        "meta": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ApiError": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "enum": [
+                            false
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable summary; not for program logic."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine-readable code, snake_case (docs/api/README.md)."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "description": "Validation errors by field (422).",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "success",
+                    "message",
+                    "code"
+                ],
+                "title": "ApiError"
+            },
+            "MediaFileResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "mime": {
+                        "type": "string"
+                    },
+                    "ext": {
+                        "type": "string"
+                    },
+                    "bytes": {
+                        "type": "integer"
+                    },
+                    "width": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "height": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "public",
+                            "private"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "ready",
+                            "failed"
+                        ]
+                    },
+                    "urls": {
+                        "type": "object",
+                        "properties": {
+                            "original": {
+                                "type": "string"
+                            },
+                            "variants": {
+                                "type": "array",
+                                "description": "width => URL (WebP)",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "original",
+                            "variants"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "mime",
+                    "ext",
+                    "bytes",
+                    "width",
+                    "height",
+                    "visibility",
+                    "status",
+                    "urls",
+                    "created_at"
+                ],
+                "title": "MediaFileResource"
+            },
+            "MediaVisibility": {
+                "type": "string",
+                "enum": [
+                    "public",
+                    "private"
+                ],
+                "title": "MediaVisibility"
+            },
+            "PresignRequest": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "mime": {
+                        "type": "string",
+                        "enum": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                            "image/gif"
+                        ]
+                    },
+                    "bytes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 26214400
+                    }
+                },
+                "required": [
+                    "filename",
+                    "mime",
+                    "bytes"
+                ],
+                "title": "PresignRequest"
+            },
+            "RegisterUploadRequest": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "description": "Keys are issued by POST /media/presign as uploads/{owner_type}/{owner_id}/{ulid}.{ext}.",
+                        "pattern": "^uploads\\/(user|source)\\/[0-9A-Za-z]+\\/[A-Za-z0-9]+\\.(jpg|png|webp|gif)$",
+                        "maxLength": 255
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/MediaVisibility"
+                    }
+                },
+                "required": [
+                    "key"
+                ],
+                "title": "RegisterUploadRequest"
+            },
+            "StoreMediaRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Content validation (MIME sniffing, dimensions) happens in HashedUploader."
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/MediaVisibility"
+                    }
+                },
+                "required": [
+                    "file"
+                ],
+                "title": "StoreMediaRequest"
+            }
+        },
+        "responses": {
+            "AuthorizationException": {
+                "description": "Authorization error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ApiError"
+                        }
+                    }
+                }
+            },
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ApiError"
+                        }
+                    }
+                }
+            },
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ApiError"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

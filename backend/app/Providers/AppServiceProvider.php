@@ -2,12 +2,18 @@
 
 namespace App\Providers;
 
+use App\Http\DashboardAccess;
+use App\Http\OpenApi\ApiErrorSchema;
+use App\Http\OpenApi\RelativeServer;
+use App\Models\User;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -32,6 +38,19 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->configureApiDocs();
+    }
+
+    /**
+     * `/docs/api` (Scramble): open locally; elsewhere behind the same nginx basic auth as Horizon and Telescope.
+     * nginx sets the user only in the `/telescope` and `/horizon` locations today, so the docs answer 403 on staging
+     * and production until the production track adds `/docs/api` there.
+     */
+    protected function configureApiDocs(): void
+    {
+        Gate::define('viewApiDocs', fn (?User $user = null): bool => DashboardAccess::allows(request()));
+
+        Scramble::configure()->withDocumentTransformers([ApiErrorSchema::class, RelativeServer::class]);
     }
 
     /**
