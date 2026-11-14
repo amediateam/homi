@@ -165,8 +165,12 @@ interface RadarSender {
   failed with reason `ineligible` or `duplicate` and `false` is returned. This closes the gap between planning and
   sending (`15` §3.6 rows 6–8).
 - `markSent()` sets `sent_at` and stores chat and message id on the ledger row. `markFailed()`: permanent → sets
-  `failed_at` and releases the ledger claim; transient → clears the claim, adds an attempt and moves `release_at` by
-  1, 5 or 15 minutes; the fifth attempt becomes permanent.
+  `failed_at` and releases the ledger claim; transient → clears the claim, releases the ledger claim, adds an
+  attempt and moves `release_at` by 1, 5 or 15 minutes; the fifth attempt becomes permanent. `defer()` clears the
+  claim and releases the ledger claim in the same way and adds no attempt. Without the release, the next `claim()`
+  of the same row would find its own ledger row and fail the item as `duplicate`.
+- The ledger origin passed by `claim()` follows the item's kind: `instant` → `instant`; `quiet_hold` and `digest` →
+  `digest` (both leave as a digest message).
 - `App\Services\Delivery\DatabaseRadarOutbox` implements `RadarOutbox`.
 
 Job `App\Jobs\Radar\DeliverRadarItems` (queue `notifications` — outbound sending must not wait behind incoming
@@ -174,7 +178,10 @@ updates on `telegram`; unique per user id, one try): reads `dueFor()`, sends `in
 `sendCard()`, and groups `quiet_hold` and `digest` items that share
 a `release_at` into one `sendDigest()` call — one digest per user and slot. Each item is claimed before sending and
 marked after. The job is dispatched by a listener on `DeliveryDue` and by the command `radar:release` (scheduled
-every minute, iterates `dueUsers()`).
+every minute, iterates `dueUsers()`). It carries the user id, not the model, and implements
+`ShouldBeUniqueUntilProcessing`: with plain `ShouldBeUnique` the lock is held until `handle()` returns
+(`Illuminate\Queue\CallQueuedHandler`), so the job's own re-dispatch after a deferral would be dropped silently. Two
+runs for one user may then overlap; the claim per item makes that harmless.
 
 This package binds `App\Services\Delivery\NullRadarSender`: with it the job returns without claiming anything, so
 items wait untouched. WP-57 binds its sender and changes nothing else here.
@@ -208,12 +215,12 @@ Tables with a user link, for the erasure registry of WP-47: `radar_deliveries`, 
 - `backend/app/Services/Delivery/Contracts/{RadarOutbox,RadarSender}.php`; `backend/app/Enums/Delivery/{OutboxKind,DeliveryOrigin}.php`
 - `backend/app/Jobs/Radar/{PollFilterSet,DeliverRadarItems}.php`; `backend/app/Console/Commands/Radar/{PollRadars,ReleaseRadars,PruneRadars,RadarStatus}.php`
 - `backend/app/Events/Delivery/DeliveryDue.php`, `backend/app/Events/Telegram/ChatUnreachable.php`,
-  `backend/app/Exceptions/Delivery/SendFailed.php`; `backend/app/Listeners/Radar/*.php` (the five rows above and
-  `DispatchDeliveryOnDue`)
+  `backend/app/Exceptions/Delivery/{SendFailed,SendDeferred}.php`; `backend/app/Listeners/Radar/*.php` (the four
+  rows above and `DispatchDeliveryOnDue`)
 - `backend/config/{radar,delivery}.php`, `backend/routes/console.php`, `backend/app/Providers/AppServiceProvider.php`
   (bindings); `backend/config/horizon.php` — separate shared-file PR
 - `backend/tests/Unit/Delivery/DeliveryPlannerTimeTest.php`; `backend/tests/Feature/Delivery/{PollFilterSetTest,RadarMatcherTest,DeliveryLedgerTest,DeliveryPlannerTest,RadarOutboxTest,DeliverRadarItemsTest,LifecycleListenersTest,RadarCommandsTest}.php`;
-  `backend/tests/Feature/Pgsql/DeliveryRaceTest.php`; `backend/tests/Support/FakeRadarSender.php`
+  `backend/tests/Pgsql/DeliveryRaceTest.php`; `backend/tests/Support/FakeRadarSender.php`
 - `backend/.env.example` (`RADAR_MATCHING_ENABLED`, `RADAR_POLL_INTERVAL`, `RADAR_POLL_BUDGET_PER_MINUTE`) —
   separate shared-file PR
 
@@ -248,7 +255,8 @@ or failed — check `radar:status` before turning matching on.
 
 ## Tests
 
-- Planner time matrix (unit, dataset): the quiet presets of WP-11 at start − 1 s, start, end − 1 s, end; `null`
+- Planner time matrix (unit, dataset; files under `tests/Unit` have no application, so the time rule is a pure
+  function that receives the default digest hours as an argument): the quiet presets of WP-11 at start − 1 s, start, end − 1 s, end; `null`
   quiet hours; digest hours `[9]`, `[9, 19]`, `[12, 20]`, `[19]` with the next-day wrap at 19:00 UTC; a digest hour
   inside quiet hours moves to the window end; no digest hours → default; results identical under process time zones
   `UTC` and `Asia/Tashkent`.

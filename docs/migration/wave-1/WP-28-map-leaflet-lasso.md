@@ -307,8 +307,10 @@ cases launch with `?map=gl`.
 - `map-leaflet.spec.ts`: the scenarios of `map.spec.ts` (pins, stack, cluster, card, error, empty, locate) on
   Leaflet; a max-zoom cluster tap with a spread stack collapses the stack first.
 - `map-lasso.spec.ts`, on both engines: filters → «Обвести на карте» → map in drawing mode with the BackButton
-  visible → Back cancels and the map stays; lasso button → mouse stroke of a large loop → the area pill, and the
-  next `listings/map` and `listings` requests carry `polygon` and no districts or zones; a tiny stroke →
+  visible → Back cancels and the map stays; lasso button → mouse stroke of a large loop → the area pill, the
+  next `/bff/listings/map` request carries `polygon` and no districts or zones, and the address keeps `polygon`
+  after the toggle to the list (the feed's first page is fetched on the server in cookie mode and is not visible
+  to the test); a tiny stroke →
   «Обведите покрупнее»; «Отмена»; reload on `/map?draw=1` → still drawing → Back → `/map` without `draw`; × on
   the pill removes the polygon.
 - `spot-map.spec.ts`: mini map mounts on scroll; tap → fullscreen; Back closes it before the listing; locate with

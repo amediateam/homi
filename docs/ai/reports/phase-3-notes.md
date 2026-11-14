@@ -184,3 +184,30 @@ Choices made while writing the plan (the developers can change them in the revie
 - the specifications of the work packages were drafted by three subagents from the audit and the earlier task files, then checked by the main session (see the handoff for what was checked).
 
 Checks at the last commit of this section: 44 specification files, each with the template's field table and ten sections (shell loop); `collect_ids.py --check` → exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; the v1 methods named in the specifications against `25` §4.2 → none undefined (script); path and address scan → no hits. Coverage totals (45/45 screens, 69/69 client rules, 47/47 client defects, 84/84 bot handlers, 76/76 buttons, 88/88 texts) are the authors' reports, not re-counted. The subagents hit the usage limit twice and were resumed.
+
+## G. Development track, 2026-11-14 (evening) — verification pass over the Wave 1 specifications
+
+The developer asked whether the colleague can start and whether the plan leaves no question. The honest state was:
+written in full, read against the code only in part. So a second pass was run.
+
+- WP-00 … WP-03 were read by the main session against the code they change. WP-00 had four defects (a validation
+  pattern that rejects the new upload key and was not listed; a generator command with the wrong namespace;
+  `media_files.uploaded_by` is a foreign key to `users` but receives the id of any actor; the variants job fails
+  before `handle()` when its row is deleted). WP-03 and WP-21 designed the fake Telegram twice.
+- The other 40 specifications were read by three agents (API, Mini App, bot with landing and launch) against the
+  repository, against each other, against `25` and for executability: 58 + 81 + 71 corrections. The main session
+  sampled 26 of their claims against the framework source, the application code and the bundled Next.js
+  documentation; all 26 held.
+- One thing was settled by the main session for all packages: tests of concurrent writes. They live in
+  `backend/tests/Pgsql/` with their own base class, run only against a database whose name ends with `_test`, and
+  use one helper `concurrently()`; WP-03 builds this (it was undefined, and seven packages needed it).
+- `25` §4.2: the two `GET /landing/*` methods are public (the note said otherwise).
+- The test phone numbers of WP-26 and WP-32 were replaced by plainly synthetic ones.
+
+Not covered by the pass (also stated in `docs/migration/wave-1/README.md`): nothing was executed; texts, constants
+and thresholds were not compared line by line with the audit; the behaviour of packages that are not installed yet
+and of the Telegram Bot API is worded "verify before writing".
+
+Checks at the commit: 44 files with the template's field table and ten sections (script); `collect_ids.py --check`
+→ exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; every repository path named
+in the specifications exists or is created by a package (script); address and token scan → no hit.

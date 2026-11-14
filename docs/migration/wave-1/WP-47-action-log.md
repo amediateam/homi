@@ -7,7 +7,7 @@
 | Depends on | WP-44 (and, by queue order, WP-45 and WP-46: their tables are registered here) |
 | Size | about 2 600 changed lines, L |
 | Behaviour reference | WP-11 (`POST /events`: body, catalogue, codes — unchanged here); `25` §3.9, §5 (action log, erasure); `24` §8.1 (DEC-47), §8.2 (Q-SEC-021); `08` row of API-034; `03` §3.3; `16` SEC-REQ-022, SEC-REQ-036, SEC-REQ-038, SEC-REQ-039, SEC-REQ-047; tasks `tasks/backend/KV-BE-150-action-log.md`, `KV-BE-151-api-events.md`, `KV-BE-152-posthog-server.md`, `KV-BE-165-retention-m4-m6-m7.md`, `KV-BE-050-erasure-service.md` (rules, edge cases, tests — not their legacy route or migration tables), and `KV-BE-049-retention-deletion-adr.md` for the proposed retention periods |
-| Needs from the production track | 1. Server env on staging and production: `ERASURE_SUBJECT_KEY` (random, at least 32 bytes, per environment, never rotated without a plan); `POSTHOG_HOST`, `POSTHOG_PROJECT_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` of that environment's own PostHog project (DEC-47; separate projects for staging and production); `ANALYTICS_FORWARD_TO_POSTHOG=true` once the keys are set. 2. Approve the migrations on production: the partitioned `user_action_log` with its first partitions, and `erasure_requests`. 3. Confirm the scheduler runs, that application logs are kept at most 30 days and database backups at most 14 days (the privacy promises of the bot text and the landing rely on it). 4. Review the shared-file PR that sets `horizon.trim.failed` to 7 days |
+| Needs from the production track | 1. Server env on staging and production: `ERASURE_SUBJECT_KEY` (random, at least 32 bytes, per environment, never rotated without a plan); `POSTHOG_HOST`, `POSTHOG_PROJECT_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` of that environment's own PostHog project (DEC-47; separate projects for staging and production); `ANALYTICS_FORWARD_TO_POSTHOG=true` once the keys are set. 2. Approve the migrations on production: the partitioned `user_action_log` with its first partitions, and `erasure_requests`. 3. Confirm the scheduler runs, that application logs are kept at most 30 days and database backups at most 14 days (the privacy promises of the bot text and the landing rely on it). 4. Nothing for Horizon: `trim.failed` and `trim.recent_failed` are already 10 080 minutes (7 days) in `backend/config/horizon.php`; do not raise them without changing the retention registry |
 
 ## Goal
 
@@ -134,7 +134,7 @@ final class ErasureService {
 | `recount` | delete, then recompute aggregates | `listing_votes` (through `VoteService`, so marks that lose their majority are removed) |
 | `tokens` | delete by morph owner | `personal_access_tokens` |
 | `references` | reference-counted delete | `media_file_references` of the user (WP-00 rules decide about the object) |
-| `custom` | a named callback | `telegram_updates` rows of the user's Telegram id (WP-50 owns the ledger and updates this entry) |
+| `custom` | a named callback | `telegram_updates` rows of the user's Telegram id (WP-50 owns the ledger and updates this entry; today the table has only `bot_id`, `update_id` and `payload`, and the webhook is a fail-closed stub, so the callback registered here does nothing) |
 | `last` | the row itself | `users` |
 
 `erase()`:
@@ -143,8 +143,11 @@ final class ErasureService {
    `ERASURE_SUBJECT_KEY`.
 2. One transaction: walk the registry in order, then upsert `erasure_requests` (`subject_hash` unique, `source`,
    `requested_at`, `db_erased_at`, `posthog_status`, `posthog_done_at`). The ledger holds no Telegram id.
-3. After commit: forget the user's cache keys (`share:<id>:*`, `contact:<id>:*`, `found:asked:<id>`, the radar
-   option keys, limiter buckets); queue `App\Jobs\Privacy\RequestPostHogPersonDeletion` (retried with back-off for up
+3. After commit: forget the user's cache keys whose full name can be built — `found:asked:<id>`, `contact:<id>:<day>`
+   for today and yesterday in Tashkent, `radar:<radar id>:options` for the user's radar ids (read before the
+   transaction deletes them), the named limiter buckets. The `Cache` facade cannot delete by pattern, so `share:<id>:<number>:<locale>` entries are left
+   to expire with their prepared message; they hold a Telegram prepared-message id under an internal id that is never
+   reused. Then queue `App\Jobs\Privacy\RequestPostHogPersonDeletion` (retried with back-off for up
    to 7 days, then status `posthog_failed` and one operator alert); queue a delayed second pass over
    `user_action_log` 60 seconds later for rows a deferred write may have added; dispatch
    `App\Events\Privacy\UserErased` (subject hash only).
@@ -170,7 +173,7 @@ batches of 10 000 by an indexed age column) applies the rules.
 | `radar_outbox` | deleted 30 days after `sent_at` or `failed_at` (`radar:prune` of WP-46 is registered as the executor) |
 | `listing_refs` | rows with `gone_at` older than 90 days deleted |
 | `personal_access_tokens` | `sanctum:prune-expired` (WP-40) |
-| `telegram_updates` | existing prune after `telegram.updates_retention_days` |
+| `telegram_updates` | the model's `Prunable` rule after `telegram.updates_retention_days`; nothing schedules `model:prune` today (`routes/console.php` holds only `inspire`), WP-50 adds the schedule entry |
 | `radar_deliveries`, `listing_views`, `favorites`, `hidden_listings`, `blocked_authors`, `found_answers`, `radars` | kept while the user exists: they are the user's own lists; erasure removes them |
 | `erasure_requests`, `vote_decisions`, `listing_marks`, `author_marks`, `source_flag_changes` | kept: audit or aggregates without a user link |
 | framework and dashboard tables (`cache`, `jobs`, `failed_jobs`, `sessions`, `features`, Pulse, Telescope) | kept with the reason "pruned by its own tool", naming the tool |
@@ -181,7 +184,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 
 - `backend/tests/Feature/Privacy/ErasureRegistryTest.php`: lists every table and column through the schema builder
   and fails when a table with `user_id`, `tokenable_id` or `owner_id` is neither in `config/erasure.php` nor in its
-  allow-list with a reason.
+  allow-list with a reason. Of today's tables, `sessions` (`user_id`, framework sessions of the frozen web UI) goes
+  into the allow-list; `media_files.uploaded_by` needs no entry, its foreign key is `nullOnDelete`.
 - `backend/tests/Feature/Privacy/RetentionRegistryTest.php`: fails when a table has neither a rule nor a `kept`
   reason.
 - A database-wide scan after `erase()` in a test: no row in any table references the user id.
@@ -200,9 +204,9 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
   `backend/app/Http/Controllers/Api/V1/EventController.php`; `backend/app/Providers/AppServiceProvider.php`
 - `backend/tests/Feature/Analytics/{ActionLoggerTest,ActionLoggerCatalogueTest,EventsTest,PostHogClientTest,ServerEventsTest}.php`,
   `backend/tests/Feature/Privacy/{ErasureServiceTest,ErasureRegistryTest,RetentionRegistryTest,PurgeOperationalDataTest}.php`,
-  `backend/tests/Feature/Pgsql/ActionLogPartitionTest.php`
-- `backend/.env.example` (the six keys) and `docs/infrastructure/environments.md` — separate shared-file PR;
-  `backend/config/horizon.php` (`trim.failed`) — separate shared-file PR
+  `backend/tests/Pgsql/ActionLogPartitionTest.php`
+- `backend/.env.example` (the six keys) and `docs/infrastructure/environments.md` — separate shared-file PR.
+  `backend/config/horizon.php` is not changed (`trim.failed` is already 7 days)
 
 ## Steps
 
@@ -216,7 +220,7 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 6. `config/erasure.php`, `ErasureService`, the ledger, `PersonEraser` and its two implementations, the jobs, the two
    commands; `ErasureRegistryTest` and the database-wide scan.
 7. `config/retention.php`, `privacy:purge-operational`, `RetentionRegistryTest`; the schedule.
-8. Pint, PHPStan, `make ci-backend`; the security-reviewer agent reads the diff; the env and Horizon PRs; deploy.
+8. Pint, PHPStan, `make ci-backend`; the security-reviewer agent reads the diff; the env PR; deploy.
 
 ## Behaviour to reproduce
 
@@ -264,7 +268,7 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - [ ] Partitions are created ahead and dropped after 180 days; the purge command and both partition commands are
       scheduled.
 - [ ] No PostHog payload contains a Telegram id, a name, a phone or `initData` (asserted on the faked requests).
-- [ ] The PR names the migrations, the six env keys, the retention periods as proposals, and the two shared-file PRs.
+- [ ] The PR names the migrations, the six env keys, the retention periods as proposals, and the shared-file PR.
 - [ ] `make ci-backend` and the `pgsql` group are green; the security review has no open finding.
 - [ ] On staging: an event sent from the Mini App appears in `user_action_log` and, with forwarding on, in the
       staging PostHog project; `php artisan privacy:erase` on a test user empties its data.

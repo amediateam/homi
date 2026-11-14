@@ -144,7 +144,8 @@ be `null`; `total` ≥ the number of points. Changed: `id` became `number`.
 
 ### `GET /listings/{number}` — legacy: API-008
 
-`{number}` is a positive integer (`whereNumber`); anything else is `404 not_found`. Query `preview=1` returns the
+`{number}` is a positive integer (`whereNumber`; that constraint admits `0`, which the controller answers with
+`SourceNotFound`); anything else is `404 not_found`. Query `preview=1` returns the
 preview object only and records no view. Without it `data` is the preview plus:
 
 ```json

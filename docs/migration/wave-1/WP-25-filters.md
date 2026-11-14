@@ -42,7 +42,10 @@ filters button (WP-27); lasso drawing (WP-28); mounting the radar modes, the sub
   names are those of `@homi/types`; where this text names a field by meaning ("count", "week", "days", "options"),
   the generated type decides the spelling. A missing field is fixed in the contract spec in the same PR.
 - Defects and flags (DEC-36): defects without a `DEV` row are fixed; the rest sit behind `devFlags`, all off. The
-  rules are WP-22's; this package passes `devFlags` into them and must show both branches in its tests.
+  rules are WP-22's; this package passes the flags into them and must show both branches in its tests. Wherever
+  this text writes `devFlags` as an argument of a `@homi/search` function (`sectionsFor`, `belowMedianAvailable`,
+  `resetAll`, `fixRanges`), the value passed is `searchRules(devFlags)` of WP-22 (`lib/search/rules.ts`): the
+  package takes a `rules` argument and never imports `lib/flags.ts`.
 - Functional parity (DEC-46): same sections, order, options, texts and results as legacy; visual detail may differ.
 - Read before coding (bundled Next.js docs under `frontend/app/node_modules/next/dist/docs/01-app/`):
   `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`, "Modals"),
@@ -97,8 +100,8 @@ filters button (WP-27); lasso drawing (WP-28); mounting the radar modes, the sub
 - `applyFilters(next, { sort, target })` in `features/filters/applyFilters.ts` is the one place that applies:
   1. `fixRanges(next, devFlags)` and `normalizeFilters`;
   2. `normalizeSort(sort, sortOptions(next, city))` — an unavailable sort becomes `new`, and `new` is not written;
-  3. navigation: `closeThen(target(q))` when the sheet was opened in the app, `router.replace(target(q))` on a direct
-     load (if `closeThen` already handles a depth of zero, call it in both cases);
+  3. navigation: `closeThen(target(q))` in both cases — WP-21 defines it as "go back, then replace" when the sheet
+     was opened in the app and as the replace alone at depth zero, which is the direct load;
   4. `window.scrollTo(0, 0)`;
   5. `notifyFiltersApplied(next)` — a listener list exported from the same file (`onFiltersApplied(cb)`), which the
      follow nudge of WP-30 and the lasso of WP-28 use. Tab switches, deal tabs and the header city pick do not call it.
@@ -137,8 +140,9 @@ renovation, floor, area and market (sale) or appliances (rent), posted (search m
 
 - Reference data, cities, city statistics and the currency come from WP-22's client hooks (`useReference()`,
   `findCity(code)`, `useCityStats()`, `useMoney()`); the sheets fetch nothing on the server.
-- `useLiveStats(draft, { flow })`: `bffFetch('listings/count?…')` 250 ms after any draft change and
-  `bffFetch('listings/flow?…')` 500 ms after, query from `toApiQuery(draft)`. Each change aborts the pending request.
+- `useLiveStats(draft, { flow })`: `bffFetch('listings/count', { query, signal })` 250 ms after any draft change
+  and `bffFetch('listings/flow', { query, signal })` 500 ms after, `query` from `toApiQuery(draft)`. Each change
+  aborts the pending request.
   An error (including `source_unavailable`) keeps the previous value. `normalizeFlow` returns `null` unless the
   answer is an object with a numeric weekly total and a day count above zero; `null` hides the flow line and the
   chips. Both session modes use the same code (`bffFetch` adds the bearer token in header mode).
@@ -149,10 +153,12 @@ renovation, floor, area and market (sale) or appliances (rent), posted (search m
 
 ### Seams
 
-- `features/radars/subscribe.ts` (created by WP-24, implemented by WP-30) exports `radarsReady`,
-  `subscribe(filters, entry, relaxed?)` and `useHasActiveRadar(filters)`. If the last one is missing, add it as a
-  stub returning `false`. While `radarsReady` is `false` the search footer shows no radar button.
-- `onFiltersApplied(cb)` for WP-30 and WP-28 (above). `normalizeFlow` for WP-30's nudge.
+- `radarsReady` comes from `features/radars/capability.ts`; `subscribe(filters, entry, relaxed?)` and
+  `useHasActiveRadar(filters)` come from `features/radars/subscribe.ts`. WP-24 creates both files (the second as a
+  stub: `subscribe` resolves `{ ok: false }`, `useHasActiveRadar` returns `false`); WP-30 writes the real bodies
+  and flips the constant. While `radarsReady` is `false` the search footer shows no radar button.
+- `onFiltersApplied(cb)` for WP-30 and WP-28 (above). `normalizeFlow` (exported from `useLiveStats.ts`) is the one
+  validator of a flow answer; WP-30 imports it for its nudge and radar sheet and does not write another.
 - Screen names expected from `screenNameOf` (WP-20, reported by WP-32): `filters`, `filters/rooms`, `filters/price`,
   `filters/owner`, `sort`, `city`; the nested picker keeps `filters`; the radar modes report `radar/new` and
   `radar/edit` (WP-30).
@@ -174,9 +180,9 @@ New, under `frontend/app/`:
 New, under `frontend/packages/ui/`: `src/components/IntInput.tsx`, `src/components/PriceInput.tsx`, exports in
 `src/index.ts`, `tests/inputs.test.tsx`.
 
-Changed: `features/radars/subscribe.ts` (only if `useHasActiveRadar` is missing); `lib/ui/shellState.ts` (only if
-`requestDraw` / `consumeDrawRequest` are missing); `lib/api/bffAllowList.ts` (only if `listings/count`,
-`listings/flow` or `cities` are not yet allowed for `GET`).
+Changed: `features/radars/subscribe.ts` (only if the stub of WP-24 lacks `useHasActiveRadar`);
+`lib/ui/shellState.ts` (only if `requestDraw` / `consumeDrawRequest` are missing); `lib/api/bffAllowList.ts` (only
+if `listings/count`, `listings/flow` or `cities` are not yet allowed for `GET`).
 
 ## Steps
 
@@ -241,7 +247,8 @@ Price section (also the body of the price quick sheet):
   decimal mark). `inputMode` is `decimal` for UZS and `numeric` for USD; `enterKeyHint="done"`.
 - The field keeps the typed text and re-syncs only when the outside value no longer equals the parsed text. Text that
   does not parse means "no filter"; the text stays as typed.
-- Presets (BR-APP-014, BR-APP-015): from `pricePresets()` — city presets win over reference presets; UZS lists are
+- Presets (BR-APP-014, BR-APP-015): from `useMoney().presets(deal, …)` of WP-22 (`createMoney(…).presets`), with
+  `applyPreset` and `isPresetSelected` of `@homi/search` — city presets win over reference presets; UZS lists are
   converted and rounded by WP-22. A chip is on only when `price_max` equals the preset and `price_min` is empty. A tap
   sets `price_max` and clears `price_min`; a tap on the chip that is on clears `price_max`. The strip scrolls
   horizontally without starting the sheet drag.
@@ -277,12 +284,13 @@ kept, daily included. The remembered relax code survives a reset, as in legacy (
 Pets entry (BR-APP-057): WP-21 turns the launch parameter `news=pets` (TMA-012) into `routes.filters({ focus:
 'pets' })`. Here: if the draft's deal is not long-term rent, the draft starts from `defaultFilters('rent_long',
 city)`; 350 ms after opening, the section marked `data-focus="pets"` scrolls into view (smooth, centred). The pill
-«Новое» shows while the reference data lists `pets` as a new feature (per the contract; if the contract has no such
-list, the storage key alone decides) and `homi-new-pets` is unset. The daily-rent case of "if needed" is not spelled
-out in the audit: check `$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:115-124` when implementing.
+«Новое» shows while `features` of `GET /reference` (WP-11) contains `pets` and `homi-new-pets` is unset. The
+daily-rent case of "if needed" is not spelled out in the audit: check
+`$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:115-124` when implementing.
 
-Tip toast: a second toast instance lives inside the sheet (SCR-042): local state in `FiltersForm`, the `@homi/ui`
-toast, 4 s, replaced by the next tip, gone with the sheet. It does not use the global `showToast`.
+Tip toast: a second toast lives inside the sheet (SCR-042). It uses the scope WP-23 built for this:
+`FiltersForm` mounts `<ToastHost scope="sheet" />`, a tip is `showToast({ key }, 'sheet')` and «Не важно» calls
+`dismissToast('sheet')`; 4 s, replaced by the next tip, gone with the sheet. It never appears in the `app` scope.
 
 ### Footer and live data
 
@@ -301,8 +309,9 @@ toast, 4 s, replaced by the next tip, gone with the sheet. It does not use the g
 | radar off | search mode, `radarsReady`, no such radar | `sheet.subscribe` «Включить радар», disabled while submitting |
 | radar modes | `radar-new`, `radar-edit` | `sheet.matchingNow` «Сейчас подходит: {n}» (empty while unknown) and one primary button: `sheet.subscribe` (new) or `sheet.save` «Сохранить» (edit), disabled while submitting |
 
-- Flow wording comes from `formatFlow(flow, 'sheet', devFlags)` (BR-APP-044, WP-22). `dev021OneFlowVocabulary` off:
-  the three sheet texts above. On: the shared vocabulary of DEV-021 (LB-APP-033).
+- Flow wording comes from WP-22 (BR-APP-044): `formatFlow(flowRate(flow), 'sheet', t, { oneVocabulary })` with
+  `oneVocabulary = devFlags.dev021OneFlowVocabulary`. Off: the three sheet texts above. On: the shared vocabulary
+  of DEV-021 (LB-APP-033).
 - Relax chip: light haptic, `replace(normalizeFilters(option.filters))`, remember the option's code as `relaxed`.
   The code travels with a later subscribe or save.
 - «Показать …»: medium haptic; if the city changed, save it; then `applyFilters`.
@@ -433,10 +442,13 @@ End to end (Playwright, fake Telegram, stubs; every case in cookie mode and head
   length unchanged, feed re-created; close without apply → address unchanged; Telegram Back closes the nested city
   picker first, then the sheet; reload on `/ru/filters?…` → direct-load form → apply lands on `/`; open from the map
   → apply lands on `/map`; launch with `news=pets` → sheet scrolled to «Животные»; quick rooms: chip → pick 2 →
-  apply → feed request with rooms 2–2; quick price reset clears bounds and «Не дороже рынка» only; `/filters/foo` →
+  apply → the address carries `rooms_min=2&rooms_max=2` and the feed is re-created (in header mode the
+  `/bff/listings` request carries the same range; in cookie mode page one is fetched on the server and is not
+  visible to the test); quick price reset clears bounds and «Не дороже рынка» only; `/filters/foo` →
   not found; sort: pick «Сначала дешевле» → `sort=cheap` in the address, pick «Сначала новые» → no `sort`.
-- `e2e/city.spec.ts`: header chip → pick another city → feed for that city, one `PATCH` to settings, districts and
-  polygon gone from the address; filters sheet → nested pick → close without «Показать» → city unchanged; nested
+- `e2e/city.spec.ts`: header chip → pick another city → feed for that city, one settings Server Action request
+  (the `PATCH /settings` itself is sent by the server; its body is covered by the unit test of `updateSettings`),
+  districts and polygon gone from the address; filters sheet → nested pick → close without «Показать» → city unchanged; nested
   pick → «Показать» → city saved.
 - Use role-based selectors: hidden Activity routes stay in the DOM (`preserving-ui-state.md`, "Testing").
 

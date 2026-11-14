@@ -4,10 +4,10 @@
 | ----- | ----- |
 | Stage | D |
 | Status | TODO |
-| Depends on | WP-52, WP-42, WP-44 |
+| Depends on | WP-52, WP-42, WP-44, WP-45 |
 | Size | ≈ 3 000 changed lines (about half of them tests and transcripts), L. If it grows past 3 000, cut after step 8: the first PR ships the table, the card, the sender, `/fav`, the number buttons, the map and the photos, with keyboard rows 3 and 4 not rendered (`config('bot.card.actions')` = `false`); the second PR ships steps 9–12 and turns the key on |
 | Behaviour reference | `04` §2 (rows of the seven handlers below), §3.10, §3.13, §3.17, §4.1, §4.2, §4.3, §5 ("Migration constraint"), §8, §9, §10; `25` §4.5; task files KV-TG-022 … KV-TG-027 (handlers, buttons, texts, rules, edge cases, tests, class names) and KV-BE-038, KV-BE-040, KV-BE-041, KV-BE-043, KV-BE-106 (rules and service names of favourites, hidden listings, blocked authors, votes, hide rules). Not taken: the `listings` table and the alias resolver, signed legacy media addresses, the migrated card log, legacy `callback_data`, parity-gate rows |
-| Needs from the production track | (1) The media host that serves listing photos (the nginx proxy and cache of `25` §4.5, set up for WP-42) must be reachable by Telegram's servers on staging and production: public `https` with a valid certificate, no IP allow-list and no authentication, `200 image/jpeg` for the photo addresses the API returns. (2) Approval of the additive migration `create_bot_listing_messages_table` on production (not needed if WP-46 already created the table). (3) `TELEGRAM_MEDIA_UPLOAD` stays unset or `false` in the server env files. (4) The regular deploy to staging and production; the developer then runs the checklist of this file inside Telegram on both |
+| Needs from the production track | (1) The media host that serves listing photos (the nginx proxy and cache of `25` §4.5, set up for WP-42) must be reachable by Telegram's servers on staging and production: public `https` with a valid certificate, no IP allow-list and no authentication, `200 image/jpeg` for the photo addresses the API returns. (2) Approval of the additive migration `create_bot_listing_messages_table` on production (WP-46 does not create this table). (3) `TELEGRAM_MEDIA_UPLOAD` stays unset or `false` in the server env files. (4) The regular deploy to staging and production; the developer then runs the checklist of this file inside Telegram on both |
 
 ## Goal
 
@@ -42,8 +42,8 @@ follow (starter lists, radar pushes, digests, withdrawn edits) send cards only t
 - Action-log events of card buttons, the coverage test — WP-58.
 - Phone numbers, call links and sharing are not part of the bot's card.
 
-The queue lists WP-52, WP-42 and WP-44 under "Depends on". This package also calls the radar hide-rule service of
-WP-45, which is earlier in the queue (stage C): do not start before WP-45 is `DONE`.
+The queue lists WP-52, WP-42, WP-44 and WP-45 under "Depends on": this package calls the radar hide-rule service
+of WP-45, so do not start before WP-45 is `DONE`.
 
 ## Decisions that bind this package
 
@@ -72,13 +72,16 @@ create a second service.
 `App\Telegram\Rendering\ListingCardDataFactory::for(User $viewer, int $number): CardLookup` returns
 `Found(ListingCardData)`, `NotFound` or `SourceUnavailable`. It makes two reads:
 
-1. The single-card read of the listings application service of WP-42 — the method `GET /api/v1/listings/{number}`
-   uses (rules of KV-BE-034 and KV-BE-036) — with the viewer, the viewer's locale and currency, and **without**
-   recording a view (history is "listings opened in the app", BR-BOT-085). It must return a listing the viewer has
-   hidden: the overlay removes hidden listings from lists, not from a direct read, and the «rented by me» card needs
-   it. If the method cannot do either, add the option there, not a second reader here.
-2. The viewer's own active votes for this listing from `VoteService` of WP-44. If it has no read method, add
-   `activeReasons(User, <listing reference>): list<ReportReason>` to that service.
+1. The single-card read `GET /api/v1/listings/{number}` uses (rules of KV-BE-034 and KV-BE-036). WP-42 has no
+   single service for it: its controller resolves the source — `SourceManager::resolve('source.listings.card',
+   $context)` of WP-10, a `ResolvedSource` whose `driver` becomes `metaSource` — calls `details($number, $context)`
+   on it and then the card step of `App\Services\Listings\ListingOverlay`. The factory
+   makes the same two calls with a `SourceContext` of the viewer (locale, currency) and does **not** call
+   `ViewRecorder`, so no view is recorded (history is "listings opened in the app", BR-BOT-085). The overlay
+   returns the card of a hidden listing with its flags (WP-42, "Overlay" rule 2), which the «rented by me» card
+   needs. No second reader is written here.
+2. The viewer's own active votes for this listing. `VoteService` of WP-44 (`App\Services\Personal`) has `report()`
+   and `withdraw()` only, so this package adds `activeReasons(User, ListingPointer): list<ReportReason>` to it.
 
 `ListingCardData` (readonly). "Display" is a string the answer already formatted for the viewer's locale and
 currency; "raw" is the value next to it (`25` §4.5). Field names of the v1 card resource are fixed by WP-12 and
@@ -108,7 +111,9 @@ WP-42; the legacy names of `08` §1.8 are given for orientation.
 | `rentedByViewer`, `agentVotedByViewer` | raw | read 2 above: an active, not withdrawn vote of the viewer |
 | `locale`, `currency` | raw | the viewer's settings |
 
-`ListingCardData::ref()` returns the listing reference WP-44 and WP-45 take (number, source channel, source post).
+`ListingCardData::ref()` returns the `App\Services\Listings\ListingPointer` of WP-42 (number, source channel,
+source post) that `FavoriteService`, `HiddenService` and `VoteService` of WP-44 take; "ref" in the sections below
+means this object.
 
 ### Rendering
 
@@ -184,7 +189,7 @@ from callback data: the handler reads them from the listing (SEC-REQ-011).
 
 ### Callback handlers
 
-Two action codes are registered with the codec of WP-51.
+Three action codes are registered with the codec of WP-51.
 
 - `cd` → `App\Telegram\Handlers\Card\CardCallback`. It validates the operation and its argument (table above; `fv`
   and `rt` take `1` or `0`; `ag` takes `1`, and `0` only while `bot.dev010` is on), loads the card once through
@@ -239,8 +244,8 @@ the text variant and the listing is flagged "photos gone" (`tg:photos-gone:{n}`,
 
 ### The delivered-card log
 
-Table `bot_listing_messages`. If the specification of WP-46 created it, skip the migration and add missing columns
-with an additive one; `DeliveryLedger` of WP-46 is a different table (the delivered set).
+Table `bot_listing_messages`, created here: no earlier package has it. `DeliveryLedger` of WP-46 is a different
+table (`radar_deliveries`, the delivered set).
 
 | Column | Type | Meaning |
 | ------ | ---- | ------- |
@@ -284,22 +289,25 @@ with `config('bot.hide_rules.scope')` = `radar` (legacy scope, BR-BOT-063):
 3. Otherwise by the number of the user's radars, active or paused: none → `null`; one → it; several →
    `HideTargetChoice` (the `RadarChoice` keyboard).
 
-The rule is stored with `RadarHideRuleService` of WP-45 (rules of KV-BE-106): expected
-`addFromListing(User, <listing reference>, HideRuleKind, Radar)`; if the service takes explicit values, pass
-`sourceChannel`, `districtCode` or `authorKey` of the card. The bot always passes a radar, so the service's own
-fallback for "no radar" is never used. The write is idempotent per radar, kind and value.
+The rule is stored with `RadarHideRuleService` of WP-45 (rules of KV-BE-106):
+`addFromListing(User $user, int $number, HideRuleKind $kind, ?Radar $origin): bool`. The service reads the channel,
+district code or author key from `listing_refs` itself and returns `false` when the listing has none. The bot
+always passes a radar, so the service's own fallback for "no radar" is never used. The write is idempotent per
+radar, kind and value.
 
-Radar titles for the choice come from WP-45 (the title `GET /api/v1/radars` returns). If it has none, create
+Radar titles for the choice: neither WP-45 nor the radar resource of WP-13 has a title, so this package creates
 `App\Telegram\Rendering\RadarTitle` in the format of TXT-BOT-059 (owned by WP-55, which then extends this class).
 
 `scope = user` is DEV-034: rules become user-wide (channel → blocked source, realtor → blocked author, district → a
-user-wide rule shown in «Скрытое») and no radar is asked for. It must be switched together with
-`config('radar.hide_rules_user_wide')` of WP-45; a config test asserts the two agree.
+user-wide rule shown in «Скрытое») and no radar is asked for. WP-45 has no user-wide mode (`config/radar.php` holds
+no such key; its rules are per radar), so `radar` is the only accepted value until DEV-034 is approved: a config
+test asserts it and the `user` cases stay Pest `todo`.
 
 ### `/fav`
 
-`App\Telegram\Handlers\FavCommand` reads the favourites through `PersonalListService::favorites(User)` of WP-44 —
-the list `GET /api/v1/favorites` returns, newest first, as listing previews — and renders with
+`App\Telegram\Handlers\FavCommand` reads the favourites through `FavoriteService::page($user, null, $limit,
+$context)` of WP-44 (`App\Services\Personal`; the whole list comes back with `nextCursor` `null`) — the list
+`GET /api/v1/favorites` returns, newest first, as listing previews — and renders with
 `App\Telegram\Keyboards\FavListKeyboard`. Page size `config('bot.fav.page_size')` = 20.
 
 ### Configuration
@@ -326,11 +334,11 @@ New catalogue keys (not among the 88 legacy texts; Russian drafts, `uz` and `en`
 
 New, under `backend/`:
 
-- `database/migrations/<date>_create_bot_listing_messages_table.php` (skip if present),
+- `database/migrations/<date>_create_bot_listing_messages_table.php`,
   `app/Models/BotListingMessage.php`, `database/factories/BotListingMessageFactory.php`
-- `app/Enums/Delivery/{CardOrigin,CardMessageState}.php` (`CardOrigin` only if absent), `app/Enums/Telegram/DepositState.php`
+- `app/Enums/Delivery/{CardOrigin,CardMessageState}.php`, `app/Enums/Telegram/DepositState.php`
 - `app/Telegram/Rendering/{ListingCardData,ListingCardDataFactory,CardLookup,ListingCardRenderer,CardMessage,CaptionLimiter}.php`
-- `app/Telegram/Rendering/RadarTitle.php` (only if WP-45 exposes no title)
+- `app/Telegram/Rendering/RadarTitle.php`
 - `app/Telegram/Keyboards/{ListingCardKeyboard,FavListKeyboard}.php`
 - `app/Services/Delivery/{CardSender,CardSendResult,CardPhotoSource}.php`
 - `app/Telegram/Handlers/Card/{CardCallback,ShowOnMap,ShowPhotos,ToggleFavourite,MarkRented,VoteRealtor,HideSimilar,HideRuleTarget}.php`
@@ -345,9 +353,12 @@ Changed:
 - `backend/config/bot.php`, `backend/config/telegram.php` (`media.upload`), `backend/phpunit.xml`
 - `backend/app/Providers/TelegramServiceProvider.php` (command `fav`, actions `cd`, `ln`, `fl`)
 - `backend/lang/{ru,uz,en}/bot.php` (the new keys above)
-- `backend/app/Services/Engagement/VoteService.php` of WP-44 — `activeReasons()`, only if it has no such read
-- `backend/tests/Support/Telegram/FakeBotApi.php` — `sendVenue`, `sendMediaGroup`, `editMessageCaption` with their
-  validators, if WP-50 left them out
+- `backend/app/Services/Personal/VoteService.php` of WP-44 — the new read `activeReasons()`
+- `backend/config/erasure.php` of WP-47 — entry `bot_listing_messages`, strategy `delete`; and
+  `backend/config/retention.php` — `bot_listing_messages`: `kept`, "needed to edit delivered copies; window set by
+  WP-70" (`ErasureRegistryTest` and `RetentionRegistryTest` of WP-47 fail without them)
+- `backend/tests/Support/Telegram/FakeBotApi.php` is not changed: WP-50 already validates `sendVenue`,
+  `sendMediaGroup` and `editMessageCaption`
 - `docs/infrastructure/telegram-webhook.md` — callback registry rows `cd`, `ln`, `fl`
 - Separate shared-file PR: `backend/.env.example` (`TELEGRAM_MEDIA_UPLOAD`), `docs/infrastructure/environments.md`
 
@@ -356,8 +367,8 @@ Changed:
 Tests first inside each step; `vendor/bin/pint --dirty --format agent` after every PHP edit.
 
 1. Shared-file PR for `TELEGRAM_MEDIA_UPLOAD`; `config/telegram.php`, `phpunit.xml`.
-2. Migration (after checking that the table is absent), `BotListingMessage`, its factory, the enums.
-3. `ListingCardData`, `ListingCardDataFactory`, `CardLookup` on the stub driver; the `VoteService` read if missing.
+2. Migration, `BotListingMessage`, its factory, the enums, the entry in `config/erasure.php`.
+3. `ListingCardData`, `ListingCardDataFactory`, `CardLookup` on the stub driver; `VoteService::activeReasons()`.
 4. `CaptionLimiter`, `ListingCardRenderer`, `CardMessage`, the new deposit keys; `ListingCardRendererTest`,
    `CaptionLimiterTest`.
 5. `ListingCardKeyboard` with all variants; `ListingCardKeyboardTest` (including the 64-byte check of every data string).
@@ -437,8 +448,8 @@ contains a brand word. Toasts and silent answers follow `04` §4.3 (BR-BOT-002).
 
 | # | Press | Service call | Toast | Card |
 | - | ----- | ------------ | ----- | ---- |
-| 1 | `⭐ В избранное` (`fv:1`) | `PersonalListService::setFavorite(user, ref, true)` | TXT-BOT-048 `Добавил в избранное ⭐ — список: /fav` | pressed copy re-rendered: `★ В избранном` |
-| 2 | `★ В избранном` (`fv:0`) | `setFavorite(user, ref, false)` | TXT-BOT-049 `Убрал из избранного` | pressed copy re-rendered: `⭐ В избранное` |
+| 1 | `⭐ В избранное` (`fv:1`) | `FavoriteService::set($user, $ref)` of WP-44 | TXT-BOT-048 `Добавил в избранное ⭐ — список: /fav` | pressed copy re-rendered: `★ В избранном` |
+| 2 | `★ В избранном` (`fv:0`) | `FavoriteService::unset($user, $number)` | TXT-BOT-049 `Убрал из избранного` | pressed copy re-rendered: `⭐ В избранное` |
 
 - The button carries the state it sets, and the call is idempotent — never the toggle the Mini App had in legacy.
   This is the fix of LB-BOT-007 (legacy: `★ В избранном` on a stale copy **added** the listing). BR-BOT-060 changes
@@ -448,16 +459,17 @@ contains a brand word. Toasts and silent answers follow `04` §4.3 (BR-BOT-002).
 
 ### 6. `Уже сдано` and `↩️ Не сдано` (BOT-060; BTN-042, BTN-043)
 
-1. `Уже сдано` (`rt:1`) → `VoteService::report(user, ref, Rented)`: one weighted vote, and the listing is hidden for
-   the voter at once (inside the service; for other users only past its threshold, BR-BOT-062, SEC-REQ-045) →
+1. `Уже сдано` (`rt:1`) → `VoteService::report($user, $ref, ReportReason::Rented, null)`: one weighted vote, and
+   the listing is hidden for the voter at once (inside the service; for other users only past its threshold, BR-BOT-062, SEC-REQ-045) →
    toast TXT-BOT-055 `Отметил как сданное — у вас скрыто; другим снимем, когда подтвердят ещё` → the pressed copy
    becomes the `Rented` variant: first line TXT-BOT-046
    `🚫 Сдано — по вашей отметке (для других снимем, когда подтвердят)`, rows 1 and 2 unchanged, the two lower rows
    replaced by `[⭐ В избранное` or `★ В избранном][↩️ Не сдано]`.
 2. A repeated `rt:1` (another copy, a double tap) answers the same toast and creates no second vote (one vote per
    user, listing and reason — SEC-REQ-015).
-3. `↩️ Не сдано` (`rt:0`) → `VoteService::withdraw(user, ref, Rented)`, then `PersonalListService::unhide(user, ref)`
-   (a no-op if `withdraw` already lifted the hide) → toast TXT-BOT-056 `Вернул объявление` → `Default` variant.
+3. `↩️ Не сдано` (`rt:0`) → `VoteService::withdraw($user, $ref, ReportReason::Rented)`, then
+   `HiddenService::unhide($user, $number)` of WP-44 (it deletes the hide row whatever its reason and never touches
+   votes) → toast TXT-BOT-056 `Вернул объявление` → `Default` variant.
 4. The variant is derived from the server state on every render, so any copy re-renders correctly.
 
 ### 7. `Это риелтор` (BTN-041)

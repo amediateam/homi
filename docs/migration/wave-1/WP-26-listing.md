@@ -109,7 +109,17 @@ Why a layout and not a page:
 8. `reportSource(meta.source)` is called by the fetch paths of WP-22, so the demo marker shows on stub answers.
 
 Field names below are the legacy ones of `08` §1.8, used as meanings; the v1 names are those of the generated
-`@homi/types` (WP-12). A missing field is fixed in the contract spec in the same PR.
+`@homi/types` (WP-12). A missing field is fixed in the contract spec in the same PR. Where the two differ, the
+contract of WP-12 says: `title` is already the short form (no `short_title`, no split at « · »); `age` is
+`posted.label` and `posted.when`; `market_code` is `market.code`; `median` and the `median_*` fields are the
+object `comparison` (`null` when there is no comparison; `value`, `own`, `n`, `metric`, `scope`, `rooms`,
+`near_class`, `radius_km`, `district`, `place_value`, `note`, `updated`, `price_usd`, `price_per_m2`), while the
+delta and the tone stay in `market.median_delta` and `market.tone`; `history` is `price_history`; `owner` is
+`owner_label`; `original_text`, `original_url`, `post_deleted` are `original.text`, `original.url`,
+`original.deleted`; the phone and the links are `contact.phone`, `contact.phone_display`, `contact.call_url`,
+`contact.call_url_expires_at`, `contact.contact_url`, `contact.contact_paid`; the price parts are
+`price.display`, `price.period`, `price.alt`, `price.notes`, `price.kind`. The action names `getContact`,
+`translate` and `prepareShare` are the ones WP-22 reserved.
 
 ### Components and modules (`frontend/app/features/listing/`)
 
@@ -140,8 +150,8 @@ Outside the feature folder: `splitPhones(text)` in `frontend/packages/utils/src/
 
 | Function | File | v1 method | Used result |
 | -------- | ---- | --------- | ----------- |
-| `requestContact(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/contact` | call link and its expiry |
-| `translateListing(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/translation` | translated text |
+| `getContact(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/contact` | call link and its expiry |
+| `translate(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/translation` | translated text |
 | `prepareShare(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/share` | prepared message identifier |
 | `hideListing`, `unhideListing` | `lib/actions/hidden.ts` | `PUT`, `DELETE /hidden/listings/{number}` | — |
 | `blockAuthor`, `unblockAuthor` | `lib/actions/hidden.ts` | `PUT`, `DELETE /listings/{number}/blocked-author` | hidden listing numbers, author label |
@@ -195,7 +205,8 @@ New unless marked.
   `market/page.tsx`, `actions/page.tsx` (replace the WP-20 placeholders)
 - `frontend/app/features/listing/**` as in the table above
 - `frontend/app/lib/actions/{listing,hidden,reports}.ts`
-- `frontend/app/lib/api/bffAllowList.ts`, `frontend/app/lib/navigation/history.ts` (changed)
+- `frontend/app/lib/api/bffAllowList.ts`, `frontend/app/lib/navigation/history.ts`,
+  `frontend/app/lib/telegram/links.ts` with `tests/telegram/links.test.ts` (changed)
 - `frontend/packages/utils/src/phone.ts`, `frontend/packages/utils/src/index.ts` (changed),
   `frontend/packages/utils/tests/phone.test.ts`
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (changed: four keys)
@@ -212,9 +223,9 @@ New unless marked.
 5. Market block and `marketText.ts` with tests. Commit.
 6. Facts, stats, history with `HistoryDate`. Commit.
 7. Location rows, «Рядом», `SpotMapSlot`. Commit.
-8. Author, description. `splitPhones` with tests. Sources, original text, translation with `translateListing`.
+8. Author, description. `splitPhones` with tests. Sources, original text, translation with `translate`.
    Commit.
-9. `useContact`, `requestContact`, CTA bar, calls from the bar, the author row and the text. Commit.
+9. `useContact`, `getContact`, CTA bar, calls from the bar, the author row and the text. Commit.
 10. `useShareListing`, `prepareShare`. Commit.
 11. `gestures.ts`, `ZoomableImage`, `PhotoViewer`, `photos/page.tsx` in both trees. Commit.
 12. `MarketSheet`, `market/page.tsx` in both trees. Commit.
@@ -309,7 +320,7 @@ SCR-018. Every server string is rendered as text, never as HTML.
     text sends `original_copied`.
 13. **Translation** (BR-APP-034): not offered in `ru`. In uz and en: `listing.translate` «Перевести» → pending
     `listing.translating` «Перевожу…» (disabled) → translated text with `listing.machineTranslation` «Перевод
-    сделан ИИ» and the button `listing.showOriginal` «Показать оригинал». The first tap calls `translateListing`,
+    сделан ИИ» and the button `listing.showOriginal` «Показать оригинал». The first tap calls `translate`,
     later taps toggle without a request. Any error or an empty text → `listing.translateFailed` «Не получилось
     перевести»; the next tap retries. State is cached per number and locale, so another listing never shows it
     (LB-APP-003) and returning to the first listing restores it.
@@ -327,10 +338,10 @@ BR-APP-033, TMA-029, TMA-040; fix of LB-APP-028.
 
 - `useContact` keeps `{ url, receivedAt, expiresAt? }` in memory. Stale = `expiresAt − 2 min` passed when the
   contract gives an expiry, else 8 min after receipt (legacy lifetime 10 min). While the document is visible a
-  timer refreshes a stale link through `requestContact`; `tg.onVisible` refreshes on return. Refresh errors are
+  timer refreshes a stale link through `getContact`; `tg.onVisible` refreshes on return. Refresh errors are
   ignored and the old link stays.
 - «Позвонить» (medium haptic): fresh link → `tg.call(phone, url)`; stale → refresh, then call (on failure with the
-  old link); **no link** → `requestContact` on demand, then call; if that fails → `failed()` and nothing is logged.
+  old link); **no link** → `getContact` on demand, then call; if that fails → `failed()` and nothing is logged.
 - `tg.call` tries `tel:` first on Android and opens the call page when the app was not left within 1.2 s; elsewhere
   it opens the call page. `contact_call { listing_id, via: 'tel' | 'browser', src? }` is sent **only when something
   opened**.
@@ -338,6 +349,11 @@ BR-APP-033, TMA-029, TMA-040; fix of LB-APP-028.
   1.5 s same-address guard of WP-21 makes a double tap one open, one event).
 - If the contract carries no raw number (DEV-007 is decided on the API side), the `tel:` attempt and the in-text
   call button are skipped and every call uses the contact link.
+- The call page is on the API host: the stub fixtures of WP-12 give `call_url` as `{api}/call/…`. The link
+  allow-list of WP-21 (`lib/telegram/links.ts`) does not hold that host, so `tg.call` would open nothing: this
+  package adds the origin of `NEXT_PUBLIC_API_URL` to the allow-list constant, with a test in
+  `telegram/links.test.ts`. A `contact_url` on any other host is refused by the same list until its host is added
+  (see "Needs from the production track").
 
 ### Share
 
@@ -370,7 +386,8 @@ or lite).
   otherwise plural `market.v3.district` or `market.v3.city`. A null sample size counts as 0.
 - Rooms phrase, fix of LB-APP-015 — a total function: 1, 2, 3 → `market.v3.rooms1…3`; ≥ 4 → `market.v3.rooms4`;
   0 → `market.v3.rooms0`; any other number → `market.v3.roomsN` with `n` rounded; null → omitted. An unexpected
-  value is reported once per launch through `reportError` with the non-fatal kind that WP-32 defines.
+  value is reported once per launch through `reportError(…, { kind: 'error' })` — the kinds of the facade are
+  `error`, `rejection`, `render` and `i18n` (WP-20, WP-32).
 - Paragraph 2, the median: `market.v3.half` or `market.v3.halfM2` (`market.v3.perM2`, `market.v3.perM2Month`).
 - Paragraph 3, own price and conclusion: `market.v3.own` / `ownM2` plus one of `mixed`, `suspicious`, `check`
   (with the server note), `same`, `noRepair`, `pricier`, `cheaper`; «в N раза» (`market.v3.times`) from +90 %, else
@@ -395,7 +412,8 @@ Menu, title `actions.title` «Объявление»:
   has 20 or more listings.
 - `actions.report` «Пожаловаться» — `actions.reportHint` «Сдано, риелтор, ошибка или обман» → step `report`.
 - `actions.support` «Написать в поддержку» — `actions.supportHint` «Уже сдано, мошенник или это ваше объявление —
-  разберёмся»: only when the reference data gives a support account; `tg.openLink(supportUrl(number))`, then close.
+  разберёмся»: only when the reference data gives a support account (`bot.support_username`);
+  `tg.openLink(supportUrl(username, number))` of WP-21, then close.
 
 Report step, title `report.title` «Что не так?», back chevron aria `actions.back` «Назад»:
 
@@ -442,8 +460,8 @@ is WP-21's (SEC-REQ-019).
 
 **Unit (Vitest).**
 
-- `frontend/packages/utils/tests/phone.test.ts`: `+998 90 123 45 67`, `(90) 123-45-67`, `901234567`,
-  `998901234567`, `90.123.45.67`, `90_123_45_67`; unknown code `12 345 67 89`; long digit runs; two numbers in a line.
+- `frontend/packages/utils/tests/phone.test.ts`: `+998 90 000 00 67`, `(90) 000-00-67`, `900000067`,
+  `998900000067`, `90.000.00.67`, `90_000_00_67`; unknown code `12 345 67 89`; long digit runs; two numbers in a line.
 - `tests/listing/useListing.test.ts`: `initial.ok`; `initial === null` fetches once; each `UiError` → its state;
   redirect seeds the new number without a second request; late answer dropped; retry uses `bffFetch`.
 - `tests/listing/marketText.test.ts`: marker 4 % for −0.6, 50 % for 0, 75 % for +0.2, 96 % for +0.5; context-line
@@ -477,12 +495,17 @@ is WP-21's (SEC-REQ-019).
 **End to end (Playwright, fake Telegram, stubs; every spec in cookie mode and header mode).**
 
 - `listing-open.spec.ts`: feed card → listing over the feed → Back to the same scroll position; direct load;
-  redirect, not-found and `503` fixtures with retry; uz: translate and toggle; Settings button closes the listing.
+  the reserved numbers of WP-12 — `100016` (answers as `100001`: redirect), `999404` (not found), `999503`
+  (`503`, never recovers); retry: the scenario `source_unavailable` (cookie of WP-22) on an ordinary number,
+  cleared before «Повторить»; uz: translate and toggle; Settings button closes the listing.
 - `photo-viewer.spec.ts` (touch): open photo 3 of 7, page, double tap, swipe down closes; Back closes the viewer
   before the listing; direct load of `photos?i=2`.
-- `listing-contact.spec.ts`: iOS opens the call link; Android with a staying app opens it after 1.2 s; no link →
-  one contact request; events recorded by the fake.
-- `listing-actions.spec.ts`: hide → toast → «Вернуть»; block; report `fraud` hidden; report failure; Back from the
+- `listing-contact.spec.ts`: iOS opens the call link (the fake Telegram records `openLink` with the call
+  address); Android with a staying app opens it after 1.2 s; no link → one Server Action request for the contact.
+  The analytics events are not visible to this spec before WP-32 (the `track` facade of WP-20 only keeps its
+  calls in memory): they are asserted in `useContact.test.ts` and, from WP-32 on, in `journal.spec.ts`.
+- `listing-actions.spec.ts`: hide → toast → «Вернуть»; block; report `fraud` hidden; report failure (scenario
+  `source_unavailable` set right before the tap); Back from the
   report step returns to the menu; after hide the feed lacks the card and the history length is unchanged.
 
 ## Acceptance checklist

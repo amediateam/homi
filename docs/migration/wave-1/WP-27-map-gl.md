@@ -54,7 +54,7 @@ and on the PMTiles file as soon as the production track hosts it.
 | Ref. DEC-49, `25` §10 | `maplibre-gl` 6.11.2, `pmtiles`, `supercluster` at the versions WP-03 installed. No other map package is added; the vector style is written by hand |
 | Ref. DEC-45 | Every merge reaches production: the "map unavailable" state is visible to real users on non-GL devices until WP-28 merges, so WP-28 follows immediately |
 | `25` §3.5 | Map points are a browser read through `/bff/*` in both session modes; no Server Component fetches them |
-| `25` §3.8, §3.10 | `tiles` comes from reference data and is empty in Wave 1 until KV-INF-021; tile hosts are allowed by the CSP of WP-21 through `CSP_TILE_HOSTS` |
+| `25` §3.8, §3.10 | `tiles` is `map.tiles_url` of `GET /reference` (WP-11, read with `useReference()`); it is `null` in Wave 1 until KV-INF-021; tile hosts are allowed by the CSP of WP-21 through `CSP_TILE_HOSTS` |
 | `25` §4.1, §4.4 | `503 source_unavailable` shows the "could not load" state; a `meta.source = stub` answer raises the demo marker through `reportSource` |
 | `25` §2 rule 3 | Nothing is copied from the legacy tree: style, palette and geometry are written from the audit; Noto Sans files come from the upstream release |
 
@@ -121,9 +121,10 @@ type MapViewProps = {
 
 ### Data (`features/map/useMapPoints.ts`, `pins.ts`)
 
-- Request: `bffFetch('listings/map?' + toApiQuery(filters))` on every change of the filters; no sort, no paging, no
-  viewport. The previous request is aborted and an answer for older filters is dropped. Check that
-  `lib/api/bffAllowList.ts` has `listings/map` and the card read; add them if WP-22 left them out.
+- Request: `bffFetch('listings/map', { query: toApiQuery(filters), signal })` (the signature of WP-22) on every
+  change of the filters; no sort, no paging, no viewport. The previous request is aborted and an answer for older
+  filters is dropped. Check that `lib/api/bffAllowList.ts` has `listings/map` and the card read; add them if WP-22
+  left them out.
 - Answer, per the contract of WP-12: points with the listing number, `lat`, `lon`, a display label, an optional tone,
   the "priced" flag and the USD price used for ordering; and `total`. A missing `total` counts as the number of
   points.
@@ -185,7 +186,9 @@ type MapViewProps = {
 - The style is rebuilt without re-creating the map when `html[data-scheme]`, `html.lite` or the locale changes
   (`MutationObserver` on `<html>`).
 - `MapAttribution` renders the two links (`https://www.openstreetmap.org/copyright`, `https://protomaps.com`) and
-  opens them with `tg.openLink`. The strings are not translated, as in legacy.
+  opens them with `tg.openLink`. The strings are not translated, as in legacy. The link allow-list of WP-21
+  (`lib/telegram/links.ts`) names neither host, so `tg.openLink` would refuse both: this package adds
+  `www.openstreetmap.org` and `protomaps.com` to the constant, with a case in `tests/telegram/links.test.ts`.
 - CSP (WP-21 reads the keys; this package documents them in `frontend/app/.env.example`): `CSP_TILE_HOSTS`, a
   space-separated list of origins added to `connect-src` and `img-src`; MapLibre also needs `worker-src blob:` and
   `img-src blob: data:` — **verify before use** against the nonce policy of WP-21, including whether the CSP build
@@ -197,9 +200,9 @@ type MapViewProps = {
   verdict, no badges, no "viewed" eye) and a × (aria `common.close`). Several numbers: header `map.stackOf` and a
   horizontal scroll-snap track with one slot per number; only slots within ±1 of the current index render content;
   slots are 85–90 % wide so neighbours peek. Z-index 31, above the tab bar and the bottom inset.
-- Preview per slot: `GET /listings/{number}` in the preview form of the contract, through
-  `useResource('listing-preview:' + number, …)`, for the current and adjacent slots, once each. If the contract has
-  no light form, the full card is read and only the preview fields are used.
+- Preview per slot: `GET /listings/{number}?preview=1` — the preview form of WP-12, which returns the preview
+  object only and records no view — through `bffFetch('listings/' + number, { query: { preview: 1 } })` and
+  `useResource('listing-preview:' + number, …)`, for the current and adjacent slots, once each.
 - A failed slot shows an inline retry for that slot (LB-APP-017).
 - With `dev013BackClosesMapCard` on, the selection is mirrored into `useLayerState('pin')`: opening pushes
   `pin=<number>`, Back closes the card and collapses the stack. A direct load with `pin` strips the parameter.
@@ -244,6 +247,7 @@ Changed:
 - `features/shell/ViewToggle.tsx`: `onIntent` (only if missing).
 - `lib/api/bffAllowList.ts`, `lib/deeplinks/parse.ts`, `lib/storage.ts` (keys `homi-map-engine`, `homi-map-fit:*`):
   only if the entries are missing.
+- `lib/telegram/links.ts` (the two attribution hosts) and `tests/telegram/links.test.ts`.
 - `lib/ui/shellState.ts`: `requestDraw()` and `consumeDrawRequest()` (only if WP-23 or WP-25 have not added them).
 - `eslint.config.mjs` (the HTML-injection rule), `.env.example` (`CSP_TILE_HOSTS`).
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the new keys of "Behaviour to reproduce".
@@ -335,8 +339,9 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `engine.test.ts`: the full table override × saved × WebGL × caveat × lite × `glFailed`; `?map=auto` clears;
   `markGlFailed` reports once; `warmMap` is single-flight and retries after a rejection.
 - `pins.test.ts`: grouping at 5 decimals; price order with missing prices last; hidden numbers dropped and
-  `shown` / `total` adjusted (300 points, total 320, 5 hidden → 295 of 315, 20 missing); spiral layout without
-  overlapping boxes for 2, 12 and 50 labels.
+  `shown` / `total` adjusted (300 points, total 320, 5 hidden → 295 of 315, 20 missing); the spiral layout
+  (`spreadStackLabels(group)` in `pins.ts`, reused by WP-28 under this name) without overlapping boxes for 2, 12
+  and 50 labels.
 - `camera.test.ts`: `robustBounds` for 1, 19, 20 and 500 points with outliers; zoom conversion; padding;
   fit-memory round trip and corrupt JSON.
 - `mask.test.ts`: ring orientation and the cut-out for a triangle and a 40-vertex polygon.
@@ -358,9 +363,12 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; cancelled on unmount before 2.5 s;
   skipped with Save-Data.
 
-**End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium renders
-WebGL in software, which the caveat probe rejects, so GL scenarios launch with `?map=gl`. OSM tile requests are
-fulfilled with a fixture image.
+**End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium is
+expected to render WebGL in software, which the caveat probe rejects, so GL scenarios launch with `?map=gl`
+(confirm on the first run and note the result in the PR). OSM tile requests are fulfilled with a fixture image by
+a route the spec registers after `launchApp`; `playwrightTelegram` of WP-03 blocks that host, so verify in the
+Playwright documentation that the later route is the one that answers, and extend the helper with an allow option
+if it is not.
 
 - Open the map from the toggle: pins from the stub answer are visible; the demo marker shows.
 - Pin → card → listing → Back: the map and the same card are still there.

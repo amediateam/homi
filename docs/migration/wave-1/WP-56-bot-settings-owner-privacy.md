@@ -129,7 +129,9 @@ key; the request class of `PATCH /api/v1/settings` does not, so the Mini App con
 | 4 | `ConversationStore::forget()` and the cache keys of the user (limiter buckets, save locks) | Redis is outside the transaction |
 | 5 | Edit the message into `bot.privacy.deleted`, no buttons, in the remembered locale | the user sees the result even though no user exists any more |
 
-- This package adds to the erasure registry of WP-47: `owner_verifications` (by `user_id`). `user_settings` goes
+- This package adds to the erasure registry of WP-47 (`config/erasure.php`): `owner_verifications`, strategy
+  `delete` (by `user_id`); and to `config/retention.php` the entry `owner_verifications`: `kept`, "the user's own
+  record, removed by erasure" (`RetentionRegistryTest` of WP-47 fails without it). `user_settings` goes
   with the settings row of WP-40. The delivered-card log, attribution rows and radars are registered by WP-53,
   WP-52 and WP-45.
 - Jobs already queued for the user (a held card, a starter list) find no user and end silently (WP-57 and WP-54
@@ -158,7 +160,7 @@ All paths under `backend/`.
 - `database/migrations/<date>_add_service_news_to_user_settings_table.php`,
   `database/migrations/<date>_create_owner_verifications_table.php`
 - `app/Services/Identity/SettingsService.php`, `UserSettingsData.php` (WP-40; changed: `service_news`)
-- the erasure registry file of WP-47 (entry `owner_verifications`)
+- `config/erasure.php` and `config/retention.php` of WP-47 (entries `owner_verifications`)
 - `app/Providers/TelegramServiceProvider.php` (commands `settings`, `owner`, `privacy`; actions `st`, `nop`, `ow`,
   `pv`; the `s` view of `lg`; the `Contact` message handler; the input handler of kind `Owner`)
 - `config/bot.php`, `config/brand.php`, `lang/{ru,uz,en}/bot.php`
@@ -234,7 +236,7 @@ heading, for each setting its title and current value, an italic last line (time
 | 1 | `/owner`, not verified (BOT-075) | The intro (TXT-BOT-076, `tb:818–825`) with a reply keyboard: `📱 Поделиться номером` (BTN-073, `request_contact`) / `Отмена` (BTN-074). The only reply keyboard of the bot (BR-BOT-005) |
 | 2 | `Отмена` — arrives as text (BOT-076) | `Хорошо, номер не подтверждаем. Вернуться — /owner.` (TXT-BOT-077); the reply keyboard is removed |
 | 3 | The user shares the contact; it is the sender's own (BOT-077) | `✅ Номер подтверждён` + `Объявлений с этим номером пока нет. Когда оно появится в одном из каналов, которые читает kvadro² [brand → :brand], метка встанет сама — обычно за несколько минут.` (TXT-BOT-078); the reply keyboard is removed in the same reply (Q-BOT-037, closed by specification) |
-| 4 | A contact that is not the sender's own: forwarded, without `user_id`, another user's, or sent in a group | `owner.not_own_contact`; nothing is stored (SEC-REQ-011; Q-BOT-008, closed by specification) |
+| 4 | A contact that is not the sender's own: forwarded, without `user_id`, or another user's | `owner.not_own_contact`; nothing is stored (SEC-REQ-011; Q-BOT-008, closed by specification). A contact sent in a group gets no reply at all: group updates never reach a handler (WP-51 router, WP-52 `GroupChatHandler`) |
 | 5 | `/owner`, already verified (BOT-078) | `✅ Ваш номер подтверждён` + the paragraph of TXT-BOT-078 (TXT-BOT-079) with the inline button `🗑 Убрать номер` (BTN-075) |
 | 6 | `🗑 Убрать номер` (BOT-079) | The verification is deleted at once and the message becomes `Номер убран, метка «номер подтверждён» снята. Подтвердить снова — /owner.` (TXT-BOT-080), no buttons; silent (BR-BOT-084, legacy; LB-BOT-023) |
 
@@ -316,7 +318,7 @@ number `+998000000001`.
 | - | ---- | ----- |
 | 1 | `SettingsPanelTest` | `/settings` → new message with five rows and `✅` on the stored values; `23:00–08:00` → toast, same message, `quiet_hours` = 23–8 in the record and in `GET /api/v1/settings`; the same press again → toast, "not modified" not logged as an error; `12:00 и 20:00` → `[12, 20]`; `Сумы` → `UZS`; `Не присылать` → `service_news` false; `🇬🇧 English` → panel in English, toast `Saved ✅`, one `setMyCommands` for the chat; header press → silent, no edit; `uz` panel copy; a forged index → alert, nothing saved; a value changed through the API shows in the next panel; a stored value outside the options → shown as text, nothing ticked; `PATCH /api/v1/settings` with `service_news` → rejected |
 | 2 | `OwnerVerificationServiceTest` (unit) | verify stores hash and date; same number again refreshes the date; another number replaces the hash; remove deletes the row; the outcome is `VerifiedNoListings` |
-| 3 | `OwnerVerifyTest` | `/owner` → intro with the reply keyboard; own contact → TXT-BOT-078, `remove_keyboard`, one row; forwarded contact → `owner.not_own_contact`, no row; contact without `user_id`; contact in a group; `Отмена` → TXT-BOT-077, keyboard removed, conversation gone; own contact without a conversation; another text ends the conversation; the same `update_id` twice → one row, one reply; afterwards no table, payload or log line contains the digits of the number |
+| 3 | `OwnerVerifyTest` | `/owner` → intro with the reply keyboard; own contact → TXT-BOT-078, `remove_keyboard`, one row; forwarded contact → `owner.not_own_contact`, no row; contact without `user_id`; contact in a group → no reply, no row, no user; `Отмена` → TXT-BOT-077, keyboard removed, conversation gone; own contact without a conversation; another text ends the conversation; the same `update_id` twice → one row, one reply; afterwards no table, payload or log line contains the digits of the number |
 | 4 | `OwnerStatusTest` | verified `/owner` → TXT-BOT-079 with the button; press → TXT-BOT-080, row deleted; press again on the old message → TXT-BOT-080, no error; a forged `k1:ow:rm` from a user without verification → TXT-BOT-080 for that user, other rows untouched; `dev032` cases (`todo`) |
 | 5 | `PrivacyCommandTest` | `ru` text equals the fixture, button `k1:pv:dl`; `en` and `uz`; a text forced over 4 096 characters → two messages, button on the second; a placeholder value with `<` is escaped; answered for a user the access gate refuses; no brand word of the legacy product in any language |
 | 6 | `PrivacyPromisesTest` | the ten rows of the promise table: a passing assertion or a `todo` naming the package |

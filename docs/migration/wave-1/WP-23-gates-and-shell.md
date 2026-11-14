@@ -70,8 +70,9 @@ access down"), `02-guides/preserving-ui-state.md` (routes are hidden, not unmoun
 
 - `error.tsx` must be a Client Component, receives `error` and a retry function, and does not wrap the layout of
   its own segment; errors of the root layout need `app/global-error.tsx`, which renders its own `<html>` and
-  `<body>` and gets no global styles (`error.md`). The reference section names the retry prop `retry`, the version
-  table `unstable_retry`: verify before use.
+  `<body>` and gets no global styles (`error.md`). The retry prop is `retry`: the version table of `error.md`
+  says it became stable in 16.3.0 (`unstable_retry` was its 16.2 name) and the app runs 16.4.5; `reset` clears
+  the boundary without fetching again.
 - A hidden route keeps its state and its effects are cleaned up while it is hidden (`preserving-ui-state.md`):
   every listener of this package (scroll, touch, timers) is attached in an effect and removed in its cleanup.
 - A Client Component that calls `useSearchParams` in a prerendered route needs a `<Suspense>` boundary
@@ -96,7 +97,8 @@ access down"), `02-guides/preserving-ui-state.md` (routes are hidden, not unmoun
 
 - `features/gates/gateState.ts` (module memory, this launch only): `returnTo`, `localePicked`, `cityPicked`,
   `isGatePending()`. The launch redirect of WP-21 (listing deep link, `?news=`) must not fire while the language
-  gate is pending; this package adds the `isGatePending()` check to that effect.
+  gate is pending; WP-21 left the hook for it: `GateRedirector` registers
+  `setLaunchGate(() => !isGatePending())` (`lib/deeplinks/launch.ts`) when it mounts.
 - Rows 5 and 6 read the flags of `me` per the WP-11 contract (legacy `locale_chosen`, `city_chosen`); row 6 fires
   only on a strict "not chosen" (Q-APP-013).
 - Gate routes have no parent: `parentOf()` returns `null` for `/welcome/*`, `/no-access` and `/outside`, so
@@ -198,17 +200,20 @@ New, under `frontend/app/`:
 - `features/gates/{resolveGate,gateState,accessReason,useBootRetry}.ts`
 - `features/city/CityList.tsx`, `features/city/nearestCity.ts`
 - `lib/ui/{toast,feedback,confirm,shellState}.ts`, `lib/actions/settings.ts`
-- `app/global-error.tsx`, `app/[locale]/dev/ui/page.tsx` (gallery; `notFound()` unless `NEXT_PUBLIC_APP_ENV` is
-  `local` or `staging`; WP-33 removes it or confirms the guard)
+- `app/[locale]/dev/ui/page.tsx` (gallery; `notFound()` unless `NEXT_PUBLIC_APP_ENV` is `local`, `ci` or
+  `staging` — `ci` is the value of the end-to-end build since WP-21, and `crash.spec.ts` here and
+  `errors.spec.ts` of WP-32 use the gallery; WP-33 removes it or confirms the guard). It is the one route file
+  added after WP-20, whose tree is otherwise closed
 - `tests/{shell,gates,city,ui}/*.test.ts(x)`, `e2e/{gates,shell,crash}.spec.ts`
 
 Changed:
 
 - `app/[locale]/layout.tsx` (mount `GateRedirector`, `ToastHost`), `app/[locale]/(main)/layout.tsx` (`AppShell`)
-- `app/[locale]/{error,not-found}.tsx`, `app/[locale]/{outside,no-access}/page.tsx`,
+- `app/global-error.tsx`, `app/[locale]/{error,not-found}.tsx`, `app/[locale]/{outside,no-access}/page.tsx`,
   `app/[locale]/welcome/{language,city}/page.tsx` (placeholders of WP-20 replaced)
-- `lib/navigation/routes.ts` (only if `parentOf` needs the gate rule), `lib/session/*` (only `error`, `refresh`
-  and the `isGatePending()` check, if missing), `lib/telegram/…/TelegramButtons` (expired state)
+- `lib/navigation/routes.ts` (only if `parentOf` needs the gate rule), `lib/session/*` (only if `error` or
+  `refresh` is missing). `features/shell/TelegramButtons.tsx` of WP-21 already hides BackButton in the expired
+  state and is not changed
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (new keys below)
 
 New keys (`homi` layer; uz and en are proposals for the reviewer):
@@ -249,8 +254,8 @@ Part C — shell.
 Part D — gates and error screens.
 
 12. `lib/actions/settings.ts` (`locale`, `city`).
-13. `resolveGate.ts`, `gateState.ts`, `GateRedirector`, `useBootRetry.ts`; the `isGatePending()` check in the launch
-    redirect of WP-21.
+13. `resolveGate.ts`, `gateState.ts`, `GateRedirector`, `useBootRetry.ts`; the `setLaunchGate` registration for
+    the launch redirect of WP-21.
 14. `OutsideScreen` and `/outside`.
 15. `accessReason.ts`, `NoAccessScreen` and `/no-access`.
 16. `LanguagePicker` and `/welcome/language`.
@@ -305,7 +310,8 @@ Part D — gates and error screens.
 - Buttons, in order:
   - «📢 Открыть пост в канале» (`noAccess.openPost`) only when the start parameter carries a channel and a post
     (`l_<id>-[seo-]<channel>-<post>`, TMA-011); opens `channelPostUrl()`.
-  - Main button: «Перейти в бота» (`noAccess.toBot`) opens `botStartUrl('s_<source>[--l<id>]')` when
+  - Main button: «Перейти в бота» (`noAccess.toBot`) opens `noAccessStartUrl(source, number)` of WP-21 (payload
+    `s_<source>[--l<id>]`) when
     `brand.botUsername` is set, the start parameter is an `l_…` link and the reason is not `blocked`; `<source>`
     is `web`, a campaign code, `seo` or `share` (parser of WP-21). Otherwise «Вернуться в бот» (`noAccess.back`)
     calls `tg.close()`.
@@ -323,9 +329,10 @@ Part D — gates and error screens.
   subtitle with the other two phrases joined by « · »; one button per locale of the reference data, the Telegram
   language first, the rest in server order; the first button is accent-coloured.
 - Empty locale list (should not happen): the three known locales with «Русский», «Oʻzbekcha», «English».
-- Tap: all buttons disabled; `updateSettings({ locale })`; on success `gateState.localePicked = true`, `me` is
-  re-read and the address is replaced by the return address in the chosen locale (next-intl router, verify
-  before use). No page reload: the launch counter of analytics does not restart.
+- Tap: all buttons disabled; `updateSettings({ locale })`; on success `gateState.localePicked = true`,
+  `patchMe({ locale, locale_chosen: true })` of WP-21 (not a re-read: on stubs `GET /me` keeps the old locale and
+  the locale guard would turn the address back) and the address is replaced by the return address in the chosen
+  locale (next-intl router, verify before use). No page reload: the launch counter of analytics does not restart.
 - Failure: buttons enabled again and `failed()` — error haptic only, as legacy (LB-APP-027); with
   `dev016ErrorToastOnFailure` also the toast `common.saveFailed` «Не получилось сохранить».
 - No Back. A second tap while saving is ignored.
@@ -376,8 +383,9 @@ Part D — gates and error screens.
 - Tab bar: «Поиск», «Избранное», «Радар», «Настройки» (`tab.search`, `tab.favorites`, `tab.subs`,
   `tab.settings`) with Search, Heart, `RadarIcon`, Settings at 24 px; a label longer than 13 characters gets the
   `long` class; the lens position is the CSS variable `--tab`.
-- Tab press: light haptic, `resetDepth()`, replace to the tab's address (search → `lastSearchHref`, saved →
-  `lastSavedHref`), scroll to top. Pressing the active tab scrolls to top. A press therefore ends the
+- Tab press: light haptic, `nav.tab(href)` of WP-21 (a replace that also calls `resetDepth()`) to the tab's
+  address (search → `lastSearchHref`, saved → `lastSavedHref`), scroll to top. Pressing the active tab scrolls
+  to top. A press therefore ends the
   radar-return mode of WP-30, as legacy.
 - View toggle: floating button showing the target — «Карта» (`app.view.map`) on the list, «Список»
   (`app.view.list`) on the map; keeps the search parameters; hidden while drawing; search tab only.
@@ -483,9 +491,10 @@ End to end (Playwright, fake Telegram, stubs; every spec in cookie mode and head
 
 - `gates.spec.ts`: no Telegram object → `/outside`, no request to `/bff/*`; `POST /bff/session` fulfilled with a
   `join` refusal twice and then passed through → checking line, shell without reload; `blocked` → no request for
-  10 s, then one after a visibility change; first launch (a `me` without a chosen locale: fulfil the browser
-  request that delivers `me` in WP-21's session flow; if `me` is read on the server only, add a stub scenario
-  switch to `@homi/testing`) → pick `en` → `PATCH` body and the `/en/…` address; city gate → pick → feed address
+  10 s, then one after a visibility change; first launch (the stub scenario `first_launch` of WP-11, set with
+  the `homi_stub_scenario` cookie that WP-22 forwards — it reaches `me` in both session modes) → pick `en` →
+  one Server Action request and the `/en/…` address (the `PATCH /settings` body is sent by the server and is
+  asserted in the unit test of `updateSettings` against a fake API); city gate → pick → feed address
   with the city; launch with `startParam: 'l_<number>'` → listing first, city page after Back; sign-in answering
   "too old" → session-expired screen, «Закрыть» calls the fake `close`.
 - `shell.spec.ts`: tab round trip keeps the search parameters; collapse on scroll and first tap expands; view

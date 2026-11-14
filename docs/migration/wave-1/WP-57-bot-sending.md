@@ -7,7 +7,7 @@
 | Depends on | WP-53, WP-46 |
 | Size | about 3 000 changed lines, L. If it grows: two PRs. Part A = steps 1–7 (pacer, the sender for cards and digests, the changes in the outbox job). Part B = steps 8–12 (withdrawn edits, recheck, broadcasts). Production works after either part |
 | Behaviour reference | `04` §2 (rows BOT-062, BOT-081 … BOT-084), §5, §4.2 (TXT-BOT-047, TXT-BOT-086 … TXT-BOT-088), §8 (BR-BOT-007, BR-BOT-073 … BR-BOT-080, BR-BOT-092, BR-BOT-100, BR-BOT-101); `11b` §2.3 row 9; `16` (SEC-REQ-029, SEC-REQ-040, SEC-REQ-046, SEC-REQ-047); `25` §5 row "Matching and delivery planning", §14 item 5; task files KV-TG-050 … KV-TG-055; the specification of WP-46 ("Outbox — the seam for the bot") |
-| Needs from the production track | (1) Approval of one migration: tables `broadcasts`, `broadcast_recipients`. (2) Review of the shared-file PR that gives the queue `notifications` its own `supervisor-delivery` in `backend/config/horizon.php`; a Horizon restart after its deploy. (3) The scheduler must run every minute on staging and production (asked by WP-46 and WP-50); two entries arrive with this package. (4) In the server env: `TELEGRAM_SEND_RATE_GLOBAL` (default 25), `TELEGRAM_SEND_RATE_PER_CHAT` (default 1), `TELEGRAM_BROADCAST_ENABLED` (default `false`); after this package is deployed and one test delivery passed, set `RADAR_MATCHING_ENABLED=true` (it was left off until a sender exists); confirm that `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are `true` (WP-54). (5) Before the deploy of part A: run `php artisan radar:status` and note the number of pending outbox rows — rows older than 36 hours are expired by the first run, not sent. (6) Alerts on the metrics named in "Metrics" (request detailed in WP-70). (7) For each real broadcast on production: `TELEGRAM_BROADCAST_ENABLED=true` for that run, with the first developer's approval |
+| Needs from the production track | (1) Approval of two additive migrations: tables `broadcasts`, `broadcast_recipients`; column `listing_marks.taken_down_at`. (2) Review of the shared-file PR that gives the queue `notifications` its own `supervisor-delivery` in `backend/config/horizon.php`; a Horizon restart after its deploy. (3) The scheduler must run every minute on staging and production (asked by WP-46 and WP-50); two entries arrive with this package. (4) In the server env: `TELEGRAM_SEND_RATE_GLOBAL` (default 25), `TELEGRAM_SEND_RATE_PER_CHAT` (default 1), `TELEGRAM_BROADCAST_ENABLED` (default `false`); after this package is deployed and one test delivery passed, set `RADAR_MATCHING_ENABLED=true` (it was left off until a sender exists); confirm that `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are `true` (WP-54). (5) Before the deploy of part A: run `php artisan radar:status` and note the number of pending outbox rows — rows older than 36 hours are expired by the first run, not sent. (6) Alerts on the metrics named in "Metrics" (request detailed in WP-70). (7) For each real broadcast on production: `TELEGRAM_BROADCAST_ENABLED=true` for that run, with the first developer's approval |
 
 ## Goal
 
@@ -46,7 +46,7 @@ Out:
 | - | -------- | ---------------- |
 | 1 | DEC-43 — radars with delivery are in Wave 1 | All five outbound handlers are built. None was ever observed in legacy (`04` §5), so each format is closed by specification with its question cited, and can change when someone captures the legacy message |
 | 2 | `25` §5 — the matcher polls the listing source | A match appears when the poll of WP-46 finds the listing (every five minutes per filter set), not when it was published. `delivery_lag_seconds` is measured from publication and includes the poll interval |
-| 3 | WP-48 — matching is switched on before the bot can send | The outbox may hold rows that waited for weeks. An item older than `delivery.max_age_hours` (36) is failed as `expired`, never sent |
+| 3 | WP-46, WP-48 — `RADAR_MATCHING_ENABLED` stays `false` until this package is deployed | The outbox is expected to be empty at the first run. The age guard still exists for rows planned while the sender was missing, paused or failing: an item older than `delivery.max_age_hours` (36) is failed as `expired`, never sent |
 | 4 | `25` §4.5 — `source_unavailable` | A send that needs the listing source and cannot get it fails as transient; the outbox retries after 1, 5 and 15 minutes and gives up at the fifth attempt (WP-46) |
 | 5 | `25` §4.4, RK-27 — demo marker | A push or digest built from stub data carries the marker through the renderer of WP-53. Matching itself is off while the feed is on the stub driver (WP-46) |
 | 6 | DEC-33 | Tests and local runs use the fake Bot API and the stub source |
@@ -65,7 +65,7 @@ Out:
 | Sender contract | `App\Services\Delivery\Contracts\RadarSender`: `sendCard(User, OutboxItem): SentMessage`, `sendDigest(User, list<OutboxItem>): SentMessage` | implemented here; the binding replaces `NullRadarSender` |
 | Item and result | `OutboxItem` (`id`, `userId`, `radarId`, `listing`, `kind`, `matchedAt`, `releaseAt`), `SentMessage` (`chatId`, `messageId`) | |
 | Failure signal | `App\Exceptions\Delivery\SendFailed` (`reason`, `permanent`) | thrown by the sender |
-| Delivery job | `App\Jobs\Radar\DeliverRadarItems`, unique per user: claims each due item, calls the sender, marks the result; groups `quiet_hold` and `digest` items of one `release_at` into one digest | unchanged; its deferral path is described below |
+| Delivery job | `App\Jobs\Radar\DeliverRadarItems`, unique per user until processing starts (`ShouldBeUniqueUntilProcessing`, WP-46): claims each due item, calls the sender, marks the result; groups `quiet_hold` and `digest` items of one `release_at` into one digest | unchanged; its deferral path is described below |
 | Release | `radar:release` every minute; the listener on `DeliveryDue` | unchanged |
 | Chat lost | `App\Events\Telegram\ChatUnreachable` and its listener | the sender raises the event through `ChatReachability` of WP-52 |
 | Ledger | `DeliveryLedger` with table `radar_deliveries` | read by `delivery:reconcile` |
@@ -137,7 +137,8 @@ Q-BOT-002).
 ### Pacer
 
 - `App\Services\Delivery\TelegramPacer::reserve(int $chatId): PaceDecision` — `allowed`, or `retryIn(seconds)`.
-  Laravel's `RateLimiter` on the Redis store. Keys: `tg:pace:global:{bot_id}` (per second),
+  Laravel's `RateLimiter` and `Cache` on the default cache store — Redis on the servers, `array` in tests; no raw
+  Redis command, because CI starts no Redis service. Keys: `tg:pace:global:{bot_id}` (per second),
   `tg:pace:chat:{bot_id}:{chat_id}` (per second), `tg:pause_until:{bot_id}` (set after a `429`),
   `tg:breaker:{bot_id}`, `tg:pace:waiting:{bot_id}` (a counter of deferred sends).
 - `retryIn` when the global rate is used up is `ceil(waiting / global_per_second)`, at least 1 and at most
@@ -169,12 +170,14 @@ How HOMI learns of a withdrawal in Wave 1 — legacy sends no events:
    50, at most `delivery.recheck_max_batches` (10) per run, in `SourceContext::system()` so the calls take the
    background share of the legacy budget (WP-41). A listing that is withdrawn, or that the source no longer knows
    (it is marked gone in `listing_refs`, WP-42), dispatches `ListingWithdrawn($number, 'source')`. The time of the
-   last check is kept in the Redis sorted set `delivery:rechecked`. When the legacy breaker is open the run ends at
-   once.
+   last check is kept per number as the cache key `delivery:rechecked:{number}` with a TTL of
+   `recheck_interval_hours` (a number is skipped while its key exists; no Redis sorted set, see "Pacer"). When the
+   legacy breaker is open the run ends at once.
 3. `php artisan delivery:withdraw {number} --cause=takedown` for an author's request made to HOMI: dispatches the
-   event and writes the listing mark of WP-44 that keeps a listing out of what HOMI shows (if WP-44 has no kind for
-   this, the kind `takedown` is added to its mark enum in this PR). Until the admin panel exists this is the
-   operator's tool (SEC-REQ-040).
+   event and marks the listing so that HOMI stops showing it. WP-44 has no mark kinds: `listing_marks` holds
+   `listing_number` and `rented_at` only. This PR adds the nullable column `listing_marks.taken_down_at` (additive
+   migration) and makes `EloquentOverlayData::rentedByVotes()` of WP-44 return such numbers too, also while the
+   rented detector is off. Until the admin panel exists this is the operator's tool (SEC-REQ-040).
 
 Editing:
 
@@ -200,7 +203,9 @@ Editing:
   64, `dry_run_count`, `confirm_token_hash`, `confirmed_at`, `status` string 16: `draft`, `counted`, `running`,
   `paused`, `done`, timestamps) and `broadcast_recipients` (`broadcast_id`, `user_id`, `status` string 16:
   `pending`, `sent`, `blocked`, `failed`, `skipped`, `message_id`, `attempted_at`; unique `broadcast_id` +
-  `user_id`). Models with factories. `broadcast_recipients` is added to `config/erasure.php` of WP-47.
+  `user_id`). Models with factories. `broadcast_recipients` is added to `config/erasure.php` of WP-47 (strategy
+  `delete`), and both tables to `config/retention.php` (`kept`: "audit of what was sent, no text of a user";
+  `RetentionRegistryTest` of WP-47 fails without the entries).
 - `App\Services\Delivery\BroadcastService`: `draft()` (texts in all three languages, Telegram HTML allow-list only,
   `https` links to allow-listed hosts only, at most 4 096 characters), `dryRun()` (stores the count, returns a
   one-time token), `confirm($token)`, `start()` (materialises recipients in chunks, dispatches
@@ -211,7 +216,8 @@ Editing:
   text of the recipient's language, records the result; a restarted batch skips rows that are not `pending`.
 - Commands: `telegram:broadcast draft --audience= --ru= --uz= --en=`, `dry-run {id}`, `confirm {id} --token=
   --i-understand`, `status {id}`, `pause {id}`, `resume {id}`. On `APP_ENV=production` `confirm` refuses unless
-  `TELEGRAM_BROADCAST_ENABLED` is true.
+  `config('telegram.broadcast_enabled')` (`TELEGRAM_BROADCAST_ENABLED`, default `false`; the key WP-71 checks) is
+  true.
 - The message body is never logged; logs and metrics carry counts. The content of a broadcast (TXT-BOT-088) is
   written by the team for each sending and is not a catalogue text.
 
@@ -232,27 +238,31 @@ minutes.
 `backend/config/delivery.php` (file of WP-46), added keys: `max_age_hours` (36), `show_radar_title` (false),
 `digest_max_rows` (30), `recheck_days` (14), `recheck_interval_hours` (6), `recheck_max_batches` (10).
 
-New catalogue keys (ru, uz, en): `digest.header`, `digest.header_morning`, `digest.more`, `digest.row_withdrawn`,
-`card.withdrawn_toast`. `card.withdrawn` is keyed by WP-51.
+New catalogue keys (ru, uz, en): `digest.row_withdrawn`, `card.withdrawn_toast`. `digest.header`,
+`digest.header_morning`, `digest.row`, `digest.more` and `card.withdrawn` are keyed by WP-51 as drafts; this package
+finalises their wording.
 
 ## Files
 
 All paths under `backend/`.
 
 - `app/Services/Delivery/{TelegramRadarSender,TelegramPacer,PaceDecision,DeliveryPause,DigestComposer,CardEditor,BroadcastService}.php`
-- `app/Exceptions/Delivery/SendDeferred.php`
-- `app/Jobs/Middleware/PaceTelegramSends.php`
+- `app/Jobs/Middleware/PaceTelegramSends.php` (`app/Exceptions/Delivery/SendDeferred.php` is not new: WP-46
+  creates it next to `SendFailed.php`)
 - `app/Jobs/Delivery/{RecheckDeliveredListings,EditCardWithdrawn,SendBroadcastBatch}.php`
 - `app/Listeners/Delivery/FanOutWithdrawnEdits.php`, `app/Events/Listings/ListingWithdrawn.php`
 - `app/Console/Commands/Delivery/{PauseCommand,ReconcileDeliveries,RecheckDeliveredCommand,WithdrawCommand}.php`,
   `app/Console/Commands/Telegram/BroadcastCommand.php`
 - `app/Models/{Broadcast,BroadcastRecipient}.php`, their factories,
   `database/migrations/<date>_create_broadcasts_tables.php`
-- Code of WP-46, changed: `app/Services/Delivery/Contracts/RadarOutbox.php` and `DatabaseRadarOutbox.php`
-  (`defer`), `app/Jobs/Radar/DeliverRadarItems.php` (queue, `SendDeferred`), `tests/Support/FakeRadarSender.php`
+- Code of WP-46, not changed: `RadarOutbox::defer`, the deferral path and the queue `notifications` of
+  `app/Jobs/Radar/DeliverRadarItems.php` exist since WP-46 ("What WP-46 already provides for pacing");
+  `app/Models/ListingMark.php` and `app/Services/Personal/EloquentOverlayData.php` of WP-44 are changed
+  (`taken_down_at`), with `database/migrations/<date>_add_taken_down_at_to_listing_marks_table.php`
 - `app/Enums/Delivery/CardMessageState.php` (two states added), `app/Providers/AppServiceProvider.php` (binding
   `RadarSender` → `TelegramRadarSender`)
-- `config/telegram.php` (`pacing`), `config/delivery.php`, `config/erasure.php`, `routes/console.php`,
+- `config/telegram.php` (`pacing`), `config/delivery.php`, `config/erasure.php`, `config/retention.php`,
+  `routes/console.php`,
   `lang/{ru,uz,en}/bot.php`
 - Shared files, each in its own small PR: `config/horizon.php` (`supervisor-delivery`), `.env.example` (three keys)
 - `tests/Unit/Telegram/PaceDecisionTest.php`, `tests/Unit/Delivery/DigestComposerTest.php`,
@@ -273,8 +283,9 @@ Part A.
 2. The shared-file PRs: `supervisor-delivery`; the three env keys.
 3. `TelegramPacer`, `PaceDecision`, `DeliveryPause`, `delivery:pause`, `PaceTelegramSends`; `TelegramPacerTest`,
    `NoSleepInJobsTest`.
-4. `SendDeferred`; `RadarOutbox::defer`; the two changes of `DeliverRadarItems`; `OutboxDeferTest`. The tests of
-   WP-46 stay green.
+4. Confirm in the code of WP-46 that `SendDeferred`, `RadarOutbox::defer` and the deferral path of
+   `DeliverRadarItems` on the queue `notifications` exist as its specification says; add only what is missing and
+   say so in the PR; `OutboxDeferTest`. The tests of WP-46 stay green.
 5. `TelegramRadarSender::sendCard` with the guards and the outcome table; `TelegramRadarSenderTest`,
    `InstantDeliveryTest` (through the real job of WP-46), transcript `push.json`.
 6. `DigestComposer`, `TelegramRadarSender::sendDigest`; `DigestComposerTest`, `DigestDeliveryTest`,
@@ -358,8 +369,8 @@ the planner of WP-46 and delivered through its real job; the listing source on t
 Run on the staging bot and on the production bot with a real radar; ru, uz and en for the texts of the digest and
 the withdrawn card. Attach screenshots to the PR.
 
-- [ ] Before the first run on each environment the old outbox rows were expired, not sent (`radar:status` before and
-      after).
+- [ ] Before `RADAR_MATCHING_ENABLED` is set on each environment `radar:status` was run and its pending count
+      noted (expected 0, matching was off); any row older than 36 hours was expired by the first run, not sent.
 - [ ] An instant card arrives for a new matching listing, once, with the full card and its buttons.
 - [ ] A listing that matches two radars arrives once.
 - [ ] With quiet hours covering the current time no card arrives; after the window ends one morning digest arrives

@@ -73,8 +73,8 @@ next-intl documentation.
 | `/settings/hidden` | `hidden/page.tsx` | `HiddenPage` (SCR-039) |
 
 - The settings screen is the **layout** of the segment (vocabulary rule for layers): it stays mounted and visible
-  under a sub-page, so the slide-in and the swipe-back show the list below, and its data is loaded once. This adds
-  `settings/layout.tsx` to the tree of WP-20.
+  under a sub-page, so the slide-in and the swipe-back show the list below, and its data is loaded once. The file
+  `settings/layout.tsx` already exists as a placeholder in the tree of WP-20 and is replaced here.
 - Every sub-page is wrapped in `SubPage` (WP-23): fixed layer, 24 % slide-in, swipe-back except on Android, header
   shadow when scrolled, Telegram Back. Closing is `back()` of `useBack()`; a direct load of a sub-page address
   closes to `/settings`.
@@ -96,7 +96,7 @@ next-intl documentation.
 | `features/settings/useHomeScreenStatus.ts` | `'unsupported' | 'unknown' | 'missed' | 'added'` for the about row |
 | `features/nudges/{homeScreen.ts,useHomeScreenOffer.ts,HomeScreenNudge.tsx}` | Visit days, offer rules, card |
 | `lib/actions/settings.ts` (from WP-23, extended) | `updateSettings(patch, auth?)` accepts `locale`, `city`, `theme`, `currency`, quiet hours, digest hours |
-| `lib/actions/hidden.ts` (from WP-26, extended) | adds `unblockAuthor(id)`, `clearHidden()` next to `unhideListing(number)` |
+| `lib/actions/hidden.ts` (from WP-26, extended) | adds `unblockAuthorById(id)` (`DELETE /hidden/authors/{id}`, `id` a ULID) and `unhideAll()` (`DELETE /hidden`) next to `unhideListing(number)` — the names WP-22 reserved. `unblockAuthor(number)` of WP-26 is a different method (`DELETE /listings/{number}/blocked-author`) and keeps its name |
 
 ### Data
 
@@ -105,10 +105,12 @@ next-intl documentation.
   client hooks fetch `/bff/settings` and `/bff/hidden`.
 - Only the settings request decides loading and error of the screen. The hidden list, the radar list (for the
   digest hint) and the support account fail silently: their rows are simply absent.
-- Option lists (languages, currencies, quiet presets, digest presets) and current values come from `GET /settings`
-  per the contract. If the contract moved a list to `GET /reference`, read it from `useReference()`. Values may be
-  the legacy strings (`23-08`, `off`, `09,21`) or structured values (the fix of LB-API-050); `format.ts` is the only
-  place that knows which, and it must render a value that is in no preset (set in the bot, Q-API-029).
+- Option lists and current values come from `GET /settings` as WP-11 fixes them: `options.locales` and
+  `options.currencies` (`code`, `name`), `options.quiet_hours` (each `null` or `{ from, to }`),
+  `options.digest_hours` (each an array of hours); the values `quiet_hours` (`null` = off, or `{ from, to }`) and
+  `digest_hours` (array of hours) are structured — the fix of LB-API-050 — and are sent back in the same form.
+  `format.ts` is the only place that turns them into «23–08», «Выкл», «9 и 21», and it must render a value that
+  is in no preset (set in the bot, Q-API-029).
 - Uzbek is `uz` on the v1 wire (25 §4.5); nothing here writes `uz_Latn`.
 
 ### Save rules (BR-APP-051)
@@ -123,7 +125,8 @@ next-intl documentation.
 
 `changeLanguage(locale)` — the fix of LB-APP-041, no `location.reload()`:
 
-1. Update `me.locale` in the session store, so the locale guard of WP-21 (session step 5) agrees with the address.
+1. `patchMe({ locale })` of WP-21's session store, so the locale guard (session step 5) agrees with the address —
+   also on stubs, where a re-read of `me` would return the old locale.
 2. Replace the address with the same route under the new locale segment through the next-intl router (`replace`
    with the `locale` option; verify before use). The search parameters are kept.
 3. `invalidate('')` drops every client cache; server parts re-render under the new segment, so texts, number
@@ -132,7 +135,7 @@ next-intl documentation.
 4. History entries below still carry the old segment. Check that the locale guard also runs on navigation, not only
    at launch, so Back from `/uz/settings/language` lands on `/uz/settings`; extend the guard if it does not.
 
-`changeCurrency(code)`: update `me.currency`, `router.refresh()` (documented: re-fetches and re-renders Server
+`changeCurrency(code)`: `patchMe({ currency })`, `router.refresh()` (documented: re-fetches and re-renders Server
 Components and keeps client state), `invalidate('')`. `useMoney()` then formats with the new currency, and UZS is
 used only when the rate is above 0 (rule of WP-22).
 
@@ -178,8 +181,8 @@ Changed:
 
 1. Read the Next.js files named above and the next-intl documentation for locale switching. Check in `@homi/types`
    the shapes of the settings answer (lists, value forms) and of the hidden list; note them in the PR.
-2. Extend `updateSettings`; add `unblockAuthor`, `clearHidden`; allow-list entries; unit tests of the header-mode
-   token argument.
+2. Extend `updateSettings`; add `unblockAuthorById`, `unhideAll`; allow-list entries; unit tests of the
+   header-mode token argument.
 3. `format.ts` with tests.
 4. `settings/layout.tsx` with the server part, `SettingsScreen` (loading, error, groups, row visibility),
    `AboutGroup` without the home row.
@@ -218,8 +221,8 @@ failed, nothing loaded): tall `ErrorState` — offline «Нет связи» (`e
 | Row | Shown when | Action |
 | --- | ---------- | ------ |
 | `settings.home` «Значок на экране телефона» with value `home.add` «Добавить» | home-screen status is `missed` or `unknown` | `tg.homeScreen.add()` (Telegram's own dialog, SCR-044) |
-| `settings.support` «Написать в поддержку» | reference data has a support account | `tg.openLink(supportUrl())` |
-| `settings.instagram` «Мы в Instagram» with the handle as value | `brand.links.instagram` is set | `tg.openLink(brand.links.instagram)` |
+| `settings.support` «Написать в поддержку» | reference data has a support account (`bot.support_username`) | `tg.openLink(supportUrl(username))` of WP-21 |
+| `settings.instagram` «Мы в Instagram» with the handle as value | `brand.links.instagram[locale]` is set | `tg.openLink(brand.links.instagram[locale])` |
 | `settings.privacy` (new key) | `brand.links.privacy` is set | `tg.openLink(brand.links.privacy[locale])` |
 | `settings.about` (static text) | always | — |
 
@@ -270,12 +273,12 @@ Instagram account is not HOMI's: the row stays hidden until the brand layer has 
 | `hidden.listings` «Скрытые объявления» | thumbnail (empty square when missing); price or `card.negotiable` «Цена договорная»; title · district; tap opens the listing; `hidden.return` «Вернуть» |
 | Footer | `hidden.all` «Показать всё снова» |
 
-- Return an author: `unblockAuthor(id)` with the entry id of the list (`DELETE /hidden/authors/{id}`).
+- Return an author: `unblockAuthorById(id)` with the entry id of the list (`DELETE /hidden/authors/{id}`).
 - Return a listing: `unhideListing(number)` (`DELETE /hidden/listings/{number}`).
 - Return all: `tg.confirm(hidden.confirmAll)` «Снова показывать все скрытые объявления и заблокированных
-  авторов?»; Cancel sends nothing; OK → `clearHidden()` (`DELETE /hidden`).
+  авторов?»; Cancel sends nothing; OK → `unhideAll()` (`DELETE /hidden`).
 - Each action: light haptic, the row leaves at once, then the request. Success: success haptic,
-  `useSessionMap('hidden').reset()`, `invalidate` of feed, map, count and radar previews, so returned items show
+  `resetHidden()` of WP-22's session maps, `invalidate` of feed, map, count and radar previews, so returned items show
   again without a manual refresh. Failure: only that row comes back, `failed()`.
 - An unknown author kind renders a generic icon and the server label. When the list empties, the page shows
   «Ничего не скрыто» and stays open.
@@ -309,8 +312,8 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
 
 **Unit (Vitest).**
 
-- `format.test.ts`: quiet `off`, `23-08`, `00-09` and their structured forms; digest `09`, `09,21`, `12,20`, a
-  non-string, an empty list; graphics labels for auto lite and auto full.
+- `format.test.ts`: quiet `null`, `{ from: 23, to: 8 }`, `{ from: 0, to: 9 }`; digest `[9]`, `[9, 21]`,
+  `[12, 20]`, a non-array, an empty list; graphics labels for auto lite and auto full.
 - `applyProfileChange.test.ts`: language → session store, address replace with the new segment and kept search
   parameters, `invalidate('')`, no reload call; currency → session store, `router.refresh()`, `invalidate('')`;
   a failed save changes nothing; `uz` is sent as `uz`.
@@ -340,11 +343,15 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
   `/settings`.
 - `settings-language.spec.ts`: ru → en changes the address segment and the tab labels with no document reload (a
   marker set on `window` before the switch is still there); Back from the language page lands under the new
-  segment; currency switch re-renders a feed price.
+  segment; currency switch: an amount the client formats (the presets of the price quick filter) reads in сум
+  and the server parts are requested again. The stub's server-formatted card prices do not follow the setting —
+  that half is ticked on real sources in WP-48.
 - `settings-hidden.spec.ts`: return an author, return a listing, return all with confirm; open a hidden listing and
   Back.
-- `home-nudge.spec.ts`: three stored days and status `missed` → card after 4 s → `home_screen_offered`; status
-  `unknown` → no card and `offered` false; the "added" event → toast and no settings row.
+- `home-nudge.spec.ts`: three stored days and status `missed` → card after 4 s and `offered: true` in
+  `homi-home` (the `home_screen_offered` event is asserted in `homeScreen.test.ts` — the `track` facade sends
+  nothing before WP-32); status `unknown` → no card and `offered` false; the "added" event → toast and no
+  settings row.
 
 ## Acceptance checklist
 
@@ -362,7 +369,8 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
       sent.
 - [ ] Language: the address segment, all texts and number formats change without a reload; filters, open tab and
       session favourites survive; Back stays in the new language.
-- [ ] Currency: prices in the feed, on the map and in an open listing change without a reload.
+- [ ] Currency: prices in the feed, on the map and in an open listing change without a reload. On stubs only the
+      amounts the client formats change (presets, market scale); server-formatted prices are ticked in WP-48.
 - [ ] A failed language or currency save changes nothing.
 - [ ] Quiet hours: «Выкл» and each preset check at once; the settings row shows the new value.
 - [ ] Digest time: presets check at once; the hint text depends on an active digest radar; «Время — ташкентское.»

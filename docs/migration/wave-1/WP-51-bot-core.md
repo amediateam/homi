@@ -7,7 +7,7 @@
 | Depends on | WP-50 |
 | Size | about 5 000 changed lines, L; a third of it is catalogue text and fixtures. Above the 3 000-line guide: ship as two PRs, part A = steps 1–10 (router, actor, limits, locale, text helpers, brand layer, catalogues, key map), part B = steps 11–19 (replies, keyboards, callback codec, conversation store, assets, conversation runner). The bot stays silent after either part |
 | Behaviour reference | `04` §1 (rows "Stickers", "Avatar"), §2 (BOT-009, BOT-010, BOT-023, BOT-026), §3 preamble and §3.17, §4.1 (labels), §4.2 (all 88 texts), §4.3, §7, §8 (BR-BOT-001 … BR-BOT-005, BR-BOT-008 … BR-BOT-011, BR-BOT-015, BR-BOT-016, BR-BOT-076, BR-BOT-085, BR-BOT-087), §9.1 (LB-BOT-009 … LB-BOT-013); `16` §4.2–§4.4 (SEC-REQ-010, SEC-REQ-011, SEC-REQ-014, SEC-REQ-019, SEC-REQ-020, SEC-REQ-036); `.ai/agents/telegram-bot-engineer.md` rules 5, 7, 10, 12, 13; task files KV-TG-006 … KV-TG-013, KV-QA-007, KV-QA-009 |
-| Needs from the production track | No migration. (1) In the server env of staging and of production: `TELEGRAM_MINIAPP_URL` (`https://app.staging.homi.uz/`, `https://app.homi.uz/`) and `TELEGRAM_SUPPORT_BOT_USERNAME` (the support contact the product owner names, without `@`; blank until then); on staging also `BRAND_SITE_URL=https://staging.homi.uz`. Optional: `TELEGRAM_CONVERSATION_TTL` (default 1 800), `TELEGRAM_STICKER_SET`, `BRAND_PRIVACY_URL`. Then a Horizon restart. (2) `php artisan telegram:assets:refresh` after any change of the sticker configuration. (3) Nothing for Redis: conversation state and limit counters use the existing cache store; a Redis flush only makes open wizards outdated |
+| Needs from the production track | No migration. (1) In the server env of staging and of production: `TELEGRAM_MINIAPP_URL` (`https://app.staging.homi.uz/`, `https://app.homi.uz/`) and `TELEGRAM_SUPPORT_USERNAME` (the key WP-11 introduced for `telegram.support.username`: the support contact the product owner names, without `@`; blank until then — confirm it is set); on staging also `BRAND_SITE_URL=https://staging.homi.uz`. Optional: `TELEGRAM_CONVERSATION_TTL` (default 1 800), `TELEGRAM_STICKER_SET`, `BRAND_PRIVACY_URL`. Then a Horizon restart. (2) `php artisan telegram:assets:refresh` after any change of the sticker configuration. (3) Nothing for Redis: conversation state and limit counters use the existing cache store; a Redis flush only makes open wizards outdated |
 
 ## Goal
 
@@ -138,8 +138,9 @@ for names; if a name differs from the text here, use theirs and do not create a 
   of `user_settings` when the user chose it (`locale_chosen_at` is set; `SettingsService::get()` of WP-40).
   Otherwise it returns the mapped code of the update, or of `users.language_code` when the update has none. The
   bot never writes the locale itself: a choice is stored by the language buttons of WP-52 through
-  `SettingsService::patch()`. WP-40 creates the settings row with a default that has no English branch (`uz*` →
-  `uz`, else `ru`, not marked chosen); the bot does not read that default. The bot only knows `ru`, `uz`, `en`;
+  `SettingsService::patch()`. WP-40 creates the settings row with the same mapping (`uz*` → `uz`, `en*` → `en`,
+  else `ru`, not marked chosen, `config/settings.php`); the bot does not read that stored default, because the
+  client language can change before the user chooses. The bot only knows `ru`, `uz`, `en`;
   `uz_Latn` exists only at the legacy boundary of WP-41 (CF-006). This closes Q-BOT-035 by specification; an
   observation of the legacy bot with an English or Uzbek Telegram client would change the mapping, nothing else.
 - `App\Telegram\Rendering\BotText`: `get(string $key, array $params, string $locale): string` over
@@ -163,7 +164,7 @@ for names; if a name differs from the text here, use theirs and do not create a 
 | --- | ----- | ----------- |
 | `name` | `HOMI` | `:brand` |
 | `bot_username` | `TELEGRAM_BOT_USERNAME` (the value `telegram.bot.username` reads) | `:bot` → `@<username>` |
-| `support_username` | `TELEGRAM_SUPPORT_BOT_USERNAME` | `:support` → `@<username>`; empty string and one warning when unset |
+| `support_username` | `config('telegram.support.username')`, env `TELEGRAM_SUPPORT_USERNAME` (both created by WP-11; no second env name) | `:support` → `@<username>`; empty string and one warning when unset |
 | `site_url` | `BRAND_SITE_URL`, default `https://homi.uz` | `:site` → the host, for example `homi.uz` |
 | `miniapp_url` | `TELEGRAM_MINIAPP_URL`, default in `.env.example` `https://app.homi.loc/` | — (buttons, WP-52) |
 | `privacy_url` | `BRAND_PRIVACY_URL`; blank means `<site_url>/privacy` (WP-61 is authoritative for the path) | — |
@@ -390,7 +391,8 @@ Later packages add reply classes to the same folder when they need one (for exam
 `Responder::send(BotContext $ctx, array $replies)`: at most one of `Toast`, `Alert`, `SilentAnswer` per callback (a
 second one throws under `testing`); `MessageNotModified` is success; `MessageNotFound` and `MessageCantBeEdited` on
 an edit are logged at `info` and skipped; `ChatUnreachable` dispatches the event
-`App\Events\Telegram\ChatUnreachable` (created here, listened to by WP-52) and stops the list; a failed sticker is
+`App\Events\Telegram\ChatUnreachable` (the class exists since WP-46, whose listener deletes the user's unsent
+outbox rows; use its constructor as it is; WP-52 adds a second listener) and stops the list; a failed sticker is
 skipped with one warning per day and the next reply is still sent.
 
 `App\Telegram\Keyboards\InlineKeyboard` (builder): `row()`, `callback(label, data)`, `url(label, url)` (only `https`
@@ -538,7 +540,8 @@ New:
 - `backend/app/Enums/Telegram/{UpdateKind,ConversationKind}.php`
 - `backend/app/Telegram/Handlers/Contracts/{CommandHandler,CallbackHandler,MessageHandler}.php`
 - `backend/app/Telegram/Handlers/StaleCallbackHandler.php`
-- `backend/app/Providers/TelegramServiceProvider.php`, `backend/app/Events/Telegram/ChatUnreachable.php`
+- `backend/app/Providers/TelegramServiceProvider.php` (`backend/app/Events/Telegram/ChatUnreachable.php` is not
+  new: WP-46 created it)
 - `backend/app/Telegram/Rendering/{BotLocale,BotText,BotFormat,Html}.php`
 - `backend/lang/{ru,uz,en}/bot.php`
 - `backend/app/Telegram/Replies/{SendMessage,EditMessage,EditKeyboard,Toast,Alert,SilentAnswer}.php`,
@@ -557,18 +560,23 @@ New:
   `{KeyboardBuilderTest,ResponderTest,CallbackCodecTest,ConversationStoreTest,StickerRegistryTest}.php`
 - `backend/tests/Unit/I18n/{CatalogueParityTest,RussianPluralsTest}.php`,
   `backend/tests/Feature/I18n/MissingKeyFallbackTest.php` (extend them if an earlier package created them)
-- `backend/tests/Arch/TelegramArchTest.php`
+- `backend/tests/Arch/TelegramArchTest.php`, `backend/tests/Pgsql/FirstContactRaceTest.php`
 
 Changed:
 
 - `backend/bootstrap/providers.php` (the new provider), `backend/config/telegram.php` (`conversation.store`,
-  `conversation.ttl`, `assets`), `backend/phpunit.xml` (test suite `Arch`; `TELEGRAM_BOT_USERNAME`,
-  `TELEGRAM_MINIAPP_URL` and `TELEGRAM_SUPPORT_BOT_USERNAME` test values), `backend/tests/Pest.php` (helper)
+  `conversation.ttl`, `assets`), `backend/phpunit.xml` (test suite `Arch`; `TELEGRAM_MINIAPP_URL` and
+  `TELEGRAM_SUPPORT_USERNAME` test values; `TELEGRAM_BOT_USERNAME` is there since WP-50), `backend/tests/Pest.php`
+  (helper)
+- `backend/app/Services/Identity/UserResolver.php` of WP-40 (new method `fromBotUpdate()`),
+  `backend/app/Providers/AppServiceProvider.php` (the `NullUpdateProcessor` binding of WP-50 is removed; the class
+  stays for tests)
 - `docs/infrastructure/telegram-webhook.md`: sections "Handler registry", "Reply conventions",
   "callback_data registry", "Conversation state", "Assets"
 - Shared files, in a small separate PR reviewed by the other developer, merged first: `backend/.env.example`
-  (`TELEGRAM_MINIAPP_URL=https://app.homi.loc/`, `TELEGRAM_SUPPORT_BOT_USERNAME=`, `TELEGRAM_CONVERSATION_TTL=1800`,
-  `TELEGRAM_STICKER_SET=`, `BRAND_SITE_URL=https://homi.loc`, `BRAND_PRIVACY_URL=`) and the names in
+  (`TELEGRAM_MINIAPP_URL=https://app.homi.loc/`, `TELEGRAM_CONVERSATION_TTL=1800`, `TELEGRAM_STICKER_SET=`,
+  `BRAND_SITE_URL=https://homi.loc`, `BRAND_PRIVACY_URL=`; `TELEGRAM_SUPPORT_USERNAME` is there since WP-11) and the
+  names in
   `docs/infrastructure/environments.md`; skip a name an earlier package already added
 
 ## Steps
@@ -591,7 +599,7 @@ Create classes with `php artisan make:* --no-interaction`. Write the tests of a 
 9. `HandlerRegistry`, the handler contracts, `BotContext`, `UpdateRouter` (actor, guard, limits, dispatch, failure
    notice), `TelegramServiceProvider`. `UpdateRouterTest` uses handlers defined in the test.
 10. `TelegramArchTest`, part 1 (formatting and translation rules). **End of part A.**
-11. Reply objects and `Responder` with `ResponderTest`; the event `ChatUnreachable`.
+11. Reply objects and `Responder` with `ResponderTest`; the dispatch of the existing event `ChatUnreachable`.
 12. `InlineKeyboard`, `ReplyKeyboard` with `KeyboardBuilderTest`; `TelegramArchTest`, part 2.
 13. `CallbackCodec`, `CallbackPayload` with `CallbackCodecTest` (round trip and length for every registered shape).
 14. `ConversationKind`, `ConversationStore`, `Conversation` with `ConversationStoreTest`.
@@ -680,7 +688,13 @@ unknown.
 
 ## Tests
 
-Layers of `25` §9. All run on the fake Bot API of WP-50.
+Layers of `25` §9. All run on the fake Bot API of WP-50. A file listed under `tests/Unit/Telegram/` or
+`tests/Unit/I18n/` that needs a facade, `config()`, `__()` or the container is created under
+`tests/Feature/Telegram/` or `tests/Feature/I18n/` instead (`tests/Pest.php` binds the test case to `Feature` only;
+the rule of WP-41 and WP-50) — here every one except `IncomingUpdateTest`, `HtmlTest` and `CallbackCodecTest`, as
+far as those take plain values. On the `sync` queue of the test run one exception already
+fails the job and surfaces in the webhook response, so the retry cases (feature cases 10 and 11) call the job's
+`handle()` and `failed()` directly, as `ProcessUpdateJobTest` of WP-50 does.
 
 **Pest unit**
 
@@ -710,7 +724,7 @@ only by the classes of an allow-list in the test (the `/owner` handlers of WP-56
 | # | Case | Expected |
 | - | ---- | -------- |
 | 1 | `/start` from a new id, a test handler registered | one user row without a name; the handler invoked once |
-| 2 | ten concurrent first updates (`->group('pgsql')`) | one user row |
+| 2 | ten concurrent first updates — `backend/tests/Pgsql/FirstContactRaceTest.php`, `concurrently()` of WP-03, each task calls `UserResolver::fromBotUpdate()` with the same Telegram id | one user row, one `user_settings` row |
 | 3 | a command with no handler and no fallback | nothing sent; one log record |
 | 4 | a callback whose handler returns no answer | one silent `answerCallbackQuery` |
 | 5 | a group message | no user row, nothing sent |
@@ -722,7 +736,7 @@ only by the classes of an allow-list in the test (the `/owner` handlers of WP-56
 | 11 | the handler throws three times | `bot.common.error` once; the row `failed` |
 | 12 | text while the conversation has `awaiting` set | the input handler, not the text handler |
 | 13 | two handlers register the action `cd` | an exception at boot |
-| 14 | stale cases 1–7 of "Outdated buttons" | the alert, the keyboard removed, and `DB::listen` sees no `insert`, `update` or `delete` outside the ledger row |
+| 14 | stale cases 1–7 of "Outdated buttons" | the alert, the keyboard removed, and `DB::listen` sees no `insert`, `update` or `delete` outside the ledger row and the actor's own `users` row (`fromBotUpdate()` refreshes `last_seen_at`) |
 | 15 | log records of the run | no Telegram id, no message text |
 
 **Conversation tests — `ConversationSelfTest`, `TranscriptTest`**
@@ -770,7 +784,7 @@ time in WP-52 and WP-54, whose checklists repeat it; here it is proven by the co
       registry, the conversation contract and the asset list.
 - [ ] The env names are in `backend/.env.example` and `docs/infrastructure/environments.md` (shared-file PR
       merged).
-- [ ] `make ci-backend` exits 0; the `pgsql` group is green; no dependency was added.
+- [ ] `make ci-backend` exits 0; the `Pgsql` suite (`make test-pgsql`) is green; no dependency was added.
 - [ ] On staging, then on production, with the production track: the env values are set; `telegram:health` exits
       0; a message sent to the bot creates one user row with the right locale and no name, the ledger row ends
       `done`, and the bot sends nothing.

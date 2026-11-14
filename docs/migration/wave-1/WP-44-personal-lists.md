@@ -49,7 +49,7 @@ nullable), `source_post_id` (`unsignedBigInteger`, nullable).
 | `blocked_authors` | `id` is a ULID; `author_key` (string 96); `kind` (`phone`, `source`); `label` (string 64); listing columns of the listing used to block | unique (`user_id`, `author_key`) |
 | `listing_votes` | listing columns; `author_key` (nullable); `reason` (string 16); `detail` (string 500, nullable); `weight` (decimal 4,2); `withdrawn_at` | unique (`user_id`, `listing_number`, `reason`); index (`listing_number`, `reason`); index (`author_key`, `reason`) |
 | `vote_decisions` | no `user_id`; `subject_type` (`listing`, `author`); `subject` (string 96); `reason`; `voters` (integer); `weight_sum` (decimal 6,2); `threshold` (decimal 6,2); `outcome` (`marked`, `unmarked`) | index (`subject_type`, `subject`) |
-| `listing_marks` | no `user_id`; `listing_number` (primary key); `rented_at` | — |
+| `listing_marks` | no `user_id`; `listing_number` (primary key); `rented_at` (WP-57 adds `taken_down_at` in its own migration) | — |
 | `author_marks` | no `user_id`; `author_key` (primary key); `realtor_marked_at`; `source` (`votes`) | — |
 | `found_answers` | `answer` (nullable), `trigger` (nullable), `where` (nullable), all string 16 | index (`user_id`, `id`) |
 
@@ -88,13 +88,19 @@ relations `favorites()`, `listingViews()`, `hiddenListings()`, `blockedAuthors()
 - `BlockResult`: entry id, `kind`, `label`, `count` (the source's author count when the card gives one, else the
   number of listings HOMI knows), `listing_numbers` = `ListingRefs::numbersOfAuthors()` plus the listing asked for.
 
-**List pages.** A page is cut from HOMI's rows by keyset (`n1.<last row id>`, newest first), then
-`ListingSource::previews()` supplies the items in that order. A number the source no longer knows is marked gone in
-`listing_refs` and left out; a page may therefore be shorter than `limit` while `meta.next_cursor` is still set. If
+**List pages.** By default favourites and history come back whole, newest first, with `meta.next_cursor: null`, and
+`cursor` and `limit` are ignored (`25` §4.1, WP-13: paging them is DEV-003, which is off). The switch is
+`config('personal.paginate_lists')` (new `backend/config/personal.php`, default `false`). Only with it on: a page is
+cut from HOMI's rows by keyset (`n1.<last row id>`, newest first) and may be shorter than `limit` while
+`meta.next_cursor` is still set. In both cases `ListingSource::previews()` supplies the items in row order, and a
+number the source no longer knows is marked gone in `listing_refs` and left out. If
 the source is unavailable the method answers `503 source_unavailable`. `GET /hidden` returns all hidden listings
 (capped at 200, newest first) and all author entries in one answer, as legacy does.
 
 ### Reports and votes (`VoteService`)
+
+WP-53 later adds one read method for the bot's report menu, `activeReasons(User, ListingPointer): list<ReportReason>`;
+nothing in this package needs it.
 
 `report(User, ListingPointer, ReportReason, ?string $detail): ReportOutcome`, in one transaction:
 
@@ -146,7 +152,8 @@ with only `where`. The wire value `homi` replaces the legacy `kvadro`.
   and unknown; then `Gate::authorize('delete', $entry)` against `App\Policies\BlockedAuthorPolicy`.
 - `backend/tests/Feature/Api/V1/IdorMatrixTest.php` holds one row per bearer route with the actors of `15` §3.1:
   owner, another user, unknown id, blocked user, no token. A coverage case walks `Route::getRoutes()` and fails when
-  a bearer route has no row. WP-45 adds the radar rows.
+  a bearer route has no row. The five `api.v1.media.*` routes that exist today are bearer routes too: they get rows
+  that point at the media tests of WP-00, not a silent skip. WP-45 adds the radar rows.
 
 ### Tables with a user link (for the erasure registry of WP-47)
 
@@ -160,13 +167,13 @@ affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_
   and their factories; `backend/app/Models/User.php`; `backend/app/Enums/Personal/*.php`
 - `backend/app/Services/Personal/{ListingResolver,FavoriteService,HistoryService,HiddenService,BlockedAuthorService,BlockResult,AuthorLabel,VoteService,ReportOutcome,FoundSurveyService,EloquentOverlayData}.php`
 - `backend/app/Jobs/Listings/ResolveListingRef.php`; `backend/app/Policies/BlockedAuthorPolicy.php`;
-  `backend/app/Console/Commands/Votes/SetDetector.php`; `backend/config/votes.php`
+  `backend/app/Console/Commands/Votes/SetDetector.php`; `backend/config/{votes,personal}.php`
 - `backend/app/Http/Controllers/Api/V1/Personal/*.php` (real bodies; the stub bodies move into `NativeStubs`, the
   rule of WP-40); `backend/app/Providers/AppServiceProvider.php`
   (binding, Pennant definitions)
 - `backend/tests/Feature/Api/V1/Personal/{FavoritesTest,HistoryTest,HiddenListingsTest,BlockedAuthorsTest,HiddenOverviewTest,ReportsTest,FoundSurveyTest}.php`,
   `backend/tests/Feature/Api/V1/IdorMatrixTest.php`, `backend/tests/Feature/Personal/{VoteThresholdTest,VoteWeightTest,AuthorLabelTest,OverlayDataTest,ListingResolverTest}.php`,
-  `backend/tests/Feature/Pgsql/PersonalRaceTest.php`
+  `backend/tests/Pgsql/PersonalRaceTest.php`
 - `backend/resources/fixtures/v1/{favorites,history,hidden}/*.json` (deleted where no test reads them any more);
   `docs/api/openapi.json` and generated types (expected diff: none in shapes)
 
@@ -205,9 +212,13 @@ without an author accepts `agent` and has no author effect.
 
 ## Tests
 
+- Driver in these tests: the stub driver knows no author keys and no source references (WP-42). Cases that need
+  them (blocked authors, vote marks per author, back-fill of channel and post) set the listing features to `legacy`
+  on `LegacyFakeServer`; the others may stay on `stub`.
 - Favourites: `PUT` twice → one row, `true` both times; `DELETE` twice; unknown number → `404`; source down and
-  number unknown locally → `503`, known locally → `200`; list order, `favorite: true`, cursor walk; a gone listing
-  is skipped and marked; user B's `PUT` leaves A's rows unchanged.
+  number unknown locally → `503`, known locally → `200`; list order, `favorite: true`, the whole list with
+  `next_cursor: null` by default and a cursor walk with `personal.paginate_lists` on; a gone listing is skipped and
+  marked; user B's `PUT` leaves A's rows unchanged.
 - History: a full card read by A appears for A only; clear → empty, favourites untouched, `viewed` false again.
 - Hidden: hide → gone from A's feed and map, still there for B; unhide restores; unhide of a `report_fraud` row keeps
   the vote; an alias number acts on the survivor.

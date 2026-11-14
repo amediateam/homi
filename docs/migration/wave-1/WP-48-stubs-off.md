@@ -7,7 +7,7 @@
 | Depends on | WP-41 … WP-47 |
 | Size | about 1 500 changed lines (mostly tests), M; the switching itself is operations, not code |
 | Behaviour reference | `25` §4.3, §4.4, §4.5 (contract tests), §9 (contract layer, checks inside Telegram), §14 item 2; `24` §3 (rollback by flag), §5 (order of methods), §8.3 (RK-25 … RK-28); WP-10 (rules, commands, audit table), WP-11 … WP-13 (the shapes), WP-41 and WP-42 (golden fixtures) |
-| Needs from the production track | This package is done together with that track. 1. Before anything: the service key is installed and `php artisan legacy:ping` succeeds (WP-41); the media location serves a legacy photo (WP-42). 2. Run the `sources:*` commands of "Design, part B" on staging and then on production, at the steps this specification names, or agree in writing on how the development track may run them. 3. After the defaults PR is deployed: server env `SOURCES_ALLOW_STUB=false` and `RADAR_MATCHING_ENABLED=true` on staging, then on production. 4. Watch Horizon and Pulse during each soak and say stop if the legacy host or the API host suffers |
+| Needs from the production track | This package is done together with that track. 1. Before anything: the service key is installed and `php artisan legacy:ping` succeeds (WP-41); the media location serves a legacy photo (WP-42). 2. Run the `sources:*` commands of "Design, part B" on staging and then on production, at the steps this specification names, or agree in writing on how the development track may run them. 3. After the defaults PR is deployed: server env `SOURCES_ALLOW_STUB=false` on staging, then on production; `RADAR_MATCHING_ENABLED` stays `false` (WP-57 switches it on). 4. Watch Horizon and Pulse during each soak and say stop if the legacy host or the API host suffers |
 
 ## Goal
 
@@ -20,7 +20,8 @@ can no longer appear for a real user.
 
 In: contract tests across drivers and against the OpenAPI file; a source-honesty test; the switching procedure for
 the nine features of reference and listing data, on staging and then production; the change of configured defaults;
-forbidding stubs on the servers; switching radar matching on; the checks inside Telegram; the records.
+forbidding stubs on the servers; the checks inside Telegram; the records. Radar matching is not switched on here
+(WP-57 does that, when a sender exists).
 
 Out: the two landing features (`source.landing.live`, `source.landing.pins`) — WP-60 binds their legacy driver and
 switches them; until then they answer `503 source_unavailable` on servers where stubs are forbidden, and nothing
@@ -116,7 +117,9 @@ After group 3 has soaked on production:
    driver of every method.
 2. After its deploy: `php artisan sources:reset <f> --all …` for the nine features, staging then production, so the
    configured default is what runs and no override is left. `sources:list` must show empty rules.
-3. The production track sets `SOURCES_ALLOW_STUB=false` (staging, then production) and runs `sources:check`.
+3. The production track sets `SOURCES_ALLOW_STUB=false` (staging, then production) and runs `sources:check`. It
+   exits 0: the command looks only at whether the resolved driver is bound (WP-10), so the two landing features,
+   whose default is still a bound but now forbidden `stub`, do not fail it; they answer `503` until WP-60.
 4. `RADAR_MATCHING_ENABLED` stays `false`. Matching is switched on by the bot's sending package (WP-57), when a
    sender exists; switching it on here would only build a backlog nobody can send.
 
@@ -154,7 +157,7 @@ Desktop and Web clients; on Web once with third-party cookies blocked (header mo
 | Share | Telegram's share sheet opens; the shared message opens the listing in HOMI's Mini App |
 | Overlay | a favourite set on the card shows on the feed; a hidden listing leaves feed and map and returns on undo; a blocked author's listings leave; "viewed" eyes appear |
 | Personal | favourites, history and «Скрытое» survive a relaunch |
-| Radars | create from the filters; the tab shows previews of real listings; pause, resume, edit, delete; `radar:status` on the server shows outbox rows for a new listing after matching is on |
+| Radars | create from the filters; the tab shows previews of real listings; pause, resume, edit, delete. Outbox rows for new listings are not checked here: matching stays off until WP-57 |
 | Failure | with the group rolled back for the tester's account only (`--user`), the marker returns for that account |
 
 Screenshots of the feed, a card and the radar tab from each client go into the PR.

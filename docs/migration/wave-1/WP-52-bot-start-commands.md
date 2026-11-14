@@ -96,8 +96,9 @@ only when no handler accepts the message, so a later package needs no switch for
 handler is enough. An action can be registered once: WP-54 replaces the `nw` line with its own handler in the PR
 that removes `new` from the interim list.
 
-One addition to `UpdateRouter`: after the access guard, every private update calls
-`ChatReachability::markActive($user)` (section 8 below).
+One addition to `UpdateRouter`: after the access guard, every private message or callback — not
+`UpdateKind::ChatMember`, whose handler sets the state itself — calls `ChatReachability::markActive($user)`
+(section 8 below).
 
 Interim list at the end of this package, and who empties it:
 
@@ -160,10 +161,10 @@ Both migrations are additive and are created with `php artisan make:migration �
 | `App\Telegram\Handlers\CommandFallback`, `InterimHandler`, `UnknownCommandHandler`, `NonTextMessageHandler`, `GroupChatHandler` | Out-of-scope input and interim replies |
 | `App\Enums\Telegram\BotChatState`, `ChatReachability`, `App\Events\Telegram\ChatReachabilityChanged`, `App\Listeners\Telegram\MarkChatBlocked`, `App\Telegram\Handlers\ChatMemberHandler` | Reachability; see section 8 of "Behaviour to reproduce". `ChatReachability` has `canWrite(User): bool`, `markActive(User): void`, `markBlocked(User, string $reason): void` |
 
-One class answers "can the bot write to this user". The radar service of WP-45 reads the state before a write (rule
-of KV-BE-100, expected `App\Services\Radar\ChatReachability::canWrite`). If that class exists, add `markActive` and
-`markBlocked` to it and bind nothing new; if it does not, create `App\Services\Telegram\ChatReachability` with all
-three methods. Never keep two classes of that name. `App\Events\Telegram\ChatUnreachable` is the event that
+One class answers "can the bot write to this user": `App\Services\Radar\ChatReachability`, created by WP-45 with
+`canWrite(User)` (the radar service reads it before a write, rule of KV-BE-100). This package adds `markActive` and
+`markBlocked` to that class and binds nothing new; no `App\Services\Telegram\ChatReachability` is created.
+`App\Events\Telegram\ChatUnreachable` is the event that
 `Responder` of WP-51 dispatches when a send is refused (the class itself is created earlier, by WP-46, whose
 listener drops the user's pending deliveries); `MarkChatBlocked` listens to it.
 
@@ -242,8 +243,7 @@ New, under `backend/`:
 - `app/Telegram/DeepLinks/{StartPayloadParser,StartPayload,MiniAppUrl}.php`, `app/Enums/Telegram/{StartPayloadKind,BotChatState}.php`
 - `app/Telegram/Keyboards/SupportButton.php`, `app/Telegram/Replies/NotUnderstoodReply.php`
 - `app/Services/Telegram/{WelcomeCounters,WelcomeCounts,DemoDataState,AttributionRecorder,LanguageSwitcher,BotCommandList}.php`
-- `app/Services/Telegram/ChatReachability.php` — only if WP-45 did not create `app/Services/Radar/ChatReachability.php`
-  (then that file is changed instead)
+- no new reachability class: `app/Services/Radar/ChatReachability.php` of WP-45 is changed (see "Changed")
 - `app/Jobs/Telegram/RefreshWelcomeCounters.php`,
   `app/Listeners/Telegram/{SyncBotCommandsOnLocaleChange,MarkChatBlocked}.php`
 - `app/Events/Telegram/ChatReachabilityChanged.php`
@@ -258,7 +258,11 @@ Changed:
 
 - `backend/config/bot.php`, `backend/config/telegram.php` (`admin_user_ids`)
 - `backend/app/Providers/TelegramServiceProvider.php` (registrations), `backend/app/Telegram/Updates/UpdateRouter.php`
-  (the `markActive` call), `backend/app/Models/User.php` (casts, relation)
+  (the `markActive` call), `backend/app/Models/User.php` (casts, relation),
+  `backend/app/Services/Radar/ChatReachability.php` (`markActive`, `markBlocked`), `backend/config/erasure.php` of
+  WP-47 (entry `user_attributions`, strategy `delete`) and `backend/config/retention.php` of WP-47
+  (`user_attributions`: `kept`, "the user's own record, removed by erasure") — without the two entries
+  `ErasureRegistryTest` and `RetentionRegistryTest` of WP-47 fail
 - `backend/lang/{ru,uz,en}/bot.php` — only keys this package adds: `ping.public`, `ping.db_error`,
   `help.unavailable`, `city_names.<code>` for every city code of the reference data; each goes into the `new` list of
   `tests/Fixtures/Bot/txt-keys.json` and into `translation-status.json`
@@ -464,12 +468,15 @@ State machine: `04` §3.2. Rules BR-BOT-013, BR-BOT-014, BR-BOT-015.
 
 - The write is a conditional update (`where bot_chat_state <> <new value>`); only when it changed a row is
   `ChatReachabilityChanged` dispatched, so ten parallel refusals change the state once and raise one event. A
-  listener of that event flushes the access-gate cache of WP-40 if the gate does not do so itself.
+  listener of that event flushes the access-gate cache of WP-40: the gate caches a decision per user for 2 s and
+  names no hook for a state change made outside its own code, so this package adds the listener and, if WP-40 did
+  not ship one, a `forget(User): void` method on `AccessGate`.
 - Updates of one chat are applied in update order (WP-50), so a late `my_chat_member` cannot undo a newer message.
 - Consumers: radar writes of WP-45 answer the conflict code `no_chat` when `canWrite` is `false` (BR-BOT-099,
-  BR-API-021) — that package owns the answer, this one owns the state. If WP-45 shipped its check behind a switch
-  because nothing wrote the state yet (see its "Handoff"), turn the switch on in step 4. Deliveries of WP-57 skip
-  `never` and `blocked` users.
+  BR-API-021) — that package owns the answer, this one owns the state. WP-45 keeps the check behind
+  `config('radar.require_chat')` (`RADAR_REQUIRE_CHAT`, `false` on the servers until WP-54 asks the production track
+  to set it); this package does not change the switch and tests the answer with the config set to `true`.
+  Deliveries of WP-57 skip `never` and `blocked` users.
 - Q-BOT-012 is closed by specification: a blocked user's radars stay active, nothing is sent, and after unblocking
   delivery resumes without re-sending what was missed.
 
@@ -521,7 +528,7 @@ and store their transcripts as JSON.
 | 4 | `LanguageSwitchTest` | edit of the same message, silent answer; one `setMyCommands` with chat scope; none on a repeat; none when the new language equals the client's default-scope variant and nothing was stored; `ChatUnreachable` → blocked, locale saved; listener on a Mini App change; no call for a `never` chat; `/start` applies a stale version; `resetChat` clears both columns; `k1:lg:uz:s` without a registered view → stale-button alert |
 | 5 | `PingCommandTest` | non-admin → exactly `🏓 pong`, no `\d+\.\d+`; admin → TXT-BOT-085 format; no PostGIS (SQLite) → `PostGIS: —`; database error → marker, no exception text; empty id list |
 | 6 | `OutOfScopeMessagesTest` | `/foo` silent; hint with the flag on (`todo`); `/start@OtherBot` ignored; photo → reply with two buttons; twenty stickers → one reply; text → reply; `write_access_allowed` → no reply, chat `active`; group message → nothing, no user row; bot added to a group → one `leaveChat`; stored update has no location |
-| 7 | `ChatReachabilityTest` | the six inputs of section 8; one event per change; ten parallel refusals (PostgreSQL group) → one change |
+| 7 | `ChatReachabilityTest` | the six inputs of section 8; one event per change; ten parallel refusals → one change (this case lives in `tests/Pgsql/ChatReachabilityRaceTest.php` and uses `concurrently()` of WP-03) |
 | 8 | `InterimHandlerTest` | each of the six commands → interim message with the Mini App button; `k1:nw` → silent answer + new message; a command with a registered handler never reaches the fallback; empty list → the command is unknown |
 | 9 | `AppHelpCommandTest` | texts and buttons; configured username in text and address; empty username → `bot.help.unavailable`, no button; an open conversation survives both commands |
 
@@ -575,7 +582,8 @@ draft until proofread (Q-BOT-014).
       message with the Mini App button (for the commands whose package has not landed).
 - [ ] Added to a group, the bot leaves and writes nothing.
 - [ ] Blocking the bot sets the state to `blocked`; unblocking or `/start` sets it to `active`; for a user whose
-      state is not `active` a radar write from the Mini App answers `no_chat`.
+      state is not `active` a radar write answers `no_chat` when `radar.require_chat` is on (shown by
+      `ChatReachabilityTest`; on the servers the switch is turned on with WP-54).
 - [ ] No web_app or url button points anywhere but the configured Mini App address and `https://t.me/…`.
 - [ ] Tests of this package are green; `make ci-backend` is green; the DEV tests are `todo`, not skipped silently.
 - [ ] Every transcript of the list above exists and passes; `txt-keys.json` still maps all 88 texts and lists the

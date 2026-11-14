@@ -231,8 +231,10 @@ Changed:
 - `frontend/app/lib/navigation/routes.ts` (`screenNameOf`), `frontend/app/lib/api/bffAllowList.ts`
 - `frontend/app/app/[locale]/layout.tsx` (mounts `ScreenTracker` and `AnalyticsBoot`)
 - `frontend/app/features/map/MapSelectionCard.tsx` (`useScreenLayer('map/card')`)
-- `frontend/app/.env.example`: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, `NEXT_PUBLIC_BUILD_VERSION`,
-  and the note that `CSP_ANALYTICS_HOSTS` must name the same host (names and comments only)
+- `frontend/app/.env.example`: the file already holds `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST`
+  as commented lines — keep them, reword their comment (DEC-47: HOMI's own project per environment), add
+  `NEXT_PUBLIC_BUILD_VERSION` and the note that `CSP_ANALYTICS_HOSTS` must name the same host (names and comments
+  only)
 - `frontend/playwright.config.ts` (project `analytics`), `.github/workflows/frontend-e2e.yml` (its job; a shared
   file — announce it in the PR as `docs/handoff/parallel-work.md` asks)
 - `docs/migration/03-legacy-frontend-audit.md` is **not** edited: the new screen names live in this specification
@@ -368,7 +370,7 @@ rendered in place and keeps the name of its address.
 **Unit (Vitest).**
 
 - `scrub.test.ts`: `tgWebAppData` in a query, in a hash and in the middle of a sentence; bearer token; the session
-  cookie pair; `+998 90 123 45 67` and `998901234567` forms; e-mail; nested object to depth 6; `$snapshot` left
+  cookie pair; `+998 90 000 00 67` and `998900000067` forms; e-mail; nested object to depth 6; `$snapshot` left
   untouched; `stripUrl` for the app's addresses and for foreign ones.
 - `sanitize.test.ts`: each field limit; `name` from a thrown string and from an object; source taken from a stack
   with and without `:line:col`; query and hash removed.
@@ -412,8 +414,9 @@ rendered in place and keeps the name of its address.
 - `analytics.spec.ts` (project `analytics`, PostHog host intercepted): nothing requested before first content;
   the `$pageview` sequence of a journey feed → filters → listing → photos → back; no captured payload contains
   `tgWebAppData`, `Bearer`, `homi_session`, a `?` query or a `#`; with Save-Data emulated no PostHog request at
-  all; in header mode, with the `GET /me` answer fulfilled as `replay: true`, `replay_rate: 1`, recorder code is
-  requested and no snapshot payload holds a readable text of the page. In the default project (no key) the test
+  all; with the `me` of the `GET /bff/session` answer (the browser request that delivers `GET /me`, WP-21)
+  fulfilled as `analytics.replay: true`, `replay_rate: 1`, recorder code is requested and no snapshot payload
+  holds a readable text of the page. In the default project (no key) the test
   asserts zero requests to any PostHog host.
 
 ## Acceptance checklist

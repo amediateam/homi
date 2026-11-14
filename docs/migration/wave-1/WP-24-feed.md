@@ -80,7 +80,8 @@ app/[locale]/(main)/page.tsx
         → <FeedScreen initial={…} />                 Client Component
 ```
 
-- `FeedServer`: `fromSearchParams()` of `@homi/search` gives `filters` and `sort`. With a session token it calls
+- `FeedServer`: `readSearchState()` of WP-22 (the server-side wrapper of `fromSearchParams()` of `@homi/search`)
+  gives `filters` and `sort`. With a session token it calls
   `serverApi()` for `GET /listings` (`toApiQuery(filters)`, `sort` unless `new`, page size 20) and passes
   `initial = { key, result }`, where `result` is the `ApiResult` (a failure is passed on, not thrown). Without a
   token, or when the address has no city and the server cannot resolve one from `me` (the fallback chain is
@@ -121,8 +122,9 @@ app/[locale]/(main)/page.tsx
 | `FeedEmpty.tsx`, `FewResultsNote.tsx`, `fewResults.ts` | States of SCR-009 and their conditions |
 | `useCursorFeed.ts`, `ListingFeed.tsx`, `FeedScreen.tsx` | List machinery |
 
-- The card is a link: `<Link href={routes.listing(number)} prefetch={false} scroll={false}>`; on click it adds the
-  number to `seen`, calls `setPreview(number, item)` and lets the router push. The heart stops the click.
+- The card is a link: `<Link href={routes.listing(number)} prefetch={false} scroll={false}>`, with `Link` from
+  `i18n/navigation.ts` (the wrapped one of WP-21, so the push is counted for Back); on click it adds the number
+  to `seen`, calls `setPreview(number, item)` and lets the router push. The heart stops the click.
 - Photos are plain `<img>` elements, not `next/image`: the addresses are signed and must reach the browser
   unchanged. The lint rule `@next/next/no-img-element` is disabled for `Photo.tsx` with a comment that says why.
 - `lib/data/previewCache.ts`: `setPreview(number, card)`, `getPreview(number)`; module memory, last 200 cards;
@@ -139,8 +141,10 @@ methods are explicit, success keeps the requested state; only a failure changes 
 ### Radar seam
 
 `features/radars/capability.ts` exports `radarsReady = false`. The few-results note renders its radar button only
-when `radarsReady` is true and then calls `subscribe(filters, 'few')` from `features/radars/subscribe.ts`. WP-30
-creates that module, flips the constant and supplies "a radar with the same filters exists".
+when `radarsReady` is true and then calls `subscribe(filters, 'few')` from `features/radars/subscribe.ts`. So that
+this import compiles before WP-30, this package creates `subscribe.ts` as a stub with the final signatures:
+`subscribe(filters, entry, relaxed?)` resolves `{ ok: false }` and `useHasActiveRadar(filters)` returns `false`
+(WP-25 imports both too). WP-30 writes the real bodies and flips the constant.
 
 ## Files
 
@@ -149,7 +153,7 @@ New, under `frontend/app/`:
 - `features/feed/{ListingCard,ListingCardSkeleton,PhotoStrip,Photo,FavButton}.tsx`
 - `features/feed/{FeedHeader,FeedEmpty,FewResultsNote,ListingFeed,FeedScreen}.tsx`
 - `features/feed/{useCursorFeed,images,cardText,verdict,badges,fewResults}.ts`
-- `features/radars/capability.ts`
+- `features/radars/capability.ts`, `features/radars/subscribe.ts` (stub)
 - `lib/data/previewCache.ts`, `lib/actions/favorites.ts`, `lib/analytics/firstContent.ts`
 - `tests/feed/{verdict,badges,images,cardText,fewResults,useCursorFeed}.test.ts`
 - `tests/feed/{ListingCard,FavButton,FeedHeader,ListingFeed,FewResultsNote,FeedEmpty}.test.tsx`
@@ -235,8 +239,11 @@ current search parameters:
   «Проверьте цену» (`card.checkPrice`, warn) > «Хозяин ✓» (`card.ownerVerified`) > «Ниже рынка»
   (`card.belowMarket`, good) > «Хозяин» (`card.owner`).
 - Price line: amount, period, and «· первый взнос» (`card.downPayment`) for a down-payment price; without a price
-  «Цена договорная» (`card.negotiable`). When the contract gives one string, the legacy split applies: first part
-  before « · », parentheses removed, amount and period divided at `/`.
+  «Цена договорная» (`card.negotiable`). The WP-12 contract delivers the legacy split already done:
+  `price.display` (amount), `price.period`, `price.kind` (`down_payment`, `business` or `null`), and `price` is
+  `null` for a negotiable price — the client does not split a string. The same holds for `title` (already the
+  short form), `posted.label` and `posted.when` (the two parts of the age), `market.label`, `market.median_delta`
+  and `market.tone`, `pets_ok`, `has_video`, `is_owner`, `owner_verified`, `status_text`.
 - Market chip (BR-APP-027): «{delta} к рынку» (`listing.marketDelta`); tone `same` → «≈ обычная»
   (`fmt.marketSameShort`); tone `mixed` → «≈ спорно» (`fmt.marketMixedShort`); compact card: the short label only
   («−12%»). Tones `check`, `suspicious`, `same`, `mixed`, `no_repair`, `good` have their own wording; any other
@@ -324,8 +331,9 @@ Unit (Vitest, `frontend/app/tests/feed/`):
 - `badges`: the priority table (every pair of adjacent ranks), nothing matching → `null`.
 - `images`: derivation for a media address with a query; no derivation for a foreign address; Save-Data, `2g`,
   `3g`, lite → small only; otherwise `srcset` with 480w and 800w.
-- `cardText`: price with parentheses and `/period`; down payment; negotiable; facts with and without floor
-  total; title and age with and without « · »; location with metro, with centre distance, with neither.
+- `cardText`: price from `display` and `period`; `kind: 'down_payment'`; `price: null` → negotiable; facts with
+  and without floor total; age from `posted.label` and `posted.when`; location with metro, with centre distance,
+  with neither.
 - `fewResults`: truth table over source, error, loaded, visible count 0 / 9 / 10, active filters, stats, city
   name; other-deal mapping (rent → sale, daily → sale, sale → rent) and its "more than visible" rule.
 - `useCursorFeed`: pages until `null`; duplicate number across pages appears once; missing cursor ends; repeated
@@ -352,7 +360,10 @@ End to end (Playwright, fake Telegram, stubs; `e2e/feed.spec.ts` in cookie mode 
   cursor was sent. Header mode: page one is requested through `/bff/listings` with `Authorization`.
 - Scrolling loads pages until the stub's last page; the number of cards equals the number of distinct listings.
 - Changing a search parameter in the address re-creates the list and scrolls to top.
-- Heart: tap sends `PUT /favorites/{number}`, second tap `DELETE`; a fulfilled `500` returns the heart.
+- Heart: a tap fills it and sends one Server Action request, a second tap empties it. The browser never sees the
+  `PUT` or `DELETE` itself (the action sends it from the server), so that choice is asserted in the unit test of
+  `setFavorite` against a fake API. A failing save — stub scenario `source_unavailable` set through the
+  `homi_stub_scenario` cookie of WP-22 right before the tap — returns the heart.
 - A tap on a card opens the listing address over the feed; after Back the card shows the eye and the scroll
   position is kept.
 - `/bff/listings` fulfilled with `500` for page two → inline «Не загрузилось — повторить»; aborted (offline) for

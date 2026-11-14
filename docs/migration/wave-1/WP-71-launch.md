@@ -61,10 +61,10 @@ any failure. It prints names and states only, never a secret value.
 | 5 | Bot interim list | `config('bot.interim_commands')` is empty |
 | 6 | Bot profile | `telegram:profile diff` reports no change |
 | 7 | Webhook | `telegram:health` reports the expected address, no recent error, a low pending count |
-| 8 | Scheduler and queues | the heartbeat is fresh; no failed job in the last hour; every Horizon supervisor of `config/horizon.php` is running |
+| 8 | Scheduler and queues | the heartbeat is fresh (the gauge `scheduler_heartbeat_timestamp` of WP-70 is younger than 5 minutes); no failed job in the last hour; every Horizon supervisor of `config/horizon.php` is running |
 | 9 | Secrets and dashboards | the result of `security:check` (WP-70) |
 | 10 | Safety switches | `delivery:pause` is off; `telegram.broadcast_enabled` is false; the LLM feature state is printed (on or off, both pass) |
-| 11 | Behaviour flags | every `bot.devNNN` and every flag of `frontend/*/lib/flags.ts` exported to the API config is off — a flag that is on is listed and needs a named approval in the go record |
+| 11 | Behaviour flags | every `bot.devNNN` key and `bot.hide_rules.scope` of `backend/config/bot.php` has its default — a flag that is on is listed and needs a named approval in the go record. The flags of `frontend/app/lib/flags.ts` and `frontend/landing/lib/flags.ts` are constants of the frontend builds, which no package exports to the API: the command cannot read them, so they are a line of the launch checklist, checked by reading the two files at the deployed commit |
 
 ### Expected driver of every method on production
 
@@ -220,7 +220,7 @@ Switching off single functions without a deploy:
 | Function | Switch | Effect |
 | -------- | ------ | ------ |
 | All outbound sending | `php artisan delivery:pause on` (WP-57) | pushes, digests, edits and broadcasts wait; replies to users continue |
-| Radar matching | `RADAR_MATCHING_ENABLED=false` (production track, config reload) | no new matches are planned; nothing is lost that was not found |
+| Radar matching | `RADAR_MATCHING_ENABLED=false` in the server env, then a Horizon restart (production track; php-fpm reads `.env` on every request, Horizon only at start — `docs/infrastructure/deployment.md`) | no new matches are planned; nothing is lost that was not found |
 | Free text and voice | `php artisan llm:feature query-parsing off` (WP-55) | every phrase gets the not-understood reply |
 | Broadcasts | `TELEGRAM_BROADCAST_ENABLED=false` (the default) | `confirm` refuses on production |
 | The whole bot | the production track removes the webhook; Telegram keeps updates for a limited time | last resort; note the time, re-register with the script of WP-50 |
@@ -309,7 +309,8 @@ done of `25` §14:
       restore drill, the signed legal texts.
 - [ ] `make ci-backend` and `make ci-frontend` are green on `main`; the audit documents describe the pinned legacy
       release and no release-intake row is older than a week.
-- [ ] No `DEV` flag is on, or each one that is on has a named approval in the go record.
+- [ ] No `DEV` flag is on — `launch:check` row 11 for the bot, and the two `lib/flags.ts` files of the frontend
+      read at the deployed commit — or each one that is on has a named approval in the go record.
 - [ ] The three switch drills were rehearsed on staging and their times are in `docs/launch/rollback.md`.
 - [ ] The go record is written and signed by the product owner and both developers.
 - [ ] The announcement was approved in three languages, proofread, and posted by the operator — or the go record

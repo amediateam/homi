@@ -45,7 +45,7 @@ unknown number is `404 not_found`. "Preview" is the listing preview object of WP
 
 | Method | Answer | Notes |
 | ------ | ------ | ----- |
-| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` is `null` | the whole list in one answer, as legacy. Query `cursor` and `limit` (1 … 50) are accepted and take effect only when the flag of DEV-003 is on. Every item has `favorite: true` |
+| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` is `null` | the whole list in one answer, as legacy. Query `cursor` and `limit` (1 … 50) are accepted and take effect only when the flag of DEV-003 is on (`config('personal.paginate_lists')`, default `false`, added by WP-44; the stub always ignores them). Every item has `favorite: true` |
 | `PUT /favorites/{number}` | `200 {"data": {"favorite": true}}` | idempotent; `503 source_unavailable` when the listing cannot be checked and is not known locally |
 | `DELETE /favorites/{number}` | `200 {"data": {"favorite": false}}` | idempotent; never `404` for a listing that was not a favourite |
 | `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` is `null` | the whole list, as legacy; paging under the same flag. Items carry `viewed: true` |
@@ -155,7 +155,8 @@ Changed against legacy: `subscriptions` became `radars`; ids are ULID strings; `
 `subscription` in results became `radar`; create-or-reactivate moved from the client to the server and reports its
 outcome in `kind`; `DELETE` always answers JSON; previews are part of the list on request instead of three requests
 per radar (fix of LB-API-038). Scenarios: `empty` (list); `no_chat`, `radar_limit`, `radar_duplicate` (writes);
-`existing`, `starter` (create with `starter: 3`), `few` (create with options), `ask_found` (pause and delete).
+`existing`, `starter` (create with `starter: 3`), `few` (create with options), `ask_found` (pause and delete: the
+stub sets `ask_found: true` in the answer, no extra fixture).
 
 ### Landing — legacy: the public data files (RES-010 … RES-013)
 
@@ -246,7 +247,8 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 ## Tests
 
 - Favourites: `PUT` twice → `true` twice; `DELETE` twice → `false` twice; list key set, `favorite: true` on every
-  item, cursor walk to `null`; `abc` and `0` as number → `404`.
+  item, `meta.next_cursor` is `null` on the first answer with and without `cursor` and `limit` in the query; `abc`
+  and `0` as number → `404`.
 - History: list shape; `DELETE` → `204` twice.
 - Hidden: `PUT` and `DELETE` → `204`, repeatable; blocked author body with `listing_numbers` as integers; `GET
   /hidden` with both arrays in `default` and `empty`; `DELETE /hidden/authors/{id}` with a non-ULID → `404`.

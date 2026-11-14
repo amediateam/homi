@@ -62,9 +62,10 @@ Server Components — server-rendered paths are proven here, in cookie mode), `0
 
 - The suite runs against the production build of the app (`pnpm --filter app build && pnpm --filter app start`,
   as WP-03 configured) and the Laravel API with every source on `stub`.
-- CI (`.github/workflows/frontend-e2e.yml`, extended here as WP-03 announced): install PHP dependencies, migrate
-  on SQLite, `php artisan sources:publish-stub-media`, serve the API on a free local port with PHP's built-in
-  server, then build and start the app with `NEXT_PUBLIC_APP_ENV=ci`. The built-in server is for CI only; on a
+- CI (`.github/workflows/frontend-e2e.yml`): the API service — PHP dependencies, migration on SQLite, the API on
+  a free local port with PHP's built-in server, the app built and started with `NEXT_PUBLIC_APP_ENV=ci` — exists
+  since WP-21, whose specs already needed it. This package adds `php artisan sources:publish-stub-media` before
+  the build, WebKit, the nightly schedule and the check steps. The built-in server is for CI only; on a
   developer machine the suite runs against `https://app.homi.loc` through `E2E_BASE_URL` after `make dev-start`.
 - Whether each engine accepts a `Secure`, `Partitioned` cookie on `http://localhost` is **verify before use**; if
   one does not, CI terminates TLS with a throwaway certificate and the projects set `ignoreHTTPSErrors`.
@@ -110,10 +111,10 @@ nightly and before the pass. The full cross product of locale, theme and mode is
 Stubs are deterministic, so every state that is not the default answer needs a switch. WP-10 provides it: the
 header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves the cookie name to stage B.
 
-- Cookie `homi_stub_scenario` (use the name of WP-22 if that specification already fixed one). `lib/api/server.ts`,
-  the pass-through of `app/bff/[...path]/route.ts`, `bff/session` and the Server Actions copy its value into
-  `X-Stub-Scenario` when `NEXT_PUBLIC_APP_ENV` is not `production`. If WP-22 did not build the forwarding, it is
-  added here, behind that build-time condition, and the bundle check proves it is absent from a production build.
+- Cookie `homi_stub_scenario`, built by WP-22: `lib/api/server.ts`, the pass-through of
+  `app/bff/[...path]/route.ts`, `bff/session` and the Server Actions (`runAction`) copy its value into
+  `X-Stub-Scenario` when `NEXT_PUBLIC_APP_ENV` is not `production`. This package checks that all four paths
+  forward it, and the bundle check proves the forwarding is absent from a production build.
 - `setScenario(page, name | null)` and `withScenario(page, name, fn)` set and clear the cookie. A scenario is
   switched right before the action that needs it, because one name applies to every stub method that knows it.
 - Faking an answer with `page.route` works only for requests the browser sends itself (`/bff/*`); in cookie mode
@@ -132,7 +133,7 @@ header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves th
 | 8 | Listing not found; merged duplicate; withdrawn listing | numbers `999404`, `100016`, `100015` | end to end |
 | 9 | Translation failure; share failure | `translation_unavailable`, `share_failed` | end to end |
 | 10 | Empty favourites, history, hidden list, radar list | `empty` (WP-13) | end to end |
-| 11 | Radar writes: no chat, limit, duplicate, reactivated, starter cards, few with options, survey trigger | `no_chat`, `radar_limit`, `radar_duplicate`, `existing`, `starter`, `few`, `ask_found` | end to end |
+| 11 | Radar writes: no chat, limit, duplicate, already on, starter cards, few with options, survey trigger | `no_chat`, `radar_limit`, `radar_duplicate`, `existing`, `starter`, `few`, `ask_found` (WP-13). WP-13 has no scenario for a create answered `reactivated`: «Радар снова включён» is reached by subscribing with the filters of the paused fixture radar (the client's own path, WP-30); the `kind: reactivated` answer is a unit test | end to end |
 | 12 | City without daily rent | `no_daily` | end to end |
 | 13 | A failing save (favourite, hide, block, report, settings, clear history) | reserved `source_unavailable`, set right before the tap | end to end |
 | 14 | Offline | `context.setOffline(true)` | end to end |
@@ -163,11 +164,11 @@ New journeys (`e2e/journeys/`), each in both modes:
 
 | # | File | Path through the app | Key assertions |
 | - | ---- | -------------------- | -------------- |
-| 1 | `first-launch.spec.ts` | `first_launch`, Telegram language `uz` → language page → pick `en` → city page → pick a city → feed | headings in the Telegram language; the address moves to `/en/…` without a document load; `PATCH /settings` bodies; the gates do not come back in this launch although the stub still answers "not chosen"; BackButton hidden on the feed |
+| 1 | `first-launch.spec.ts` | `first_launch`, Telegram language `uz` → language page → pick `en` → city page → pick a city → feed | headings in the Telegram language; the address moves to `/en/…` without a document load; one settings Server Action request per pick (the `PATCH /settings` bodies are sent by the server and belong to the unit tests of `updateSettings`); the gates do not come back in this launch although the stub still answers "not chosen"; BackButton hidden on the feed |
 | 2 | `deep-link.spec.ts` | `startParam: 'l_<number>'`; `?listing=`; `?news=pets`; direct load of a listing address | listing over the feed, Back → feed, then no BackButton; `app_launch` and `app_opened` with `entry: 'link'`; filters open on the pets section with «Новое»; a directly loaded layer goes back to its parent |
 | 3 | `search-to-radar.spec.ts` | feed → filters (rooms, price) → «Показать N» → map → lasso → «Своя область» → filters footer «Включить радар» → «Радар» tab → radar sheet → «Изменить условия» → save → switch off with `ask_found` → survey → «Ещё ищу» | the same search parameters on feed and map; chips and collapsed title follow the filters; each toast text; Back order editor → sheet → tab; the survey toast |
 | 4 | `moderation.spec.ts` | listing → «⋯» → hide → «Вернуть»; block author; report fraud; report rented; settings → «Скрытое» → return one → «Показать всё снова» | card leaves and returns; toasts with and without undo; the rented report has no undo; confirm before returning all; «Ничего не скрыто» |
-| 5 | `locale-currency.spec.ts` | settings → language `uz` → currency UZS (`uz` scenario) → feed → listing | address segment changes, no reload (a value set on `window` survives); tab labels in Uzbek; numbers with a space as thousands separator; prices in сум |
+| 5 | `locale-currency.spec.ts` | settings → language `uz` → currency UZS (`uz` scenario) → feed → listing | address segment changes, no reload (a value set on `window` survives); tab labels in Uzbek; numbers with a space as thousands separator; amounts the client formats (price presets, market scale) in сум — the stub's server-formatted card prices stay as the fixture has them and are checked in WP-48 |
 | 6 | `session-expiry.spec.ts` | launch → `unauthenticated` → any request → then `auth_expired` on the next sign-in | one silent `POST /bff/session`, the request repeats, the screen continues; then the session-expired screen, «Закрыть» calls the fake `close`, no further request, no BackButton |
 | 7 | `source-unavailable.spec.ts` | `source_unavailable` on feed, map, listing, live count, a save | «Не загрузилось» with «Повторить» and recovery; the map error state; the count label keeps its last value; a failed save vibrates only (flags off) and rolls back |
 | 8 | `demo-marker.spec.ts` | every address of the route tree | marker visible wherever an answer has `meta.source = stub`; absent on `/outside`; absent when the answers of a screen are fulfilled with `meta.source = native` (header mode) |
@@ -218,7 +219,7 @@ Run in CI on a build made with `NEXT_PUBLIC_APP_ENV=production`, over `.next/sta
 | 1 | `public/__dev/telegram-emulator.js` and the string `homi-dev-initData` | development emulator (WP-21) |
 | 2 | any module of `@homi/testing` (its marker string) | test doubles |
 | 3 | the gallery of WP-23 (`/dev/ui`): its marker string in any chunk; the address answers 404 | development page |
-| 4 | the cookie name `homi_stub_scenario` and the header name `X-Stub-Scenario` | scenario forwarding is non-production |
+| 4 | the cookie name `homi_stub_scenario` and the header name `X-Stub-Scenario` — this row also over `.next/server/`, because the forwarding is server code | scenario forwarding is non-production |
 | 5 | every key of `frontend/app/.env.example` without the `NEXT_PUBLIC_` prefix, and the values those keys have in the job | server-only configuration |
 | 6 | the strings `LEGACY_` and `SERVICE_KEY` | the legacy key never reaches the frontend (DEC-33) |
 | 7 | `kvadro`, case-insensitive | brand layer (`25` §2 rule 5) |
@@ -280,8 +281,8 @@ Changed:
 - `frontend/playwright.config.ts` (projects, tags, reporters), existing `frontend/app/e2e/*.spec.ts` (tags,
   annotations, scenarios instead of interception)
 - `frontend/app/lib/api/server.ts`, `frontend/app/app/bff/[...path]/route.ts`, `frontend/app/app/bff/session/route.ts`,
-  `frontend/app/lib/actions/*.ts` — only if the scenario forwarding is not there yet
-- `.github/workflows/frontend-e2e.yml` (API service, WebKit, the nightly schedule, the check steps), `Makefile`
+  `frontend/app/lib/actions/run.ts` — only where a path does not forward the scenario cookie of WP-22
+- `.github/workflows/frontend-e2e.yml` (stub media, WebKit, the nightly schedule, the check steps), `Makefile`
   (`e2e`, new `bundle-check`) — shared files: announce them in the PR as `docs/handoff/parallel-work.md` asks
 - `docs/testing/verification-log.md`, `docs/migration/wave-1/README.md` (status), the specifications of owning
   packages where the acceptance corrected them
@@ -291,9 +292,9 @@ Changed:
 1. Read the documents listed under Design and the acceptance checklists of WP-20 … WP-32. Run the existing suite;
    list every checklist line without a test and every test that fakes an answer with `page.route`.
 2. Scenario plumbing: confirm the header of WP-10 and the scenario names of WP-11 … WP-13 against the fixtures;
-   add the cookie forwarding if missing; `setScenario`, `withScenario`; a spec that proves a scenario reaches a
-   server-rendered page and a Server Action. Add a missing scenario to the contract specification and its fixture
-   in this PR.
+   confirm the cookie forwarding of WP-22 on its four paths; `setScenario`, `withScenario`; a spec that proves a
+   scenario reaches a server-rendered page and a Server Action. Add a missing scenario to the contract
+   specification and its fixture in this PR.
 3. `e2e/support/modes.ts` with the after-test assertions; run the whole suite in both modes and fix what differs.
 4. Projects and tags in `playwright.config.ts`; the API service and WebKit in the workflow.
 5. Move interception-based fakes to scenarios; delete the helpers nobody uses.

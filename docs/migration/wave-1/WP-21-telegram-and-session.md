@@ -77,8 +77,12 @@ receives the nonce is **verify before use**.
 ### Boot script (`frontend/app/boot/`)
 
 - `boot/boot.js` is hand-written in ES5 syntax (it must parse on engines below the floor) and linted with an
-  ES5 parser setting. `boot/build.mjs` (run by `predev` and `prebuild`) writes its text to
-  `boot/inline.generated.ts`, which the layout injects. No bundler touches it.
+  ES5 parser setting (a block for `boot/boot.js` in `frontend/app/eslint.config.mjs`). `boot/build.mjs` (run by
+  `predev` and `prebuild`) writes its text to `boot/inline.generated.ts`, which the layout injects. No bundler
+  touches it. Whether pnpm 11 runs `pre*` scripts by itself depends on its `enablePrePostScripts` setting —
+  verify in the pnpm documentation; if it does not, chain the call inside the scripts instead
+  (`"dev": "node boot/build.mjs && next dev -p 3001"`, the same for `build`), because CI and the Playwright
+  `webServer` of WP-03 build through `pnpm`.
 - State: `window.__homiBoot = { ok: false, watching: false, sdk: null, show, errors: [] }`.
 - **Engine test.** Proposed feature probe for "at or above the floor": `CSS.supports('color', 'color-mix(in srgb,
   red, blue)')` and `HTMLScriptElement.supports('importmap')`. Check both against current compatibility data
@@ -122,7 +126,7 @@ member is a no-op or returns `null` / `false` and never throws.
 | 17 | TMA-024, TMA-027, TMA-032, TMA-034, TMA-038 | none | — | confirmed absences: no MainButton or bottom buttons, no popup / alert / QR, no inline query / story / `sendData` / download / invoice, no `requestContact`, no Cloud or Secure storage, biometrics or motion sensors. The facade has no member for them; adding one is a product change |
 | 18 | TMA-025 | `tg.haptic.impact(style = 'light')`, `.success()`, `.error()` | none | optional calls; `selectionChanged` unused |
 | 19 | TMA-026 | `tg.confirm(text)` → `Promise<boolean>` | 6.2 | `showConfirm`, else `window.confirm` |
-| 20 | TMA-028 | `tg.openLink(url)` → `boolean` | none | `https:` only and only hosts of one allow-list constant (`t.me`, the app and landing origins, `yandex.uz`, `google.com`, the brand links); `t.me` goes to `openTelegramLink`, the rest to `openLink`; the same address within 1.5 s returns `false`; outside Telegram `window.open(url, '_blank', 'noopener')` |
+| 20 | TMA-028 | `tg.openLink(url)` → `boolean` | none | `https:` only and only hosts of one allow-list constant (`t.me`, the app and landing origins, `yandex.uz`, `google.com`, the brand links; an entry also matches its `www.` form; WP-26 and WP-27 add the call-page host and the two map attribution hosts); `t.me` goes to `openTelegramLink`, the rest to `openLink`; the same address within 1.5 s returns `false`; outside Telegram `window.open(url, '_blank', 'noopener')` |
 | 21 | TMA-029 | `tg.call(phone, callUrl)` → `'tel' \| 'browser' \| null` | — | Android: `tel:` then watch `visibilitychange` and `blur` for 1.2 s, else open `callUrl`; other platforms open `callUrl`; `null` when nothing opened (WP-26 logs the event only on a non-null result) |
 | 22 | TMA-030 | `tg.shareMessage(preparedId)` → `boolean` | 8.0 | on `WebAppShareMessageOpened` send the internal `prepared_message_failed` event and retry once; guarded so an SDK change fails a unit test, not the user |
 | 23 | TMA-031 | `tg.shareUrl(url, text)` | — | `t.me/share/url` through `openTelegramLink`; outside Telegram `navigator.share`, else a new tab |
@@ -187,7 +191,7 @@ else Android with ≤ 4 cores or ≤ 3 GB (missing values count as 8); iOS and d
 | Method | Input | Does | Answers |
 | ------ | ----- | ---- | ------- |
 | `POST` | JSON `{ initData }`, at most 4 KB, same-origin `Origin` only | calls `POST /auth/telegram` per the WP-11 contract; on success sets `homi_session` with `httpOnly`, `secure`, `sameSite: 'none'`, `partitioned`, `path: '/'` and the token's expiry | `200 { token, expiresAt, me }`; `401` with the API's code when the signature or the age of `auth_date` is refused (the cookie is deleted); `403` with the access reason of the contract; `502` for anything else |
-| `GET` | the cookie, or `Authorization: Bearer` | calls `GET /me` with that token | `200 { mode: 'cookie', me }`, `200 { mode: 'header', me }`, or `200 { mode: 'none' }` when neither is present; `401` when the API refuses the token |
+| `GET` | the cookie, or `Authorization: Bearer` | calls `GET /me` with that token | `200 { mode: 'cookie', me }`, `200 { mode: 'header', me }`, or `200 { mode: 'none' }` when neither is present; `401` when the API refuses the token; `403` with the access reason, as on `POST`, when `GET /me` answers `access_denied` (a user refused after an earlier launch) |
 
 Both answers are `Cache-Control: no-store`; the handler never logs a body or a header.
 
@@ -199,7 +203,10 @@ Both answers are `Cache-Control: no-store`; the handler never logs a body or a h
    user id is used only to decide whether to sign in again) → ready, no sign-in.
 4. Otherwise `POST /bff/session` with the launch data, then `GET /bff/session`: `cookie` → cookie mode, the token
    from the body is dropped; `none` → header mode, the token stays in module memory and `GET /bff/session` is
-   repeated with the bearer header to read `me`.
+   repeated with the bearer header to read `me`. Outcomes other than success, in step 3 or here: `403` → status
+   `denied` with the reason; `401` from the sign-in (`auth_expired` or `invalid_init_data` of WP-11) → status
+   `expired`, also on the first sign-in of a launch; a network error, a timeout, `502` or `429` → still `booting`
+   with `error` set.
 5. Ready: apply `me.theme` (it replaces `homi-theme` on every start, TMA-021), let `LocaleGuard` replace the
    locale segment if it differs, `track('app_opened', …)`, then `router.refresh()` in cookie mode so Server
    Components render with the session.
@@ -215,6 +222,7 @@ Both answers are `Cache-Control: no-store`; the handler never logs a body or a h
 | `error` | `UiError` of the last failed attempt (offline, timeout, server) while still `booting` |
 | `retry()` | runs the bootstrap again; WP-23 owns the timers of BR-APP-054 that call it |
 | `refresh()` | re-reads `me` after a settings change |
+| `patchMe(partial)` | merges a saved change (`locale`, `currency`, `theme`, `city` and the two "chosen" marks) into `me` at once. Keys patched in this launch are applied again after every later re-read of `me`: a stub `GET /me` never changes, and without this the locale guard would turn the address back after a language pick. WP-23 and WP-31 call it after a successful `updateSettings` |
 
 `lib/session/server.ts` (`import 'server-only'`): `getSessionToken()` reads the cookie; every caller sits inside
 `<Suspense>` (`authentication-with-cache-components.md`). `lib/session/store.ts`: `getAuth()` returns
@@ -230,8 +238,10 @@ hidden, no request is retried. The same check runs when the app becomes visible 
 - `nav.ts`: `nav.push(href)`, `nav.replace(href)`, `nav.back()`, `nav.tab(href)` — thin wrappers over the
   next-intl router with `scroll: false`. The `useRouter` exported by `frontend/app/i18n/navigation.ts` (WP-20) is
   rebuilt on top of them, so wherever another specification writes `router.push`, `router.replace` or
-  `router.back`, the call is counted. Feature code never imports a router from `next/navigation`; that is what
-  makes the depth counter exact. `nav.tab` is what the tab bar and the list/map toggle use.
+  `router.back`, the call is counted. The `Link` exported there is wrapped the same way — an unmodified click
+  appends its target to the stack, a `replace` link rewrites the top — so the card link of WP-24 counts like
+  `nav.push`. Feature code never imports a router or `Link` from `next/navigation`, `next/link` or next-intl
+  directly; that is what makes the depth counter exact. `nav.tab` is what the tab bar and the list/map toggle use.
 - `history.ts`: the app's own stack of addresses pushed in this launch. `depth` is its length. `nav.push` and
   `useLayerState().open` append; a `popstate` pops down to the entry that matches the new address; `nav.replace`
   rewrites the top; `nav.tab` clears the stack (`resetDepth()`). The Navigation API, where the engine has it, may
@@ -340,9 +350,22 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
 - `frontend/app/lib/deeplinks/{parse,build,launch}.ts`, `frontend/app/features/shell/LaunchRedirector.tsx`.
 - `frontend/app/dev/telegram-emulator.ts`, `frontend/packages/testing/**`.
 - Changed: `frontend/app/proxy.ts`, `frontend/app/lib/security/csp.ts` (new), `frontend/app/app/[locale]/layout.tsx`,
-  `frontend/app/package.json` (scripts only), `frontend/app/.env.example`, `.gitignore` (`public/__dev/`).
+  `frontend/app/i18n/navigation.ts` (its `useRouter` rebuilt on `nav`), `frontend/app/eslint.config.mjs` (the
+  ES5 block for `boot/boot.js`), `frontend/app/package.json` (scripts only), `frontend/app/.env.example` (the
+  server-only keys `API_URL`, `CSP_FRAME_ANCESTORS`, `CSP_TILE_HOSTS`, `CSP_ANALYTICS_HOSTS`, `CSP_REPORT_ONLY`;
+  today the file holds `NEXT_PUBLIC_*` keys only), `frontend/app/.gitignore` (`/public/__dev/`).
+  `boot/inline.generated.ts` is committed: CI runs lint and typecheck before any build, so the import must
+  resolve without `prebuild`; `boot/boot.test.ts` also asserts that the committed text equals `boot.js`.
 - Tests under `frontend/app/tests/{telegram,session,navigation,deeplinks,boot,security}/` and
   `frontend/app/e2e/{launch,session,back,boot-failure,csp}.spec.ts`.
+- `.github/workflows/frontend-e2e.yml` and the `webServer` entry of `frontend/playwright.config.ts` (shared files:
+  announce them in the PR). WP-03 left the API service of the end-to-end workflow to WP-33, but `launch.spec.ts`
+  and `session.spec.ts` cannot sign in without the API and the workflow runs on every frontend pull request, so
+  the service is added here: PHP and Composer install, `php artisan migrate` on SQLite, the API served by PHP's
+  built-in server on a local port (CI only — never on a developer machine), `API_URL` pointing at it, the app
+  built and started with `NEXT_PUBLIC_APP_ENV=ci`. Whether the engines keep a `Secure`, `Partitioned` cookie on
+  `http://localhost` is **verify before use**; if not, the job terminates TLS with a throwaway certificate and
+  the project sets `ignoreHTTPSErrors`. WP-33 adds the remaining steps (stub media, WebKit, nightly, checks).
 
 ## Steps
 
@@ -355,7 +378,8 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
 5. Remaining adapter members (haptics, dialogs, links, phone, share, access, location, home screen), each with
    its test; the facade `tg`.
 6. `@homi/testing` fake Telegram and the emulator; `predev` / `prebuild` scripts.
-7. `app/bff/session/route.ts`, `lib/session/*`, `SessionProvider`; unit tests of the route with a fake API.
+7. `app/bff/session/route.ts`, `lib/session/*`, `SessionProvider`; unit tests of the route with a fake API; the
+   API service of the end-to-end workflow (see "Files"), so that the specs of the next steps can sign in on CI.
 8. `lib/navigation/*` and `TelegramButtons`; unit tests of the stack; e2e Back cases on the placeholder routes.
 9. `lib/deeplinks/*`, `LaunchRedirector`, `LocaleGuard`.
 10. `lib/security/csp.ts` and the headers in `proxy.ts` per step 1; the CSP e2e case.

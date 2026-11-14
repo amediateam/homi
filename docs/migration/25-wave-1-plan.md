@@ -280,9 +280,10 @@ frontend/
 
 Notes on the table:
 
-- `POST /auth/telegram`, `GET /reference` and `GET /cities` are public; `GET /reference` also carries the bot and
-  support names, which the no-access and outside-Telegram screens need before any session exists. Everything else
-  needs the session. A refused user gets `403` with code `access_denied` and a `reason`.
+- `POST /auth/telegram`, `GET /reference`, `GET /cities` and the two `GET /landing/*` methods are public;
+  `GET /reference` also carries the bot and support names, which the no-access and outside-Telegram screens need
+  before any session exists. Everything else needs the session. A refused user gets `403` with code `access_denied`
+  and a `reason`.
 - `GET /radars` can include the preview listings of each radar; `GET /listings/{number}` has a short preview form
   for cards on the map.
 - There is no method to withdraw a report: the "undo" of a report belongs to a `DEV` item that is off.

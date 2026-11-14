@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | D |
 | Status | TODO |
-| Depends on | WP-40 |
+| Depends on | WP-40, WP-43 (its minimal `TelegramClient` is moved and extended here) |
 | Size | about 4 000 changed lines, L. Above the 3 000-line guide: ship as two PRs, part A = steps 1–9 (webhook, ledger, privacy, prune), part B = steps 10–17 (client, commands, health, metrics, document). Production works after either part |
 | Behaviour reference | `04` §1 (row "Webhook" and the paragraph "Bot API features the bot depends on"), `04` §8 (BR-BOT-055, BR-BOT-081, BR-BOT-085, BR-BOT-094); `16` §4.2 and §4.9 (SEC-REQ-008 … SEC-REQ-010, SEC-REQ-013, SEC-REQ-034, SEC-REQ-036 … SEC-REQ-038, SEC-REQ-047, SEC-REQ-048; findings SEC-030, SEC-031); `11b` §2.3 rows 2 and 6; `HANDOFF.md` §4 T1; `.ai/agents/telegram-bot-engineer.md` rules 1–4; task files KV-TG-001 … KV-TG-005, KV-TG-059, KV-QA-003 |
 | Needs from the production track | (1) Approval of two migrations on the empty table `telegram_updates`. (2) In the server env of staging and of production, separate values each: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_UPDATES_ENCRYPTION_KEY`, `PHONE_HMAC_PEPPER`; then a Horizon restart. (3) The `hook.*` vhost keeps forwarding only `/telegram/*` and `/up` with the original `Host` and the secret header, body limit `1m`. (4) A `schedule:run` cron entry every minute in both environments. (5) `setWebhook` for the staging bot and the production bot, from the server, with the secret and `allowed_updates` = `message`, `callback_query`, `my_chat_member`. (6) The alert target of `telegram:health`: its `ERROR` log line and its Redis gauges. Exact actions: "Design → What the production track does" |
@@ -103,7 +103,7 @@ Telegram → nginx hook.* → POST /telegram/webhook (route name hooks.telegram)
 | Same (`bot_id`, `update_id`) again | 200 | `{"ok":true,"duplicate":true}` | none |
 | Type outside `allowed_updates` | 200 | `{"ok":true}` | none |
 | Body not an object, no valid `update_id` | 400 | `{"ok":false}` | none |
-| Secret missing, wrong, another environment's, or not configured | 403 | error envelope, no detail about the failed check | none |
+| Secret missing, wrong, another environment's, or not configured | 403 | JSON error body with no detail about the failed check: the ADR-0007 envelope when the request accepts JSON (`postJson()` in tests), Laravel's default `{"message": …}` otherwise, because `ApiExceptionRenderer::isApiRequest()` matches `api/*` and JSON requests only | none |
 | Correct secret on another host (`api.*`) | 404 | — | none |
 | Body over 1 MB | 413 | — | none |
 | Media type not JSON | 415 | — | none |
@@ -198,7 +198,8 @@ visible to users, and DEV-011 only records the difference.
    The second branch re-claims a row whose worker was killed: `processing_timeout` (60 s) is above the job timeout
    (25 s) and below the queue's `retry_after` (90 s), so the re-delivered job finds an orphan, never a live run.
 4. Decrypt the payload and call `app(UpdateProcessor::class)->process(array $update, TelegramUpdate $row)`.
-5. Save `afterProcessing()`, set `done` and `processed_at`, count the metric.
+5. Save `afterProcessing()`, set `done` and `processed_at`, count the metric. An update that matches no row — the
+   handler erased the user and with it the ledger rows of the chat (WP-56) — is not an error.
 
 On an exception the row goes back to `received` and the exception is rethrown. `failed(Throwable $e)` sets `failed`
 and writes the exception class and the first 200 characters of its message to `error`, after replacing anything
@@ -213,13 +214,16 @@ binds `NullUpdateProcessor` (does nothing, metric result `ignored`). WP-51 binds
 
 All classes in `backend/app/Telegram/Client/`. Before writing them, read the current Bot API documentation and
 record its version and the date in the PR and in `telegram-webhook.md`; confirm the inline button field `style`
-and the `expandable_blockquote` entity (`04` §1 names them as Bot API 9.x features).
+and the `expandable_blockquote` entity (`04` §1 names them as Bot API 9.x features). Every Bot API fact in this and
+the eight later bot specifications — method and field names, length limits, the error descriptions of the
+exception table, `secret_token`, `allowed_updates` — could not be confirmed offline: verify it against the Bot API
+documentation before writing it.
 
 | Class | Role |
 | ----- | ---- |
 | `TelegramClient` | `call(string $method, array $params = [], array $files = []): mixed` builds `{base_url}/bot{token}/{method}` internally, sends JSON (multipart when `$files` is set), returns `result` when `ok` is true. `downloadFile(string $filePath): string` reads `{base_url}/file/bot{token}/{path}`. Timeouts from `telegram.http`. Retries (`http.retries`) only on connection errors and `5xx`. Never sleeps on `429` |
 | `TelegramBot` | Typed wrappers (table below). `TelegramBot::fromConfig()`; bound as a singleton. Parameters are arrays shaped as the Bot API expects, so a new Bot API field needs no client release |
-| `TelegramBotIdentity` | `id(): int` (token prefix), `username(): ?string` |
+| `TelegramBotIdentity` | `id(): int` (token prefix; `0` when the token is empty or malformed, so the limiter key never throws — `UpdateLedger::accept()` throws on bot id `0`, which is the `5xx` case), `username(): ?string` |
 | `TelegramException` and `Exceptions\*` | One hierarchy callers can branch on (mapping below). Messages are built from the method name and Telegram's `description` only |
 
 The token is read from config at call time. It is never a constructor argument, a property or part of a serialised
@@ -227,9 +231,12 @@ job. A transport exception is caught and rethrown as `TransportError` with the U
 
 **WP-43 created a minimal client first**: `App\Services\Telegram\TelegramClient` with `call(string $method, array
 $params): array`, and `App\Exceptions\TelegramException`, for `savePreparedInlineMessage`. This package moves that
-class to `App\Telegram\Client\TelegramClient`, keeps `call()` with the same signature, grows it into the client
-described here, makes the exception of WP-43 the base class of the error classes, and updates the import in the
-share service. There is one client and one exception hierarchy afterwards; the tests of WP-43 stay green.
+class to `App\Telegram\Client\TelegramClient` and its exception to `App\Telegram\Client\TelegramException` (the
+base class of the error classes), keeps the first two parameters of `call()` and widens the return type from
+`array` to `mixed` (many Bot API methods answer `true`), grows it into the client described here, and updates the
+imports in `ShareService` and in the tests of WP-43. `backend/app/Services/Telegram/TelegramClient.php` and
+`backend/app/Exceptions/TelegramException.php` no longer exist afterwards: one client, one exception hierarchy,
+and the tests of WP-43 stay green.
 
 | Group | Methods of `TelegramBot` | First used by |
 | ----- | ------------------------ | ------------- |
@@ -338,7 +345,13 @@ fixed hours):
   `retry_after`, `403` blocked, `400` not modified, `401`, `500`, connection failure. Assertions: `assertSent()`,
   `assertSentInOrder()`, `assertNothingSent()`, `calls()`. When `parse_mode` is absent the HTML rules are not
   applied.
-- `backend/tests/TestCase.php` calls `Http::preventStrayRequests()` in `setUp()` unless an earlier package did.
+- `backend/tests/TestCase.php` calls `Http::preventStrayRequests()` in `setUp()` (no earlier package adds it
+  there: WP-41 and WP-42 call it per test file).
+- `backend/tests/Pest.php` binds `Tests\TestCase` to `Feature` only, so a file under `tests/Unit` has no
+  application (the rule WP-41 states in its step 1). A test file that this and the later bot specifications list
+  under `tests/Unit/Telegram/` but that needs a facade (`Http`, `Redis`, `Cache`), `config()`, `__()` or the
+  container is created under `tests/Feature/Telegram/` with the same name; only tests of pure values
+  (`UpdateRedactorTest` with an injected pepper) stay in `tests/Unit`.
 - `backend/phpunit.xml` gets the synthetic values `config/telegram.php` reads: a username,
   `TELEGRAM_WEBHOOK_URL=https://hook.homi.test/telegram/webhook`, a secret, a ledger key and a pepper. The
   format-valid fake token is there since WP-40. No real value is ever used.
@@ -381,7 +394,9 @@ New:
 - `backend/app/Http/Middleware/{LimitTelegramBody,RecordWebhookMetrics}.php`
 - `backend/app/Telegram/Updates/{UpdateLedger,LedgerResult,UpdateRedactor,UpdateProcessor,NullUpdateProcessor}.php`
 - `backend/app/Casts/EncryptedJsonPayload.php`, `backend/app/Services/Telegram/PhoneHmac.php`
-- `backend/app/Telegram/Client/{TelegramClient,TelegramBot,TelegramBotIdentity,TelegramException}.php`
+- `backend/app/Telegram/Client/{TelegramBot,TelegramBotIdentity}.php`; `TelegramClient.php` and
+  `TelegramException.php` in the same folder are moved from `backend/app/Services/Telegram/` and
+  `backend/app/Exceptions/` (WP-43), not created
 - `backend/app/Telegram/Client/Exceptions/{TooManyRequests,ChatUnreachable,MessageNotModified,MessageNotFound}.php`,
   `{MessageCantBeEdited,QueryTooOld,BadRequest,Unauthorized,ServerError,TransportError}.php` in the same folder
 - `backend/app/Console/Commands/Telegram/{WebhookCommand,HealthCommand}.php`
@@ -391,6 +406,7 @@ New:
 - `backend/tests/Support/Telegram/{UpdateFactory,FakeBotApi}.php`
 - `backend/tests/Feature/Bot/{WebhookAuthenticityTest,WebhookLedgerTest,ProcessUpdateJobTest}.php`,
   `{UpdateLedgerPrivacyTest,WebhookCommandTest,TelegramHealthTest}.php` in the same folder
+- `backend/tests/Pgsql/WebhookLedgerRaceTest.php`
 - `backend/tests/Unit/Telegram/{UpdateRedactorTest,TelegramClientTest,TelegramBotTest}.php`,
   `{TelegramExceptionMappingTest,UpdateFactoryTest,FakeBotApiTest,BotMetricsTest}.php` in the same folder
 - `docs/infrastructure/telegram-webhook.md`
@@ -405,6 +421,9 @@ Changed:
   if it is still there), `backend/bootstrap/app.php` (`hooks` group), `backend/app/Providers/AppServiceProvider.php`
   (limiter key, bindings), `backend/config/telegram.php`
 - `backend/tests/TestCase.php`, `backend/phpunit.xml`
+- `backend/app/Services/Telegram/ShareService.php` and the share tests of WP-43 (imports of the moved client and
+  exception); `backend/config/erasure.php` of WP-47 (the `custom` entry of `telegram_updates` becomes
+  `TelegramUpdate::forChat($telegramId)->delete()`)
 - Shared files, in a small separate PR reviewed by the other developer, merged first: `backend/.env.example`
   (`TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `TELEGRAM_WEBHOOK_SECRET_ROTATED_AT`, `TELEGRAM_UPDATES_ENCRYPTION_KEY`,
   `TELEGRAM_UPDATES_RETENTION_DAYS=14`, `PHONE_HMAC_PEPPER`), `docs/infrastructure/environments.md` (the names),
@@ -414,7 +433,12 @@ Changed:
 ## Steps
 
 Create classes with `php artisan make:* --no-interaction` (`make:class` for plain classes). Write the tests of a
-step first. Run `vendor/bin/pint --dirty --format agent` after every PHP edit.
+step first. Run `vendor/bin/pint --dirty --format agent` after every PHP edit. Generator facts of the installed
+framework: `make:enum` and `make:exception` write under `App\Enums` (the folder exists) and `App\Exceptions`, so
+`LedgerResult` (an enum) and the classes of `app/Telegram/Client/Exceptions/` are created with `make:class
+Telegram/…` and edited by hand; `make:interface Telegram/Updates/UpdateProcessor` writes to `App\Telegram\Updates`
+only while neither `app/Contracts` nor `app/Interfaces` exists — check, else use `make:class`; the classes under
+`backend/tests/Support/` have no generator and are written by hand.
 
 1. Shared-file PR: the env names in `backend/.env.example` and `docs/infrastructure/environments.md`.
 2. Test kit, part 1: `UpdateFactory`, `Http::preventStrayRequests()`, the synthetic values in `phpunit.xml`,
@@ -428,8 +452,8 @@ step first. Run `vendor/bin/pint --dirty --format agent` after every PHP edit.
 7. The job: order per chat, atomic claim with orphan recovery, `UpdateProcessor` with the null implementation,
    failure handling. `ProcessUpdateJobTest` green.
 8. Privacy: `PhoneHmac`, `UpdateRedactor`, `EncryptedJsonPayload`, the migration
-   `change_payload_to_text_on_telegram_updates_table`, `scopeForChat`. `UpdateRedactorTest` and
-   `UpdateLedgerPrivacyTest` green.
+   `change_payload_to_text_on_telegram_updates_table`, `scopeForChat`, the `telegram_updates` entry of
+   `config/erasure.php` (WP-47 left it to this package). `UpdateRedactorTest` and `UpdateLedgerPrivacyTest` green.
 9. Schedule the prune. **End of part A**: the pipeline stores and completes updates; nothing is sent.
 10. `BotMetrics` with both drivers; `RecordWebhookMetrics`; counters in the ledger and the job.
 11. `TelegramException` and its subclasses; `TelegramClient` (or the extension of the WP-43 class);
@@ -441,7 +465,7 @@ step first. Run `vendor/bin/pint --dirty --format agent` after every PHP edit.
 16. `docs/infrastructure/telegram-webhook.md`: the flow, the response table, ledger states, stored data, env keys,
     the client and the Bot API version checked, both commands, the meaning of each health check, secret rotation,
     and the section "Production track" (the table above). Link it from `local-development.md`.
-17. `make ci-backend`; `php artisan test --compact --group=pgsql` on PostgreSQL; security review by the
+17. `make ci-backend`; `make test-pgsql` (the `Pgsql` suite of WP-03, against `homi_test`); security review by the
     `security-reviewer` agent (secrets, phones, retention); fill the PR description (migrations, env names, new
     scheduled tasks, new commands); mark T1 done in `HANDOFF.md` through the shared-file PR.
 
@@ -512,14 +536,14 @@ only; the token must not appear in any captured log record of the run.
 | - | ---- | -------- |
 | 1 | `UpdateFactory::command('/start')` posted once | 200 `{"ok":true}`, one row `received`, one job on `telegram` |
 | 2 | the same update posted twice | second answer `duplicate:true`; one row; one job |
-| 3 | the same update accepted ten times in parallel (`->group('pgsql')`, `pgsqlOnly()` of WP-03; parallel runs through the `Concurrency` facade — confirm its API with `search-docs`) | one row, one job |
+| 3 | the same update accepted ten times in parallel — `backend/tests/Pgsql/WebhookLedgerRaceTest.php`, base class and helper `concurrently()` of WP-03; each task is a static closure that calls `UpdateLedger::accept()` in a child process and returns its `LedgerResult` | one `Stored`, nine `Duplicate`, one row |
 | 4 | same `update_id`, second synthetic token | two rows, both processed |
 | 5 | `edited_message`, `inline_query`, `chat_member` | 200, no row |
 | 6 | body `[]`, body without `update_id`, `update_id: -1` | 400, no row |
 | 7 | the job run twice for one row | the second run claims nothing |
 | 8 | jobs for updates 11 and 10 of one chat, 11 first (`withFakeQueueInteractions()`) | 11 is released with delay 1 until 10 is `done` |
 | 9 | a row of another chat still `received` | does not block this chat |
-| 10 | the processor throws three times | row `failed`; `error` holds the class and no payload text; the webhook had answered 200 |
+| 10 | the processor throws three times (the update is posted under `Queue::fake()`; the test then calls `handle()` three times and, as the worker does after the third exception, `failed($e)`) | after each throw the row is `received` again; at the end `failed`; `error` holds the class and no payload text; the webhook had answered 200 |
 | 11 | a row left `processing` 61 s ago, job delivered again | re-claimed and finished |
 | 12 | a row `processing` for 5 s, job delivered again | not claimed |
 | 13 | insert fails (ledger key missing) | 5xx, no job, one error record |
@@ -536,7 +560,7 @@ only; the token must not appear in any captured log record of the run.
 | 6 | a callback processed | no `data` and no message text afterwards |
 | 7 | a text message whose processor fails three times | row `failed`, payload encrypted, text present until the prune |
 | 8 | the raw column read with `DB::table()` | not JSON; decrypts with the ledger key; decrypting with `APP_KEY` throws |
-| 9 | `travelTo(now()->addDays(15))`, `artisan('schedule:run')` | rows older than 14 days gone, newer kept |
+| 9 | `travelTo(now()->addDays(15))`, `artisan('model:prune', ['--model' => [TelegramUpdate::class]])` (not `schedule:run`: a scheduled command runs in a child process, which cannot see the in-memory SQLite database; case 11 covers the schedule) | rows older than 14 days gone, newer kept |
 | 10 | `scopeForChat($chatId)->delete()` | only that chat's rows gone |
 | 11 | `Schedule::events()` | the prune and the health check use `onOneServer` and `withoutOverlapping`; the prune names `Asia/Tashkent` |
 
@@ -557,7 +581,7 @@ only; the token must not appear in any captured log record of the run.
 | 11 | `FakeBotApi`: a 65-byte `callback_data`, a 4 097-character text, `<script>`, an unclosed `<b>`, an `http://` button | each rejected with a clear message |
 | 12 | a test that makes a real HTTP request | fails because of `preventStrayRequests()` |
 | 13 | `UpdateFactory` | ascending unique `update_id`; a contact belongs to `from.id` unless forwarded |
-| 14 | `BotMetrics` array and Redis drivers | the same values for the same calls; labels sorted |
+| 14 | `BotMetrics` array and Redis drivers; the Redis driver runs against a mocked `Redis` facade, because CI starts no Redis service (`.github/workflows/backend.yml` has PostgreSQL only) | the same values for the same calls; the hash key and the sorted label field are the documented ones |
 
 **Feature — `WebhookCommandTest`, `TelegramHealthTest`**
 
@@ -596,7 +620,7 @@ only; the token must not appear in any captured log record of the run.
 - [ ] `docs/infrastructure/telegram-webhook.md` exists, is linked from `local-development.md`, names the Bot API
       version that was checked, and its "Production track" section was read by the first developer.
 - [ ] The env names are in `backend/.env.example` and `docs/infrastructure/environments.md` (shared-file PR merged).
-- [ ] `make ci-backend` exits 0; the `pgsql` group is green in CI; the package registry is unchanged (no dependency).
+- [ ] `make ci-backend` exits 0; the `Pgsql` suite is green in CI; the package registry is unchanged (no dependency).
 - [ ] On staging, then on production, with the production track: the migrations ran; `telegram:health` exits 0;
       `getWebhookInfo` lists exactly `message`, `callback_query`, `my_chat_member`; a message sent to the bot from a
       phone produces one row that reaches `done` within seconds, with a redacted payload; the bot sends no reply.

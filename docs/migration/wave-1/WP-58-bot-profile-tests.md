@@ -73,7 +73,7 @@ Out:
 | ---- | ------ |
 | `telegram:profile dump` | writes `storage/app/telegram-profile-<bot username>-<date>.json`: name, descriptions, commands per language, menu button. No token |
 | `telegram:profile diff` | read-only; prints the changes and the manual checklist; exit 1 when the profile differs — used by the launch checklist of WP-71 |
-| `telegram:profile sync` | applies the differences only. On `APP_ENV` `staging` or `production` it refuses unless `--approved` is given **and** `config('telegram.profile_sync_allowed')` (`TELEGRAM_PROFILE_SYNC_ALLOWED`) is true. Locally it refuses a bot whose username equals the configured staging or production username |
+| `telegram:profile sync` | applies the differences only. On `APP_ENV` `staging` or `production` it refuses unless `--approved` is given **and** `config('telegram.profile_sync_allowed')` (`TELEGRAM_PROFILE_SYNC_ALLOWED`) is true. Locally it refuses a bot whose username is in `config('telegram.profile_protected_usernames')` — a new list in `config/telegram.php` (no env) that holds the usernames of the staging and the production bot; the production track names them, and while the list is empty only the environment check protects |
 
 - The manual checklist, printed by `diff` and kept in `docs/infrastructure/telegram-webhook.md`, section "Bot
   profile":

@@ -57,7 +57,8 @@ live requests of many users (RK-25) and never hold per-user data. `previews()` d
 logs one that is unavailable; if the operator offers a batch read (WP-02 point 9), only this method changes.
 Calls made for a system context (`SourceContext::system()`) are marked `background` for the limiter.
 
-Bind the class in `config/sources.php` for the capability `listings`. Defaults of the features stay `stub`.
+Bind the class in `config/sources.php` for the capability `listings`. Defaults of the features stay `stub`. The
+interface of WP-10 also has `contact()` and `translation()`: here both throw `SourceUnavailable`; WP-43 writes them.
 
 ### Translators (`App\Services\Sources\Legacy\Translators`)
 
@@ -116,6 +117,12 @@ real implementation. `App\Services\Listings\ListingOverlay` applies it:
    the user can scroll. Map `total` is reduced by the number of removed points.
 
 Without a user (system context) only step 1's vote part and step 4 run.
+
+The controllers apply the overlay and the view recorder to the answer of every driver, `stub` included: the stub's
+own `favorite` and `viewed` values are overwritten like legacy's, so a favourite saved by real code shows on a stub
+feed. One exception: while `sources.native_stubs` is on (WP-40), both are skipped, so the end-to-end suite keeps the
+fixed flags of the fixtures and leaves no rows behind (`25` §4.4: stubs are deterministic). Author keys exist only
+for cards that came through the legacy driver (`AuthorKey::fromCard()` reads the legacy card).
 
 **Feed paging and top-up.** Legacy is always asked for pages of 20. To build one HOMI page: fetch the legacy page the
 cursor names, apply the overlay, skip the offset the cursor carries, and take items up to `limit`. While fewer than
@@ -209,8 +216,10 @@ keys). `LegacyFakeServer` serves them, including the `?cursor=` of the second pa
 
 ## Steps
 
-1. Read WP-12 again; read `08` §1.7, §1.8 and the five rows. Every test file starts with
-   `Http::preventStrayRequests()`.
+1. Read WP-12 again; read `08` §1.7, §1.8 and the five rows. Every feature test file starts with
+   `Http::preventStrayRequests()`. Unit test files have no application (the rule of WP-41 step 1): a translator
+   that needs `DistrictMatcher`, `PhotoUrlRewriter` or configuration gets them as constructor arguments, or its
+   test moves to `tests/Feature`.
 2. Golden fixtures; extend `LegacyFakeServer`.
 3. `PriceParser`, `SourceRefParser`, `FiltersTranslator` with unit tests (table-driven).
 4. Summary, details, map and flow translators; `DistrictMatcher`; `PhotoUrlRewriter`.

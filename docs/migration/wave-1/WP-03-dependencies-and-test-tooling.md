@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | 0 |
 | Status | TODO |
-| Depends on | WP-01 (ADR-0019 names the UI stack; the PR size rule is agreed) |
+| Depends on | WP-01 (ADR-0019 names the UI stack; the PR size rule is agreed); WP-00 (the first test of the `pgsql` group exercises its reference table) |
 | Size | about 900 changed lines without `pnpm-lock.yaml`, M |
 | Behaviour reference | `25` §9, §10; `24` §8.1 (DEC-49); tasks `tasks/frontend/KV-FE-005-dependency-approvals.md` (versions, vetting) and `tasks/frontend/KV-FE-010-test-runner-ci.md` (runner, fake Telegram); `15` §2.7, §5.4, §5.5; `docs/handoff/parallel-work.md` §4; `HANDOFF.md` T8; Next.js guides `frontend/app/node_modules/next/dist/docs/01-app/02-guides/testing/{vitest,playwright}.md` |
 | Needs from the production track | The first developer confirms the package list in this PR (DEC-49, `docs/handoff/parallel-work.md` §4). No server-side action: nothing in this package runs on staging or production |
@@ -49,7 +49,7 @@ Everything is pinned exactly (no `^`) except type packages.
 | `next-intl` | current stable | `app`, `landing` | runtime |
 | `lucide-react` | 1.69.x | `@homi/ui` | runtime |
 | `class-variance-authority`, `clsx`, `tailwind-merge` | current stable | `@homi/ui` | runtime (shadcn/ui helpers) |
-| `@radix-ui/react-dialog`, `@radix-ui/react-slot`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast` | current stable | `@homi/ui` | runtime (the primitives behind dialogs, sheets, switches, tabs and toasts of `25` §3.6) |
+| `@radix-ui/react-dialog`, `@radix-ui/react-slot`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast`, `@radix-ui/react-toggle`, `@radix-ui/react-toggle-group`, `@radix-ui/react-radio-group` | current stable | `@homi/ui` | runtime (the primitives behind dialogs, sheets, switches, tabs and toasts of `25` §3.6) |
 | `maplibre-gl` | 6.11.2 | `app` | runtime |
 | `pmtiles` | 4.5.x | `app` | runtime |
 | `supercluster` | 8.0.x | `app` | runtime |
@@ -102,17 +102,18 @@ and name each allowed script in the PR. Verify the exact key in the pnpm 11 docu
 | `syntheticInitData(user?)` | Returns a query string with the right fields and an obviously fake hash; never a real user |
 | `freezeClock(isoUtc)` | Fixes `Date` and timers for a test |
 | `fixture(name)` | Reads a stub fixture of the API by name from `backend/resources/fixtures/v1/` (the store WP-10 creates); throws on an unknown name. The fixtures stay in one place for both sides |
-| `playwrightTelegram(page, options)` | The same double as an init script for Playwright, plus a block list for external hosts (`telegram.org`, PostHog, OpenStreetMap, any tile host) |
+| `playwrightTelegram(page, options)` | The same double as an init script for Playwright, plus a block list for external hosts (`telegram.org`, PostHog, OpenStreetMap, any tile host). An `allowHosts` option lets a spec fulfil a tile or media host itself from a fixture (WP-27); it never lets a request leave the machine |
 
 ### End-to-end tests
 
 - `frontend/playwright.config.ts`: project `miniapp` (390 × 844, device scale 1, touch, locale `ru-RU`); projects
-  `landing-desktop` (1440 × 900) and `landing-phone` are declared and empty until WP-61. `webServer` starts
+  `landing-desktop` (1 366 × 860) and `landing-phone` are declared and empty until WP-61, which also adds the
+  `webServer` entry for `landing`. `webServer` starts
   `pnpm --filter app build && pnpm --filter app start` on port 3001 when `E2E_BASE_URL` is not set.
 - Tests live in `frontend/app/e2e/`. The first one loads `/` with the fake Telegram and asserts that the page
   renders and the console has no error.
-- From WP-21 on the suite needs the API on stubs. WP-33 extends the workflow with a backend service; this package
-  only makes the runner work.
+- From WP-21 on the suite needs the API on stubs: WP-21 adds the API service to this workflow; WP-33 adds stub
+  media, WebKit, the nightly run and the check steps. This package only makes the runner work.
 
 ### CI and local gate
 
@@ -128,12 +129,34 @@ and name each allowed script in the PR. Verify the exact key in the pnpm 11 docu
 
 ### Backend: the `pgsql` test group
 
-`25` §9 asks for API tests on PostgreSQL where SQL differs. Tests that need it carry `->group('pgsql')` and skip
-themselves on another driver. Add to `backend/tests/Pest.php` a helper `pgsqlOnly()` that returns the skip closure,
-and to `.github/workflows/backend.yml` a step after the main gate:
-`php artisan test --compact --group=pgsql` with `DB_CONNECTION=pgsql` and the service's credentials in `env`. Verify
-that the process environment wins over the `<env>` entries of `phpunit.xml`; if it does not, add
-`backend/phpunit.pgsql.xml` and pass `-c`. The first member of the group is the concurrency case of WP-00.
+`25` §9 asks for API tests on PostgreSQL where SQL differs, and many packages test concurrent writes (WP-10, WP-40,
+WP-44 … WP-47, WP-50, WP-51). This package builds the one place for them; later packages only add files.
+
+- **Folder and suite.** `backend/tests/Pgsql/` (outside `tests/Feature`, whose Pest binding applies
+  `RefreshDatabase` to everything below it). `backend/phpunit.xml` gets a third test suite `Pgsql` for that folder.
+- **Base class** `backend/tests/PgsqlTestCase.php`: extends `Tests\TestCase`, uses
+  `Illuminate\Foundation\Testing\DatabaseTruncation` (a child process or a second connection cannot see the open
+  transaction that `RefreshDatabase` keeps). Its `setUp()` reads the process environment **before**
+  `parent::setUp()`: unless `DB_CONNECTION` is `pgsql` and `DB_DATABASE` ends with `_test`, it calls
+  `markTestSkipped()`. The truncation trait runs `migrate:fresh` on first use, so this guard is what keeps the suite
+  from ever touching a development database; do not replace it with a Pest `->skip()` closure, which runs after
+  the traits are set up.
+- **`backend/tests/Pest.php`:** `pest()->extend(Tests\PgsqlTestCase::class)->group('pgsql')->in('Pgsql');` and one
+  helper `concurrently(array $tasks): array`, which runs the given closures in parallel through
+  `Concurrency::driver('process')->run($tasks)` and returns their results in order (ten identical tasks:
+  `concurrently(array_fill(0, 10, $task))`). The driver serialises the closure and runs it
+  in child `php artisan` processes (`Illuminate\Concurrency\ProcessDriver`), so a task is a `static` closure that
+  captures scalars only, and it sees committed rows only. The first test asserts inside a task that the child has
+  `APP_ENV=testing` and the test database.
+- **Environment.** The `<env>` entries of `phpunit.xml` carry no `force` attribute, so variables set in the process
+  environment win (PHPUnit rule); a normal `php artisan test` keeps SQLite and skips the suite.
+- **CI.** `.github/workflows/backend.yml`, a step after the main gate: create the database `homi_test` on the
+  PostgreSQL service with `psql`, then `php artisan test --compact --testsuite=Pgsql` with `DB_CONNECTION=pgsql`,
+  `DB_DATABASE=homi_test` and the service credentials the step "Setup application" already uses.
+- **Locally.** `createdb homi_test` once; `make test-pgsql` runs the suite with `DB_CONNECTION=pgsql` and
+  `DB_DATABASE=homi_test` (host and credentials come from the local `.env`).
+- **First member** `backend/tests/Pgsql/MediaOwnershipRaceTest.php`: ten parallel uploads of the same bytes by one
+  actor leave one `media_files` row and one reference (the case WP-00 leaves to this package).
 
 ## Files
 
@@ -147,7 +170,8 @@ that the process environment wins over the `<env>` entries of `phpunit.xml`; if 
 - `frontend/app/eslint.config.mjs`, `frontend/landing/eslint.config.mjs`, `frontend/arm/eslint.config.mjs` (import
   restriction)
 - `.github/workflows/frontend.yml`, `.github/workflows/frontend-e2e.yml` (new), `.github/workflows/backend.yml`
-- `Makefile`; `backend/tests/Pest.php`
+- `Makefile` (also the new target `test-pgsql`); `backend/tests/Pest.php`, `backend/tests/PgsqlTestCase.php` (new),
+  `backend/tests/Pgsql/MediaOwnershipRaceTest.php` (new), `backend/phpunit.xml` (test suite `Pgsql`)
 - `frontend/.gitignore` or the root one: `test-results/`, `playwright-report/`
 
 ## Steps
@@ -165,7 +189,8 @@ that the process environment wins over the `<env>` entries of `phpunit.xml`; if 
 8. Add `frontend/playwright.config.ts`, `playwrightTelegram` and the smoke test; run `pnpm test:e2e` locally against
    `https://app.homi.loc` (`E2E_BASE_URL`) and against the built app.
 9. Wire CI and the `Makefile`; push and see both workflows green.
-10. Add the `pgsql` group to the backend (helper, workflow step); confirm the WP-00 case runs in CI.
+10. Add the `pgsql` group to the backend (base class, Pest binding, `concurrently()`, test suite, workflow step,
+    `make test-pgsql`) and its first test; run it locally against `homi_test` and see it green in CI.
 11. After merge: the small shared-file PR for `CLAUDE.md`.
 
 ## Behaviour to reproduce
@@ -185,7 +210,9 @@ that the process environment wins over the `<env>` entries of `phpunit.xml`; if 
   an unknown name.
 - `@homi/utils`: one smoke test of an existing formatter.
 - End to end: the smoke test in project `miniapp`; a request to `https://telegram.org/` from the page fails the test.
-- Backend: `php artisan test --compact --group=pgsql` runs at least one test in CI and none locally on SQLite.
+- Backend: `php artisan test --compact --testsuite=Pgsql` runs `MediaOwnershipRaceTest` in CI and with
+  `make test-pgsql`; a plain `php artisan test` reports the suite as skipped; with `DB_CONNECTION=pgsql` and a
+  database whose name does not end with `_test` the suite is skipped and the database is untouched.
 
 ## Acceptance checklist
 
@@ -198,7 +225,8 @@ that the process environment wins over the `<env>` entries of `phpunit.xml`; if 
 - [ ] `@homi/testing` cannot be imported from non-test files of the apps (lint fails on a deliberate import).
 - [ ] No product code imports a newly installed package yet.
 - [ ] `make registry-check` is green; `composer.lock` is unchanged.
-- [ ] The backend `pgsql` group runs in CI.
+- [ ] The backend `pgsql` group runs in CI and through `make test-pgsql`, and refuses any database whose name does
+      not end with `_test`.
 - [ ] Deployed to staging and production (a no-op for users: nothing new is rendered).
 
 ## Handoff

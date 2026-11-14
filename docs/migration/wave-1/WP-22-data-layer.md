@@ -66,6 +66,18 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   `ApiResult<T> = { ok: true, data, meta } | { ok: false, error: UiError, status, code? }` — it does not throw for
   an HTTP answer. The locale comes from the root parameter getter in Server Components (`next-root-params.md`
   says the getter does not run in Server Actions or Route Handlers, so those pass the locale in).
+- Two facts of today's `@homi/api-client` (`frontend/packages/api-client/src/index.ts`) that this package
+  corrects there, with tests, because the contract needs both: `request()` throws `ApiError` for every empty body
+  (`payload === null`), so each `204` of WP-11 and WP-13 would be an error — an empty `2xx` body must resolve as
+  `{ success: true, data: null }`; and `RequestOptions.query` takes one scalar per key and writes it with
+  `searchParams.set`, so the list filters of WP-12 (`types[]=a&types[]=b`) cannot be sent — `query` also accepts
+  `URLSearchParams`, which is what `toApiQuery` returns.
+- Stub scenarios (`25` §9, WP-10): outside production — `NEXT_PUBLIC_APP_ENV` is not `production`, a build-time
+  condition — `server.ts`, the pass-through below, `app/bff/session/route.ts` of WP-21 and `runAction` copy the
+  value of the cookie `homi_stub_scenario` (`^[a-z0-9_]{1,40}$`, anything else ignored) into the request header
+  `X-Stub-Scenario`. It is the only way an end-to-end test reaches an error or empty state of a server-rendered
+  page, so every later package of stage B relies on it; tests set the cookie with Playwright's
+  `context.addCookies` until WP-33 adds the `setScenario` helper. The cached reference calls never forward it.
 - `errors.ts`: `UiError` and `toUiError(statusOrFailure)` (table below). An error object carries the method, the
   path template (`listings/:number`), the status and the code — never headers, a query string or a body.
 - `browser.ts`: `bffFetch(path, { query, signal })` → `GET /bff/<path>`; sends `Accept-Language`; adds
@@ -75,7 +87,9 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   here so later packages do not touch it: `GET` `me`, `settings`, `reference`, `cities`, `listings`,
   `listings/count`, `listings/flow`, `listings/map`, `listings/:number`, `favorites`, `history`, `hidden`,
   `radars`. (`POST events` and `boot-error` are added by WP-32.) The handler rejects anything else with `404`,
-  accepts same-origin requests only, takes the token from the cookie or the bearer header, validates `:number` as
+  accepts same-origin requests only (a same-origin `GET` carries no `Origin` header, so the rule is: refuse when
+  `Origin` is present and is not the app's origin, or when `Sec-Fetch-Site` is present and is not `same-origin`),
+  takes the token from the cookie or the bearer header, validates `:number` as
   a positive integer, caps the query string at 4 KB, forwards the API's status and body unchanged, answers
   `Cache-Control: private, no-store`, never forwards `Set-Cookie`, never logs the query.
 
@@ -104,7 +118,8 @@ A read that fails while older data is on screen keeps the data and shows the inl
   serialisable). Each action re-reads the session itself; nothing trusts the client
   (`authentication-with-cache-components.md`, "Trusting the client for authorization").
 - Every action is `'use server'`, takes `(input, auth?: { token?: string }, locale?)`, validates its input (listing
-  numbers and radar ids as positive integers, enums against the generated types) and returns `ActionResult`. The
+  numbers as positive integers; radar and blocked-author ids as ULID strings, 26 characters, as WP-13 defines
+  them; enums against the generated types) and returns `ActionResult`. The
   token travels in the request body of the action, never in an address.
 - `useAction(action)` (client): injects `auth` in header mode and the locale, awaits `reauthenticate()` once on
   `unauthorized`, and reports `meta.source`.
@@ -142,14 +157,23 @@ Files and names reserved for the packages that write them:
 
 - `server.ts`: `getReference(locale)` and `getCities(locale)` — `'use cache'`, tagged `reference`, with a lifetime
   of about ten minutes (`cacheLife.md`). A cached function cannot read the cookie
-  (`authentication-with-cache-components.md`), so both calls go **without a user token**. If the WP-11 contract
-  requires a session for `GET /reference` or `GET /cities`, fix the contract in the same PR (queue rule 6); a
-  per-user token must never become part of a cache key.
-- `ReferenceProvider` (in the root layout, fed by the cached call) and `useReference()`: cities (code, name, kind
-  city or region, centre, zones, districts, metro and median marks), renovations per deal, appliances, price
-  presets per deal, locale and currency lists, the USD → UZS rate, the tile address, the radar limit, the support
-  account. `useCityStats()`: counts per deal, presets and the typical price per city from `GET /cities`.
-  `findCity(code)`.
+  (`authentication-with-cache-components.md`), so both calls go **without a user token**; WP-11 defines
+  `GET /reference` and `GET /cities` as public methods, so no token is needed. A per-user token must never become
+  part of a cache key.
+- Build time. `use-cache.md` says prerendering fills a cache entry, and `cacheLife.md` ("Prerendering behavior")
+  excludes only entries that expire in under five minutes — so `next build` calls the API once per locale, while
+  the `Build` step of `.github/workflows/frontend.yml` and `make ci-frontend` have no API. Both functions
+  therefore never throw: when the call fails they return an empty reference (no cities, default limit) and give
+  that result a short lifetime (`cacheLife.md`, "Conditional cache lifetimes") so the next request asks again;
+  because such an entry is resolved at request time, `ReferenceProvider` sits inside `<Suspense>`. Verify at
+  step 11 by building once with `API_URL` pointing at a closed port: the build passes and the running app loads
+  the reference data on the first request.
+- `ReferenceProvider` (in the root layout, fed by the cached call) and `useReference()`: cities (`code`, `name`,
+  `is_region`, `center`, `zoom`, `zones`, `districts`, `has_metro`, `has_median`), `renovations` per deal,
+  `appliances`, `price_presets` per deal, `locales`, `features`, `rates.usd_uzs`, `map.tiles_url`,
+  `limits.radars`, `bot.username` and `bot.support_username` — the names of WP-11. The currency list is not
+  reference data: it is `options.currencies` of `GET /settings` (WP-31). `useCityStats()`: `counts` per deal,
+  `price_presets` and `typical_price` per city from `GET /cities`. `findCity(code)`.
 - Defaults when a field is absent: radar limit 10; no support account → its rows are hidden; no cities →
   nothing that needs a city is offered (see LB-APP-023 below).
 
@@ -222,7 +246,11 @@ canonical order, unknown keys dropped, a polygon under 3 points dropped. No `und
 the fix of LB-APP-007. `sortOptions(f, null)` (reference data not loaded) returns only `new`, `cheap`,
 `expensive` — the fix of LB-APP-023. `serializePolygon` / `parsePolygon` hold the wire form; the drawing rules of
 the lasso are WP-28's. `areaLabel(f, city)`: «Своя область», «Центр и ближе к центру» (`sum.zonesBoth`), the
-zone name before « (», two districts and «+N». Server-stored types in a radar title go through `labelFor` (WP-20).
+zone name before « (», two districts and «+N». `filtersAreaSummary(f, ctx)` is the area line of a radar tile and
+of the radar sheet header (WP-30 uses it under this name): the legacy function of the same name, listed in task
+KV-FE-020 next to `filtersSummary` and `filtersTitle` — its composition is read from the audited `summary.js`
+and fixed by a snapshot test in three locales. Server-stored types in a radar title go through `labelFor`
+(WP-20).
 
 **Flagged branches** (argument `rules`, every member `false` by default):
 
@@ -241,9 +269,12 @@ New key: `sum.wholeCityGeneric` — ru «Весь город», uz «Butun shaha
 
 Pure functions; the locale, the clock and a `t(key, values)` function are arguments. The existing `formatPrice`
 and `intlLocale` of `@homi/utils` are a different contract (minor units, `en-US`) and are not used by the Mini
-App.
+App. A formatter with a flagged branch takes the flag as a plain last option that the caller fills from
+`devFlags` — `formatMetroLabel(name, km, { oneFormatter })`, `formatFlow(rate, surface, t, { oneVocabulary })` —
+because the package never imports `lib/flags.ts`.
 
-- **Numbers.** `numberLocale(locale)`: `ru-RU` for ru and uz, `en-GB` for en. `formatNumber`, `formatDecimal`
+- **Numbers.** `numberLocale(locale)` of WP-20 (`src/locale.ts`, not written again): `ru-RU` for ru and uz,
+  `en-GB` for en. `formatNumber`, `formatDecimal`
   (at most one fraction digit), `formatCount(n, pluralKey)`.
 - **Money** (`money.ts`, BR-APP-060): `createMoney({ locale, currency, usdUzs, t })` → `isUzs` (currency `UZS`
   **and** rate > 0), `format(usd)`, `unitLabel()`, `toInput(usd)`, `parseInput(text)`, `presets(…)`.
@@ -281,12 +312,16 @@ package formats only what the client formats in legacy. Both must agree with the
 
 ## Files
 
-- `frontend/app/lib/api/{server,errors,browser,bffAllowList}.ts`; `frontend/app/app/bff/[...path]/route.ts`.
+- `frontend/app/lib/api/{server,errors,browser,bffAllowList}.ts`; `frontend/app/app/bff/[...path]/route.ts`;
+  changed `frontend/app/app/bff/session/route.ts` (scenario forwarding) and
+  `frontend/packages/api-client/src/index.ts` with its test (empty body, list query).
 - `frontend/app/lib/actions/{run,useAction}.ts`.
 - `frontend/app/lib/data/{useResource,sessionMaps}.ts`; changed `lib/data/sources.ts`.
 - `frontend/app/lib/reference/{server,ReferenceProvider,useReference}.ts(x)`; changed `app/[locale]/layout.tsx`.
 - `frontend/app/lib/search/{useSearchState,readSearchState,rules}.ts`; `frontend/app/lib/money/useMoney.ts`.
-- New package `frontend/packages/search/**`; `frontend/pnpm-lock.yaml` (workspace link only).
+- New package `frontend/packages/search/**` with the `lint`, `typecheck` and `test` scripts of the other
+  packages and its project in `frontend/vitest.config.ts`; `frontend/app/package.json` (workspace dependencies
+  `@homi/search`, `@homi/api-client`, `@homi/types`); `frontend/pnpm-lock.yaml` (workspace links only).
 - `frontend/packages/i18n/src/format/{index,number,money,date,distance,flow}.ts`, `package.json` (export),
   `messages/homi/*.json` (one key).
 - Tests: `frontend/packages/search/tests/*.test.ts`, `frontend/packages/i18n/tests/format/*.test.ts`,
@@ -369,7 +404,9 @@ package formats only what the client formats in legacy. Both must agree with the
 **Unit and component, `frontend/app/tests/`.**
 
 - `api/errors.test.ts`: each row of the mapping table. `api/server.test.ts`: token from the cookie; locale
-  header; timeout; an error object holds no header or query.
+  header; timeout; an error object holds no header or query; a `204` is `ok`; `types[]` is sent twice for two
+  types; the `homi_stub_scenario` cookie becomes `X-Stub-Scenario` with `NEXT_PUBLIC_APP_ENV=ci` and is not sent
+  with `production`.
 - `api/bff.test.ts`: every allowed path; a path outside the list → 404; `listings/abc` → 404; cookie and bearer;
   foreign origin refused; `Set-Cookie` not forwarded; status passed through.
 - `api/browser.test.ts`: bearer only in header mode; `401` → one re-authentication, one repeat; second `401` →

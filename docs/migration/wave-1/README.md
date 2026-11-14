@@ -9,23 +9,33 @@ whoever holds the relay takes the first package that is not `DONE` and continues
 
 ## State of the specifications (2026-11-14)
 
-All 44 specifications are written (about 17 000 lines). They were drafted by subagents from the audit and the
-earlier task files. What the main session checked:
+All 44 specifications are written (about 17 400 lines). They were drafted by subagents from the audit and the
+earlier task files, and then verified in a second pass.
 
-- structure: every file has the field table and the ten sections of the template, in order;
-- identifiers: `collect_ids.py --check` exits 0 — every cited identifier exists and none is defined twice;
-- the v1 methods named in the specifications against the table of `25` §4.2: no method is used that the contract
-  packages do not define;
-- coverage as reported by the authors: 45 of 45 screens, 69 of 69 client rules, 47 of 47 client defects, 45 of 45
-  Telegram points; 84 of 84 bot handlers, 76 of 76 buttons, 88 of 88 texts; 50 security requirements classified;
-- the contradictions the authors reported between packages and with `25` — settled in the specifications and in `25`
-  (radar starter list, deferral and queue of the delivery job, when matching is switched on, default locale,
-  whole-list favourites and history, public methods, stub scenarios).
+**Verification pass (2026-11-14).** Every specification was read in full against four things: the repository as it
+is today (files, classes, signatures, routes, config and env keys, tables, CI, generator commands), the other
+specifications (every name one package uses from another), `25` with the developer's answers, and whether each step
+can be executed as written. About 220 corrections were made. Typical ones: a property name that PHP refuses, a
+validation pattern that rejected the new format, exception classes the framework converts before the renderer sees
+them, a test helper designed twice, a method or config key used under a name its owner does not define, a test
+that cannot observe what it asserts. WP-00 … WP-03 were checked by the main session; the other 40 by three agents,
+whose claims the main session sampled against the code (26 sampled, 26 confirmed).
 
-Read in full by the main session: WP-02, WP-10, and the parts of WP-13, WP-40, WP-45, WP-46, WP-48, WP-54 and WP-57
-that were changed in that reconciliation. **The rest was not read line by line.** Treat a specification as the
-starting point: when it disagrees with `25` or with the audit, `25` and the audit win, and the specification is
-corrected in the same PR (rule 6 below).
+Checked by script on all 44 files: the template (field table and ten sections, in order); `collect_ids.py --check`
+exits 0; the v1 methods named against the table of `25` §4.2; every repository path named — it exists or a package
+creates it.
+
+**What the pass did not cover.** Nothing was executed: no step of any package was run. Not compared line by line:
+interface texts, bot texts, constants and thresholds against the audit (`03`, `04`, `05`, `09`, `16`) — the
+coverage totals are the authors' own (45 of 45 screens, 69 of 69 client rules, 47 of 47 client defects, 84 of 84
+bot handlers, 76 of 76 buttons, 88 of 88 texts). Not confirmable before WP-03 installs them: the behaviour of
+next-intl, shadcn/ui and Radix, the map libraries, PostHog, Vitest and Playwright; such statements are worded
+"verify in the installed documentation". Telegram Bot API facts are worded "verify against the Bot API
+documentation". Three Next.js points are marked the same way in WP-20 (interception inside a route group, slot
+catch-alls beside `[locale]/[...rest]`, `notFound()` in the root layout).
+
+So a specification is a checked starting point, not a proof. When it disagrees with `25`, with the audit or with
+the code, those win, and the specification is corrected in the same PR (rule 6 below).
 
 ## How to work the queue
 
@@ -55,7 +65,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-00](WP-00-media-ownership-fix.md) | Media ownership fix | — | TODO |
 | [WP-01](WP-01-adrs-and-shared-files.md) | ADRs and shared-file updates | — | TODO |
 | [WP-02](WP-02-operator-request-and-baseline.md) | Operator request and legacy baseline pin | — | TODO |
-| [WP-03](WP-03-dependencies-and-test-tooling.md) | Dependencies and test tooling | WP-01 | TODO |
+| [WP-03](WP-03-dependencies-and-test-tooling.md) | Dependencies and test tooling | WP-00, WP-01 | TODO |
 
 ## Stage A — Contract
 

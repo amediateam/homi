@@ -66,8 +66,9 @@ malformed); `401 auth_expired` (`auth_date` older than the window — the client
 app", fix of LB-APP-047); `403 access_denied` with `reason`; `429 rate_limited`.
 
 Stub: accepts any valid body, issues a real Sanctum token (abilities `app:read`, `app:write`, 24 h) for the single
-**stub user** (`users.email = 'stub@homi.invalid'`, created on first use), so `auth:sanctum` works unchanged on every
-other route. Nothing is verified. Scenarios: `auth_expired`, `invalid_init_data`, `access_private`, `access_invite`,
+**stub user** (`users.email = 'stub@homi.invalid'`, created on first use with a fixed `name` and a random
+`password`, because both columns are `NOT NULL` until WP-40), so `auth:sanctum` works unchanged on every other
+route. Nothing is verified. Scenarios: `auth_expired`, `invalid_init_data`, `access_private`, `access_invite`,
 `access_full`, `access_blocked`, `access_join`.
 
 ### `GET /me` — bearer `app:read`; legacy: the user part of the meta method (API-001)
@@ -137,8 +138,10 @@ sent keys overlaid; nothing is stored.
   "price_presets": {"rent_long": [300, 400, 500, 700, 1000], "rent_daily": [20, 30, 50], "sale": [50000, 80000, 120000]}}}
 ```
 
-`bot.*` and `limits.*` come from HOMI's configuration (`telegram.bot.username`, the new `telegram.support.username`,
-`radar.max`); everything else comes from `ReferenceSource::reference()`. `bot.username` and `support_username` may be
+`bot.*` and `limits.*` come from HOMI's configuration (`telegram.bot.username`, which exists; the new
+`telegram.support.username`; and `radar.max` in the new `backend/config/radar.php`, created here with that one key —
+`(int) env('RADAR_MAX', 10)` — and extended by WP-45, which also announces the env key); everything else comes from
+`ReferenceSource::reference()`. `bot.username` and `support_username` may be
 `null`; `map.tiles_url` is `null` until HOMI hosts tiles (`25` §3.8); price presets are whole USD. Names are
 localised by `Accept-Language`. `is_region` replaces the legacy rule "zoom below 11". Changed against legacy: one
 public method instead of an authenticated one plus `/api/bot`; `metro` and `median` became `has_metro` and
@@ -183,7 +186,9 @@ An unknown `name` or unknown properties are accepted with `204` and not stored (
 (an event without a session is never stored, SEC-REQ-022); `413 payload_too_large`; `422 validation_failed` only when
 `name` is missing or not a string. Over the rate limit the answer is still `204` and the event is dropped. Changed
 against legacy: properties moved from the top level into `props`; nothing was renamed. Stub: validates and answers
-`204`.
+`204`. The body cap is checked first in `StoreEventRequest` (`prepareForValidation()`): a raw body
+(`$this->getContent()`) over 8 192 bytes throws `Illuminate\Http\Exceptions\PostTooLargeException`, which the
+renderer of WP-10 answers as `413 payload_too_large`.
 
 ### Data objects, source and routes
 
@@ -193,24 +198,29 @@ against legacy: properties moved from the top level into `props`; nothing was re
 - `ReferenceSource` gains `reference()` and `cities()`; `App\Services\Sources\Stub\StubReferenceSource` reads
   `reference/default.<locale>.json` and `cities/default.json`. Features `source.reference` and `source.cities` are
   added to `config/sources.php` with default `stub` everywhere.
-- `App\Services\Sources\Stub\StubResponder`: `fixture(string $name, Request $request): array` applies the scenario
-  header and throws the mapped error for an error scenario. The stub controllers of native-only methods use it and
-  answer with `SourceDriver::Stub`.
+- `App\Services\Sources\Stub\StubResponder`: `fixture(string $name, Request $request, array $scenarios = []): array`
+  returns the fixture `$name`, or the one that `$scenarios` (scenario name → fixture name, for example
+  `['first_launch' => 'me/first_launch']`) gives for the scenario header, and throws the mapped error for a reserved
+  or method-specific error scenario. A scenario that is neither in the map nor an error of the method is ignored
+  (WP-10). The stub controllers of native-only methods use it and answer with `SourceDriver::Stub`.
 - Routes (`backend/routes/api.php`, names `api.v1.*`): `auth.telegram`, `me.show`, `settings.show`,
-  `settings.update`, `reference.show`, `cities.index`, `events.store`. The public ones sit outside the
-  `auth:sanctum` group; the whole `v1` group gets `throttle:api` until WP-40 attaches the named limiters.
+  `settings.update`, `reference.show`, `cities.index`, `events.store`. Today the file has one `v1` group that
+  carries `auth:sanctum` and holds the media routes: split it into an outer group (prefix, name, `SetRequestLocale`,
+  `throttle:api`) and an inner `auth:sanctum` group that keeps the media routes unchanged. The public routes sit in
+  the outer group; `throttle:api` stays until WP-40 attaches the named limiters.
 - Resources: `MeResource`, `SettingsResource`, `ReferenceResource`, `CityStatsResource`, `SessionResource`.
 
 ## Files
 
-- `backend/routes/api.php`; `backend/app/Http/Middleware/SetRequestLocale.php`; `backend/bootstrap/app.php` (group)
+- `backend/routes/api.php`; `backend/app/Http/Middleware/SetRequestLocale.php`; `backend/bootstrap/app.php` (only
+  if a middleware alias is registered for it)
 - `backend/app/Http/Controllers/Api/V1/{Auth/TelegramAuthController,MeController,SettingsController,ReferenceController,CityController,EventController}.php`
 - `backend/app/Http/Requests/Api/V1/{Auth/TelegramSignInRequest,UpdateSettingsRequest,StoreEventRequest}.php`
 - `backend/app/Http/Resources/Api/V1/{SessionResource,MeResource,SettingsResource,ReferenceResource,CityStatsResource}.php`
 - `backend/app/Services/Sources/Data/{ReferenceData,CityData,NamedCode,CityStats}.php`;
   `backend/app/Services/Sources/Stub/{StubReferenceSource,StubResponder,StubUser}.php`; `backend/app/Exceptions/AccessDenied.php`
 - `backend/config/sources.php`, `backend/config/telegram.php` (`support.username`), `backend/config/settings.php` (the
-  option lists)
+  option lists), `backend/config/radar.php` (new: `max`)
 - `backend/resources/fixtures/v1/me/{default,first_launch,no_city,uz}.json`, `settings/default.json`,
   `reference/default.{ru,uz,en}.json`, `reference/single_city.ru.json`, `reference/no_bot.ru.json`,
   `cities/{default,no_daily}.json`

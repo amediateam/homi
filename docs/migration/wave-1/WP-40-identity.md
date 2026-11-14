@@ -75,7 +75,9 @@ Migration on `users`: `name`, `email`, `password` become nullable; new columns `
 `language_code` (string 8, nullable), `bot_chat_state` (string 16, default `never`; values `never`, `active`,
 `blocked`), `analytics_distinct_id` (uuid, unique), `is_team` (boolean, default false), `first_start_param`
 (string 64, nullable), `last_seen_at` (`timestampTz`, nullable). The same migration deletes the stub user of WP-11
-and its tokens.
+and its tokens. `analytics_distinct_id` is added nullable, filled with a random UUID for every remaining row, and
+then changed to `NOT NULL` in the same migration: SQLite, which the tests use, refuses `ADD COLUMN … NOT NULL`
+without a default even on an empty table.
 
 `App\Services\Identity\UserResolver::fromInitData(TelegramInitData): User` — `createOrFirst` on `telegram_user_id`,
 then update the booleans, `language_code` and `last_seen_at`. On creation: a random `analytics_distinct_id`,
@@ -102,8 +104,12 @@ real code. `config('sources.native_stubs')` (`SOURCES_NATIVE_STUBS`, default fal
 `App\Http\Middleware\AnswerNativeStubs` on the `v1` group. It looks the route name up in
 `App\Services\Sources\Stub\NativeStubs` — a map of route name to a callable that builds the stub answer with
 `StubResponder` (fixtures, scenario header, `meta.source = stub`) — and answers without reaching the real
-controller. Rule for this and every later package of stage C: when a stub controller body is replaced, the old body
-moves into this map; it is not deleted. This package moves sign-in (with `StubUser`), `me` and settings. On staging
+controller. The middleware is always attached, after `auth:sanctum` on bearer routes, and reads the switch on every
+request, so a test turns it on with `config(['sources.native_stubs' => true])`. The stub contract tests of WP-11 …
+WP-13 (`*ContractTest.php`) do that in a `beforeEach` from the package that replaces their controller, and keep
+asserting `meta.source = stub`; the new tests of the real code run with the switch off. Rule for this and every
+later package of stage C: when a stub controller body is replaced, the old body moves into this map; it is not
+deleted. This package moves sign-in (with `StubUser`), `me` and settings. On staging
 and production the switch cannot be on, so no stub code can answer there. If the end-to-end workflow already boots
 the API, set `SOURCES_NATIVE_STUBS=true` in its environment in this PR.
 
@@ -129,7 +135,8 @@ Table `user_settings`: `user_id` (primary key, foreign key, cascade), `locale` (
 ### Access gate
 
 `config/access.php`: `mode` (`ACCESS_MODE`: `private`, `invite`, `open`; default `private`, so a missing key fails
-closed), `max_seats` (`ACCESS_MAX_SEATS`, null = unlimited), `owner_telegram_ids` (list, from env, for `private`),
+closed), `max_seats` (`ACCESS_MAX_SEATS`, null = unlimited), `owner_telegram_ids` (list, from the comma-separated
+`ACCESS_OWNER_TELEGRAM_IDS`, for `private`),
 `require_chat` (default false: in open mode a user who has not started the bot is still let in; radar writes have
 their own `no_chat` check).
 
@@ -141,10 +148,13 @@ Table `access_grants`: `user_id` (primary key, foreign key, cascade), `state` (`
 → `Join`; grant `admitted` or owner → `Granted`; mode `private` → `Private`; mode `invite` → `Invite`; mode `open`
 with `max_seats` and no seat left → `Full`; mode `open` → `Granted` (with `max_seats` set, the admission inserts the
 grant under a lock that counts seats; without it no row is written). The decision is cached per user for 2 s and
-flushed when the grant or `bot_chat_state` changes.
+flushed when the grant or `bot_chat_state` changes: `AccessGate::forget(User $user): void` drops the cached
+decision; the grant writers of this package call it, and WP-52 calls it when it changes `bot_chat_state`.
 
 Middleware `App\Http\Middleware\EnsureAccessGranted`, alias `access`, on every bearer route; `access:lenient` (only
-`blocked` is refused) on `POST /events`. Commands `access:block {user}` and `access:unblock {user}` (internal user
+`blocked` is refused) on `POST /events`. `auth:sanctum` can also authenticate an `App\Models\Source` (a collector
+token; that model uses `HasApiTokens`, and the media routes accept it): the middleware lets every actor that is not
+a `User` pass, and the limiter key for such an actor keeps the form of today's `actorKey()` (class and id). Commands `access:block {user}` and `access:unblock {user}` (internal user
 id; `--by` and `--reason` required; one log line without any Telegram id).
 
 ### Rate limits
@@ -170,16 +180,20 @@ routes; it never contains a Telegram id.
 
 Notes: `RateLimiter::for('api')` exists today, but `bootstrap/app.php` never calls `throttleApi()`, so check with
 `php artisan route:list -v` which routes carry which limiter before and after. The `throttle:api` that WP-11 put on
-the `v1` group is replaced by the named limiters. The limiter runs after authentication. Trusted proxies: the list
-comes from `TRUSTED_PROXIES` through a config value; find with `search-docs` how `trustProxies()` takes a value that
-survives `config:cache`, and do not call `env()` in `bootstrap/app.php`.
+the `v1` group is replaced by the named limiters. The limiter runs after authentication. Trusted proxies: a new
+`backend/config/trustedproxy.php` with `'proxies' => env('TRUSTED_PROXIES')` (a comma-separated string, or null).
+`Illuminate\Http\Middleware\TrustProxies` is already in the global stack and falls back to
+`config('trustedproxy.proxies')` when `trustProxies(at: …)` was never called (read in the installed framework), so
+nothing is added to `bootstrap/app.php` and the value survives `config:cache`.
 
 ### Redaction
 
 `init_data` and `Authorization` never reach a log, Telescope, Pulse or an exception context (SEC-REQ-047): add
-`init_data` to the hidden request parameters and `authorization`, `cookie` to the hidden headers in
-`TelescopeServiceProvider`; add `init_data` to the `dontFlash` list in `bootstrap/app.php`; a test greps the log
-channel after a failed and a successful sign-in.
+`init_data` to the hidden request parameters in `TelescopeServiceProvider::hideSensitiveRequestDetails()`. The
+headers need no change: Telescope hides `authorization` by default (`Telescope::$hiddenRequestHeaders`) and the
+provider already hides `cookie`. That method returns early in `local`, so nothing is hidden there. Add `init_data`
+to the `dontFlash` list in `bootstrap/app.php`; a test greps the log channel after a failed and a successful sign-in
+and asserts that the three names are in Telescope's hidden lists.
 
 ## Files
 
@@ -193,13 +207,14 @@ channel after a failed and a successful sign-in.
 - `backend/app/Http/Controllers/Api/V1/{Auth/TelegramAuthController,MeController,SettingsController}.php` (bodies
   replaced); `backend/app/Services/Sources/SourceContext.php`; `backend/app/Services/Sources/Stub/NativeStubs.php`,
   `backend/app/Http/Middleware/AnswerNativeStubs.php` (new); `backend/config/sources.php` (`native_stubs`)
-- `backend/config/{telegram,access,rate_limits,settings,app}.php`, `backend/app/Providers/{AppServiceProvider,TelescopeServiceProvider}.php`,
+- `backend/config/{telegram,access,rate_limits,settings,trustedproxy}.php`, `backend/app/Providers/{AppServiceProvider,TelescopeServiceProvider}.php`,
   `backend/bootstrap/app.php`, `backend/routes/{api,console}.php`
 - `backend/tests/Unit/Identity/{TelegramInitDataVerifierTest,QuietWindowTest,DigestScheduleTest}.php`,
   `backend/tests/Feature/Api/V1/Auth/*`, `backend/tests/Feature/Access/*`, `backend/tests/Feature/Api/V1/{MeTest,SettingsTest,RateLimitTest}.php`,
   `backend/tests/Support/InitDataSigner.php` (signs synthetic values with the test token of `phpunit.xml`)
-- `backend/.env.example` (the five keys) and `docs/infrastructure/environments.md` (their names) — separate
-  shared-file PR; `docs/api/openapi.json` and generated types (regenerated; expected diff: none in shapes)
+- `backend/.env.example` (`ACCESS_MODE`, `ACCESS_MAX_SEATS`, `ACCESS_OWNER_TELEGRAM_IDS`, `SANCTUM_TOKEN_PREFIX`,
+  `TRUSTED_PROXIES`, `TELEGRAM_INITDATA_MAX_AGE`, `SOURCES_NATIVE_STUBS`) and `docs/infrastructure/environments.md`
+  (their names) — separate shared-file PR; `docs/api/openapi.json` and generated types (regenerated; expected diff: none in shapes)
 
 ## Steps
 

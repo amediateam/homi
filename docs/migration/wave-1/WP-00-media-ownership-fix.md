@@ -189,8 +189,9 @@ Edge cases:
 - `it('drops the variants job when the media row was deleted before it ran')` — the job has
   `deleteWhenMissingModels`; `it('removes its own variants when the row disappears during the run')`.
 - `it('keeps the objects when the same bytes were uploaded again before the delete finished')`.
-- `it('creates one reference under concurrent identical uploads')` — skipped unless the connection is PostgreSQL
-  (`->skip(fn () => DB::getDriverName() !== 'pgsql')`); it runs once WP-03 adds the `pgsql` group to CI.
+- `it('keeps one reference when the same actor attaches twice')` — `attachOwner` called twice. The case with
+  parallel uploads needs PostgreSQL and child processes; WP-03 writes it as the first test of the `pgsql` group
+  (`backend/tests/Pgsql/MediaOwnershipRaceTest.php`).
 
 The existing media suites stay green; only assertions on the old key prefix change.
 

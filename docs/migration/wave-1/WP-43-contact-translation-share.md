@@ -69,14 +69,19 @@ object into a second cache entry of the same lifetime, encrypted with `Crypt`.
 
 ### Disclosure quota (`App\Services\Listings\ContactDisclosure`)
 
-- `decide(User, int $number): bool` and `record(User, int $number): void`. A Redis set
-  `contact:<user id>:<Y-m-d in Asia/Tashkent>` of listing numbers, expiring one hour after the end of that Tashkent
-  day. Distinct listings count once; a number already disclosed today is always allowed again.
+- `decide(User, int $number): bool` and `record(User, int $number): void`. A cache entry
+  `contact:<user id>:<Y-m-d in Asia/Tashkent>` that holds the set of listing numbers, expiring one hour after the end
+  of that Tashkent day; it is read and written through the `Cache` facade under `Cache::lock`, not with raw Redis set
+  commands, because the tests and CI run on the `array` store and CI has no Redis service
+  (`backend/phpunit.xml`, `.github/workflows/backend.yml`). Distinct listings count once; a number already disclosed
+  today is always allowed again.
 - `config/contacts.php`: `soft_limit` (`CONTACT_SOFT_LIMIT`), `hard_limit` (`CONTACT_HARD_LIMIT`); `null` disables.
   Values are a product decision (DEC-19, Q-SEC-003); production starts with them blank and the PR says so.
 - Above the soft limit: suppression as above. At the hard limit, once per day: set `access_grants.flagged_at` and
   `flag_reason = 'contact_quota'`, log a warning with the internal user id only, dispatch
-  `App\Events\Listings\ContactQuotaExceeded`. Blocking stays an operator action (`access:block`).
+  `App\Events\Listings\ContactQuotaExceeded`. In open mode without seats a user has no `access_grants` row (WP-40),
+  so this is an `updateOrCreate`: a missing row is created with `state = admitted` and `admitted_via = open`.
+  Blocking stays an operator action (`access:block`).
 - A card counts when it emits a phone or a link; a refresh counts the same listing (no double count).
 - Cache store unavailable: fail closed (suppress) and log once; never a `500` on the card.
 
@@ -158,7 +163,9 @@ environment.
   (encrypted phone entry)
 - `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingContactController,ListingTranslationController,ListingShareController}.php`
 - `backend/app/Http/Controllers/Pages/CallPageController.php`; `backend/resources/views/call/{show,expired,missing,unavailable}.blade.php`;
-  `backend/lang/{ru,uz,en}/call.php`; `backend/routes/pages.php` (new) and `backend/bootstrap/app.php`
+  `backend/lang/{ru,uz,en}/call.php` (the folder `backend/lang/` does not exist today; it is Laravel's default
+  language path and is created here — name it in the PR, a new folder under `backend/` needs approval);
+  `backend/routes/pages.php` (new) and `backend/bootstrap/app.php`
 - `backend/config/{contacts,legacy}.php`; `backend/app/Providers/AppServiceProvider.php` (limiter `call-page`)
 - `backend/resources/fixtures/legacy/{call.json,translate.uz_Latn.json,translate.en.json,listing.link_only.json}`
 - `backend/tests/Feature/Listings/{ContactServiceTest,ContactDisclosureTest,CallLinkServiceTest,CallPageTest,TranslationServiceTest}.php`,

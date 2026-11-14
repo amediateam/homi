@@ -143,10 +143,11 @@ Rules for both:
   does not know keeps the legacy name. Codes in the files use underscores (`mirzo_ulugbek`); the lookup compares
   after normalising `-` and `_`.
 - **Withdrawn listings.** A listing number that HOMI already knows as gone (`listing_refs.gone_at`, WP-42) or that
-  carries a takedown mark (WP-44, set by `delivery:withdraw` of WP-57) is left out of `latest` and `pins`
+  carries a takedown mark (`listing_marks.taken_down_at`, the column and the command `delivery:withdraw` of WP-57)
+  is left out of `latest` and `pins`
   (SEC-REQ-040). This is one indexed query per answer.
-- **Privacy guard.** Any string value that matches the phone pattern of `PiiMasker` (WP-55; a local pattern if that
-  class does not exist yet) removes its item and writes one `warning`.
+- **Privacy guard.** Any string value that matches the phone pattern of `App\Services\Parsing\PiiMasker` (WP-55,
+  earlier in the queue, so the class exists) removes its item and writes one `warning`.
 - **No suspicion labels**: the answer has the tri-state `is_owner` only (SEC-REQ-045).
 - The driver never formats text: the counter rules (BR-LND-007), the push list (BR-LND-014) and the «≈N в день»
   wording (BR-LND-015, BR-LND-016) are rules of the page (WP-61).
@@ -226,7 +227,8 @@ Generators always with `--no-interaction`; tests first inside each step; Pint af
 7. Controllers: headers and `304`; `LandingHeadersTest`.
 8. `LandingDriversContractTest`: the stub and the legacy driver answer the same schema; `LandingGoldenContractTest`.
 9. Locally: `php artisan sources:set source.landing.live legacy --by=<you> --reason=local-check`, call the method,
-   see `meta.source = legacy`, then `sources:reset`. Regenerate OpenAPI and the types if anything changed.
+   see `meta.source = legacy`, then `php artisan sources:reset source.landing.live --all --by=<you>
+   --reason=local-check` (the form WP-48 uses). Regenerate OpenAPI and the types if anything changed.
 10. `make ci-backend`; the env key PR; PR; deploy with both features still on `stub`.
 11. With the production track: env values, the nginx location, then the two `sources:set` calls on staging; check
     the two methods and three photo addresses; the same on production.

@@ -50,7 +50,7 @@ LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 | Scope of Wave 1 (DEC-43) | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
 | Routing (DEC-44, 25 §3.2) | Sheets are intercepting routes in the `@sheet` slot; Back closes editor, then radar sheet, then nothing (root tab) |
 | Session modes (25 §3.4) | Every read works with `initial` data from the server (cookie mode) and through `/bff` (header mode); every mutation is a Server Action that takes the token as an argument in header mode |
-| API methods (25 §4.2) | Methods used: `GET /radars`, `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow`, `GET /listings/count`, `GET /listings` (previews, only if the contract has no preview field) and `GET /settings` (digest hours) |
+| API methods (25 §4.2) | Methods used: `GET /radars` (with `include=previews` on the radar tab), `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow` (nudge), `GET /listings/count` and `GET /listings/flow` through `FiltersForm`, and `GET /settings` (digest hours). `{id}` is a ULID string (WP-13) |
 | Demo marker (25 §4.4) | A radar answer with `meta.source = stub` shows the demo marker through `reportSource()` |
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`, "Closing the
@@ -64,16 +64,16 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 
 | Address | Files | Renders |
 | ------- | ----- | ------- |
-| `/radars` | `(main)/radars/page.tsx` | `<Suspense>` around a server part that calls `GET /radars` when the cookie exists, then `RadarScreen` with `initial` |
+| `/radars` | `(main)/radars/page.tsx` | `<Suspense>` around a server part that calls `GET /radars?include=previews` when the cookie exists, then `RadarScreen` with `initial` |
 | `/radars/new` | `@sheet/(.)radars/new/page.tsx`, `(main)/radars/new/page.tsx` | `RadarCreateSheet` (SCR-030) |
 | `/radars/[id]` | `@sheet/(.)radars/[id]/layout.tsx` + `page.tsx`; `(main)/radars/[id]/layout.tsx` + `page.tsx` | layout: `RadarSheetRoute` and `{children}`; `page.tsx` renders `null` (SCR-028) |
 | `/radars/[id]/edit` | `edit/page.tsx` under both layouts | `RadarEditSheet` over the radar sheet (SCR-029) |
 | `/radars/found` | `@sheet/(.)radars/found/page.tsx`, `(main)/radars/found/page.tsx` | `FoundSheet`; `?trigger=pause|delete` (SCR-031) |
 
 - Route files hold no logic; both trees import the same components from `features/radars/`.
-- The direct-load versions render `RadarScreen` under the sheet, so a reload of `/radars/7` shows the same picture
-  as a tap on the tile. Closing uses `back()` of `useBack()`: `router.back()` when the app has history, else
-  `router.replace(parentOf(pathname))` — `/radars/7/edit` → `/radars/7` → `/radars`.
+- The direct-load versions render `RadarScreen` under the sheet, so a reload of `/radars/<id>` shows the same
+  picture as a tap on the tile. Closing uses `back()` of `useBack()`: `router.back()` when the app has history,
+  else `router.replace(parentOf(pathname))` — `/radars/<id>/edit` → `/radars/<id>` → `/radars`.
 - The radar sheet stays mounted under its editor because it is the layout of the segment (vocabulary rule for
   layers). A listing opened from the strip is intercepted into `@overlay`; the `@sheet` catch-all then renders
   `null`, and Back brings the sheet back — the legacy "hidden while a listing is open" (SCR-028).
@@ -88,11 +88,11 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 | Path under `frontend/app/` | Content |
 | -------------------------- | ------- |
 | `lib/actions/radars.ts` | Server Actions `createRadar`, `replaceRadar`, `patchRadar`, `deleteRadar`, `relaxRadar`; `(input, auth?)` → `ActionResult<T>` |
-| `lib/actions/surveys.ts` | `submitFound`, `submitFoundWhere` |
+| `lib/actions/surveys.ts` | `sendFound`, `sendFoundWhere` (the names WP-22 reserved) |
 | `lib/telegram/chatAccess.ts` | `isNoChat(result)`, `withChatAccess(run)` |
 | `features/radars/useRadars.ts` | `useRadars({ initial? })` on `useResource('radars', …)`: `{ radars, status, error, refetch, replace(radar), remove(id) }` |
-| `features/radars/normalize.ts` | `normalizeRadar`, `normalizeMutation`, `normalizeFlow` — total functions |
-| `features/radars/subscribe.ts` | `subscribe(filters, entry, relaxed?)`, `saveEdit(id, filters, relaxed?)`, `relax(id, code)`; each returns `{ ok, toast }` |
+| `features/radars/normalize.ts` | `normalizeRadar`, `normalizeMutation` — total functions. `normalizeFlow` is not written again: it is imported from `features/filters/useLiveStats.ts` (WP-25) |
+| `features/radars/subscribe.ts` (a stub since WP-24; bodies written here) | `subscribe(filters, entry, relaxed?)`, `saveEdit(id, filters, relaxed?)`, `relax(id, code)`; each returns `{ ok, toast }`. `useHasActiveRadar(filters)`: true when `useRadars()` holds an active radar with `sameFilters`. `radarsReady` in `features/radars/capability.ts` becomes `true` |
 | `features/radars/toasts.ts` | The toast table below as one function per outcome |
 | `features/radars/radarStatus.ts` | Status line of a tile and of the sheet header |
 | `features/radars/useRadarPreviews.ts` | Finds, matching count and flow per radar |
@@ -113,21 +113,24 @@ nudge), `empty` (new-radar sheet).
    `ok: true`.
 3. The same but inactive → `withChatAccess(() => patchRadar(id, { active: true }))` → toast `toast.alertOn`.
 4. Otherwise `withChatAccess(() => createRadar({ filters: toRadarFilters(filters, rules), entry, relaxed? }))`;
-   `relaxed` is left out of the body when no relax chip was chosen.
+   `relaxed` is left out of the body when no relax chip was chosen. In the WP-13 contract the server repeats the
+   check of steps 2 and 3 and says what it did in `kind`, so the answer is read first: `existing` →
+   `toast.alreadyOn`; `reactivated` → `toast.alertOn`; `created` → step 5. Steps 2 and 3 stay as the fast path
+   for a list that is already loaded.
 5. Result → toast: `starter > 0` → count toast; else the first `options[]` entry with `count ≥ 7`, else the last
    one → "few" toast with the action «Расширить» that calls `relax(radar.id, option.code)`; no option → "empty"
    toast with `hint = relaxed[0] ? ' — ' + relaxed[0].text : ''`.
 6. `normalizeMutation` makes `options` and `relaxed` arrays and `starter` a finite number before step 5. A request
    that succeeded always ends in a success toast and `ok: true` — the fix of LB-APP-005.
-7. Failure: `no_chat` after the chat-access flow → `toast.noChat`; any other conflict on create → `toast.subLimit`
-   with `max` = the radar limit from `useReference()` (legacy `max_subscriptions`), fallback `10`; a conflict whose
-   code says "duplicate" → `toast.alreadyOn`; anything else → `common.saveFailed`. The exact codes are the
-   contract's (the v1 answer is expected to tell the limit from `no_chat` by code, the fix of LB-API-033).
+7. Failure, by the `409` codes of WP-13 (the fix of LB-API-033): `no_chat` after the chat-access flow →
+   `toast.noChat`; `radar_limit` → `toast.subLimit` with `max` = `limits.radars` from `useReference()` (legacy
+   `max_subscriptions`), fallback `10`; `radar_duplicate` (edit and widen only) → `toast.alreadyOn`; anything
+   else → `common.saveFailed`.
 8. Two calls with the same `filtersKey` while one is in flight share one promise.
 9. After every success: `refetch()` of the radar list.
 
-`toRadarFilters` gets `{ dropPostedDays: devFlags.dev005RadarDropsPostedDays }`: off sends `posted_days` as it is
-in the search filters (legacy), on sends `null`.
+`rules` is `searchRules(devFlags)` of WP-22: with `dev005RadarDropsPostedDays` off `toRadarFilters` sends
+`posted_days` as it is in the search filters (legacy), on it sends `null`.
 
 ### Chat access (`withChatAccess`)
 
@@ -137,7 +140,8 @@ in the search filters (legacy), on sends `null`.
 2. Answer `false` → `track('chat_access_declined')`, return the failure.
 3. Answer `true` → `track('chat_access_allowed')`, run once more; success returns; another `no_chat` falls through.
 4. Method unavailable or still `no_chat`: when `brand.botUsername` is set, `tg.confirm(t('chat.restart'))`; on OK
-   `tg.openLink(botStartUrl())` (the bare `https://t.me/<bot>` of HOMI's bot). Then return the failure.
+   `tg.openLink(botUrl())` — `botUrl()` of WP-21 is the bare `https://t.me/<bot>` of HOMI's bot. Then return the
+   failure.
 5. A second call while the native sheet is open reuses the pending promise.
 
 Turning a radar on, creating, replacing and widening go through it; turning off, mode, unhide and delete do not
@@ -145,18 +149,14 @@ Turning a radar on, creating, replacing and widening go through it; turning off,
 
 ### Previews (BR-APP-063, fix of LB-APP-036)
 
-Look in the generated type of the `GET /radars` item for a preview object: latest finds (at most 5 listing
-previews), the count of listings that match now, and the flow (`week`, `days`). 25 §5 lists previews as part of the
-radar module, so the field is expected.
+The WP-13 contract carries the previews: `GET /radars?include=previews` adds `preview` to every radar —
+`preview.items` (at most 5 listing previews, newest first), `preview.count` (listings that match now, may be
+`null`) and `preview.flow` (`week`, `days`, may be `null`); `preview` itself is `null` when it could not be
+computed. `useRadarPreviews` only maps it, so the tab sends one request. The list read for the search tab (footer
+state, note, nudge rules) is sent without `include`. There is no per-radar fallback to the listing methods.
 
-- **Present:** `useRadarPreviews` only maps it; the tab sends one request.
-- **Absent:** fix the contract specification in the same PR (queue rule 6). Until the stub carries it, the hook
-  falls back to `GET /listings?…&limit=5`, `GET /listings/count` and `GET /listings/flow` through `bffFetch`, each
-  behind `useResource` keyed by `filtersKey` (two radars with equal filters cost one set; a revisit within 60 s
-  costs nothing), started only for tiles within 200 px of the viewport, at most 6 in parallel.
-
-Every flow value passes `normalizeFlow`: anything that is not an object with a numeric `week` and a positive
-`days` becomes `null`.
+Every flow value passes `normalizeFlow` of WP-25: anything that is not an object with a numeric `week` and a
+positive `days` becomes `null`.
 
 ### Return from a radar feed
 
@@ -165,10 +165,12 @@ Every flow value passes `normalizeFlow`: anything that is not an object with a n
 `sort` = `normalizeSort(lastSort, sortOptions(radar.filters, city))`. Back returns to `/radars/[id]`: the sheet
 opens without the rise animation (`instant`) and the list scrolls to the stored position.
 
-`lib/search/useSearchState.ts` gets one rule: while `from=radar` is in the address, the feed does not overwrite the
-remembered last search (the value the search tab link is built from), so after Back the search tab still holds the
-user's own filters. A filter or sort change on that feed, or a tab press, drops `from=radar` and the radar's
-filters become the search — the legacy "tab press clears radar-return" (`03` §1.2).
+Two rules make this work. The remembered last search is `lastSearchHref` of `lib/ui/shellState.ts`, written by
+`AppShell` (WP-23): while `from=radar` is in the address `AppShell` does not write it, so after Back the search
+tab still holds the user's own filters ("the last search filters" in this file are
+`searchStateFromHref(lastSearchHref)` of WP-22). And `setFilters` / `setSort` of `lib/search/useSearchState.ts`
+drop `from=radar` — the one reserved parameter they remove: a filter or sort change on that feed, or a tab press,
+makes the radar's filters the search — the legacy "tab press clears radar-return" (`03` §1.2).
 
 ### Nudges
 
@@ -199,12 +201,13 @@ New, under `frontend/app/`:
 
 Changed:
 
-- `lib/api/bffAllowList.ts`: `GET radars`, `GET settings` (and the three listing reads if the preview fallback is
-  used).
-- `lib/search/useSearchState.ts`: the `from=radar` rule; an accessor for the last search if WP-22 has none.
-- `features/shell/AppShell.tsx` (mount `NudgeHost`), `features/shell/TopBar.tsx` («+» action).
+- `lib/api/bffAllowList.ts`: nothing to add — `GET radars` and `GET settings` are in the list of WP-22.
+- `lib/search/useSearchState.ts` (drops `from=radar`), `features/shell/AppShell.tsx` (no `lastSearchHref` write
+  under `from=radar`; mount `NudgeHost`), `features/shell/TopBar.tsx` («+» action).
+- `features/radars/capability.ts` (`radarsReady = true`), `features/radars/subscribe.ts` (stub of WP-24 replaced).
 - `features/filters/FiltersForm.tsx` and the footer (radar modes, «Включить радар» state), `features/feed/
-  FewResultsNote.tsx` (button), the apply handlers that call `offerFollowNudge(filters)`.
+  FewResultsNote.tsx` (button). The apply handlers are not edited: the nudge registers
+  `onFiltersApplied(offerFollowNudge)` of WP-25 (`features/filters/applyFilters.ts`).
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the keys of "Behaviour to reproduce", "New and
   overridden texts".
 
@@ -212,7 +215,8 @@ Changed:
 
 1. Read the Next.js files named above. Check three seams and note the result in the PR: the radar types in
    `@homi/types` (item shape, preview field, mutation result, error codes); what `FiltersForm` already does in its
-   radar modes; how WP-24 and WP-25 hid their radar buttons (the `radarsReady` seam, whatever its final name).
+   radar modes; how WP-24 and WP-25 hid their radar buttons (`radarsReady` of `features/radars/capability.ts` and
+   the stub `features/radars/subscribe.ts`).
 2. `lib/actions/radars.ts` and `lib/actions/surveys.ts` on `serverApi()`; allow-list entries; unit tests of the
    token argument in header mode.
 3. `features/radars/normalize.ts` with tests.
@@ -228,8 +232,9 @@ Changed:
 10. «Смотреть найденное», `radarReturn`, the `from=radar` rule, the count label flag.
 11. New radar and editor: routes, wrappers, what `FiltersForm` lacks from step 1.
 12. Survey: routes, `FoundSheet`, the two actions, share.
-13. `NudgeHost`, `store.ts`, `followNudge.ts`, `useFollowNudge.ts`, `FollowNudge.tsx`; call `offerFollowNudge`
-    from the apply handlers of the filters sheet, the quick filter sheet and the lasso.
+13. `NudgeHost`, `store.ts`, `followNudge.ts`, `useFollowNudge.ts`, `FollowNudge.tsx`; register
+    `onFiltersApplied(offerFollowNudge)` once in `NudgeHost` — `applyFilters` of WP-25 notifies for the filters
+    sheet, the quick filter sheet and the lasso (WP-28), so no handler is touched.
 14. Catalogue overrides and the new key; component tests; Playwright specs in both session modes.
 15. Run the checklist in three locales and two themes; update the queue and the handoff.
 
@@ -354,15 +359,16 @@ backdrop, drag, Telegram Back, a final answer. Steps are component state, not hi
 | `where` | `found.whereTitle` «Где нашли?»; `found.whereText` | «Другой Telegram-канал», «OLX», «Другой сайт (Uybor, Uysot…)», «Через риелтора», «Знакомые подсказали», «Объявление на доме или на улице», «Другое» (`found.where.*`) → close + toast `found.thanksYes` «Поздравляем! 🎉 Спасибо, что рассказали» |
 | congratulations | image `brand.assets.hooray` 132 px; `found.congrats` «Поздравляем с новосельем!»; `found.congratsText` | «Рассказать друзьям» (`found.share`, only when `brand.botUsername` is set) → `tg.shareUrl(botStartUrl('s_friend'), t('found.shareText'))`, then close; «Готово» (`found.done`) → close |
 
-Every answer of step 1 calls `submitFound({ answer, trigger })`, every row of step 2 `submitFoundWhere({ where })`;
-both are fire-and-forget: not awaited, errors swallowed, rows never disabled. The answer codes are the contract's
-enum (legacy: `kvadro`, `elsewhere`, `searching`, `stopped`; seven `where` codes). The address carries `trigger`
-and, only if the contract's body asks for it, the radar id as `radar`. A missing or unknown `trigger` in the
+Every answer of step 1 calls `sendFound({ answer, trigger })`, every row of step 2 `sendFoundWhere({ where })`;
+both are fire-and-forget: not awaited, errors swallowed, rows never disabled. The codes are the enums of WP-13:
+`answer` is `homi` (legacy `kvadro` — the catalogue key stays `found.kvadro`), `elsewhere`, `searching`,
+`stopped`; `where` is `telegram`, `olx`, `site`, `agent`, `friends`, `street`, `other`, in the order of the rows
+above. The address carries `trigger` only; the contract's body has no radar id. A missing or unknown `trigger` in the
 address → `router.replace(routes.radars())`. A second `ask_found` while the survey is open replaces the trigger.
 
 ### Follow nudge (SCR-040, BR-APP-043, BR-APP-046)
 
-1. An apply handler calls `offerFollowNudge(filters)`; `followPending` becomes true.
+1. `notifyFiltersApplied` of WP-25 calls the registered `offerFollowNudge(filters)`; `followPending` becomes true.
 2. When `nudgesAllowed` holds and no toast is visible, wait 1 800 ms. A filter change in between drops the
    candidate.
 3. `shouldShowFollowNudge`: filters are custom (`isCustomFilters`), no radar has the same filters, radars < the
@@ -400,10 +406,12 @@ the brand word only.
 
 - `normalize.test.ts`: `relaxed` missing or `null`, `options` `null`, `starter` as a string, filters with a missing
   key, unknown `mode`; `normalizeFlow` for `undefined`, `null`, `{}`, `{ week: 0, days: 7 }`, `days: 0`.
-- `subscribe.test.ts`: active twin sends nothing; inactive twin sends one patch; starter toast; few picks the first
+- `subscribe.test.ts`: active twin sends nothing; inactive twin sends one patch; a create answered with `kind`
+  `existing` or `reactivated` gives the already-on or the on-again toast; starter toast; few picks the first
   option with `count ≥ 7`; few falls back to the last option; empty toast with and without a hint; success with no
   `options` and no `relaxed` still returns `ok` (regression of LB-APP-005); edit toasts; widen with and without
-  starter; limit uses the reference maximum or 10; duplicate code → already on; other error → save failed;
+  starter; `radar_limit` uses the reference maximum or 10; `radar_duplicate` → already on; other error → save
+  failed;
   `posted_days` kept by default and `null` with `dev005RadarDropsPostedDays`; two calls with one key share a
   request; list re-read failure falls back to the cache.
 - `chatAccess.test.ts`: granted → one retry and `chat_access_allowed` once; declined → `chat_access_declined`, no
@@ -433,10 +441,13 @@ the brand word only.
   direct load of `/radars/<id>` and of `/radars/<id>/edit`.
 - `radar-subscribe.spec.ts`: filters footer «Включить радар» → toast and ✓ state; few-results note button.
 - `radar-forms.spec.ts`: «+» → new radar → toast, sheet closed; edit → save → toast.
-- `follow-nudge.spec.ts`: apply custom filters → card after 1.8 s → «Включить» sends the create with entry
-  `prompt`.
-- Error paths the deterministic stubs cannot produce (`no_chat`, limit, `ask_found`, failures) use the scenario
-  switch of the stub framework (WP-10) when it has one; otherwise they stay at the unit and component layers.
+- `follow-nudge.spec.ts`: apply custom filters → card after 1.8 s → «Включить» → the success toast (the
+  `entry: 'prompt'` argument travels inside a Server Action and is asserted in `subscribe.test.ts`).
+- States the default stub answers cannot produce use the scenarios of WP-13 through the `homi_stub_scenario`
+  cookie that WP-22 forwards: `no_chat`, `radar_limit`, `radar_duplicate`, `existing`, `starter`, `few`,
+  `ask_found`, and the reserved `source_unavailable` for a failing save. The stub list never changes after a
+  write, so the ✓ «Радар включён» state is shown with a search equal to the filters of a fixture radar, and
+  «Радар снова включён» with the filters of the paused fixture radar.
 
 ## Acceptance checklist
 
@@ -447,7 +458,7 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
 - [ ] Tile shows collage or icon, title, area summary and status; a paused tile is greyscale and reads «На паузе».
 - [ ] Status reads «≈N в день · сразу», «N за неделю · подборкой» or «пока редко · …» for the three flow cases.
 - [ ] Keyboard: Tab reaches tile and switch separately; Enter opens the sheet.
-- [ ] Opening the tab sends one radar request and no per-radar burst (or the bounded fallback, noted in the PR).
+- [ ] Opening the tab sends one radar request (`include=previews`) and no per-radar request.
 - [ ] Switch off: tile pauses at once; switch on: active again, toast «Радар снова включён. …» when there are new
       listings.
 - [ ] Pull-to-refresh reloads the list.
@@ -464,7 +475,8 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
 - [ ] «Изменить условия» opens «Условия радара» with the radar's filters and «Сохранить»; success closes it with
       «Радар обновлён. …».
 - [ ] Filters footer: «Включить радар» creates a radar, then shows ✓ «Радар включён»; a second try says «Радар по
-      этому поиску уже включён».
+      этому поиску уже включён». On stubs, where a write is not stored: ✓ with a search equal to a fixture radar,
+      the second-try text with the scenario `existing`; with stored radars this line is ticked again in WP-48.
 - [ ] Few-results note: «Включить радар по этому поиску» works and disappears once the radar exists.
 - [ ] A "few" result offers «Расширить», and it widens the radar.
 - [ ] At the limit the toast reads «Уже N радаров — удалите ненужный во вкладке «Радар»».

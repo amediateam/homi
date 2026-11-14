@@ -30,14 +30,19 @@ Real screens (WP-23 … WP-31). Event transport and PostHog (WP-32).
 ## Decisions that bind this package
 
 - DEC-44 and `25` §3.2: a file route per screen, sheets and overlays as intercepting routes in parallel slots, the
-  locale as the first segment. The tree below is the only allowed shape; later packages do not add route files.
+  locale as the first segment. The tree below is the only allowed shape; later packages do not add route files
+  (one exception: the development gallery `[locale]/dev/ui/page.tsx` of WP-23, which answers 404 in production).
 - DEC-44 and `25` §3.7: next-intl; catalogues in `@homi/i18n`, one file per locale, legacy key names; `uz` is the
   address and file name for legacy `uz_Latn` (CF-006). `uz_Latn` exists only inside Laravel's legacy driver.
 - DEC-36: LB-APP-002 is fixed here — a missing key or an unknown server value never throws. The typed flag module
   for `DEV` behaviour is created here with every flag off.
 - DEC-40 and `25` §2 rule 5: the interface is the legacy one, brand words are HOMI's and live in one layer.
 - DEC-32 and `25` §2 rule 3: tokens are re-typed from the audit table; no legacy CSS file or asset is copied.
-- DEC-49: no dependency is added here. If a package this specification names is missing, stop and fix WP-03.
+- DEC-49: nothing outside the approved batch is added here. WP-03 installs the Radix primitives this package uses
+  (dialog, slot, switch, tabs, toast, toggle, toggle-group, radio-group). Read the imports of the copied shadcn/ui
+  source: if a component needs a primitive that is not in WP-03's table, WP-03 lets this package add it under the
+  same decision — install it into `@homi/ui` at an exact version and name it with a vetting note in the PR. If any
+  other package this specification names is missing, stop and fix WP-03.
 - `25` §4.4 and RK-27: the demo marker ships in this package because every merge reaches production (DEC-45).
 - `25` §8: the catalogues are imported from the legacy release pinned by WP-02 (Q-APP-024), not from the release
   the audit describes; the key count is whatever that release has (461 in the audit, 472 in the current tree).
@@ -93,13 +98,22 @@ Rules of the tree:
    `generateStaticParams` for the three locales, renders `<html lang data-scheme="light" suppressHydrationWarning>`
    (the boot script of WP-21 changes the attributes before paint, see `preventing-flash-before-hydration.md`),
    sets the viewport with `viewport-fit=cover`, loads no web font, and wraps children in the next-intl provider.
-   `params` is a promise (`LayoutProps<'/[locale]'>`).
+   `params` is a promise (`LayoutProps<'/[locale]'>`). Through `proxy.ts` an unknown first segment (`/de/x`) is
+   redirected under a locale and ends in `[...rest]`, which renders `[locale]/not-found.tsx`; the layout's own
+   `notFound()` is reached only by paths the matcher skips. What Next.js renders in that case — a root layout
+   under a dynamic segment is the case `not-found.md` names for the experimental `global-not-found` — is
+   **verify before use**; any `404` answer is acceptable there and `globalNotFound` is not switched on.
 2. **Slots.** `(main)/layout.tsx` receives `children`, `sheet`, `overlay` and renders them in this DOM order:
    children, overlay, sheet — the legacy stacking (listing layer below sheets, `03` §3.6). Each slot has
    `default.tsx`, a `page.tsx` for the root address and a catch-all page, all returning `null`, so a hard load
    shows no layer and a soft navigation to an unrelated address — the root included — closes the layer
    (`parallel-routes.md`, "Closing the modal", shows the slot page for the root next to the catch-all).
-   `children` also has `default.tsx`.
+   `children` also has `default.tsx`. The two slot catch-alls and `[locale]/[...rest]` describe the same address
+   pattern from different folders and with different parameter names; the bundled documentation does not say
+   whether the build accepts that. **Verify before use** at step 13 (`pnpm --filter app build`, then a direct load
+   of `/ru/unknown` must answer `404`, not an empty `200`). Default if the build refuses it or the answer is not
+   `404`: name all three `[...rest]` and move the page that calls `notFound()` to `(main)/[...rest]/page.tsx`;
+   record the shape in "Handoff".
 3. **Interception.** `@sheet/(.)filters` and its siblings intercept soft navigations from any page under `(main)`;
    a hard load of the same address renders the page of the same name outside the slot (`intercepting-routes.md`).
    The bundled documentation says `(.)` ignores `@slot` folders; it does not say the same about route groups.
@@ -113,8 +127,14 @@ Rules of the tree:
 5. **Placeholders.** Every `page.tsx` renders `RoutePlaceholder` (`frontend/app/features/shell/RoutePlaceholder.tsx`)
    with the route name, the locale, a translated string and one `Button`. A later package replaces the import and
    nothing else. `filters/[kind]` accepts `rooms`, `price`, `owner` and calls `notFound()` for anything else;
-   `listing/[number]` and `radars/[id]` accept positive integers only.
+   `listing/[number]` accepts positive integers only; `radars/[id]` accepts a ULID string (26 characters of
+   Crockford base32 — the radar identifier of the WP-13 contract, so `routes.radar(id)` takes a string); both
+   call `notFound()` otherwise.
 6. Route files contain no logic: they read `params` / `searchParams` and mount a component from `features/…`.
+   With `cacheComponents`, `searchParams` and every dynamic parameter that `generateStaticParams` does not list
+   (`number`, `id`, `kind` — only `locale` is listed) are runtime data (`dynamic-routes.md`, "With Cache
+   Components"): a route file never awaits them at the top of the page; it passes the promise to a component
+   inside `<Suspense>`, the placeholders of this package included.
 
 ### Navigation vocabulary
 
@@ -139,8 +159,8 @@ Pure helpers in the same file, used by WP-21 and WP-32:
 
 ### `proxy.ts` (locale only in this package)
 
-`frontend/app/proxy.ts` exports `proxy` and a `matcher` that skips `_next`, `bff`, and files with an extension
-(`proxy.md`, "Matcher" and "Negative matching"). Behaviour:
+`frontend/app/proxy.ts` exports the function `proxy` and `config` with a constant `matcher` that skips `_next`,
+`bff`, and files with an extension (`proxy.md`, "Matcher" and "Negative matching"). Behaviour:
 
 - a path without a locale prefix is redirected to the same path under a locale; the query string is kept. The
   launch data Telegram puts into the fragment (`#tgWebAppData=…`) is never sent to the server; browsers carry a
@@ -303,9 +323,15 @@ catalogues or under `frontend/app` outside `lib/brand`.
 
 ## Files
 
-- New package `frontend/packages/i18n/**` (see the tree above); `frontend/pnpm-lock.yaml` (workspace link only).
+- New package `frontend/packages/i18n/**` (see the tree above), with the `lint`, `typecheck` and `test` scripts
+  the other workspace packages have and its own project in `frontend/vitest.config.ts` (WP-03);
+  `frontend/pnpm-lock.yaml` (workspace links; a Radix primitive only in the case named under "Decisions").
+- `frontend/app/package.json`: the workspace dependencies `@homi/config`, `@homi/ui`, `@homi/i18n`
+  (`workspace:*`). Today the app declares none — its dependencies are `next`, `react` and `react-dom` only.
+  `transpilePackages` is not needed: `transpilePackages.md` says Turbopack compiles workspace packages by itself.
 - `frontend/packages/ui/src/styles/{tokens,brand,themes,layout,theme,lite,motion}.css`, `src/styles.css`,
-  `src/components/*.tsx`, `src/index.ts`, `package.json` (exports); `frontend/packages/ui/tests/*.test.ts(x)`.
+  `src/components/*.tsx`, `src/index.ts`, `package.json` (exports, the Radix primitives);
+  `frontend/packages/ui/tests/*.test.ts(x)`.
 - `frontend/app/app/**` — the tree above; removed: `app/layout.tsx`, `app/page.tsx`, `app/globals.css`,
   `app/favicon.ico`, `public/{file,globe,next,vercel,window}.svg`.
 - `frontend/app/{proxy.ts,next.config.ts}`, `frontend/app/i18n/{routing,request,navigation}.ts`,

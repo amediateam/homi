@@ -70,7 +70,8 @@ Every write follows this order:
 1. **Chat.** `ChatReachability::canWrite($user)` — `users.bot_chat_state === 'active'`. When
    `config('radar.require_chat')` is true and the answer is no: `App\Exceptions\Radar\NoChat` (`409 no_chat`), before
    any lock or write. Checked for `create`, `update`, `setActive(true)` and `relax`; never for pause, mode, unhide or
-   delete. The flag is false until the bot maintains the chat state and can send (WP-52, WP-57).
+   delete. The flag is false until the bot maintains the chat state (WP-52) and sends the starter list; it is
+   switched on with the deploy of WP-54, as the field table says.
 2. **Lock.** One lock per user for the transaction: `pg_advisory_xact_lock(hashtext('radar:' || user id))` on
    PostgreSQL, `Cache::lock("radar:{$user->id}", 5)->block(3)` elsewhere.
 3. **Twin.** The canonical hash of the filters (WP-12: `posted_days`, key order and array order ignored) is looked up
@@ -157,7 +158,8 @@ ids — and then passed to `Gate::authorize` against `App\Policies\RadarPolicy` 
 `unhide: true` → `clearAll`. `DELETE` answers `{"ask_found": …}`; a second call is `404`. The radar rows are added to
 `IdorMatrixTest` (WP-44).
 
-Configuration `backend/config/radar.php`: `max`, `limit_scope` (`active`), `require_chat`, `starter_enabled`,
+Configuration `backend/config/radar.php` (the file exists since WP-11 with `max`; the other keys are added here):
+`max`, `limit_scope` (`active`), `require_chat`, `starter_enabled`,
 `starter_window_days` (3), `starter_max` (20), `options_max` (5), `preview_ttl`, `preview_budget_ms`,
 `author_hide_rules`, `found_cooldown_days`.
 
@@ -175,7 +177,7 @@ and `found:asked:<user id>`.
 - `backend/config/radar.php`; `backend/lang/{ru,uz,en}/radar.php`
 - `backend/tests/Feature/Radar/{RadarServiceTest,StarterSelectorTest,RadarRelaxOptionsTest,RadarHideRuleServiceTest,RadarPreviewsTest,FoundAskPolicyTest}.php`,
   `backend/tests/Feature/Api/V1/Radars/{RadarListTest,RadarWriteTest,RadarPatchDeleteTest,RadarRelaxTest}.php`,
-  `backend/tests/Feature/Pgsql/RadarConcurrencyTest.php`, `backend/tests/Feature/Api/V1/IdorMatrixTest.php`
+  `backend/tests/Pgsql/RadarConcurrencyTest.php`, `backend/tests/Feature/Api/V1/IdorMatrixTest.php`
 - `backend/.env.example` (`RADAR_MAX`, `RADAR_REQUIRE_CHAT`, `RADAR_STARTER_ENABLED`) — separate shared-file PR
 
 ## Steps
@@ -242,7 +244,7 @@ filters); a daily-rent radar gets daily options because the source computes them
 - [ ] `GET /radars?include=previews` costs one source round per distinct filter set and never fails the list.
 - [ ] Hide rules exist per radar, are cleared by `unhide`, and drive `hidden`.
 - [ ] Radar rows are in the IDOR matrix; foreign equals unknown.
-- [ ] The PR names the migrations, the three env keys and the two switches that WP-57 turns on.
+- [ ] The PR names the migrations, the three env keys and the two switches that WP-54 turns on.
 - [ ] `make ci-backend` and the `pgsql` group are green.
 - [ ] Inside Telegram on staging, then production: create a radar from the filters, see it on the «Радар» tab with
       its preview, pause, resume, change mode, edit, delete; the limit toast appears at the eleventh radar.

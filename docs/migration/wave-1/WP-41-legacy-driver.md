@@ -170,7 +170,10 @@ installing the key.
 ## Steps
 
 1. Read `08` §1 and the two rows, `25` §4.5, the answers log of WP-02 (it may be empty) and the skill
-   `laravel-best-practices` (HTTP client). Tests first; every test file starts with `Http::preventStrayRequests()`.
+   `laravel-best-practices` (HTTP client). Tests first; every feature test file starts with
+   `Http::preventStrayRequests()`. Files under `backend/tests/Unit` run without the application (`tests/Pest.php`
+   binds `Tests\TestCase` only in `Feature`), so no facade, `config()` or container works there: the translators and
+   `LegacyLocale` tested there take plain arrays and values; a test that needs more belongs in `tests/Feature`.
 2. `config/legacy.php` and the boot check (`php artisan make:class Services/Sources/Legacy/LegacyClient …`).
 3. `LegacyClient`: headers, locale mapping, query encoding, timeouts, retry, error mapping, redaction.
 4. `LegacyLimiter` and `LegacyBreaker` with frozen-clock tests.
@@ -216,7 +219,7 @@ installing the key.
 - [ ] Every legacy outcome maps to `not_found` or `source_unavailable`; no legacy error body reaches a v1 answer.
 - [ ] `GET /reference` and `GET /cities` with the `legacy` driver equal the stub in shape, in `ru`, `uz` and `en`.
 - [ ] The golden fixtures are sanitised and documented; a shape change fails `ReferenceGoldenContractTest`.
-- [ ] No test or CI job opens a network connection (`Http::preventStrayRequests()` in every file).
+- [ ] No test or CI job opens a network connection (`Http::preventStrayRequests()` in every feature test file).
 - [ ] The env key names are announced; production flags are unchanged after the deploy.
 - [ ] If the key exists: the production track ran `legacy:ping` on staging and it succeeded; otherwise the status of
       this package notes "merged, key pending" and the queue continues.

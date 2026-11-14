@@ -34,8 +34,8 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 - Contract (DEC-41, 25 §4.1, §4.2): `GET /favorites`, `GET /history`, `DELETE /history`. Both lists are **whole
   lists**: one request, `meta.next_cursor` is `null` — the legacy behaviour. 25 §4.1 gives cursors to feed-like
   lists, but paging these two is the deviation DEV-003, still `PROPOSED`, so it sits behind the flag
-  `dev003PaginatedLists` (off) like every other `DEV` row (DEC-36). If the contract of WP-13 pages them, fix the
-  contract in the same PR (queue rule 6).
+  `dev003PaginatedLists` (off) like every other `DEV` row (DEC-36). The contract of WP-13 says the same: both
+  methods accept `cursor` and `limit`, which take effect only when that flag is on.
 - Defects (DEC-36): LB-APP-022 is fixed here. The silent failure of «Очистить» (LB-APP-027) and the 403 text
   (LB-APP-045) follow the flags `dev016ErrorToastOnFailure` and `dev001AnyForbiddenShowsAccess`, both off.
 - Personal data stays per user: nothing here is cached on the server (25 §3.1); the server part sits inside
@@ -69,7 +69,8 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 - Loading: `useCursorFeed` with the path `favorites` or `history` and the option `singlePage: true` (add the
   option in WP-24's hook in this PR if it is missing): the list is the first answer — from `initial`, or one
   `bffFetch` — and the sentinel never asks for more. A non-null `next_cursor` is ignored and reported once
-  (`reportError`, kind `contract`); this is the fix of LB-APP-022, whose legacy lists re-requested the same page
+  (`reportError(new Error('unexpected_cursor'), { kind: 'error' })` — the facade has no other non-fatal kind);
+  this is the fix of LB-APP-022, whose legacy lists re-requested the same page
   forever when a cursor came back. With `dev003PaginatedLists` on, `singlePage` is `false` and the cursor is
   followed like the feed's. The guard of the hook stays for both modes and is harmless here: a cursor that is
   `null`, missing or equal to the one just used ends the list; items are de-duplicated by listing number.
@@ -99,9 +100,10 @@ New, under `frontend/app/`:
 - `app/[locale]/(main)/saved/page.tsx`, `app/[locale]/(main)/saved/history/page.tsx` (replace the WP-20
   placeholders)
 - `features/saved/server.tsx`, `features/saved/{FavoritesScreen,HistoryScreen,ClearHistoryButton}.tsx`
+- `lib/actions/history.ts` (WP-22 only reserved the file name and `clearHistory`), `tests/actions/history.test.ts`
 - `tests/saved/{FavoritesScreen,HistoryScreen}.test.tsx`, `e2e/saved.spec.ts`
 
-Changed: `lib/actions/history.ts` (action body); `lib/api/bffAllowList.ts` (only if `GET favorites` and
+Changed: `lib/api/bffAllowList.ts` (only if `GET favorites` and
 `GET history` are not yet allowed); `features/feed/ListingFeed.tsx` or `useCursorFeed.ts` (only for a missing prop
 or the cursor guard, with their tests).
 
@@ -188,8 +190,10 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 
 - `e2e/saved.spec.ts`: Heart tab → favourites from the stub; un-favourite a card → it disappears; title tab
   «Смотрели» → history, no Back button; open a listing from the feed → back → «Смотрели» sends one new request;
-  «Очистить» → fake confirm OK → empty state; fake confirm Cancel → no request; an intercepted answer carrying a
-  cursor → still exactly one request, no loop; pull-to-refresh re-requests the list.
+  «Очистить» → fake confirm OK → empty state; fake confirm Cancel → no Server Action request; an intercepted
+  `/bff/favorites` answer carrying a cursor → still exactly one request, no loop (in cookie mode the first load is
+  rendered on the server, so the case runs on the request that follows a pull-to-refresh); pull-to-refresh
+  re-requests the list; the empty states with the stub scenario `empty` of WP-13 (cookie of WP-22).
 
 ## Acceptance checklist
 

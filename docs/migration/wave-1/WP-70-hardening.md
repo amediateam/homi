@@ -7,7 +7,7 @@
 | Depends on | WP-48, WP-58, WP-61 |
 | Size | about 2 000 changed lines, M: tests, scans, three small commands, one endpoint, documents |
 | Behaviour reference | `16` §3 (findings), §4 (SEC-REQ-001 … SEC-REQ-050), §5 (test plan), §6.1; `25` §2 rule 7, §3.9, §3.10, §9, §14 item 7; `24` §8.2 (Q-SEC-021), §8.3 (RK-25, RK-27); `17` §12 (signals); task files KV-QA-015, KV-QA-016, KV-QA-017, KV-QA-020, KV-QA-022, KV-INF-004, KV-INF-011, KV-INF-012, KV-INF-013, KV-INF-025, KV-INF-026 |
-| Needs from the production track | Every item of "Requests to the production track" in "Design": (1) scrape `GET /internal/metrics` and arm the alert rules of the table; (2) the scheduler heartbeat check; (3) PostgreSQL backups with point-in-time recovery, nothing older than 14 days, a timed restore drill; (4) nginx: the header set per host, no second CSP header, access logs without query strings on `api.*`, `app.*`, `hook.*`; framing of `app.*` by Telegram Web allowed; (5) `TELESCOPE_ENABLED=false` on production, operator ids for the dashboards, `METRICS_TOKEN` and `METRICS_ALLOWED_IPS` in the server env; (6) run `php artisan security:check` after every change of a server env file and send the output (names only); (7) confirm the log retention of each log on the servers. No migration |
+| Needs from the production track | Every item of "Requests to the production track" in "Design": (1) scrape `GET /api/internal/metrics` and arm the alert rules of the table; (2) the scheduler heartbeat check; (3) PostgreSQL backups with point-in-time recovery, nothing older than 14 days, a timed restore drill; (4) nginx: the header set per host, no second CSP header, access logs without query strings on `api.*`, `app.*`, `hook.*`; framing of `app.*` by Telegram Web allowed; (5) `TELESCOPE_ENABLED=false` on production, a review of the basic-auth users of the dashboard locations (the gate exists: nginx basic auth plus `App\Http\DashboardAccess`), `METRICS_TOKEN` and `METRICS_ALLOWED_IPS` in the server env; (6) run `php artisan security:check` after every change of a server env file and send the output (names only); (7) confirm the log retention of each log on the servers. No migration |
 
 ## Goal
 
@@ -116,8 +116,11 @@ Counts: 34 apply as written, 12 apply in a changed form, 4 are not applicable (r
 ### Logging without personal data
 
 `App\Logging\RedactSecrets` — a Monolog processor added to every channel in `backend/config/logging.php` (a shared
-file: its production-relevant part goes in a separate small PR). It replaces values, in the message and the
-context, that match:
+file: its production-relevant part goes in a separate small PR). The `processors` key of a channel is read only by
+the `monolog` driver (`LogManager::createMonologDriver`); the channels `single`, `daily`, `syslog` and `errorlog`
+ignore it, so the processor is pushed by a `tap` class (`App\Logging\AddRedaction`, listed under `tap` of every
+channel), and a test logs through each configured channel. It replaces values, in the message and the context,
+that match:
 
 | Kind | Pattern or key |
 | ---- | -------------- |
@@ -173,20 +176,23 @@ refused with the documented answer, another key is unaffected. The rows it must 
 | `POST /events` | user | as set there | WP-47 |
 | Contact disclosure quota | user, distinct listings per day | as set there | WP-43 |
 | Landing methods | IP | 120 per minute | WP-60 |
-| Webhook | IP | 3 000 per minute (`telegram-webhook`) | WP-50 |
+| Webhook | bot id and IP | 3 000 per minute (`telegram-webhook`, `telegram.webhook.rate_limit`) | WP-50 |
 | Bot per user: messages, callbacks, radar writes | Telegram user | as set there | WP-51 |
 | LLM text, voice | user | 30 and 10 per hour; daily spend cap | WP-55 |
 | Outbound to legacy | global, with a background share | `LEGACY_RATE_PER_SECOND` | WP-41 |
 | Outbound to Telegram | bot and chat | 25 per second, 1 per second per chat | WP-57 |
 
-A limiter keyed by IP is tested behind the trusted-proxy configuration, so the key is the client address and not
-nginx's.
+A limiter keyed by IP must see the client address, not nginx's. The servers call PHP-FPM from nginx through
+FastCGI, so `REMOTE_ADDR` already is the client; `backend/bootstrap/app.php` configures no trusted proxies today,
+and WP-40 adds `config/trustedproxy.php` with `TRUSTED_PROXIES`, which stays unset on these servers. The test
+asserts that with no trusted proxy a forged `X-Forwarded-For` header does not change the key.
 
 ### IDOR matrix
 
 Actors: A (owner), B (another user), U (unknown id), N (no token). Expected: A → success; B and U → `404` in the
-envelope with no state change for A and the same query count; N → `401`. `IdorMatrixTest` walks the table; a
-coverage case fails when a route with a bound `{id}` or `{number}` under the user group is missing from it.
+envelope with no state change for A and the same query count; N → `401`. `IdorMatrixTest` — the file WP-44 created
+at `backend/tests/Feature/Api/V1/` and WP-45 extended, not a new class — walks the table; its coverage case fails
+when a route with a bound `{id}` or `{number}` under the user group is missing from it.
 
 | Resource | Methods | Extra check |
 | -------- | ------- | ----------- |
@@ -249,9 +255,18 @@ to the repository needs approval.
 
 ### Requests to the production track
 
-The application side built here: `GET /internal/metrics` on `api.*` (text exposition of the `ops:metrics:*` hashes
+The application side built here: `GET /api/internal/metrics` on `api.*` (the route sits in `routes/api.php`,
+whose routes carry the `api` prefix of `bootstrap/app.php`; text exposition of the `ops:metrics:*` hashes
 of WP-50, WP-57 and the sources; bearer `METRICS_TOKEN`, allow-list `METRICS_ALLOWED_IPS`, `404` otherwise), and
-the gates of `/horizon`, `/pulse`, `/telescope` (`OPS_DASHBOARD_TELEGRAM_IDS`; open locally).
+the scheduler heartbeat: a `Schedule::call` in `backend/routes/console.php`, every minute, sets the gauge
+`scheduler_heartbeat_timestamp` through `BotMetrics` of WP-50 (no earlier package writes one).
+
+The dashboard gates are not built here: they exist. `App\Http\DashboardAccess` lets `/horizon` and `/telescope`
+through only when nginx authenticated the request with basic auth and passed `HOMI_DASHBOARD_USER`
+(`infra/<env>/nginx/api.*.conf`; gates in `HorizonServiceProvider` and `TelescopeServiceProvider`; test
+`backend/tests/Feature/Http/DashboardAccessTest.php`). `/pulse` is not in that nginx location and the application
+defines no `viewPulse` gate, so outside `local` Pulse's own default refuses it. This package adds no id list and
+no new gate; it extends `DashboardAccessTest` with the `/pulse` case and checks the three paths from outside.
 
 | Signal | Threshold (proposed) | Source |
 | ------ | -------------------- | ------ |
@@ -309,11 +324,15 @@ range for a runtime dependency of the three apps.
 
 ## Files
 
-- `backend/app/Logging/RedactSecrets.php`, `backend/config/logging.php` (separate small PR)
+- `backend/app/Logging/{RedactSecrets,AddRedaction}.php`, `backend/config/logging.php` (separate small PR)
 - `backend/app/Console/Commands/Security/SecurityCheck.php`, `backend/app/Console/Commands/Perf/Burst.php`
-- `backend/app/Http/Controllers/Internal/MetricsController.php`, `backend/routes/api.php` or a dedicated route
-  file, `backend/app/Providers/AppServiceProvider.php` (dashboard gates)
-- `backend/tests/Feature/Security/{AuthStatusMatrixTest,IdorMatrixTest,RateLimitMatrixTest,CorsTest,LogLeakTest,FailedJobLeakTest,TelescopeHiddenParametersTest,SchemaMinimisationTest,MetricsEndpointTest,DashboardGateTest,SecurityCheckCommandTest}.php`
+- `backend/app/Http/Controllers/Internal/MetricsController.php`, `backend/routes/api.php` (the route
+  `internal/metrics` outside the `v1` group and its `auth:sanctum` middleware), `backend/routes/console.php` (the
+  heartbeat entry)
+- `backend/tests/Feature/Security/{AuthStatusMatrixTest,RateLimitMatrixTest,CorsTest,LogLeakTest,FailedJobLeakTest,TelescopeHiddenParametersTest,SchemaMinimisationTest,MetricsEndpointTest,SecurityCheckCommandTest}.php`
+- changed, not new: `backend/tests/Feature/Api/V1/IdorMatrixTest.php` (created by WP-44 with its coverage case,
+  extended by WP-45 — the rows of the table below that it lacks are added there, no second matrix class) and
+  `backend/tests/Feature/Http/DashboardAccessTest.php` (the `/pulse` case)
 - `backend/tests/Arch/SearchFiltersBoundaryTest.php`
 - `frontend/app/e2e/security.spec.ts`, `frontend/landing/e2e/csp.spec.ts` (extended), an ESLint rule entry for
   `dangerouslySetInnerHTML`
@@ -322,8 +341,7 @@ range for a runtime dependency of the three apps.
 - `docs/security/{checklist.md,rate-limits.md,secrets.md,public-env.md,headers.staging.txt,headers.production.txt,incident.md,audit-exceptions.md,licences.md}`,
   `docs/testing/performance.md`, `docs/legal/privacy-facts.md`
 - `backend/lang/{ru,uz,en}/bot.php` (`privacy.*`), `frontend/packages/i18n/messages/privacy/{ru,uz,en}.json`
-- Shared file, separate small PR: `backend/.env.example` (`METRICS_TOKEN`, `METRICS_ALLOWED_IPS`,
-  `OPS_DASHBOARD_TELEGRAM_IDS`)
+- Shared file, separate small PR: `backend/.env.example` (`METRICS_TOKEN`, `METRICS_ALLOWED_IPS`)
 
 ## Steps
 
@@ -332,12 +350,12 @@ range for a runtime dependency of the three apps.
 2. Copy the checklist table into `docs/security/checklist.md`; for each row find the existing test and link it;
    list the rows without one.
 3. `RedactSecrets` and its wiring; `LogLeakTest`, `FailedJobLeakTest`, `TelescopeHiddenParametersTest`.
-4. `IdorMatrixTest` with the coverage case; `AuthStatusMatrixTest`; `CorsTest`; `SchemaMinimisationTest`;
-   `SearchFiltersBoundaryTest`.
+4. The missing rows of the existing `IdorMatrixTest` (WP-44); `AuthStatusMatrixTest`; `CorsTest`;
+   `SchemaMinimisationTest`; `SearchFiltersBoundaryTest`.
 5. `docs/security/rate-limits.md` from the code; `RateLimitMatrixTest`.
 6. `security:check`; `scan-secrets.sh` with its CI step; the bundle scan; `docs/security/secrets.md`,
    `public-env.md`.
-7. The metrics endpoint and the dashboard gates with their tests.
+7. The metrics endpoint and the scheduler heartbeat with their tests; the `/pulse` case of `DashboardAccessTest`.
 8. Header files and `check-headers.sh`; the two Playwright security specs.
 9. The audit steps in CI; licences; the unused-dependency review.
 10. `perf:burst`, `bundle-size.mjs`; measure on staging; write `docs/testing/performance.md`.
@@ -374,7 +392,7 @@ users:
 | 4 | Feature | `CorsTest` | foreign origin, the app origin, a preflight |
 | 5 | Feature | `LogLeakTest`, `FailedJobLeakTest` | the seeded token, `initData`, phone and phrase are absent after each driven flow |
 | 6 | Feature | `SchemaMinimisationTest` | no forbidden column name in any table with a user link |
-| 7 | Feature | `MetricsEndpointTest`, `DashboardGateTest`, `SecurityCheckCommandTest` | token and address checks; operator and ordinary user; each failing rule exits 1 without printing a value |
+| 7 | Feature | `MetricsEndpointTest`, `DashboardAccessTest` (existing, extended), `SecurityCheckCommandTest` | token and address checks; `/horizon` and `/telescope` with and without `HOMI_DASHBOARD_USER`, `/pulse` refused outside `local`; each failing rule exits 1 without printing a value |
 | 8 | Arch | `SearchFiltersBoundaryTest` | only the normaliser constructs `SearchFilters` |
 | 9 | End to end | `security.spec.ts`, `csp.spec.ts` | zero violations in the full scenario; storage and cookie checks in cookie mode and header mode; no `initData` in any address |
 | 10 | Static | secret scan, bundle scan, audits | a planted fake token fails the scan; a `NEXT_PUBLIC_` name off the list fails the build check |

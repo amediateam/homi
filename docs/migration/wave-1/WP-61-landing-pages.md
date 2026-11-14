@@ -7,7 +7,7 @@
 | Depends on | WP-60, WP-20 |
 | Size | about 7 000 changed lines, L — the legacy landing is one 145 KB script plus its styles. Three PRs: part A = steps 1–9 (routing, texts, links, head, headers, data loader, frame: a complete simple page). Part B = steps 10–12 (display versions, hero and phone, live map). Part C = steps 13–17 (sections, privacy, analytics, scenarios). Production works after each part |
 | Behaviour reference | `03b` §1 (LND-001 … LND-039), §1.5, §1.6 (the 40 parity scenarios), §3.1 (BR-LND-001 … BR-LND-023), §4.1 (LB-LND-001 … LB-LND-016), §5.1; `04` §6.1 (payloads the bot accepts); `25` §3.6, §3.7, §3.9, §4.4, §7; task files KV-FE-100, KV-FE-102 … KV-FE-113. Not used: KV-FE-101 and KV-FE-114 … KV-FE-129 (SEO, Wave 3) |
-| Needs from the production track | (1) The landing app served at `https://homi.uz` and `https://staging.homi.uz` (vhost, TLS, the Node process of `frontend/landing`); staging answers with `X-Robots-Tag: noindex` on every path. (2) Env of the landing app per environment: `NEXT_PUBLIC_SITE_URL`, `API_BASE_URL` (server-side address of the API), `NEXT_PUBLIC_BOT_USERNAME`, `NEXT_PUBLIC_SUPPORT_USERNAME`, `NEXT_PUBLIC_MEDIA_HOST`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (HOMI's own project of that environment, DEC-47). (3) nginx adds no second `Content-Security-Policy` header and keeps HSTS, `nosniff` and `Referrer-Policy` consistent with the app's values (below). (4) The media host serves the snapshot proxy of WP-60. Nothing else |
+| Needs from the production track | (1) The landing app served at `https://homi.uz` and `https://staging.homi.uz` (vhost, TLS, the Node process of `frontend/landing`); staging answers with `X-Robots-Tag: noindex` on every path. (2) Env of the landing app per environment. Keys that `frontend/landing/.env.example` already has keep their names: `NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CDN_URL` (the media host of the CSP and of the snapshot photos), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`. New: `NEXT_PUBLIC_SITE_URL`, `API_URL` (server-side address of the API, the name WP-21 uses in `frontend/app`; falls back to `NEXT_PUBLIC_API_URL`), `NEXT_PUBLIC_SUPPORT_USERNAME`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (HOMI's own project of that environment, DEC-47). (3) nginx adds no second `Content-Security-Policy` header and keeps HSTS, `nosniff` and `Referrer-Policy` consistent with the app's values (below). (4) The media host serves the snapshot proxy of WP-60. Nothing else |
 
 ## Goal
 
@@ -50,7 +50,7 @@ Out:
 | 7 | `25` §4.4, RK-27 | When an answer has `meta.source = stub`, the block that shows it carries the "demo data" marker of WP-20 |
 | 8 | `25` §4.1 | The API answers `503 source_unavailable` → the page renders without that block's numbers; it never fails |
 | 9 | DEC-08 (open: CSP for the landing) | Baseline of its recommendation: a policy without nonces, set in `next.config.ts`. The developer and the security review confirm it, or the hash-based option, in part A |
-| 10 | DEC-49 | No new package beyond the approved batch. `next-intl` and `posthog-js` are added to `frontend/landing/package.json`; a QR generator is **not** added (static files, see "Brand") |
+| 10 | DEC-49 | No new package beyond the approved batch. `next-intl` is in `frontend/landing/package.json` since WP-03; `posthog-js` (installed by WP-03 for `app` only) is added to it at the same exact version, with the `@homi/*` workspace packages the landing imports — a `package.json` and lockfile change the PR names for the first developer; a QR generator is **not** added (static files, see "Brand") |
 | 11 | DEC-46, `25` §9 | Functional parity; the checklist is run in ru, uz and en at 1 366 × 860 and 390 × 844 |
 
 ## Design
@@ -149,8 +149,8 @@ route or under `frontend/landing` outside `lib/brand.ts`.
 Assets under `public/`: `logo.svg`, `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`,
 `icon-512.png`, `og-{ru,uz,en}.jpg` — HOMI's, from the product owner. The QR code of the final block encodes
 `https://t.me/<bot username>`; it is a static file per bot (`img/qr-<bot username>.svg`, produced once outside the
-repository for the staging and the production bot) chosen by `NEXT_PUBLIC_BOT_USERNAME`; a missing file fails the
-build.
+repository for the staging and the production bot) chosen by `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`; a missing file
+fails the build.
 
 Demo assets, which legacy ships as files: the four post photos, the six owner and agent card photos, and the static
 Tashkent map image. The pins of the data are positioned in per cent on **that** map image (1 800 × 1 125), so HOMI
@@ -303,7 +303,9 @@ All paths under `frontend/`.
 - `packages/config/src/brand.ts`; `app/lib/brand/index.ts` (imports the shared constants)
 - `landing/tests/*.test.ts(x)`, `landing/e2e/*.spec.ts`; the `landing` projects in `frontend/vitest.config.ts` and
   `frontend/playwright.config.ts`
-- Shared file, separate small PR: `landing/.env.example`
+- Shared file, separate small PR: `landing/.env.example` (adds `NEXT_PUBLIC_SITE_URL`, `API_URL`,
+  `NEXT_PUBLIC_SUPPORT_USERNAME` and uncomments the two PostHog keys; the five existing keys keep their names) and
+  the frontend key list of `docs/infrastructure/environments.md`
 
 ## Steps
 
@@ -312,8 +314,11 @@ Part A.
 1. Read the Next.js files of the table, the next-intl routing documentation, the specifications of WP-20 (i18n
    package, tokens, demo marker, flags), WP-60 (data) and WP-52 (payloads). List the assets to ask for; send the
    request to the product owner.
-2. Workspace wiring: `next-intl` and `posthog-js` in `landing/package.json` (approved batch; the registry check
-   passes), the workspace packages, the Vitest and Playwright projects, `lib/flags.ts` with the four flags.
+2. Workspace wiring: `posthog-js` at the version WP-03 pinned and the `@homi/*` workspace packages in
+   `landing/package.json` (`next-intl` is there since WP-03; the Composer package registry is not affected); the
+   Vitest project; the Playwright projects `landing-desktop` and `landing-phone` that WP-03 declared empty — set
+   `landing-desktop` to 1 366 × 860 (WP-03 wrote 1440 × 900) and add a `webServer` entry that builds and starts
+   `landing` on port 3000, because WP-03 starts only `app`; `lib/flags.ts` with the four flags.
 3. Routes and `proxy.ts`: the table of addresses, the language order, the redirects, the 404 page; unit tests of
    the language resolver; `e2e/routing.spec.ts`.
 4. Catalogues: the importer, the landing and privacy messages, the brand overrides; `RichText`; `format.ts` with

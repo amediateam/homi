@@ -66,13 +66,13 @@ second service.
 | Clear hide rules | WP-45 | `RadarHideRuleService::clearAll(Radar)`; `rulesFor(Radar)` for the `🙈` line. Removing one rule (DEV-033) has no method in WP-45: this package adds `removeOne(Radar, int $ruleId)` with the flagged branch |
 | Replace filters | WP-45 | `RadarService::update(User, Radar, SearchFilters, null)` → `RadarMutation` of kind `updated` with its `Starter`; throws `RadarDuplicate` |
 | Delete | WP-45 | `RadarService::delete(User, Radar)`, then `FoundAskPolicy::shouldAsk()` |
-| Radar limit | WP-11 through `WizardReference::radarLimit()` of WP-54 | |
+| Radar limit | WP-45 | `config('radar.max')` through `WizardReference::radarLimit()` of WP-54 |
 | Store a poll answer | WP-44 | `FoundSurveyService::answer(User, FoundAnswerType, FoundTrigger)`, `where(User, FoundPlace)` |
 | Summary rows, wizard engine, review, starter list | WP-54 | `RadarSummaryRenderer`, `Wizard` in mode `edit_radar`, `ReviewStep`, the job `SendStarterList`, `BotRadarWrite::run()` around every call of the radar service |
-| Radar title | this package | `App\Telegram\Rendering\RadarTitle` — if WP-53 already created it for the hide-rule radar choice, extend that class |
+| Radar title | WP-53 | `App\Telegram\Rendering\RadarTitle`, created there for the hide-rule radar choice; this package extends that class (the 60-character cut, the tests) |
 | Voice file | WP-50 | `TelegramBot::getFile()` and `downloadFile()`; the file address is never built outside the client (SEC-REQ-013) |
 | Text and voice redaction in `telegram_updates` | WP-50 | the ledger keeps no `text` and no `voice` after processing |
-| Per-user limits | WP-51 | the router's limiter, with two new buckets below |
+| Per-user limits | WP-51 | the router's limiter and its buckets `free_text_per_hour`, `voice_per_hour` |
 
 ### Radar screens
 
@@ -129,15 +129,19 @@ Edit of an existing radar:
   reached, timeout, provider error.
 - Feature `App\Features\LlmQueryParsing` (Pennant, global scope, default off). `php artisan llm:feature
   query-parsing on|off|status` writes it with `Feature::globally()`; confirm the calls with `search-docs`.
-- Spend: the cost of every call is added to `llm:spend:<UTC date>` in Redis and to the call log. At
+- Spend: the cost of every call is added to the cache key `llm:spend:<UTC date>` (`Cache::increment`: Redis on the
+  servers, the `array` store in tests — CI has no Redis service) and to the call log. At
   `AI_DAILY_SPEND_LIMIT` the gateway throws `LlmUnavailable` until the next UTC day (SEC-REQ-044).
 - Table `llm_calls`: `id` (ULID), `task` (string 32), `prompt_version` (string 16), `provider`, `model` (string
   64), `masked_input_sha256` (char 64), `input_tokens`, `output_tokens` (integers), `cost_micro_usd` (bigint),
   `status` (string 16: `ok`, `invalid_output`, `unavailable`), `error_code` (string 32, nullable), `created_at`.
   No text column of any kind. Model `LlmCall` with a factory; an entry in `config/retention.php` of WP-47 deletes
   rows after 180 days. The table has no user link, so the erasure registry lists it as exempt.
-- Config `backend/config/ai.php` (published from the package, config only): `default` from `AI_DEFAULT_PROVIDER`
-  (default `gemini`), plus `daily_spend_limit`, `request_timeout`. Env names go to `backend/.env.example` in a
+- Config `backend/config/ai.php` (the file does not exist yet; publish it with `php artisan vendor:publish
+  --tag=ai-config`, config only). The package file hard-codes `'default' => 'openai'` and a separate
+  `'default_for_transcription' => 'openai'`: change both to `env('AI_DEFAULT_PROVIDER', 'gemini')`, and add
+  `daily_spend_limit`, `request_timeout`. How a call sets its timeout and how the fakes are installed: verify in
+  the installed documentation of `laravel/ai` before writing it. Env names go to `backend/.env.example` in a
   separate small PR (shared file) and to `docs/infrastructure/environments.md`.
 - Queue `llm`, supervisor `supervisor-llm` (one process locally, two on servers, timeout 60 s, tries 1): shared
   file `config/horizon.php`, separate small PR.
@@ -150,18 +154,20 @@ the bytes into memory inside `handle()`.
 Handlers `App\Telegram\Handlers\{FreeTextQuery,VoiceQuery}`: registered as the text handler and the voice handler of
 the router of WP-51 (the `messageFallback` slot WP-52 used for its interim reply keeps every other message kind).
 
-Limits (buckets of the router's limiter of WP-51, values in `config/bot.php`): `limits.llm_text_per_hour` = 30,
-`limits.llm_voice_per_hour` = 10; over the limit → `bot.common.slow_down` once per window, no job. Voice:
+Limits: the two buckets the router of WP-51 already has — `bot.limits.free_text_per_hour` = 30 and
+`bot.limits.voice_per_hour` = 10; no second pair of keys is added. Over the limit → `bot.common.slow_down` once
+per window, no job. Voice:
 `voice.max_seconds` = 60, `voice.max_bytes` = 1 048 576 (Q-BOT-005, closed by specification).
 
 ### Configuration
 
-`backend/config/bot.php`, added keys: `dev028`, `dev030`, `dev031`, `dev033` (all `false`); `limits.*` and `voice.*`
-above; `freetext.fallback_city` = `tashkent`.
+`backend/config/bot.php`, added keys: `dev028`, `dev030`, `dev031`, `dev033` (all `false`); `voice.*` above;
+`freetext.fallback_city` = `tashkent`.
 
 New catalogue keys (ru, uz, en; legacy has no such texts): `subs.resumed_found`, `subs.hidden_rules`,
-`subs.rule_removed`, `subs.unhide_all_confirm`, `found.searching`, `found.stopped`, `radar.updated`,
-`radar.updated_paused`, `freetext.unsupported_city`, `voice.too_long`.
+`subs.rule_removed`, `subs.unhide_all_confirm`, `radar.updated`, `radar.updated_paused`,
+`freetext.unsupported_city`, `voice.too_long`. `found.searching` and `found.stopped` are not new: WP-51 keyed them
+as the drafts of TXT-BOT-071, and this package finalises their wording.
 
 ## Files
 
@@ -169,7 +175,8 @@ All paths under `backend/`.
 
 - `app/Telegram/Handlers/{SubsCommand,FoundPoll,FreeTextQuery,VoiceQuery}.php`
 - `app/Telegram/Handlers/Subs/{RadarStateActions,RadarHiddenRules,RadarDelete,RadarEdit}.php`
-- `app/Telegram/Rendering/{RadarTitle,RadarCardRenderer}.php`
+- `app/Telegram/Rendering/RadarCardRenderer.php` (new); `RadarTitle.php` of WP-53 and
+  `app/Services/Radar/RadarHideRuleService.php` of WP-45 (`removeOne()`, used only with `bot.dev033`) are changed
 - `app/Telegram/Keyboards/{RadarListKeyboard,RadarCardKeyboard,HiddenRulesKeyboard,ConfirmKeyboard,FoundPollKeyboard}.php`
 - `app/Telegram/Conversations/RadarWizard/{EditScreenStep}.php` (new); `ReviewStep.php`, `WizardState.php`,
   `SaveRadar.php` (changed: title by origin, notes block, the edit branch)
@@ -233,7 +240,7 @@ TXT-BOT-033, TXT-BOT-040 … TXT-BOT-043, TXT-BOT-057 … TXT-BOT-071. Brand wor
 | # | Trigger | What the user sees | Answer |
 | - | ------- | ------------------ | ------ |
 | 1 | `/subs`, no radars | New message: `Радаров пока нет. Опишите, что ищете, — включу первый: он будет следить за каналами и присылать новые подходящие объявления сюда, в чат.` (TXT-BOT-057) with `➕ Новый радар` (BTN-030, owned by WP-54) | — |
-| 2 | `/subs`, 1 … 10 radars | New message: `📡 Радар (k из 10)` + `Радар проверяет каналы и присылает новые объявления в чат. ▶️ — включён, ⏸ — на паузе. Нажмите на радар, чтобы изменить.` (TXT-BOT-058). One button per radar (BTN-049): `▶️ <title>` or `⏸ <title>`; last row `➕ Новый радар`. The limit is the radar limit of the reference data (BR-BOT-064) | — |
+| 2 | `/subs`, 1 … 10 radars | New message: `📡 Радар (k из 10)` + `Радар проверяет каналы и присылает новые объявления в чат. ▶️ — включён, ⏸ — на паузе. Нажмите на радар, чтобы изменить.` (TXT-BOT-058). One button per radar (BTN-049): `▶️ <title>` or `⏸ <title>`; last row `➕ Новый радар`. The limit is `config('radar.max')` (BR-BOT-064) | — |
 | 3 | `📡 Радар` under a saved radar (BTN-029, WP-54), `◀️ К списку` (BTN-060), after a delete | The pressed message becomes view 1 or 2 | silent |
 | 4 | A radar button | The same message becomes the radar card (TXT-BOT-060, layout `tb:698–708`) | silent |
 
@@ -290,8 +297,8 @@ TXT-BOT-033, TXT-BOT-040 … TXT-BOT-043, TXT-BOT-057 … TXT-BOT-071. Brand wor
 
 - Stored codes (BR-BOT-070, WP-13): answer `homi` / `elsewhere` / `searching` / `stopped`; where `telegram` / `olx`
   / `site` / `agent` / `friends` / `street` / `other`; trigger `pause` / `delete`.
-- One answer per poll (BR-BOT-071): the first press removes the buttons; a lock `bot:fp:{chat}:{message}` (`SET NX
-  EX 30`) makes a double tap store one row. `FoundSurveyService` itself accepts every call (WP-44).
+- One answer per poll (BR-BOT-071): the first press removes the buttons; a lock
+  `Cache::lock('bot:fp:{chat}:{message}', 30)` makes a double tap store one row. `FoundSurveyService` itself accepts every call (WP-44).
 - Whether to ask is the rule of WP-45 (`ask_found`, with its suppression window after an answer); this package
   never decides it. «Больше не ищу» pauses nothing.
 - All poll presses are answered silently. A poll message too old to edit gets the reply as a new message.
