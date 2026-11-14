@@ -279,13 +279,19 @@ when a part is missing, and the caller hides its button.
 
 ### Development emulator and the fake Telegram
 
-- `frontend/packages/testing/src/fake-telegram/` (`@homi/testing`, development dependency; create the package here
-  if WP-03 did not): `createFakeTelegram({ version, platform, theme, initData, user, startParam })` emulates the
-  mobile bridge (`TelegramWebviewProxy.postEvent` in, `Telegram.WebView.receiveEvent` out) for every `web_app_*`
-  request the adapter makes: theme, viewport, safe area, back and settings buttons, popup, links, write access,
-  prepared message, home screen, fullscreen, location, DeviceStorage, close. Playwright helpers
-  `installFakeTelegram(page, options)` and `launchApp(page, { mode, locale, startParam, platform, version })`.
-- `frontend/app/dev/telegram-emulator.ts` wraps the same core for a desktop browser: a form over the
+- `@homi/testing` exists since WP-03 with `fakeTelegram(options)` — a double of `window.Telegram.WebApp` that
+  refuses what the configured version does not support (TMA-042) — and `playwrightTelegram(page, options)`, which
+  installs the same double as an init script and blocks external hosts, `telegram.org` included. Tests therefore
+  never run Telegram's own script: the adapter finds `window.Telegram.WebApp` in place. Do not build a second fake
+  at the bridge level. This package extends the double (`frontend/packages/testing/src/fakeTelegram.ts`) with every
+  member of the adapter table it still lacks — theme and viewport events, safe area, fullscreen, popup, write
+  access, prepared message, home screen, location, DeviceStorage, close — each with its version gate and a
+  self-test, and adds `launchApp(page, { mode, locale, startParam, platform, version, sdk })`: it calls
+  `playwrightTelegram`, forces the session mode and opens the app.
+- The start without an SDK (TMA-005) is tested with `launchApp(page, { sdk: false })`: no double is installed, the
+  SDK host stays blocked, and a spy on `TelegramWebviewProxy.postEvent` records `web_app_ready` and
+  `web_app_expand`.
+- `frontend/app/dev/telegram-emulator.ts` wraps the same double for a desktop browser: a form over the
   outside-Telegram state (paste launch data of the developer's own dev bot, or "fake user" for stub sign-in), the
   choice kept in `sessionStorage` `homi-dev-initData`; a dev bar with Back, Settings, version (6.0 … 9.1),
   platform, theme; a red bar on `401`. Inside a real Telegram it does nothing.
