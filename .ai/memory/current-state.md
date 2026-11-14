@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (development track: WP-00 media ownership fix in PR #27, not merged; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-14 (development track: WP-00 in PR #27 and WP-01 in PRs #29 … #36, none merged; PR #26 deps update merged; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -12,7 +12,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Gitignored machine files: `infra/local/certs/`, `infra/local/nginx/snippets/paths.conf`, `infra/local/{run,logs}/`, `.ai/local.env`, `backend/.env`, `frontend/*/.env.local`.
 
 ## Backend (`backend/`)
-- Laravel 13.40, PHP 8.5.12, `php ^8.5` + platform pin. Starter Inertia/React UI present and **frozen** (ADR-0002).
+- Laravel 13.42 (`php artisan --version` after PR #26, merged 2026-11-14), PHP 8.5.12, `php ^8.5` + platform pin. Starter Inertia/React UI present and **frozen** (ADR-0002).
 - `composer ci:check` (`make ci-backend`) exit 0 on 2026-11-09 after the AM-36 fixes (`vite.config.ts` fmt/lint ignores, `phpstan.neon` exclude): 47 Pest tests, PHPStan 0 errors. GitHub's `backend.yml` has not run on the phase 3/4 branches (PR/`main` only). PostgreSQL via `DB_CONNECTION=pgsql`, no pending migrations.
 - `make dev-setup` installs Composer deps only; the frozen starter UI needs `cd backend && npm ci && npm run build` before `ci-backend` (CI does it through `composer setup`).
 - Local `.env`: `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` (ADR-0005 applied), `MEDIA_PUBLIC_URL=https://cdn.homi.loc`, blank `AWS_*` and `TELEGRAM_*`. `.env.example` is the authoritative key list; `dev-check` enforces key parity.
@@ -43,8 +43,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - `telegram.uz`: Laravel 13 + MadelineProto, PostgreSQL, stores listings/phones(HMAC)/photos, public API `/api/public/v1/listings` (tokens `tk_live_*`); rules + an Anthropic LLM; no push into HOMI, production use not confirmed. `geo.uz`: not a housing source (elmarket). `datahub.uz`: dedup/canon platform, intake not built, no consumer API. None of them mentions kvadro. ADR-0009's push model is not backed by any collector yet (AM-44; reported by `reference-reader` 2026-11-09, not re-run).
 
 ## kvadro² (the legacy product being migrated)
-- Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
+- Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. The guard hook does not protect it on `main` yet (KI-26); the fix is WP-01 step 1, PR #29, not merged. It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
 - The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
 - The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
-- Course decided by the developer on 2026-11-14 (PR #25, not merged): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (45 work packages including the support bot WP-59, none started; 45 specifications `wave-1/WP-NN-*.md`, decisions DEC-31 … DEC-56, drafted by subagents, then read in full against the code and each other in a verification pass), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
+- Course decided by the developer on 2026-11-14 (PR #25, merged 2026-11-14): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (45 work packages including the support bot WP-59; WP-00 and WP-01 in review, the rest not started; 45 specifications `wave-1/WP-NN-*.md`, decisions DEC-31 … DEC-56, drafted by subagents, then read in full against the code and each other in a verification pass), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
 - Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` is still the starter page.

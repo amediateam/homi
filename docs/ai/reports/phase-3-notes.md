@@ -273,3 +273,45 @@ ASSUMPTION_MISMATCH AM-50 (2026-11-14):
   the old code).
 - **Resolution.** The backfill is unconditional; the source-token count was dropped from "Needs from the production
   track"; `actorKey()` uses the model class and key; the specification was corrected in PR #27.
+
+## J. Development track, 2026-11-14 (night) — WP-01, ADRs and shared files
+
+Developer's go: «бери следующий пакет WP-01». WP-01 is the one package that is split into small separate PRs
+(shared files and ADRs, `docs/handoff/parallel-work.md` §1). All eight were opened from fresh `origin/main`, each in
+its own git worktree. The shared working tree stayed on the WP-00 branch.
+
+**Applied (all open, none merged; the first developer reviews each):**
+
+- #29 `chore/guard-kvadro-root` (KI-26). `KVADRO_ROOT` becomes a reference key and `kvadro.uz` a fallback folder name.
+  Under the legacy tree the guard gives its own deny reason. It also carries the queue status `REVIEW (PRs #29 … #36)`
+  and the spec's Handoff.
+- ADR PRs, all `Proposed` until approved:
+  - #33 ADR-0016: new product, three waves;
+  - #34 ADR-0017: `/api/v1` with source drivers, amends 0007;
+  - #35 ADR-0018: Mini App architecture, amends 0003 and 0013;
+  - #36 ADR-0019: UI stack, amends 0006.
+- Shared-file PRs:
+  - #30 `parallel-work.md` §2 and §8: the Wave 1 PR size and relay rule;
+  - #31 `HANDOFF.md` §4: mapped onto the work packages;
+  - #32 `CLAUDE.md` and `AGENTS.md`: pointer to the migration queue (to merge after #29).
+- Own choices, each named in its PR:
+  - Under the legacy tree the deny reason quotes DEC-32. The generic reason says "port single files", which DEC-32
+    forbids for legacy.
+  - T0 is named among the unchanged HANDOFF tasks.
+  - ADR-0018 states that DEC-44 replaces three parts of SEC-REQ-007: memory only, no cookie, a new exchange per
+    launch.
+  - WP-21's CSP spike records its result in an ADR that amends ADR-0018, not in ADR-0018 itself (accepted ADRs are
+    not edited). WP-21 step 1 and `25` §3.10 were corrected.
+- Checks:
+  - guard tests RED first (11 failures), then `make ai-hooks-test` → 55 tests OK, and `tooling` CI on #29 passes;
+  - a pipe probe of the new hook (Edit under `kvadro.uz` → deny, Read → allowed, `npm run dev` there → deny);
+  - a reviewer agent read the four ADRs against 24, 25, the answers and the amended ADRs: no blocker, 8 small
+    traceability findings, all fixed before the PRs were opened.
+- PR #26 (deps) was merged by the other session. I merged `main` into the WP-00 branch: `make ci-backend` exit 0,
+  Pest 92 of 92.
+
+**Not applied:**
+
+- No ADR is accepted.
+- The live-session hook probe has not been done: it is only possible after #29 merges.
+- The first developer has not yet answered on the PR size or on the deploy cadence (asked in #30).
