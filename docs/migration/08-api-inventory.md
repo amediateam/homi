@@ -6,10 +6,14 @@ This document lists every `/api/*` method the legacy Mini App calls (`API-NNN`, 
 `$KVADRO_ROOT/docs/api.md` §2) and every non-API HTTP resource the legacy system serves or depends on (`RES-NNN`).
 The server-side system behind these endpoints — business rules `BR-API-NNN`, contract quirks and questionable design
 decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open questions `Q-API-NNN` — is in
-`02-legacy-backend-audit.md`. The machine-readable twin of this file is `data/api-inventory.json`.
+`02-legacy-backend-audit.md`. The machine-readable twin of this file is `data/api-inventory.json`. API-035
+(`GET /api/feed/new`, added in release `index-DY_DH7h-.js`) stands at its registry position, after API-006; ids stay
+stable, so it takes the next free number while the legacy registry renumbered the methods after it.
 
-- **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js`
-  (`$KVADRO_ROOT/docs/api.md:5`, `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`).
+- **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to the
+  pinned release `index-DY_DH7h-.js` (current `$KVADRO_ROOT/docs/api.md:5`, `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`;
+  `wave-1/baseline.md`). Text changed for a later release names it; "Doc:" line numbers are those of the audited
+  tree, "current Doc:" and "at the pin" those of SVN r27.
 - **Evidence base:** the legacy backend source and database are not available. The Mini App source is decompiled from
   the production bundle; the landing is a 1:1 production mirror. Nothing was run: `RUNTIME_VERIFIED` is not used.
 - **Status per endpoint** carries two labels: **Contract** (method, path, request construction, the response fields
@@ -98,9 +102,10 @@ decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open qu
 
 ### 1.6 Timeouts, cancellation, prefetch and retries
 
-- Timeout 15 s per request (`client.js:24`, `:63`). An external `AbortSignal` (used by `/api/feed/count` and
-  `/api/feed/flow`) aborts the request and is re-thrown as `AbortError`, so the server sees dropped connections
-  (`client.js:64-72`, `:104`; `$KVADRO_ROOT/docs/api.md:534`). — `CONFIRMED`
+- Timeout 15 s per request (`client.js:24`, `:63`). An external `AbortSignal` (used by `/api/feed/count`,
+  `/api/feed/flow` and, since release `index-DY_DH7h-.js`, `/api/feed/new`) aborts the request and is re-thrown as
+  `AbortError`, so the server sees dropped connections (`client.js:64-72`, `:104`; `$KVADRO_ROOT/docs/api.md:534`). —
+  `CONFIRMED`
 - Prefetch before React mounts (`src/main.jsx:24-39`): `GET /api/meta`; the first feed page for
   `defaultFilters('rent_long', <saved city>)` with `limit=20`; `GET /api/listings/<id>` when opened from a listing
   link. Prefetch is skipped without `initData` (`client.js:35-43`). The first `apiFetch(url)` **without options**
@@ -115,7 +120,8 @@ decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open qu
 
 ### 1.7 Common filter query (`FilterQuery`)
 
-`GET /api/feed`, `/api/feed/count`, `/api/feed/flow` and `/api/map` send the same parameters, built by
+`GET /api/feed`, `/api/feed/count`, `/api/feed/flow`, `/api/map` and, since release `index-DY_DH7h-.js`,
+`/api/feed/new` (plus `since`, API-035) send the same parameters, built by
 `buildFilterParams` (`src/lib/api/feed.js:10-66`; `$KVADRO_ROOT/docs/api.md:188-225`). Order of keys in the query
 string is the order below (it matters only for the prefetch-cache string match):
 
@@ -165,7 +171,10 @@ must be present even when empty.
 
 **`ListingPreview`** (`$KVADRO_ROOT/docs/api.md:227-273`): `id: number`! (compared with `===`/`!==`),
 `title: string` (part before the first ` · ` is shown), `short_title?: string`, `price: string|null` (pre-formatted;
-parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the period), `price_kind: "down_payment"|null`,
+parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the period),
+`price_kind: "down_payment"|"business"|null` (label after the price: «первый взнос» /
+«цена за бизнес, помещение в аренде»; any other value gets no label; `"business"` since release `index-Dbpp463V.js`
+— `src/features/listing/format.js:35-43`, current `$KVADRO_ROOT/docs/api.md:239`; BR-API-156, Q-API-065),
 `favorite: boolean`!, `viewed?: boolean`, `district_name: string|null`, `place?: string`, `landmark: string|null`,
 `metro: string|null`, `metro_km: number|null`!, `center_km: number|null`!, `area_total: number|null`,
 `floor: number|null`, `floors_total: number|null`, `rooms: number|null`, `pets_ok: boolean`, `is_owner?: boolean`,
@@ -272,8 +281,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   also for `blocked` (`useAppBootstrap.js:26`, `:130-139`, `:150-157`). Any other failure (network, `401`, `5xx`) →
   retries after 1, 3, 7, 15, 30 s, then the app stays without meta and without an error screen
   (`useAppBootstrap.js:24`, `:141-143`). A failed prefetch adds one immediate repeat (`client.js:56-60`). Telegram
-  user-facing texts: «Бот приватный», «Закрытая бета», «Мест пока нет», «Нет доступа», «Сначала — бот»
-  (`src/i18n/locales/ru.js:28-32`).
+  user-facing texts: «Бот приватный», «Вход по приглашению», «Мест пока нет», «Нет доступа», «Сначала — бот»
+  (`src/i18n/locales/ru.js:28-32`); release `index-Dbpp463V.js` renamed «Закрытая бета» and dropped the beta from
+  the `full` text (`03` SCR-003). The `detail` codes did not change.
 - **Legacy Source:** Doc:104 (registry), Doc:64-72 (403 handling), Doc:416-466 (§4);
   `$KVADRO_ROOT/docs/about.md:248-252`; client `src/lib/api/meta.js:5`, `src/main.jsx:24` (prefetch),
   `src/app/useAppBootstrap.js:70`, `src/app/App.jsx:234`, `:252`, `:257`; parity mock
@@ -439,6 +449,44 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   original filters; edge — wide filters return no options; negative/auth as API-004.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-005, LB-API-006, LB-API-007,
   LB-API-036, LB-API-052.
+
+### API-035 — `GET /api/feed/new`
+
+- **Method:** GET
+- **URL:** `/api/feed/new`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** since release `index-DY_DH7h-.js`, called by the return banner (`03` SCR-046); client lines in this row
+  are at the pin. Query `FilterQuery` (§1.7), built by the same `buildFilterParams` as `/api/feed/count`, plus `since` =
+  the previous visit with these filters as integer unix **seconds** (`Math.floor(ms / 1000)` of the device clock,
+  `src/lib/api/feed.js:105-117`); no `limit`, `sort`, `cursor`. The previous visit comes from `kv-visits` (`03`
+  BR-APP-070) and has no lower bound on the client, so it can be weeks old. Sent at most once per eligible visit,
+  1.8 s after a search-tab visit with meta and radars loaded, nothing over the list and the `03` BR-APP-071
+  conditions met (`src/app/useReturnNudge.js:90-143`). Aborted through `AbortSignal` when the filters, the radars or
+  the overlay state change during the wait or the request (`useReturnNudge.js:110,138-141`). Sent again when the app
+  returns from the background after ≥ 6 h, which starts a new visit session (`useReturnNudge.js:50-71`).
+- **Validation:** as API-004; validation and bounds of `since` unknown (Q-API-066). — DOCUMENTED_ONLY
+- **Business Logic:** number of listings matching the filters that appeared after `since`, with the filter
+  interpretation of `/api/feed`, `/count`, `/flow` and `/map` (current Doc:563-570, :1161). What "appeared" means
+  (publication or first seen), whether hidden listings and blocked authors are excluded and whether `since` is clamped
+  are open in the legacy contract itself (current Doc:1200-1202; Q-API-066). — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none; aborted requests show up as dropped connections.
+- **Response:** `200 {"count": number}` (current Doc:566-570). `count` is mandatory and numeric: the client shows the
+  banner for `count > 0`, nothing for `0`, and crashes on a body without `count` (current Doc:572-573; LB-API-055,
+  `03` LB-APP-048). `return_prompt_shown.n` carries this `count`.
+- **Errors:** any status, network failure or timeout → no banner, silently (`useReturnNudge.js:117`; current
+  Doc:574).
+- **Legacy Source:** `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:16,29`; current Doc:110 (registry #7), Doc:559-588,
+  Doc:1161-1162, Doc:1200-1202; client `src/lib/api/feed.js:105-117`,
+  `src/app/useReturnNudge.js:112-137`, `src/features/feed/followNudge.js:179-195`; mock
+  `tools/parity/mocks.mjs:207-211`; scenarios `return-nudge*` (`tools/parity/mocks.mjs:314-323`).
+- **Migration Target:** legacy `GET /api/feed/new` byte-compatible. Handler: TBD (`10-target-architecture.md`).
+- **Tests:** positive — `count` equals the number of `/api/feed` items for the same filters that appeared after
+  `since` (meaning per Q-API-066); edge — nothing new → `{"count": 0}`; `since` in the future → `{"count": 0}`; `since`
+  weeks old → per the bound decided in Q-API-066; every `200` carries an integer `count` (never an empty body or
+  `null`); an aborted request leaves no server work running; negative/auth as API-004.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-055; Q-API-066.
 
 ### API-007 — `GET /api/map`
 
@@ -692,33 +740,49 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Roles/access mode:** authenticated; anti-abuse weighting applies (`02 §11`).
 - **Input:** path `id`; body `{"reason": "rented"|"agent"|"wrong_data"|"fraud"}` (`Content-Type: application/json`).
   `agent` is not offered when the card says `is_owner: false`
-  (`src/features/listing/ListingActionsSheet.jsx:12`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:20`).
-- **Validation:** `reason` from the four literals (Pydantic `Literal` assumed → `422` otherwise). — UNVERIFIED
+  (`src/features/listing/ListingActionsSheet.jsx:12`, `:176`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:77`).
+  Since release `index-BNLZFfL0.js` a `wrong_data` report carries
+  `"detail": "price"|"rooms"|"place"|"photos"|"other"`, picked on the detail view of the actions sheet (`03` SCR-023):
+  `{"reason": "wrong_data", "detail": "price"}`. The client adds the key only when `detail` is truthy and only the
+  detail view passes one, so the other reasons keep the old body without the key (not `null`, not `""`)
+  (`src/lib/api/listings.js:86-90`; `src/features/listing/ListingActionsSheet.jsx:93-102`, `:176-200`). This client
+  no longer sends `wrong_data` without `detail`; older cached bundles still can, and the legacy contract requires the
+  server to accept both bodies (current `$KVADRO_ROOT/docs/api.md:724-744`, `:1171-1172`).
+- **Validation:** `reason` from the four literals (Pydantic `Literal` assumed → `422` otherwise). `detail` is optional;
+  the answer to `detail` with another reason or to an unknown code is unknown (Q-API-064). — UNVERIFIED
 - **Business Logic:** records the vote. `rented`: hidden for the voter at once, for everybody after more
   confirmations; `agent`: the phone is remembered as a realtor's and marked in all its listings; `wrong_data`:
   recorded; `fraud`: may hide the listing for the reporter immediately (`$KVADRO_ROOT/docs/about.md:221-228`). —
-  DOCUMENTED_ONLY (thresholds 🔶, Q-API-039)
-- **DB Changes:** insert a vote/report row; possibly update listing status, realtor mark on the phone, hidden row. —
-  UNVERIFIED
+  DOCUMENTED_ONLY (thresholds 🔶, Q-API-039). Whether `detail` is only stored for moderation or also affects `hidden`
+  is open in the legacy contract itself (current `$KVADRO_ROOT/docs/api.md:1198-1199`). — UNVERIFIED (Q-API-064)
+- **DB Changes:** insert a vote/report row (with `detail` when sent); possibly update listing status, realtor mark on
+  the phone, hidden row. — UNVERIFIED
 - **Side Effects:** global effects on other users (status after confirmations, realtor badge, `owner` filter
   results, owner-verification eligibility).
 - **Response:** `200 {"hidden": boolean}` **for every reason** — a `204` makes the client show
   «Не получилось сохранить» although the report was accepted (Doc:704-705; mock `tools/parity/mocks.mjs:175-177`).
   Client toasts: `rented` → «Отметили: уже сдано» (listing hidden locally, card closed, no undo); `agent` →
   «Отметили номер как риелторский»; `fraud` with `hidden: true` → «Спасибо, посмотрим. Это объявление у вас скрыли»
-  with undo via API-013; others → «Спасибо! Посмотрим» (`useListingActions.js:61-77`, `ru.js:217-220`).
+  with undo via API-013; others, including `wrong_data` with any `detail` → «Спасибо! Посмотрим»
+  (`useListingActions.js:61-77`, `ru.js:229-232`; audited tree `ru.js:217-220`).
 - **Errors:** any error → «Не получилось сохранить».
 - **Legacy Source:** Doc:119, Doc:675-705; `$KVADRO_ROOT/docs/about.md:219-228`; client
   `src/lib/api/listings.js:84-90`, `src/features/listing/ListingActionsSheet.jsx:89-95`,
-  `src/app/useListingActions.js:61-77`.
+  `src/app/useListingActions.js:61-77` (audited tree). Release `index-BNLZFfL0.js`: `src/lib/api/listings.js:79-90`,
+  `src/features/listing/ListingActionsSheet.jsx:13-14`, `:93-102`, `:175-200`; current
+  `$KVADRO_ROOT/docs/api.md:707-758`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:22-24`;
+  parity scenarios `tools/parity/mocks.mjs:281-293`.
 - **Migration Target:** legacy `POST /api/listings/:id/report` byte-compatible. Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — each reason returns JSON `{hidden}` (never `204`); `fraud` returns `hidden: true` when the
   listing was hidden for the reporter; `rented` hides for the voter; `agent` marks the phone (per threshold);
-  negative — `reason: "spam"` → `422`, missing body → `422`; repeat — same user, same reason twice is counted once
-  (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-015, LB-API-042, LB-API-043;
-  Q-API-038 … Q-API-040.
+  `wrong_data` with each of `price`, `rooms`, `place`, `photos`, `other` → `200 {hidden}`, the `detail` kept with the
+  report; compatibility — `{"reason": "wrong_data"}` without `detail` (older bundle) → `200 {hidden}`; the other
+  reasons without the key → `200`; negative — `reason: "spam"` → `422`, missing body → `422`; an unknown `detail` code
+  and a `detail` with another reason → per Q-API-064 (record legacy first); repeat — same user, same reason twice is
+  counted once (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (`detail` handling `UNVERIFIED`). Related:
+  LB-API-015, LB-API-042, LB-API-043; Q-API-038 … Q-API-040, Q-API-064.
 
 ### API-017 — `POST /api/listings/:id/share`
 
@@ -767,8 +831,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Errors:** radar tab → error state with «Повторить» (`src/features/radar/RadarScreen.jsx:58`, `:193-195`);
   elsewhere ignored.
 - **Legacy Source:** Doc:121, Doc:368-378, Doc:721-729; client `src/lib/api/subscriptions.js:5`,
-  `src/app/App.jsx:175` (search tab), `src/app/subscriptionActions.js:95` (re-read before every create),
-  `src/features/radar/RadarScreen.jsx:58`, `src/features/settings/SettingsScreen.jsx:60`; mock
+  `src/app/App.jsx:175` (search tab; since release `index-DY_DH7h-.js` also re-read when the app returns from the
+  background after ≥ 6 h, `src/app/useReturnNudge.js:62-66` at the pin), `src/app/subscriptionActions.js:95` (re-read
+  before every create), `src/features/radar/RadarScreen.jsx:58`, `src/features/settings/SettingsScreen.jsx:60`; mock
   `tools/parity/mocks.mjs:105-107`, `:121`.
 - **Migration Target:** legacy `GET /api/subscriptions` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — radars created in the app and in the bot both appear; every `filters` has 25 keys; ids stable;
@@ -783,11 +848,16 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Auth:** `tma` required.
 - **Roles/access mode:** authenticated; the bot must be able to write to the user (else `409 no_chat`); limit
   `max_subscriptions` (default 10).
-- **Input:** body `{"filters": SearchFilters, "entry": "filters"|"empty"|"few"|"prompt", "relaxed"?: string}`
-  (Doc:733-738). `entry`: `filters` = «Включить радар» in the filters sheet (`App.jsx:582`), `empty` = «Создать радар»
-  sheet on the radar tab / «+» (`App.jsx:599`), `few` = banner under a short result list (`App.jsx:310`),
-  `prompt` = follow nudge (`App.jsx:631`). `relaxed` = `code` of a `/api/feed/flow` option, only with `filters` or
-  `empty`; omitted from JSON when not chosen. `filters.posted_days` is sent as it is in the feed filters.
+- **Input:** body `{"filters": SearchFilters, "entry": "filters"|"empty"|"few"|"prompt"|"feed"|"return", "relaxed"?:
+  string}` (Doc:733-738; current Doc:786-807). `entry`: `filters` = «Включить радар» in the filters sheet
+  (`App.jsx:582`), `empty` = «Создать радар» sheet on the radar tab / «+» (`App.jsx:599`), `few` = banner under a short
+  result list (`App.jsx:310`), `prompt` = follow nudge (`App.jsx:631`). Since release `index-DY_DH7h-.js` also `feed` =
+  the in-feed radar card and `return` = the return banner (`03` SCR-047, SCR-046): sent at once for custom filters, or
+  from the create-radar sheet for default filters; that sheet now sends the `entry` of the place it was opened from
+  and, from «+» and the empty radar screen, still `empty` (`App.jsx:401-415`, `:635`, `:718`, `:752` at the pin).
+  `relaxed` = `code` of a `/api/feed/flow` option, only when the radar is created in a filters sheet (`filters`,
+  `empty`, and `feed` / `return` through the create-radar sheet; never from the banner or the card directly); omitted
+  from JSON when not chosen. `filters.posted_days` is sent as it is in the feed filters.
 - **Validation:** filters schema (Pydantic `Literal`s assumed); limit; `no_chat` check **before** any write. —
   DOCUMENTED_ONLY
 - **Business Logic:** before calling, the client re-reads API-018 and looks for a radar with the same filters
@@ -807,15 +877,18 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   to open the bot chat; final toast «Радар не включён — боту нужно разрешение писать вам в чат»
   (`src/lib/chatAccess.js:27-54`, `ru.js:390`); `409` without `no_chat` → limit toast (`ru.js:64`); other →
   «Не получилось сохранить».
-- **Legacy Source:** Doc:122, Doc:731-754, Doc:76-85; `$KVADRO_ROOT/docs/about.md:194-211`; client
-  `src/lib/api/subscriptions.js:13-21`, `src/app/subscriptionActions.js:131`.
+- **Legacy Source:** Doc:122, Doc:731-754, Doc:76-85; current Doc:784-811, :1163; `$KVADRO_ROOT/docs/about.md:194-211`;
+  client `src/lib/api/subscriptions.js:13-21`, `src/app/subscriptionActions.js:131`; at the pin
+  `src/app/App.jsx:399-415`, `:629-635`, `:712-721`, `:749-753`; parity `feed-radar-setup` and `return-nudge-setup`
+  (`tools/parity/mocks.mjs:307`, `:317`).
 - **Migration Target:** legacy `POST /api/subscriptions` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — creates radar; response has `subscription` (25-key filters), numeric `starter`, `relaxed`
   array; starter cards delivered to the bot chat once; narrow filters → `options` with codes accepted by API-023;
   `no_chat` — user who never started the bot gets `409 no_chat` and **no radar is created** (repeat after granting
   access creates exactly one); limit — 11th radar → `409` whose `detail` is not `no_chat`, nothing created;
-  validation — invalid `deal`/`types`/`entry` → `422`; `relaxed` absent vs present; idempotency — double submit does
-  not create two radars (record legacy, Q-API-034); auth.
+  validation — invalid `deal`/`types`/`entry` → `422`; `entry` `feed` and `return` accepted (current Doc:1163);
+  `relaxed` absent vs present; idempotency — double submit does not create two radars (record legacy, Q-API-034);
+  auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-013, LB-API-014, LB-API-033 …
   LB-API-037; Q-API-027, Q-API-031, Q-API-033, Q-API-034.
 
@@ -1170,7 +1243,11 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   no query/hash), stage: boot|app, screen? (≤ 40, React only), tg? (≤ 10), platform? (≤ 20)}}` — boot script always
   sends the 7 keys (empty = `""`), React omits empty keys, max 5 distinct errors per session, each `kind|name|message`
   once (`src/lib/errors.js:10`, `:68-94`); `follow_prompt_shown|expired|closed` (`useFollowNudge.js:66`,
-  `App.jsx:110`, `:624`); `home_screen_offered|added|closed` (`useHomeScreenOffer.js:74`, `:27`, `App.jsx:609`);
+  `App.jsx:110`, `:624`); since release `index-DY_DH7h-.js` `return_prompt_shown {n, custom}`,
+  `return_prompt_expired|closed {custom}` (`useReturnNudge.js:126-129`, `App.jsx:143-145`, `:744-746` at the pin) and
+  `feed_radar_shown|closed {custom}` (`App.jsx:309-311`, `:638-640` at the pin), where `n` is the `count` of API-035
+  and `custom` says the filters differ from the defaults of their deal and city (current Doc:1082-1085, :1106-1107);
+  `home_screen_offered|added|closed` (`useHomeScreenOffer.js:74`, `:27`, `App.jsx:609`);
   `chat_access_declined|allowed` (`chatAccess.js:36`, `:40`); `listing_shared {listing_id}`
   (`ListingTitleRow.jsx:30`); `original_opened {listing_id, src: button|video|sources|price_history|offers}`
   (`ListingScreen.jsx:141`); `original_copied {listing_id}` (`sections/OriginalText.jsx:71`);
@@ -1183,8 +1260,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** server-side PostHog capture (Q-API-046).
 - **Response:** recommended `204` (Doc:1046); never read.
 - **Errors:** never surfaced.
-- **Legacy Source:** Doc:137, Doc:970-1046; client `src/lib/api/events.js:9-35`, `index.html:69-90`,
-  `src/lib/errors.js:80`, call sites listed above. Parity excludes it from comparison
+- **Legacy Source:** Doc:137, Doc:970-1046; current Doc:1076-1107; client `src/lib/api/events.js:9-35`,
+  `index.html:69-90`, `src/lib/errors.js:80`, call sites listed above. Parity excludes it from comparison
   (`tools/parity/README.md:28-29`).
 - **Migration Target:** legacy `POST /api/events` byte-compatible (accept both producers). Handler: TBD
   (`10-target-architecture.md`).
@@ -1477,8 +1554,9 @@ resources.
 
 ### 4.1 Registry → client code
 
-All 34 registry methods (`$KVADRO_ROOT/docs/api.md:102-137`) are called by the current client. None is
-documented-but-unused.
+All 35 registry methods (current `$KVADRO_ROOT/docs/api.md:102-138`; 34 at the audit, `:102-137`) are called by the
+client at the pin. None is documented-but-unused. "Doc #" is the current registry number: since release
+`index-DY_DH7h-.js` `/api/feed/new` is #7 and every later method moved down by one.
 
 | Doc # | Method | Path | ID | In client | Wrapper | Call sites |
 | ----: | ------ | ---- | -- | --------- | ------- | ---------- |
@@ -1488,34 +1566,35 @@ documented-but-unused.
 | 4 | GET | `/api/feed` | API-004 | yes | `feed.js:75-93` | `main.jsx:25`, `useInfiniteFeed.js:36`, `useRadarPreviews.js:42` |
 | 5 | GET | `/api/feed/count` | API-005 | yes | `feed.js:100` | `useLiveFeedStats.js:16`, `useRadarPreviews.js:52` |
 | 6 | GET | `/api/feed/flow` | API-006 | yes | `feed.js:110` | `useLiveFeedStats.js:38`, `useRadarPreviews.js:59`, `useFollowNudge.js:63` |
-| 7 | GET | `/api/map` | API-007 | yes | `feed.js:119` | `gl/useMapPoints.js:15`, `leaflet/MapView.jsx:154` |
-| 8 | GET | `/api/listings/:id` | API-008 | yes | `listings.js:10-17` | `main.jsx:38`, `useListingLoader.js:47`, `MapSelectionCard.jsx:29` |
-| 9 | GET | `/api/listings/:id/call` | API-009 | yes | `listings.js:23` | `useListingContact.js:26` |
-| 10 | POST | `/api/listings/:id/translate` | API-010 | yes | `listings.js:29` | `useListingTranslation.js:32` |
-| 11 | POST | `/api/listings/:id/favorite` | API-011 | yes | `listings.js:38` | `FavButton.jsx:27` |
-| 12 | POST | `/api/listings/:id/hide` | API-012 | yes | `listings.js:47` | `ListingActionsSheet.jsx:71` |
-| 13 | DELETE | `/api/listings/:id/hide` | API-013 | yes | `listings.js:56` | `useListingActions.js:51`, `:62`, `HiddenScreen.jsx:53` |
-| 14 | POST | `/api/listings/:id/block-author` | API-014 | yes | `listings.js:65` | `ListingActionsSheet.jsx:79` |
-| 15 | DELETE | `/api/listings/:id/block-author` | API-015 | yes | `listings.js:74` | `useListingActions.js:59` |
-| 16 | POST | `/api/listings/:id/report` | API-016 | yes | `listings.js:84` | `ListingActionsSheet.jsx:89` |
-| 17 | POST | `/api/listings/:id/share` | API-017 | yes | `listings.js:97` | `ListingTitleRow.jsx:35` |
-| 18 | GET | `/api/subscriptions` | API-018 | yes | `subscriptions.js:5` | `App.jsx:175`, `subscriptionActions.js:95`, `RadarScreen.jsx:58`, `SettingsScreen.jsx:60` |
-| 19 | POST | `/api/subscriptions` | API-019 | yes | `subscriptions.js:13` | `subscriptionActions.js:131` |
-| 20 | PUT | `/api/subscriptions/:id` | API-020 | yes | `subscriptions.js:29` | `subscriptionActions.js:163` |
-| 21 | PATCH | `/api/subscriptions/:id` | API-021 | yes | `subscriptions.js:56` | `subscriptionActions.js:108`, `RadarScreen.jsx:99`, `:134`, `:151` |
-| 22 | DELETE | `/api/subscriptions/:id` | API-022 | yes | `subscriptions.js:66` | `RadarScreen.jsx:172` |
-| 23 | POST | `/api/subscriptions/:id/relax` | API-023 | yes | `subscriptions.js:43` | `subscriptionActions.js:72` |
-| 24 | GET | `/api/settings` | API-024 | yes | `settings.js:5` | `SettingsScreen.jsx:59`, `RadarSheet.jsx:52` |
-| 25 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
-| 26 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
-| 27 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
-| 28 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
-| 29 | GET | `/api/favorites` | API-029 | yes | `user.js:23` | `useInfiniteFeed.js:33` |
-| 30 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
-| 31 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
-| 32 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
-| 33 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
-| 34 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites (§2 API-034) |
+| 7 | GET | `/api/feed/new` | API-035 | yes | `feed.js:111-117` | `useReturnNudge.js:117` (at the pin) |
+| 8 | GET | `/api/map` | API-007 | yes | `feed.js:119` | `gl/useMapPoints.js:15`, `leaflet/MapView.jsx:154` |
+| 9 | GET | `/api/listings/:id` | API-008 | yes | `listings.js:10-17` | `main.jsx:38`, `useListingLoader.js:47`, `MapSelectionCard.jsx:29` |
+| 10 | GET | `/api/listings/:id/call` | API-009 | yes | `listings.js:23` | `useListingContact.js:26` |
+| 11 | POST | `/api/listings/:id/translate` | API-010 | yes | `listings.js:29` | `useListingTranslation.js:32` |
+| 12 | POST | `/api/listings/:id/favorite` | API-011 | yes | `listings.js:38` | `FavButton.jsx:27` |
+| 13 | POST | `/api/listings/:id/hide` | API-012 | yes | `listings.js:47` | `ListingActionsSheet.jsx:71` |
+| 14 | DELETE | `/api/listings/:id/hide` | API-013 | yes | `listings.js:56` | `useListingActions.js:51`, `:62`, `HiddenScreen.jsx:53` |
+| 15 | POST | `/api/listings/:id/block-author` | API-014 | yes | `listings.js:65` | `ListingActionsSheet.jsx:79` |
+| 16 | DELETE | `/api/listings/:id/block-author` | API-015 | yes | `listings.js:74` | `useListingActions.js:59` |
+| 17 | POST | `/api/listings/:id/report` | API-016 | yes | `listings.js:84` | `ListingActionsSheet.jsx:89` |
+| 18 | POST | `/api/listings/:id/share` | API-017 | yes | `listings.js:97` | `ListingTitleRow.jsx:35` |
+| 19 | GET | `/api/subscriptions` | API-018 | yes | `subscriptions.js:5` | `App.jsx:175`, `subscriptionActions.js:95`, `RadarScreen.jsx:58`, `SettingsScreen.jsx:60` |
+| 20 | POST | `/api/subscriptions` | API-019 | yes | `subscriptions.js:13` | `subscriptionActions.js:131` |
+| 21 | PUT | `/api/subscriptions/:id` | API-020 | yes | `subscriptions.js:29` | `subscriptionActions.js:163` |
+| 22 | PATCH | `/api/subscriptions/:id` | API-021 | yes | `subscriptions.js:56` | `subscriptionActions.js:108`, `RadarScreen.jsx:99`, `:134`, `:151` |
+| 23 | DELETE | `/api/subscriptions/:id` | API-022 | yes | `subscriptions.js:66` | `RadarScreen.jsx:172` |
+| 24 | POST | `/api/subscriptions/:id/relax` | API-023 | yes | `subscriptions.js:43` | `subscriptionActions.js:72` |
+| 25 | GET | `/api/settings` | API-024 | yes | `settings.js:5` | `SettingsScreen.jsx:59`, `RadarSheet.jsx:52` |
+| 26 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
+| 27 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
+| 28 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
+| 29 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
+| 30 | GET | `/api/favorites` | API-029 | yes | `user.js:23` | `useInfiniteFeed.js:33` |
+| 31 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
+| 32 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
+| 33 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
+| 34 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
+| 35 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin (§2 API-034) |
 
 ### 4.2 Client requests → documentation
 
@@ -1525,7 +1604,7 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 
 | Client request | Where | Documented in | Result |
 | -------------- | ----- | ------------- | ------ |
-| 34 `apiFetch` methods | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-034) |
+| 35 `apiFetch` methods (34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-035) |
 | Prefetch of meta, first feed page, deep-link listing | `src/main.jsx:24-39` | Doc:87-98 | documented |
 | `XMLHttpRequest POST /api/events` (boot errors) | `index.html:76-88` | Doc:974-975, Doc:1007 | documented |
 | `XMLHttpRequest GET /api/bot` (boot fallback) | `index.html:94-102` | Doc:38-39, Doc:500-501 | documented |
@@ -1560,6 +1639,7 @@ legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`
 | 5 | `median_metric` values | `m2 \| person \| string` (Doc:325) | mock uses `unit` (`tools/parity/mocks.mjs:98`); client treats others as per month | compatible |
 | 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:60-62`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:68-70`) | data is live (LB-API-017) |
 | 7 | `useMapTilePrefetch` JSDoc | `tiles` "object" (`src/app/useMapTilePrefetch.js:12`) | `meta.tiles` is a string (Doc:443) | string |
+| 8 | `entry` JSDoc (release `index-DY_DH7h-.js`) | `'filters' \| 'few' \| 'prompt' \| 'empty'` (`src/app/subscriptionActions.js:92`, `src/lib/api/subscriptions.js:10`) | the app also sends `feed` and `return` (`App.jsx:635`, `:752` at the pin); current Doc:789 lists all six | six values |
 
 ## 5. Unused, obsolete, duplicate or risky endpoints
 
@@ -1583,6 +1663,7 @@ Nothing here is a deletion recommendation. Proposed fixes and old-client impact 
 | `POST /api/listings/:id/share` | risky: outbound Bot API call per tap | — | `ListingTitleRow.jsx:35` | LB-API-046 |
 | `POST /api/listings/:id/translate` | risky: LLM cost per call | — | `useListingTranslation.js:32` | LB-API-032 |
 | `GET /api/feed/count`, `/api/feed/flow` | risky: load (live per change + 3 requests per radar) | — | `useLiveFeedStats.js`, `useRadarPreviews.js` | LB-API-038, LB-API-052 |
+| `GET /api/feed/new` | fragile: a body without numeric `count` crashes the old client; `since` from the device clock, unbounded | — | `src/app/useReturnNudge.js:112-136` (at the pin) | LB-API-055, Q-API-066 |
 | `GET /api/favorites`, `/api/history` | risky: unbounded single page | — | Doc:930-941 | LB-API-024 |
 | `POST /api/listings/:id/favorite` | risky: toggle, not idempotent | — | Doc:636-647 | LB-API-039 |
 | `/img/snap/<id>.webp` | risky: unsigned copies of third-party photos | — | RES-013 | LB-API-054 |

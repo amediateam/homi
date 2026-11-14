@@ -3,7 +3,9 @@
 Part of the kvadro² → HOMI migration audit (rules, labels and ID scheme: [`README.md`](README.md)). The data migration
 that uses this model is [`14-data-migration-plan.md`](14-data-migration-plan.md).
 
-- **Audit date:** 2026-11-09. Legacy Mini App release `index-plF_TOcT.js`; landing data snapshot 2026-11-08.
+- **Audit date:** 2026-11-09. Legacy Mini App release `index-plF_TOcT.js`; landing data snapshot 2026-11-08. Brought
+  up to the pinned release `index-DY_DH7h-.js` (`wave-1/baseline.md`) for the three fields it changed: report
+  `detail`, `price_kind: business` and radar `entry` `feed`/`return`.
 - **The legacy database is not available** — no DDL, no dump, no row counts, no sample (`Q-SYS-002`). Every table
   boundary, column type, key and index below is **reconstructed**, never observed. `RUNTIME_VERIFIED` is not used.
 - **IDs defined here:** `ENT-NNN` (entities), `BR-DATA-NNN` (business rules about data), `LB-DATA-NNN` (legacy data
@@ -291,7 +293,7 @@ Common field-table columns: **Field** (logical name; wire name in backticks when
 | `mode` | `text` | no | `instant`, `digest`. Default for Mini App-created radars unknown (`Q-API-031`); bot sets `instant` then the first-radar tip may switch it (BOT-051, BOT-053). | Doc:374; BR-BOT-100 | C |
 | `filters` | `jsonb` (probable) | no | The full `SearchFilters` object, 25 keys (field list below). Stored radars from before 2026-11-06 may still hold `zone` instead of `zones` (`Q-API-013`). | 08 §1.7; BR-API-039 | C (wire) / U (storage) |
 | `hidden` | `integer` | yes | Count of listings suppressed by the radar's hide rules (ENT-009); `> 0` shows «Скрыто: N». | Doc:376; BR-API-091 | C |
-| entry | `text` | yes | Creation source for statistics: `filters`, `empty`, `few`, `prompt` (Mini App only; bot creations have none). Lost on re-activation through `PATCH` (LB-API-034). | 08 API-019; BR-API-086 | C (wire) / U (storage) |
+| entry | `text` | yes | Creation source for statistics: `filters`, `empty`, `few`, `prompt`, and since `index-DY_DH7h-.js` `feed` and `return` (API-019, BR-API-086; Mini App only; bot creations have none). Lost on re-activation through `PATCH` (LB-API-034). | 08 API-019; BR-API-086 | C (wire) / U (storage) |
 | relaxed | `text` | yes | Flow-option code applied before saving (statistics only; may not describe the saved filters — LB-API-035). | 08 API-019; BR-API-087 | C (wire) / U (storage) |
 | created_at | `timestamptz` | no | Server may send `created_at` (unread by the client). | Doc:402-414 | D |
 | updated_at, paused_at | `timestamptz` | yes | Not visible. | — | U |
@@ -487,6 +489,7 @@ Common field-table columns: **Field** (logical name; wire name in backticks when
 | user | → ENT-001 | no | | C |
 | listing | → ENT-023 | no | | C |
 | `reason` | `text` | no | `rented`, `agent`, `wrong_data`, `fraud`. | C |
+| `detail` | `text` | yes | Only with `wrong_data`: `price`, `rooms`, `place`, `photos`, `other` (since `index-BNLZFfL0.js`; API-016, BR-API-101). What the server stores is unknown (Q-API-064). | U |
 | weight | `numeric` | yes | Anti-abuse weight from ENT-001 flags; stored or computed at evaluation. | U |
 | created_at | `timestamptz` | no | | U |
 | withdrawn_at | `timestamptz` | yes | «↩️ Не сдано» undo (bot); Mini App has no undo for `rented`. | U |
@@ -575,7 +578,7 @@ Common field-table columns: **Field** (logical name; wire name in backticks when
 | property type | `text` | no | `apartment`, `house`, `room`, `commercial`, `land` (filter vocabulary BR-API-028; fact key `type`). | Doc:149, :284 | C (enum) / U (column) |
 | `price_usd` | `numeric(12,2)` or `integer` | yes | Normalised price in USD; landing `price_usd` is an integer; `null` = negotiable (`priced: false` on the map). | Doc:335; 08 API-007; Fixtures `live.json` | C (wire) / U (precision) |
 | original amount + currency | `bigint` + `char(3)` | yes | Posts in UZS are converted to USD at the CBU rate (BR-API-140). Whether the original amount, currency and rate date are kept is unknown. | About:170; SEO:250 | U |
-| `price_kind` | `text` | yes | `down_payment` (instalment sale) or `null`. | Doc:238; BR-API-156 | C |
+| `price_kind` | `text` | yes | `down_payment` (instalment sale), `business` (business price, premises rented; since `index-Dbpp463V.js`) or `null`. | Doc:238; BR-API-156; Q-API-065 | C |
 | price basis | enum `total`, `per_month`, `per_day`, `per_person`, `per_m2`, `per_sotka` | yes | Implied by `median_metric` (`m2`, `person`), the period inside `price` (`/мес`) and the land hint «Цена за сотку или м² — умножаем на площадь» (BR-APP-018). | Doc:325; BR-API-071 | U |
 | `price` | — | — | Display string formatted per user locale × currency (`$700 · …/мес`); computed on read (LB-API-029). | Doc:237; BR-API-071 | C (wire) |
 | `title`, `short_title` | — | — | Display strings; computed (probable). | Doc:235-236; BR-API-072 | C (wire) / U (stored?) |

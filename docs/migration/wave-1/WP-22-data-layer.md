@@ -90,11 +90,11 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   and repeats the request; returns the same `ApiResult<T>`. Every successful answer calls `reportSource(meta.source)`.
 - `bffAllowList.ts` and `app/bff/[...path]/route.ts`: a pass-through for **reads** only. The complete list ships
   here so later packages do not touch it: `GET` `me`, `settings`, `reference`, `cities`, `listings`,
-  `listings/count`, `listings/flow`, `listings/map`, `listings/:number`, `favorites`, `history`, `hidden`,
-  `radars`. (`POST events` and `boot-error` are added by WP-32.) The handler rejects anything else with `404`,
-  accepts same-origin requests only (a same-origin `GET` carries no `Origin` header, so the rule is: refuse when
-  `Origin` is present and is not the app's origin, or when `Sec-Fetch-Site` is present and is not `same-origin`),
-  takes the token from the cookie or the bearer header, validates `:number` as
+  `listings/count`, `listings/new`, `listings/flow`, `listings/map`, `listings/:number`, `favorites`, `history`,
+  `hidden`, `radars`. (`POST events` and `boot-error` are added by WP-32.) The handler rejects anything else with
+  `404`, accepts same-origin requests only (a same-origin `GET` carries no `Origin` header, so the rule is: refuse
+  when `Origin` is present and is not the app's origin, or when `Sec-Fetch-Site` is present and is not
+  `same-origin`), takes the token from the cookie or the bearer header, validates `:number` as
   a positive integer, caps the query string at 4 KB, forwards the API's status and body unchanged, answers
   `Cache-Control: private, no-store`, never forwards `Set-Cookie`, never logs the query. The query string is
   forwarded as it is, so `favorites` and `history` page with `cursor` and `limit` exactly like `listings` (DEC-53).

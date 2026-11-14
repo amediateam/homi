@@ -327,8 +327,10 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 #### TMA-037 — DeviceStorage (CONFIRMED)
 
 - **Writes:** from `isVersionAtLeast('9.0')`, every `storageSet` also writes `DeviceStorage.setItem` / `removeItem`.
-- **Restore:** `getItem` restores `kv-nudge`, `kv-home` and `kv-city` when they are missing locally, with a 1.5 s
-  timeout each (`$KVADRO_ROOT/demo/app/src/lib/storage.js:6-87`).
+- **Restore:** `getItem` restores `kv-nudge`, `kv-home`, `kv-city` and, since release `index-DY_DH7h-.js`, `kv-visits`
+  (the visit times of the return banner, SCR-046) when they are missing locally, with a 1.5 s timeout each
+  (`$KVADRO_ROOT/demo/app/src/lib/storage.js:6-87`;
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md:22`).
 - **Gaps:** LB-APP-012, LB-APP-021.
 
 #### TMA-038 — CloudStorage, SecureStorage, BiometricManager, Accelerometer, Gyroscope, DeviceOrientation (CONFIRMED absence)
@@ -345,7 +347,9 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 
 - **Mechanism:** the app uses `document.visibilitychange`, not Telegram's `activated` / `deactivated` events. It drives
   the immediate meta retry (`useAppBootstrap.js:150-158`), the contact-link refresh (`useListingContact.js:36-52`) and
-  `tel:` detection (TMA-029).
+  `tel:` detection (TMA-029). Since release `index-DY_DH7h-.js` it also drives the visit sessions of the return banner:
+  going to the background on the search tab records a visit, and a return after ≥ 6 h starts a new session and
+  re-reads the radars (`$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:50-71` at the pin; BR-APP-070).
 
 ### 1.9 Platform checks, version gates and life outside Telegram
 

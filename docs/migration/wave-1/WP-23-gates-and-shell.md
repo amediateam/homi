@@ -56,7 +56,7 @@ builds on. Every route under `(main)` still shows its WP-20 placeholder inside t
 | Brand | DEC-40, 25 §2 rule 5 | The bot name and links come from `lib/brand`; no brand word is written in a component |
 | Access | DEC-43 | The gate is built for all five reasons although the mode is "open" |
 | Acceptance | DEC-46, 25 §9 | The acceptance checklist below is ticked in ru / uz / en and light / dark |
-| Baseline | 25 §8.1 | The no-access texts changed after the audited release; the strings quoted below are those of the audit and are replaced by the re-baselined audit of WP-02 where it differs |
+| Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change |
 
 ## Design
 
@@ -300,10 +300,14 @@ Part D — gates and error screens.
   | Reason | Title (`noAccess.title.*`) | Text (`noAccess.text.*`) |
   | ------ | -------------------------- | ------------------------ |
   | `private` | «Бот приватный» | «Приложение сейчас доступно только владельцу.» |
-  | `invite` | «Закрытая бета» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
-  | `full` | «Мест пока нет» | «Все места в бете заняты. Попробуйте позже.» |
+  | `invite` | «Вход по приглашению» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
+  | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
   | `join` | «Сначала — бот» | «Нажмите «Старт» в боте — после этого приложение откроется.» |
+
+  The two texts reworded by `index-Dbpp463V.js` in uz and en: `invite` «Taklif orqali kirish» / «Invite only»;
+  `full` «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
+  No text of this screen mentions a beta in any locale.
 
 - Checking line `noAccess.checking` «Только что нажали «Старт»? Подождите пару секунд — проверяем доступ…» while
   an automatic re-check is pending; never for `blocked`; buttons stay enabled.
@@ -483,7 +487,8 @@ Component (Vitest + Testing Library):
   with a resolved promise; no handler → no listeners.
 - `LanguagePicker`: order and headings for Telegram `ru`, `uz-UZ`, `en-US`, `de`; disabled while saving; failure
   with the flag off (haptic only) and on (toast).
-- `NoAccessScreen`: each reason in each locale; support row absent without an account; post row only for channel
+- `NoAccessScreen`: each reason in each locale, with the texts of the pinned release (no value contains «бета» or,
+  ignoring case, «beta»); support row absent without an account; post row only for channel
   links; checking line never for `blocked`.
 - `CityList`: each location outcome with a mocked adapter; counts with and without stats; the DEV-023 line with the
   flag on. `CrashScreen` and `SessionExpiredScreen`: texts and the single action.
@@ -510,7 +515,9 @@ Run in ru, uz and en, light and dark, in the emulator and (shell lines) inside T
 Gates
 
 - [ ] Opened without Telegram: only «Откройте приложение через бота в Telegram.», no button, no API request.
-- [ ] Each of the five refusal reasons shows its title and text; an unknown reason shows the `private` pair.
+- [ ] Each of the five refusal reasons shows its title and text; an unknown reason shows the `private` pair;
+      `invite` reads «Вход по приглашению», `full` «Сейчас все места заняты. Попробуйте позже.», and no text mentions
+      a beta (SCR-003).
 - [ ] The checking line shows during the three automatic re-checks and never for `blocked`.
 - [ ] After access is granted the app opens by itself, without a reload.
 - [ ] «Перейти в бота» carries `s_web--l123` for `l_123-web` and `s_share--l123` for `l_123`; without a start

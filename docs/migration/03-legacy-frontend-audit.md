@@ -1,17 +1,21 @@
 # 03 — Legacy frontend audit: kvadro² Mini App
 
 Scope: the Telegram Mini App `app.kvadro.app` (React 19 + Vite 8), as recovered by decompiling the production bundle.
-The recovered tree is `$KVADRO_ROOT/demo/app/`. Its last promoted base is release `index-plF_TOcT.js` (prod
-`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT), per `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`. The Telegram WebApp
-integration is in [`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are named by
-`METHOD path`; their `API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
+The recovered tree is `$KVADRO_ROOT/demo/app/`. The audit of 2026-11-09 described release `index-plF_TOcT.js` (prod
+`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT). It is brought up to the pinned release `index-DY_DH7h-.js` (prod
+`Last-Modified` Fri, 13 Nov 2026 22:05:41 GMT, SVN r27; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`;
+[`wave-1/baseline.md`](wave-1/baseline.md)). Text added for a later release names that release and cites the code at
+the pin ("at the pin"); other line numbers are those of the audited tree. The Telegram WebApp integration is in
+[`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are named by `METHOD path`; their
+`API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
 [`data/screens.json`](data/screens.json).
 
 How this audit was made: by reading the code only. Nothing was built or run, so no item is `RUNTIME_VERIFIED`. The
-recovery itself was checked against the production bundle by 79 differential parity scenarios. Those ran on mocks
-that the recovery authors inferred from the code, not on the real API (`$KVADRO_ROOT/demo/app/tools/parity/README.md`,
-`$KVADRO_ROOT/CLAUDE.md` "Commands"). Code that the recovery reconstructed by guesswork carries
-`// TODO: inferred from build` and is `UNVERIFIED` here; §6 has the list.
+recovery itself was checked against the production bundle by 79 differential parity scenarios at the audit and by 109
+at the pin (57 screens and sheets, ten of them for SCR-046 and SCR-047; 36 filter; 16 GL;
+`$KVADRO_ROOT/CLAUDE.md:26-28`). Those ran on mocks that the recovery authors inferred from the code, not on the real
+API (`$KVADRO_ROOT/demo/app/tools/parity/README.md`, `$KVADRO_ROOT/CLAUDE.md` "Commands"). Code that the recovery
+reconstructed by guesswork carries `// TODO: inferred from build` and is `UNVERIFIED` here; §6 has the list.
 
 Policy (HOMI, 2026-11-09): HOMI **fixes** legacy bugs and logically wrong decisions instead of reproducing them. Every
 `LB-APP` item therefore has a `Proposed fix:` line. Proposals are not approved changes. The inventory of existing
@@ -38,8 +42,8 @@ behaviour in §1–§4 stays exact.
    enum can therefore white-screen the app (LB-APP-002, LB-APP-015, LB-APP-016).
 5. **Session-only state and the map stack need explicit decisions.**
    - Favourites, "seen" and locally hidden maps live only in memory (`App.jsx:65-73`).
-   - Ten `kv-*` localStorage keys and their Telegram DeviceStorage mirror must keep their names, or users lose client
-     settings (§3.2).
+   - Eleven `kv-*` localStorage keys (ten at the audit; `kv-visits` since release `index-DY_DH7h-.js`) and their
+     Telegram DeviceStorage mirror must keep their names, or users lose client settings (§3.2).
    - The map is two parallel implementations (MapLibre GL and Leaflet) with different behaviour (SCR-011).
    - The radar tab sends 3 requests per subscription (LB-APP-036).
 
@@ -91,14 +95,14 @@ behaviour in §1–§4 stays exact.
   - PhotoViewer (`.../listing/PhotoViewer.jsx:20`)
   - MarketSheet (`MarketSheet.jsx:74`)
   - SpotMapFullscreen (`.../listing/spot/SpotMapFullscreen.jsx:23`)
-  - ListingActionsSheet, where Back on the report view returns to the menu (`.../listing/ListingActionsSheet.jsx:33-39`)
+  - ListingActionsSheet: Back steps detail → reasons → menu → close (`.../listing/ListingActionsSheet.jsx:36-45`)
   - RadarSheet (`.../radar/RadarSheet.jsx:43`) and FoundSheet (`FoundSheet.jsx:88`)
   - SubPage, i.e. all settings sub-pages (`.../settings/SubPage.jsx:17`)
   - Drawing mode (`$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:37-44`)
   - Radar-return mode: Back on the search tab after "open radar feed" restores the previous filters, sort, list view
     and radar sheet (`useTelegramButtons.js:54-79`).
-- **No Back handler:** the base tabs, the map selection card (SCR-013, LB-APP-024), the follow and home nudges, toasts
-  and the first-launch city picker. With an empty stack, Telegram's BackButton is hidden.
+- **No Back handler:** the base tabs, the map selection card (SCR-013, LB-APP-024), the follow, return and home nudges,
+  the in-feed radar card, toasts and the first-launch city picker. With an empty stack, Telegram's BackButton is hidden.
 - **SettingsButton** (Telegram 7.0+) closes the listing, filters and radar editor and switches to the settings tab
   (`useTelegramButtons.js:10-23`). It does **not** close sort, quick filter, city picker or the create-radar sheet.
 - **Swipe-back.** `useSwipeBack` (`$KVADRO_ROOT/demo/app/src/hooks/useSwipeBack.js:24-148`) is a rightward swipe:
@@ -165,6 +169,8 @@ behaviour in §1–§4 stays exact.
      `GET /api/cities`.
 9. **First paint** shows the feed for the locally saved city before meta arrives (`App.jsx:52`).
    `useHomeScreenEvents` restores DeviceStorage keys and records the visit day (`$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:23-32`).
+   Since release `index-DY_DH7h-.js`, once meta is loaded every search-tab visit is recorded per filter set in
+   `kv-visits`, and once the radars are loaded the return banner may send `GET /api/feed/new` (BR-APP-070, BR-APP-071).
 
 ### 1.4 Render gating (`App.jsx:228-236`)
 
@@ -267,10 +273,14 @@ Losing a WebView reload loses these:
 - `seen`: listings opened this session.
 - `hidden`: listings hidden or blocked this session.
 - `subs` and `cityStats`.
+- Since release `index-DY_DH7h-.js`: the previous-visit time per filter hash for the current visit session
+  (`sessionVisits`, module scope of `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:119-123`), the hashes for
+  which `feed_radar_shown` was sent (`feedRadarShown`, `App.jsx:123-124`) and the pending and shown return banner
+  (`App.jsx:115-120`), all at the pin.
 
-All are in `App.jsx:65-90`. The server is the source of truth after a reload (`item.favorite`, `item.viewed`, and
-hidden listings filtered server-side). The settings tab's hidden screen resets `hidden` to `{}` after any change
-(`App.jsx:499`).
+All but `sessionVisits` are in `App.jsx` (`:65-90` in the audited tree). The server is the source of truth after a
+reload (`item.favorite`, `item.viewed`, and hidden listings filtered server-side). The settings tab's hidden screen
+resets `hidden` to `{}` after any change (`App.jsx:499`).
 
 ### 1.12 Server-formatted vs client-formatted values
 
@@ -354,18 +364,26 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Layout:** `main.lang-pick` with a Lock icon, h1, text, an optional «checking» line and a list of large buttons
   (`$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:41-87`).
 - **Reasons:** `private | invite | full | blocked | join`; anything else renders as `private` (`NoAccessScreen.jsx:13,22`).
-- **Titles and texts** (ru):
+- **Titles and texts** (ru, `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js:28-37`):
 
   | Reason | Title (`noAccess.title.*`) | Text (`noAccess.text.*`) |
   | ------ | -------------------------- | ------------------------ |
   | `private` | «Бот приватный» | «Приложение сейчас доступно только владельцу.» |
-  | `invite` | «Закрытая бета» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
-  | `full` | «Мест пока нет» | «Все места в бете заняты. Попробуйте позже.» |
+  | `invite` | «Вход по приглашению» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
+  | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
   | `join` | «Сначала — бот» | «Нажмите «Старт» в боте — после этого приложение откроется.» |
 
-  The uz and en equivalents are in the locale files, e.g. en «This bot is private», «Closed beta», «No spots yet»,
+  The uz and en equivalents are in the locale files, e.g. en «This bot is private», «Invite only», «No spots yet»,
   «No access», «Start with the bot».
+- **No beta wording since release `index-Dbpp463V.js`:** two texts were reworded, the reason codes and the gate logic
+  stayed (`ru.js:29,35`; `uz_Latn.js:27,33`; `en.js:27,33`;
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:20-22`):
+  - `noAccess.title.invite`: «Закрытая бета» / «Yopiq beta-talqin» / «Closed beta» became «Вход по приглашению» /
+    «Taklif orqali kirish» / «Invite only»;
+  - `noAccess.text.full`: «Все места в бете заняты. Попробуйте позже.» / «Betada joy qolmadi. Keyinroq urinib koʻring.»
+    / «All beta spots are taken. Please try again later.» became «Сейчас все места заняты. Попробуйте позже.» /
+    «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
 - **Checking line:** `noAccess.checking` «Только что нажали «Старт»? Подождите пару секунд — проверяем доступ…».
   Shown while an automatic re-check is pending: 3 tries at 2.5 s, never for `blocked`.
 - **Actions:**
@@ -483,7 +501,13 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Cards** (`$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx:32-93`):
   - photo strip with scroll-snap and dots; lazy slide mounting; a ▶ badge for video;
   - badge tag (BR-APP-026), favourite heart, «viewed» eye (aria `card.viewedTitle`), `status_text` warning tag;
-  - price `main` + `period` + «· первый взнос» (`card.downPayment`), or «Цена договорная» (`card.negotiable`);
+  - price `main` + `period` + the price-kind label, or «Цена договорная» (`card.negotiable`). The label
+    (`priceKindLabel`, `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43`; `ListingCard.jsx:74`) is
+    «· первый взнос» (`card.downPayment`) for `price_kind: "down_payment"` and, since release `index-Dbpp463V.js`,
+    «· цена за бизнес, помещение в аренде» / «biznes narxi, joy ijarada» / «business price, premises rented»
+    (`card.businessPrice`, `ru.js:103`, `uz_Latn.js:101`, `en.js:101`) for `"business"`; any other value has no
+    label (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:14-15`). The same card, and so
+    the label, appears in favourites, history and the compact map card (SCR-013);
   - market delta chip (`listing.marketDelta` «{delta} к рынку», or the short verdict);
   - facts line `title · area · floor · market · 🐾`, then age;
   - location line `district · landmark · metro|center distance`.
@@ -494,6 +518,10 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   (`App.jsx:516`).
 - **Visibility:** hidden listings are filtered locally (`ListingFeed.jsx:81-86`). The first 2 cards load their photo
   eagerly with high priority.
+- **Block inside the list** (since release `index-DY_DH7h-.js`): the search list takes an `inline` block and renders it
+  after the 8th visible card, or after the last card when the list is shorter, fully loaded and shows no few-results
+  note (`ListingFeed.jsx:98-106,128-139` at the pin). That block is the in-feed radar card SCR-047. The return banner
+  SCR-046 floats above the list.
 - **Actions:**
   - open a card: `openListing(id, item)` adds it to `seen` and passes the card as `preview`;
   - favourite toggle: optimistic `POST /api/listings/:id/favorite`, with the server result applied
@@ -548,6 +576,9 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   `PATCH /api/subscriptions/:id` (BR-APP-041).
 - **Edge case:** with 0 active filters but no city stats yet, the plain empty state shows «Сбросить фильтры» although
   there is nothing to reset (LB-APP-038).
+- **With the in-feed radar card** (SCR-047, since release `index-DY_DH7h-.js`): on a list of 8 or fewer cards the card
+  follows the last one only when the few-results note is not rendered; with 9 cards it stands after the 8th and the
+  note below the list (`ListingFeed.jsx:94-106` at the pin).
 - **Status:** CONFIRMED.
 
 ### SCR-010 — Pull-to-refresh (`overlay`)
@@ -840,7 +871,13 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - «Написать» opens `contact_url`.
 - **Share:** a prepared message (`POST /api/listings/:id/share` → `shareMessage(id)`), else
   `t.me/share/url?url=https://t.me/<bot>?startapp=l_<id>&text=<title · price · kind · district>`. Repeat taps are
-  locked during sharing and for 1.5 s after (`ListingTitleRow.jsx:28-63`).
+  locked during sharing and for 1.5 s after (`ListingTitleRow.jsx:28-63`). `kind` is the price-kind label of the
+  card (SCR-007): «первый взнос», or «цена за бизнес, помещение в аренде» since release `index-Dbpp463V.js`
+  (`ListingTitleRow.jsx:40-49`). This share text is the only place the label appears on the listing screen: the
+  title row and the CTA bar do not render it (`ListingTitleRow.jsx:64-89`, `ListingCtaBar.jsx:17-83`), although the
+  sync report and the changelog say the label shows "in the title row" / "on the listing screen"
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:15`,
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:53`).
 - **Actions menu:** SCR-023.
 - **Overlays:** PhotoViewer (SCR-020), MarketSheet (SCR-022), SpotMapFullscreen (SCR-021).
 - **APIs:**
@@ -918,12 +955,23 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Edge case:** a `median_rooms` value that is not 1–3 or ≥ 4 throws (LB-APP-015).
 - **Status:** CONFIRMED.
 
-### SCR-023 — Listing actions sheet: menu and report (`sheet`)
+### SCR-023 — Listing actions sheet: menu, report and report detail (`sheet`)
 
 - **Purpose:** hide, block the author, report, or contact support.
-- **Opens:** «⋯» in the title row. **Closes:** ×, backdrop, drag, Telegram Back (Back on the report view returns to the
-  menu), or a successful action.
-- **Menu view** (`$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:129-166`), title «Объявление»:
+- **Opens:** «⋯» in the title row. **Closes:** ×, backdrop or drag from any view, Telegram Back on the menu view, or a
+  successful action.
+- **Views and Back** (`$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:30-45,108-134`): `menu` →
+  `report` → `detail`; the third view exists since release `index-BNLZFfL0.js`
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:13-20`).
+  - Back goes one step: detail → reasons → menu → close (`goBack`, `ListingActionsSheet.jsx:36-44`). Telegram Back
+    (`pushBackHandler(goBack)`, `:45`) and the header back button (ChevronLeft, aria `actions.back` «Назад») call the
+    same `goBack`.
+  - The header back button is shown on every view except the menu (`:123-129`). Before `index-BNLZFfL0.js` it existed
+    only on the report view and went straight to the menu.
+  - Title, also the dialog `aria-label` (`:108-110,116`): menu `actions.title` «Объявление» / «Eʼlon» / «Listing»;
+    report `report.title` «Что не так?» / «Nima notoʻgʻri?» / «What's wrong?»; detail `report.detailTitle`
+    «Что именно неверно?» / «Aynan nima notoʻgʻri?» / «What exactly is wrong?».
+- **Menu view** (`ListingActionsSheet.jsx:137-174`), title «Объявление»:
   - «Скрыть объявление» — «Больше не покажем ни его, ни его копии»;
   - «Заблокировать автора» — «Не показывать объявления с номера {label}» / «… из {label}» / «Не показывать его
     объявления», plus « — скроет N объявлений» when the author has 20 or more listings. Phone hints are masked for
@@ -931,11 +979,28 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - «Пожаловаться» › «Сдано, риелтор, ошибка или обман»;
   - «Написать в поддержку» — «Уже сдано, мошенник или это ваше объявление — разберёмся», only when `/api/bot` returns
     `support`; opens `t.me/<support>?start=l_<id>`.
-- **Report view**, title «Что не так?»:
+- **Report view** (`ListingActionsSheet.jsx:175-191`), title «Что не так?»:
   - «Уже сдано» / «Объявление больше не актуально»;
   - «Это риелтор, а не хозяин» / «Отметим номер как риелторский» (hidden when `is_owner === false`);
-  - «Неверные данные» / «Цена, район или комнаты не совпадают»;
+  - «Неверные данные» / «Цена, район или комнаты не совпадают» — since `index-BNLZFfL0.js` with a › arrow; a tap
+    gives a light haptic and opens the detail view, nothing is sent;
   - «Мошенничество или спам» / «Просят предоплату, чужие фото, реклама».
+
+  The other three reasons are sent at once with `{reason}`.
+- **Detail view** «Что именно неверно?» (`ListingActionsSheet.jsx:13-14,192-200`; since `index-BNLZFfL0.js`): five
+  rows from `REPORT_DETAILS`, no icons, no arrows. A tap sends `reason: "wrong_data"` with the row's `detail` code
+  (`ru.js:201-211`, `uz_Latn.js:194-204`, `en.js:195-205`):
+
+  | `detail` | Title `report.d_<code>` (ru / uz_Latn / en) | Hint `report.d_<code>Hint` (ru / uz_Latn / en) |
+  | -------- | ------------------------------------------- | ---------------------------------------------- |
+  | `price` | «Цена» / «Narx» / «Price» | «Другая сумма или валюта» / «Summa yoki valyuta boshqa» / «Different amount or currency» |
+  | `rooms` | «Комнаты, площадь или этаж» / «Xonalar, maydon yoki qavat» / «Rooms, area or floor» | «Не совпадают с постом или квартирой» / «Post yoki kvartiraga mos emas» / «Don't match the post or the flat» |
+  | `place` | «Район или место на карте» / «Tuman yoki xaritadagi joy» / «District or map location» | «Квартира в другом районе» / «Kvartira boshqa tumanda» / «The flat is in another district» |
+  | `photos` | «Фото» / «Rasmlar» / «Photos» | «Фото не от этой квартиры» / «Rasmlar bu kvartiraniki emas» / «Photos are from another flat» |
+  | `other` | «Другое» / «Boshqa» / «Other» | «Тип жилья, ремонт, условия» / «Uy turi, taʼmir, shartlar» / «Property type, renovation, terms» |
+
+  This client never sends `wrong_data` without a `detail` (BR-APP-036). The release added 11 i18n keys and no
+  analytics event.
 - **Results** (`$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`):
 
   | Action | Effect | Toast |
@@ -945,13 +1010,20 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   | Report `fraud` with `hidden: true` | hide | «Спасибо, посмотрим. Это объявление у вас скрыли» + undo |
   | Report `rented` | hide and close, no undo | «Отметили: уже сдано» |
   | Report `agent` | — | «Отметили номер как риелторский» |
-  | Other reports | — | «Спасибо! Посмотрим» |
+  | Other reports, including `wrong_data` with any `detail` | — | «Спасибо! Посмотрим» |
   | Any failure | — | «Не получилось сохранить» |
   | Undo failure | re-hides | «Не получилось сохранить» |
 
 - **APIs:** `POST /api/listings/:id/hide`, `POST /api/listings/:id/block-author`, `POST /api/listings/:id/report`
-  `{reason}`, `GET /api/bot`, `DELETE /api/listings/:id/hide`, `DELETE /api/listings/:id/block-author`.
-- **States:** `busy` ignores taps while a request runs. Haptics: success or error.
+  `{reason}` or `{reason: "wrong_data", detail}` (`detail` only when truthy,
+  `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90`), `GET /api/bot`, `DELETE /api/listings/:id/hide`,
+  `DELETE /api/listings/:id/block-author`.
+- **States:** `busy` ignores taps on every view while a request runs. Haptics: light when the report or detail view
+  opens and when an action starts; success or error after it.
+- **Legacy parity scenarios** (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:281-293`): `listing-report-wrong` (the
+  detail view, no request), `listing-report-wrong-price` (body `{"reason":"wrong_data","detail":"price"}`, toast),
+  `listing-report-wrong-back` (header back from the detail view to the reasons), `listing-report-204` (`wrong_data`
+  with `detail: "photos"`).
 - **Status:** CONFIRMED.
 
 ### SCR-024 — Favourites (`screen`)
@@ -1061,8 +1133,12 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 ### SCR-030 — New radar: filters sheet in create mode (`sheet`)
 
 - **Opens:** «+» on the radar tab, or «Включить радар» on the empty state. It starts from the current search filters.
+  Since release `index-DY_DH7h-.js` also from «Настроить» on the return banner (SCR-046) and «Настроить радар» on the
+  in-feed radar card (SCR-047), which offer it for default filters only (BR-APP-073).
 - **Differences from SCR-014:** title «Новый радар»; the button «Включить радар»; no posted-days section.
-- **Save:** `subscribe(next, 'empty', relaxed)`; the sheet closes on success.
+- **Save:** `subscribe(next, createSubSource, relaxed)`; the sheet closes on success. `createSubSource` is `empty` from
+  «+» and the empty state, `return` / `feed` from the banner / the card (`App.jsx:401-415,717-721` at the pin); before
+  release `index-DY_DH7h-.js` the sheet always sent `empty`.
 - **Toasts** (`subscriptionActions.js:94-158`):
   - «Радар включён. {count} уже в чате с ботом»;
   - few: «Радар включён, но таких объявлений мало. {what}: {rate}» + «Расширить»;
@@ -1190,14 +1266,21 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   (resets the close counter, then `subscribe(filters, 'prompt')`); or a filter change.
 - **Layout:** `.nudge` card: radar icon, «Включить радар по этому поиску?», «Новые — сразу в чат», a flow line («≈N в
   день» / «N за неделю» / «Таких пока нет — радар пришлёт, как появятся»), «Включить» and × (`$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:19-60`).
+- **Interplay with the return banner** (since release `index-DY_DH7h-.js`, BR-APP-046): not offered while a banner check
+  for the same filters is pending, not rendered next to a banner and dropped when one shows. A shown banner also sets
+  the shared cooldown and marks its filter hash as offered (BR-APP-071). No nudge shows while the create-radar sheet is
+  open.
 - **Storage:** `kv-nudge`.
 - **Analytics:** `follow_prompt_shown`, `follow_prompt_expired`, `follow_prompt_closed`.
-- **Edge case:** LB-APP-006.
+- **Edge cases:** LB-APP-006; LB-APP-050.
 - **Status:** CONFIRMED.
 
 ### SCR-041 — Home-screen nudge (`overlay`)
 
 - **Opens:** BR-APP-045. **Closes:** after 10 s; ×; or «Добавить», which calls `addToHomeScreen()`.
+- **Interplay:** the offer waits while a follow nudge or its candidate, a toast and, since release `index-DY_DH7h-.js`,
+  a return banner or its pending check is present (BR-APP-046). An offer already on screen is hidden by a follow nudge
+  but not by a return banner (LB-APP-049).
 - **Layout:** «kvadro² на экране телефона», «Открывать в одно касание, как обычное приложение», «Добавить».
 - **After adding:** the Telegram `homeScreenAdded` event shows the toast «Значок kvadro² добавлен на экран телефона».
 - **Storage:** `kv-home`.
@@ -1247,6 +1330,88 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
 - **Sources:** `$KVADRO_ROOT/demo/app/src/app/ErrorBoundary.jsx:11-42`.
 - **Status:** CONFIRMED.
 
+### SCR-046 — Return banner «С вашего прошлого захода — N новых» (`overlay`)
+
+- **Since:** release `index-DY_DH7h-.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:10-12`;
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md:21-25`). Line numbers here are at the pin.
+  An entry of its own, like SCR-040 and SCR-041: a floating layer with its own trigger, timer, request, storage and
+  events.
+- **Purpose:** on a return to a search after a break, says how many listings appeared since the previous visit with the
+  same filters and offers a radar for them.
+- **Opens:** 1.8 s after a search-tab visit (BR-APP-070), once meta and the radars are loaded and nothing covers the
+  list, when the BR-APP-071 conditions hold. It then sends `GET /api/feed/new?<filters>&since=<unix seconds>` and shows
+  only for `count > 0` (`$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:90-143`;
+  `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:179-216`). Rendered only without a toast and while the filters
+  still match (`App.jsx:737`).
+- **Closes:** after 15 s (`return_prompt_expired`); × (`return_prompt_closed`; counts towards the 3-close snooze shared
+  with SCR-040); «Включить» / «Настроить» (BR-APP-073); or a filter change (`useDropStaleNudges`,
+  `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:24-33`).
+- **Layout:** the `.nudge` card of SCR-040 (fixed above the tab bar, z 35): radar icon, a bold title, a hint that wraps
+  instead of being cut (`.nudge-text.wrap .muted`, `$KVADRO_ROOT/demo/app/src/styles/nudges.css:60-62`), the button
+  with a medium haptic and × (`$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:63-105`). The number is formatted
+  with the number locale and followed by the plural word (`Nudges.jsx:84-87`): «С вашего прошлого захода — 12 новых» /
+  «Oxirgi kirganingizdan beri — 12 ta yangi» / «12 new since your last visit».
+- **Texts** (`ru.js:395-409`, `uz_Latn.js:369-381`, `en.js:370-382`):
+
+  | Key | ru | uz_Latn | en |
+  | --- | -- | ------- | -- |
+  | `back.title` | «С вашего прошлого захода — {count}» | «Oxirgi kirganingizdan beri — {count}» | «{count} since your last visit» |
+  | `back.new` (plural) | `one` «новое»; `few`, `many`, `other` «новых» | `one`, `other` «ta yangi» | `one`, `other` «new» |
+  | `back.what` | «Радар пришлёт следующие сразу — узнаете о них первыми» | «Radar keyingilarini darhol yuboradi — birinchilardan boʻlib bilasiz» | «Radar will send the next ones right away — you'll know first» |
+  | `nudge.enable` (custom filters, existing key) | «Включить» | «Yoqish» | «Turn on» |
+  | `nudge.setup` (default filters, new key) | «Настроить» | «Sozlash» | «Set up» |
+
+- **APIs:** `GET /api/feed/new`; `GET /api/subscriptions` (the conditions, and a re-read when the app returns from the
+  background after ≥ 6 h); from «Включить» the radar flow of BR-APP-041 with `entry: "return"`
+  (`GET /api/subscriptions`, then `POST /api/subscriptions` or `PATCH /api/subscriptions/:id`).
+- **Storage:** `kv-visits`; `kv-nudge` (`back`, `lastShown`, `asked`, `closed`, `quietUntil`).
+- **Analytics:** `return_prompt_shown {n, custom}`, `return_prompt_expired {custom}`, `return_prompt_closed {custom}`
+  (§3.3).
+- **Edge cases:** a response without a numeric `count` (LB-APP-048); on screen together with the home-screen offer
+  (LB-APP-049); counted as shown before it renders (LB-APP-050).
+- **Sources:** `useReturnNudge.js`; `followNudge.js:98-216`; `Nudges.jsx:63-105`;
+  `App.jsx:115-120,140-149,221-265,399-415,737-755`; `$KVADRO_ROOT/demo/app/src/lib/api/feed.js:105-117`; parity
+  scenarios `return-nudge`, `return-nudge-setup`, `return-nudge-close`, `return-nudge-recent`, `return-nudge-cooldown`
+  (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:314-323`).
+- **Status:** CONFIRMED.
+
+### SCR-047 — In-feed radar card on the search list (`state`)
+
+- **Since:** release `index-DY_DH7h-.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:13-14`). Line numbers here are at the
+  pin. A `state` of SCR-007, not an overlay: the card scrolls with the list. An entry of its own because it has its own
+  conditions, storage, texts and events.
+- **Shown when:** BR-APP-072. It sits after the 8th card, or after the last card of a short, fully loaded list without
+  the few-results note (SCR-007, SCR-009; `App.jsx:297-303,629-645`;
+  `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:219-244`;
+  `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:98-106,128-139`).
+- **Layout:** `section.feed-radar` (`$KVADRO_ROOT/demo/app/src/styles/nudges.css:63-112`): the animated radar sweep with
+  two blips (`.feed-radar-art.radar-art`, with a fallback without `color-mix` in
+  `$KVADRO_ROOT/demo/app/src/styles/fallbacks.css:86-88`), a 22 px title, the hint, a full-width primary button with
+  the radar icon and a medium haptic, and × in the top-right corner
+  (`$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:107-171`).
+- **Texts** (`ru.js:404-408`, `uz_Latn.js:376-380`, `en.js:377-381`):
+
+  | Key | Used for | ru | uz_Latn | en |
+  | --- | -------- | -- | ------- | -- |
+  | `feedRadar.titleRent` | rent, including daily | «Хорошие квартиры снимают в первые часы» | «Yaxshi kvartiralar birinchi soatlardayoq ijaraga olinadi» | «Good flats get rented in the first few hours» |
+  | `feedRadar.titleSale` | sale | «Выгодные квартиры продают быстро» | «Yaxshi narxdagi kvartiralar tez sotiladi» | «Good-value flats sell fast» |
+  | `feedRadar.what` | hint | «Включите радар — новые по этому поиску придут в Telegram сразу, как появятся.» | «Radarni yoqing — bu qidiruv boʻyicha yangilari chiqishi bilan Telegramga keladi.» | «Turn on radar — new ones for this search will come to Telegram as soon as they appear.» |
+  | `feedRadar.enable` | button, custom filters | «Включить радар» | «Radarni yoqish» | «Turn on radar» |
+  | `feedRadar.setup` | button, default filters | «Настроить радар» | «Radarni sozlash» | «Set up radar» |
+
+- **Actions:** the button → BR-APP-073 with `entry: "feed"`; × (aria `common.close`) → hidden for 7 days
+  (`kv-nudge.feedOff`) and `feed_radar_closed {custom}`; this close does not count towards the nudge snooze
+  (`App.jsx:635-642`).
+- **Analytics:** `feed_radar_shown {custom}` once 60 % of the card is visible (`IntersectionObserver`, threshold 0.6),
+  once per session per filter hash; never where `IntersectionObserver` is missing (`Nudges.jsx:117-136`;
+  `App.jsx:304-313`).
+- **APIs:** as SCR-046 «Включить», with `entry: "feed"`.
+- **Storage:** `kv-nudge.feedOff`.
+- **Sources:** `Nudges.jsx:107-171`; `followNudge.js:150-167,219-244`; `ListingFeed.jsx`; `App.jsx`; parity scenarios
+  `feed-radar`, `feed-radar-setup`, `feed-radar-close`, `feed-radar-sale`, `feed-radar-custom`
+  (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:305-313`).
+- **Status:** CONFIRMED.
+
 ### 2.1 Shared components (not screens on their own)
 
 `src/components/`:
@@ -1274,7 +1439,7 @@ Every directory under `src/features` maps to SCR items:
 | Directory | SCR items |
 | --------- | --------- |
 | `city` | SCR-005, SCR-017 |
-| `feed` | SCR-007, SCR-008, SCR-009, SCR-024, SCR-025, SCR-040, SCR-041 |
+| `feed` | SCR-007, SCR-008, SCR-009, SCR-024, SCR-025, SCR-040, SCR-041, SCR-046, SCR-047 |
 | `filters` | SCR-014, SCR-015, SCR-029, SCR-030 |
 | `listing` | SCR-018 to SCR-023 |
 | `map` | SCR-011, SCR-012, SCR-013 |
@@ -1294,13 +1459,22 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
 
 - **Locales:** `ru`, `uz_Latn`, `en`. Intl locales are `ru-RU`, `uz-Latn-UZ`, `en-GB`. Numbers in `uz_Latn` are
   formatted with `ru-RU` (space thousands separator, decimal comma) (`$KVADRO_ROOT/demo/app/src/i18n/index.js:16-74`).
-- **Keys:** **461 top-level keys in each locale**, 461 in the union. No key is missing in any locale (CONFIRMED).
-  - 14 keys are plural objects: `listings`, `listing.rooms`, `details.daysOnMarket`, `details.publications`,
-    `details.channels`, `details.views`, `actions.blockCount`, `map.missing`, `market.info.agoMin`,
-    `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`, `market.v3.city`.
+- **Keys:** **482 top-level keys in each locale** at the pinned release, 482 in the union. No key is missing in any
+  locale (CONFIRMED). A plural object counts as one key.
+  - Per release: 461 at `index-plF_TOcT.js` (the audit), 462 after `index-Dbpp463V.js` (`card.businessPrice`), 473
+    after `index-BNLZFfL0.js` (`report.detailTitle` and ten `report.d_*` keys), 482 after `index-DY_DH7h-.js` (nine
+    keys: `back.title`, `back.new`, `back.what`, `feedRadar.titleRent`, `feedRadar.titleSale`, `feedRadar.what`,
+    `feedRadar.enable`, `feedRadar.setup`, `nudge.setup`; texts in SCR-046 and SCR-047).
+  - Method: the object literal of each locale file is parsed and its depth-1 keys counted, per SVN revision of the
+    locale files (r9, r24, r25, r27). Counting quoted key lines (`^  '`) gives one less, because the plural key
+    `listings` is unquoted; the 472 of `25` §1 matches that line count at `index-BNLZFfL0.js`.
+  - 14 keys are plural objects up to `index-BNLZFfL0.js`: `listings`, `listing.rooms`, `details.daysOnMarket`,
+    `details.publications`, `details.channels`, `details.views`, `actions.blockCount`, `map.missing`,
+    `market.info.agoMin`, `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`,
+    `market.v3.city`. Release `index-DY_DH7h-.js` adds a fifteenth, `back.new` (`ru.js:397-402`).
   - In ru they have `one / few / many / other`, except `map.missing`, which has `one / other`. In uz_Latn and en they
     have `one / other`.
-- **Key families by prefix:**
+- **Key families by prefix** (as of `index-BNLZFfL0.js`):
 
   | Prefix | Keys | Prefix | Keys | Prefix | Keys |
   | ------ | ---- | ------ | ---- | ------ | ---- |
@@ -1310,8 +1484,10 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `noAccess` | 14 | `radar` | 14 | `map` | 13 |
   | `notify` | 12 | `subs` | 12 | `sum` | 12 |
   | `details` | 10 | `hidden` | 10 | `sort` | 10 |
-  | `report` | 9 | `card` | 8 | `city` | 7 |
+  | `report` | 20 | `card` | 9 | `city` | 7 |
   | `app` | 5 | `type` | 5 | others | ≤ 4 each |
+
+  Release `index-DY_DH7h-.js` adds the prefixes `back` (3 keys) and `feedRadar` (5) and one `nudge` key.
 
 - **Keys built at runtime** (every value must exist, or `t()` throws):
 
@@ -1323,6 +1499,7 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `sort.${sort}` | local | local |
   | `subs.mode.${mode}` | **server** subscription | server-driven |
   | `report.${reason}`, `report.${reason}Hint` | local | local |
+  | `report.d_${detail}`, `report.d_${detail}Hint` | local (`REPORT_DETAILS`, since `index-BNLZFfL0.js`) | local |
   | `found.*`, `found.where.*` | local | local |
   | `noAccess.title.*`, `noAccess.text.*` | guarded by a whitelist | none |
   | `settings.theme.*`, `settings.graphics.*`, `sheet.market.*`, `sheet.posted.*`, `app.saved.*` | local | local |
@@ -1342,8 +1519,12 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   - the methodology URLs (`MarketSheet.jsx:37-41`);
   - Uzbek short month names `yan … dek` (`i18n/index.js:76`).
 - **Release history:** 2026-11-06 changed three uz strings (`details.facts` «Xususiyatlar», `details.publications`
-  «nashr», `details.channels` «kanal») and added `sum.zonesBoth`. 2026-11-07 added `card.ownerVerified`
-  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:27,41,50`).
+  «nashr», `details.channels` «kanal») and added `sum.zonesBoth`. 2026-11-07 added `card.ownerVerified`. 2026-11-11
+  (`index-Dbpp463V.js`) added `card.businessPrice` and reworded `noAccess.title.invite` and `noAccess.text.full`
+  (SCR-003). 2026-11-12 (`index-BNLZFfL0.js`) added `report.detailTitle` and the pairs `report.d_<code>` /
+  `report.d_<code>Hint` for `price`, `rooms`, `place`, `photos`, `other` (SCR-023). 2026-11-14 (`index-DY_DH7h-.js`)
+  added the nine `back.*`, `feedRadar.*` and `nudge.setup` keys (SCR-046, SCR-047)
+  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:17,38,54,59,84,99,107`).
 
 ### 3.2 Client storage: localStorage `kv-*` and Telegram DeviceStorage
 
@@ -1356,7 +1537,8 @@ with a 1.5 s timeout per key (`storage.js:59-87`).
 | `kv-locale` | `ru` / `uz_Latn` / `en` | `setLocale(persist)`, `saveLocale` (`i18n/index.js:43-55`) | `detectLocale` (`:25-34`); boot script `index.html:46` | yes | **no** |
 | `kv-theme` | `auto` / `light` / `dark` | `setThemePreference` (`$KVADRO_ROOT/demo/app/src/lib/telegram/theme.js:56-62`), directly | `theme.js:7-17` | no | — |
 | `kv-city` | city code | `saveCity` (`$KVADRO_ROOT/demo/app/src/lib/city.js:20-27`) | `getSavedCity` (main.jsx prefetch, App initial filters, filters sheet apply) | yes | yes, but after first use (LB-APP-021) |
-| `kv-nudge` | JSON `{asked: string[≤40], closed, quietUntil, lastShown}` | `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:30-92` | `followNudge.js:16-28` | yes | yes |
+| `kv-nudge` | JSON `{asked: string[≤40], closed, quietUntil, lastShown}`; since `index-DY_DH7h-.js` also `back: {<filters hash>: ms}` (the return banner per filter set, ≤ 40) and `feedOff: ms` (end of the in-feed card's snooze) | `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:30-92`; at the pin also `:198-216`, `:239-244` | `followNudge.js:16-28`; at the pin also `:179-195`, `:232-237` | yes | yes |
+| `kv-visits` | JSON `{<filters hash>: ms}`: the last search-tab visit per filter set, 40 newest kept; since `index-DY_DH7h-.js` (BR-APP-070) | `recordVisit` (`followNudge.js:125-143` at the pin) | `recordVisit` into the session map, then `returnSince` (`followNudge.js:108-123,179-195` at the pin) | yes | yes, since `index-DY_DH7h-.js` (`storage.js:6` at the pin; LB-APP-021) |
 | `kv-home` | JSON `{days: ['YYYY-MM-DD' ×≤10], offered}` | `$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js:71-98` | `homeScreen.js:17-28` | yes | yes |
 | `kv-new-<feature>` | `'1'` (only `pets` is used) | `markFeatureSeen` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`) | `isNewFeature` (`:11-12`) | yes | no |
 | `kv-graphics` | `full` / `lite` (absent = auto) | `setGraphicsMode` (`$KVADRO_ROOT/demo/app/src/lib/graphics.js:97-103`) | `getGraphicsMode` | no | — |
@@ -1384,6 +1566,11 @@ to `name` (`$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35`).
 | `follow_prompt_shown` | — | follow nudge shown | `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:66` |
 | `follow_prompt_expired` | — | follow nudge timed out (10 s) | `$KVADRO_ROOT/demo/app/src/app/App.jsx:110` |
 | `follow_prompt_closed` | — | follow nudge × | `App.jsx:624` |
+| `return_prompt_shown` | `n` (the `count`), `custom` | return banner shown (since `index-DY_DH7h-.js`, SCR-046) | `$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:126-129` |
+| `return_prompt_expired` | `custom` | return banner timed out (15 s) | `App.jsx:140-149` at the pin |
+| `return_prompt_closed` | `custom` | return banner × | `App.jsx:742-748` at the pin |
+| `feed_radar_shown` | `custom` | in-feed radar card 60 % visible, once per session per filter hash (SCR-047) | `App.jsx:304-313` at the pin; `Nudges.jsx:117-136` |
+| `feed_radar_closed` | `custom` | in-feed radar card × | `App.jsx:636-642` at the pin |
 | `home_screen_offered` | — | home nudge shown (status `missed`) | `$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:74` |
 | `home_screen_closed` | — | home nudge × (not on timeout) | `App.jsx:609` |
 | `home_screen_added` | — | Telegram `homeScreenAdded` | `useHomeScreenOffer.js:27` |
@@ -1395,7 +1582,8 @@ to `name` (`$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35`).
 | `contact_call` | `listing_id`, `via` (`tel` / `browser`), `src?` (`text`) | call attempt resolved | `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:74-80` |
 | `contact_write` | `listing_id` | «Написать» link opened | `useListingContact.js:82-88` |
 
-Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11).
+Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:1076-1107`). `custom` is
+`isCustomFilters` of the filters concerned (BR-APP-013).
 
 **(b) PostHog** (`$KVADRO_ROOT/demo/app/src/lib/analytics.js`). The key and host come from `meta.analytics`.
 
@@ -1429,8 +1617,10 @@ Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11).
 | Live count / flow debounce | 250 ms / 500 ms | `$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js:20,39` |
 | Filters focus scroll | 350 ms after open | `$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx:92` |
 | Follow nudge | delay 1.8 s; auto-hide 10 s; cooldown 8 h; snooze 14 days after 3 closes; remembers 40 filter hashes | `useFollowNudge.js:9`; `$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:9`; `followNudge.js:8-13` |
+| Return banner | check 1.8 s after a visit; previous visit ≥ 6 h ago; once per filter set per 2 days; auto-hide 15 s; 40 visit hashes kept; shares the follow nudge's 8 h cooldown and 14-day snooze | `useReturnNudge.js:17`; `followNudge.js:100-106`; `Nudges.jsx:63` (at the pin) |
+| In-feed radar card | after 8 cards; × hides it for 7 days; seen at 60 % visibility | `followNudge.js:220-223`; `Nudges.jsx:131` (at the pin) |
 | Home-screen offer | delay 4 s; ≥ 3 distinct visit days (last 10 kept); once; status check timeout 1.5 s | `useHomeScreenOffer.js:15`; `homeScreen.js:8,38,75` |
-| Max radars (fallback) | 10 (`meta.max_subscriptions`) | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:16`; `useFollowNudge.js:11` |
+| Max radars (fallback) | 10 (`meta.max_subscriptions`) | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:16`; `useFollowNudge.js:11`; at the pin also `useReturnNudge.js:19`, `App.jsx:298` |
 | Relax option threshold | first option with `count ≥ 7`, else the last | `subscriptionActions.js:18,51` |
 | Radar preview finds | 5 per radar | `$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:7` |
 | Toast lifetime | 4 s (text) / 6 s (with action) | `$KVADRO_ROOT/demo/app/src/components/Toast.jsx:14` |
@@ -1597,7 +1787,7 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-023 | **Sort options:** `new`, `cheap` and `expensive` always. `deal` for non-daily apartment-only searches where `city.median !== false`. `center` when the city has zones. `ppm` for sale. An unavailable sort falls back to `new`. `new` is never sent to the API. | `$KVADRO_ROOT/demo/app/src/features/sort/SortSheet.jsx:17-34`; `App.jsx:259-263`; `$KVADRO_ROOT/demo/app/src/lib/api/feed.js:78` |
 | BR-APP-024 | **Feed paging:** `limit=20` with an opaque `cursor`, which ends when `next_cursor === null`. Items are de-duplicated by `id` across pages. | `feed.js:75-85`; `$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:31-42` |
 | BR-APP-025 | **The few-results note** appears only when the list is fully loaded with fewer than 10 items, there are no active filters, and city stats and name are known. «Смотреть продажу / аренду · N» is offered only when the other deal has more listings in the city. | `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:89-92`; `App.jsx:420-439`; `$KVADRO_ROOT/demo/app/src/app/FewResultsNote.jsx:39` |
-| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Хозяин ✓» (`owner_verified`) > «Ниже рынка» (`good`) > «Хозяин» (`is_owner`). | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:250-279` |
+| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Хозяин ✓» (`owner_verified`) > «Хозяин» (`is_owner`) > «Ниже рынка» (`good`). Since release `index-Dbpp463V.js`; before it «Ниже рынка» ranked above «Хозяин». | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:253-283`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:12-13` |
 | BR-APP-027 | **Market verdict wording** depends on `median_tone`: `check` (above or below), `suspicious`, `same`, `mixed`, `no_repair`, `good`. Otherwise the text says "pricier"; from +90 % it says «В {x} раза дороже рынка». Percentages are rounded `abs(delta)·100`. | `format.js:142-217` |
 | BR-APP-028 | **The market block shows** only when a verdict exists and `median_value`, `median_delta` and `median` are present. The scale is linear with ±40 % at the edges, clamped to 4–96 %. | `$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx:105,177-179` |
 | BR-APP-029 | **Metro on cards:** shown only within 1.5 km. Under 50 m only the name is shown; otherwise «{metro} · {m} м», with metres rounded to 100. | `format.js:76-87` |
@@ -1607,17 +1797,17 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-033 | **Calling.** On Android, `tel:` is tried first; if the app is not left within 1.2 s, the call page opens. Elsewhere the call page (`call_url`, about 10 min TTL) opens directly, refreshed when it is older than 8 min. | `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:14-40`; `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:54-81` |
 | BR-APP-034 | **Machine translation** of the original text is offered only when the interface locale is not `ru`. The first tap fetches, later taps toggle; the result is labelled «Перевод сделан ИИ». | `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22-39`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:78-80` |
 | BR-APP-035 | **Phone numbers in the original text** are detected as Uzbek numbers (`[+998] XX XXX XX XX` with a known operator or city code). Only the number that equals the listing's `phone` becomes a call button. | `$KVADRO_ROOT/demo/app/src/lib/phone.js:4-89`; `OriginalText.jsx:32-38` |
-| BR-APP-036 | **Moderation effects on the client:** hide → hidden with undo; block → all `listing_ids` hidden with undo; `fraud` with `hidden` → hidden with undo; `rented` → hidden without undo. The `agent` reason is not offered when `is_owner === false`. | `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:168` |
-| BR-APP-037 | **The block hint** appends «скроет N объявлений» only when the author has 20 or more listings. | `ListingActionsSheet.jsx:97-101` |
-| BR-APP-038 | **Share** is shown only when `bot_username` is known. It uses a prepared message (Telegram 8.0+); otherwise `t.me/share/url` with `https://t.me/<bot>?startapp=l_<id>` and text `title · price · down payment · district`. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-50,71` |
+| BR-APP-036 | **Moderation effects on the client:** hide → hidden with undo; block → all `listing_ids` hidden with undo; `fraud` with `hidden` → hidden with undo; `rented` → hidden without undo. The `agent` reason is not offered when `is_owner === false`. Since release `index-BNLZFfL0.js` `wrong_data` is sent only together with a `detail` (`price`, `rooms`, `place`, `photos`, `other`) picked on a third view; the other reasons are sent at once and without `detail`. | `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200`; `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:13-23` |
+| BR-APP-037 | **The block hint** appends «скроет N объявлений» only when the author has 20 or more listings. | `ListingActionsSheet.jsx:103-107` |
+| BR-APP-038 | **Share** is shown only when `bot_username` is known. It uses a prepared message (Telegram 8.0+); otherwise `t.me/share/url` with `https://t.me/<bot>?startapp=l_<id>` and text `title · price · price-kind label · district`; the label is «первый взнос» (`down_payment`) or, since release `index-Dbpp463V.js`, «цена за бизнес, помещение в аренде» (`business`), and is left out for other values. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-50,71`; `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43` |
 | BR-APP-039 | **Favourite toggle** is optimistic; the server toggle response (`favorite`) wins, and a failure rolls back. The favourites list hides items un-favourited this session. | `$KVADRO_ROOT/demo/app/src/components/FavButton.jsx:19-34`; `ListingFeed.jsx:81-84` |
 | BR-APP-040 | **The «viewed» eye** is `seen[id] ?? item.viewed`; it is not shown in history or on compact map cards. | `ListingFeed.jsx:120`; `ListingCard.jsx:61` |
-| BR-APP-041 | **Turning on a radar.** The client re-fetches the subscriptions. If an identical one is active → «Радар по этому поиску уже включён». If it exists but is inactive → `PATCH {active:true}`. Otherwise `POST` with `entry` = `filters` / `few` / `prompt` / `empty`. `409` (not `no_chat`) → the limit toast with `max_subscriptions ?? 10`. | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:94-158` |
+| BR-APP-041 | **Turning on a radar.** The client re-fetches the subscriptions. If an identical one is active → «Радар по этому поиску уже включён». If it exists but is inactive → `PATCH {active:true}`. Otherwise `POST` with `entry` = `filters` / `few` / `prompt` / `empty`, since release `index-DY_DH7h-.js` also `feed` / `return` (BR-APP-073). `409` (not `no_chat`) → the limit toast with `max_subscriptions ?? 10`. | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:94-158`; `App.jsx:401-415,718,752` (at the pin) |
 | BR-APP-042 | **"Widen" suggestion** after a radar with no starter results: the first `options[]` entry with `count ≥ 7`, else the last one. | `subscriptionActions.js:49-67` |
-| BR-APP-043 | **Follow nudge** appears when: filters are custom, no radar with the same filters exists, radars < max, not snoozed (14 days after 3 closes in a row), ≥ 8 h since the last nudge, and this filter hash was not offered before (last 40 kept). It shows 1.8 s after applying filters and hides after 10 s. | `followNudge.js:51-92`; `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:9,49-79`; `$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:9` |
+| BR-APP-043 | **Follow nudge** appears when: filters are custom, no radar with the same filters exists, radars < max, not snoozed (14 days after 3 closes in a row), ≥ 8 h since the last nudge, and this filter hash was not offered before (last 40 kept). It shows 1.8 s after applying filters and hides after 10 s. Since release `index-DY_DH7h-.js` a shown return banner counts as a shown nudge: it sets the last-nudge time and marks its filter hash as offered (BR-APP-071). | `followNudge.js:51-92`; `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:9,49-79`; `$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:9`; at the pin `followNudge.js:198-216` |
 | BR-APP-044 | **Radar flow wording:** `week == 0` → "none" (three different texts, LB-APP-033); `week / days < 1` → «N за неделю»; otherwise «≈N в день» with N rounded. | `format.js:230-243`; `Nudges.jsx:24-37`; `$KVADRO_ROOT/demo/app/src/features/radar/subscriptionStatus.js:19-31` |
 | BR-APP-045 | **Home-screen offer:** Telegram 8.0+, at least 3 distinct (UTC) visit days, never offered before, after 4 s calm on the list feed, and only when the status is `missed`. The settings row shows when the status is `missed` or `unknown`. | `$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js:8,84-87`; `$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:56-83`; `$KVADRO_ROOT/demo/app/src/features/settings/AboutGroup.jsx:19` |
-| BR-APP-046 | **Nudges** appear only on search / list with nothing else open. The home offer waits while a follow nudge, follow candidate or toast is present. | `App.jsx:181-189,605,618` |
+| BR-APP-046 | **Nudges** appear only on search / list with nothing else open. The home offer waits while a follow nudge, follow candidate or toast is present. Since release `index-DY_DH7h-.js`: the create-radar sheet also blocks them; the home offer also waits for a return banner and its pending check; the follow nudge is not offered while a banner check for the same filters is pending, is not rendered next to a banner and is dropped when one shows. A home offer already on screen is hidden by a follow nudge but not by a banner (LB-APP-049). | `App.jsx:181-189,605,618`; at the pin `App.jsx:233-242,724,737,756`, `useFollowNudge.js:70-72`, `useHomeScreenOffer.js:60-73`, `useReturnNudge.js:130-131` |
 | BR-APP-047 | **Radar sheet:** the delivery mode can be chosen only while the radar is active. «Скрыто: N» appears only when `hidden > 0`. The digest hint shows the user's digest hours. | `$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx:99-138` |
 | BR-APP-048 | **Turning a radar on** goes through the chat-access flow; turning it off does not. `ask_found` after pause or delete opens the survey. Delete requires a confirmation. | `$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:92-183` |
 | BR-APP-049 | **Survey:** `kvadro` → congratulations; `elsewhere` → "where" (7 options); `searching` / `stopped` → close with a toast. Answers are sent with `trigger` = `pause` / `delete`. | `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:93-122` |
@@ -1641,6 +1831,10 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-067 | **Clearing history** requires a confirmation and clears it on the server; there is no undo. | `ListingFeed.jsx:93-103` |
 | BR-APP-068 | **Listing stats:** 0 days → «Сегодня на рынке». Channels are shown only when > 1; views only when non-zero. | `$KVADRO_ROOT/demo/app/src/features/listing/sections/StatsSection.jsx:13-24` |
 | BR-APP-069 | **Price history:** one entry → a sentence with a clickable @channel; several → a timeline with the price and ±%, green when negative and orange when positive. | `$KVADRO_ROOT/demo/app/src/features/listing/sections/HistorySection.jsx:28-97` |
+| BR-APP-070 | **Search visits** (since release `index-DY_DH7h-.js`). Once meta is loaded, a visit is recorded for the current filter set on entering the search tab, on every filter change and, on the search tab, when the app goes to the background. A set is keyed by a djb2 hash of `filtersKey`, so `posted_days` is ignored; `kv-visits` keeps the 40 newest. The previous visit of a set is the stored time read at its first visit in the current visit session. A session starts with the app and again when the app returns from the background after ≥ 6 h, which also re-reads the radars. | `$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:35-72`; `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:37-45,98-148` (at the pin) |
+| BR-APP-071 | **Return banner** (since release `index-DY_DH7h-.js`). 1.8 s after a visit, with the radars loaded and nothing over the list, it is checked for that filter set. It needs: no radar with the same filters (for default filters, also none for the same base deal in the same city); radars < `max_subscriptions` (else 10); a previous visit ≥ 6 h ago; no snooze (14 days after 3 closes in a row, shared with the follow nudge); ≥ 8 h since the last nudge; no banner for this set in the last 2 days. Then `GET /api/feed/new` is sent, and the banner shows only for `count > 0` and hides after 15 s. Showing it stores the time for the set (`kv-nudge.back`, 40 kept), sets the last-nudge time, marks the set as offered and drops a follow nudge or its candidate; × counts towards the close streak. | `useReturnNudge.js:90-143`; `followNudge.js:150-216`; `Nudges.jsx:63-79`; `App.jsx:737-748` (at the pin) |
+| BR-APP-072 | **In-feed radar card** (since release `index-DY_DH7h-.js`) on the search list when meta and the radars are loaded, no radar exists for the search (the test of BR-APP-071), radars < max and the card is not snoozed. It follows the 8th card, or the last card when the list has 8 or fewer, is fully loaded and has no few-results note. The title depends on the base deal (rent, including daily, or sale), the button on custom or default filters. × hides it for 7 days on every search and does not count towards the nudge close streak. | `followNudge.js:219-244`; `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:98-106,128-139`; `App.jsx:297-303,629-645` (at the pin) |
+| BR-APP-073 | **«Включить радар» from the return banner or the in-feed card** resets the close streak. Custom filters go straight to the radar flow of BR-APP-041 with `entry` `return` / `feed`; default filters open the create-radar sheet (SCR-030), which sends the same `entry` (and `relaxed` when an option was picked). «+» and the empty radar screen open that sheet with `entry` `empty`, which it always sent before this release. | `App.jsx:399-415,629-635,712-721,749-753` (at the pin) |
 
 ## 5. Known legacy bugs (LB-APP, tag `bug`)
 
@@ -1748,6 +1942,8 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
 #### LB-APP-012 — DeviceStorage receives every key but restores only three (`bug`, CONFIRMED)
 
 - **Symptom:** `kv-locale` and `kv-new-*` are mirrored but never restored.
+- **Since release `index-DY_DH7h-.js`:** four keys are restored, `kv-visits` joined `DEVICE_SYNCED_KEYS` (`storage.js:6`
+  at the pin); the title keeps the audited count. `kv-locale` and `kv-new-*` are still not restored.
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/lib/storage.js:6,34-52`; `RECOVERY.md:171`.
 - **Proposed fix:** declare per key whether it is local-only, mirrored or restored; mirror only the keys that are
   restored.
@@ -1812,6 +2008,10 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
 - **Symptom:** `restoreFromDeviceStorage()` runs in an effect after mount. `kv-city` has already been read for the
   prefetch and the initial filters (`main.jsx:25`, `App.jsx:52`), so a restored city only takes effect on the next
   launch. `kv-locale` is never restored.
+- **Since release `index-DY_DH7h-.js`** the race also hits `kv-visits`: when meta arrives before the restore finishes,
+  the first visit reads an empty map, so no previous visit and no return banner this launch, and its write may replace
+  the DeviceStorage copy with that single entry (`useReturnNudge.js:44-49`, `followNudge.js:131-142`,
+  `storage.js:34-52,59-87`, all at the pin).
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:23-25`; `$KVADRO_ROOT/demo/app/src/main.jsx:25`.
 - **Proposed fix:** restore before the first data request (with a short timeout), or rely on the server profile
   (`meta.city`, `meta.locale`) as the source of truth.
@@ -1837,6 +2037,30 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
   filter, city picker or create-radar. Those keep rendering over the settings tab.
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:10-23`; overlay rendering `App.jsx:546-669`.
 - **Proposed fix:** one navigation reset (route change) that dismisses every overlay.
+
+#### LB-APP-048 — The return banner crashes the app on a response without `count` (`bug`, CONFIRMED; trigger UNVERIFIED, Q-APP-026)
+
+- **Symptom:** `useReturnNudgeTimer` skips the banner only for `!fresh || fresh.count <= 0`. A JSON body without `count`
+  passes, because `undefined <= 0` is false. The banner then calls `count.toLocaleString()` in render, a TypeError that
+  takes the whole app to the crash screen (SCR-045); a non-numeric `count` is rendered as text. A `204` is safe:
+  `apiFetch` returns `undefined`. The legacy contract states the trap (`$KVADRO_ROOT/docs/api.md:572-573` at the pin).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:117-136`;
+  `$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx:84-87` (at the pin);
+  `$KVADRO_ROOT/demo/app/src/lib/api/client.js:99-101`.
+- **Proposed fix:** show the banner only for a positive integer `count` and treat any other body as "no banner"; the
+  server always sends an integer (LB-API-055).
+
+#### LB-APP-049 — The return banner and the home-screen offer can be on screen together (`bug`, CONFIRMED)
+
+- **Symptom:** the home offer waits for a banner and its check before it starts, but an offer already on screen is
+  rendered with `!followNudge` only. A banner that appears during the offer's 10 s (a filter change starts a new check)
+  is rendered as well. Both are `.nudge` cards fixed at the same place above the tab bar, so the banner covers the
+  offer, which is then used up unseen (LB-APP-040).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/app/App.jsx:724,737`;
+  `$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:60-73`; `$KVADRO_ROOT/demo/app/src/styles/nudges.css:2-7` (at the
+  pin).
+- **Proposed fix:** one nudge slot with a fixed priority (return banner, follow nudge, home offer): a higher nudge hides
+  a lower one, and a hidden home offer stays available for later.
 
 ## 5b. Questionable UX and logic decisions (LB-APP, tag `decision`)
 
@@ -1941,8 +2165,8 @@ are proposals.
 #### LB-APP-037 — Most layers are not tracked as screens (`decision`, CONFIRMED)
 
 - **Symptom:** these layers never produce a `$pageview`: language picker, no-access screen, first-launch city picker,
-  map card, actions sheet, report view, photo viewer, market sheet, fullscreen map, radar sheet, survey, settings
-  sub-pages, hidden list.
+  map card, actions sheet, report view, report detail view, photo viewer, market sheet, fullscreen map, radar sheet,
+  survey, settings sub-pages, hidden list.
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:26-44`.
 - **Proposed fix:** derive screen names from routes or layers; keep the existing names for continuity.
 
@@ -2004,6 +2228,17 @@ are proposals.
 - **Proposed fix:** on `401`, show a dedicated «Сессия устарела — закройте и откройте приложение снова» state with
   `WebApp.close()`, and report it once.
 
+#### LB-APP-050 — The return banner and the follow nudge count as shown before they render (`decision`, CONFIRMED)
+
+- **Symptom:** `markReturnShown` / `markNudgeAsked` and `return_prompt_shown` / `follow_prompt_shown` run when the
+  nudge is scheduled. The render waits until no toast is shown, and a filter change in the meantime drops the nudge.
+  Such a nudge was never seen, yet it starts the 8 h cooldown (and, for the banner, the 2-day cooldown of its filters),
+  marks the filter hash as offered and is counted as shown in analytics.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:125-136`;
+  `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:24-33,79-88`; `$KVADRO_ROOT/demo/app/src/app/App.jsx:737,756` (at
+  the pin).
+- **Proposed fix:** record the nudge as shown, and send `*_shown`, from its first render, not when it is scheduled.
+
 ## 6. Reconstruction guesses and open questions
 
 ### 6.1 `// TODO: inferred from build` spots (4)
@@ -2044,18 +2279,19 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 | Q-APP-020 | Do the parity mocks match real API shapes for every state above? | Record real responses for each endpoint on a test account and diff them against `tools/parity/mocks*.mjs`. |
 | Q-APP-021 | Does `GET /api/bot` return `support`, and which account? | Call `GET /api/bot`. |
 | Q-APP-022 | Do support staff use `?map=gl|leaflet|auto` overrides? | Ask the operators; otherwise treat it as a debug-only feature. |
+| Q-APP-026 | Can `GET /api/feed/new` answer `200` without a numeric `count`? (LB-APP-048) | Call it on a test account with narrow filters, with `since` in the future and with `since=0`, and record the status and the body. |
 
 ## 7. Summary
 
 | Kind | Count | Status |
 | ---- | ----- | ------ |
-| Screens and states (SCR) | 45: 17 `screen`, 11 `sheet`, 7 `overlay`, 2 `modal`, 8 `state` | 45 CONFIRMED (SCR-011 contains 2 inferred style details) |
-| i18n keys | 461 per locale (ru, uz_Latn, en); 0 missing; 14 plural; 6 unused | CONFIRMED |
-| Client storage keys | 10 `kv-*` (5 mirrored to DeviceStorage, 3 restored) + 1 dev-only | CONFIRMED |
-| Analytics | 16 journal events (`POST /api/events`) + PostHog `$pageview` with 16 screen names, autocapture, web vitals, exceptions, replay | CONFIRMED |
-| Business rules (BR-APP) | 69 | CONFIRMED |
-| Legacy bugs (LB-APP, `bug`) | 24 (LB-APP-001 to 023, 046; 14 from RECOVERY.md §7, 10 found here) | 18 CONFIRMED; 6 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022) |
-| Questionable decisions (LB-APP, `decision`) | 23 (LB-APP-024 to 045, 047) | CONFIRMED |
+| Screens and states (SCR) | 47: 17 `screen`, 11 `sheet`, 8 `overlay`, 2 `modal`, 9 `state` (SCR-046 and SCR-047 since `index-DY_DH7h-.js`) | 47 CONFIRMED (SCR-011 contains 2 inferred style details) |
+| i18n keys | 482 per locale (ru, uz_Latn, en) at the pinned release, 461 at the audit (§3.1); 0 missing; 15 plural at the pin (14 up to `index-BNLZFfL0.js`); 6 unused | CONFIRMED |
+| Client storage keys | 11 `kv-*` at the pin (6 mirrored to DeviceStorage, 4 restored; 10, 5 and 3 at the audit) + 1 dev-only | CONFIRMED |
+| Analytics | 21 journal events (`POST /api/events`) at the pin, 16 at the audit, + PostHog `$pageview` with 16 screen names, autocapture, web vitals, exceptions, replay | CONFIRMED |
+| Business rules (BR-APP) | 73 (BR-APP-070 to 073 since `index-DY_DH7h-.js`) | CONFIRMED |
+| Legacy bugs (LB-APP, `bug`) | 26 (LB-APP-001 to 023, 046, 048, 049; 14 from RECOVERY.md §7, 12 found here) | 19 CONFIRMED; 7 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048) |
+| Questionable decisions (LB-APP, `decision`) | 24 (LB-APP-024 to 045, 047, 050) | CONFIRMED |
 | `TODO: inferred from build` | 4 (3 in `src`, 1 in `vite.config.js`) | UNVERIFIED |
-| Open questions (Q-APP) | 22 | open |
+| Open questions (Q-APP) | 23 (Q-APP-001 to 022 and 026 here; Q-APP-023 to 025 are in `24`) | open |
 | Telegram integration points (TMA) | 45 in `05-telegram-miniapp-audit.md` (39 used, 6 confirmed absences) | CONFIRMED (2 server-side parts DOCUMENTED_ONLY) |

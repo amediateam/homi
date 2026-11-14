@@ -5,8 +5,8 @@
 | Stage | B |
 | Status | TODO |
 | Depends on | WP-25, WP-26 |
-| Size | ≈ 3 000 changed lines, L |
-| Behaviour reference | `03` §2 (SCR-026 … SCR-031, SCR-040), §3.2 (nudge storage), §3.3 (events), §3.4 (constants), §4, §5, §5b; `05` TMA-033 and §2; task files KV-FE-074, KV-FE-075, KV-FE-076, KV-FE-077, KV-FE-078, KV-FE-079, KV-FE-080, KV-FE-030 |
+| Size | ≈ 3 700 changed lines, L — above the 3 000 of the PR rule since the return banner and the radar card in the feed of `index-DY_DH7h-.js` joined; steps 14 – 16 hold them, so they can go into a second PR on the same branch if the reviewer asks |
+| Behaviour reference | `03` §2 (SCR-026 … SCR-031, SCR-040, SCR-046, SCR-047), §3.2 (nudge and visit storage), §3.3 (events), §3.4 (constants), §4, §5, §5b; `05` TMA-033, TMA-040 and §2; `08` API-019, API-035; `09` F-RADAR-009, F-RADAR-010; task files KV-FE-074, KV-FE-075, KV-FE-076, KV-FE-077, KV-FE-078, KV-FE-079, KV-FE-080, KV-FE-030 |
 | Needs from the production track | Nothing new. `RADAR_CREATION_ENABLED` stays unset on staging and production (WP-11, DEC-51), so the radar tab deployed by this package shows its "soon" state there until WP-57 switches radars on |
 
 The task files above were written for another architecture. Their states, texts, constants, edge cases and test
@@ -15,21 +15,24 @@ ideas are taken; their file layout, navigation stack, API paths and transport ar
 ## Goal
 
 The whole radar part of the Mini App works on stubs: turning a radar on from the feed, the filters sheet and the
-nudge; the «Радар» tab with tiles and previews; the radar sheet; the new-radar and editor sheets; the «Нашли
-жильё?» survey; the follow nudge. One subscribe flow serves every entry point, and the "bot cannot write to you"
+nudges; the «Радар» tab with tiles and previews; the radar sheet; the new-radar and editor sheets; the «Нашли
+жильё?» survey; the follow nudge, the return banner «С вашего прошлого захода — N новых» and the radar card inside
+the search list. One subscribe flow serves every entry point, and the "bot cannot write to you"
 case asks for write access to HOMI's own bot. While the server has radars switched off, the tab says that radars
 are coming soon and nothing in the app offers one.
 
 ## Scope
 
-**In.** Owned audit items: screens SCR-026, SCR-027, SCR-028, SCR-029, SCR-030, SCR-031 and SCR-040; rules
-BR-APP-041, BR-APP-042, BR-APP-043, BR-APP-046, BR-APP-047, BR-APP-048, BR-APP-049 and BR-APP-063; defects
-LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
+**In.** Owned audit items: screens SCR-026, SCR-027, SCR-028, SCR-029, SCR-030, SCR-031, SCR-040, SCR-046 and
+SCR-047; rules BR-APP-041, BR-APP-042, BR-APP-043, BR-APP-046, BR-APP-047, BR-APP-048, BR-APP-049, BR-APP-063 and
+BR-APP-070 … BR-APP-073; defects LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034, LB-APP-036 and LB-APP-048 …
+LB-APP-050; features F-RADAR-009 and F-RADAR-010.
 
 - The subscribe flow (create, reactivate, already on, limit, widen) and the chat-access flow.
 - The radar tab, its empty state, tiles, status lines and previews; pull-to-refresh on the tab.
 - The radar sheet, the editor and the new-radar sheet (`FiltersForm` in its two radar modes), the survey.
-- The follow nudge and `NudgeHost` with its arbitration rules.
+- The follow nudge, the search visits, the return banner (SCR-046) and the radar card in the search list
+  (SCR-047); `NudgeHost` with one slot and a fixed priority.
 - The switched-off state (DEC-51): the "soon" state of the tab and the one rule that hides every way to create or
   change a radar.
 - Wiring of the buttons earlier packages left without an action: «Включить радар» in the filters footer (WP-25),
@@ -40,7 +43,8 @@ LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 - The filters form itself, the live count and the flow line: WP-25. Formatters (`formatFlow`, `filtersTitle`,
   `filtersAreaSummary`): WP-22.
 - Delivery of radar results, quiet hours and digests: the API and the bot (WP-45, WP-46, WP-57).
-- The home-screen nudge and the settings pages (digest time, quiet hours): WP-31.
+- The home-screen nudge and the settings pages (digest time, quiet hours): WP-31. The inline slot of the search
+  list that holds the radar card: WP-24. The storage keys and their DeviceStorage mirror: WP-21.
 - The event transport and screen tracking: WP-32. This package only calls `track()`.
 
 ## Decisions that bind this package
@@ -48,13 +52,13 @@ LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 | Decision | Consequence here |
 | -------- | ---------------- |
 | Rebuild and parity (DEC-32, DEC-46) | Rebuilt from the audit; the checklist below is the proof of parity |
-| Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014 and LB-APP-036 are fixed. LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
+| Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-036 and, from the pinned release, LB-APP-048, LB-APP-049 and LB-APP-050 are fixed (plain fixes in `09` §4.3; LB-APP-050 also changes when the follow nudge counts as shown). LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
 | Brand (DEC-40, 25 §2 rule 5) | The bot is HOMI's own. Every bot link and every text with the brand name goes through `lib/brand` and the `homi` catalogue layer |
 | Scope of Wave 1 (DEC-43) | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
-| Radars before delivery (DEC-51) | The server switches radars off until its bot can deliver them and says so in `GET /reference` (`radars_enabled`, WP-11). `radarsReady` stays what it was — a build-time constant that orders the frontend packages. Every radar entry point asks `useRadarsEnabled()` of WP-24, which needs both |
+| Radars before delivery (DEC-51) | The server switches radars off until its bot can deliver them and says so in `GET /reference` (`radars_enabled`, WP-11). `radarsReady` stays what it was — a build-time constant that orders the frontend packages. Every radar entry point asks `useRadarsEnabled()` of WP-24, which needs both. The return banner and the radar card in the feed are radar entry points too: while radars are switched off neither is shown, no `GET /listings/new` is sent, and only the local visit record runs — an approved consequence of DEC-51, listed as such in the checklist |
 | Routing (DEC-44, 25 §3.2) | Sheets are intercepting routes in the `@sheet` slot; Back closes editor, then radar sheet, then nothing (root tab) |
 | Session modes (25 §3.4) | Every read works with `initial` data from the server (cookie mode) and through `/bff` (header mode); every mutation is a Server Action that takes the token as an argument in header mode |
-| API methods (25 §4.2) | Methods used: `GET /radars` (with `include=previews` on the radar tab), `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow` (nudge), `GET /listings/count` and `GET /listings/flow` through `FiltersForm`, and `GET /settings` (digest hours). `{id}` is a ULID string (WP-13) |
+| API methods (25 §4.2) | Methods used: `GET /radars` (with `include=previews` on the radar tab), `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow` (follow nudge), `GET /listings/new` (return banner), `GET /listings/count` and `GET /listings/flow` through `FiltersForm`, and `GET /settings` (digest hours). `{id}` is a ULID string (WP-13) |
 | Demo marker (25 §4.4) | A radar answer with `meta.source = stub` shows the demo marker through `reportSource()` |
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`, "Closing the
@@ -107,12 +111,18 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 | `features/radars/radarReturn.ts` | `{ id, scrollY }` kept in module memory for the return from a radar feed |
 | `features/nudges/{NudgeHost.tsx,store.ts}` | Host and arbitration |
 | `features/nudges/{followNudge.ts,useFollowNudge.ts,FollowNudge.tsx}` | Rules, timing, card |
+| `features/nudges/visits.ts` | Search visits and visit sessions on `homi-visits` (BR-APP-070) |
+| `features/nudges/{returnNudge.ts,useReturnNudge.ts,ReturnNudge.tsx}` | Return banner: rules, timing, the `GET /listings/new` read, card |
+| `features/nudges/{feedRadar.ts,FeedRadarCard.tsx}` | Radar card in the search list: conditions, card, its seen event |
+| `features/nudges/shown.ts` | `useMarkShownOnRender(kind, mark)`: runs the "shown" bookkeeping in the effect of the first render (fix of LB-APP-050) |
 | `features/settings/{useSettings.ts,format.ts}` | `useSettings()` on `useResource('settings', …)` and `digestHours()`, `formatDigestHours()`; WP-31 extends both |
 
 ### Subscribe flow (`subscribe.ts`)
 
 One module, no UI. Callers pass `entry`: `filters` (filters footer), `few` (few-results note), `prompt` (follow
-nudge), `empty` (new-radar sheet).
+nudge), `return` (return banner), `feed` (radar card in the feed), `empty` (new-radar sheet opened from «+» or the
+empty tab); the new-radar sheet opened from the banner or the card passes `return` or `feed` (BR-APP-041,
+BR-APP-073, BR-API-086).
 
 1. Re-read `GET /radars` (through `refetch()`); when it fails, compare against the cached list.
 2. A radar with `sameFilters` (WP-22; `posted_days` ignored) that is active → no request, toast `toast.alreadyOn`,
@@ -166,6 +176,8 @@ Turning a radar on, creating, replacing and widening go through it; turning off,
 | `/radars/new`, `/radars/<id>`, `/radars/<id>/edit`, `/radars/found` | loaded directly or reached by a stale link: `router.replace(routes.radars())` once the reference data is there; nothing of the sheet is shown |
 | Few-results note, filters footer | their radar buttons are hidden (WP-24, WP-25 ask the same hook) |
 | Follow nudge | never offered: `offerFollowNudge` returns before the flow request |
+| Return banner | never checked: no wait, no `GET /listings/new`, nothing rendered. Visits are still recorded in `homi-visits`, so the banner has its history when radars come on |
+| Radar card in the feed | not passed into the inline slot of the list; nothing rendered, no event |
 | Radar list on the search tab | not requested |
 
 The tab itself stays in the tab bar. Pull-to-refresh on the "soon" state does nothing. A radar action that is
@@ -201,15 +213,30 @@ makes the radar's filters the search — the legacy "tab press clears radar-retu
 ### Nudges
 
 `NudgeHost` is mounted once by `AppShell` above the tab bar (z 35 on the ladder of `03` §3.6) and renders at most
-one nudge. `store.ts` holds `{ active: 'follow' | 'home' | null, followPending: boolean }`.
+one nudge. `store.ts` holds `{ active: 'return' | 'follow' | 'home' | null, followPending: boolean, returnPending:
+string | null }` (`returnPending` is the filter hash of a return check that waits or is in flight).
 
-- `nudgesAllowed` (BR-APP-046): the address is the feed list (`/`, no layer parameter), session `ready`.
-- The follow nudge may take the slot when `nudgesAllowed` and no toast is visible.
-- The home nudge (WP-31) may take it only when also `active === null` and `followPending === false`.
+- `nudgesAllowed` (BR-APP-046): the address is the feed list (`/`, no layer parameter), session `ready`. The
+  new-radar sheet has its own address, so no nudge shows while it is open.
+- One slot, fixed priority — the fix of LB-APP-049: return banner > follow nudge > home offer. A higher nudge takes
+  the slot from a lower one; a lower one never displaces a higher one. A displaced follow nudge, or its candidate,
+  is dropped without an event (BR-APP-071); a displaced home offer is hidden without an event and stays available
+  for later (WP-31 does not count it as used).
+- The return banner and the follow nudge take the slot when `nudgesAllowed` holds and no toast is visible.
+- The follow nudge is not offered while `returnPending` is the hash of the same filters (BR-APP-046).
+- The home nudge (WP-31) may take the slot only when `active === null`, `followPending === false` and
+  `returnPending === null`.
+- Shown means rendered — the fix of LB-APP-050. A nudge is marked as shown (`lastShown`, `asked`, `back`, its
+  `*_shown` event) by `useMarkShownOnRender` in the effect of its first render in the slot, not when it is
+  scheduled. A nudge that a toast, a filter change or a higher nudge drops before it renders leaves no trace: no
+  cooldown, no offered hash, no event.
 
 `homi-nudge` (policy mirrored and restored, `lib/storage.ts`): `{ asked: string[≤40], closed: number, quietUntil:
-number, lastShown: number }`; a broken value reads as `{ asked: [], closed: 0, quietUntil: 0, lastShown: 0 }`.
-The hash of a filter set is djb2 over `filtersKey(filters)`, unsigned, base 36.
+number, lastShown: number, back: Record<string, number>, feedOff: number }` — `back` (the time of the last return
+banner per filter hash, the 40 newest kept) and `feedOff` (end of the radar card's snooze) since legacy release
+`index-DY_DH7h-.js`; a broken value reads as `{ asked: [], closed: 0, quietUntil: 0, lastShown: 0, back: {},
+feedOff: 0 }`. The hash of a filter set is djb2 over `filtersKey(filters)`, unsigned, base 36, so `posted_days` is
+ignored.
 
 ## Files
 
@@ -222,17 +249,20 @@ New, under `frontend/app/`:
 - Every module of the table in "Design".
 - `tests/radars/{normalize,subscribe,radarStatus}.test.ts`, `tests/radars/{RadarSoon,RadarTiles,RadarSheet,
   RadarForms,FoundSheet}.test.tsx`, `tests/telegram/chatAccess.test.ts`, `tests/nudges/{followNudge.test.ts,
-  FollowNudge.test.tsx,NudgeHost.test.tsx}`.
-- `e2e/{radars,radar-subscribe,radar-forms,follow-nudge,radars-soon}.spec.ts`.
+  FollowNudge.test.tsx,NudgeHost.test.tsx}`, `tests/nudges/{visits,returnNudge,feedRadar,shown}.test.ts`,
+  `tests/nudges/{ReturnNudge,FeedRadarCard}.test.tsx`.
+- `e2e/{radars,radar-subscribe,radar-forms,follow-nudge,return-nudge,feed-radar,radars-soon}.spec.ts`.
 
 Changed:
 
-- `lib/api/bffAllowList.ts`: nothing to add — `GET radars` and `GET settings` are in the list of WP-22.
+- `lib/api/bffAllowList.ts`: nothing to add — `GET radars`, `GET settings` and `GET listings/new` are in the list
+  of WP-22.
 - `lib/search/useSearchState.ts` (drops `from=radar`), `features/shell/AppShell.tsx` (no `lastSearchHref` write
   under `from=radar`; mount `NudgeHost`), `features/shell/TopBar.tsx` («+» action).
 - `features/radars/capability.ts` (`radarsReady = true`), `features/radars/subscribe.ts` (stub of WP-24 replaced).
 - `features/filters/FiltersForm.tsx` and the footer (radar modes, «Включить радар» state), `features/feed/
-  FewResultsNote.tsx` (button). The apply handlers are not edited: the nudge registers
+  FewResultsNote.tsx` (button), `features/feed/FeedScreen.tsx` (passes `FeedRadarCard` into the `inline` slot of
+  WP-24). The apply handlers are not edited: the nudge registers
   `onFiltersApplied(offerFollowNudge)` of WP-25 (`features/filters/applyFilters.ts`).
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the keys of "Behaviour to reproduce", "New and
   overridden texts".
@@ -264,9 +294,14 @@ Changed:
 13. `NudgeHost`, `store.ts`, `followNudge.ts`, `useFollowNudge.ts`, `FollowNudge.tsx`; register
     `onFiltersApplied(offerFollowNudge)` once in `NudgeHost` — `applyFilters` of WP-25 notifies for the filters
     sheet, the quick filter sheet and the lasso (WP-28), so no handler is touched.
-14. Catalogue overrides and the new keys; component tests; Playwright specs in both session modes; the tag
+14. `visits.ts` with the visit sessions on `tg.onHidden` and `tg.onVisible`; `shown.ts`, and the follow nudge
+    moved onto it (LB-APP-050); the priority of the slot (LB-APP-049).
+15. Return banner: `returnNudge.ts`, `useReturnNudge.ts` with the `GET /listings/new` read, `ReturnNudge.tsx`, the
+    `entry` parameter of the new-radar sheet.
+16. Radar card in the feed: `feedRadar.ts`, `FeedRadarCard.tsx`, the `inline` slot in `FeedScreen`.
+17. Catalogue overrides and the new keys; component tests; Playwright specs in both session modes; the tag
     `@radars-off` in `playwright.config.ts` and its workflow step.
-15. Run the checklist in three locales and two themes; update the queue and the handoff.
+18. Run the checklist in three locales and two themes; update the queue and the handoff.
 
 ## Behaviour to reproduce
 
@@ -372,8 +407,10 @@ Both mount `FiltersForm` (WP-25). Differences from the search mode (BR-APP-021 i
 
 - No «Опубликовано» section, no «Показать» button in either mode.
 - Submit: medium haptic; the button is disabled while the request runs (no spinner).
-- New: `subscribe(draft, 'empty', relaxed)`; `ok` → `back()` and the toast; not `ok` → the sheet stays with the
-  draft.
+- New: `subscribe(draft, entry, relaxed)`; `entry` is the address parameter `entry` when it is `return` or `feed`
+  (the sheet opened from «Настроить» of the return banner or «Настроить радар» of the radar card in the feed,
+  BR-APP-073), and `empty` otherwise («+», the empty radar tab, a direct load); `ok` → `back()` and the toast; not
+  `ok` → the sheet stays with the draft.
 - Edit: `saveEdit(id, draft, relaxed)` = `withChatAccess(replaceRadar(id, { filters, relaxed? }))`; same closing
   rule; a `not_found` answer → `common.saveFailed` and a list reload.
 - A relax chip replaces the draft with the option's filters and remembers its code as `relaxed`.
@@ -401,14 +438,17 @@ address → `router.replace(routes.radars())`. A second `ask_found` while the su
 ### Follow nudge (SCR-040, BR-APP-043, BR-APP-046)
 
 1. `notifyFiltersApplied` of WP-25 calls the registered `offerFollowNudge(filters)`; `followPending` becomes true.
+   It is not offered while a return check for the same filters is pending (`returnPending`, BR-APP-046).
 2. When `nudgesAllowed` holds and no toast is visible, wait 1 800 ms. A filter change in between drops the
-   candidate.
+   candidate; so does a return banner that takes the slot (BR-APP-071).
 3. `shouldShowFollowNudge`: radars are switched on (`useRadarsEnabled()`), filters are custom (`isCustomFilters`),
    no radar has the same filters, radars < the limit, `now ≥ quietUntil`, `now − lastShown ≥ 8 h`, hash not in
-   `asked`. Otherwise stop.
+   `asked`. Otherwise stop. A shown return banner counts as a shown nudge here: it sets `lastShown` and puts its
+   hash into `asked` (BR-APP-043).
 4. `GET /listings/flow` with an `AbortSignal`, through `normalizeFlow` (fix of LB-APP-006: an empty answer shows
    the card without a flow line instead of crashing).
-5. Mark asked (keep the newest 40, set `lastShown`), `track('follow_prompt_shown')`, show.
+5. Take the slot and render. On the first render (fix of LB-APP-050; legacy marks it when it is scheduled): mark
+   asked (keep the newest 40), set `lastShown`, `track('follow_prompt_shown')`.
 
 Card: radar icon; `nudge.title` «Включить радар по этому поиску?»; `nudge.what` «Новые — сразу в чат»; flow line
 (`nudge.none` «Таких пока нет — радар пришлёт, как появятся», `alert.week`, `alert.day`, or nothing); «Включить»
@@ -421,6 +461,88 @@ Back does not close it.
 | × | hide, closes + 1 (3 in a row → `quietUntil = now + 14 days`, counter reset), `track('follow_prompt_closed')` |
 | «Включить» | medium haptic, hide, closes reset to 0, `subscribe(filters, 'prompt')` |
 | Filters change, navigation, a toast, a layer opens | hide, no event |
+| A return banner takes the slot | hide, no event |
+
+### Search visits (BR-APP-070)
+
+Since legacy release `index-DY_DH7h-.js`. `features/nudges/visits.ts` keeps `homi-visits` of WP-21: `{ <filter
+hash>: ms }`, the last search visit per filter set, the 40 newest kept; the hash is the one of `homi-nudge`.
+
+- Once the reference data is loaded, a visit of the current filters is recorded on entering the search tab (`/`
+  and `/map`), on every filter change, and — on the search tab — when the app goes to the background
+  (`tg.onHidden`, TMA-040). Visits are recorded whether radars are switched on or not.
+- A visit session starts with the launch and again when the app becomes visible after at least 6 h in the
+  background (`tg.onVisible`); a new session also re-reads the radar list.
+- The previous visit of a filter set is the stored time read at its first visit in the current session; module
+  memory (`sessionVisits`) keeps it for the rest of the session, while the stored time moves to now with each
+  visit.
+- `homi-visits` is restored from DeviceStorage before the first data request (WP-21), so the first visit of a
+  launch reads the restored map — the legacy race of LB-APP-021 that loses it does not occur.
+
+### Return banner (SCR-046, BR-APP-071)
+
+1. After a recorded visit, with `nudgesAllowed`, nothing over the list, radars switched on (`useRadarsEnabled()`)
+   and the reference data and the radar list loaded: `returnPending` = the hash; wait 1 800 ms. A change of the
+   filters or of the radar list, or a layer that opens, during the wait or the request aborts it (`AbortSignal`)
+   and clears `returnPending`.
+2. `shouldCheckReturn`: no radar with the same filters — for default filters also none for the same base deal in
+   the same city; radars < `limits.radars` (else 10); a previous visit at least 6 h ago; `now ≥ quietUntil` and
+   `now − lastShown ≥ 8 h` (shared with the follow nudge); no `back[hash]` in the last 2 days. Otherwise stop.
+3. `bffFetch('listings/new', { query: { ...toApiQuery(filters), since: Math.floor(previousVisit / 1000) }, signal
+   })`. Any error ends the check silently: no banner, no toast (API-035).
+4. Only a positive integer `count` (`Number.isInteger(count) && count > 0`) shows the banner — the client half of
+   the fix of LB-APP-048: `0`, a missing `count`, `null`, a string or a fraction show nothing and never throw. The
+   server half is WP-12 (`count` always an integer).
+5. The banner takes the slot (a follow nudge or its candidate is dropped, a home offer is hidden). On its first
+   render (LB-APP-050): `back[hash] = now` (the 40 newest kept), `lastShown = now`, the hash into `asked`,
+   `track('return_prompt_shown', { n: count, custom })`. `custom` is `isCustomFilters(filters)` here and in every
+   event below.
+
+Card: the `.nudge` card of the follow nudge — radar icon; bold title `back.title` «С вашего прошлого захода —
+{count}», where `{count}` is the number through `formatNumber` (WP-22) followed by the plural `back.new` («новое»,
+«новых»), so «С вашего прошлого захода — 12 новых» (uz «Oxirgi kirganingizdan beri — 12 ta yangi», en «12 new since
+your last visit»); the hint `back.what` «Радар пришлёт следующие сразу — узнаете о них первыми», which wraps
+instead of being cut; the button «Включить» (`nudge.enable`) for custom filters or «Настроить» (`nudge.setup`) for
+default filters, with a medium haptic; × (aria `common.close`). It is rendered only without a toast, on the feed
+list and while the filters still match; the 15 s run from its first render. No Back handler; a tap outside does not
+close it.
+
+| Ends by | Effect |
+| ------- | ------ |
+| 15 s | hide, `track('return_prompt_expired', { custom })` |
+| × | hide, closes + 1 (the streak of the follow nudge: 3 in a row → `quietUntil = now + 14 days`), `track('return_prompt_closed', { custom })` |
+| «Включить» (custom filters) | hide, closes reset to 0, `subscribe(filters, 'return')` (BR-APP-073) |
+| «Настроить» (default filters) | hide, closes reset to 0, `router.push(routes.radarNew({ ...q, entry: 'return' }))`, `q` = the current search parameters — the new-radar sheet with these filters, which sends `entry: 'return'` and `relaxed` when a chip was picked |
+| Filters change | hide, no event |
+
+### Radar card in the search list (SCR-047, BR-APP-072)
+
+Since legacy release `index-DY_DH7h-.js`. `FeedScreen` passes `FeedRadarCard` into the `inline` slot of
+`ListingFeed` (WP-24), which places it after the 8th card, or after the last card of a short, fully loaded list
+without the few-results note. It is not a nudge: it scrolls with the list and never takes the slot of `NudgeHost`.
+
+- Rendered when radars are switched on (`useRadarsEnabled()`), the reference data and the radar list are loaded,
+  no radar exists for the search (the first condition of step 2 above), radars < the limit, and `now ≥ feedOff`.
+- Layout: a section with the animated radar sweep and two blips (static in lite mode and under reduced motion), a
+  22 px title, the hint, a full-width primary button with the radar icon and a medium haptic, and × in the top
+  right corner (aria `common.close`).
+- Texts: title `feedRadar.titleRent` «Хорошие квартиры снимают в первые часы» for rent, daily rent included, or
+  `feedRadar.titleSale` «Выгодные квартиры продают быстро» for sale; hint `feedRadar.what` «Включите радар — новые
+  по этому поиску придут в Telegram сразу, как появятся.»; button `feedRadar.enable` «Включить радар» for custom
+  filters or `feedRadar.setup` «Настроить радар» for default filters.
+- Button: closes reset to 0; custom filters → `subscribe(filters, 'feed')`; default filters →
+  `router.push(routes.radarNew({ ...q, entry: 'feed' }))` with `q` as above (BR-APP-073).
+- × → `feedOff = now + 7 days`, hidden on every search; `track('feed_radar_closed', { custom })`. This close does
+  not count towards the streak of the nudges.
+- `track('feed_radar_shown', { custom })` once 60 % of the card is visible (`IntersectionObserver`, threshold 0.6),
+  at most once per launch per filter hash (module memory); never where `IntersectionObserver` is missing.
+
+### Constants of the two (`03` §3.4)
+
+| Item | Value |
+| ---- | ----- |
+| Return banner | check 1.8 s after a visit; previous visit ≥ 6 h ago; once per filter set per 2 days; auto-hide 15 s; 40 visit hashes and 40 banner hashes kept; the 8 h cooldown and the 14-day snooze shared with the follow nudge |
+| Radar card in the feed | after 8 cards; × hides it for 7 days; seen at 60 % visibility |
 
 ### New and overridden texts
 
@@ -433,6 +555,11 @@ New keys of the switched-off state (`homi` layer; uz and en are proposals for th
 | --- | -- | -- | -- |
 | `radar.soon.title` | «Радар скоро заработает» | «Radar tez orada ishga tushadi» | «Radar is coming soon» |
 | `radar.soon.body` | «Мы включим уведомления о новых объявлениях в ближайшее время.» | «Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz.» | «We’ll turn on alerts about new listings shortly.» |
+
+The nine keys of the return banner and the radar card in the feed — `back.title`, `back.new`, `back.what`,
+`feedRadar.titleRent`, `feedRadar.titleSale`, `feedRadar.what`, `feedRadar.enable`, `feedRadar.setup`,
+`nudge.setup` — are legacy keys of the pinned release and arrive with the import of WP-20; none of them carries the
+brand word, so none needs an override.
 
 Legacy values with the brand word must have an override in the `homi` layer (the WP-20 test fails without one).
 Check and add: `found.text` «Подскажите одной кнопкой — так мы поймём, помогает ли HOMI искать.», `found.kvadro`
@@ -453,7 +580,7 @@ the brand word only.
   starter; `radar_limit` uses the reference maximum or 10; `radar_duplicate` → already on; `radars_disabled` → the
   "soon" toast and `ok: false`; other error → save failed;
   `posted_days` kept by default and `null` with `dev005RadarDropsPostedDays`; two calls with one key share a
-  request; list re-read failure falls back to the cache.
+  request; list re-read failure falls back to the cache; `entry` `return` and `feed` reach the create body.
 - `chatAccess.test.ts`: granted → one retry and `chat_access_allowed` once; declined → `chat_access_declined`, no
   confirm; version 6.8 → confirm, OK opens the bot link; granted but still `no_chat` → confirm once; other failures
   pass untouched; no bot username → no confirm; concurrent calls share one native sheet.
@@ -461,7 +588,22 @@ the brand word only.
   of `dev021OneFlowVocabulary`.
 - `followNudge.test.ts` (fake clock): rule matrix (radars switched off, default vs custom filters, existing radar,
   at the limit, cooldown 8 h, snooze after 3 closes, 40 hashes kept, broken JSON); stable hash for equal filters;
-  with radars off no flow request is sent.
+  with radars off no flow request is sent; not offered while a return check of the same hash is pending; a shown
+  return banner starts its cooldown and marks its hash.
+- `visits.test.ts` (fake clock): a visit on entering the tab, on a filter change and on `onHidden`, none before the
+  reference data; the 40 newest kept; the previous visit is the stored time at the first visit of the session;
+  visible again after 5 h 59 min keeps the session, after 6 h starts a new one and re-reads the radars;
+  `posted_days` does not change the hash; broken JSON reads as empty.
+- `returnNudge.test.ts` (fake clock): rule matrix (radars switched off → no request; a radar with the same
+  filters; default filters with a radar of the same base deal and city; at the limit; previous visit 5 h 59 min
+  and 6 h ago; snooze; 8 h cooldown; `back` 1 and 2 days old); the request carries the filters and `since` in
+  seconds; `count` `1` and `12` show, `0`, `"12"`, `null`, `1.5` and a missing `count` show nothing and do not
+  throw (LB-APP-048); an error shows nothing; a change of filters or radars during the wait or the request aborts
+  it.
+- `feedRadar.test.ts`: the four conditions (radars off, a radar for the search, at the limit, `feedOff` ahead or
+  past); the title per deal (long rent, daily rent, sale); the button per custom or default filters.
+- `shown.test.ts`: a nudge dropped before its first render changes neither `lastShown`, `asked` nor `back` and
+  sends no event; the first render marks once, a re-render does not mark again (LB-APP-050).
 
 **Component (Vitest + Testing Library).**
 
@@ -477,7 +619,17 @@ the brand word only.
   pending; sheet stays open on failure.
 - `FoundSheet`: each answer and each `where` code calls the right action; toasts; share hidden without a bot.
 - `FollowNudge`, `NudgeHost`: flow `null`, none, week, day; auto-hide at 10 s; × counts; home slot refused while a
-  follow nudge or candidate exists.
+  follow nudge, its candidate or a pending return check exists; a return banner hides a home offer and drops a
+  follow nudge; a follow nudge never displaces a return banner (LB-APP-049).
+- `ReturnNudge`: titles for 1 («новое»), 12 («новых») and 1 234 (number format) in three locales; «Включить» for
+  custom, «Настроить» for default filters; 15 s → `return_prompt_expired`; × → `return_prompt_closed` and the
+  streak + 1; «Включить» → `subscribe(filters, 'return')`; «Настроить» → `/radars/new` with `entry=return`; not
+  rendered under a toast; `return_prompt_shown { n, custom }` once, on the first render.
+- `FeedRadarCard`: rent and sale titles; «Включить радар» and «Настроить радар» with their actions (`entry`
+  `feed`); × → `feedOff` 7 days ahead and `feed_radar_closed`, the streak unchanged; `feed_radar_shown` at 60 %
+  once per hash, never without `IntersectionObserver`; static art in lite mode.
+- `RadarForms` also: `entry=return` and `entry=feed` in the address create with that `entry`; no parameter or
+  another value → `empty`.
 
 **End to end (Playwright, fake Telegram, cookie mode and header mode).**
 
@@ -488,6 +640,14 @@ the brand word only.
 - `radar-forms.spec.ts`: «+» → new radar → toast, sheet closed; edit → save → toast.
 - `follow-nudge.spec.ts`: apply custom filters → card after 1.8 s → «Включить» → the success toast (the
   `entry: 'prompt'` argument travels inside a Server Action and is asserted in `subscribe.test.ts`).
+- `return-nudge.spec.ts` and `feed-radar.spec.ts` use a search that no fixture radar of WP-13 covers (both offers
+  disappear when a radar for the search exists).
+- `return-nudge.spec.ts`: `homi-visits` seeded before launch with a visit 7 h ago for the default filters → after
+  1.8 s «С вашего прошлого захода — N новых» with «Настроить» → «Новый радар» with the search filters; the same with
+  custom filters → «Включить» → the success toast; the scenario `new_none` → no banner; × hides it; a visit 1 h ago
+  → no banner and no `/bff/listings/new` request.
+- `feed-radar.spec.ts`: the card after the 8th card of the default feed; the scenario `few` with custom filters →
+  after the 5th card; × → absent on the next search too; «Настроить радар» opens «Новый радар».
 - `radars-soon.spec.ts`, tagged `@radars-off` — the switched-off state end to end. Its switch is the API's env
   value, not a stub scenario: `radars_enabled` is HOMI's configuration, and the cached reference call never
   forwards the scenario cookie (WP-22). The default run (API with `RADAR_CREATION_ENABLED=true`, the value of
@@ -497,11 +657,14 @@ the brand word only.
   the key to `false` in the backend's env file and `make dev-start`, with `E2E_BASE_URL`. Cases, in both session
   modes: the «Радар» tab shows the two texts and no «+»; a direct load of `/radars/new` and of
   `/radars/<fixture id>` ends on `/radars`; a feed with the scenario `few` shows the note without the radar
-  button; the filters footer has no «Включить радар»; applying custom filters shows no nudge after 3 s; no request
-  to `/bff/radars` and no radar Server Action was sent during the spec.
+  button; the filters footer has no «Включить радар»; applying custom filters shows no nudge after 3 s; with
+  `homi-visits` seeded 7 h back no return banner appears and no `/bff/listings/new` request is sent; the default
+  feed has no radar card after its 8th card; no request to `/bff/radars` and no radar Server Action was sent during
+  the spec.
 - States the default stub answers cannot produce use the scenarios of WP-13 through the `homi_stub_scenario`
   cookie that WP-22 forwards: `no_chat`, `radar_limit`, `radar_duplicate`, `existing`, `starter`, `few`,
-  `ask_found`, and the reserved `source_unavailable` for a failing save. The stub list never changes after a
+  `ask_found`, and the reserved `source_unavailable` for a failing save; of WP-12 `new_none` and `new_one` for the
+  return banner. The stub list never changes after a
   write, so the ✓ «Радар включён» state is shown with a search equal to the filters of a fixture radar, and
   «Радар снова включён» with the filters of the paused fixture radar.
 
@@ -515,8 +678,10 @@ backend env has `RADAR_CREATION_ENABLED=true` as `backend/.env.example` does) wi
 once more inside Telegram on staging and production in WP-57, right after it switches radars on.
 
 - [ ] Radars switched off: the «Радар» tab shows «Радар скоро заработает» with its second line and no button; no
-      «+»; the few-results note and the filters footer offer no radar; no nudge appears; a radar sheet address
-      opens the tab. Seen inside Telegram on staging and production, in three languages.
+      «+»; the few-results note and the filters footer offer no radar; no nudge appears — neither the follow nudge
+      nor the return banner, and the search list has no radar card (both offer a radar: an approved consequence of
+      DEC-51, a difference from legacy until WP-57); a radar sheet address opens the tab. Seen inside Telegram on
+      staging and production, in three languages.
 - [ ] «Радар» tab: spinner, then tiles; a failed list shows the error state and «Повторить» reloads it.
 - [ ] No radars: sweep art, both texts and «Включить радар»; the art is static in lite mode.
 - [ ] Tile shows collage or icon, title, area summary and status; a paused tile is greyscale and reads «На паузе».
@@ -552,6 +717,22 @@ once more inside Telegram on staging and production in WP-57, right after it swi
 - [ ] Follow nudge appears 1.8 s after applying custom filters, never for default filters, never twice for the same
       filters, hides after 10 s; three closes silence it.
 - [ ] The nudge without a flow answer shows no flow line and no crash.
+- [ ] Return banner (SCR-046): back on a search at least 6 h after the last visit with these filters, «С вашего
+      прошлого захода — N новых» appears 1.8 s after the list opens, only for N > 0, with «Включить» for custom
+      filters and «Настроить» for default ones; it hides after 15 s; × counts towards the three-close snooze; it
+      does not come back for the same filters within 2 days, nor within 8 h of another nudge.
+- [ ] «Включить» on the banner turns the radar on with the toasts of the subscribe flow; «Настроить» opens «Новый
+      радар» with the search filters, and its radar is created with `entry: return` (unit test).
+- [ ] The return banner, the follow nudge and the home offer are never on screen together; the banner wins and a
+      hidden home offer comes back later (LB-APP-049).
+- [ ] A nudge that was dropped before it appeared (a toast or a filter change first) starts no cooldown and sends
+      no `*_shown` event (LB-APP-050, unit test).
+- [ ] A `GET /listings/new` answer without a positive integer `count` shows no banner and no crash screen
+      (LB-APP-048, unit test).
+- [ ] Radar card in the search list (SCR-047): after the 8th card, or after the last card of a short complete list
+      without the few-results note; «Хорошие квартиры снимают в первые часы» for rent, «Выгодные квартиры продают
+      быстро» for sale; «Включить радар» for custom, «Настроить радар» for default filters; × hides it for 7 days
+      on every search without counting towards the nudge snooze; absent once a radar for the search exists.
 - [ ] No text shows the legacy brand name; the demo marker is visible while radars come from stubs.
 - [ ] With every `dev…` flag off the labels are the legacy ones; the flagged branches pass their tests.
 

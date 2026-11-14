@@ -77,6 +77,7 @@ From `25` §4.2. `meta.source` of a live call must equal the column.
 | `GET /cities` | `source.cities` | `legacy` |
 | `GET /listings` | `source.listings.feed` | `legacy` |
 | `GET /listings/count` | `source.listings.count` | `legacy` |
+| `GET /listings/new` | `source.listings.new` | `legacy` |
 | `GET /listings/flow` | `source.listings.flow` | `legacy` |
 | `GET /listings/map` | `source.listings.map` | `legacy` |
 | `GET /listings/{number}` | `source.listings.card` | `legacy` |
@@ -275,7 +276,7 @@ done of `25` §14:
 | - | ---------------- | ----- |
 | 1 | Every work package is done | the queue; each PR with its signed checklist |
 | 2 | No method answers from a stub on production | `launch:check` rows 1 … 3; the driver table with observed `meta.source` |
-| 3 | All 45 screens and all bot scenarios have a signed checklist | WP-33 and the packages of stage B; `docs/testing/bot-pass.md` of WP-58 |
+| 3 | All 47 screens and all bot scenarios have a signed checklist | WP-33 and the packages of stage B; `docs/testing/bot-pass.md` of WP-58 |
 | 4 | The Mini App works on iOS, Android, Desktop and Web, in cookie mode and header mode | the device pass of WP-33, repeated on production data after WP-48 |
 | 5 | An instant card, a digest and a quiet-hours release were each observed on production | the checklist line of WP-57 with date and radar |
 | 6 | The landing is live with the privacy page | WP-61; the page answers on `homi.uz` in three languages |
@@ -294,7 +295,7 @@ done of `25` §14:
 ## Acceptance checklist
 
 - [ ] `php artisan launch:check` exits 0 on production; its output is attached.
-- [ ] `sources:list` on production shows `legacy` for the eleven features, empty rules, and no `stub`; a call of
+- [ ] `sources:list` on production shows `legacy` for the twelve features, empty rules, and no `stub`; a call of
       each method of the driver table shows the expected `meta.source`.
 - [ ] The "demo data" marker of the Mini App and the landing, and `bot.welcome.demo_notice`, are not shown anywhere
       on production.
@@ -302,7 +303,7 @@ done of `25` §14:
 - [ ] The production bot's profile is synced (`telegram:profile diff` exits 0) and the manual BotFather items are
       done: avatar, description picture, Main Mini App, privacy link, inline off, groups off.
 - [ ] The welcome text was read on production in ru, uz and en; it names HOMI and nothing of the old product.
-- [ ] All 45 screens and every bot scenario have a signed checklist; the links are in `docs/launch/checklist.md`.
+- [ ] All 47 screens and every bot scenario have a signed checklist; the links are in `docs/launch/checklist.md`.
 - [ ] The Mini App was opened from the production bot on iOS, Android, Desktop and Web, in cookie mode and in
       header mode, on legacy data.
 - [ ] Radars are switched on on production (`radar.creation_enabled` in `launch:check` row 4): the Mini App

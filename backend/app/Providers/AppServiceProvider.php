@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -56,8 +57,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Named limiters (app.uz catalogue A5, adapted): `api` applies to every /api route through the
-     * default `api` middleware group; the others are attached per route group.
+     * Named limiters (app.uz catalogue A5, adapted): `api` is attached to the whole /api/v1 group in
+     * routes/api.php; the others are attached per route group.
      */
     protected function configureRateLimiting(): void
     {
@@ -74,11 +75,13 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Rate-limit key: the authenticated model (users and sources do not collide) or the IP.
+     * The key comes from the model because a `Source` is not Authenticatable and has no
+     * `getAuthIdentifier()`.
      */
     private function actorKey(Request $request): string
     {
         $actor = $request->user();
 
-        return $actor !== null ? $actor::class.':'.$actor->getAuthIdentifier() : (string) $request->ip();
+        return $actor instanceof Model ? $actor::class.':'.$actor->getKey() : (string) $request->ip();
     }
 }

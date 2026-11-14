@@ -5,8 +5,8 @@
 | Stage | B |
 | Status | TODO |
 | Depends on | WP-23 |
-| Size | ≈ 2 300 changed lines, M |
-| Behaviour reference | `03` §1.11 (session-only state), §1.12 (server-formatted values), §2 screens SCR-007, SCR-008, SCR-009, §2.1 (shared components), §3.4 (constants), §4 rules listed under Scope; task files KV-FE-047, KV-FE-048, KV-FE-049, KV-FE-023 (session maps and first-paint ideas only) — behaviour, texts, edge cases and test ideas only; their file layout, request cache, API paths and transport are not taken |
+| Size | ≈ 2 400 changed lines, M |
+| Behaviour reference | `03` §1.11 (session-only state), §1.12 (server-formatted values), §2 screens SCR-007, SCR-008, SCR-009 and the place of SCR-047 in the list, §2.1 (shared components), §3.4 (constants), §4 rules listed under Scope; `02` BR-API-111, BR-API-156; task files KV-FE-047, KV-FE-048, KV-FE-049, KV-FE-023 (session maps and first-paint ideas only) — behaviour, texts, edge cases and test ideas only; their file layout, request cache, API paths and transport are not taken |
 | Needs from the production track | Nothing new. Before the deploy, confirm that the photo addresses in the stub fixtures of WP-12 load on staging and production and that their host is in the `img-src` list of WP-21 |
 
 ## Goal
@@ -28,14 +28,16 @@ built once here and reused by favourites, history, the map card and the listing 
 - Defects owned here: LB-APP-039 and LB-APP-042 fixed; LB-APP-038 behind `dev024ResetOnlyWithActiveFilters`
   (DEV-024, off).
 - v1 methods: `GET /listings`, `PUT /favorites/{number}`, `DELETE /favorites/{number}`.
-- Seams for later packages: `previewCache`, `radars/capability`, the generic `ListingFeed` and `useCursorFeed`.
+- Seams for later packages: `previewCache`, `radars/capability`, the generic `ListingFeed` and `useCursorFeed`, and
+  the inline slot of the search list that WP-30 fills with the radar card (SCR-047).
 
 **Out.**
 
 - Filters, quick filter, sort and city sheets behind the chips — WP-25 (the chips link to their WP-20
   placeholders until then). Listing screen — WP-26. Compact card on the map — WP-27 (variant built here).
 - Favourites and history screens — WP-29 (they reuse `ListingFeed`). Radar subscribe flow — WP-30.
-- Follow and home-screen nudges on the list — WP-30, WP-31. Screen tracking and the PostHog loader — WP-32.
+- The follow nudge, the return banner (SCR-046) and the radar card inside the list (SCR-047) — WP-30; the
+  home-screen nudge — WP-31. Screen tracking and the PostHog loader — WP-32.
 - Filter model, summaries, distance and money formatters, error mapping, session maps — WP-22 (used here).
 
 ## Decisions that bind this package
@@ -48,7 +50,7 @@ built once here and reused by favourites, history, the map card and the listing 
 | Server strings | 25 §4.5, Q-API-062 | The card renders the display strings of the contract; where the contract gives one combined string the legacy split of `03` §1.12 applies; nothing is re-formatted that the server already formatted |
 | Demo data | 25 §4.4, RK-27 | Every list answer reports `meta.source`; the marker of WP-20 shows on the feed while the source is `stub` |
 | Defects and flags | DEC-36 | LB-APP-039 and LB-APP-042 are fixed unconditionally; LB-APP-038 is a `DEV` row and stays behind its flag |
-| Baseline | 25 §8.1 | The badge order and the `price_kind` labels changed after the audited release; the order and labels below are replaced by the re-baselined audit of WP-02 where it differs |
+| Baseline | 25 §8, `wave-1/baseline.md` | The rules below are those of the pinned release `index-DY_DH7h-.js`. Since `index-Dbpp463V.js` «Хозяин» ranks above «Ниже рынка» (BR-APP-026, BR-API-111) and `price.kind: business` has the label `card.businessPrice` (BR-API-156); since `index-DY_DH7h-.js` the search list carries the radar card after its 8th card (SCR-047, built by WP-30 in the slot of this package) |
 | Photos | 25 §4.5 | Photo addresses arrive ready from the API; the client only derives the small variant |
 | Acceptance | DEC-46, 25 §9 | The checklist below is ticked in ru / uz / en and light / dark |
 
@@ -98,8 +100,13 @@ app/[locale]/(main)/page.tsx
   - next page with the last `meta.next_cursor`; `null`, a missing cursor, or a cursor equal to the previous one
     ends the list; items are de-duplicated by `number`; no automatic retry after an error; a change of `key`
     aborts the request in flight and drops its result.
-- `ListingFeed` (`source: 'feed' | 'favorites' | 'history'`, `path`, `query`, `initial`, `emptySlot`) is generic:
-  WP-29 passes other paths. It reads the session maps of WP-22: `favorite = favs[number] ?? item.favorite`,
+- `ListingFeed` (`source: 'feed' | 'favorites' | 'history'`, `path`, `query`, `initial`, `emptySlot`, `inline`) is
+  generic: WP-29 passes other paths. `inline` (a React node, used only with `source: 'feed'`) is rendered once, at
+  the place `inlineSlotIndex(visible, done, noteShown)` of `features/feed/inlineSlot.ts` gives: after the 8th
+  visible card; with 8 or fewer visible cards after the last one, but only when the list is fully loaded without
+  an error and the few-results note is not shown; otherwise not at all. With 9 visible cards it stands after the
+  8th and the note below the list (SCR-007, BR-APP-072). This package passes nothing into it; WP-30 passes the
+  radar card. It reads the session maps of WP-22: `favorite = favs[number] ?? item.favorite`,
   `viewed = seen[number] ?? item.viewed`, items in `hidden` are not rendered.
 - The sentinel is an `IntersectionObserver` with a root margin of 800 px.
 
@@ -156,10 +163,10 @@ New, under `frontend/app/`:
 
 - `features/feed/{ListingCard,ListingCardSkeleton,PhotoStrip,Photo,FavButton}.tsx`
 - `features/feed/{FeedHeader,FeedEmpty,FewResultsNote,ListingFeed,FeedScreen}.tsx`
-- `features/feed/{useCursorFeed,images,cardText,verdict,badges,fewResults}.ts`
+- `features/feed/{useCursorFeed,images,cardText,verdict,badges,fewResults,inlineSlot}.ts`
 - `features/radars/capability.ts`, `features/radars/subscribe.ts` (stub)
 - `lib/data/previewCache.ts`, `lib/actions/favorites.ts`, `lib/analytics/firstContent.ts`
-- `tests/feed/{verdict,badges,images,cardText,fewResults,useCursorFeed}.test.ts`
+- `tests/feed/{verdict,badges,images,cardText,fewResults,inlineSlot,useCursorFeed}.test.ts`
 - `tests/feed/{ListingCard,FavButton,FeedHeader,ListingFeed,FewResultsNote,FeedEmpty}.test.tsx`
 - `e2e/feed.spec.ts`
 
@@ -168,8 +175,8 @@ Changed:
 - `app/[locale]/(main)/page.tsx` (placeholder of WP-20 replaced)
 - `features/shell/TopBar.tsx` (mount `FeedHeader` in the `chips` region)
 - `app/[locale]/dev/ui/page.tsx` (card states for review)
-- `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` only if the re-baselined audit adds card labels that the
-  legacy catalogue lacks; no new key is planned
+- No catalogue change: `card.businessPrice` is a legacy key of the pinned release and arrives with the import of
+  WP-20
 
 ## Steps
 
@@ -182,7 +189,8 @@ Changed:
 5. `lib/actions/favorites.ts` and `FavButton` (optimistic, rollback, busy) with the `favs` session map.
 6. `lib/data/previewCache.ts`; the card as a link that records `seen` and the preview.
 7. `useCursorFeed` with its unit tests.
-8. `ListingFeed`: skeletons, cards, sentinel spinner, the two error forms, hidden-item filtering.
+8. `ListingFeed`: skeletons, cards, sentinel spinner, the two error forms, hidden-item filtering; `inlineSlot.ts`
+   and the `inline` prop with their tests.
 9. `(main)/page.tsx` with `FeedServer` under `<Suspense>` and `FeedScreen`; check both session modes by hand.
 10. `FeedHeader` in the top bar: chip set, labels, badge, links to the four sheet routes.
 11. `fewResults.ts`, `FewResultsNote`, `FeedEmpty` (all three sources), `features/radars/capability.ts`, the flag
@@ -239,11 +247,16 @@ current search parameters:
   `referrerPolicy="no-referrer"` and `decoding="async"`.
 - Over the photo: the badge (not in compact), the heart, the «viewed» eye (aria `card.viewedTitle` «Вы открывали
   это объявление»), and the status text of the listing as a warning tag at the bottom.
-- Badge priority (BR-APP-026), first match wins: «Подозрительно дёшево» (`card.suspiciousCheap`, warn) >
-  «Проверьте цену» (`card.checkPrice`, warn) > «Хозяин ✓» (`card.ownerVerified`) > «Ниже рынка»
-  (`card.belowMarket`, good) > «Хозяин» (`card.owner`).
-- Price line: amount, period, and «· первый взнос» (`card.downPayment`) for a down-payment price; without a price
-  «Цена договорная» (`card.negotiable`). The WP-12 contract delivers the legacy split already done:
+- Badge priority (BR-APP-026, BR-API-111), first match wins: «Подозрительно дёшево» (`card.suspiciousCheap`, warn) >
+  «Проверьте цену» (`card.checkPrice`, warn) > «Хозяин ✓» (`card.ownerVerified`) > «Хозяин» (`card.owner`) >
+  «Ниже рынка» (`card.belowMarket`, good). Before legacy release `index-Dbpp463V.js` «Ниже рынка» ranked above
+  «Хозяин»; the pinned order is the one above.
+- Price line: amount, period, and the price-kind label `priceKindLabel(kind)` of `cardText.ts`: «· первый взнос»
+  (`card.downPayment`) for `down_payment`, «· цена за бизнес, помещение в аренде» (`card.businessPrice`; uz
+  «biznes narxi, joy ijarada», en «business price, premises rented», `03` SCR-007) for `business` (BR-API-156),
+  nothing for `null` or any other value (Q-API-065); without a price «Цена договорная» (`card.negotiable`). The full and the compact card
+  show the label alike, so it appears in the feed, favourites, history and the map card (SCR-013); on the listing
+  screen only the share text carries it (WP-26). The WP-12 contract delivers the legacy split already done:
   `price.display` (amount), `price.period`, `price.kind` (`down_payment`, `business` or `null`), and `price` is
   `null` for a negotiable price — the client does not split a string. The same holds for `title` (already the
   short form), `posted.label` and `posted.when` (the two parts of the age), `market.label`, `market.median_delta`
@@ -333,12 +346,16 @@ Unit (Vitest, `frontend/app/tests/feed/`):
 
 - `verdict`: each of the six tones; delta +0.9 and above → "in N times"; rounding; unknown tone with a negative
   delta → "cheaper", neutral tone, short «−12%»; unknown tone with a positive delta; no verdict data → `null`.
-- `badges`: the priority table (every pair of adjacent ranks), nothing matching → `null`.
+- `badges`: the priority table (every pair of adjacent ranks), in particular `is_owner` with a `good` verdict →
+  «Хозяин» and `owner_verified` with a `good` verdict → «Хозяин ✓»; nothing matching → `null`.
 - `images`: derivation for a media address with a query; no derivation for a foreign address; Save-Data, `2g`,
   `3g`, lite → small only; otherwise `srcset` with 480w and 800w.
-- `cardText`: price from `display` and `period`; `kind: 'down_payment'`; `price: null` → negotiable; facts with
+- `cardText`: price from `display` and `period`; `kind: 'down_payment'` and `kind: 'business'` with their labels in
+  three locales; `kind: null` and an unknown string → no label; `price: null` → negotiable; facts with
   and without floor total; age from `posted.label` and `posted.when`; location with metro, with centre distance,
   with neither.
+- `inlineSlot`: 20 visible → after the 8th; 9 with the note → after the 8th; 8, fully loaded, no note → after the
+  8th; 5 fully loaded, no note → after the 5th; 5 with the note → none; 5 still loading → none; 0 → none (the empty state shows instead).
 - `fewResults`: truth table over source, error, loaded, visible count 0 / 9 / 10, active filters, stats, city
   name; other-deal mapping (rent → sale, daily → sale, sale → rent) and its "more than visible" rule.
 - `useCursorFeed`: pages until `null`; duplicate number across pages appears once; missing cursor ends; repeated
@@ -355,7 +372,8 @@ Component (Vitest + Testing Library):
 - `FeedHeader`: chip set with and without polygon, with room-less types, with one city, before reference data;
   owner chip for `any`, `no_agents`, `owners`; badge count; labels in three locales.
 - `ListingFeed`: three skeletons; each row of the error table; inline retry keeps the cards; hidden items removed;
-  favourites source hides items un-favourited in this launch.
+  favourites source hides items un-favourited in this launch; an `inline` node renders once at the place of
+  `inlineSlotIndex` with `source: 'feed'` and never with the other sources.
 - `FewResultsNote`, `FeedEmpty`: every text; button visibility; radar button absent while `radarsReady` is false,
   and — with the constant forced on — absent for `radars_enabled` `false` or missing, present for `true`;
   DEV-024 branch with the flag off and on; favourites and history variants.
@@ -407,9 +425,10 @@ Chips
 
 Card
 
-- [ ] Price shows amount and period; a down-payment price adds «· первый взнос»; no price shows «Цена договорная».
-- [ ] The badge follows the priority: «Подозрительно дёшево», «Проверьте цену», «Хозяин ✓», «Ниже рынка»,
-      «Хозяин».
+- [ ] Price shows amount and period; a down-payment price adds «· первый взнос», a business price «· цена за
+      бизнес, помещение в аренде»; no price shows «Цена договорная».
+- [ ] The badge follows the priority: «Подозрительно дёшево», «Проверьте цену», «Хозяин ✓», «Хозяин», «Ниже
+      рынка» — a listing from an owner that is below the market shows «Хозяин».
 - [ ] The market chip shows «−N% к рынку» / «+N% к рынку», «≈ обычная», «≈ спорно» with the tone colour; an
       unknown tone shows the real sign in the neutral colour.
 - [ ] The facts line shows title, area, floor, market and the pets mark when present, then the age.

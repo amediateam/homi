@@ -59,20 +59,22 @@ What the code does today and what is missing: [`project-context.md`](docs/handof
 
 ## 4. Plan for the development track
 
+Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md` (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2. T0, T4, T9, T10 and T11 are unchanged.
+
 | ID | Pri | Task | Depends on | Gate |
 |---|---|---|---|---|
-| T0 | P0 | Onboard, verify the environment, record the clean-machine run | access (§5) | — |
-| T1 | P1 | Telegram webhook pipeline | T0 | none for the tests; the optional live check needs your dev bot and an HTTPS tunnel tool (not chosen yet → approval) |
-| T2 | P1 | Intake accept layer (`/api/v1/intake/*`) | T0 | — |
-| T3 | P1 | OpenAPI export + CI drift check | T1, T2 | — |
-| T4 | P1 | Close Phase 3: dev-check additions, ADR-0014, docs, phase-3 report | T1–T3 | — |
-| T5 | P2 | Generated TypeScript API client | T3 | generator = new npm dependency → approval |
-| T6 | P2 | Telegram sign-in (`POST /api/v1/auth/telegram`) | T0 (T1 helps) | — |
-| T7 | P2 | Domain modules: Geo → Listings → dedup → pricing → radar → ARM → AI tagging | T2, T6 | product questions OPQ-1…5, PostGIS, AI vendor |
-| T8 | P2 | Frontend foundation in the Next apps | T5, T6 | test runner = new npm dependency → approval |
-| T9 | P2 | Guard rails for Codex (hook adapters) | T0 | first developer (Phase 4 D6) |
-| T10 | P2 | Technical protection of `main` (ADR-0010 git hooks) | T0 | new tools (e.g. gitleaks) need approval |
-| T11 | P3 | Remaining Phase 4–7 items | — | each item listed below |
+| T0 | P0 | Onboard, verify the environment, record the clean-machine run *(unchanged)* | access (§5) | — |
+| T1 | P1 | Telegram webhook pipeline *(Wave 1: WP-50)* | T0 | none for the tests; the optional live check needs your dev bot and an HTTPS tunnel tool (not chosen yet → approval) |
+| T2 | P1 | Intake accept layer (`/api/v1/intake/*`) *(Wave 2)* | T0 | — |
+| T3 | P1 | OpenAPI export + CI drift check *(Wave 1: WP-10)* | T1, T2 | — |
+| T4 | P1 | Close Phase 3: dev-check additions, ADR-0014, docs, phase-3 report *(unchanged)* | T1–T3 | — |
+| T5 | P2 | Generated TypeScript API client *(Wave 1: WP-10)* | T3 | generator = new npm dependency → approval |
+| T6 | P2 | Telegram sign-in (`POST /api/v1/auth/telegram`) *(Wave 1: WP-40)* | T0 (T1 helps) | — |
+| T7 | P2 | Domain modules: Geo → Listings → dedup → pricing → radar → ARM → AI tagging *(replaced by the native modules of Wave 1 and by Wave 2)* | T2, T6 | product questions OPQ-1…5, PostGIS, AI vendor |
+| T8 | P2 | Frontend foundation in the Next apps *(Wave 1: WP-03, WP-20 … WP-33)* | T5, T6 | test runner = new npm dependency → approval |
+| T9 | P2 | Guard rails for Codex (hook adapters) *(unchanged)* | T0 | first developer (Phase 4 D6) |
+| T10 | P2 | Technical protection of `main` (ADR-0010 git hooks) *(unchanged)* | T0 | new tools (e.g. gitleaks) need approval |
+| T11 | P3 | Remaining Phase 4–7 items *(unchanged)* | — | each item listed below |
 
 **T0 — onboard and verify.** Read first: §1, `docs/handoff/environment.md`.
 Result: running local stack, Codex wired to the repository (instructions, skills, Boost MCP), a written record of the clean-machine install.

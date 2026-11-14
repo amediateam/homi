@@ -44,8 +44,8 @@ Real screens (WP-23 … WP-31). Event transport and PostHog (WP-32).
   same decision — install it into `@homi/ui` at an exact version and name it with a vetting note in the PR. If any
   other package this specification names is missing, stop and fix WP-03.
 - `25` §4.4 and RK-27: the demo marker ships in this package because every merge reaches production (DEC-45).
-- `25` §8: the catalogues are imported from the legacy release pinned by WP-02 (Q-APP-024), not from the release
-  the audit describes; the key count is whatever that release has (461 in the audit, 472 in the current tree).
+- `25` §8: the catalogues are imported from the legacy release pinned by WP-02 (Q-APP-024), `index-DY_DH7h-.js`,
+  which the audit now describes: 482 keys per locale (461 at the release first audited; `03` §3.1).
 
 ## Design
 
@@ -212,8 +212,9 @@ frontend/packages/i18n/
    `sheet.posted.1`; `settings.theme` → `settings.theme._` next to `settings.theme.auto`; `settings.graphics` →
    `settings.graphics._` next to `settings.graphics.hint`. Code and specifications use the mapped name; the
    legacy name stays in `keys.json` so a release diff still matches. No other renaming is allowed.
-3. The 14 plural objects (`03` §3.1) become ICU plural messages selected by the argument `n`, with the forms the
-   locale has (`one/few/many/other` in ru, `one/other` in uz and en, `map.missing` `one/other` everywhere).
+3. The 15 plural objects (`03` §3.1; `back.new` of the return banner is the fifteenth, since legacy release
+   `index-DY_DH7h-.js`) become ICU plural messages selected by the argument `n`, with the forms the locale has
+   (`one/few/many/other` in ru, `one/other` in uz and en, `map.missing` `one/other` everywhere).
    Placeholders `{name}` are already ICU arguments.
 4. Characters that ICU message syntax treats specially (apostrophe, braces that are not placeholders, `#` inside a
    plural, `<`) are escaped; the importer prints every value it changed.
@@ -308,9 +309,10 @@ catalogues or under `frontend/app` outside `lib/brand`.
   favourites and history (DEC-53) or for the whole-city label (DEC-54): both were decided and are plain behaviour
   (WP-29, WP-22). Workspace packages never import this file; they take a rules argument.
   `frontend/app/tests/helpers/flags.ts`: `withDevFlags(overrides, fn)`.
-- `frontend/app/lib/analytics/events.ts`: `track(name, props)` typed by the map of the 16 journal events of `03`
-  §3.3; `frontend/app/lib/errors/report.ts`: `reportError(error, { kind })`. Both are no-ops that keep the last 20
-  calls in memory for tests; WP-32 implements them.
+- `frontend/app/lib/analytics/events.ts`: `track(name, props)` typed by the map of the 21 journal events of `03`
+  §3.3 (16 at the release first audited, five more since `index-DY_DH7h-.js`);
+  `frontend/app/lib/errors/report.ts`: `reportError(error, { kind })`. Both are no-ops that keep the last 20 calls
+  in memory for tests; WP-32 implements them.
 
 ### Demo marker
 
@@ -419,7 +421,7 @@ navigation; never intercepts taps.
   per locale; escaping of apostrophes and stray braces; a leaf that is also a prefix moves to `<key>._` and is
   listed in `leaf-and-prefix.json`; the
   six dead keys are absent; `uz_Latn` → `uz`.
-- `packages/i18n/tests/catalogue.test.ts`: the three merged catalogues have identical key sets; the 14 plural keys
+- `packages/i18n/tests/catalogue.test.ts`: the three merged catalogues have identical key sets; the 15 plural keys
   are plural messages; every message formats without an error; ru plural matrix for 1, 2, 5, 11, 12, 14, 21, 22,
   25, 101, 111; no value matches `brand-words.json`; `keys.json` equals the keys of the `legacy` layer.
 - `packages/i18n/tests/labels.test.ts`: known values of every table; `type: "villa"` and radar mode `"weekly"`

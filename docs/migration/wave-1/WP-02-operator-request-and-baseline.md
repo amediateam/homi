@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | TODO |
+| Status | WAITING (PR #37 merged; the request to the operator is not sent yet) |
 | Depends on | — (the guard key of WP-01 step 1 should be merged before the legacy tree is read) |
 | Size | about 1 200 changed lines, documentation and registers only, M |
 | Behaviour reference | `24` §8.2 (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062, Q-API-063, Q-APP-024), §8.3 (RK-25, RK-26, RK-28); `25` §4.5, §8; `README.md` (evidence rules, identifier scheme); `08` header and §1; `03` header; legacy `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md` and `$KVADRO_ROOT/demo/app/docs/releases/` (read-only) |
@@ -61,8 +61,9 @@ live only in HOMI; we do not need any user data from you. Please answer the poin
    for our production environment.
    a. How is the key sent: header name and value format?
    b. Which routes does it open? We need: GET /api/meta (directories only), GET /api/cities,
-      GET /api/feed, GET /api/feed/count, GET /api/feed/flow, GET /api/map, GET /api/listings/:id
-      (also with preview=1), GET /api/listings/:id/call, POST /api/listings/:id/translate.
+      GET /api/feed, GET /api/feed/count, GET /api/feed/flow, GET /api/feed/new, GET /api/map,
+      GET /api/listings/:id (also with preview=1), GET /api/listings/:id/call,
+      POST /api/listings/:id/translate.
    c. Does a service-key request need any user identity (for example a Telegram user id)? We would
       prefer that it does not.
    d. Do you restrict by source address? We will give you our outbound addresses separately.
@@ -183,6 +184,9 @@ The hand-maintained registers (`data/api-inventory.json`, `data/screens.json`, `
 - `docs/migration/03-legacy-frontend-audit.md`, `08-api-inventory.md`, `07-business-rules.md`,
   `09-feature-parity-matrix.md`, `24-three-wave-strategy.md` (§8.2 rows), `README.md` (status line); `04` and `05`
   only if a sync report requires it
+- `docs/migration/02-legacy-backend-audit.md` (it owns the `BR-API` rules and `Q-API` questions that the releases
+  change), `06-database-schema.md` (report `detail`, `price_kind`, radar `entry`), `25-wave-1-plan.md` (§1 key count,
+  §4.2 method table, §8), and the line references into the edited documents from `14`, `15` and `tasks/**`
 - `docs/migration/data/api-inventory.json`, `screens.json`, `features.csv` (by hand); `ids.csv`, `tasks.csv`,
   `20-open-questions.md`, `13-dependency-graph.md` (generated)
 - `docs/migration/wave-1/WP-12-…`, `WP-13-…`, `WP-42-…`, `WP-44-…` where the baseline changes a contract
@@ -232,4 +236,38 @@ None; this package changes documents. What it must not do:
 
 ## Handoff
 
-Empty.
+**2026-11-14: Part B done, Part A prepared but not sent.** Branch `feat/wp-02-operator-request-and-baseline`.
+
+Done:
+
+- **The pin.** `wave-1/baseline.md` pins `index-DY_DH7h-.js` (`demo/app` at SVN r27) and covers three releases since the
+  audit. The third, `index-DY_DH7h-.js`, is a new feature that `25` §8 could not list: the return banner with
+  `GET /api/feed/new` and the radar card in the feed. Q-APP-024 is answered in `24` §8.2.
+- **Audit and registers** are brought up to the pin:
+  - `caedfe3`: the two releases of 11 and 12 November;
+  - `cfd0291`: the pinned release.
+  Commit by release, not by legacy change, because the edits of one release share rows. Every behaviour was
+  checked in the r27 code. Inserted lines shifted references in other files, which were remapped by content and
+  checked.
+- **Specifications** brought up to the pin: 25 files plus `25`. The PR description lists them.
+- **Decisions taken while writing them** (open to review):
+  - a new v1 method `GET /listings/new` behind `source.listings.new`;
+  - a malformed legacy `count` becomes `503 source_unavailable`;
+  - the banner and the feed card stay hidden while radars are switched off (DEC-51);
+  - one nudge slot, with the banner above the follow nudge above the home-screen offer (fix of LB-APP-049);
+  - a nudge counts as "shown" only when it renders (fix of LB-APP-050).
+- **Checks:** `collect_ids.py` with `--check`, `build_open_questions.py` and `task_graph.py --check` exit 0, and
+  their output is committed. F-RADAR-009 and F-RADAR-010 are covered by KV-FE-080.
+- **Part A, the request:**
+  - the text is ready as an unsent mail draft for the developer;
+  - the outbound addresses are asked of the production track in the PR description;
+  - `GET /api/feed/new` was added to point 2b.
+
+Not done, and why:
+
+- **The request is not sent.** Only the product owner knows the operator's contact (Q-SYS-009). When it is sent,
+  fill "Sent to the operator's contact" in `decisions/2026-11-14-operator-request.md` with the date and the sender,
+  and paste the text if it changed. The package is `DONE` once the request is sent and this PR is merged.
+- **WP-30 size.** It is now about 3 700 lines, above the PR rule. The reviewer decides whether its steps 14–16
+  (banner and feed card) become a package of their own.
+- **Answers.** When the operator answers, follow step 6.

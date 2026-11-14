@@ -5,7 +5,8 @@ Telegram bot `@KvadroAppBot`, Mini App `app.kvadro.app`, landing and SEO pages `
 this repository (Laravel 13 / PostgreSQL / Next.js 16). The legacy system is the reference for behaviour. Nothing here
 is new product design until a document says so explicitly and links the decision.
 
-Status (2026-11-09): **audit and plan complete; no migration code yet.** Start with
+Status (2026-11-14): **audit and plan complete; no migration code yet.** The audit describes legacy release
+`index-DY_DH7h-.js` (baseline: [`wave-1/baseline.md`](wave-1/baseline.md)). Start with
 [`21-development-master-plan.md`](21-development-master-plan.md); to continue the work, read
 [`22-agent-handoff.md`](22-agent-handoff.md).
 

@@ -238,3 +238,111 @@ of radars on staging is allowed for the check of WP-46, never on production.
 Checks at the commit: 45 files with the template (script); `collect_ids.py --check` → exit 0;
 `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; repository paths named exist or are
 created by a package (script); address and phone scan → only synthetic numbers.
+
+## I. Development track, 2026-11-14 (late night) — WP-00, media ownership fix
+
+Developer's go: «Возьми первый пакет очереди со статусом не DONE. Сейчас это WP-00 …; добро на него дано.» Rules of
+that prompt kept: one package = one branch = one PR; no dependency, staging or production changes; legacy untouched.
+
+**Applied** (branch `feat/wp-00-media-ownership-fix`, PR #27, CI `ci` pass; companion draft PR #28 for
+`.ai/memory/known-issues.md`):
+
+- `media_file_references` (owner type and id as text, no global morph map), owner-scoped show and delete with
+  `MediaFilePolicy`, uploads that attach the owner under the row lock, reference-counted delete, actor-typed presign
+  prefix, the variants job dropping itself or its own variants when its row is gone; backfill of one user reference
+  per row with an uploader.
+- After the `security-reviewer` pass: `whereUlid('media')` on show and destroy, `throttle:api` on the v1 group (the
+  limiter was defined but not attached), `$/D` in the register key pattern, re-dispatch of the variants job for a
+  `failed` row, `uploaded_by` cleared when the uploader lets go.
+- Own choices: `MediaFile::recordFor()` as the one upload entry point, `const UPDATED_AT = null` on the reference
+  model, a Source signs in with a real token in tests (`Sanctum::actingAs()` needs an `Authenticatable`).
+- Checks: RED first (media suite 27 of 54 passed before the code); `make ci-backend` exit 0 with Pest 92 of 92,
+  PHPStan 0 errors; `collect_ids.py --check` and `task_graph.py --check` exit 0.
+
+On the developer's go («да, это моя dev-база, прогони migrate») the migration ran on the dev database (PostgreSQL
+18.6); backfill, `down()`/`up()`, a double `attachOwner()` and the owner scope under `FOR UPDATE` were checked there in
+a rolled-back transaction. **Not applied:** not deployed; the parallel-upload race on PostgreSQL is not tested. KI-27 (object deletion is one attempt, failures
+swallowed) and KI-28 (presign without a size bound) are open, filed in PR #28.
+
+ASSUMPTION_MISMATCH AM-50 (2026-11-14):
+- **Assumption.** The WP-00 specification assumed an upload by a `Source` token could have written a `media_files` row
+  that stores the source's number as `uploaded_by`, and made the backfill depend on a count of source tokens.
+- **What was found.** A `Source` is not `Authenticatable`. `AppServiceProvider::actorKey()` (the `throttle:uploads`
+  key) and both media controllers called `getAuthIdentifier()`, so every source request to the upload routes ended in
+  `BadMethodCallException` → `500` before any row was written (the source cases of the new tests failed that way on
+  the old code).
+- **Resolution.** The backfill is unconditional; the source-token count was dropped from "Needs from the production
+  track"; `actorKey()` uses the model class and key; the specification was corrected in PR #27.
+
+## J. Development track, 2026-11-14 (night) — WP-01, ADRs and shared files
+
+Developer's go: «бери следующий пакет WP-01». WP-01 is the one package that is split into small separate PRs
+(shared files and ADRs, `docs/handoff/parallel-work.md` §1). All eight were opened from fresh `origin/main`, each in
+its own git worktree. The shared working tree stayed on the WP-00 branch.
+
+**Applied (all open, none merged; the first developer reviews each):**
+
+- #29 `chore/guard-kvadro-root` (KI-26). `KVADRO_ROOT` becomes a reference key and `kvadro.uz` a fallback folder name.
+  Under the legacy tree the guard gives its own deny reason. It also carries the queue status `REVIEW (PRs #29 … #36)`
+  and the spec's Handoff.
+- ADR PRs, all `Proposed` until approved:
+  - #33 ADR-0016: new product, three waves;
+  - #34 ADR-0017: `/api/v1` with source drivers, amends 0007;
+  - #35 ADR-0018: Mini App architecture, amends 0003 and 0013;
+  - #36 ADR-0019: UI stack, amends 0006.
+- Shared-file PRs:
+  - #30 `parallel-work.md` §2 and §8: the Wave 1 PR size and relay rule;
+  - #31 `HANDOFF.md` §4: mapped onto the work packages;
+  - #32 `CLAUDE.md` and `AGENTS.md`: pointer to the migration queue (to merge after #29).
+- Own choices, each named in its PR:
+  - Under the legacy tree the deny reason quotes DEC-32. The generic reason says "port single files", which DEC-32
+    forbids for legacy.
+  - T0 is named among the unchanged HANDOFF tasks.
+  - ADR-0018 states that DEC-44 replaces three parts of SEC-REQ-007: memory only, no cookie, a new exchange per
+    launch.
+  - WP-21's CSP spike records its result in an ADR that amends ADR-0018, not in ADR-0018 itself (accepted ADRs are
+    not edited). WP-21 step 1 and `25` §3.10 were corrected.
+- Checks:
+  - guard tests RED first (11 failures), then `make ai-hooks-test` → 55 tests OK, and `tooling` CI on #29 passes;
+  - a pipe probe of the new hook (Edit under `kvadro.uz` → deny, Read → allowed, `npm run dev` there → deny);
+  - a reviewer agent read the four ADRs against 24, 25, the answers and the amended ADRs: no blocker, 8 small
+    traceability findings, all fixed before the PRs were opened.
+- PR #26 (deps) was merged by the other session. I merged `main` into the WP-00 branch: `make ci-backend` exit 0,
+  Pest 92 of 92.
+
+**Not applied:**
+
+- No ADR is accepted.
+- The live-session hook probe has not been done: it is only possible after #29 merges.
+- The first developer has not yet answered on the PR size or on the deploy cadence (asked in #30).
+
+## K. Development track, 2026-11-14 (night) — WP-01 merges, WP-02
+
+Developer: «#29 слит, проверь хук в живой сессии». GitHub said #29 was still open, so the developer chose «Проверить до
+слияния». With #29's guard placed temporarily in the working tree, the live probe on a throwaway `kvadro.uz` folder
+gave:
+
+- `Edit` and `Write` refused with the legacy reason;
+- `npm` and `svn commit` refused;
+- `Read`, `rg` and `cat` allowed.
+
+Then «#29 слит, сливай #32 и бери WP-02»: #29 was still open, and the developer chose «Слить #29, потом #32». Both
+were merged with merge commits (`8aa422f`, `6286ef4`), and `main` was merged into the WP-00 branch.
+
+**WP-02 applied** (PR #37, open):
+
+- `KVADRO_ROOT` is set in this machine's `.ai/local.env`; the legacy checkout is in a `local/smart/kvadro.uz` folder.
+- The baseline pins `index-DY_DH7h-.js` (SVN r27). It is the third release after the audited one, and it is a new
+  feature: the return banner with `GET /api/feed/new` and the radar card in the feed.
+- Audit, registers and 24 specifications are brought up to the pin, in three subagent passes. The main session
+  reviewed and verified each pass:
+  - spot checks in the code (SCR-018, LB-APP-048);
+  - every remapped line reference checked by content;
+  - `task_graph` fixed by covering F-RADAR-009 and F-RADAR-010 in KV-FE-080.
+- Own choices, all listed in #37: the new v1 method `GET /listings/new`; a malformed legacy `count` becomes `503`;
+  the banner and the card stay hidden while radars are off (DEC-51).
+
+On «сделай все сам»: the request to the operator exists as an unsent Gmail draft. It cannot be sent, because only the
+product owner knows the operator's contact (Q-SYS-009). The outbound addresses are asked for in #37.
+
+**Not applied:** the request is not sent; WP-02 is not `DONE`.

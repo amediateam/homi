@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-24 |
 | Size | ≈ 3 000 changed lines (upper end of the PR rule), L |
-| Behaviour reference | `03` §2 (SCR-018, SCR-019, SCR-020, SCR-022, SCR-023), §1.2, §1.12, §3.3–§3.5, §4, §5; `05` §1.7; `08` §1.8; task files KV-FE-063 … KV-FE-071, KV-FE-029, KV-FE-030 — behaviour, texts, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
+| Behaviour reference | `03` §2 (SCR-018, SCR-019, SCR-020, SCR-022, SCR-023), §1.2, §1.12, §3.3–§3.5, §4, §5; `05` §1.7; `08` §1.8 and the row of API-016; `02` BR-API-101, BR-API-156; `09` F-REPORT-001; task files KV-FE-063 … KV-FE-071, KV-FE-029, KV-FE-030 — behaviour, texts, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
 | Needs from the production track | nothing on stubs. When WP-43 fixes the host of the call page, that host joins the link allow-list of WP-21 |
 
 ## Goal
@@ -46,7 +46,7 @@ translation, share, hide, block and report.
 | API conventions | 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
 | Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The API records the view on the read; the client sends nothing for it |
 | The author's number | DEC-52, WP-12 | The card answer has no number and no call link, and the numbers in its texts are masked. «Позвонить», «Показать номер» and a masked number in the text call `POST …/contact` on the tap and only then show the digits or open the call link. Nothing asks for a contact without a tap, so no number is in the server-rendered page. On by decision, no flag |
-| Baseline | 25 §8.1, Q-APP-024 | The report-detail step and the `price_kind: business` label come from the re-baselined audit of WP-02 (see "Behaviour to reproduce") |
+| Baseline | 25 §8, Q-APP-024, `wave-1/baseline.md` | The behaviour is that of the pinned release `index-DY_DH7h-.js`. Two parts came after the release first audited: the report-detail step (`index-BNLZFfL0.js`; SCR-023, BR-APP-036, API-016) and the `business` price kind, which on this screen shows only in the share text (`index-Dbpp463V.js`; SCR-018, BR-APP-038). Both are specified below from the audit |
 | Brand | DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
 | Acceptance | DEC-46, 25 §9 | The functional checklist below, in three locales and two themes |
 
@@ -142,7 +142,7 @@ and `contact.contact_paid` are what it carries, and `phone`, `phone_display`, `c
 | `openOriginal.ts` | `openOriginal(number, url, src)`: `tg.openLink`, then `original_opened` only if it opened |
 | `viewer/{PhotoViewerRoute,PhotoViewer,ZoomableImage}.tsx`, `viewer/gestures.ts` | viewer, zoomable slide, pure gesture maths |
 | `market/{MarketSheetRoute,MarketSheet}.tsx` | `RouteSheet` without a × button |
-| `actions/{ListingActionsRoute,ListingActionsSheet,ActionRow,ReportDetailForm}.tsx`, `actions/useListingActions.ts` | menu, report and detail steps; results, toasts, undo |
+| `actions/{ListingActionsRoute,ListingActionsSheet,ActionRow,ReportDetailStep}.tsx`, `actions/useListingActions.ts` | menu, report and detail steps; results, toasts, undo |
 | `closeListing.ts` | closes the sheet steps and the listing in one move (see below) |
 
 Outside the feature folder: `splitMaskedPhones(text)` in `frontend/packages/utils/src/phone.ts` (pure, exported
@@ -220,7 +220,8 @@ New unless marked.
 
 ## Steps
 
-1. Read the Next.js files named in "Design" and the re-baselined SCR-018 and SCR-023 sections of `03` (WP-02).
+1. Read the Next.js files named in "Design" and the SCR-018 and SCR-023 sections of `03` (they describe the pinned
+   release).
 2. `ListingServer`, `ListingScreen` shell, `useListing`, `viewState`, skeletons; both `layout.tsx` and `page.tsx`.
    Open from a feed card, Back closes. Commit.
 3. Loading and error states; the number redirect; `seen` map. Unit tests of `useListing`. Commit.
@@ -236,7 +237,7 @@ New unless marked.
 11. `gestures.ts`, `ZoomableImage`, `PhotoViewer`, `photos/page.tsx` in both trees. Commit.
 12. `MarketSheet`, `market/page.tsx` in both trees. Commit.
 13. `backBy`, `closeListing`, actions `lib/actions/{hidden,reports}.ts`, `useListingActions`, the menu. Commit.
-14. Report step, then the detail step from the re-baselined audit. Both flags with tests. Commit.
+14. Report step, then the detail step with its Back order. Both flags with tests. Commit.
 15. Swipe-back, body classes, portals and z-order check against the toast and the tab bar. Commit.
 16. Playwright specs in both session modes; tick the checklist on staging in ru, uz, en, light and dark.
 
@@ -336,8 +337,9 @@ SCR-018. Every server string is rendered as text, never as HTML.
 14. **CTA bar** (fixed bottom). Left: price main part + period, or `listing.negotiable` «Договорная» without a
     price; below it the verdict short label when a price note exists, else `listing.marketDelta` «{delta} к рынку»
     (`fmt.marketSameShort` «≈ обычная», `fmt.marketMixedShort` «≈ спорно»), and the note (bracket text and the
-    remaining « · » parts). Price parts and the price-kind label come from the contract or from the card helper of
-    WP-24, as on the card. Right (BR-APP-032), in priority: answer pending → shimmer; `contact.has_phone` →
+    remaining « · » parts). Price parts come from the contract, as on the card. The bar shows no price-kind label —
+    neither «первый взнос» nor the business label: on this screen the label is only in the share text (`03`
+    SCR-018). Right (BR-APP-032), in priority: answer pending → shimmer; `contact.has_phone` →
     `listing.call` «Позвонить»; contact link → `listing.write` «Написать», or `listing.writePaid` «Номер платный»
     when the contact
     is paid; post deleted → no action; else `listing.openPost` «Открыть пост» → `openOriginal(…, 'button')`.
@@ -385,7 +387,10 @@ listing hold no number.
 BR-APP-038, TMA-030, TMA-031. Tap: ignored while locked; light haptic; `listing_shared { listing_id }` (before
 trying, as legacy); `prepareShare` → `tg.shareMessage(id)`; on any error, an old client or `false` →
 `tg.shareUrl(botStartAppUrl(number), text)` with `text` = title · price main + period · price-kind label ·
-district (empty parts dropped). The lock holds during the share and 1.5 s after. No toast in any outcome.
+district (empty parts dropped). The price-kind label is the card's (`priceKindLabel` of WP-24) without its leading
+«· »: «первый взнос» for `down_payment`, «цена за бизнес, помещение в аренде» for `business` (since legacy release
+`index-Dbpp463V.js`), left out for any other kind (BR-APP-038, BR-API-156). This is the only place the label appears
+on the listing screen; the title row and the CTA bar do not render it (`03` SCR-018). The lock holds during the share and 1.5 s after. No toast in any outcome.
 
 ### Photo viewer
 
@@ -425,8 +430,13 @@ or lite).
 
 ### Actions sheet
 
-SCR-023, BR-APP-036, BR-APP-037. Closes with ×, backdrop, drag, Back, or a successful action. While a request runs
-(`busy`) taps are ignored. Every action: light haptic on tap, success or error haptic on the result.
+SCR-023, BR-APP-036, BR-APP-037. Three steps: menu → report → detail. Closes with ×, backdrop or drag from any
+step, with Telegram Back on the menu, or after a successful action. Back — Telegram's and the header chevron (aria
+`actions.back` «Назад»), which is shown on the report and detail steps but not on the menu — goes one step:
+detail → report → menu → listing. The dialog's title, which is also its accessible name, follows the step:
+`actions.title`, `report.title`, `report.detailTitle`. While a request runs (`busy`) taps are ignored on every
+step. Haptics: light when the report or the detail step opens and when an action starts, success or error on the
+result.
 
 Menu, title `actions.title` «Объявление»:
 
@@ -445,17 +455,28 @@ Report step, title `report.title` «Что не так?», back chevron aria `ac
 - `report.rented` «Уже сдано» — `report.rentedHint` «Объявление больше не актуально».
 - `report.agent` «Это риелтор, а не хозяин» — `report.agentHint` «Отметим номер как риелторский»; hidden when the
   listing says it is not from an owner (`is_owner === false`).
-- `report.wrong_data` «Неверные данные» — `report.wrong_dataHint` «Цена, район или комнаты не совпадают».
+- `report.wrong_data` «Неверные данные» — `report.wrong_dataHint` «Цена, район или комнаты не совпадают»; with a
+  › arrow. A tap opens the detail step and sends nothing.
 - `report.fraud` «Мошенничество или спам» — `report.fraudHint` «Просят предоплату, чужие фото, реклама».
 
-Detail step (`step=detail`): added by a legacy release after the audited one (25 §8.1). The audit of this step is
-written by WP-02; take from it, without guessing: which reasons open the step and whether it can be skipped; the
-title, field label, placeholder, button and error texts with their keys; the length limits and trimming of
-`detail`; what Back and a drag do with typed text; the toasts. The request is `reportListing(number, { reason,
-detail })`. If the audit rows are missing, the audit is completed first, in the same PR (queue rule 6).
+`rented`, `agent` and `fraud` are sent at once as `reportListing(number, { reason })`.
 
-The same release adds the `price_kind: business` label. Its text, key and placement on the CTA bar and in the share
-text come from the re-baselined SCR-018 section; the card half is WP-24's.
+Detail step (`step=detail`; since legacy release `index-BNLZFfL0.js`; SCR-023, BR-APP-036, F-REPORT-001): title
+`report.detailTitle` «Что именно неверно?» (uz «Aynan nima notoʻgʻri?», en «What exactly is wrong?»), the back
+chevron, and five rows in this order, without icons or arrows (the uz and en values are those of `03` SCR-023):
+
+| Detail code | Title `report.d_<code>` | Hint `report.d_<code>Hint` |
+| ----------- | ----------------------- | -------------------------- |
+| `price` | «Цена» | «Другая сумма или валюта» |
+| `rooms` | «Комнаты, площадь или этаж» | «Не совпадают с постом или квартирой» |
+| `place` | «Район или место на карте» | «Квартира в другом районе» |
+| `photos` | «Фото» | «Фото не от этой квартиры» |
+| `other` | «Другое» | «Тип жилья, ремонт, условия» |
+
+A tap sends `reportListing(number, { reason: 'wrong_data', detail: <code> })` at once; there is no text field, no
+confirm button and no analytics event. The client never sends `wrong_data` without a detail and never a detail with
+another reason (BR-API-101, WP-13). The eleven keys are legacy keys of the pinned release and arrive with the
+import of WP-20.
 
 Results (`useListingActions`):
 
@@ -466,7 +487,7 @@ Results (`useListingActions`):
 | Report `fraud`, answer says hidden | as hide | `toast.reportedFraud` «Спасибо, посмотрим. Это объявление у вас скрыли» + «Вернуть» → `unhideListing` |
 | Report `rented` | number into `hidden`; `closeListing()` | `toast.reportedRented` «Отметили: уже сдано», no action (see `dev051RentedUndo`) |
 | Report `agent` | sheet closes | `toast.reportedAgent` «Отметили номер как риелторский» |
-| Other reports | sheet closes | `toast.reported` «Спасибо! Посмотрим» |
+| Other reports, `wrong_data` with any detail included | sheet closes | `toast.reported` «Спасибо! Посмотрим» |
 | Any failure | nothing changes, sheet stays | `common.saveFailed` «Не получилось сохранить» |
 | Undo | removes the numbers from `hidden` at once; on failure puts them back | on failure `common.saveFailed` |
 
@@ -500,7 +521,8 @@ is WP-21's (SEC-REQ-019).
   one; two concurrent taps share one request; `contact_unavailable` → `failed()` and no event; both Android
   outcomes; an answer without a number never tries `tel:`.
 - `tests/listing/useShareListing.test.ts`: prepared path; old client; action failure; `shareMessage` false; lock;
-  fallback text for rent, sale with a price kind, no price.
+  fallback text for rent, a sale with `down_payment`, a commercial listing with `business`, an unknown kind (no
+  label part), no price.
 - `tests/listing/useListingActions.test.ts`: each row of the results table; undo failure; both branches of both
   flags (`withDevFlags`); `todo` for the vote withdrawal.
 - `tests/listing/useTranslation.test.ts`: not offered in ru; fetch then toggle; failure then retry; keyed by number
@@ -525,7 +547,9 @@ is WP-21's (SEC-REQ-019).
 - `ListingCtaBar`: the priority table of BR-APP-032 with `has_phone`; negotiable; note.
 - `PhotoViewer`: start index, counter, `locked` class, a replaced `onClose` is honoured (LB-APP-004).
 - `ListingActionsSheet`: hint variants (phone, source, none, 19 and 20 listings); support row with and without an
-  account; `agent` filter; busy guard; step order with Back.
+  account; `agent` filter; busy guard; step order with Back; the chevron absent on the menu and present on the two
+  other steps; the title and accessible name per step; «Неверные данные» opens the detail step without a request;
+  each of the five rows sends `wrong_data` with its code; `rented`, `agent`, `fraud` send no detail.
 
 **End to end (Playwright, fake Telegram, stubs; every spec in cookie mode and header mode).**
 
@@ -544,8 +568,9 @@ is WP-21's (SEC-REQ-019).
   The analytics events are not visible to this spec before WP-32 (the `track` facade of WP-20 only keeps its
   calls in memory): they are asserted in `useContact.test.ts` and, from WP-32 on, in `journal.spec.ts`.
 - `listing-actions.spec.ts`: hide → toast → «Вернуть»; block; report `fraud` hidden; report failure (scenario
-  `source_unavailable` set right before the tap); Back from the
-  report step returns to the menu; after hide the feed lacks the card and the history length is unchanged.
+  `source_unavailable` set right before the tap); «Неверные данные» → the detail step → «Цена» → «Спасибо!
+  Посмотрим»; the chevron on the detail step returns to the reasons, Telegram Back from the report step to the
+  menu; after hide the feed lacks the card and the history length is unchanged.
 
 ## Acceptance checklist
 
@@ -588,6 +613,8 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] A failed contact request gives the error haptic and no `contact_call` event.
 - [ ] «Написать» opens the chat once on a double tap.
 - [ ] Share opens Telegram's picker; on an old client or a failure the share link opens; a double tap shares once.
+- [ ] The share link's text carries «первый взнос» or «цена за бизнес, помещение в аренде» for those price kinds;
+      the title row and the CTA bar show no price-kind label.
 - [ ] The viewer opens at the tapped photo; pinch to 4×, double tap 2.5×, pan when zoomed, no paging while zoomed.
 - [ ] Swipe down past 110 px closes; less springs back; × and Back close the viewer and leave the listing open.
 - [ ] The market sheet opens from ⓘ, has no ×, closes by backdrop, drag and Back; three paragraphs and the footer
@@ -597,7 +624,9 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Block hides all the author's listings, shows «Автор … заблокирован»; «Вернуть» restores them.
 - [ ] The report step lists four reasons («Это риелтор…» absent for a non-owner listing); each gives its toast;
       `rented` and a hidden `fraud` close the listing.
-- [ ] The detail step behaves as the re-baselined audit describes.
+- [ ] «Неверные данные» opens «Что именно неверно?» and sends nothing; its five rows (Цена; Комнаты, площадь или
+      этаж; Район или место на карте; Фото; Другое) show their hints; a tap sends the report and shows «Спасибо!
+      Посмотрим»; the chevron and Telegram Back return to «Что не так?».
 - [ ] Any failed action shows «Не получилось сохранить» and changes nothing.
 - [ ] Back order: detail → report → menu → listing → page below; the Settings button closes everything.
 - [ ] Swipe right closes the listing on iOS and desktop, never on Android, and not while a layer is open.

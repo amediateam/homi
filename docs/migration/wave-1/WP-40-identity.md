@@ -168,7 +168,7 @@ routes; it never contains a Telegram id.
 | `v1-auth` | 10 per minute per address, 5 per minute per verified Telegram user | `POST /auth/telegram` |
 | `v1-public` | 60 per minute per address | `GET /reference`, `GET /cities`, `GET /landing/*` |
 | `v1-me` | 30 per minute | `GET /me` |
-| `v1-reads` | 300 per minute | feed, count, flow, map, `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden` |
+| `v1-reads` | 300 per minute | feed, count, `GET /listings/new`, flow, map, `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden` |
 | `v1-listing` | 120 per minute | `GET /listings/{number}` |
 | `v1-contact` | 30 per hour | `POST …/contact` |
 | `v1-translation` | 30 per hour, counted on cache misses inside the service (WP-43) | `POST …/translation` |

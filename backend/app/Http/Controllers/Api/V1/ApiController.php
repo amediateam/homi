@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -77,5 +80,21 @@ abstract class ApiController extends Controller
     protected function noContent(): Response
     {
         return response()->noContent();
+    }
+
+    /**
+     * The authenticated actor: a `User` or a `Source` (both sign in with Sanctum tokens).
+     *
+     * @throws AuthenticationException
+     */
+    protected function actor(Request $request): Model
+    {
+        $actor = $request->user();
+
+        if (! $actor instanceof Model) {
+            throw new AuthenticationException;
+        }
+
+        return $actor;
     }
 }

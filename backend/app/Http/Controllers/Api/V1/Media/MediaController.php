@@ -2,19 +2,27 @@
 
 namespace App\Http\Controllers\Api\V1\Media;
 
+use App\Enums\MediaOwnerType;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Media\StoreMediaRequest;
 use App\Http\Resources\Api\V1\MediaFileResource;
 use App\Jobs\Media\GenerateImageVariantsJob;
 use App\Models\MediaFile;
 use App\Services\Media\HashedUploader;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 /**
  * Media files: upload (multipart), show, delete. Variants are derived asynchronously.
+ *
+ * Access goes through the caller's reference (WP-00): a file the caller does not hold answers
+ * exactly like an unknown id (SEC-REQ-014).
  */
 class MediaController extends ApiController
 {
@@ -22,7 +30,7 @@ class MediaController extends ApiController
      * Upload an image.
      *
      * Stores the original under a content-addressed key and queues WebP variants; uploading the
-     * same bytes again returns the existing media file.
+     * same bytes again returns the existing media file and makes the caller one of its owners.
      */
     public function store(StoreMediaRequest $request, HashedUploader $uploader): JsonResponse
     {
@@ -31,9 +39,9 @@ class MediaController extends ApiController
         $visibility = $request->visibility();
 
         $stored = $uploader->storeUploadedFile($upload, $visibility);
-        $media = MediaFile::fromStored($stored, $visibility, (int) $request->user()?->getAuthIdentifier() ?: null);
+        $media = MediaFile::recordFor($this->actor($request), $stored, $visibility);
 
-        if ($media->wasRecentlyCreated) {
+        if ($media->needsVariants()) {
             GenerateImageVariantsJob::dispatch($media)->afterCommit();
         }
 
@@ -43,19 +51,67 @@ class MediaController extends ApiController
     /**
      * Show a media file with its public or temporary URLs.
      */
-    public function show(MediaFile $media): JsonResponse
+    public function show(Request $request, string $media): JsonResponse
     {
-        return $this->success(new MediaFileResource($media));
+        $file = MediaFile::query()->ownedBy($this->actor($request))->findOrFail($media);
+        Gate::authorize('view', $file);
+
+        return $this->success(new MediaFileResource($file));
     }
 
     /**
-     * Delete a media file, its variants and its record.
+     * Delete the caller's reference to a media file.
+     *
+     * The original, its variants and the record go with the last reference; while another owner
+     * holds the file it stays readable for them.
      */
-    public function destroy(MediaFile $media): Response
+    public function destroy(Request $request, string $media): Response
     {
-        Storage::disk($media->disk)->delete([$media->key, ...array_values($media->variants ?? [])]);
-        $media->delete();
+        $actor = $this->actor($request);
+
+        DB::transaction(function () use ($actor, $media): void {
+            $file = MediaFile::query()->ownedBy($actor)->lockForUpdate()->findOrFail($media);
+            Gate::authorize('delete', $file);
+
+            $file->references()->heldBy($actor)->delete();
+
+            if ($file->isReferenced()) {
+                $this->forgetUploader($file, $actor);
+
+                return;
+            }
+
+            $file->delete();
+            DB::afterCommit(fn () => $this->deleteObjects($file));
+        });
 
         return $this->noContent();
+    }
+
+    /**
+     * A file that stays for other owners no longer names the user who let go of it.
+     */
+    private function forgetUploader(MediaFile $file, Model $actor): void
+    {
+        $uploaderId = MediaOwnerType::uploaderId($actor);
+
+        if ($uploaderId !== null && $file->uploaded_by === $uploaderId) {
+            $file->forceFill(['uploaded_by' => null])->save();
+        }
+    }
+
+    /**
+     * Remove the original and the whole derived directory (a running job may have written
+     * variants the row does not list yet), unless the same bytes were recorded again meanwhile.
+     */
+    private function deleteObjects(MediaFile $file): void
+    {
+        if ($file->contentIsRecorded()) {
+            return;
+        }
+
+        $disk = Storage::disk($file->disk);
+        $disk->delete($file->key);
+        $disk->deleteDirectory(config('media.paths.derived').'/'.$file->sha256);
     }
 }
