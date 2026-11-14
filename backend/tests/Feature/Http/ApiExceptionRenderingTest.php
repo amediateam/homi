@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\AccessReason;
+use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
@@ -148,4 +150,17 @@ it('leaves non-api requests to the default html rendering', function (): void {
 
     $response->assertNotFound();
     expect($response->headers->get('Content-Type'))->toContain('text/html');
+});
+
+it('renders an access refusal with its reason', function (AccessReason $reason): void {
+    Route::get('api/v1/_test/denied', fn () => throw new AccessDenied($reason));
+
+    $this->getJson('/api/v1/_test/denied')
+        ->assertForbidden()
+        ->assertExactJson(['success' => false, 'message' => 'Access denied.', 'code' => 'access_denied', 'reason' => $reason->value]);
+})->with(AccessReason::cases());
+
+it('knows the five refusal reasons of the no-access screen', function (): void {
+    expect(array_map(fn (AccessReason $reason): string => $reason->value, AccessReason::cases()))
+        ->toBe(['private', 'invite', 'full', 'blocked', 'join']);
 });
