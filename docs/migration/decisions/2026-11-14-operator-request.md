@@ -11,7 +11,7 @@ No key, address, phone number or contact detail is written here: a value is name
 | Item | State |
 | ---- | ----- |
 | Text prepared | 2026-11-14, the WP-02 specification, Part A (with `GET /api/feed/new` added to point 2b, see below) |
-| Handed to the product owner | 2026-11-14: the text is prepared as an unsent mail draft for the developer. The operator's contact is known only to the product owner (Q-SYS-009), so the recipient is still to be filled in |
+| Handed to the product owner | pending: the developer sends or hands over the text of the WP-02 specification, Part A, from the project's own mailbox. The operator's contact is known only to the product owner (Q-SYS-009) |
 | Sent to the operator's contact | pending: date and sender (the product owner) to be filled in |
 | Text as sent | unchanged from the specification unless pasted below |
 | Outbound addresses of the staging and production API hosts | 2026-11-14: asked of the production track in the description of the WP-02 pull request #37 ("Needs from the production track"). The production track gives them to the operator directly; this file only records that they were asked for |

@@ -342,7 +342,7 @@ were merged with merge commits (`8aa422f`, `6286ef4`), and `main` was merged int
 - Own choices, all listed in #37: the new v1 method `GET /listings/new`; a malformed legacy `count` becomes `503`;
   the banner and the card stay hidden while radars are off (DEC-51).
 
-On «сделай все сам»: the request to the operator exists as an unsent Gmail draft. It cannot be sent, because only the
+On «сделай все сам»: the request to the operator was put into an unsent Gmail draft. On 2026-11-15 the developer had it deleted («Удали черновик gmail это не та почта который нужно использовать»); the text stays in the WP-02 specification. It cannot be sent, because only the
 product owner knows the operator's contact (Q-SYS-009). The outbound addresses are asked for in #37.
 
 **Not applied:** the request is not sent; WP-02 is not `DONE`.
