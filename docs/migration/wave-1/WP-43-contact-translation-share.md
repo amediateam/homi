@@ -143,7 +143,8 @@ description with the token replaced by `bot***`. An empty bot token fails closed
 
 ### Controllers and sources
 
-The three stub controllers of WP-12 get real bodies. `ListingController@show` calls `ContactService::forCard()`.
+The three stub controllers of WP-12 get real bodies; the stub answer of share moves into `NativeStubs` (the rule of
+WP-40). `ListingController@show` calls `ContactService::forCard()`.
 `meta.source` is the driver of `source.listings.contact` or `source.listings.translation`, and `native` for share.
 With the stub driver the same services run on stub data, so the quota and the limits behave alike in every
 environment.

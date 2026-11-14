@@ -205,6 +205,8 @@ All answered by the developer on 2026-11-14 unless the row says otherwise. Verba
 | RK-30 | **The cookie session fails inside frames** (Telegram Web), or the two session modes drift apart | M | M | frontend | One screen code path with optional server-fetched data; both modes in the end-to-end suite; checked on staging in three browsers | developer | DEC-44, 25 §3.4 |
 | RK-31 | **"Functional parity" is judged differently by different people** | M | M | acceptance | A written checklist per screen and per bot scenario, taken from the audit, signed in the PR | developer | DEC-46, 25 §9 |
 
+| RK-32 | **Radars exist before anything delivers them.** The radar package is in stage C and the bot's sending package in stage D, while every merge reaches production and access is open: a user can create a radar that sends nothing | H | M | product | Keep creation behind the chat requirement and the starter switch until sending is live, and say so on the radar tab; or move the radar packages after the sending package — the developers choose when stage C starts | developer | DEC-43, DEC-45, 25 §9 |
+
 Risks of 19 that change: RK-02 (data migration), RK-03, RK-04, RK-06 and RK-19 no longer apply; RK-07 (old WebViews)
 is accepted by DEC-44; RK-11 (personal data) grows, because HOMI now has users of its own from the first deploy.
 

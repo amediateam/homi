@@ -13,14 +13,15 @@
 
 A Telegram user of HOMI's bot signs in with `initData`, becomes a HOMI user, and gets a token with an expiry.
 `GET /me`, `GET /settings` and `PATCH /settings` read and write real rows. One gate decides access on every
-protected route. Every route class has its own per-user limiter. The stub user of WP-11 is gone, and these methods
-answer with `meta.source = native`.
+protected route. Every route class has its own per-user limiter. On the servers the stub user of WP-11 is gone, and
+these methods answer with `meta.source = native`.
 
 ## Scope
 
 In: the `initData` verifier; the users migration and resolver; token issuing, cap and pruning; settings storage and
 service; the gate with its modes and two operator commands; named rate limiters and trusted proxies; redaction of
-`initData` and tokens in logs and dashboards; removal of the stub sign-in.
+`initData` and tokens in logs and dashboards; the stub mode that keeps the end-to-end suite running, into which the
+stub sign-in moves.
 
 Out: the Login Widget (not used by the Mini App); invite admission and `bot_chat_state` maintenance from bot updates
 (WP-52); the disclosure quota (WP-43); erasure (WP-47); ARM roles.
@@ -92,6 +93,19 @@ first sign-ins create one user.
 `TelegramAuthController` (the class of WP-11, body replaced): limiter → verify → resolve user → gate → issue token →
 `SessionResource` with `meta.source = native`. A gate refusal answers `403 access_denied` with `reason` and issues no
 token.
+
+### Stub mode for the end-to-end suite
+
+The Playwright suite runs on stubs (`25` §9) and must keep doing so while stage C replaces stub controllers with
+real code. `config('sources.native_stubs')` (`SOURCES_NATIVE_STUBS`, default false; a boot check in
+`SourceServiceProvider` refuses it outside `local` and `testing`) switches on the middleware
+`App\Http\Middleware\AnswerNativeStubs` on the `v1` group. It looks the route name up in
+`App\Services\Sources\Stub\NativeStubs` — a map of route name to a callable that builds the stub answer with
+`StubResponder` (fixtures, scenario header, `meta.source = stub`) — and answers without reaching the real
+controller. Rule for this and every later package of stage C: when a stub controller body is replaced, the old body
+moves into this map; it is not deleted. This package moves sign-in (with `StubUser`), `me` and settings. On staging
+and production the switch cannot be on, so no stub code can answer there. If the end-to-end workflow already boots
+the API, set `SOURCES_NATIVE_STUBS=true` in its environment in this PR.
 
 ### Settings
 
@@ -176,7 +190,8 @@ channel after a failed and a successful sign-in.
 - `backend/database/migrations/<date>_add_telegram_identity_to_users_table.php`, `…_create_user_settings_table.php`,
   `…_create_access_grants_table.php`
 - `backend/app/Http/Controllers/Api/V1/{Auth/TelegramAuthController,MeController,SettingsController}.php` (bodies
-  replaced); `backend/app/Services/Sources/SourceContext.php`; `backend/app/Services/Sources/Stub/StubUser.php` (deleted)
+  replaced); `backend/app/Services/Sources/SourceContext.php`; `backend/app/Services/Sources/Stub/NativeStubs.php`,
+  `backend/app/Http/Middleware/AnswerNativeStubs.php` (new); `backend/config/sources.php` (`native_stubs`)
 - `backend/config/{telegram,access,rate_limits,settings,app}.php`, `backend/app/Providers/{AppServiceProvider,TelescopeServiceProvider}.php`,
   `backend/bootstrap/app.php`, `backend/routes/{api,console}.php`
 - `backend/tests/Unit/Identity/{TelegramInitDataVerifierTest,QuietWindowTest,DigestScheduleTest}.php`,
@@ -196,7 +211,8 @@ channel after a failed and a successful sign-in.
 6. `user_settings`, value objects, `SettingsService`, `MeController`, `SettingsController`.
 7. `access_grants`, `AccessGate`, the middleware on the route groups, the two commands.
 8. `config/rate_limits.php`, named limiters, attach them per route; trusted proxies.
-9. Redaction and its test. Delete the stub sign-in and `StubUser`.
+9. Redaction and its test. `AnswerNativeStubs`, `NativeStubs` and the boot check; move the stub answers of sign-in,
+   `me` and settings into the map; run the Playwright suite in stub mode.
 10. Pint, PHPStan, `make ci-backend`; the security-reviewer agent reads the diff; the env PR; deploy and check.
 
 ## Behaviour to reproduce
@@ -241,7 +257,8 @@ channel after a failed and a successful sign-in.
 - [ ] The gate runs on every bearer route; `access:block` takes effect within 2 seconds; mode `open` lets everyone in.
 - [ ] Every v1 route has a named limiter (`route:list -v` attached to the PR); no route uses `throttle:api`.
 - [ ] `initData` and tokens never appear in logs, Telescope or Pulse.
-- [ ] The stub user, its tokens and the stub sign-in code are removed.
+- [ ] The stub user and its tokens are removed from the databases of staging and production; stub answers of these
+      methods exist only behind `SOURCES_NATIVE_STUBS` in `local` and `testing`, and the Playwright suite passes there.
 - [ ] `make ci-backend` and the `pgsql` group are green; the security review has no open finding.
 - [ ] The production track set the env keys and approved the migrations.
 - [ ] Inside Telegram on staging, then production (iOS, Android, Desktop, Web): the app opens and signs in; language

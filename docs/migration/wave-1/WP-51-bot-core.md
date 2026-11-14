@@ -435,7 +435,7 @@ Registry of actions. Each package registers its rows and adds them to `docs/infr
 | `fl` | `k1:fl:<page>` (`/fav` paging) | WP-53 |
 | `cd` | `k1:cd:<listing number>:<op>[:<value>]`; operations `map`, `ph`, `fv:<1 or 0>`, `rt:<1 or 0>`, `ag:<1 or 0>`, `hs`, `hc[:<radar>]`, `hd[:<radar>]`, `ha[:<radar>]`, `hx` (the channel, district and author are read from the listing, never from the data) | WP-53 |
 | `sb` | `k1:sb:<radar or 0>:<op>[:<value>]`; operations `ls` (with radar `0`), `op`, `ps`, `on`, `dg`, `in`, `ra`, `ray`, `hr`, `rr:<rule>`, `ed`, `dl`, `dly`, `dln` | WP-55 |
-| `fp` | `k1:fp:<radar><p or d>:<kv, el, se or st>` and `k1:fp:<id>:w:<tg, ol, si, ag, fr, st or ot>` | WP-55 |
+| `fp` | `k1:fp:<p or d>:<hm, el, se or st>` and `k1:fp:w:<tg, ol, si, ag, fr, st or ot>` (the trigger only: `found_answers` of WP-44 has no radar column) | WP-55 |
 | `st` | `k1:st:<q, d, c or n>:<value>` | WP-56 |
 | `nop` | `k1:nop` (settings section headers, answered silently) | WP-56 |
 | `ow` | `k1:ow:<rm, rmy or rmn>` | WP-56 |

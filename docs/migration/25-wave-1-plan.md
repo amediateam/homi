@@ -258,7 +258,7 @@ frontend/
 | `POST /auth/telegram` | none (legacy authenticates every request) | native |
 | `GET /me` | user part of meta (API-001) | native |
 | `GET /settings`, `PATCH /settings` | API-024, API-025 | native |
-| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached |
+| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name and limits always from HOMI's configuration |
 | `GET /cities` | API-002 | legacy, cached |
 | `GET /listings` | feed (API-004) | legacy + overlay |
 | `GET /listings/count`, `GET /listings/flow` | API-005, API-006 | legacy |
@@ -322,7 +322,12 @@ is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any scr
 - **Limits.** One outbound limiter for all legacy calls, a timeout of 15 s, one retry for reads, a circuit breaker
   that answers `source_unavailable` instead of queueing.
 - **Photos.** Legacy photo addresses are signed and need no key (RES-001, RES-002). The API rewrites them to a HOMI
-  media address that nginx proxies and caches (production track); the client keeps deriving the small variant.
+  media address that nginx proxies and caches; the client keeps deriving the small variant. Which host carries that
+  location is the production track's choice, given to the API as configuration.
+- **What legacy does not give.** Its previews carry neither the source channel and post nor an author key (`08`
+  §1.8). Unless the operator adds them (WP-02), HOMI learns both only when a card is opened: the Wave 2 reference is
+  empty for listings a user saved without opening, and a blocked author's other listings disappear only once HOMI
+  has seen them as cards. Counts and the flow estimate cannot subtract a user's hidden listings.
 - **Contract tests.** The golden fixtures of 08 describe what legacy returns. A test per method fails when a
   recorded legacy answer no longer fits the translator, which is how a legacy release shows up (RK-26).
 
@@ -398,7 +403,9 @@ if it is an `LB` fix or a visual detail.
 **Stub scenarios.** Deterministic stubs cannot show an error state by themselves. A stub method therefore accepts a
 named scenario (empty list, source unavailable, refused access, radar limit and so on) through a request header that
 is honoured only by the `stub` driver; outside production the Mini App forwards a cookie as that header, which is how
-the end-to-end suite reaches every state in both session modes. States that open access and stub answers cannot
+the end-to-end suite reaches every state in both session modes. Native methods lose their stub when their real code
+is merged; a switch that is refused outside local and test environments keeps a stub answer for them, so the suite
+of stage B keeps running. States that open access and stub answers cannot
 produce inside Telegram (no access, the "no chat" prompt, the radar limit, real share and call pages) are proven by
 the end-to-end suite in stage B and seen in Telegram in stage C, when the real code answers.
 
@@ -410,6 +417,9 @@ the end-to-end suite in stage B and seen in Telegram in stage C, when the real c
 - A user who never opened the old bot has no history there to bring; nothing is imported (DEC-40).
 - The map uses the raster fallback until HOMI hosts its own tile file (section 3.8).
 - Contact shows what the operator's service key allows: a number, or a link that leaves HOMI (Q-API-062).
+- Blocking an author and the Wave 2 reference of a saved listing are partial until the operator adds the source and
+  author fields (section 4.5).
+- Between the radar package and the bot's sending package a radar can be created but nothing is delivered (RK-32).
 
 **Definition of done of a work package.** Specification steps complete; tests of the package green in CI; checklist
 ticked and signed; OpenAPI, generated types, the package registry and the audit rows current; the queue and the
@@ -422,7 +432,9 @@ Approved as one batch by DEC-49; the first developer confirms in the install PR.
 - **Runtime:** `next-intl`; the Radix primitives and helper packages that shadcn/ui components need;
   `lucide-react`; `maplibre-gl`, `pmtiles`, `supercluster`, `leaflet`, `leaflet.markercluster`, `protomaps-leaflet`
   at the legacy versions (`$KVADRO_ROOT/demo/app/package.json:22-33`); `posthog-js`.
-- **Development:** Vitest, Testing Library, jsdom, Playwright, `openapi-typescript`.
+- **Development:** Vitest, Testing Library, jsdom, Playwright, `openapi-typescript`; and what these need to run in
+  this workspace — the React plugin and the path-alias plugin for Vitest, and the type packages of the map
+  libraries. The exact list is in the dependency package (WP-03) for the first developer to confirm.
 - **Backend:** nothing new is known to be needed; Pennant, Sanctum, Horizon and Scramble are installed.
 
 ## 11. Environments and deployment
@@ -453,9 +465,15 @@ record with statuses is `wave-1/README.md`.
 | E Landing | WP-60, WP-61 | Landing data, landing pages |
 | F Launch | WP-70, WP-71 | Hardening, launch and watch |
 
+Three places where a package needs something a later package builds are bridged inside the specifications by a
+contract with an empty implementation: the per-user overlay of the listing package (tables come with the personal
+lists), the starter list of the radar package (the delivered set comes with matching), and the share method (the
+Bot API client comes with the bot). The two landing methods keep no driver between the stubs-off package and the
+landing data package; nothing calls them in between.
+
 ## 13. Risks of this wave
 
-RK-24 … RK-31 in 24 §8.3. The three that decide the order of work: the service key may be late (RK-28), so nothing
+RK-24 … RK-32 in 24 §8.3. The three that decide the order of work: the service key may be late (RK-28), so nothing
 before stage C depends on it; stub data is visible in production (RK-27), so the marker is part of the first frontend
 package; and the size of the wave (RK-29), which is why the queue is strict and every package ends in a deployable
 state.

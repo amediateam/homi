@@ -149,7 +149,8 @@ policy, so the app and the bot never ask twice.
 
 ### Controllers and authorisation
 
-`RadarController` and `RadarRelaxController` of WP-13 get real bodies and answer with `meta.source = native`.
+`RadarController` and `RadarRelaxController` of WP-13 get real bodies and answer with `meta.source = native`; their
+stub bodies move into `NativeStubs` (the rule of WP-40).
 A radar is always loaded as `$request->user()->radars()->findOrFail($id)` — one query for own, foreign and unknown
 ids — and then passed to `Gate::authorize` against `App\Policies\RadarPolicy` (`view`, `update`, `delete`).
 `PATCH`: `active: true` → resume with `starter`; `active: false` → pause with `ask_found`; `mode` → `setMode`;

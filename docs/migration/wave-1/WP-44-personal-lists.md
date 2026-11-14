@@ -161,7 +161,8 @@ affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_
 - `backend/app/Services/Personal/{ListingResolver,FavoriteService,HistoryService,HiddenService,BlockedAuthorService,BlockResult,AuthorLabel,VoteService,ReportOutcome,FoundSurveyService,EloquentOverlayData}.php`
 - `backend/app/Jobs/Listings/ResolveListingRef.php`; `backend/app/Policies/BlockedAuthorPolicy.php`;
   `backend/app/Console/Commands/Votes/SetDetector.php`; `backend/config/votes.php`
-- `backend/app/Http/Controllers/Api/V1/Personal/*.php` (real bodies); `backend/app/Providers/AppServiceProvider.php`
+- `backend/app/Http/Controllers/Api/V1/Personal/*.php` (real bodies; the stub bodies move into `NativeStubs`, the
+  rule of WP-40); `backend/app/Providers/AppServiceProvider.php`
   (binding, Pennant definitions)
 - `backend/tests/Feature/Api/V1/Personal/{FavoritesTest,HistoryTest,HiddenListingsTest,BlockedAuthorsTest,HiddenOverviewTest,ReportsTest,FoundSurveyTest}.php`,
   `backend/tests/Feature/Api/V1/IdorMatrixTest.php`, `backend/tests/Feature/Personal/{VoteThresholdTest,VoteWeightTest,AuthorLabelTest,OverlayDataTest,ListingResolverTest}.php`,
