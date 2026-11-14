@@ -50,5 +50,15 @@ jobs:
       - name: Typecheck
         run: pnpm -r --if-present typecheck
 
+      - name: Unit tests
+        run: pnpm test
+
+      # The same packages again in the product time zone: a formatter or clock helper that reads the process
+      # time zone fails one of the two runs (15 §3.10).
+      - name: Unit tests (Asia/Tashkent)
+        run: pnpm --filter @homi/utils --filter @homi/testing test
+        env:
+          TZ: Asia/Tashkent
+
       - name: Build
         run: pnpm -r build

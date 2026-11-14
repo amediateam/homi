@@ -1,2 +1,5 @@
 node_modules/
 .pnpm-store/
+# Playwright output (WP-03)
+test-results/
+playwright-report/

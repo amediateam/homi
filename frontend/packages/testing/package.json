@@ -1,0 +1,21 @@
+{
+  "name": "@homi/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./playwright": "./src/playwright.ts"
+  },
+  "scripts": {
+    "test": "vitest run --config ../../vitest.config.mts --project @homi/testing",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"@homi/testing: no lint rules yet\""
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "^26",
+    "typescript": "^6",
+    "vitest": "5.1.0"
+  }
+}

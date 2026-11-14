@@ -346,3 +346,61 @@ On «сделай все сам»: the request to the operator was put into an u
 product owner knows the operator's contact (Q-SYS-009). The outbound addresses are asked for in #37.
 
 **Not applied:** the request is not sent; WP-02 is not `DONE`.
+
+## L. Development track, 2026-11-15 — WP-03, package list and the pgsql test group
+
+The developer: «бери WP-03». WP-03 depends on WP-01, which is `WAITING` (ADR-0019 `Proposed`, #30 unanswered); the
+package list needs the first developer's confirmation anyway (DEC-49), so both can come together.
+
+**Applied** (draft PR #39, branch `feat/wp-03-dependencies-and-test-tooling`):
+
+- Backend `pgsql` test group: `tests/PgsqlTestCase.php` (truncation; skips unless `pgsql` and a `_test` database,
+  checked from the environment and from the booted configuration), `concurrently()` in `tests/Pest.php` (unbinds
+  each task from the generated Pest class), suite `Pgsql`, CI steps with `--fail-on-skipped`, `make test-pgsql`.
+  First members: `ConcurrentlyTest`, `MediaOwnershipRaceTest` (WP-00, KI-25), `Unit/PgsqlGuardTest`. Verified red
+  first, then `make test-pgsql` → 3 passed on a local `homi_test`, and `make ci-backend` → exit 0.
+- Own choices: `PgsqlTestCase::refusal()` as a static rule with a unit test; the second check in
+  `createApplication()`; `PGSQL_TEST_DATABASE` in the Makefile; the local `homi_test` on this machine's Homebrew
+  PostgreSQL rather than on the LAN database host of `.env`.
+- The package table (31 packages) with licence, release dates, transitive counts and audit is in the PR body. It
+  comes from a scratch resolution outside the repository (`pnpm install --lockfile-only --ignore-scripts`).
+- The specification was corrected against the registry: `vite` added as Vitest 5's peer; `vite-tsconfig-paths`
+  dropped; `oxc` instead of `esbuild`; the real install scripts; peers of `openapi-typescript` and Radix; pnpm 11's
+  minimum release age.
+
+**Not applied (at that point):** no npm package was installed; steps 3–9 waited for the confirmation in #39.
+
+**Later the same day.** The developer confirmed the table: «потверждаю». The confirmation is recorded in the PR
+description. Steps 3–9 were then applied on the same branch, and PR #39 is out of draft for review:
+- **Packages:** the 31 packages are installed at the confirmed versions. The lockfile grew from 417 to 665 entries
+  and no existing entry changed. `pnpm audit --prod` found no known vulnerabilities.
+- **Install scripts:** all three are denied in `allowBuilds`.
+- **Unit tests:** `frontend/vitest.config.mts` defines the projects, and `vitest.setup.ts` rejects every unmocked
+  `fetch`. `@homi/testing` has the fake Telegram, the synthetic `initData`, `freezeClock` and `fixture()`; its 89
+  self-tests pass under `UTC` and `Asia/Tashkent`.
+- **Lint:** the ESLint restriction on `@homi/testing` is in place in the three apps.
+- **End to end:** Playwright runs the smoke test and the guard test, both green against the built app and against
+  `https://app.homi.loc`.
+- **Gates:** `make ci-frontend` now runs the unit tests, and `make e2e` and `frontend-e2e.yml` are new. All three
+  workflows were green on the PR.
+
+Own choices, each recorded in the specification's "Design" section:
+- the flaky tag uses `skip: true`;
+- every `test` script passes `--config`;
+- the Vitest configuration is a `.mts` file;
+- `@homi/testing` has two entry points, and its guard is an automatic Playwright fixture;
+- the double declares no global `Window` type;
+- `BackButton` has no version gate, as in TMA-042;
+- fixture names take the form `<area>/<name>`.
+
+ASSUMPTION_MISMATCH AM-51 (2026-11-15):
+- **Assumption.** The WP-03 vetting, which read a lockfile from a scratch resolution, listed three install scripts in
+  the new tree: `@swc/core`, `@parcel/watcher` and `fsevents`. The plan was to allow none of them, without recording
+  any decision.
+- **What was found.**
+  - The first `pnpm add` failed with `ERR_PNPM_IGNORED_BUILDS`, because pnpm 11 has `strictDepBuilds: true` by
+    default.
+  - It named `core-js` as well (through `posthog-js`).
+  - `fsevents` 2.3.3 has no install script; its binary ships in the package.
+- **Resolution.** `frontend/pnpm-workspace.yaml` lists the three real scripts in `allowBuilds`, all set to `false`.
+  The specification and the PR description were corrected.

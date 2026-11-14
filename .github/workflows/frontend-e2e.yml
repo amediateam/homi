@@ -1,0 +1,66 @@
+name: frontend-e2e
+
+# End-to-end tests of the frontend (WP-03): Playwright against a production build of `app` on :3001, with the fake
+# Telegram of `@homi/testing`. Its guard fails a test that sends a request to an external host. The nightly run,
+# WebKit and the API on stubs come with WP-21 and WP-33.
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.node-version'
+      - '.github/workflows/frontend-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node (pinned in .node-version)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install pnpm (version pinned in frontend/package.json)
+        run: npm install --global pnpm@11.24.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The browser build follows the Playwright version, which only changes with the lockfile.
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
+      - name: Install Chromium and its system libraries
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
+      - name: Upload traces and report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-traces
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
