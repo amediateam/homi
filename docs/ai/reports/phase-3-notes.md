@@ -368,4 +368,39 @@ package list needs the first developer's confirmation anyway (DEC-49), so both c
   dropped; `oxc` instead of `esbuild`; the real install scripts; peers of `openapi-typescript` and Radix; pnpm 11's
   minimum release age.
 
-**Not applied:** no npm package is installed; steps 3–9 wait for the confirmation in #39.
+**Not applied (at that point):** no npm package was installed; steps 3–9 waited for the confirmation in #39.
+
+**Later the same day.** The developer confirmed the table: «потверждаю». The confirmation is recorded in the PR
+description. Steps 3–9 were then applied on the same branch, and PR #39 is out of draft for review:
+- **Packages:** the 31 packages are installed at the confirmed versions. The lockfile grew from 417 to 665 entries
+  and no existing entry changed. `pnpm audit --prod` found no known vulnerabilities.
+- **Install scripts:** all three are denied in `allowBuilds`.
+- **Unit tests:** `frontend/vitest.config.mts` defines the projects, and `vitest.setup.ts` rejects every unmocked
+  `fetch`. `@homi/testing` has the fake Telegram, the synthetic `initData`, `freezeClock` and `fixture()`; its 89
+  self-tests pass under `UTC` and `Asia/Tashkent`.
+- **Lint:** the ESLint restriction on `@homi/testing` is in place in the three apps.
+- **End to end:** Playwright runs the smoke test and the guard test, both green against the built app and against
+  `https://app.homi.loc`.
+- **Gates:** `make ci-frontend` now runs the unit tests, and `make e2e` and `frontend-e2e.yml` are new. All three
+  workflows were green on the PR.
+
+Own choices, each recorded in the specification's "Design" section:
+- the flaky tag uses `skip: true`;
+- every `test` script passes `--config`;
+- the Vitest configuration is a `.mts` file;
+- `@homi/testing` has two entry points, and its guard is an automatic Playwright fixture;
+- the double declares no global `Window` type;
+- `BackButton` has no version gate, as in TMA-042;
+- fixture names take the form `<area>/<name>`.
+
+ASSUMPTION_MISMATCH AM-51 (2026-11-15):
+- **Assumption.** The WP-03 vetting, which read a lockfile from a scratch resolution, listed three install scripts in
+  the new tree: `@swc/core`, `@parcel/watcher` and `fsevents`. The plan was to allow none of them, without recording
+  any decision.
+- **What was found.**
+  - The first `pnpm add` failed with `ERR_PNPM_IGNORED_BUILDS`, because pnpm 11 has `strictDepBuilds: true` by
+    default.
+  - It named `core-js` as well (through `posthog-js`).
+  - `fsevents` 2.3.3 has no install script; its binary ships in the package.
+- **Resolution.** `frontend/pnpm-workspace.yaml` lists the three real scripts in `allowBuilds`, all set to `false`.
+  The specification and the PR description were corrected.
