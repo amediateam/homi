@@ -1,0 +1,360 @@
+# WP-28 — Map: Leaflet engine, lasso, spot map
+
+| Field | Value |
+| ----- | ----- |
+| Stage | B |
+| Status | TODO |
+| Depends on | WP-27 |
+| Size | ≈ 2 800 changed lines, L |
+| Behaviour reference | `03` §1.2 (Back while drawing), §1.7, §1.8, §2 (SCR-011 "Differences between engines", SCR-012, SCR-021, the location part of SCR-018), §3.2, §3.4 ("Lasso", "Map", "Geolocation"), §4 (BR-APP-061, BR-APP-008), §5 (LB-APP-001, LB-APP-013, LB-APP-020); `05` (TMA-015, TMA-022, TMA-028, TMA-035); task files KV-FE-059, KV-FE-060, KV-FE-067 (spot map parts). From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
+| Needs from the production track | `CSP_TILE_HOSTS` of WP-27 must also cover `img-src` (Leaflet loads raster tiles as images) and the app's `Referrer-Policy` must not strip the origin from tile requests; a low-end Android device (lite mode) for the pass on staging. Nothing else |
+
+## Goal
+
+Every device gets a working map: where MapLibre GL cannot run, the Leaflet view shows the same pins, stacks,
+clusters, card, note, states and locate behaviour, and the temporary "map unavailable" state of WP-27 is removed.
+The user can draw a search area with a finger on either engine and cancel it with Telegram's Back. The listing
+shows its approximate location on a mini map and on a fullscreen map with "where am I" and links to Yandex and
+Google Maps.
+
+## Scope
+
+**In.**
+
+- `features/map/leaflet/MapViewLeaflet` behind the `MapViewProps` contract of WP-27, with markercluster and the
+  protomaps-leaflet basemap; fallback wiring in `MapScreen`; fix of LB-APP-013; text-only icons (LB-APP-020).
+- Lasso drawing (SCR-012, BR-APP-061) on both engines: the `draw` layer, the overlay, the geometry module, the
+  hand-off from the filters sheet, the "too small" signal for the top bar.
+- Spot map: the mini map in the listing's location section and the fullscreen overlay at
+  `/listing/[number]/location` (SCR-021) in both listing trees, on both engines; fix of LB-APP-001.
+- Navigation amendments settled across packages (see "Decisions"), where they are not implemented yet.
+
+**Out.**
+
+- GL view, points, grouping, camera maths, mask geometry, selection card, status pills, warm-up: WP-27 (reused).
+- Top bar variants (lasso button, drawing hints, «Отмена», area pill and its ×), view toggle: WP-23.
+- «Обвести на карте» in the filters sheet and `applyFilters`: WP-25. Follow nudge after an apply: WP-30.
+- Location rows and «Рядом» of the listing: WP-26. Location service and its 12 s cap (LB-APP-009): WP-21.
+- Screen name `map/draw`: WP-32 (derived by `screenNameOf` of WP-20).
+
+## Decisions that bind this package
+
+| Decision | Consequence here |
+| -------- | ---------------- |
+| Ref. DEC-44, `25` §3.8 | Leaflet with markercluster and protomaps-leaflet is the fallback engine, chosen by `pickEngine` of WP-27: lite mode, no WebGL2 without a performance caveat, `?map=leaflet`, or a GL failure in this session |
+| Ref. DEC-36 | LB-APP-001 and LB-APP-013 are fixed without a flag; the text-only rule of LB-APP-020 covers Leaflet icons |
+| Ref. DEC-46 | The engine differences listed under "Behaviour to reproduce" are accepted; states, texts and rules are the same on both engines |
+| Ref. DEC-49, `25` §10 | `leaflet` 1.9.4, `leaflet.markercluster` 1.5.3 and `protomaps-leaflet` at the versions WP-03 installed; nothing is added |
+| Ref. DEC-45 | This package removes a state real users see on production (`map.unavailable`), so it is taken right after WP-27 |
+| `25` §3.2 "Back" | Closing order is sheet, overlay, screen. Drawing and the fullscreen spot map are layers that Back closes |
+| Settled: parent of an address | `parentOf(pathname, searchParams)` in `lib/navigation/routes.ts` returns an address or `null`. With a layer parameter present (`pick`, `draw`, `pin`, `step`) the parent is the same address without it. `/filters`, `/filters/<kind>`, `/sort`, `/city` go to `/map` when `from=map`, else `/`, carrying the 25 filter keys and `sort`. `useBack()`: `canGoBack = depth > 0 \|\| parentOf(…) !== null`; `back()` is `router.back()` when `depth > 0`, else `router.replace(parentOf(…))` |
+| Settled: drawing is a pushed layer | The lasso button, the «Своя область» pill and the filters hand-off all end in `useLayerState('draw').open()`, which pushes `draw=1`; the BackButton is then visible and Back cancels with `router.back()`, as legacy. The filters sheet never puts `draw` into its navigation |
+| Settled: reserved parameters | `from`, `focus`, `pick`, `draw`, `pin`, `step`, `i` are never filter keys: `fromSearchParams` ignores them and `toSearchParams` never writes them |
+| Settled: one apply path | A finished stroke applies through `applyFilters` of WP-25, which calls `notifyFiltersApplied`; the follow nudge of WP-30 listens there |
+
+If `routes.ts`, `useBack()` or `@homi/search` do not implement the three "settled" navigation rows when this
+package starts, implement them here with their tests and say so in the PR description (queue rule 6).
+
+## Design
+
+Read before coding: `01-app/02-guides/lazy-loading.md` (`ssr: false` only inside a Client Component; libraries
+through `import()`), `01-app/02-guides/single-page-applications.md` ("Shallow routing": `pushState` and
+`replaceState` integrate with the router), `01-app/03-api-reference/03-file-conventions/parallel-routes.md` and
+`intercepting-routes.md` (the two listing trees), and
+`01-app/03-api-reference/05-config/01-next-config-js/cacheComponents.md` ("Navigation with Activity": Effects of
+a hidden route are cleaned up and re-created). Facts about `leaflet`,
+`leaflet.markercluster` and `protomaps-leaflet` beyond the audit are **verify before use** at the installed
+versions; the list is in step 1.
+
+### Leaflet view (`features/map/leaflet/`)
+
+- `MapViewLeaflet.tsx` implements `MapViewProps` of `features/map/types.ts` unchanged. `MapScreen` loads it with
+  `next/dynamic(() => import('./leaflet/MapViewLeaflet'), { ssr: false })`. Leaflet, its plugins and their CSS are
+  imported only inside this chunk.
+- `MapScreen` changes: `MapUnavailable.tsx` and the key `map.unavailable` are deleted. The Leaflet view mounts when
+  `pickEngine` says so, when the GL chunk fails to load, or when the GL view calls `onFail` (then `markGlFailed`
+  of WP-27 runs once). A fallback during drawing closes the `draw` layer; filters are kept. If the Leaflet chunk
+  fails too, the error pill of WP-27 is shown and «Повторить» retries the import. `warmMap()` warms the chunk of
+  the engine `pickEngine` picks.
+- Map: maximum zoom 18; attribution through Leaflet's control without its prefix — «© OpenStreetMap», plus
+  «· Protomaps» with vector tiles; link clicks are routed to `tg.openLink`.
+- Basemap (`basemap.ts`, `useDeferredBasemap.ts`): added after the first fit or after 1.2 s, whichever comes first;
+  before that the palette's land colour. `tiles` empty → OSM raster layer, maximum zoom 19, tile images requested
+  with an origin referrer; a string → the protomaps-leaflet vector layer with the palettes of WP-27 and label rules
+  in the interface locale (`basemapRules.ts`), `maxDataZoom` 15. A vector failure switches to raster and reports
+  `map_tiles_failed` once. The layer is re-created when the scheme, lite mode or locale changes.
+- Listings layer (`listingLayer.ts`, `icons.ts`, `useSpiderfy.ts`): marker clusters with `maxClusterRadius` 48 and
+  `spiderfyOnMaxZoom` off. Pin, stack and cluster icons come from one builder shared with GL: move
+  `gl/markerElements.ts` of WP-27 to `features/map/markerElements.ts`. Icons are DOM nodes filled with
+  `textContent`; no HTML string ever carries server text (the ESLint rule of WP-27 covers this folder).
+- Stacks spread on tap with `spreadStackLabels` of WP-27 and collapse when a zoom starts. A cluster tap first
+  collapses any spread stack, then zooms or selects (fix of LB-APP-013).
+- Camera: the fit rules of WP-27 (`robustBounds`, padding 90 / 24, maximum zoom 14, first fit not animated), the
+  city jump, the default view, and `homi-map-fit:<lat>,<lon>` saved after the first fit.
+- Mask: `maskGeometry()` of WP-27 as a polygon with a hole. Locate: a circle marker of radius 7 and an accuracy
+  circle under 2 km (`useMyLocation.ts`).
+- In-map tile prefetch on `moveend`, only for a `{z}/{x}/{y}` template: tiles around the stopped view within the
+  per-stop budget and the session cap of `tilePrefetch.ts` (WP-27); nothing with Save-Data or on `2g`.
+
+### Drawing layer (`MapScreen`, `lib/ui/shellState.ts`)
+
+- `const draw = useLayerState('draw')`; drawing is on while the address has `draw=1`. `shellVariantOf()` of WP-23
+  already maps that to `map-drawing`, so `TopBar` shows the hints and «Отмена» and the view toggle hides.
+- Starting (`startDrawing()` in `MapScreen`): light haptic, `shellState.areaTooSmall = false`, selection card
+  closed, `draw.open('1')`. Callers: the lasso button and the area pill of `TopBar`, and the consumer below.
+- Hand-off from the filters sheet: WP-25 calls `requestDraw()` and then `closeThen(routes.map(q))` with districts
+  and zones cleared. `MapScreen` calls `consumeDrawRequest()` once in its activation effect (first mount and every
+  re-show) and starts drawing when it returns `true`. `requestDraw()` stores a timestamp;
+  `consumeDrawRequest()` clears it and returns `true` only if it is younger than 3 s, so a failed hand-off cannot
+  start drawing on a later visit. Add both functions to `shellState.ts` if they are missing, and replace the
+  temporary "close at once" code of WP-27.
+- Leaving: «Отмена» and Telegram Back both run `back()` of `useBack()`; a tab press, the view toggle's absence, the
+  SettingsButton and any other route change end drawing because the address changes.
+- Reload on `/map?draw=1` (depth 0): drawing mode stays. The BackButton is visible because `parentOf()` returns the
+  same address without `draw`; Back and «Отмена» replace to it.
+- Finished stroke: `applyFilters(setGeography(filters, { polygon }), { sort, target: routes.map })`.
+  `setGeography` (WP-22) clears districts and zones (BR-APP-008). `applyFilters` normalises, keeps or resets the
+  sort, leaves the layer with `closeThen(routes.map(q))` (or `router.replace` at depth 0; `q` never contains
+  `draw`), scrolls to the top and calls `notifyFiltersApplied`.
+
+### Lasso (`features/map/lasso/`)
+
+- `polygon.ts` is pure and has no map import: `lassoToPolygon(screenPoints, unproject)` and the constants.
+  `serializePolygon` stays in `@homi/search`; `maskGeometry` stays in WP-27's `mask.ts`.
+- `LassoOverlay.tsx` covers the map between the top bar and the tab bar while drawing and talks to the engine
+  through `LassoHost = { unproject(x, y), panBy(dx, dy), zoomAround(x, y, scale) }`, implemented by
+  `gl/GlLasso.tsx` and `leaflet/lassoHandlers.ts`.
+
+| Rule | Value |
+| ---- | ----- |
+| Drawing pointer | the first pointer, with pointer capture; a mouse works the same (Telegram Desktop) |
+| Point spacing | a point closer than 4 px to the previous one is skipped; points outside the overlay clamp to its box |
+| Second pointer | drops the stroke; the two pointers pan and pinch the map, applied once per animation frame; marker re-sync is deferred 150 ms |
+| Stroke end | lifting the drawing pointer, or losing pointer capture |
+| Rejected | fewer than 3 points, or a span under 40 px on either axis |
+| Simplification | Douglas–Peucker from a 3 px tolerance, × 1.5 per pass, until at most 40 vertices |
+| Closing gap | the last vertex is dropped when it is within 12 px of the first and more than 3 remain |
+| Self-intersection | the outline is replaced by its convex hull |
+| Output | `[lat, lon]` pairs rounded to 5 decimals, not closed, 3–40 vertices; otherwise `null` |
+
+### Spot map (`features/listing/spot/`)
+
+- `spotGeometry.ts`: radius = the listing's `geo_radius_m`, or 500 m when missing, zero or negative; circle ring;
+  `yandexUrl()`, `googleUrl()` with 6-decimal coordinates; `yandexZoom(radius)`; bounds of spot plus user;
+  distance to the user.
+- `useSpotMap(containerRef, spot, { interactive, tiles, scheme, locale, lite })` is the only owner of the map
+  container (fix of LB-APP-001). One effect: pick the engine with `pickEngine`, import `spotGL.ts` or
+  `spotLeaflet.ts`, create the map, draw the circle (fill opacity 0.12, outline per theme) and the attribution.
+  Each run has a cancellation flag: an import that resolves after cleanup creates nothing; cleanup disposes the
+  instance before any new run. A GL rejection calls `markGlFailed` and continues with Leaflet in the same run.
+  Returns `{ status, showUser(point), fitSpotAndUser() }`.
+- `SpotMap.tsx` (mini map) replaces `sections/SpotMapSlot.tsx` of WP-26, which is deleted: a button (aria
+  `listing.mapOpen`) around a 2:1 box with an expand icon; the map mounts when the box comes within 300 px of the
+  viewport (`IntersectionObserver`, `rootMargin: '300px'`) and reference data is loaded; it ignores pan and zoom.
+- `SpotMapRoute.tsx` is what `location/page.tsx` renders in `(main)/listing/[number]/` and in
+  `(main)/@overlay/(.)listing/[number]/` (both route files replace the WP-20 placeholder and hold no logic). It
+  reads the listing with `useListing()` of WP-26 from the resource cache — no second request — and renders
+  `SpotMapFullscreen` in a `RouteOverlay` at z-index 100. No coordinates, or a listing error: `back()`.
+- `SpotMapFullscreen.tsx`: interactive map, close button, locate button, bottom card. The user's position lives in
+  component state, is dropped on close and is never sent (TMA-035).
+
+## Files
+
+New, under `frontend/app/`:
+
+- `features/map/leaflet/{MapViewLeaflet.tsx,useLeafletMap.ts,listingLayer.ts,icons.ts,useSpiderfy.ts}`,
+  `features/map/leaflet/{basemap.ts,basemapRules.ts,useDeferredBasemap.ts,useMyLocation.ts,lassoHandlers.ts}`
+- `features/map/lasso/{polygon.ts,LassoOverlay.tsx}`, `features/map/gl/GlLasso.tsx`
+- `features/listing/spot/{SpotMap,SpotMapFullscreen,SpotMapRoute}.tsx`,
+  `features/listing/spot/{useSpotMap,spotGeometry,spotGL,spotLeaflet}.ts`
+- `tests/map/{lassoPolygon,leafletIcons,useSpiderfy,drawRequest}.test.ts`, `tests/map/LassoOverlay.test.tsx`,
+  `tests/listing/{spotGeometry,useSpotMap}.test.ts`, `tests/listing/SpotMapFullscreen.test.tsx`
+- `e2e/{map-leaflet,map-lasso,spot-map}.spec.ts`
+
+Changed:
+
+- `features/map/MapScreen.tsx` (fallback, drawing, draw request), `features/map/engine.ts` (`warmMap`),
+  `features/map/markerElements.ts` (moved from `gl/`), `tests/map/MapScreen.test.tsx`.
+- `app/[locale]/(main)/listing/[number]/location/page.tsx`,
+  `app/[locale]/(main)/@overlay/(.)listing/[number]/location/page.tsx`.
+- `features/listing/sections/LocationSection.tsx` (uses `SpotMap`).
+- `lib/ui/shellState.ts`, `lib/navigation/routes.ts`, `lib/navigation/useBack.ts`,
+  `frontend/packages/search/src/*` (reserved parameters): only where the settled rules are missing.
+- `e2e/map.spec.ts` (the "unavailable" case becomes a Leaflet case).
+
+Deleted: `features/map/MapUnavailable.tsx`, `features/listing/sections/SpotMapSlot.tsx`, the key `map.unavailable`
+in `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`.
+
+## Steps
+
+1. Read the documents named in "Design". Verify and note in the PR description: importing Leaflet 1.9.4 and
+   markercluster only on the client; whether `divIcon` accepts an element (if not, create the icon empty and fill
+   its element when the marker is added); the tile layer option that sets the referrer policy of tile images; the
+   protomaps-leaflet layer API, its `maxDataZoom` and label-rule options at the installed version.
+2. Settled navigation rules: `parentOf(pathname, searchParams)`, `useBack()`, reserved parameters,
+   `requestDraw` / `consumeDrawRequest` — add what is missing, with unit tests.
+3. `lasso/polygon.ts` with `lassoPolygon.test.ts`.
+4. Leaflet view base: map, raster basemap, deferred basemap, attribution, disposal in the effect cleanup.
+5. Listings layer: clusters, shared icon builder, stacks, the collapse-before-cluster rule, tap rules, haptics.
+6. Camera, fit memory, city jump, mask, locate.
+7. Vector basemap with protomaps-leaflet, fallback to raster, in-map tile prefetch.
+8. `MapScreen`: mount Leaflet by rule and on GL failure; delete `MapUnavailable` and its key; update tests.
+9. `LassoOverlay`, `GlLasso`, `lassoHandlers`; `startDrawing`, the draw-request consumer, the finish and cancel
+   paths; `areaTooSmall`.
+10. `spotGeometry.ts` and `useSpotMap.ts` with their tests; `spotGL.ts`, `spotLeaflet.ts`.
+11. `SpotMap` in the location section; delete `SpotMapSlot`.
+12. `SpotMapRoute`, `SpotMapFullscreen`, both `location/page.tsx` files.
+13. End-to-end specs; run the checklist on staging on a GL device and a lite device; tick it in the PR.
+
+## Behaviour to reproduce
+
+### Leaflet view
+
+Same states, texts, tap rules, note, pills, card and locate behaviour as the table of WP-27 (SCR-011, SCR-013).
+Differences a user may notice between the engines, all kept from legacy:
+
+| Aspect | GL | Leaflet |
+| ------ | -- | ------- |
+| Label font | bundled Noto Sans glyphs | system font of the vector layer |
+| Attribution | own component | Leaflet control |
+| Pinch while drawing | fractional zoom | whole zoom steps |
+| Spread stack on zoom | stays until a tap elsewhere | collapses when the zoom starts |
+| Order in a max-zoom cluster | by price | markercluster's order |
+| Basemap on open | at once | after the first fit, at most 1.2 s |
+| Tile prefetch while panning | none (the library fetches its own) | within the per-stop budget |
+| Theme or language change | style rebuilt in place | basemap layer re-created |
+
+### Drawing (SCR-012)
+
+| State | Trigger | What the user sees |
+| ----- | ------- | ------------------ |
+| Drawing, idle | lasso button, tap on the «Своя область» pill, or «Обвести на карте» in the filters sheet | top bar: `map.areaHint` «Обведите пальцем, где искать», `map.areaMove` «Двумя пальцами — двигать карту», `map.areaCancel` «Отмена»; BackButton visible; view toggle, locate button and card hidden; the mask of an existing area stays |
+| Stroke | finger down and moving | an outline follows the finger |
+| Two fingers | a second finger lands | the outline disappears; the map pans and zooms; drawing mode stays |
+| Too small | stroke rejected | error haptic; outline cleared; top bar `map.areaSmall` «Обведите покрупнее» + `map.areaMove`; drawing mode stays |
+| Area set | valid stroke | success haptic; drawing ends; the mask shows the area; top bar pill `map.areaOn` «Своя область» with × (aria `map.areaRemove` «Убрать область»); the feed and the map search inside it |
+
+| Action | Result |
+| ------ | ------ |
+| Tap the lasso button (aria `map.area` «Обвести на карте») | light haptic; drawing starts as a pushed layer |
+| «Обвести на карте» in the filters sheet | the sheet closes, the map opens with districts and zones cleared, drawing starts; one Back cancels drawing and the map stays |
+| Finger down | light haptic at the start of each stroke |
+| Valid stroke | `applyFilters` with the polygon, districts and zones empty; sort kept or reset to `new`; address `/map` without `draw`; scroll to top; `notifyFiltersApplied` |
+| «Отмена» | light haptic; drawing ends; filters unchanged |
+| Telegram Back while drawing | drawing ends; the map stays |
+| Reload while drawing | drawing mode is restored; Back or «Отмена» leaves it |
+| Tab press, SettingsButton | drawing ends with the route change |
+| × on the area pill | light haptic; polygon removed; no nudge (WP-23 renders it; verified here) |
+| GL fails while drawing | Leaflet mounts, drawing is cancelled, filters kept |
+
+A downward stroke must not collapse the Mini App: vertical swipes are disabled by WP-21 (TMA-015).
+
+### Spot map (SCR-021 and the mini map of SCR-018)
+
+| State | Trigger | What the user sees |
+| ----- | ------- | ------------------ |
+| No coordinates | listing without `lat` / `lon` | no mini map and no hint; `/location` returns to the listing |
+| Mini map waiting | box farther than 300 px from the viewport, or reference data not loaded | the box in the background colour, no spinner |
+| Mini map | box near the viewport | static map with the circle of the approximate place; attribution; hint `listing.mapApprox` «Место примерное: по кварталу, ориентиру или метро из объявления» (rendered by WP-26) |
+| Mini map failed | both engines failed | the box keeps the background; the tap still opens the fullscreen map, which tries again |
+| Fullscreen, idle | tap on the mini map | interactive map; close button (aria `common.close`); locate button (aria `map.locate` «Где я») when location is available; bottom card with the place name in bold, the line `listing.mapApprox`, buttons `listing.openYandex` «Яндекс Карты» and `listing.openGoogle` «Google Карты» |
+| Locating | locate tapped | spinner in the button; button disabled |
+| Located | position received | success haptic; blue dot; the view fits spot and user; line `listing.mapFromYou` «≈ {km} км от вас — место примерное» (one decimal) |
+| Locate denied | answer `denied` | line `map.locateDenied` «Нет доступа к геопозиции. Разрешить можно в настройках Telegram.» |
+| Locate failed | answer `fail`, including the 12 s cap | line `map.locateFail` «Не получилось определить, где вы.» |
+
+| Action | Result |
+| ------ | ------ |
+| Tap the mini map | light haptic; `router.push(routes.listingLocation(number))`; the listing stays underneath |
+| Close button or Telegram Back | the fullscreen map closes; the listing is still open; a second Back closes the listing |
+| Swipe on the fullscreen map | pans the map; there is no swipe-to-close and the listing's swipe-back does not fire |
+| «Яндекс Карты» | light haptic; `tg.openLink('https://yandex.uz/maps/?ll=<lon>,<lat>&z=<zoom>&pt=<lon>,<lat>,pm2rdm')` with zoom 17 / 16 / 15 / 13 for a radius ≤ 250 / ≤ 600 / ≤ 1 500 m / larger |
+| «Google Карты» | light haptic; `tg.openLink('https://www.google.com/maps/search/?api=1&query=<lat>,<lon>')` |
+| Open and close the same listing repeatedly | exactly one map instance per mount; no «Map container is already initialized» (LB-APP-001) |
+
+No new i18n keys. `map.unavailable` (added by WP-27) is removed.
+
+## Tests
+
+**Unit (Vitest).**
+
+- `lassoPolygon.test.ts`: 2 points → `null`; 39 px span → `null`, 40 px → polygon; a 200 px circle of 300 points →
+  at most 40 vertices; closing-gap drop at 11 px and not at 13 px; a figure-eight → its convex hull; rounding to 5
+  decimals; never fewer than 3 or more than 40 vertices.
+- `leafletIcons.test.ts`: a label with markup renders literally; tone classes; cluster sizes 32 / 38 / 44.
+- `useSpiderfy.test.ts`: spread, collapse on zoom start, collapse before a cluster tap is handled.
+- `drawRequest.test.ts`: consumed once; `false` without a request; `false` after 3 s (fake timers).
+- `routes.test.ts` additions: `parentOf` for `/map?draw=1`, `/map?pin=7`, `/filters?from=map&city=…`,
+  `/listing/5/actions?step=report`; reserved parameters dropped by `fromSearchParams` and never written.
+- `spotGeometry.test.ts`: default radius for missing, 0 and negative; zoom 17 / 16 / 15 / 13 at 250 / 600 / 1 500 /
+  1 501 m; link formats and 6-decimal rounding.
+- `useSpotMap.test.ts` (engines mocked): StrictMode double effect → one live instance; unmount disposes; unmount
+  during the import → nothing created; GL rejection → Leaflet and one `markGlFailed`.
+
+**Component (Testing Library, map libraries mocked).**
+
+- `LassoOverlay.test.tsx` (synthetic pointer events): 4 px skip; second pointer drops the stroke and emits pan and
+  zoom; pointer-up finishes; lost capture finishes; invalid stroke → `onTooSmall`; valid → `onDrawn`.
+- `MapScreen.test.tsx`: Leaflet by rule and after `onFail`; Leaflet chunk failure → error pill and retry; draw
+  request consumed once on activation; `startDrawing` closes the card and hides locate; a drawn polygon calls
+  `applyFilters` with empty districts and zones and `target: routes.map`; too small sets
+  `shellState.areaTooSmall`; fallback during drawing closes the layer.
+- `SpotMapFullscreen.test.tsx`: locate states and texts; external links per radius; close calls `back()`.
+
+**End to end (fake Telegram, stubs, cookie mode and header mode).** Headless Chromium falls to Leaflet by rule; GL
+cases launch with `?map=gl`.
+
+- `map-leaflet.spec.ts`: the scenarios of `map.spec.ts` (pins, stack, cluster, card, error, empty, locate) on
+  Leaflet; a max-zoom cluster tap with a spread stack collapses the stack first.
+- `map-lasso.spec.ts`, on both engines: filters → «Обвести на карте» → map in drawing mode with the BackButton
+  visible → Back cancels and the map stays; lasso button → mouse stroke of a large loop → the area pill, the
+  next `/bff/listings/map` request carries `polygon` and no districts or zones, and the address keeps `polygon`
+  after the toggle to the list (the feed's first page is fetched on the server in cookie mode and is not visible
+  to the test); a tiny stroke →
+  «Обведите покрупнее»; «Отмена»; reload on `/map?draw=1` → still drawing → Back → `/map` without `draw`; × on
+  the pill removes the polygon.
+- `spot-map.spec.ts`: mini map mounts on scroll; tap → fullscreen; Back closes it before the listing; locate with
+  a fake position → the distance line; no request carries coordinates; ten open/close cycles without a console
+  error; direct load of `/listing/<n>/location` shows the fullscreen map over the listing page.
+
+**Not automated:** two-finger pan and pinch while drawing, whole-step versus fractional zoom, the native location
+sheet, tile likeness, scrolling smoothness on a lite device.
+
+## Acceptance checklist
+
+Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL profile (lite mode or
+`?map=leaflet`); in cookie mode and header mode.
+
+- [ ] Non-GL profile: the map opens on Leaflet; the "map unavailable" state no longer exists anywhere.
+- [ ] Leaflet shows the same pins, tones, stacks, clusters, card, «На карте {shown} из {total} · …» note, loading,
+      empty and error pills as GL for the same search.
+- [ ] Leaflet basemap appears after the first fit or within 1.2 s; «© OpenStreetMap» is in the control and opens
+      outside the app.
+- [ ] Tapping a max-zoom cluster while a stack is spread collapses the stack and opens the cluster's card.
+- [ ] A label with markup is shown as text on Leaflet pins, stacks and clusters.
+- [ ] A forced GL failure switches to Leaflet at once and for the rest of the session.
+- [ ] Lasso button starts drawing: hints «Обведите пальцем, где искать» and «Двумя пальцами — двигать карту»,
+      «Отмена», BackButton visible, view toggle and locate hidden, open card closed.
+- [ ] «Обвести на карте» in the filters sheet closes the sheet and starts drawing on the map; the BackButton is
+      visible; Back cancels drawing and the map stays.
+- [ ] A large loop becomes «Своя область»: mask on the map, pill in the top bar, feed and map limited to it,
+      districts and zones cleared.
+- [ ] A tiny stroke shows «Обведите покрупнее» with an error haptic and drawing continues.
+- [ ] A self-crossing outline still produces an area; two fingers move the map without leaving drawing.
+- [ ] «Отмена», Telegram Back, a tab press and the SettingsButton each end drawing without changing filters.
+- [ ] Reloading while drawing keeps drawing mode; Back then leaves it and stays on the map.
+- [ ] × on the area pill removes the area; tapping the pill starts a new drawing.
+- [ ] A new area offers the follow nudge under the conditions of WP-30 (once WP-30 is merged).
+- [ ] Listing with coordinates: the mini map appears when scrolled near, shows the circle, does not pan.
+- [ ] Listing without coordinates: no mini map, no hint.
+- [ ] Tap on the mini map opens the fullscreen map; Back closes it, then the listing.
+- [ ] Locate on the fullscreen map: denied text, failure text, success with the dot, both points in view and
+      «≈ {km} км от вас — место примерное».
+- [ ] «Яндекс Карты» and «Google Карты» open the right place outside the app; Yandex zoom follows the radius.
+- [ ] Opening and closing listings repeatedly never logs «Map container is already initialized».
+- [ ] Drawing, the Leaflet map and the spot map work on a listing opened over the feed and on a direct load.
+- [ ] Inside Telegram on staging: iOS, Android (one lite device), Desktop (mouse drawing) and Web.
+
+## Handoff
+
+Empty.

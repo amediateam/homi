@@ -3,6 +3,14 @@
 Read this first if you are an engineer or an agent (Claude Code, Codex, Gemini…) picking up the migration. It tells
 you where everything is and how to continue **without re-auditing the legacy system**.
 
+> **Changed on 2026-11-14.** HOMI ships a **new product** under its own bot and brand instead of taking over the
+> legacy bot, hosts and users ([`24-three-wave-strategy.md`](24-three-wave-strategy.md)). To continue the work, read
+> [`25-wave-1-plan.md`](25-wave-1-plan.md) once, then take the first package of
+> [`wave-1/README.md`](wave-1/README.md) that is not done. In this document, sections 2, 4, 8 and 9 still apply;
+> sections 1, 3, 5, 6 and 7 describe the earlier plan (S1, the legacy compatibility surface, the reference client)
+> and are not followed. The prohibitions of section 4 stand unchanged: people, tests, CI and agents never call the
+> legacy production API; only HOMI's servers do, with the operator's service key.
+
 ## 1. Goal
 
 Move the running product **kvadro²** onto the HOMI stack in this repository, 1:1 in capabilities, data and public
@@ -68,7 +76,10 @@ See [`21-development-master-plan.md`](21-development-master-plan.md) §1 for the
 - **Audit:** complete for every legacy source we have, independently re-checked ([`23-coverage-audit.md`](23-coverage-audit.md)).
 - **Plan:** written: features, rules, architecture, roadmaps, tasks.
 - **Code:** none yet.
-- **Waiting for people:** see [`20-open-questions.md`](20-open-questions.md) §1 and `10` §8 (`DEC-01` … `DEC-30`).
+- **Since 2026-11-14:** the strategy is 24, the plan is 25, the queue is `wave-1/README.md` (44 work packages,
+  none started). Next step: package WP-00.
+- **Waiting for people:** `24` §8 (`DEC-31` … `DEC-49` with what each still needs, and the questions for the
+  operator). Most of `DEC-01` … `DEC-30` no longer apply (24 §7).
 
 ## 6. How to continue
 

@@ -3,6 +3,13 @@
 **This is the document to steer by.** It summarises the audit and the plan and points to the detail. Conventions:
 [`README.md`](README.md). State on **2026-11-09**: audit and plan complete, no migration code written.
 
+> **Superseded as the plan to steer by on 2026-11-14.** The developer decided that HOMI ships a new product under
+> its own bot instead of taking over the legacy one, in three waves. Steer by
+> [`24-three-wave-strategy.md`](24-three-wave-strategy.md), [`25-wave-1-plan.md`](25-wave-1-plan.md) and the queue
+> [`wave-1/README.md`](wave-1/README.md). Of this document, sections 2 and 3 (scale and modules of the legacy
+> product) stay valid as description; sections 4–20 describe the earlier "compatibility first" plan with its single
+> cut-over and data migration, which is not followed. 24 §7 maps every element.
+
 ## 1. Executive summary
 
 - **What the product is.** kvadro² is a running Telegram product:
@@ -295,6 +302,9 @@ Proposal from [10](10-target-architecture.md) §9, for the first developer's rev
 - **New:** the legacy surface, the data migration, the cut-over, and the ADR batch.
 
 ## 20. Next concrete task
+
+> Since 2026-11-14 the next task is the first package of [`wave-1/README.md`](wave-1/README.md) that is not done.
+> The task below is that queue's first package (WP-00).
 
 **KV-BE-002 — Media ownership fix** ([task file](tasks/backend/KV-BE-002-media-ownership-fix.md)).
 
