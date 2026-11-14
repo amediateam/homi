@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run --config ../../vitest.config.ts --project @homi/ui",
+    "test": "vitest run --config ../../vitest.config.mts --project @homi/ui",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"@homi/ui: no lint rules yet\""
   },

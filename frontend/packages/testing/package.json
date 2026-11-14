@@ -8,7 +8,7 @@
     "./playwright": "./src/playwright.ts"
   },
   "scripts": {
-    "test": "vitest run --config ../../vitest.config.ts --project @homi/testing",
+    "test": "vitest run --config ../../vitest.config.mts --project @homi/testing",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"@homi/testing: no lint rules yet\""
   },

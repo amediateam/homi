@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run --config ../vitest.config.ts --project landing",
+    "test": "vitest run --config ../vitest.config.mts --project landing",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

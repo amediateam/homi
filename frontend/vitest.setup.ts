@@ -1,5 +1,5 @@
 /**
- * Loaded before every test file of every project (`vitest.config.ts`). No unit test may reach the network
+ * Loaded before every test file of every project (`vitest.config.mts`). No unit test may reach the network
  * (DEC-33): an unmocked `fetch` rejects. A test that needs a response stubs it with `vi.stubGlobal("fetch", …)`;
  * `unstubGlobals` puts this guard back after the test.
  */
