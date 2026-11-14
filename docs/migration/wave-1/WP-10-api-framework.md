@@ -79,13 +79,19 @@ the exact-body case in `tests/Feature/Http/ApiControllerTest.php` changes with i
 protected function sourced(mixed $data, SourceDriver $source, array $meta = [], int $status = 200): JsonResponse;
 // body: {"success": true, "data": …, "meta": {"source": "stub|legacy|native", …$meta}}
 
-/** @param iterable<int, mixed> $items */
-protected function cursorPage(iterable $items, ?string $nextCursor, SourceDriver $source): JsonResponse;
-// body: {"success": true, "data": [...], "meta": {"source": …, "next_cursor": string|null}}
+protected function cursorPage(ResourceCollection $items, ?string $nextCursor, SourceDriver $source): JsonResponse;
+// body: {"success": true, "data": [...], "meta": {"next_cursor": string|null, "source": …}}
 ```
 
 `meta.next_cursor` is always present on a cursor list and `null` ends it. Methods that answer `204` carry no body and
 therefore no `meta`.
+
+*Corrected while executing (rule 6).* `sourced()` writes the `SourceDriver` enum itself (JSON writes its value) and
+puts it after the spread of `$meta` (`[...$meta, 'source' => $source]`), so a `source` key in `$meta` cannot replace
+it. Written as `['source' => $source->value] + $meta`, Scramble documented `meta` as a bare `array`. `cursorPage()`
+takes a `ResourceCollection`, not an `iterable`: with a branch for plain iterables, Scramble documented `data` as
+`anyOf [list of the resource, array]`, and every generated list type would have become `T[] | unknown[]`. Every list
+of the contract goes through a resource anyway.
 
 ### Drivers, contracts, manager
 
@@ -127,6 +133,9 @@ interface LandingSource {                                                       
   $user`, `?string $scenario`. Built by `SourceContext::fromRequest(Request)`: locale from `Accept-Language`
   (first supported tag, else `ru`), currency from the user's settings once WP-40 exists (until then `USD`), scenario
   from the header below. `SourceContext::system(string $locale = 'ru')` serves jobs and the bot.
+- `App\Services\Sources\SourceConfig` reads `config/sources.php`. Feature names contain dots, so the features map is
+  always read whole, never through a dotted config key (`config('sources.features.source.reference')` would look for
+  a nested `source` key). Selector, manager and commands use it.
 - `App\Services\Sources\SourceManager`: `resolve(string $feature, SourceContext $context): ResolvedSource`, where
   `ResolvedSource` (readonly, generic over the contract) holds `SourceDriver $driver` and `$source`, the instance.
   Typed shortcuts `reference(string $feature, …)`, `listings(…)`, `landing(…)` return a `ResolvedSource` whose
@@ -152,11 +161,15 @@ return [
         'landing'   => ['contract' => LandingSource::class,   'drivers' => []],
     ],
     'features' => [
-        // name => capability and the default driver per environment
-        'source.reference' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
+        // name => capability and the default driver per environment, for example
+        // 'source.reference' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
     ],
 ];
 ```
+
+*Corrected while executing (rule 6).* WP-10 ships `features` empty. A feature whose default driver is not bound
+answers `503` and makes `sources:check` fail, and nothing is bound before WP-11. Each contract package adds its
+features together with its stub driver.
 
 `default` is a map of `APP_ENV` name to driver; `*` is the fallback. The full list, filled by the contract packages:
 `source.reference`, `source.cities`, `source.listings.feed`, `source.listings.count`, `source.listings.new`,
@@ -197,23 +210,31 @@ an error once per minute; if the default itself is `stub`, the method answers `5
 | `sources:reset {feature} [--share] [--user=ID]* [--all] --by= --reason=` | Removes that part of the rule; `--all` empties it |
 | `sources:check` | Exit 1 when a feature resolves to an unbound driver in this environment; for `make dev-check` and deploy smoke tests |
 
-`--by` and `--reason` are required. Each change inserts a row into `source_flag_changes` (`id`, `feature`,
+`sources:reset` without options removes `everyone`. `--by` and `--reason` are required. Each change inserts a row into `source_flag_changes` (`id`, `feature`,
 `old_rule` json nullable, `new_rule` json nullable, `actor` string 64, `reason` string 255 nullable, `environment`
 string 32, `created_at`) and writes a `notice` log line. A command changes the rule inside one transaction that
 first takes a lock per feature — `pg_advisory_xact_lock(hashtext('sources:' || <feature>))` on PostgreSQL,
 `Cache::lock("sources:{$feature}", 10)->block(5)` elsewhere — and then reads the stored rule again after
-`Feature::flushCache()` (Pennant keeps resolved values in memory), so two changes cannot lose each other. A listener on
+`Feature::flushCache()` (Pennant keeps resolved values in memory), so two changes cannot lose each other. The
+transaction, the lock and the audit row live in `App\Services\Sources\SourceRuleStore`, which both commands use. It
+reads the rule once before the transaction (*corrected while executing*): that read stores Pennant's default row when
+it is missing. Pennant retries an insert that loses a race, but inside a PostgreSQL transaction the failed insert
+aborts the transaction first, and the race test failed that way before the change. A listener on
 Pennant's `FeatureUpdated`, `FeatureUpdatedForAllScopes`, `FeatureDeleted`, `FeaturesPurged` and `AllFeaturesPurged`
 events (the last two are what `php artisan pennant:purge` raises) records any change of a configured feature that
 did not come through the commands with actor `unknown` and `old_rule` null (these events do not carry the previous
 value), so the log has no gaps. The commands write their own row and tell the listener to skip the event they cause.
+A value stored for a single scope other than Pennant's global one is not recorded, because no driver reads it. The
+listener is found by Laravel's event discovery (`app/Listeners`), not registered by hand.
 
 ### Stubs
 
 - Fixtures live in `backend/resources/fixtures/v1/<area>/<name>.json`, in the shape of the data objects (not of the
   legacy answer), sanitised: no real phones, names, addresses or channel names.
 - `App\Services\Sources\Stub\FixtureStore`: `get(string $name): array` (decoded once per process), throws on an
-  unknown name. Native-only methods use the same store from their stub controllers until stage C.
+  unknown name. Native-only methods use the same store from their stub controllers until stage C. A stub method calls
+  `pick(SourceContext $context, string $default, array $scenarios = [])` with its scenario => fixture table; `pick`
+  throws the reserved errors (`rate_limited` with `Retry-After: 60`).
 - Scenario switch: the request header `X-Stub-Scenario: <scenario>` makes a stub method answer another fixture of its
   area (for example `me/first_launch.json` in place of `me/default.json`) or a named error. Each stub method names
   the scenarios it knows and the fixture of each; a scenario it does not name is ignored, so one header value can
@@ -229,7 +250,8 @@ value), so the log has no gaps. The commands write their own row and tell the li
   WP-13, WP-42 and WP-48 use it; it is written once, here.
 - Stub images: `php artisan sources:publish-stub-media` copies the placeholder images of
   `backend/resources/fixtures/media/` to the public media disk under `stub/`, so fixture photo addresses resolve
-  under `MEDIA_PUBLIC_URL` in every environment (WP-12 adds the images and uses the command).
+  under `MEDIA_PUBLIC_URL` in every environment (WP-12 adds the images and uses the command). `--from=<dir>` copies
+  from another directory (the test uses it).
 
 ### OpenAPI
 
@@ -240,7 +262,15 @@ value), so the log has no gaps. The commands write their own row and tell the li
 - `backend/config/scramble.php`: the `description` still gives the error shape as `{success: false, message,
   errors?}`; add `code` to it.
 - Composer scripts: `openapi:export` (`@php artisan scramble:export`) and `openapi:check` (export, then
-  `git diff --exit-code -- ../docs/api/openapi.json`); `ci:check` runs `openapi:check` last.
+  `git ls-files --error-unmatch` and `git diff --exit-code -- ../docs/api/openapi.json`; `git diff` alone passes an
+  untracked file); `ci:check` runs `openapi:check` last.
+- *Corrected while executing (rule 6).* Two Scramble document transformers, registered in `AppServiceProvider`:
+  `App\Http\OpenApi\ApiErrorSchema` adds the shared `ApiError` schema and points every error response at it, and
+  `App\Http\OpenApi\RelativeServer` names the server `/api/v1`. Scramble builds the server URL from `APP_URL`, so
+  without it the committed file differs between machines and CI.
+- *Corrected while executing.* `phpunit.xml` sets `memory_limit` to 512M. The OpenAPI test exports in the test
+  process, Scramble keeps the parsed code of every class it reads in static caches, and the suite then needs about
+  160M against PHP's CLI default of 128M. The test exports once per process.
 - `.github/workflows/backend.yml`: add `docs/api/openapi.json` to both `paths` lists.
 - Read `.claude/skills/scramble-development/` first. The acceptance is concrete: for a route that returns
   `$this->sourced(new XResource(…), …)`, the exported `data` schema is the schema of `XResource` and `meta.source` is
@@ -261,7 +291,11 @@ value), so the log has no gaps. The commands write their own row and tell the li
 - `@homi/api-client`: add the missing `put` method, and `createTypedClient(client)` whose
   `call(method, path, { params?, query?, body?, signal? })` is typed from `paths`: `path` must be a key of `paths`
   that has `method`; `params` fills `{number}`-style segments; the result is `ApiSuccess<data of the 200/201 answer>`.
-  `ApiError.code` becomes non-optional with fallback `'unknown'`.
+  `ApiError.code` becomes non-optional with fallback `'unknown'`. The options are required when the path has
+  parameters or the body is required; bodies are JSON (a multipart upload uses the plain client).
+- *Corrected while executing.* A `204` answers `{success: true, data: null}`. The client threw `ApiError` on every
+  `204` before, `DELETE /media/{media}` included, and the typed result of a `204` method is `ApiSuccess<null>`.
+  `@homi/types` also re-exports `operations` and names `SourceDriver`.
 
 ## Files
 
@@ -276,8 +310,11 @@ value), so the log has no gaps. The commands write their own row and tell the li
 - `backend/app/Models/SourceFlagChange.php`, its factory, `backend/database/migrations/<date>_create_source_flag_changes_table.php`,
   `backend/app/Listeners/RecordSourceFlagChange.php`
 - `backend/resources/fixtures/v1/.gitkeep`, `backend/resources/fixtures/media/.gitkeep`
-- `backend/tests/Support/{JsonShape,FakeCapability}.php`; tests under `backend/tests/Feature/Sources/` and
-  `backend/tests/Feature/Http/`; `backend/tests/Pgsql/SourceRuleRaceTest.php`
+- `backend/tests/Support/{JsonShape,FakeCapability,FakeStubSource,FakeLegacySource,FakeCapabilityController,FakeSourcedController,FakeSourcedResource}.php`,
+  `backend/tests/Support/fixtures/fake/*.json`; tests under `backend/tests/Feature/Sources/`,
+  `backend/tests/Feature/Http/` and `backend/tests/Unit/JsonShapeTest.php`; `backend/tests/Pgsql/SourceRuleRaceTest.php`
+- `backend/app/Services/Sources/{SourceConfig,SourceRuleStore}.php`, `backend/app/Console/Commands/Sources/SourceRuleCommand.php`,
+  `backend/app/Http/OpenApi/{ApiErrorSchema,RelativeServer}.php`, `backend/phpunit.xml` (`memory_limit`)
 - `backend/config/scramble.php` (the description text)
 - `backend/composer.json` (the `scripts` section only: `openapi:export`, `openapi:check`, `ci:check`; no package is
   added or changed), `.github/workflows/backend.yml`, `.github/workflows/frontend.yml`, `Makefile`
@@ -327,8 +364,9 @@ No legacy behaviour. Rules that later packages rely on:
   codes. A direct `Feature::globally()->activate()` in a test still produces an audit row with actor `unknown`.
 - Stubs: `FixtureStore` unknown name throws; the scenario header is honoured for `stub` and ignored for the "legacy"
   double; each reserved scenario gives its status and code.
-- `pgsql` group (`backend/tests/Pgsql/SourceRuleRaceTest.php`, helper `concurrently()` of WP-03): two concurrent
-  `sources:set` calls (one `--share`, one `--user`) leave a rule that holds both parts and two audit rows.
+- `pgsql` group (`backend/tests/Pgsql/SourceRuleRaceTest.php`, helper `concurrently()` of WP-03): concurrent
+  `sources:set` calls (one `--share`, five `--user` with different ids; two calls rarely overlap) leave a rule that
+  holds every part and six audit rows. Without the advisory lock the test fails (three runs of three).
 - OpenAPI: a Pest test exports to a temporary path and asserts that the document has `meta.source` as an enum on the
   test route's schema and a shared error schema with `code`.
 - Frontend (Vitest): `createTypedClient` builds the URL from `params` and `query`, sends `PUT`, maps an error body to
