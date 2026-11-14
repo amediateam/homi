@@ -67,7 +67,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-00](WP-00-media-ownership-fix.md) | Media ownership fix | — | WAITING (PR #27 merged; production track: the two counts, approval of the migration on production, deploy, a foreign id answers `404` on staging) |
 | [WP-01](WP-01-adrs-and-shared-files.md) | ADRs and shared-file updates | — | WAITING (all eight PRs merged; the first developer accepts ADR-0016 … ADR-0019 and answers the PR-size and deploy questions of #30) |
 | [WP-02](WP-02-operator-request-and-baseline.md) | Operator request and legacy baseline pin | — | WAITING (PR #37 merged; the request to the operator is sent) |
-| [WP-03](WP-03-dependencies-and-test-tooling.md) | Dependencies and test tooling | WP-00, WP-01 | WAITING (draft PR #39: the first developer confirms the package list) |
+| [WP-03](WP-03-dependencies-and-test-tooling.md) | Dependencies and test tooling | WP-00, WP-01 | REVIEW (PR #39) |
 
 ## Stage A — Contract
 
