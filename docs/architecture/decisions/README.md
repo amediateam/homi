@@ -20,6 +20,7 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0012](0012-local-media-on-disk-no-minio.md) | Local media storage on disk — no MinIO in development | Accepted |
 | [0013](0013-nextjs-ssr-behind-nginx.md) | Next.js apps run as SSR servers behind nginx in production (SEO/GEO/AEO) | Accepted, amended by 0015 |
 | [0015](0015-server-runtime-as-deployed.md) | Server runtime as deployed: databases, Redis, process manager, code delivery | Accepted |
+| [0016](0016-new-product-three-waves.md) | HOMI ships a new product; the migration runs in three waves | Proposed |
 | [0017](0017-api-v1-source-drivers.md) | `/api/v1` is the only contract; a source driver per method selected by a Pennant feature | Proposed |
 
-Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it.
+Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it. 0016–0019 record the kvadro² migration decisions of 2026-11-14 (`docs/migration/24-three-wave-strategy.md` §8.1).
