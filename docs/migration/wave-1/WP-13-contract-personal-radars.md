@@ -45,14 +45,15 @@ unknown number is `404 not_found`. "Preview" is the listing preview object of WP
 
 | Method | Answer | Notes |
 | ------ | ------ | ----- |
-| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` | query `cursor`, `limit` (1 … 50, default 20). Every item has `favorite: true` |
+| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` is `null` | the whole list in one answer, as legacy. Query `cursor` and `limit` (1 … 50) are accepted and take effect only when the flag of DEV-003 is on. Every item has `favorite: true` |
 | `PUT /favorites/{number}` | `200 {"data": {"favorite": true}}` | idempotent; `503 source_unavailable` when the listing cannot be checked and is not known locally |
 | `DELETE /favorites/{number}` | `200 {"data": {"favorite": false}}` | idempotent; never `404` for a listing that was not a favourite |
-| `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` | items carry `viewed: true` |
+| `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` is `null` | the whole list, as legacy; paging under the same flag. Items carry `viewed: true` |
 | `DELETE /history` | `204` | clears the whole history; idempotent |
 
-Changed against legacy: the toggle `POST …/favorite` became `PUT` and `DELETE`; the two lists are paged with a cursor
-(legacy returned everything with `next_cursor: null`); withdrawn listings stay in the lists with `status_text`,
+Changed against legacy: the toggle `POST …/favorite` became `PUT` and `DELETE`. Not changed in Wave 1: both lists
+come back whole with `next_cursor: null`; paging them and capping the history are the deviation DEV-003, which is
+`PROPOSED`, so its flag is off (DEC-36) and the stub and native drivers return whole lists. Withdrawn listings stay in the lists with `status_text`,
 listings the source no longer knows are left out. Scenarios: `empty` for both lists.
 
 ### Hidden listings, blocked authors, the hidden list — legacy: API-012 … API-015, API-026 … API-028

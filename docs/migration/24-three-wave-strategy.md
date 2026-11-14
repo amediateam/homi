@@ -162,7 +162,7 @@ All answered by the developer on 2026-11-14 unless the row says otherwise. Verba
 | DEC-33 | Access of people and tools to legacy production | None. Development, tests, CI and agents use stubs; only HOMI servers call legacy with the service key | — | 25 §4 |
 | DEC-34 | A launch path on the legacy bot | Not needed: the product has its own bot | — | — |
 | DEC-35 | Where the per-method switch lives | In Laravel: a source driver per method, selected by a Pennant feature | First developer: ADR review | section 3 |
-| DEC-36 | Legacy client defects | Every `LB` fix of 03, 04 and 02 is made; every `DEV` behaviour change stays behind a flag that is off | — | all work packages |
+| DEC-36 | Legacy client defects | Every `LB` item that is a plain fix is made; every behaviour change — each `DEV` row, including the `LB` items that `09` §4.2 turns into `DEV` rows — is written behind a flag that is off | — | all work packages |
 | DEC-37 | Legacy releases during the work | Followed until HOMI no longer depends on legacy: each release is read from its sync report and becomes a queue item | — | 25 §8 |
 | DEC-38 | Landing and SEO | Full landing on `homi.uz` in Wave 1; SEO pages in Wave 3 | — | 25 §7 |
 | DEC-39 | Data from legacy and listings after legacy | The operator gives a dump and a schema; listings after legacy come from `telegram.uz` | Collector's owner and first developer (DEC-02) | section 5 |
@@ -189,6 +189,7 @@ All answered by the developer on 2026-11-14 unless the row says otherwise. Verba
 | `Q-API-063` | How does a legacy listing number map to a listing from `telegram.uz`? Candidate key: source channel and post (the legacy deep link carries both, TMA-011). `UNVERIFIED` | A join on the dump once it arrives | Developer (Wave 2 plan) |
 | `Q-APP-023` | Effect of the CSS pipeline on copied legacy CSS. `DEPRECATED_CANDIDATE`: the legacy CSS is not copied (DEC-44) | — | — |
 | `Q-APP-024` | Which legacy release is the behaviour baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`). `CONFIRMED` drift | Re-baseline 03 and 08 in the first stage of the queue and pin the release | Developer |
+| `Q-APP-025` | Who supplies HOMI's own artwork — logo, favicon, mascots, the celebration image, the bot's stickers and welcome picture — and when? Legacy artwork is not copied (DEC-32, DEC-40); the work packages use neutral placeholders until it arrives. `UNVERIFIED` | Files handed to the developers; the brand layer and the bot's asset registry updated | Product owner |
 | `Q-SEC-021` | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008)? `UNVERIFIED` | Lawyer's note; the privacy page of the landing | Product owner |
 
 ### 8.3 Risks

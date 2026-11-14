@@ -360,10 +360,10 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
 ## Behaviour to reproduce
 
 **Update screen «Обновите Telegram» (SCR-001).** Shown when the engine test fails, when a script of the app
-fails to load, or on an uncaught error before `ok`; never closes. Full-height centred block built with inline styles by the boot
-script: 🔄 44 px, title 22 px, one paragraph, two 48 px pill buttons (first accent, second `#f0f0f3` light or
-`#1c1c1f` dark; dark when the SDK says so or the system prefers dark). Texts are in the script, not in the
-catalogues:
+fails to load, or on an uncaught error before `ok`; never closes. Full-height centred block built with inline
+styles by the boot script: 🔄 44 px, title 22 px, one paragraph, two 48 px pill buttons (first accent, second
+`#f0f0f3` light or `#1c1c1f` dark; dark when the SDK says so or the system prefers dark). Texts are in the
+script, not in the catalogues:
 
 | Locale | Title | First button | Second button |
 | ------ | ----- | ------------ | ------------- |

@@ -43,14 +43,17 @@ section 5; the bot of section 6; the landing of section 7.
 
 1. **Functional parity** is the acceptance criterion (DEC-46): the same screens, states, texts and scenarios as
    legacy. Small visual differences are accepted. Each work package carries its checklist (section 9).
-2. **Defects are fixed, behaviour changes are not made** (DEC-36): every `LB` item in scope is fixed and tested;
-   every `DEV` item is a typed flag that is off.
+2. **Defects are fixed, behaviour changes are not made** (DEC-36). An `LB` item that `09` §4.3 lists as a plain fix
+   is fixed and tested. An `LB` item that `09` §4.2 turns into a `DEV` row changes what a user sees, so it is written
+   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 33 fixes and
+   14 flagged items; each specification names its own.
 3. **The legacy tree is read-only** and is a reference: no edits, no `npm`, no builds, no dev server there, and no
    copy-paste of its code or CSS into this repository.
 4. **Nobody but HOMI's servers calls legacy** (DEC-33). Development, tests, CI and agents work on stubs and recorded
    fixtures. The service key exists only in the server environment files of staging and production.
 5. **Brand.** The interface is the legacy one; name, logo, bot name, links and legal texts are HOMI (DEC-40). All of
-   them live in one brand layer, never inline.
+   them live in one brand layer, never inline. Legacy artwork is not copied; until HOMI's own logo, mascots and
+   stickers are supplied (Q-APP-025) the packages ship neutral placeholders.
 6. **Texts.** The legacy i18n key names are kept, so a legacy release diff can be applied; values are copied
    verbatim except brand words.
 7. **Secrets and personal data** follow 16: nothing in the repository, nothing in logs (SEC-REQ-047).
@@ -97,9 +100,12 @@ confirms (SCR-043), Telegram system sheets (SCR-044), the crash screen (SCR-045,
 - **Sheets and overlays** are intercepting routes rendered into a parallel slot, so the screen below stays mounted
   and a direct load of the address still works (`…/03-file-conventions/parallel-routes.md`,
   `…/03-file-conventions/intercepting-routes.md`).
-- **Back.** Telegram's `BackButton` is shown whenever the in-app history has an entry and calls `router.back()`
-  (TMA-022); the `SettingsButton` pushes `/settings` (TMA-023). This replaces the legacy stack of back handlers and
-  must give the same visible order of closing: sheet, then overlay, then screen.
+- **Back.** The visible behaviour of legacy is the rule: tabs and the list/map switch have no Back; every sheet,
+  overlay and pushed screen has one and closes in the order sheet, overlay, screen (TMA-022). The app keeps its own
+  depth counter: a tab or view switch replaces the address and resets it; a layer pushes. Telegram's `BackButton` is
+  shown while the counter is above zero and goes back one step. An address of a layer that is loaded directly has
+  no history behind it, so Back there goes to the layer's parent address. The `SettingsButton` opens `/settings`
+  (TMA-023). The helper that knows each address's parent is defined once (WP-20) and used everywhere.
 - **Launch.** The bot opens `/`; `proxy.ts` redirects to the locale. A `start_param` of the form `l_<number>` or a
   `?listing=` query redirects to the listing; `?news=pets` opens the filters on the pets section
   (TMA-010 … TMA-012).
@@ -135,6 +141,8 @@ Telegram in a desktop browser; it is never part of a production bundle.
   same Server Action. Nothing is written to `localStorage` or to the address.
 - One screen implementation serves both modes: the client part takes `initial` data when the server had a session
   and fetches for itself when it did not.
+- **A later launch.** A valid cookie of the same Telegram user skips steps 1–3. A cookie of another Telegram user
+  (a second account on the device) is replaced by a fresh sign-in.
 - **Expiry.** A `401` restarts step 1 with the current `initData`. If Telegram's `initData` is itself too old, the
   user sees the "session expired, reopen the app" state — the fix of LB-APP-047.
 
@@ -175,7 +183,9 @@ here).
 Both engines (DEC-44): MapLibre GL with supercluster and PMTiles as the main engine, Leaflet with markercluster and
 protomaps-leaflet as the fallback, chosen by the legacy rule (`03` §1.8). Both are client-only and loaded on demand.
 Tiles: the address comes from the reference data; until HOMI hosts its own PMTiles file (KV-INF-021, production
-track) the value is empty and both engines use the raster fallback the legacy client already has.
+track) the value is `null` and both engines use the raster fallback the legacy client already has. That fallback is
+the public OpenStreetMap tile server, which is not meant to carry a product's traffic: hosting the tile file is a
+condition of the launch package (WP-70), not an option. The vector path cannot be tested before the file exists.
 
 ### 3.9 Analytics and errors
 
@@ -189,6 +199,9 @@ track) the value is empty and both engines use the raster fallback the legacy cl
 
 The floor is the Next.js default: Chrome 111, Safari 16.4 (DEC-44). The CSP is nonce-based and set in `proxy.ts`
 (SEC-REQ-031); it allows the Telegram SDK host, the API host, the media host, the tile host and the PostHog host.
+A nonce needs every document rendered per request, which works against the cached shell of section 3.1; the session
+package (WP-21) opens with a one-day spike that settles it — nonce with dynamic rendering, or hashes for the inline
+scripts — and records the result in the Mini App ADR.
 The vhosts of the app must allow framing by Telegram Web (Q-SEC-012): today the staging vhost sends
 `X-Frame-Options: SAMEORIGIN` (`infra/staging/nginx/app.staging.homi.conf`), which the production track changes.
 
@@ -233,7 +246,8 @@ frontend/
   entries have HOMI's own identifiers.
 - The locale comes from `Accept-Language`, the currency from the user's settings.
 - Every answer carries `meta.source` with the driver that produced it: `stub`, `legacy` or `native`.
-- Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list.
+- Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list. Favourites and history come back whole
+  with `next_cursor: null`, as in legacy: paging them is the deviation DEV-003, whose flag is off (DEC-36).
 - When the listing source cannot answer, the method returns `503` with code `source_unavailable`; the client shows
   the legacy "could not load" state.
 
@@ -264,8 +278,16 @@ frontend/
 | `POST /events` | API-034 | native |
 | `GET /landing/live`, `GET /landing/pins` | landing data files (RES-010 … RES-012) | legacy, cached |
 
-Legacy toggles a favourite with one `POST`; v1 uses an explicit `PUT` and `DELETE`, so a repeated request cannot
-flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
+Notes on the table:
+
+- `POST /auth/telegram`, `GET /reference` and `GET /cities` are public; `GET /reference` also carries the bot and
+  support names, which the no-access and outside-Telegram screens need before any session exists. Everything else
+  needs the session. A refused user gets `403` with code `access_denied` and a `reason`.
+- `GET /radars` can include the preview listings of each radar; `GET /listings/{number}` has a short preview form
+  for cards on the map.
+- There is no method to withdraw a report: the "undo" of a report belongs to a `DEV` item that is off.
+- Legacy toggles a favourite with one `POST`; v1 uses an explicit `PUT` and `DELETE`, so a repeated request cannot
+  flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
 exported as OpenAPI.
 
 ### 4.3 Source drivers and flags
@@ -372,6 +394,22 @@ if it is an `LB` fix or a visual detail.
 | End to end | Playwright with a fake Telegram, on stubs | every checklist scenario of the Mini App, in cookie mode and header mode |
 | Bot | conversation tests: fake updates in, expected Bot API calls out (KV-QA-009) | every handler |
 | In Telegram | by hand on staging, then production, after each deploy (DEC-45) | iOS, Android, Desktop, Web |
+
+**Stub scenarios.** Deterministic stubs cannot show an error state by themselves. A stub method therefore accepts a
+named scenario (empty list, source unavailable, refused access, radar limit and so on) through a request header that
+is honoured only by the `stub` driver; outside production the Mini App forwards a cookie as that header, which is how
+the end-to-end suite reaches every state in both session modes. States that open access and stub answers cannot
+produce inside Telegram (no access, the "no chat" prompt, the radar limit, real share and call pages) are proven by
+the end-to-end suite in stage B and seen in Telegram in stage C, when the real code answers.
+
+**Known gaps against legacy, accepted for Wave 1.** They are listed here so that nobody reports them as defects:
+
+- The «Подробнее» link of the market sheet is hidden, because the methodology page it opens is one of the SEO pages
+  of Wave 3.
+- A report does not change what users of the old bot see, and reports made there do not reach HOMI (DEC-48).
+- A user who never opened the old bot has no history there to bring; nothing is imported (DEC-40).
+- The map uses the raster fallback until HOMI hosts its own tile file (section 3.8).
+- Contact shows what the operator's service key allows: a number, or a link that leaves HOMI (Q-API-062).
 
 **Definition of done of a work package.** Specification steps complete; tests of the package green in CI; checklist
 ticked and signed; OpenAPI, generated types, the package registry and the audit rows current; the queue and the

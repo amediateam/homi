@@ -53,13 +53,13 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 
 <!-- generated:start -->
 
-244 questions, generated from `data/ids.csv`.
+245 questions, generated from `data/ids.csv`.
 
 | Area | Questions |
 | ---- | --------: |
 | System and scope (01) | 9 |
 | API and server behaviour (02, 08) | 63 |
-| Mini App (03) | 24 |
+| Mini App (03) | 25 |
 | Landing (03b) | 11 |
 | SEO pages (03b) | 21 |
 | Telegram bot (04) | 45 |
@@ -176,6 +176,7 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `03-legacy-frontend-audit.md:2046` | Q-APP-022 | Do support staff use `?map=gl — leaflet — auto` overrides? — Ask the operators; otherwise treat it as a debug-only feature. |
 | `24-three-wave-strategy.md:190` | Q-APP-023 | Effect of the CSS pipeline on copied legacy CSS. `DEPRECATED_CANDIDATE`: the legacy CSS is not copied (DEC-44) — — — — |
 | `24-three-wave-strategy.md:191` | Q-APP-024 | Which legacy release is the behaviour baseline? The audit describes `index-plF_TOcT.js` (`08-api-inventory.md:11-12`); the legacy tree has since synced `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`). `CONFIRMED` drift — Re-baseline 03 and 08 in the first st |
+| `24-three-wave-strategy.md:192` | Q-APP-025 | Who supplies HOMI's own artwork — logo, favicon, mascots, the celebration image, the bot's stickers and welcome picture — and when? Legacy artwork is not copied (DEC-32, DEC-40); the work packages use neutral placeholders until it arrives. `UNVERIFIED` — Files handed to the developers; the brand lay |
 
 ### Landing (03b)
 
@@ -348,6 +349,6 @@ the CSP baseline (DEC-08), and approval of each `PROPOSED` deviation (`DEV-…` 
 | `16-security-review.md:1109` | Q-SEC-018 | Which Telegram accounts become ARM admins and moderators, and is TOTP acceptable to them? Is the legacy owner list (`private` mode) imported? — SEC-REQ-046, Q-SYS-004 — Named list approved by the product owner — product owner |
 | `16-security-review.md:1110` | Q-SEC-019 | How do admins reach Horizon, Telescope and Pulse in staging and production, given that gates check e-mail and users sign in with Telegram only? — SEC-REQ-046, SEC-034 — Prod-track decision (gate by role, or SSH tunnel only) — prod track |
 | `16-security-review.md:1111` | Q-SEC-020 | Is `@KvadroSupportBot` migrated (GAP-026)? If yes, it needs its own review (texts with names, LLM translation, 90-day mapping). — SEC-018, BR-BOT-091 — Product decision; then a review — product owner |
-| `24-three-wave-strategy.md:192` | Q-SEC-021 | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008) |
+| `24-three-wave-strategy.md:193` | Q-SEC-021 | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008) |
 
 <!-- generated:end -->
