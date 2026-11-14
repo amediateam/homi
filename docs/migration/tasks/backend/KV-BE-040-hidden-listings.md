@@ -16,13 +16,13 @@ undo returns it — including listings hidden by a `rented` or `fraud` report.
 
 ## Legacy reference
 
-- API-012 and API-013 (`08-api-inventory.md:587-635`): bodiless `POST`/`DELETE`, response not read, recommended `204`;
+- API-012 and API-013 (`08-api-inventory.md:635-683`): bodiless `POST`/`DELETE`, response not read, recommended `204`;
   client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:47-50`, `:56-59`;
   `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:35-51` (local hide + «Отменить»), `:61-62` (undo after a
   `fraud` report); `$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:53` (return from «Скрытое»);
   `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:71`; parity mocks
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:178`, `:183-189`.
-- Rules: `02-legacy-backend-audit.md:516-540` (§10: BR-API-096, Q-API-036, Q-API-037), `:542-568` (§11: BR-API-104,
+- Rules: `02-legacy-backend-audit.md:541-565` (§10: BR-API-096, Q-API-036, Q-API-037), `:567-593` (§11: BR-API-104,
   Q-API-038, Q-API-040).
 - Defects fixed by policy (`09` §4.3): LB-API-041 (server-side exclusion), LB-API-043 (idempotency), LB-DATA-012
   (unique key). Decision rows: DEV-034 (`PROPOSED`, scope of hide rules), DEV-051 (new client only).

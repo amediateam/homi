@@ -209,6 +209,8 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
       after a client request.
 - [ ] Un-favouriting a card removes it at once; a failed request brings it back.
 - [ ] A listing hidden or blocked in this launch is absent from favourites.
+- [ ] Cards in both lists carry the price-kind label of the feed card: «· первый взнос», «· цена за бизнес,
+      помещение в аренде» (WP-24).
 - [ ] Favourites empty state shows the mascot, «Здесь пока пусто» and its hint.
 - [ ] Offline and server errors show their texts with «Повторить»; an error after items shows the inline retry.
 - [ ] History cards have no «viewed» eye; «Очистить» is visible only with items.

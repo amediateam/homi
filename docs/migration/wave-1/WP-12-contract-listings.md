@@ -5,22 +5,22 @@
 | Stage | A |
 | Status | TODO |
 | Depends on | WP-11 |
-| Size | about 2 800 changed lines without generated files and fixtures, L |
-| Behaviour reference | `25` §4.1, §4.2, §4.5; `08` §1.7, §1.8 and the rows of API-004 … API-010 and API-017, RES-001, RES-002; `03` §1.12 and §4 (BR-APP-001 … BR-APP-009, BR-APP-020, BR-APP-023, BR-APP-024, BR-APP-026 … BR-APP-035, BR-APP-059, BR-APP-062); tasks `tasks/backend/KV-BE-016-search-filters-normaliser.md`, `KV-BE-037-call-links.md`, `KV-BE-048-translation.md`, `KV-BE-046-share.md` (rules only) |
+| Size | about 3 000 changed lines without generated files and fixtures, L |
+| Behaviour reference | `25` §4.1, §4.2, §4.5; `08` §1.7, §1.8 and the rows of API-004 … API-010, API-017 and API-035, RES-001, RES-002; `02` BR-API-156 … BR-API-158, LB-API-055, Q-API-065, Q-API-066; `03` §1.12 and §4 (BR-APP-001 … BR-APP-009, BR-APP-020, BR-APP-023, BR-APP-024, BR-APP-026 … BR-APP-035, BR-APP-059, BR-APP-062, BR-APP-070, BR-APP-071); tasks `tasks/backend/KV-BE-016-search-filters-normaliser.md`, `KV-BE-037-call-links.md`, `KV-BE-048-translation.md`, `KV-BE-046-share.md` (rules only) |
 | Needs from the production track | After the deploy, run `php artisan sources:publish-stub-media` once on staging and once on production (it writes placeholder images under `stub/` on the public media disk), and confirm that one fixture photo address loads from the CDN host |
 
 ## Goal
 
-The eight listing methods of `25` §4.2 exist as stub routes with their final request and response shapes:
-`GET /listings`, `GET /listings/count`, `GET /listings/flow`, `GET /listings/map`, `GET /listings/{number}`,
-`POST /listings/{number}/contact`, `POST /listings/{number}/translation`, `POST /listings/{number}/share`. The filter
-model exists once on the server. The stub driver filters a small catalogue, so the frontend sees results change with
-the filters.
+The nine listing methods of `25` §4.2 exist as stub routes with their final request and response shapes:
+`GET /listings`, `GET /listings/count`, `GET /listings/new`, `GET /listings/flow`, `GET /listings/map`,
+`GET /listings/{number}`, `POST /listings/{number}/contact`, `POST /listings/{number}/translation`,
+`POST /listings/{number}/share`. The filter model exists once on the server. The stub driver filters a small
+catalogue, so the frontend sees results change with the filters.
 
 ## Scope
 
 In: the filter value object and its normaliser; data objects; `ListingSource` methods and `StubListingSource`; the
-seven `source.listings.*` features; routes, requests, resources; the fixture catalogue and placeholder photos.
+eight `source.listings.*` features; routes, requests, resources; the fixture catalogue and placeholder photos.
 
 Out: the legacy driver, overlay and photo rewriting (WP-42); real contact, translation and share (WP-43); favourite
 and viewed flags from real data (WP-44 through the overlay of WP-42).
@@ -38,6 +38,9 @@ and viewed flags from real data (WP-44 through the overlay of WP-42).
 - The other behaviour changes stay off (DEC-36): impossible filter combinations are normalised, not rejected
   (DEV-004 off); inverted ranges are swapped (DEV-025 off).
 - Every per-listing object carries `source_ref` when the source knows it (`25` §5, Q-API-063).
+- The new-since count of `GET /listings/new` is always an integer ≥ 0 (DEC-36: LB-API-055 is a plain fix in `09`
+  §4.3, made on HOMI's side). A malformed answer of a source never reaches the client as a `count`: the driver
+  turns it into `503 source_unavailable` (WP-42).
 - When the source cannot answer: `503 source_unavailable` (`25` §4.1).
 
 ## Design
@@ -46,7 +49,7 @@ All paths are under `/api/v1`, bearer with ability `app:read`. `success` and `me
 examples. Common errors: `401 unauthenticated`, `403 access_denied`, `422 validation_failed`, `429 rate_limited`,
 `503 source_unavailable`.
 
-### Filter parameters (shared by feed, count, flow and map)
+### Filter parameters (shared by feed, count, new, flow and map)
 
 Arrays are sent as repeated bracket keys (`types[]=apartment&types[]=house`). Booleans are `true` or `false`.
 
@@ -102,7 +105,7 @@ The same 25 keys form the **filters object** in flow options and radars: every k
 | `number` | no | `id` | integer |
 | `deal`, `type` | yes | `deal_type` on cards only | `null` on previews when legacy does not send them |
 | `title` | no | `short_title`, else the part of `title` before « · » | |
-| `price` | yes | `price`, `price_kind`, `usd` | `display` = first part without the bracket text and the period; `period` = text from the first `/`; `alt` = bracket text; `notes` = the remaining « · » parts; `usd` raw or `null`; `kind` is `null`, `down_payment` or `business` |
+| `price` | yes | `price`, `price_kind`, `usd` | `display` = first part without the bracket text and the period; `period` = text from the first `/`; `alt` = bracket text; `notes` = the remaining « · » parts; `usd` raw or `null`; `kind` is `null`, `down_payment` or `business` (BR-API-156); any other legacy value becomes `null`, so the client shows no label for it (Q-API-065) |
 | `rooms`, `area_total`, `floor`, `floors_total`, `landmark`, `place`, `center_km` | yes | same names | |
 | `district` | yes | `district_name` | `code` is `null` when the name cannot be matched to the city's directory |
 | `metro` | yes | `metro`, `metro_km` | `km` may be `null` |
@@ -133,6 +136,31 @@ does not offer for the filters are accepted and fall back to `new`. Scenarios: `
 
 `days` is ≥ 1; `options` is always an array (empty when there is nothing to suggest); `count` in an option may be
 `null`. Renamed nothing. Scenario for both: `source_unavailable`.
+
+### `GET /listings/new` — legacy: API-035
+
+The filter parameters above plus `since` (required): the user's previous visit with these filters, in Unix seconds.
+The return banner of the Mini App asks it (SCR-046, BR-APP-070, BR-APP-071, WP-30). No `sort`, `cursor` or `limit`.
+
+```json
+{"data": {"count": 12}}
+```
+
+- `count` is always an integer ≥ 0 — never missing, `null`, a string or a fraction (fix of LB-API-055; a legacy
+  client crashes on a body without it, LB-APP-048). It is the number of listings of the filters that appeared after
+  `since`, under the filter rules of the feed (BR-API-157, BR-API-158).
+- `since` is an integer from 0 to 4 294 967 295; anything else, or a missing value, is `422` with `since` in
+  `errors`. A `since` later than the server's current time answers `{"count": 0}` without asking the source. No
+  lower bound is applied in Wave 1: what "appeared" means and whether legacy bounds `since` are open (Q-API-066),
+  so the value is passed through.
+- Like count and flow, the answer is not overlaid: it cannot subtract the user's hidden listings or the listings of
+  blocked authors (`25` §4.5).
+- Errors: the common ones. The client shows no banner on any error and says nothing (API-035).
+- Changed against legacy: the path (`/api/feed/new` → `/listings/new`) and the envelope; nothing renamed.
+- Stub: `count` = the number of catalogue entries that match the filters, divided by 4 and rounded down, whatever
+  `since` is (the default Tashkent long-rent filters give a positive number, so the banner can be seen); `0` for a
+  `since` in the future, by the rule above. Scenarios: `new_none` (`count: 0`), `new_one` (`count: 1`, the singular
+  form of the banner) and the reserved `source_unavailable`.
 
 ### `GET /listings/map` — legacy: API-007
 
@@ -263,16 +291,18 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 - Data objects in `App\Services\Sources\Data`: `ListingSummary`, `ListingDetails`, `PriceInfo`, `SourceRef`,
   `ListingPage`, `MapPoints`, `MapPoint`, `FlowEstimate`, `FlowOption`, `ListingContact`, `ListingTranslation`.
   `ListingDetails` holds `hasPhone`, `contactUrl` and `contactPaid` and no number; `ListingContact` (the answer of
-  the contact method) is the only object with one.
+  the contact method) is the only object with one. `PriceInfo::fromArray()` keeps `kind` only when it is
+  `down_payment` or `business`, else `null`.
 - `App\Services\Listings\PhoneMasker` (above), called from the three `fromArray()` methods named there.
-- `ListingSource` gains the nine methods of WP-10. `StubListingSource` loads `listings/catalog.json` (16 base
+- `ListingSource` gains the ten methods of WP-10. `StubListingSource` loads `listings/catalog.json` (16 base
   listings covering every deal × type, a video listing, one without photos, one without coordinates, one suspicious
-  price, one verified owner; two entries carry a raw synthetic number in `summary` and in `original.text`, so the
-  masker is seen to work), repeats the Tashkent long-rent apartments with shifted numbers up to 45 entries, and
-  filters in memory by city, deal, types, rooms, price, districts, `near_metro`, `below_median` and owner. Sorts are
-  applied; the cursor is `s1.<offset>`. Count and map follow the same filter; flow returns `week = count`, `days = 7`
-  and the options of `listings/flow.options.json` when the count is below 10.
-- Features with default `stub`: `source.listings.feed`, `.count`, `.flow`, `.map`, `.card`, `.contact`,
+  price, one verified owner, a sale with `price.kind` `down_payment` and a commercial rent with `business`; two
+  entries carry a raw synthetic number in `summary` and in `original.text`, so the masker is seen to work), repeats
+  the Tashkent long-rent apartments with shifted numbers up to 45 entries, and filters in memory by city, deal,
+  types, rooms, price, districts, `near_metro`, `below_median` and owner. Sorts are applied; the cursor is
+  `s1.<offset>`. Count and map follow the same filter; flow returns `week = count`, `days = 7` and the options of
+  `listings/flow.options.json` when the count is below 10; `newSince` answers the rule of `GET /listings/new`.
+- Features with default `stub`: `source.listings.feed`, `.count`, `.new`, `.flow`, `.map`, `.card`, `.contact`,
   `.translation`.
 - Placeholder photos: six neutral generated images (no real photographs) with their small variants in
   `backend/resources/fixtures/media/`; `sources:publish-stub-media` writes `stub/<number>/<n>.jpg` and
@@ -285,10 +315,10 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 - `backend/app/Services/Listings/PhoneMasker.php`
 - `backend/app/Services/Sources/Data/*.php` (the objects above); `backend/app/Services/Sources/Stub/StubListingSource.php`;
   `backend/app/Services/Sources/Contracts/ListingSource.php`; `backend/config/sources.php`
-- `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingCountController,ListingFlowController,ListingMapController,ListingContactController,ListingTranslationController,ListingShareController}.php`
-- `backend/app/Http/Requests/Api/V1/Listings/{ListingFiltersRequest,ListingFeedRequest,ShowListingRequest}.php`
+- `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingCountController,ListingNewController,ListingFlowController,ListingMapController,ListingContactController,ListingTranslationController,ListingShareController}.php`
+- `backend/app/Http/Requests/Api/V1/Listings/{ListingFiltersRequest,ListingFeedRequest,ListingNewRequest,ShowListingRequest}.php`
 - `backend/app/Http/Resources/Api/V1/{ListingPreviewResource,ListingDetailsResource,MapPointsResource,FlowResource,ContactResource,TranslationResource,PreparedShareResource,FiltersResource}.php`
-- `backend/routes/api.php` (static paths `listings/count`, `listings/flow`, `listings/map` before `listings/{number}`)
+- `backend/routes/api.php` (static paths `listings/count`, `listings/new`, `listings/flow`, `listings/map` before `listings/{number}`)
 - `backend/resources/fixtures/v1/listings/{catalog,flow.options,translation}.json`, `backend/resources/fixtures/media/*`
 - `backend/tests/Unit/Search/{SearchFiltersTest,CanonicalHashTest}.php`, `backend/tests/Unit/Listings/PhoneMaskerTest.php`,
   `backend/tests/Feature/Search/SearchFiltersNormaliserTest.php`,
@@ -301,8 +331,9 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 2. `SearchFilters`, the normaliser and `config/filters.php` with unit and feature tests (`php artisan make:class …`).
 3. `PhoneMasker` with its unit test; data objects with `fromArray()` (the masked fields); `ListingSource` methods;
    the catalogue fixture; `StubListingSource`.
-4. `ListingFiltersRequest` (rules of the table; `passedValidation()` builds `SearchFilters`) and `ListingFeedRequest`.
-5. Feed, count, flow, map controllers and resources; then the card with `preview=1`.
+4. `ListingFiltersRequest` (rules of the table; `passedValidation()` builds `SearchFilters`), `ListingFeedRequest` and
+   `ListingNewRequest` (adds `since`).
+5. Feed, count, new, flow, map controllers and resources; then the card with `preview=1`.
 6. Contact, translation and share stub controllers.
 7. Placeholder images and `sources:publish-stub-media`; run it locally and open one address under `cdn.homi.loc`.
 8. Export OpenAPI, generate types, read every generated listing type field by field.
@@ -315,6 +346,10 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 - Geography modes are exclusive in the client (BR-APP-008); if several arrive, the server keeps `polygon`, else
   `zones`, else `districts`.
 - The same filters give the same set in feed, count and map (`08` API-004 tests); the stub honours this.
+- The new-since count follows the filter rules of the feed and is always an integer, `0` when nothing is new or
+  `since` lies in the future (BR-API-157, BR-API-158, fix of LB-API-055).
+- Price kinds (BR-API-156): `down_payment` and, since legacy release `index-Dbpp463V.js`, `business` reach the
+  client as they are; the label text is the client's (`card.downPayment`, `card.businessPrice`, WP-24).
 - A removed listing answers `404`; a merged one answers with the surviving number.
 - The phone number, different from legacy by decision (DEC-52): legacy sends `phone`, `phone_display` and the call
   link with every card and prints the numbers of the post in its texts (BR-API-113). HOMI sends none of them with
@@ -332,6 +367,12 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 - Feed: default filters → 20 items with the exact key set; following `meta.next_cursor` reaches `null` with 45
   distinct numbers; `limit=0` and `limit=51` → `422`; unknown `sort` → `422`; each scenario.
 - Count equals the number of items reachable by paging; map numbers are a subset of feed numbers and `total` ≥ points.
+- New-since count: default filters with `since` a day ago → `{"count": <integer ≥ 1>}`, equal to the stub rule;
+  `since` one hour in the future → `0`; `since` missing, `abc`, `-1`, `1.5` and `4294967296` → `422` with `since`;
+  `since=0` accepted; each scenario; the answer's `count` is an `int` in `JsonShape` for every case; an invalid filter
+  → `422` as on the feed.
+- Price kind: the catalogue entries with `down_payment` and `business` keep their kind; `PriceInfo::fromArray()`
+  with the kind `installment` gives `kind: null`.
 - `PhoneMasker` (dataset; only the synthetic number is used, and the test adds the synthetic code `00` to the
   masker's code list so that no real operator code appears in a fixture): `+998 00 000 00 67`, `998000000067`,
   `8 00 000-00-67`, `(00) 000 00 67`, `00.000.00.67`, `00_000_00_67` → `+998 ** *** ** 67`; the same digits behind
@@ -345,11 +386,14 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 - Contact: `phone`, `phone_display`, `call_url`, `expires_at`; `phone` non-null implies `call_url` non-null.
 - Contact, translation, share: happy path, each error code, `Accept-Language: ru` on translation → `422`; the
   translated text of an entry with a number is masked.
-- Contract: OpenAPI has the eight paths and one shared preview schema; `pnpm types:check` is clean.
+- Contract: OpenAPI has the nine paths and one shared preview schema; `count` of `GET /listings/new` is typed as an
+  integer; `pnpm types:check` is clean.
 
 ## Acceptance checklist
 
-- [ ] The eight methods answer as specified with `meta.source = stub`.
+- [ ] The nine methods answer as specified with `meta.source = stub`.
+- [ ] `GET /listings/new` takes the filter parameters and `since`, and always answers an integer `count ≥ 0`; a
+      future `since` answers `0`.
 - [ ] The filter table is enforced by one request class; the 25-key filters object appears in flow options.
 - [ ] Feed pages end with `meta.next_cursor: null`; count, map and feed agree for the same filters.
 - [ ] Reserved numbers and scenarios produce `404`, `503`, a merged answer and a withdrawn listing.

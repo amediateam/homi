@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-10 |
 | Size | about 2 000 changed lines without generated files and fixtures, M |
-| Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
+| Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `02` BR-API-123; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
 | Needs from the production track | Two new env key names, announced in the PR. `TELEGRAM_SUPPORT_USERNAME`, blank by default (public name of the support account; staging and production values set by that track). `RADAR_CREATION_ENABLED`: leave it **unset** on staging and production — radars stay switched off there until the bot's sending package sets it (WP-57, DEC-51). After the deploy, check on staging that `GET /api/v1/reference` answers without a token and reports `radars_enabled: false` |
 
 ## Goal
@@ -187,13 +187,19 @@ products; `listing_id` carries the listing number. Catalogue:
 | `app_opened` | `entry`, `listing_id` (only for `link`), `ms` |
 | `app_error` | `v`, `error` = `{kind (boot, error, rejection, render), name, message, source, stage (boot, app), screen, tg, platform}` |
 | `follow_prompt_shown`, `follow_prompt_expired`, `follow_prompt_closed` | none |
+| `return_prompt_shown` | `n` (integer ≥ 0, the `count` of `GET /listings/new`), `custom` (boolean) |
+| `return_prompt_expired`, `return_prompt_closed` | `custom` |
+| `feed_radar_shown`, `feed_radar_closed` | `custom` |
 | `home_screen_offered`, `home_screen_added`, `home_screen_closed` | none |
 | `chat_access_declined`, `chat_access_allowed` | none |
 | `listing_shared`, `original_copied`, `contact_write` | `listing_id` |
 | `original_opened` | `listing_id`, `src` (`button`, `video`, `sources`, `price_history`, `offers`) |
 | `contact_call` | `listing_id`, `via` (`tel`, `browser`), `src` (`text`, `author`) |
 
-An unknown `name` or unknown properties are accepted with `204` and not stored (WP-47). Errors: `401 unauthenticated`
+`custom` says whether the filters of the nudge differ from the defaults of their deal and city (BR-APP-013). The
+five `return_prompt_*` and `feed_radar_*` names belong to the return banner and the radar card in the feed, added by
+legacy release `index-DY_DH7h-.js` (SCR-046, SCR-047, API-034, BR-API-123). An unknown `name` or unknown properties
+are accepted with `204` and not stored (WP-47). Errors: `401 unauthenticated`
 (an event without a session is never stored, SEC-REQ-022); `413 payload_too_large`; `422 validation_failed` only when
 `name` is missing or not a string. Over the rate limit the answer is still `204` and the event is dropped. Changed
 against legacy: properties moved from the top level into `props`; nothing was renamed. Stub: validates and answers

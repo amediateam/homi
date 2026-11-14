@@ -17,8 +17,8 @@ never come back).
 
 ## Legacy reference
 
-- ENT-025 (publication, `06:628-649`), ENT-026 (history event, `06:650-668`), ENT-034 (status, `06:829-845`), ENT-037
-  (takedown, `06:863-872`); mapping `06` §4.2 lines 1240-1241, 1247, 1250.
+- ENT-025 (publication, `06:631-652`), ENT-026 (history event, `06:653-671`), ENT-034 (status, `06:832-848`), ENT-037
+  (takedown, `06:866-875`); mapping `06` §4.2 lines 1240-1241, 1247, 1250.
 - `ListingDetails.history[] {at, channel (no @), url, text?, kind? (published|price_down|price_up), price_usd!,
   change_pct!}`, `stats {days_listed, publications, channels, views?}`, `sources[] {url, handle}!`, `original_url`,
   `post_deleted`, `status_text` (`08` §1.8).

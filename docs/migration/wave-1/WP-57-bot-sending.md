@@ -171,8 +171,9 @@ first:
    which run the bot's handlers and the poll jobs, read it only at start (`docs/infrastructure/deployment.md`).
 3. Check: `GET /api/v1/reference` reports `radars_enabled: true`; `/new` opens the wizard; the Mini App shows the
    radar tab instead of "soon" once its cached reference data has expired (about ten minutes, WP-22).
-4. Run the passes inside Telegram that waited for this switch: the radar lines of the Mini App (WP-30, with the
-   lines of WP-45 and of WP-48 part D that point here), the wizard (WP-54), the radar screens and free text
+4. Run the passes inside Telegram that waited for this switch: the radar lines of the Mini App (WP-30 — the
+   follow nudge, the return banner and the radar card in the search list among them, rows 26 … 31, 40, 46 and 47
+   of WP-33 — with the lines of WP-45 and of WP-48 part D that point here), the wizard (WP-54), the radar screens and free text
    (WP-55). Then the delivery lines of this package's checklist.
 5. Production: steps 1 – 4 again, after staging passed.
 

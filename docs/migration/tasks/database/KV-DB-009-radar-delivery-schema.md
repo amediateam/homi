@@ -17,8 +17,8 @@ canonical 25-key filters and their structured copy, `radar_hide_rules`, `radar_d
 
 ## Legacy reference
 
-- ENT-008 (radar, `06:280-334`), ENT-009 (hide rule, `06:335-353`), ENT-010 (delivered-card log, `06:354-380`),
-  ENT-011 (pending delivery, `06:381-390`); mapping `06` §4.2 lines 1223-1226; forced design `06` §4.3 items 1, 2, 6.
+- ENT-008 (radar, `06:282-336`), ENT-009 (hide rule, `06:337-355`), ENT-010 (delivered-card log, `06:356-382`),
+  ENT-011 (pending delivery, `06:383-392`); mapping `06` §4.2 lines 1223-1226; forced design `06` §4.3 items 1, 2, 6.
 - `Subscription {id, active, mode, filters (25 keys), hidden?}` and `SubscriptionMutationResult` (`08` §1.8);
   `SearchFilters` keys (`08` §1.7).
 - BR-DATA-009 (25 keys), BR-DATA-010 (limit, `no_chat`), BR-DATA-012 (active/paused, instant/digest), BR-DATA-016

@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-40 (and, by queue order, WP-42: its `ListingRefs`, `AuthorKey` and `OverlayData` are used here) |
 | Size | about 2 800 changed lines, L |
-| Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (personal lists, reports and surveys); `24` §8.1 (DEC-48); `08` rows of API-011 … API-016 and API-026 … API-033; `03` §4 (BR-APP-036, BR-APP-037, BR-APP-039, BR-APP-040, BR-APP-049, BR-APP-053, BR-APP-067); `15` §3.1 (the IDOR matrix), §3.4, §3.6; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-045; tasks `tasks/backend/KV-BE-038-favourites.md`, `KV-BE-039-view-history.md`, `KV-BE-040-hidden-listings.md`, `KV-BE-041-blocked-authors.md`, `KV-BE-042-hidden-management.md`, `KV-BE-043-votes-reports.md`, `KV-BE-044-found-survey.md` (rules, limits, edge cases, tests — not their routes or serializers) |
+| Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (personal lists, reports and surveys); `24` §8.1 (DEC-48); `08` rows of API-011 … API-016 and API-026 … API-033; `02` BR-API-101, Q-API-064; `03` §4 (BR-APP-036, BR-APP-037, BR-APP-039, BR-APP-040, BR-APP-049, BR-APP-053, BR-APP-067); `15` §3.1 (the IDOR matrix), §3.4, §3.6; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-045; tasks `tasks/backend/KV-BE-038-favourites.md`, `KV-BE-039-view-history.md`, `KV-BE-040-hidden-listings.md`, `KV-BE-041-blocked-authors.md`, `KV-BE-042-hidden-management.md`, `KV-BE-043-votes-reports.md`, `KV-BE-044-found-survey.md` (rules, limits, edge cases, tests — not their routes or serializers) |
 | Needs from the production track | Approve the migrations on production: eight new tables (`favorites`, `hidden_listings`, `blocked_authors`, `listing_votes`, `vote_decisions`, `listing_marks`, `author_marks`, `found_answers`), all additive and empty. No env key, no nginx change |
 
 ## Goal
@@ -49,7 +49,7 @@ nullable), `source_post_id` (`unsignedBigInteger`, nullable).
 | `favorites` | listing columns | unique (`user_id`, `listing_number`); index (`user_id`, `id`) |
 | `hidden_listings` | listing columns; `reason` (string 16: `manual`, `report_rented`, `report_fraud`) | unique (`user_id`, `listing_number`) |
 | `blocked_authors` | `id` is a ULID; `author_key` (string 96); `kind` (`phone`, `source`); `label` (string 64); listing columns of the listing used to block | unique (`user_id`, `author_key`) |
-| `listing_votes` | listing columns; `author_key` (nullable); `reason` (string 16); `detail` (string 500, nullable); `weight` (decimal 4,2); `withdrawn_at` | unique (`user_id`, `listing_number`, `reason`); index (`listing_number`, `reason`); index (`author_key`, `reason`) |
+| `listing_votes` | listing columns; `author_key` (nullable); `reason` (string 16); `detail` (string 16, nullable: a `ReportDetail` code, only with `wrong_data`); `weight` (decimal 4,2); `withdrawn_at` | unique (`user_id`, `listing_number`, `reason`); index (`listing_number`, `reason`); index (`author_key`, `reason`) |
 | `vote_decisions` | no `user_id`; `subject_type` (`listing`, `author`); `subject` (string 96); `reason`; `voters` (integer); `weight_sum` (decimal 6,2); `threshold` (decimal 6,2); `outcome` (`marked`, `unmarked`) | index (`subject_type`, `subject`) |
 | `listing_marks` | no `user_id`; `listing_number` (primary key); `rented_at` (WP-57 adds `taken_down_at` in its own migration) | — |
 | `author_marks` | no `user_id`; `author_key` (primary key); `realtor_marked_at`; `source` (`votes`) | — |
@@ -58,7 +58,8 @@ nullable), `source_post_id` (`unsignedBigInteger`, nullable).
 `listing_views` exists since WP-42. Models: `Favorite`, `HiddenListing`, `BlockedAuthor`, `ListingVote`,
 `VoteDecision`, `ListingMark`, `AuthorMark`, `FoundAnswer`, each with a factory; `User` gains the `hasMany`
 relations `favorites()`, `listingViews()`, `hiddenListings()`, `blockedAuthors()`, `listingVotes()`,
-`foundAnswers()`. Enums in `App\Enums\Personal`: `HiddenReason`, `ReportReason`, `FoundAnswerType`, `FoundTrigger`,
+`foundAnswers()`. Enums in `App\Enums\Personal`: `HiddenReason`, `ReportReason`, `ReportDetail` (`Price = 'price'`,
+`Rooms = 'rooms'`, `Place = 'place'`, `Photos = 'photos'`, `Other = 'other'`), `FoundAnswerType`, `FoundTrigger`,
 `FoundPlace`.
 
 ### Resolving a listing for a write
@@ -107,10 +108,14 @@ answer, as legacy does.
 WP-53 later adds one read method for the bot's report menu, `activeReasons(User, ListingPointer): list<ReportReason>`;
 nothing in this package needs it.
 
-`report(User, ListingPointer, ReportReason, ?string $detail): ReportOutcome`, in one transaction:
+`report(User, ListingPointer, ReportReason, ?ReportDetail $detail): ReportOutcome`, in one transaction:
 
 1. `insertOrIgnore` into `listing_votes`; a repeat of the same reason is counted once and returns the same outcome.
-   `detail` is trimmed, stripped of control characters, cut to 500 characters, never logged.
+   `detail` is the code the request validated (WP-13: one of five, only with `wrong_data`; BR-APP-036, BR-API-101);
+   `StoreReportRequest` turns it into the enum, and `report()` refuses a detail with another reason
+   (`InvalidArgumentException`, a programming error). A repeat of `wrong_data` with another detail keeps the first
+   row and its detail. The detail feeds review only: it changes neither `hidden` nor any mark (Q-API-064 is about
+   legacy; HOMI decides its own effects, DEC-48).
 2. `weight` from `config/votes.php`: base 1.0, plus 0.5 for Telegram Premium, 0.25 for a username, 0.25 for a
    profile photo, capped at 2.0 (proposal; the legacy formula is unknown).
 3. Voter-side effect: `rented` → hide with `ReportRented`; `fraud` → hide with `ReportFraud`; both answer
@@ -238,10 +243,11 @@ without an author accepts `agent` and has no author effect.
   /hidden/authors/{id}` own → `204`, second time → `404`, foreign id → the same `404` body and query count as an
   unknown id; a listing number passed as `{id}` → `404`.
 - Overview and clear: both arrays; counts; B's data untouched by A's `DELETE /hidden`.
-- Reports: four reasons → `hidden` as specified; same reason twice → one row; two reasons → two rows; `detail`
-  stored trimmed and absent from logs; below threshold no mark; at threshold one mark, one decision row; a withdrawn
-  vote lowers the sum and removes the mark; a single maximum-weight user never marks; detector off → no mark and
-  marks ignored by the overlay.
+- Reports: four reasons → `hidden` as specified; same reason twice → one row; two reasons → two rows; `wrong_data`
+  with each of the five details stores its code, without a detail stores `null`, and answers `hidden: false` in
+  every case; a second `wrong_data` with another detail keeps the first; a detail with `fraud` → `422` and no row;
+  below threshold no mark; at threshold one mark, one decision row; a withdrawn vote lowers the sum and removes the
+  mark; a single maximum-weight user never marks; detector off → no mark and marks ignored by the overlay.
 - Survey: 4 × 2 answers stored; `where` attaches to the caller's latest `elsewhere`, never to another user's;
   without one → a separate row.
 - IDOR matrix: every row; the coverage case fails on a deliberately unlisted test route.
@@ -259,12 +265,12 @@ without an author accepts `agent` and has no author effect.
 - [ ] Every personal table stores number, channel and post; unknown channel and post are back-filled by the job.
 - [ ] Vote marks need the threshold, write an audit row, and both detectors can be switched off without a deploy.
 - [ ] The IDOR matrix covers every bearer route that exists at this point; foreign equals unknown.
-- [ ] No phone is stored; labels are masked; `detail` never appears in a log.
+- [ ] No phone is stored; labels are masked; `detail` holds only one of the five codes, and only for `wrong_data`.
 - [ ] The PR lists the eight migrations and the tables to register for erasure.
 - [ ] `make ci-backend` and the `pgsql` group are green; the security review has no open finding.
-- [ ] Inside Telegram on staging, then production: favourite, hide with undo, block with undo, a report with a
-      detail text, and the «Скрытое» page behave as in the functional checklists of the saved and listing screens,
-      and survive a relaunch.
+- [ ] Inside Telegram on staging, then production: favourite, hide with undo, block with undo, a «Неверные данные»
+      report with each detail, and the «Скрытое» page behave as in the functional checklists of the saved and
+      listing screens, and survive a relaunch.
 
 ## Handoff
 

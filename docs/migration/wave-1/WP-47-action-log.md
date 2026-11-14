@@ -74,8 +74,11 @@ final class ActionLogger {
 ```
 
 `App\Enums\Analytics\ActionChannel`: `App`, `Bot`. The catalogue is `config/analytics.php` → `events`: name → allowed
-property keys, each with a type (`int`, `enum` with its values, `string` with a cap). It holds the names of WP-11;
-WP-58 adds the bot's names with the prefix `bot_` and enum-only properties. Rules:
+property keys, each with a type (`int`, `bool`, `enum` with its values, `string` with a cap). It holds the names of
+WP-11, the five of the return banner and the radar card in the feed included (`return_prompt_shown` with `n` as
+`int` and `custom` as `bool`; `return_prompt_expired`, `return_prompt_closed`, `feed_radar_shown`,
+`feed_radar_closed` with `custom`; BR-API-123); WP-58 adds the bot's names with the prefix `bot_` and enum-only
+properties. Rules:
 
 - A name outside the catalogue stores nothing and returns `false`.
 - Only allow-listed keys are kept; a value of the wrong type or outside its enum is dropped; strings are cut to
@@ -243,7 +246,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 
 ## Tests
 
-- Catalogue: every name of WP-11 is present with typed keys and caps.
+- Catalogue: every name of WP-11 is present with typed keys and caps; `return_prompt_shown {n: 12, custom: true}`
+  is stored as given; `n: "12"` and `custom: "yes"` are dropped and the rest of the event is kept.
 - Disclosures: a `200` of `POST …/contact` → one `contact_disclosed` row with `listing_id` and channel `app`; the
   event with channel `bot` → channel `bot`; `contact_unavailable` → no row; the name posted to `POST /events` →
   `204`, no row; no capture job is queued for it; the row holds no digit run of the listing's phone.

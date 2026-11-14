@@ -22,17 +22,17 @@ The legacy product is the description of the behaviour, not a source of code (DE
 
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
-| Mini App screens, sheets, overlays, states | 45 (SCR-001 … SCR-045) | `03` §2, `data/screens.json` |
-| Client business rules | 69 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 47 (`LB-APP`) | `03` §5, §5b |
+| Mini App screens, sheets, overlays, states | 47 (SCR-001 … SCR-047) | `03` §2, `data/screens.json` |
+| Client business rules | 73 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 50 (`LB-APP`) | `03` §5, §5b |
 | Telegram integration points | 45, of which 39 in use (TMA-001 … TMA-045) | `05` |
-| API methods the client uses | 34 (API-001 … API-034) | `08` §2 |
+| API methods the client uses | 35 (API-001 … API-035) | `08` §2 |
 | Bot handlers, buttons, texts | 84, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 472 keys per locale in the current legacy tree; the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 482 keys per locale at the baseline `index-DY_DH7h-.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-plF_TOcT.js`. Two later releases are in the legacy tree and not in the
-audit (Q-APP-024); the queue starts by bringing the audit up to a pinned release (section 8).
+The audit describes legacy release `index-DY_DH7h-.js`, pinned by WP-02 in `wave-1/baseline.md` (Q-APP-024). Each
+later release is read into the audit as described in section 8.
 
 ## 2. Scope and rules
 
@@ -45,8 +45,9 @@ section 5; the bot of section 6; the landing of section 7.
    legacy. Small visual differences are accepted. Each work package carries its checklist (section 9).
 2. **Defects are fixed, behaviour changes are not made** (DEC-36). An `LB` item that `09` §4.3 lists as a plain fix
    is fixed and tested. An `LB` item that `09` §4.2 turns into a `DEV` row changes what a user sees, so it is written
-   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 34 fixes and
-   13 flagged items (LB-APP-026 became a fix through DEC-54); each specification names its own. Three behaviour changes are **on by the developer's
+   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 37 fixes and
+   13 flagged items (LB-APP-026 became a fix through DEC-54; LB-APP-048 … LB-APP-050 of the pinned release are
+   fixes); each specification names its own. Three behaviour changes are **on by the developer's
    decision** and are not flags: the author's phone number is given only after a tap (DEC-52), favourites and
    history are paged (DEC-53), and the whole-city label is «{city} целиком» (DEC-54). The acceptance checklists list
    them as approved differences from legacy.
@@ -97,8 +98,9 @@ parameters, so a feed, its map and its filter sheet share one state and survive 
 | `/welcome/language`, `/welcome/city` | first-launch pickers (SCR-004, SCR-005) | page |
 | `/no-access`, `/outside` | no access, outside Telegram (SCR-003, SCR-002) | page |
 
-Not routes: the boot-failure screen (SCR-001, inline boot guard), nudges (SCR-040, SCR-041), toast (SCR-042),
-confirms (SCR-043), Telegram system sheets (SCR-044), the crash screen (SCR-045, `error.tsx`).
+Not routes: the boot-failure screen (SCR-001, inline boot guard), nudges (SCR-040, SCR-041, SCR-046), the in-feed
+radar card (SCR-047, a state of the feed), toast (SCR-042), confirms (SCR-043), Telegram system sheets (SCR-044), the
+crash screen (SCR-045, `error.tsx`).
 
 - **Sheets and overlays** are intercepting routes rendered into a parallel slot, so the screen below stays mounted
   and a direct load of the address still works (`…/03-file-conventions/parallel-routes.md`,
@@ -269,6 +271,7 @@ frontend/
 | `GET /cities` | API-002 | legacy, cached |
 | `GET /listings` | feed (API-004) | legacy + overlay |
 | `GET /listings/count`, `GET /listings/flow` | API-005, API-006 | legacy |
+| `GET /listings/new` | API-035 | legacy |
 | `GET /listings/map` | API-007 | legacy + overlay |
 | `GET /listings/{number}` | API-008 | legacy + overlay; records the view natively |
 | `POST /listings/{number}/contact` | call link (API-009) | legacy (form depends on Q-API-062); the only method that returns a phone number (DEC-52) |
@@ -295,7 +298,8 @@ Notes on the table:
   for cards on the map.
 - While `RADAR_CREATION_ENABLED` is off (DEC-51) the radar methods that create or change answer `403` with code
   `radars_disabled`, `GET /radars` answers an empty list, and `GET /reference` says `radars_enabled: false`; the
-  radar tab and the bot then show "soon". The switch goes on with the bot's sending package.
+  radar tab and the bot then show "soon", and the Mini App offers no radar anywhere: no follow nudge, no return
+  banner, no radar card in the feed. The switch goes on with the bot's sending package.
 - There is no method to withdraw a report: the "undo" of a report belongs to a `DEV` item that is off.
 - Legacy toggles a favourite with one `POST`; v1 uses an explicit `PUT` and `DELETE`, so a repeated request cannot
   flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
@@ -338,7 +342,8 @@ is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any scr
 - **What legacy does not give.** Its previews carry neither the source channel and post nor an author key (`08`
   §1.8). Unless the operator adds them (WP-02), HOMI learns both only when a card is opened: the Wave 2 reference is
   empty for listings a user saved without opening, and a blocked author's other listings disappear only once HOMI
-  has seen them as cards. Counts and the flow estimate cannot subtract a user's hidden listings.
+  has seen them as cards. Counts, the new-since count and the flow estimate cannot subtract a user's hidden
+  listings.
 - **Contract tests.** The golden fixtures of 08 describe what legacy returns. A test per method fails when a
   recorded legacy answer no longer fits the translator, which is how a legacy release shows up (RK-26).
 
@@ -400,8 +405,9 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
 ## 8. Legacy baseline and release intake
 
 1. **Pin.** The first stage of the queue names the legacy release the work describes and brings 03, 08, 04 and the
-   registers up to it. Already missing: the report-detail step with the `detail` field, the `price_kind: business`
-   label, the badge order and the no-access text (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-24`).
+   registers up to it. Done by WP-02 on 2026-11-14 (`wave-1/baseline.md`): the report-detail step with the `detail`
+   field, the `price_kind: business` label, the badge order, the no-access text, and the "new since your last
+   visit" banner with the radar card in the feed (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-61`).
 2. **Intake.** Each later legacy release is read from its sync report (`$KVADRO_ROOT/demo/app/docs/releases/`) and
    becomes one queue item: update the audit, the affected specification, the stub fixtures, the legacy translator.
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
@@ -509,7 +515,7 @@ state.
 
 1. Every work package is done by its definition (section 9).
 2. No method answers from a stub on production; `meta.source` is `legacy` or `native` everywhere.
-3. All 45 screens and all bot scenarios have a signed checklist.
+3. All 47 screens and all bot scenarios have a signed checklist.
 4. The Mini App works in iOS, Android, Desktop and Web clients of Telegram, in cookie mode and header mode.
 5. Radars deliver: an instant card, a digest and a quiet-hours release were each observed on production.
    `RADAR_CREATION_ENABLED` is on.

@@ -391,8 +391,8 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] Listings at one address form a stack with the cheapest label and a count; tapping spreads it without overlaps.
 - [ ] A cluster zooms in on tap; at maximum zoom it opens the card with its listings, cheapest first.
 - [ ] A background tap and × close the card; the active pin is raised above the others.
-- [ ] The card shows one photo, price, short verdict, no badges and no eye; the heart toggles; a tap opens the
-      listing and Back returns to the same card.
+- [ ] The card shows one photo, price with its price-kind label (WP-24), short verdict, no badges and no eye; the
+      heart toggles; a tap opens the listing and Back returns to the same card.
 - [ ] A stack card shows «{n} из {total}» and swipes; only neighbouring previews are requested.
 - [ ] A failed preview shows «Не загрузилось — повторить» and recovers.
 - [ ] «На карте {shown} из {total} · …» appears for 6 s when some listings have no coordinates, with the right

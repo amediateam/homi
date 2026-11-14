@@ -215,7 +215,7 @@ KV-FE-076,frontend,Radar empty state,TODO,S,15,F-RADAR-001,KV-FE-075,,tasks/fron
 KV-FE-077,frontend,Radar subscription sheet,TODO,M,15,F-RADAR-004 F-RADAR-005,KV-BE-045 KV-BE-104 KV-BE-106 KV-FE-013 KV-FE-014 KV-FE-047 KV-FE-075 KV-FE-079,Q-API-030 Q-API-032,tasks/frontend/KV-FE-077-radar-sheet.md
 KV-FE-078,frontend,New radar and radar editor sheets,TODO,M,14,F-RADAR-002 F-RADAR-003,KV-BE-032 KV-BE-103 KV-BE-105 KV-FE-050 KV-FE-054 KV-FE-074,Q-API-031 Q-APP-006,tasks/frontend/KV-FE-078-radar-create-edit.md
 KV-FE-079,frontend,«Нашли жильё?» survey,TODO,S,11,F-DELIVERY-007,KV-BE-044 KV-FE-013 KV-FE-030,Q-API-030,tasks/frontend/KV-FE-079-found-survey.md
-KV-FE-080,frontend,Radar follow nudge,TODO,S,14,F-RADAR-007,KV-FE-028 KV-FE-034 KV-FE-048 KV-FE-074,Q-APP-005,tasks/frontend/KV-FE-080-follow-nudge.md
+KV-FE-080,frontend,Radar follow nudge,TODO,S,14,F-RADAR-007 F-RADAR-009 F-RADAR-010,KV-FE-028 KV-FE-034 KV-FE-048 KV-FE-074,Q-APP-005,tasks/frontend/KV-FE-080-follow-nudge.md
 KV-FE-081,frontend,Settings screen and «О приложении»,TODO,M,11,F-SETTINGS-001,KV-BE-022 KV-BE-042 KV-BE-045 KV-BE-101 KV-FE-012 KV-FE-013 KV-FE-045 KV-FE-086,Q-API-029,tasks/frontend/KV-FE-081-settings-screen.md
 KV-FE-082,frontend,Settings › Theme and Graphics,TODO,S,12,F-SETTINGS-002 F-SETTINGS-003,KV-BE-045 KV-FE-026 KV-FE-027 KV-FE-081,,tasks/frontend/KV-FE-082-settings-theme-graphics.md
 KV-FE-083,frontend,"Settings › Language and Currency, without a reload",TODO,S,12,F-LOCALE-001 F-SETTINGS-004,KV-BE-020 KV-BE-045 KV-FE-015 KV-FE-017 KV-FE-023 KV-FE-081,Q-APP-011,tasks/frontend/KV-FE-083-settings-language-currency.md
