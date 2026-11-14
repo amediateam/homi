@@ -16,7 +16,7 @@ allow-listed event names and property keys, so the log can never hold free text,
 
 ## Legacy reference
 
-- ENT-021 (`06:532-550`): fields user, name, props, channel, created_at; "no texts", 180 days; volume unknown
+- ENT-021 (`06:535-553`): fields user, name, props, channel, created_at; "no texts", 180 days; volume unknown
   (Q-DATA-021).
 - `$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431` (action log promise in `/privacy`); bot audit
   `04-telegram-bot-audit.md:1153` (BR-BOT-086).

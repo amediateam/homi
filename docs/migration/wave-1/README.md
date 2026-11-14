@@ -65,8 +65,8 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
 | [WP-00](WP-00-media-ownership-fix.md) | Media ownership fix | — | REVIEW (`feat/wp-00-media-ownership-fix`) |
-| [WP-01](WP-01-adrs-and-shared-files.md) | ADRs and shared-file updates | — | REVIEW (PRs #29 … #36) |
-| [WP-02](WP-02-operator-request-and-baseline.md) | Operator request and legacy baseline pin | — | TODO |
+| [WP-01](WP-01-adrs-and-shared-files.md) | ADRs and shared-file updates | — | WAITING (all eight PRs merged; the first developer accepts ADR-0016 … ADR-0019 and answers the PR-size and deploy questions of #30) |
+| [WP-02](WP-02-operator-request-and-baseline.md) | Operator request and legacy baseline pin | — | WAITING (PR #37 merged; the request to the operator is sent) |
 | [WP-03](WP-03-dependencies-and-test-tooling.md) | Dependencies and test tooling | WP-00, WP-01 | TODO |
 
 ## Stage A — Contract

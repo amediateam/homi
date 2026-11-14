@@ -96,6 +96,21 @@
     "notes": "{week, days>0, options?[{code,label,rate,filters(25 keys)}]}; option code goes as 'relaxed' in POST/PUT subscriptions. server logic DOCUMENTED_ONLY. LB-API-005, -006, -007, -036, -038, -052."
   },
   {
+    "id": "API-035",
+    "method": "GET",
+    "path": "/api/feed/new",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (current, release index-DY_DH7h-.js) :110, :559-588, :1161-1162, :1200-1202",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js:105-117",
+      "$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:112-137",
+      "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:179-195"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-DY_DH7h-.js. Common filter query plus since = previous visit with these filters, integer unix seconds of the device clock (no lower bound on the client); response {count}, count mandatory and numeric (a body without count crashes the banner). Sent 1.8 s after an eligible search visit (return banner SCR-046), aborted on filter/radar/overlay change, again after a return from background >= 6 h; errors ignored. Lines at the pin (SVN r27). server logic DOCUMENTED_ONLY. LB-API-055; Q-API-066."
+  },
+  {
     "id": "API-007",
     "method": "GET",
     "path": "/api/map",
@@ -232,13 +247,14 @@
     "path": "/api/listings/:id/report",
     "auth": "tma <initData> required",
     "access": "authenticated; anti-abuse weighting",
-    "doc_ref": "$KVADRO_ROOT/docs/api.md:119, :675-705",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:119, :675-705 (audited tree); current :707-758, :1171-1172, :1198-1199",
     "client_call_sites": [
-      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90",
-      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:89"
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:93-102",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200"
     ],
     "status": "CONFIRMED",
-    "notes": "Body {reason: rented|agent|wrong_data|fraud}; must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY. LB-API-015, -042, -043; Q-API-038..040."
+    "notes": "Body {reason: rented|agent|wrong_data|fraud}; since index-BNLZFfL0.js wrong_data carries detail: price|rooms|place|photos|other (key present only when detail is set, never with another reason); older bundles still send wrong_data without detail, both accepted. Must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY (detail handling UNVERIFIED). LB-API-015, -042, -043; Q-API-038..040, -064."
   },
   {
     "id": "API-017",
@@ -264,12 +280,13 @@
     "client_call_sites": [
       "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:5",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:175",
+      "$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:62-66",
       "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:95",
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:58",
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:60"
     ],
     "status": "CONFIRMED",
-    "notes": "Bare array of Subscription; filters must have all 25 keys; types valid per deal. server logic DOCUMENTED_ONLY. LB-API-005, -006, -038; Q-API-013, -032."
+    "notes": "Bare array of Subscription; since index-DY_DH7h-.js also re-read on a return from background after >= 6 h; filters must have all 25 keys; types valid per deal. server logic DOCUMENTED_ONLY. LB-API-005, -006, -038; Q-API-013, -032."
   },
   {
     "id": "API-019",
@@ -277,13 +294,17 @@
     "path": "/api/subscriptions",
     "auth": "tma <initData> required",
     "access": "authenticated; bot must be able to write (409 no_chat); limit max_subscriptions (default 10)",
-    "doc_ref": "$KVADRO_ROOT/docs/api.md:122, :731-754, :76-85",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:122, :731-754, :76-85 (audited tree); current :784-811, :1163",
     "client_call_sites": [
       "$KVADRO_ROOT/demo/app/src/lib/api/subscriptions.js:13-21",
-      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:131"
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:131",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:399-415",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:635",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:718",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:752"
     ],
     "status": "CONFIRMED",
-    "notes": "Body {filters, entry: filters|empty|few|prompt, relaxed?}; 409 no_chat before any write; 409 limit without no_chat. SubscriptionMutationResult with relaxed[] always. server logic DOCUMENTED_ONLY. LB-API-013, -014, -033..037; Q-API-027, -031, -033, -034."
+    "notes": "Body {filters, entry: filters|empty|few|prompt, relaxed?}; since index-DY_DH7h-.js entry also feed (in-feed radar card) | return (return banner), sent directly for custom filters or from the create-radar sheet for default filters; relaxed only from a filters sheet (App.jsx lines at the pin); 409 no_chat before any write; 409 limit without no_chat. SubscriptionMutationResult with relaxed[] always. server logic DOCUMENTED_ONLY. LB-API-013, -014, -033..037; Q-API-027, -031, -033, -034."
   },
   {
     "id": "API-020",
@@ -498,7 +519,7 @@
     "path": "/api/events",
     "auth": "tma <initData>; empty 'tma ' arrives from React app_error and must be rejected silently",
     "access": "any; fire-and-forget",
-    "doc_ref": "$KVADRO_ROOT/docs/api.md:137, :970-1046",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md:137, :970-1046 (audited tree); current :1076-1107",
     "client_call_sites": [
       "$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35",
       "$KVADRO_ROOT/demo/app/index.html:76-88",
@@ -517,10 +538,15 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:141",
       "$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:71",
       "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:75",
-      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:84"
+      "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:84",
+      "$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:126",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:143",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:309",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:638",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:744"
     ],
     "status": "CONFIRMED",
-    "notes": "{name, ...props} at top level; React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046."
+    "notes": "{name, ...props} at top level; since index-DY_DH7h-.js also return_prompt_shown {n, custom}, return_prompt_expired|closed {custom}, feed_radar_shown|closed {custom} (last five call sites at the pin); React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046."
   },
   {
     "id": "RES-001",

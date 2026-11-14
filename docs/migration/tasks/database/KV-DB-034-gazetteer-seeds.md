@@ -17,10 +17,10 @@ columns.
 
 ## Legacy reference
 
-- ENT-045 (quarter, `06:957-962`; 45 quarters, Tashkent, rent pages — `$KVADRO_ROOT/docs/seo-pages.md:52-56`, `:110`;
-  slugs `:103-113`; names in three scripts LB-SEO-007), ENT-046 (metro, `06:964-967`; 35 stations with SEO pages,
-  `$KVADRO_ROOT/docs/seo-pages.md:57`, `:82-83`), ENT-047 (place/ЖК/landmark, `06:969-978`), ENT-048 (POI,
-  `06:980-983`); mapping `06` §4.2 line 1254.
+- ENT-045 (quarter, `06:960-965`; 45 quarters, Tashkent, rent pages — `$KVADRO_ROOT/docs/seo-pages.md:52-56`, `:110`;
+  slugs `:103-113`; names in three scripts LB-SEO-007), ENT-046 (metro, `06:967-970`; 35 stations with SEO pages,
+  `$KVADRO_ROOT/docs/seo-pages.md:57`, `:82-83`), ENT-047 (place/ЖК/landmark, `06:972-981`), ENT-048 (POI,
+  `06:983-986`); mapping `06` §4.2 line 1254.
 - Boundaries and school rating from `opendata.tashkent.uz` (`/132`, `/134`), schools from OpenStreetMap (BR-API-053;
   `$KVADRO_ROOT/docs/seo-pages.md:253-256`); `near_metro` ≈ 1 km (BR-API-037); distances from the named place
   (BR-API-051, BR-DATA-036).

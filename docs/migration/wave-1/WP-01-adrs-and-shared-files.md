@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | REVIEW (PRs #29 … #36) |
+| Status | WAITING (all eight PRs merged; ADR acceptance and the DEC-45 answers of the first developer) |
 | Depends on | — |
 | Size | about 600 changed lines in eight small PRs, S |
 | Behaviour reference | `24` §7, §8.1, §9; `25` §3, §4; `decisions/2026-11-14-developer-answers.md`; `docs/handoff/parallel-work.md` §1, §2, §4; `HANDOFF.md` §4; known issue KI-26 in `.ai/memory/known-issues.md`; `.ai/hooks/README.md` |
@@ -75,7 +75,7 @@ description instead of editing that file.
 > Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md`
 > (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and
 > WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2.
-> T4, T9, T10 and T11 are unchanged.
+> T0, T4, T9, T10 and T11 are unchanged.
 
 **`CLAUDE.md` and `AGENTS.md`.** In "Mandate and session start" of `CLAUDE.md` add one bullet, and restate it in the
 hard-rules list of `AGENTS.md`:
@@ -183,6 +183,11 @@ Decisions taken while doing it (each one is in its PR description):
 - ADR-0018 says that DEC-44 replaces three parts of SEC-REQ-007.
 - The CSP spike of WP-21 records its result in an ADR that amends ADR-0018. Both WP-21 step 1 and `25` §3.10 were
   corrected to say so.
+
+**2026-11-15: all eight PRs merged** on the developer's instruction («сливай #37 и все PR WP-01»), in the order
+#30, #31, #33, #34, #35, #36 (#29 and #32 the day before). The four ADRs are merged with `Status: Proposed`: the
+first developer has not reviewed them, and only that review accepts them. What remains is steps 1 and 4 below,
+and the `current-state.md` references of step 5.
 
 Next concrete steps:
 

@@ -16,8 +16,8 @@ SEO slug) to a canonical row, so legacy codes resolve on input and the legacy AP
 
 ## Legacy reference
 
-- ENT-042 (cities, `06:927-937`), ENT-043 (districts, `06:939-947`), ENT-044 (zones, `06:949-955`), ENT-049
-  (renovation, `06:985-988`), ENT-050 (appliances, `06:990-992`), ENT-053 (translatable names, `06:1017-1023`);
+- ENT-042 (cities, `06:930-940`), ENT-043 (districts, `06:942-950`), ENT-044 (zones, `06:952-958`), ENT-049
+  (renovation, `06:988-991`), ENT-050 (appliances, `06:993-995`), ENT-053 (translatable names, `06:1020-1026`);
   mapping `06` §4.2 (line 1254).
 - Six cities/regions: `$KVADRO_ROOT/docs/about.md:50` (Tashkent, Tashkent region, Andijan, Namangan, Kokand,
   Fergana); `CityMeta` fields `code`, `name`, `center`, `zoom` (`< 11` = region, LB-API-051), `metro`, `median`

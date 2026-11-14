@@ -17,9 +17,9 @@ The tables for computed and reference numbers exist: `exchange_rates`, `listing_
 
 ## Legacy reference
 
-- ENT-031 (market comparison, `06:756-784`), ENT-032 (median aggregate, `06:785-805`), ENT-033 (price index,
-  `06:806-828`), ENT-041 (exchange rate, `06:911-919`), ENT-051 (presets, `06:994-1000`), ENT-055 (SEO slice,
-  `06:1039-1047`), ENT-056 (salary reference, `06:1048-1053`); mapping `06` §4.2 lines 1244-1246, 1253, 1255,
+- ENT-031 (market comparison, `06:759-787`), ENT-032 (median aggregate, `06:788-808`), ENT-033 (price index,
+  `06:809-831`), ENT-041 (exchange rate, `06:914-922`), ENT-051 (presets, `06:997-1003`), ENT-055 (SEO slice,
+  `06:1042-1050`), ENT-056 (salary reference, `06:1051-1056`); mapping `06` §4.2 lines 1244-1246, 1253, 1255,
   1259-1260.
 - `ListingDetails.median*` fields and `ListingPreview.median_delta`, `median_tone` (`08` §1.8); map `tone`, `usd`
   (API-007); `meta.price_presets`, `meta.usd_uzs` (API-001); `CityStats.presets`, `typical` (API-002).

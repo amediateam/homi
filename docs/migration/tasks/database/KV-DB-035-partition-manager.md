@@ -16,8 +16,8 @@ partitions is not done here but only by the explicit retention command of KV-DB-
 
 ## Legacy reference
 
-- Partitioned logs: ENT-010 delivered-card log (`06:354-380`; `06` §4.2 line 1225, monthly by `sent_at`), ENT-021
-  action log (`06:532-550`; line 1236, 180-day retention by dropping partitions).
+- Partitioned logs: ENT-010 delivered-card log (`06:356-382`; `06` §4.2 line 1225, monthly by `sent_at`), ENT-021
+  action log (`06:535-553`; line 1236, 180-day retention by dropping partitions).
 - `10` §4.9 (monthly partitions for `user_action_log`, `bot_listing_messages`), §4.11 (scheduler entry "create next
   month's partition on the 25th"), `17` §5 ("Partitions: created by migrations and the monthly scheduler task").
 - `.ai/agents/postgis-geo-engineer.md` rule 7 (time series partitioned monthly, partitions created ahead,

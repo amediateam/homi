@@ -16,7 +16,7 @@ caches on-demand translations per (listing, locale).
 
 ## Legacy reference
 
-- ENT-027 (photo, `06:669-689`), ENT-035 (translation, `06:846-854`); mapping `06` §4.2 lines 1242, 1248; forced
+- ENT-027 (photo, `06:672-692`), ENT-035 (translation, `06:849-857`); mapping `06` §4.2 lines 1242, 1248; forced
   design `06` §4.3 item 5 (JPEG at legacy paths).
 - `/media/<listing_id>/<n>.jpg` (800 px) and `.s.jpg` (480 px), `n` from 0 (RES-001, RES-002, BR-API-054,
   BR-DATA-025); `photos`, `photos_preview`, `photos_count`, `cover` (`08` §1.8); 90-day erase (BR-API-065,

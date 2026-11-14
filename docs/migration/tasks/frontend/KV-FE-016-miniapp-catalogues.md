@@ -19,7 +19,7 @@ unknown key.
 
 ## Legacy reference
 
-- Sources (read-only, release `plF_TOcT`, `03` §1 intro): `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js`,
+- Sources (read-only, the pinned release `index-DY_DH7h-.js` of `wave-1/baseline.md`, `03` §1 intro): `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js`,
   `uz_Latn.js`, `en.js` — each `export const <name> = {…}`, self-contained (no imports).
 - Inventory (`03` §3.1): **461 top-level keys per locale**, none missing in any locale; **14 plural keys**: `listings`,
   `listing.rooms`, `details.daysOnMarket`, `details.publications`, `details.channels`, `details.views`,

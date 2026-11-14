@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-12 |
 | Size | about 2 800 changed lines without generated files and fixtures, L |
-| Behaviour reference | `25` §4.2, §5, §7; `08` rows of API-011 … API-016, API-018 … API-023, API-026 … API-033 and RES-010 … RES-013, §1.8 (`Subscription`, `SubscriptionMutationResult`); `03` §4 (BR-APP-036 … BR-APP-049, BR-APP-063); `15` §3.1, §3.4; tasks `tasks/backend/KV-BE-038-…` … `KV-BE-044-…`, `KV-BE-100-…` … `KV-BE-106-…`, `KV-BE-154-…`, `KV-BE-155-…` (rules only) |
+| Behaviour reference | `25` §4.2, §5, §7; `08` rows of API-011 … API-016, API-018 … API-023, API-026 … API-033 and RES-010 … RES-013, §1.8 (`Subscription`, `SubscriptionMutationResult`); `02` BR-API-086, BR-API-101, Q-API-064; `03` §4 (BR-APP-036 … BR-APP-049, BR-APP-063, BR-APP-073); `15` §3.1, §3.4; tasks `tasks/backend/KV-BE-038-…` … `KV-BE-044-…`, `KV-BE-100-…` … `KV-BE-106-…`, `KV-BE-154-…`, `KV-BE-155-…` (rules only) |
 | Needs from the production track | nothing |
 
 ## Goal
@@ -95,12 +95,19 @@ asked for; `count` drives the hint "hides N listings" from 20 up (BR-APP-037). C
 | Body field | Type | Rule |
 | ---------- | ---- | ---- |
 | `reason` | string | required; `rented`, `agent`, `wrong_data`, `fraud` |
-| `detail` | string | optional, at most 500 characters, plain text (the detail step of the pinned legacy release, WP-02) |
+| `detail` | string | optional; `price`, `rooms`, `place`, `photos`, `other`; allowed only with `reason: wrong_data` |
+
+The detail comes from the third step of the report sheet (SCR-023, BR-APP-036): the Mini App sends `wrong_data`
+only with a `detail`, and the other reasons without one (BR-API-101). The server still accepts `wrong_data` without
+`detail`, as legacy must for older bundles. A `detail` with another reason, or an unknown code, is `422` with
+`detail` in `errors`. Q-API-064 asks what legacy does with the detail; HOMI's reports are its own (DEC-48), so here
+the detail is stored for review and changes nothing: `wrong_data` answers `hidden: false` with or without it.
 
 Answer `200 {"data": {"hidden": true}}` for every reason, never `204` (fix of LB-API-015). `hidden` is `true` for
 `rented` and `fraud` (the listing is hidden for the reporter; `fraud` can be undone through
 `DELETE /hidden/listings/{number}`), `false` for the other two. A repeat with the same reason is counted once and
-answers the same. Stub: `hidden` follows the reason.
+answers the same, whatever its `detail`. Changed against legacy: `POST …/report` became `POST …/reports`; the body
+and the codes are the legacy ones. Stub: `hidden` follows the reason.
 
 ### Surveys — legacy: API-032, API-033
 
@@ -138,7 +145,7 @@ is used.
 | Method | Request | Answer |
 | ------ | ------- | ------ |
 | `GET /radars` | query `include=previews` (optional) | `200`, `data`: radar objects in creation order; `[]` when there are none and while the switch is off |
-| `POST /radars` | `filters` (object, required, normalised by the filter rules of WP-12), `entry` (required: `filters`, `empty`, `few`, `prompt`), `relaxed` (optional, `[a-z_]{1,32}`) | `201` (created) or `200` (existing or reactivated) with the mutation result |
+| `POST /radars` | `filters` (object, required, normalised by the filter rules of WP-12), `entry` (required: `filters`, `empty`, `few`, `prompt`, `feed`, `return`), `relaxed` (optional, `[a-z_]{1,32}`) | `201` (created) or `200` (existing or reactivated) with the mutation result |
 | `PUT /radars/{id}` | `filters` (required), `relaxed` (optional) | `200`, mutation result; replaces the filters, keeps `active` |
 | `PATCH /radars/{id}` | exactly one of `active` (boolean), `mode` (`instant`, `digest`), `unhide` (`true`) | `200 {"data": {"radar": {…}, "starter": 2, "ask_found": false}}`; `starter` only for `active: true`, `ask_found` only for `active: false` |
 | `DELETE /radars/{id}` | — | `200 {"data": {"ask_found": false}}`; a second call → `404 not_found` |
@@ -262,6 +269,10 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
   (BR-API-023); HOMI pages them by decision (DEC-53).
 - Hide, block and `fraud` have undo; `rented` has none (BR-APP-036); the `agent` reason is not offered by the client
   when the card says `is_owner: false`, but the server accepts it.
+- `entry` says where a radar was turned on and is kept for statistics only (BR-API-086): `filters` (filters sheet),
+  `empty` (new-radar sheet from «+» or the empty radar tab), `few` (few-results note), `prompt` (follow nudge) and,
+  since legacy release `index-DY_DH7h-.js`, `feed` (the radar card in the feed, SCR-047) and `return` (the return
+  banner, SCR-046) — sent directly for custom filters, or by the new-radar sheet opened from them (BR-APP-073).
 - Radar on: an identical active radar answers `existing`; an identical paused one is reactivated (BR-APP-041);
   `starter`, `options` and `relaxed` drive the three toasts; the "widen" action sends the option's `code` to relax
   (BR-APP-042).
@@ -281,10 +292,12 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - History: list shape; the same page walk; `DELETE` → `204` twice.
 - Hidden: `PUT` and `DELETE` → `204`, repeatable; blocked author body with `listing_numbers` as integers; `GET
   /hidden` with both arrays in `default` and `empty`; `DELETE /hidden/authors/{id}` with a non-ULID → `404`.
-- Reports: dataset of four reasons → `200` with `hidden` as specified; `reason: "spam"`, missing body, `detail` of 501
-  characters → `422`.
+- Reports: dataset of four reasons → `200` with `hidden` as specified; `wrong_data` with each of the five details
+  and without one → `200`, `hidden: false`; `reason: "spam"`, missing body, `detail: "floor"`, `detail` with
+  `rented`, `agent` or `fraud` → `422` with the field named; `detail: null` counts as absent.
 - Surveys: 4 × 2 answers and 7 places → `204`; unknown values → `422`; extra keys accepted.
 - Radars: list with and without `include=previews`; create → `201` with the exact key set and a 25-key `filters`;
+  each of the six `entry` values accepted, `entry: "banner"` and a missing `entry` → `422`;
   each scenario gives its status and code; `PATCH` with `{}`, two keys, `mode: "weekly"`, `unhide: false` → `422`;
   `DELETE` → `200` with `ask_found`; relax with an unknown code → `422`.
 - Radars with `radar.creation_enabled` off (set through `config()` in the test; `phpunit.xml` keeps it on for
@@ -294,7 +307,7 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - Landing: both methods without a token; `deal=sale` → `bargains_week: null`, `medians: []`; `deal=x` → `422`; no key
   named `phone`, `text` or `author` anywhere in the answers.
 - Contract: every method of `25` §4.2 is a path in `docs/api/openapi.json` (a test compares the route list with a
-  hard-coded table of the 38 method–path pairs); `pnpm types:check` is clean.
+  hard-coded table of the 39 method–path pairs); `pnpm types:check` is clean.
 
 ## Acceptance checklist
 
@@ -302,6 +315,8 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - [ ] Favourites use `PUT` and `DELETE` and are idempotent; favourites and history page by 20 and end with
       `meta.next_cursor: null`.
 - [ ] Radar writes distinguish `no_chat`, `radar_limit` and `radar_duplicate` by code; the result carries `kind`.
+- [ ] `POST /radars` accepts the six `entry` values, `feed` and `return` included; reports accept `detail` only as
+      one of the five codes and only with `wrong_data`.
 - [ ] With `radar.creation_enabled` off every radar write answers `403 radars_disabled`, the list is empty and
       `DELETE` still works; with it on the methods behave as specified.
 - [ ] `GET /radars?include=previews` returns the preview object; without the parameter the key is absent.
