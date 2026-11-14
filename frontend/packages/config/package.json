@@ -12,6 +12,6 @@
     "lint": "echo \"@homi/config: no lint rules yet\""
   },
   "devDependencies": {
-    "typescript": "^6"
+    "typescript": "^7"
   }
 }
