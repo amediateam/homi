@@ -90,13 +90,15 @@ Also add `kvadro.uz` to the list of folder names in the "Agent guard rails" para
 **Guard key (KI-26).**
 
 - `.ai/hooks/guard_paths.py`: add `"KVADRO_ROOT"` to `REFERENCE_KEYS` and `"kvadro.uz"` to `FALLBACK_MARKERS`; update
-  the module docstring.
+  the module docstring. Under the legacy tree the deny reason is its own: builds and dev servers there reach
+  production, and the code is read, never copied (DEC-32). The generic reason for reference codebases says "port single
+  files or patterns into homi.uz", which DEC-32 forbids for legacy.
 - `.ai/local.env.example`: under the reference block add `KVADRO_ROOT=/path/to/Server/kvadro.uz` with the comment
   "Legacy kvadro² checkout (SVN working copy): read-only; builds and dev servers there reach production".
 - `.ai/hooks/tests/test_guard_paths.py`: new cases — an `Edit` under the legacy root is denied; `npm run build`,
   `pnpm install`, `npx vite` and `svn commit` with that root as working directory are denied; `Read`, `rg` and
   `svn info` are allowed; the folder-name fallback works without `.ai/local.env`; reading a `.env` file there is
-  denied.
+  denied; the legacy reason is given under the legacy tree and not under `app.uz`.
 - `.ai/hooks/README.md`: name the new key. `.ai/memory/known-issues.md`: KI-26 → resolved.
 
 ## Files
