@@ -61,7 +61,7 @@ live only in HOMI; we do not need any user data from you. Please answer the poin
    for our production environment.
    a. How is the key sent: header name and value format?
    b. Which routes does it open? We need: GET /api/meta (directories only), GET /api/cities,
-      GET /api/feed, GET /api/feed/count, GET /api/feed/flow, GET /api/map, GET /api/listings/:id
+      GET /api/feed, GET /api/feed/count, GET /api/feed/flow, GET /api/feed/new, GET /api/map, GET /api/listings/:id
       (also with preview=1), GET /api/listings/:id/call, POST /api/listings/:id/translate.
    c. Does a service-key request need any user identity (for example a Telegram user id)? We would
       prefer that it does not.
