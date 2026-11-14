@@ -206,6 +206,99 @@ class GuardCase(unittest.TestCase):
         self.assertIsNone(self.bash("rm -rf backend/storage/framework/cache/*"))
 
 
+class LegacyTreeCase(unittest.TestCase):
+    """The legacy kvadro² checkout (`KVADRO_ROOT`, KI-26): read-only, no builds, no dev server, no copies.
+
+    The root is deliberately not named `kvadro.uz`, so the key and the folder-name fallback are tested apart.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        base = Path(self.tmp.name)
+        self.project = base / "homi.uz"
+        self.legacy = base / "Server" / "legacy-checkout"
+        self.ref = base / "Server" / "app.uz"
+        for path in (self.project / ".ai", self.legacy / "demo" / "app" / "src", self.ref / "backend"):
+            path.mkdir(parents=True)
+        (self.project / ".ai" / "local.env").write_text(
+            "APPUZ_ROOT=%s\nKVADRO_ROOT=%s\n" % (self.ref, self.legacy)
+        )
+        (self.legacy / "demo" / "app" / "package.json").write_text("{}\n")
+        (self.legacy / "demo" / "app" / "src" / "App.vue").write_text("<template/>\n")
+        (self.legacy / "demo" / "app" / ".env").write_text("API_KEY=theirs\n")
+        self.guard = g.Guard.from_project(self.project)
+        self.app = self.legacy / "demo" / "app"
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def decide(self, tool: str, tool_input: dict, cwd: Path | None = None) -> str | None:
+        return self.guard.decide(tool, tool_input, str(cwd or self.project))
+
+    def bash(self, command: str, cwd: Path | None = None) -> str | None:
+        return self.decide("Bash", {"command": command}, cwd)
+
+    def assertDenied(self, reason: str | None, *needles: str) -> None:
+        self.assertIsNotNone(reason, "expected a denial, got None")
+        assert reason is not None
+        for needle in needles:
+            self.assertIn(needle.lower(), reason.lower())
+
+    def test_kvadro_root_is_a_reference_key(self) -> None:
+        self.assertIn("KVADRO_ROOT", g.REFERENCE_KEYS)
+        self.assertIn(self.legacy.resolve(), self.guard.reference_roots)
+
+    def test_placeholder_from_the_example_file_is_skipped(self) -> None:
+        (self.project / ".ai" / "local.env").write_text("KVADRO_ROOT=/path/to/Server/kvadro.uz\n")
+        self.assertEqual(g.Guard.from_project(self.project).reference_roots, [])
+
+    def test_edit_under_the_legacy_root_is_denied_with_the_legacy_reason(self) -> None:
+        reason = self.decide("Edit", {"file_path": str(self.app / "src" / "App.vue")})
+        self.assertDenied(reason, "read-only", "legacy", "never copy", "production")
+        self.assertDenied(self.decide("Write", {"file_path": str(self.legacy / "NOTES.md")}), "read-only", "legacy")
+
+    def test_the_legacy_reason_is_not_given_for_other_reference_codebases(self) -> None:
+        reason = self.decide("Edit", {"file_path": str(self.ref / "backend" / "x.php")})
+        self.assertDenied(reason, "read-only", "app.uz")
+        assert reason is not None
+        self.assertNotIn("legacy", reason.lower())
+
+    def test_builds_and_package_managers_in_the_legacy_root_are_denied(self) -> None:
+        for command in ("npm run build", "npm install", "pnpm install", "npx vite", "yarn dev", "make build"):
+            with self.subTest(command=command):
+                self.assertDenied(self.bash(command, cwd=self.app), "read-only", "legacy")
+        self.assertDenied(self.bash("cd %s && npm run dev" % self.app), "read-only", "legacy")
+        self.assertDenied(self.bash("./node_modules/.bin/vite build", cwd=self.app), "read-only")
+
+    def test_svn_writes_in_the_legacy_root_are_denied(self) -> None:
+        self.assertDenied(self.bash("svn commit -m x", cwd=self.legacy), "read-only", "svn commit")
+        self.assertDenied(self.bash("svn update", cwd=self.legacy), "read-only", "svn update")
+        self.assertDenied(self.bash("svn revert -R %s" % self.legacy), "read-only")
+
+    def test_reading_the_legacy_root_is_allowed(self) -> None:
+        self.assertIsNone(self.decide("Read", {"file_path": str(self.app / "src" / "App.vue")}))
+        self.assertIsNone(self.decide("Grep", {"pattern": "template", "path": str(self.app)}))
+        self.assertIsNone(self.bash("rg -n 'template' src", cwd=self.app))
+        self.assertIsNone(self.bash("svn info", cwd=self.legacy))
+        self.assertIsNone(self.bash("svn log -l 5 %s" % self.legacy))
+        self.assertIsNone(self.bash("cat %s/package.json" % self.app))
+
+    def test_env_files_in_the_legacy_root_are_never_read(self) -> None:
+        self.assertDenied(self.decide("Read", {"file_path": str(self.app / ".env")}), "never")
+        self.assertDenied(self.bash("cat .env", cwd=self.app), "never")
+        self.assertDenied(self.bash("cp %s/.env /tmp/legacy.env" % self.app), "never")
+
+    def test_folder_name_fallback_without_local_env(self) -> None:
+        (self.project / ".ai" / "local.env").unlink()
+        guard = g.Guard.from_project(self.project)
+        self.assertEqual(guard.reference_roots, [])
+        legacy = "/Users/dev/Server/kvadro.uz/demo/app"
+        self.assertDenied(guard.decide("Edit", {"file_path": legacy + "/src/App.vue"}, str(self.project)), "read-only", "kvadro.uz", "legacy")
+        self.assertDenied(guard.decide("Bash", {"command": "npm run build"}, legacy), "read-only", "legacy")
+        self.assertDenied(guard.decide("Read", {"file_path": legacy + "/.env"}, str(self.project)), "never")
+        self.assertIsNone(guard.decide("Read", {"file_path": legacy + "/src/App.vue"}, str(self.project)))
+
+
 class HelperCase(unittest.TestCase):
     def test_split_segments_handles_operators_and_substitution(self) -> None:
         segments = g.split_segments("a && b | c; d $(e) `f` || g\nh")
