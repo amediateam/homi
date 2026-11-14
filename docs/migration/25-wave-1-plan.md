@@ -207,7 +207,7 @@ The floor is the Next.js default: Chrome 111, Safari 16.4 (DEC-44). The CSP is n
 (SEC-REQ-031); it allows the Telegram SDK host, the API host, the media host, the tile host and the PostHog host.
 A nonce needs every document rendered per request, which works against the cached shell of section 3.1; the session
 package (WP-21) opens with a one-day spike that settles it — nonce with dynamic rendering, or hashes for the inline
-scripts — and records the result in the Mini App ADR.
+scripts — and records the result in a short ADR that amends the Mini App ADR (ADR-0018).
 The vhosts of the app must allow framing by Telegram Web (Q-SEC-012): today the staging vhost sends
 `X-Frame-Options: SAMEORIGIN` (`infra/staging/nginx/app.staging.homi.conf`), which the production track changes.
 

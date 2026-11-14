@@ -75,7 +75,7 @@ description instead of editing that file.
 > Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md`
 > (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and
 > WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2.
-> T4, T9, T10 and T11 are unchanged.
+> T0, T4, T9, T10 and T11 are unchanged.
 
 **`CLAUDE.md` and `AGENTS.md`.** In "Mandate and session start" of `CLAUDE.md` add one bullet, and restate it in the
 hard-rules list of `AGENTS.md`:
