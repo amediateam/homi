@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | REVIEW (PR #39) |
+| Status | WAITING (merged in #39 on 2026-11-15; deploy with the production track) |
 | Depends on | WP-01 (ADR-0019 names the UI stack; the PR size rule is agreed); WP-00 (the first test of the `pgsql` group exercises its reference table) |
 | Size | about 900 changed lines without `pnpm-lock.yaml`, M |
 | Behaviour reference | `25` §9, §10; `24` §8.1 (DEC-49); tasks `tasks/frontend/KV-FE-005-dependency-approvals.md` (versions, vetting) and `tasks/frontend/KV-FE-010-test-runner-ci.md` (runner, fake Telegram); `15` §2.7, §5.4, §5.5; `docs/handoff/parallel-work.md` §4; `HANDOFF.md` T8; Next.js guides `frontend/app/node_modules/next/dist/docs/01-app/02-guides/testing/{vitest,playwright}.md` |
@@ -312,7 +312,6 @@ the other developer's review.
   - **Root configuration files are not type-checked.** No package's `typecheck` covers `vitest.config.mts`, `vitest.setup.ts` and `playwright.config.ts` (checked by hand with `tsc`, exit 0).
   - **No Testing Library cleanup.** Vitest runs without globals, so the first component test (WP-20) adds `afterEach(cleanup)` in a setup file for the `jsdom` projects.
   - **The positive path of `fixture()` is untested.** It is exercised with the first fixture of WP-10.
-- **Next:**
-  - review and merge;
-  - then step 11, the `CLAUDE.md` shared-file PR;
-  - the deploy is a no-op and goes with the production track.
+- **Merged** on 2026-11-15 (#39, merge commit `3af66f9`; `frontend` and `backend` green on `main`). Step 11, the
+  `CLAUDE.md` update, is in the small follow-up PR #41.
+- **Next:** the deploy with the production track (a no-op for users), then `DONE`.
