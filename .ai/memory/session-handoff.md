@@ -42,7 +42,7 @@ Written for whoever continues the **development track** (the second developer, a
    - On approval of an ADR PR, change `Status` to `Accepted` (in the file header and the index row), then merge.
    - After each ADR merge, merge `main` into the next ADR branch and fix the one-line conflict in the index rows.
 2. **First developer's answers** (DEC-45, asked in #30): the Wave 1 PR size rule, and whether every merge is deployed to staging and production. Quote them here when they come (WP-01 acceptance checklist).
-3. **After #29 merges:** probe in a live session that an `Edit` under a `kvadro.uz` path is refused and a `Read` succeeds. Then, after the last WP-01 merge, update the ADR references in `current-state.md`, set WP-01 to `DONE` and run save-session.
+3. #29 is still **open** (the developer thought it was merged, but GitHub said `OPEN` with no review). The live probe was done before the merge, on the developer's choice «Проверить до слияния»: Edit and Write refused, npm and `svn commit` refused, Read, rg and cat allowed (details in #29). After the last WP-01 merge, update the ADR references in `current-state.md`, set WP-01 to `DONE` and run save-session.
 4. **WP-00:** review and merge #27, then #28. The production track's counts, its migration approval and the deploy are listed in PR #27; after the deploy set WP-00 to `DONE`.
 5. Unchanged from before: operator contact and service key (Q-SYS-009, Q-API-059 … 062), artwork (Q-APP-025), legal basis (DEC-13, Q-SEC-021), PostHog (DEC-47), support-bot operators (WP-59), DEC-08/12/19/20.
 
