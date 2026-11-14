@@ -73,7 +73,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
-| [WP-10](WP-10-api-framework.md) | API v1 framework: source drivers, flags, stubs, OpenAPI, generated types | WP-03 | IN_PROGRESS (`feat/wp-10-api-framework`) |
+| [WP-10](WP-10-api-framework.md) | API v1 framework: source drivers, flags, stubs, OpenAPI, generated types | WP-03 | REVIEW (#42) |
 | [WP-11](WP-11-contract-session-reference.md) | Contract: session, me, settings, reference, cities, events | WP-10 | TODO |
 | [WP-12](WP-12-contract-listings.md) | Contract: listings, map, card, contact, translation, share | WP-11 | TODO |
 | [WP-13](WP-13-contract-personal-radars.md) | Contract: personal lists, reports, surveys, radars, landing | WP-12 | TODO |

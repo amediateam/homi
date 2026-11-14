@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | IN_PROGRESS (`feat/wp-10-api-framework`) |
+| Status | REVIEW (#42) |
 | Depends on | WP-03 (`openapi-typescript`, the test runners and the `pgsql` group are installed) |
 | Size | about 2 400 changed lines without generated files, L |
 | Behaviour reference | `25` §4.1, §4.3, §4.4, §4.6; `24` §3; ADR-0003, ADR-0007 and ADR-0017 (written by WP-01); `HANDOFF.md` T3 and T5; skills `.claude/skills/pennant-development/`, `.claude/skills/scramble-development/` |
@@ -388,4 +388,31 @@ No legacy behaviour. Rules that later packages rely on:
 
 ## Handoff
 
-Empty.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-10-api-framework`, PR #42, ready for the other
+developer's review.
+
+- **Done — steps 1–10.** Each step went test first, and each test was seen failing before the code existed.
+  - Mutation checks (each reverted): the share comparison, the log throttle, the audit skip flag, the global-scope
+    filter and the 204 type. Each was caught.
+  - `make ci-backend` → exit 0 (Pest 215 passed, 4 skipped); `make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
+  - Stale-file proofs: `composer openapi:check` and `pnpm types:check` each exited 1 with a changed resource and 0 once
+    it was restored.
+- **Decisions taken here** (each is also in "Design" above, marked *corrected while executing*):
+  - `features` ships empty;
+  - `SourceConfig` and `SourceRuleStore`;
+  - the enum after the spread in `sourced()`, and a `ResourceCollection` in `cursorPage()`;
+  - the two Scramble document transformers;
+  - `memory_limit` 512M in `phpunit.xml`;
+  - the untracked-file check;
+  - `204` → `null` data in the client.
+- **Not in this PR:** `backend/.env.example` (`SOURCES_ALLOW_STUB`), which goes in a separate shared-file PR.
+- **Known gaps, left for later packages:**
+  - the media answers built by `success()` are documented with `message: null` and `meta: string` (pre-existing Scramble
+    inference);
+  - `resources/fixtures/v1` and `resources/fixtures/media` are empty until WP-11 and WP-12.
+- **Next:**
+  1. review and merge;
+  2. the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production,
+     deploys, and adds `/docs/api` to the nginx basic-auth locations;
+  3. run `php artisan sources:list` on staging;
+  4. set the status to `DONE`.
