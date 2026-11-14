@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | TODO |
+| Status | REVIEW (PRs #29 … #36) |
 | Depends on | — |
 | Size | about 600 changed lines in eight small PRs, S |
 | Behaviour reference | `24` §7, §8.1, §9; `25` §3, §4; `decisions/2026-11-14-developer-answers.md`; `docs/handoff/parallel-work.md` §1, §2, §4; `HANDOFF.md` §4; known issue KI-26 in `.ai/memory/known-issues.md`; `.ai/hooks/README.md` |
@@ -157,4 +157,42 @@ None; this package records decisions. Two checks keep the ADRs honest:
 
 ## Handoff
 
-Empty.
+**2026-11-14, all eight PRs open, waiting for the first developer's review.**
+
+| Step | Branch | PR |
+| ---- | ------ | -- |
+| 1 | `chore/guard-kvadro-root` | #29 (CI `tooling` pass) |
+| 2 | `docs/adr-0016-new-product-three-waves` | #33 |
+| 3 | `docs/adr-0017-api-v1-source-drivers` | #34 |
+| 4 | `docs/adr-0018-mini-app-architecture` | #35 |
+| 5 | `docs/adr-0019-frontend-ui-stack` | #36 |
+| 6 | `docs/parallel-work-wave-1-pr-size` | #30 |
+| 7 | `docs/handoff-wave-1-pointer` | #31 |
+| 8 | `docs/claude-md-migration-pointer` | #32 (merge after #29) |
+
+Done:
+
+- Guard tests written first: 11 failures on the old code, then `make ai-hooks-test` → 55 tests OK.
+- Four ADRs drafted as `Proposed`, each under 80 lines. A separate reviewer agent checked them against 24, 25, the
+  answers and the amended ADRs before the PRs were opened. Its findings are fixed and listed in each PR.
+
+Decisions taken while doing it (each one is in its PR description):
+
+- Under the legacy tree, the guard gives its own deny reason (DEC-32).
+- T0 is named among the unchanged HANDOFF tasks.
+- ADR-0018 says that DEC-44 replaces three parts of SEC-REQ-007.
+- The CSP spike of WP-21 records its result in an ADR that amends ADR-0018. Both WP-21 step 1 and `25` §3.10 were
+  corrected to say so.
+
+Next concrete steps:
+
+1. When the first developer approves an ADR PR, change `Status` to `Accepted` in the file header and in the index
+   row of the same PR, then merge.
+2. The ADR PRs all add their index row after 0015. After each merge, merge `main` into the next ADR branch and
+   resolve the one-line conflict there; never force-push.
+3. After #29 merges, probe the hook in a live session: an `Edit` under the legacy tree must be refused and a `Read`
+   must succeed. Use a path in a folder named `kvadro.uz`; this machine's `.ai/local.env` has no `KVADRO_ROOT`.
+4. Quote the first developer's answers on the PR size and the deploy cadence (asked in #30) in
+   `.ai/memory/session-handoff.md`.
+5. After the last merge: update the ADR references in `.ai/memory/current-state.md` (development sections), set this
+   package to `DONE` in the queue, and run `save-session`.
