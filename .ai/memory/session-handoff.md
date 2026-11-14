@@ -11,11 +11,11 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «открой PR со статусом в main»; «сливай #40».
 
 ## State at handoff
-- `main` = `3876d9b` (#38). WP-03 branch `feat/wp-03-dependencies-and-test-tooling` (pushed), **draft PR #39**, 3 commits on `main`. The shared working tree is on that branch.
-- **WP-03** — `WAITING (draft PR #39)` in the spec and the queue row of the branch; `main` still shows `TODO` until #39 merges. Done on the branch: the backend `pgsql` group (step 10) and the package table with vetting in the PR body (step 2). **Nothing is installed**: `frontend/pnpm-lock.yaml`, `composer.lock` unchanged.
+- `main` = `db9cf4f` (#40, the WP-03 queue row). WP-03 branch `feat/wp-03-dependencies-and-test-tooling` (pushed), **draft PR #39**, 3 commits on `main`. The shared working tree is on that branch.
+- **WP-03** — `WAITING (draft PR #39)` in the spec and the queue row (on `main` too, through #40). Done on the branch: the backend `pgsql` group (step 10) and the package table with vetting in the PR body (step 2). **Nothing is installed**: `frontend/pnpm-lock.yaml`, `composer.lock` unchanged.
 - WP-00, WP-01, WP-02 — `WAITING`, unchanged (see the list below).
 - Local only: database `homi_test` on this machine's Homebrew PostgreSQL (`127.0.0.1`, owner = the OS user). The `.env` database host of this machine is another LAN host; it was not touched.
 - Verify: `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 3 passed; `make ci-backend` → exit 0 (103 tests: 100 passed, 3 skipped); `collect_ids.py --check` and `task_graph.py --check` → 0; `make registry-check` → current.
@@ -28,7 +28,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## Waiting for the developer (do NOT start on your own)
 1. **First developer:** confirm the package table of PR #39 (31 packages; the points `vite`, `@vitejs/plugin-react`, `next-intl`'s native packages, no build scripts allowed). Then WP-03 steps 3–9 on the same branch.
-2. **Main's queue row:** PR #40 (`docs/wp-03-queue-status`, opened on «открой PR со статусом в main») sets WP-03 to `WAITING` on `main`, the same line as on #39; it waits for review and merge.
+2. Done: PR #40 merged on «сливай #40» (`db9cf4f`); `main`'s queue shows WP-03 `WAITING`, the same line as on #39 (`git merge-tree` of #39 over `main`: clean).
 3. **Send the operator request** from the project's own mailbox (WP-02 spec, Part A; never the connected Gmail); then fill "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and set WP-02 to `DONE`.
 4. **First developer:** accept ADR-0016 … 0019 (then a `Status` PR) and answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
 5. **WP-00 (production track):** counts, migration approval, deploy, staging check; then `DONE`. Outbound addresses to the operator (#37).
