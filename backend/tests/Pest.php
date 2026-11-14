@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Concurrency;
 use Tests\DuskTestCase;
+use Tests\PgsqlTestCase;
 use Tests\TestCase;
 
 /*
@@ -22,6 +24,10 @@ pest()->extend(TestCase::class)
 pest()->extend(DuskTestCase::class)
 //  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
     ->in('Browser');
+
+pest()->extend(PgsqlTestCase::class)
+    ->group('pgsql')
+    ->in('Pgsql');
 
 /*
 |--------------------------------------------------------------------------
@@ -52,4 +58,31 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Run the tasks at the same time in child `php artisan` processes and return their results in
+ * the order of the tasks (pgsql group only). A task is a static closure that captures scalars
+ * only, because it is serialised into the child, and it sees committed rows only. Ten identical
+ * tasks: `concurrently(array_fill(0, 10, $task))`.
+ *
+ * A closure written inside a test keeps the generated Pest test class as its scope, and the
+ * child does not have that class; each task is therefore unbound from any class first, so a
+ * task cannot use `self::`, `static::` or `$this`. Write each task as its own closure on its own
+ * lines: the serialiser reads the source and cannot tell two closures on one line apart. A task
+ * that throws an exception whose constructor needs more than a message, such as a
+ * `QueryException`, fails the test with an `ArgumentCountError` that names that class.
+ *
+ * @template TResult
+ *
+ * @param  array<int, Closure(): TResult>  $tasks
+ * @return list<TResult>
+ */
+function concurrently(array $tasks): array
+{
+    $unbound = array_map(static fn (Closure $task): Closure => Closure::bind($task, null, null), $tasks);
+    $results = Concurrency::driver('process')->run($unbound);
+    ksort($results);
+
+    return array_values($results);
 }

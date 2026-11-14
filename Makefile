@@ -6,7 +6,7 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend ai-sync ai-skills ai-hooks-test
+        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend test-pgsql ai-sync ai-skills ai-hooks-test
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -75,3 +75,10 @@ ci-backend: ## Run the backend CI gate locally (Pint, PHPStan, Vite+ check, tsc,
 
 ci-frontend: ## Run the frontend CI gate locally (lint, typecheck, build)
 	@cd frontend && pnpm -r lint && pnpm -r typecheck && pnpm -r build
+
+# The pgsql group (backend/tests/Pgsql) needs a database whose name ends with _test: `createdb homi_test` once
+# on the server of backend/.env, whose host and credentials are used; DB_HOST=… etc. on the command line win.
+PGSQL_TEST_DATABASE ?= homi_test
+
+test-pgsql: ## Run the backend pgsql test group against PGSQL_TEST_DATABASE (default homi_test)
+	@cd backend && DB_CONNECTION=pgsql DB_DATABASE=$(PGSQL_TEST_DATABASE) php artisan test --compact --testsuite=Pgsql --fail-on-skipped
