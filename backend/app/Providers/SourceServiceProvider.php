@@ -6,6 +6,7 @@ use App\Services\Sources\SourceConfig;
 use App\Services\Sources\SourceManager;
 use App\Services\Sources\SourceRuleStore;
 use App\Services\Sources\SourceSelector;
+use App\Services\Sources\Stub\FixtureStore;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pennant\Feature;
 
@@ -22,6 +23,8 @@ class SourceServiceProvider extends ServiceProvider
         $this->app->singleton(SourceManager::class);
         // One instance, so the audit listener sees that the store is writing.
         $this->app->singleton(SourceRuleStore::class);
+        // One instance per process, so each fixture is decoded once.
+        $this->app->singleton(FixtureStore::class, fn (): FixtureStore => new FixtureStore(resource_path('fixtures/v1')));
     }
 
     public function boot(): void

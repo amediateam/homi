@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\ApiController;
 use App\Models\User;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
+use App\Services\Sources\Stub\FixtureStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -17,7 +18,8 @@ final class FakeCapabilityController extends ApiController
     public const string FEATURE = 'source.fake';
 
     /**
-     * Configures the capability `fake`, the feature `source.fake` and the route.
+     * Configures the capability `fake`, the feature `source.fake`, the route, and a fixture store over
+     * `tests/Support/fixtures`.
      *
      * @param  array<string, string>  $default  environment name or `*` => driver
      * @param  array<string, class-string<FakeCapability>>  $drivers
@@ -30,6 +32,7 @@ final class FakeCapabilityController extends ApiController
             'sources.features' => [...config('sources.features', []), self::FEATURE => ['capability' => 'fake', 'default' => $default]],
         ]);
         Feature::define(self::FEATURE, []);
+        app()->instance(FixtureStore::class, new FixtureStore(__DIR__.'/fixtures'));
         Route::get('api/v1/_test/fake', self::class);
     }
 
