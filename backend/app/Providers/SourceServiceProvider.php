@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\Sources\SourceConfig;
 use App\Services\Sources\SourceManager;
+use App\Services\Sources\SourceRuleStore;
 use App\Services\Sources\SourceSelector;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pennant\Feature;
@@ -19,6 +20,8 @@ class SourceServiceProvider extends ServiceProvider
         $this->app->singleton(SourceConfig::class);
         $this->app->singleton(SourceSelector::class);
         $this->app->singleton(SourceManager::class);
+        // One instance, so the audit listener sees that the store is writing.
+        $this->app->singleton(SourceRuleStore::class);
     }
 
     public function boot(): void

@@ -92,7 +92,8 @@ final class SourceSelector
         return $rule->everyone;
     }
 
-    private function usable(string $name): ?SourceDriver
+    /** The driver of a name when it can be used here: a known driver, and not `stub` while stubs are off. */
+    public function usable(string $name): ?SourceDriver
     {
         $driver = SourceDriver::tryFrom($name);
 
