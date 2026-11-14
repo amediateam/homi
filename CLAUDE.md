@@ -23,7 +23,7 @@ homi.uz aggregates housing rental and sale listings from public Telegram channel
 One git repo at the root (`docs/architecture/decisions/0001-…` has the canonical layout). `backend/` and `frontend/` have separate toolchains; run commands from inside them.
 
 - `backend/`: Laravel 13 on PHP 8.5 (pinned `^8.5`), with a frozen Inertia v3 + React 19 + TypeScript 7 + Tailwind 4 starter UI. Installed packages: Horizon, Reverb, Sanctum, Scout, Socialite, Pennant, Pulse, Telescope, `laravel/ai`, `laravel/mcp`, Wayfinder, Dusk. Full registry: `docs/backend/package-registry.md` (generated; compact index `.ai/memory/package-capabilities.md`).
-- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` with the shared workspace packages `@homi/config` (locales, currencies, defaults), `@homi/types` (API envelope, pagination), `@homi/utils` (formatting), `@homi/api-client` (`createApiClient`, `ApiError`) and `@homi/ui` (`cn`). Apps import them as workspace dependencies; each package has `lint`/`typecheck` scripts so `pnpm -r` covers them.
+- `frontend/`: **pnpm workspace** (`pnpm@11.24.0`, Node 26 from `.node-version`) with `landing/`, `app/`, `arm/` — three Next.js 16.4 App Router apps (Tailwind 4 via the turbopack loader, `cacheComponents`, `partialPrefetching`, `@/*` alias per app) — and `packages/*` with the shared workspace packages `@homi/config` (locales, currencies, defaults), `@homi/types` (API envelope, pagination), `@homi/utils` (formatting), `@homi/api-client` (`createApiClient`, `ApiError`), `@homi/ui` (`cn`) and the dev-only `@homi/testing` (fake Telegram, synthetic `initData`, `freezeClock`, API fixtures; `@homi/testing/playwright` for specs — ESLint forbids it outside test files). Apps import them as workspace dependencies; each package has `lint`/`typecheck`/`test` scripts so `pnpm -r` covers them. The Wave 1 npm packages (WP-03) are installed, but no product code uses them yet.
 
 ## Commands
 
@@ -32,7 +32,7 @@ One git repo at the root (`docs/architecture/decisions/0001-…` has the canonic
 ```bash
 composer setup                    # first-time: install deps, .env, key, migrate, npm install + build
 composer run dev                  # `php artisan dev` TUI: serve (:8000), horizon, reverb, pail, vite
-php artisan test --compact        # Unit + Feature suites
+php artisan test --compact        # Unit + Feature suites (the Pgsql suite is skipped here)
 php artisan test --compact tests/Feature/ExampleTest.php   # single file
 php artisan test --compact --filter=testName               # single test
 php artisan dusk                  # browser tests in tests/Browser (not run by `artisan test`)
@@ -52,9 +52,12 @@ pnpm install                        # whole workspace (frontend/pnpm-lock.yaml)
 pnpm --filter app dev               # landing → 3000, app → 3001 (`-- -p 3001`), arm → 3002
 pnpm -r lint                        # eslint (next core-web-vitals + typescript) in every app
 pnpm -r build
+pnpm test                           # Vitest, every project (frontend/vitest.config.mts); TZ=UTC unless set
+pnpm --filter @homi/utils test      # one package; `pnpm test:watch` for watch mode
+pnpm test:e2e                       # Playwright (builds + starts app on :3001; E2E_BASE_URL=https://app.homi.loc to reuse the dev server)
 ```
 
-There is no test setup in the Next.js apps yet. Known peer-dependency warnings (eslint 10 / TypeScript 7 vs `eslint-config-next` plugins) come from the create-next-app template.
+Unit tests reject any unmocked `fetch` (`frontend/vitest.setup.ts`); Playwright specs import `test`/`expect` from `@homi/testing/playwright`, whose guard fails a test after a request to an external host. Run `pnpm exec playwright install chromium` once per machine. Dependency install scripts are decided in `allowBuilds` of `frontend/pnpm-workspace.yaml` (pnpm 11 fails an install while one is undecided); never commit a `minimumReleaseAgeExclude` entry. Known peer-dependency warnings (eslint 10 / TypeScript 7 vs `eslint-config-next` plugins; `openapi-typescript` wants TypeScript 5) are expected.
 
 ### Repository tooling (root)
 
@@ -63,7 +66,9 @@ make help                           # all targets
 make dev-setup                      # fresh clone → running local stack (announces sudo steps)
 make dev-start | dev-stop | dev-status | dev-logs   # Horizon + Next dev servers behind nginx
 make dev-check                      # health check (DNS, TLS, ports, API, CDN, DB, Horizon, env keys)
-make ci-backend | ci-frontend       # the CI gates locally
+make ci-backend | ci-frontend       # the CI gates locally (ci-frontend includes `pnpm test`)
+make e2e                            # Playwright suite (`pnpm test:e2e`)
+make test-pgsql                     # backend tests/Pgsql on a PostgreSQL database ending in _test (default homi_test)
 make registry | registry-check      # Composer registry after any composer.lock change
 ```
 
@@ -77,7 +82,7 @@ Local URLs: `https://homi.loc`, `https://app.homi.loc`, `https://arm.homi.loc`, 
 - **JS tooling:** `vite` is aliased to Vite+ (`@voidzero-dev/vite-plus-core`) through npm `overrides`. The `lint` and `fmt` sections of `vite.config.ts` replace ESLint and Prettier: 4-space indent, single quotes, 80 columns, Tailwind class sorting for `clsx`/`cn`/`cva`. The React Compiler is enabled through a babel preset. `.npmrc` sets `ignore-scripts=true`.
 - **Realtime:** broadcasting goes through Reverb, and Echo is configured in `resources/js/app.tsx`.
 - **Defaults in `AppServiceProvider`:** dates are `CarbonImmutable`. Destructive DB commands are blocked in production. Strict password rules apply only in production.
-- **Databases:** `.env.example` and the local `.env` use PostgreSQL (`DB_CONNECTION=pgsql`). Tests run on in-memory SQLite (`phpunit.xml`, with Pulse and Telescope disabled), so Postgres-specific SQL behaves differently in tests. Feature tests get `RefreshDatabase` automatically (`tests/Pest.php`).
+- **Databases:** `.env.example` and the local `.env` use PostgreSQL (`DB_CONNECTION=pgsql`). Tests run on in-memory SQLite (`phpunit.xml`, with Pulse and Telescope disabled), so Postgres-specific SQL behaves differently in tests; such tests and concurrent writes go into `tests/Pgsql` (base `Tests\PgsqlTestCase`, `concurrently()` in `tests/Pest.php`), which runs only through `make test-pgsql` / CI and refuses a database whose name does not end in `_test`. Feature tests get `RefreshDatabase` automatically (`tests/Pest.php`).
 - **Queues:** Horizon only consumes **Redis** queues (`config/horizon.php`); `.env.example` and the local `.env` set `QUEUE_CONNECTION=redis` and `CACHE_STORE=redis` (ADR-0005). `make dev-start` runs Horizon; `make dev-check` fails if the queue driver is not `redis`. An old `.env` with `QUEUE_CONNECTION=database` leaves queued jobs unprocessed.
 - **Media:** the `public` disk writes to `storage/app/public`, served locally by nginx as `https://cdn.homi.loc` (`MEDIA_PUBLIC_URL`, ADR-0012). MinIO/S3 exists only in staging and production; `AWS_*` stays blank locally.
 - **Local dashboards:** `/horizon`, `/telescope`, `/pulse`.
