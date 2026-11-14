@@ -271,7 +271,9 @@ listener is found by Laravel's event discovery (`app/Listeners`), not registered
 - *Corrected while executing.* `phpunit.xml` sets `memory_limit` to 512M. The OpenAPI test exports in the test
   process, Scramble keeps the parsed code of every class it reads in static caches, and the suite then needs about
   160M against PHP's CLI default of 128M. The test exports once per process.
-- `.github/workflows/backend.yml`: add `docs/api/openapi.json` to both `paths` lists.
+- `.github/workflows/backend.yml`: add `docs/api/openapi.json` to both `paths` lists. *Corrected while executing:* the
+  `ci:check` step also gets the `DB_*` variables of the setup step, because Scramble reads model columns from the
+  migrated database and the export failed in CI without them.
 - Read `.claude/skills/scramble-development/` first. The acceptance is concrete: for a route that returns
   `$this->sourced(new XResource(…), …)`, the exported `data` schema is the schema of `XResource` and `meta.source` is
   an enum of the three driver names. If the helper hides the resource type from Scramble's inference, document the

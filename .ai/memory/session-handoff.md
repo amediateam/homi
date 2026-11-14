@@ -26,7 +26,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## Waiting for the developer (do NOT start on your own)
 1. **Review and merge of PR #42.** Then the production track approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
-2. **Shared-file PR** for `backend/.env.example` (`SOURCES_ALLOW_STUB=true`), opened next to #42.
+2. **Shared-file PR #43** for `backend/.env.example` (`SOURCES_ALLOW_STUB=true`). After its merge every `backend/.env` needs the key, or `make dev-check` reports it missing.
 3. **WP-03:** the deploy with the production track (a no-op for users), then `DONE`.
 4. **Operator request:** from the project's own mailbox (WP-02 Part A; never the connected Gmail); then "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and WP-02 `DONE`.
 5. **First developer:** accept ADR-0016 … 0019, answer the PR-size and deploy questions of #30; then WP-01 `DONE`.

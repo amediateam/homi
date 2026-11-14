@@ -103,6 +103,8 @@ from the user's settings, and until they exist (WP-40) it is `USD`.
 | A route, form request or resource of `/api/v1` | `cd backend && composer openapi:export` | `composer openapi:check` (in `composer ci:check`) |
 | `docs/api/openapi.json` | `cd frontend && pnpm types:generate` | `pnpm types:check` (in `make ci-frontend`) |
 
-Never edit `openapi.json` or `frontend/packages/types/src/generated/api.ts` by hand. Locally the documentation UI is at
+The export reads the columns of the models from the database on the default connection, so it needs a migrated
+PostgreSQL database (locally `backend/.env`; in CI the service of `backend.yml`). Never edit `openapi.json` or
+`frontend/packages/types/src/generated/api.ts` by hand. Locally the documentation UI is at
 `https://api.homi.loc/docs/api`. On staging and production it sits behind the same nginx basic auth as Horizon and
 Telescope.
