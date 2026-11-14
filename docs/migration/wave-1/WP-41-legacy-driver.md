@@ -189,7 +189,8 @@ installing the key.
 - With the flag on `legacy` and the fixture server, `GET /reference` and `GET /cities` have the same key set and
   types as with `stub` (the shape test of WP-10), in three locales.
 - `Accept-Language: uz` on the v1 request becomes `uz_Latn` towards legacy and `uz` again in the answer (CF-006).
-- Bot names and `limits.radars` in `GET /reference` are HOMI's with either driver.
+- Bot names, `limits.radars` and `radars_enabled` in `GET /reference` are HOMI's with either driver: the legacy
+  answer has no say in whether radars are switched on (DEC-51).
 - A legacy outage does not empty the directories: the last good answer is served for up to a day.
 - Nothing waits in a queue for legacy: a call either goes out within half a second or answers `503`.
 

@@ -7,7 +7,7 @@
 | Depends on | WP-53, WP-45 |
 | Size | about 4 500 changed lines, L. Above the 3 000-line guide: two PRs. Part A = steps 1–9 (engine and wizard steps 1–8, reachable only in tests: `new` stays in the interim list). Part B = steps 10–16 (review, step edit, save, starter list, tip, `new` leaves the interim list). Production works after either part |
 | Behaviour reference | `04` §2 (rows BOT-014, BOT-036 … BOT-053), §3.4 … §3.8, §4.1 (BTN-006 … BTN-033), §4.2, §4.3, §8 (BR-BOT-016 … BR-BOT-050, BR-BOT-104), §9 (LB-BOT-001, LB-BOT-002, LB-BOT-003, LB-BOT-005, LB-BOT-009, LB-BOT-015, LB-BOT-016, LB-BOT-018, LB-BOT-019, LB-BOT-030, LB-BOT-031); `09` §4.2 and §4.3; `11b` §2.3 rows 1 and 4; task files KV-TG-028 … KV-TG-037; rules of KV-BE-100, KV-BE-102, KV-BE-105 |
-| Needs from the production track | (1) Approval of one migration: `users.first_radar_tip_sent_at` (nullable timestamp, additive). (2) After the deploy of part B, `php artisan telegram:assets:refresh` on staging and on production so the post-save sticker resolves for each bot (WP-51). (3) With the deploy of part B, in the server env of staging and production: `RADAR_STARTER_ENABLED=true` and `RADAR_REQUIRE_CHAT=true` (WP-45 left both `false` until this package, which sends the starter list and follows the reachability tracking of WP-52). No new queue or cron entry |
+| Needs from the production track | (1) Approval of one migration: `users.first_radar_tip_sent_at` (nullable timestamp, additive). (2) After the deploy of part B, `php artisan telegram:assets:refresh` on staging and on production so the post-save sticker resolves for each bot (WP-51). (3) With the deploy of part B, in the server env of staging and production: `RADAR_STARTER_ENABLED=true` and `RADAR_REQUIRE_CHAT=true` (WP-45 left both `false` until this package, which sends the starter list and follows the reachability tracking of WP-52). `RADAR_CREATION_ENABLED` is **not** set here: radars stay switched off on the servers until WP-57 (DEC-51), so after this deploy `/new` answers the "soon" text there. No new queue or cron entry |
 
 ## Goal
 
@@ -44,7 +44,9 @@ Out:
 | # | Decision | Consequence here |
 | - | -------- | ---------------- |
 | 1 | DEC-43, `25` §6 — full parity of the bot | All 19 handlers, 28 buttons and 27 texts of the lists below are built; nothing is cut for size |
-| 2 | DEC-36 and answer 5 of the developer («Все баги, кроме смены логики») | Defects of `09` §4.3 are fixed at once: LB-BOT-003, LB-BOT-005, LB-BOT-015, LB-BOT-016. A defect whose only fix is a `DEV` row of `09` §4.2 is built behind its flag, and the flag is off: LB-BOT-009 (DEV-015), LB-BOT-001, LB-BOT-002, LB-BOT-031 (DEV-026), LB-BOT-018 (DEV-029), LB-BOT-019 (DEV-006), LB-BOT-030 (DEV-017). The legacy behaviour is the default and is what the checklist tests |
+| 2 | DEC-36 and answer 5 of the developer («Все баги, кроме смены логики») | Defects of `09` §4.3 are fixed at once: LB-BOT-003, LB-BOT-005, LB-BOT-015, LB-BOT-016. A defect whose only fix is a `DEV` row of `09` §4.2 is built behind its flag, and the flag is off: LB-BOT-001, LB-BOT-002, LB-BOT-031 (DEV-026), LB-BOT-018 (DEV-029), LB-BOT-019 (DEV-006), LB-BOT-030 (DEV-017). The legacy behaviour is the default and is what the checklist tests |
+| 10 | DEC-54 — the whole-city label | LB-BOT-009 is settled by decision: the label is `<Город> целиком`, built from the city's name in the reference data, on the area button and in the summary. No flag; callback data and stored filters are unchanged |
+| 11 | DEC-51 — radars before delivery | The wizard is built and tested with `config('radar.creation_enabled')` on. Its registrations carry the `radar` mark of WP-51, so while the switch is off — on staging and production until WP-57 — every entry answers `bot.radar.soon` and creates nothing. `RadarService` of WP-45 refuses a write in that state as well |
 | 3 | DEC-41, WP-12, WP-13 — one filter object | The draft is a `SearchFilters` value built only by `SearchFiltersNormaliser::normalise($raw, forRadar: true)`. The wizard stores no value the normaliser did not return |
 | 4 | WP-13 — create-or-reactivate lives in the radar service | The bot shows the outcome the service reports (`created`, `existing`, `reactivated`). There is no `bot.dev009` flag: the contract already decided DEV-009 for every client of the service |
 | 5 | `25` §4.3 … §4.5 — source drivers | Cities, districts, zones, presets and typical prices come from `ReferenceSource`; the flow estimate and the relax options from `ListingSource::flow`; starter rows from `ListingSource::previews`. On `stub` the wizard works on fixtures |
@@ -147,7 +149,7 @@ Step graph and numbering:
 | Districts | `districts[]` (codes); exclusive with `zones` |
 | `🏛 Центр`, `🏙 Ближе к центру` | `zones[]` = `center`, `near_center` |
 | `🚇 Рядом с метро (до ~1 км)` | `near_metro` |
-| `Весь <город>` | `districts` and `zones` empty |
+| `<Город> целиком` | `districts` and `zones` empty |
 | Preset, typed amount, `Не важно` | `price_max` in whole USD, or empty |
 | `📊 Не дороже рынка` | `below_median` |
 | `Все объявления` / `Без риелторов` / `Только хозяева` | `owner` = `any` / `no_agents` / `owners` |
@@ -217,7 +219,6 @@ longer shown are dropped by the normaliser, never kept silently.
 | Key | Default | Meaning |
 | --- | ------- | ------- |
 | `dev006` | `false` | budget in the user's currency |
-| `dev015` | `false` | gender-neutral whole-city label |
 | `dev017` | `false` | reserved: tenant and pets visibility follows the normaliser; the flag exists so the approval is one line |
 | `dev021` | `false` | shared flow vocabulary |
 | `dev026` | `false` | area step: zones and cities toggle in place |
@@ -228,8 +229,8 @@ longer shown are dropped by the normaliser, never kept silently.
 | `review.base_scarce_per_week` | 2 | |
 | `amount.max_usd` | 10 000 000 | Q-BOT-024 |
 
-New catalogue keys (ru, uz, en; legacy has no such texts): `wizard.frame.step_first`, `wizard.area.whole_city_neutral`
-(the flagged label of DEV-015), `wizard.area.zone_cleared_districts`, `wizard.object.new_builds`,
+New catalogue keys (ru, uz, en; legacy has no such texts): `wizard.frame.step_first`,
+`wizard.area.zone_cleared_districts`, `wizard.object.new_builds`,
 `summary.pets.not_forbidden`, `summary.pets.allowed`, `summary.extra_filters`, `review.relax.<code>`,
 `radar.saved_none`, `radar.limit_reached`, `radar.twin_exists`, `radar.open`, `tip.digest_chosen`.
 
@@ -246,13 +247,13 @@ All paths under `backend/`.
 - `app/Jobs/Telegram/SendStarterList.php`, `app/Listeners/Telegram/QueueStarterListOnRadarSaved.php`,
   `app/Support/Telegram/BotRadarWrite.php`
 - `app/Providers/TelegramServiceProvider.php` (registrations: command `new`, actions `nw`, `wz`, `tp`, interim `sb`,
-  the awaited input `amount`)
+  the awaited input `amount`; `new`, `nw`, `wz`, `tp` and `amount` with `radar: true`, the mark of WP-51)
 - `config/bot.php` (keys above; `new` removed from `interim_commands`), `lang/{ru,uz,en}/bot.php` (new keys),
   `tests/Fixtures/Bot/txt-keys.json` (unchanged ids, new keys listed as "no legacy id")
 - `database/migrations/<date>_add_first_radar_tip_sent_at_to_users_table.php` (neither WP-40 nor WP-45 has the
   column)
 - `tests/Unit/Telegram/{StepGraphTest,AreaKeyboardTest,AmountParserTest,RadarSummaryRendererTest,FlowLineTest,NumberGridKeyboardTest}.php`
-- `tests/Feature/Bot/Wizard/{WizardEngineTest,DealObjectRoomsTest,AreaStepTest,BudgetStepTest,TypedAmountTest,OwnerTenantPetsTest,ReviewTest,ReviewStepEditTest,RadarSaveTest,StarterListTest}.php`
+- `tests/Feature/Bot/Wizard/{WizardEngineTest,DealObjectRoomsTest,AreaStepTest,BudgetStepTest,TypedAmountTest,OwnerTenantPetsTest,ReviewTest,ReviewStepEditTest,RadarSaveTest,StarterListTest,RadarSwitchTest}.php`
 - `tests/Fixtures/Bot/transcripts/{wizard-rent-long,wizard-rent-daily,wizard-sale,wizard-area,wizard-amount,wizard-review,wizard-save,starter-tip}.json`
 - `docs/infrastructure/telegram-webhook.md` (registry rows of `nw`, `wz`, `tp`)
 
@@ -270,8 +271,8 @@ Part A (the wizard is not reachable by users: `new` stays in the interim list).
 3. Engine: `Wizard`, `WizardState`, `Step`, `StepView`, `Transition`, `StepGraph`; `StepGraphTest` (N and M of every
    branch) and `WizardEngineTest` with two fake steps (start, edit in place, Back, Cancel, stale `sid`, expiry).
 4. `DealStep`, `ObjectStep`, `RoomsStep` and their catalogue keys; `DealObjectRoomsTest`.
-5. `AreaStep` and `AreaKeyboard` in the legacy behaviour, then the `dev026` and `dev015` branches with their tests
-   marked `todo`; the legacy whole-city label; `AreaStepTest`, `AreaKeyboardTest`, transcript
+5. `AreaStep` and `AreaKeyboard` in the legacy behaviour, then the `dev026` branch with its tests marked `todo`;
+   the whole-city label `<Город> целиком` (DEC-54); `AreaStepTest`, `AreaKeyboardTest`, transcript
    `wizard-area.json`.
 6. `BudgetStep` and `BudgetKeyboard`; `BudgetStepTest`.
 7. `TypedAmountInput`, `AmountParser`, the awaited-input registration; `TypedAmountTest`, `AmountParserTest`.
@@ -287,7 +288,8 @@ Part B.
 13. `SaveRadar`, `BotRadarWrite`, the interim registration of `sb`; `RadarSaveTest` including the double press.
 14. The migration, the job `SendStarterList`, `QueueStarterListOnRadarSaved`, `StarterListRenderer`, `NumberGridKeyboard`, `FirstRadarTip`; `StarterListTest`.
 15. `NewRadarCommand` takes over `new` and `nw`; remove `new` from the interim list; update `InterimHandlerTest` of
-    WP-52. Transcripts of the three deal branches end to end.
+    WP-52. The `radar` marks on the registrations; `RadarSwitchTest`. Transcripts of the three deal branches end to
+    end.
 16. Registry rows in `docs/infrastructure/telegram-webhook.md`; the uz and en keys added to the translation status
     file of WP-51; `make ci-backend`; PR B; deploy; the checklist inside Telegram on staging and production.
 
@@ -307,6 +309,11 @@ and are copied from there into the catalogue of WP-51.
 | 4 | Any button of an outdated wizard message | Alert `Форма устарела — начните заново: /new` (TXT-BOT-039), keyboard removed, no state change | Owned by WP-51 |
 
 Every step except step 1 ends with the row `◀️ Назад` · `✖️ Отмена`; step 1 ends with `✖️ Отмена` alone.
+
+While radars are switched off (DEC-51; staging and production until WP-57) none of the rows above runs: `/new`,
+`📡 Включить радар`, `➕ Новый радар`, a button of a wizard message, a tip button and a typed amount each get the
+message `bot.radar.soon` «Радар скоро заработает…» from the router of WP-51 — a callback also its silent answer —
+and nothing is created or edited. Legacy has no such state. Everything below describes the bot with radars on.
 
 ### Steps 1–3 (BOT-037, BOT-038, BOT-039)
 
@@ -341,15 +348,15 @@ Keyboard:
 3. Districts of the city, two per row, alphabetical in the user's language, ticked ones `✅` (BTN-015). Counts in
    legacy: Tashkent 12, region 22, Andijan 15, Namangan 13, Fergana 17, Kokand none (BR-BOT-026). The list comes from
    the reference data; a fixture test compares the stub fixture with these counts.
-4. `✅ Весь <город>` (BTN-016) · `Готово (N)` (BTN-017).
+4. `✅ <Город> целиком` (BTN-016; for example `✅ Ташкент целиком`) · `Готово (N)` (BTN-017).
 5. `◀️ Назад` · `✖️ Отмена`.
 
 Legacy behaviour (default, `bot.dev026` off):
 
 | Press | Effect |
 | ----- | ------ |
-| A district | Toggles in place. The first tick removes `✅` from `Весь <город>`; unticking the last restores it; `Готово (N)` counts the ticks (BR-BOT-029) |
-| `Весь <город>` | Clears districts and zones, stays on the step |
+| A district | Toggles in place. The first tick removes `✅` from `<Город> целиком`; unticking the last restores it; `Готово (N)` counts the ticks (BR-BOT-029) |
+| `<Город> целиком` | Clears districts and zones, stays on the step |
 | `Готово (N)` | Step 5. `N = 0` means the whole city (BR-BOT-028) |
 | Another city | Selects it with the whole city and **jumps to step 5** (LB-BOT-002) |
 | `🏛 Центр`, `🏙 Ближе к центру` | Toggles the zone, clears ticked districts without a notice (BR-BOT-030, LB-BOT-031) and **jumps to step 5** (LB-BOT-001) |
@@ -359,11 +366,11 @@ With `bot.dev026` on (tests `todo` until DEV-026 is approved): city, zone and me
 `Готово (N)` advances; when a zone clears districts the text gains the line `wizard.area.zone_cleared_districts`; a
 district ticked while a zone is on clears the zone.
 
-Whole-city label: legacy says `Весь <город>` for every city, hence «Весь Фергана» (LB-BOT-009). `09` lists this
-item only as the row DEV-015 of §4.2, not among the plain fixes of §4.3, so by `25` §2 rule 2 the legacy label
-stays the default — the `ru` catalogue of WP-51 keeps `Весь :city` — and the fix is flagged: with `bot.dev015` on
-the label is the neutral `wizard.area.whole_city_neutral` («Весь город»; `uz` and `en` drafts). No per-city gender
-form is built.
+Whole-city label (DEC-54): `<Город> целиком` — `wizard.area.whole_city` of WP-51 with `:city` = the city's name
+from the reference data, for example «Ташкент целиком», «Фергана целиком»; `uz` `Butun :city` and `en`
+`All of :city` are drafts for the proofreader (Q-BOT-014). Legacy says `Весь <город>` for every city, hence «Весь
+Фергана» (LB-BOT-009); HOMI uses the decided wording, which needs no gender form. The operation `wc` and the
+stored filters are the same as before.
 
 Edge cases: Kokand has only the whole-city button and `Готово (0)`. Back from step 5 shows the city chosen last. A
 district that left the reference list while the wizard was open is outdated-button behaviour. In `edit_step` and
@@ -423,8 +430,9 @@ Text, in this order (TXT-BOT-027, layout `tb:458–470`):
 
 1. Title `📡 Новый радар — проверьте`.
 2. Summary rows: `🏠 Аренда · квартира · 2 комн.` (also `Посуточно · комната`, `Покупка · участок`); `📍 Ташкент ·
-   Юнусабад, Чиланзар` or `весь Ташкент` (zones and metro named the same way); `💰 до $650/мес`, `до $100 000, не
-   дороже рынка`, `любой бюджет`; `👤 все объявления` / `без риелторов` / `только хозяева`; `👥 для семьи` (absent
+   Юнусабад, Чиланзар` or `Ташкент целиком` — the whole-city wording of DEC-54, where legacy wrote `весь Ташкент`
+   (zones and metro named the same way); `💰 до $650/мес`, `до $100 000, не дороже рынка`, `любой бюджет`;
+   `👤 все объявления` / `без риелторов` / `только хозяева`; `👥 для семьи` (absent
    for `Не важно`); the pets row absent for `Не важно`, otherwise `summary.pets.not_forbidden` or
    `summary.pets.allowed` (Q-BOT-010, closed by specification). BR-BOT-039.
 3. Flow line (TXT-BOT-028), one of: `📡 По последней неделе — ≈3 объявления в день (дубли из разных каналов — одной
@@ -507,7 +515,7 @@ alert (BR-BOT-064; the limit is `config('radar.max')`, the value `GET /reference
 | 1 | Wrong total on step 1; numbering when rooms are skipped | Fixed: LB-BOT-015, LB-BOT-016 (header rules above) |
 | 2 | Starter list showed an old post first | Fixed: LB-BOT-003 |
 | 3 | Estimate not recomputed after an object change | Fixed: LB-BOT-005 |
-| 4 | «Весь Фергана» | Legacy kept; LB-BOT-009 is DEV-015 in `09` §4.2, built behind `bot.dev015`, off |
+| 4 | «Весь Фергана» | Fixed by decision (DEC-54): `<Город> целиком` on the button and in the summary; LB-BOT-009 needs no flag |
 | 5 | City, zone and metro buttons jump to step 5; «Центр» unticks districts silently | Legacy kept; LB-BOT-001, LB-BOT-002, LB-BOT-031 behind DEV-026, `bot.dev026` off |
 | 6 | Typed amount accepts bare numbers only, errors stack | Legacy kept; LB-BOT-018 behind DEV-029, `bot.dev029` off |
 | 7 | Budget always in dollars | Legacy kept; LB-BOT-019 behind DEV-006, `bot.dev006` off |
@@ -518,14 +526,15 @@ alert (BR-BOT-064; the limit is `config('radar.max')`, the value `GET /reference
 
 Conversation tests use the runner of WP-51: a fake update goes in through the webhook, the Bot API calls that come
 out are compared with the transcript. Sources run on the stub driver; `ListingSource::flow` and the services of
-WP-45 and WP-46 are faked where a case needs a number.
+WP-45 and WP-46 are faked where a case needs a number. Every case runs with `radar.creation_enabled` on — the
+value `phpunit.xml` has since WP-11; `RadarSwitchTest` alone sets it off through `config()`.
 
 Unit (Pest):
 
 | # | Test | Cases |
 | - | ---- | ----- |
 | 1 | `StepGraphTest` | N and M for the six branches; `tenant` and `pets` visibility; Back targets when rooms are skipped |
-| 2 | `AreaKeyboardTest` | three cities per row; two districts per row; alphabetical per locale; every `callback_data` at most 64 bytes for the largest city; the label `Весь <город>` for every city, the neutral label with `dev015` on (`todo`) |
+| 2 | `AreaKeyboardTest` | three cities per row; two districts per row; alphabetical per locale; every `callback_data` at most 64 bytes for the largest city; the label `<Город> целиком` for every city of the fixture in `ru`, `Butun <city>` in `uz`, `All of <city>` in `en`; the data of the button is the same `wc` operation |
 | 3 | `AmountParserTest` | `650`, `85000` valid; `0`, `-5`, `99999999999`, `600 700`, `примерно шестьсот`, `1 000,5` invalid in legacy mode; the `dev029` dataset in ru, uz, en (`85k`, `85к`, `1,2 млн`) as `todo` |
 | 4 | `RadarSummaryRendererTest` | every row variant of `04` §3.7; no `👥` and no pets row for "any"; `summary.extra_filters`; HTML escaping of names |
 | 5 | `FlowLineTest` | 0, 1, 2, 6, 7, 21, 140 per week; plural forms in ru, uz, en |
@@ -537,7 +546,7 @@ Feature and conversation (Pest):
 | - | ---- | ----- |
 | 1 | `WizardEngineTest` | `/new` → new message `📡 Новый радар · шаг 1`, three deal buttons and `✖️ Отмена`, no Back; a deal → same message edited, `шаг 2 из 8`; room → `шаг 3 из 7` (area); Back → object step with `✅`; Cancel → TXT-BOT-026, no keyboard, conversation gone; wizard A, then `/new`, press on A → alert, A loses its keyboard, B intact; idle past the TTL → alert; welcome button → new message, welcome not edited; a forged `sid` of another user → alert, no change |
 | 2 | `DealObjectRoomsTest` | object options per deal; rooms step with `✅ Не важно`; `2–3` → context `· 2–3 комн.`; sale → `Участок` → area directly; forged `s2:ld` under rent_long → alert; `dev046` row (`todo`) |
-| 3 | `AreaStepTest` | Tashkent: `✅ Ташкент`, three zone buttons, districts, `✅ Весь Ташкент`, `Готово (0)`; two districts → both ticked, whole city unticked, `Готово (2)`; `Готово` → step 5 with the districts; another city → step 5 with that city (legacy); `Центр` → step 5, districts cleared; metro → step 5, districts kept; Kokand; Fergana label `Весь Фергана` (legacy, `dev015` off); Back → rooms with the tick, or object when rooms are skipped; `en` labels; the `dev026` cases (`todo`); reference source down → `bot.common.source_unavailable`, state kept |
+| 3 | `AreaStepTest` | Tashkent: `✅ Ташкент`, three zone buttons, districts, `✅ Ташкент целиком`, `Готово (0)`; two districts → both ticked, whole city unticked, `Готово (2)`; `Готово` → step 5 with the districts; another city → step 5 with that city (legacy); `Центр` → step 5, districts cleared; metro → step 5, districts kept; Kokand; Fergana label `Фергана целиком`; Back → rooms with the tick, or object when rooms are skipped; `en` labels; the `dev026` cases (`todo`); reference source down → `bot.common.source_unavailable`, state kept |
 | 4 | `BudgetStepTest` | question per deal; median line and toggle per fixture city; rent_daily without both; toggle stays and shows `✅`; preset → step 6 with `price_max` and `below_median`; `Не важно`; forged amount → alert; no presets → two buttons; `dev006` (`todo`) |
 | 5 | `TypedAmountTest` | prompt replaces the step; `650` → keyboard removed, step 6 as a new message, later presses edit the new message; bad text → new error message, still waiting; bounds; Back; expiry while waiting → the text is not consumed; edit mode → review as a new message; `dev029` cases (`todo`) |
 | 6 | `OwnerTenantPetsTest` | labels and defaults; rent_long shows all three; rent_daily ends after tenant; sale ends after owner; `Разрешены` sets `pets_only` only; forged `s8:al` under sale → alert |
@@ -545,6 +554,7 @@ Feature and conversation (Pest):
 | 8 | `ReviewStepEditTest` | `✏️ Комнаты` → `3` → review; `✏️ Бюджет` → Back → byte-equal review; rent_long room → `✏️ Сделка` → `🏷 Купить` → object step → `Квартира` → review `Покупка · квартира`, `любой бюджет`, no `👥`; rent_long → `🌙 Снять посуточно` keeps the object and drops pets; `✏️ Районы` → tick → `Готово (2)`; stale `ed:pets` after a deal change |
 | 9 | `RadarSaveTest` | one press → toast, edit to TXT-BOT-034 with `N`, two buttons, `sendSticker`, the starter job dispatched after the sticker; two callback ids within 50 ms → one radar, one edit; limit → alert, review intact; `N = 0` paragraph; `existing` → toast and `📡 Открыть радар`; `reactivated` → as created; service throws → `bot.common.error`; save on an outdated review → alert; `📡 Радар` before WP-55 → interim reply |
 | 10 | `StarterListTest` | 11 matches → list with a 5/5/1 grid, then the tip (first radar); a number → card as a new message with origin `Starter`, list unchanged; radar deleted, number still opens; `⚡ Сразу`; `📬 Подборкой` → mode `digest` and the text with the user's hours; second radar → no tip; 20 matches → a 5/5/5/5 grid; a number whose ledger claim is refused is left out and N follows; listed listings are in the delivered set; a `403` on the list → claims released; a radar created through the API → the list only, once; a save in the bot → one list, not two; no row of kind `starter` appears in the outbox of WP-46 |
+| 11 | `RadarSwitchTest` | with `radar.creation_enabled` off: `/new`, `k1:nw` (the welcome button and `➕ Новый радар`), a `wz` press of an older wizard message, a `tp` press and a number typed while an amount is awaited → `bot.radar.soon` in `ru`, `uz`, `en`, the pressed message unchanged, no conversation opened, no radar row, `RadarService::create` never called; a direct `RadarService::create` in that state throws `RadarsDisabled`; with the switch on `/new` opens step 1 |
 
 Transcripts: the three deal branches from `/new` to the tip, in ru, with uz and en variants of the first and last
 message. Security cases: every option value is from a closed set; the `sid` binds a press to the actor's own
@@ -556,6 +566,13 @@ is not stored (BR-BOT-055).
 
 Run in ru, uz and en on the staging bot and on the production bot; attach screenshots to the PR.
 
+Radars are switched off on both bots until WP-57 (DEC-51). With this package's deploy only the first line can be
+seen there; it is ticked then. The other lines are proven by the conversation tests when the PR is merged and are
+run inside Telegram on the staging bot and on the production bot in WP-57, right after it switches radars on; the
+screenshots go into that PR and are linked from this one.
+
+- [ ] Radars switched off: `/new`, `📡 Включить радар` of the welcome and `➕ Новый радар` each answer «Радар скоро
+      заработает…» in the user's language; no wizard message appears and no radar is created.
 - [ ] `/new` sends a new wizard message with `шаг 1`, the three deal buttons and `✖️ Отмена`.
 - [ ] `📡 Включить радар` of the welcome and `➕ Новый радар` under a saved radar each start a new wizard message and
       leave their own message unchanged.
@@ -564,10 +581,11 @@ Run in ru, uz and en on the staging bot and on the production bot; attach screen
 - [ ] rent_daily: object step shows three options; the branch ends after «Кто будет жить?».
 - [ ] sale: object step shows five options with `Участок`; the branch ends after «От кого объявления?».
 - [ ] Rooms step appears for `Квартира`, `Дом`, `Квартира или дом` only, with `✅ Не важно`.
-- [ ] Area step: six cities, Tashkent zones and metro, districts two per row, `✅ Весь Ташкент`, `Готово (0)`.
+- [ ] Area step: six cities, Tashkent zones and metro, districts two per row, `✅ Ташкент целиком`, `Готово (0)`.
 - [ ] Ticking two districts unticks the whole city and shows `Готово (2)`; `Готово` goes to the budget.
 - [ ] Another city, a zone and the metro button each go to the budget step (legacy behaviour).
-- [ ] Fergana shows the legacy label `Весь Фергана` (flag `dev015` off); Kokand has no districts.
+- [ ] Fergana shows `Фергана целиком`, and the review of a whole-city radar reads `📍 Фергана целиком`; Kokand
+      has no districts.
 - [ ] Budget step: question by deal, median line, presets, `✍️ Своя сумма`, `✅ Не важно`; `📊 Не дороже рынка` and
       its paragraph only for Tashkent and the region, never for daily rent.
 - [ ] The below-market toggle stays on the step and survives a preset.

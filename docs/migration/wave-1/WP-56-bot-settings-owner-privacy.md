@@ -7,7 +7,7 @@
 | Depends on | WP-52, WP-47 |
 | Size | about 2 400 changed lines, M |
 | Behaviour reference | `04` §2 (rows BOT-017, BOT-018, BOT-020, BOT-074 … BOT-080), §3.14, §3.15, §3.16, §4.1 (BTN-067 … BTN-076), §4.2, §6.3 item 4, §8 (BR-BOT-073 … BR-BOT-094, BR-BOT-103), §9 (LB-BOT-010, LB-BOT-011, LB-BOT-012, LB-BOT-023, LB-BOT-026, LB-BOT-029); `16` (SEC-REQ-011, SEC-REQ-036 … SEC-REQ-039, SEC-REQ-045, SEC-REQ-047); `24` §8.2 (Q-SEC-021); task files KV-TG-045 … KV-TG-049; rules of KV-BE-045 and KV-BE-050 |
-| Needs from the production track | (1) Approval of two additive migrations: column `user_settings.service_news`, table `owner_verifications`. (2) `PHONE_HMAC_PEPPER` is already requested by WP-50; confirm it is set on staging and production, is different per environment, and is kept in the password manager: if it changes or is lost, every stored verification stops matching and owners must verify again. (3) The backup retention the privacy text promises (about two weeks) is confirmed by the production track before the text goes live (request of WP-70). Nothing else |
+| Needs from the production track | (1) Approval of two additive migrations: column `user_settings.service_news`, table `owner_verifications`. (2) `PHONE_HMAC_PEPPER` is already requested by WP-50; confirm it is set on staging and production, is different per environment, and is kept in the password manager: if it changes or is lost, every stored verification stops matching and owners must verify again. (3) The backup retention the privacy text promises (about two weeks) is confirmed by the production track before the text goes live (request of WP-70). (4) `BRAND_LLM_VENDOR` — the provider name the privacy text shows — is set in the same step in which the team configures or changes the provider of WP-55 (DEC-55); it stays blank while none is configured. Nothing else |
 
 ## Goal
 
@@ -116,7 +116,9 @@ key; the request class of `PATCH /api/v1/settings` does not, so the Mini App con
 - `App\Telegram\Handlers\PrivacyCommand` (command `privacy`) and `PrivacyDeleteCallback` (action `pv`: `dl`, `dly`,
   `dln`). Conversation kind `PrivacyDelete` holding the message id of the policy message.
 - The text is `bot.privacy.text` with placeholders from the brand layer: `:brand`, `:support`, `:site`, the privacy
-  address of the user's language, and `:llm` (`config('brand.llm_vendor')`, the vendor WP-55 really calls). A text
+  address of the user's language, and `:llm` (`config('brand.llm_vendor')`, env `BRAND_LLM_VENDOR`: the display
+  name of the language-model provider that is configured for WP-55 — the team switches providers on the servers
+  (DEC-55), so the name is env too and is changed in the same step). A text
   longer than 4 096 characters in a language is sent as two messages cut at a paragraph; the button sits on the last.
 - `/privacy` and the deletion are answered whatever the access gate says.
 - Erasure order inside `pv:dly`, when the conversation matches the pressed message:
@@ -143,11 +145,15 @@ key; the request class of `PATCH /api/v1/settings` does not, so the Mini App con
 
 ### Configuration
 
-`backend/config/bot.php`, added keys: `dev032`, `dev035` (both `false`). `backend/config/brand.php`: `llm_vendor`.
+`backend/config/bot.php`, added keys: `dev032`, `dev035` (both `false`). `backend/config/brand.php`: `llm_vendor`
+(`env('BRAND_LLM_VENDOR')`, no default: the repository names no vendor, DEC-55). While it is empty — no provider
+configured, so no text is sent to a language model at all — the text uses the variant `privacy.llm_none` of that
+sentence, which says so. The env name goes into `backend/.env.example`, blank, by the shared-file rule.
 
 New catalogue keys (ru, uz, en; legacy has no such texts or they were never observed): `owner.not_own_contact`,
 `owner.verified_with_listings`, `owner.refused_many_flats`, `owner.refused_realtor`, `owner.remove_confirm`,
-`privacy.delete_confirm`, `privacy.deleted`, and the button labels `🗑 Да, убрать`, `🗑 Да, удалить всё`.
+`privacy.delete_confirm`, `privacy.deleted`, `privacy.llm_none` (the sentence about the language model when none
+is configured), and the button labels `🗑 Да, убрать`, `🗑 Да, удалить всё`.
 
 ## Files
 
@@ -163,7 +169,8 @@ All paths under `backend/`.
 - `config/erasure.php` and `config/retention.php` of WP-47 (entries `owner_verifications`)
 - `app/Providers/TelegramServiceProvider.php` (commands `settings`, `owner`, `privacy`; actions `st`, `nop`, `ow`,
   `pv`; the `s` view of `lg`; the `Contact` message handler; the input handler of kind `Owner`)
-- `config/bot.php`, `config/brand.php`, `lang/{ru,uz,en}/bot.php`
+- `config/bot.php`, `config/brand.php`, `lang/{ru,uz,en}/bot.php`; `.env.example` (`BRAND_LLM_VENDOR`, blank) —
+  separate shared-file PR
 - `tests/Feature/Bot/{SettingsPanelTest,OwnerVerifyTest,OwnerStatusTest,PrivacyCommandTest,PrivacyPromisesTest,PrivacyDeleteTest}.php`
 - `tests/Unit/Owner/OwnerVerificationServiceTest.php`
 - `tests/Fixtures/Bot/transcripts/{settings,owner-verify,owner-remove,privacy,privacy-delete}.json`
@@ -258,7 +265,9 @@ heading, for each setting its title and current value, an italic last line (time
 ### `/privacy` (BOT-020) and the promises
 
 `/privacy` sends the policy (TXT-BOT-083, `tb:850–865`) with the button `🗑 Удалить мои данные` (BTN-076). The legacy
-text names the product, the support bot, the site and the LLM vendor; all four come from the brand layer.
+text names the product, the support bot, the site and the LLM vendor; all four come from the brand layer. Legacy
+names one fixed vendor; HOMI names whichever provider the team has configured (DEC-55), or says that none is
+used.
 
 Promise table — one test case each in `PrivacyPromisesTest`; a row whose mechanism belongs to a later package is a
 Pest `todo` that names it.
@@ -268,7 +277,7 @@ Pest `todo` that names it.
 | 1 | Stored: Telegram id, language and settings, radars, favourites, card marks, opened listings, received cards, arrival source, an action log. No name, no contacts | BR-BOT-085 | yes | `users` has no name column (WP-40); the ledger is redacted (WP-50); a schema test lists the columns of every user table |
 | 2 | The action log (what was pressed, without texts) is kept 180 days | BR-BOT-086 | yes, if WP-47 keeps 180 days | retention value of WP-47 asserted; bot events carry ids only (WP-58) |
 | 3 | Three profile flags and the account age for weighing votes | BR-BOT-087 | yes | `users.is_premium`, `has_username`, `has_photo` (WP-40), vote weights (WP-44) |
-| 4 | Phones and handles are masked before text goes to the LLM vendor | BR-BOT-088 | yes; the vendor name is `:llm` | `PiiMaskerTest`, `LlmGatewayTest` (WP-55) |
+| 4 | Phones and handles are masked before text goes to the LLM vendor | BR-BOT-088 | yes; the vendor name is `:llm`, the provider configured at the time (DEC-55); without one the sentence says that no language model is used | `PiiMaskerTest`, `LlmGatewayTest` (WP-55); a case of `PrivacyPromisesTest` renders the text with `brand.llm_vendor` set and empty |
 | 5 | Geolocation stays in the app and is never sent or stored | BR-BOT-089 | yes | the redactor drops `location` (WP-50); no API method takes the user's position |
 | 6 | Analytics in PostHog under a random id; erased on deletion | BR-BOT-090 | yes, with HOMI's own project (DEC-47); the hosting region named in the text is the real one | distinct id rule and person deletion of WP-47; `PrivacyDeleteTest` asserts one deletion request |
 | 7 | Support bot: mapping 90 days, texts until the conversation ends, summary one year | BR-BOT-091 | **no** — HOMI runs no support bot; the support contact is `:support` | the paragraph is replaced by one sentence that says who answers and that those messages are not processed by the bot; the product owner supplies the facts |
@@ -312,7 +321,10 @@ promises of the text.
 ## Tests
 
 Conversation tests use the runner of WP-51; contacts come from `UpdateFactory::contact` of WP-50 with the synthetic
-number `+998000000001`.
+number `+998000000001`. The suite runs with `radar.creation_enabled` on (the `phpunit.xml` value of WP-11). No
+handler of this package is an entry into a radar, so none carries the `radar` mark of WP-51: `/settings`,
+`/owner` and `/privacy` answer as specified while radars are switched off (DEC-51) — one case of
+`SettingsPanelTest` runs with the switch off to prove it.
 
 | # | Test | Cases |
 | - | ---- | ----- |
@@ -342,10 +354,12 @@ Run in ru, uz and en on the staging bot and on the production bot; attach screen
 - [ ] `/owner` again shows the status with `🗑 Убрать номер`; pressing it removes the number and shows the removal
       text.
 - [ ] `/privacy` shows the HOMI text in the user's language with `🗑 Удалить мои данные`; it names HOMI, the HOMI
-      support contact and the real vendors.
+      support contact and the real vendors — for the language model the provider configured at the time, or the
+      sentence that none is used.
 - [ ] `🗑 Удалить мои данные` asks for a confirmation; `✖️ Отмена` restores the button.
 - [ ] `🗑 Да, удалить всё` (throw-away account) shows the result text; `/subs`, `/fav` and `/owner` afterwards show
-      the empty states; the Mini App opens as for a new user; the command menu is the default one.
+      the empty states (`/subs` answers the "soon" text instead while radars are switched off, before WP-57); the
+      Mini App opens as for a new user; the command menu is the default one.
 - [ ] The production track confirms: no row with the Telegram id of that account in the database, and the backup
       retention matches the text.
 - [ ] `config('bot.interim_commands')` no longer contains `settings`, `owner`, `privacy`.

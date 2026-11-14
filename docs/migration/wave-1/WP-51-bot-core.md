@@ -52,7 +52,9 @@ alert, the slow-down notice and the apology after a failed update.
 | -------- | ---------------- |
 | Brand HOMI, same interface (DEC-40; `25` §2 rule 5) | No catalogue value names the product, the bot, the support bot or a domain. They come from `config/brand.php` through `:brand`, `:bot`, `:support`, `:site`. A test fails on a legacy or HOMI brand word in `backend/lang/**` |
 | Texts copied verbatim except brand words (`25` §2 rule 6, `25` §6) | The catalogue is the audit's text. Each text keeps its audit id through `tests/Fixtures/Bot/txt-keys.json`, so a later change of the legacy bot can be found and applied |
-| Defects fixed, behaviour changes off (DEC-36) | The Uzbek and English copy defects LB-BOT-010 … LB-BOT-013 are fixed in the catalogues. LB-BOT-009 is recorded as the behaviour change DEV-015: the `ru` label stays `Весь :city`, and WP-54 adds the flagged wording under `config('bot.dev015')`. This package creates `backend/config/bot.php` and adds no flag of its own |
+| Defects fixed, behaviour changes off (DEC-36) | The Uzbek and English copy defects LB-BOT-010 … LB-BOT-013 are fixed in the catalogues. This package creates `backend/config/bot.php` and adds no flag of its own |
+| The whole-city label (DEC-54) | LB-BOT-009 is settled by decision, without a flag: the label is built from the city's name — `:city целиком` in `ru`, with `uz` and `en` drafts — on the button and in the summary row. Callback data and stored values do not change |
+| Radars before delivery (DEC-51) | While `config('radar.creation_enabled')` (WP-11) is off, no entry into the radar wizard or a radar screen runs: the router answers one text, `bot.radar.soon`. The rule and the text live here; later packages only mark their registrations |
 | Full parity, open access, no admin panel (DEC-43) | The access guard only stops a `blocked` user. The limits protect an open bot from the first day |
 | Every merge reaches production (DEC-45) | No handler is registered, so the deploy is silent. `ConversationSelfTest` proves the kit against a toy handler that exists only in tests |
 | Functional parity (DEC-46) | The reply conventions of `04` §4.3 are built into the responder, so a handler cannot answer in another manner by accident |
@@ -104,6 +106,17 @@ Classes:
 | `App\Telegram\Handlers\Contracts\CallbackHandler` | `accepts(BotContext $ctx, CallbackPayload $p): bool` (argument validation, no side effect) and `handle(BotContext $ctx, CallbackPayload $p): array` |
 | `App\Telegram\Handlers\Contracts\MessageHandler` | `handle(BotContext $ctx, IncomingUpdate $update): array` |
 | `App\Providers\TelegramServiceProvider` | binds the router, the registry (singleton), the conversation store and the sticker registry; each later package adds its registrations here |
+
+**Radar switch (DEC-51).** `command()`, `callback()`, `message()` and `input()` of `HandlerRegistry` take an
+optional last argument `radar: true`, which marks the registration as an entry into the radar wizard or a radar
+screen. When the dispatch (rows 1, 3, 5 and 6) selects a marked registration while
+`config('radar.creation_enabled')` is false, the router does not call the handler: it returns one `SendMessage`
+with `bot.radar.soon` — plus the silent answer for a callback — opens no conversation and writes nothing. A text
+or a voice gets that message at most once a minute per user; a command and a callback always get it. With the
+switch on the mark has no effect. The marks are set by the packages that own the handlers: WP-54 (`new`, `nw`,
+`wz`, `tp`, the awaited amount) and WP-55 (`subs`, `sb`, the text and the voice handler). The interim replies of
+WP-52 are not marked — a command whose package has not landed keeps its interim reply — and no `/start` payload
+opens the wizard, so links need no mark.
 
 A handler exception propagates to the job, which retries (WP-50). Handlers are therefore written against the target
 state, so a second run changes nothing. When the job gives up, `UpdateRouter::failed()` sends `bot.common.error`
@@ -227,7 +240,9 @@ Rules:
    buttons.
 
 `backend/tests/Fixtures/Bot/txt-keys.json` holds the map below in the form
-`{"texts": {"<text id>": ["<key>", …]}, "buttons": {"<button id>": ["<key>", …]}, "new": ["<key>", …]}`.
+`{"texts": {"<text id>": ["<key>", …]}, "buttons": {"<button id>": ["<key>", …]}, "new": ["<key>", …]}`, plus
+`"decided": ["<id>", …]` for the ids whose wording a decision changed — DEC-54: BTN-016, and any text id whose
+sample in `texts.ru.json` shows the whole-city form of the summary row.
 `backend/tests/Fixtures/Bot/texts.{ru,uz,en}.json` hold the verbatim texts by id with sample parameters: `ru` for
 every text quoted in `04` §4.2, `uz` and `en` only for captured texts. `translation-status.json` maps every key of
 `uz` and `en` to `captured`, `draft` or `proofread`.
@@ -361,6 +376,7 @@ texts; `uz` and `en` are drafts:
 | `bot.interim.use_app` | «Этот раздел в боте ещё не готов. Всё то же самое уже есть в приложении:» | `InterimHandler` of WP-52 |
 | `bot.welcome.demo_notice` | «🧪 Часть разделов пока работает на тестовых данных — объявления в них ненастоящие.» | WP-52 |
 | `bot.card.demo_marker` | «🧪 Демо-данные» (the wording of `demo.label` in the Mini App, WP-20) | WP-53, WP-57 |
+| `bot.radar.soon` | «Радар скоро заработает. Мы включим уведомления о новых объявлениях в ближайшее время.» (the two sentences of `radar.soon.*` in the Mini App, WP-30; drafts: `uz` «Radar tez orada ishga tushadi. Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz.», `en` «Radar is coming soon. We’ll turn on alerts about new listings shortly.») | the router, while radars are switched off (DEC-51) |
 
 Glossary fixes applied to the captured Uzbek and English texts:
 
@@ -370,7 +386,7 @@ Glossary fixes applied to the captured Uzbek and English texts:
 | Two terms for quiet hours (LB-BOT-011) | header `Sokinlik soatlari`, text `Sokin soatlar` | `Sokin soatlar` in the header and in the text (the proofreader confirms) |
 | Currency label (LB-BOT-012) | UZ `Sumi`, EN `Soʻm` | UZ `Soʻm` on the button and `soʻm` in running text; EN `Soʻm` |
 | City names in the English welcome (LB-BOT-013) | `Toshkent`, `Andijon`, `Qoʻqon`, `Fargʻona` next to «Tashkent Region» | none in the catalogue: the welcome takes the names through `:cities` (WP-52 renders them from the reference data) |
-| «Весь Фергана» (LB-BOT-009) | `Весь <город>` | unchanged in `ru`; the fix is DEV-015, flagged, in WP-54 |
+| «Весь Фергана» (LB-BOT-009) | `Весь <город>` | `:city целиком` in `ru` (DEC-54), on the button `wizard.area.whole_city` and in the whole-city form of the `📍` summary row; `uz` `Butun :city` and `en` `All of :city` are drafts for the proofreader (Q-BOT-014). The name comes from the city dictionary through `:city` |
 
 ### Replies and keyboards
 
@@ -436,7 +452,7 @@ Registry of actions. Each package registers its rows and adds them to `docs/infr
 | `tp` | `k1:tp:<radar>:<in or dg>` (first-radar tip) | WP-54 |
 | `ln` | `k1:ln:<listing number>:<f, s or n>[:<radar>]` (open a card by number; the origin is the `/fav` list, a starter list or another number button) | WP-53; reused by the starter list of WP-54 and the digest of WP-57 |
 | `fl` | `k1:fl:<page>` (`/fav` paging) | WP-53 |
-| `cd` | `k1:cd:<listing number>:<op>[:<value>]`; operations `map`, `ph`, `fv:<1 or 0>`, `rt:<1 or 0>`, `ag:<1 or 0>`, `hs`, `hc[:<radar>]`, `hd[:<radar>]`, `ha[:<radar>]`, `hx` (the channel, district and author are read from the listing, never from the data) | WP-53 |
+| `cd` | `k1:cd:<listing number>:<op>[:<value>]`; operations `map`, `ph`, `fv:<1 or 0>`, `rt:<1 or 0>`, `ag:<1 or 0>`, `hs`, `hc[:<radar>]`, `hd[:<radar>]`, `ha[:<radar>]`, `hx`, `ct` (show the author's number, DEC-52) (the channel, district and author are read from the listing, never from the data) | WP-53 |
 | `sb` | `k1:sb:<radar or 0>:<op>[:<value>]`; operations `ls` (with radar `0`), `op`, `ps`, `on`, `dg`, `in`, `ra`, `ray`, `hr`, `rr:<rule>`, `ed`, `dl`, `dly`, `dln` | WP-55 |
 | `fp` | `k1:fp:<p or d>:<hm, el, se or st>` and `k1:fp:w:<tg, ol, si, ag, fr, st or ot>` (the trigger only: `found_answers` of WP-44 has no radar column) | WP-55 |
 | `st` | `k1:st:<q, d, c or n>:<value>` | WP-56 |
@@ -553,7 +569,8 @@ New:
   `backend/app/Console/Commands/Telegram/AssetsRefreshCommand.php`
 - `backend/tests/Support/Bot/Conversation.php`
 - `backend/tests/Fixtures/Bot/{txt-keys,translation-status,texts.ru,texts.uz,texts.en}.json`
-- `backend/tests/Fixtures/Bot/transcripts/{stale-callback,first-contact-locale,rate-limit,blocked-user}.json`
+- `backend/tests/Fixtures/Bot/transcripts/{stale-callback,first-contact-locale,rate-limit,blocked-user}.json`,
+  `backend/tests/Fixtures/Bot/transcripts/radar-soon.json`
 - `backend/tests/Feature/Bot/{UpdateRouterTest,StaleCallbackTest,ConversationSelfTest,TranscriptTest}.php`
 - `backend/tests/Unit/Telegram/{IncomingUpdateTest,BotLocaleTest,BotTextTest,BotFormatTest,HtmlTest}.php`,
   `{RuCatalogueTest,UzEnCatalogueTest,BrandWordsTest}.php`,
@@ -587,17 +604,19 @@ Create classes with `php artisan make:* --no-interaction`. Write the tests of a 
 1. Shared-file PR: the env names.
 2. `config/brand.php`, `App\Support\Brand`, `config/bot.php` with `limits`.
 3. `BotLocale` with `BotLocaleTest`; `Html` with `HtmlTest` (the corpus of SEC-REQ-020); `BotFormat` with its test.
-4. `backend/lang/{ru,uz,en}/bot.php` with the seven shared keys only; `BotText` with `BotTextTest`;
+4. `backend/lang/{ru,uz,en}/bot.php` with the eight shared keys only; `BotText` with `BotTextTest`;
    `CatalogueParityTest`, `RussianPluralsTest`, `MissingKeyFallbackTest`.
 5. The Russian catalogue: all 88 texts and every button label, `txt-keys.json`, `texts.ru.json`, `RuCatalogueTest`.
-   Record in the PR which `tb` lines each long text came from.
+   Record in the PR which `tb` lines each long text came from. The whole-city label is written in its decided
+   wording (DEC-54), and `txt-keys.json` lists the ids it touches under `"decided"`, so the test compares them
+   with that wording and not with the audit's.
 6. `BrandWordsTest`; replace every brand word it reports and extend the brand table of this specification.
 7. The Uzbek and English catalogues: captured texts with the glossary fixes, drafts for the rest,
    `translation-status.json`, `texts.{uz,en}.json`, `UzEnCatalogueTest`. List the draft keys in the PR for the
    proofreader.
 8. `UpdateKind`, `IncomingUpdate` with `IncomingUpdateTest`.
-9. `HandlerRegistry`, the handler contracts, `BotContext`, `UpdateRouter` (actor, guard, limits, dispatch, failure
-   notice), `TelegramServiceProvider`. `UpdateRouterTest` uses handlers defined in the test.
+9. `HandlerRegistry`, the handler contracts, `BotContext`, `UpdateRouter` (actor, guard, limits, dispatch, the
+   radar switch, failure notice), `TelegramServiceProvider`. `UpdateRouterTest` uses handlers defined in the test.
 10. `TelegramArchTest`, part 1 (formatting and translation rules). **End of part A.**
 11. Reply objects and `Responder` with `ResponderTest`; the dispatch of the existing event `ChatUnreachable`.
 12. `InlineKeyboard`, `ReplyKeyboard` with `KeyboardBuilderTest`; `TelegramArchTest`, part 2.
@@ -645,7 +664,7 @@ outdated — start again: /new».
 
 | Convention | Rule | Source |
 | ---------- | ---- | ------ |
-| Edit or new | A callback edits the message it came from. A new message is sent only for: the wizard step after a typed amount, a card opened by number or from `/fav`, the starter list, the first-radar tip, the venue, the photo album, the poll | BR-BOT-001 |
+| Edit or new | A callback edits the message it came from. A new message is sent only for: the wizard step after a typed amount, a card opened by number or from `/fav`, the starter list, the first-radar tip, the venue, the photo album, the poll — and two answers legacy does not have: the number shown by `📞 Показать номер` (WP-53) and `bot.radar.soon` | BR-BOT-001 |
 | Toast | `answerCallbackQuery` with text: TXT-BOT-048 … TXT-BOT-056, TXT-BOT-062 … TXT-BOT-067, TXT-BOT-075 | BR-BOT-002 |
 | Alert | `show_alert`: TXT-BOT-039 only | BR-BOT-002 |
 | Silent | 14 kinds: wizard step buttons, `✏️`, `◀️ Назад`, `✖️ Отмена`, the welcome language buttons, `✏️ Изменить`, `🗑 Удалить` (first step), `◀️ К списку`, poll answers, number buttons, `📍 На карте`, `📷` (on success), `🗑 Убрать номер`, `/settings` headers | BR-BOT-002 |
@@ -679,11 +698,23 @@ A client that does not render `style` shows default buttons; that is harmless.
 These are security requirements (SEC-REQ-010, SEC-REQ-011), not flagged behaviour changes; legacy limits are
 unknown.
 
+### Radars switched off (DEC-51)
+
+| # | Trigger, while `radar.creation_enabled` is off | Result |
+| - | ---------------------------------------------- | ------ |
+| 1 | A command, a text or a voice whose registration is marked `radar` | one new message `bot.radar.soon`; nothing is created; for text and voice at most once a minute |
+| 2 | A callback whose registration is marked `radar` | a silent answer and the same new message; the pressed message is not edited |
+| 3 | Any other update | handled as usual |
+
+Legacy has no such state: its radars work from the first day. HOMI's bot says "soon" until the sending package
+switches radars on (WP-57). No handler of this package is marked; the rows are proven with handlers of the test.
+
 ### Defects fixed and behaviour changes
 
 - Fixed here: LB-BOT-010, LB-BOT-011, LB-BOT-012, LB-BOT-013 (table "Glossary fixes").
-- Not here: LB-BOT-009 → DEV-015, flag off, WP-54. LB-BOT-007 → target-state callbacks, WP-53; the codec supports
-  them.
+- Fixed here by decision (DEC-54): LB-BOT-009 — the whole-city label is `:city целиком` (table "Glossary fixes");
+  WP-54 renders it. Legacy says `Весь <город>`, hence «Весь Фергана».
+- Not here: LB-BOT-007 → target-state callbacks, WP-53; the codec supports them.
 - No `DEV` flag is read by this package.
 
 ## Tests
@@ -704,7 +735,7 @@ fails the job and surfaces in the webhook response, so the retry cases (feature 
 | 2 | `BotLocaleTest` | the six `language_code` cases; a chosen locale wins; the unchosen default of WP-40 does not; `users.language_code` is used when the update has none |
 | 3 | `BotTextTest` | a parameter `<script>` comes out escaped; `Html::raw()` is not escaped; brand placeholders filled and not overridable; a missing key throws under `testing`; `choice()` for 1, 2, 5, 21 |
 | 4 | `BotFormatTest` | 18657 → `18 657` (`ru`, `uz`), `18,657` (`en`); `$1 000`; a UTC time shown in Asia/Tashkent |
-| 5 | `RuCatalogueTest` | 88 text ids and 76 button ids mapped, none missing or extra; every mapped key exists; each key rendered with the sample parameters of `texts.ru.json` equals the audit text (whitespace normalised); `bot.stale.alert` is `Форма устарела — начните заново: /new`; `bot.toasts.saved` is `Сохранил ✅`; no value contains `<`; exactly eight text ids are marked `spec` |
+| 5 | `RuCatalogueTest` | 88 text ids and 76 button ids mapped, none missing or extra; every mapped key exists; each key rendered with the sample parameters of `texts.ru.json` equals the audit text (whitespace normalised), except the ids listed under `"decided"`, which equal their decided wording: `bot.wizard.area.whole_city` with `:city` = `Фергана` is `Фергана целиком` (DEC-54); `bot.stale.alert` is `Форма устарела — начните заново: /new`; `bot.toasts.saved` is `Сохранил ✅`; no value contains `<`; exactly eight text ids are marked `spec` |
 | 6 | `UzEnCatalogueTest` | the key sets and placeholder names of `ru`, `uz`, `en` are identical; `uz` has no ASCII `'`, no `‘`, no Cyrillic except `🇷🇺 Русский`; the quiet-hours line has `oʻch.` with one dot; one quiet-hours term; no `Sumi`; `en` has none of `Toshkent`, `Andijon`, `Qoʻqon`, `Fargʻona`; captured texts equal `texts.{uz,en}.json`; `translation-status.json` lists every key |
 | 7 | `BrandWordsTest` | none of the forbidden strings under `backend/lang/**`; a fixture file with `kvadro²` makes the scanner report it |
 | 8 | `CatalogueParityTest`, `RussianPluralsTest` | every file of `lang/ru` exists in `uz` and `en` with the same keys; plural strings for 1, 2, 5, 11, 12, 14, 21, 22, 25, 101, 111 |
@@ -738,6 +769,8 @@ only by the classes of an allow-list in the test (the `/owner` handlers of WP-56
 | 13 | two handlers register the action `cd` | an exception at boot |
 | 14 | stale cases 1–7 of "Outdated buttons" | the alert, the keyboard removed, and `DB::listen` sees no `insert`, `update` or `delete` outside the ledger row and the actor's own `users` row (`fromBotUpdate()` refreshes `last_seen_at`) |
 | 15 | log records of the run | no Telegram id, no message text |
+| 16 | a command, a callback, a text and a voice registered with `radar: true`, `radar.creation_enabled` off | no handler is invoked; each gets one `bot.radar.soon` message, the callback a silent answer; no conversation, and `DB::listen` sees no write outside the ledger row and the actor's `users` row; a second text within a minute gets nothing |
+| 17 | the same four with the switch on; an unmarked registration with the switch off | every handler is invoked; no `bot.radar.soon` |
 
 **Conversation tests — `ConversationSelfTest`, `TranscriptTest`**
 
@@ -749,6 +782,7 @@ only by the classes of an allow-list in the test (the `/owner` handlers of WP-56
 | 4 | `first-contact-locale.json` | the toy reply in the language of each `language_code` |
 | 5 | `rate-limit.json` | the notice once, in the user's language |
 | 6 | `blocked-user.json` | no outgoing call except silent answers |
+| 7 | `radar-soon.json` in `ru`, `uz`, `en`: a marked toy command and a marked toy button with the switch off | the text of the locale as a new message each time; the button's message is unchanged |
 
 ## Acceptance checklist
 
@@ -769,6 +803,10 @@ time in WP-52 and WP-54, whose checklists repeat it; here it is proven by the co
 - [ ] `SendSticker` works per bot from a set or a file and is skipped without an error when the asset is missing
       (BOT-010); the avatar entry exists for WP-58 (BOT-009).
 - [ ] The 31st interactive update of a minute gets the slow-down notice once; a blocked user gets nothing.
+- [ ] With `radar.creation_enabled` off a registration marked as a radar entry is answered with `bot.radar.soon`
+      and its handler is not called; with it on the mark changes nothing.
+- [ ] The whole-city label reads `:city целиком` in `ru`; its `uz` and `en` wordings are drafts on the
+      proofreader's list.
 - [ ] All 88 texts and all 76 button ids are mapped in `txt-keys.json`; `ru`, `uz` and `en` have the same keys and
       placeholders.
 - [ ] Russian texts quoted in `04` §4.2 are reproduced verbatim except brand words; no catalogue value holds a

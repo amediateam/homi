@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14 (new-product course; strategy, Wave 1 plan, queue of 44 work packages; all 44 specifications written and verified in a second pass; PR #25 open; next step package WP-00)
+updated: 2026-11-14 (new-product course; Wave 1 plan and a queue of 45 work packages, all specified and verified; second answer round DEC-50 … DEC-56; PR #25 open; next step package WP-00)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -13,6 +13,7 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-14, three waves (prompt kept local as `prompt.md`): «Основной принцип — постепенный переход на новую архитектуру без остановки работающего сайта и нарушения существующей функциональности.»
 - 2026-11-14, answer round (43 answers, verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`). The ones that shape everything: «Пока будет новый бот с нашим backend старый бот будет работат в старом»; «Постоянный новый продукт»; «Сразу новый /api/v1»; «Laravel как шлюз»; «Пересборка по аудиту»; «Полный App Router»; «На сервере через cookie-сессию»; «Сначала весь фронтенд на моках»; «Крупные PR по модулям»; «фуллстак только по очереди там где ты остоновился он продолжит или там где он остоновился ты продоожиш»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14: «у нас план должен быть детальным чтобы у разработчика не возникола вопросов и чтобы быстро безостоновки все сделал»; «Переписать план в этом же PR».
+- 2026-11-14, second round (answers 44–51, DEC-50 … DEC-56): demo marker kept; radars switched off until WP-57; «Номер после нажатия»; «Постранично, по 20»; «<Город> целиком»; «Будет все модели мы сами переключим»; «Свой бот поддержки», operators in «Личный чат оператора».
 - Gates that need the first developer's OK: dependency changes, new tools, anything on staging/production, `HANDOFF.md` §4 items marked **gate**.
 
 ## State at handoff
@@ -24,10 +25,11 @@ Written for whoever continues the **development track** (the second developer, a
 - Verify the plan: `python3 scripts/migration/collect_ids.py --check && python3 scripts/migration/task_graph.py --check` (both exit 0 at the last commit).
 
 ## Done this session
-- `24` rewritten, `25-wave-1-plan.md` written, `wave-1/README.md` (one ordered queue) and 44 specifications `wave-1/WP-NN-*.md` (about 17 400 lines), drafted by subagents.
+- `24` rewritten, `25-wave-1-plan.md` written, `wave-1/README.md` (one ordered queue) and 45 specifications `wave-1/WP-NN-*.md` (about 18 400 lines), drafted by subagents; WP-59 (support bot) written by the main session.
 - **Verification pass.** WP-00 … WP-03 read by the main session against the code they change (WP-00: four defects fixed). The other 40 read in full by three agents against the repository, each other, `25` and for executability: 58 + 81 + 71 corrections (reported); 26 of their claims sampled by the main session against framework source, application code and the bundled Next.js docs → 26 confirmed.
 - Settled for all packages: tests of concurrent writes live in `backend/tests/Pgsql/` (own base class, only a database named `*_test`, helper `concurrently()`), built by WP-03.
-- Checks at the last commit: template of all 44 files (script); `collect_ids.py --check` exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` exit 0; every repository path named exists or is created by a package (script); address and token scan → no hit.
+- Second answer round carried through 32 specifications by one agent (reported), seams and `24`/`25`/queue aligned by the main session (`phase-3-notes.md` §H lists the defaults it chose).
+- Checks at the last commit: template of all 45 files (script); `collect_ids.py --check` exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` exit 0; every repository path named exists or is created by a package (script); address and token scan → no hit.
 - **Not covered:** nothing was executed; texts, constants and thresholds were not compared line by line with the audit; behaviour of packages not installed yet and of the Telegram Bot API is worded "verify before writing" (`wave-1/README.md`, "State of the specifications").
 - Legacy tree only read; legacy production not called.
 
@@ -35,8 +37,8 @@ Written for whoever continues the **development track** (the second developer, a
 1. First developer: review PR #25. It changes three project rules: PR size (one PR per work package), the dependency batch (DEC-49), a production deploy on every merge. Technical points for him are listed in the PR description (OpenAPI UI and `/pulse` behind nginx, Redis in CI, the API server of the end-to-end CI job).
 2. Developer: OK to start WP-00. Then WP-01 (four ADRs 0016–0019, each its own PR), WP-02 (send the request to the operator — the text is in the specification — and pin the legacy baseline), WP-03 (dependencies, test tooling).
 3. Product owner: the operator's contact, the service key and its contract, limits, a batch read for saved lists, dump and schema (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062); HOMI's own artwork (Q-APP-025); the legal basis and privacy text before real users arrive (DEC-13, Q-SEC-021); a PostHog account (DEC-47); proofreading of uz and en texts (Q-BOT-014).
-4. Decisions with a working default in the plan: RK-27 stub data visible on production (a "demo data" marker); RK-32 radars can be created before the bot delivers; the phone number in the card as in legacy (SEC-REQ-036, DEV-007 off); whole-list favourites and history against the legacy rate limit (DEV-003 off); the whole-city label (DEV-015 off).
-5. Still open and needed inside Wave 1: DEC-03 (LLM vendor for the bot's free-text queries), DEC-08, DEC-12, DEC-19, DEC-20, DEC-21 (`24` §7).
+4. Product owner, for the support bot (WP-59): who the operators are (their Telegram ids); the production track creates one support bot per environment.
+5. Still open and needed inside Wave 1: DEC-08 (landing CSP), DEC-12 (retention periods), DEC-19 (thresholds of the phone-disclosure quota), DEC-20 (cap on instant cards) — each package has a configurable default (`24` §7).
 
 ## Gotchas learned this session
 - The earlier task files (`docs/migration/tasks/**`) and `21`, `18`, `14` describe the abandoned plan. They are behaviour reference only; `24` §7 maps what still applies.

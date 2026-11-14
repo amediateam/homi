@@ -84,6 +84,12 @@ WP-58 adds the bot's names with the prefix `bot_` and enum-only properties. Rule
   over `kind|name|message` (fix of LB-DATA-015).
 - A value that matches a phone, e-mail or `tgWebAppData` pattern is dropped whatever its key.
 
+One name is written by the server alone: `contact_disclosed` with the property `listing_id` (integer). The listener
+`App\Listeners\Analytics\RecordContactDisclosure` on `ContactDisclosed` of WP-43 records it for every number HOMI
+gave out (DEC-52), with the channel of the event — `app` for `POST …/contact`, `bot` for the bot's «Показать номер»
+(WP-53). The row holds the listing number and never the phone. `EventIngest` treats the name as unknown when a
+client posts it (`204`, nothing stored), and the row is not forwarded to PostHog.
+
 ### `POST /events` for real
 
 `EventController` of WP-11, body replaced (the stub answer moves into `NativeStubs`, the rule of WP-40):
@@ -198,7 +204,7 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - `backend/app/Services/Privacy/{ErasureService,ErasureReceipt,PostHogPersonEraser,NotConfiguredPersonEraser}.php`,
   `backend/app/Services/Privacy/Contracts/PersonEraser.php`
 - `backend/app/Jobs/Analytics/CapturePostHogEvents.php`, `backend/app/Jobs/Privacy/{RequestPostHogPersonDeletion,PurgeLateActionRows}.php`,
-  `backend/app/Events/Privacy/UserErased.php`
+  `backend/app/Events/Privacy/UserErased.php`, `backend/app/Listeners/Analytics/RecordContactDisclosure.php`
 - `backend/app/Console/Commands/{Partitions/EnsurePartitions,Partitions/DropExpiredPartitions,Privacy/EraseUser,Privacy/RetryPostHog,Privacy/PurgeOperationalData}.php`
 - `backend/config/{analytics,partitions,erasure,retention}.php`; `backend/routes/console.php`;
   `backend/app/Http/Controllers/Api/V1/EventController.php`; `backend/app/Providers/AppServiceProvider.php`
@@ -214,7 +220,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
    `.ai/agents/postgis-geo-engineer.md` (partitions, BRIN); the skills `laravel-queues` and `laravel-testing`.
    Every test file fakes HTTP and prevents stray requests.
 2. `PartitionManager`, the migration, the two partition commands; the `pgsql` partition test.
-3. The catalogue and `ActionLogger` with its tests (`php artisan make:class Services/Analytics/ActionLogger …`).
+3. The catalogue and `ActionLogger` with its tests (`php artisan make:class Services/Analytics/ActionLogger …`);
+   the listener for `ContactDisclosed`.
 4. `EventIngest` and the real `EventController`.
 5. `PostHogClient`, `ServerEvents`, the capture job, the boot check.
 6. `config/erasure.php`, `ErasureService`, the ledger, `PersonEraser` and its two implementations, the jobs, the two
@@ -228,6 +235,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
   privacy text; task `KV-BE-150`).
 - An unknown event name or extra fields never produce an error for the client (fix of LB-API-047); an event without
   a session is never stored (fix of LB-API-001).
+- Every phone number HOMI gives out leaves a row: who asked, for which listing, when, from the app or the bot —
+  never the number itself (DEC-52; legacy sends numbers with every card and records nothing).
 - PostHog sees a random id per user, not a Telegram id, and the person is deleted when the user asks.
 - «Удалить мои данные» removes everything at once from the database; a returning user starts empty.
 - Erasure during traffic: late writes and queued jobs for the erased user leave nothing behind.
@@ -235,6 +244,9 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 ## Tests
 
 - Catalogue: every name of WP-11 is present with typed keys and caps.
+- Disclosures: a `200` of `POST …/contact` → one `contact_disclosed` row with `listing_id` and channel `app`; the
+  event with channel `bot` → channel `bot`; `contact_unavailable` → no row; the name posted to `POST /events` →
+  `204`, no row; no capture job is queued for it; the row holds no digit run of the listing's phone.
 - Logger: unknown name → `false`, no row; unknown properties dropped; enum value outside its set dropped; string
   over its cap cut; `app_error` stores a fingerprint and no message or source; the same error gives the same
   fingerprint; a synthetic phone, an e-mail and a `tgWebAppData` value are dropped; `recordMany` is one insert;
@@ -263,6 +275,7 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - [ ] `POST /events` stores catalogue events through the allow-list and answers as WP-11 specifies.
 - [ ] No row of the action log can hold a key outside the catalogue, a string over its cap, or an error text.
 - [ ] `ActionLogger::record()` accepts the `Bot` channel; `ErasureService::erase($user, 'bot')` is callable by the bot.
+- [ ] Each disclosed phone number has one `contact_disclosed` row with the listing number and no phone.
 - [ ] Erasure leaves no row with the user's id anywhere, writes the ledger, and queues one PostHog deletion.
 - [ ] Both registry tests fail on an unregistered table and pass on the current schema.
 - [ ] Partitions are created ahead and dropped after 180 days; the purge command and both partition commands are

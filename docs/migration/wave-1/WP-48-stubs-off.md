@@ -7,7 +7,7 @@
 | Depends on | WP-41 … WP-47 |
 | Size | about 1 500 changed lines (mostly tests), M; the switching itself is operations, not code |
 | Behaviour reference | `25` §4.3, §4.4, §4.5 (contract tests), §9 (contract layer, checks inside Telegram), §14 item 2; `24` §3 (rollback by flag), §5 (order of methods), §8.3 (RK-25 … RK-28); WP-10 (rules, commands, audit table), WP-11 … WP-13 (the shapes), WP-41 and WP-42 (golden fixtures) |
-| Needs from the production track | This package is done together with that track. 1. Before anything: the service key is installed and `php artisan legacy:ping` succeeds (WP-41); the media location serves a legacy photo (WP-42). 2. Run the `sources:*` commands of "Design, part B" on staging and then on production, at the steps this specification names, or agree in writing on how the development track may run them. 3. After the defaults PR is deployed: server env `SOURCES_ALLOW_STUB=false` on staging, then on production; `RADAR_MATCHING_ENABLED` stays `false` (WP-57 switches it on). 4. Watch Horizon and Pulse during each soak and say stop if the legacy host or the API host suffers |
+| Needs from the production track | This package is done together with that track. 1. Before anything: the service key is installed and `php artisan legacy:ping` succeeds (WP-41); the media location serves a legacy photo (WP-42). 2. Run the `sources:*` commands of "Design, part B" on staging and then on production, at the steps this specification names, or agree in writing on how the development track may run them. 3. After the defaults PR is deployed: server env `SOURCES_ALLOW_STUB=false` on staging, then on production; `RADAR_MATCHING_ENABLED` stays `false` and `RADAR_CREATION_ENABLED` stays unset (WP-57 switches both on, DEC-51). 4. Watch Horizon and Pulse during each soak and say stop if the legacy host or the API host suffers |
 
 ## Goal
 
@@ -20,8 +20,8 @@ can no longer appear for a real user.
 
 In: contract tests across drivers and against the OpenAPI file; a source-honesty test; the switching procedure for
 the nine features of reference and listing data, on staging and then production; the change of configured defaults;
-forbidding stubs on the servers; the checks inside Telegram; the records. Radar matching is not switched on here
-(WP-57 does that, when a sender exists).
+forbidding stubs on the servers; the checks inside Telegram; the records. Radar matching is not switched on here,
+and neither is radar creation (WP-57 does both, when a sender exists; DEC-51).
 
 Out: the two landing features (`source.landing.live`, `source.landing.pins`) — WP-60 binds their legacy driver and
 switches them; until then they answer `503 source_unavailable` on servers where stubs are forbidden, and nothing
@@ -63,7 +63,10 @@ All in `backend/tests/Feature/Contract/`, run by `make ci-backend`; every file p
    For each sample the request runs once per driver that is bound for the capability (`stub` and `legacy` now;
    `native` joins by itself when Wave 2 binds it). Assertions: equal status; `meta.source` equals the driver;
    `JsonShape::of($data)` (WP-10) is equal across drivers — same keys at every depth, same types, where `null` is
-   compatible with any type and an array's shape is the union of its elements' shapes.
+   compatible with any type and an array's shape is the union of its elements' shapes. For the card and translation
+   samples one more assertion per driver (DEC-52): the serialised answer holds none of the synthetic phone numbers
+   of the stub catalogue and of the golden cards, only their masked form; the contact samples are the one place
+   where a number appears.
 2. **`OpenApiConformanceTest`.** For each of the 38 methods of `25` §4.2: call it (native methods against real code
    with factories; flagged methods once per bound driver) and validate the answer against its schema in
    `docs/api/openapi.json` with `Tests\Support\OpenApiSchema` — a small validator written here (types, `required`,
@@ -120,8 +123,9 @@ After group 3 has soaked on production:
 3. The production track sets `SOURCES_ALLOW_STUB=false` (staging, then production) and runs `sources:check`. It
    exits 0: the command looks only at whether the resolved driver is bound (WP-10), so the two landing features,
    whose default is still a bound but now forbidden `stub`, do not fail it; they answer `503` until WP-60.
-4. `RADAR_MATCHING_ENABLED` stays `false`. Matching is switched on by the bot's sending package (WP-57), when a
-   sender exists; switching it on here would only build a backlog nobody can send.
+4. `RADAR_MATCHING_ENABLED` stays `false` and `RADAR_CREATION_ENABLED` stays unset. Both are switched on by the
+   bot's sending package (WP-57), when a sender exists; a radar created before that would deliver nothing (RK-32),
+   and matching without a sender would only build a backlog nobody can send.
 
 From step 3 on, a rollback of a listing feature no longer shows stub data: the user sees the "could not load" state
 (`503 source_unavailable`) until legacy is back. That is intended.
@@ -152,15 +156,15 @@ Desktop and Web clients; on Web once with third-party cookies blocked (header mo
 | Filters | the live count changes with the filters; the flow line appears; a narrow filter shows widen options |
 | Map | points appear and agree with the feed count; the lasso narrows them; the selection card opens |
 | Card | opens from the feed, the map and a `startapp=l_<number>` link; photos viewer; market block; price history; original text; a removed listing shows "could not load" |
-| Contact | «Позвонить» opens the dialer or the call page; «Написать» opens the link; after ten minutes the link still works (it was refreshed) |
+| Contact | before any tap the numbers in the original text are masked and no number is shown; «Позвонить» fetches the contact and opens the dialer or the call page; «Показать номер» shows the digits; «Написать» opens the link; after ten minutes a second tap still opens a working link (it is fetched again) |
 | Translation | in `uz` and `en` the original text translates and toggles back; in `ru` the button is absent |
 | Share | Telegram's share sheet opens; the shared message opens the listing in HOMI's Mini App |
 | Overlay | a favourite set on the card shows on the feed; a hidden listing leaves feed and map and returns on undo; a blocked author's listings leave; "viewed" eyes appear |
-| Personal | favourites, history and «Скрытое» survive a relaunch |
-| Radars | create from the filters; the tab shows previews of real listings; pause, resume, edit, delete. Outbox rows for new listings are not checked here: matching stays off until WP-57 |
+| Personal | favourites, history and «Скрытое» survive a relaunch; with more than 20 favourites the list continues on scroll |
+| Radars | still switched off on the servers (DEC-51): the tab shows the "soon" state, neither the few-results note nor the filters offer a radar, and a radar sheet address returns to the tab. Creating a radar from the filters, previews of real listings, pause, resume, edit and delete are checked in WP-57, right after it switches radars on |
 | Failure | with the group rolled back for the tester's account only (`--user`), the marker returns for that account |
 
-Screenshots of the feed, a card and the radar tab from each client go into the PR.
+Screenshots of the feed, a card and the radar tab (its "soon" state) from each client go into the PR.
 
 ### Records
 
@@ -211,7 +215,8 @@ Screenshots of the feed, a card and the radar tab from each client go into the P
 - [ ] `SOURCES_ALLOW_STUB=false` is set on staging and production; `sources:check` exits 0 there.
 - [ ] No answer of a Mini App method on production carries `meta.source = stub`; native-only methods answer `native`.
 - [ ] The "demo data" marker is not shown on any screen in any of the four Telegram clients on production.
-- [ ] `RADAR_MATCHING_ENABLED` is still `false` on production (the bot's sending package, WP-57, switches it on).
+- [ ] `RADAR_MATCHING_ENABLED` is still `false` and `RADAR_CREATION_ENABLED` still unset on production (the bot's
+      sending package, WP-57, switches both on).
 - [ ] The checklist of part D was run on iOS, Android, Desktop and Web, in cookie mode and header mode, with
       screenshots in the PR, and the reviewer signed it.
 - [ ] `docs/api/README.md` and the queue reflect the new state; the landing features are named as still pending

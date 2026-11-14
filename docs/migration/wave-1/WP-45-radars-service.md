@@ -7,7 +7,7 @@
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
-| Needs from the production track | Approve two migrations on production (`radars`, `radar_hide_rules`, new and empty). Server env: leave `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are switched to `true` when the bot's radar wizard package (WP-54) is deployed: it sends the starter list, and the bot's reachability tracking (WP-52) is live by then |
+| Needs from the production track | Approve two migrations on production (`radars`, `radar_hide_rules`, new and empty). Server env: leave `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are switched to `true` when the bot's radar wizard package (WP-54) is deployed: it sends the starter list, and the bot's reachability tracking (WP-52) is live by then. `RADAR_CREATION_ENABLED` (key of WP-11) stays **unset** on staging and production: radars cannot be created or changed there until the bot's sending package sets it (WP-57, DEC-51) |
 
 ## Goal
 
@@ -27,6 +27,10 @@ chat (WP-57); the bot's wizard and radar screens, which call the same service (W
 ## Decisions that bind this package
 
 - Radars are stored, matched and delivered by HOMI (DEC-43); nothing about a radar is sent to legacy.
+- Radars cannot be created or changed until the bot can deliver them (DEC-51): the switch
+  `config('radar.creation_enabled')` of WP-11 is off on staging and production until WP-57. This package is built
+  and tested with the switch on, and it enforces the off state in the service, so no caller — API or bot — can
+  write a radar around it.
 - Create-or-reactivate is a server rule (`25` §5); the result says what happened in `kind` (WP-13).
 - Behaviour changes stay off (DEC-36): radars keep `posted_days` as received (DEV-005), price bounds stay USD
   (DEV-006), hide rules stay per radar (DEV-034), unhide clears all rules of the radar at once (DEV-033).
@@ -67,6 +71,11 @@ public function delete(User $user, Radar $radar): void;
 
 Every write follows this order:
 
+0. **Switch.** While `config('radar.creation_enabled')` is false, `create`, `update`, `setActive`, `setMode` and
+   `relax` throw `App\Exceptions\Radar\RadarsDisabled` (the exception of WP-13: `403 radars_disabled`) before
+   anything else — no chat check, no lock, no source call. `delete` is never refused. On the API the middleware
+   `EnsureRadarsEnabled` of WP-13 has already answered, also for `PATCH {"unhide": true}`; the check is repeated
+   here because the bot calls the service directly (WP-54, WP-55).
 1. **Chat.** `ChatReachability::canWrite($user)` — `users.bot_chat_state === 'active'`. When
    `config('radar.require_chat')` is true and the answer is no: `App\Exceptions\Radar\NoChat` (`409 no_chat`), before
    any lock or write. Checked for `create`, `update`, `setActive(true)` and `relax`; never for pause, mode, unhide or
@@ -156,10 +165,13 @@ A radar is always loaded as `$request->user()->radars()->findOrFail($id)` — on
 ids — and then passed to `Gate::authorize` against `App\Policies\RadarPolicy` (`view`, `update`, `delete`).
 `PATCH`: `active: true` → resume with `starter`; `active: false` → pause with `ask_found`; `mode` → `setMode`;
 `unhide: true` → `clearAll`. `DELETE` answers `{"ask_found": …}`; a second call is `404`. The radar rows are added to
-`IdorMatrixTest` (WP-44).
+`IdorMatrixTest` (WP-44). While the switch of step 0 is off, `GET /radars` answers `[]` without a query and
+without previews, even for a user who has radars — the state before the first switch-on, when nobody has one;
+`DELETE` answers as usual; the four write routes keep the middleware of WP-13. The stub bodies that moved into
+`NativeStubs` follow the same rule, so the end-to-end suite of stage B sees the same switched-off state.
 
-Configuration `backend/config/radar.php` (the file exists since WP-11 with `max`; the other keys are added here):
-`max`, `limit_scope` (`active`), `require_chat`, `starter_enabled`,
+Configuration `backend/config/radar.php` (the file exists since WP-11 with `max` and `creation_enabled`; the other
+keys are added here): `max`, `creation_enabled`, `limit_scope` (`active`), `require_chat`, `starter_enabled`,
 `starter_window_days` (3), `starter_max` (20), `options_max` (5), `preview_ttl`, `preview_budget_ms`,
 `author_hide_rules`, `found_cooldown_days`.
 
@@ -172,27 +184,31 @@ and `found:asked:<user id>`.
 - `backend/app/Enums/Radar/{RadarMode,HideRuleKind,RadarMutationKind}.php`
 - `backend/app/Services/Radar/{RadarService,RadarCreateContext,RadarMutation,ChatReachability,StarterSelector,Starter,RadarRelaxOptions,RadarHideRuleService,HideRuleSet,RadarPreviews,FoundAskPolicy}.php`
 - `backend/app/Services/Delivery/Contracts/DeliveredSet.php`, `backend/app/Services/Delivery/NullDeliveredSet.php`
-- `backend/app/Exceptions/Radar/{NoChat,RadarLimitReached,RadarDuplicate}.php`; `backend/app/Events/Radar/{RadarSaved,RadarDeleted}.php`
+- `backend/app/Exceptions/Radar/{NoChat,RadarLimitReached,RadarDuplicate}.php` (`RadarsDisabled` exists since WP-13);
+  `backend/app/Events/Radar/{RadarSaved,RadarDeleted}.php`
 - `backend/app/Policies/RadarPolicy.php`; `backend/app/Http/Controllers/Api/V1/Radars/{RadarController,RadarRelaxController}.php`
 - `backend/config/radar.php`; `backend/lang/{ru,uz,en}/radar.php`
 - `backend/tests/Feature/Radar/{RadarServiceTest,StarterSelectorTest,RadarRelaxOptionsTest,RadarHideRuleServiceTest,RadarPreviewsTest,FoundAskPolicyTest}.php`,
   `backend/tests/Feature/Api/V1/Radars/{RadarListTest,RadarWriteTest,RadarPatchDeleteTest,RadarRelaxTest}.php`,
   `backend/tests/Pgsql/RadarConcurrencyTest.php`, `backend/tests/Feature/Api/V1/IdorMatrixTest.php`
-- `backend/.env.example` (`RADAR_MAX`, `RADAR_REQUIRE_CHAT`, `RADAR_STARTER_ENABLED`) — separate shared-file PR
+- `backend/.env.example` (`RADAR_MAX`, `RADAR_REQUIRE_CHAT`, `RADAR_STARTER_ENABLED`; `RADAR_CREATION_ENABLED` is
+  there since WP-11) — separate shared-file PR
 
 ## Steps
 
 1. Read the seven task files for rules, edge cases and test names; skip their SQL predicates and legacy
    serializers. Tests first in every step.
 2. Migrations, models, enums, relations (`php artisan make:model Radar --factory --migration --no-interaction`).
-3. `ChatReachability`, the three exceptions, `RadarService::create` with lock, twin and limit; the events.
+3. `ChatReachability`, the three exceptions, `RadarService::create` with the switch, lock, twin and limit; the
+   events.
 4. `update`, `setActive`, `setMode`, `delete`.
 5. `DeliveredSet` with its null binding; `StarterSelector`.
 6. `RadarRelaxOptions` and `RadarService::relax`; the hint texts in three locales.
 7. `RadarHideRuleService` and `HideRuleSet`.
 8. `RadarPreviews`; `FoundAskPolicy`.
 9. Controllers, `RadarPolicy`, the IDOR rows; the `pgsql` concurrency cases.
-10. Pint, PHPStan, `make ci-backend`; the env PR; deploy with both switches off.
+10. Pint, PHPStan, `make ci-backend`; the env PR; deploy. On the servers creation, the chat check and the starter
+    all stay off.
 
 ## Behaviour to reproduce
 
@@ -206,6 +222,8 @@ and `found:asked:<user id>`.
 - «Скрыто: N» appears only when `hidden > 0`, and unhide brings it to 0 (BR-APP-047).
 - Pause and delete may open the survey; resume goes through the chat check, pause does not (BR-APP-048).
 - Each filters object returned has 25 keys and only type codes valid for its deal (fix of LB-API-005, LB-API-006).
+- Different from legacy by decision (DEC-51): while radars are switched off nothing can be created, replaced,
+  paused, resumed, relaxed or re-moded, and the list is empty; legacy has no such state.
 
 Edge cases: lowering `RADAR_MAX` below a user's count keeps existing radars and refuses only new activations; a
 `PUT` that changes nothing writes nothing; two quick relax requests relax twice (each from the then-current
@@ -213,6 +231,10 @@ filters); a daily-rent radar gets daily options because the source computes them
 
 ## Tests
 
+- Switch (`config(['radar.creation_enabled' => false])`; every other case runs with it on, as `phpunit.xml` sets
+  it): `create`, `update`, `setActive(true)`, `setActive(false)`, `setMode` and `relax` throw `RadarsDisabled`
+  with no query, no lock and no source call; `delete` removes the radar; `GET /radars` → `[]` for a user with two
+  radars, with and without `include=previews`, and no source call; each write route → `403 radars_disabled`.
 - Service (SQLite): `no_chat` before any write for chat states `never` and `blocked` when the flag is on, and not
   checked for pause, mode and delete; with the flag off nothing is refused; limit counts active radars only; the
   eleventh active radar and a resume at the limit are refused; active twin → `existing` without a write; paused twin
@@ -238,16 +260,22 @@ filters); a daily-rent radar gets daily options because the source computes them
 ## Acceptance checklist
 
 - [ ] The six radar methods answer in the WP-13 shapes with `meta.source = native`.
+- [ ] With `radar.creation_enabled` off no radar can be written through the API or the service, the list is empty
+      and `DELETE` works.
 - [ ] `no_chat`, `radar_limit` and `radar_duplicate` are raised in the specified order and leave no partial write.
 - [ ] Twin handling returns `existing` or `reactivated`; the concurrency cases of the `pgsql` group pass.
 - [ ] Starter, options and `relaxed` follow the rules above; with `RADAR_STARTER_ENABLED=false` the starter is 0.
 - [ ] `GET /radars?include=previews` costs one source round per distinct filter set and never fails the list.
 - [ ] Hide rules exist per radar, are cleared by `unhide`, and drive `hidden`.
 - [ ] Radar rows are in the IDOR matrix; foreign equals unknown.
-- [ ] The PR names the migrations, the three env keys and the two switches that WP-54 turns on.
+- [ ] The PR names the migrations, the three env keys, the two switches that WP-54 turns on, and that
+      `RADAR_CREATION_ENABLED` stays unset on the servers until WP-57.
 - [ ] `make ci-backend` and the `pgsql` group are green.
-- [ ] Inside Telegram on staging, then production: create a radar from the filters, see it on the «Радар» tab with
-      its preview, pause, resume, change mode, edit, delete; the limit toast appears at the eleventh radar.
+- [ ] Inside Telegram on staging, then production, where radars are still switched off: the «Радар» tab shows the
+      "soon" state and no button offers a radar. The pass with radars on — create a radar from the filters, see it
+      on the «Радар» tab with its preview, pause, resume, change mode, edit, delete; the limit toast at the
+      eleventh radar — is run on the local stack now (`backend/.env.example` has the switch on) and inside Telegram
+      on staging and production in WP-57, right after it switches radars on.
 
 ## Handoff
 

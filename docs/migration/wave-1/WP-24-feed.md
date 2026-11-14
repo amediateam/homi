@@ -140,11 +140,15 @@ methods are explicit, success keeps the requested state; only a failure changes 
 
 ### Radar seam
 
-`features/radars/capability.ts` exports `radarsReady = false`. The few-results note renders its radar button only
-when `radarsReady` is true and then calls `subscribe(filters, 'few')` from `features/radars/subscribe.ts`. So that
-this import compiles before WP-30, this package creates `subscribe.ts` as a stub with the final signatures:
-`subscribe(filters, entry, relaxed?)` resolves `{ ok: false }` and `useHasActiveRadar(filters)` returns `false`
-(WP-25 imports both too). WP-30 writes the real bodies and flips the constant.
+`features/radars/capability.ts` exports two things. `radarsReady = false` is a build-time constant that only
+orders the frontend packages: WP-30 flips it when the radar screens exist. `useRadarsEnabled()` is what every radar
+entry point asks: it returns `true` only when `radarsReady` is `true` and `useReference().radars_enabled` is
+`true` — the server's switch of DEC-51, which WP-22 reads as `false` while the reference data is missing. The
+few-results note renders its radar button only when `useRadarsEnabled()` is true and then calls
+`subscribe(filters, 'few')` from `features/radars/subscribe.ts`. So that this import compiles before WP-30, this
+package creates `subscribe.ts` as a stub with the final signatures: `subscribe(filters, entry, relaxed?)` resolves
+`{ ok: false }` and `useHasActiveRadar(filters)` returns `false` (WP-25 imports both too). WP-30 writes the real
+bodies and flips the constant.
 
 ## Files
 
@@ -298,8 +302,9 @@ current search parameters:
   - «Смотреть продажу · N» (`feed.seeSale`) or «Смотреть аренду · N» (`feed.seeRent`): the other deal is sale,
     or long-term rent when the current deal is sale; shown only when that deal has more listings in the city
     than are visible now; it runs `switchDeal()` (geography kept).
-  - «Включить радар по этому поиску» (`feed.subscribeHere`): only when `radarsReady`; hidden when a radar with
-    the same filters exists; disabled while its request runs (WP-30).
+  - «Включить радар по этому поиску» (`feed.subscribeHere`): only when `useRadarsEnabled()` — so never while
+    radars are switched off on the server (DEC-51); hidden when a radar with the same filters exists; disabled
+    while its request runs (WP-30).
   - «Другой город» (`feed.otherCity`): only with more than one city; opens `routes.filters()`.
 - Search empty (0 visible items and the note not shown): magnifier mascot, «Ничего не нашлось»
   (`feed.nothing`), «Попробуйте ослабить фильтры» (`feed.nothingHint`), «Сбросить фильтры»
@@ -351,7 +356,8 @@ Component (Vitest + Testing Library):
   owner chip for `any`, `no_agents`, `owners`; badge count; labels in three locales.
 - `ListingFeed`: three skeletons; each row of the error table; inline retry keeps the cards; hidden items removed;
   favourites source hides items un-favourited in this launch.
-- `FewResultsNote`, `FeedEmpty`: every text; button visibility; radar button absent while `radarsReady` is false;
+- `FewResultsNote`, `FeedEmpty`: every text; button visibility; radar button absent while `radarsReady` is false,
+  and — with the constant forced on — absent for `radars_enabled` `false` or missing, present for `true`;
   DEV-024 branch with the flag off and on; favourites and history variants.
 
 End to end (Playwright, fake Telegram, stubs; `e2e/feed.spec.ts` in cookie mode and header mode):
@@ -429,7 +435,8 @@ States
 - [ ] «Смотреть продажу · N» / «Смотреть аренду · N» appears only when the other deal has more listings and
       switches the deal keeping the area.
 - [ ] «Другой город» appears only with several cities and opens the filters.
-- [ ] The radar button of the note is absent in this package (`radarsReady` is false).
+- [ ] The radar button of the note is absent in this package (`radarsReady` is false); the test with the constant
+      forced on shows it only when the reference data says `radars_enabled: true`.
 - [ ] `dev024ResetOnlyWithActiveFilters` is off in `lib/flags.ts`; both branches are covered by tests.
 
 ## Handoff

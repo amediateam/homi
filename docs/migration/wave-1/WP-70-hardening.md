@@ -85,9 +85,9 @@ N = not applicable to the new product.
 | 23 | Photo ingestion rules | SEC-REQ-023 | N — HOMI fetches no photos in Wave 1; the proxies have one fixed upstream | Wave 2 | nginx review: no variable in `proxy_pass` |
 | 24 | Signed legacy media route | SEC-REQ-024 | N — legacy signs its own addresses; HOMI passes the query through | WP-42 | — |
 | 25 | Erasure-compatible photo storage | SEC-REQ-025 | C — no stored copies; proxy cache of at most 24 hours | WP-42, WP-60 | nginx cache lifetimes confirmed by the production track |
-| 26 | Call page and tokens | SEC-REQ-026 | C — contact goes through legacy; HOMI issues no call token | WP-43 | no phone in logs or analytics after a contact (leak scan) |
+| 26 | Call page and tokens | SEC-REQ-026 | C — a call link exists only in the answer of the counted contact method (DEC-52): HOMI's own page and token when the source gives the raw number, the source's link when it gives only that (WP-43) | WP-43 | the call-page and token tests of WP-43; no phone in logs or analytics after a contact (leak scan) |
 | 27 | Limiters | SEC-REQ-027 | A | several | limiter matrix |
-| 28 | Phone-disclosure quota | SEC-REQ-028 | A | WP-43 | quota test; alert input |
+| 28 | Phone-disclosure quota | SEC-REQ-028 | C — counted on the contact method, the only place a number is given; beyond the soft limit it answers `contact_unavailable` instead of emptying card fields (DEC-52); thresholds are DEC-19 | WP-43 | quota test; alert input |
 | 29 | Outbound Telegram pacing | SEC-REQ-029 | A | WP-57 | pacer tests; a 10 000-recipient run against the fake |
 | 30 | CSP for the unchanged legacy Mini App | SEC-REQ-030 | N — not served by HOMI | — | — |
 | 31 | CSP for the Mini App and the landing | SEC-REQ-031 | A | WP-21, WP-61 | header checks |
@@ -95,7 +95,7 @@ N = not applicable to the new product.
 | 33 | Headers on every host | SEC-REQ-033 | A | nginx, apps | `scripts/security/check-headers.sh` on the five hosts of each environment |
 | 34 | Secret inventory per environment | SEC-REQ-034 | A | production track | inventory below; `security:check` |
 | 35 | Secret scanning | SEC-REQ-035 | A | this package | `scripts/security/scan-secrets.sh` in CI and as a documented pre-commit hook |
-| 36 | Minimisation per field | SEC-REQ-036 | A | WP-40, WP-50, WP-56 | schema test: no name, username, phone or e-mail column in any user table |
+| 36 | Minimisation per field | SEC-REQ-036 | C — the user fields as written; the listing author's number is not stored by HOMI in Wave 1, never travels with a card, is masked in listing texts, and is returned only by the counted contact method after a tap (DEC-52) | WP-40, WP-50, WP-56; WP-12, WP-42, WP-43 | schema test: no name, username, phone or e-mail column in any user table; the card tests of WP-12, WP-42 and WP-48 find no raw number in a card answer of any driver; Playwright: no number in the page before a tap (WP-26) |
 | 37 | Raw updates encrypted and redacted | SEC-REQ-037 | A | WP-50 | existing tests; a staging row decrypted by the production track holds no text |
 | 38 | Retention, scheduled and tested | SEC-REQ-038 | C — action log 180 days, updates 14 days, LLM call log 180 days, vote details 180 days, backups 14 days; the rule for withdrawn listings does not apply (none stored) | WP-47, WP-50, WP-55 | `RetentionRegistryTest`; time-travel test per rule |
 | 39 | Deletion on request | SEC-REQ-039 | A | WP-47, WP-56 | the database-wide scan after erasure |
@@ -111,7 +111,7 @@ N = not applicable to the new product.
 | 49 | Dependency audit in CI | SEC-REQ-049 | A | this package | CI steps |
 | 50 | Legal readiness before real users | SEC-REQ-050 | A — earlier than planned (Q-SEC-021) | product owner, this package | legal texts section |
 
-Counts: 34 apply as written, 12 apply in a changed form, 4 are not applicable (rows 23, 24, 30, 41).
+Counts: 32 apply as written, 14 apply in a changed form, 4 are not applicable (rows 23, 24, 30, 41).
 
 ### Logging without personal data
 
@@ -127,8 +127,8 @@ that match:
 | Bot token | the token shape, also inside a `api.telegram.org/bot…` address |
 | `initData` | keys `initData`, `init_data`, `tgWebAppData`; a `hash=` with 64 hex characters next to `auth_date=` |
 | Bearer tokens | `Authorization` values; the Sanctum token shape |
-| Webhook secret, service key, LLM key, PostHog keys, metrics token | the configured values themselves, read at boot |
-| Phones | the phone pattern of `PiiMasker` (WP-55) |
+| Webhook secret, service key, the key of every provider in `config/ai.php` that has one, PostHog keys, metrics token | the configured values themselves, read at boot |
+| Phones | the phone patterns of `PhoneMasker` (WP-12), the list `PiiMasker` of WP-55 shares |
 | Contact and message payloads | keys `contact`, `text`, `caption`, `voice` under an update |
 
 Where a value could leak, and the check for each channel:
@@ -222,7 +222,7 @@ when a route with a bound `{id}` or `{number}` under the user group is missing f
 | Phone HMAC pepper | `PHONE_HMAC_PEPPER` | backend | never without a plan: verifications stop matching |
 | Erasure subject key | `ERASURE_SUBJECT_KEY` | backend | never without a plan (WP-47) |
 | Legacy service key | `LEGACY_SERVICE_KEY` | backend | by the operator |
-| LLM key | the provider's key | backend | provider console |
+| LLM keys | the key of each language-model provider the team has configured, under the name the published `config/ai.php` gives it (DEC-55) | backend | that provider's console; a provider that is no longer used loses its key from the env |
 | PostHog keys | `POSTHOG_PERSONAL_API_KEY`, project keys | backend, apps (the project key is public by design) | PostHog console |
 | Metrics token | `METRICS_TOKEN` | backend, scraper | production track |
 
@@ -305,7 +305,7 @@ of WP-51, WP-56) and the landing page (WP-61) are written from it in ru, uz and 
 | The legal basis for processing and for showing phones and photos taken from another service | lawyer's note (Q-SEC-021) |
 | Data stored per user: Telegram id, three profile flags, language and settings, radars, favourites, marks, opened listings, received cards, arrival source, the action log; the phone hash when an owner verifies | WP-40, WP-44, WP-45, WP-47, WP-52, WP-53, WP-56 |
 | Not stored: name, username, phone number, message texts, voice, location | WP-40, WP-50, WP-55 |
-| Processors: HOMI's PostHog project and its region; the LLM vendor, with masking; the listing service that supplies listings, phones and photos | DEC-47, WP-55, DEC-42 |
+| Processors: HOMI's PostHog project and its region; the language-model provider configured at the time, with masking — the team may change it (DEC-55), and the text is changed in the same step (`BRAND_LLM_VENDOR`, WP-56); the listing service that supplies listings, phones and photos | DEC-47, WP-55, DEC-42 |
 | Retention: action log 180 days, raw updates 14 days, backups 14 days | WP-47, WP-50, production track |
 | Deletion: «Удалить мои данные» in the bot, immediate in the database; what an author of a listing can ask for | WP-56, WP-57 |
 | The site: no cookies, a visit number that travels into the bot | WP-61 |
@@ -374,7 +374,7 @@ users:
 | # | Legacy finding | What HOMI must show instead |
 | - | -------------- | --------------------------- |
 | 1 | Server strings injected as HTML into map labels (SEC-001) | rows 18 and 21 |
-| 2 | Phone numbers reachable without a quota (SEC-002, SEC-003, SEC-015) | rows 26 and 28 |
+| 2 | Phone numbers reachable without a quota (SEC-002, SEC-003, SEC-015) | rows 26, 28 and 36: no number travels with a card or its texts, and the one method that gives it is counted per user |
 | 3 | Bot output without consistent escaping (SEC-024) | row 20 |
 | 4 | Contact ownership never checked in `/owner` (SEC-009) | the IDOR matrix row "Bot `/owner`" |
 | 5 | Promises of the privacy text never tested (SEC-018) | the legal texts section and `PrivacyPromisesTest` |

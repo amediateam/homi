@@ -7,7 +7,7 @@
 | Depends on | WP-25, WP-26 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `03` §2 (SCR-026 … SCR-031, SCR-040), §3.2 (nudge storage), §3.3 (events), §3.4 (constants), §4, §5, §5b; `05` TMA-033 and §2; task files KV-FE-074, KV-FE-075, KV-FE-076, KV-FE-077, KV-FE-078, KV-FE-079, KV-FE-080, KV-FE-030 |
-| Needs from the production track | nothing |
+| Needs from the production track | Nothing new. `RADAR_CREATION_ENABLED` stays unset on staging and production (WP-11, DEC-51), so the radar tab deployed by this package shows its "soon" state there until WP-57 switches radars on |
 
 The task files above were written for another architecture. Their states, texts, constants, edge cases and test
 ideas are taken; their file layout, navigation stack, API paths and transport are not.
@@ -17,7 +17,8 @@ ideas are taken; their file layout, navigation stack, API paths and transport ar
 The whole radar part of the Mini App works on stubs: turning a radar on from the feed, the filters sheet and the
 nudge; the «Радар» tab with tiles and previews; the radar sheet; the new-radar and editor sheets; the «Нашли
 жильё?» survey; the follow nudge. One subscribe flow serves every entry point, and the "bot cannot write to you"
-case asks for write access to HOMI's own bot.
+case asks for write access to HOMI's own bot. While the server has radars switched off, the tab says that radars
+are coming soon and nothing in the app offers one.
 
 ## Scope
 
@@ -29,6 +30,8 @@ LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 - The radar tab, its empty state, tiles, status lines and previews; pull-to-refresh on the tab.
 - The radar sheet, the editor and the new-radar sheet (`FiltersForm` in its two radar modes), the survey.
 - The follow nudge and `NudgeHost` with its arbitration rules.
+- The switched-off state (DEC-51): the "soon" state of the tab and the one rule that hides every way to create or
+  change a radar.
 - Wiring of the buttons earlier packages left without an action: «Включить радар» in the filters footer (WP-25),
   «Включить радар по этому поиску» in the few-results note (WP-24), «+» in the top bar of the radar tab (WP-23).
 
@@ -48,6 +51,7 @@ LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-034 and LB-APP-036.
 | Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014 and LB-APP-036 are fixed. LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
 | Brand (DEC-40, 25 §2 rule 5) | The bot is HOMI's own. Every bot link and every text with the brand name goes through `lib/brand` and the `homi` catalogue layer |
 | Scope of Wave 1 (DEC-43) | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
+| Radars before delivery (DEC-51) | The server switches radars off until its bot can deliver them and says so in `GET /reference` (`radars_enabled`, WP-11). `radarsReady` stays what it was — a build-time constant that orders the frontend packages. Every radar entry point asks `useRadarsEnabled()` of WP-24, which needs both |
 | Routing (DEC-44, 25 §3.2) | Sheets are intercepting routes in the `@sheet` slot; Back closes editor, then radar sheet, then nothing (root tab) |
 | Session modes (25 §3.4) | Every read works with `initial` data from the server (cookie mode) and through `/bff` (header mode); every mutation is a Server Action that takes the token as an argument in header mode |
 | API methods (25 §4.2) | Methods used: `GET /radars` (with `include=previews` on the radar tab), `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax`, `POST /surveys/found`, `POST /surveys/found/where`; reads of `GET /listings/flow` (nudge), `GET /listings/count` and `GET /listings/flow` through `FiltersForm`, and `GET /settings` (digest hours). `{id}` is a ULID string (WP-13) |
@@ -71,6 +75,8 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 | `/radars/found` | `@sheet/(.)radars/found/page.tsx`, `(main)/radars/found/page.tsx` | `FoundSheet`; `?trigger=pause|delete` (SCR-031) |
 
 - Route files hold no logic; both trees import the same components from `features/radars/`.
+- While radars are switched off (section "Radars switched off"), `/radars` renders the "soon" state and the four
+  sheet addresses return to it.
 - The direct-load versions render `RadarScreen` under the sheet, so a reload of `/radars/<id>` shows the same
   picture as a tap on the tile. Closing uses `back()` of `useBack()`: `router.back()` when the app has history,
   else `router.replace(parentOf(pathname))` — `/radars/<id>/edit` → `/radars/<id>` → `/radars`.
@@ -96,7 +102,7 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 | `features/radars/toasts.ts` | The toast table below as one function per outcome |
 | `features/radars/radarStatus.ts` | Status line of a tile and of the sheet header |
 | `features/radars/useRadarPreviews.ts` | Finds, matching count and flow per radar |
-| `features/radars/{RadarScreen,RadarTiles,RadarEmptyState,RadarSheetRoute,RadarSheet,RadarStrip}.tsx` | Tab and radar sheet |
+| `features/radars/{RadarScreen,RadarTiles,RadarEmptyState,RadarSoonState,RadarSheetRoute,RadarSheet,RadarStrip}.tsx` | Tab and radar sheet; the "soon" state |
 | `features/radars/{RadarCreateSheet,RadarEditSheet,FoundSheet}.tsx` | Thin wrappers over `FiltersForm`; the survey |
 | `features/radars/radarReturn.ts` | `{ id, scrollY }` kept in module memory for the return from a radar feed |
 | `features/nudges/{NudgeHost.tsx,store.ts}` | Host and arbitration |
@@ -124,8 +130,9 @@ nudge), `empty` (new-radar sheet).
    that succeeded always ends in a success toast and `ok: true` — the fix of LB-APP-005.
 7. Failure, by the `409` codes of WP-13 (the fix of LB-API-033): `no_chat` after the chat-access flow →
    `toast.noChat`; `radar_limit` → `toast.subLimit` with `max` = `limits.radars` from `useReference()` (legacy
-   `max_subscriptions`), fallback `10`; `radar_duplicate` (edit and widen only) → `toast.alreadyOn`; anything
-   else → `common.saveFailed`.
+   `max_subscriptions`), fallback `10`; `radar_duplicate` (edit and widen only) → `toast.alreadyOn`; the error
+   `radars_disabled` of WP-22 (`403`, the server switched radars off after the reference data was cached) → the
+   toast `radar.soon.title`; anything else → `common.saveFailed`.
 8. Two calls with the same `filtersKey` while one is in flight share one promise.
 9. After every success: `refetch()` of the radar list.
 
@@ -146,6 +153,25 @@ nudge), `empty` (new-radar sheet).
 
 Turning a radar on, creating, replacing and widening go through it; turning off, mode, unhide and delete do not
 (BR-APP-048).
+
+### Radars switched off (DEC-51)
+
+`useRadarsEnabled()` (`features/radars/capability.ts`, WP-24) is `true` only when `radarsReady` is `true` and
+`useReference().radars_enabled` is `true`. While it is `false`:
+
+| Place | Behaviour |
+| ----- | --------- |
+| `/radars` | `RadarScreen` renders `RadarSoonState` and nothing else: the radar icon (no sweep animation), `radar.soon.title`, `radar.soon.body`, no button. No radar request is sent: the server part reads the cached reference first, and `useRadars` stays disabled |
+| «+» in the top bar of the tab | not rendered |
+| `/radars/new`, `/radars/<id>`, `/radars/<id>/edit`, `/radars/found` | loaded directly or reached by a stale link: `router.replace(routes.radars())` once the reference data is there; nothing of the sheet is shown |
+| Few-results note, filters footer | their radar buttons are hidden (WP-24, WP-25 ask the same hook) |
+| Follow nudge | never offered: `offerFollowNudge` returns before the flow request |
+| Radar list on the search tab | not requested |
+
+The tab itself stays in the tab bar. Pull-to-refresh on the "soon" state does nothing. A radar action that is
+answered `radars_disabled` although the hook said "on" — the reference data is cached for about ten minutes —
+reverts its optimistic change and shows the toast `radar.soon.title`; the entry points disappear with the next
+reference refresh. Nothing here reads the stub scenario cookie: the state follows the server's configuration.
 
 ### Previews (BR-APP-063, fix of LB-APP-036)
 
@@ -194,10 +220,10 @@ New, under `frontend/app/`:
 - `app/[locale]/(main)/@sheet/(.)radars/new/page.tsx`, `(.)radars/[id]/layout.tsx`, `(.)radars/[id]/page.tsx`,
   `(.)radars/[id]/edit/page.tsx`, `(.)radars/found/page.tsx`; `@sheet/page.tsx` if missing.
 - Every module of the table in "Design".
-- `tests/radars/{normalize,subscribe,radarStatus}.test.ts`, `tests/radars/{RadarTiles,RadarSheet,RadarForms,
-  FoundSheet}.test.tsx`, `tests/telegram/chatAccess.test.ts`, `tests/nudges/{followNudge.test.ts,
+- `tests/radars/{normalize,subscribe,radarStatus}.test.ts`, `tests/radars/{RadarSoon,RadarTiles,RadarSheet,
+  RadarForms,FoundSheet}.test.tsx`, `tests/telegram/chatAccess.test.ts`, `tests/nudges/{followNudge.test.ts,
   FollowNudge.test.tsx,NudgeHost.test.tsx}`.
-- `e2e/{radars,radar-subscribe,radar-forms,follow-nudge}.spec.ts`.
+- `e2e/{radars,radar-subscribe,radar-forms,follow-nudge,radars-soon}.spec.ts`.
 
 Changed:
 
@@ -210,6 +236,8 @@ Changed:
   `onFiltersApplied(offerFollowNudge)` of WP-25 (`features/filters/applyFilters.ts`).
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the keys of "Behaviour to reproduce", "New and
   overridden texts".
+- Shared files, announced in the PR: `frontend/playwright.config.ts` (the default projects exclude the tag
+  `@radars-off`) and `.github/workflows/frontend-e2e.yml` (the step that runs it; see "Tests").
 
 ## Steps
 
@@ -224,8 +252,9 @@ Changed:
 5. `features/radars/toasts.ts` and `subscribe.ts` with tests.
 6. `useRadars`; load the list on the search tab too (it feeds the footer state, the note and the nudge rules).
    Flip the seam of step 1: filters footer and few-results note call `subscribe`.
-7. Radar tab: page, `RadarScreen` (loading, error, empty, tiles), `RadarTiles`, `radarStatus`, `RadarEmptyState`,
-   pull-to-refresh handler, «+».
+7. Radar tab: page, `RadarScreen` (soon, loading, error, empty, tiles), `RadarSoonState`, `RadarTiles`,
+   `radarStatus`, `RadarEmptyState`, pull-to-refresh handler, «+». The switched-off rule for the tab, the «+», the
+   sheet addresses, the radar list request and the nudge (section "Radars switched off").
 8. `useRadarPreviews` by the rule in "Previews".
 9. Radar sheet: both layouts, `RadarSheetRoute`, `RadarSheet`, `RadarStrip`, `useSettings` and the digest hint;
    switch, mode, unhide, delete; verify the `replace` interception question.
@@ -235,7 +264,8 @@ Changed:
 13. `NudgeHost`, `store.ts`, `followNudge.ts`, `useFollowNudge.ts`, `FollowNudge.tsx`; register
     `onFiltersApplied(offerFollowNudge)` once in `NudgeHost` — `applyFilters` of WP-25 notifies for the filters
     sheet, the quick filter sheet and the lasso (WP-28), so no handler is touched.
-14. Catalogue overrides and the new key; component tests; Playwright specs in both session modes.
+14. Catalogue overrides and the new keys; component tests; Playwright specs in both session modes; the tag
+    `@radars-off` in `playwright.config.ts` and its workflow step.
 15. Run the checklist in three locales and two themes; update the queue and the handoff.
 
 ## Behaviour to reproduce
@@ -254,6 +284,7 @@ Changed:
 | Edited, empty | `toast.subUpdatedEmpty` «Радар обновлён. Пока пусто{hint}» |
 | Widened | `starter > 0` → `toast.subUpdated`; else `toast.relaxedEmpty` «Радар расширен — новые придут в чат, как только появятся» |
 | No chat | `toast.noChat` «Радар не включён — боту нужно разрешение писать вам в чат» |
+| Radars switched off on the server | `radar.soon.title` «Радар скоро заработает» |
 | Limit | `toast.subLimit` «Уже {max} радаров — удалите ненужный во вкладке «Радар»» |
 | Other failure | `common.saveFailed` «Не получилось сохранить» |
 
@@ -270,6 +301,7 @@ radar button when such a radar exists.
 
 | State | Trigger | What the user sees |
 | ----- | ------- | ------------------ |
+| Soon | `useRadarsEnabled()` is `false` (reference data loaded; DEC-51) | radar icon; `radar.soon.title` «Радар скоро заработает»; `radar.soon.body` «Мы включим уведомления о новых объявлениях в ближайшее время.»; no button, no «+». Legacy has no such state: its radars work from the first day |
 | Loading | list not loaded, no `initial` | centred spinner |
 | Error | list failed, nothing cached | tall `ErrorState`: offline «Нет связи» (`error.offline`) + `error.offlineText`, else «Не загрузилось» (`common.loadFailed`) + `error.serverText`; «Повторить» (`error.retry`) |
 | Empty | list is `[]` | radar sweep with 3 blips (static in lite mode and with reduced motion); `subs.empty` «Радар следит за каналами за вас»; `subs.emptyHint`; primary «Включить радар» (`sheet.subscribe`) |
@@ -371,8 +403,9 @@ address → `router.replace(routes.radars())`. A second `ask_found` while the su
 1. `notifyFiltersApplied` of WP-25 calls the registered `offerFollowNudge(filters)`; `followPending` becomes true.
 2. When `nudgesAllowed` holds and no toast is visible, wait 1 800 ms. A filter change in between drops the
    candidate.
-3. `shouldShowFollowNudge`: filters are custom (`isCustomFilters`), no radar has the same filters, radars < the
-   limit, `now ≥ quietUntil`, `now − lastShown ≥ 8 h`, hash not in `asked`. Otherwise stop.
+3. `shouldShowFollowNudge`: radars are switched on (`useRadarsEnabled()`), filters are custom (`isCustomFilters`),
+   no radar has the same filters, radars < the limit, `now ≥ quietUntil`, `now − lastShown ≥ 8 h`, hash not in
+   `asked`. Otherwise stop.
 4. `GET /listings/flow` with an `AbortSignal`, through `normalizeFlow` (fix of LB-APP-006: an empty answer shows
    the card without a flow line instead of crashing).
 5. Mark asked (keep the newest 40, set `lastShown`), `track('follow_prompt_shown')`, show.
@@ -394,6 +427,13 @@ Back does not close it.
 New key (`homi` layer), used only with `dev016ErrorToastOnFailure`: `toast.subDeleted` — ru «Радар удалён», uz
 «Radar oʻchirildi», en «Radar deleted».
 
+New keys of the switched-off state (`homi` layer; uz and en are proposals for the reviewer):
+
+| Key | ru | uz | en |
+| --- | -- | -- | -- |
+| `radar.soon.title` | «Радар скоро заработает» | «Radar tez orada ishga tushadi» | «Radar is coming soon» |
+| `radar.soon.body` | «Мы включим уведомления о новых объявлениях в ближайшее время.» | «Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz.» | «We’ll turn on alerts about new listings shortly.» |
+
 Legacy values with the brand word must have an override in the `homi` layer (the WP-20 test fails without one).
 Check and add: `found.text` «Подскажите одной кнопкой — так мы поймём, помогает ли HOMI искать.», `found.kvadro`
 «Да, через HOMI», `found.congratsText` «Спасибо, что рассказали. Если HOMI помог — расскажите друзьям, им тоже
@@ -410,8 +450,8 @@ the brand word only.
   `existing` or `reactivated` gives the already-on or the on-again toast; starter toast; few picks the first
   option with `count ≥ 7`; few falls back to the last option; empty toast with and without a hint; success with no
   `options` and no `relaxed` still returns `ok` (regression of LB-APP-005); edit toasts; widen with and without
-  starter; `radar_limit` uses the reference maximum or 10; `radar_duplicate` → already on; other error → save
-  failed;
+  starter; `radar_limit` uses the reference maximum or 10; `radar_duplicate` → already on; `radars_disabled` → the
+  "soon" toast and `ok: false`; other error → save failed;
   `posted_days` kept by default and `null` with `dev005RadarDropsPostedDays`; two calls with one key share a
   request; list re-read failure falls back to the cache.
 - `chatAccess.test.ts`: granted → one retry and `chat_access_allowed` once; declined → `chat_access_declined`, no
@@ -419,11 +459,16 @@ the brand word only.
   pass untouched; no bot username → no confirm; concurrent calls share one native sheet.
 - `radarStatus.test.ts`: paused; no flow; `week 0`; `week 3, days 7`; `week 21, days 7`; unknown mode; both values
   of `dev021OneFlowVocabulary`.
-- `followNudge.test.ts` (fake clock): rule matrix (default vs custom filters, existing radar, at the limit,
-  cooldown 8 h, snooze after 3 closes, 40 hashes kept, broken JSON); stable hash for equal filters.
+- `followNudge.test.ts` (fake clock): rule matrix (radars switched off, default vs custom filters, existing radar,
+  at the limit, cooldown 8 h, snooze after 3 closes, 40 hashes kept, broken JSON); stable hash for equal filters;
+  with radars off no flow request is sent.
 
 **Component (Vitest + Testing Library).**
 
+- `RadarSoon` (the reference value is given through `ReferenceProvider`; `radarsReady` is `true` in this package):
+  `radars_enabled` `false` and missing → the two texts, no button, no «+», no radar request, pull-to-refresh sends
+  nothing; `true` → the normal tab; each of the four sheet routes with `false` → one `router.replace` to the tab
+  and nothing rendered; a switch answered `radars_disabled` → reverted, the "soon" toast.
 - `RadarTiles`: collage with 0, 1, 4, 5 covers; greyscale when inactive; tile and switch are separate controls;
   Enter opens, Space on the switch toggles.
 - `RadarSheet`: active vs paused; `hidden` 0 and 3; strip ghost, empty, finds; digest hint with hours, without
@@ -443,6 +488,17 @@ the brand word only.
 - `radar-forms.spec.ts`: «+» → new radar → toast, sheet closed; edit → save → toast.
 - `follow-nudge.spec.ts`: apply custom filters → card after 1.8 s → «Включить» → the success toast (the
   `entry: 'prompt'` argument travels inside a Server Action and is asserted in `subscribe.test.ts`).
+- `radars-soon.spec.ts`, tagged `@radars-off` — the switched-off state end to end. Its switch is the API's env
+  value, not a stub scenario: `radars_enabled` is HOMI's configuration, and the cached reference call never
+  forwards the scenario cookie (WP-22). The default run (API with `RADAR_CREATION_ENABLED=true`, the value of
+  `backend/.env.example`) excludes the tag. A second step of `.github/workflows/frontend-e2e.yml` restarts the API
+  service with `RADAR_CREATION_ENABLED=false`, builds and starts the app again against it (the first build cached
+  the reference data with radars on) and runs `pnpm test:e2e --grep @radars-off`; locally the same after setting
+  the key to `false` in the backend's env file and `make dev-start`, with `E2E_BASE_URL`. Cases, in both session
+  modes: the «Радар» tab shows the two texts and no «+»; a direct load of `/radars/new` and of
+  `/radars/<fixture id>` ends on `/radars`; a feed with the scenario `few` shows the note without the radar
+  button; the filters footer has no «Включить радар»; applying custom filters shows no nudge after 3 s; no request
+  to `/bff/radars` and no radar Server Action was sent during the spec.
 - States the default stub answers cannot produce use the scenarios of WP-13 through the `homi_stub_scenario`
   cookie that WP-22 forwards: `no_chat`, `radar_limit`, `radar_duplicate`, `existing`, `starter`, `few`,
   `ask_found`, and the reserved `source_unavailable` for a failing save. The stub list never changes after a
@@ -453,6 +509,14 @@ the brand word only.
 
 Run in ru, uz, en and in light and dark; cookie mode and header mode where a request is involved.
 
+Staging and production have radars switched off until WP-57 (DEC-51), so only the first line can be seen there
+when this package is deployed. The other lines are run against the local stack (`https://app.homi.loc`, whose
+backend env has `RADAR_CREATION_ENABLED=true` as `backend/.env.example` does) with the screenshots in the PR, and
+once more inside Telegram on staging and production in WP-57, right after it switches radars on.
+
+- [ ] Radars switched off: the «Радар» tab shows «Радар скоро заработает» with its second line and no button; no
+      «+»; the few-results note and the filters footer offer no radar; no nudge appears; a radar sheet address
+      opens the tab. Seen inside Telegram on staging and production, in three languages.
 - [ ] «Радар» tab: spinner, then tiles; a failed list shows the error state and «Повторить» reloads it.
 - [ ] No radars: sweep art, both texts and «Включить радар»; the art is static in lite mode.
 - [ ] Tile shows collage or icon, title, area summary and status; a paused tile is greyscale and reads «На паузе».
@@ -476,7 +540,8 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
       «Радар обновлён. …».
 - [ ] Filters footer: «Включить радар» creates a radar, then shows ✓ «Радар включён»; a second try says «Радар по
       этому поиску уже включён». On stubs, where a write is not stored: ✓ with a search equal to a fixture radar,
-      the second-try text with the scenario `existing`; with stored radars this line is ticked again in WP-48.
+      the second-try text with the scenario `existing`; with stored radars this line is ticked again in WP-57,
+      when radars are switched on on the servers.
 - [ ] Few-results note: «Включить радар по этому поиску» works and disappears once the radar exists.
 - [ ] A "few" result offers «Расширить», and it widens the radar.
 - [ ] At the limit the toast reads «Уже N радаров — удалите ненужный во вкладке «Радар»».

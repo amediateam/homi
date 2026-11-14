@@ -143,7 +143,7 @@ the old bot and its backend is the operator's act.
 | 18, stages S0–S6, freeze, point of no return, rollback window | Replaced by continuous deployment to staging and production and by per-method flags |
 | DEC-01, DEC-05, DEC-07, DEC-15 … DEC-18, DEC-24, DEC-29 | No longer needed |
 | DEC-02, DEC-04, DEC-06, DEC-23, DEC-25, DEC-26 | Answered: `telegram.uz`; brand HOMI; DEC-44; DEC-49; open access; own PostHog projects |
-| DEC-03, DEC-08, DEC-12, DEC-19, DEC-20, DEC-21 | **Still open and needed inside Wave 1:** the LLM vendor for the bot's free-text and voice queries (DEC-03; translation of listings comes from legacy); the landing's CSP (DEC-08); retention periods (DEC-12); the phone-disclosure quota and the cap on instant cards (DEC-19, DEC-20); whether a support bot exists (DEC-21). Each affected package builds a configurable default and names the decision |
+| DEC-08, DEC-12, DEC-19, DEC-20 | **Still open and needed inside Wave 1:** the landing's CSP (DEC-08); retention periods (DEC-12); the thresholds of the phone-disclosure quota and the cap on instant cards (DEC-19, DEC-20). Each affected package builds a configurable default and names the decision. DEC-03 (language model) and DEC-21 (support bot) are answered by DEC-55 and DEC-56 |
 | DEC-13 (legal basis for personal data) | **Still open and now earlier:** HOMI collects its own users' personal data from the first production deploy (Q-SEC-021) |
 | 22 §4 "Never call the production API" | Stands for people, tests, CI and agents. Only HOMI's servers call legacy, with the service key |
 | `HANDOFF.md` §4 | T3 (OpenAPI) and T5 (generated client) open Wave 1; T6 (sign-in), T8 (frontend) and T1 (webhook) are inside it; T2 (intake) is Wave 2. Change by a separate shared-file PR |
@@ -153,7 +153,8 @@ the old bot and its backend is the operator's act.
 
 ### 8.1 Decisions
 
-All answered by the developer on 2026-11-14 unless the row says otherwise. Verbatim answers:
+All answered by the developer on 2026-11-14 unless the row says otherwise (DEC-50 … DEC-56 in a second round the
+same day, after the verification of the specifications). Verbatim answers:
 `decisions/2026-11-14-developer-answers.md`.
 
 | ID | Decision | Answer | Still needs | Shapes |
@@ -177,6 +178,13 @@ All answered by the developer on 2026-11-14 unless the row says otherwise. Verba
 | DEC-47 | Analytics | HOMI's own action log and its own PostHog projects per environment | PostHog account and keys | 25 §3.9 |
 | DEC-48 | Reports and votes | Stored and applied in HOMI only | — | 25 §5 |
 | DEC-49 | Dependencies | Approved as one batch: the map packages, `posthog-js`, `lucide-react`, the test tools, `openapi-typescript`, next-intl, shadcn/ui with Radix | First developer: confirms in the install PR (`docs/handoff/parallel-work.md` §4) | 25 §10 |
+| DEC-50 | Stub data on production | A visible "demo data" marker on every screen that still answers from a stub | — | 25 §4.4 |
+| DEC-51 | Radars before delivery | Creating and changing radars is switched off (`RADAR_CREATION_ENABLED`) until the bot's sending package is live; the radar tab and the bot say "soon" | Production track: sets the switch after the deploy of WP-57 | 25 §4.2, §5; WP-11, WP-13, WP-30, WP-45, WP-51, WP-57 |
+| DEC-52 | The author's phone number | Never sent with the card; masked in texts; given by the counted contact method after a tap. A deliberate difference from legacy (the variant of DEV-007 "after a tap") | Thresholds of the disclosure quota (DEC-19) | 25 §4.1, §4.2; WP-12, WP-26, WP-43, WP-53 |
+| DEC-53 | Favourites and history | Paged by 20 with a cursor, like the feed (the paging part of DEV-003; no cap on history) | — | 25 §4.1; WP-13, WP-29, WP-44 |
+| DEC-54 | The whole-city label | «{city} целиком», built from the city dictionary, in the Mini App and the bot (DEV-015, this wording) | Proofreading of the uz and en wording (Q-BOT-014) | WP-22, WP-51, WP-54 |
+| DEC-55 | Language model for the bot's free-text and voice queries | No fixed vendor: provider and model come from configuration and the team switches them; without a configured provider the bot answers the wizard hint. Answers DEC-03 | Accounts and keys of the providers the team wants to use | 25 §6, WP-55 |
+| DEC-56 | Support | HOMI's own support bot; it relays between a user and the private chats of the operators. Answers DEC-21 | Production track: a support bot per environment in BotFather, its token and webhook; the operators' Telegram ids | 25 §6, WP-59 |
 
 ### 8.2 Questions
 
@@ -200,13 +208,13 @@ All answered by the developer on 2026-11-14 unless the row says otherwise. Verba
 | RK-24 | **Wave 2 stalls.** The collector does not push into HOMI yet, the processing chain is large, and listing identities change | H | H | data, backend | Agree with the collector's owner during Wave 1; store channel and post with every personal reference from day one; keep the legacy driver until each method is proven | first developer; developer | DEC-39, Q-API-063, AM-44 |
 | RK-25 | **Legacy throttles or blocks the service key** under user traffic and radar polling | M | H | backend | Ask for limits first; cache reference data; group radar polls by identical filters; back off and serve the last good answer | developer | Q-API-059, DEC-42 |
 | RK-26 | **The behaviour baseline moves.** The legacy client and its API change every one to three days | H | M | all | Pin a baseline; each legacy release becomes a queue item; the legacy driver has contract tests that fail when the legacy shape changes | developer | DEC-37, Q-APP-024, RK-05 |
-| RK-27 | **Stub data is visible to real users on production**, because every merge is deployed and access is open | H | M | product | A visible "demo data" marker driven by the driver flag; stub sections are named in the bot's welcome text until they are real | developer | DEC-43, DEC-45 |
+| RK-27 | **Stub data is visible to real users on production**, because every merge is deployed and access is open | H | M | product | A visible "demo data" marker driven by the driver flag (confirmed by DEC-50); stub sections are named in the bot's welcome text until they are real | developer | DEC-43, DEC-45, DEC-50 |
 | RK-28 | **The service key arrives late or never.** It is a change in legacy, and the operator offered only a dump and a schema | M | H | backend | The frontend and every native part do not wait for it; the listing methods stay on stubs; the fallback is importing dumps into HOMI | product owner | DEC-42, Q-SYS-009, Q-API-060 |
 | RK-29 | **Wave 1 is a whole product**: 45 screens, the v1 surface, radars with delivery, 84 bot handlers and the landing, built by two developers in relay | H | M | plan | One ordered queue, one work package per PR, a handoff after every stop; no date pressure (DEC-45) | developer | `wave-1/README.md` |
 | RK-30 | **The cookie session fails inside frames** (Telegram Web), or the two session modes drift apart | M | M | frontend | One screen code path with optional server-fetched data; both modes in the end-to-end suite; checked on staging in three browsers | developer | DEC-44, 25 §3.4 |
 | RK-31 | **"Functional parity" is judged differently by different people** | M | M | acceptance | A written checklist per screen and per bot scenario, taken from the audit, signed in the PR | developer | DEC-46, 25 §9 |
 
-| RK-32 | **Radars exist before anything delivers them.** The radar package is in stage C and the bot's sending package in stage D, while every merge reaches production and access is open: a user can create a radar that sends nothing | H | M | product | Keep creation behind the chat requirement and the starter switch until sending is live, and say so on the radar tab; or move the radar packages after the sending package — the developers choose when stage C starts | developer | DEC-43, DEC-45, 25 §9 |
+| RK-32 | **Radars exist before anything delivers them.** The radar package is in stage C and the bot's sending package in stage D, while every merge reaches production and access is open: a user can create a radar that sends nothing | H | M | product | Decided (DEC-51): creating and changing radars is switched off on the servers until the sending package is deployed; the radar tab and the bot say "soon"; one switch turns it on together with matching | developer | DEC-43, DEC-45, DEC-51 |
 
 Risks of 19 that change: RK-02 (data migration), RK-03, RK-04, RK-06 and RK-19 no longer apply; RK-07 (old WebViews)
 is accepted by DEC-44; RK-11 (personal data) grows, because HOMI now has users of its own from the first deploy.
@@ -219,5 +227,5 @@ is accepted by DEC-44; RK-11 (personal data) grows, because HOMI now has users o
    amends ADR-0013); the frontend UI stack (Tailwind tokens, shadcn/ui, next-intl). Next free numbers: 0016–0019.
 3. The request to the operator goes out at once: contact, service key and its contract, limits, dump and schema
    (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062).
-4. The queue starts with KV-BE-002 (`wave-1/README.md`).
+4. The queue starts with KV-BE-002 (`wave-1/README.md`). It has 45 work packages since DEC-56 added the support bot.
 5. The Wave 2 plan is written when the collector's owner has answered and the dump has arrived.

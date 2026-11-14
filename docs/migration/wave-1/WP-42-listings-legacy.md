@@ -22,7 +22,7 @@ In: `LegacyListingSource` (feed, count, flow, map, details, preview, previews); 
 contract; feed top-up and cursors; `listing_refs` and `listing_views`; view recording; photo address rewriting;
 golden fixtures and contract tests.
 
-Out: the phone, the call link and translation (WP-43 — until then the card's phone and link fields are `null`); the
+Out: the contact method and translation (WP-43 — until then `contact.has_phone` is `false`); the
 tables behind favourites, hidden listings, blocked authors and votes (WP-44 binds the real overlay data); radar
 polling (WP-46); switching flags on production (WP-48).
 
@@ -37,6 +37,8 @@ polling (WP-46); switching flags on production (WP-48).
 - Raw values next to display strings; where legacy gives only a string, HOMI parses it once on the server and the
   gap is listed per field (Q-API-062).
 - Photos are proxied and cached by nginx on a HOMI host; the client keeps deriving the small variant (`25` §4.5).
+- No raw phone number leaves the driver with a card (DEC-52, WP-12): the legacy card's `phone` and `phone_display`
+  are not copied into `ListingDetails`, and numbers inside texts are masked.
 
 ## Design
 
@@ -78,7 +80,12 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   `has_video` = truthiness of `video`; `metro.km` and `center_km` numeric or `null`; `source_ref` through
   `SourceRefParser` from `original_url`, else the first `sources[].url`, with the pattern
   `https://t.me/<channel>/<post id>` (optional `s/`); `comparison` only when `median` is truthy and `median_value`
-  is numeric. Strings are passed as text; nothing is treated as markup (SEC-REQ-018).
+  is numeric. Strings are passed as text; nothing is treated as markup (SEC-REQ-018). Both translators build
+  their object through its `fromArray()`, so `PhoneMasker` of WP-12 masks `title`, `summary`, `original.text`,
+  `offers[].text` and `price_history[].text` — the legacy `original_text` and `summary` carry the numbers of the
+  post. The legacy keys `phone`, `phone_display` and the call link are not mapped; `contact` gets `contact_url`
+  and `contact_paid`, and `has_phone: false` until WP-43 sets it. The card cache stores the data object, so it
+  holds no raw number.
 - `MapPointsTranslator`: `id → number`; points without numeric `lat` and `lon` are dropped; `<` and `&` are removed
   from `label` (fix of LB-API-008 on HOMI's side); `total` defaults to the number of points.
 - `FlowTranslator`: `days` below 1 becomes 1; `options` default `[]`; each option's `filters` through
@@ -255,7 +262,8 @@ count and flow ignore the user's hidden items.
   polygon string; `sort=new` omitted; `fromLegacy` with `zone`, with a missing key, with an invalid type.
 - Translators on every golden fixture: the result equals the WP-12 shape (`JsonShape` against the stub fixture);
   `listing.minimal.json` yields nulls, not errors; a fixture copy without a required key raises a contract error
-  naming the key.
+  naming the key. `listing.rent_apartment.json` has a synthetic number in `phone`, `original_text` and `summary`:
+  the serialised `ListingDetails` holds it nowhere, and both texts hold its masked form.
 - Source: card cached for a minute per locale; feed never cached; count cached 30 s; `previews` of 7 numbers sends
   at most 5 in parallel and omits a `404`; a system context marks calls as background.
 - Overlay (with a fake `OverlayData`): flags set; hidden and blocked removed from feed and map; card of a hidden
@@ -281,6 +289,8 @@ count and flow ignore the user's hidden items.
 - [ ] A full card read records one view per user and listing; previews do not.
 - [ ] Photo addresses are rewritten to the configured media base and keep the `…/<digits>/<digits>.jpg?…` form.
 - [ ] `listing_refs` stores number, channel, post and an opaque author key; no phone is stored or logged.
+- [ ] No card built by the legacy driver, cached or answered, holds a raw phone number: texts are masked and the
+      contact object has no number (WP-12).
 - [ ] The nginx request and the two env keys are in the PR description; migrations are named.
 - [ ] `make ci-backend` is green; production flags are unchanged.
 - [ ] If the key and the media location exist on staging: with the five features set to `legacy` there, the feed,

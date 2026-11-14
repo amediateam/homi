@@ -13,12 +13,12 @@
 
 The Heart tab shows the user's favourites at `/saved` and the listings they opened at `/saved/history`, rendered on
 the server when a session cookie exists and by the client otherwise, with the feed's loading, error and empty states,
-the «Очистить» tool for history, and lists that can never loop on a cursor.
+the «Очистить» tool for history, and lists that load 20 at a time on scroll and can never loop on a cursor.
 
 ## Scope
 
-In: the two route pages with their server part; `FavoritesScreen` and `HistoryScreen`; the whole-list loading of
-both lists with the flagged paging branch; filtering by the session maps; the history refetch after a listing was
+In: the two route pages with their server part; `FavoritesScreen` and `HistoryScreen`; the paged loading of both
+lists with the feed's cursor; filtering by the session maps; the history refetch after a listing was
 opened; «Очистить» with its confirm and Server Action; pull-to-refresh wiring; tests.
 
 Out: `ListingCard`, `FavButton`, `ListingFeed`, `useCursorFeed`, the skeleton, error and empty states (WP-24); the
@@ -31,11 +31,10 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 - Server rendering with a client fallback (DEC-44, 25 §3.1, §3.4): one screen implementation; the client part takes
   `initial` when the server had a session and fetches through `/bff` when it did not (first request of a launch,
   header mode).
-- Contract (DEC-41, 25 §4.1, §4.2): `GET /favorites`, `GET /history`, `DELETE /history`. Both lists are **whole
-  lists**: one request, `meta.next_cursor` is `null` — the legacy behaviour. 25 §4.1 gives cursors to feed-like
-  lists, but paging these two is the deviation DEV-003, still `PROPOSED`, so it sits behind the flag
-  `dev003PaginatedLists` (off) like every other `DEV` row (DEC-36). The contract of WP-13 says the same: both
-  methods accept `cursor` and `limit`, which take effect only when that flag is on.
+- Contract (DEC-41, WP-13): `GET /favorites`, `GET /history`, `DELETE /history`. Both lists are **paged by 20
+  with the cursor of the feed** (DEC-53): the first answer holds up to 20 items and `meta.next_cursor`; `null` ends
+  the list. This is the paging part of DEV-003, on by decision — there is no flag and no whole-list branch. Legacy
+  returns each list whole in one request.
 - Defects (DEC-36): LB-APP-022 is fixed here. The silent failure of «Очистить» (LB-APP-027) and the 403 text
   (LB-APP-045) follow the flags `dev016ErrorToastOnFailure` and `dev001AnyForbiddenShowsAccess`, both off.
 - Personal data stays per user: nothing here is cached on the server (25 §3.1); the server part sits inside
@@ -66,14 +65,15 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 - `features/saved/FavoritesScreen.tsx` and `HistoryScreen.tsx` (Client Components) mount WP-24's
   `ListingFeed` with `source="favorites"` or `source="history"`. Props are WP-24's; if one of these is missing, add it
   there in this PR: an item filter, a switch for the «viewed» eye, a slot above the first card, a version key.
-- Loading: `useCursorFeed` with the path `favorites` or `history` and the option `singlePage: true` (add the
-  option in WP-24's hook in this PR if it is missing): the list is the first answer — from `initial`, or one
-  `bffFetch` — and the sentinel never asks for more. A non-null `next_cursor` is ignored and reported once
-  (`reportError(new Error('unexpected_cursor'), { kind: 'error' })` — the facade has no other non-fatal kind);
-  this is the fix of LB-APP-022, whose legacy lists re-requested the same page
-  forever when a cursor came back. With `dev003PaginatedLists` on, `singlePage` is `false` and the cursor is
-  followed like the feed's. The guard of the hook stays for both modes and is harmless here: a cursor that is
-  `null`, missing or equal to the one just used ends the list; items are de-duplicated by listing number.
+- Loading: `useCursorFeed` of WP-24 with the path `favorites` or `history`, used exactly as the feed uses it: the
+  first page comes from `initial` or from one `bffFetch`, and the sentinel asks for the next page with the last
+  `meta.next_cursor` until it is `null`. No `limit` is sent: the server's default is 20. The guard of the hook is
+  the fix of LB-APP-022, whose legacy lists re-requested the same page forever when a cursor came back: a cursor
+  that is `null`, missing or equal to the one just used ends the list, and items are de-duplicated by listing
+  number. A failed next page keeps the cards and shows the inline retry, as on the feed.
+- The session maps apply to every loaded page, so the optimistic updates work wherever the card is: un-favouriting
+  hides the card at once and a failure brings it back. Hiding cards never asks for a page by itself; when the
+  shortened list brings the sentinel into view, the next page loads as on any scroll.
 - Favourites visibility: an item shows unless `favs[number] === false` or `hidden[number]` in the session maps
   (`useSessionMap`). Heart state is `favs[number] ?? item.favorite`; the eye is `seen[number] ?? item.viewed`.
 - History visibility: every returned item shows; the session `hidden` map is not applied (legacy behaviour recorded in
@@ -105,15 +105,14 @@ New, under `frontend/app/`:
 
 Changed: `lib/api/bffAllowList.ts` (only if `GET favorites` and
 `GET history` are not yet allowed); `features/feed/ListingFeed.tsx` or `useCursorFeed.ts` (only for a missing prop
-or the cursor guard, with their tests).
+or a gap in the cursor guard, with their tests).
 
 ## Steps
 
 1. Read the docs listed under "Decisions". Check what `ListingFeed` and `useCursorFeed` already accept; list the gaps
    in the PR description.
-2. `singlePage` option and the cursor guard in `useCursorFeed` (whatever WP-24 did not ship): one request and a
-   single report for an unexpected cursor; with the option off, a `null`, missing or repeated cursor ends the list;
-   unit tests for both.
+2. The cursor guard in `useCursorFeed`, if WP-24 did not ship all of it: a `null`, missing or repeated cursor ends
+   the list; two pages are merged without duplicates; unit tests.
 3. `clearHistory` Server Action with its test.
 4. `features/saved/server.tsx` and the two route pages; both render the skeleton as Suspense fallback.
 5. `FavoritesScreen`: session-map filter, heart and eye state, version key, pull-to-refresh registration.
@@ -127,7 +126,8 @@ or the cursor guard, with their tests).
 
 - Opens from the Heart tab; «Избранное» (`app.saved.favorites`) is the default title tab.
 - Loading: 3 card skeletons with shimmer (SCR-008). The first 2 cards load their photo eagerly.
-- Success: cards in the order the server returns them. Tap a card → listing with the card as preview. The heart
+- Success: cards in the order the server returns them, 20 at a time; scrolling towards the end loads the next
+  page, as on the feed. Tap a card → listing with the card as preview. The heart
   toggles in place (optimistic, server answer wins, failure rolls back — BR-APP-039, owned by WP-24); a card
   un-favourited in this launch disappears at once and returns if the request fails.
 - Listings hidden or whose author was blocked in this launch are not shown.
@@ -162,6 +162,8 @@ or the cursor guard, with their tests).
 ### Both lists
 
 - Pull-to-refresh is active on both (BR-APP-058) and re-creates the list; the collapsing header does not apply.
+- Paging, different from legacy by decision (DEC-53): legacy loads each list whole in one request (BR-API-023);
+  HOMI loads 20 and continues on scroll. A list of 20 or fewer looks and behaves as in legacy.
 - One column up to 608 px; cards as in the feed.
 - Screen names expected from `screenNameOf`: `saved/favorites`, `saved/history`.
 - Stub answers carry `meta.source = stub`; the demo marker shows through WP-22's reporting, no code here.
@@ -170,18 +172,19 @@ or the cursor guard, with their tests).
 
 Unit (Vitest):
 
-- `tests/feed/useCursorFeed.test.ts` (extend): `singlePage` — a first page with cursor `null` sends one request; a
-  first page with a non-null cursor still sends one request and reports once; with `singlePage` off (the
-  `dev003PaginatedLists` branch) a missing cursor key ends the list, a cursor equal to the previous one ends the
-  list after one extra request, and two pages are merged without duplicates.
+- `tests/feed/useCursorFeed.test.ts` (extend, with the paths `favorites` and `history`): a first page with cursor
+  `null` sends one request; a first page with a cursor is followed by one request per `loadMore` until `null`; a
+  missing cursor key ends the list; a cursor equal to the previous one ends the list after one extra request; two
+  pages are merged without duplicates; a failed second page keeps the first and `retry` asks for it again.
 - `tests/actions/history.test.ts`: `clearHistory` sends `DELETE /history` with the cookie token and with the
   argument token; non-2xx maps to a failed `ActionResult`.
 
 Component (Vitest + Testing Library):
 
 - `FavoritesScreen.test.tsx`: items filtered by `favs` and `hidden`; heart and eye state from the maps; `initial`
-  used without a request; `initial = null` fetches through `bffFetch`; empty, offline, server and inline-retry
-  states; 403 with `dev001AnyForbiddenShowsAccess` off and on.
+  used without a request; `initial = null` fetches through `bffFetch`; a second page is appended when the sentinel
+  is reached, and a card of the second page un-favourited in this launch disappears and returns on failure; empty,
+  offline, server and inline-retry states; 403 with `dev001AnyForbiddenShowsAccess` off and on.
 - `HistoryScreen.test.tsx`: no eye; hidden items still shown; growth of the `seen` map triggers exactly one refetch;
   clear — cancel sends nothing, OK empties the list and disables the button meanwhile, failure keeps the list with
   `dev016ErrorToastOnFailure` off (no toast) and on (toast); no tool row when empty.
@@ -190,10 +193,12 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 
 - `e2e/saved.spec.ts`: Heart tab → favourites from the stub; un-favourite a card → it disappears; title tab
   «Смотрели» → history, no Back button; open a listing from the feed → back → «Смотрели» sends one new request;
-  «Очистить» → fake confirm OK → empty state; fake confirm Cancel → no Server Action request; an intercepted
-  `/bff/favorites` answer carrying a cursor → still exactly one request, no loop (in cookie mode the first load is
-  rendered on the server, so the case runs on the request that follows a pull-to-refresh); pull-to-refresh
-  re-requests the list; the empty states with the stub scenario `empty` of WP-13 (cookie of WP-22).
+  «Очистить» → fake confirm OK → empty state; fake confirm Cancel → no Server Action request; paging on the stub
+  fixtures of WP-13 (25 entries each): 20 cards first, scrolling to the end sends one request with the cursor and
+  shows 25, further scrolling sends nothing; an intercepted `/bff/favorites` answer that repeats its cursor → one
+  extra request, then the list ends, no loop (in cookie mode the first load is rendered on the server, so the case
+  runs on the requests that follow a pull-to-refresh); pull-to-refresh re-requests the list from the first page;
+  the empty states with the stub scenario `empty` of WP-13 (cookie of WP-22).
 
 ## Acceptance checklist
 
@@ -214,8 +219,9 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
       получилось сохранить».
 - [ ] A 403 shows «Нет доступа — повторить» (flag off). Test: `dev001AnyForbiddenShowsAccess` on opens the access
       screen.
-- [ ] Each list is one request; a cursor in the answer is ignored and never causes a second request or a loop
-      (flag off). Test: `dev003PaginatedLists` on follows the cursor, and a repeated or missing cursor ends the list.
+- [ ] Each list shows its first 20 entries and loads the next 20 on scroll until the server answers
+      `next_cursor: null`; a repeated or missing cursor ends the list and never causes a loop.
+- [ ] Un-favouriting a card of a later page removes it at once; a failed request brings it back.
 - [ ] The history rule for listings hidden in this launch is checked against the pinned legacy release (WP-02) and
       the result is noted in the PR.
 - [ ] Pull-to-refresh reloads either list from the first page.

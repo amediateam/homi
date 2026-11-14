@@ -11,8 +11,9 @@
 
 ## Goal
 
-The three remaining listing actions work for real. The card carries the author's contact under a per-user disclosure
-limit and `POST …/contact` refreshes the call link — in either of the two forms the operator may offer. `POST
+The three remaining listing actions work for real. The author's number is given only by `POST …/contact`, after a
+tap, under a per-user disclosure limit — in either of the two forms the operator may offer; the card only says
+whether a number exists. `POST
 …/translation` returns a machine translation fetched through legacy and cached. `POST …/share` prepares an inline
 message of HOMI's bot. Shapes are those of WP-12.
 
@@ -23,15 +24,17 @@ In: `ContactService` with both variants, the disclosure quota, HOMI's call links
 client and `ShareService`; the three controllers.
 
 Out: the Mini App side of calling and sharing (stage B, done); the bot's own cards and the full Bot API client
-(WP-50, which extends the client created here instead of adding a second one); HOMI's own translation through an LLM
-(Wave 2).
+(WP-50, which extends the client created here instead of adding a second one); the bot's «Показать номер» button,
+which calls the service built here (WP-53); the action-log row of a disclosure (WP-47 listens to the event raised
+here); HOMI's own translation through an LLM (Wave 2).
 
 ## Decisions that bind this package
 
 - The contact method's form depends on the operator's answer (Q-API-062, `25` §4.2). Both variants are built behind
   one response shape; a configuration value picks one, with automatic detection as the default.
-- The card keeps carrying the phone, as legacy does (DEV-007 is not applied, DEC-36); harvesting is limited by a
-  per-user quota instead (SEC-REQ-028).
+- The author's number is given only after a tap (DEC-52): the card carries no number and its texts are masked
+  (WP-12). The contact method is the one disclosure; each is counted by a per-user quota (SEC-REQ-028) and reported
+  for the action log. The thresholds of the quota stay a product decision (DEC-19).
 - Translation goes through legacy in Wave 1 (`25` §4.2); nothing is sent to an LLM by HOMI.
 - Share is native: a prepared message of HOMI's bot with HOMI's link (DEC-40, `25` §4.2).
 - Phones, tokens and translated texts never reach logs or analytics (SEC-REQ-047).
@@ -46,26 +49,36 @@ neither → no contact.
 
 | | Variant A — the service key gets the raw phone | Variant B — the service key gets only a call link |
 | - | ---------------------------------------------- | -------------------------------------------------- |
-| `contact.phone` on the card | the number in E.164 | `null` |
-| `contact.phone_display` | legacy `phone_display`, else HOMI's formatting | legacy `phone_display` if present, else `null` |
-| `contact.call_url` | HOMI's call page: `<call page base>/call/<token>` | the legacy link, made absolute against `legacy.base_url` |
-| `call_url_expires_at` | issue time + `contacts.call_link_ttl` (600 s) | receipt time + `contact.link_ttl` |
-| `POST …/contact` | issues a new HOMI token; no legacy call when the card is cached | `GET /api/listings/{id}/call` through `LegacyClient`, answer `{url}` |
-| Client effect | `tel:` first on Android, call page elsewhere (BR-APP-033); the number in the original text is a call button (BR-APP-035) | every call opens the link; no `tel:` attempt, no in-text button — a difference to record in the functional checklist |
+| `contact.has_phone` on the card | `true` | `true` |
+| `phone` in the answer of `POST …/contact` | the number in E.164 | `null` |
+| `phone_display` there | legacy `phone_display`, else HOMI's formatting | legacy `phone_display` if present, else `null` |
+| `call_url` there | HOMI's call page: `<call page base>/call/<token>` | the legacy link, made absolute against `legacy.base_url` |
+| `expires_at` there | issue time + `contacts.call_link_ttl` (600 s) | receipt time + `contact.link_ttl` |
+| What `POST …/contact` does | issues a new HOMI token; no legacy call while the phone entry below is cached | `GET /api/listings/{id}/call` through `LegacyClient`, answer `{url}` |
+| Client effect | `tel:` first on Android, call page elsewhere (BR-APP-033); «Показать номер» and a masked number in the text show the digits after the tap (WP-26) | every call opens the link; no `tel:` attempt, and «Показать номер» opens the link because there are no digits to show — a difference to record in the functional checklist |
 | Brand | HOMI page | the operator's page is shown to HOMI's user; say so in the PR and in `docs/api/README.md` |
 
-`App\Services\Listings\ContactService`:
+The card itself carries no number in either variant (WP-12). The details translator of WP-42 sets
+`contact.has_phone` to `true` when the legacy card has a phone or a call link; `contact_url` and `contact_paid` are
+passed through untouched. Reading a card asks no quota and is not a disclosure.
 
-- `forCard(User $user, ListingDetails $card): ListingContact` — called by the card controller after the overlay.
-- `refresh(User $user, int $number, SourceContext $context): ListingContact` — behind `POST …/contact`.
-- Both ask `ContactDisclosure` first. Suppressed, or no phone and no link: the four phone and link fields are `null`
-  on the card (legacy rule "phone ⇒ call link" stays true), and the method answers `404 contact_unavailable`.
-  `contact_url` and `contact_paid` are passed through untouched.
-- `LegacyListingSource::contact(int, SourceContext)` implements the variant B refresh and, for variant A, returns
-  the phone of the (cached) card.
+`App\Services\Listings\ContactService` has one entry:
 
-The shared card cache of WP-42 must not hold a readable phone: the translator moves the phone out of the cached
-object into a second cache entry of the same lifetime, encrypted with `Crypt`.
+- `disclose(User $user, int $number, SourceContext $context, string $channel): ListingContact` — behind
+  `POST …/contact` (`$channel` = `app`) and behind the bot's «Показать номер» (`bot`, WP-53). In this order:
+  1. the source's contact for the listing (`ListingSource::contact()`); no phone and no link → `404
+     contact_unavailable`;
+  2. `ContactDisclosure::decide()`; refused → `404 contact_unavailable`;
+  3. the answer: variant A issues a call link of HOMI, variant B takes the link of step 1;
+  4. `ContactDisclosure::record()`;
+  5. `App\Events\Listings\ContactDisclosed` (user id, listing number, channel) is dispatched. WP-47 writes the
+     action-log row from it; until WP-47 is merged the event has no listener.
+- `LegacyListingSource::contact(int, SourceContext)` implements the variant B request and, for variant A, returns
+  the phone of the card.
+
+The card cache of WP-42 holds no number (WP-12). For variant A the details translator keeps the phone of the legacy
+card in a second cache entry of the same lifetime, encrypted with `Crypt`; `contact()` reads that entry and reads
+the card again when it has expired.
 
 ### Disclosure quota (`App\Services\Listings\ContactDisclosure`)
 
@@ -77,13 +90,17 @@ object into a second cache entry of the same lifetime, encrypted with `Crypt`.
   today is always allowed again.
 - `config/contacts.php`: `soft_limit` (`CONTACT_SOFT_LIMIT`), `hard_limit` (`CONTACT_HARD_LIMIT`); `null` disables.
   Values are a product decision (DEC-19, Q-SEC-003); production starts with them blank and the PR says so.
-- Above the soft limit: suppression as above. At the hard limit, once per day: set `access_grants.flagged_at` and
+- Above the soft limit: `disclose()` answers `404 contact_unavailable` for a listing not yet disclosed that day.
+  At the hard limit, once per day: set `access_grants.flagged_at` and
   `flag_reason = 'contact_quota'`, log a warning with the internal user id only, dispatch
   `App\Events\Listings\ContactQuotaExceeded`. In open mode without seats a user has no `access_grants` row (WP-40),
   so this is an `updateOrCreate`: a missing row is created with `state = admitted` and `admitted_via = open`.
   Blocking stays an operator action (`access:block`).
-- A card counts when it emits a phone or a link; a refresh counts the same listing (no double count).
-- Cache store unavailable: fail closed (suppress) and log once; never a `500` on the card.
+- Only `disclose()` counts; reading a card counts nothing, because it carries no number. The day's set holds
+  every listing a contact was asked for, the refused ones included: the first `soft_limit` listings are answered,
+  later ones are refused, and asking on is what reaches the hard limit. A second disclosure of a listing already
+  answered that day — a stale link fetched again, the bot after the Mini App — is always allowed and counts once.
+- Cache store unavailable: fail closed (`contact_unavailable`) and log once; never a `500`.
 
 ### HOMI's call links and call page (variant A)
 
@@ -106,9 +123,11 @@ cookie, no Inertia. `App\Http\Controllers\Pages\CallPageController` (invokable):
 | bad signature, unknown listing, no phone, erased user | `404` view `call/missing` |
 | listing source unavailable | `503` view `call/unavailable` |
 
-The page reads the phone through `ListingSource::details()` in a system context (the card cache makes this cheap).
-Headers on every answer: `X-Robots-Tag: noindex`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
-`Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`. No
+The page reads the title through `ListingSource::preview()` and the phone through `ListingSource::contact()`, both
+in a system context (the caches make this cheap). Opening the page is not a second disclosure: its token was
+issued by one. Headers on every answer: `X-Robots-Tag: noindex`, `Cache-Control: no-store`,
+`Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`,
+`X-Content-Type-Options: nosniff`. No
 script, no external asset, inline CSS only. Texts in `backend/lang/{ru,uz,en}/call.php`. The page base is
 `config('contacts.call_page_base')`, default `config('app.url')`.
 
@@ -127,8 +146,9 @@ script, no external asset, inline CSS only. Texts in `backend/lang/{ru,uz,en}/ca
 5. Legacy `404` → `404 not_found`; any other failure, an empty text, or `unsupported` → `503
    translation_unavailable` (the client shows its inline "failed" state with retry).
 
-The text lives only in the cache; it is never written to the database or a log. Two concurrent first requests may
-both reach legacy; the second result overwrites the first.
+The text lives only in the cache; it is never written to the database or a log. `ListingTranslation::fromArray()`
+masks phone numbers in it like in every listing text (WP-12), so the cache holds the masked text. Two concurrent
+first requests may both reach legacy; the second result overwrites the first.
 
 ### Share (`App\Services\Telegram\ShareService`)
 
@@ -149,7 +169,8 @@ description with the token replaced by `bot***`. An empty bot token fails closed
 ### Controllers and sources
 
 The three stub controllers of WP-12 get real bodies; the stub answer of share moves into `NativeStubs` (the rule of
-WP-40). `ListingController@show` calls `ContactService::forCard()`.
+WP-40). `ListingController@show` is not changed: the card answer has `contact.has_phone` from the translator and no
+number. `ListingContactController` calls `ContactService::disclose()` with the channel `app`.
 `meta.source` is the driver of `source.listings.contact` or `source.listings.translation`, and `native` for share.
 With the stub driver the same services run on stub data, so the quota and the limits behave alike in every
 environment.
@@ -158,9 +179,9 @@ environment.
 
 - `backend/app/Services/Listings/{ContactService,ContactDisclosure,CallLinkService,CallLink,CallLinkClaims,TranslationService}.php`
 - `backend/app/Services/Telegram/{TelegramClient,ShareService,PreparedShare}.php`, `backend/app/Exceptions/TelegramException.php`
-- `backend/app/Events/Listings/ContactQuotaExceeded.php`
+- `backend/app/Events/Listings/{ContactQuotaExceeded,ContactDisclosed}.php`
 - `backend/app/Services/Sources/Legacy/LegacyListingSource.php` (`contact`, `translation`); the details translator
-  (encrypted phone entry)
+  (`has_phone`, the encrypted phone entry)
 - `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingContactController,ListingTranslationController,ListingShareController}.php`
 - `backend/app/Http/Controllers/Pages/CallPageController.php`; `backend/resources/views/call/{show,expired,missing,unavailable}.blade.php`;
   `backend/lang/{ru,uz,en}/call.php` (the folder `backend/lang/` does not exist today; it is Laravel's default
@@ -179,9 +200,9 @@ environment.
    set the defaults of `contact.mode` and `translation.via` accordingly and say so in the PR.
 2. `ContactDisclosure` with tests (array cache, frozen clock).
 3. `CallLinkService`, the call page route, views and headers, with tests.
-4. `ContactService` for variant A, then variant B with the fixture `listing.link_only.json`; the encrypted phone
-   entry; `LegacyListingSource::contact()`.
-5. Card controller and `POST …/contact`.
+4. `ContactService::disclose()` for variant A, then variant B with the fixture `listing.link_only.json`; the
+   encrypted phone entry; `LegacyListingSource::contact()`; the event `ContactDisclosed`.
+5. `has_phone` in the details translator; `POST …/contact`.
 6. `TranslationService`, `LegacyListingSource::translation()`, the controller.
 7. `TelegramClient`, `ShareService`, the controller; every test fakes HTTP and prevents stray requests.
 8. Pint, PHPStan, `make ci-backend`; the security-reviewer agent reads the diff; the env PR; the nginx request in
@@ -189,8 +210,11 @@ environment.
 
 ## Behaviour to reproduce
 
-- The primary action of the card: a phone → «Позвонить»; a contact link → «Написать» (or «Номер платный» when
+- The primary action of the card: `has_phone` → «Позвонить»; a contact link → «Написать» (or «Номер платный» when
   `contact_paid`); otherwise «Открыть пост» (BR-APP-032). The API only has to keep the fields truthful.
+- Different from legacy by decision (DEC-52): legacy sends the number and a call link with every card and limits
+  nothing. HOMI gives the number only when the user taps «Позвонить», «Показать номер» or a masked number, counts
+  every listing whose number a user received that day, and answers `contact_unavailable` beyond the soft limit.
 - A call link works for at least ten minutes and can be refreshed two minutes early (API-009).
 - A token for listing A never shows listing B; a withdrawn listing answers `404` at once even with a valid token.
 - Translation is offered only outside `ru`; the first tap fetches, later taps toggle locally (BR-APP-034).
@@ -199,18 +223,23 @@ environment.
 
 ## Tests
 
-- Quota: soft 3 and hard 5 → listings 1–3 with phone, the 4th with the four fields `null`, the 6th flags the user
-  once; reopening listing 1 still shows its phone; reset at 00:00 Asia/Tashkent (19:00 UTC), not at UTC midnight;
-  limits `null` → no suppression; two users have separate counters; the flag log line has no phone and no Telegram
-  id; cache failure → suppressed, no `500`.
+- Quota: soft 3 and hard 5 → `POST …/contact` for listings 1–3 answers the number, for the 4th `404
+  contact_unavailable`, the 6th flags the user once; a second request for listing 1 still answers its number and
+  counts nothing; reading ten cards counts nothing; reset at 00:00 Asia/Tashkent (19:00 UTC), not at UTC midnight;
+  limits `null` → no refusal; two users have separate counters; a disclosure with the channel `bot` and one with
+  `app` share one counter; the flag log line has no phone and no Telegram id; cache failure →
+  `contact_unavailable`, no `500`.
 - Call links: valid at +600 s and +659 s, expired at +661 s; altered payload or signature → `404`; previous key
   accepted; token of listing A with the number changed → `404`; no phone in the address.
 - Call page: `200` with one `tel:` link and no `<script>` or external address; `410` in the token's locale; headers
   exactly as listed; no `Set-Cookie`; the 31st request in a minute → `429`; source unavailable → `503`.
-- Contact, variant A: card has phone, display, HOMI link and expiry; `POST …/contact` returns a new token without a
-  legacy request when the card is cached. Variant B: card has `phone: null` and an absolute legacy link; the method
-  calls legacy once and returns the new link; legacy failure → `503 source_unavailable`. No phone and no link →
-  `404 contact_unavailable`. `auto` picks per fixture.
+- Contact, variant A: the card has `has_phone: true` and no number in any field; `POST …/contact` returns phone,
+  display, HOMI link and expiry, and a second call a new token without a legacy request while the phone entry is
+  cached. Variant B: the card has `has_phone: true`; the method calls legacy once and returns `phone: null` with
+  an absolute legacy link; legacy failure → `503 source_unavailable`. No phone and no link → `has_phone: false`
+  and `404 contact_unavailable`. `auto` picks per fixture. Each `200` dispatches one `ContactDisclosed` with the
+  user, the number and the channel; a refused or failed request dispatches none. The cached card and the cached
+  translation hold no raw number; the phone entry is unreadable without the application key.
 - Translation: `uz` and `en` reach legacy with the configured language selection; second call → no request and no
   limiter use; `ru` → `422`; legacy `404` → `404`; timeout → `503 translation_unavailable`; the 31st miss in an hour
   → `429`, hits still work; `unsupported` → `503`; the text is absent from logs.
@@ -222,8 +251,10 @@ environment.
 
 ## Acceptance checklist
 
-- [ ] The card and `POST …/contact` answer in the WP-12 shape in both variants; `auto` chooses per card.
-- [ ] The disclosure quota suppresses and flags as specified and is off when the limits are blank.
+- [ ] The card and `POST …/contact` answer in the WP-12 shape in both variants; `auto` chooses per card; no card
+      answer holds a phone number.
+- [ ] `POST …/contact` is the only place a number is given; each answer is counted and raises `ContactDisclosed`.
+- [ ] The disclosure quota refuses and flags as specified and is off when the limits are blank.
 - [ ] HOMI's call page shows the number only through a valid, unexpired token and sends the listed headers.
 - [ ] Translation is cached per listing and locale, limited per user on misses, and never stored or logged.
 - [ ] Share returns a prepared message id of HOMI's bot and reuses it within its lifetime.
@@ -231,7 +262,8 @@ environment.
 - [ ] The env keys and the nginx request are in the PR; the security review has no open finding.
 - [ ] `make ci-backend` is green.
 - [ ] Inside Telegram on staging, then production, once the features are on a real source: «Позвонить» works on iOS
-      and Android; a `uz` profile gets a translation; «Поделиться» opens Telegram's share sheet and the shared
+      and Android; «Показать номер» shows the digits only after the tap and the numbers in the original text are
+      masked before it; a `uz` profile gets a translation; «Поделиться» opens Telegram's share sheet and the shared
       message opens the listing in HOMI's Mini App.
 
 ## Handoff

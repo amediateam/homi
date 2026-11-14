@@ -7,7 +7,7 @@
 | Depends on | WP-10 |
 | Size | about 2 000 changed lines without generated files and fixtures, M |
 | Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
-| Needs from the production track | One new env key name, blank by default, announced in the PR: `TELEGRAM_SUPPORT_USERNAME` (public name of the support account; staging and production values set by that track). After the deploy, check on staging that `GET /api/v1/reference` answers without a token |
+| Needs from the production track | Two new env key names, announced in the PR. `TELEGRAM_SUPPORT_USERNAME`, blank by default (public name of the support account; staging and production values set by that track). `RADAR_CREATION_ENABLED`: leave it **unset** on staging and production — radars stay switched off there until the bot's sending package sets it (WP-57, DEC-51). After the deploy, check on staging that `GET /api/v1/reference` answers without a token and reports `radars_enabled: false` |
 
 ## Goal
 
@@ -30,6 +30,9 @@ Out: real sign-in, users, settings storage, the gate and rate limits (WP-40); th
 - The contract is fixed as stub routes (DEC-41); legacy shapes never reach the frontend (`24` §3).
 - Bot name, support name and limits are HOMI's (DEC-40): they come from HOMI's configuration even when the
   directories come from legacy.
+- Radars cannot be created or changed until the bot can deliver them (DEC-51). The switch is HOMI's configuration,
+  `config('radar.creation_enabled')`; `GET /reference` reports it as `radars_enabled`, so every client knows before
+  it offers a radar.
 - Access is open (DEC-43), but the refusal shape exists, because the no-access screen exists.
 - Stub answers are deterministic and sanitised (`25` §4.4): no real names, phones or channel names in fixtures.
 - JSON keys are snake_case; the locale comes from `Accept-Language`; `uz` is the only Uzbek code on this surface
@@ -125,6 +128,7 @@ sent keys overlaid; nothing is stored.
 {"data": {
   "bot": {"username": "homi_stub_bot", "support_username": "homi_stub_support"},
   "limits": {"radars": 10},
+  "radars_enabled": true,
   "rates": {"usd_uzs": 12800},
   "map": {"tiles_url": null},
   "features": ["pets"],
@@ -138,15 +142,22 @@ sent keys overlaid; nothing is stored.
   "price_presets": {"rent_long": [300, 400, 500, 700, 1000], "rent_daily": [20, 30, 50], "sale": [50000, 80000, 120000]}}}
 ```
 
-`bot.*` and `limits.*` come from HOMI's configuration (`telegram.bot.username`, which exists; the new
-`telegram.support.username`; and `radar.max` in the new `backend/config/radar.php`, created here with that one key —
-`(int) env('RADAR_MAX', 10)` — and extended by WP-45, which also announces the env key); everything else comes from
-`ReferenceSource::reference()`. `bot.username` and `support_username` may be
+`bot.*`, `limits.*` and `radars_enabled` come from HOMI's configuration (`telegram.bot.username`, which exists; the
+new `telegram.support.username`; and the new `backend/config/radar.php`, created here with two keys: `max` —
+`(int) env('RADAR_MAX', 10)`, whose env key WP-45 announces — and `creation_enabled` —
+`(bool) env('RADAR_CREATION_ENABLED', false)`; WP-45 extends the file). They are filled by the resource for every
+driver and are not part of a fixture or of a legacy answer; everything else comes from
+`ReferenceSource::reference()`. `radars_enabled` is a boolean and always present: `false` means that radars cannot
+be created or changed yet (DEC-51; the radar methods of WP-13 follow the same key). `backend/.env.example` sets
+`RADAR_CREATION_ENABLED=true`, and `backend/phpunit.xml` sets it to `true` as well, so the local stack, the test
+suites and the CI jobs (which build their `.env` from the example) run with radars on; staging and production leave
+the key unset until WP-57. `bot.username` and `support_username` may be
 `null`; `map.tiles_url` is `null` until HOMI hosts tiles (`25` §3.8); price presets are whole USD. Names are
 localised by `Accept-Language`. `is_region` replaces the legacy rule "zoom below 11". Changed against legacy: one
 public method instead of an authenticated one plus `/api/bot`; `metro` and `median` became `has_metro` and
 `has_median`; `center` became an object; `max_subscriptions` became `limits.radars`; `new_features` became
-`features`; the top-level `districts` and `zones` fallback is gone (every city carries its own). Scenarios:
+`features`; the top-level `districts` and `zones` fallback is gone (every city carries its own); `radars_enabled`
+is new (legacy has no such switch). Scenarios:
 `single_city` (only `tashkent`), `no_bot` (`bot.username: null`).
 
 ### `GET /cities` — public; legacy: API-002
@@ -220,13 +231,15 @@ renderer of WP-10 answers as `413 payload_too_large`.
 - `backend/app/Services/Sources/Data/{ReferenceData,CityData,NamedCode,CityStats}.php`;
   `backend/app/Services/Sources/Stub/{StubReferenceSource,StubResponder,StubUser}.php`; `backend/app/Exceptions/AccessDenied.php`
 - `backend/config/sources.php`, `backend/config/telegram.php` (`support.username`), `backend/config/settings.php` (the
-  option lists), `backend/config/radar.php` (new: `max`)
+  option lists), `backend/config/radar.php` (new: `max`, `creation_enabled`), `backend/phpunit.xml`
+  (`RADAR_CREATION_ENABLED=true`)
 - `backend/resources/fixtures/v1/me/{default,first_launch,no_city,uz}.json`, `settings/default.json`,
   `reference/default.{ru,uz,en}.json`, `reference/single_city.ru.json`, `reference/no_bot.ru.json`,
   `cities/{default,no_daily}.json`
 - `backend/tests/Feature/Api/V1/{SignInContractTest,MeContractTest,SettingsContractTest,ReferenceContractTest,CitiesContractTest,EventsContractTest}.php`
 - `docs/api/openapi.json`, `frontend/packages/types/src/generated/api.ts` (regenerated); `docs/api/README.md`
-- `backend/.env.example` (`TELEGRAM_SUPPORT_USERNAME`) — separate shared-file PR
+- `backend/.env.example` (`TELEGRAM_SUPPORT_USERNAME`, blank; `RADAR_CREATION_ENABLED=true`) — separate shared-file
+  PR
 
 ## Steps
 
@@ -235,13 +248,16 @@ renderer of WP-10 answers as `413 payload_too_large`.
 3. Data objects and `ReferenceSource` methods; `StubReferenceSource`; the two features. Write the reference fixtures
    for three cities: `tashkent` (districts, zones, metro, median), `samarkand` (no metro, no zones, `has_median`
    false) and `tashkent_region` (`is_region: true`, zoom 9), with names in three locales.
-4. `GET /reference`, `GET /cities` with resources (`php artisan make:resource …`, `make:controller …`).
+4. `GET /reference`, `GET /cities` with resources (`php artisan make:resource …`, `make:controller …`);
+   `config/radar.php` with its two keys and the `phpunit.xml` entry.
 5. `StubUser` and `POST /auth/telegram` (`php artisan make:request Api/V1/Auth/TelegramSignInRequest`).
 6. `GET /me`, `GET /settings`, `PATCH /settings` on `StubResponder`.
 7. `POST /events` with the body cap.
 8. `composer openapi:export`, `pnpm types:generate`; read the generated types of all seven methods and fix the
    resources until every field of the examples above is typed (no `unknown`, no untyped object).
-9. Pint, PHPStan, both CI gates; the env key PR.
+9. Pint, PHPStan, both CI gates; the PR for the two env keys. Its description tells both developers to add
+   `RADAR_CREATION_ENABLED=true` to their existing local `backend/.env` (a file made before this package lacks the
+   line and would run with radars off), and tells the production track to leave the key unset.
 
 ## Behaviour to reproduce
 
@@ -250,6 +266,8 @@ renderer of WP-10 answers as `413 payload_too_large`.
 - The no-access screen needs the reason and must work without a session: `GET /reference` is public for that reason
   (legacy `/api/bot` was).
 - A stale `initData` is told apart from a bad one (`auth_expired` against `invalid_init_data`).
+- `radars_enabled` has no legacy counterpart: legacy lets a user create a radar at any time. HOMI reports `false`
+  until its bot can deliver (DEC-51), and the Mini App and the bot then say "soon" instead of offering a radar.
 - Arrays are never `null`; `counts` always has three keys; a city without listings has zeros (the client reads them
   without guards in legacy, fixed by typing here).
 
@@ -262,7 +280,8 @@ renderer of WP-10 answers as `413 payload_too_large`.
   `422` with the field name; `{}` → `200`.
 - Reference and cities: answer without `Authorization`; `Accept-Language: uz` gives Uzbek names and
   `Content-Language: uz`; `uz-Latn` is read as `uz`; an unsupported language falls back to `ru`; flag set to an
-  unbound driver → `503 source_unavailable`.
+  unbound driver → `503 source_unavailable`; `radars_enabled` is `true` with `radar.creation_enabled` on and
+  `false` with it off (set through `config()` in the test), with the same answer otherwise.
 - Events: every catalogue name → `204`; unknown name → `204`; 9 KB body → `413`; no token → `401`.
 - Contract: the exported OpenAPI has all seven paths; `pnpm types:check` is clean.
 
@@ -273,7 +292,9 @@ renderer of WP-10 answers as `413 payload_too_large`.
 - [ ] `GET /reference` and `GET /cities` work without a token and follow `Accept-Language`.
 - [ ] Fixtures hold three cities and no real personal data; `@homi/testing`'s `fixture()` reads them.
 - [ ] OpenAPI and generated types are committed and typed field by field; both CI gates are green.
-- [ ] `TELEGRAM_SUPPORT_USERNAME` is announced and added to `backend/.env.example` in its own PR.
+- [ ] `GET /reference` carries `radars_enabled` from `config('radar.creation_enabled')`, whatever the driver.
+- [ ] `TELEGRAM_SUPPORT_USERNAME` and `RADAR_CREATION_ENABLED` are announced and added to `backend/.env.example` in
+      their own PR; the PR says that staging and production leave `RADAR_CREATION_ENABLED` unset.
 - [ ] Deployed to staging and production; a sign-in on staging returns a token and `GET /me` answers with it.
 
 ## Handoff

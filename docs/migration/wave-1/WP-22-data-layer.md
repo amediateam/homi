@@ -40,10 +40,15 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   `meta.source`; `503 source_unavailable` shows the legacy "could not load" state.
 - `25` §3.7, `03` §3.5: numbers in Uzbek are formatted with `ru-RU`; prices are stored and sent in USD.
 - DEC-36. Fixed here: LB-APP-007, LB-APP-011, LB-APP-023. Written behind flags that are off: LB-APP-025
-  (`dev014TashkentDates`), LB-APP-026 (`dev015NeutralWholeCity`), LB-APP-029 (`dev017TenantPetsDailyRule`),
+  (`dev014TashkentDates`), LB-APP-029 (`dev017TenantPetsDailyRule`),
   LB-APP-030 (`dev018ResetKeepsDaily`), LB-APP-031 (`dev019OneDistanceFormatter`), LB-APP-033
   (`dev021OneFlowVocabulary`), LB-APP-043 (`dev025ValidateRanges`), LB-APP-045
   (`dev001AnyForbiddenShowsAccess`). Also wired: `dev052UnifiedBelowMedianRule`, `dev005RadarDropsPostedDays`.
+- DEC-54: the whole-city label is «{city} целиком», built from the city's name in the reference data. It is on by
+  decision and has no flag; it settles LB-APP-026.
+- DEC-51: `GET /reference` says whether radars are switched on (`radars_enabled`, WP-11); the reference hook
+  exposes it and a refused radar write has its own error.
+- DEC-53: favourites and history are read page by page, with the cursor of the feed.
 - SEC-REQ-047: no token, launch data or query string in a log line or an error object.
 
 ## Design
@@ -91,7 +96,8 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   `Origin` is present and is not the app's origin, or when `Sec-Fetch-Site` is present and is not `same-origin`),
   takes the token from the cookie or the bearer header, validates `:number` as
   a positive integer, caps the query string at 4 KB, forwards the API's status and body unchanged, answers
-  `Cache-Control: private, no-store`, never forwards `Set-Cookie`, never logs the query.
+  `Cache-Control: private, no-store`, never forwards `Set-Cookie`, never logs the query. The query string is
+  forwarded as it is, so `favorites` and `history` page with `cursor` and `limit` exactly like `listings` (DEC-53).
 
 ### Error mapping
 
@@ -107,6 +113,7 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
 | 8 | `409` | `conflict` + `code` | radar limit and `no_chat` (WP-30) |
 | 9 | `422` | `validation` | a mutation: `failed()` of WP-23 |
 | 10 | `429` | `rate_limited` | reads: row 3; mutations: `failed()` |
+| 11 | `403` with code `radars_disabled` | `radars_disabled` | read before row 6: a radar write while radars are switched off (DEC-51, WP-13) — the toast `radar.soon.title` (WP-30); never the "no access" handling of row 6 |
 
 A read that fails while older data is on screen keeps the data and shows the inline retry (`03` §1.6). An empty
 `2xx` or `204` on a mutation is success.
@@ -171,11 +178,13 @@ Files and names reserved for the packages that write them:
 - `ReferenceProvider` (in the root layout, fed by the cached call) and `useReference()`: cities (`code`, `name`,
   `is_region`, `center`, `zoom`, `zones`, `districts`, `has_metro`, `has_median`), `renovations` per deal,
   `appliances`, `price_presets` per deal, `locales`, `features`, `rates.usd_uzs`, `map.tiles_url`,
-  `limits.radars`, `bot.username` and `bot.support_username` — the names of WP-11. The currency list is not
-  reference data: it is `options.currencies` of `GET /settings` (WP-31). `useCityStats()`: `counts` per deal,
-  `price_presets` and `typical_price` per city from `GET /cities`. `findCity(code)`.
-- Defaults when a field is absent: radar limit 10; no support account → its rows are hidden; no cities →
-  nothing that needs a city is offered (see LB-APP-023 below).
+  `limits.radars`, `radars_enabled`, `bot.username` and `bot.support_username` — the names of WP-11. The
+  currency list is not reference data: it is `options.currencies` of `GET /settings` (WP-31). `useCityStats()`:
+  `counts` per deal, `price_presets` and `typical_price` per city from `GET /cities`. `findCity(code)`.
+- Defaults when a field is absent: radar limit 10; `radars_enabled` `false` (no radar is offered while the
+  reference data is missing); no support account → its rows are hidden; no cities → nothing that needs a city is
+  offered (see LB-APP-023 below). `radars_enabled` is read from the cached reference, so a switch on the server
+  reaches a running app when the cache entry expires (about ten minutes).
 
 ### Search state in the address (`frontend/app/lib/search/`)
 
@@ -256,14 +265,19 @@ and fixed by a snapshot test in three locales. Server-stored types in a radar ti
 
 | # | Flag | Defect | Off (legacy) | On |
 | - | ---- | ------ | ------------ | -- |
-| 1 | `dev015NeutralWholeCity` | LB-APP-026 | with no city name the summary says «Весь Ташкент» (`sum.wholeCity`) | new key `sum.wholeCityGeneric` |
-| 2 | `dev017TenantPetsDailyRule` | LB-APP-029 | tenant and pets sections visible for daily rent although the switch clears them | sections hidden for daily rent |
-| 3 | `dev018ResetKeepsDaily` | LB-APP-030 | «Сбросить» returns to `rent_long` | reset keeps `rent_daily` |
-| 4 | `dev025ValidateRanges` | LB-APP-043 | `fixRanges` returns its input: inverted price or area ranges are sent as typed | `fixRanges` swaps the bounds |
-| 5 | `dev052UnifiedBelowMedianRule` | — | row 17 above | the single rule of DEV-052 as approved; until then a `todo` test and no effect |
-| 6 | `dev005RadarDropsPostedDays` | — | `toRadarFilters` keeps `posted_days` | sets it to `null` |
+| 1 | `dev017TenantPetsDailyRule` | LB-APP-029 | tenant and pets sections visible for daily rent although the switch clears them | sections hidden for daily rent |
+| 2 | `dev018ResetKeepsDaily` | LB-APP-030 | «Сбросить» returns to `rent_long` | reset keeps `rent_daily` |
+| 3 | `dev025ValidateRanges` | LB-APP-043 | `fixRanges` returns its input: inverted price or area ranges are sent as typed | `fixRanges` swaps the bounds |
+| 4 | `dev052UnifiedBelowMedianRule` | — | row 17 above | the single rule of DEV-052 as approved; until then a `todo` test and no effect |
+| 5 | `dev005RadarDropsPostedDays` | — | `toRadarFilters` keeps `posted_days` | sets it to `null` |
 
-New key: `sum.wholeCityGeneric` — ru «Весь город», uz «Butun shahar», en «Whole city» (`homi` layer).
+**Whole-city label (DEC-54, no flag).** Wherever the audited `summary.js` prints `sum.wholeCity` — `03` LB-APP-026
+names the collapsed title; the area line of `filtersAreaSummary` is read from the same file — the summaries print
+`sum.wholeCity` with the argument `{city}` = the name of the filters' city in the reference data (`findCity`). The
+key keeps its legacy name; its value is overridden in the `homi` layer: ru «{city} целиком», uz «Butun {city}», en
+«All of {city}» (uz and en are proposals for the reviewer). When the city's name is not known yet (reference data
+not loaded) the part is left out. The fixed «Весь Ташкент» of legacy is never printed, and no generic
+«Весь город» key is added.
 
 ### Formatters (`frontend/packages/i18n/src/format/`, exported as `@homi/i18n/format`)
 
@@ -323,7 +337,7 @@ package formats only what the client formats in legacy. Both must agree with the
   packages and its project in `frontend/vitest.config.ts`; `frontend/app/package.json` (workspace dependencies
   `@homi/search`, `@homi/api-client`, `@homi/types`); `frontend/pnpm-lock.yaml` (workspace links only).
 - `frontend/packages/i18n/src/format/{index,number,money,date,distance,flow}.ts`, `package.json` (export),
-  `messages/homi/*.json` (one key).
+  `messages/homi/*.json` (one key: the override of `sum.wholeCity`).
 - Tests: `frontend/packages/search/tests/*.test.ts`, `frontend/packages/i18n/tests/format/*.test.ts`,
   `frontend/app/tests/{api,actions,data,reference,search}/*.test.ts(x)`, `frontend/app/e2e/data.spec.ts`.
 - `CLAUDE.md` "Layout" (the new package) through the shared-file rule.
@@ -351,14 +365,15 @@ package formats only what the client formats in legacy. Both must agree with the
 
 ## Behaviour to reproduce
 
-- **Defaults and transitions:** rows 1 – 23 of the rules table, exactly; the flag table for the four legacy
+- **Defaults and transitions:** rows 1 – 23 of the rules table, exactly; the flag table for the three legacy
   decisions.
 - **Comparison:** `{ …f, posted_days: 7 }` equals `f` for radar matching; a city object without a metro mark
   leaves `near_metro` at `false`, the filters are not "custom" and the follow nudge does not fire (LB-APP-007).
 - **Sort:** before reference data arrives only the three basic sorts are offered and nothing throws
   (LB-APP-023); a stored `center` falls back to `new` in a city without zones.
 - **Summaries** (ru): «Ташкент · Юнусабадский · у метро · 2-комн. · до $600 · без риелторов»; title «Посуточно ·
-  Дом, Комната · 1–3 комн. · от $40», empty → «Аренда».
+  Дом, Комната · 1–3 комн. · от $40», empty → «Аренда». The whole city reads «Фергана целиком» — legacy prints
+  «Весь Ташкент» for every city (LB-APP-026); HOMI builds the label from the city's own name (DEC-54).
 - **Money** (ru): `$1 200`; «850 000 сум»; 999 499 → «999 000 сум»; 999 500 … 999 999 → «1 млн сум»;
   1 500 000 000 → «1,5 млрд сум»; currency `UZS` with a missing or zero rate → USD display.
 - **Dates, distances, flow:** the examples in the formatter list; kilometres use the locale's decimal mark.
@@ -382,7 +397,8 @@ package formats only what the client formats in legacy. Both must agree with the
 - `availability`: section matrix deal × types × mode, tenant and pets with `dev017TenantPetsDailyRule` off and on;
   `belowMedianAvailable` matrix; `fixRanges` off and on for price and area.
 - `sort`: matrix sale / rent / daily × apartment-only × medians × zones × city `null`.
-- `summary`: snapshots in ru, uz, en; whole-city label with `dev015NeutralWholeCity` off and on; an unknown type
+- `summary`: snapshots in ru, uz, en; the whole-city label for Tashkent and Fergana in three locales («Фергана
+  целиком», «Butun Fargʻona», «All of Fergana») and without a city name (the part is absent); an unknown type
   in a radar title gives the fallback label.
 - `url`: round trip for every key; defaults omitted; `sort=new` omitted; fixed order; reserved parameters
   ignored (`from=map&focus=pets&pick=city&draw=1&pin=5&step=report&i=2` → default filters); garbage values
@@ -416,6 +432,8 @@ package formats only what the client formats in legacy. Both must agree with the
 - `data/useResource.test.tsx`: `initial` without a request; shared in-flight request; abort on key change; stale
   entry shown while refetching; `mutate`; `invalidate`; `403` with `dev001AnyForbiddenShowsAccess` off and on.
 - `data/sessionMaps.test.ts`: overrides and `resetHidden`.
+- `reference/useReference.test.tsx`: `radars_enabled` `true` and `false` are passed through; an absent key and an
+  empty reference read as `false`; the radar limit falls back to 10.
 - `search/useSearchState.test.tsx`: fallback city order; `setFilters` keeps a reserved parameter; `setSort('new')`
   removes the parameter.
 
@@ -430,6 +448,10 @@ outside the allow-list answers 404.
 - [ ] `@homi/search` and `@homi/i18n/format` import nothing from `frontend/app`, React or Next.js.
 - [ ] Every row of the rules table has a test named after its rule.
 - [ ] LB-APP-007, LB-APP-011 and LB-APP-023 are fixed and each has a test that fails on the legacy behaviour.
+- [ ] The whole city reads «{city} целиком» with the city's own name in ru, uz and en; «Весь Ташкент» appears
+      nowhere (LB-APP-026, DEC-54).
+- [ ] `useReference()` exposes `radars_enabled` and reads a missing value as `false`; `403 radars_disabled` maps to
+      its own error.
 - [ ] Each flagged branch of this package has a test for the flag off (legacy) and on.
 - [ ] The address round trip holds for all 25 keys and `sort`; reserved parameters are ignored by
       `fromSearchParams` and never emitted by `toSearchParams`.

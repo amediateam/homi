@@ -222,7 +222,8 @@ frontend/packages/i18n/
 6. Values are otherwise byte-identical to legacy. No wording fix happens in this layer.
 
 **The `homi` layer** overrides a legacy value or adds a key. It holds (a) every key whose legacy value matches
-`brand-words.json` — rewritten with the HOMI name, bot and links; (b) HOMI-only keys. Keys added by this package:
+`brand-words.json` — rewritten with the HOMI name, bot and links; (b) HOMI-only keys; (c) a legacy key whose wording
+a decision changed — in Wave 1 only `sum.wholeCity` (DEC-54, written by WP-22). Keys added by this package:
 
 | Key | ru | uz | en |
 | --- | -- | -- | -- |
@@ -299,13 +300,14 @@ catalogues or under `frontend/app` outside `lib/brand`.
 ### Flags and facades
 
 - `frontend/app/lib/flags.ts`: `devFlags` (`as const`, all `false`) and `DevFlags`: `dev001AnyForbiddenShowsAccess`,
-  `dev003PaginatedLists`, `dev005RadarDropsPostedDays`, `dev010RealtorVoteWording`, `dev013BackClosesMapCard`,
-  `dev014TashkentDates`,
-  `dev015NeutralWholeCity`, `dev016ErrorToastOnFailure`, `dev017TenantPetsDailyRule`, `dev018ResetKeepsDaily`,
+  `dev005RadarDropsPostedDays`, `dev010RealtorVoteWording`, `dev013BackClosesMapCard`,
+  `dev014TashkentDates`, `dev016ErrorToastOnFailure`, `dev017TenantPetsDailyRule`, `dev018ResetKeepsDaily`,
   `dev019OneDistanceFormatter`, `dev020OneLanguageDetector`, `dev021OneFlowVocabulary`, `dev022RadarCountLabel`,
   `dev023CityCountsIncludeDaily`, `dev024ResetOnlyWithActiveFilters`, `dev025ValidateRanges`, `dev051RentedUndo`,
-  `dev052UnifiedBelowMedianRule`. Each has a comment naming its `DEV` row. Workspace packages never import this
-  file; they take a rules argument. `frontend/app/tests/helpers/flags.ts`: `withDevFlags(overrides, fn)`.
+  `dev052UnifiedBelowMedianRule` — 17 flags. Each has a comment naming its `DEV` row. There is no flag for paged
+  favourites and history (DEC-53) or for the whole-city label (DEC-54): both were decided and are plain behaviour
+  (WP-29, WP-22). Workspace packages never import this file; they take a rules argument.
+  `frontend/app/tests/helpers/flags.ts`: `withDevFlags(overrides, fn)`.
 - `frontend/app/lib/analytics/events.ts`: `track(name, props)` typed by the map of the 16 journal events of `03`
   §3.3; `frontend/app/lib/errors/report.ts`: `reportError(error, { kind })`. Both are no-ops that keep the last 20
   calls in memory for tests; WP-32 implements them.

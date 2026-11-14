@@ -11,7 +11,7 @@ legacy product does, function by function. Personal data, radars and the bot are
 points, cards, contacts and photos are read from legacy through a service key until Wave 2.
 
 **Not in this wave.** HOMI's own listing ingestion (Wave 2), SEO pages (Wave 3), the admin panel, any transfer of
-legacy users' data, any `DEV` behaviour change.
+legacy users' data, any `DEV` behaviour change except the three the developer decided (DEC-52 … DEC-54).
 
 **Reading order for whoever does the work.** This document once, then the queue, then the specification of the
 package you take. The audit documents are opened only at the sections a specification cites.
@@ -45,8 +45,11 @@ section 5; the bot of section 6; the landing of section 7.
    legacy. Small visual differences are accepted. Each work package carries its checklist (section 9).
 2. **Defects are fixed, behaviour changes are not made** (DEC-36). An `LB` item that `09` §4.3 lists as a plain fix
    is fixed and tested. An `LB` item that `09` §4.2 turns into a `DEV` row changes what a user sees, so it is written
-   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 33 fixes and
-   14 flagged items; each specification names its own.
+   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 34 fixes and
+   13 flagged items (LB-APP-026 became a fix through DEC-54); each specification names its own. Three behaviour changes are **on by the developer's
+   decision** and are not flags: the author's phone number is given only after a tap (DEC-52), favourites and
+   history are paged (DEC-53), and the whole-city label is «{city} целиком» (DEC-54). The acceptance checklists list
+   them as approved differences from legacy.
 3. **The legacy tree is read-only** and is a reference: no edits, no `npm`, no builds, no dev server there, and no
    copy-paste of its code or CSS into this repository.
 4. **Nobody but HOMI's servers calls legacy** (DEC-33). Development, tests, CI and agents work on stubs and recorded
@@ -189,7 +192,8 @@ condition of the launch package (WP-70), not an option. The vector path cannot b
 
 ### 3.9 Analytics and errors
 
-- The action log: `POST /api/v1/events`, with the legacy event names (`03` §3.3).
+- The action log: `POST /api/v1/events`, with the legacy event names (`03` §3.3). The server adds events of its
+  own that no client sends, such as `contact_disclosed` (WP-47).
 - PostHog: HOMI's own projects, one per environment (DEC-47); loaded lazily under the legacy rules (not on
   Save-Data or 2g); `initData` and session tokens are scrubbed; replay masks everything by default (SEC-021).
 - Screen names sent to PostHog are the legacy names, derived from the route, so one vocabulary serves both products.
@@ -246,8 +250,11 @@ frontend/
   entries have HOMI's own identifiers.
 - The locale comes from `Accept-Language`, the currency from the user's settings.
 - Every answer carries `meta.source` with the driver that produced it: `stub`, `legacy` or `native`.
-- Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list. Favourites and history come back whole
-  with `next_cursor: null`, as in legacy: paging them is the deviation DEV-003, whose flag is off (DEC-36).
+- Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list. Favourites and history are paged the same
+  way, 20 per page (DEC-53) — legacy returns them whole, which under the legacy rate limit would cost one read per
+  row. No cap on the length of the history is introduced.
+- No answer except `POST /listings/{number}/contact` carries a phone number (DEC-52): the card has no number,
+  numbers inside texts are masked, and the contact method is counted per user.
 - When the listing source cannot answer, the method returns `503` with code `source_unavailable`; the client shows
   the legacy "could not load" state.
 
@@ -258,13 +265,13 @@ frontend/
 | `POST /auth/telegram` | none (legacy authenticates every request) | native |
 | `GET /me` | user part of meta (API-001) | native |
 | `GET /settings`, `PATCH /settings` | API-024, API-025 | native |
-| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name and limits always from HOMI's configuration |
+| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name, limits and `radars_enabled` always from HOMI's configuration |
 | `GET /cities` | API-002 | legacy, cached |
 | `GET /listings` | feed (API-004) | legacy + overlay |
 | `GET /listings/count`, `GET /listings/flow` | API-005, API-006 | legacy |
 | `GET /listings/map` | API-007 | legacy + overlay |
 | `GET /listings/{number}` | API-008 | legacy + overlay; records the view natively |
-| `POST /listings/{number}/contact` | call link (API-009) | legacy (form depends on Q-API-062) |
+| `POST /listings/{number}/contact` | call link (API-009) | legacy (form depends on Q-API-062); the only method that returns a phone number (DEC-52) |
 | `POST /listings/{number}/translation` | API-010 | legacy |
 | `POST /listings/{number}/share` | API-017 | native (a prepared message of HOMI's bot) |
 | `GET /favorites`, `PUT /favorites/{number}`, `DELETE /favorites/{number}` | API-029, API-011 | native |
@@ -286,6 +293,9 @@ Notes on the table:
   and a `reason`.
 - `GET /radars` can include the preview listings of each radar; `GET /listings/{number}` has a short preview form
   for cards on the map.
+- While `RADAR_CREATION_ENABLED` is off (DEC-51) the radar methods that create or change answer `403` with code
+  `radars_disabled`, `GET /radars` answers an empty list, and `GET /reference` says `radars_enabled: false`; the
+  radar tab and the bot then show "soon". The switch goes on with the bot's sending package.
 - There is no method to withdraw a report: the "undo" of a report belongs to a `DEV` item that is off.
 - Legacy toggles a favourite with one `POST`; v1 uses an explicit `PUT` and `DELETE`, so a repeated request cannot
   flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
@@ -305,7 +315,7 @@ exported as OpenAPI.
 Stubs return fixtures written from the examples of 08 and the legacy parity mocks, sanitised (no real phones, names
 or addresses). They are deterministic, so tests can rely on them. Because every merge reaches production and access
 is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any screen whose answer has
-`meta.source = stub` (RK-27).
+`meta.source = stub` (RK-27; confirmed by the developer, DEC-50).
 
 ### 4.5 The legacy driver
 
@@ -349,7 +359,7 @@ built, so only their rules, limits and edge cases are taken.
 | Settings | locale, currency, quiet hours, digest times, theme hints; drives the bot's language | KV-BE-045 |
 | Personal lists | favourites, view history, hidden listings, blocked authors, the «Скрытое» list | KV-BE-038 … KV-BE-042 |
 | Reports and surveys | votes with weights and thresholds, applied to what HOMI shows (DEC-48); the «Нашли жильё?» survey | KV-BE-043, KV-BE-044 |
-| Radars | create or reactivate, limit, replace, pause, mode, relax, hide rules, previews | KV-BE-100 … KV-BE-106 |
+| Radars | create or reactivate, limit, replace, pause, mode, relax, hide rules, previews; one switch keeps creation off until the bot can deliver (DEC-51) | KV-BE-100 … KV-BE-106 |
 | Matching and delivery planning | in Wave 1 the matcher polls the listing source per distinct filter set and compares with the delivered set; quiet hours, digest slots, the planner | KV-BE-108 … KV-BE-111 |
 | Share | prepared inline messages of HOMI's bot | KV-BE-046 |
 | Action log and analytics | partitioned action log, server-side PostHog, person deletion | KV-BE-150 … KV-BE-152 |
@@ -365,7 +375,19 @@ queue groups them into nine packages. Not built: the reset of legacy per-chat me
 `callback_data` and the cut-over switches (KV-TG-057, KV-TG-058, KV-TG-060) — there are no old messages of this bot.
 
 Listing cards in chat, the wizard's flow estimate, starter lists and radar pushes read the same listing source as
-the API. The bot's texts are the catalogue of 04 with the brand words replaced.
+the API. The bot's texts are the catalogue of 04 with the brand words replaced, the whole-city label in its decided
+wording (DEC-54), and a few texts of HOMI's own: `bot.radar.soon` while radars are switched off (DEC-51) and the
+`📞 Показать номер` button with its answer (DEC-52).
+
+Free-text and voice queries go through a language model that is not tied to a vendor (DEC-55): provider and model
+come from configuration, the team switches them on the servers, and without a configured provider the bot answers
+with the hint that leads to the wizard.
+
+**Support bot (DEC-56).** HOMI runs its own second bot for support, one per environment. A user writes to it; it
+relays the message to the private chats of the operators (Telegram ids from configuration) and relays their replies
+back. It stores who talks to whom and when, not the text of the messages. The support buttons of the Mini App, the
+bot and the landing lead to it; they stay hidden while no support bot is configured. Legacy's support bot was not
+audited (GAP-026), so this is HOMI's own design, not a parity item; its package is WP-59.
 
 ## 7. The landing (`frontend/landing`)
 
@@ -408,7 +430,10 @@ the end-to-end suite reaches every state in both session modes. Native methods l
 is merged; a switch that is refused outside local and test environments keeps a stub answer for them, so the suite
 of stage B keeps running. States that open access and stub answers cannot
 produce inside Telegram (no access, the "no chat" prompt, the radar limit, real share and call pages) are proven by
-the end-to-end suite in stage B and seen in Telegram in stage C, when the real code answers.
+the end-to-end suite in stage B and seen in Telegram in stage C, when the real code answers; the "no chat" prompt
+and the radar limit only in stage D, after WP-57 has switched radars on. Every checklist line that needs radars on
+(WP-30, WP-45, WP-48, WP-54, WP-55) is ticked from the tests and the local stack, and its Telegram check runs in
+WP-57.
 
 **Known gaps against legacy, accepted for Wave 1.** They are listed here so that nobody reports them as defects:
 
@@ -420,7 +445,8 @@ the end-to-end suite in stage B and seen in Telegram in stage C, when the real c
 - Contact shows what the operator's service key allows: a number, or a link that leaves HOMI (Q-API-062).
 - Blocking an author and the Wave 2 reference of a saved listing are partial until the operator adds the source and
   author fields (section 4.5).
-- Between the radar package and the bot's sending package a radar can be created but nothing is delivered (RK-32).
+- Until the bot's sending package is live radars are switched off on the servers: the radar tab and the bot say
+  "soon" (DEC-51, RK-32).
 
 **Definition of done of a work package.** Specification steps complete; tests of the package green in CI; checklist
 ticked and signed; OpenAPI, generated types, the package registry and the audit rows current; the queue and the
@@ -453,7 +479,7 @@ needs from that track, and a migration reaches production only with that track's
 
 ## 12. The queue in outline
 
-Forty-four work packages in six stages, worked strictly in order by whoever holds the relay (DEC-45). The table of
+Forty-five work packages in six stages, worked strictly in order by whoever holds the relay (DEC-45). The table of
 record with statuses is `wave-1/README.md`.
 
 | Stage | Packages | Content |
@@ -462,7 +488,7 @@ record with statuses is `wave-1/README.md`.
 | A Contract | WP-10 … WP-13 | Source drivers, flags, stubs, OpenAPI, generated types; the stub contract of every method |
 | B Mini App on stubs | WP-20 … WP-33 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs |
 | C API | WP-40 … WP-48 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off |
-| D Bot | WP-50 … WP-58 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests |
+| D Bot | WP-50 … WP-59 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot |
 | E Landing | WP-60, WP-61 | Landing data, landing pages |
 | F Launch | WP-70, WP-71 | Hardening, launch and watch |
 
@@ -486,6 +512,7 @@ state.
 3. All 45 screens and all bot scenarios have a signed checklist.
 4. The Mini App works in iOS, Android, Desktop and Web clients of Telegram, in cookie mode and header mode.
 5. Radars deliver: an instant card, a digest and a quiet-hours release were each observed on production.
+   `RADAR_CREATION_ENABLED` is on.
 6. The landing is live on `homi.uz` with the privacy page that answers Q-SEC-021.
 7. The security checks of the hardening package pass; no `initData`, token or phone appears in logs or analytics.
 8. `make ci-backend` and `make ci-frontend` are green on `main`; the audit describes the pinned legacy release.

@@ -5,7 +5,7 @@ first draft of the three-wave plan. The developer (development track) answered e
 Russian as given, or as the option chosen. They are **decisions of the developer**. Where a decision touches the
 production track or project rules, the row says so, and the first developer sees it in the review of PR #25.
 
-The decisions are registered as `DEC-31` … `DEC-49` in [`../24-three-wave-strategy.md`](../24-three-wave-strategy.md)
+The decisions are registered as `DEC-31` … `DEC-56` in [`../24-three-wave-strategy.md`](../24-three-wave-strategy.md)
 §8. The plan built on them is [`../25-wave-1-plan.md`](../25-wave-1-plan.md) and the queue in
 [`../wave-1/README.md`](../wave-1/README.md).
 
@@ -57,6 +57,22 @@ The decisions are registered as `DEC-31` … `DEC-49` in [`../24-three-wave-stra
 | 42 | Format of the detailed plan | «Очередь + спецификация на модуль» | DEC-45 | `wave-1/README.md` and one file per work package |
 | 43 | PR #25 | «Переписать план в этом же PR» | — | Done in this PR |
 
+### Second round, the same day
+
+Asked after the verification pass over the specifications. Each question had a default in the plan; the answers
+replace the defaults.
+
+| # | Question | Answer | Recorded as | Note |
+| - | -------- | ------ | ----------- | ---- |
+| 44 | Stub data visible on production | «Пометка „демо-данные“» | DEC-50 | Confirms the plan (`25` §4.4); closes the open point of RK-27 |
+| 45 | Radars before the bot can deliver | «Создание выключено до отправки» | DEC-51 | One switch; the radar tab and the bot say "soon" until the sending package is live |
+| 46 | The author's phone number | «Номер после нажатия» | DEC-52 | A behaviour change, on by decision: no raw number with the card, text masked, number through the counted contact method |
+| 47 | Favourites and history against the legacy rate limit | «Постранично, по 20» | DEC-53 | A behaviour change, on by decision |
+| 48 | The whole-city label | «<Город> целиком» | DEC-54 | A behaviour change, on by decision; uz and en wording goes to proofreading |
+| 49 | Vendor of the language model for free-text and voice queries | «Будет все модели мы сами переключим» | DEC-55 | No fixed vendor: provider and model come from configuration, the team switches. Answers DEC-03 |
+| 50 | Where the support buttons lead | «Свой бот поддержки» | DEC-56 | A new work package, WP-59. Answers DEC-21 |
+| 51 | Where the operators of the support bot answer | «Личный чат оператора» | DEC-56 | The bot relays to the private chats of the operators and back |
+
 ## What the answers changed in the first draft
 
 The first draft (commit `cf4d325`) planned a file-by-file port of the legacy client that would talk to the legacy
@@ -77,8 +93,8 @@ These follow from the answers; none of them reopens a decision.
 1. **Wave 1 is now a product build**, not a frontend port: 45 screens, the `/api/v1` surface, radars with delivery,
    84 bot handlers and the landing (RK-29).
 2. **Stub data will be visible to real users on production** while a section still runs on stubs (answers 18 and 34).
-   The plan adds a visible "demo data" marker driven by the same flag that selects the stub (25 §4.4); remove it from
-   the plan if it is not wanted.
+   The plan adds a visible "demo data" marker driven by the same flag that selects the stub (25 §4.4); answer 44
+   confirms it.
 3. **The service key is a change the operator must make in legacy** (answer 14), although answer 2 says only a dump
    and a schema are on offer. Until the key exists the shared-data methods stay on stubs (RK-28).
 4. **Listing identity changes in Wave 2.** Favourites, history and radars of HOMI users point at legacy listing
@@ -87,3 +103,6 @@ These follow from the answers; none of them reopens a decision.
 5. **Rules of the repository that the answers change** and that need the first developer's agreement in the review:
    the PR size rule (answer 22), the dependency approval route (answer 21), and "local code never points at
    production" stays intact — only HOMI servers hold the service key.
+6. **Four answers of the second round are deliberate differences from legacy** (46, 47, 48 and the support bot of
+   50). They are not flags: the acceptance checklists list them as approved differences (DEC-46 stays "functional
+   parity" for everything else).

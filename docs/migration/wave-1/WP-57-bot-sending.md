@@ -7,7 +7,7 @@
 | Depends on | WP-53, WP-46 |
 | Size | about 3 000 changed lines, L. If it grows: two PRs. Part A = steps 1–7 (pacer, the sender for cards and digests, the changes in the outbox job). Part B = steps 8–12 (withdrawn edits, recheck, broadcasts). Production works after either part |
 | Behaviour reference | `04` §2 (rows BOT-062, BOT-081 … BOT-084), §5, §4.2 (TXT-BOT-047, TXT-BOT-086 … TXT-BOT-088), §8 (BR-BOT-007, BR-BOT-073 … BR-BOT-080, BR-BOT-092, BR-BOT-100, BR-BOT-101); `11b` §2.3 row 9; `16` (SEC-REQ-029, SEC-REQ-040, SEC-REQ-046, SEC-REQ-047); `25` §5 row "Matching and delivery planning", §14 item 5; task files KV-TG-050 … KV-TG-055; the specification of WP-46 ("Outbox — the seam for the bot") |
-| Needs from the production track | (1) Approval of two additive migrations: tables `broadcasts`, `broadcast_recipients`; column `listing_marks.taken_down_at`. (2) Review of the shared-file PR that gives the queue `notifications` its own `supervisor-delivery` in `backend/config/horizon.php`; a Horizon restart after its deploy. (3) The scheduler must run every minute on staging and production (asked by WP-46 and WP-50); two entries arrive with this package. (4) In the server env: `TELEGRAM_SEND_RATE_GLOBAL` (default 25), `TELEGRAM_SEND_RATE_PER_CHAT` (default 1), `TELEGRAM_BROADCAST_ENABLED` (default `false`); after this package is deployed and one test delivery passed, set `RADAR_MATCHING_ENABLED=true` (it was left off until a sender exists); confirm that `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are `true` (WP-54). (5) Before the deploy of part A: run `php artisan radar:status` and note the number of pending outbox rows — rows older than 36 hours are expired by the first run, not sent. (6) Alerts on the metrics named in "Metrics" (request detailed in WP-70). (7) For each real broadcast on production: `TELEGRAM_BROADCAST_ENABLED=true` for that run, with the first developer's approval |
+| Needs from the production track | (1) Approval of two additive migrations: tables `broadcasts`, `broadcast_recipients`; column `listing_marks.taken_down_at`. (2) Review of the shared-file PR that gives the queue `notifications` its own `supervisor-delivery` in `backend/config/horizon.php`; a Horizon restart after its deploy. (3) The scheduler must run every minute on staging and production (asked by WP-46 and WP-50); two entries arrive with this package. (4) In the server env: `TELEGRAM_SEND_RATE_GLOBAL` (default 25), `TELEGRAM_SEND_RATE_PER_CHAT` (default 1), `TELEGRAM_BROADCAST_ENABLED` (default `false`); after part A of this package is deployed, switch radars on (DEC-51): set `RADAR_CREATION_ENABLED=true` and `RADAR_MATCHING_ENABLED=true` together and restart Horizon — on staging first, and on production after the staging checks of "Switching radars on" have passed (both keys were left off until a sender exists); confirm that `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are `true` (WP-54). (5) Before the deploy of part A: run `php artisan radar:status` and note the number of pending outbox rows — rows older than 36 hours are expired by the first run, not sent. (6) Alerts on the metrics named in "Metrics" (request detailed in WP-70). (7) For each real broadcast on production: `TELEGRAM_BROADCAST_ENABLED=true` for that run, with the first developer's approval |
 
 ## Goal
 
@@ -46,7 +46,7 @@ Out:
 | - | -------- | ---------------- |
 | 1 | DEC-43 — radars with delivery are in Wave 1 | All five outbound handlers are built. None was ever observed in legacy (`04` §5), so each format is closed by specification with its question cited, and can change when someone captures the legacy message |
 | 2 | `25` §5 — the matcher polls the listing source | A match appears when the poll of WP-46 finds the listing (every five minutes per filter set), not when it was published. `delivery_lag_seconds` is measured from publication and includes the poll interval |
-| 3 | WP-46, WP-48 — `RADAR_MATCHING_ENABLED` stays `false` until this package is deployed | The outbox is expected to be empty at the first run. The age guard still exists for rows planned while the sender was missing, paused or failing: an item older than `delivery.max_age_hours` (36) is failed as `expired`, never sent |
+| 3 | DEC-51, WP-45, WP-46, WP-48 — radar creation and matching stay off until this package is deployed | No radar can exist on staging or production before the switch, so the outbox is empty at the first run. This package switches both on, together, after its part A is deployed (section "Switching radars on"), and from then on the Mini App and the bot offer radars. The age guard still exists for rows planned while the sender was missing, paused or failing: an item older than `delivery.max_age_hours` (36) is failed as `expired`, never sent |
 | 4 | `25` §4.5 — `source_unavailable` | A send that needs the listing source and cannot get it fails as transient; the outbox retries after 1, 5 and 15 minutes and gives up at the fifth attempt (WP-46) |
 | 5 | `25` §4.4, RK-27 — demo marker | A push or digest built from stub data carries the marker through the renderer of WP-53. Matching itself is off while the feed is on the stub driver (WP-46) |
 | 6 | DEC-33 | Tests and local runs use the fake Bot API and the stub source |
@@ -158,6 +158,29 @@ Q-BOT-002).
   60 seconds. These jobs: queue `notifications`, `tries` 5, `retryUntil` 6 hours.
 - No job ever sleeps (architecture test over `app/Jobs`).
 
+### Switching radars on (DEC-51)
+
+Until here `config('radar.creation_enabled')` (WP-11) and `config('radar.matching_enabled')` (WP-46) are off on
+staging and production: the radar methods refuse writes (WP-13, WP-45), the Mini App shows "soon" (WP-30) and the
+bot answers `bot.radar.soon` (WP-51). Once part A is deployed and the sender is bound, per environment, staging
+first:
+
+1. `php artisan radar:status` — no pending rows are expected; note the number.
+2. The production track sets `RADAR_CREATION_ENABLED=true` and `RADAR_MATCHING_ENABLED=true` in the server env and
+   restarts Horizon. php-fpm reads the env on every request, so the API follows at once; the Horizon workers,
+   which run the bot's handlers and the poll jobs, read it only at start (`docs/infrastructure/deployment.md`).
+3. Check: `GET /api/v1/reference` reports `radars_enabled: true`; `/new` opens the wizard; the Mini App shows the
+   radar tab instead of "soon" once its cached reference data has expired (about ten minutes, WP-22).
+4. Run the passes inside Telegram that waited for this switch: the radar lines of the Mini App (WP-30, with the
+   lines of WP-45 and of WP-48 part D that point here), the wizard (WP-54), the radar screens and free text
+   (WP-55). Then the delivery lines of this package's checklist.
+5. Production: steps 1 – 4 again, after staging passed.
+
+Going back is the same two keys unset and a Horizon restart: writes are refused again, the lists answer empty
+(the radars stay stored and come back with the next switch-on) and no new match is planned. If cards are going
+out wrongly, `delivery:pause on` comes first. `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are not touched
+here: WP-54 switched them on.
+
 ### Withdrawn listings
 
 How HOMI learns of a withdrawal in Wave 1 — legacy sends no events:
@@ -267,7 +290,7 @@ All paths under `backend/`.
 - Shared files, each in its own small PR: `config/horizon.php` (`supervisor-delivery`), `.env.example` (three keys)
 - `tests/Unit/Telegram/PaceDecisionTest.php`, `tests/Unit/Delivery/DigestComposerTest.php`,
   `tests/Arch/NoSleepInJobsTest.php`
-- `tests/Feature/Delivery/{TelegramPacerTest,TelegramRadarSenderTest,InstantDeliveryTest,QuietHoursDeliveryTest,DigestDeliveryTest,OutboxDeferTest,DeliveryReconcileTest,RecheckDeliveredTest,WithdrawnCardEditTest,BroadcastTest}.php`
+- `tests/Feature/Delivery/{TelegramPacerTest,TelegramRadarSenderTest,InstantDeliveryTest,QuietHoursDeliveryTest,DigestDeliveryTest,OutboxDeferTest,DeliveryReconcileTest,RecheckDeliveredTest,WithdrawnCardEditTest,BroadcastTest,RadarSwitchOnTest}.php`
 - `tests/Fixtures/Bot/transcripts/{push,digest,digest-morning,card-withdrawn}.json`
 - `docs/infrastructure/telegram-webhook.md` (section "Outbound sending": limits, switches, commands)
 
@@ -290,9 +313,11 @@ Part A.
    `InstantDeliveryTest` (through the real job of WP-46), transcript `push.json`.
 6. `DigestComposer`, `TelegramRadarSender::sendDigest`; `DigestComposerTest`, `DigestDeliveryTest`,
    `QuietHoursDeliveryTest` on a frozen clock in Asia/Tashkent; transcripts.
-7. Bind the sender; `delivery:reconcile`; `make ci-backend`; PR A; deploy. On staging, then production: a radar
-   that matches fresh listings shows one instant card; the same radar in digest mode shows a digest at the next
-   slot; with quiet hours covering the current hour nothing arrives until the window ends, then one morning digest.
+7. Bind the sender; `delivery:reconcile`; `RadarSwitchOnTest`; `make ci-backend`; PR A; deploy. Then the procedure
+   of "Switching radars on", on staging and after it on production: the two env keys, the passes that waited for
+   the switch, and the delivery checks — a radar that matches fresh listings shows one instant card; the same
+   radar in digest mode shows a digest at the next slot; with quiet hours covering the current hour nothing
+   arrives until the window ends, then one morning digest.
 
 Part B.
 
@@ -363,14 +388,21 @@ the planner of WP-46 and delivered through its real job; the listing source on t
 | 10 | `WithdrawnCardEditTest` | photo card → `editMessageCaption`, text card → `editMessageText`, both with the withdrawn text and no keyboard; the same event again → no call; a digest row replaced and its button removed; two rows of one digest → one edit; takedown → `editMessageMedia` to the placeholder and no original text in the payload; `can't be edited` → `edit_failed`; `403` → `ChatUnreachable`; 1 000 rows → every row final, one edit per message; unsent outbox rows of the number are gone; a press on a failed copy → toast and keyboard removed |
 | 11 | `BroadcastTest` | five users (three opted in, one opted out, one blocked) → count three, three sends; start without confirm → refused; wrong token → refused; opt-out while queued → `skipped`; one `403` → `blocked`, others continue; a batch killed after 40 of 100 → 60 more, no duplicate; a text with a script tag or an `http` link → draft refused; a `uz` user gets the `uz` text; production without the switch → refused; 10 000 recipients stay under the rate |
 | 12 | `NoSleepInJobsTest` (arch) | no class under `app/Jobs` calls `sleep` or `usleep` |
+| 13 | `RadarSwitchOnTest` | with `radar.creation_enabled` and `radar.matching_enabled` on and the feed on the fixture-backed legacy driver: a radar created through `POST /radars` gets its filter set, a poll that finds a new listing plans one item, and the sender delivers one card; with both off: `POST /radars` → `403 radars_disabled`, `radar:poll` dispatches nothing, nothing is sent; `GET /reference` reports `radars_enabled` accordingly |
 
 ## Acceptance checklist
 
 Run on the staging bot and on the production bot with a real radar; ru, uz and en for the texts of the digest and
 the withdrawn card. Attach screenshots to the PR.
 
-- [ ] Before `RADAR_MATCHING_ENABLED` is set on each environment `radar:status` was run and its pending count
-      noted (expected 0, matching was off); any row older than 36 hours was expired by the first run, not sent.
+- [ ] Before the switch on each environment `radar:status` was run and its pending count noted (expected 0: no
+      radar could exist); any row older than 36 hours was expired by the first run, not sent.
+- [ ] `RADAR_CREATION_ENABLED=true` and `RADAR_MATCHING_ENABLED=true` were set together, with a Horizon restart,
+      on staging and then on production; there `GET /reference` answers `radars_enabled: true`, the «Радар» tab of
+      the Mini App offers radars instead of "soon", and `/new` opens the wizard.
+- [ ] The passes inside Telegram that waited for the switch were run on staging and then on production, with
+      their screenshots: the radar lines of WP-30 (and the lines of WP-45 and WP-48 that point here), the checklist
+      of WP-54 and the checklist of WP-55 (its free-text lines once the team has configured a provider).
 - [ ] An instant card arrives for a new matching listing, once, with the full card and its buttons.
 - [ ] A listing that matches two radars arrives once.
 - [ ] With quiet hours covering the current time no card arrives; after the window ends one morning digest arrives

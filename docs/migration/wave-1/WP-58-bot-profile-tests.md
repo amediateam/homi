@@ -103,13 +103,16 @@ before a reply. The names are added to `config/analytics.php` → `events` of WP
 | 3 | `bot_callback` | router (WP-51) | `action` (registry code), `outcome` (`ok`, `stale`) |
 | 4 | `bot_radar_created`, `bot_radar_updated`, `bot_radar_deleted`, `bot_radar_paused`, `bot_radar_resumed` | WP-54, WP-55 | `deal`, `mode`, `via` (`wizard`, `text`, `voice`, `card`) |
 | 5 | `bot_card_opened` | `CardSender` (WP-53) | `origin` (values of `CardOrigin`) |
-| 6 | `bot_card_action` | card handlers (WP-53) | `op` (`fav_on`, `fav_off`, `rented`, `rented_undo`, `agent`, `agent_undo`, `hide_channel`, `hide_district`, `hide_author`, `map`, `photos`) |
+| 6 | `bot_card_action` | card handlers (WP-53) | `op` (`fav_on`, `fav_off`, `rented`, `rented_undo`, `agent`, `agent_undo`, `hide_channel`, `hide_district`, `hide_author`, `map`, `photos`, `phone`) |
 | 7 | `bot_alert_sent`, `bot_alert_blocked` | `TelegramRadarSender` (WP-57) | `kind` (`instant`, `digest`) |
 | 8 | `bot_language_switched` | `LanguageSwitcher` (WP-52) | `from`, `to` (`ru`, `uz`, `en`) |
 | 9 | `bot_owner_verified`, `bot_owner_removed` | WP-56 | `outcome` (values of `OwnerOutcome`) |
 | 10 | `bot_found_answered` | `FoundPoll` (WP-55) | `answer`, `place`, `trigger` |
 | 11 | `bot_text_parsed` | `ParseUserQuery`, `TranscribeVoiceQuery` (WP-55) | `understood` (`yes`, `no`), `kind` (`text`, `voice`) |
 
+- A number shown by `📞 Показать номер` (WP-53, DEC-52) leaves two rows: `bot_card_action` with `op` `phone` from
+  this class, and `contact_disclosed` with the listing number, which the listener of WP-47 writes for the app and
+  the bot alike — it is not one of the bot's own names and is not emitted here.
 - No listing number, radar id, message text, payload string or Telegram id is a property. A property outside its
   set is dropped before the write.
 - Nothing is written for a user who was erased during the update (WP-56): the buffer is discarded when the user
@@ -138,6 +141,12 @@ before a reply. The names are added to `config/analytics.php` → `events` of WP
 - `BotLocaleSweepTest`: every transcript is replayed in uz and en; no outgoing text contains a raw catalogue key
   (`bot.` followed by a key path), a `:placeholder` left unfilled, or a brand word of the legacy product.
 - `InterimListTest`: `config('bot.interim_commands')` is empty and no action is bound to `InterimHandler`.
+- `RadarSwitchSweepTest` (DEC-51): the registrations `new`, `nw`, `wz`, `tp`, `subs`, `sb`, the text handler, the
+  voice handler and the awaited amount carry the `radar` mark of WP-51, and no other registration does. With
+  `radar.creation_enabled` off, the first step of every wizard, radar-screen, free-text and voice transcript is
+  answered by `bot.radar.soon` alone and leaves no radar, no conversation and no `llm_calls` row; the transcripts
+  of `/start`, cards, `/fav`, `/settings`, `/owner` and `/privacy` pass unchanged in that state. Every other test
+  of the bot runs with the switch on (the `phpunit.xml` value of WP-11).
 
 ### The pass inside Telegram
 
@@ -148,13 +157,16 @@ locale, the scenario block, pass or fail, link to the screenshot, notes.
 | ----- | ------------------- | ------- |
 | Profile: name, description, picture, bio, menu button, command menu in three languages, Main Mini App, privacy link | this package | all four |
 | Start, payloads, hand-off, language, `/app`, `/help`, `/ping`, unknown input | acceptance checklist of WP-52 | all four; payloads on one |
-| Cards, card buttons, `/fav` | WP-53 | all four (photo cards and `web_app` buttons differ per client) |
+| Cards, card buttons, `📞 Показать номер`, `/fav` | WP-53 | all four (photo cards and `web_app` buttons differ per client) |
 | Wizard, three deal branches, review, save, starter list, tip | WP-54 | iOS and Android in full; Desktop and Web: one branch |
 | Free text, voice, `/subs`, radar card, poll, edit | WP-55 | all four; voice on a phone |
 | `/settings`, `/owner`, `/privacy`, deletion | WP-56 | all four; the contact share on a phone (Desktop and Web cannot share a contact the same way) |
 | Push, digest, quiet hours, withdrawn card, broadcast | WP-57 | one phone |
 
 - The lines are not copied: the document links each block to the checklist of its package and records the result.
+- The pass runs with radars switched on: WP-57 has set `RADAR_CREATION_ENABLED` on both environments (DEC-51).
+  The blocks of WP-54 and WP-55 could not be seen inside Telegram before that switch; WP-57 ran them first, and
+  this pass repeats them with the rest of the bot.
 - Who runs it: the developer who holds the relay, with their own accounts, after the production track deployed and
   synced the profile. Staging first, then production. On production the data-deletion line uses a throw-away
   account, and no broadcast is sent.
@@ -177,7 +189,7 @@ All paths under `backend/` unless they start with `docs/`.
 - `app/Console/Commands/Telegram/ProfileCommand.php`
 - `app/Telegram/Analytics/BotEvents.php`; one call added in each emitter named in the events table
 - `lang/{ru,uz,en}/bot.php` (only if a `profile.*` key is missing)
-- `tests/Feature/Bot/{ProfileSyncTest,ActionLogEventsTest,BotCoverageTest,BotInjectionTest,BotForgeryTest,BotLocaleSweepTest,InterimListTest}.php`
+- `tests/Feature/Bot/{ProfileSyncTest,ActionLogEventsTest,BotCoverageTest,BotInjectionTest,BotForgeryTest,BotLocaleSweepTest,InterimListTest,RadarSwitchSweepTest}.php`
 - `tests/Arch/BotAnalyticsTest.php`
 - `tests/Fixtures/Bot/{coverage.json,injection-corpus.json}`, `tests/Fixtures/Bot/transcripts/*.json` (the missing
   ones)
@@ -200,7 +212,7 @@ Generators always with `--no-interaction`; tests first inside each step; Pint af
    prints the three totals.
 6. `injection-corpus.json`, `BotInjectionTest`, `BotForgeryTest`.
 7. `BotLocaleSweepTest`; fix every key it finds in the package that owns it.
-8. `InterimListTest`; delete what is left of the interim list.
+8. `InterimListTest`; delete what is left of the interim list. `RadarSwitchSweepTest`.
 9. `docs/testing/bot-pass.md`; `make ci-backend`; PR; deploy.
 10. Ask the production track for the profile sync and the BotFather actions on staging; run the pass on staging;
     then the same on production. Tick the checklist with the screenshots; the reviewer signs.
@@ -340,7 +352,7 @@ from.
 | 13 | callback button: `🏙 Ближе к центру` | BTN-013 | WP-54 | KV-TG-030 |
 | 14 | callback button: `🚇 Рядом с метро (до ~1 км)` | BTN-014 | WP-54 | KV-TG-030 |
 | 15 | callback button: District name (per-city list, tb l.351-358; two per row, alphabetical) | BTN-015 | WP-54 | KV-TG-030 |
-| 16 | callback button: `Весь <город>` (e.g. `✅ Весь Ташкент`, `Весь Фергана`) | BTN-016 | WP-54 | KV-TG-030 |
+| 16 | callback button: `<Город> целиком` (e.g. `✅ Ташкент целиком`, `Фергана целиком`; legacy `Весь <город>`, reworded by DEC-54) | BTN-016 | WP-54 | KV-TG-030 |
 | 17 | callback button: `Готово (N)` | BTN-017 | WP-54 | KV-TG-030 |
 | 18 | callback button: `до $<amount>` presets (per city/deal/rooms, §3.6) and `✅ Не важно` | BTN-018 | WP-54 | KV-TG-031 |
 | 19 | callback button: `✍️ Своя сумма` | BTN-019 | WP-54 | KV-TG-032 |
@@ -515,13 +527,14 @@ from.
 | # | Test | Cases |
 | - | ---- | ----- |
 | 1 | `ProfileSyncTest` | the fake returns the desired profile → `diff` exit 0, "no changes"; a different Russian command list → `diff` lists it, `sync` calls `setMyCommands` for `ru` once; a missing Uzbek list → set; `sync` twice → no write the second time; `APP_ENV=production` without the switch → refused, no `set*` call; with the switch and without `--approved` → refused; with both → applied; a local run against the production username → refused; `dump` → JSON without a token string; a description over the limit → validation error before any call; `dev036` on (`todo`) → `/ping` absent from every list |
-| 2 | `ActionLogEventsTest` | `/start` with a tagged payload → `bot_started` with `source` and the three flags, `bot_command` with `start`; `/foo` → `bot_command` with `unknown`; a wizard to save → one `bot_callback` per press and one `bot_radar_created`; a free text → `bot_text_parsed`, and no column holds the text; an outdated button → `outcome` `stale`; an instant card, then a `403` → `bot_alert_sent`, `bot_alert_blocked`; `/owner` with the own contact → `bot_owner_verified`, no phone or hash; an unknown property → dropped; a user erased in the same update → no row; the rows are written after the Bot API calls of the update |
+| 2 | `ActionLogEventsTest` | `/start` with a tagged payload → `bot_started` with `source` and the three flags, `bot_command` with `start`; `/foo` → `bot_command` with `unknown`; a wizard to save → one `bot_callback` per press and one `bot_radar_created`; a free text → `bot_text_parsed`, and no column holds the text; an outdated button → `outcome` `stale`; an instant card, then a `403` → `bot_alert_sent`, `bot_alert_blocked`; `/owner` with the own contact → `bot_owner_verified`, no phone or hash; `📞 Показать номер` → `bot_card_action` with `op` `phone` and one `contact_disclosed` row of WP-47 with channel `bot`, neither holding the number; an unknown property → dropped; a user erased in the same update → no row; the rows are written after the Bot API calls of the update |
 | 3 | `BotAnalyticsTest` (arch) | only `BotEvents` uses `ActionLogger` in the bot namespaces |
 | 4 | `BotCoverageTest` | the three totals; a transcript removed from the fixture → failure naming the id; exactly the listed exceptions |
 | 5 | `BotInjectionTest` | every corpus entry rendered literally in the four renderers; `FakeBotApi` accepts the HTML |
 | 6 | `BotForgeryTest` | per action: foreign radar, foreign `sid`, 65 bytes, `k2:`, value outside the set → no state change |
 | 7 | `BotLocaleSweepTest` | uz and en replays: no raw key, no unfilled placeholder, no legacy brand word |
 | 8 | `InterimListTest` | empty list; no action bound to `InterimHandler` |
+| 9 | `RadarSwitchSweepTest` | the list of marked registrations is exact; with radars off every radar entry answers `bot.radar.soon` and creates nothing, every other scenario is unchanged |
 
 ## Acceptance checklist
 
@@ -533,9 +546,9 @@ from.
 - [ ] The profile opens the Mini App and the privacy page; inline mode shows nothing; the bot cannot be added to a
       group.
 - [ ] `BotCoverageTest` prints `84/84 handlers, 76/76 buttons, 88/88 texts` and names four exceptions.
-- [ ] The injection, forgery, locale-sweep and interim-list tests are green.
-- [ ] A sample of the action log on staging after the pass shows the eleven event groups and no text, phone, name
-      or Telegram id in any property.
+- [ ] The injection, forgery, locale-sweep, interim-list and radar-switch tests are green.
+- [ ] A sample of the action log on staging after the pass shows the eleven event groups (and `contact_disclosed`
+      for the numbers shown) and no text, phone, name or Telegram id in any property.
 - [ ] `docs/testing/bot-pass.md` holds a complete run for staging and for production: every block, four clients,
       three languages as the table says, each line pass or an accepted difference signed by the reviewer.
 - [ ] The acceptance checklists of WP-52 … WP-57 are all ticked and signed (`25` §14 item 3).

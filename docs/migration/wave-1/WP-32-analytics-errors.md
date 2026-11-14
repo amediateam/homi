@@ -370,7 +370,7 @@ rendered in place and keeps the name of its address.
 **Unit (Vitest).**
 
 - `scrub.test.ts`: `tgWebAppData` in a query, in a hash and in the middle of a sentence; bearer token; the session
-  cookie pair; `+998 90 000 00 67` and `998900000067` forms; e-mail; nested object to depth 6; `$snapshot` left
+  cookie pair; `+998 00 000 00 67` and `998000000067` forms; e-mail; nested object to depth 6; `$snapshot` left
   untouched; `stripUrl` for the app's addresses and for foreign ones.
 - `sanitize.test.ts`: each field limit; `name` from a thrown string and from an object; source taken from a stack
   with and without `:line:col`; query and hash removed.

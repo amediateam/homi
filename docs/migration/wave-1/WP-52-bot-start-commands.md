@@ -485,6 +485,10 @@ State machine: `04` §3.2. Rules BR-BOT-013, BR-BOT-014, BR-BOT-015.
 - `InterimHandler`: for a command of the interim list — one new message `bot.interim.use_app` with the button
   `📱 Открыть приложение` (`web_app`, `MiniAppUrl::home()`). For callback `k1:nw` — a silent answer and the same
   new message; the welcome stays as it is.
+- The radar switch of WP-51 (DEC-51) does not touch the interim replies: none of this package's registrations is
+  marked as a radar entry. `/new`, `/subs` and `📡 Включить радар` answer `bot.interim.use_app` while they are
+  interim; from the packages that take them over (WP-54, WP-55) they answer `bot.radar.soon` until WP-57 switches
+  radars on. No `/start` payload of the table in section 2 opens the wizard.
 - BOT-035 (`t.me/<support>?start=l_<number>`) is a payload sent to the support contact, not to this bot. HOMI has
   no support bot of its own in Wave 1 (DEC-21 and Q-BOT-016 are open), so nothing handles it; the Mini App builds
   the link from the same support username (WP-26). Recorded as "not built".

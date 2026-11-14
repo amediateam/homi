@@ -281,9 +281,11 @@ kvadro² [brand → HOMI] в Telegram», «Как удалить свои дан
   (LB-LND-016, LND-039).
 - The text is the legacy text adapted to what HOMI really does — the same adaptations as the bot text of WP-56
   (no support bot of its own, listings shown from another service and not stored, HOMI's own PostHog project, the
-  real LLM vendor, a site without cookies that passes a visit number into the bot). It is marked "pending legal
-  review"; WP-70 delivers the final wording as the answer to Q-SEC-021. The page and the bot text are changed
-  together.
+  real LLM vendor, a site without cookies that passes a visit number into the bot). The vendor is not fixed
+  (DEC-55): the page takes its display name from the brand layer (`brand.llmVendor`, a build-time value that the
+  production track changes together with `BRAND_LLM_VENDOR` of the bot text, WP-56) and prints the sentence that
+  no language model is used while it is empty. The text is marked "pending legal review"; WP-70 delivers the final
+  wording as the answer to Q-SEC-021. The page and the bot text are changed together.
 
 ## Files
 

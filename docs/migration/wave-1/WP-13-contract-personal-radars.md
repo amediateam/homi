@@ -33,6 +33,11 @@ controllers are stateless: a write validates and answers, a later read returns t
 - Reports and votes are stored and applied in HOMI only (DEC-48).
 - Brand (DEC-40): the survey answer legacy calls `kvadro` is `homi` here.
 - A foreign identifier answers exactly like an unknown one: `404 not_found` (SEC-REQ-014).
+- Favourites and history are paged by 20 with the cursor of the feed (DEC-53). This is the paging part of DEV-003,
+  on by decision and without a flag; a cap on the length of the history is not introduced.
+- Radars cannot be created or changed while `config('radar.creation_enabled')` is false (DEC-51; the key of WP-11,
+  reported by `GET /reference` as `radars_enabled`). The switch is HOMI's configuration, not a property of a
+  driver, so the stub controllers of this package obey it exactly as the real code of WP-45 will.
 
 ## Design
 
@@ -45,16 +50,18 @@ unknown number is `404 not_found`. "Preview" is the listing preview object of WP
 
 | Method | Answer | Notes |
 | ------ | ------ | ----- |
-| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` is `null` | the whole list in one answer, as legacy. Query `cursor` and `limit` (1 … 50) are accepted and take effect only when the flag of DEV-003 is on (`config('personal.paginate_lists')`, default `false`, added by WP-44; the stub always ignores them). Every item has `favorite: true` |
+| `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` | the cursor paging of the feed (WP-12): query `cursor` (opaque string, at most 512 characters) and `limit` (1 … 50, default 20); pages hold at most `limit` items and may hold fewer; `null` ends the list. Every item has `favorite: true` |
 | `PUT /favorites/{number}` | `200 {"data": {"favorite": true}}` | idempotent; `503 source_unavailable` when the listing cannot be checked and is not known locally |
 | `DELETE /favorites/{number}` | `200 {"data": {"favorite": false}}` | idempotent; never `404` for a listing that was not a favourite |
-| `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` is `null` | the whole list, as legacy; paging under the same flag. Items carry `viewed: true` |
+| `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` | the same paging. Items carry `viewed: true` |
 | `DELETE /history` | `204` | clears the whole history; idempotent |
 
-Changed against legacy: the toggle `POST …/favorite` became `PUT` and `DELETE`. Not changed in Wave 1: both lists
-come back whole with `next_cursor: null`; paging them and capping the history are the deviation DEV-003, which is
-`PROPOSED`, so its flag is off (DEC-36) and the stub and native drivers return whole lists. Withdrawn listings stay in the lists with `status_text`,
-listings the source no longer knows are left out. Scenarios: `empty` for both lists.
+Changed against legacy: the toggle `POST …/favorite` became `PUT` and `DELETE`; and both lists are paged by 20
+with a cursor, like the feed (DEC-53) — legacy returns each list whole in one answer with `next_cursor: null`. The
+length of the history is not capped (that part of DEV-003 is undecided). The stub cuts its pages from the fixture
+with the cursor form of the stub feed (`s1.<offset>`); a cursor that does not decode ends the list quietly (empty
+`data`, `null` cursor), as on the feed (WP-42). Withdrawn listings stay in the lists with `status_text`, listings
+the source no longer knows are left out. Scenarios: `empty` for both lists.
 
 ### Hidden listings, blocked authors, the hidden list — legacy: API-012 … API-015, API-026 … API-028
 
@@ -118,9 +125,19 @@ The radar object:
 always has all 25 keys with valid `types` for the `deal`; `preview` is present only when asked for and is `null` when
 it could not be computed (`items` at most 5, `count` and `flow` may be `null`).
 
+**The switch (DEC-51).** While `config('radar.creation_enabled')` is false — the default; staging and production
+stay there until the bot's sending package switches it on (WP-57) — `POST /radars`, `PUT /radars/{id}`,
+`PATCH /radars/{id}` and `POST /radars/{id}/relax` answer `403 radars_disabled` and change nothing;
+`GET /radars` answers `200` with `data: []`, with and without `include=previews`; `DELETE /radars/{id}` works as
+described below. The route middleware `App\Http\Middleware\EnsureRadarsEnabled` on the four write routes throws
+`App\Exceptions\Radar\RadarsDisabled` (an `ApiException` of WP-10: 403, `radars_disabled`) after authentication
+(and, from WP-40 on, the access gate) and before validation or any lookup of the radar. The stub controllers sit
+behind the same middleware and answer the empty list themselves: with the switch off no fixture and no scenario
+is used.
+
 | Method | Request | Answer |
 | ------ | ------- | ------ |
-| `GET /radars` | query `include=previews` (optional) | `200`, `data`: radar objects in creation order; `[]` when there are none |
+| `GET /radars` | query `include=previews` (optional) | `200`, `data`: radar objects in creation order; `[]` when there are none and while the switch is off |
 | `POST /radars` | `filters` (object, required, normalised by the filter rules of WP-12), `entry` (required: `filters`, `empty`, `few`, `prompt`), `relaxed` (optional, `[a-z_]{1,32}`) | `201` (created) or `200` (existing or reactivated) with the mutation result |
 | `PUT /radars/{id}` | `filters` (required), `relaxed` (optional) | `200`, mutation result; replaces the filters, keeps `active` |
 | `PATCH /radars/{id}` | exactly one of `active` (boolean), `mode` (`instant`, `digest`), `unhide` (`true`) | `200 {"data": {"radar": {…}, "starter": 2, "ask_found": false}}`; `starter` only for `active: true`, `ask_found` only for `active: false` |
@@ -145,6 +162,7 @@ Radar errors, each with its own code so the client can tell them apart (fix of L
 
 | Status and code | When |
 | --------------- | ---- |
+| `403 radars_disabled` | the switch is off (above): every `POST`, `PUT`, `PATCH` and relax, whatever its body; never `GET` or `DELETE` |
 | `409 no_chat` | the bot cannot write to the user; checked before any write on `POST`, `PUT`, `PATCH {active: true}` and relax; nothing is changed |
 | `409 radar_limit` | creating or switching on would exceed `limits.radars` of `GET /reference`; `message` names the limit |
 | `409 radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
@@ -154,7 +172,8 @@ Radar errors, each with its own code so the client can tell them apart (fix of L
 Changed against legacy: `subscriptions` became `radars`; ids are ULID strings; `hidden` kept its name;
 `subscription` in results became `radar`; create-or-reactivate moved from the client to the server and reports its
 outcome in `kind`; `DELETE` always answers JSON; previews are part of the list on request instead of three requests
-per radar (fix of LB-API-038). Scenarios: `empty` (list); `no_chat`, `radar_limit`, `radar_duplicate` (writes);
+per radar (fix of LB-API-038); `403 radars_disabled` and the empty list of the switched-off state are new (legacy
+has no such switch). Scenarios: `empty` (list); `no_chat`, `radar_limit`, `radar_duplicate` (writes);
 `existing`, `starter` (create with `starter: 3`), `few` (create with options), `ask_found` (pause and delete: the
 stub sets `ask_found: true` in the answer, no extra fixture).
 
@@ -195,6 +214,8 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - Stub controllers on `StubResponder` (WP-11) for every native-only method; each validates through its final form
   request, so the validation rules do not change in stage C.
 - Radar bodies reuse `SearchFiltersNormaliser` with `forRadar: true`.
+- `EnsureRadarsEnabled` and `RadarsDisabled` (the switch above); the middleware is attached by class to the four
+  radar write routes and stays there when WP-45 gives the controllers their real bodies.
 - Routes named `api.v1.favorites.*`, `history.*`, `hidden.*`, `listings.blocked-author.*`, `listings.reports.store`,
   `surveys.found.*`, `radars.*`, `landing.*`; `{id}` is constrained with `whereUlid`.
 
@@ -209,8 +230,10 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - `backend/app/Http/Resources/Api/V1/{FavoriteStateResource,BlockedAuthorResource,BlockedAuthorResultResource,HiddenOverviewResource,ReportResultResource,RadarResource,RadarMutationResource,RadarPatchResource,LandingLiveResource,LandingPinsResource}.php`
 - `backend/app/Services/Sources/Data/{LandingLive,LandingPins}.php`, `backend/app/Services/Sources/Stub/StubLandingSource.php`,
   `backend/app/Services/Sources/Contracts/LandingSource.php`, `backend/config/sources.php`
-- `backend/routes/api.php`
-- `backend/resources/fixtures/v1/favorites/{default,empty}.json`, `history/{default,empty}.json`,
+- `backend/routes/api.php`; `backend/app/Http/Middleware/EnsureRadarsEnabled.php`,
+  `backend/app/Exceptions/Radar/RadarsDisabled.php`
+- `backend/resources/fixtures/v1/favorites/{default,empty}.json`, `history/{default,empty}.json` (`default` holds
+  25 entries each, so a second page exists),
   `hidden/{default,empty,blocked_author}.json`, `radars/{list,list.previews,empty,created,existing,starter,few,patched,relaxed}.json`,
   `landing/{live,pins.rent,pins.sale}.json`
 - `backend/tests/Feature/Api/V1/Personal/*ContractTest.php`, `Radars/*ContractTest.php`, `Landing/*ContractTest.php`
@@ -220,12 +243,13 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 
 1. Read the legacy rows named above and the rule sections of the task files; take no routes or serializers from them.
 2. Tests first per group: favourites and history; hidden and blocked authors; reports and surveys; radars; landing.
-3. Favourites and history controllers with `ListPersonalRequest` (cursor, limit) and fixtures that reuse catalogue
-   numbers of WP-12.
+3. Favourites and history controllers with `ListPersonalRequest` (cursor, limit), the page cut of the stub, and
+   fixtures of 25 entries each that reuse catalogue numbers of WP-12 (its catalogue has 45).
 4. Hidden, blocked author and the hidden list.
 5. Reports and the two survey methods.
 6. Radar requests, resources and the stub controller; the fixtures cover three radars (one paused, one digest, one
-   with `hidden: 3`) and the scenario bodies.
+   with `hidden: 3`) and the scenario bodies. `RadarsDisabled`, `EnsureRadarsEnabled` on the four write routes, the
+   empty list of the switched-off state.
 7. `LandingSource`, the stub driver, the two public routes.
 8. Export OpenAPI, generate types; check in the generated file that the radar item, the mutation result and the
    error codes are typed. Add the full method table of `25` §4.2 with route names to `docs/api/README.md`.
@@ -234,6 +258,8 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 ## Behaviour to reproduce
 
 - Favourite: the answer is the source of truth for the heart (BR-APP-039); an error rolls the optimistic state back.
+- Favourites and history load 20 at a time and continue on scroll. Legacy returns the whole list at once
+  (BR-API-023); HOMI pages them by decision (DEC-53).
 - Hide, block and `fraud` have undo; `rented` has none (BR-APP-036); the `agent` reason is not offered by the client
   when the card says `is_owner: false`, but the server accepts it.
 - Radar on: an identical active radar answers `existing`; an identical paused one is reactivated (BR-APP-041);
@@ -243,13 +269,16 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
   creates exactly one radar (`15` §3.4 row 2).
 - Pause and delete may ask for the survey through `ask_found` (BR-APP-048, BR-APP-049).
 - Radar previews: at most five newest items, the count and the flow per radar (BR-APP-063).
+- Legacy lets a user create a radar at any time. In HOMI every radar write is refused with `radars_disabled` and the
+  list is empty until the switch is on (DEC-51); deleting stays possible, so nothing can be left behind.
 
 ## Tests
 
 - Favourites: `PUT` twice → `true` twice; `DELETE` twice → `false` twice; list key set, `favorite: true` on every
-  item, `meta.next_cursor` is `null` on the first answer with and without `cursor` and `limit` in the query; `abc`
-  and `0` as number → `404`.
-- History: list shape; `DELETE` → `204` twice.
+  item; the first answer has 20 items and a cursor, following it gives the other 5 and `null`, 25 distinct numbers
+  in all; `limit=5` → 5 items; `limit=0` and `limit=51` → `422`; a cursor that does not decode → an empty page with
+  `null`; `abc` and `0` as number → `404`.
+- History: list shape; the same page walk; `DELETE` → `204` twice.
 - Hidden: `PUT` and `DELETE` → `204`, repeatable; blocked author body with `listing_numbers` as integers; `GET
   /hidden` with both arrays in `default` and `empty`; `DELETE /hidden/authors/{id}` with a non-ULID → `404`.
 - Reports: dataset of four reasons → `200` with `hidden` as specified; `reason: "spam"`, missing body, `detail` of 501
@@ -258,6 +287,10 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 - Radars: list with and without `include=previews`; create → `201` with the exact key set and a 25-key `filters`;
   each scenario gives its status and code; `PATCH` with `{}`, two keys, `mode: "weekly"`, `unhide: false` → `422`;
   `DELETE` → `200` with `ask_found`; relax with an unknown code → `422`.
+- Radars with `radar.creation_enabled` off (set through `config()` in the test; `phpunit.xml` keeps it on for
+  every other case): `POST`, `PUT`, each of the three `PATCH` bodies and relax → `403` with code `radars_disabled`,
+  also with an invalid body and with a write scenario in the header; `GET /radars` → `[]` with and without
+  `include=previews`; `DELETE` → `200`; without a token still `401`.
 - Landing: both methods without a token; `deal=sale` → `bargains_week: null`, `medians: []`; `deal=x` → `422`; no key
   named `phone`, `text` or `author` anywhere in the answers.
 - Contract: every method of `25` §4.2 is a path in `docs/api/openapi.json` (a test compares the route list with a
@@ -266,13 +299,17 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 ## Acceptance checklist
 
 - [ ] Every method of this package answers as specified with `meta.source = stub`, or `204`.
-- [ ] Favourites use `PUT` and `DELETE` and are idempotent; lists carry `meta.next_cursor`.
+- [ ] Favourites use `PUT` and `DELETE` and are idempotent; favourites and history page by 20 and end with
+      `meta.next_cursor: null`.
 - [ ] Radar writes distinguish `no_chat`, `radar_limit` and `radar_duplicate` by code; the result carries `kind`.
+- [ ] With `radar.creation_enabled` off every radar write answers `403 radars_disabled`, the list is empty and
+      `DELETE` still works; with it on the methods behave as specified.
 - [ ] `GET /radars?include=previews` returns the preview object; without the parameter the key is absent.
 - [ ] The landing methods are public and contain no personal data.
 - [ ] The route list equals the method table of `25` §4.2; OpenAPI and types are regenerated; both CI gates are green.
 - [ ] `docs/api/README.md` lists every method with its route name and its Wave 1 driver.
-- [ ] Deployed to staging and production.
+- [ ] Deployed to staging and production; there `RADAR_CREATION_ENABLED` is unset, so `GET /radars` answers `[]`
+      and `POST /radars` answers `403 radars_disabled`.
 
 ## Handoff
 

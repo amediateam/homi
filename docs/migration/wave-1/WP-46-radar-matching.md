@@ -7,7 +7,7 @@
 | Depends on | WP-45 |
 | Size | about 2 600 changed lines, L |
 | Behaviour reference | `25` §5 (matching and delivery planning), §4.5 (limits); `24` §8.3 (RK-25); `15` §3.5, §3.6 rows 6–9, §3.10 (time zones); `16` SEC-REQ-014, SEC-REQ-029; tasks `tasks/backend/KV-BE-108-radar-match-job.md` (exclusions, one delivery per user), `KV-BE-109-delivery-ledger.md` (claim and release), `KV-BE-110-delivery-planner.md` (quiet hours, digest slots), `KV-BE-111-radar-lifecycle-listeners.md` (what drops pending items). The SQL match predicate of `KV-BE-107` is not built in Wave 1; `backend/config/horizon.php` (queues) |
-| Needs from the production track | 1. Review the small shared-file PR that adds `supervisor-radar` (queue `radar`) to `backend/config/horizon.php`; Horizon restarts with the deploy. 2. Confirm the Laravel scheduler runs every minute on staging and production. 3. Approve three migrations on production (`radar_filter_sets`, `radar_deliveries`, `radar_outbox`, new and empty). 4. Server env: `RADAR_MATCHING_ENABLED=false` now; it becomes `true` with the bot's sending package (WP-57), when the feed feature is on a real source and a sender exists. Leave `RADAR_POLL_INTERVAL` and `RADAR_POLL_BUDGET_PER_MINUTE` blank (defaults 300 and 60) unless the operator's limits say otherwise |
+| Needs from the production track | 1. Review the small shared-file PR that adds `supervisor-radar` (queue `radar`) to `backend/config/horizon.php`; Horizon restarts with the deploy. 2. Confirm the Laravel scheduler runs every minute on staging and production. 3. Approve three migrations on production (`radar_filter_sets`, `radar_deliveries`, `radar_outbox`, new and empty). 4. Server env: `RADAR_MATCHING_ENABLED=false` now; it becomes `true` with the bot's sending package (WP-57), when the feed feature is on a real source and a sender exists — together with `RADAR_CREATION_ENABLED` (WP-11), which stays unset until then, so no radar exists on the servers that could be matched (DEC-51). Leave `RADAR_POLL_INTERVAL` and `RADAR_POLL_BUDGET_PER_MINUTE` blank (defaults 300 and 60) unless the operator's limits say otherwise |
 
 ## Goal
 
@@ -31,6 +31,8 @@ which binds the sender); the bot's radar screens (WP-55); matching by SQL over H
 - In Wave 1 the matcher polls the listing source per distinct filter set and compares with what it has seen
   (`25` §5); identical filters of many users cost one poll (RK-25).
 - The matcher never runs on stub data: real users must not get demo listings in their chat (RK-27).
+- Until the bot's sending package is live nobody can create a radar on staging or production (DEC-51, the switch
+  of WP-11 and WP-45), so the matcher has nothing to do there; WP-57 switches creation and matching on together.
 - A delivered listing is never delivered again to the same user, whatever radar matched (task `KV-BE-109`).
 - Time rules are computed in Asia/Tashkent wall-clock through the zone name; storage is UTC (ADR-0006).
 - Behaviour changes stay off (DEC-36): no cap on instant cards per radar (DEC-20 undecided → `null`).
@@ -293,10 +295,12 @@ or failed — check `radar:status` before turning matching on.
       delivers cards and digests in tests; the null sender leaves rows untouched.
 - [ ] Pause, delete, settings changes and an unreachable chat adjust the outbox as specified.
 - [ ] `supervisor-radar` is in Horizon (shared-file PR merged); the three commands are scheduled; `radar:status` works.
-- [ ] The PR names the migrations, the env keys and the fact that `RADAR_MATCHING_ENABLED` stays false until the bot's sending package (WP-57) is deployed.
+- [ ] The PR names the migrations, the env keys and the fact that `RADAR_MATCHING_ENABLED` stays false, and radar
+      creation off, until the bot's sending package (WP-57) is deployed.
 - [ ] `make ci-backend` and the `pgsql` group are green.
-- [ ] On staging with matching switched on for a test (feed feature on the fixture-backed legacy driver or a real
-      key): a radar gets outbox rows for new listings, visible in `radar:status`; then matching is switched off again.
+- [ ] On staging, for a test (feed feature on the fixture-backed legacy driver or a real key): the production
+      track switches radar creation and matching on together, the tester creates one radar, it gets outbox rows for
+      new listings, visible in `radar:status`; then the radar is deleted and both switches are set back to off.
 
 ## Handoff
 

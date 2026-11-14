@@ -57,13 +57,13 @@ any failure. It prints names and states only, never a secret value.
 | 1 | Source flags | every feature of `config/sources.php` resolves to `legacy` or `native` for a system context and for a sample user; no stored rule names `stub`; `sources.allow_stub` is false |
 | 2 | Driver binding | the result of `sources:check` |
 | 3 | Legacy reachability | the result of `legacy:ping` (WP-41) |
-| 4 | Radar switches | `radar.matching_enabled`, `radar.starter_enabled`, `radar.require_chat` are true; the sender bound for `RadarSender` is not the null one |
+| 4 | Radar switches | `radar.creation_enabled` (DEC-51: switched on by WP-57), `radar.matching_enabled`, `radar.starter_enabled`, `radar.require_chat` are true; the sender bound for `RadarSender` is not the null one |
 | 5 | Bot interim list | `config('bot.interim_commands')` is empty |
 | 6 | Bot profile | `telegram:profile diff` reports no change |
 | 7 | Webhook | `telegram:health` reports the expected address, no recent error, a low pending count |
 | 8 | Scheduler and queues | the heartbeat is fresh (the gauge `scheduler_heartbeat_timestamp` of WP-70 is younger than 5 minutes); no failed job in the last hour; every Horizon supervisor of `config/horizon.php` is running |
 | 9 | Secrets and dashboards | the result of `security:check` (WP-70) |
-| 10 | Safety switches | `delivery:pause` is off; `telegram.broadcast_enabled` is false; the LLM feature state is printed (on or off, both pass) |
+| 10 | Safety switches | `delivery:pause` is off; `telegram.broadcast_enabled` is false; the LLM feature state and the names of the configured providers and models are printed (on or off, configured or not: all pass — DEC-55); it fails only when a provider is configured and `brand.llm_vendor`, the name the privacy text shows, is empty |
 | 11 | Behaviour flags | every `bot.devNNN` key and `bot.hide_rules.scope` of `backend/config/bot.php` has its default — a flag that is on is listed and needs a named approval in the go record. The flags of `frontend/app/lib/flags.ts` and `frontend/landing/lib/flags.ts` are constants of the frontend builds, which no package exports to the API: the command cannot read them, so they are a line of the launch checklist, checked by reading the two files at the deployed commit |
 
 ### Expected driver of every method on production
@@ -221,6 +221,8 @@ Switching off single functions without a deploy:
 | -------- | ------ | ------ |
 | All outbound sending | `php artisan delivery:pause on` (WP-57) | pushes, digests, edits and broadcasts wait; replies to users continue |
 | Radar matching | `RADAR_MATCHING_ENABLED=false` in the server env, then a Horizon restart (production track; php-fpm reads `.env` on every request, Horizon only at start — `docs/infrastructure/deployment.md`) | no new matches are planned; nothing is lost that was not found |
+| Creating and changing radars | `RADAR_CREATION_ENABLED=false` the same way (WP-57, "Switching radars on") | the Mini App and the bot say "soon" again, writes are refused and the radar lists answer empty; stored radars are kept and come back with the switch. Use it together with the row above, otherwise hidden radars keep delivering |
+| The language model | change `AI_DEFAULT_PROVIDER`, the model and the key in the server env, then a Horizon restart (WP-55, DEC-55); empty the provider to stop all calls | the next phrase goes to the other provider; with none configured every phrase gets the not-understood reply |
 | Free text and voice | `php artisan llm:feature query-parsing off` (WP-55) | every phrase gets the not-understood reply |
 | Broadcasts | `TELEGRAM_BROADCAST_ENABLED=false` (the default) | `confirm` refuses on production |
 | The whole bot | the production track removes the webhook; Telegram keeps updates for a limited time | last resort; note the time, re-register with the script of WP-50 |
@@ -284,7 +286,7 @@ done of `25` §14:
 
 | # | Layer | Test | Cases |
 | - | ----- | ---- | ----- |
-| 1 | Feature (Pest) | `LaunchCheckTest` | all green → exit 0; a feature resolving to `stub` → row 1 fails; a stored rule naming `stub`; `allow_stub` true; an unbound driver; `radar.starter_enabled` false; the null sender bound; a non-empty interim list; a profile difference (fake Bot API); a stale heartbeat; a failed job; `delivery:pause` on; a `bot.devNNN` flag on is listed; no output line contains a configured secret value |
+| 1 | Feature (Pest) | `LaunchCheckTest` | all green → exit 0; a feature resolving to `stub` → row 1 fails; a stored rule naming `stub`; `allow_stub` true; an unbound driver; `radar.creation_enabled` false; `radar.starter_enabled` false; the null sender bound; a configured provider with an empty `brand.llm_vendor`; no provider configured at all → passes; a non-empty interim list; a profile difference (fake Bot API); a stale heartbeat; a failed job; `delivery:pause` on; a `bot.devNNN` flag on is listed; no output line contains a configured secret value |
 | 2 | On servers | the five commands of the field table | outputs attached to the checklist for staging and production |
 | 3 | Rehearsal | the three switch drills on staging | each takes effect within a minute and is undone; `source_flag_changes` holds the rows |
 | 4 | In Telegram | a last short pass on production after the go record: `/start`, a card, a radar saved, the Mini App opened from the bot, the landing button into the bot | screenshots in the go record |
@@ -303,6 +305,8 @@ done of `25` §14:
 - [ ] All 45 screens and every bot scenario have a signed checklist; the links are in `docs/launch/checklist.md`.
 - [ ] The Mini App was opened from the production bot on iOS, Android, Desktop and Web, in cookie mode and in
       header mode, on legacy data.
+- [ ] Radars are switched on on production (`radar.creation_enabled` in `launch:check` row 4): the Mini App
+      offers radars and `/new` opens the wizard.
 - [ ] An instant card, a digest and a quiet-hours release were each observed on production (date and radar).
 - [ ] `https://homi.uz` is live in three languages with the privacy page; its buttons open the production bot.
 - [ ] The checks of WP-70 pass: the security checklist, the leak scans on production logs, the alerts armed, the

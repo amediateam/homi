@@ -211,3 +211,30 @@ and of the Telegram Bot API is worded "verify before writing".
 Checks at the commit: 44 files with the template's field table and ten sections (script); `collect_ids.py --check`
 → exit 0; `build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; every repository path named
 in the specifications exists or is created by a package (script); address and token scan → no hit.
+
+## H. Development track, 2026-11-14 (night) — second answer round, support bot
+
+The developer answered eight more questions (answers 44–51, verbatim in
+`docs/migration/decisions/2026-11-14-developer-answers.md`), registered as DEC-50 … DEC-56 in `24` §8.1:
+
+- DEC-50: the "demo data" marker stays (confirms RK-27's mitigation).
+- DEC-51: creating and changing radars is switched off (`RADAR_CREATION_ENABLED`) until the bot's sending package
+  WP-57 is live; the radar tab and the bot say "soon". Telegram checks of radar features move to WP-57.
+- DEC-52: the author's phone number only after a tap — never on the card, masked in texts, given by the counted
+  contact method (a deliberate difference from legacy, no flag).
+- DEC-53: favourites and history paged by 20 with a cursor (no flag).
+- DEC-54: the whole-city label «{city} целиком» in the Mini App and the bot (no flag; uz and en to proofreading).
+- DEC-55: no fixed language-model vendor; provider and model come from configuration (answers DEC-03).
+- DEC-56: HOMI's own support bot, relaying to the operators' private chats (answers DEC-21) — new work package
+  WP-59; the queue has 45 packages.
+
+The five behaviour decisions were carried through 32 specifications by one agent; the main session reviewed the
+seams (callback registry, dependencies, the claim about env reload checked against
+`docs/infrastructure/deployment.md`), aligned `24`, `25` and the queue, and wrote WP-59. Defaults chosen in that
+work, open to change in the review: numbers of other people inside a listing text stay masked; `has_phone` does not
+look at the quota (a refusal comes on the tap); the bot sends the number as a separate message; a temporary switch-on
+of radars on staging is allowed for the check of WP-46, never on production.
+
+Checks at the commit: 45 files with the template (script); `collect_ids.py --check` → exit 0;
+`build_open_questions.py` → 245 questions; `task_graph.py --check` → exit 0; repository paths named exist or are
+created by a package (script); address and phone scan → only synthetic numbers.

@@ -153,10 +153,12 @@ renovation, floor, area and market (sale) or appliances (rent), posted (search m
 
 ### Seams
 
-- `radarsReady` comes from `features/radars/capability.ts`; `subscribe(filters, entry, relaxed?)` and
-  `useHasActiveRadar(filters)` come from `features/radars/subscribe.ts`. WP-24 creates both files (the second as a
-  stub: `subscribe` resolves `{ ok: false }`, `useHasActiveRadar` returns `false`); WP-30 writes the real bodies
-  and flips the constant. While `radarsReady` is `false` the search footer shows no radar button.
+- `radarsReady` and `useRadarsEnabled()` come from `features/radars/capability.ts`; `subscribe(filters, entry,
+  relaxed?)` and `useHasActiveRadar(filters)` come from `features/radars/subscribe.ts`. WP-24 creates both files
+  (the second as a stub: `subscribe` resolves `{ ok: false }`, `useHasActiveRadar` returns `false`); WP-30 writes
+  the real bodies and flips the constant. The footer asks `useRadarsEnabled()` only: while it is `false` — the
+  constant is off, or the server has radars switched off (`radars_enabled` of the reference data, DEC-51) — the
+  search footer shows neither the radar button nor the «Радар включён» state.
 - `onFiltersApplied(cb)` for WP-30 and WP-28 (above). `normalizeFlow` (exported from `useLiveStats.ts`) is the one
   validator of a flow answer; WP-30 imports it for its nudge and radar sheet and does not write another.
 - Screen names expected from `screenNameOf` (WP-20, reported by WP-32): `filters`, `filters/rooms`, `filters/price`,
@@ -204,7 +206,8 @@ if `listings/count`, `listings/flow` or `cities` are not yet allowed for `GET`).
 11. `CityPickerSheet`, `useCityPick`, the nested layer in the full form, `CitySheetRoute` and the `/city` route files.
 12. `QuickFilterForm`, `QuickFilterSheetRoute`, the `/filters/[kind]` route files.
 13. `SortList`, `SortSheetRoute`, the `/sort` route files.
-14. Wire the radar button to the seam; component test with `radarsReady` forced on.
+14. Wire the radar button to the seam; component test with `radarsReady` forced on and `radars_enabled` `true`,
+    `false` and missing.
 15. End-to-end specs in both session modes; run the acceptance checklist on staging in ru, uz, en and light, dark.
 
 ## Behaviour to reproduce
@@ -305,8 +308,9 @@ Tip toast: a second toast lives inside the sheet (SCR-042). It uses the scope WP
 | flow, daily | otherwise | `sheet.flowDay` «📡 Радар: ≈{n} в день», rounded |
 | flow absent | request failed or `normalizeFlow` returned `null` | no flow line, no chips; height reserved, no layout jump |
 | relax chips | the flow answer carries options | `«{label} · {rate}»`, server strings as text |
-| radar on | search mode, `radarsReady`, an active radar has the same filters (BR-APP-012) | ✓ `head.followOn` «Радар включён» |
-| radar off | search mode, `radarsReady`, no such radar | `sheet.subscribe` «Включить радар», disabled while submitting |
+| radar on | search mode, `useRadarsEnabled()`, an active radar has the same filters (BR-APP-012) | ✓ `head.followOn` «Радар включён» |
+| radar off | search mode, `useRadarsEnabled()`, no such radar | `sheet.subscribe` «Включить радар», disabled while submitting |
+| radars switched off | search mode, `useRadarsEnabled()` is `false` | no radar button and no «Радар включён»; the rest of the footer is unchanged |
 | radar modes | `radar-new`, `radar-edit` | `sheet.matchingNow` «Сейчас подходит: {n}» (empty while unknown) and one primary button: `sheet.subscribe` (new) or `sheet.save` «Сохранить» (edit), disabled while submitting |
 
 - Flow wording comes from WP-22 (BR-APP-044): `formatFlow(flowRate(flow), 'sheet', t, { oneVocabulary })` with
@@ -417,7 +421,8 @@ Component (Vitest + Testing Library):
   order; reset with `dev018ResetKeepsDaily` off and on; footer labels for unknown, positive and zero counts; flow
   line for `{21 in 7 days}` → «≈3 в день», `{4 in 7 days}` → «4 за неделю», `{0}` → the "none" text, with
   `dev021OneFlowVocabulary` off and on; relax chip replaces the draft and sets `relaxed`; radar button hidden when
-  `radarsReady` is false, «Радар включён» when `useHasActiveRadar` is true.
+  `radarsReady` is false and when the reference data says `radars_enabled: false`, «Радар включён» when
+  `useHasActiveRadar` is true.
 - `DealSections.test.tsx`: deal switch keeps geography; long → daily with `[apartment, commercial]` keeps
   `[apartment]` and clears price, below-median, tenant and pets; last type cannot be removed; adding «Дом» clears
   `below_median`; rent-term visibility table.
@@ -505,6 +510,8 @@ Full filters sheet:
       no error screen.
 - [ ] Radar layouts (component test until WP-30): «Новый радар» with «Включить радар», «Условия радара» with
       «Сохранить», both with «Сейчас подходит: N», neither with «Опубликовано» nor «Обвести на карте».
+- [ ] While the reference data says `radars_enabled: false` the search footer offers no radar (component test;
+      DEC-51).
 
 Quick filter sheet:
 

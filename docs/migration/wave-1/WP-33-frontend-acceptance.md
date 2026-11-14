@@ -44,7 +44,8 @@ the audit is traced to the package that owns it.
 | Proof of parity | DEC-46, `25` §9, RK-31 | Acceptance is the written checklist per screen, ticked in the PR with staging screenshots and signed by the reviewer. A difference is accepted only as a defect fix or a visual detail |
 | Process | DEC-45 | Checks inside Telegram happen on staging and then on production after the deploy; there is no tunnel to a developer machine |
 | Session modes | DEC-44, `25` §3.4, RK-30 | Every end-to-end scenario runs in cookie mode and in header mode; the pass on Telegram Web records which mode each browser ended in |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 33 defects without a `DEV` row are checked as fixed; the 14 with one are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 19 flags are off on `main` |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 34 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main` |
+| Decided behaviour changes | DEC-51 … DEC-54 | Four differences from legacy are behaviour of the build, not flags, and are checked as such: radars are switched off on staging and production until WP-57 and the app says "soon"; the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
 | No legacy access | DEC-33 | The suite, CI and the pass never reach legacy; `@homi/testing` blocks external hosts |
 | Stubs and the marker | `25` §4.4, RK-27 | Stub answers are deterministic and mutations do not persist: assertions target what the interface does, never stored state. The demo-data marker is asserted on every stub-backed screen |
 | Scope of the wave | DEC-43 | The access gate is open, so the no-access screen is accepted on stubs only |
@@ -141,6 +142,8 @@ header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves th
 | 16 | Old Telegram client | project `miniapp-old` | end to end |
 | 17 | Bundle cannot start | the test aborts an app chunk | end to end |
 | 18 | GL engine and Leaflet engine | headless Chromium falls to Leaflet by the legacy rule; `?map=gl` forces GL (WP-27) | end to end |
+| 19 | Radars switched off on the server | not a scenario: the API's env value `RADAR_CREATION_ENABLED=false`, in the workflow step that runs the specs tagged `@radars-off` against a rebuilt app (WP-30). The cached reference call never forwards the scenario cookie | end to end |
+| 20 | A second page of favourites and of history | the default fixtures of WP-13, 25 entries each | end to end |
 
 States that can be checked only below the end-to-end layer (they are listed in the PR with the test that covers
 each): the 15 s request timeout; the scroll measurement that turns lite mode on; an engine truly below the floor
@@ -156,9 +159,10 @@ stage C and by the second run in WP-48.
 Existing specs keep their files and owners: `smoke`, `foundation`, `launch`, `session`, `back`, `boot-failure`,
 `csp`, `gates`, `shell`, `crash`, `feed`, `filters`, `city`, `listing-open`, `listing-contact`, `listing-actions`,
 `photo-viewer`, `map`, `map-leaflet`, `map-lasso`, `spot-map`, `saved`, `radars`, `radar-subscribe`, `radar-forms`,
-`follow-nudge`, `settings`, `settings-language`, `settings-hidden`, `home-nudge`, `journal`, `errors`, `analytics`
-(plus those of WP-22). This package adds tags (`@smoke`, `@gesture`, `@gates`, `@render`), the screen annotation,
-and what is missing against the checklists of the owning specifications.
+`follow-nudge`, `radars-soon`, `settings`, `settings-language`, `settings-hidden`, `home-nudge`, `journal`,
+`errors`, `analytics` (plus those of WP-22). This package adds tags (`@smoke`, `@gesture`, `@gates`, `@render`;
+`@radars-off` exists since WP-30 and stays excluded from the default projects), the screen annotation, and what
+is missing against the checklists of the owning specifications.
 
 New journeys (`e2e/journeys/`), each in both modes:
 
@@ -257,6 +261,11 @@ Not reachable inside Telegram while the answers are stubs — accepted in the su
 no-access screen (gate open, DEC-43); the write-access prompt after `no_chat` and the restart-bot confirm; the
 radar limit; the prepared-message share window and a real call page; a session that expires by age. On staging a
 tester on Telegram Web may set `homi_stub_scenario` in the browser to see these; on production nothing can.
+
+Not reachable inside Telegram at all in this package: the radar screens beyond their "soon" state. Staging and
+production keep radars switched off until WP-57 (DEC-51), and the switch is not a stub scenario. Rows 26 … 31 of
+the screen table are therefore proven by the suite and on the local stack here, the "soon" state is checked inside
+Telegram, and the full radar pass inside Telegram is part of WP-57.
 
 Evidence for the PR: the filled record (date, client and version, device, system, mode, pass or fail per row of
 the checklist, notes), one screenshot per screen group and client, and a screen recording of the Back order on iOS
@@ -366,11 +375,11 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 19 | LB-APP-019 | GL failure retried on every open | WP-27 | fixed |
 | 20 | LB-APP-020 | pin labels inserted as HTML | WP-27 | fixed |
 | 21 | LB-APP-021 | restored values arrive too late | WP-21 | fixed |
-| 22 | LB-APP-022 | saved lists re-request a cursor | WP-29 | fixed (whole lists; paging itself is DEV-003, `dev003PaginatedLists`) |
+| 22 | LB-APP-022 | saved lists re-request a cursor | WP-29 | fixed (the cursor guard of the list hook; the lists are paged by decision, DEC-53) |
 | 23 | LB-APP-023 | sort options before reference data | WP-22 | fixed |
 | 24 | LB-APP-024 | map card ignores Back | WP-27 | flagged `dev013BackClosesMapCard` (DEV-013) |
 | 25 | LB-APP-025 | history dates in the device zone | WP-22 | flagged `dev014TashkentDates` (DEV-014) |
-| 26 | LB-APP-026 | «Весь Ташкент» for every city; dead keys | WP-22 | flagged `dev015NeutralWholeCity` (DEV-015); the dead keys are dropped by WP-20's importer |
+| 26 | LB-APP-026 | «Весь Ташкент» for every city; dead keys | WP-22 | fixed by decision (DEC-54): «{city} целиком» with the city's own name, no flag; the dead keys are dropped by WP-20's importer |
 | 27 | LB-APP-027 | failures that only vibrate | WP-23 | flagged `dev016ErrorToastOnFailure` (DEV-016) |
 | 28 | LB-APP-028 | call button dead end, calls over-counted | WP-26 | fixed |
 | 29 | LB-APP-029 | tenant and pets on daily rent | WP-22 | flagged `dev017TenantPetsDailyRule` (DEV-017) |
@@ -393,15 +402,15 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 46 | LB-APP-046 | Settings button leaves sheets open | WP-21 | fixed |
 | 47 | LB-APP-047 | expired session blamed on the server | WP-21 | fixed (the screen is WP-23's) |
 
-Totals: 33 fixed, 14 flagged. Five more flags exist without a client defect behind them, all off:
+Totals: 34 fixed, 13 flagged. Four more flags exist without a client defect behind them, all off (paged saved
+lists, the paging part of DEV-003, are not among them: DEC-53 made them plain behaviour):
 
 | # | Flag | Deviation | Package |
 | - | ---- | --------- | ------- |
-| 1 | `dev003PaginatedLists` | DEV-003 | WP-29 |
-| 2 | `dev005RadarDropsPostedDays` | DEV-005 | WP-22 (used by WP-30) |
-| 3 | `dev010RealtorVoteWording` | DEV-010 | WP-26 |
-| 4 | `dev051RentedUndo` | DEV-051 | WP-26 |
-| 5 | `dev052UnifiedBelowMedianRule` | DEV-052 | WP-22 |
+| 1 | `dev005RadarDropsPostedDays` | DEV-005 | WP-22 (used by WP-30) |
+| 2 | `dev010RealtorVoteWording` | DEV-010 | WP-26 |
+| 3 | `dev051RentedUndo` | DEV-051 | WP-26 |
+| 4 | `dev052UnifiedBelowMedianRule` | DEV-052 | WP-22 |
 
 ### Telegram points (45)
 
@@ -467,15 +476,15 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 15 | SCR-015 | Quick filter | WP-25 | `/filters/rooms`, `/price`, `/owner` | three bodies; own reset; live count |
 | 16 | SCR-016 | Sort | WP-25 | `/sort` | six options with their availability; a pick closes and scrolls up |
 | 17 | SCR-017 | City picker | WP-25 | `/city`; `pick=city` in filters | rows with counts and ✓; location row; header variant saves at once; nested variant changes the draft only |
-| 18 | SCR-018 | Listing | WP-26 | `/listing/<number>`, over a list and direct | hero; title row; key facts; market block; facts; stats; history; location rows; author; description; source, original, translation; each CTA variant; share |
+| 18 | SCR-018 | Listing | WP-26 | `/listing/<number>`, over a list and direct | hero; title row; key facts; market block; facts; stats; history; location rows; author with «Показать номер»; description; source, original with masked numbers, translation; no phone number before a tap, the digits after it; each CTA variant; share |
 | 19 | SCR-019 | Listing loading and errors | WP-26 | same | skeleton; section skeletons over a preview; «Объявление не загрузилось»; error with retry |
 | 20 | SCR-020 | Photo viewer | WP-26 | `/listing/<number>/photos` | counter; zoom; swipe down; ×; Back |
 | 21 | SCR-021 | Spot map | WP-28 | `/listing/<number>/location` | circle; locate with the distance line or an error; Yandex and Google buttons; ×; Back; both engines |
 | 22 | SCR-022 | Market sheet | WP-26 | `/listing/<number>/market` | the three paragraphs per scope and tone; "updated" steps; «Подробнее» only when the brand has a link |
 | 23 | SCR-023 | Actions and report | WP-26 | `/listing/<number>/actions`, `step` | menu rows; report rows; detail step; every toast and undo; support row only with an account |
-| 24 | SCR-024 | Favourites | WP-29 | `/saved` | list; removing a favourite removes the card; empty; error; pull |
-| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye; «Очистить» with its confirm; empty; failure |
-| 26 | SCR-026 | Radar tab | WP-30 | `/radars` | spinner; error; tiles with status; switch on and off; resumed toast; «+» |
+| 24 | SCR-024 | Favourites | WP-29 | `/saved` | list, 20 at a time with the next page on scroll; removing a favourite removes the card; empty; error; pull |
+| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye, 20 at a time; «Очистить» with its confirm; empty; failure |
+| 26 | SCR-026 | Radar tab | WP-30 | `/radars` | the "soon" state while radars are switched off; spinner; error; tiles with status; switch on and off; resumed toast; «+» |
 | 27 | SCR-027 | Radar empty | WP-30 | `/radars` with none | sweep, still in lite; texts; button opens the new-radar sheet |
 | 28 | SCR-028 | Radar sheet | WP-30 | `/radars/<id>` | header; finds strip in its three states; delivery switch and mode; hidden row; delete with confirm; «Смотреть найденное» and Back returns here |
 | 29 | SCR-029 | Radar editor | WP-30 | `/radars/<id>/edit` | title; no «Опубликовано»; «Сейчас подходит: N»; each save toast; «Расширить» |
@@ -499,14 +508,18 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 ### Statements
 
 - [ ] Rows 1–45 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
+      Rows 26 … 31 carry the staging screenshot of the "soon" state and local screenshots of the radar screens,
+      and are ticked inside Telegram in WP-57 (DEC-51).
 - [ ] Every line of the acceptance checklists of WP-20 … WP-32 is ticked in its own PR or re-ticked here.
 - [ ] `miniapp-cookie` and `miniapp-header` run every spec; a spec cannot opt out of a mode.
 - [ ] The mode assertions pass after every test: cookie attributes in cookie mode; bearer header and no stored
       token in header mode.
 - [ ] `e2e-coverage.mjs` reports no screen without a test; the tables of this file name every rule, defect and
       Telegram point once (the check of step 10 and a count: 45, 69, 47, 45).
-- [ ] The 33 fixed defects each have a passing test that would fail on the legacy behaviour; the 14 flagged ones
-      and the 5 other flags each have tests for both branches; `lib/flags.ts` on `main` has 19 flags, all `false`.
+- [ ] The 34 fixed defects each have a passing test that would fail on the legacy behaviour; the 13 flagged ones
+      and the 4 other flags each have tests for both branches; `lib/flags.ts` on `main` has 17 flags, all `false`.
+- [ ] The four decided differences from legacy hold on the merged build: the "soon" state with radars off, no
+      phone number before a tap, saved lists paged by 20, «{city} целиком».
 - [ ] The eight journeys pass in both modes; the state table has a scenario or a named lower-layer test per row.
 - [ ] No test reaches an external host; no test contains real launch data, a real phone or a real name.
 - [ ] `render.spec.ts` finds no raw key, no missing-message report and no legacy brand word in three locales.

@@ -45,6 +45,7 @@ translation, share, hide, block and report.
 | Session modes | 25 §3.4 | Cookie mode and header mode use the same screen code; mutations are Server Actions that take the token as an argument in header mode |
 | API conventions | 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
 | Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The API records the view on the read; the client sends nothing for it |
+| The author's number | DEC-52, WP-12 | The card answer has no number and no call link, and the numbers in its texts are masked. «Позвонить», «Показать номер» and a masked number in the text call `POST …/contact` on the tap and only then show the digits or open the call link. Nothing asks for a contact without a tap, so no number is in the server-rendered page. On by decision, no flag |
 | Baseline | 25 §8.1, Q-APP-024 | The report-detail step and the `price_kind: business` label come from the re-baselined audit of WP-02 (see "Behaviour to reproduce") |
 | Brand | DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
 | Acceptance | DEC-46, 25 §9 | The functional checklist below, in three locales and two themes |
@@ -116,8 +117,9 @@ object `comparison` (`null` when there is no comparison; `value`, `own`, `n`, `m
 `near_class`, `radius_km`, `district`, `place_value`, `note`, `updated`, `price_usd`, `price_per_m2`), while the
 delta and the tone stay in `market.median_delta` and `market.tone`; `history` is `price_history`; `owner` is
 `owner_label`; `original_text`, `original_url`, `post_deleted` are `original.text`, `original.url`,
-`original.deleted`; the phone and the links are `contact.phone`, `contact.phone_display`, `contact.call_url`,
-`contact.call_url_expires_at`, `contact.contact_url`, `contact.contact_paid`; the price parts are
+`original.deleted`; the card has no phone and no call link (DEC-52) — `contact.has_phone`, `contact.contact_url`
+and `contact.contact_paid` are what it carries, and `phone`, `phone_display`, `call_url` and `expires_at` come from
+`getContact`; the price parts are
 `price.display`, `price.period`, `price.alt`, `price.notes`, `price.kind`. The action names `getContact`,
 `translate` and `prepareShare` are the ones WP-22 reserved.
 
@@ -135,7 +137,7 @@ delta and the tone stay in `market.median_delta` and `market.tone`; `history` is
 | `sections/{LocationSection,NearbySection,SpotMapSlot}.tsx` | location rows, «Рядом», the 2:1 placeholder that links to `routes.listingLocation(number)` |
 | `sections/{AuthorSection,DescriptionSection,SourcesSection,OriginalText}.tsx` | author, description, channel chips, original text with translation |
 | `translation/{useTranslation,translationCache}.ts` | state per number and locale: `{ text, shown, pending, failed }` |
-| `cta/{ListingCtaBar.tsx,useContact.ts}` | price, delta or note, primary action; contact link lifetime and the call flow |
+| `cta/{ListingCtaBar.tsx,useContact.ts}` | price, delta or note, primary action; the contact fetched on a tap, its lifetime and the call flow |
 | `share/useShareListing.ts` | prepared message, fallback link, lock |
 | `openOriginal.ts` | `openOriginal(number, url, src)`: `tg.openLink`, then `original_opened` only if it opened |
 | `viewer/{PhotoViewerRoute,PhotoViewer,ZoomableImage}.tsx`, `viewer/gestures.ts` | viewer, zoomable slide, pure gesture maths |
@@ -143,14 +145,16 @@ delta and the tone stay in `market.median_delta` and `market.tone`; `history` is
 | `actions/{ListingActionsRoute,ListingActionsSheet,ActionRow,ReportDetailForm}.tsx`, `actions/useListingActions.ts` | menu, report and detail steps; results, toasts, undo |
 | `closeListing.ts` | closes the sheet steps and the listing in one move (see below) |
 
-Outside the feature folder: `splitPhones(text)` in `frontend/packages/utils/src/phone.ts` (pure, exported from
-`@homi/utils`); `backBy(steps)` added to `frontend/app/lib/navigation/history.ts`.
+Outside the feature folder: `splitMaskedPhones(text)` in `frontend/packages/utils/src/phone.ts` (pure, exported
+from `@homi/utils`): it cuts a text into plain parts and masked numbers — the fixed form of WP-12,
+`+998 ** *** ** NN` or `+** *** ** NN` — and gives each number's last two digits. `backBy(steps)` added to
+`frontend/app/lib/navigation/history.ts`.
 
 ### Server Actions and reads
 
 | Function | File | v1 method | Used result |
 | -------- | ---- | --------- | ----------- |
-| `getContact(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/contact` | call link and its expiry |
+| `getContact(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/contact` | number, display number, call link and its expiry; called only from a tap |
 | `translate(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/translation` | translated text |
 | `prepareShare(number)` | `lib/actions/listing.ts` | `POST /listings/{number}/share` | prepared message identifier |
 | `hideListing`, `unhideListing` | `lib/actions/hidden.ts` | `PUT`, `DELETE /hidden/listings/{number}` | — |
@@ -194,6 +198,7 @@ New keys, `homi` layer of `@homi/i18n` (uz wording is confirmed by the reviewer)
 | `market.v3.roomsN` | «тоже {n}-комн.» | «ham {n} xonali» | «also {n}-room» |
 | `report.agentHintReview` | «Проверим номер — если это риелтор, отметим его» | «Raqamni tekshiramiz — rieltor boʻlsa, belgilaymiz» | «We’ll check the number and mark it if it’s an agent» |
 | `toast.reportedAgentReview` | «Спасибо, проверим» | «Rahmat, tekshiramiz» | «Thanks, we’ll check» |
+| `listing.showPhone` | «Показать номер» | «Raqamni koʻrsatish» | «Show number» |
 
 ## Files
 
@@ -209,7 +214,7 @@ New unless marked.
   `frontend/app/lib/telegram/links.ts` with `tests/telegram/links.test.ts` (changed)
 - `frontend/packages/utils/src/phone.ts`, `frontend/packages/utils/src/index.ts` (changed),
   `frontend/packages/utils/tests/phone.test.ts`
-- `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (changed: four keys)
+- `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (changed: five keys)
 - `frontend/app/tests/listing/*.test.ts(x)`
 - `frontend/app/e2e/{listing-open,listing-contact,listing-actions,photo-viewer}.spec.ts`
 
@@ -223,9 +228,10 @@ New unless marked.
 5. Market block and `marketText.ts` with tests. Commit.
 6. Facts, stats, history with `HistoryDate`. Commit.
 7. Location rows, «Рядом», `SpotMapSlot`. Commit.
-8. Author, description. `splitPhones` with tests. Sources, original text, translation with `translate`.
+8. Author, description. `splitMaskedPhones` with tests. Sources, original text, translation with `translate`.
    Commit.
-9. `useContact`, `getContact`, CTA bar, calls from the bar, the author row and the text. Commit.
+9. `useContact`, `getContact`, CTA bar; the tap flows of the bar, of «Показать номер» and of a masked number in
+   the text. Commit.
 10. `useShareListing`, `prepareShare`. Commit.
 11. `gestures.ts`, `ZoomableImage`, `PhotoViewer`, `photos/page.tsx` in both trees. Commit.
 12. `MarketSheet`, `market/page.tsx` in both trees. Commit.
@@ -307,17 +313,20 @@ SCR-018. Every server string is rendered as text, never as HTML.
    branch live there) with the `~` prefix when `(geo_radius_m ?? 500) ≥ 400`. Fix of LB-APP-016: icons for `metro`,
    `park`, `school`, a default pin for any other kind; React key = kind + name + index.
 10. **Author** `listing.whoPosts` «Кто размещает»: owner text; offers (with a link → button,
-    `openOriginal(…, 'offers')`; without → text); the display phone as a button with class `ph-mask` (medium
-    haptic, call with `src: 'author'`); `listing.published` «Опубликовано {when}» from the part of `age` after the
-    first « · », else the whole string.
+    `openOriginal(…, 'offers')`; without → text); when `contact.has_phone`, the button `listing.showPhone`
+    «Показать номер», which becomes the display number (class `ph-mask`, call with `src: 'author'`) after its tap
+    — see "Contact"; `listing.published` «Опубликовано {when}» from the part of `age` after the first « · », else
+    the whole string.
 11. **Description** `listing.description` «Из объявления»: the summary as text with line breaks kept; hidden when
     empty.
 12. **Source** `listing.source` «Источник»: chips `@handle` → `openOriginal(…, 'sources')`. Disclosure
     `listing.originalText` «Текст оригинала», only with a non-empty original text, closed on every new number.
-    Inside: the text in a `<pre>` with class `ph-mask`; `splitPhones` finds Uzbek numbers (optional `998` prefix,
-    known operator and city codes, separators space, hyphens, dot, underscore) and **only the number equal to the
-    listing's phone** is a call button (`src: 'text'`), the others stay text (BR-APP-035). A `copy` event on the
-    text sends `original_copied`.
+    Inside: the text in a `<pre>` with class `ph-mask`. The server has masked every phone number in it (WP-12);
+    `splitMaskedPhones` finds them, and while `contact.has_phone` each masked number is a button that does what
+    «Показать номер» does. After the answer the masked numbers whose last two digits are those of the listing's
+    number show its display form and call on tap (`src: 'text'`); the other masked numbers stop being buttons
+    and stay masked — BR-APP-035 in its new form: **only the listing's own number** is ever shown. A `copy` event
+    on the text sends `original_copied`; before the tap the copied text holds the masked form.
 13. **Translation** (BR-APP-034): not offered in `ru`. In uz and en: `listing.translate` «Перевести» → pending
     `listing.translating` «Перевожу…» (disabled) → translated text with `listing.machineTranslation` «Перевод
     сделан ИИ» and the button `listing.showOriginal` «Показать оригинал». The first tap calls `translate`,
@@ -328,28 +337,44 @@ SCR-018. Every server string is rendered as text, never as HTML.
     price; below it the verdict short label when a price note exists, else `listing.marketDelta` «{delta} к рынку»
     (`fmt.marketSameShort` «≈ обычная», `fmt.marketMixedShort` «≈ спорно»), and the note (bracket text and the
     remaining « · » parts). Price parts and the price-kind label come from the contract or from the card helper of
-    WP-24, as on the card. Right (BR-APP-032), in priority: answer pending → shimmer; phone → `listing.call`
-    «Позвонить»; contact link → `listing.write` «Написать», or `listing.writePaid` «Номер платный» when the contact
+    WP-24, as on the card. Right (BR-APP-032), in priority: answer pending → shimmer; `contact.has_phone` →
+    `listing.call` «Позвонить»; contact link → `listing.write` «Написать», or `listing.writePaid` «Номер платный»
+    when the contact
     is paid; post deleted → no action; else `listing.openPost` «Открыть пост» → `openOriginal(…, 'button')`.
 
 ### Contact
 
-BR-APP-033, TMA-029, TMA-040; fix of LB-APP-028.
+BR-APP-033, BR-APP-035, TMA-029; fix of LB-APP-028; DEC-52. The refresh on return to the app (TMA-040) that
+legacy used for its call link is not built: nothing is fetched without a tap.
 
-- `useContact` keeps `{ url, receivedAt, expiresAt? }` in memory. Stale = `expiresAt − 2 min` passed when the
-  contract gives an expiry, else 8 min after receipt (legacy lifetime 10 min). While the document is visible a
-  timer refreshes a stale link through `getContact`; `tg.onVisible` refreshes on return. Refresh errors are
-  ignored and the old link stays.
-- «Позвонить» (medium haptic): fresh link → `tg.call(phone, url)`; stale → refresh, then call (on failure with the
-  old link); **no link** → `getContact` on demand, then call; if that fails → `failed()` and nothing is logged.
+The card has no number and no call link (WP-12); `contact.has_phone` only says that `getContact` can give them.
+Nothing asks for a contact before a tap, so the server-rendered page, the preview and the resource cache of the
+listing hold no number.
+
+- `useContact(number)` holds `null` until the first successful `getContact`, then `{ phone, phoneDisplay, url,
+  receivedAt, expiresAt }` in memory for this listing. Stale = `expiresAt − 2 min` passed, else 8 min after
+  receipt (legacy lifetime 10 min). There is no timer and no refresh on return to the app: a stale contact is
+  fetched again by the next tap. `reveal()` returns a fresh contact as it is and calls `getContact` otherwise
+  (concurrent taps share one request); when a refetch fails the old contact is returned.
+- «Позвонить» (medium haptic): `reveal()`, then `tg.call(phone, url)`. No contact — the request failed or answered
+  `contact_unavailable` (no number any more, or the user's daily limit of WP-43) → `failed()` and nothing is
+  logged.
+- «Показать номер» in the author section (medium haptic): `reveal()`. With a number in the answer the button
+  becomes the display number, and a tap on it calls (`src: 'author'`). With no number in the answer (the source
+  gives only a call link, Q-API-062) the tap opens the call link as «Позвонить» does and the button stays. No
+  contact → `failed()`.
+- A masked number in the original text does the same (block 12 above).
 - `tg.call` tries `tel:` first on Android and opens the call page when the app was not left within 1.2 s; elsewhere
   it opens the call page. `contact_call { listing_id, via: 'tel' | 'browser', src? }` is sent **only when something
   opened**.
 - «Написать» / «Номер платный»: `tg.openLink(contactUrl)`; `contact_write { listing_id }` only when it opened (the
   1.5 s same-address guard of WP-21 makes a double tap one open, one event).
-- If the contract carries no raw number (DEV-007 is decided on the API side), the `tel:` attempt and the in-text
-  call button are skipped and every call uses the contact link.
-- The call page is on the API host: the stub fixtures of WP-12 give `call_url` as `{api}/call/…`. The link
+- When the answer carries no number, the `tel:` attempt is skipped and every call uses the call link.
+- Different from legacy by decision (DEC-52): legacy has the number in the card — it shows it in the author
+  section at once, prints the numbers of the post in the original text and refreshes the call link on a timer.
+  HOMI shows no digit before the tap and fetches nothing without one.
+- The call page is on the API host: the stub answer of `POST …/contact` (WP-12) gives `call_url` as
+  `{api}/call/…`. The link
   allow-list of WP-21 (`lib/telegram/links.ts`) does not hold that host, so `tg.call` would open nothing: this
   package adds the origin of `NEXT_PUBLIC_API_URL` to the allow-list constant, with a test in
   `telegram/links.test.ts`. A `contact_url` on any other host is refused by the same list until its host is added
@@ -460,15 +485,20 @@ is WP-21's (SEC-REQ-019).
 
 **Unit (Vitest).**
 
-- `frontend/packages/utils/tests/phone.test.ts`: `+998 90 000 00 67`, `(90) 000-00-67`, `900000067`,
-  `998900000067`, `90.000.00.67`, `90_000_00_67`; unknown code `12 345 67 89`; long digit runs; two numbers in a line.
+- `frontend/packages/utils/tests/phone.test.ts` (`splitMaskedPhones`): `+998 ** *** ** 67` and `+** *** ** 67`
+  are found with their last two digits; two masked numbers in a line; one at the start and one at the end of a
+  text; left as text: `**`, `5 ** 7`, `** *** **` without digits, `$1 ***`, and a raw `+998 00 000 00 67` (the API
+  never sends one; the function does not turn it into a control).
 - `tests/listing/useListing.test.ts`: `initial.ok`; `initial === null` fetches once; each `UiError` → its state;
   redirect seeds the new number without a second request; late answer dropped; retry uses `bffFetch`.
 - `tests/listing/marketText.test.ts`: marker 4 % for −0.6, 50 % for 0, 75 % for +0.2, 96 % for +0.5; context-line
   branches; rooms 0, 1, 2.5, 4, 7, null; radius 0.05 / 0.34 / 1.26 km; ago at 1 min, 5 min, 3 h, 49 h, future.
 - `tests/listing/gestures.test.ts`: scale clamp 1–4; pan clamp; double-tap window and distance; close at 110 px.
-- `tests/listing/useContact.test.ts` (fake timers, visibility): refresh at 8 min only when visible and by contract
-  expiry; refresh error keeps the link; on-demand fetch; failure sends no event; both Android outcomes.
+- `tests/listing/useContact.test.ts` (fake timers, visibility): no request on mount, after 10 minutes without a
+  tap or on return to the app; the first `reveal()` sends one; a fresh contact sends none; a contact stale by the
+  8 minutes or by the contract's expiry is fetched again on the next tap, and a failed refetch returns the old
+  one; two concurrent taps share one request; `contact_unavailable` → `failed()` and no event; both Android
+  outcomes; an answer without a number never tries `tel:`.
 - `tests/listing/useShareListing.test.ts`: prepared path; old client; action failure; `shareMessage` false; lock;
   fallback text for rent, sale with a price kind, no price.
 - `tests/listing/useListingActions.test.ts`: each row of the results table; undo failure; both branches of both
@@ -486,8 +516,13 @@ is WP-21's (SEC-REQ-019).
 - `NearbySection`: metro at 1.5 and 1.51 km; kind `hospital`; two `school`; `~` at radius 500, not at 300.
 - `MarketBlock`: visibility rules; no marker without an own value; animation once per number.
 - `MarketSheet`: every conclusion branch; no ×; «Подробнее» absent with a `null` link, opens the link otherwise.
-- `OriginalText`: only the matching number is a button; copy event; `ph-mask` present.
-- `ListingCtaBar`: the priority table of BR-APP-032; negotiable; note.
+- `OriginalText`: before the tap every masked number is a button and no digit run of a phone is in the document;
+  after it only the number with the matching last two digits shows the digits and calls, the others are masked
+  text; an answer without a number opens the call link; `has_phone: false` → masked numbers are plain text; copy
+  event; `ph-mask` present.
+- `AuthorSection`: «Показать номер» only with `has_phone`; it becomes the display number after the tap; with an
+  answer without a number the button stays and the link opens; a failed request leaves the button.
+- `ListingCtaBar`: the priority table of BR-APP-032 with `has_phone`; negotiable; note.
 - `PhotoViewer`: start index, counter, `locked` class, a replaced `onClose` is honoured (LB-APP-004).
 - `ListingActionsSheet`: hint variants (phone, source, none, 19 and 20 listings); support row with and without an
   account; `agent` filter; busy guard; step order with Back.
@@ -500,8 +535,12 @@ is WP-21's (SEC-REQ-019).
   cleared before «Повторить»; uz: translate and toggle; Settings button closes the listing.
 - `photo-viewer.spec.ts` (touch): open photo 3 of 7, page, double tap, swipe down closes; Back closes the viewer
   before the listing; direct load of `photos?i=2`.
-- `listing-contact.spec.ts`: iOS opens the call link (the fake Telegram records `openLink` with the call
-  address); Android with a staying app opens it after 1.2 s; no link → one Server Action request for the contact.
+- `listing-contact.spec.ts`: on a direct load the served HTML, the `/bff/listings/<number>` answer and the visible
+  page hold no seven-digit run of the fixture's number, the original text shows `+998 ** *** ** 67`, and no contact
+  request was sent; «Показать номер» → one Server Action request → the digits in the author row and in the text;
+  «Позвонить» afterwards sends no second request: iOS opens the call link (the fake Telegram records `openLink`
+  with the call address), Android with a staying app opens it after 1.2 s; «Позвонить» as the first tap → one
+  request, then the call; the withdrawn listing `100015` shows neither button.
   The analytics events are not visible to this spec before WP-32 (the `track` facade of WP-20 only keeps its
   calls in memory): they are asserted in `useContact.test.ts` and, from WP-32 on, in `journal.spec.ts`.
 - `listing-actions.spec.ts`: hide → toast → «Вернуть»; block; report `fraud` hidden; report failure (scenario
@@ -532,16 +571,21 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
       percentages; dates follow the device time zone.
 - [ ] Location: hint, place, centre distance, «Рядом» with metro within 1.5 km and `~` for approximate places; an
       unknown kind renders with the default icon.
-- [ ] Author: owner, offers (links open), phone button calls, «Опубликовано …».
+- [ ] Author: owner, offers (links open), «Показать номер» (only for a listing with a phone) shows the number
+      after the tap and the number then calls, «Опубликовано …».
 - [ ] Description shows the summary with line breaks; hidden when empty.
-- [ ] Source: channel chips open the post; «Текст оригинала» opens; only the listing's own number is a call button.
+- [ ] Source: channel chips open the post; «Текст оригинала» opens with every phone number masked to its last two
+      digits; a tap on a masked number reveals the listing's own number there, which then calls; other numbers stay
+      masked.
+- [ ] Before any tap no phone number is visible on the screen or present in the page source.
 - [ ] Translation: absent in ru; in uz and en «Перевести» → «Перевожу…» → text with «Перевод сделан ИИ» →
       «Показать оригинал»; a failure shows «Не получилось перевести» and the next tap retries.
 - [ ] Opening another listing never shows the previous translation or an open original text.
 - [ ] CTA shows «Позвонить», «Написать», «Номер платный», «Открыть пост» or nothing, by the priority rule.
-- [ ] «Позвонить» on Android tries the dialer, then the call page; elsewhere the call page opens.
-- [ ] After 8 minutes on the screen a call still opens a working link; a listing without a link fetches one on tap.
-- [ ] A failed link fetch gives the error haptic and no `contact_call` event.
+- [ ] «Позвонить» fetches the contact on the tap; on Android it tries the dialer, then the call page; elsewhere
+      the call page opens.
+- [ ] After 8 minutes on the screen a second «Позвонить» fetches a fresh link and opens it.
+- [ ] A failed contact request gives the error haptic and no `contact_call` event.
 - [ ] «Написать» opens the chat once on a double tap.
 - [ ] Share opens Telegram's picker; on an old client or a failure the share link opens; a double tap shares once.
 - [ ] The viewer opens at the tapped photo; pinch to 4×, double tap 2.5×, pan when zoomed, no paging while zoomed.

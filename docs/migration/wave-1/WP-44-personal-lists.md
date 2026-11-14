@@ -33,6 +33,8 @@ Out: radar hide rules (WP-45 — `DELETE /hidden` does not touch them); the bot'
 - One tap never relabels a person or a listing for everybody: weighted distinct voters, a threshold, an audit row
   and a kill switch (SEC-REQ-045). The threshold values are proposals until the product owner confirms them.
 - A foreign identifier equals an unknown one in status, body and query count (SEC-REQ-014).
+- Favourites and history are paged by 20 with a cursor, like the feed (DEC-53; the shapes are in WP-13). There is
+  no switch for it and no cap on the length of the history.
 
 ## Design
 
@@ -83,19 +85,22 @@ relations `favorites()`, `listingViews()`, `hiddenListings()`, `blockedAuthors()
   not_found`; `createOrFirst` on (`user_id`, `author_key`); a repeat returns the same entry.
   `unblockByListing(User, int)`; `removeEntry(User, string $id)`.
 - `AuthorLabel`: phone → `+998 ** *** ** NN` with the last two digits only (from the number in memory, never
-  stored); source → `@channel`; no raw number available (contact variant B of WP-43) → the source's own label,
+  stored; the form comes from `PhoneMasker` of WP-12, not from a second rule); source → `@channel`; no raw number
+  available (contact variant B of WP-43) → the source's own label,
   reduced to digits, `+`, `*` and spaces. The label is stored at block time and is plain text.
 - `BlockResult`: entry id, `kind`, `label`, `count` (the source's author count when the card gives one, else the
   number of listings HOMI knows), `listing_numbers` = `ListingRefs::numbersOfAuthors()` plus the listing asked for.
 
-**List pages.** By default favourites and history come back whole, newest first, with `meta.next_cursor: null`, and
-`cursor` and `limit` are ignored (`25` §4.1, WP-13: paging them is DEV-003, which is off). The switch is
-`config('personal.paginate_lists')` (new `backend/config/personal.php`, default `false`). Only with it on: a page is
-cut from HOMI's rows by keyset (`n1.<last row id>`, newest first) and may be shorter than `limit` while
-`meta.next_cursor` is still set. In both cases `ListingSource::previews()` supplies the items in row order, and a
-number the source no longer knows is marked gone in `listing_refs` and left out. If
-the source is unavailable the method answers `503 source_unavailable`. `GET /hidden` returns all hidden listings
-(capped at 200, newest first) and all author entries in one answer, as legacy does.
+**List pages.** Favourites and history are paged like the feed (DEC-53, WP-13): `limit` 1 … 50, default 20,
+newest first. A page is cut from HOMI's rows by keyset in the list's own order — favourites by row id, history by
+`last_viewed_at` and then row id — and the cursor is `n1.` + base64url of the last row's sort key; a cursor that
+does not decode ends the list quietly (empty `data`, `null` cursor). `meta.next_cursor` is `null` when no row is
+left. `ListingSource::previews()` supplies the items in row order, and a number the source no longer knows is
+marked gone in `listing_refs` and left out, so a page may be shorter than `limit` while the cursor is still set.
+If the source is unavailable the method answers `503 source_unavailable`. `FavoriteService::page()` and
+`HistoryService::page()` are the only readers of the two lists: the bot's `/fav` pages through the same method
+(WP-53). `GET /hidden` returns all hidden listings (capped at 200, newest first) and all author entries in one
+answer, as legacy does.
 
 ### Reports and votes (`VoteService`)
 
@@ -167,7 +172,7 @@ affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_
   and their factories; `backend/app/Models/User.php`; `backend/app/Enums/Personal/*.php`
 - `backend/app/Services/Personal/{ListingResolver,FavoriteService,HistoryService,HiddenService,BlockedAuthorService,BlockResult,AuthorLabel,VoteService,ReportOutcome,FoundSurveyService,EloquentOverlayData}.php`
 - `backend/app/Jobs/Listings/ResolveListingRef.php`; `backend/app/Policies/BlockedAuthorPolicy.php`;
-  `backend/app/Console/Commands/Votes/SetDetector.php`; `backend/config/{votes,personal}.php`
+  `backend/app/Console/Commands/Votes/SetDetector.php`; `backend/config/votes.php`
 - `backend/app/Http/Controllers/Api/V1/Personal/*.php` (real bodies; the stub bodies move into `NativeStubs`, the
   rule of WP-40); `backend/app/Providers/AppServiceProvider.php`
   (binding, Pennant definitions)
@@ -196,6 +201,8 @@ affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_
 ## Behaviour to reproduce
 
 - Favourite on, favourite off, list reflects the last state; the heart follows the answer (BR-APP-039).
+- Both lists arrive 20 at a time. Legacy returns each list whole in one answer (BR-API-023); HOMI pages them by
+  decision (DEC-53).
 - Opening a listing shows it in history; clearing history needs no undo and resets the "viewed" eye (BR-APP-040,
   BR-APP-067).
 - Hide is for this user only and can be undone; a second identical request changes nothing (fix of LB-API-043).
@@ -216,10 +223,14 @@ without an author accepts `agent` and has no author effect.
   them (blocked authors, vote marks per author, back-fill of channel and post) set the listing features to `legacy`
   on `LegacyFakeServer`; the others may stay on `stub`.
 - Favourites: `PUT` twice → one row, `true` both times; `DELETE` twice; unknown number → `404`; source down and
-  number unknown locally → `503`, known locally → `200`; list order, `favorite: true`, the whole list with
-  `next_cursor: null` by default and a cursor walk with `personal.paginate_lists` on; a gone listing is skipped and
-  marked; user B's `PUT` leaves A's rows unchanged.
-- History: a full card read by A appears for A only; clear → empty, favourites untouched, `viewed` false again.
+  number unknown locally → `503`, known locally → `200`; list order, `favorite: true`; 45 favourites → pages of
+  20, 20 and 5, each listing once, the last with `next_cursor: null`; `limit=50` → one page; a favourite added or
+  removed between two pages neither repeats nor skips another row; a broken cursor → an empty page with `null`; a
+  gone listing is skipped and marked, and the page is one shorter with its cursor still set; user B's `PUT` leaves
+  A's rows unchanged.
+- History: a full card read by A appears for A only; the same page walk in the order of the last view; a listing
+  of the first page that is opened again before the second page is asked for is not repeated there; clear → empty,
+  favourites untouched, `viewed` false again.
 - Hidden: hide → gone from A's feed and map, still there for B; unhide restores; unhide of a `report_fraud` row keeps
   the vote; an alias number acts on the survivor.
 - Blocked authors: phone author and source author; repeat → same id; label dataset (never more than two digits of a
@@ -242,6 +253,7 @@ without an author accepts `agent` and has no author effect.
 ## Acceptance checklist
 
 - [ ] All methods of this package answer in the WP-13 shapes with `meta.source = native`.
+- [ ] `GET /favorites` and `GET /history` answer 20 per page with `meta.next_cursor` and end with `null`.
 - [ ] Writes are idempotent; the races of the `pgsql` group pass.
 - [ ] Feed, map and card of WP-42 reflect favourites, views, hidden listings, blocked authors and vote marks.
 - [ ] Every personal table stores number, channel and post; unknown channel and post are back-filled by the job.

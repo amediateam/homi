@@ -9,8 +9,10 @@ whoever holds the relay takes the first package that is not `DONE` and continues
 
 ## State of the specifications (2026-11-14)
 
-All 44 specifications are written (about 17 400 lines). They were drafted by subagents from the audit and the
-earlier task files, and then verified in a second pass.
+All 45 specifications are written (about 18 400 lines). They were drafted by subagents from the audit and the
+earlier task files, and then verified in a second pass. WP-59 (support bot, DEC-56) was added afterwards by the main
+session, and the decisions DEC-50 … DEC-55 of the second answer round were carried into the specifications they
+touch; neither went through the verification pass.
 
 **Verification pass (2026-11-14).** Every specification was read in full against four things: the repository as it
 is today (files, classes, signatures, routes, config and env keys, tables, CI, generator commands), the other
@@ -21,7 +23,7 @@ them, a test helper designed twice, a method or config key used under a name its
 that cannot observe what it asserts. WP-00 … WP-03 were checked by the main session; the other 40 by three agents,
 whose claims the main session sampled against the code (26 sampled, 26 confirmed).
 
-Checked by script on all 44 files: the template (field table and ten sections, in order); `collect_ids.py --check`
+Checked by script on all 45 files: the template (field table and ten sections, in order); `collect_ids.py --check`
 exits 0; the v1 methods named against the table of `25` §4.2; every repository path named — it exists or a package
 creates it.
 
@@ -116,12 +118,13 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-50](WP-50-bot-webhook-client.md) | Webhook, update ledger, Bot API client | WP-40, WP-43 | TODO |
 | [WP-51](WP-51-bot-core.md) | Router, locale, texts, reply conventions, callbacks, state, assets | WP-50 | TODO |
 | [WP-52](WP-52-bot-start-commands.md) | Start, commands, language, reachability | WP-51 | TODO |
-| [WP-53](WP-53-bot-cards.md) | Listing cards and card actions | WP-52, WP-42, WP-44, WP-45 | TODO |
+| [WP-53](WP-53-bot-cards.md) | Listing cards and card actions | WP-52, WP-42, WP-43, WP-44, WP-45 | TODO |
 | [WP-54](WP-54-bot-radar-wizard.md) | Radar wizard | WP-53, WP-45 | TODO |
 | [WP-55](WP-55-bot-radar-screens.md) | Free text and voice, poll, radar list and card, edit | WP-54 | TODO |
 | [WP-56](WP-56-bot-settings-owner-privacy.md) | Settings, owner verification, privacy, erasure | WP-52, WP-47 | TODO |
 | [WP-57](WP-57-bot-sending.md) | Sending: pacing, outbox, quiet hours, digest, withdrawn cards, broadcasts | WP-53, WP-46 | TODO |
 | [WP-58](WP-58-bot-profile-tests.md) | Bot profile as code, action log, conversation tests, pass inside Telegram | WP-52 … WP-57 | TODO |
+| [WP-59](WP-59-support-bot.md) | Support bot: a second bot that relays between a person and the operators' private chats | WP-58 | TODO |
 
 ## Stage E — Landing
 

@@ -375,7 +375,8 @@ Part D — gates and error screens.
     «Обведите покрупнее»; sub-hint `map.areaMove` «Двумя пальцами — двигать карту»; «Отмена»
     (`map.areaCancel`), which closes the `draw` layer;
   - saved: title tabs «Избранное» / «Смотрели» (`app.saved.favorites`, `app.saved.history`), replace navigation;
-  - radars: `h1` «Радар» (`tab.subs`) and «+» (aria `sheet.createTitle` «Новый радар»);
+  - radars: `h1` «Радар» (`tab.subs`) and «+» (aria `sheet.createTitle` «Новый радар»; WP-30 gives it its action
+    and hides it while radars are switched off, DEC-51);
   - settings: `h1` «Настройки» (`tab.settings`).
 - Deal switch (title tabs and map control): `switchDeal()` — the new deal's defaults, geography kept (rule
   BR-APP-002), sort back to `new` when unavailable (rule BR-APP-023); light haptic; scroll to top; tapping the
