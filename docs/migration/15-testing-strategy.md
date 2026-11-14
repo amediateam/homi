@@ -276,8 +276,9 @@ including non-GET bodies, excluding `POST /api/events` (`parity.mjs:60-89`). `SH
 
 1. The runner copies the legacy **production artefacts** — not a rebuild of the decompiled sources (Q-SEC-015,
    SEC-REQ-049) — and the scenario files into a gitignored scratch directory, and records a hash manifest. It first
-   checks which release the artefacts are: `08` names `index-plF_TOcT.js`, while
-   `$KVADRO_ROOT/demo/app/tools/parity/original/assets/` holds `index-B_mMoUu6.js`.
+   checks which release the artefacts are: `08` names the pinned release `index-DY_DH7h-.js`
+   (`wave-1/baseline.md`); `$KVADRO_ROOT/demo/app/tools/parity/original/assets/` holds both `index-B_mMoUu6.js` and
+   `index-DY_DH7h-.js`.
 2. It serves the artefacts and proxies `/api`, `/media`, `/tiles` and `/call` to HOMI — the same rule as
    `VITE_API_PROXY` (`$KVADRO_ROOT/demo/app/vite.config.js:49-63`), implemented in the runner so that no legacy
    `npm`/`vite` run is needed.

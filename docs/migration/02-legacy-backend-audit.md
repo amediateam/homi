@@ -8,8 +8,9 @@ Mini App contract (`$KVADRO_ROOT/docs/api.md`), the decompiled Mini App (`$KVADR
 mocks, the landing mirror (`$KVADRO_ROOT/demo/landing`), and the product, bot and SEO documents. The endpoint-level
 contract is in `08-api-inventory.md` (`API-NNN`, `RES-NNN`).
 
-- **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`. Nothing was run (`RUNTIME_VERIFIED` is not
-  used).
+- **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`, brought up to the pinned release
+  `index-DY_DH7h-.js` (`wave-1/baseline.md`); items changed for a later release name it, and "current Doc:" and "at
+  the pin" cite SVN r27. Nothing was run (`RUNTIME_VERIFIED` is not used).
 - **Labels:** `CONFIRMED` — visible in client code or in a contract the code agrees with (for a server rule this means
   the client depends on it or produces it); `DOCUMENTED_ONLY` — stated as fact (✅) in legacy docs, no implementation
   visible; `UNVERIFIED` — 🔶 in legacy docs or our inference, always with a `Q-API` item.
@@ -180,8 +181,8 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 ## 7. Filter model, query serialization and search endpoints
 
 `SearchFilters` (25 keys) and its query form are specified in `08` §1.7. The four search endpoints
-(`/api/feed`, `/api/feed/count`, `/api/feed/flow`, `/api/map`) take the same query and must interpret it identically
-(Doc:1096; About:191).
+(`/api/feed`, `/api/feed/count`, `/api/feed/flow`, `/api/map`), and since release `index-DY_DH7h-.js` a fifth,
+`/api/feed/new`, take the same query and must interpret it identically (Doc:1096; current Doc:1161; About:191).
 
 - **BR-API-025** · `CONFIRMED` — Repeated query keys (`types`, `districts`, `renovation`, `appliances`, `zones`) carry
   multi-values and must all be applied (not last-wins). *Evidence:* `feed.js:16-19`, :46; Doc:1097.
@@ -225,6 +226,15 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **BR-API-041** · `CONFIRMED` — `GET /api/map` returns all matching points in one response (no viewport/zoom
   parameters); `label` is plain text, `tone` ∈ {`good`, `high`, `check`, `suspicious`, null}, `priced: false` =
   negotiable, `usd` orders stacks. *Evidence:* Doc:562-585; `feed.js:119`.
+- **BR-API-157** · `CONFIRMED` — `GET /api/feed/new` (since release `index-DY_DH7h-.js`) takes the common filter query
+  plus `since`, the previous visit with these filters as integer unix seconds of the device clock, and returns
+  `{"count": number}` with `count` required. The client calls it only for an eligible return banner, shows the banner
+  for `count > 0` and ignores every error. *Evidence:* current Doc:559-588; `src/lib/api/feed.js:105-117`,
+  `src/app/useReturnNudge.js:112-137` (at the pin).
+- **BR-API-158** · `DOCUMENTED_ONLY` — `count` is the number of listings matching the filters that appeared after
+  `since`, under the filter semantics of `/api/feed`. What "appeared" means, whether hidden listings and blocked
+  authors are excluded and whether `since` is bounded are not documented (Q-API-066). *Evidence:* current Doc:568,
+  :1161-1162, :1200-1202.
 - **Q-API-010** — What exactly do `sort=deal` (by `median_delta`?), `center` (by `center_km`?), `ppm` and the default
   order (first seen? last publication?) sort by, and what is the tie-breaker? *Check:* with a test account compare the
   first 40 items of each sort against the fields in the responses.
@@ -241,6 +251,12 @@ The mode and owner list are server configuration (About:453). UI texts: «При
   interview.
 - **Q-API-015** — Is `/api/map` capped (`total` > `points.length`) and in what order are points returned? *Check:*
   call it for Tashkent rent with default filters and compare `total` with `/api/feed/count`.
+- **Q-API-066** — What counts as "new" in `GET /api/feed/new`: the publication time or the first appearance in the
+  database? Are hidden listings and blocked authors excluded? Is `since` bounded from below (the last visit can be
+  weeks old), and what does the server answer to a `since` in the future or a malformed one? The legacy contract asks
+  the same (§14 question 15, current Doc:1200-1202). *Check:* owner interview; with a test account compare
+  `GET /api/feed/new?…&since=<t>` with the `/api/feed` items of the same filters first seen after `t`, for `t` an
+  hour, a week and a month ago and in the future.
 - **Q-API-016** — Does `GET /api/cities` return one entry per `meta.cities` item, and is `typical` the median price
   of the city per deal? *Check:* compare `GET /api/cities` with `meta.cities` and with SEO city medians.
 - **LB-API-005** · `bug` · `CONFIRMED` — A filter object from the server with a missing key breaks the client: a
@@ -268,6 +284,13 @@ The mode and owner list are server configuration (About:453). UI texts: «При
     strips `<`, `>`, `&`, quotes; the new client renders labels as text.
   - **Old-client impact:** compatible — the old client renders plain text correctly; never emit HTML entities
     (`&amp;`) because Leaflet would show them decoded and GL single pins raw.
+- **LB-API-055** · `quirk` · `CONFIRMED` — `GET /api/feed/new` must always carry a numeric `count`: the client tests
+  "not `count <= 0`", so a body without `count` passes and the return banner throws while formatting the number,
+  which takes the old client to its crash screen. *Evidence:* `src/app/useReturnNudge.js:117-136`,
+  `src/features/feed/Nudges.jsx:84-87` (at the pin); current Doc:572-573, :1162.
+  - **Proposed fix:** the server always returns an integer `count ≥ 0` (`0` when nothing is new or `since` is out of
+    range); the new client shows the banner only for a positive integer (`03` LB-APP-048).
+  - **Old-client impact:** compatible — a server-side guarantee.
 
 ## 8. Listings pipeline
 
@@ -460,8 +483,10 @@ follow the processing order.
 - **BR-API-085** · `UNVERIFIED` — Bot presets: quiet `off`, `22-08`, `23-08`, `00-09`, `23-07`; digest `09`, `09,19`,
   `12,20`, `19`; the Mini App contract shows other examples. *Evidence:* Bot:990; About:161 (🔶); Doc:846-847.
   (Q-API-029)
-- **BR-API-086** · `CONFIRMED` — `entry` (`filters`, `empty`, `few`, `prompt`) and `relaxed` (flow option code) are
-  sent with a new radar for statistics only. *Evidence:* Doc:733-748; `App.jsx:310`, :582, :599, :631.
+- **BR-API-086** · `CONFIRMED` — `entry` (`filters`, `empty`, `few`, `prompt`; since release `index-DY_DH7h-.js` also
+  `feed` and `return`) and `relaxed` (flow option code, only from a filters sheet) are sent with a new radar for
+  statistics only. *Evidence:* Doc:733-748; `App.jsx:310`, :582, :599, :631; current Doc:786-807, :1163;
+  `App.jsx:401-415`, :635, :718, :752 (at the pin).
 - **BR-API-087** · `CONFIRMED` — Relax codes from `SubscriptionMutationResult.options` go to `POST …/relax`; flow option
   codes go as `relaxed` in `POST`/`PUT`; they are separate code sets. *Evidence:* Doc:553-556, :822-838.
 - **BR-API-088** · `DOCUMENTED_ONLY` — Relax options widen price, rooms, districts or include realtors («✅ Вместе с
@@ -646,7 +671,9 @@ follow the processing order.
 - **BR-API-123** · `CONFIRMED` — The event catalogue is closed in the current client: `app_launch`, `app_opened`,
   `app_error`, `follow_prompt_shown|expired|closed`, `home_screen_offered|added|closed`,
   `chat_access_declined|allowed`, `listing_shared`, `original_opened`, `original_copied`, `contact_call`,
-  `contact_write` (properties in `08` API-034). *Evidence:* Doc:1015-1042; 15 `trackEvent` call sites.
+  `contact_write`; since release `index-DY_DH7h-.js` also `return_prompt_shown|expired|closed` and
+  `feed_radar_shown|closed`, each with `custom` and `return_prompt_shown` with `n` (properties in `08` API-034).
+  *Evidence:* Doc:1015-1042; 15 `trackEvent` call sites; at the pin current Doc:1076-1107 and 20 call sites.
 - **BR-API-124** · `CONFIRMED` — `app_error` volume is bounded client-side: ≤ 5 distinct errors per session, each
   `kind|name|message` once; `message` ≤ 300, `source` ≤ 300 without query/hash, `name`/`screen`/`v` ≤ 40, `tg` ≤ 10,
   `platform` ≤ 20. *Evidence:* `src/lib/errors.js:10`, :41-94; `index.html:60-88`.
@@ -1108,7 +1135,7 @@ the transition (About:437-440).
 3. **Security debts sit in the contract itself** — raw phone numbers in listing details (LB-API-030), HTML-injected map
    labels (LB-API-008), PII-bearing `initData` in every request header (LB-API-020), unsigned photo snapshots
    (LB-API-054). Two of them cannot be removed while the old client runs; mitigations must be server-side.
-4. **Most server behaviour is undocumented outside prose** — 70 business rules are `DOCUMENTED_ONLY` and 58 questions
+4. **Most server behaviour is undocumented outside prose** — 71 business rules are `DOCUMENTED_ONLY` and 61 questions
    are open; radar matching triggers, delivered-card tracking, vote thresholds, `auth_date` window, photo-signing and
    owner-hash algorithms (Q-API-002, -024, -027, -031, -039, -041) block both parity and data migration and need the
    legacy owner.
@@ -1120,20 +1147,20 @@ the transition (About:437-440).
 
 | Prefix | Count | Defined in |
 | ------ | ----: | ---------- |
-| `API-` | 34 | `08-api-inventory.md` §2 |
+| `API-` | 35 | `08-api-inventory.md` §2 |
 | `RES-` | 22 | `08-api-inventory.md` §3 |
-| `BR-API-` | 156 | this document |
-| `LB-API-` | 54 (18 `bug`/`quirk` in §3–§21, 36 `decision` in §24) | this document |
-| `Q-API-` | 58 | this document |
+| `BR-API-` | 158 | this document |
+| `LB-API-` | 55 (19 `bug`/`quirk` in §3–§21, 36 `decision` in §24) | this document |
+| `Q-API-` | 61 | this document |
 
 ### Status distribution
 
 | Prefix | CONFIRMED | DOCUMENTED_ONLY | UNVERIFIED | DEPRECATED_CANDIDATE |
 | ------ | --------: | --------------: | ---------: | -------------------: |
-| `API-` (contract) | 34 | 0 | 0 | 0 |
-| `API-` (server logic) | 0 | 33 | 1 (API-017) | 0 |
+| `API-` (contract) | 35 | 0 | 0 | 0 |
+| `API-` (server logic) | 0 | 34 | 1 (API-017) | 0 |
 | `RES-` (primary label) | 13 | 7 | 2 | 0 (RES-016 is flagged as a candidate in `08` §5) |
-| `BR-API-` | 79 | 70 | 7 | 0 |
-| `LB-API-` | 46 (8 bug, 10 quirk, 28 decision) | 5 (decision) | 3 (decision) | 0 |
+| `BR-API-` | 80 | 71 | 7 | 0 |
+| `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 3 (decision) | 0 |
 
 `Q-API-` items carry no status: each is an open check.

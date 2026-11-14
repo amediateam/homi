@@ -694,12 +694,15 @@
     "kind": "sheet",
     "entry_points": [
       "+ on radar tab",
-      "Включить радар on radar empty state"
+      "Включить радар on radar empty state",
+      "Настроить on the return banner (default filters, since index-DY_DH7h-.js)",
+      "Настроить радар on the in-feed radar card (default filters, since index-DY_DH7h-.js)"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
-      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js"
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
     ],
     "apis": [
       "GET /api/subscriptions",
@@ -1039,6 +1042,73 @@
     "storage_keys": [],
     "analytics_events": [
       "app_error"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-046",
+    "name": "Return banner «С вашего прошлого захода — N новых»",
+    "kind": "overlay",
+    "entry_points": [
+      "1.8 s after a search-tab visit with these filters when the previous visit was >= 6 h ago and count > 0 (since index-DY_DH7h-.js)",
+      "return from background after >= 6 h (new visit session)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js",
+      "$KVADRO_ROOT/demo/app/src/styles/nudges.css"
+    ],
+    "apis": [
+      "GET /api/feed/new",
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id"
+    ],
+    "storage_keys": [
+      "kv-visits",
+      "kv-nudge"
+    ],
+    "analytics_events": [
+      "return_prompt_shown",
+      "return_prompt_expired",
+      "return_prompt_closed",
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-047",
+    "name": "In-feed radar card on the search list",
+    "kind": "state",
+    "entry_points": [
+      "search list after the 8th card, or after the last card of a short fully loaded list without the few-results note (since index-DY_DH7h-.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/feed/Nudges.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/nudges.css",
+      "$KVADRO_ROOT/demo/app/src/styles/fallbacks.css"
+    ],
+    "apis": [
+      "GET /api/subscriptions",
+      "POST /api/subscriptions",
+      "PATCH /api/subscriptions/:id"
+    ],
+    "storage_keys": [
+      "kv-nudge"
+    ],
+    "analytics_events": [
+      "feed_radar_shown",
+      "feed_radar_closed",
+      "chat_access_declined",
+      "chat_access_allowed"
     ],
     "status": "CONFIRMED"
   }

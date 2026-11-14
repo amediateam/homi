@@ -16,13 +16,13 @@ until it expires, and any Bot API failure yields a non-2xx so the legacy client 
 
 ## Legacy reference
 
-- API-017 (`08-api-inventory.md:743-767`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:97-100`,
+- API-017 (`08-api-inventory.md:787-811`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:97-100`,
   `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-49` (fallback
   `https://t.me/<bot_username>?startapp=l_<id>` with «title · price · kind · district»), `:35`;
   `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:12-15` (only with `shareMessage`, Telegram ≥ 8.0);
   `$KVADRO_ROOT/docs/api.md:707-717`; `$KVADRO_ROOT/docs/about.md:243-246`; mock
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:129`.
-- Rules: `02-legacy-backend-audit.md:620-639` (§14: BR-API-117, BR-API-118 🔶, BR-API-119, Q-API-044).
+- Rules: `02-legacy-backend-audit.md:645-664` (§14: BR-API-117, BR-API-118 🔶, BR-API-119, Q-API-044).
 - Fix by policy (`09` §4.3): LB-API-046 (cache per (user, listing, locale); rate limit).
 - Bot API features: `04-telegram-bot-audit.md` §1 (prepared inline messages, Bot API 9.x); `10` §4.14 (in-house thin
   client, no library).

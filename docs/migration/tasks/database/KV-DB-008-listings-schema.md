@@ -18,9 +18,9 @@ one session.
 
 ## Legacy reference
 
-- ENT-023 (listing, `06:560-616`), ENT-024 (alias, `06:617-627`), ENT-028 (location, `06:690-713`), ENT-029
-  (attributes, `06:714-738`), ENT-030 (author, `06:739-755`), ENT-034 (status, `06:829-845`), ENT-040 (channel,
-  `06:890-910`); mapping `06` §4.2 lines 1238-1240, 1243; forced design `06` §4.3 items 1–3, 5, 7, 8.
+- ENT-023 (listing, `06:563-619`), ENT-024 (alias, `06:620-630`), ENT-028 (location, `06:693-716`), ENT-029
+  (attributes, `06:717-741`), ENT-030 (author, `06:742-758`), ENT-034 (status, `06:832-848`), ENT-040 (channel,
+  `06:893-913`); mapping `06` §4.2 lines 1238-1240, 1243; forced design `06` §4.3 items 1–3, 5, 7, 8.
 - Ids: BR-DATA-002, BR-DATA-019, BR-API-048, LB-API-011; sequences and gaps `14` §3; V-RI-1, V-RI-2, V-RI-8, V-RI-9
   (`14` §6.3).
 - Money and deal: BR-DATA-008, BR-API-153, BR-API-156 (`down_payment`), LB-DATA-019 (`price_basis`), CF-005, CF-016.

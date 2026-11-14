@@ -16,8 +16,8 @@ The per-user list and feedback tables exist with the composite keys that make ev
 
 ## Legacy reference
 
-- ENT-014 (`06:412-427`), ENT-015 (`06:428-440`), ENT-016 (`06:441-458`), ENT-017 (`06:459-477`), ENT-018
-  (`06:478-498`), ENT-019 (`06:499-514`), ENT-020 (`06:515-531`); mapping `06` §4.2 lines 1229-1235.
+- ENT-014 (`06:414-429`), ENT-015 (`06:430-442`), ENT-016 (`06:443-460`), ENT-017 (`06:461-479`), ENT-018
+  (`06:480-500`), ENT-019 (`06:502-517`), ENT-020 (`06:518-534`); mapping `06` §4.2 lines 1229-1235.
 - Contracts: API-011 (toggle `{favorite}`), API-012/013, API-014 (`{listing_ids, label}`), API-016 (`{hidden}`),
   API-026 (`authors[{id, kind, label, count}]`), API-027 (delete by author entry id), API-029/030 (whole lists),
   API-032/033 (`answer`, `trigger`, `where`) — `08` §2.

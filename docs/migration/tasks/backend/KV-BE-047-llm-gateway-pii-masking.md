@@ -17,8 +17,8 @@ with a kill switch, and writes an audit row without raw text.
 
 ## Legacy reference
 
-- Masking promise: BR-API-045 («номера и @-ники скрываются до отправки в Gemini»), `02-legacy-backend-audit.md:286-296`
-  (§8.2), `$KVADRO_ROOT/docs/about.md:173`, `:350`, `:400`; translation with Gemini `02-legacy-backend-audit.md:382-388`
+- Masking promise: BR-API-045 («номера и @-ники скрываются до отправки в Gemini»), `02-legacy-backend-audit.md:309-319`
+  (§8.2), `$KVADRO_ROOT/docs/about.md:173`, `:350`, `:400`; translation with Gemini `02-legacy-backend-audit.md:405-411`
   (§8.8, BR-API-070, Q-API-025); vendor named in the privacy text `$KVADRO_ROOT/docs/about.md` §5.11.
 - Decisions: CF-007 "where parsing happens" and DEC-03 (`10-target-architecture.md` §3.8, §8), `10` §4.14 (`laravel/ai`
   with an env-driven default provider; the package hard-codes `openai` at `backend/vendor/laravel/ai/config/ai.php:16`).

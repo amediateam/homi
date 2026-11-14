@@ -23,7 +23,7 @@ and the API request set; the runner technology is decided and recorded.
 - Dev proxy rule to reproduce: `$KVADRO_ROOT/demo/app/vite.config.js:49-63` (`/api`, `/media`, `/tiles` →
   `VITE_API_PROXY`).
 - Production artefacts: `$KVADRO_ROOT/demo/app/tools/parity/original/` (entry `assets/index-B_mMoUu6.js`) and
-  `$KVADRO_ROOT/demo/app/dist/`; `08` names release `index-plF_TOcT.js`.
+  `$KVADRO_ROOT/demo/app/dist/`; `08` names the pinned release `index-DY_DH7h-.js` (`wave-1/baseline.md`).
 - Serve unchanged artefacts, not a rebuild: Q-SEC-015, SEC-REQ-049; CSP for the served build: SEC-REQ-030.
 
 ## Implementation
