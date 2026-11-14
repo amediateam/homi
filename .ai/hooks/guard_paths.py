@@ -2,9 +2,12 @@
 """HOMI PreToolUse guard — the two red lines of the master prompt that tooling can enforce.
 
 1. Reference codebases are read-only (master prompt §4, CLAUDE.md): no Edit/Write/NotebookEdit, no
-   destructive shell commands, no project tooling (composer, artisan, pnpm, git/svn writes) under the
-   paths listed in `.ai/local.env` (`APPUZ_ROOT`, collectors, nginx mirrors). Without that file the
-   guard falls back to path segments named `app.uz`, `telegram.uz`, `datahub.uz`, `geo.uz`.
+   destructive shell commands, no project tooling (composer, artisan, npm, pnpm, git/svn writes) under the
+   paths listed in `.ai/local.env` (`APPUZ_ROOT`, collectors, nginx mirrors, and `KVADRO_ROOT`, the legacy
+   kvadro² checkout). Without that file the guard falls back to path segments named `app.uz`,
+   `telegram.uz`, `datahub.uz`, `geo.uz`, `kvadro.uz`. The legacy tree gets its own reason: builds and
+   dev servers there reach production, and its code is read, never copied
+   (`docs/migration/22-agent-handoff.md` §4, DEC-32).
 2. Secrets are never printed or copied: `.env*` (except `*.example|dist|sample|template`), `envprod*`,
    `key.md`, private keys. Inside a reference codebase this extends to every `.env*`, `settings.local.json`
    and database dumps. Key *names* may still be listed (`grep -o '^[A-Z_]*=' backend/.env`).
@@ -33,8 +36,11 @@ REFERENCE_KEYS = (
     "NGINX_MIRROR_WEB",
     "NGINX_MIRROR_CDN",
     "CDN_DOCS_PATH",
+    "KVADRO_ROOT",
 )
-FALLBACK_MARKERS = ("app.uz", "telegram.uz", "datahub.uz", "geo.uz")
+FALLBACK_MARKERS = ("app.uz", "telegram.uz", "datahub.uz", "geo.uz", "kvadro.uz")
+LEGACY_KEYS = ("KVADRO_ROOT",)
+LEGACY_MARKERS = ("kvadro.uz",)
 
 WRITE_TOOLS = {"Edit", "Write", "NotebookEdit", "MultiEdit"}
 READ_TOOLS = {"Read", "Grep"}
@@ -135,14 +141,16 @@ def project_root() -> Path:
 
 
 class Guard:
-    def __init__(self, project_root: Path, reference_roots: List[Path]) -> None:
+    def __init__(self, project_root: Path, reference_roots: List[Path], legacy_roots: Optional[List[Path]] = None) -> None:
         self.project_root = Path(os.path.realpath(str(project_root)))
         self.reference_roots = reference_roots
+        self.legacy_roots = legacy_roots or []
 
     @classmethod
     def from_project(cls, root: Path) -> "Guard":
         env = load_local_env(root / ".ai" / "local.env")
         roots: List[Path] = []
+        legacy: List[Path] = []
         for key in REFERENCE_KEYS:
             value = env.get(key, "").strip()
             if not value or value.startswith("/path/to"):
@@ -150,7 +158,9 @@ class Guard:
             resolved = Path(os.path.realpath(os.path.expanduser(value)))
             if resolved not in roots:
                 roots.append(resolved)
-        return cls(root, roots)
+            if key in LEGACY_KEYS and resolved not in legacy:
+                legacy.append(resolved)
+        return cls(root, roots, legacy)
 
     # path classification --------------------------------------------------------------------
 
@@ -177,6 +187,13 @@ class Guard:
             return True
         return any(part in FALLBACK_MARKERS for part in path.parts)
 
+    def is_legacy(self, path: Path) -> bool:
+        if self.is_project(path):
+            return False
+        if any(self.is_under(path, root) for root in self.legacy_roots):
+            return True
+        return any(part in LEGACY_MARKERS for part in path.parts)
+
     def reference_label(self, path: Path) -> str:
         for root in self.reference_roots:
             if self.is_under(path, root):
@@ -191,6 +208,13 @@ class Guard:
     def readonly_reason(self, path: Path, detail: str = "") -> str:
         label = self.reference_label(path)
         suffix = " (%s)" % detail if detail else ""
+        if self.is_legacy(path):
+            return (
+                "HOMI guard: `%s` is the READ-ONLY legacy kvadro² checkout (docs/migration/22-agent-handoff.md §4). "
+                "Writing, deleting or running project tooling there is blocked%s: %s. Builds and dev servers there "
+                "reach production. Read it as the behaviour reference and never copy its code (DEC-32)."
+                % (label, suffix, path)
+            )
         return (
             "HOMI guard: `%s` is a READ-ONLY reference codebase (master prompt §4, CLAUDE.md). "
             "Writing, deleting or running project tooling there is blocked%s: %s. "
