@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | REVIEW (`feat/wp-02-operator-request-and-baseline`); the request is not sent yet |
+| Status | WAITING (PR #37 merged; the request to the operator is not sent yet) |
 | Depends on | — (the guard key of WP-01 step 1 should be merged before the legacy tree is read) |
 | Size | about 1 200 changed lines, documentation and registers only, M |
 | Behaviour reference | `24` §8.2 (Q-SYS-009, Q-API-059, Q-API-060, Q-API-062, Q-API-063, Q-APP-024), §8.3 (RK-25, RK-26, RK-28); `25` §4.5, §8; `README.md` (evidence rules, identifier scheme); `08` header and §1; `03` header; legacy `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md` and `$KVADRO_ROOT/demo/app/docs/releases/` (read-only) |
