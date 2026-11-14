@@ -59,7 +59,7 @@ What the code does today and what is missing: [`project-context.md`](docs/handof
 
 ## 4. Plan for the development track
 
-Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md` (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2. T0, T4, T9, T10 and T11 are unchanged. The notes in the table say the same per task.
+Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md` (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2. T0, T4, T9, T10 and T11 are unchanged.
 
 | ID | Pri | Task | Depends on | Gate |
 |---|---|---|---|---|
