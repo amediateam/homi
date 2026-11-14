@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | 0 |
-| Status | TODO |
+| Status | REVIEW (PRs #29 … #36) |
 | Depends on | — |
 | Size | about 600 changed lines in eight small PRs, S |
 | Behaviour reference | `24` §7, §8.1, §9; `25` §3, §4; `decisions/2026-11-14-developer-answers.md`; `docs/handoff/parallel-work.md` §1, §2, §4; `HANDOFF.md` §4; known issue KI-26 in `.ai/memory/known-issues.md`; `.ai/hooks/README.md` |
@@ -75,7 +75,7 @@ description instead of editing that file.
 > Since 2026-11-14 the order of work is the Wave 1 queue in `docs/migration/wave-1/README.md`
 > (`docs/migration/24-three-wave-strategy.md` §7). T3 and T5 are done by WP-10; T6 by WP-40; T8 by WP-03 and
 > WP-20 … WP-33; T1 by WP-50. T2 (intake) is Wave 2. T7 is replaced by the native modules of Wave 1 and by Wave 2.
-> T4, T9, T10 and T11 are unchanged.
+> T0, T4, T9, T10 and T11 are unchanged.
 
 **`CLAUDE.md` and `AGENTS.md`.** In "Mandate and session start" of `CLAUDE.md` add one bullet, and restate it in the
 hard-rules list of `AGENTS.md`:
@@ -90,13 +90,15 @@ Also add `kvadro.uz` to the list of folder names in the "Agent guard rails" para
 **Guard key (KI-26).**
 
 - `.ai/hooks/guard_paths.py`: add `"KVADRO_ROOT"` to `REFERENCE_KEYS` and `"kvadro.uz"` to `FALLBACK_MARKERS`; update
-  the module docstring.
+  the module docstring. Under the legacy tree the deny reason is its own: builds and dev servers there reach
+  production, and the code is read, never copied (DEC-32). The generic reason for reference codebases says "port single
+  files or patterns into homi.uz", which DEC-32 forbids for legacy.
 - `.ai/local.env.example`: under the reference block add `KVADRO_ROOT=/path/to/Server/kvadro.uz` with the comment
   "Legacy kvadro² checkout (SVN working copy): read-only; builds and dev servers there reach production".
 - `.ai/hooks/tests/test_guard_paths.py`: new cases — an `Edit` under the legacy root is denied; `npm run build`,
   `pnpm install`, `npx vite` and `svn commit` with that root as working directory are denied; `Read`, `rg` and
   `svn info` are allowed; the folder-name fallback works without `.ai/local.env`; reading a `.env` file there is
-  denied.
+  denied; the legacy reason is given under the legacy tree and not under `app.uz`.
 - `.ai/hooks/README.md`: name the new key. `.ai/memory/known-issues.md`: KI-26 → resolved.
 
 ## Files
@@ -155,4 +157,47 @@ None; this package records decisions. Two checks keep the ADRs honest:
 
 ## Handoff
 
-Empty.
+**2026-11-14, all eight PRs open, waiting for the first developer's review.**
+
+| Step | Branch | PR |
+| ---- | ------ | -- |
+| 1 | `chore/guard-kvadro-root` | #29 (CI `tooling` pass) |
+| 2 | `docs/adr-0016-new-product-three-waves` | #33 |
+| 3 | `docs/adr-0017-api-v1-source-drivers` | #34 |
+| 4 | `docs/adr-0018-mini-app-architecture` | #35 |
+| 5 | `docs/adr-0019-frontend-ui-stack` | #36 |
+| 6 | `docs/parallel-work-wave-1-pr-size` | #30 |
+| 7 | `docs/handoff-wave-1-pointer` | #31 |
+| 8 | `docs/claude-md-migration-pointer` | #32 (merge after #29) |
+
+Done:
+
+- Guard tests written first: 11 failures on the old code, then `make ai-hooks-test` → 55 tests OK.
+- Four ADRs drafted as `Proposed`, each under 80 lines. A separate reviewer agent checked them against 24, 25, the
+  answers and the amended ADRs before the PRs were opened. Its findings are fixed and listed in each PR.
+
+Decisions taken while doing it (each one is in its PR description):
+
+- Under the legacy tree, the guard gives its own deny reason (DEC-32).
+- T0 is named among the unchanged HANDOFF tasks.
+- ADR-0018 says that DEC-44 replaces three parts of SEC-REQ-007.
+- The CSP spike of WP-21 records its result in an ADR that amends ADR-0018. Both WP-21 step 1 and `25` §3.10 were
+  corrected to say so.
+
+Next concrete steps:
+
+1. When the first developer approves an ADR PR, change `Status` to `Accepted` in the file header and in the index
+   row of the same PR, then merge.
+2. The ADR PRs all add their index row after 0015. After each merge, merge `main` into the next ADR branch and
+   resolve the one-line conflict there; never force-push.
+3. Live-session probe: **done 2026-11-14, before the merge**, with this branch's `guard_paths.py` placed temporarily
+   in the shared working tree, on a throwaway folder named `kvadro.uz` under the session's scratch directory:
+   - `Edit` and `Write` there were refused with the legacy reason;
+   - `npm --version` with that folder as working directory, and `svn commit` on it, were refused;
+   - `Read`, `rg` and `cat` worked, and the file stayed unchanged.
+   This machine's `.ai/local.env` has no `KVADRO_ROOT`, so the folder-name fallback was tested. The committed hook
+   was restored afterwards (`git status` clean).
+4. Quote the first developer's answers on the PR size and the deploy cadence (asked in #30) in
+   `.ai/memory/session-handoff.md`.
+5. After the last merge: update the ADR references in `.ai/memory/current-state.md` (development sections), set this
+   package to `DONE` in the queue, and run `save-session`.

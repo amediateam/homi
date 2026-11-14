@@ -13,6 +13,7 @@ Nested instructions apply to their directory and are **not** loaded automaticall
 ## Hard rules
 Claude Code enforces these with hooks and permission lists (`.claude/settings.json`, `.ai/hooks/`); in your agent nothing enforces them, so you do.
 - Reference codebases are read-only: `app.uz`, `telegram.uz`, `datahub.uz`, `geo.uz` and the nginx mirrors (paths in `.ai/local.env`). No writes, no project tooling, no folder copies there; never open their `.env*`, `envprod*` or `key.md`.
+- The kvadro² → HOMI migration is planned in `docs/migration/` (conventions in its `README.md`). Wave 1 is worked from the single queue `docs/migration/wave-1/README.md`: take the first package that is not `DONE` and read its specification. The legacy checkout (`KVADRO_ROOT` in `.ai/local.env`) is read-only: no edits, no builds, no `npm`, no dev server there, and no copy of its code.
 - Never read, print or copy secrets: `.env*` except `*.example`, private keys (`*.key`, `*-key.pem`), `key.md`, `.claude/settings.local.json`. List key names with `grep -o '^[A-Z_]*=' backend/.env`.
 - No machine-specific absolute paths in tracked files — they belong in `.ai/local.env`.
 - Never `php artisan serve` (ports 8000/8001 are taken); never `brew services start|restart nginx` (KI-13) — use `make dev-nginx`.
