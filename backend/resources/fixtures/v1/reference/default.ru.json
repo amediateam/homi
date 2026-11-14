@@ -1,0 +1,218 @@
+{
+    "rates": {
+        "usd_uzs": 12800
+    },
+    "map": {
+        "tiles_url": null
+    },
+    "features": [
+        "pets"
+    ],
+    "locales": [
+        {
+            "code": "ru",
+            "name": "Русский"
+        },
+        {
+            "code": "uz",
+            "name": "Oʻzbekcha"
+        },
+        {
+            "code": "en",
+            "name": "English"
+        }
+    ],
+    "cities": [
+        {
+            "code": "tashkent",
+            "name": "Ташкент",
+            "center": {
+                "lat": 41.3111,
+                "lon": 69.2797
+            },
+            "zoom": 12,
+            "is_region": false,
+            "has_metro": true,
+            "has_median": true,
+            "districts": [
+                {
+                    "code": "bektemir",
+                    "name": "Бектемир"
+                },
+                {
+                    "code": "chilonzor",
+                    "name": "Чиланзар"
+                },
+                {
+                    "code": "mirobod",
+                    "name": "Мирабад"
+                },
+                {
+                    "code": "mirzo_ulugbek",
+                    "name": "Мирзо-Улугбек"
+                },
+                {
+                    "code": "olmazor",
+                    "name": "Алмазар"
+                },
+                {
+                    "code": "sergeli",
+                    "name": "Сергели"
+                },
+                {
+                    "code": "shayxontohur",
+                    "name": "Шайхантахур"
+                },
+                {
+                    "code": "uchtepa",
+                    "name": "Учтепа"
+                },
+                {
+                    "code": "yakkasaroy",
+                    "name": "Яккасарай"
+                },
+                {
+                    "code": "yangihayot",
+                    "name": "Янгихаёт"
+                },
+                {
+                    "code": "yashnobod",
+                    "name": "Яшнабад"
+                },
+                {
+                    "code": "yunusobod",
+                    "name": "Юнусабад"
+                }
+            ],
+            "zones": [
+                {
+                    "code": "center",
+                    "name": "Центр (внутри кольца)"
+                },
+                {
+                    "code": "near_center",
+                    "name": "Ближе к центру"
+                }
+            ]
+        },
+        {
+            "code": "tashkent_region",
+            "name": "Ташкентская область",
+            "center": {
+                "lat": 41.2213,
+                "lon": 69.8597
+            },
+            "zoom": 9,
+            "is_region": true,
+            "has_metro": false,
+            "has_median": true,
+            "districts": [
+                {
+                    "code": "chirchiq",
+                    "name": "Чирчик"
+                },
+                {
+                    "code": "olmaliq",
+                    "name": "Алмалык"
+                },
+                {
+                    "code": "qibray",
+                    "name": "Кибрай"
+                },
+                {
+                    "code": "toshkent_tumani",
+                    "name": "Ташкентский район"
+                },
+                {
+                    "code": "zangiota",
+                    "name": "Зангиата"
+                }
+            ],
+            "zones": []
+        },
+        {
+            "code": "andijan",
+            "name": "Андижан",
+            "center": {
+                "lat": 40.7821,
+                "lon": 72.3442
+            },
+            "zoom": 12,
+            "is_region": false,
+            "has_metro": false,
+            "has_median": false,
+            "districts": [],
+            "zones": []
+        }
+    ],
+    "renovations": {
+        "rent_long": [
+            {
+                "code": "euro",
+                "name": "Евроремонт"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Косметический ремонт"
+            },
+            {
+                "code": "none",
+                "name": "Без ремонта"
+            }
+        ],
+        "rent_daily": [],
+        "sale": [
+            {
+                "code": "euro",
+                "name": "Евроремонт"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Косметический ремонт"
+            },
+            {
+                "code": "shell",
+                "name": "Черновая отделка"
+            }
+        ]
+    },
+    "appliances": [
+        {
+            "code": "washer",
+            "name": "Стиральная машина"
+        },
+        {
+            "code": "fridge",
+            "name": "Холодильник"
+        },
+        {
+            "code": "air_conditioner",
+            "name": "Кондиционер"
+        }
+    ],
+    "price_presets": {
+        "rent_long": [
+            300,
+            400,
+            500,
+            600,
+            800,
+            1000,
+            1500
+        ],
+        "rent_daily": [
+            30,
+            50,
+            80,
+            120
+        ],
+        "sale": [
+            40000,
+            60000,
+            80000,
+            100000,
+            150000,
+            200000
+        ]
+    }
+}

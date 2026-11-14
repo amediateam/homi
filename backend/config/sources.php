@@ -3,6 +3,7 @@
 use App\Services\Sources\Contracts\LandingSource;
 use App\Services\Sources\Contracts\ListingSource;
 use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Stub\StubReferenceSource;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,12 +28,14 @@ return [
     'allow_stub' => (bool) env('SOURCES_ALLOW_STUB', true),
 
     'capabilities' => [
-        'reference' => ['contract' => ReferenceSource::class, 'drivers' => []],
+        'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class]],
         'listings' => ['contract' => ListingSource::class, 'drivers' => []],
         'landing' => ['contract' => LandingSource::class, 'drivers' => []],
     ],
 
     'features' => [
-        // 'source.reference' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
+        // WP-11
+        'source.reference' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
+        'source.cities' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
     ],
 ];

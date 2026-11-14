@@ -41,7 +41,8 @@ final class FixtureStore
             return $this->decoded[$name];
         }
 
-        if (preg_match('#^[a-z0-9_-]+(/[a-z0-9_-]+)*$#', $name) !== 1) {
+        // `<area>/<name>`; a part after the area may hold dots between words (`reference/default.ru`), never `..`.
+        if (preg_match('#^[a-z0-9_-]+(/[a-z0-9_-]+(\.[a-z0-9_-]+)*)*$#', $name) !== 1) {
             throw new InvalidArgumentException("Invalid stub fixture name \"{$name}\": use <area>/<name> without the extension.");
         }
 

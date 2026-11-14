@@ -1,0 +1,218 @@
+{
+    "rates": {
+        "usd_uzs": 12800
+    },
+    "map": {
+        "tiles_url": null
+    },
+    "features": [
+        "pets"
+    ],
+    "locales": [
+        {
+            "code": "ru",
+            "name": "Русский"
+        },
+        {
+            "code": "uz",
+            "name": "Oʻzbekcha"
+        },
+        {
+            "code": "en",
+            "name": "English"
+        }
+    ],
+    "cities": [
+        {
+            "code": "tashkent",
+            "name": "Tashkent",
+            "center": {
+                "lat": 41.3111,
+                "lon": 69.2797
+            },
+            "zoom": 12,
+            "is_region": false,
+            "has_metro": true,
+            "has_median": true,
+            "districts": [
+                {
+                    "code": "bektemir",
+                    "name": "Bektemir"
+                },
+                {
+                    "code": "chilonzor",
+                    "name": "Chilanzar"
+                },
+                {
+                    "code": "mirobod",
+                    "name": "Mirabad"
+                },
+                {
+                    "code": "mirzo_ulugbek",
+                    "name": "Mirzo Ulugbek"
+                },
+                {
+                    "code": "olmazor",
+                    "name": "Almazar"
+                },
+                {
+                    "code": "sergeli",
+                    "name": "Sergeli"
+                },
+                {
+                    "code": "shayxontohur",
+                    "name": "Shaykhantahur"
+                },
+                {
+                    "code": "uchtepa",
+                    "name": "Uchtepa"
+                },
+                {
+                    "code": "yakkasaroy",
+                    "name": "Yakkasaray"
+                },
+                {
+                    "code": "yangihayot",
+                    "name": "Yangihayot"
+                },
+                {
+                    "code": "yashnobod",
+                    "name": "Yashnabad"
+                },
+                {
+                    "code": "yunusobod",
+                    "name": "Yunusabad"
+                }
+            ],
+            "zones": [
+                {
+                    "code": "center",
+                    "name": "Centre (inside the ring)"
+                },
+                {
+                    "code": "near_center",
+                    "name": "Near the centre"
+                }
+            ]
+        },
+        {
+            "code": "tashkent_region",
+            "name": "Tashkent Region",
+            "center": {
+                "lat": 41.2213,
+                "lon": 69.8597
+            },
+            "zoom": 9,
+            "is_region": true,
+            "has_metro": false,
+            "has_median": true,
+            "districts": [
+                {
+                    "code": "chirchiq",
+                    "name": "Chirchiq"
+                },
+                {
+                    "code": "olmaliq",
+                    "name": "Almalyk"
+                },
+                {
+                    "code": "qibray",
+                    "name": "Kibray"
+                },
+                {
+                    "code": "toshkent_tumani",
+                    "name": "Tashkent district"
+                },
+                {
+                    "code": "zangiota",
+                    "name": "Zangiata"
+                }
+            ],
+            "zones": []
+        },
+        {
+            "code": "andijan",
+            "name": "Andijan",
+            "center": {
+                "lat": 40.7821,
+                "lon": 72.3442
+            },
+            "zoom": 12,
+            "is_region": false,
+            "has_metro": false,
+            "has_median": false,
+            "districts": [],
+            "zones": []
+        }
+    ],
+    "renovations": {
+        "rent_long": [
+            {
+                "code": "euro",
+                "name": "Euro-style renovation"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Cosmetic repair"
+            },
+            {
+                "code": "none",
+                "name": "No renovation"
+            }
+        ],
+        "rent_daily": [],
+        "sale": [
+            {
+                "code": "euro",
+                "name": "Euro-style renovation"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Cosmetic repair"
+            },
+            {
+                "code": "shell",
+                "name": "Shell and core"
+            }
+        ]
+    },
+    "appliances": [
+        {
+            "code": "washer",
+            "name": "Washing machine"
+        },
+        {
+            "code": "fridge",
+            "name": "Fridge"
+        },
+        {
+            "code": "air_conditioner",
+            "name": "Air conditioner"
+        }
+    ],
+    "price_presets": {
+        "rent_long": [
+            300,
+            400,
+            500,
+            600,
+            800,
+            1000,
+            1500
+        ],
+        "rent_daily": [
+            30,
+            50,
+            80,
+            120
+        ],
+        "sale": [
+            40000,
+            60000,
+            80000,
+            100000,
+            150000,
+            200000
+        ]
+    }
+}

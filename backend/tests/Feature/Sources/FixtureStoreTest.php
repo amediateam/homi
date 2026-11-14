@@ -33,11 +33,17 @@ it('decodes a fixture once per process', function (): void {
     File::deleteDirectory($root);
 });
 
+it('reads a name whose last parts carry a dot, such as reference/default.ru', function (): void {
+    $store = new FixtureStore(base_path('tests/Support/fixtures'));
+
+    expect($store->get('fake/name.with.dots'))->toBe(['dotted' => true]);
+});
+
 it('fails loudly on an unknown or invalid fixture name', function (string $name): void {
     $store = new FixtureStore(base_path('tests/Support/fixtures'));
 
     expect(fn () => $store->get($name))->toThrow(InvalidArgumentException::class);
-})->with(['fake/nothing', '../../../.env', 'Fake/Default', '/etc/passwd', 'fake/default.json']);
+})->with(['fake/nothing', '../../../.env', 'Fake/Default', '/etc/passwd', 'fake/default.json', 'fake/..', 'fake/.hidden', 'fake/a..b', 'fake.x/default']);
 
 it('has the fixture store of the API in resources', function (): void {
     expect(app(FixtureStore::class)->root())->toBe(resource_path('fixtures/v1'))
