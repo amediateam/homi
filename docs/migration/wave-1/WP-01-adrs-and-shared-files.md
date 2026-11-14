@@ -190,8 +190,13 @@ Next concrete steps:
    row of the same PR, then merge.
 2. The ADR PRs all add their index row after 0015. After each merge, merge `main` into the next ADR branch and
    resolve the one-line conflict there; never force-push.
-3. After #29 merges, probe the hook in a live session: an `Edit` under the legacy tree must be refused and a `Read`
-   must succeed. Use a path in a folder named `kvadro.uz`; this machine's `.ai/local.env` has no `KVADRO_ROOT`.
+3. Live-session probe: **done 2026-11-14, before the merge**, with this branch's `guard_paths.py` placed temporarily
+   in the shared working tree, on a throwaway folder named `kvadro.uz` under the session's scratch directory:
+   - `Edit` and `Write` there were refused with the legacy reason;
+   - `npm --version` with that folder as working directory, and `svn commit` on it, were refused;
+   - `Read`, `rg` and `cat` worked, and the file stayed unchanged.
+   This machine's `.ai/local.env` has no `KVADRO_ROOT`, so the folder-name fallback was tested. The committed hook
+   was restored afterwards (`git status` clean).
 4. Quote the first developer's answers on the PR size and the deploy cadence (asked in #30) in
    `.ai/memory/session-handoff.md`.
 5. After the last merge: update the ADR references in `.ai/memory/current-state.md` (development sections), set this
