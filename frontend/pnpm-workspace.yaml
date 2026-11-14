@@ -3,3 +3,10 @@ packages:
   - 'app'
   - 'arm'
   - 'packages/*'
+# Dependency install scripts (pnpm 11 `allowBuilds`; `strictDepBuilds` is on by default, so an undecided entry fails
+# the install). All are denied: none is needed by a test or a build (WP-03). Allowing one needs the first developer's
+# confirmation and its reason in the PR.
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': false
+  core-js: false
