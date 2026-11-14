@@ -125,6 +125,17 @@ and cannot bring it back (a test keeps this). An earlier draft added a row-exist
 | `DELETE` by one of two owners | `204`, object deleted for both | `204`; the file stays readable for the other owner |
 | `POST /api/v1/media/presign` | key `uploads/{id}/…` | key `uploads/{owner_type}/{owner_id}/…` |
 | `POST /api/v1/media/register` with a key under another actor's prefix | accepted when the numeric ids match | `403` `forbidden_upload` (existing `MediaException::foreignUpload`) |
+| `GET` / `DELETE /api/v1/media/{id}` with an id that is not a ULID | `404` from the implicit binding, no query | the same `404` from the route constraint `whereUlid('media')`, no query |
+| Any `/api/v1` read | not throttled: the `api` limiter was defined but never attached | `throttle:api` (120 per minute per actor) on the whole v1 group |
+| `DELETE` by the uploader while another owner keeps the file | — | `uploaded_by` becomes `null` |
+| Upload of bytes whose row is `failed` | no variants job | the job runs again (`MediaFile::needsVariants()`) |
+
+Added after the security review of the diff (step 10). The scoped load takes the id as a string, so without the route
+constraint any string reached the query; on PostgreSQL a NUL byte (`%00`, valid UTF-8, refused by the database) gave
+a `500` where the old implicit binding answered `404`. The key pattern of `RegisterUploadRequest` ends in `$/D`, so a
+trailing newline cannot match. A file kept by another owner no longer names the user who let go of it. A row left
+`failed` by the accepted delete window (the original removed while the same bytes arrive again) recovers on the next
+upload of those bytes instead of staying `failed`.
 
 ## Files
 
@@ -137,7 +148,7 @@ and cannot bring it back (a test keeps this). An earlier draft added a row-exist
   `backend/app/Http/Requests/Api/V1/Media/RegisterUploadRequest.php`,
   `backend/app/Jobs/Media/GenerateImageVariantsJob.php` (changed)
 - `backend/app/Http/Controllers/Api/V1/ApiController.php` (`actor()`), `backend/app/Providers/AppServiceProvider.php`
-  (`actorKey()`) (changed)
+  (`actorKey()`), `backend/routes/api.php` (`whereUlid`, `throttle:api`) (changed)
 - `backend/tests/Feature/Media/MediaOwnershipTest.php` (new); `backend/tests/Feature/Media/MediaApiTest.php` where
   it asserts the old upload prefix, and its show and delete cases, which now give the acting user a reference
 - No seeder: `MediaFile` has none, and references without media objects mean nothing
@@ -217,6 +228,11 @@ nothing.
 - `it('keeps the variants when the same bytes were uploaded again during the run')`;
   `it('does not bring a deleted row back when the variants job fails')`.
 - `it('keeps existing sanctum tokens resolvable without a morph map')`.
+- From the security review: `it('answers a malformed media id like an unknown one without touching the database')`
+  (GET and DELETE; `not-a-ulid`, `%00`, a 28-character id), `it('rejects a register key with a trailing newline')`,
+  `it('derives the variants again when the same bytes arrive for a failed row')`,
+  `it('clears the uploader when the uploader leaves and another owner stays')`,
+  `it('throttles reads of media files per actor')`.
 - `it('keeps one reference when the same actor attaches twice')` — `attachOwner` called twice. The case with
   parallel uploads needs PostgreSQL and child processes; WP-03 writes it as the first test of the `pgsql` group
   (`backend/tests/Pgsql/MediaOwnershipRaceTest.php`).
@@ -243,4 +259,21 @@ The existing media suites stay green; only assertions on the old key prefix chan
 
 ## Handoff
 
-Empty.
+2026-11-14, development track (Claude Code). Branch `feat/wp-00-media-ownership-fix`; status `REVIEW`.
+
+- **Done:** every step of "Steps" except the deploy. Tests first (RED: 27 of 54 media tests passed, every new case
+  failed for the missing feature), then the code; `make ci-backend` exit 0 (Pest 92 of 92, PHPStan 0 errors, Pint
+  clean). Specification corrected against the code (backfill premise, `actorKey()`, `failed()` guard, test notes).
+  Security review by `.ai/agents/security-reviewer.md`: no blocker; S1, S2, S4 (minimum), S5 and S6 fixed in this
+  branch (see "API contract").
+- **Open, outside this package:** deleting the objects is a single attempt after commit; with `throw => false` on the
+  S3 disks a storage failure leaves the original and variants in the bucket without a log or a retry (review S3;
+  queued delete with retries and a sweep for objects without a row: KI-27). A presigned upload has no size bound and
+  `register` reads the whole object into memory before the size check (review N4, existed before: KI-28). A second
+  uploader of identical bytes learns that they were uploaded before, and when (review N1; matters once private
+  documents arrive). References have no foreign key to their owner; the erasure package (WP-47) must delete them.
+- **Not verified:** the migration has not run on PostgreSQL (SQLite tests; `migrate --pretend` SQL read). Staging runs
+  it on deploy. The parallel-upload race test is WP-03's first `pgsql` test.
+- **Next step:** review and merge of the PR by the other developer; the production track reports the two counts,
+  approves the migration on production and deploys; then `GET` of a foreign id on staging must answer `404`, the
+  queue row becomes `DONE`, and the KI-25 PR merges.
