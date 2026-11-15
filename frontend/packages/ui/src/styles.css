@@ -1,0 +1,11 @@
+/*
+ * The stylesheet of @homi/ui (WP-20), imported by an app after `@import "tailwindcss"`. Order is the cascade:
+ * tokens, brand, themes, layout, the Tailwind mapping, motion, then lite, which relies on coming late.
+ */
+@import "./styles/tokens.css";
+@import "./styles/brand.css";
+@import "./styles/themes.css";
+@import "./styles/layout.css";
+@import "./styles/theme.css";
+@import "./styles/motion.css";
+@import "./styles/lite.css";

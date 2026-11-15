@@ -1,26 +1,43 @@
 /**
- * Shared UI for landing, app and arm (master prompt §12.3 design system).
- * The design tokens and components arrive with the first product screens; until then this package
- * only fixes the contract every app relies on: a className merger with no runtime dependencies.
+ * Shared UI for landing, app and arm (WP-20): `cn`, the restyled shadcn/ui base components and, as
+ * `@homi/ui/styles.css`, the tokens, themes, lite and motion CSS. Knows nothing about Telegram or routing, and
+ * imports nothing from an app.
  */
-
-export type ClassValue = string | number | null | undefined | false | ClassValue[] | Record<string, boolean | null | undefined>;
-
-/** Join conditional class names (tiny clsx-compatible subset; swap for clsx + tailwind-merge when tokens land). */
-export function cn(...inputs: ClassValue[]): string {
-  const out: string[] = [];
-  for (const input of inputs) {
-    if (!input) continue;
-    if (typeof input === "string" || typeof input === "number") {
-      out.push(String(input));
-    } else if (Array.isArray(input)) {
-      const nested = cn(...input);
-      if (nested) out.push(nested);
-    } else {
-      for (const [key, enabled] of Object.entries(input)) {
-        if (enabled) out.push(key);
-      }
-    }
-  }
-  return out.join(" ");
-}
+export { type ClassValue, cn } from "./cn";
+export { Button, type ButtonProps, buttonVariants } from "./components/Button";
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/Dialog";
+export { RadioGroup, RadioGroupItem } from "./components/RadioGroup";
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHandle,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
+} from "./components/Sheet";
+export { Skeleton } from "./components/Skeleton";
+export { Spinner } from "./components/Spinner";
+export { Switch } from "./components/Switch";
+export { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/Tabs";
+export {
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "./components/Toast";
+export { ToggleGroup, ToggleGroupItem, toggleVariants } from "./components/ToggleGroup";

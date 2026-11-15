@@ -1,0 +1,40 @@
+/*
+ * The three theme states of `03` §3.6 (WP-20). `data-scheme` is always set (`light` on the first paint, then by the
+ * boot script of WP-21); `data-theme` only for an explicit choice (WP-31). Telegram's theme is read only in
+ * auto + light, and only its four colours. There is no `prefers-color-scheme` rule.
+ */
+html[data-scheme="light"]:not([data-theme]) {
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg2: var(--tg-theme-secondary-bg-color, #f2f2f7);
+  --text: var(--tg-theme-text-color, #0f0f10);
+  --hint: var(--tg-theme-hint-color, #8a8f98);
+  color-scheme: light;
+}
+
+html[data-theme="light"] {
+  --bg: #ffffff;
+  --bg2: #f2f2f7;
+  --text: #0f0f10;
+  --hint: #8a8f98;
+  color-scheme: light;
+}
+
+html[data-scheme="dark"] {
+  --bg: #000000;
+  --bg2: #151517;
+  --text: #ececee;
+  --hint: #8f8f97;
+  --sheet: #151517;
+  --dim: rgba(0, 0, 0, 0.6);
+  --sep: color-mix(in srgb, var(--text) 14%, transparent);
+  --fill: color-mix(in srgb, var(--text) 8%, transparent);
+  --badge-good: #4ade80;
+  --badge-good-bg: rgba(74, 222, 128, 0.13);
+  --badge-high: #fdba74;
+  --badge-high-bg: rgba(251, 146, 60, 0.15);
+  --badge-warn: #fcd34d;
+  --badge-warn-bg: rgba(245, 158, 11, 0.15);
+  --badge-same: #c2c2ca;
+  --badge-same-bg: rgba(236, 236, 238, 0.14);
+  color-scheme: dark;
+}

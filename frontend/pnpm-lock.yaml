@@ -32,6 +32,15 @@ importers:
 
   app:
     dependencies:
+      '@homi/config':
+        specifier: workspace:*
+        version: link:../packages/config
+      '@homi/i18n':
+        specifier: workspace:*
+        version: link:../packages/i18n
+      '@homi/ui':
+        specifier: workspace:*
+        version: link:../packages/ui
       leaflet:
         specifier: 1.9.4
         version: 1.9.4
@@ -272,6 +281,9 @@ importers:
         specifier: 3.7.0
         version: 3.7.0
     devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.6
       '@types/react':
         specifier: ^19
         version: 19.3.0

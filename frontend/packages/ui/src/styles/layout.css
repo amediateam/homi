@@ -1,0 +1,56 @@
+/*
+ * Page layout of the Mini App (WP-20). Safe areas come only from Telegram's variables (TMA-017): no
+ * `env(safe-area-inset-*)`, no left or right inset. No dynamic viewport units and no Telegram viewport variables:
+ * a full-screen layer is `position: fixed; inset: 0` (TMA-018). Phone layout only, no width or orientation queries.
+ */
+:root {
+  --top-inset: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --bottom-inset: var(--tg-safe-area-inset-bottom, 0px);
+  --gutter: 16px;
+  --feed-max: 608px;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* A layer that covers the whole screen */
+.layer-full {
+  position: fixed;
+  inset: 0;
+}
+
+/* Frosted glass */
+.glass {
+  background: var(--material);
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+}
+
+/* Hooks of the shell; WP-23 fills them (fullscreen mode, collapsed chrome). */
+html.fullscreen {
+  --chrome-fullscreen: 1;
+}
+
+html.chrome-mini {
+  --chrome-mini: 1;
+}

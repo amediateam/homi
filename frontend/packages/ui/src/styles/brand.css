@@ -1,0 +1,8 @@
+/*
+ * The only colours that belong to the brand (WP-20, DEC-40). The accent stays the brand yellow in every theme;
+ * Telegram's `button_color` is never used.
+ */
+:root {
+  --accent: #ffd23f;
+  --accent-text: #0b0b0b;
+}

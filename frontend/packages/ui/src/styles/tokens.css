@@ -1,0 +1,36 @@
+/*
+ * Colour roles, radii and chrome sizes of the Mini App (WP-20), re-typed from the audit table of `03` §3.6 with the
+ * same names and values; no legacy file is copied. `--bg`, `--bg2`, `--text`, `--hint` come from themes.css, the
+ * brand accent from brand.css, the insets from layout.css.
+ */
+:root {
+  --sheet: var(--bg);
+  --material: color-mix(in srgb, var(--bg) 72%, transparent);
+  --dim: rgba(0, 0, 0, 0.4);
+  --sep: color-mix(in srgb, var(--text) 10%, transparent);
+  --fill: color-mix(in srgb, var(--text) 6%, transparent);
+  --good: #16a34a;
+  --high: #ea7a0c;
+  --warn: #b45309;
+  --heart: #ff385c;
+  --badge-good: #15803d;
+  --badge-good-bg: rgba(22, 163, 74, 0.11);
+  --badge-high: #c2410c;
+  --badge-high-bg: rgba(234, 122, 12, 0.12);
+  --badge-warn: #92400e;
+  --badge-warn-bg: rgba(180, 83, 9, 0.12);
+  --badge-same: var(--hint);
+  --badge-same-bg: var(--fill);
+  /* `.danger-row` of legacy */
+  --danger: #ff5c5c;
+  --r-s: 12px;
+  --r-m: 16px;
+  --r-l: 24px;
+  --r-photo: 18px;
+  --r-pill: 999px;
+  --tabbar-h: 62px;
+  --bottom-chrome: calc(var(--tabbar-h) + var(--bottom-inset) + 90px);
+  /* Frosted glass over `--material` */
+  --glass: blur(22px) saturate(190%);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
