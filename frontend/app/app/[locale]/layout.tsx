@@ -14,6 +14,7 @@ import { NavigationBinder } from "@/features/shell/NavigationBinder";
 import { TelegramButtons } from "@/features/shell/TelegramButtons";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
+import { ReferenceFeed } from "@/lib/reference/ReferenceFeed";
 import { LocaleGuard } from "@/lib/session/LocaleGuard";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { brand } from "@/lib/brand";
@@ -42,12 +43,13 @@ export function generateStaticParams() {
 }
 
 /**
- * Root layout (WP-20, WP-21). The head holds, in order: the native-callback stubs (TMA-002), in development only
+ * Root layout (WP-20, WP-21, WP-22). The head holds, in order: the native-callback stubs (TMA-002), in development only
  * the Telegram emulator (`dev/telegram-emulator.ts`, which must run before the SDK), and the boot script (theme and
  * lite class before paint, engine test, watchdog — SCR-001), all with the request's nonce. The boot
  * script inserts the Telegram SDK tag itself (TMA-001): React hoists an `async` `<script src>` above inline scripts,
  * and the watchdog must listen before the SDK can fail. `data-scheme="light"` is the server's first paint; the boot script changes the attributes of
- * `<html>` before React hydrates, hence `suppressHydrationWarning`.
+ * `<html>` before React hydrates, hence `suppressHydrationWarning`. The body feeds the cached reference data to the
+ * client (`ReferenceFeed`, inside `<Suspense>` because its entry may be resolved at request time).
  */
 export default async function LocaleLayout({ children, params }: LayoutProps<"/[locale]">) {
   const { locale } = await params;
@@ -71,6 +73,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         <IntlClientProvider locale={locale} messages={getMessages(locale)}>
           <SessionProvider>
             {children}
+            <Suspense fallback={null}>
+              <ReferenceFeed locale={locale} />
+            </Suspense>
             <Suspense fallback={null}>
               <DemoDataMarker />
             </Suspense>
