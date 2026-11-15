@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS |
+| Status | REVIEW (#52) |
 | Depends on | WP-13 (and the packages installed by WP-03) |
 | Size | ≈ 2 800 changed lines without the generated catalogues, L |
 | Behaviour reference | `25` §3.2, §3.6, §3.7, §3.11, §4.4; `03` §1.7, §3.1, §3.6; `05` TMA-017, TMA-018; earlier tasks KV-FE-011, KV-FE-012, KV-FE-015, KV-FE-016 (behaviour, texts and test ideas only — not their file layout, `t()` runtime or navigation) |
