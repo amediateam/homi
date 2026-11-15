@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | REVIEW (#50) |
+| Status | WAITING (merged in #50 on 2026-11-15; production track: deploy, staging check of `GET /radars` → `[]` and `POST /radars` → `403 radars_disabled`) |
 | Depends on | WP-12 |
 | Size | about 2 800 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.2, §5, §7; `08` rows of API-011 … API-016, API-018 … API-023, API-026 … API-033 and RES-010 … RES-013, §1.8 (`Subscription`, `SubscriptionMutationResult`); `02` BR-API-086, BR-API-101, Q-API-064; `03` §4 (BR-APP-036 … BR-APP-049, BR-APP-063, BR-APP-073); `15` §3.1, §3.4; tasks `tasks/backend/KV-BE-038-…` … `KV-BE-044-…`, `KV-BE-100-…` … `KV-BE-106-…`, `KV-BE-154-…`, `KV-BE-155-…` (rules only) |
@@ -380,8 +380,11 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
     `make ci-frontend` → exit 0 (`types:check` clean).
 - **Decisions taken here:** marked *corrected and added while executing* above; AM-55 in
   `docs/ai/reports/phase-3-notes.md` §P.
+- **Merged** on 2026-11-15 on «сливай #50» (merge commit `6c48ce6`), after `backend`, `frontend` and `frontend-e2e`
+  were green on `5c93ca9`; `backend` run 43665456702 and `frontend` run 43665456689 green on `main`. This
+  status and the `CLAUDE.md` update are in the follow-up docs PR.
 - **Next:**
-  1. review and merge;
+  1. ~~review and merge~~ (done);
   2. the production track deploys; on staging `GET /api/v1/radars` answers `[]` and `POST /api/v1/radars` answers
      `403 radars_disabled` while `RADAR_CREATION_ENABLED` is unset;
   3. set the status to `DONE`. With WP-11 … WP-13 the whole `/api/v1` surface of Wave 1 is fixed; stage B (WP-20)
