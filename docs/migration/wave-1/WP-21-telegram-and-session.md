@@ -625,7 +625,7 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
   `frontend-e2e` (run 43715695498) were green on `a17e65f`; #55 on «сливай #55» (merge commit `31b53f4`) after
   `frontend` (run 43716094230) and `frontend-e2e` (run 43716094223) were green on `fc942db`; `frontend` green on
   `main` after each merge (runs 43731715684, 43732411072). This status and the `CLAUDE.md` update are in the
-  follow-up docs PR.
+  follow-up docs PR #56.
 - **Next:**
   1. ~~review and merge~~ (done);
   2. the production track applies the request above and deploys to staging with `CSP_REPORT_ONLY=1`; the checks
