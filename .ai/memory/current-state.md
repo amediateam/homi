@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49; `main` = `d639099`), WAITING for the production track; WP-13 on branch `feat/wp-13-contract-personal-radars`; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -54,7 +54,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     filters); the eight `source.listings.*` features; six placeholder photos and `sources:publish-stub-media`.
   - **Tests:** `make ci-backend` → exit 0 (603 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and
     `frontend` green on `main` after the merge (runs 43662113261, 43662113325).
-- **WP-13, on branch `feat/wp-13-contract-personal-radars` (not on `main`):**
+- **Since WP-13 (#50, merged 2026-11-15 as `6c48ce6`; staging and production do not run it yet):**
   - **Methods on stubs:** favourites, history, hidden listings, blocked authors, the hidden list, reports, the two
     found-survey methods, the six radar methods, and the public `GET /landing/live` and `/landing/pins`. With them
     the `/api/v1` route list equals the 39 pairs of `25` §4.2 (a test pins it).
