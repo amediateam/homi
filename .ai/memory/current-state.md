@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44; `main` = `02f43ae`), WAITING for the production track; WP-11 on branch `feat/wp-11-contract-session-reference`; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46; `main` = `e1a65f2`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -15,7 +15,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Laravel 13.42 (`php artisan --version` after PR #26, merged 2026-11-14), PHP 8.5.12, `php ^8.5` + platform pin. Starter Inertia/React UI present and **frozen** (ADR-0002).
 - `composer ci:check` (`make ci-backend`) exit 0 on 2026-11-09 after the AM-36 fixes (`vite.config.ts` fmt/lint ignores, `phpstan.neon` exclude): 47 Pest tests, PHPStan 0 errors. GitHub's `backend.yml` has not run on the phase 3/4 branches (PR/`main` only). PostgreSQL via `DB_CONNECTION=pgsql`, no pending migrations.
 - `make dev-setup` installs Composer deps only; the frozen starter UI needs `cd backend && npm ci && npm run build` before `ci-backend` (CI does it through `composer setup`).
-- Local `.env`: `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` (ADR-0005 applied), `MEDIA_PUBLIC_URL=https://cdn.homi.loc`, blank `AWS_*` and `TELEGRAM_*`. `.env.example` is the authoritative key list; `dev-check` enforces key parity.
+- Local `.env`: `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` (ADR-0005 applied), `MEDIA_PUBLIC_URL=https://cdn.homi.loc`, blank `AWS_*` and `TELEGRAM_*`. `.env.example` is the authoritative key list; `dev-check` enforces key parity. On 2026-11-15 `scripts/dev/env-keys.sh` reports four template keys missing from the developer's local file: `RADAR_CREATION_ENABLED`, `SOURCES_ALLOW_STUB`, `TELEGRAM_SUPPORT_USERNAME`, `TELESCOPE_RECORD_ALL` (the agent may not write it: deny rule `Edit(**/.env)`).
 - `config/cors.php` env-driven; `config/filesystems.php` `public` disk URL from `MEDIA_PUBLIC_URL`; `storage/app/public/{health.txt,originals,derived}` exist locally.
 - **Phase 3 WIP (branch `chore/phase-3-cdn-webhook`, paused by the developer on 2026-11-08):** packages added with approval — `league/flysystem-aws-s3-v3`, `intervention/image` 4.4, `dedoc/scramble` (registry regenerated). Media module implemented and tested (`/api/v1/media*`: upload, show, delete, presign/register; `HashedUploader`, `GenerateImageVariantsJob` on queue `media`, CDN/temporary URLs); `ApiController` envelope + `ApiExceptionRenderer`; `AssignRequestId`; rate limiters `api|uploads|intake|telegram-webhook`; Horizon queues `default+notifications|telegram|media|ingest`; tables `media_files`, `telegram_updates`, `sources`, `source_listings`, `intake_requests`, `intake_events` (migrated locally). Webhook route `POST /telegram/webhook` exists but is fail-closed (403/501 stubs). Intake endpoints, Telegram pipeline, OpenAPI export and Phase 3 docs are NOT done — the plan is `HANDOFF.md` §4 T1–T4 (development track), re-planned by the kvadro² migration tasks (PR #9, `docs/migration/10` §9). 47 tests green, PHPStan clean.
 - Media ownership: the fix WP-00 is on `main` since PR #27 (merged 2026-11-15): `media_file_references`, owner-scoped load and policy, actor-typed upload prefix, migration `2026_11_14_150551_create_media_file_references_table` (run on the developer's dev database only). Staging and production still run the old code (KI-25) until the production track deploys it and approves the migration on production. KI-27 and KI-28 are open (PR #28, merged).
@@ -27,7 +27,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **OpenAPI:** the committed `docs/api/openapi.json`, `composer openapi:check` in `ci:check`, and `/docs/api` behind `viewApiDocs`.
   - **Tests:** `make ci-backend` → exit 0 (215 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and `frontend` green on `main` after the merge (runs 43652932665, 43652932624).
   - `backend/.env.example` has `SOURCES_ALLOW_STUB` since PR #43 (merged).
-- **WP-11, on branch `feat/wp-11-contract-session-reference` (not on `main`):**
+- **Since WP-11 (#45, merged 2026-11-15 as `2e3d3bf`; staging and production do not run it yet):**
   - **Methods on stubs:**
     - `POST /auth/telegram` issues a real Sanctum token for the stub user `stub@homi.invalid`;
     - `GET /me`, `GET|PATCH /settings`, `GET /reference` (public), `GET /cities` (public), `POST /events`.
@@ -40,6 +40,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     - `StubReferenceSource` and the features `source.reference` and `source.cities`;
     - `config/{radar,settings}.php` and `telegram.support.username`;
     - the fixtures under `resources/fixtures/v1/{me,settings,reference,cities}`.
+  - **Tests:** `make ci-backend` → exit 0 (343 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and `frontend` green on `main` after the merge (runs 43657763081, 43657762964).
+  - `backend/.env.example` has `TELEGRAM_SUPPORT_USERNAME` and `RADAR_CREATION_ENABLED=true` since PR #46 (merged as `e1a65f2`; `backend` run 43658186462 green). Staging and production leave the radar key unset until WP-57.
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).
@@ -53,6 +55,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - Since WP-10 (#42):
   - `@homi/types` generates `src/generated/api.ts` from `docs/api/openapi.json`, and `pnpm types:check` runs in CI and in `make ci-frontend`.
   - `@homi/api-client` gains `put`, a required `ApiError.code`, `null` data for a `204`, and `createTypedClient`.
+- Since WP-11 (#45): the generated types cover the seven contract methods; `@homi/testing` 90 passed, including a `fixture()` test on the real backend fixtures.
 - `next.config.ts`: `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure

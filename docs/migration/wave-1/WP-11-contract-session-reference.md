@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | REVIEW (#45) |
+| Status | WAITING (merged in #45 on 2026-11-15; production track: `TELEGRAM_SUPPORT_USERNAME`, deploy, staging check of `GET /reference` without a token and of sign-in → `GET /me`) |
 | Depends on | WP-10 |
 | Size | about 2 000 changed lines without generated files and fixtures, M |
 | Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `02` BR-API-123; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
@@ -350,9 +350,14 @@ review.
   - The env-key PR #46 for `backend/.env.example` is open next to #45.
 - **Decisions taken here:** each is marked *corrected while executing* or *added while executing* in the sections
   above.
+- **Merged** on 2026-11-15 on «сливай #45» (merge commit `2e3d3bf`; `backend` run 43657763081 and `frontend` run
+  43657762964 green on `main`). The env keys followed on «сливай #46» (`e1a65f2`, `backend` run 43658186462 green).
+  The key names are in `docs/infrastructure/environments.md`, and this status and the `CLAUDE.md` update are in the
+  follow-up docs PR.
 - **Next:**
-  1. review and merge;
-  2. both developers add `RADAR_CREATION_ENABLED=true` to their local environment file;
+  1. ~~review and merge~~ (done);
+  2. both developers add `RADAR_CREATION_ENABLED=true` and `TELEGRAM_SUPPORT_USERNAME=` to their local environment
+     file (the agent cannot write it: the committed deny rule `Edit(**/.env)`);
   3. the production track sets `TELEGRAM_SUPPORT_USERNAME`, leaves `RADAR_CREATION_ENABLED` unset, deploys, and
      checks on staging that `GET /reference` answers without a token with `radars_enabled: false` and that a sign-in
      token opens `GET /me`;
