@@ -1,0 +1,13 @@
+{
+    "radar": {
+        "id": "01JD0000000000000000000001",
+        "active": true,
+        "mode": "instant",
+        "hidden": 0,
+        "created_at": "2026-11-10T06:00:00+00:00"
+    },
+    "kind": "existing",
+    "starter": 0,
+    "options": [],
+    "relaxed": []
+}

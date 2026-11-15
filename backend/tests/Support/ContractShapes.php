@@ -146,4 +146,22 @@ final class ContractShapes
 
     /** `data` of `GET /hidden` (WP-13): both lists are always present. */
     public const array HIDDEN = ['listings' => ['*' => self::LISTING_PREVIEW], 'authors' => ['*' => self::BLOCKED_AUTHOR]];
+
+    /** A radar (WP-13) without its preview; `GET /radars?include=previews` adds `preview`. */
+    public const array RADAR = [
+        'id' => 'string', 'active' => 'bool', 'mode' => 'string', 'hidden' => 'int', 'created_at' => 'string',
+        'filters' => self::FILTERS,
+    ];
+
+    /** The preview of a radar (WP-13): at most five items, the count and the flow; null when not computed. */
+    public const array RADAR_PREVIEW = [
+        'items' => ['*' => self::LISTING_PREVIEW], 'count' => 'int', 'flow' => ['week' => 'int', 'days' => 'int'],
+    ];
+
+    /** The mutation result of `POST /radars` and `PUT /radars/{id}` (WP-13). */
+    public const array RADAR_MUTATION = [
+        'radar' => self::RADAR, 'kind' => 'string', 'starter' => 'int',
+        'options' => ['*' => ['code' => 'string', 'label' => 'string', 'rate' => 'string', 'count' => 'int']],
+        'relaxed' => ['*' => ['text' => 'string']],
+    ];
 }

@@ -21,8 +21,11 @@ use App\Http\Controllers\Api\V1\Personal\HiddenController;
 use App\Http\Controllers\Api\V1\Personal\HiddenListingController;
 use App\Http\Controllers\Api\V1\Personal\HistoryController;
 use App\Http\Controllers\Api\V1\Personal\ReportController;
+use App\Http\Controllers\Api\V1\Radars\RadarController;
+use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Support\Facades\Route;
 
@@ -77,6 +80,16 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
         Route::post('listings/{number}/reports', ReportController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
         Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware('ability:app:write')->name('surveys.found.store');
         Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware('ability:app:write')->name('surveys.found.where');
+
+        // Radars (WP-13): native, stubs until WP-45. The four writes sit behind the switch (DEC-51).
+        Route::get('radars', [RadarController::class, 'index'])->middleware('ability:app:read')->name('radars.index');
+        Route::delete('radars/{id}', [RadarController::class, 'destroy'])->whereUlid('id')->middleware('ability:app:write')->name('radars.destroy');
+        Route::middleware(['ability:app:write', EnsureRadarsEnabled::class])->group(function (): void {
+            Route::post('radars', [RadarController::class, 'store'])->name('radars.store');
+            Route::put('radars/{id}', [RadarController::class, 'update'])->whereUlid('id')->name('radars.update');
+            Route::patch('radars/{id}', [RadarController::class, 'patch'])->whereUlid('id')->name('radars.patch');
+            Route::post('radars/{id}/relax', RadarRelaxController::class)->whereUlid('id')->name('radars.relax');
+        });
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
