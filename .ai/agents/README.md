@@ -15,7 +15,10 @@ Russian trigger words in each description because the developer writes Russian.
 
 Conventions
 - Frontmatter: `name`, `description` ("Use when …" + boundaries + Russian triggers), `tools`, `model`
-  (`inherit` for engineering agents, `sonnet` for the reader). Supported fields per the Claude Code docs:
+  (`inherit` for engineering agents, `sonnet` for the reader). The frontmatter must be strict YAML: a
+  `description` that contains ": " (for example `Триггеры: …`) goes in double quotes, with `\` and `"`
+  escaped. Claude Code tolerates the unquoted form, but Grok silently drops such an agent (`grok inspect`
+  listed 1 of 6 project agents until 2026-11-16). Supported fields per the Claude Code docs:
   also `disallowedTools`, `permissionMode`, `skills`, `memory`, `hooks`, `maxTurns`, `color`.
 - Body skeleton: mandate → HOMI context (verified facts, dated) → numbered rules → scope boundaries →
   output format → "not inherited" (what the source got wrong or what does not apply). Rules carry the

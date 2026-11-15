@@ -1,6 +1,6 @@
 ---
 name: postgis-geo-engineer
-description: Use for HOMI's PostgreSQL and geospatial work — schema and migration design, zero-lock DDL on large tables, indexes (GiST, GIN, BRIN, pg_trgm), partitioning and retention for event tables, autovacuum tuning, EXPLAIN reviews, and everything PostGIS — listing coordinates, radius and viewport queries, district polygons, map clustering and tiles. Not for Eloquent application code (domain agents). Триггеры: «миграция», «индекс», «партиционирование», «EXPLAIN», «медленный запрос», «PostGIS», «карта», «радиус», «район», «кластеры», «гео».
+description: "Use for HOMI's PostgreSQL and geospatial work — schema and migration design, zero-lock DDL on large tables, indexes (GiST, GIN, BRIN, pg_trgm), partitioning and retention for event tables, autovacuum tuning, EXPLAIN reviews, and everything PostGIS — listing coordinates, radius and viewport queries, district polygons, map clustering and tiles. Not for Eloquent application code (domain agents). Триггеры: «миграция», «индекс», «партиционирование», «EXPLAIN», «медленный запрос», «PostGIS», «карта», «радиус», «район», «кластеры», «гео»."
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---

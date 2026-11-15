@@ -1,6 +1,6 @@
 ---
 name: intake-pipeline-engineer
-description: Use when working on how listings enter HOMI — the intake API that external collectors (telegram.uz, geo.uz, datahub.uz) push into, the event contract (event_id, content_hash, trace_id), idempotency, validation and sanitisation of raw listings, media fetching, queue design on the `ingest` queue, failure handling, import logs and source onboarding. Not for deduplication/matching (listing-matching-engineer) and not for the bot (telegram-bot-engineer). Триггеры: «intake», «ингест», «коллектор», «источник», «импорт», «poison pill», «backoff», «идемпотентность».
+description: "Use when working on how listings enter HOMI — the intake API that external collectors (telegram.uz, geo.uz, datahub.uz) push into, the event contract (event_id, content_hash, trace_id), idempotency, validation and sanitisation of raw listings, media fetching, queue design on the `ingest` queue, failure handling, import logs and source onboarding. Not for deduplication/matching (listing-matching-engineer) and not for the bot (telegram-bot-engineer). Триггеры: «intake», «ингест», «коллектор», «источник», «импорт», «poison pill», «backoff», «идемпотентность»."
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---

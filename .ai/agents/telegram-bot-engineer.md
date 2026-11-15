@@ -1,6 +1,6 @@
 ---
 name: telegram-bot-engineer
-description: Use when working on HOMI's Telegram bot side — the radar alert bot, the webhook behind hook.homi.uz, update_id dedup, conversation state (FSM), inline and reply keyboards, callback_data, deep links, broadcasts and their throttling, bot locale (ru, uz-Latn, en), phone collection with consent, bot analytics. Not for ingesting listings from Telegram channels (intake-pipeline-engineer) and not for the Next.js apps. Триггеры: «бот», «радар», «webhook», «рассылка», «inline keyboard», «deep link», «FSM», «callback».
+description: "Use when working on HOMI's Telegram bot side — the radar alert bot, the webhook behind hook.homi.uz, update_id dedup, conversation state (FSM), inline and reply keyboards, callback_data, deep links, broadcasts and their throttling, bot locale (ru, uz-Latn, en), phone collection with consent, bot analytics. Not for ingesting listings from Telegram channels (intake-pipeline-engineer) and not for the Next.js apps. Триггеры: «бот», «радар», «webhook», «рассылка», «inline keyboard», «deep link», «FSM», «callback»."
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---
