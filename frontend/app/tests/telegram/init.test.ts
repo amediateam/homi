@@ -87,6 +87,16 @@ describe("initTelegramApp (TMA-014 … TMA-016)", () => {
     expect(members(telegram)).toContain("disableVerticalSwipes");
   });
 
+  it("applies the theme of the client and follows themeChanged (TMA-019)", () => {
+    const telegram = launch({ version: "8.0", platform: "tdesktop", colorScheme: "dark" });
+    initTelegramApp();
+    expect(document.documentElement.dataset.scheme).toBe("dark");
+
+    (telegram.webApp as { colorScheme: string }).colorScheme = "light";
+    telegram.emit("themeChanged");
+    expect(document.documentElement.dataset.scheme).toBe("light");
+  });
+
   it("is a no-op outside Telegram", () => {
     expect(() => initTelegramApp()).not.toThrow();
     expect(document.documentElement.classList.contains("fullscreen")).toBe(false);

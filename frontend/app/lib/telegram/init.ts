@@ -1,5 +1,6 @@
 import { supportsFeature } from "./gates";
 import { safeCallback, webApp } from "./sdk";
+import { watchTheme } from "./theme";
 import type { TgWebApp } from "./types";
 
 /** TMA-016: fullscreen is requested on these platforms only. */
@@ -21,8 +22,8 @@ function syncFullscreen(app: TgWebApp): void {
 }
 
 /**
- * Starts the SDK once per SDK object (TMA-014 … TMA-016): `ready()` and `expand()`, vertical swipes off from 7.7,
- * fullscreen on mobile from 8.0 with `html.fullscreen` following `isFullscreen`. A late SDK is a new object, so it
+ * Starts the SDK once per SDK object (TMA-014 … TMA-016, TMA-019): `ready()` and `expand()`, vertical swipes off
+ * from 7.7, fullscreen on mobile from 8.0 with `html.fullscreen` following `isFullscreen`, then the theme. A late SDK is a new object, so it
  * is started again (TMA-004). Outside Telegram it does nothing.
  */
 export function initTelegramApp(): void {
@@ -41,4 +42,5 @@ export function initTelegramApp(): void {
   }
   syncFullscreen(app);
   attempt(() => app.onEvent?.("fullscreenChanged", safeCallback(() => syncFullscreen(app))));
+  watchTheme();
 }
