@@ -15,7 +15,7 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-16: «получи последную версию проекта с гит»; «да сделай все сам»; «да давай сделаем граомтно»; «конечно сделай чтобы все граомтно работало»; «сохрани сессию и commit push main сделай сво изминение» — read, as on 2026-11-16 before, as: into `main` through PRs with merge commits, never a direct push.
 
 ## State at handoff
-- `main` = `59a34ad` (#64), on top of `d92f318` (#63) and WP-22 (#61, #62). Branch `docs/session-2026-11-16-local-tooling` holds this save; its PR goes into `main` on the same instruction (check `git log -1 origin/main`). No feature branch is open.
+- `main` holds #63 (`d92f318`), #64 (`59a34ad`) and this save (#65, `94f4fad`); the agents fix on branch `fix/agents-frontmatter-yaml` goes into `main` on «да сделай, и сразу commit push main» (check `git log -1 origin/main`). No feature branch is open after it.
 - WP-22, WP-21, WP-20, WP-10 … WP-13 merged and `WAITING` for the production track; WP-03, WP-00, WP-01, WP-02 `WAITING`. Open PRs: Dependabot #5 (not to be merged, KI-4) and #57–#60 (dependency bumps, the first developer's call; untouched).
 - The developer's machine is current: `composer install`, `pnpm install` (links `@homi/search`), migrations `2026_11_14_150551_*` and `2026_11_14_224945_*` applied, the new `.env`/`.env.local` keys added by the developer from the templates, nginx master started from Terminal by `make dev-nginx-restart` at 04:03.
 - Verify: `make dev-check` → `dev:check OK (0 warning(s))`, 24 PASS (run on `main` = `59a34ad`).
@@ -24,6 +24,7 @@ Written for whoever continues the **development track** (the second developer, a
 - **Pull.** `main` moved `3bf4f39` → `a86a41c` (166 + 18 commits, WP-00 … WP-22); `git pull --ff-only` both times.
 - **#63, KI-30 (resolved):** `check.sh` follows the app's 307 to `/ru` and passes only on 200 on the same host. Verified: real `make dev-check` → OK; the loop cut from `check.sh` against a fake `curl` (foreign host, 000, redirect loop, empty output) → expected FAIL lines.
 - **#64, KI-31:** `nginx.sh` `stop` waits for the root master and falls back to TERM; `start` is its own command; `reload` of a quitting master starts it; new `restart` and `make dev-nginx-restart`; the "Operation not permitted" diagnosis after start/reload and in `storage.sh check`; only the root master is signalled. Verified: stub harness, 15 scenarios as intended; real `nginx.sh check`, `storage.sh check` → PASS; the developer's `make dev-nginx-restart` → new master pid 10946, then `dev:check OK`.
+- **Agents frontmatter:** 5 of 6 `.ai/agents/*.md` had an unquoted `description` with ": ", invalid as strict YAML; Grok dropped them (found by the smartagent.uz session). Descriptions quoted, rule added to `.ai/agents/README.md`. Verified: Symfony YAML parses all 6, each `description` equals the old text; 20 skills valid; `grok inspect --json` → project agents 1 before, 6 after.
 - Phase document: `docs/ai/reports/phase-3-notes.md` §T.
 
 ## Waiting for the developer (do NOT start on your own)

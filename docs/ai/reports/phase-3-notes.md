@@ -649,3 +649,8 @@ on the pid file; 10 s before TERM; the stub harness used for the 15 scenarios st
 (no test runner exists for `scripts/dev`, and no CI covers it).
 
 Verified: `make dev-check` → `dev:check OK (0 warning(s))`, 24 PASS, on `main` = `59a34ad`.
+
+Afterwards, on «да сделай, и сразу commit push main»: the smartagent.uz session reported that Grok drops five of
+the six project agents. Their `description` held an unquoted ": ", which is invalid as strict YAML. The descriptions
+are now double-quoted, and `.ai/agents/README.md` states the rule. Verified: Symfony YAML parses all six, and every
+`description` equals the old text; `grok inspect --json` lists 1 project agent before and 6 after.

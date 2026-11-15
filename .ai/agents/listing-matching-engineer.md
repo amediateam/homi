@@ -1,6 +1,6 @@
 ---
 name: listing-matching-engineer
-description: Use when working on listing deduplication and matching in HOMI — detecting the same flat posted in several Telegram channels or reposted later, normalising titles and descriptions (ru, uz-Latn, uz-Cyrl), "killer words" that forbid a merge (rent vs sale, room vs flat vs house), confidence tiers, the review queue, shadow logs and revert, matching benchmarks and precision targets. Not for the intake contract (intake-pipeline-engineer) and not for search ranking. Триггеры: «дубликат», «дедупликация», «матчинг», «похожие объявления», «repost», «merge», «false positive», «synonyms».
+description: "Use when working on listing deduplication and matching in HOMI — detecting the same flat posted in several Telegram channels or reposted later, normalising titles and descriptions (ru, uz-Latn, uz-Cyrl), \"killer words\" that forbid a merge (rent vs sale, room vs flat vs house), confidence tiers, the review queue, shadow logs and revert, matching benchmarks and precision targets. Not for the intake contract (intake-pipeline-engineer) and not for search ranking. Триггеры: «дубликат», «дедупликация», «матчинг», «похожие объявления», «repost», «merge», «false positive», «synonyms»."
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---

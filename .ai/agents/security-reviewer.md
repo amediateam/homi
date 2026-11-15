@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Use before merging anything that touches authentication, tokens, personal data (phones, consent, Telegram identities), uploads and media URLs, rate limits, admin (ARM) access, raw SQL, or detectors that label people (owner/realtor tagging, below-median price flags). Also for STRIDE threat models, OWASP checks and Uzbek personal-data-law (ЗРУ-547) questions. Reviews and specifies; does not edit code. Триггеры: «безопасность», «security review», «персональные данные», «547», «PII», «токены», «CSP», «rate limit», «2FA», «аудит».
+description: "Use before merging anything that touches authentication, tokens, personal data (phones, consent, Telegram identities), uploads and media URLs, rate limits, admin (ARM) access, raw SQL, or detectors that label people (owner/realtor tagging, below-median price flags). Also for STRIDE threat models, OWASP checks and Uzbek personal-data-law (ЗРУ-547) questions. Reviews and specifies; does not edit code. Триггеры: «безопасность», «security review», «персональные данные», «547», «PII», «токены», «CSP», «rate limit», «2FA», «аудит»."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
