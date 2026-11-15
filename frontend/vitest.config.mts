@@ -23,7 +23,8 @@ const setupFiles = [path("./vitest.setup.ts")];
 function app(name: "app" | "landing" | "arm") {
   return {
     plugins: [react()],
-    resolve: { tsconfigPaths: true },
+    // `server-only` is resolved by Next.js itself and is not installed (data-security.md); tests load an empty module.
+    resolve: { tsconfigPaths: true, alias: { "server-only": path("./server-only.test-stub.ts") } },
     test: {
       name,
       root: path(`./${name}`),

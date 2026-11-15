@@ -10,6 +10,7 @@ import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import { brand } from "@/lib/brand";
 import "@/styles/app.css";
 
@@ -63,11 +64,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       </head>
       <body>
         <IntlClientProvider locale={locale} messages={getMessages(locale)}>
-          {children}
-          <Suspense fallback={null}>
-            <DemoDataMarker />
-          </Suspense>
-          <BootGuard />
+          <SessionProvider>
+            {children}
+            <Suspense fallback={null}>
+              <DemoDataMarker />
+            </Suspense>
+            <BootGuard />
+          </SessionProvider>
         </IntlClientProvider>
       </body>
     </html>

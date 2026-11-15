@@ -314,6 +314,11 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
   /** The CSS variables a real client writes on `<html>` (`--tg-viewport-*` always, safe areas from 8.0). */
   const cssVariables: string[] = [];
   function writeCss(): void {
+    // An init script of Playwright can run before <html> exists; the variables follow once it does.
+    if (document.documentElement === null) {
+      document.addEventListener("readystatechange", writeCss, { once: true });
+      return;
+    }
     const style = document.documentElement.style;
     const set = (name: string, px: number): void => {
       style.setProperty(name, `${px}px`);
@@ -662,15 +667,15 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     },
     uninstall: () => {
       for (const name of cssVariables) {
-        document.documentElement.style.removeProperty(name);
+        document.documentElement?.style.removeProperty(name);
       }
       delete host.Telegram;
       delete host.__homiFakeTelegram;
     },
   };
 
-  writeCss();
   host.Telegram = { WebApp: webApp, WebView: webView };
+  writeCss();
   host.__homiFakeTelegram = fake;
   return fake;
 }

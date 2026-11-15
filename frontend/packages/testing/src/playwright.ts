@@ -151,6 +151,8 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
   if (mode === "header") {
     await page.route("**/bff/session", async (route) => {
       const response = await route.fetch();
+      // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
+      await page.context().clearCookies({ name: /^homi_session/ });
       const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
       await route.fulfill({ response, headers });
     });
@@ -177,3 +179,6 @@ export const test = base.extend<{ externalRequestGuard: void }>({
 });
 
 export { expect };
+
+/** For specs that launch a second Telegram user (WP-21). */
+export { syntheticInitData };

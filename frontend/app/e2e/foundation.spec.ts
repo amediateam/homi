@@ -62,11 +62,13 @@ async function mark(page: Page, selector: string, value: string) {
 
 test.describe("locale redirect", () => {
   test("/ goes to /ru and keeps the query and the launch fragment", async ({ page }) => {
+    // The adapter removes the fragment once the SDK wait settled (TMA-009, WP-21), so it is read on arrival.
+    await page.addInitScript(() => Object.assign(window, { __arrivedHash: location.hash }));
     await page.goto("/?listing=7#tgWebAppData=x");
 
     expect(new URL(page.url()).pathname).toBe("/ru");
     expect(new URL(page.url()).search).toBe("?listing=7");
-    expect(await page.evaluate(() => location.hash)).toBe("#tgWebAppData=x");
+    expect(await page.evaluate(() => (window as unknown as { __arrivedHash: string }).__arrivedHash)).toBe("#tgWebAppData=x");
   });
 
   test("a deeper path keeps its query under the locale", async ({ page }) => {
