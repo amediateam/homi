@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#55; shared files #54) |
+| Status | WAITING (merged in #55 and #54 on 2026-11-15; production track: the request in the Handoff, then steps 11–12) |
 | Depends on | WP-20 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1 – §3.4, §3.10; `03` §1.2 – §1.7, §3.2, SCR-001, SCR-044; `05` (all of TMA-001 … TMA-045); earlier tasks KV-FE-024 … KV-FE-033, KV-FE-037, KV-FE-038, KV-FE-040 (behaviour, constants, edge cases and test ideas only — not their layer stack, `Authorization: tma` transport, `kv-*` keys or file layout) |
@@ -621,3 +621,14 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
   `measureScrollPerformance()` on the first scroll; WP-26 adds the call-page host to `LINK_HOSTS`, WP-27 the map
   attribution hosts and the tile hosts of `CSP_TILE_HOSTS`; WP-32 sets `__homiBoot.watching` and the boot-error
   route.
+- **Merged** on 2026-11-15: #54 on «сливай #54» (merge commit `68751f3`) after `frontend` (run 43715695542) and
+  `frontend-e2e` (run 43715695498) were green on `a17e65f`; #55 on «сливай #55» (merge commit `31b53f4`) after
+  `frontend` (run 43716094230) and `frontend-e2e` (run 43716094223) were green on `fc942db`; `frontend` green on
+  `main` after each merge (runs 43731715684, 43732411072). This status and the `CLAUDE.md` update are in the
+  follow-up docs PR.
+- **Next:**
+  1. ~~review and merge~~ (done);
+  2. the production track applies the request above and deploys to staging with `CSP_REPORT_ONLY=1`; the checks
+     inside Telegram on iOS, Android, Desktop and Web close the (T) lines and the framing line (step 11);
+  3. the policy is enforced and the same check runs on production (step 12); then set the status to `DONE`.
+     WP-22 (data layer) builds on this package.

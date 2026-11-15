@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53; `main` = `f3ab4f0`), WAITING for the deploy; WP-21 in REVIEW (#55 on `feat/wp-21-telegram-and-session`, shared files #54), not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -8,7 +8,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 ## Repository
 - Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. PRs #6–#8 merged later the same day. On 2026-11-14 `main` is at `596d0db` (last merge PR #24); PR #9 (`docs/migration/` + `scripts/migration/`, the kvadro² audit and migration plan) is merged as `b583d3d`. Open (`gh pr list`, 2026-11-14): Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4); PR #25 (`docs/three-wave-plan`: the three-wave strategy and the Wave 1 plan — not on `main` yet). No branch protection (free GitHub plan) and no local push guard yet (KI-19).
 - Two tracks since 2026-11-09: development (second developer, Codex) and production (first developer) — `HANDOFF.md`, `docs/handoff/parallel-work.md`.
-- Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013 and 0015 (Accepted), 0016–0019 (merged 2026-11-15 with `Status: Proposed`, waiting for the first developer's acceptance), `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
+- Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013 and 0015 (Accepted), 0016–0020 (merged 2026-11-15 with `Status: Proposed`, waiting for the first developer's acceptance), `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
 - Gitignored machine files: `infra/local/certs/`, `infra/local/nginx/snippets/paths.conf`, `infra/local/{run,logs}/`, `.ai/local.env`, `backend/.env`, `frontend/*/.env.local`.
 
 ## Backend (`backend/`)
@@ -91,11 +91,15 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Tests:** `make ci-frontend` → exit 0 (app 135, `@homi/i18n` 30, `@homi/ui` 24, `@homi/testing` 90 passed);
     `pnpm exec playwright test --project miniapp` → 20 passed; `frontend` and `frontend-e2e` green on the PR,
     `frontend` green on `main` after the merge (run 43697001406).
-- **WP-21 (#55, open; not on `main`):** the Telegram adapter, boot script, session exchange (`/bff/session`), history
-  stack with BackButton and SettingsButton, launch links, locale guard and the nonce CSP of `proxy.ts` live on
-  `feat/wp-21-telegram-and-session`; ADR-0020 and the app's server-only env keys are in #54. On that branch:
-  `make ci-frontend` → exit 0 (app 362 + the launch-order test, `@homi/testing` 95), Playwright `miniapp` → 51 passed
-  against the local API on stubs.
+- **Since WP-21 (#55 merged 2026-11-15 as `31b53f4`, shared files #54 as `68751f3`; staging and production do not
+  run it yet):** the Telegram adapter `tg` (`lib/telegram/`), the ES5 boot script and update screen (`boot/`),
+  storage and graphics mode, the session exchange `/bff/session` with `lib/session/`, the history stack with
+  BackButton and SettingsButton, launch links, the locale and fragment guards, the development-only emulator
+  (`dev/`), the nonce CSP and security headers of `proxy.ts` (every document at request time, ADR-0020; unknown
+  address → `200` + `noindex`, AM-57); `frontend/app/.env.example` has the server-only keys `API_URL`, `CSP_*`.
+  `frontend-e2e.yml` starts the API on stubs. On the branch: `make ci-frontend` → exit 0 (app 362 + the launch-order
+  test, `@homi/testing` 95), Playwright `miniapp` → 51 passed; `frontend` and `frontend-e2e` green on the PR,
+  `frontend` green on `main` after the merge (run 43732411072).
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
@@ -120,4 +124,4 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
 - The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
 - Course decided by the developer on 2026-11-14 (PR #25, merged 2026-11-14): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (45 work packages including the support bot WP-59; WP-00, WP-01 and WP-02 merged and `WAITING` (deploy; ADR acceptance; the operator request is not sent); WP-03 merged (#39, 2026-11-15) and `WAITING` for the deploy: the confirmed packages, the test tooling and the backend `pgsql` test group (`backend/tests/Pgsql`, `make test-pgsql`) are on `main`; the rest not started; 45 specifications `wave-1/WP-NN-*.md`, decisions DEC-31 … DEC-56, drafted by subagents, then read in full against the code and each other in a verification pass), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
-- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` serves placeholders only (WP-20).
+- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` serves placeholders behind the Telegram layer and the session (WP-20, WP-21).
