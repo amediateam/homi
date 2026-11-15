@@ -12,9 +12,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // @homi/testing is dev only (WP-03): test files may import it, product code may not.
+    // @homi/testing is dev only (WP-03): test files and the development emulator (dev/, WP-21) may import it,
+    // product code may not.
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
-    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "e2e/**"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "e2e/**", "dev/**"],
     rules: {
       "no-restricted-imports": [
         "error",

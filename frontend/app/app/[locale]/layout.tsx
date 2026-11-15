@@ -36,8 +36,9 @@ export function generateStaticParams() {
 }
 
 /**
- * Root layout (WP-20, WP-21). The head holds, in order: the native-callback stubs (TMA-002) and the boot script
- * (theme and lite class before paint, engine test, watchdog — SCR-001), both with the request's nonce. The boot
+ * Root layout (WP-20, WP-21). The head holds, in order: the native-callback stubs (TMA-002), in development only
+ * the Telegram emulator (`dev/telegram-emulator.ts`, which must run before the SDK), and the boot script (theme and
+ * lite class before paint, engine test, watchdog — SCR-001), all with the request's nonce. The boot
  * script inserts the Telegram SDK tag itself (TMA-001): React hoists an `async` `<script src>` above inline scripts,
  * and the watchdog must listen before the SDK can fail. `data-scheme="light"` is the server's first paint; the boot script changes the attributes of
  * `<html>` before React hydrates, hence `suppressHydrationWarning`.
@@ -53,6 +54,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     <html lang={htmlLang(locale)} data-scheme="light" suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: BOOT_STUBS }} />
+        {process.env.NODE_ENV === "development" ? (
+          // eslint-disable-next-line @next/next/no-sync-scripts -- development only: the emulator must run before the SDK.
+          <script src="/__dev/telegram-emulator.js" nonce={nonce} />
+        ) : null}
         <script id="homi-boot" nonce={nonce} data-bot={brand.botUsername} dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <link rel="preconnect" href="https://telegram.org" crossOrigin="anonymous" />
       </head>

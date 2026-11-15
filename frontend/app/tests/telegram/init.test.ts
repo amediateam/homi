@@ -92,8 +92,7 @@ describe("initTelegramApp (TMA-014 … TMA-016)", () => {
     initTelegramApp();
     expect(document.documentElement.dataset.scheme).toBe("dark");
 
-    (telegram.webApp as { colorScheme: string }).colorScheme = "light";
-    telegram.emit("themeChanged");
+    telegram.setColorScheme("light");
     expect(document.documentElement.dataset.scheme).toBe("light");
   });
 

@@ -15,7 +15,10 @@ export {
   type FakeTelegramConfig,
   type FakeTelegramOptions,
   type FakeTelegramWindow,
+  type FakeInsets,
   type FakeWebApp,
+  type TelegramColorScheme,
+  type TelegramPlatform,
 } from "./fakeTelegram";
 export { fixture } from "./fixtures";
 export { SYNTHETIC_HASH, syntheticInitData, type SyntheticTelegramUser } from "./initData";

@@ -44,6 +44,15 @@ describe("shareMessage (TMA-030)", () => {
     expect(receiveEvent).toHaveBeenCalledWith("prepared_message_failed", { error: "UNKNOWN_ERROR" });
   });
 
+  it("recovers the window a lost callback left open (the double's own stale state)", async () => {
+    fake = fakeTelegram({ version: "8.0", answers: { shareSent: "stuck" } });
+    const first = shareMessage("prepared-1");
+
+    fake.answers.shareSent = true;
+    await expect(shareMessage("prepared-2")).resolves.toBe(true);
+    await expect(first).resolves.toBe(false);
+  });
+
   it("gives up after the one retry", async () => {
     fake = fakeTelegram({ version: "8.0" });
     addWebView();

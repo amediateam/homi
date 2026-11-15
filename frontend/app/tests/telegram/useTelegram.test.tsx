@@ -26,8 +26,7 @@ describe("useTelegram (TMA-016)", () => {
     act(() => {
       fake?.webApp.requestFullscreen();
       fake?.emit("fullscreenChanged");
-      (fake?.webApp as { colorScheme: string }).colorScheme = "dark";
-      fake?.emit("themeChanged");
+      fake?.setColorScheme("dark");
     });
     expect(screen.getByRole("status").textContent).toBe("true ios 8.0 true dark");
   });

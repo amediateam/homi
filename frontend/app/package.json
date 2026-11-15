@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node boot/build.mjs",
+    "predev": "node boot/build.mjs && node dev/build.mjs",
     "dev": "next dev -p 3001",
-    "prebuild": "node boot/build.mjs",
+    "prebuild": "node boot/build.mjs && node dev/build.mjs --clean",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

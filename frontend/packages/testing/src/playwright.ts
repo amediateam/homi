@@ -1,6 +1,7 @@
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 
 import { installFakeTelegram, resolveFakeTelegramConfig, type FakeTelegramCall, type FakeTelegramOptions, type FakeTelegramWindow } from "./fakeTelegram";
+import { syntheticInitData } from "./initData";
 
 /**
  * Playwright side of `@homi/testing` (WP-03). Specs import `test` and `expect` from here: every test then runs behind
@@ -95,6 +96,72 @@ export async function playwrightTelegram(page: Page, options: PlaywrightTelegram
           args: call.args.map((arg) => (typeof arg === "function" ? "[function]" : arg)),
         })),
       ),
+  };
+}
+
+export interface LaunchAppOptions extends Omit<PlaywrightTelegramOptions, "initData" | "startParam"> {
+  /**
+   * `cookie` (default) or `header`: header mode strips `Set-Cookie` from the app's `/bff/session` answers, as the
+   * frame of a browser that refuses the cookie does (DEC-44, RK-30).
+   */
+  mode?: "cookie" | "header";
+  /** The Telegram user's `language_code`; default `ru`. */
+  locale?: string;
+  startParam?: string;
+  /** A complete launch data string instead of the synthetic one. */
+  initData?: string;
+  /** The address the bot opens, with its query; default `/`. */
+  path?: string;
+  /**
+   * `false`: no double at all, the SDK tag is aborted, and a spy on `TelegramWebviewProxy.postEvent` records the
+   * bridge events (TMA-005).
+   */
+  sdk?: boolean;
+}
+
+export interface LaunchedApp extends PlaywrightTelegram {
+  /** The launch data the app received. */
+  readonly initData: string;
+  /** `web_app_*` events the page posted through the native bridge; only with `sdk: false`. */
+  bridgeEvents(): Promise<string[]>;
+}
+
+/**
+ * Opens the Mini App as the bot does (WP-21): the fake Telegram (or none), the session mode, and the launch
+ * parameters in the address fragment, where Telegram puts them.
+ */
+export async function launchApp(page: Page, options: LaunchAppOptions = {}): Promise<LaunchedApp> {
+  const { mode = "cookie", locale = "ru", startParam, initData, path = "/", sdk = true, ...telegram } = options;
+  const launchData = initData ?? syntheticInitData({ language_code: locale }, { startParam });
+  let installed: PlaywrightTelegram;
+  if (sdk) {
+    installed = await playwrightTelegram(page, { ...telegram, initData: launchData });
+  } else {
+    const state = await guard(page);
+    await page.route(TELEGRAM_SDK_URL, (route) => route.abort("blockedbyclient"));
+    await page.addInitScript(() => {
+      const events: string[] = [];
+      Object.assign(window, {
+        __homiBridgeEvents: events,
+        TelegramWebviewProxy: { postEvent: (eventType: string) => events.push(eventType) },
+      });
+    });
+    installed = { blockedRequests: state.blocked, calls: async () => [] };
+  }
+  if (mode === "header") {
+    await page.route("**/bff/session", async (route) => {
+      const response = await route.fetch();
+      const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
+      await route.fulfill({ response, headers });
+    });
+  }
+  const config = resolveFakeTelegramConfig({ ...telegram, initData: launchData });
+  const fragment = new URLSearchParams({ tgWebAppData: launchData, tgWebAppVersion: config.version, tgWebAppPlatform: config.platform });
+  await page.goto(`${path}#${fragment.toString()}`);
+  return {
+    ...installed,
+    initData: launchData,
+    bridgeEvents: () => page.evaluate(() => [...((window as unknown as { __homiBridgeEvents?: string[] }).__homiBridgeEvents ?? [])]),
   };
 }
 

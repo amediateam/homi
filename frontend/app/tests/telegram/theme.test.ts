@@ -125,8 +125,7 @@ describe("setThemePreference and themeChanged", () => {
     expect(html.dataset.scheme).toBe("light");
 
     const initial = colourCalls(telegram).length;
-    (telegram.webApp as { colorScheme: string }).colorScheme = "dark";
-    telegram.emit("themeChanged");
+    telegram.setColorScheme("dark");
     expect(html.dataset.scheme).toBe("dark");
     const before = colourCalls(telegram).length;
     expect(before - initial, "one listener: one header and one background call").toBe(2);
