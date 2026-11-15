@@ -74,16 +74,21 @@ final class FixtureStore
      */
     public function pick(SourceContext $context, string $default, array $scenarios = []): array
     {
+        $this->failForReserved($context);
         $scenario = $context->scenario;
 
-        match ($scenario) {
+        return $this->get($scenario !== null && isset($scenarios[$scenario]) ? $scenarios[$scenario] : $default);
+    }
+
+    /** Throws the error of a reserved scenario (`RESERVED_SCENARIOS`); any other scenario passes. */
+    public function failForReserved(SourceContext $context): void
+    {
+        match ($context->scenario) {
             'source_unavailable' => throw new SourceUnavailable('Stub scenario source_unavailable.'),
             'rate_limited' => throw new ThrottleRequestsException('Too Many Attempts.', headers: ['Retry-After' => '60']),
             'unauthenticated' => throw new AuthenticationException,
             'forbidden' => throw new AuthorizationException('Stub scenario forbidden.'),
             default => null,
         };
-
-        return $this->get($scenario !== null && isset($scenarios[$scenario]) ? $scenarios[$scenario] : $default);
     }
 }

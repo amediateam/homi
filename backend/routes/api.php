@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\CityController;
+use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
 use App\Http\Controllers\Api\V1\ReferenceController;
@@ -17,11 +19,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'throttle:api'])->group(function (): void {
-    // Public (WP-11): the no-access screen needs them without a session.
+    // Public (WP-11): sign-in, and what the no-access screen needs without a session.
+    Route::post('auth/telegram', TelegramAuthController::class)->name('auth.telegram');
     Route::get('reference', ReferenceController::class)->name('reference.show');
     Route::get('cities', CityController::class)->name('cities.index');
 
     Route::middleware('auth:sanctum')->group(function (): void {
+        // The Mini App session (WP-11): abilities app:read and app:write.
+        Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
+
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
 

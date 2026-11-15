@@ -1,38 +1,8 @@
 <?php
 
 use Laravel\Pennant\Feature;
+use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
-
-/**
- * The contract of `GET /api/v1/reference` (WP-11): public, per locale, HOMI's configuration added for every driver.
- * A JSON number without a fraction decodes as an int, so rates and coordinates are `float|int`.
- */
-const REFERENCE_SHAPE = [
-    'success' => 'bool',
-    'data' => [
-        'bot' => ['username' => 'string', 'support_username' => 'string'],
-        'limits' => ['radars' => 'int'],
-        'radars_enabled' => 'bool',
-        'rates' => ['usd_uzs' => 'float|int'],
-        'map' => ['tiles_url' => 'null'],
-        'features' => ['*' => 'string'],
-        'locales' => ['*' => ['code' => 'string', 'name' => 'string']],
-        'cities' => ['*' => [
-            'code' => 'string', 'name' => 'string', 'center' => ['lat' => 'float|int', 'lon' => 'float|int'], 'zoom' => 'int',
-            'is_region' => 'bool', 'has_metro' => 'bool', 'has_median' => 'bool',
-            'districts' => ['*' => ['code' => 'string', 'name' => 'string']],
-            'zones' => ['*' => ['code' => 'string', 'name' => 'string']],
-        ]],
-        'renovations' => [
-            'rent_long' => ['*' => ['code' => 'string', 'name' => 'string']],
-            'rent_daily' => ['*' => ['code' => 'string', 'name' => 'string']],
-            'sale' => ['*' => ['code' => 'string', 'name' => 'string']],
-        ],
-        'appliances' => ['*' => ['code' => 'string', 'name' => 'string']],
-        'price_presets' => ['rent_long' => ['*' => 'int'], 'rent_daily' => ['*' => 'int'], 'sale' => ['*' => 'int']],
-    ],
-    'meta' => ['source' => 'string'],
-];
 
 beforeEach(function (): void {
     config([
@@ -46,7 +16,7 @@ beforeEach(function (): void {
 it('answers without a token in the shape of the contract, from the stub', function (): void {
     $response = $this->getJson('/api/v1/reference', ['Accept-Language' => 'ru'])->assertOk();
 
-    JsonShape::assertSame(REFERENCE_SHAPE, JsonShape::of($response->json()));
+    JsonShape::assertSame(ContractShapes::REFERENCE, JsonShape::of($response->json()));
     $response->assertJsonPath('meta.source', 'stub')
         ->assertJsonPath('data.bot', ['username' => 'homi_stub_bot', 'support_username' => 'homi_stub_support'])
         ->assertJsonPath('data.limits.radars', 10)
