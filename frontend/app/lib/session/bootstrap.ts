@@ -303,6 +303,16 @@ export async function refresh(): Promise<void> {
 }
 
 /** Merges a saved change (`locale`, `currency`, `theme`, `city`, the two "chosen" marks) into `me` at once. */
+/**
+ * A `403` of a later read while `dev001AnyForbiddenShowsAccess` is on (LB-APP-045, WP-22): the session turns
+ * `denied` and the access screen replaces the app, as the refusal at launch does.
+ */
+export function onForbidden(reason?: unknown): void {
+  if (state.status === "ready") {
+    update({ status: "denied", reason: accessReason(reason), error: null });
+  }
+}
+
 export function patchMe(change: Partial<Pick<Me, "locale" | "currency" | "theme" | "city" | "locale_chosen" | "city_chosen">>): void {
   patches = { ...patches, ...change };
   if (state.me !== null) {

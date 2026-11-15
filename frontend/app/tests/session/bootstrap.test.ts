@@ -283,3 +283,16 @@ describe("patchMe", () => {
     expect(session.getSession().me).toMatchObject({ locale: "en", city: "samarkand" });
   });
 });
+
+describe("onForbidden (WP-22, LB-APP-045)", () => {
+  it("turns a ready session denied with the reason; an unknown reason is private; a booting one is left alone", async () => {
+    server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });
+    const { session } = await load();
+    session.onForbidden("full");
+    expect(session.getSession().status).toBe("booting");
+
+    await session.startSession();
+    session.onForbidden();
+    expect(session.getSession()).toMatchObject({ status: "denied", reason: "private" });
+  });
+});

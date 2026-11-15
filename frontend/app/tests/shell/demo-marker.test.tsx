@@ -57,6 +57,12 @@ describe("DemoDataMarker", () => {
     expect(screen.getByText("Демо-данные")).toBeDefined();
   });
 
+  it("reports nothing for an answer without meta.source (WP-22)", () => {
+    renderMarker(<SourceReporter source={undefined} />);
+
+    expect(screen.queryByText("Демо-данные")).toBeNull();
+  });
+
   it("is hidden again after the pathname changes", () => {
     const view = renderMarker(<SourceReporter source="stub" />);
     expect(screen.getByText("Демо-данные")).toBeDefined();
