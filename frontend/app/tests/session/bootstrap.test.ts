@@ -3,6 +3,19 @@ import { createHash } from "node:crypto";
 import { fakeTelegram, syntheticInitData, type FakeTelegram } from "@homi/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+/** The address fragment at each `track` call: the scrub must come first (TMA-009). */
+const tracked = vi.hoisted(() => ({ hashes: [] as string[] }));
+vi.mock("@/lib/analytics/events", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/analytics/events")>();
+  return {
+    ...actual,
+    track: (...args: Parameters<typeof actual.track>) => {
+      tracked.hashes.push(window.location.hash);
+      actual.track(...args);
+    },
+  };
+});
+
 const me = { locale: "uz", locale_chosen: true, currency: "UZS", theme: "dark", city: "tashkent", city_chosen: true, team: false, analytics: null };
 const TOKEN = "9|launchtoken";
 const tag = (id: number) => createHash("sha256").update(String(id)).digest("hex");
@@ -52,6 +65,8 @@ async function load(options: { telegram?: boolean; startParam?: string } = {}) {
   const session = await import("@/lib/session/bootstrap");
   const store = await import("@/lib/session/store");
   const events = await import("@/lib/analytics/events");
+  // The mocked module keeps one buffer across module resets.
+  events.clearTracked();
   return { session, store, events };
 }
 
@@ -200,6 +215,30 @@ describe("session bootstrap (25 §3.4)", () => {
     await Promise.all([session.startSession(), session.startSession()]);
 
     expect(calls.get).toHaveLength(1);
+  });
+});
+
+describe("launch order", () => {
+  it("restores homi-visits from DeviceStorage before the first request, and scrubs the fragment before app_launch", async () => {
+    fake = fakeTelegram({ version: "9.0", initData: syntheticInitData({ id: USER }) });
+    fake.webApp.DeviceStorage.setItem("homi-visits", '{"abc":1}');
+    window.history.replaceState(null, "", `/ru#tgWebAppData=${encodeURIComponent(fake.webApp.initData)}`);
+    tracked.hashes = [];
+    let visitsAtFirstRequest: string | null | undefined;
+    server({
+      get: () => {
+        visitsAtFirstRequest ??= window.localStorage.getItem("homi-visits");
+        return [200, { mode: "cookie", me, user: tag(USER) }];
+      },
+    });
+    vi.resetModules();
+    const session = await import("@/lib/session/bootstrap");
+
+    await session.startSession();
+
+    expect(visitsAtFirstRequest).toBe('{"abc":1}');
+    expect(tracked.hashes).toEqual(["", ""]);
+    expect(window.location.hash).toBe("");
   });
 });
 
