@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | IN_PROGRESS (feat/wp-22-data-layer) |
 | Depends on | WP-21 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1, §3.5, §4.1 – §4.4; `03` §1.6, §1.11, §1.12, §3.4, §3.5, §4 (rules 001 … 023, 029, 031, 044, 060, 064 … 066); earlier tasks KV-FE-017 … KV-FE-023 (rules, tables, edge cases and test ideas only — not the legacy query strings, the `Authorization: tma` transport, the boot prefetch or their file layout) |

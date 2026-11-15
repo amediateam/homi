@@ -1,0 +1,17 @@
+{
+  "name": "@homi/search",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --config ../../vitest.config.mts --project @homi/search",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"@homi/search: no lint rules yet\""
+  },
+  "devDependencies": {
+    "typescript": "^6"
+  }
+}
