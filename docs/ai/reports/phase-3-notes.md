@@ -466,3 +466,30 @@ ASSUMPTION_MISMATCH AM-53 (2026-11-15):
   - `single_city` is derived from the default fixture, and `no_bot` is answered by the controller.
   - `Locale`, `Currency` and `Theme` have `fromField()`; the settings presets are built with `foreach`; `props` is
     validated in `after()` and documented with `#[BodyParameter]`.
+
+## O. Development track, 2026-11-15 — WP-12, contract: listings, map, card, contact, translation, share
+
+Taken on «бери WP-12». Branch `feat/wp-12-contract-listings`. The nine listing methods answer on stubs; the
+corrections are recorded in the specification (rule 6).
+
+ASSUMPTION_MISMATCH AM-54 (2026-11-15):
+- **Assumption.** The WP-12 specification assumed several things:
+  - the filter table could say "rent only" for `tenant`;
+  - the example district code `yunusabad` is a code of the reference data;
+  - the resources would type every listing field once the data objects are typed;
+  - `sources:publish-stub-media` of WP-10 already wrote catalogue photos.
+- **What was found.**
+  - BR-API-029 and BR-APP-003 keep `tenant`, `pets` and `pets_only` for long rent only; "rent only" is DEV-017,
+    which stays off.
+  - The district codes are the slugs of `03b` (AM-53): `yunusobod`.
+  - Scramble types an element of an array property only through a resource with a typed constructor. A docblock on
+    the promoted property, an inline `@var` in the loop and a typed `@return` accessor were each tried, and each still
+    gave `string`. The counts read through the generic `ResolvedSource` came out as `string` too.
+  - The command copied a directory tree as it was.
+- **Resolution.**
+  - `tenant`, `pets` and `pets_only` are stripped outside long rent.
+  - The example uses `yunusobod`.
+  - Each item list has a small resource (`MapPointResource`, `PriceEventResource`, …), and the counts are cast to
+    `int`.
+  - The command writes `stub/<number>/<n>.jpg` and `.s.jpg` for every photo address of the catalogue, from six
+    generated placeholders.

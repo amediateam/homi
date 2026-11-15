@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46; `main` = `e1a65f2`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47; `main` = `03c55b6`), WAITING for the production track; WP-12 on branch `feat/wp-12-contract-listings`; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -42,6 +42,16 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     - the fixtures under `resources/fixtures/v1/{me,settings,reference,cities}`.
   - **Tests:** `make ci-backend` → exit 0 (343 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and `frontend` green on `main` after the merge (runs 43657763081, 43657762964).
   - `backend/.env.example` has `TELEGRAM_SUPPORT_USERNAME` and `RADAR_CREATION_ENABLED=true` since PR #46 (merged as `e1a65f2`; `backend` run 43658186462 green). Staging and production leave the radar key unset until WP-57.
+
+- **WP-12, on branch `feat/wp-12-contract-listings` (not on `main`):**
+  - **Methods on stubs** (bearer, `app:read`): `GET /listings`, `/listings/count`, `/listings/new`, `/listings/flow`,
+    `/listings/map`, `/listings/{number}`; `POST /listings/{number}/contact|translation|share`.
+  - **Filters:** `SearchFilters` (25 keys, `canonicalHash()`), `SearchFiltersNormaliser`, `config/filters.php`
+    (three DEV switches off), `ListingFiltersRequest`.
+  - **No phone on the card:** `PhoneMasker` masks every author number to its last two digits; only `POST …/contact`
+    gives a number (DEC-52).
+  - **Stub:** `StubListingSource` over `resources/fixtures/v1/listings/catalog.json` (16 listings, 45 for the default
+    filters); the eight `source.listings.*` features; six placeholder photos and `sources:publish-stub-media`.
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).
