@@ -62,7 +62,7 @@ jobs:
       # The same packages again in the product time zone: a formatter or clock helper that reads the process
       # time zone fails one of the two runs (15 §3.10).
       - name: Unit tests (Asia/Tashkent)
-        run: pnpm --filter @homi/utils --filter @homi/testing test
+        run: pnpm --filter @homi/utils --filter @homi/testing --filter @homi/i18n test
         env:
           TZ: Asia/Tashkent
 
