@@ -66,6 +66,20 @@ describe("useResource (WP-22)", () => {
     expect(second.result.current).toMatchObject({ data: { n: 2 }, status: "success" });
   });
 
+  it("a refetch while a read is in flight joins it instead of starting another", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const { result } = renderHook(() => useResource("feed", fetcher));
+
+    act(() => {
+      void result.current.refetch();
+      void result.current.refetch();
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await act(async () => pending[0].resolve(ok(6)));
+    expect(result.current.data).toEqual({ n: 6 });
+  });
+
   it("a key change aborts the old request; so does the last unmount", () => {
     const { fetcher, pending } = controlledFetcher();
 
