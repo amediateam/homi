@@ -154,3 +154,26 @@ describe("GET /bff/session", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("stub scenarios (WP-22)", () => {
+  const sentScenario = (fetch: ReturnType<typeof apiAnswers>) =>
+    (fetch.mock.calls[0] as unknown as [string, RequestInit])[1].headers as Record<string, string>;
+
+  it("POST and GET copy the homi_stub_scenario cookie into X-Stub-Scenario outside production", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    const signIn = apiAnswers([200, { success: true, data: session, meta: { source: "stub" } }]);
+    await POST(post({ initData: launch }, { cookie: "homi_stub_scenario=access_full" }));
+    expect(sentScenario(signIn)["X-Stub-Scenario"]).toBe("access_full");
+
+    const read = apiAnswers([200, { success: true, data: me, meta: { source: "stub" } }]);
+    await GET(get({ cookie: `homi_session=${TOKEN}; homi_stub_scenario=access_full` }));
+    expect(sentScenario(read)["X-Stub-Scenario"]).toBe("access_full");
+  });
+
+  it("never in production", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
+    const signIn = apiAnswers([200, { success: true, data: session, meta: { source: "stub" } }]);
+    await POST(post({ initData: launch }, { cookie: "homi_stub_scenario=access_full" }));
+    expect(sentScenario(signIn)["X-Stub-Scenario"]).toBeUndefined();
+  });
+});

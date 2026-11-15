@@ -49,7 +49,8 @@ export interface ApiClientOptions {
 export interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
-  query?: Record<string, string | number | boolean | undefined>;
+  /** A record of scalars, or `URLSearchParams` for repeated keys (`types[]=a&types[]=b`, WP-12 list filters). */
+  query?: Record<string, string | number | boolean | undefined> | URLSearchParams;
   anonymous?: boolean;
   signal?: AbortSignal;
   headers?: Record<string, string>;
@@ -70,8 +71,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function request<T>(path: string, req: RequestOptions = {}): Promise<ApiSuccess<T>> {
     const url = new URL(`${baseUrl}/${path.replace(/^\/+/, "")}`);
-    for (const [key, value] of Object.entries(req.query ?? {})) {
-      if (value !== undefined) url.searchParams.set(key, String(value));
+    if (req.query instanceof URLSearchParams) {
+      for (const [key, value] of req.query) url.searchParams.append(key, value);
+    } else {
+      for (const [key, value] of Object.entries(req.query ?? {})) {
+        if (value !== undefined) url.searchParams.set(key, String(value));
+      }
     }
 
     const headers: Record<string, string> = {
@@ -93,12 +98,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       signal: req.signal,
     });
 
-    // 204 No Content (a DELETE) has no envelope to unwrap.
-    if (response.status === 204) {
+    const text = response.status === 204 ? "" : await response.text();
+
+    // An empty 2xx body (a 204, or a 200/201 without content) has no envelope to unwrap: it is a success.
+    if (response.ok && text === "") {
       return { success: true, data: null as T };
     }
 
-    const payload = await parseJson<ApiEnvelope<T>>(response);
+    const payload = parseJson<ApiEnvelope<T>>(text);
 
     if (!response.ok || payload === null || isApiFailure(payload)) {
       if (response.status === 401 && !req.anonymous) options.onUnauthorized?.();
@@ -124,9 +131,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   };
 }
 
-/** Non-JSON bodies (nginx 502 pages, empty 204s) must not surface as SyntaxError. */
-async function parseJson<T>(response: Response): Promise<T | null> {
-  const text = await response.text();
+/** Non-JSON bodies (nginx 502 pages) must not surface as SyntaxError. */
+function parseJson<T>(text: string): T | null {
   if (!text) return null;
   try {
     return JSON.parse(text) as T;
@@ -134,3 +140,6 @@ async function parseJson<T>(response: Response): Promise<T | null> {
     return null;
   }
 }
+
+export { createTypedClient } from "./typed";
+export type { CallOptions, HttpMethod, JsonBody, OperationOf, PathsWith, SuccessData, TypedClient } from "./typed";

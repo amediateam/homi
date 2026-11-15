@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
 import { apiBaseUrl, SESSION_COOKIE, SESSION_USER_COOKIE, telegramUserTag } from "@/lib/session/server";
 import { accessReason } from "@/lib/session/types";
 
@@ -46,8 +47,11 @@ function sameOrigin(request: NextRequest, requireOrigin: boolean): boolean {
 
 type ApiAnswer = { status: number; body: Record<string, unknown> | null } | { status: 0; body: null };
 
-async function callApi(path: string, init: { method: "GET" | "POST"; body?: string; token?: string }): Promise<ApiAnswer> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+async function callApi(
+  path: string,
+  init: { method: "GET" | "POST"; body?: string; token?: string; scenario?: string },
+): Promise<ApiAnswer> {
+  const headers: Record<string, string> = { Accept: "application/json", ...stubScenarioHeaders(init.scenario) };
   if (init.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -114,7 +118,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return answer({ code: "validation_failed" }, 400);
   }
 
-  const api = await callApi("/auth/telegram", { method: "POST", body: JSON.stringify({ init_data: initData }) });
+  const api = await callApi("/auth/telegram", {
+    method: "POST",
+    body: JSON.stringify({ init_data: initData }),
+    scenario: request.cookies.get(STUB_SCENARIO_COOKIE)?.value,
+  });
   const refused = refusal(api);
   if (refused !== null) {
     return api.status === 401 ? clearSession(refused) : refused;
@@ -148,7 +156,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   const mode = cookie !== null ? "cookie" : "header";
 
-  const api = await callApi("/me", { method: "GET", token });
+  const api = await callApi("/me", { method: "GET", token, scenario: request.cookies.get(STUB_SCENARIO_COOKIE)?.value });
   const refused = refusal(api);
   if (refused !== null) {
     return api.status === 401 && mode === "cookie" ? clearSession(refused) : refused;
