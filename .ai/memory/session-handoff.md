@@ -15,7 +15,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## State at handoff
 - `main` = `02f43ae`: #42 (WP-10), #44 (its status and `CLAUDE.md` commands) and #43 (`SOURCES_ALLOW_STUB` in `backend/.env.example`) are merged. `backend` is green on `main` after each (#43: run 43654802905). The developer's local `backend/.env` lacks `SOURCES_ALLOW_STUB` and `TELESCOPE_RECORD_ALL`, which `scripts/dev/env-keys.sh` reports.
-- **WP-11** was taken on «бери WP-11». Branch `feat/wp-11-contract-session-reference`, all 9 steps done; **PR #45**, status `REVIEW (#45)`. The env-key PR **#46** (`TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`) is open next to it.
+- **WP-11** was taken on «бери WP-11». Branch `feat/wp-11-contract-session-reference`, all 9 steps done; **PR #45**, status `REVIEW (#45)`; CI green on `b24754d` (backend 43657250034, frontend 43657250006, frontend-e2e 43657250276). The env-key PR **#46** (`TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`) is open next to it.
 - WP-10 is `WAITING (merged in #42; production track …)`; WP-03, WP-00, WP-01 and WP-02 are `WAITING`, unchanged. Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-backend` → exit 0; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
 
