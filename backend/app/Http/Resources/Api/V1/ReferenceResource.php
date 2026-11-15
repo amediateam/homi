@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Config;
 /**
  * `GET /reference` (WP-11). The directories come from `ReferenceSource::reference()`; the bot names, the limits and
  * `radars_enabled` come from HOMI's configuration for every driver (DEC-40, DEC-51).
+ *
+ * @property-read ReferenceData $resource
  */
 class ReferenceResource extends JsonResource
 {

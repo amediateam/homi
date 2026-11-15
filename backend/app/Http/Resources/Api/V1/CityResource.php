@@ -6,7 +6,11 @@ use App\Services\Sources\Data\CityData;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** A city of `GET /reference`, with its own districts and zones. */
+/**
+ * A city of `GET /reference`, with its own districts and zones.
+ *
+ * @property-read CityData $resource
+ */
 class CityResource extends JsonResource
 {
     public function __construct(private readonly CityData $city)

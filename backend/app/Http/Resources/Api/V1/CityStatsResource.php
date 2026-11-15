@@ -9,6 +9,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * A city of `GET /cities` (WP-11): `counts` always has the three deals; `price_presets` and `typical_price` may lack
  * a deal. Whole USD, whatever the user's currency.
+ *
+ * @property-read CityStats $resource
  */
 class CityStatsResource extends JsonResource
 {

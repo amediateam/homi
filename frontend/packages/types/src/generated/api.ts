@@ -4,6 +4,54 @@
  */
 
 export interface paths {
+    "/cities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.cities.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.events.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.me.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media/{media}": {
         parameters: {
             query?: never;
@@ -81,6 +129,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.reference.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.settings.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** The stub validates and answers the fixture with the sent keys overlaid; nothing is stored */
+        patch: operations["v1.settings.update"];
+        trace?: never;
+    };
+    "/auth/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.auth.telegram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -97,6 +194,68 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        /** CityResource */
+        CityResource: {
+            code: string;
+            name: string;
+            center: {
+                lat: number;
+                lon: number;
+            };
+            zoom: number;
+            is_region: boolean;
+            has_metro: boolean;
+            has_median: boolean;
+            districts: components["schemas"]["NamedCodeResource"][];
+            zones: components["schemas"]["NamedCodeResource"][];
+        };
+        /** CityStatsResource */
+        CityStatsResource: {
+            code: string;
+            counts: {
+                rent_long: number;
+                rent_daily: number;
+                sale: number;
+            };
+            price_presets: {
+                rent_long?: number[];
+                rent_daily?: number[];
+                sale?: number[];
+            };
+            typical_price: {
+                rent_long?: number;
+                rent_daily?: number;
+                sale?: number;
+            };
+        };
+        /**
+         * Currency
+         * @description The display currencies of the product. Prices in the reference data are whole USD whatever the user's currency.
+         * @enum {string}
+         */
+        Currency: "USD" | "UZS";
+        /**
+         * Locale
+         * @description The languages of `/api/v1` (CF-006: `uz` is the only Uzbek code on this surface; `uz_Latn` lives only inside the legacy driver).
+         * @enum {string}
+         */
+        Locale: "ru" | "uz" | "en";
+        /** MeResource */
+        MeResource: {
+            locale: components["schemas"]["Locale"];
+            locale_chosen: boolean;
+            currency: components["schemas"]["Currency"];
+            theme: components["schemas"]["Theme"];
+            city: string | null;
+            city_chosen: boolean;
+            team: boolean;
+            analytics: {
+                distinct_id: string;
+                autocapture: boolean;
+                replay: boolean;
+                replay_rate: number;
+            } | null;
         };
         /** MediaFileResource */
         MediaFileResource: {
@@ -122,6 +281,11 @@ export interface components {
          * @enum {string}
          */
         MediaVisibility: "public" | "private";
+        /** NamedCodeResource */
+        NamedCodeResource: {
+            code: string;
+            name: string;
+        };
         /** PresignRequest */
         PresignRequest: {
             filename: string;
@@ -129,11 +293,86 @@ export interface components {
             mime: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
             bytes: number;
         };
+        /** ReferenceResource */
+        ReferenceResource: {
+            bot: {
+                username: string | null;
+                support_username: string | null;
+            };
+            limits: {
+                radars: number;
+            };
+            radars_enabled: boolean;
+            rates: {
+                usd_uzs: number;
+            };
+            map: {
+                tiles_url: string | null;
+            };
+            features: string[];
+            locales: components["schemas"]["NamedCodeResource"][];
+            cities: components["schemas"]["CityResource"][];
+            renovations: {
+                rent_long: components["schemas"]["NamedCodeResource"][];
+                rent_daily: components["schemas"]["NamedCodeResource"][];
+                sale: components["schemas"]["NamedCodeResource"][];
+            };
+            appliances: components["schemas"]["NamedCodeResource"][];
+            price_presets: {
+                rent_long: number[];
+                rent_daily: number[];
+                sale: number[];
+            };
+        };
         /** RegisterUploadRequest */
         RegisterUploadRequest: {
             /** @description Keys are issued by POST /media/presign as uploads/{owner_type}/{owner_id}/{ulid}.{ext}. */
             key: string;
             visibility?: components["schemas"]["MediaVisibility"];
+        };
+        /** SessionResource */
+        SessionResource: {
+            token: string;
+            /** @constant */
+            token_type: "Bearer";
+            expires_at: string;
+            user: components["schemas"]["MeResource"];
+        };
+        /** SettingsResource */
+        SettingsResource: {
+            locale: components["schemas"]["Locale"];
+            currency: components["schemas"]["Currency"];
+            theme: components["schemas"]["Theme"];
+            city: string | null;
+            quiet_hours: {
+                from: number;
+                to: number;
+            } | null;
+            digest_hours: number[];
+            options: {
+                locales: components["schemas"]["NamedCodeResource"][];
+                currencies: components["schemas"]["NamedCodeResource"][];
+                quiet_hours: ({
+                    from: number;
+                    to: number;
+                } | null)[];
+                digest_hours: number[][];
+            };
+        };
+        /**
+         * SourceDriver
+         * @description Which implementation of a capability answered (ADR-0017): fixtures, the legacy service, or HOMI's own code. Written to every `/api/v1` answer as `meta.source`; the client's "demo data" marker reads `stub`.
+         * @enum {string}
+         */
+        SourceDriver: "stub" | "legacy" | "native";
+        /**
+         * StoreEventRequest
+         * @description `POST /events` (WP-11): `{name, props?}`. A `422` only for a missing or non-string `name` or a `props` that is not an
+         *     object. An unknown name, a name outside the pattern or unknown properties are accepted and not stored (WP-47 stores
+         *     the catalogue). The raw body is capped at 8 KB before anything else: over it, `413 payload_too_large`.
+         */
+        StoreEventRequest: {
+            name: string;
         };
         /** StoreMediaRequest */
         StoreMediaRequest: {
@@ -144,10 +383,41 @@ export interface components {
             file: string;
             visibility?: components["schemas"]["MediaVisibility"];
         };
+        /**
+         * TelegramSignInRequest
+         * @description `POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes.
+         */
+        TelegramSignInRequest: {
+            init_data: string;
+        };
+        /**
+         * Theme
+         * @description The colour theme a user chose; `auto` follows Telegram.
+         * @enum {string}
+         */
+        Theme: "auto" | "light" | "dark";
+        /**
+         * UpdateSettingsRequest
+         * @description `PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of
+         *     `GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of
+         *     `config/settings.php`.
+         */
+        UpdateSettingsRequest: {
+            locale?: components["schemas"]["Locale"];
+            currency?: components["schemas"]["Currency"];
+            theme?: components["schemas"]["Theme"];
+            /** @enum {string} */
+            city?: "tashkent" | "tashkent_region" | "andijan";
+            quiet_hours?: {
+                from?: number;
+                to?: number;
+            } | null;
+            digest_hours?: number[];
+        };
     };
     responses: {
-        /** @description Authorization error */
-        AuthorizationException: {
+        /** @description Validation error */
+        ValidationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -164,8 +434,8 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description Validation error */
-        ValidationException: {
+        /** @description Authorization error */
+        AuthorizationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -181,6 +451,89 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "v1.cities.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["CityStatsResource"][];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "v1.events.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StoreEventRequest"] & {
+                    props?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.me.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["MeResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "v1.media.show": {
         parameters: {
             query?: never;
@@ -324,6 +677,126 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.reference.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ReferenceResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "v1.settings.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["SettingsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.settings.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["SettingsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.auth.telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelegramSignInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["SessionResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             422: components["responses"]["ValidationException"];
         };
     };

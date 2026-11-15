@@ -49,16 +49,17 @@ it('accepts a body just under the cap', function (): void {
         ->assertNoContent();
 });
 
-it('refuses only a missing or non-string name with 422', function (array $body): void {
+it('refuses only a missing or non-string name, or props that are not an object, with 422', function (array $body, string $field): void {
     actAsEventUser();
 
     $this->postJson('/api/v1/events', $body)
         ->assertUnprocessable()
         ->assertJsonPath('code', 'validation_failed')
-        ->assertJsonValidationErrors('name');
+        ->assertJsonValidationErrors($field);
 })->with([
-    'missing' => [['props' => []]],
-    'not a string' => [['name' => 7]],
+    'a missing name' => [['props' => []], 'name'],
+    'a name that is not a string' => [['name' => 7], 'name'],
+    'props that are not an object' => [['name' => 'app_launch', 'props' => 'listing_id=7'], 'props'],
 ]);
 
 it('never takes an event without a session, and needs app:write', function (): void {

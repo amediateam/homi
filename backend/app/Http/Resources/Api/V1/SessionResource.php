@@ -8,7 +8,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\NewAccessToken;
 
-/** The answer of `POST /auth/telegram` (WP-11): an opaque bearer token, when it expires, and the object of `GET /me`. */
+/**
+ * The answer of `POST /auth/telegram` (WP-11): an opaque bearer token, when it expires, and the object of `GET /me`.
+ *
+ * @property-read NewAccessToken $resource
+ */
 class SessionResource extends JsonResource
 {
     /** @param  array<array-key, mixed>  $me */

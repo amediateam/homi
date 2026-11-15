@@ -13,6 +13,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * The object of `GET /me`, also `data.user` of a sign-in (WP-11): the user's choices and the per-user analytics
  * settings (`null` when analytics is off). The directories, the rate, the bot name and the limits are in
  * `GET /reference`. Built from a decoded fixture today; every field is read strictly.
+ *
+ * @property-read array<array-key, mixed> $resource
  */
 class MeResource extends JsonResource
 {
@@ -26,10 +28,10 @@ class MeResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'locale' => Locale::from(Fields::string($this->me, 'locale')),
+            'locale' => Locale::fromField($this->me, 'locale'),
             'locale_chosen' => Fields::bool($this->me, 'locale_chosen'),
-            'currency' => Currency::from(Fields::string($this->me, 'currency')),
-            'theme' => Theme::from(Fields::string($this->me, 'theme')),
+            'currency' => Currency::fromField($this->me, 'currency'),
+            'theme' => Theme::fromField($this->me, 'theme'),
             'city' => Fields::nullableString($this->me, 'city'),
             'city_chosen' => Fields::bool($this->me, 'city_chosen'),
             'team' => Fields::bool($this->me, 'team'),

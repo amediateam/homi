@@ -4,11 +4,12 @@ namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Validation\Validator;
 
 /**
- * `POST /events` (WP-11): `{name, props?}`. Only a missing or non-string `name` is a `422`. An unknown name, a name
- * outside the pattern or unknown properties are accepted and not stored (WP-47 stores the catalogue). The raw body
- * is capped at 8 KB before anything else: over it, `413 payload_too_large`.
+ * `POST /events` (WP-11): `{name, props?}`. A `422` only for a missing or non-string `name` or a `props` that is not an
+ * object. An unknown name, a name outside the pattern or unknown properties are accepted and not stored (WP-47 stores
+ * the catalogue). The raw body is capped at 8 KB before anything else: over it, `413 payload_too_large`.
  */
 class StoreEventRequest extends FormRequest
 {
@@ -40,7 +41,25 @@ class StoreEventRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string'],
-            'props' => ['sometimes'],
+        ];
+    }
+
+    /**
+     * `props`, when present, must be an object. Checked here rather than with the `array` rule, which the OpenAPI
+     * export reads as a list of strings; `EventController` documents `props` as an object.
+     *
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $props = $this->input('props');
+
+                if ($this->has('props') && ! (is_array($props) && ($props === [] || ! array_is_list($props)))) {
+                    $validator->errors()->add('props', 'The props field must be an object.');
+                }
+            },
         ];
     }
 

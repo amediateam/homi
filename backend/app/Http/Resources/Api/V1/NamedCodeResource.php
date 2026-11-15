@@ -6,7 +6,11 @@ use App\Services\Sources\Data\NamedCode;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** `{code, name}`: a district, a zone, a renovation, an appliance, a locale or a currency. */
+/**
+ * `{code, name}`: a district, a zone, a renovation, an appliance, a locale or a currency.
+ *
+ * @property-read NamedCode $resource
+ */
 class NamedCodeResource extends JsonResource
 {
     public function __construct(private readonly NamedCode $item)
