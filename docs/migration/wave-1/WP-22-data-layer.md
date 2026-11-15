@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#61) |
+| Status | WAITING (merged in #61 on 2026-11-16; production track: deploy, with the `API_URL` of WP-21) |
 | Depends on | WP-21 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1, §3.5, §4.1 – §4.4; `03` §1.6, §1.11, §1.12, §3.4, §3.5, §4 (rules 001 … 023, 029, 031, 044, 060, 064 … 066); earlier tasks KV-FE-017 … KV-FE-023 (rules, tables, edge cases and test ideas only — not the legacy query strings, the `Authorization: tma` transport, the boot prefetch or their file layout) |
@@ -560,3 +560,13 @@ outside the allow-list answers 404.
   `bffFetch` / `serverApi().listings` with `toApiQuery(…, { cursor, limit })` and replaces the feed proof; WP-25
   builds the filters UI on `sectionsFor`, the transitions and `useMoney().presets`; WP-27 replaces the map proof;
   WP-33 adds the `setScenario` helper over the `homi_stub_scenario` cookie.
+- **Merged** on 2026-11-16 on the developer's «все commit push main» (merge commit `e8c8f9e`), after `frontend`
+  (run 43740527305) and `frontend-e2e` (run 43740527311, 56 passed) were green on `3bb7831`; `frontend` on `main`
+  after the merge: run 43768797356, green. The first CI run (`e051f85`) failed two `data.spec.ts` cases on a hidden `<Activity>`
+  copy of the proof; the spec matches visible elements since `3bb7831`. This status, `CLAUDE.md` and the memory are in
+  the follow-up docs PR.
+- **Next:**
+  1. ~~review and merge~~ (done);
+  2. the production track deploys; the app server reaches the API over the `API_URL` WP-21 asked for, and the feed
+     and map placeholders show the proof on staging;
+  3. set the status to `DONE`. WP-23 (gates and shell) builds on this package.
