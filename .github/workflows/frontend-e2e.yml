@@ -78,7 +78,8 @@ jobs:
           php artisan key:generate --no-interaction
           touch database/e2e.sqlite
           php artisan migrate --force --no-interaction
-          nohup php -S 127.0.0.1:8080 -t public vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php > "$RUNNER_TEMP/api.log" 2>&1 &
+          # Laravel's router script takes the public directory from the working directory, as `artisan serve` does.
+          (cd public && nohup php -S 127.0.0.1:8080 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php > "$RUNNER_TEMP/api.log" 2>&1 &)
           for attempt in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8080/api/v1/reference > /dev/null; then exit 0; fi
             sleep 1
