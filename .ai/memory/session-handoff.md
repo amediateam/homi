@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-20 in REVIEW, PR #52; WP-10 … WP-13 merged and WAITING for the production track; WP-03 WAITING deploy; WP-00/01/02 WAITING)
+updated: 2026-11-15 (WP-20 merged #52, WAITING for the deploy; WP-10 … WP-13 merged and WAITING for the production track; WP-03 WAITING deploy; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,10 +11,10 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail); «тебе можно править .env пока я сам не запрещу» (the committed deny `Edit(**/.env)` and the guard hook still block the agent; never bypass, never print values); «сделай все сам и добав все что не хватает»; «бери WP-12» … «сливай #51» (each PR merged on its own word, each follow-up docs PR opened on «погнали, открывай docs-PR»); «бери WP-20».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail); «тебе можно править .env пока я сам не запрещу» (the committed deny `Edit(**/.env)` and the guard hook still block the agent; never bypass, never print values); «сделай все сам и добав все что не хватает»; «бери WP-12» … «сливай #51» (each PR merged on its own word, each follow-up docs PR opened on «погнали, открывай docs-PR»); «бери WP-20»; «сливай #52»; «погнали, открывай docs-PR» (the WP-20 follow-up).
 
 ## State at handoff
-- `main` = `2628435` (#51 merged). **WP-20** is on `feat/wp-20-app-foundation`, PR **#52** open (`REVIEW (#52)` in the queue); CI of #52 not yet read when this was written — check `gh pr checks 52`.
+- `main` = `2ef9b2f` (#52 merged on «сливай #52» after `frontend` 43696680754 and `frontend-e2e` 43696680767 were green on `422ef06`; `frontend` 43697001406 green on `main`). **WP-20** is `WAITING` for the deploy; its follow-up docs PR (branch `docs/wp-20-after-merge`: status, `frontend/app/.env.example` comment, `CLAUDE.md`, memory) is open.
 - WP-10 … WP-13 merged and `WAITING` for the production track; WP-03, WP-00, WP-01, WP-02 `WAITING`, unchanged. Other open PRs: only Dependabot #5 (not to be merged, KI-4).
 - Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`; the copied legacy locale files and the importer report in the session scratchpad (not in the repository).
 - Verify: `make ci-frontend` → exit 0; `cd frontend && pnpm exec playwright test --project miniapp` → 20 passed; `make ci-backend` → exit 0 (Pest 720 passed, 4 skipped, last run for WP-13).
@@ -24,7 +24,7 @@ Written for whoever continues the **development track** (the second developer, a
 - **WP-20** steps 1–17, tests first (mutation-checked where a test passed at once): `@homi/i18n` with the importer and the legacy layer of `index-DY_DH7h-.js` (476 keys per locale, own commit `5c403e9`), the `homi` layer, runtime rules and label tables; `@homi/ui` tokens, themes, lite, motion and base components; the route tree with `proxy.ts`, next-intl, routes, brand, flags, facades and the demo marker. `make ci-frontend` → exit 0 (app 135, i18n 30, ui 24 passed); Playwright `miniapp` → 20 passed. AM-56 in §Q; the specification corrected and its "Handoff" filled (rule 6).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **#52 (WP-20):** review and «сливай #52» after green checks; then the follow-up PR with the shared files: `frontend/app/.env.example` (comment that `lib/brand` reads `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, empty hides bot links), the `CLAUDE.md` "Layout" and current-state paragraphs (`@homi/i18n`, the app's route tree), WP-20 `WAITING` (deploy only).
+1. **The WP-20 follow-up docs PR:** «сливай #<n>» (docs only, so no CI runs).
 2. **The developer's local `backend/.env`** lacks `SOURCES_ALLOW_STUB`, `TELESCOPE_RECORD_ALL`, `TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`: `! printf '\nSOURCES_ALLOW_STUB=true\nTELESCOPE_RECORD_ALL=false\nTELEGRAM_SUPPORT_USERNAME=\nRADAR_CREATION_ENABLED=true\n' >> backend/.env`.
 3. **Production track:** WP-13 deploy + staging check (`GET /radars` → `[]`, `POST /radars` → `403 radars_disabled`); WP-12 deploy + `sources:publish-stub-media` on staging and production; WP-11 `TELEGRAM_SUPPORT_USERNAME` + deploy; WP-10 migration approval, deploy, `/docs/api` basic auth, `sources:list`; WP-03 deploy; WP-20 deploy (placeholders on staging and production).
 4. **Operator request** from the project's own mailbox (WP-02 Part A; never the connected Gmail).

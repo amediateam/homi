@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#52) |
+| Status | WAITING (merged in #52 on 2026-11-15; production track: deploy, then staging and production serve the placeholder app) |
 | Depends on | WP-13 (and the packages installed by WP-03) |
 | Size | ≈ 2 800 changed lines without the generated catalogues, L |
 | Behaviour reference | `25` §3.2, §3.6, §3.7, §3.11, §4.4; `03` §1.7, §3.1, §3.6; `05` TMA-017, TMA-018; earlier tasks KV-FE-011, KV-FE-012, KV-FE-015, KV-FE-016 (behaviour, texts and test ideas only — not their file layout, `t()` runtime or navigation) |
@@ -524,3 +524,11 @@ Run in ru, uz and en, and in light, explicit light and dark where a line is visu
 - **Soft navigation in end-to-end tests.** `window.next.router.push` (Next.js keeps it for debugging in production
   builds) stands in for a `Link` until the shell has real links; `e2e/foundation.spec.ts` uses it.
 - **The WP-03 smoke spec** now looks for `[data-route="feed"]` instead of `main`.
+- **Merged** on 2026-11-15 on «сливай #52» (merge commit `2ef9b2f`), after `frontend` (run 43696680754) and
+  `frontend-e2e` (run 43696680767) were green on `422ef06`; `frontend` run 43697001406 green on `main`. This status,
+  the `frontend/app/.env.example` comment and the `CLAUDE.md` update are in the follow-up docs PR.
+- **Next:**
+  1. ~~review and merge~~ (done);
+  2. the production track deploys; staging and production serve the placeholder app (the last box of the
+     acceptance checklist);
+  3. set the status to `DONE`. WP-21 (Telegram layer and session) builds on this tree.
