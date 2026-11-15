@@ -19,6 +19,11 @@ return [
         'username' => env('TELEGRAM_BOT_USERNAME'),
     ],
 
+    // The public name of HOMI's support account, shown by the Mini App (`GET /api/v1/reference`, WP-11).
+    'support' => [
+        'username' => env('TELEGRAM_SUPPORT_USERNAME'),
+    ],
+
     'webhook' => [
         'url' => env('TELEGRAM_WEBHOOK_URL'),
         'secret' => env('TELEGRAM_WEBHOOK_SECRET'),
