@@ -469,7 +469,7 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
   `docs/ai/reports/phase-3-notes.md` §O.
 - **Merged** on 2026-11-15 on «сливай #48» (merge commit `b16993e`), after `backend`, `frontend` and `frontend-e2e`
   were green on `5c58f00`; `backend` run 43662113261 and `frontend` run 43662113325 green on `main`. This status and
-  the `CLAUDE.md` update are in the follow-up docs PR.
+  the `CLAUDE.md` update are in the follow-up docs PR #49.
 - **Next:**
   1. ~~review and merge~~ (done);
   2. the production track deploys, runs `php artisan sources:publish-stub-media` once on staging and once on
