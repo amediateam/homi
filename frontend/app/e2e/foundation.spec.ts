@@ -111,10 +111,13 @@ test.describe("addresses", () => {
     });
   }
 
-  test("an unknown address and an unknown locale answer 404", async ({ request }) => {
+  // Documents render at request time for the CSP nonce (ADR-0020); the not-found screen then answers 200 with
+  // noindex instead of 404 (AM-57).
+  test("an unknown address and an unknown locale render the not-found screen with noindex", async ({ page }) => {
     for (const path of ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/de/x"]) {
-      const response = await request.get(path);
-      expect(response.status(), path).toBe(404);
+      await page.goto(path);
+      await expect(page.locator('[data-route="not-found"]'), path).toBeVisible();
+      await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", "noindex");
     }
   });
 

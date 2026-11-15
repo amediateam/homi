@@ -6,6 +6,9 @@ import type { HomiBoot, TelegramHost, TgWebApp } from "./types";
  * "outside Telegram".
  */
 
+/** The official SDK (TMA-001); unpinned, whatever telegram.org serves. */
+export const TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js";
+
 function host(): TelegramHost | null {
   return typeof window === "undefined" ? null : (window as unknown as TelegramHost);
 }
