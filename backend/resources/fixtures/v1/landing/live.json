@@ -1,0 +1,73 @@
+{
+    "now": "2026-11-14T09:00:00+00:00",
+    "generated_at": "2026-11-14T08:45:00+00:00",
+    "day": 148,
+    "week": 1012,
+    "latest": [
+        {
+            "number": 100012,
+            "rooms": 2,
+            "price_usd": 600,
+            "delta_pct": -12,
+            "tone": "good",
+            "district_code": "yunusobod",
+            "area": 54,
+            "seen_at": "2026-11-14T08:40:00+00:00",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100012-web"
+        },
+        {
+            "number": 100013,
+            "rooms": 2,
+            "price_usd": 350,
+            "delta_pct": -45,
+            "tone": "suspicious",
+            "district_code": "chilonzor",
+            "area": 48,
+            "seen_at": "2026-11-14T08:31:00+00:00",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100013-web"
+        },
+        {
+            "number": 100014,
+            "rooms": 3,
+            "price_usd": 900,
+            "delta_pct": -2,
+            "tone": "same",
+            "district_code": "mirobod",
+            "area": 82,
+            "seen_at": "2026-11-14T08:12:00+00:00",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100014-web"
+        },
+        {
+            "number": 100002,
+            "rooms": 4,
+            "price_usd": 1500,
+            "delta_pct": 5,
+            "tone": null,
+            "district_code": "mirzo_ulugbek",
+            "area": null,
+            "seen_at": "2026-11-14T07:55:00+00:00",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100002-web"
+        },
+        {
+            "number": 100017,
+            "rooms": 2,
+            "price_usd": 250,
+            "delta_pct": null,
+            "tone": null,
+            "district_code": null,
+            "area": 50,
+            "seen_at": "2026-11-14T07:30:00+00:00",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100017-web"
+        }
+    ],
+    "sheet": {
+        "all": {
+            "count": 4120,
+            "per_day": 148.0
+        },
+        "demo": {
+            "count": 310,
+            "per_day": 11.5
+        }
+    }
+}

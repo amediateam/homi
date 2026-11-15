@@ -164,4 +164,26 @@ final class ContractShapes
         'options' => ['*' => ['code' => 'string', 'label' => 'string', 'rate' => 'string', 'count' => 'int']],
         'relaxed' => ['*' => ['text' => 'string']],
     ];
+
+    /** `data` of `GET /landing/live` (WP-13): public; no phone, no listing text, no author. */
+    public const array LANDING_LIVE = [
+        'now' => 'string', 'generated_at' => 'string', 'day' => 'int', 'week' => 'int',
+        'latest' => ['*' => [
+            'number' => 'int', 'rooms' => 'int', 'price_usd' => 'int', 'delta_pct' => 'int', 'tone' => 'string',
+            'district' => ['code' => 'string', 'name' => 'string'], 'area' => 'float|int', 'seen_at' => 'string', 'link' => 'string',
+        ]],
+        'sheet' => ['all' => ['count' => 'int', 'per_day' => 'float|int'], 'demo' => ['count' => 'int', 'per_day' => 'float|int']],
+    ];
+
+    /** `data` of `GET /landing/pins` (WP-13): `bargains_week` is null and `medians` empty for sale. */
+    public const array LANDING_PINS = [
+        'generated_at' => 'string', 'bargains_week' => 'int',
+        'pins' => ['*' => [
+            'number' => 'int', 'x' => 'float|int', 'y' => 'float|int', 'rooms' => 'int', 'price_usd' => 'int', 'delta_pct' => 'int',
+            'tone' => 'string', 'area' => 'float|int', 'floor' => 'int', 'floors_total' => 'int',
+            'district' => ['code' => 'string', 'name' => 'string'], 'point' => 'string', 'photo_url' => 'string', 'link' => 'string',
+            'age_min' => 'int', 'is_owner' => 'bool', 'in_all' => 'bool', 'in_rooms' => 'bool',
+        ]],
+        'medians' => ['*' => ['district_code' => 'string', 'rooms' => 'int', 'median_usd' => 'int', 'n' => 'int']],
+    ];
 }

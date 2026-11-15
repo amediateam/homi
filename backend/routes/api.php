@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\CityController;
 use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\Landing\LandingLiveController;
+use App\Http\Controllers\Api\V1\Landing\LandingPinsController;
 use App\Http\Controllers\Api\V1\Listings\ListingContactController;
 use App\Http\Controllers\Api\V1\Listings\ListingController;
 use App\Http\Controllers\Api\V1\Listings\ListingCountController;
@@ -43,6 +45,9 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
     Route::post('auth/telegram', TelegramAuthController::class)->name('auth.telegram');
     Route::get('reference', ReferenceController::class)->name('reference.show');
     Route::get('cities', CityController::class)->name('cities.index');
+    // Public landing data (WP-13).
+    Route::get('landing/live', LandingLiveController::class)->name('landing.live');
+    Route::get('landing/pins', LandingPinsController::class)->name('landing.pins');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         // The Mini App session (WP-11): abilities app:read and app:write.
