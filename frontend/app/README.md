@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# frontend/app — the HOMI Mini App
 
-## Getting Started
+Next.js 16.4 App Router app of the Telegram Mini App (DEC-44). Its plan is `docs/migration/25-wave-1-plan.md` §3; the
+packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`. Read the guide of a Next.js feature in
+`node_modules/next/dist/docs/` before using it: this version differs from older ones (`proxy.ts`, `cacheComponents`).
 
-First, run the development server:
+## Layout
+
+| Path | Content |
+| ---- | ------- |
+| `app/[locale]/` | The route tree of `25` §3.2. `layout.tsx` is the root layout; `(main)/` holds the screens with the `@sheet` and `@overlay` slots; `welcome/`, `no-access/`, `outside/` are the gates. Route files only read `params` and mount a component from `features/` |
+| `app/[locale]/(main)/@sheet/(.)…`, `@overlay/(.)listing/…` | Sheets and the listing layer intercepted from a soft navigation; a hard load renders the page of the same name. Each slot has `default.tsx`, `page.tsx` and `[...rest]` returning `null` |
+| `features/` | One folder per feature; `features/shell/` has `RoutePlaceholder`, `SourceReporter`, `DemoDataMarker` |
+| `i18n/` | next-intl: `routing.ts`, `request.ts` (locale from `next/root-params`), `navigation.ts` (`Link`, `useRouter`, `usePathname`, `redirect`), `IntlClientProvider.tsx`, `labels.ts` |
+| `lib/navigation/routes.ts` | The only place an address is spelled: `routes.*`, `parentOf`, `isRootTab`, `searchStateOf`, `screenNameOf` |
+| `lib/brand/` | HOMI's name, bot, links and artwork paths; the only place a brand word may appear |
+| `lib/flags.ts` | `devFlags`: the 17 `DEV` switches, all off |
+| `lib/analytics/events.ts`, `lib/errors/report.ts` | `track` and `reportError` facades (no-ops until WP-32) |
+| `lib/data/sources.ts` | Which drivers answered the current screen; drives the "demo data" marker |
+| `proxy.ts` | Locale redirect (cookie `NEXT_LOCALE`, else `ru`); WP-21 adds the CSP and security headers |
+| `styles/app.css` | Tailwind and `@homi/ui/styles.css` (tokens, themes, lite, motion) |
+| `public/brand/` | Placeholder artwork of the legacy sizes; the final files replace them without a code change |
+| `tests/`, `e2e/` | Vitest (`pnpm --filter app test`) and Playwright (`pnpm test:e2e` from `frontend/`) |
+
+Catalogues live in `@homi/i18n` (`frontend/packages/i18n`): the generated `legacy` layer, the hand-written `homi`
+layer, and the runtime rules — a missing key renders its path and is reported once, never a throw.
+
+## Commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter app dev       # http://localhost:3001, or https://app.homi.loc through the local stack
+pnpm --filter app build
+pnpm --filter app test      # Vitest project "app"
+pnpm --filter app lint
+pnpm --filter app typecheck # next typegen && tsc --noEmit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Rules for later packages: every address is built with `routes.*` and navigated with `@/i18n/navigation`; colours,
+radii and motion come from the tokens of `@homi/ui` (Tailwind's default palette is removed); a server value becomes a
+label through `labelFor` of `@/i18n/labels`; workspace packages never import `lib/flags.ts`.

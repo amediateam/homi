@@ -523,3 +523,43 @@ ASSUMPTION_MISMATCH AM-55 (2026-11-15):
   - `area` is nullable.
   - `201` for a created radar is listed among the changes, as are the time form and `ask_found` on pauses only.
   - `StubCursor` ends every stub list quietly on a foreign cursor; the WP-12 note and its test are corrected.
+
+## Q. Development track, 2026-11-15 — WP-20, app foundation: routes, localisation, tokens, themes, brand, base components
+
+Taken on «бери WP-20». Branch `feat/wp-20-app-foundation`. Stage B starts: `frontend/app` has the whole route tree of
+`25` §3.2 with placeholders, the locale redirect, next-intl over the new package `@homi/i18n` (the legacy catalogues of
+`index-DY_DH7h-.js`, SVN r27, imported without running the legacy files), the legacy look as tokens and themes in
+`@homi/ui`, the restyled shadcn/ui base components, the brand layer, the `DEV` flags, the no-op facades and the demo
+marker. The "verify before use" items are resolved in the specification (rule 6) and its "Handoff".
+
+ASSUMPTION_MISMATCH AM-56 (2026-11-15):
+- **Assumption.** The WP-20 specification assumed several things:
+  - the Vitest config is `frontend/vitest.config.ts`, and package tests may live in `tests/`;
+  - the build might accept the two slot catch-alls next to `[locale]/[...rest]`;
+  - next-intl's middleware could be composed into `proxy.ts` for the locale rule (cookie, else `ru`, never
+    `Accept-Language`);
+  - a layer leaves the DOM when Back closes it;
+  - `notFound()` for an invalid parameter answers `404`;
+  - component tests have `@testing-library/jest-dom`.
+- **What was found.**
+  - The config is `frontend/vitest.config.mts`; its package projects included `src/**` only.
+  - `next build` refuses the catch-alls: "Ambiguous route pattern `/[*]/[...*]`".
+  - next-intl 4.15.1 detects by `Accept-Language` when `localeDetection` is on and ignores the cookie when it is off;
+    its cookie sync also reads `Accept-Language`. It deprecates `setRequestLocale` for `next/root-params`.
+  - Next.js 16 with `cacheComponents` hides a page it left in a React `<Activity>` (`preserving-ui-state.md`); the
+    closed sheet is in the DOM, hidden.
+  - A parameter is runtime data, so `notFound()` runs after the static shell has started streaming: the not-found
+    placeholder renders with status `200` (`not-found.md`). Unknown addresses still answer `404`.
+  - `@testing-library/jest-dom` is not installed (WP-03).
+  - A plain `kvadro` brand pattern would match the legacy key name `found.kvadro`, which later code must call.
+- **Resolution.**
+  - Package projects include `src/**` and `tests/**`.
+  - All three catch-alls are `[...rest]`; the not-found page is `(main)/[...rest]/page.tsx` (the specification's
+    default).
+  - `proxy.ts` owns the redirect in a twelve-line `withLocale`; next-intl reads the locale from `next/root-params`.
+    Pages keep their static shell (the build lists them `○`).
+  - End-to-end checks test visibility, not presence; WP-21 and WP-23 are told in the "Handoff".
+  - The `200` for invalid parameters is recorded; no `generateStaticParams` is added for `number`, `id` or `kind`.
+  - Component tests assert DOM attributes; no dependency is added.
+  - `brand-words.json` lists the brand forms (`kvadro²`, `KvadroApp`, hosts, handles, the Cyrillic name), not the
+    bare word.
