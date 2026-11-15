@@ -128,6 +128,43 @@ final class Fields
         return $value;
     }
 
+    /** @param  array<array-key, mixed>  $data */
+    public static function nullableInt(array $data, string $key): ?int
+    {
+        return self::present($data, $key, 'a whole number or null') === null ? null : self::int($data, $key);
+    }
+
+    /** @param  array<array-key, mixed>  $data */
+    public static function nullableFloat(array $data, string $key): ?float
+    {
+        return self::present($data, $key, 'a number or null') === null ? null : self::float($data, $key);
+    }
+
+    /** @param  array<array-key, mixed>  $data */
+    public static function nullableBool(array $data, string $key): ?bool
+    {
+        return self::present($data, $key, 'true, false or null') === null ? null : self::bool($data, $key);
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $data
+     * @return array<array-key, mixed>|null
+     */
+    public static function nullableObject(array $data, string $key): ?array
+    {
+        return self::present($data, $key, 'an object or null') === null ? null : self::object($data, $key);
+    }
+
+    /**
+     * The value of a key that must exist, even when it is null.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    private static function present(array $data, string $key, string $expected): mixed
+    {
+        return array_key_exists($key, $data) ? $data[$key] : throw self::invalid($key, $expected);
+    }
+
     /**
      * A per-deal object. With `$complete` every deal must be present; otherwise a deal may be missing, but no key may
      * be other than a deal.

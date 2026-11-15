@@ -3,6 +3,7 @@
 use App\Services\Sources\Contracts\LandingSource;
 use App\Services\Sources\Contracts\ListingSource;
 use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Stub\StubListingSource;
 use App\Services\Sources\Stub\StubReferenceSource;
 
 /*
@@ -29,7 +30,7 @@ return [
 
     'capabilities' => [
         'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class]],
-        'listings' => ['contract' => ListingSource::class, 'drivers' => []],
+        'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class]],
         'landing' => ['contract' => LandingSource::class, 'drivers' => []],
     ],
 
@@ -37,5 +38,15 @@ return [
         // WP-11
         'source.reference' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
         'source.cities' => ['capability' => 'reference', 'default' => ['*' => 'stub']],
+
+        // WP-12
+        'source.listings.feed' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.count' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.new' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.flow' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.map' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.card' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.contact' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+        'source.listings.translation' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
     ],
 ];

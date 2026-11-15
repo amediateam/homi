@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | TODO |
+| Status | REVIEW (#48) |
 | Depends on | WP-11 |
 | Size | about 3 000 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.1, §4.2, §4.5; `08` §1.7, §1.8 and the rows of API-004 … API-010, API-017 and API-035, RES-001, RES-002; `02` BR-API-156 … BR-API-158, LB-API-055, Q-API-065, Q-API-066; `03` §1.12 and §4 (BR-APP-001 … BR-APP-009, BR-APP-020, BR-APP-023, BR-APP-024, BR-APP-026 … BR-APP-035, BR-APP-059, BR-APP-062, BR-APP-070, BR-APP-071); tasks `tasks/backend/KV-BE-016-search-filters-normaliser.md`, `KV-BE-037-call-links.md`, `KV-BE-048-translation.md`, `KV-BE-046-share.md` (rules only) |
@@ -60,17 +60,17 @@ Arrays are sent as repeated bracket keys (`types[]=apartment&types[]=house`). Bo
 | `owner` | string | `any` (default), `no_agents`, `owners` |
 | `types[]` | string | `apartment`, `house`, `room`, `commercial`, `land`; types not valid for the deal are dropped; empty → `apartment` |
 | `districts[]` | string | district codes of the city |
-| `zones[]` | string | `center`, `near_center`, only for a city with zones |
+| `zones[]` | string | `center`, `near_center`; dropped for a city without zones |
 | `rooms_min`, `rooms_max` | integer | 0 … 10; `4` as maximum means "4 or more" |
 | `price_min`, `price_max` | integer | whole USD, ≥ 1 |
 | `area_min`, `area_max` | integer | 1 … 10 000; sale only |
 | `posted_days` | integer | `1`, `3`, `7` |
 | `furnished` | boolean | three states: absent, `true`, `false` |
-| `renovation[]` | string | renovation codes of the deal |
+| `renovation[]` | string | renovation codes of the reference data; codes of another deal are dropped |
 | `appliances[]` | string | appliance codes; rent only |
-| `floor_not_first`, `floor_not_last`, `near_metro`, `below_median`, `pets`, `pets_only` | boolean | applied only when `true` |
+| `floor_not_first`, `floor_not_last`, `near_metro`, `below_median`, `pets`, `pets_only` | boolean | applied only when `true`; `pets` and `pets_only` long rent only |
 | `market` | string | `new`, `secondary`; sale only |
-| `tenant` | string | `family`, `men`, `women`; rent only |
+| `tenant` | string | `family`, `men`, `women`; long rent only |
 | `polygon` | string | `lat,lon;lat,lon;…`, 3 … 40 vertices, 5 decimals, not closed |
 
 Types per deal: long rent `apartment, house, room, commercial`; daily rent `apartment, house, room`; sale
@@ -78,6 +78,14 @@ Types per deal: long rent `apartment, house, room, commercial`; daily rent `apar
 `min > max` is swapped; a closed polygon is opened. An unknown enum value, an unknown code, a malformed number or
 polygon is `422` with the parameter name in `errors`. Feed only: `sort` (`new` default, `cheap`, `expensive`,
 `deal`, `center`, `ppm`), `cursor` (opaque string, at most 512 characters), `limit` (1 … 50, default 20).
+
+*Corrected while executing (rule 6).*
+- `tenant`, `pets` and `pets_only` exist only for long rent (BR-API-029, BR-APP-003); "rent only" in the table
+  above was DEV-017, which stays off.
+- A zone of a city without zones and a renovation code of another deal are dropped like a type of another deal (an
+  impossible combination, DEV-004 off); a value outside every list is `422`.
+- Lists hold at most 100 values, codes at most 64 characters, the polygon text at most 2 000 characters.
+- A radar body may send the polygon as `[[lat, lon], …]`, JSON booleans and numbers.
 
 The same 25 keys form the **filters object** in flow options and radars: every key present, arrays never `null`,
 `polygon` as `[[lat, lon], …]` or `null`, in this order: `city`, `deal`, `types`, `districts`, `rooms_min`,
@@ -91,7 +99,7 @@ The same 25 keys form the **filters object** in flow options and radars: every k
 {"number": 100012, "deal": "rent_long", "type": "apartment", "title": "2-комн. квартира, 54 м²",
  "price": {"display": "$600", "period": "/мес", "alt": "≈ 7,7 млн сум", "notes": ["депозит $600"], "usd": 600, "kind": null},
  "rooms": 2, "area_total": 54, "floor": 3, "floors_total": 9,
- "district": {"code": "yunusabad", "name": "Юнусабадский"}, "place": null, "landmark": "Мегапланет",
+ "district": {"code": "yunusobod", "name": "Юнусабадский"}, "place": null, "landmark": "Мегапланет",
  "metro": {"name": "Минор", "km": 0.7}, "center_km": 4.2, "location": {"lat": 41.35012, "lon": 69.28431},
  "photos": {"preview": ["https://cdn.homi.loc/stub/100012/1.jpg?e=0&s=stub"], "count": 8, "cover": null},
  "has_video": false, "pets_ok": false, "is_owner": true, "owner_verified": false,
@@ -309,6 +317,44 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
   `stub/<number>/<n>.s.jpg` for every catalogue photo. The token `{media}` in fixtures is replaced by
   `config('media.public_url')`, `{api}` by `config('app.url')`.
 
+*Added while executing (rule 6).*
+- **Filters.**
+  - `SearchFilters::fromNormalised(array)` takes an array in the form of `toArray()` (a stored radar, a flow option)
+    and only checks its types; the constructor is private. The polygon is held as a list of `GeoPoint`.
+  - Closed values are enums: `PropertyType` (with `forDeal()`), `OwnerFilter`, `Tenant`, `Market`, `ListingSort`,
+    `PriceKind`.
+  - `forRadar` needs a third switch, `radar_without_posted_days` (DEV-005, off). `canonicalHash()` sorts the polygon
+    vertices by latitude, then longitude; the rule is in its docblock and re-implemented in `CanonicalHashTest`.
+  - `SearchFiltersNormaliser::sortFor()` applies the sort fallback of BR-APP-023.
+- **Data objects.**
+  - `ListingDetails` holds the preview as `ListingDetails::$preview`.
+  - The item lists are their own objects: `ListingFact`, `ListingNearby`, `PriceEvent`, `ListingOffer`,
+    `ListingSourceLink`, `MarketComparison`. The other nested parts (`district`, `metro`, `photos`, `posted`,
+    `author`, `contact`, `original`) are flat properties that the resources nest.
+  - `author.label` goes through the masker as well.
+  - `contact_paid` is a boolean.
+- **Resources.** Scramble types an element of an array property only through a resource with a typed constructor. So
+  each item list has a small resource: `MapPointResource`, `FlowOptionResource`, `ListingFactResource`,
+  `ListingNearbyResource`, `PriceEventResource`, `ListingOfferResource`, `ListingSourceLinkResource`,
+  `PolygonVertexResource`. The two counts are cast to `int`.
+- **Errors.** `App\Exceptions\Listings\{ContactUnavailable, TranslationNotNeeded, TranslationUnavailable,
+  ShareFailed}`.
+- **Stub.**
+  - The catalogue numbers are `100001` … `100015` and `100017`; `100016` is the merged alias, not an entry. The
+    repeats are `101001` … `101040`; they keep the photo addresses of the listing they repeat.
+  - Each entry has a `stub` object (city and synthetic phone) that is never answered.
+  - The district codes are the slugs of the reference data (AM-53).
+  - A map pin's tone is the market tone when it is `good`, `check` or `suspicious`, else `high` for a median delta
+    above 0.1.
+  - Filters other than those listed above are accepted and ignored.
+  - A cursor this feed did not give is `422 validation_failed` on `cursor`.
+  - `contact_unavailable` is also a scenario.
+  - Share checks the number through the card source (`404`).
+  - `listings/translation.json` holds, per locale, a `default` text and texts by number.
+- **Placeholders.** They are `placeholder-<k>.jpg` and `.s.jpg`; photo `n` of listing `number` uses
+  `k = (number + n − 1) mod 6 + 1`.
+- **Errors in the controller.** `GET /listings/new` answers `503` when a source returns a negative count.
+
 ## Files
 
 - `backend/app/Services/Search/{SearchFilters,SearchFiltersNormaliser,FilterRejected,ListingQuery}.php`; `backend/config/filters.php`
@@ -407,4 +453,22 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
 
 ## Handoff
 
-Empty.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-12-contract-listings`, PR #48, ready for review.
+
+- **Done:** steps 1–9. Each test was seen failing before its code; mutation checks:
+  - the masker without the `000` rule and without its look-behind: 1 test fails for each;
+  - the card without masking `summary`: 2 tests fail.
+
+  Checks:
+  - `make ci-backend` → exit 0 (Pest 603 passed, 4 skipped; PHPStan 0; `openapi:check` clean);
+  - `make ci-frontend` → exit 0 (`types:check` clean).
+
+  `php artisan sources:publish-stub-media` was run locally: 136 files, and
+  `https://cdn.homi.loc/stub/100012/1.jpg` answers `200 image/jpeg`.
+- **Decisions taken here:** marked *corrected while executing* or *added while executing* above; AM-54 in
+  `docs/ai/reports/phase-3-notes.md` §O.
+- **Next:**
+  1. review and merge;
+  2. the production track deploys, runs `php artisan sources:publish-stub-media` once on staging and once on
+     production, and confirms that one fixture photo address loads from the CDN host;
+  3. set the status to `DONE`.

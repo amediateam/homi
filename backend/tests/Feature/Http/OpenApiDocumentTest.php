@@ -93,3 +93,32 @@ it('documents the seven methods of the session and reference contract (WP-11)', 
         ->and($paths['/cities'])->toHaveKey('get')
         ->and($paths['/events'])->toHaveKey('post');
 });
+
+it('documents the nine listing methods (WP-12)', function (): void {
+    $paths = exportedOpenApi()['paths'];
+
+    foreach (['/listings', '/listings/count', '/listings/new', '/listings/flow', '/listings/map', '/listings/{number}'] as $path) {
+        expect($paths)->toHaveKey($path)->and($paths[$path])->toHaveKey('get');
+    }
+
+    foreach (['contact', 'translation', 'share'] as $action) {
+        expect($paths["/listings/{number}/{$action}"])->toHaveKey('post');
+    }
+});
+
+it('shares one preview schema between the feed and the preview card (WP-12)', function (): void {
+    $document = exportedOpenApi();
+    $feed = resolveSchema($document, $document['paths']['/listings']['get']['responses']['200']['content']['application/json']['schema']);
+
+    expect($feed['properties']['data']['items'])->toBe(['$ref' => '#/components/schemas/ListingPreviewResource'])
+        ->and($document['components']['schemas']['ListingPreviewResource']['properties'])->toHaveKeys(['number', 'price', 'photos', 'source_ref'])
+        ->and($document['components']['schemas']['ListingPreviewResource']['properties'])->not->toHaveKey('phone');
+});
+
+it('types the new-since count as an integer (WP-12, fix of LB-API-055)', function (): void {
+    $document = exportedOpenApi();
+    $schema = resolveSchema($document, $document['paths']['/listings/new']['get']['responses']['200']['content']['application/json']['schema']);
+
+    expect($schema['properties']['data']['properties']['count'])->toBe(['type' => 'integer'])
+        ->and($schema['properties']['data']['required'])->toContain('count');
+});

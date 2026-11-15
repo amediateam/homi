@@ -36,9 +36,13 @@ only on `422` and maps each field to its messages.
 | 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked` or `join` (show an unknown or missing reason as `private`) |
 | 403 | `forbidden` | Not allowed, or the token lacks the ability |
 | 404 | `not_found` | Unknown route, or a resource or listing that does not exist |
+| 404 | `contact_unavailable` | `POST /listings/{number}/contact`: the listing has no phone, or the disclosure limit is reached |
+| 422 | `translation_not_needed` | `POST /listings/{number}/translation` with locale `ru`, the language of the originals |
 | 413 | `payload_too_large` | The request body is over the size cap |
 | 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds |
+| 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
 | 503 | `source_unavailable` | The data source of the method cannot answer; show the "could not load" state |
+| 503 | `translation_unavailable` | `POST /listings/{number}/translation`: the translation service cannot answer |
 | other 4xx/5xx | `http_error` | Any other HTTP error |
 | 500 | `server_error` | An unexpected failure; the message is hidden outside debug |
 
@@ -109,6 +113,48 @@ comes from the user's settings, and until they exist (WP-40) it is `USD`.
 `POST /auth/telegram` exchanges the raw `initData` of the Mini App launch for a bearer token (abilities `app:read`
 and `app:write`, 24 hours) and the object of `GET /me`. Send the token as `Authorization: Bearer <token>`.
 `GET /reference` and `GET /cities` need no token, so the no-access screen works without a session.
+
+## Listings
+
+The feed, count, new-since, flow and map take the same filter parameters (WP-12). Arrays are repeated bracket keys
+(`types[]=apartment&types[]=house`); booleans are `true` or `false`; unknown parameters are ignored.
+
+| Parameter | Rule |
+| --------- | ---- |
+| `city` | required; a city code of `GET /reference` |
+| `deal` | required; `rent_long`, `rent_daily`, `sale` |
+| `owner` | `any` (default), `no_agents`, `owners` |
+| `types[]` | `apartment`, `house`, `room`, `commercial`, `land`; types the deal does not offer are dropped; none left → `apartment` |
+| `districts[]` | district codes of the city |
+| `zones[]` | `center`, `near_center`; dropped for a city without zones |
+| `rooms_min`, `rooms_max` | 0 … 10; `4` or more as the maximum means "4 or more" |
+| `price_min`, `price_max` | whole USD, ≥ 1 |
+| `area_min`, `area_max` | 1 … 10 000; sale only |
+| `posted_days` | `1`, `3`, `7` |
+| `furnished` | absent, `true` or `false` |
+| `renovation[]` | renovation codes of `GET /reference`; codes of another deal are dropped |
+| `appliances[]` | appliance codes; rent only |
+| `floor_not_first`, `floor_not_last`, `near_metro`, `below_median`, `pets`, `pets_only` | applied only when `true`; `pets` and `pets_only` long rent only, `pets_only` wins over `pets` |
+| `market` | `new`, `secondary`; sale only |
+| `tenant` | `family`, `men`, `women`; long rent only |
+| `polygon` | `lat,lon;lat,lon;…`, 3 … 40 vertices, rounded to 5 decimals, a closed polygon is opened |
+
+Keys that do not apply to the deal are stripped; of several geography modes the server keeps `polygon`, else `zones`,
+else `districts`; `min > max` is swapped. An unknown value or code, a malformed number or polygon is `422
+validation_failed` naming the parameter. The feed adds `sort` (`new` default, `cheap`, `expensive`, `deal`, `center`,
+`ppm`; an order the filters do not offer falls back to `new`), `cursor` and `limit` (1 … 50, default 20);
+`GET /listings/new` adds `since` (Unix seconds, required). Flow options and radars carry the same 25 keys as the
+filters object, every key present.
+
+No card answer, full or `preview=1`, carries the author's number: numbers in listing texts are masked to
+`+998 ** *** ** NN` (or `+** *** ** NN`), and `POST /listings/{number}/contact` is the one method that returns
+`phone`, `phone_display` and `call_url` (DEC-52). A merged duplicate answers with another `number`; the client
+follows the answer.
+
+Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `new_none`, `new_one` (new-since);
+`contact_unavailable`; `translation_unavailable`; `share_failed`. Reserved numbers: `999404` answers `404`, `999503`
+answers `503`, `100016` answers with `100001`, and `100015` is withdrawn. Photo addresses resolve after
+`php artisan sources:publish-stub-media`.
 
 ## Keeping the contract current
 
