@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\Radars;
 
 use App\Enums\RadarMode;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,7 +29,11 @@ class PatchRadarRequest extends FormRequest
         return [
             'active' => ['sometimes', 'boolean'],
             'mode' => ['sometimes', Rule::enum(RadarMode::class)],
-            'unhide' => ['sometimes', 'accepted'],
+            'unhide' => ['sometimes', 'boolean', function (string $attribute, mixed $value, Closure $fail): void {
+                if ($value !== true) {
+                    $fail('The unhide key can only be true.');
+                }
+            }],
         ];
     }
 

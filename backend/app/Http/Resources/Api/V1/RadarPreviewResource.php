@@ -26,7 +26,7 @@ class RadarPreviewResource extends JsonResource
         return [
             'items' => ListingPreviewResource::collection($preview->items),
             'count' => $preview->count,
-            'flow' => $preview->flowWeek === null ? null : ['week' => $preview->flowWeek, 'days' => (int) $preview->flowDays],
+            'flow' => $preview->flowWeek === null ? null : ['week' => (int) $preview->flowWeek, 'days' => (int) $preview->flowDays],
         ];
     }
 }

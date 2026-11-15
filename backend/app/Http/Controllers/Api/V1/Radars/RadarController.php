@@ -20,6 +20,7 @@ use App\Services\Radars\RadarChange;
 use App\Services\Sources\Stub\StubRadars;
 use App\Services\Sources\Stub\StubResponder;
 use Closure;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -53,6 +54,7 @@ class RadarController extends ApiController
      * switches on a paused one (`reactivated`, `200`). The same filters ignore `posted_days` and the order of keys
      * and lists (BR-APP-012).
      */
+    #[BodyParameter('filters', description: 'The filters object of WP-12; any subset of its 25 keys, normalised for a radar.', required: true, type: 'array<string, mixed>')]
     public function store(StoreRadarRequest $request): JsonResponse
     {
         $context = $this->stubs->check($request, self::errors(['no_chat', 'radar_limit']));
@@ -62,12 +64,17 @@ class RadarController extends ApiController
             'few' => 'radars/few',
             default => 'radars/created',
         }, $request->filters());
-        $status = in_array($mutation->kind, [RadarMutationKind::Existing, RadarMutationKind::Reactivated], true) ? 200 : 201;
+        $result = new RadarMutationResource($mutation);
 
-        return $this->sourced(new RadarMutationResource($mutation), SourceDriver::Stub, status: $status);
+        if (in_array($mutation->kind, [RadarMutationKind::Existing, RadarMutationKind::Reactivated], true)) {
+            return $this->sourced($result, SourceDriver::Stub);
+        }
+
+        return $this->sourced($result, SourceDriver::Stub, status: 201);
     }
 
     /** `PUT /radars/{id}`: replaces the filters and keeps `active`. */
+    #[BodyParameter('filters', description: 'The filters object of WP-12; any subset of its 25 keys, normalised for a radar.', required: true, type: 'array<string, mixed>')]
     public function update(UpdateRadarRequest $request, string $id): JsonResponse
     {
         $radar = $this->radars->find($id);
