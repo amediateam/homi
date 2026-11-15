@@ -1,0 +1,8 @@
+/*
+ * The Mini App stylesheet (WP-20): Tailwind, then the tokens, themes, lite and motion CSS of @homi/ui. Tailwind
+ * also scans the sources of @homi/ui for the classes its components use.
+ */
+@import "tailwindcss";
+@import "@homi/ui/styles.css";
+
+@source "../../packages/ui/src";

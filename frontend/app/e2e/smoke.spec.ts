@@ -15,7 +15,7 @@ test.describe("Mini App smoke", () => {
     await page.goto("/");
 
     await expect(page.locator("body")).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator('[data-route="feed"]')).toBeVisible();
     expect(await page.evaluate(() => (window as { Telegram?: { WebApp: { version: string } } }).Telegram?.WebApp.version)).toBe(
       "8.0",
     );
