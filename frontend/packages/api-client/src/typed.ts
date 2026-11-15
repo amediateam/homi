@@ -18,13 +18,13 @@ export type PathsWith<M extends HttpMethod> = {
   [P in keyof paths]: [NonNullable<paths[P][M]>] extends [never] ? never : P;
 }[keyof paths];
 
-type OperationOf<P extends keyof paths, M extends HttpMethod> = NonNullable<paths[P][M]>;
+export type OperationOf<P extends keyof paths, M extends HttpMethod> = NonNullable<paths[P][M]>;
 
 type PathParams<Op> = Op extends { parameters: { path: infer Params } } ? Params : never;
 
 type QueryParams<Op> = Op extends { parameters: { query?: infer Query } } ? Exclude<Query, undefined> : never;
 
-type JsonBody<Op> = Op extends { requestBody?: { content: { "application/json": infer Body } } } ? Body : never;
+export type JsonBody<Op> = Op extends { requestBody?: { content: { "application/json": infer Body } } } ? Body : never;
 
 type HasRequiredBody<Op> = Op extends { requestBody: { content: { "application/json": unknown } } } ? true : false;
 

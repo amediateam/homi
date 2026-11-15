@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#61) |
 | Depends on | WP-21 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1, §3.5, §4.1 – §4.4; `03` §1.6, §1.11, §1.12, §3.4, §3.5, §4 (rules 001 … 023, 029, 031, 044, 060, 064 … 066); earlier tasks KV-FE-017 … KV-FE-023 (rules, tables, edge cases and test ideas only — not the legacy query strings, the `Authorization: tma` transport, the boot prefetch or their file layout) |
@@ -68,26 +68,33 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   base `API_URL`, the token from `getSessionToken()` (WP-21) or from `auth.token`, `Accept-Language` = the locale
   (`uz` stays `uz`; only Laravel's legacy driver knows `uz_Latn`), a 15 s timeout and a request id header. It
   exposes one typed function per v1 method of `25` §4.2 and returns
-  `ApiResult<T> = { ok: true, data, meta } | { ok: false, error: UiError, status, code? }` — it does not throw for
-  an HTTP answer. The locale comes from the root parameter getter in Server Components (`next-root-params.md`
-  says the getter does not run in Server Actions or Route Handlers, so those pass the locale in).
+  `ApiResult<T> = { ok: true, data, meta } | { ok: false, error: UiError, status, code?, method, path }` (`status`
+  `0` without an answer; types in `lib/api/types.ts`) — it does not throw for an HTTP answer. The locale comes from
+  the root parameter getter in Server Components (`next-root-params.md` says the getter does not run in Server
+  Actions or Route Handlers, so those pass the locale in). `createServerApi({ token, locale, scenario })` is the
+  core both build on; `publicApi(locale)` sends no token and no stub scenario, for the cached reference calls. The
+  request id is a random value, so a call awaits `io()` of `next/cache` first (`io.md`); without it
+  `cacheComponents` reports `crypto.randomUUID()` while prerendering.
 - Two facts of today's `@homi/api-client` (`frontend/packages/api-client/src/index.ts`) that this package
-  corrects there, with tests, because the contract needs both: `request()` throws `ApiError` for every empty body
-  (`payload === null`), so each `204` of WP-11 and WP-13 would be an error — an empty `2xx` body must resolve as
-  `{ success: true, data: null }`; and `RequestOptions.query` takes one scalar per key and writes it with
+  corrects there, with tests, because the contract needs both: `request()` answers a `204` with
+  `{ success: true, data: null }` but throws `ApiError` for any other empty body (`payload === null`), so an empty
+  `200` or `201` would be an error — every empty `2xx` body must resolve as `{ success: true, data: null }`, while an
+  unreadable one stays an error; and `RequestOptions.query` takes one scalar per key and writes it with
   `searchParams.set`, so the list filters of WP-12 (`types[]=a&types[]=b`) cannot be sent — `query` also accepts
   `URLSearchParams`, which is what `toApiQuery` returns.
 - Stub scenarios (`25` §9, WP-10): outside production — `NEXT_PUBLIC_APP_ENV` is not `production`, a build-time
   condition — `server.ts`, the pass-through below, `app/bff/session/route.ts` of WP-21 and `runAction` copy the
   value of the cookie `homi_stub_scenario` (`^[a-z0-9_]{1,40}$`, anything else ignored) into the request header
-  `X-Stub-Scenario`. It is the only way an end-to-end test reaches an error or empty state of a server-rendered
+  `X-Stub-Scenario` (`lib/api/scenario.ts`). It is the only way an end-to-end test reaches an error or empty state of a server-rendered
   page, so every later package of stage B relies on it; tests set the cookie with Playwright's
   `context.addCookies` until WP-33 adds the `setScenario` helper. The cached reference calls never forward it.
-- `errors.ts`: `UiError` and `toUiError(statusOrFailure)` (table below). An error object carries the method, the
-  path template (`listings/:number`), the status and the code — never headers, a query string or a body.
+- `errors.ts`: `UiError` and `toUiError(statusOrFailure)` (table below); a `4xx` the table does not name is row 3.
+  An error object (`ApiFailure`, built by `failureOf`) carries the method, the path template (`listings/:number`),
+  the status and the code — never headers, a query string or a body.
 - `browser.ts`: `bffFetch(path, { query, signal })` → `GET /bff/<path>`; sends `Accept-Language`; adds
   `Authorization: Bearer` in header mode (`getAuth()` of WP-21); on `unauthorized` awaits `reauthenticate()` once
   and repeats the request; returns the same `ApiResult<T>`. Every successful answer calls `reportSource(meta.source)`.
+  An abort by the caller rejects with its `AbortError`; the locale is the document's `lang` unless given.
 - `bffAllowList.ts` and `app/bff/[...path]/route.ts`: a pass-through for **reads** only. The complete list ships
   here so later packages do not touch it: `GET` `me`, `settings`, `reference`, `cities`, `listings`,
   `listings/count`, `listings/new`, `listings/flow`, `listings/map`, `listings/:number`, `favorites`, `history`,
@@ -95,8 +102,10 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
   `404`, accepts same-origin requests only (a same-origin `GET` carries no `Origin` header, so the rule is: refuse
   when `Origin` is present and is not the app's origin, or when `Sec-Fetch-Site` is present and is not
   `same-origin`), takes the token from the cookie or the bearer header, validates `:number` as
-  a positive integer, caps the query string at 4 KB, forwards the API's status and body unchanged, answers
-  `Cache-Control: private, no-store`, never forwards `Set-Cookie`, never logs the query. The query string is
+  a positive integer, caps the query string at 4 KB (`414` above), forwards the API's status and body unchanged
+  (`502` when the API cannot be reached, `504` after 15 s), answers `Cache-Control: private, no-store`, forwards no
+  header of the API but `Content-Type` — so never `Set-Cookie` — and never logs the query. The same-origin rule lives
+  in `lib/security/sameOrigin.ts`, shared with `app/bff/session/route.ts`. The query string is
   forwarded as it is, so `favorites` and `history` page with `cursor` and `limit` exactly like `listings` (DEC-53).
 
 ### Error mapping
@@ -122,14 +131,16 @@ A read that fails while older data is on screen keeps the data and shows the inl
 
 - `run.ts`: `runAction(auth, locale, fn)` resolves the token (cookie first, else `auth.token`), refuses to run
   without one (`unauthorized`), calls `fn(serverApi(...))`, and returns `ActionResult<T>` (the `ApiResult` union,
-  serialisable). Each action re-reads the session itself; nothing trusts the client
-  (`authentication-with-cache-components.md`, "Trusting the client for authorization").
+  serialisable); a refusal has `method` `ACTION`. `runAction.invalid(method, path)` is the `validation` answer of an
+  action whose input failed its check, without a request. Each action re-reads the session itself; nothing trusts
+  the client (`authentication-with-cache-components.md`, "Trusting the client for authorization").
 - Every action is `'use server'`, takes `(input, auth?: { token?: string }, locale?)`, validates its input (listing
-  numbers as positive integers; radar and blocked-author ids as ULID strings, 26 characters, as WP-13 defines
-  them; enums against the generated types) and returns `ActionResult`. The
+  numbers as positive integers; radar and blocked-author ids as ULID strings, 26 characters in either case, as
+  Laravel's `whereUlid` of WP-13 accepts them; enums against the generated types — `listingNumber`, `ulid` and
+  `oneOf` of `lib/actions/validate.ts`) and returns `ActionResult`. The
   token travels in the request body of the action, never in an address.
 - `useAction(action)` (client): injects `auth` in header mode and the locale, awaits `reauthenticate()` once on
-  `unauthorized`, and reports `meta.source`.
+  `unauthorized`, and reports `meta.source`; an action that cannot be reached resolves `offline`.
 - Nothing per-user is cached, so actions call no revalidation; the caller updates its session map or
   `invalidate(prefix)`.
 
@@ -148,39 +159,52 @@ Files and names reserved for the packages that write them:
 
 ### Client data (`frontend/app/lib/data/`)
 
-- `useResource(key, fetcher, { initial, enabled = true, staleMs = 30000 })` → `{ data, error, status, refetch,
-  mutate }`, `status` = `idle | loading | success | error`. One module-level map keyed by `key`: `initial` seeds
+- `useResource(key, fetcher, { initial, enabled = true, staleMs = 30000, flags })` → `{ data, error, status,
+  refreshing, refetch, mutate }`, `status` = `idle | loading | success | error`, `refreshing` while a read is in
+  flight over shown data; `fetcher(signal)` returns an `ApiResult`. One module-level map keyed by `key`: `initial` seeds
   it; equal keys share one in-flight request; a key change or unmount aborts; a fresh entry is reused, a stale one
-  is shown while it refetches; `mutate(updater)` writes optimistically; `invalidate(prefix)` drops entries.
-  Memory only. With `cacheComponents`, hidden routes keep state and re-run effects when shown again
+  is shown while it refetches; `mutate(updater)` writes optimistically; `invalidate(prefix)` drops entries and
+  reads a key that is on screen again. Memory only, and never written on the server (a server-rendered Client
+  Component sees `initial` only, so one user's data cannot reach another request). A `403` with
+  `dev001AnyForbiddenShowsAccess` on calls `onForbidden()` of `lib/session/bootstrap.ts`. With `cacheComponents`, hidden routes keep state and re-run effects when shown again
   (`preserving-ui-state.md`); the stale check is what stops a refetch storm on every Back.
 - `sessionMaps.ts`: `favs`, `seen`, `hidden` for this launch (`03` §1.11) with `useSessionMap(name)`,
-  `setFav(number, on)`, `markSeen(number)`, `hide(numbers)`, `unhide(numbers)`, `resetHidden()`. The server stays
-  the truth after a reload.
+  `setFav(number, on)`, `markSeen(number)`, `hide(numbers)`, `unhide(numbers)`, `resetHidden()`, and the readers
+  `isFavorite(number, server)`, `isSeen(number, server)`, `isHidden(number)`. The server stays the truth after a
+  reload.
 - `sources.ts` (created by WP-20): `bffFetch`, `useAction` and the `SourceReporter` rendered next to every
   server-fetched `initial` all report, so the demo marker is right on every screen without per-screen code.
+  `SourceReporter` takes an optional source, as `meta.source` is optional.
 
 ### Reference data (`frontend/app/lib/reference/`)
 
 - `server.ts`: `getReference(locale)` and `getCities(locale)` — `'use cache'`, tagged `reference`, with a lifetime
-  of about ten minutes (`cacheLife.md`). A cached function cannot read the cookie
+  of about ten minutes (`cacheLife.md`; `{ stale: 300, revalidate: 600, expire: 3600 }`). Each returns
+  `{ loaded, data, source? }`: `loaded` is `false` when the empty value stands in. A cached function cannot read the cookie
   (`authentication-with-cache-components.md`), so both calls go **without a user token**; WP-11 defines
   `GET /reference` and `GET /cities` as public methods, so no token is needed. A per-user token must never become
   part of a cache key.
 - Build time. `use-cache.md` says prerendering fills a cache entry, and `cacheLife.md` ("Prerendering behavior")
-  excludes only entries that expire in under five minutes — so `next build` calls the API once per locale, while
-  the `Build` step of `.github/workflows/frontend.yml` and `make ci-frontend` have no API. Both functions
+  excludes only entries that expire in under five minutes — so a prerendered page would make `next build` call the
+  API once per locale, while the `Build` step of `.github/workflows/frontend.yml` and `make ci-frontend` have no API.
+  Since ADR-0020 every document renders at request time, so the build makes no reference call at all (AM-58); the
+  rule below still holds for the first request. Both functions
   therefore never throw: when the call fails they return an empty reference (no cities, default limit) and give
-  that result a short lifetime (`cacheLife.md`, "Conditional cache lifetimes") so the next request asks again;
-  because such an entry is resolved at request time, `ReferenceProvider` sits inside `<Suspense>`. Verify at
+  that result a short lifetime (`cacheLife.md`, "Conditional cache lifetimes"; the `seconds` profile) so the next
+  request asks again; because such an entry is resolved at request time, `ReferenceProvider` sits inside
+  `<Suspense>`. Verify at
   step 11 by building once with `API_URL` pointing at a closed port: the build passes and the running app loads
   the reference data on the first request.
-- `ReferenceProvider` (in the root layout, fed by the cached call) and `useReference()`: cities (`code`, `name`,
+- `ReferenceProvider` (rendered by `ReferenceFeed` of the root layout inside `<Suspense>`, next to the page rather
+  than around it so the page never waits for it; a layout effect hands the data to a client store) and
+  `useReference()` → `{ loaded, reference, cities, findCity, radarsEnabled, radarLimit, botUsername,
+  supportUsername, usdUzs }` over: cities (`code`, `name`,
   `is_region`, `center`, `zoom`, `zones`, `districts`, `has_metro`, `has_median`), `renovations` per deal,
   `appliances`, `price_presets` per deal, `locales`, `features`, `rates.usd_uzs`, `map.tiles_url`,
   `limits.radars`, `radars_enabled`, `bot.username` and `bot.support_username` — the names of WP-11. The
-  currency list is not reference data: it is `options.currencies` of `GET /settings` (WP-31). `useCityStats()`:
-  `counts` per deal, `price_presets` and `typical_price` per city from `GET /cities`. `findCity(code)`.
+  currency list is not reference data: it is `options.currencies` of `GET /settings` (WP-31).
+  `useCityStats(code)`: `counts` per deal, `price_presets` and `typical_price` per city from `GET /cities`.
+  `findCity(code)` matches the code only, never another city in its place.
 - Defaults when a field is absent: radar limit 10; `radars_enabled` `false` (no radar is offered while the
   reference data is missing); no support account → its rows are hidden; no cities → nothing that needs a city is
   offered (see LB-APP-023 below). `radars_enabled` is read from the cached reference, so a switch on the server
@@ -190,12 +214,13 @@ Files and names reserved for the packages that write them:
 
 - `useSearchState()` (Client Component, under `<Suspense>` as `use-search-params.md` requires) →
   `{ filters, sort, setFilters(next), setSort(sort), href(builder) }`. It reads the address with
-  `fromSearchParams`, writes with `nav.replace(builder(toSearchParams(next, sort)))` on the current root (`/` or
-  `/map`), and never touches a reserved parameter.
+  `fromSearchParams`, writes with `nav.replace` on the current root (`/` or `/map`) — the search keys of
+  `toSearchParams(next, sort)` first, then every other parameter of the address as it was — and never touches a
+  reserved parameter.
 - `readSearchState(searchParams, me)` — the same parsing for Server Components.
-- `searchStateFromHref(href)` — for callers that hold a remembered address (the shell of WP-23, the radar «+»).
+- `searchStateFromHref(href, fallbackCity?)` — for callers that hold a remembered address (the shell of WP-23, the radar «+»).
 - City when the address has none (BR-APP-001, BR-APP-010): `me.city`, else `homi-city`, else `tashkent`. At
-  sign-in `homi-city` is overwritten with `me.city` without a server call. An address that already carries a city
+  sign-in `homi-city` is overwritten with `me.city` without a server call (`SessionProvider`). An address that already carries a city
   is left alone, so a selected geography is never reset by the profile.
 - `rules.ts`: `searchRules(devFlags)` — the one place where app flags become the `rules` argument of `@homi/search`.
 
@@ -210,13 +235,16 @@ summary,url,api,radar,polygon}.ts`. Translations and money enter as arguments.
 `below_median`, `tenant`, `pets`, `pets_only`, `polygon`. Prices are USD integers.
 
 **Address mapping.** `toSearchParams(filters, sort)` writes each key under its own name (lists as repeated
-parameters, booleans as `1`, `polygon` as `lat,lon;lat,lon…` with 5 decimals), omits every value equal to the
+parameters, booleans as `1`, the three-state `furnished` as `1` or `0`, `polygon` as `lat,lon;lat,lon…` with 5
+decimals), omits every value equal to the
 default of its deal, omits `deal=rent_long` and `sort=new`, always writes `city`, and emits keys in one fixed
 order so equal states give equal addresses. `fromSearchParams(params, { fallbackCity })` reads **only** the 25
 keys and `sort`, ignores everything else — in particular the reserved parameters `from`, `focus`, `pick`,
 `draw`, `pin`, `step`, `i` (`RESERVED_PARAMS` of WP-20) — and passes the result through `normalizeFilters`, so a
 hand-edited address cannot produce an invalid state. `toApiQuery(filters, { sort, cursor, limit })` is the single
-mapping to the v1 query of WP-12; `new` is never sent.
+mapping to the v1 query of WP-12 (lists as repeated `name[]` keys, booleans as `true` and only when set,
+`furnished` as `true` or `false`); `new` is never sent. `cityFallback({ profile, saved })` is the fallback city of
+row 10 (`me.city`, else `homi-city`, else `tashkent`); the wiring is in `lib/search`.
 
 **Rules and where they live.**
 
@@ -225,7 +253,7 @@ mapping to the v1 query of WP-12; `new` is never sent.
 | 1 | BR-APP-001 | `defaultFilters(deal, city)` | `rent_long`, `types ['apartment']`, `owner 'any'`, lists empty, the rest `null` or `false` |
 | 2 | BR-APP-002 | `switchDeal(f, deal)` | new deal's defaults, keeping `districts`, `zones`, `polygon` |
 | 3 | BR-APP-003 | `switchRentTerm(f, term)` | keeps the types allowed for the term (else `['apartment']`), resets `price_min`, `price_max`, `below_median`; daily also clears `tenant`, `pets`, `pets_only` |
-| 4 | BR-APP-004 | `sectionsFor(f, city, mode, rules).rentTerm` | rent only, and daily already selected or the city's daily count > 0 |
+| 4 | BR-APP-004 | `sectionsFor(f, city, mode, rules, stats).rentTerm` | rent only, and daily already selected or the city's daily count > 0 (`stats` = the city's entry of `GET /cities`) |
 | 5 | BR-APP-005 | `toggleType(f, type)`, `TYPES_BY_DEAL` | rent `apartment, house, room, commercial`; daily `apartment, house, room`; sale `apartment, house, commercial, land`; the last type cannot be removed; `below_median` survives only for `['apartment']` |
 | 6 | BR-APP-006 | `sectionsFor(…).rooms` | hidden when every type is `room`, `commercial` or `land` |
 | 7 | BR-APP-007 | `pickRooms(f, value)` | one value; a second different value makes a range; `4` is "4 or more"; `null` clears |
@@ -235,15 +263,15 @@ mapping to the v1 query of WP-12; `new` is never sent.
 | 11 | BR-APP-011 | `countActiveFilters(f)` | groups: daily, non-apartment types, rooms, price, geography, metro, below-median, owner, tenant, pets (not for sale), furnished, renovation, floor, area, market, appliances, posted days |
 | 12 | BR-APP-012 | `filtersKey(f)`, `sameFilters(a, b)` | defaults filled, keys and lists sorted, `posted_days` ignored |
 | 13 | BR-APP-013 | `isCustomFilters(f)` | differs from the defaults of its base deal and city |
-| 14 | BR-APP-014 | `applyPreset(f, usd)`, `isPresetSelected` | sets `price_max`, clears `price_min`; selected only with no minimum; city presets before reference presets |
+| 14 | BR-APP-014 | `applyPreset(f, usd)`, `isPresetSelected` | sets `price_max`, or clears it when it already equals the preset, and clears `price_min`; selected only with no minimum; city presets before reference presets |
 | 15 | BR-APP-015 | `createMoney(…).presets(deal, …)` | UZS presets: city USD presets converted and rounded to 50 млн (sale), 0.1 млн (daily), 0.5 млн (rent), duplicates dropped; else the fixed lists of `03` §3.5 |
-| 16 | BR-APP-016 | `sectionsFor(…).typicalPrice` | apartment-only searches (daily included) in a city with a name and a typical price |
-| 17 | BR-APP-017 | `belowMedianAvailable(f, city, rules)` | non-daily, apartment-only, city with medians |
+| 16 | BR-APP-016 | `sectionsFor(…).typicalPrice` | apartment-only searches (daily included) in a city with a name and a typical price; the USD amount to show or `null` |
+| 17 | BR-APP-017 | `belowMedianAvailable(f, city, rules)` | non-daily, apartment-only, a city whose `has_median` is `true` (a missing mark counts as none, as the server's `SearchFiltersNormaliser` reads it) |
 | 18 | BR-APP-018 | `sectionsFor(…).unitPriceHint` | sale searches that include land or houses |
 | 19 | BR-APP-019 | `sectionsFor(…).tenant`, `.pets` | base deal rent, daily included (flag row below) |
 | 20 | BR-APP-020 | `sectionsFor(…).area`, `.market`, `.appliances` | area and market for sale only; appliances for rent only |
 | 21 | BR-APP-021 | `sectionsFor(…).posted` | `mode === 'search'` only |
-| 22 | BR-APP-022 | `resetAll(f, city, rules)`, `resetQuick(f, kind)` | full reset → defaults of the base deal and city; quick reset → its own filter, price also clears `below_median` |
+| 22 | BR-APP-022 | `resetAll(f, cityCode = f.city, rules)`, `resetQuick(f, kind)` | full reset → defaults of the base deal and city; quick reset → its own filter, price also clears `below_median` |
 | 23 | BR-APP-023 | `sortOptions(f, city)`, `normalizeSort(sort, options)` | `new`, `cheap`, `expensive` always; `deal` for non-daily apartment-only with medians; `center` with zones; `ppm` for sale; unavailable → `new` |
 | 24 | BR-APP-064 | `filtersSummary(f, ctx)` | `city · area · Посуточно · у метро · rooms · price · ≤ медианы · без риелторов / от хозяев` |
 | 25 | BR-APP-065 | `filtersTitle(f, ctx)` | deal (unless long rent) · types (unless only apartments) · rooms · price; empty → the deal name |
@@ -251,7 +279,11 @@ mapping to the v1 query of WP-12; `new` is never sent.
 
 `normalizeFilters(input)` is used for every state change, address read and API body: missing keys from the
 defaults of the input's deal, booleans coerced, numbers finite integers or `null`, lists as lists, zones in
-canonical order, unknown keys dropped, a polygon under 3 points dropped. No `undefined` can reach `filtersKey` —
+canonical order, unknown keys dropped, a polygon under 3 points dropped. Like the server's normaliser it also closes
+the enums, keeps the types the deal offers in `TYPES_BY_DEAL` order (none → apartments), drops repeated list codes
+(at most 100 matching `^[\w.-]{1,64}$`), keeps the bounds of `config/filters.php` (`posted_days` 1, 3 or 7), lets
+`pets_only` win over `pets`, rounds a polygon to 5 decimals, opens a closed one and keeps 3 – 40 vertices, and reads
+own properties only; it does not resolve the geography modes, so a server radar keeps what it sent. No `undefined` can reach `filtersKey` —
 the fix of LB-APP-007. `sortOptions(f, null)` (reference data not loaded) returns only `new`, `cheap`,
 `expensive` — the fix of LB-APP-023. `serializePolygon` / `parsePolygon` hold the wire form; the drawing rules of
 the lasso are WP-28's. `areaLabel(f, city)`: «Своя область», «Центр и ближе к центру» (`sum.zonesBoth`), the
@@ -271,9 +303,12 @@ and fixed by a snapshot test in three locales. Server-stored types in a radar ti
 | 4 | `dev052UnifiedBelowMedianRule` | — | row 17 above | the single rule of DEV-052 as approved; until then a `todo` test and no effect |
 | 5 | `dev005RadarDropsPostedDays` | — | `toRadarFilters` keeps `posted_days` | sets it to `null` |
 
-**Whole-city label (DEC-54, no flag).** Wherever the audited `summary.js` prints `sum.wholeCity` — `03` LB-APP-026
-names the collapsed title; the area line of `filtersAreaSummary` is read from the same file — the summaries print
-`sum.wholeCity` with the argument `{city}` = the name of the filters' city in the reference data (`findCity`). The
+**Whole-city label (DEC-54, no flag).** The audited `summary.js` prints `sum.wholeCity` where the city's name is
+unknown (`city.name || «Весь Ташкент»`). HOMI: `filtersSummary` starts with the city's name and the area (the
+legacy `[name, area]`) and leaves the city part out while the name is unknown; `filtersAreaSummary` prints the
+area, else `sum.wholeCity` with the argument `{city}` = the name of the filters' city in the reference data
+(`findCity`, exact code only), else nothing. Whether the collapsed title should also read «{city} целиком» is
+open for the reviewer. The
 key keeps its legacy name; its value is overridden in the `homi` layer: ru «{city} целиком», uz «Butun {city}», en
 «All of {city}» (uz and en are proposals for the reviewer). When the city's name is not known yet (reference data
 not loaded) the part is left out. The fixed «Весь Ташкент» of legacy is never printed, and no generic
@@ -285,7 +320,11 @@ Pure functions; the locale, the clock and a `t(key, values)` function are argume
 and `intlLocale` of `@homi/utils` are a different contract (minor units, `en-US`) and are not used by the Mini
 App. A formatter with a flagged branch takes the flag as a plain last option that the caller fills from
 `devFlags` — `formatMetroLabel(name, km, { oneFormatter })`, `formatFlow(rate, surface, t, { oneVocabulary })` —
-because the package never imports `lib/flags.ts`.
+because the package never imports `lib/flags.ts`. The locale and `t` are explicit arguments wherever a formatter
+prints: `formatNumber(value, locale)`, `formatDecimal(value, locale)`, `formatKm(km, locale)`,
+`formatCount(n, pluralKey, locale, t)`, `formatMetroLabel(name, km, locale, t, { oneFormatter })`,
+`formatDistance(km, locale, t, { approx })`, `formatCenter(km, locale, t)`; the date zone comes from
+`dateTimeZone(devFlags.dev014TashkentDates)` (`undefined` = the device zone).
 
 - **Numbers.** `numberLocale(locale)` of WP-20 (`src/locale.ts`, not written again): `ru-RU` for ru and uz,
   `en-GB` for en. `formatNumber`, `formatDecimal`
@@ -299,7 +338,9 @@ because the package never imports `lib/flags.ts`.
   parse by stripping spaces of every kind, treating one `,` or `.` followed by one or two digits as the decimal
   mark and repeated separators as thousands (`1.000.000` → 1 000 000); `0`, empty and non-numbers → `null`; UZS
   input converts with `max(1, round(value · 10⁶ / rate))`. A negative or non-finite amount formats to an empty
-  string and reports once.
+  string and reports once (`report` of `createMoney`). `presets(deal, { city, reference })`: in USD the city
+  presets, else the reference presets; in UZS the city presets converted and rounded per deal, at least one step,
+  duplicates dropped in first-seen order, else the fixed lists (reference presets are not used in UZS, as legacy).
 - **Dates** (`date.ts`): `formatShortDate(iso, locale, { timeZone })` — «5 мар» (dot removed), «5 Mar», «5-mar»
   with the Uzbek short months `yan … dek` as a constant; `formatTime`; `formatAgo(iso, now, t)` — under 2 min
   «только что», then minutes, hours under 48 h, then days (`market.info.ago*`), a future time is «только что»;
@@ -310,14 +351,15 @@ because the package never imports `lib/flags.ts`.
   under 50 m, else «{metro} · {m} м» with metres rounded to 100; `formatDistance(km, { approx })` (BR-APP-031) —
   under 0.1 km «рядом», under 0.95 km metres rounded to 100, else kilometres with one decimal, `~` prefix when
   approximate; `formatCenter(km)` «{km} км до центра». LB-APP-031: `dev019OneDistanceFormatter` on makes the metro
-  label use the same thresholds as `formatDistance`.
+  label use the thresholds of `formatDistance` inside the 1.5 km cap: the name alone under 0.1 km, «{metro} · {m} м»
+  under 0.95 km, else «{metro} · {km} км» (`near.km`; a key of its own when DEV-019 is approved).
 - **Flow** (`flow.ts`, BR-APP-044): `flowRate(flow)` → `null` unless the answer is an object with a numeric
   `week` and `days > 0`; `week = 0` → `none`; `week / days < 1` → `week` with N; else `day` with N rounded.
   `formatFlow(rate, surface, t)` for `sheet | tile | nudge`: «📡 За неделю таких не было — радар будет срабатывать
   редко» (`sheet.flowNone`), «📡 Радар: {n} за неделю» (`sheet.flowWeek`), «📡 Радар: ≈{n} в день»
   (`sheet.flowDay`); tiles «пока редко» (`alert.rare`), «{n} за неделю» (`alert.week`), «≈{n} в день»
   (`alert.day`); nudge «Таких пока нет — радар пришлёт, как появятся» (`nudge.none`). LB-APP-033:
-  `dev021OneFlowVocabulary` on uses the sheet vocabulary on every surface.
+  `dev021OneFlowVocabulary` on uses the sheet vocabulary, 📡 included, on every surface.
 - `lib/money/useMoney.ts`: `createMoney` bound to `me.currency`, the reference rate and next-intl's `t`; a new
   instance after a currency change.
 
@@ -326,15 +368,18 @@ package formats only what the client formats in legacy. Both must agree with the
 
 ## Files
 
-- `frontend/app/lib/api/{server,errors,browser,bffAllowList}.ts`; `frontend/app/app/bff/[...path]/route.ts`;
+- `frontend/app/lib/api/{server,errors,browser,bffAllowList,scenario,types}.ts`, `lib/security/sameOrigin.ts`; `frontend/app/app/bff/[...path]/route.ts`;
   changed `frontend/app/app/bff/session/route.ts` (scenario forwarding) and
   `frontend/packages/api-client/src/index.ts` with its test (empty body, list query).
-- `frontend/app/lib/actions/{run,useAction}.ts`.
+- `frontend/app/lib/actions/{run,validate,useAction}.ts`; `onForbidden()` in `lib/session/bootstrap.ts`; the
+  `homi-city` overwrite in `lib/session/SessionProvider.tsx`.
 - `frontend/app/lib/data/{useResource,sessionMaps}.ts`; changed `lib/data/sources.ts`.
-- `frontend/app/lib/reference/{server,ReferenceProvider,useReference}.ts(x)`; changed `app/[locale]/layout.tsx`.
+- `frontend/app/lib/reference/{server,empty,types,ReferenceFeed,ReferenceProvider,useReference}.ts(x)`; changed
+  `app/[locale]/layout.tsx`; `features/shell/{SearchProof,SearchProofServer}.tsx` and the feed and map pages (step 13);
+  the `Asia/Tashkent` unit-test run of `.github/workflows/frontend.yml` gains `@homi/i18n`.
 - `frontend/app/lib/search/{useSearchState,readSearchState,rules}.ts`; `frontend/app/lib/money/useMoney.ts`.
 - New package `frontend/packages/search/**` with the `lint`, `typecheck` and `test` scripts of the other
-  packages and its project in `frontend/vitest.config.ts`; `frontend/app/package.json` (workspace dependencies
+  packages and its project in `frontend/vitest.config.mts`; `frontend/app/package.json` (workspace dependencies
   `@homi/search`, `@homi/api-client`, `@homi/types`); `frontend/pnpm-lock.yaml` (workspace links only).
 - `frontend/packages/i18n/src/format/{index,number,money,date,distance,flow}.ts`, `package.json` (export),
   `messages/homi/*.json` (one key: the override of `sum.wholeCity`).
@@ -356,11 +401,11 @@ package formats only what the client formats in legacy. Both must agree with the
    re-authentication retry.
 9. `lib/actions/run.ts`, `useAction`; a test action proves cookie mode, header mode and refusal.
 10. `useResource`, `sessionMaps`, the source reporting; component tests.
-11. `lib/reference/*` and the provider in the root layout; check in the build output that the reference call is
-    cached and that no per-user call is.
+11. `lib/reference/*` and the provider in the root layout; check that the reference call is cached and that no
+    per-user call is (the build output cannot show it since ADR-0020: count the app server's API calls, AM-58).
 12. `useSearchState`, `readSearchState`, `rules.ts`, `useMoney`.
-13. Replace two placeholders with a visible proof: the feed placeholder prints the parsed filters and the count of
-    cities; a button changes a filter through `setFilters`. `e2e/data.spec.ts` runs it in both modes.
+13. Replace two placeholders with a visible proof (the feed and the map): it prints the parsed filters, the count
+    of cities and the count of `GET /listings/count`; a button changes a filter through `setFilters`. `e2e/data.spec.ts` runs it in both modes.
 14. `make ci-frontend`; update `CLAUDE.md` through the shared-file rule.
 
 ## Behaviour to reproduce
@@ -408,7 +453,8 @@ package formats only what the client formats in legacy. Both must agree with the
 **Unit, `frontend/packages/i18n/tests/format/`.**
 
 - `money`: the table of "Behaviour"; `parseInput('1.000.000')` = 1 000 000 in USD mode; `parseInput('1,2')` at
-  rate 12 650 in UZS mode = 95; `'0,001'` = 1; `'0'`, `''`, `'abc'` → `null`; presets rounded to the step without
+  rate 12 650 in UZS mode = 95; `'0,001'` = 1 in USD mode (three digits after one separator are a thousands group;
+  the UZS floor `max(1, …)` is shown by `'0,01'` at a rate of 30 000); `'0'`, `''`, `'abc'` → `null`; presets rounded to the step without
   duplicates; fixed lists without city presets; negative and `NaN` → empty string.
 - `date`: «5 мар» / «5 Mar» / «5-mar»; `tashkentDayKey('2026-11-08T19:30:00Z')` = `2026-11-09`; ago steps at 1
   min, 5 min, 30 h, 3 days, a future time; device zone vs `Asia/Tashkent` under two `TZ` values.
@@ -458,7 +504,8 @@ outside the allow-list answers 404.
 - [ ] Equal states produce byte-equal addresses.
 - [ ] Uzbek numbers use the Russian separators; English uses `en-GB`.
 - [ ] Money, date, distance and flow examples of "Behaviour to reproduce" hold in ru, uz and en.
-- [ ] A per-user call is never cached: the build output shows only the reference calls as cached.
+- [ ] A per-user call is never cached: the app server's API calls, counted while it serves pages, show only the
+      reference calls as cached (the build output lists every route as `ƒ` since ADR-0020, AM-58).
 - [ ] Reference data loads once per locale and is reused across requests.
 - [ ] `/bff` passes only the listed reads; a mutation path or an unknown path answers 404.
 - [ ] Cookie mode and header mode render the same proof screen.
@@ -473,4 +520,43 @@ outside the allow-list answers 404.
 
 ## Handoff
 
-Empty.
+- **Steps 1–14 are done** on `feat/wp-22-data-layer`, tests first. `@homi/search` (steps 2–5) and
+  `@homi/i18n/format` (step 6) were written by two subagents in parallel and spot-checked; the app side (steps 7–13)
+  in the main session. Mutation-checked: `@homi/search` 101 breaks, every non-equivalent one caught (2 equivalent:
+  `normalizeFilters` undoes both); `@homi/i18n/format` 68 breaks, 67 caught (the survivor is a type guard with no
+  runtime effect); the app modules 53 breaks, all caught after one added test. The contract field names are listed in
+  the PR description.
+- **Checks:** `make ci-frontend` → exit 0 (app 480, `@homi/search` 238 + 1 todo, `@homi/i18n` 108, `@homi/testing`
+  95, `@homi/api-client` 14); `@homi/i18n` also under `TZ=Asia/Tashkent` (108 passed); Playwright `e2e/data.spec.ts`
+  → 5 passed against the local API on stubs; `API_URL=http://127.0.0.1:9/api/v1 pnpm --filter app build` → exit 0
+  (AM-58); behind a counting proxy only `GET /reference` and `GET /cities` are cached (once per locale), `GET /me` and
+  `GET /listings/count` run on every request with a session.
+- **Corrections made in this specification (rule 6):** the empty-body fact of `@homi/api-client` (a `204` was already
+  handled; an empty `200`/`201` was not); `ApiResult` failures with `method` and `path`; `createServerApi`,
+  `publicApi` and `io()` before the request id; `lib/api/scenario.ts` and `lib/security/sameOrigin.ts`; the `414`,
+  `502` and `504` of `/bff`; `runAction.invalid`, `validate.ts` and ULIDs in either case; `refreshing`, `flags`,
+  `invalidate` re-reading and the server rule of `useResource`; `onForbidden()`; the readers of `sessionMaps`; the
+  `{ loaded, data, source? }` of the reference calls, `ReferenceFeed` and the shape of `useReference()`; the build
+  makes no reference call (AM-58); the write order of `useSearchState`; `furnished` as `1`/`0` and the `name[]` and
+  `true` of the v1 query; `sectionsFor(…, stats)`; `has_median === true`; the preset toggle of row 14; `resetAll`'s
+  city code; what `normalizeFilters` also does; the whole-city label of `filtersSummary` and `filtersAreaSummary`;
+  the formatter signatures with locale and `t`; `presets(deal, { city, reference })`; the `dev019` thresholds; the 📡
+  of `dev021`; the `'0,001'` example; `vitest.config.mts`; the files list; step 13 on the feed and the map.
+- **Decisions of the implementation** (no ADR): `ReferenceProvider` feeds a client store from inside `<Suspense>`
+  next to the page; the proof of step 13 reads `GET /listings/count` (server-side `initial` only when the keys of
+  server and client agree); the profile's city overwrites `homi-city` in `SessionProvider`; `@homi/i18n` joins the
+  `Asia/Tashkent` unit-test run of CI.
+- **Open for the reviewer:** should the collapsed title (`filtersSummary`) also read «{city} целиком» (today only
+  `filtersAreaSummary` prints it)? The uz and en wording of the whole-city label (`Butun {city}`, `All of {city}`)
+  are proposals. Input parsing is strict (`$1200`, `-5`, `1e5` → no value; legacy stripped other characters), and a
+  USD input that rounds to 0 is no value. ESLint does not lint `packages/*` (no root config; the packages' `lint`
+  scripts are placeholders) — the new code was linted with the app's config.
+- **Shared files:** `CLAUDE.md` "Layout" (the new package `@homi/search`, `@homi/i18n/format`) follows in the
+  follow-up docs PR after the merge, as for WP-20 and WP-21. `.github/workflows/frontend.yml` (the `Asia/Tashkent`
+  run gains `@homi/i18n`), `frontend/vitest.config.mts` (the `@homi/search` project), `frontend/app/package.json` and
+  `frontend/pnpm-lock.yaml` (workspace links only) are in this PR and announced there.
+- **For the next packages:** WP-23 renders `ErrorState` from `UiError` (`error.offline`, `common.loadFailed`, …),
+  writes `lib/actions/settings.ts` with `runAction` and calls `patchMe` after it; WP-24 builds `useCursorFeed` on
+  `bffFetch` / `serverApi().listings` with `toApiQuery(…, { cursor, limit })` and replaces the feed proof; WP-25
+  builds the filters UI on `sectionsFor`, the transitions and `useMoney().presets`; WP-27 replaces the map proof;
+  WP-33 adds the `setScenario` helper over the `homi_stub_scenario` cookie.

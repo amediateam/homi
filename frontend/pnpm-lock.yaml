@@ -32,12 +32,21 @@ importers:
 
   app:
     dependencies:
+      '@homi/api-client':
+        specifier: workspace:*
+        version: link:../packages/api-client
       '@homi/config':
         specifier: workspace:*
         version: link:../packages/config
       '@homi/i18n':
         specifier: workspace:*
         version: link:../packages/i18n
+      '@homi/search':
+        specifier: workspace:*
+        version: link:../packages/search
+      '@homi/types':
+        specifier: workspace:*
+        version: link:../packages/types
       '@homi/ui':
         specifier: workspace:*
         version: link:../packages/ui
@@ -214,6 +223,12 @@ importers:
       '@types/node':
         specifier: ^26
         version: 26.6.6
+      typescript:
+        specifier: ^6
+        version: 6.0.3
+
+  packages/search:
+    devDependencies:
       typescript:
         specifier: ^6
         version: 6.0.3

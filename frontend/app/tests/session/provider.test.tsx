@@ -44,6 +44,22 @@ describe("SessionProvider", () => {
     expect(document.documentElement.dataset.session).toBe("ready");
   });
 
+  it("at sign-in the profile's city overwrites the saved homi-city, without a server call (WP-22, BR-APP-010)", async () => {
+    window.localStorage.setItem("homi-city", "samarkand");
+    await mount({ mode: "cookie", me: { ...me, city: "bukhara" }, user: createHash("sha256").update("5").digest("hex") });
+
+    await vi.waitFor(() => expect(window.localStorage.getItem("homi-city")).toBe("bukhara"));
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+  });
+
+  it("a profile without a city leaves homi-city alone", async () => {
+    window.localStorage.setItem("homi-city", "samarkand");
+    await mount({ mode: "cookie", me, user: createHash("sha256").update("5").digest("hex") });
+
+    await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("ready cookie"));
+    expect(window.localStorage.getItem("homi-city")).toBe("samarkand");
+  });
+
   it("does not refresh outside cookie mode", async () => {
     await mount({ mode: "none" });
     await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("booting -"));

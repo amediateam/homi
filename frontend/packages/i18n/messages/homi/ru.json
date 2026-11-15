@@ -18,5 +18,8 @@
   },
   "fallback": {
     "other": "Другое"
+  },
+  "sum": {
+    "wholeCity": "{city} целиком"
   }
 }

@@ -18,5 +18,8 @@
   },
   "fallback": {
     "other": "Boshqa"
+  },
+  "sum": {
+    "wholeCity": "Butun {city}"
   }
 }

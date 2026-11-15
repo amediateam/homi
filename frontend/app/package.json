@@ -13,8 +13,11 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@homi/api-client": "workspace:*",
     "@homi/config": "workspace:*",
     "@homi/i18n": "workspace:*",
+    "@homi/search": "workspace:*",
+    "@homi/types": "workspace:*",
     "@homi/ui": "workspace:*",
     "leaflet": "1.9.4",
     "leaflet.markercluster": "1.5.3",

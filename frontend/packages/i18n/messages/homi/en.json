@@ -18,5 +18,8 @@
   },
   "fallback": {
     "other": "Other"
+  },
+  "sum": {
+    "wholeCity": "All of {city}"
   }
 }

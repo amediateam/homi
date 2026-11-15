@@ -57,6 +57,7 @@ export default defineConfig({
       app("arm"),
       workspacePackage("ui", "jsdom"),
       workspacePackage("i18n", "node"),
+      workspacePackage("search", "node"),
       workspacePackage("testing", "jsdom"),
       workspacePackage("config", "node"),
       workspacePackage("types", "node"),

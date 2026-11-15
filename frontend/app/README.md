@@ -11,6 +11,7 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `app/[locale]/` | The route tree of `25` §3.2. `layout.tsx` is the root layout; `(main)/` holds the screens with the `@sheet` and `@overlay` slots; `welcome/`, `no-access/`, `outside/` are the gates. Route files only read `params` and mount a component from `features/` |
 | `app/[locale]/(main)/@sheet/(.)…`, `@overlay/(.)listing/…` | Sheets and the listing layer intercepted from a soft navigation; a hard load renders the page of the same name. Each slot has `default.tsx`, `page.tsx` and `[...rest]` returning `null` |
 | `app/bff/session/route.ts` | The session exchange (`25` §3.4): `POST` trades the launch data for the `homi_session` cookie, `GET` reads `/me` with the cookie or a bearer header |
+| `app/bff/[...path]/route.ts` | The read pass-through for header mode (`25` §3.5): only the reads of `lib/api/bffAllowList.ts`, same-origin, never cached |
 | `boot/` | `stubs.js` and `boot.js` (ES5, inlined by the root layout from the committed `inline.generated.ts`; `build.mjs` writes it before `dev` and `build`): theme and lite class before paint, the engine test, the boot watchdog, «Обновите Telegram», the SDK tag |
 | `dev/` | The development Telegram emulator; `build.mjs` turns it into `public/__dev/telegram-emulator.js` (git-ignored) before `next dev` and deletes it before a build |
 | `features/` | One folder per feature; `features/shell/` has the placeholders, `BootGuard`, `TelegramButtons`, `LaunchRedirector`, `FragmentGuard`, `NavigationBinder`, the demo marker |
@@ -24,7 +25,12 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `lib/brand/` | HOMI's name, bot, links and artwork paths; the only place a brand word may appear |
 | `lib/flags.ts` | `devFlags`: the 17 `DEV` switches, all off |
 | `lib/analytics/events.ts`, `lib/errors/report.ts` | `track` and `reportError` facades (no-ops until WP-32) |
-| `lib/data/sources.ts` | Which drivers answered the current screen; drives the "demo data" marker |
+| `lib/api/` | `server.ts` (server-only: one typed function per `/api/v1` method, `serverApi()` with the session, `publicApi()` without), `browser.ts` (`bffFetch`), `errors.ts` (`UiError`, the mapping table), `scenario.ts` (stub scenarios outside production), `bffAllowList.ts` |
+| `lib/actions/` | `runAction` (the one shape of a Server Action), `validate.ts`, `useAction`; the actions themselves arrive with the packages that need them (WP-22 "Server Actions") |
+| `lib/data/` | `useResource` (the small client data hook), `sessionMaps` (favourites, seen and hidden of this launch), `sources.ts` (which drivers answered the current screen; drives the "demo data" marker) |
+| `lib/reference/` | The cached reference data (`getReference`, `getCities`), `ReferenceFeed` → `ReferenceProvider`, `useReference()`, `useCityStats()` |
+| `lib/search/` | `useSearchState`, `readSearchState`, `searchStateFromHref`, `searchRules` over `@homi/search` |
+| `lib/money/useMoney.ts` | `createMoney` of `@homi/i18n/format` bound to the profile's currency and the reference rate |
 | `proxy.ts` | Locale redirect (cookie `NEXT_LOCALE`, else `ru`), then the CSP with a fresh nonce and the security headers |
 | `styles/app.css` | Tailwind and `@homi/ui/styles.css` (tokens, themes, lite, motion) |
 | `public/brand/` | Placeholder artwork of the legacy sizes; the final files replace them without a code change |
@@ -43,6 +49,18 @@ layer, and the runtime rules — a missing key renders its path and is reported 
   so Server Components render with the session; header mode keeps the token in memory only. `html[data-session]`
   mirrors the status (`booting`, `ready`, `outside`, `denied`, `expired`).
 - The app server calls the API at `API_URL` (server-only), else `NEXT_PUBLIC_API_URL`.
+
+## Data
+
+- A screen reads on the server with `serverApi()` inside `<Suspense>` and hands the answer to the client as
+  `initial` of `useResource`; without a cookie (header mode) the same read goes through `bffFetch` and `/bff/*`.
+  Every call returns `ApiResult` and never throws for an answer; screens decide by `UiError`.
+- Mutations are Server Actions built on `runAction`, called through `useAction` (the header-mode token travels in
+  the action's body). Nothing per-user is cached; only `lib/reference` is (`'use cache'`, ten minutes, per locale).
+- The search state lives in the address: `useSearchState()` reads and writes the 25 keys and `sort` of
+  `@homi/search`, and never touches a reserved parameter.
+- Outside production the cookie `homi_stub_scenario` becomes the API's `X-Stub-Scenario`, so a test reaches the
+  error and empty states of a server-rendered page.
 
 ## Commands
 
