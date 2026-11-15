@@ -60,8 +60,8 @@ importers:
         specifier: 4.5.0
         version: 4.5.0
       posthog-js:
-        specifier: 1.434.15
-        version: 1.434.15(@types/react@19.3.0)(react@19.3.1)
+        specifier: 1.447.15
+        version: 1.447.15(@types/react@19.3.0)(react@19.3.1)
       protomaps-leaflet:
         specifier: 5.1.0
         version: 5.1.0
@@ -881,14 +881,14 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@posthog/browser-common@0.9.12':
-    resolution: {integrity: sha512-pKYLYgV0o4UK5PAQ3OTlZpQnKvcBpG+UOqWYa+W41Omec8TlI6FXzGMHdYMTmaymxii0vi9R4jLVi7JQSr4vnQ==}
+  '@posthog/browser-common@0.10.8':
+    resolution: {integrity: sha512-TQmqLVNFoKaL4dDV5Q8AScX2dIwdq8By2cj2KU1hMGe88tn7Usbf3U/hv5okhobEojntqJeslPIRBrG79Su+vg==}
 
-  '@posthog/core@1.67.3':
-    resolution: {integrity: sha512-BAVJB+ADAjFNBVZKCRbMi5+WMJaSFHHIEId0/ebvAwhOVIMmK4mVrktGGjx9zJBHLe82JdQVVRhpaOwLgoBMgA==}
+  '@posthog/core@1.67.2':
+    resolution: {integrity: sha512-FcDdAm3L2UKxA2NWCxwG8KKgZ4QjGBl7f9WASLlCVPeKgXI0FeguSq81x0f2htEB37itKbUwLkNFgA3FV4b7iQ==}
 
-  '@posthog/types@1.425.0':
-    resolution: {integrity: sha512-VaAlT5cl2wQ8mRkC3agp32YqI1HCZyeDE9qc5cziXgtbqK8kGeodhqZpJgSIPz0wAl3yRtKN4yOL+d7wxDRPww==}
+  '@posthog/types@1.424.1':
+    resolution: {integrity: sha512-p82S3QPoyewUdzLVNvGsbowUe8qds15ij/7lKXav17vccuR2bioCVaizNZw+u9WgsaY1DmEycsD1dNS5nlqjLA==}
 
   '@protomaps/basemaps@5.7.2':
     resolution: {integrity: sha512-K1Yk6bWdULulYg+R2QRVXx4NzJZan5YQhpejEG0c1/sXruJrfPIPZuakpf3jwAgVmjIRVQwAv+yRafDeN0aaUQ==}
@@ -2984,8 +2984,8 @@ packages:
     resolution: {integrity: sha512-LJlKCCAUFKOuZxipUdYw1NzIITEsPcgyOG9LkvRJvuKj/bRzbuRY0ARXvL0pWGpsZvn8jku+LMep2eU0seHp8g==}
     engines: {node: ^10 || ^12 || >=14}
 
-  posthog-js@1.434.15:
-    resolution: {integrity: sha512-ZfBkNrQiFr1Q43G3dR0USzTRdfx+6gKPebyoWDmKnLUhG3yRgYjLH914J6ifEDRnH+RaGOx7rsWKxKcvaSJXHg==}
+  posthog-js@1.447.15:
+    resolution: {integrity: sha512-pgSLqlDqklvHrr0qVfvn+7LuRznLJ3pzv1ZIL0UmAUKYw3d/KMrG7PFgPO31U2QxxeT0HEIMAejRzKi5TSzkrA==}
     peerDependencies:
       '@types/react': '>=16.8.0'
       react: '>=16.8.0'
@@ -4088,19 +4088,20 @@ snapshots:
     dependencies:
       playwright: 1.65.1
 
-  '@posthog/browser-common@0.9.12':
+  '@posthog/browser-common@0.10.8':
     dependencies:
-      '@posthog/core': 1.67.3
-      '@posthog/types': 1.425.0
+      '@posthog/core': 1.67.2
+      '@posthog/types': 1.424.1
+      dompurify: 3.4.17
       preact: 10.29.8
     transitivePeerDependencies:
       - preact-render-to-string
 
-  '@posthog/core@1.67.3':
+  '@posthog/core@1.67.2':
     dependencies:
-      '@posthog/types': 1.425.0
+      '@posthog/types': 1.424.1
 
-  '@posthog/types@1.425.0': {}
+  '@posthog/types@1.424.1': {}
 
   '@protomaps/basemaps@5.7.2': {}
 
@@ -6235,11 +6236,11 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  posthog-js@1.434.15(@types/react@19.3.0)(react@19.3.1):
+  posthog-js@1.447.15(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      '@posthog/browser-common': 0.9.12
-      '@posthog/core': 1.67.3
-      '@posthog/types': 1.425.0
+      '@posthog/browser-common': 0.10.8
+      '@posthog/core': 1.67.2
+      '@posthog/types': 1.424.1
       core-js: 3.51.0
       dompurify: 3.4.17
       fflate: 0.4.9
