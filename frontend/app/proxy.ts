@@ -2,6 +2,7 @@ import { defaultLocale, isLocale } from "@homi/config";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { LOCALE_COOKIE } from "@/i18n/routing";
+import { cspFromEnv, PERMISSIONS_POLICY } from "@/lib/security/csp";
 
 /**
  * Locale step of the proxy pipeline (WP-20). A path without a locale prefix is redirected to the same path under the
@@ -20,9 +21,33 @@ export function withLocale(request: NextRequest): NextResponse {
   return NextResponse.redirect(url);
 }
 
-/** The request pipeline; WP-21 adds the CSP nonce and the security headers to the same response. */
+function securityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Permissions-Policy", PERMISSIONS_POLICY);
+  // No X-Frame-Options: `frame-ancestors` decides framing, and Telegram Web shows the app in a frame (Q-SEC-012).
+  return response;
+}
+
+/**
+ * The request pipeline (WP-20, WP-21): the locale redirect, then for a document a fresh nonce in the CSP (ADR-0020).
+ * Next.js reads the nonce from the request's `Content-Security-Policy` header and adds it to its own scripts; the
+ * root layout reads `x-nonce` for the boot scripts. Documents are never stored (`Cache-Control: no-store`).
+ */
 export function proxy(request: NextRequest): NextResponse {
-  return withLocale(request);
+  const redirected = withLocale(request);
+  if (redirected.headers.has("location")) {
+    return securityHeaders(redirected);
+  }
+  const nonce = btoa(crypto.randomUUID());
+  const { header, reportOnly } = cspFromEnv(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("content-security-policy", header);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set(reportOnly ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy", header);
+  response.headers.set("Cache-Control", "no-store");
+  return securityHeaders(response);
 }
 
 export const config = {
