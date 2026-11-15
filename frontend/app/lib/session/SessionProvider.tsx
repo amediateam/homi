@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 
 import { useRouter } from "@/i18n/navigation";
+import { storageSet } from "@/lib/storage";
 
 import { getSession, patchMe, refresh, retry, startSession, subscribeSession, type SessionState } from "./bootstrap";
 
@@ -40,6 +41,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       router.refresh();
     }
   }, [state.status, state.mode, router]);
+
+  // BR-APP-010 (WP-22): at sign-in the profile's city overwrites the saved one, without a server call.
+  const profileCity = state.me?.city ?? null;
+  useEffect(() => {
+    if (profileCity !== null) {
+      storageSet("homi-city", profileCity);
+    }
+  }, [profileCity]);
 
   const session = useMemo<Session>(() => ({ ...state, ...actions }), [state]);
   return <SessionContext value={session}>{children}</SessionContext>;

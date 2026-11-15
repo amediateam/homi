@@ -1,0 +1,114 @@
+import { switchDeal } from "@homi/search";
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { devFlags } from "@/lib/flags";
+
+const address = vi.hoisted(() => ({ pathname: "/", search: "" }));
+const replace = vi.hoisted(() => vi.fn());
+const session = vi.hoisted(() => ({ me: null as { city: string } | null }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(address.search) }));
+vi.mock("@/i18n/navigation", () => ({ usePathname: () => address.pathname }));
+vi.mock("@/lib/navigation/nav", () => ({ nav: { replace: (href: string) => replace(href) } }));
+vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: session.me }) }));
+
+const { useSearchState } = await import("@/lib/search/useSearchState");
+const { readSearchState, searchStateFromHref } = await import("@/lib/search/readSearchState");
+const { searchRules } = await import("@/lib/search/rules");
+
+beforeEach(() => {
+  address.pathname = "/";
+  address.search = "";
+  session.me = null;
+  replace.mockReset();
+  window.localStorage.clear();
+});
+
+afterEach(() => cleanup());
+
+describe("useSearchState (WP-22)", () => {
+  it("BR-APP-010: the city of an address without one is the profile's, else the saved one, else tashkent", () => {
+    expect(renderHook(() => useSearchState()).result.current.filters.city).toBe("tashkent");
+
+    window.localStorage.setItem("homi-city", "samarkand");
+    expect(renderHook(() => useSearchState()).result.current.filters.city).toBe("samarkand");
+
+    session.me = { city: "bukhara" };
+    expect(renderHook(() => useSearchState()).result.current.filters.city).toBe("bukhara");
+
+    address.search = "city=fergana";
+    expect(renderHook(() => useSearchState()).result.current.filters.city).toBe("fergana");
+  });
+
+  it("setFilters writes the state with replace on the current root and keeps a reserved parameter", () => {
+    address.pathname = "/map";
+    address.search = "city=tashkent&focus=pets&pin=5";
+    const { result } = renderHook(() => useSearchState());
+
+    act(() => result.current.setFilters(switchDeal(result.current.filters, "sale")));
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    const [href] = replace.mock.calls[0] as [string];
+    const url = new URL(href, "https://app.test");
+    expect(url.pathname).toBe("/map");
+    expect(url.searchParams.get("deal")).toBe("sale");
+    expect(url.searchParams.get("city")).toBe("tashkent");
+    expect(url.searchParams.get("focus")).toBe("pets");
+    expect(url.searchParams.get("pin")).toBe("5");
+  });
+
+  it("setSort('new') removes the parameter; another sort writes it", () => {
+    address.search = "city=tashkent&sort=cheap&from=map";
+    const { result } = renderHook(() => useSearchState());
+    expect(result.current.sort).toBe("cheap");
+
+    act(() => result.current.setSort("new"));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&from=map");
+
+    act(() => result.current.setSort("expensive"));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&sort=expensive&from=map");
+  });
+
+  it("equal states give equal addresses, whatever the order of the current one", () => {
+    address.search = "rooms_min=2&city=tashkent&types=house&types=apartment";
+    const first = renderHook(() => useSearchState()).result.current;
+    address.search = "types=apartment&city=tashkent&types=house&rooms_min=2";
+    const second = renderHook(() => useSearchState()).result.current;
+
+    act(() => first.setFilters(first.filters));
+    act(() => second.setFilters(second.filters));
+
+    expect(replace.mock.calls[0][0]).toBe(replace.mock.calls[1][0]);
+  });
+
+  it("href(builder) builds another address with the current state", () => {
+    address.search = "city=tashkent&deal=sale&from=map";
+    const { result } = renderHook(() => useSearchState());
+
+    expect(result.current.href((params) => `/map?${params.toString()}`)).toBe("/map?city=tashkent&deal=sale");
+  });
+});
+
+describe("readSearchState and searchStateFromHref (WP-22)", () => {
+  it("the server reads the same state, with the profile's city as the fallback", () => {
+    expect(readSearchState({ deal: "sale", focus: "x" }, { city: "bukhara" })).toMatchObject({ filters: { deal: "sale", city: "bukhara" }, sort: "new" });
+    expect(readSearchState({}, null).filters.city).toBe("tashkent");
+  });
+
+  it("a remembered address gives its state", () => {
+    expect(searchStateFromHref("/map?city=fergana&sort=cheap&draw=1")).toMatchObject({ filters: { city: "fergana" }, sort: "cheap" });
+  });
+});
+
+describe("searchRules (WP-22)", () => {
+  it("is the one place where app flags become the rules of @homi/search", () => {
+    expect(searchRules(devFlags)).toEqual({
+      dev017TenantPetsDailyRule: false,
+      dev018ResetKeepsDaily: false,
+      dev025ValidateRanges: false,
+      dev052UnifiedBelowMedianRule: false,
+      dev005RadarDropsPostedDays: false,
+    });
+    expect(searchRules({ ...devFlags, dev018ResetKeepsDaily: true }).dev018ResetKeepsDaily).toBe(true);
+  });
+});
