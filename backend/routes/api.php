@@ -3,6 +3,14 @@
 use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\CityController;
 use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\Listings\ListingContactController;
+use App\Http\Controllers\Api\V1\Listings\ListingController;
+use App\Http\Controllers\Api\V1\Listings\ListingCountController;
+use App\Http\Controllers\Api\V1\Listings\ListingFlowController;
+use App\Http\Controllers\Api\V1\Listings\ListingMapController;
+use App\Http\Controllers\Api\V1\Listings\ListingNewController;
+use App\Http\Controllers\Api\V1\Listings\ListingShareController;
+use App\Http\Controllers\Api\V1\Listings\ListingTranslationController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
@@ -32,6 +40,19 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
         Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
         Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
         Route::post('events', EventController::class)->middleware('ability:app:write')->name('events.store');
+
+        // Listings (WP-12): the static paths come before `listings/{number}`.
+        Route::prefix('listings')->name('listings.')->middleware('ability:app:read')->group(function (): void {
+            Route::get('/', [ListingController::class, 'index'])->name('index');
+            Route::get('count', ListingCountController::class)->name('count');
+            Route::get('new', ListingNewController::class)->name('new');
+            Route::get('flow', ListingFlowController::class)->name('flow');
+            Route::get('map', ListingMapController::class)->name('map');
+            Route::get('{number}', [ListingController::class, 'show'])->whereNumber('number')->name('show');
+            Route::post('{number}/contact', ListingContactController::class)->whereNumber('number')->name('contact');
+            Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->name('translation');
+            Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->name('share');
+        });
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
