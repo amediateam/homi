@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | IN_PROGRESS (`feat/wp-11-contract-session-reference`) |
+| Status | REVIEW (#45) |
 | Depends on | WP-10 |
 | Size | about 2 000 changed lines without generated files and fixtures, M |
 | Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `02` BR-API-123; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
@@ -342,7 +342,21 @@ renderer of WP-10 answers as `413 payload_too_large`.
 
 ## Handoff
 
-Empty.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-11-contract-session-reference`, PR #45, ready for
+review.
+
+- **Done:** steps 1–9. Each contract test was seen failing before its code.
+  - `make ci-backend` → exit 0 (Pest 343 passed, 4 skipped); `make ci-frontend` → exit 0; `make test-pgsql` → 4 passed.
+  - The env-key PR for `backend/.env.example` is opened next to #45.
+- **Decisions taken here:** each is marked *corrected while executing* or *added while executing* in the sections
+  above.
+- **Next:**
+  1. review and merge;
+  2. both developers add `RADAR_CREATION_ENABLED=true` to their local environment file;
+  3. the production track sets `TELEGRAM_SUPPORT_USERNAME`, leaves `RADAR_CREATION_ENABLED` unset, deploys, and
+     checks on staging that `GET /reference` answers without a token with `radars_enabled: false` and that a sign-in
+     token opens `GET /me`;
+  4. set the status to `DONE`.
 
 ### Notes for the generated types
 
