@@ -8,10 +8,13 @@ import { Suspense } from "react";
 import { BOOT_SCRIPT, BOOT_STUBS } from "@/boot/inline.generated";
 import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
+import { FragmentGuard } from "@/features/shell/FragmentGuard";
+import { LaunchRedirector } from "@/features/shell/LaunchRedirector";
 import { NavigationBinder } from "@/features/shell/NavigationBinder";
 import { TelegramButtons } from "@/features/shell/TelegramButtons";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
+import { LocaleGuard } from "@/lib/session/LocaleGuard";
 import { SessionProvider } from "@/lib/session/SessionProvider";
 import { brand } from "@/lib/brand";
 import "@/styles/app.css";
@@ -74,6 +77,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             <NavigationBinder />
             <Suspense fallback={null}>
               <TelegramButtons />
+            </Suspense>
+            <LocaleGuard />
+            <FragmentGuard />
+            <Suspense fallback={null}>
+              <LaunchRedirector />
             </Suspense>
             <BootGuard />
           </SessionProvider>

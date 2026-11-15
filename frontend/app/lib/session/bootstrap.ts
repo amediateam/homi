@@ -28,6 +28,11 @@ export type SessionError = "offline" | "timeout" | "server" | "rate_limited";
 
 export interface SessionState {
   status: SessionStatus;
+  /**
+   * The SDK wait, the DeviceStorage restore and the fragment scrub are done. Navigations wait for it: the scrub's
+   * `history.replaceState` would undo one that is still pending.
+   */
+  prepared: boolean;
   mode: SessionMode | null;
   me: Me | null;
   reason: AccessReason | null;
@@ -38,7 +43,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** `v` of `app_launch`: the app build; empty until WP-32 sets the build version. */
 const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
-const initial: SessionState = { status: "booting", mode: null, me: null, reason: null, error: null };
+const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null };
 let state: SessionState = initial;
 const listeners = new Set<() => void>();
 
@@ -224,14 +229,14 @@ const jsStart = typeof performance === "undefined" ? 0 : Math.round(performance.
 async function run(): Promise<void> {
   const outcome = await prepare();
   if (!tg.hasInitData()) {
-    update({ status: "outside" });
+    update({ status: "outside", prepared: true });
     return;
   }
   if (launch === null) {
     launch = parseLaunch(tg.initData(), typeof window === "undefined" ? "" : window.location.search);
     track("app_launch", { entry: launch.entry, ms: Math.round(performance.now()), v: BUILD_VERSION, sdk: outcome, js: String(jsStart), platform: tg.platform() });
   }
-  update({ status: "booting", error: null });
+  update({ status: "booting", prepared: true, error: null });
 
   const current = await readSession();
   if (current.kind === "session" && current.mode === "cookie" && (await belongsToLaunchUser(current.user))) {
