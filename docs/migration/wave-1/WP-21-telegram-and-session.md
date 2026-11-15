@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | IN_PROGRESS (feat/wp-21-telegram-and-session) |
 | Depends on | WP-20 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1 – §3.4, §3.10; `03` §1.2 – §1.7, §3.2, SCR-001, SCR-044; `05` (all of TMA-001 … TMA-045); earlier tasks KV-FE-024 … KV-FE-033, KV-FE-037, KV-FE-038, KV-FE-040 (behaviour, constants, edge cases and test ideas only — not their layer stack, `Authorization: tma` transport, `kv-*` keys or file layout) |
@@ -555,4 +555,8 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
 
 ## Handoff
 
-Empty.
+- **Step 1 (2026-11-15): option (a)** — nonce and `'strict-dynamic'`, every document rendered at request time: the
+  root layout reads `x-nonce` with `headers()` outside `<Suspense>` and exports `instant = false`. Measured on a
+  production build: with the static shell no script tag carries the nonce (23 of 23 blocked); with the request-time
+  layout all 31 carry it and nothing is blocked. Recorded in ADR-0020 (amends ADR-0018). Side effect: an unknown
+  address answers `200` with the not-found screen and `noindex` (AM-57).
