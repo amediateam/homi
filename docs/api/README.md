@@ -31,6 +31,9 @@ only on `422` and maps each field to its messages.
 | ------ | ------ | ---- |
 | 422 | `validation_failed` | A request field is invalid (`errors` lists them) |
 | 401 | `unauthenticated` | No valid bearer token (ADR-0003) |
+| 401 | `invalid_init_data` | Sign-in: the Telegram launch data is malformed or its signature is wrong |
+| 401 | `auth_expired` | Sign-in: the launch data is too old; the client asks to reopen the app |
+| 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked` or `join` (show an unknown or missing reason as `private`) |
 | 403 | `forbidden` | Not allowed, or the token lacks the ability |
 | 404 | `not_found` | Unknown route, or a resource or listing that does not exist |
 | 413 | `payload_too_large` | The request body is over the size cap |
@@ -86,6 +89,10 @@ Each method lists its scenarios in its specification. Every stub method knows th
 | `unauthenticated` | `401 unauthenticated` |
 | `forbidden` | `403 forbidden` |
 
+Every method that needs a session also knows `access_private`, `access_invite`, `access_full`, `access_blocked` and
+`access_join`, which answer `403 access_denied` with that `reason`. Sign-in knows `auth_expired` and
+`invalid_init_data` as well.
+
 Outside production the Mini App forwards the cookie `homi_stub_scenario` as this header (WP-22). The fixtures live in
 `backend/resources/fixtures/v1/<area>/<name>.json`, in the shape of the data objects and sanitised: no real phones,
 names, addresses or channel names. Frontend tests read the same files through `fixture("<area>/<name>")` of
@@ -93,8 +100,15 @@ names, addresses or channel names. Frontend tests read the same files through `f
 
 ## Locale and currency
 
-The locale comes from `Accept-Language`: the first supported tag (`ru`, `uz`, `en`), else `ru`. The currency comes
-from the user's settings, and until they exist (WP-40) it is `USD`.
+The locale comes from `Accept-Language`: the first supported tag (`ru`, `uz`, `en`; `uz-Latn` and `uz_Latn` are read
+as `uz`), else `ru`. Every answer says it in `Content-Language`. `uz` is the only Uzbek code of this API. The currency
+comes from the user's settings, and until they exist (WP-40) it is `USD`.
+
+## Session
+
+`POST /auth/telegram` exchanges the raw `initData` of the Mini App launch for a bearer token (abilities `app:read`
+and `app:write`, 24 hours) and the object of `GET /me`. Send the token as `Authorization: Bearer <token>`.
+`GET /reference` and `GET /cities` need no token, so the no-access screen works without a session.
 
 ## Keeping the contract current
 

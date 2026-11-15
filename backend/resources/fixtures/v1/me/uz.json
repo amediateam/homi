@@ -1,0 +1,15 @@
+{
+    "locale": "uz",
+    "locale_chosen": true,
+    "currency": "UZS",
+    "theme": "auto",
+    "city": "tashkent",
+    "city_chosen": true,
+    "team": false,
+    "analytics": {
+        "distinct_id": "5f0c2b1e-7a36-4c59-9d4e-2f1a6b7c8d90",
+        "autocapture": true,
+        "replay": false,
+        "replay_rate": 0
+    }
+}

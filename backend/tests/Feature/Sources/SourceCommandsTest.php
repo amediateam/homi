@@ -113,7 +113,11 @@ it('lists every feature with its capability, default, rule and bound drivers', f
     $this->artisan('sources:list')
         ->expectsTable(
             ['Feature', 'Capability', 'Default here', 'Rule', 'Bound drivers'],
-            [[FakeCapabilityController::FEATURE, 'fake', 'stub', '{"everyone":"legacy"}', 'stub, legacy']],
+            [
+                ['source.reference', 'reference', 'stub', '(none)', 'stub'],
+                ['source.cities', 'reference', 'stub', '(none)', 'stub'],
+                [FakeCapabilityController::FEATURE, 'fake', 'stub', '{"everyone":"legacy"}', 'stub, legacy'],
+            ],
         )
         ->assertSuccessful();
 });

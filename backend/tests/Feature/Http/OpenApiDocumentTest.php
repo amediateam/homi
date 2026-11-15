@@ -82,3 +82,14 @@ it('documents every error answer with the shared ApiError schema, which has code
 it('names a relative server, so the export does not depend on APP_URL', function (): void {
     expect(exportedOpenApi()['servers'])->toBe([['url' => '/api/v1']]);
 });
+
+it('documents the seven methods of the session and reference contract (WP-11)', function (): void {
+    $paths = exportedOpenApi()['paths'];
+
+    expect($paths['/auth/telegram'])->toHaveKey('post')
+        ->and($paths['/me'])->toHaveKey('get')
+        ->and($paths['/settings'])->toHaveKeys(['get', 'patch'])
+        ->and($paths['/reference'])->toHaveKey('get')
+        ->and($paths['/cities'])->toHaveKey('get')
+        ->and($paths['/events'])->toHaveKey('post');
+});

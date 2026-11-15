@@ -11,6 +11,143 @@
         }
     ],
     "paths": {
+        "/cities": {
+            "get": {
+                "operationId": "v1.cities.index",
+                "tags": [
+                    "City"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CityStatsResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events": {
+            "post": {
+                "operationId": "v1.events.store",
+                "tags": [
+                    "Event"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/StoreEventRequest"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "props": {
+                                                "type": "object",
+                                                "additionalProperties": {}
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/me": {
+            "get": {
+                "operationId": "v1.me.show",
+                "tags": [
+                    "Me"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MeResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/media/{media}": {
             "get": {
                 "operationId": "v1.media.show",
@@ -290,6 +427,216 @@
                     }
                 }
             }
+        },
+        "/reference": {
+            "get": {
+                "operationId": "v1.reference.show",
+                "tags": [
+                    "Reference"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReferenceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/settings": {
+            "get": {
+                "operationId": "v1.settings.show",
+                "tags": [
+                    "Settings"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SettingsResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.settings.update",
+                "summary": "The stub validates and answers the fixture with the sent keys overlaid; nothing is stored",
+                "tags": [
+                    "Settings"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSettingsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SettingsResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/auth/telegram": {
+            "post": {
+                "operationId": "v1.auth.telegram",
+                "tags": [
+                    "TelegramAuth"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TelegramSignInRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SessionResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -328,6 +675,224 @@
                     "code"
                 ],
                 "title": "ApiError"
+            },
+            "CityResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "center": {
+                        "type": "object",
+                        "properties": {
+                            "lat": {
+                                "type": "number"
+                            },
+                            "lon": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "lat",
+                            "lon"
+                        ]
+                    },
+                    "zoom": {
+                        "type": "integer"
+                    },
+                    "is_region": {
+                        "type": "boolean"
+                    },
+                    "has_metro": {
+                        "type": "boolean"
+                    },
+                    "has_median": {
+                        "type": "boolean"
+                    },
+                    "districts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedCodeResource"
+                        }
+                    },
+                    "zones": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedCodeResource"
+                        }
+                    }
+                },
+                "required": [
+                    "code",
+                    "name",
+                    "center",
+                    "zoom",
+                    "is_region",
+                    "has_metro",
+                    "has_median",
+                    "districts",
+                    "zones"
+                ],
+                "title": "CityResource"
+            },
+            "CityStatsResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "properties": {
+                            "rent_long": {
+                                "type": "integer"
+                            },
+                            "rent_daily": {
+                                "type": "integer"
+                            },
+                            "sale": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "rent_long",
+                            "rent_daily",
+                            "sale"
+                        ]
+                    },
+                    "price_presets": {
+                        "type": "object",
+                        "properties": {
+                            "rent_long": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "rent_daily": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "sale": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "typical_price": {
+                        "type": "object",
+                        "properties": {
+                            "rent_long": {
+                                "type": "integer"
+                            },
+                            "rent_daily": {
+                                "type": "integer"
+                            },
+                            "sale": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "code",
+                    "counts",
+                    "price_presets",
+                    "typical_price"
+                ],
+                "title": "CityStatsResource"
+            },
+            "Currency": {
+                "type": "string",
+                "description": "The display currencies of the product. Prices in the reference data are whole USD whatever the user's currency.\n",
+                "enum": [
+                    "USD",
+                    "UZS"
+                ],
+                "title": "Currency"
+            },
+            "Locale": {
+                "type": "string",
+                "description": "The languages of `/api/v1` (CF-006: `uz` is the only Uzbek code on this surface; `uz_Latn` lives only inside the legacy driver).\n",
+                "enum": [
+                    "ru",
+                    "uz",
+                    "en"
+                ],
+                "title": "Locale"
+            },
+            "MeResource": {
+                "type": "object",
+                "properties": {
+                    "locale": {
+                        "$ref": "#/components/schemas/Locale"
+                    },
+                    "locale_chosen": {
+                        "type": "boolean"
+                    },
+                    "currency": {
+                        "$ref": "#/components/schemas/Currency"
+                    },
+                    "theme": {
+                        "$ref": "#/components/schemas/Theme"
+                    },
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "city_chosen": {
+                        "type": "boolean"
+                    },
+                    "team": {
+                        "type": "boolean"
+                    },
+                    "analytics": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "distinct_id": {
+                                "type": "string"
+                            },
+                            "autocapture": {
+                                "type": "boolean"
+                            },
+                            "replay": {
+                                "type": "boolean"
+                            },
+                            "replay_rate": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "distinct_id",
+                            "autocapture",
+                            "replay",
+                            "replay_rate"
+                        ]
+                    }
+                },
+                "required": [
+                    "locale",
+                    "locale_chosen",
+                    "currency",
+                    "theme",
+                    "city",
+                    "city_chosen",
+                    "team",
+                    "analytics"
+                ],
+                "title": "MeResource"
             },
             "MediaFileResource": {
                 "type": "object",
@@ -419,6 +984,22 @@
                 ],
                 "title": "MediaVisibility"
             },
+            "NamedCodeResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
+                ],
+                "title": "NamedCodeResource"
+            },
             "PresignRequest": {
                 "type": "object",
                 "properties": {
@@ -448,6 +1029,165 @@
                 ],
                 "title": "PresignRequest"
             },
+            "ReferenceResource": {
+                "type": "object",
+                "properties": {
+                    "bot": {
+                        "type": "object",
+                        "properties": {
+                            "username": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "support_username": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "username",
+                            "support_username"
+                        ]
+                    },
+                    "limits": {
+                        "type": "object",
+                        "properties": {
+                            "radars": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "radars"
+                        ]
+                    },
+                    "radars_enabled": {
+                        "type": "boolean"
+                    },
+                    "rates": {
+                        "type": "object",
+                        "properties": {
+                            "usd_uzs": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "usd_uzs"
+                        ]
+                    },
+                    "map": {
+                        "type": "object",
+                        "properties": {
+                            "tiles_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "tiles_url"
+                        ]
+                    },
+                    "features": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "locales": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedCodeResource"
+                        }
+                    },
+                    "cities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CityResource"
+                        }
+                    },
+                    "renovations": {
+                        "type": "object",
+                        "properties": {
+                            "rent_long": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
+                            },
+                            "rent_daily": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
+                            },
+                            "sale": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "rent_long",
+                            "rent_daily",
+                            "sale"
+                        ]
+                    },
+                    "appliances": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NamedCodeResource"
+                        }
+                    },
+                    "price_presets": {
+                        "type": "object",
+                        "properties": {
+                            "rent_long": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "rent_daily": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "sale": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
+                        "required": [
+                            "rent_long",
+                            "rent_daily",
+                            "sale"
+                        ]
+                    }
+                },
+                "required": [
+                    "bot",
+                    "limits",
+                    "radars_enabled",
+                    "rates",
+                    "map",
+                    "features",
+                    "locales",
+                    "cities",
+                    "renovations",
+                    "appliances",
+                    "price_presets"
+                ],
+                "title": "ReferenceResource"
+            },
             "RegisterUploadRequest": {
                 "type": "object",
                 "properties": {
@@ -466,6 +1206,161 @@
                 ],
                 "title": "RegisterUploadRequest"
             },
+            "SessionResource": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "token_type": {
+                        "type": "string",
+                        "const": "Bearer"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/MeResource"
+                    }
+                },
+                "required": [
+                    "token",
+                    "token_type",
+                    "expires_at",
+                    "user"
+                ],
+                "title": "SessionResource"
+            },
+            "SettingsResource": {
+                "type": "object",
+                "properties": {
+                    "locale": {
+                        "$ref": "#/components/schemas/Locale"
+                    },
+                    "currency": {
+                        "$ref": "#/components/schemas/Currency"
+                    },
+                    "theme": {
+                        "$ref": "#/components/schemas/Theme"
+                    },
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quiet_hours": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "from": {
+                                "type": "integer"
+                            },
+                            "to": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "from",
+                            "to"
+                        ]
+                    },
+                    "digest_hours": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "options": {
+                        "type": "object",
+                        "properties": {
+                            "locales": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
+                            },
+                            "currencies": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
+                            },
+                            "quiet_hours": {
+                                "type": "array",
+                                "items": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "from": {
+                                            "type": "integer"
+                                        },
+                                        "to": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "from",
+                                        "to"
+                                    ]
+                                }
+                            },
+                            "digest_hours": {
+                                "type": "array",
+                                "items": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        },
+                        "required": [
+                            "locales",
+                            "currencies",
+                            "quiet_hours",
+                            "digest_hours"
+                        ]
+                    }
+                },
+                "required": [
+                    "locale",
+                    "currency",
+                    "theme",
+                    "city",
+                    "quiet_hours",
+                    "digest_hours",
+                    "options"
+                ],
+                "title": "SettingsResource"
+            },
+            "SourceDriver": {
+                "type": "string",
+                "description": "Which implementation of a capability answered (ADR-0017): fixtures, the legacy service, or HOMI's own code. Written to every `/api/v1` answer as `meta.source`; the client's \"demo data\" marker reads `stub`.\n",
+                "enum": [
+                    "stub",
+                    "legacy",
+                    "native"
+                ],
+                "title": "SourceDriver"
+            },
+            "StoreEventRequest": {
+                "type": "object",
+                "description": "`POST /events` (WP-11): `{name, props?}`. A `422` only for a missing or non-string `name` or a `props` that is not an\nobject. An unknown name, a name outside the pattern or unknown properties are accepted and not stored (WP-47 stores\nthe catalogue). The raw body is capped at 8 KB before anything else: over it, `413 payload_too_large`.",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "StoreEventRequest"
+            },
             "StoreMediaRequest": {
                 "type": "object",
                 "properties": {
@@ -483,11 +1378,85 @@
                     "file"
                 ],
                 "title": "StoreMediaRequest"
+            },
+            "TelegramSignInRequest": {
+                "type": "object",
+                "description": "`POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes.",
+                "properties": {
+                    "init_data": {
+                        "type": "string",
+                        "maxLength": 4096
+                    }
+                },
+                "required": [
+                    "init_data"
+                ],
+                "title": "TelegramSignInRequest"
+            },
+            "Theme": {
+                "type": "string",
+                "description": "The colour theme a user chose; `auto` follows Telegram.\n",
+                "enum": [
+                    "auto",
+                    "light",
+                    "dark"
+                ],
+                "title": "Theme"
+            },
+            "UpdateSettingsRequest": {
+                "type": "object",
+                "description": "`PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of\n`GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of\n`config/settings.php`.",
+                "properties": {
+                    "locale": {
+                        "$ref": "#/components/schemas/Locale"
+                    },
+                    "currency": {
+                        "$ref": "#/components/schemas/Currency"
+                    },
+                    "theme": {
+                        "$ref": "#/components/schemas/Theme"
+                    },
+                    "city": {
+                        "type": "string",
+                        "enum": [
+                            "tashkent",
+                            "tashkent_region",
+                            "andijan"
+                        ]
+                    },
+                    "quiet_hours": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "from": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 23
+                            },
+                            "to": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 23
+                            }
+                        }
+                    },
+                    "digest_hours": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 23
+                        }
+                    }
+                },
+                "title": "UpdateSettingsRequest"
             }
         },
         "responses": {
-            "AuthorizationException": {
-                "description": "Authorization error",
+            "ValidationException": {
+                "description": "Validation error",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -506,8 +1475,8 @@
                     }
                 }
             },
-            "ValidationException": {
-                "description": "Validation error",
+            "AuthorizationException": {
+                "description": "Authorization error",
                 "content": {
                     "application/json": {
                         "schema": {

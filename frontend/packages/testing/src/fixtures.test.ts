@@ -8,6 +8,11 @@ describe("fixture()", () => {
     expect(() => fixture("nothing/here")).toThrow('Unknown API fixture "nothing/here"');
   });
 
+  it("reads a fixture of the store (WP-11)", () => {
+    expect(fixture("me/default")).toMatchObject({ locale: "ru", city: "tashkent", theme: "auto" });
+    expect(fixture("reference/default.uz")).toMatchObject({ cities: [{ code: "tashkent", name: "Toshkent" }, {}, {}] });
+  });
+
   it("refuses a name that leaves the fixture store", () => {
     expect(() => fixture("../../../.env")).toThrow("Invalid API fixture name");
   });

@@ -44,11 +44,17 @@ final readonly class SourceContext
         $scenario = $request->header(self::SCENARIO_HEADER);
 
         return new self(
-            locale: (string) $request->getPreferredLanguage(self::LOCALES),
+            locale: self::localeOf($request),
             currency: 'USD',
             user: $actor instanceof User ? $actor : null,
             scenario: is_string($scenario) && preg_match('/^[a-z0-9_]{1,64}$/', $scenario) === 1 ? $scenario : null,
         );
+    }
+
+    /** The first supported `Accept-Language` tag by weight (`uz-Latn` and `uz_Latn` are `uz`), else `ru`. */
+    public static function localeOf(Request $request): string
+    {
+        return (string) $request->getPreferredLanguage(self::LOCALES);
     }
 
     /** Context of a queued job or the bot: no user, no scenario. */

@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, `main` = `70d5e56`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44; `main` = `02f43ae`), WAITING for the production track; WP-11 on branch `feat/wp-11-contract-session-reference`; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -26,7 +26,20 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Stubs:** `FixtureStore` over `resources/fixtures/v1` (empty) with the `X-Stub-Scenario` header.
   - **OpenAPI:** the committed `docs/api/openapi.json`, `composer openapi:check` in `ci:check`, and `/docs/api` behind `viewApiDocs`.
   - **Tests:** `make ci-backend` → exit 0 (215 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and `frontend` green on `main` after the merge (runs 43652932665, 43652932624).
-  - `backend/.env.example` gains `SOURCES_ALLOW_STUB` only with PR #43 (open).
+  - `backend/.env.example` has `SOURCES_ALLOW_STUB` since PR #43 (merged).
+- **WP-11, on branch `feat/wp-11-contract-session-reference` (not on `main`):**
+  - **Methods on stubs:**
+    - `POST /auth/telegram` issues a real Sanctum token for the stub user `stub@homi.invalid`;
+    - `GET /me`, `GET|PATCH /settings`, `GET /reference` (public), `GET /cities` (public), `POST /events`.
+  - **Plumbing:**
+    - `SetRequestLocale` on the whole `v1` group;
+    - `AccessDenied` (`403 access_denied` + `reason`);
+    - `StubResponder`;
+    - the reference data objects with strict `fromArray()`.
+  - **Sources and config:**
+    - `StubReferenceSource` and the features `source.reference` and `source.cities`;
+    - `config/{radar,settings}.php` and `telegram.support.username`;
+    - the fixtures under `resources/fixtures/v1/{me,settings,reference,cities}`.
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).

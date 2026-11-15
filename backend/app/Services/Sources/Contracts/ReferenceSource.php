@@ -2,11 +2,20 @@
 
 namespace App\Services\Sources\Contracts;
 
-/**
- * Reference data and city statistics (ADR-0017). The methods `reference()` and `cities()` arrive with WP-11,
- * together with their data objects, the stub driver and the fixtures.
- */
+use App\Services\Sources\Data\CityStats;
+use App\Services\Sources\Data\ReferenceData;
+use App\Services\Sources\SourceContext;
+
+/** Reference data and city statistics (ADR-0017; methods since WP-11). */
 interface ReferenceSource
 {
-    //
+    /** The directories in the context's locale (`GET /reference`). */
+    public function reference(SourceContext $context): ReferenceData;
+
+    /**
+     * One entry per city of the reference data (`GET /cities`).
+     *
+     * @return list<CityStats>
+     */
+    public function cities(SourceContext $context): array;
 }
