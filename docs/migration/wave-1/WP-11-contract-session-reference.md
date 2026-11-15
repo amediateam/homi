@@ -347,7 +347,7 @@ review.
 
 - **Done:** steps 1–9. Each contract test was seen failing before its code.
   - `make ci-backend` → exit 0 (Pest 343 passed, 4 skipped); `make ci-frontend` → exit 0; `make test-pgsql` → 4 passed.
-  - The env-key PR for `backend/.env.example` is opened next to #45.
+  - The env-key PR #46 for `backend/.env.example` is open next to #45.
 - **Decisions taken here:** each is marked *corrected while executing* or *added while executing* in the sections
   above.
 - **Next:**

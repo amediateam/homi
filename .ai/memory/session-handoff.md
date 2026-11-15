@@ -15,7 +15,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## State at handoff
 - `main` = `02f43ae`: #42 (WP-10), #44 (its status and `CLAUDE.md` commands) and #43 (`SOURCES_ALLOW_STUB` in `backend/.env.example`) are merged. `backend` is green on `main` after each (#43: run 43654802905). The developer's local `backend/.env` lacks `SOURCES_ALLOW_STUB` and `TELESCOPE_RECORD_ALL`, which `scripts/dev/env-keys.sh` reports.
-- **WP-11** was taken on «бери WP-11». Branch `feat/wp-11-contract-session-reference`, all 9 steps done; **PR #45**, status `REVIEW (#45)`. The env-key PR (`TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`) comes next to it.
+- **WP-11** was taken on «бери WP-11». Branch `feat/wp-11-contract-session-reference`, all 9 steps done; **PR #45**, status `REVIEW (#45)`. The env-key PR **#46** (`TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`) is open next to it.
 - WP-10 is `WAITING (merged in #42; production track …)`; WP-03, WP-00, WP-01 and WP-02 are `WAITING`, unchanged. Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-backend` → exit 0; `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0.
 
@@ -31,7 +31,7 @@ Written for whoever continues the **development track** (the second developer, a
 
 ## Waiting for the developer (do NOT start on your own)
 1. **WP-10 (production track):** it approves the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploys, adds `/docs/api` to the nginx basic-auth locations and runs `php artisan sources:list` on staging; then WP-10 `DONE`.
-2. **The developer's local `backend/.env`:** add `SOURCES_ALLOW_STUB=true` and `TELESCOPE_RECORD_ALL=false` (the template defaults). With WP-11's env PR, also add `TELEGRAM_SUPPORT_USERNAME=` and `RADAR_CREATION_ENABLED=true`; without the last one the local stack runs with radars off. For staging and production, `SOURCES_ALLOW_STUB` and `TELEGRAM_SUPPORT_USERNAME` come from the production track, and `RADAR_CREATION_ENABLED` stays unset until WP-57.
+2. **The developer's local `backend/.env`:** add `SOURCES_ALLOW_STUB=true` and `TELESCOPE_RECORD_ALL=false` (the template defaults). With #46, also add `TELEGRAM_SUPPORT_USERNAME=` and `RADAR_CREATION_ENABLED=true`; without the last one the local stack runs with radars off. For staging and production, `SOURCES_ALLOW_STUB` and `TELEGRAM_SUPPORT_USERNAME` come from the production track, and `RADAR_CREATION_ENABLED` stays unset until WP-57.
 3. **WP-03:** the deploy with the production track (a no-op for users), then `DONE`.
 4. **Operator request:** from the project's own mailbox (WP-02 Part A; never the connected Gmail); then "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and WP-02 `DONE`.
 5. **First developer:** accept ADR-0016 … 0019, answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
