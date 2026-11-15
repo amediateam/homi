@@ -353,7 +353,7 @@ review.
 - **Merged** on 2026-11-15 on «сливай #45» (merge commit `2e3d3bf`; `backend` run 43657763081 and `frontend` run
   43657762964 green on `main`). The env keys followed on «сливай #46» (`e1a65f2`, `backend` run 43658186462 green).
   The key names are in `docs/infrastructure/environments.md`, and this status and the `CLAUDE.md` update are in the
-  follow-up docs PR.
+  follow-up docs PR #47.
 - **Next:**
   1. ~~review and merge~~ (done);
   2. both developers add `RADAR_CREATION_ENABLED=true` and `TELEGRAM_SUPPORT_USERNAME=` to their local environment
