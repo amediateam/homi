@@ -19,6 +19,8 @@ case "${1:-check}" in
         code="$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' https://cdn.homi.loc/health.txt 2>/dev/null || true)"
         if [ "$code" = "200" ]; then
             ok "https://cdn.homi.loc/health.txt → 200 (static from storage/app/public)"
+        elif [ "$code" = "500" ] && nginx_documents_denied; then
+            fail "cdn.homi.loc → 500: nginx workers cannot read ~/Documents (\"Operation not permitted\", KI-31) → make dev-nginx-restart from Terminal or iTerm (a reload does not help)"; exit 1
         else
             fail "cdn.homi.loc → ${code:-no response} → make dev-nginx; scripts/dev/storage.sh prepare"; exit 1
         fi

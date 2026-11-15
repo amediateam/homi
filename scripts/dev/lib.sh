@@ -65,8 +65,23 @@ port_listening() {
 }
 
 # nginx rewrites its process title to "nginx: master process ...", so `pgrep -x nginx` never matches.
+# Only the shared nginx counts: it runs as root (`sudo nginx`). An nginx another project or a test starts
+# under the developer's own user (`nginx -c <conf> -p <dir>` on a high port) is not ours to signal (KI-31).
+nginx_master_pid() {
+    pgrep -u root -f '^nginx: master process' 2>/dev/null | head -n 1
+}
+
 nginx_running() {
-    pgrep -f '^nginx: master process' >/dev/null 2>&1
+    [ -n "$(nginx_master_pid)" ]
+}
+
+# The vhosts write their logs here (absolute paths, KI-14).
+: "${NGINX_LOG_DIR:=/opt/homebrew/var/log/nginx}"
+
+# True when the newest line of the cdn vhost's error log is a macOS privacy denial: the nginx workers
+# cannot read the checkout under ~/Documents ("Operation not permitted", KI-13, KI-31).
+nginx_documents_denied() {
+    tail -n 1 "$NGINX_LOG_DIR/homi.cdn.error.log" 2>/dev/null | grep -q 'Operation not permitted'
 }
 
 pid_alive() {

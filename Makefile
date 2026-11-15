@@ -6,10 +6,10 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-storage registry registry-check ci-backend ci-frontend e2e test-pgsql ai-sync ai-skills ai-hooks-test
+        dev-hosts dev-certs dev-nginx dev-nginx-restart dev-storage registry registry-check ci-backend ci-frontend e2e test-pgsql ai-sync ai-skills ai-hooks-test
 
 help: ## Show targets
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 dev-setup: ## Fresh clone → running stack (brew deps, certs, nginx, hosts, storage, env files, migrate). Asks for sudo where needed
 	@$(DEV)/setup.sh
@@ -43,6 +43,10 @@ dev-nginx: ## Link vhosts, test and reload nginx (sudo for test/reload)
 	@$(DEV)/nginx.sh link
 	@$(DEV)/nginx.sh test
 	@$(DEV)/nginx.sh reload
+
+dev-nginx-restart: ## Test the config, then stop nginx (waits; fast shutdown if it hangs) and start a new master (sudo). Run from Terminal/iTerm (KI-31)
+	@$(DEV)/nginx.sh test
+	@$(DEV)/nginx.sh restart
 
 dev-storage: ## Prepare the local media directory served by cdn.homi.loc
 	@$(DEV)/storage.sh prepare
