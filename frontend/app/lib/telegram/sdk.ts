@@ -91,6 +91,27 @@ export function version(): string {
   return webApp()?.version || fragment.version || "";
 }
 
+let generation = 0;
+const sdkListeners = new Set<() => void>();
+
+/** Counts the SDK objects started so far; a late SDK (TMA-004) is a new generation, and handlers register again. */
+export function sdkGeneration(): number {
+  return generation;
+}
+
+export function subscribeSdk(listener: () => void): () => void {
+  sdkListeners.add(listener);
+  return () => sdkListeners.delete(listener);
+}
+
+/** Called by `initTelegramApp` once per SDK object it starts. */
+export function announceSdk(): void {
+  generation += 1;
+  for (const listener of sdkListeners) {
+    listener();
+  }
+}
+
 /** A call a client refuses degrades to nothing (TMA-042). */
 export function attempt(run: () => void): void {
   try {
@@ -110,15 +131,17 @@ export function hasInitData(): boolean {
 }
 
 /**
- * Removes the launch fragment from the address, keeping the path, the query and the router's history state
- * (TMA-009). Called after the SDK wait settled — the SDK reads the fragment at load — and before any analytics code.
+ * Removes the launch fragment from the address, keeping the path and the query (TMA-009). Called after the SDK wait
+ * settled — the SDK reads the fragment at load — and before any analytics code. The state argument is `null` on
+ * purpose: the App Router's patched `replaceState` adopts a new address only for a state it did not write, and
+ * otherwise restores the address with the fragment on the next Back.
  */
 export function scrubLaunchFragment(): void {
   if (typeof window === "undefined" || window.location.hash === "") {
     return;
   }
   try {
-    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
   } catch {
     // A sandboxed frame may refuse history calls; the fragment then stays, as in legacy.
   }

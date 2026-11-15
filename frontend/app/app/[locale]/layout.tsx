@@ -8,6 +8,8 @@ import { Suspense } from "react";
 import { BOOT_SCRIPT, BOOT_STUBS } from "@/boot/inline.generated";
 import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
+import { NavigationBinder } from "@/features/shell/NavigationBinder";
+import { TelegramButtons } from "@/features/shell/TelegramButtons";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
 import { SessionProvider } from "@/lib/session/SessionProvider";
@@ -68,6 +70,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             {children}
             <Suspense fallback={null}>
               <DemoDataMarker />
+            </Suspense>
+            <NavigationBinder />
+            <Suspense fallback={null}>
+              <TelegramButtons />
             </Suspense>
             <BootGuard />
           </SessionProvider>

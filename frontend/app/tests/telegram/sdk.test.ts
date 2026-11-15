@@ -52,14 +52,16 @@ describe("initData (TMA-006)", () => {
 });
 
 describe("scrubLaunchFragment (TMA-009)", () => {
-  it("removes the fragment and keeps the path, the query and the router's history state", async () => {
+  it("removes the fragment, keeps the path and the query, and hands the App Router no state of its own", async () => {
     const sdk = await loadSdk(`/ru/listing/5?from=map#tgWebAppData=${encodeURIComponent(syntheticInitData())}`);
+    const replace = vi.spyOn(window.history, "replaceState");
 
     sdk.scrubLaunchFragment();
 
     expect(window.location.hash).toBe("");
     expect(window.location.pathname + window.location.search).toBe("/ru/listing/5?from=map");
-    expect(window.history.state).toEqual({ router: "state" });
+    // A state with `__NA` makes Next.js skip the address; `null` lets its patched replaceState adopt it.
+    expect(replace).toHaveBeenCalledWith(null, "", "/ru/listing/5?from=map");
     expect(sdk.hasInitData()).toBe(true);
   });
 

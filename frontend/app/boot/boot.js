@@ -219,17 +219,18 @@
   }
 
   function onError(event) {
+    var target = event && event.target;
+    /* The SDK's state is kept after the hand-over too: waitForSdk reads it whenever it starts. */
+    if (target && target.id === 'tg-sdk') {
+      boot.sdk = 'error';
+      return;
+    }
     if (boot.ok) {
       return;
     }
-    var target = event && event.target;
     /* An element's error is a failed resource; anything else is an uncaught error of a script. */
     if (target && target.nodeType === 1) {
       if (target.tagName !== 'SCRIPT') {
-        return;
-      }
-      if (target.id === 'tg-sdk') {
-        boot.sdk = 'error';
         return;
       }
       var src = target.getAttribute('src') || '';

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { attempt, insideTelegram, platform, safeCallback, version, webApp } from "./sdk";
+import { attempt, insideTelegram, platform, safeCallback, sdkGeneration, subscribeSdk, version, webApp } from "./sdk";
 
 export interface TelegramState {
   inside: boolean;
@@ -45,4 +45,9 @@ function subscribe(onChange: () => void): () => void {
 /** The Telegram state a component renders from (TMA-016, TMA-019): fullscreen, colour scheme, platform, version. */
 export function useTelegram(): TelegramState {
   return useSyncExternalStore(subscribe, read, () => outside);
+}
+
+/** Re-renders when a new SDK object was started (a late SDK); effects that register handlers depend on it. */
+export function useSdkGeneration(): number {
+  return useSyncExternalStore(subscribeSdk, sdkGeneration, () => 0);
 }

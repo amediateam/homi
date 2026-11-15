@@ -1,5 +1,5 @@
 import { supportsFeature } from "./gates";
-import { attempt, safeCallback, webApp } from "./sdk";
+import { announceSdk, attempt, safeCallback, webApp } from "./sdk";
 import { watchTheme } from "./theme";
 import type { TgWebApp } from "./types";
 
@@ -34,4 +34,5 @@ export function initTelegramApp(): void {
   syncFullscreen(app);
   attempt(() => app.onEvent?.("fullscreenChanged", safeCallback(() => syncFullscreen(app))));
   watchTheme();
+  announceSdk();
 }

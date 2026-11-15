@@ -356,6 +356,13 @@ describe("watchdog (TMA-003)", () => {
     expect(String(send.mock.calls[0][0])).not.toContain("query_id");
   });
 
+  it("still marks a late SDK failure after BootGuard set ok", () => {
+    const boot = runBoot();
+    boot.ok = true;
+    scriptError("https://telegram.org/js/telegram-web-app.js", "tg-sdk");
+    expect(boot.sdk).toBe("error");
+  });
+
   it("stops once BootGuard set ok", () => {
     const boot = runBoot();
     boot.ok = true;
