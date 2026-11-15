@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 on `feat/wp-20-app-foundation`, in review; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52; `main` = `2ef9b2f`), WAITING for the deploy; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -77,7 +77,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - `@homi/types` generates `src/generated/api.ts` from `docs/api/openapi.json`, and `pnpm types:check` runs in CI and in `make ci-frontend`.
   - `@homi/api-client` gains `put`, a required `ApiError.code`, `null` data for a `204`, and `createTypedClient`.
 - Since WP-11 (#45): the generated types cover the seven contract methods; `@homi/testing` 90 passed, including a `fixture()` test on the real backend fixtures.
-- **Since WP-20 (branch `feat/wp-20-app-foundation`, not merged yet):**
+- **Since WP-20 (#52, merged 2026-11-15 as `2ef9b2f`; staging and production do not run it yet):**
   - **`frontend/app`:** the route tree of `25` §3.2 under `app/[locale]/` with `RoutePlaceholder` on every address;
     sheets and the listing layer intercepted into `(main)/@sheet` and `(main)/@overlay`; the three catch-alls are
     `[...rest]`. `proxy.ts` redirects to the `NEXT_LOCALE` cookie's locale or `ru`. next-intl reads the locale from
@@ -89,7 +89,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **`@homi/ui`:** tokens, themes, lite and motion CSS (`@homi/ui/styles.css`; Tailwind's default palette removed),
     the restyled shadcn/ui base components, `cn` = clsx + tailwind-merge.
   - **Tests:** `make ci-frontend` → exit 0 (app 135, `@homi/i18n` 30, `@homi/ui` 24, `@homi/testing` 90 passed);
-    `pnpm exec playwright test --project miniapp` → 20 passed.
+    `pnpm exec playwright test --project miniapp` → 20 passed; `frontend` and `frontend-e2e` green on the PR,
+    `frontend` green on `main` after the merge (run 43697001406).
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
@@ -114,4 +115,4 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
 - The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
 - Course decided by the developer on 2026-11-14 (PR #25, merged 2026-11-14): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (45 work packages including the support bot WP-59; WP-00, WP-01 and WP-02 merged and `WAITING` (deploy; ADR acceptance; the operator request is not sent); WP-03 merged (#39, 2026-11-15) and `WAITING` for the deploy: the confirmed packages, the test tooling and the backend `pgsql` test group (`backend/tests/Pgsql`, `make test-pgsql`) are on `main`; the rest not started; 45 specifications `wave-1/WP-NN-*.md`, decisions DEC-31 … DEC-56, drafted by subagents, then read in full against the code and each other in a verification pass), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
-- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` serves placeholders only (WP-20, not merged yet).
+- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` serves placeholders only (WP-20).
