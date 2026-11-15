@@ -11,6 +11,7 @@ import {
   type SuccessData,
 } from "@homi/api-client";
 import { isLocale, type Locale } from "@homi/config";
+import { io } from "next/cache";
 import { cookies } from "next/headers";
 import { locale as rootLocale } from "next/root-params";
 
@@ -75,6 +76,9 @@ export function createServerApi(config: ServerApiConfig) {
     options: CallOptions = {},
   ): Promise<ApiResult<Data<P, M>>> {
     const where = { method: method.toUpperCase(), path: template(path) };
+    // The request id is a random value: `io()` keeps it out of a prerender and resolves at once during a request
+    // and inside `'use cache'` (`io.md`).
+    await io();
     // A timer of its own rather than `AbortSignal.timeout`, so the clock of a test drives it.
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(new DOMException("The API did not answer in time.", "TimeoutError")), API_TIMEOUT_MS);

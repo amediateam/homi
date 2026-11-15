@@ -5,6 +5,7 @@ const cache = vi.hoisted(() => ({ life: [] as unknown[], tags: [] as string[] })
 vi.mock("next/cache", () => ({
   cacheLife: (profile: unknown) => void cache.life.push(profile),
   cacheTag: (...tags: string[]) => void cache.tags.push(...tags),
+  io: async () => undefined,
 }));
 const jar = new Map([
   ["homi_session", "cookie-token"],
