@@ -620,6 +620,8 @@ ASSUMPTION_MISMATCH AM-58 (2026-11-15):
   and `GET /cities` once per locale over eight page loads in three locales, and `GET /me` and `GET /listings/count`
   once per request with a session (four loads, four calls each) — only the reference is cached.
 
+Merged on 2026-11-16 as #61 (`e8c8f9e`) after green `frontend` and `frontend-e2e`; `WAITING` for the deploy.
+
 Own choices (no ADR): `ApiResult` failures carry `method` and `path` besides `error`, `status` and `code`;
 `ReferenceProvider` feeds a client store next to the page instead of wrapping it; the request id waits for `io()`;
 the feed and map placeholders show the proof of step 13 until WP-24 and WP-27.
