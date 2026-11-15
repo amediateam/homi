@@ -22,7 +22,8 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0015](0015-server-runtime-as-deployed.md) | Server runtime as deployed: databases, Redis, process manager, code delivery | Accepted |
 | [0016](0016-new-product-three-waves.md) | HOMI ships a new product; the migration runs in three waves | Proposed |
 | [0017](0017-api-v1-source-drivers.md) | `/api/v1` is the only contract; a source driver per method selected by a Pennant feature | Proposed |
-| [0018](0018-mini-app-architecture.md) | Mini App: App Router with a route per screen, server rendering through a session cookie with a header fallback | Proposed |
+| [0018](0018-mini-app-architecture.md) | Mini App: App Router with a route per screen, server rendering through a session cookie with a header fallback | Proposed, amended by 0020 |
 | [0019](0019-frontend-ui-stack.md) | Frontend UI stack: Tailwind 4 tokens, shadcn/ui with Radix, next-intl | Proposed |
+| [0020](0020-mini-app-csp-nonce-per-request-documents.md) | Mini App CSP: a nonce per request, every document rendered at request time | Proposed |
 
-Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it. 0016–0019 record the kvadro² migration decisions of 2026-11-14 (`docs/migration/24-three-wave-strategy.md` §8.1).
+Decisions 0001–0013 were taken at the Phase 0–2 checkpoints on 2026-11-08 (`docs/ai/reports/phase-0.md` §14). 0015 records the production bring-up decisions of 2026-11-09 (`docs/ai/reports/production-notes.md` §6). 0014 is reserved for the Phase 3 close ("media stack and Scramble", `HANDOFF.md` §4 T4), and the kvadro² plan (PR #9) also refers to it. 0016–0019 record the kvadro² migration decisions of 2026-11-14 (`docs/migration/24-three-wave-strategy.md` §8.1). 0020 records the CSP spike of WP-21 step 1 (2026-11-15).
