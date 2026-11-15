@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | TODO |
+| Status | IN_PROGRESS (`feat/wp-12-contract-listings`) |
 | Depends on | WP-11 |
 | Size | about 3 000 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.1, §4.2, §4.5; `08` §1.7, §1.8 and the rows of API-004 … API-010, API-017 and API-035, RES-001, RES-002; `02` BR-API-156 … BR-API-158, LB-API-055, Q-API-065, Q-API-066; `03` §1.12 and §4 (BR-APP-001 … BR-APP-009, BR-APP-020, BR-APP-023, BR-APP-024, BR-APP-026 … BR-APP-035, BR-APP-059, BR-APP-062, BR-APP-070, BR-APP-071); tasks `tasks/backend/KV-BE-016-search-filters-normaliser.md`, `KV-BE-037-call-links.md`, `KV-BE-048-translation.md`, `KV-BE-046-share.md` (rules only) |
