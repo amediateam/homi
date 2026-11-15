@@ -439,3 +439,30 @@ answers `{success: true, data: null}`.
 
 Left as found: Scramble documents the media answers built by `success()` with `message: null` and `meta: string`
 (pre-existing), so the generated media types carry them. The typed client reads only `data`.
+
+## N. Development track, 2026-11-15 — WP-11, contract: session, me, settings, reference, cities, events
+
+Taken on «бери WP-11». Branch `feat/wp-11-contract-session-reference`. The seven methods answer on stubs; the
+corrections are recorded in the specification (rule 6).
+
+The same day the developer allowed the agent to edit the local environment file until revoked (verbatim quote in
+`.ai/memory/session-handoff.md`). The committed deny rule of `.claude/settings.json` still blocks the agent from
+writing that file, so the developer adds new local keys with one command.
+
+ASSUMPTION_MISMATCH AM-53 (2026-11-15):
+- **Assumption.** The WP-11 specification assumed several things:
+  - its examples were legacy vocabulary: the city `samarkand`, the district `yunusabad`, the zone «Центр», daily rent
+    presets 20/30/50;
+  - fixtures could carry the scenarios `single_city` and `no_bot`;
+  - Scramble types an enum from `BackedEnum::from()`, a list from `array_map`, and an object from the `array` rule.
+- **What was found.** The audit was read by a subagent; its claims were spot-checked against the cited lines of
+  `04`, `06` and `03b`.
+  - Samarkand is not a legacy city (`04`). The district codes are the slugs of `03b`. The zone is «Центр (внутри
+    кольца)». The bot's daily presets are 30/50/80/120.
+  - The bot name is configuration, not fixture data.
+  - Scramble typed all three as `string`.
+- **Resolution.**
+  - The fixtures follow the audit.
+  - `single_city` is derived from the default fixture, and `no_bot` is answered by the controller.
+  - `Locale`, `Currency` and `Theme` have `fromField()`; the settings presets are built with `foreach`; `props` is
+    validated in `after()` and documented with `#[BodyParameter]`.

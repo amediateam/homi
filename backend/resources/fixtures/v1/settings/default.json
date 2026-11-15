@@ -7,8 +7,5 @@
         "from": 23,
         "to": 8
     },
-    "digest_hours": [
-        9,
-        19
-    ]
+    "digest_hours": [9, 19]
 }

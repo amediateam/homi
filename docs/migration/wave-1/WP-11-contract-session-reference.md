@@ -72,7 +72,10 @@ Stub: accepts any valid body, issues a real Sanctum token (abilities `app:read`,
 **stub user** (`users.email = 'stub@homi.invalid'`, created on first use with a fixed `name` and a random
 `password`, because both columns are `NOT NULL` until WP-40), so `auth:sanctum` works unchanged on every other
 route. Nothing is verified. Scenarios: `auth_expired`, `invalid_init_data`, `access_private`, `access_invite`,
-`access_full`, `access_blocked`, `access_join`.
+`access_full`, `access_blocked`, `access_join`. *Corrected while executing:* `data.user` follows the scenarios of
+`GET /me` (`first_launch`, `no_city`, `uz`), so one header value gives the same user on both methods. The two `401`
+errors are `App\Exceptions\Identity\{InitDataExpired, InvalidInitData}`, the names WP-40 planned. They are created
+here without WP-40's internal reason.
 
 ### `GET /me` — bearer `app:read`; legacy: the user part of the meta method (API-001)
 
@@ -158,7 +161,12 @@ public method instead of an authenticated one plus `/api/bot`; `metro` and `medi
 `has_median`; `center` became an object; `max_subscriptions` became `limits.radars`; `new_features` became
 `features`; the top-level `districts` and `zones` fallback is gone (every city carries its own); `radars_enabled`
 is new (legacy has no such switch). Scenarios:
-`single_city` (only `tashkent`), `no_bot` (`bot.username: null`).
+`single_city` (only `tashkent`), `no_bot` (`bot.username: null`). *Corrected while executing:*
+- `single_city` filters the default fixture of the locale, so it needs no fixture of its own and stays localised.
+- `no_bot` cannot be a fixture, because the bot name is configuration. `ReferenceController` answers it when the
+  driver is `stub`.
+- The answer may be cached: `Cache-Control: public, max-age=300` and `Vary: Accept-Language`. The radar switch
+  therefore reaches clients within five minutes.
 
 ### `GET /cities` — public; legacy: API-002
 
@@ -178,7 +186,9 @@ were renamed. Scenario: `no_daily` (`counts.rent_daily: 0` everywhere, so the re
 | `name` | string | required, 1 … 40 characters, `[a-z_]` |
 | `props` | object | optional; at most 20 keys; whole body at most 8 KB |
 
-Answer `204`. Event names and property names are the legacy ones (`03` §3.3), so one vocabulary serves both
+Answer `204`. *Corrected while executing:* a present `props` that is not an object is also `422 validation_failed`
+(the table says object). It is checked in `StoreEventRequest::after()`, because the `array` rule alone is exported as
+a list of strings, and `EventController` documents it with `#[BodyParameter]`. Event names and property names are the legacy ones (`03` §3.3), so one vocabulary serves both
 products; `listing_id` carries the listing number. Catalogue:
 
 | Name | Properties |
@@ -215,11 +225,17 @@ renderer of WP-10 answers as `413 payload_too_large`.
 - `ReferenceSource` gains `reference()` and `cities()`; `App\Services\Sources\Stub\StubReferenceSource` reads
   `reference/default.<locale>.json` and `cities/default.json`. Features `source.reference` and `source.cities` are
   added to `config/sources.php` with default `stub` everywhere.
-- `App\Services\Sources\Stub\StubResponder`: `fixture(string $name, Request $request, array $scenarios = []): array`
+- `App\Services\Sources\Stub\StubResponder`: `fixture(string $name, Request $request, array $scenarios = [], array $errors = []): array`
   returns the fixture `$name`, or the one that `$scenarios` (scenario name → fixture name, for example
   `['first_launch' => 'me/first_launch']`) gives for the scenario header, and throws the mapped error for a reserved
-  or method-specific error scenario. A scenario that is neither in the map nor an error of the method is ignored
-  (WP-10). The stub controllers of native-only methods use it and answer with `SourceDriver::Stub`.
+  or method-specific error scenario (`$errors`: scenario name → a closure that returns the exception). A scenario that
+  is neither in the map nor an error of the method is ignored (WP-10). The stub controllers of native-only methods use
+  it and answer with `SourceDriver::Stub`. *Corrected while executing:*
+  - the five `access_*` refusals are known by every method of `StubResponder`, as "common errors on every bearer
+    route" asks;
+  - `check(Request $request, array $errors = []): SourceContext` throws the same errors for a method without a
+    fixture (`POST /events`);
+  - it rests on `FixtureStore::pick()` and `failForReserved()` of WP-10.
 - Routes (`backend/routes/api.php`, names `api.v1.*`): `auth.telegram`, `me.show`, `settings.show`,
   `settings.update`, `reference.show`, `cities.index`, `events.store`. Today the file has one `v1` group that
   carries `auth:sanctum` and holds the media routes: split it into an outer group (prefix, name, `SetRequestLocale`,
@@ -240,8 +256,17 @@ renderer of WP-10 answers as `413 payload_too_large`.
   option lists), `backend/config/radar.php` (new: `max`, `creation_enabled`), `backend/phpunit.xml`
   (`RADAR_CREATION_ENABLED=true`)
 - `backend/resources/fixtures/v1/me/{default,first_launch,no_city,uz}.json`, `settings/default.json`,
-  `reference/default.{ru,uz,en}.json`, `reference/single_city.ru.json`, `reference/no_bot.ru.json`,
-  `cities/{default,no_daily}.json`
+  `reference/default.{ru,uz,en}.json`, `cities/{default,no_daily}.json` (*corrected:* no `single_city` or `no_bot`
+  fixture, see `GET /reference`). The fixture store of WP-10 now accepts dots after the area (`reference/default.ru`).
+- *Added while executing:*
+  - enums `App\Enums\{Locale,Currency,Theme,Deal,AccessReason}`. `Locale`, `Currency` and `Theme` have `fromField()`
+    because the OpenAPI export does not resolve `BackedEnum::from()`;
+  - `App\Services\Sources\Data\{Fields,GeoPoint}` (strict reads, and the city centre) and
+    `App\Services\Identity\SettingsOptions`;
+  - `App\Http\Resources\Api\V1\{NamedCodeResource,CityResource}`;
+  - `App\Exceptions\Identity\{InvalidInitData,InitDataExpired}`;
+  - `backend/tests/Support/ContractShapes.php` (the expected shapes, also for WP-42 and WP-48),
+    `backend/tests/Unit/Sources/ReferenceDataTest.php` and `backend/tests/Feature/Http/{ApiRoutesTest,SetRequestLocaleTest}.php`.
 - `backend/tests/Feature/Api/V1/{SignInContractTest,MeContractTest,SettingsContractTest,ReferenceContractTest,CitiesContractTest,EventsContractTest}.php`
 - `docs/api/openapi.json`, `frontend/packages/types/src/generated/api.ts` (regenerated); `docs/api/README.md`
 - `backend/.env.example` (`TELEGRAM_SUPPORT_USERNAME`, blank; `RADAR_CREATION_ENABLED=true`) — separate shared-file
@@ -252,8 +277,20 @@ renderer of WP-10 answers as `413 payload_too_large`.
 1. Tests first for each method: status, exact key set (`JsonShape` of WP-10), `meta.source`, errors, scenarios.
 2. `SetRequestLocale` and the `AccessDenied` exception (403, `access_denied`, extra key `reason`).
 3. Data objects and `ReferenceSource` methods; `StubReferenceSource`; the two features. Write the reference fixtures
-   for three cities: `tashkent` (districts, zones, metro, median), `samarkand` (no metro, no zones, `has_median`
-   false) and `tashkent_region` (`is_region: true`, zoom 9), with names in three locales.
+   for three cities, with names in three locales:
+   - `tashkent`: districts, zones, metro, median;
+   - `andijan`: no metro, no zones, `has_median` false;
+   - `tashkent_region`: `is_region: true`, zoom 9.
+
+   *Corrected while executing*, after the audit:
+   - `samarkand` is not a legacy city: the bot treats it as unsupported (`04`). `andijan` is one, and has no metro and
+     no median (`06`, `04`).
+   - The district codes are the 12 slugs of `03b`, with underscores as in the landing data (`yunusobod`, not
+     `yunusabad`). The region carries its five towns with SEO pages.
+   - The zones are «Центр (внутри кольца)» and «Ближе к центру» (`06`, `07`).
+   - The price presets are those of the bot (`04`).
+   - Renovation and appliance codes are not documented (Q-DATA-030) and are placeholders.
+   - The audit has no coordinates, so the centres are approximate public ones.
 4. `GET /reference`, `GET /cities` with resources (`php artisan make:resource …`, `make:controller …`);
    `config/radar.php` with its two keys and the `phpunit.xml` entry.
 5. `StubUser` and `POST /auth/telegram` (`php artisan make:request Api/V1/Auth/TelegramSignInRequest`).
@@ -306,3 +343,12 @@ renderer of WP-10 answers as `413 payload_too_large`.
 ## Handoff
 
 Empty.
+
+### Notes for the generated types
+
+Every field of the examples is typed. Two maps stay open by design:
+- `props` of an event: its properties depend on the event name;
+- `meta` of every sourced answer: `sourced()` of WP-10 spreads `$meta`.
+
+`scramble:analyze` keeps two `JR001` warnings for `MeResource` and `SettingsResource`. They wrap a decoded fixture,
+not a model, until WP-40.

@@ -198,7 +198,7 @@ and asserts that the three names are in Telescope's hidden lists.
 ## Files
 
 - `backend/app/Services/Identity/{TelegramInitData,TelegramInitDataVerifier,UserResolver,TokenIssuer,SettingsService,UserSettingsData,QuietWindow,DigestSchedule}.php`
-- `backend/app/Exceptions/Identity/{InvalidInitData,InitDataExpired}.php`; `backend/app/Events/Identity/SettingsChanged.php`
+- `backend/app/Exceptions/Identity/{InvalidInitData,InitDataExpired}.php` (they exist since WP-11 and render as `401 invalid_init_data` and `401 auth_expired`; this package adds the internal reason); `backend/app/Events/Identity/SettingsChanged.php`
 - `backend/app/Services/Access/{AccessGate,AccessDecision}.php`, `backend/app/Enums/AccessState.php`,
   `backend/app/Http/Middleware/EnsureAccessGranted.php`, `backend/app/Console/Commands/Access/{BlockUser,UnblockUser}.php`
 - `backend/app/Models/{User,UserSetting,AccessGrant}.php` with factories (`UserFactory` gains a `telegram()` state)
