@@ -1,0 +1,592 @@
+{
+  "tab": {
+    "search": "Search",
+    "favorites": "Saved",
+    "subs": "Radar",
+    "settings": "Settings"
+  },
+  "deal": {
+    "rent_long": "Rent",
+    "sale": "Buy",
+    "rent_daily": "Daily"
+  },
+  "rent": {
+    "long": "Long-term"
+  },
+  "common": {
+    "close": "Close",
+    "loadFailed": "Couldn’t load",
+    "noAccess": "No access",
+    "saveFailed": "Couldn’t save"
+  },
+  "error": {
+    "offline": "No connection",
+    "offlineText": "Check your internet connection and try again.",
+    "serverText": "The server didn’t respond. Try again in a minute.",
+    "retry": "Retry"
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "text": "The error has been logged. Reload the app — that usually helps.",
+    "reload": "Reload"
+  },
+  "listings": "{n, plural, one {listing} other {listings}}",
+  "app": {
+    "openViaBot": "Open the app via the bot in Telegram.",
+    "saved": {
+      "favorites": "Saved",
+      "history": "Viewed"
+    },
+    "view": {
+      "map": "Map",
+      "list": "List"
+    }
+  },
+  "noAccess": {
+    "title": {
+      "private": "This bot is private",
+      "invite": "Invite only",
+      "full": "No spots yet",
+      "blocked": "No access",
+      "join": "Start with the bot"
+    },
+    "text": {
+      "private": "The app is available only to its owner for now.",
+      "invite": "You can join with an invite link: open it and tap “Start” in the bot.",
+      "full": "All spots are taken right now. Please try again later.",
+      "blocked": "Access to the app is closed.",
+      "join": "Tap “Start” in the bot — then the app will open."
+    },
+    "back": "Back to the bot",
+    "toBot": "Go to the bot",
+    "checking": "Just tapped “Start”? Give it a couple of seconds — checking access…",
+    "openPost": "📢 Open the post in the channel"
+  },
+  "sort": {
+    "title": "Sort",
+    "new": "Newest first",
+    "cheap": "Cheapest first",
+    "expensive": "Most expensive first",
+    "deal": "Best deal vs market",
+    "center": "Closest to the centre",
+    "ppm": "Lowest price per m²",
+    "dealHint": "Furthest below the typical price first — the nearest similar listings or the district",
+    "centerHint": "By distance to the city centre",
+    "ppmHint": "By price per square metre"
+  },
+  "toast": {
+    "subSaved": "Radar is on. {count} are already in your chat with the bot",
+    "subSavedEmpty": "Radar is on — new listings will come to the chat as soon as they appear{hint}",
+    "subUpdated": "Radar updated. {count} match the new conditions — see your chat with the bot",
+    "subUpdatedEmpty": "Radar updated. Nothing yet{hint}",
+    "subSavedFew": "Radar is on, but such listings are rare. {what}: {rate}",
+    "subUpdatedFew": "Radar updated, but such listings are rare. {what}: {rate}",
+    "relax": "Widen",
+    "relaxedEmpty": "Radar widened — new listings will come to the chat as soon as they appear",
+    "subLimit": "You already have {max} radars — delete one you don’t need on the Radar tab",
+    "hidden": "Listing hidden",
+    "blocked": "Author {label} blocked",
+    "undo": "Undo",
+    "reported": "Thanks! We'll take a look",
+    "reportedFraud": "Thanks, we'll take a look. We've hidden this listing for you",
+    "reportedRented": "Marked as rented",
+    "reportedAgent": "Number marked as an agent's",
+    "alreadyOn": "Radar for this search is already on",
+    "noChat": "Radar is off — the bot needs permission to message you",
+    "alertOn": "Radar is on again"
+  },
+  "sum": {
+    "roomsFrom": "{n}+ rooms",
+    "roomsExact": "{n}-room",
+    "roomsRange": "{lo}–{hi} rooms",
+    "priceUpto": "up to {hi}",
+    "priceFrom": "from {lo}",
+    "wholeCity": "All of Tashkent",
+    "nearMetro": "near metro",
+    "belowMedian": "≤ median",
+    "noAgents": "no agents",
+    "owners": "from owners",
+    "polygon": "Your area",
+    "zonesBoth": "Centre and near it"
+  },
+  "sheet": {
+    "districts": "Districts:",
+    "districtsRegion": "Region districts (optional):",
+    "city": "City",
+    "unitPriceHint": "Price per sotka or m² is multiplied by the area in the listing",
+    "typicalRent": "{city}: half of the flats are up to {price} a month",
+    "typicalDaily": "{city}: half of the flats are up to {price} a day",
+    "typicalSale": "{city}: half of the flats are up to {price}",
+    "title": "Filters",
+    "editTitle": "Radar conditions",
+    "reset": "Reset",
+    "createTitle": "New radar",
+    "housing": "Property",
+    "rooms": "Rooms",
+    "roomsHint": "— two numbers set a range",
+    "roomsAny": "Any",
+    "price": "Price, {cur}",
+    "priceMonth": "Price per month, {cur}",
+    "priceDay": "Price per day, {cur}",
+    "rentTerm": "Rental term",
+    "from": "from",
+    "to": "to",
+    "anyPrice": "any",
+    "upto": "up to {amount}",
+    "belowMedian": "📊 Not above the market",
+    "belowMedianHintSale": "Price per m² no higher than typical for the nearest similar listings (otherwise the district) and not above the district — up to +10% counts as “in line”. Where there is no typical price yet, listings won’t be shown.",
+    "belowMedianHintRent": "Price no higher than typical for the nearest listings with the same number of rooms (otherwise the district) and not above the district — up to +10% counts as “in line”. Where there is no typical price yet, listings won’t be shown.",
+    "where": "Where",
+    "zone": {
+      "center": "🏛 Centre",
+      "near_center": "🏙 Near the centre"
+    },
+    "nearMetro": "🚇 Near the metro",
+    "drawArea": "Draw on the map",
+    "drawAreaOn": "Your area on the map",
+    "orDistricts": "Or districts:",
+    "who": "Listed by",
+    "tenant": "Who will live there",
+    "pets": "Not banned",
+    "petsOnly": "Allowed",
+    "petsTip": "🐾 We’ll hide listings that say no pets. Pet-friendly ones go first.",
+    "petsOnlyTip": "🐾 Only listings that say pets are allowed. There aren’t many yet.",
+    "matchingNow": "Matching now: {n}",
+    "flowDay": "📡 Radar: ≈{n} a day",
+    "flowWeek": "📡 Radar: {n} a week",
+    "flowNone": "📡 None in the past week — radar will rarely go off",
+    "save": "Save",
+    "subscribe": "Turn on radar",
+    "show": "Show",
+    "showN": "Show {n}",
+    "nothing": "Nothing found",
+    "petsTitle": "Pets",
+    "new": "New",
+    "furniture": "Furniture",
+    "any": "Any",
+    "furnished": "Furnished",
+    "unfurnished": "Unfurnished",
+    "renovation": "Renovation",
+    "floor": "Floor",
+    "notFirst": "Not first",
+    "notLast": "Not top",
+    "area": "Area, m²",
+    "anyArea": "any",
+    "market": {
+      "_": "Building",
+      "new": "New build",
+      "secondary": "Resale"
+    },
+    "appliances": "Appliances",
+    "posted": {
+      "1": "Last 24 hours",
+      "3": "Last 3 days",
+      "7": "Last week",
+      "_": "Posted"
+    },
+    "postedHint": "Feed only: the chat gets only new listings anyway."
+  },
+  "fmt": {
+    "area": "{area} m²",
+    "floorOf": "floor {floor}/{total}",
+    "floor": "floor {floor}",
+    "pets": "🐾 pets OK",
+    "metroDist": "{metro} · {m} m",
+    "centerKm": "{km} km to the centre",
+    "marketSame": "In line with the typical price",
+    "marketSameShort": "≈ typical",
+    "marketMixed": "{pct}% below the nearest, but above the district",
+    "marketMixedShort": "≈ mixed",
+    "marketNoRepair": "{pct}% below the nearest — no renovation",
+    "marketCheaper": "{pct}% below market",
+    "marketPricier": "{pct}% above market",
+    "marketTimes": "{x} times above market",
+    "marketSuspicious": "Suspiciously cheap: {pct}% below market",
+    "marketCheck": "Check the price: {pct}% below market",
+    "marketCheckHigh": "Check the price: {pct}% above market"
+  },
+  "card": {
+    "belowMarket": "Below market",
+    "suspiciousCheap": "Suspiciously cheap",
+    "checkPrice": "Check the price",
+    "owner": "Owner",
+    "ownerVerified": "Owner ✓",
+    "negotiable": "Price on request",
+    "downPayment": "down payment",
+    "businessPrice": "business price, premises rented",
+    "viewedTitle": "You have opened this listing"
+  },
+  "viewer": {
+    "title": "Photos"
+  },
+  "fav": {
+    "add": "Save",
+    "remove": "Remove from saved"
+  },
+  "feed": {
+    "retry": "{error} — retry",
+    "clearConfirm": "Clear your viewing history?",
+    "clear": "Clear",
+    "favEmpty": "Nothing here yet",
+    "favEmptyHint": "Tap ♡ on a listing to save it",
+    "histEmpty": "You haven’t opened anything yet",
+    "histEmptyHint": "Listings you open will appear here",
+    "fewRent": "That’s all the rentals",
+    "fewSale": "That’s everything for sale",
+    "fewHint": "{city}: new listings are rare. Turn on radar and it will send new ones to the chat as soon as they appear.",
+    "seeRent": "See rentals · {n}",
+    "seeSale": "See homes to buy · {n}",
+    "subscribeHere": "Turn on radar for this search",
+    "otherCity": "Another city",
+    "nothing": "Nothing found",
+    "nothingHint": "Try loosening the filters",
+    "resetFilters": "Reset filters"
+  },
+  "city": {
+    "title": "City",
+    "counts": "{rent} to rent · {sale} to buy",
+    "firstTitle": "Where are you looking?",
+    "locate": "Use my location",
+    "locating": "Locating…",
+    "locateDenied": "No access to your location — pick a city from the list. You can allow it in Telegram settings.",
+    "locateFail": "Couldn’t find where you are — pick a city from the list.",
+    "locateFar": "None of our cities is near you yet — pick one from the list."
+  },
+  "map": {
+    "locate": "My location",
+    "locateDenied": "No access to your location. You can allow it in Telegram settings.",
+    "locateFail": "Couldn’t find where you are.",
+    "stackOf": "{n} of {total}",
+    "area": "Draw an area",
+    "areaHint": "Circle where to search with your finger",
+    "areaSmall": "Draw a bigger area",
+    "areaMove": "Two fingers move the map",
+    "areaCancel": "Cancel",
+    "areaOn": "Your area",
+    "areaRemove": "Remove area",
+    "note": "{shown} of {total} on the map · {missing} only the district is known",
+    "missing": "{n, plural, one {for {n} listing} other {for {n} listings}}"
+  },
+  "listing": {
+    "loadFailed": "Couldn’t load the listing",
+    "rooms": "{n, plural, one {room} other {rooms}}",
+    "m2": "m²",
+    "floor": "floor",
+    "building": "building",
+    "newBuilding": "New",
+    "secondary": "Resale",
+    "call": "Call",
+    "write": "Message",
+    "writePaid": "Paid number",
+    "openPost": "Open post",
+    "watchVideo": "Watch video in Telegram",
+    "share": "Share",
+    "location": "Location",
+    "mapOpen": "Open map",
+    "nearby": "Nearby",
+    "mapApprox": "Approximate location: from the block, landmark or metro in the listing",
+    "mapFromYou": "≈ {km} km from you — approximate location",
+    "openYandex": "Yandex Maps",
+    "openGoogle": "Google Maps",
+    "whoPosts": "Listed by",
+    "published": "Published {when}",
+    "description": "From the listing",
+    "source": "Source",
+    "originalText": "Original text",
+    "translate": "Translate",
+    "translating": "Translating…",
+    "showOriginal": "Show original",
+    "translateFailed": "Couldn’t translate",
+    "machineTranslation": "Translated by AI",
+    "negotiable": "On request",
+    "marketDelta": "{delta} vs market"
+  },
+  "actions": {
+    "menu": "More",
+    "title": "Listing",
+    "back": "Back",
+    "hide": "Hide listing",
+    "hideHint": "We won't show it or its copies again",
+    "block": "Block author",
+    "blockHint": "Don't show their listings",
+    "blockHintPhone": "Don't show listings from number {label}",
+    "blockHintSource": "Don't show listings from {label}",
+    "blockCount": "{n, plural, one {hides {n} listing} other {hides {n} listings}}",
+    "report": "Report",
+    "support": "Contact support",
+    "supportHint": "Already rented, a scam or it’s your listing — we’ll sort it out",
+    "reportHint": "Rented, agent, wrong details or scam"
+  },
+  "report": {
+    "title": "What's wrong?",
+    "rented": "Already rented",
+    "rentedHint": "The listing is no longer available",
+    "agent": "It's an agent, not the owner",
+    "agentHint": "We'll mark the number as an agent's",
+    "wrong_data": "Wrong details",
+    "wrong_dataHint": "Price, district or rooms don't match",
+    "detailTitle": "What exactly is wrong?",
+    "d_price": "Price",
+    "d_priceHint": "Different amount or currency",
+    "d_rooms": "Rooms, area or floor",
+    "d_roomsHint": "Don't match the post or the flat",
+    "d_place": "District or map location",
+    "d_placeHint": "The flat is in another district",
+    "d_photos": "Photos",
+    "d_photosHint": "Photos are from another flat",
+    "d_other": "Other",
+    "d_otherHint": "Property type, renovation, terms",
+    "fraud": "Scam or spam",
+    "fraudHint": "Asks for prepayment, stolen photos, ads"
+  },
+  "settings": {
+    "group": {
+      "feed": "Feed",
+      "look": "Appearance",
+      "region": "Language and currency",
+      "notify": "When to send",
+      "about": "About"
+    },
+    "hidden": "Hidden",
+    "home": "Home screen icon",
+    "support": "Contact support",
+    "instagram": "Follow us on Instagram",
+    "about": "KvadroApp collects listings from public Telegram channels. Every card links to the original post.",
+    "theme": {
+      "_": "Theme",
+      "auto": "Like Telegram",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "graphics": {
+      "_": "Graphics",
+      "auto": "Auto",
+      "full": "Full",
+      "lite": "Lite",
+      "hint": "Lite turns off the blur under panels and on photos, so the feed scrolls smoother on slower phones. Auto turns it on by itself if the phone is slow or the feed stutters."
+    }
+  },
+  "hidden": {
+    "intro": "These listings and authors won't show up in the feed or the radar.",
+    "empty": "Nothing is hidden",
+    "authors": "Blocked authors",
+    "listings": "Hidden listings",
+    "phone": "Number",
+    "channel": "Channel",
+    "noListings": "no listings right now",
+    "return": "Unhide",
+    "all": "Show everything again",
+    "confirmAll": "Show all hidden listings and blocked authors again?"
+  },
+  "near": {
+    "here": "close by",
+    "m": "{m} m",
+    "km": "{km} km"
+  },
+  "details": {
+    "facts": "Facts",
+    "today": "Today",
+    "onMarket": "on the market",
+    "daysOnMarket": "{n, plural, one {day on the market} other {days on the market}}",
+    "publications": "{n, plural, one {post} other {posts}}",
+    "channels": "{n, plural, one {channel} other {channels}}",
+    "views": "{n, plural, one {view} other {views}}",
+    "history": "History",
+    "historySingle": "Published {date} in @{channel}. No reposts or price changes yet.",
+    "priceHistory": "Price history"
+  },
+  "market": {
+    "title": "Compared with the district",
+    "titleNear": "Compared with similar nearby",
+    "titleCity": "Compared with the city",
+    "cheaper": "cheaper",
+    "median": "typical {value}{unit}",
+    "pricier": "pricier",
+    "how": "Where this comes from",
+    "clsJk": " in complexes",
+    "clsHouse": " in regular buildings",
+    "ctxNear": "{n} nearest {rooms}-room{cls} · within {km} km",
+    "ctxNearSale": "{n} nearest flats{cls} · within {km} km · per m²",
+    "ctxDistrict": "{rooms}-room · {district} · {n} listings",
+    "ctxDistrictSale": "{district} · per m² · {n} listings",
+    "ctxCity": "{rooms}-room · {district} city · {n} listings",
+    "ctxCitySale": "{district} city · per m² · {n} listings",
+    "ctxM2": "Per m² · 3+ rooms · {district}",
+    "ctxPerson": "A bed · {district} · {n} listings",
+    "ctxPlace": " · district {place}",
+    "info": {
+      "more": "More",
+      "agoNow": "just now",
+      "agoMin": "{n, plural, one {{n} minute ago} other {{n} minutes ago}}",
+      "agoHour": "{n, plural, one {{n} hour ago} other {{n} hours ago}}",
+      "agoDay": "{n, plural, one {{n} day ago} other {{n} days ago}}"
+    },
+    "v3": {
+      "m": "{m} m",
+      "km": "{km} km",
+      "times": "{x} times",
+      "pct": "{pct}%",
+      "rooms1": "also 1-room",
+      "rooms2": "also 2-room",
+      "rooms3": "also 3-room",
+      "rooms4": "also 4+ rooms",
+      "jk": "also in a complex",
+      "house": "also in a regular building",
+      "within": "within {dist}",
+      "half": "Half of them cost less than {value}, half more.",
+      "halfM2": "We compare the price per m²: half of them are below {value}, half above.",
+      "perM2": "{value} per m²",
+      "perM2Month": "{value} per m² a month",
+      "own": "This one costs {value}",
+      "ownM2": "Here it is {value}",
+      "pricier": "{how} more.",
+      "cheaper": "{how} less.",
+      "same": "about the same.",
+      "mixed": "cheaper than its neighbours. But across the district such flats usually cost {place}, so we don’t call it “below market”.",
+      "noRepair": "cheaper than its neighbours, but the flat has no renovation or needs it — such flats usually cost less, so we don’t call it “below market”.",
+      "suspicious": "much cheaper than everything nearby. Check the price with the seller and don’t pay upfront.",
+      "check": "very far from prices nearby — check it with the seller.",
+      "asking": "Asking prices — after bargaining it can be cheaper",
+      "updated": "updated {ago}",
+      "found": "{n, plural, one {We found {n} similar flat nearby: {alike}.} other {We found {n} similar flats nearby: {alike}.}}",
+      "district": "{n, plural, one {Too few similar flats nearby, so we compared with all of {place}: {n} listing.} other {Too few similar flats nearby, so we compared with all of {place}: {n} listings.}}",
+      "city": "{n, plural, one {The district isn’t given, so we compared with all of {place}: {n} listing.} other {The district isn’t given, so we compared with all of {place}: {n} listings.}}"
+    },
+    "noteSuspicious": "The price is far below the usual for such apartments — this is what lures often look like. Do not pay anything before viewing and checking the documents."
+  },
+  "unit": {
+    "m2": "/m²",
+    "month": "/mo",
+    "m2Month": "/m² per mo"
+  },
+  "radar": {
+    "all": "All {n}",
+    "instantHint": "Each new one as soon as it appears",
+    "digestHint": "As a list at {time}",
+    "digestHintAny": "As a list at set times",
+    "latest": "Latest finds",
+    "none": "Nothing yet — radar will send it as soon as it appears",
+    "found": "See what it found · {n}",
+    "foundPlain": "See what it found",
+    "send": "Send to chat",
+    "edit": "Edit conditions",
+    "unhide": "Show again",
+    "unhidden": "Hidden listings are shown again",
+    "delete": "Delete radar",
+    "new": "new"
+  },
+  "nudge": {
+    "title": "Turn on radar for this search?",
+    "what": "New ones — straight to the chat",
+    "none": "None yet — radar will send them as they appear",
+    "enable": "Turn on",
+    "setup": "Set up"
+  },
+  "back": {
+    "title": "{count} since your last visit",
+    "new": "{n, plural, one {new} other {new}}",
+    "what": "Radar will send the next ones right away — you'll know first"
+  },
+  "feedRadar": {
+    "titleRent": "Good flats get rented in the first few hours",
+    "titleSale": "Good-value flats sell fast",
+    "what": "Turn on radar — new ones for this search will come to Telegram as soon as they appear.",
+    "enable": "Turn on radar",
+    "setup": "Set up radar"
+  },
+  "home": {
+    "title": "kvadro² on your home screen",
+    "what": "Open it in one tap, like a regular app",
+    "add": "Add",
+    "added": "kvadro² icon added to your home screen"
+  },
+  "chat": {
+    "restart": "The bot can’t message you — it looks stopped. Open the chat with the bot? Tap “Restart” there and turn the radar on again."
+  },
+  "head": {
+    "rooms": "Rooms",
+    "price": "Price",
+    "followOn": "Radar is on"
+  },
+  "alert": {
+    "day": "≈{n} a day",
+    "week": "{n} a week",
+    "rare": "rarely so far"
+  },
+  "type": {
+    "apartment": "Apartment",
+    "house": "House",
+    "room": "Room",
+    "commercial": "Commercial",
+    "land": "Land"
+  },
+  "owner": {
+    "any": "Anyone",
+    "no_agents": "No agents",
+    "owners": "Owners only"
+  },
+  "tenant": {
+    "family": "Family",
+    "men": "Men",
+    "women": "Women"
+  },
+  "subs": {
+    "empty": "Radar watches the channels for you",
+    "emptyHint": "Tell it what you’re looking for: radar checks dozens of Telegram channels around the clock and sends new matching listings to the chat right away. Turn it off any time.",
+    "resumed": "Radar is on again. {count} you haven’t seen are in your chat with the bot",
+    "deleteConfirm": "Delete radar “{name}”?",
+    "paused": "Paused",
+    "hidden": "Hidden: {n}",
+    "mode": {
+      "instant": "Right away",
+      "digest": "As a digest"
+    }
+  },
+  "found": {
+    "title": "Found a place?",
+    "text": "Let us know with one tap — it tells us whether kvadro² helps you search.",
+    "kvadro": "Yes, through kvadro²",
+    "elsewhere": "Yes, elsewhere",
+    "searching": "Still looking",
+    "thanksYes": "Congrats! 🎉 Thanks for telling us",
+    "thanksSearching": "Good luck with the search! You can turn radar back on anytime",
+    "stopped": "Not looking anymore",
+    "thanksStopped": "Got it, thanks! You can turn radar back on anytime",
+    "whereTitle": "Where did you find it?",
+    "whereText": "Let us know — it shows which listings we’re missing.",
+    "where": {
+      "telegram": "Another Telegram channel",
+      "olx": "OLX",
+      "site": "Another website (Uybor, Uysot…)",
+      "agent": "Through a realtor",
+      "friends": "Friends told me",
+      "street": "A sign on a building or in the street",
+      "other": "Other"
+    },
+    "congrats": "Congrats on the new place!",
+    "congratsText": "Thanks for telling us. If kvadro² helped, tell your friends — they’ll find it useful too.",
+    "share": "Tell friends",
+    "shareText": "Found my new place through kvadro² 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. realtors and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free.",
+    "done": "Done"
+  },
+  "notify": {
+    "quiet": "Quiet hours",
+    "quietHint": "No cards are sent; everything from overnight comes as one digest in the morning.",
+    "quietOff": "Off",
+    "digest": "Digest times",
+    "digestHint": "When to send what radars in “As a digest” mode found.",
+    "digestHintNone": "For radars in “As a digest” mode — switch it in a radar card on the Radar tab.",
+    "and": " and ",
+    "tz": "Times are Tashkent time.",
+    "currency": "Currency",
+    "currencyHint": "Prices in the feed, on the map and in bot cards.",
+    "language": "Language",
+    "languageHint": "For the app, the bot and listing cards."
+  },
+  "money": {
+    "uzs": "{amount} UZS",
+    "mln": "{value}M UZS",
+    "bln": "{value}B UZS",
+    "unitMln": "M UZS"
+  }
+}
