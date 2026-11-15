@@ -563,3 +563,37 @@ ASSUMPTION_MISMATCH AM-56 (2026-11-15):
   - Component tests assert DOM attributes; no dependency is added.
   - `brand-words.json` lists the brand forms (`kvadro²`, `KvadroApp`, hosts, handles, the Cyrillic name), not the
     bare word.
+
+## R. Development track, 2026-11-15 — WP-21, Telegram layer and session
+
+Taken on «бери WP-21». Branch `feat/wp-21-telegram-and-session`. The Mini App now starts inside Telegram: the boot
+script with «Обновите Telegram», the adapter `tg` (the only reader of `window.Telegram`), the session exchange through
+`/bff/session` in cookie or header mode, BackButton and SettingsButton on the app's own history stack, launch links,
+the locale guard, and a nonce CSP from `proxy.ts`. The spike of step 1 chose nonces with request-time documents
+(ADR-0020, its own PR). The specification is corrected where the code differs (rule 6) and its "Handoff" is filled.
+
+ASSUMPTION_MISMATCH AM-57 (2026-11-15):
+- **Assumption.** `25` §3.1 and the WP-21 specification assumed:
+  - a nonce-based CSP can live with the static shell of `cacheComponents`;
+  - a plain `<script async>` of the root layout keeps its place in `<head>`;
+  - `MeResource` tells which Telegram user a cookie belongs to;
+  - `history.replaceState(history.state, …)` removes the launch fragment for good;
+  - two history changes in one tick are two entries.
+- **What was found.**
+  - The static shell is prerendered without a request: none of its 23 script tags carries the nonce and the browser
+    blocks all of them. With the root layout reading `x-nonce` (and `instant = false`) all 31 carry it; documents
+    become `ƒ`, and an unknown address answers `200` with the not-found screen and `noindex` instead of `404`.
+  - React 19 hoists an `async` `<script src>` above the inline scripts of `<head>`.
+  - `MeResource` has no Telegram id.
+  - The App Router's patched `replaceState` ignores an address under a state that carries its `__NA` marker, and the
+    fragment came back on the next Back; it also came back on the locale switch after sign-in.
+  - A native `replaceState` followed by a router push in the same tick left one history entry.
+  - `restoreFromDeviceStorage` cannot run in parallel with the SDK wait: DeviceStorage is part of the SDK.
+- **Resolution.**
+  - ADR-0020: every document renders at request time; the WP-20 end-to-end 404 case now checks the not-found screen
+    with `noindex`.
+  - The boot script inserts the SDK tag after its watchdog listens.
+  - `homi_session_user` holds the SHA-256 of the Telegram user id; `GET /bff/session` returns it.
+  - `scrubLaunchFragment` passes `null`; `FragmentGuard` removes the fragment after every navigation.
+  - The launch redirect replaces first and pushes once the router shows the cleaned address.
+  - The restore runs right after the SDK wait.
