@@ -57,10 +57,23 @@ grep -qE '^QUEUE_CONNECTION=redis' backend/.env 2>/dev/null && ok "QUEUE_CONNECT
 # `services.sh status` exits 0 when a service is merely not running (that is a WARN line), so read its output (KI-21).
 next_status="$("$HOMI_ROOT/scripts/dev/services.sh" status next-landing next-app next-arm 2>&1 || true)"
 if printf '%s\n' "$next_status" | grep -qE '^(WARN|FAIL)  '; then warn "Next dev servers not all running → make dev-start"; else ok "Next dev servers running on 3000/3001/3002"; fi
+# Redirects are followed: the app answers `/` with 307 to its default locale (`/ru`, frontend/app/proxy.ts, WP-20),
+# so the page that must answer 200 is the last one in the chain, and the chain must stay on the probed host (KI-30).
 for pair in homi.loc:landing app.homi.loc:app arm.homi.loc:arm; do
     host="${pair%%:*}"; app="${pair##*:}"
-    code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "https://$host/" 2>/dev/null || true)"
-    [ "$code" = "200" ] && ok "https://$host/ → 200 (nginx → next dev $app)" || fail "https://$host/ → ${code:-no response} → make dev-start; make dev-nginx"
+    probe="$(curl -sL --max-redirs 3 --max-time 10 -o /dev/null -w '%{http_code} %{url_effective}' "https://$host/" 2>/dev/null || true)"
+    code="${probe%% *}"; final="${probe#* }"
+    rest="${final#https://}"; final_host="${rest%%/*}"
+    case "$rest" in */*) final_path="/${rest#*/}" ;; *) final_path="/" ;; esac
+    if [ "$code" = "200" ] && [ "$final_host" = "$host" ]; then
+        via=""; [ "$final_path" = "/" ] || via=" via $final_path"
+        ok "https://$host/ → 200$via (nginx → next dev $app)"
+    elif [ "$code" = "200" ]; then
+        fail "https://$host/ ends on another host ($final) → check the redirects of frontend/$app and its nginx vhost"
+    else
+        where=""; [ -z "$final" ] || [ "$final" = "https://$host/" ] || where=" at $final"
+        fail "https://$host/ → ${code:-no response}$where → make dev-start; make dev-nginx"
+    fi
 done
 
 info "env files (key names only)"

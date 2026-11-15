@@ -37,12 +37,12 @@ Laravel  ─ Horizon (Redis :6379) · PostgreSQL :5432 · `public` disk = storag
 
 ## What `dev-check` verifies
 
-Version pins (`.node-version`, `packageManager`, composer platform, PHP extensions) · `/etc/hosts` entries · certificate present, covers all six hosts, not expiring, **trusted by the system keychain** · php-fpm/PostgreSQL/Redis/nginx ports · `https://api.homi.loc/up` → 200 without `-k` · `https://cdn.homi.loc/health.txt` → 200 · database reachable and no pending migrations · Horizon running · `QUEUE_CONNECTION=redis` (ADR-0005) · Next dev servers · `.env` **key** parity against `.env.example` for backend and each app (values are never printed). Exit code 1 on any FAIL, with a fix hint per line.
+Version pins (`.node-version`, `packageManager`, composer platform, PHP extensions) · `/etc/hosts` entries · certificate present, covers all six hosts, not expiring, **trusted by the system keychain** · php-fpm/PostgreSQL/Redis/nginx ports · `https://api.homi.loc/up` → 200 without `-k` · `https://cdn.homi.loc/health.txt` → 200 · database reachable and no pending migrations · Horizon running · `QUEUE_CONNECTION=redis` (ADR-0005) · Next dev servers · `https://homi.loc/`, `https://app.homi.loc/` and `https://arm.homi.loc/` through nginx → 200 after redirects on the same host (the app's `/` answers 307 to its default locale `/ru`, and the line says `via /ru`; KI-30) · `.env` **key** parity against `.env.example` for backend and each app (values are never printed). Exit code 1 on any FAIL, with a fix hint per line.
 
 ## Environment files
 
 - `backend/.env.example` is the authoritative key list (ADR-0005/0006 defaults, `MEDIA_PUBLIC_URL`, blank `AWS_*` for staging/production, Telegram and CORS keys). Secrets never enter the repository.
-- `frontend/{landing,app,arm}/.env.example` → copy to `.env.local` (gitignored). Only `NEXT_PUBLIC_*` values exist today.
+- `frontend/{landing,app,arm}/.env.example` → copy to `.env.local` (gitignored). Besides `NEXT_PUBLIC_*`, the app has server-only keys since WP-21 (`API_URL`, `CSP_*`). After pulling, a key added to a template shows up in `dev-check` as "keys missing"; copy it from the template with its default.
 - Machine-specific overrides for the scripts: `.ai/local.env` (template `.ai/local.env.example`): Next ports, `NGINX_ETC`, reference-project paths.
 
 ## Troubleshooting
