@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\CityController;
+use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
@@ -30,6 +31,7 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
         Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
         Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
         Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
+        Route::post('events', EventController::class)->middleware('ability:app:write')->name('events.store');
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
