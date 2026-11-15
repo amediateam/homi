@@ -14,6 +14,13 @@ use App\Http\Controllers\Api\V1\Listings\ListingTranslationController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
+use App\Http\Controllers\Api\V1\Personal\BlockedAuthorController;
+use App\Http\Controllers\Api\V1\Personal\FavoriteController;
+use App\Http\Controllers\Api\V1\Personal\FoundSurveyController;
+use App\Http\Controllers\Api\V1\Personal\HiddenController;
+use App\Http\Controllers\Api\V1\Personal\HiddenListingController;
+use App\Http\Controllers\Api\V1\Personal\HistoryController;
+use App\Http\Controllers\Api\V1\Personal\ReportController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Middleware\SetRequestLocale;
@@ -53,6 +60,23 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
             Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->name('translation');
             Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->name('share');
         });
+
+        // Personal lists (WP-13): native, stubs until WP-44; `app:read` to list, `app:write` to change.
+        Route::get('favorites', [FavoriteController::class, 'index'])->middleware('ability:app:read')->name('favorites.index');
+        Route::put('favorites/{number}', [FavoriteController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.update');
+        Route::delete('favorites/{number}', [FavoriteController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.destroy');
+        Route::get('history', [HistoryController::class, 'index'])->middleware('ability:app:read')->name('history.index');
+        Route::delete('history', [HistoryController::class, 'destroy'])->middleware('ability:app:write')->name('history.destroy');
+        Route::put('hidden/listings/{number}', [HiddenListingController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.update');
+        Route::delete('hidden/listings/{number}', [HiddenListingController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.destroy');
+        Route::put('listings/{number}/blocked-author', [BlockedAuthorController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.update');
+        Route::delete('listings/{number}/blocked-author', [BlockedAuthorController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.destroy');
+        Route::get('hidden', [HiddenController::class, 'index'])->middleware('ability:app:read')->name('hidden.index');
+        Route::delete('hidden/authors/{id}', [HiddenController::class, 'destroyAuthor'])->whereUlid('id')->middleware('ability:app:write')->name('hidden.authors.destroy');
+        Route::delete('hidden', [HiddenController::class, 'destroy'])->middleware('ability:app:write')->name('hidden.destroy');
+        Route::post('listings/{number}/reports', ReportController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
+        Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware('ability:app:write')->name('surveys.found.store');
+        Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware('ability:app:write')->name('surveys.found.where');
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');

@@ -23,7 +23,6 @@ use App\Services\Sources\Data\MapPoints;
 use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 /**
@@ -38,8 +37,9 @@ use InvalidArgumentException;
  *
  * Reserved numbers: `999404` → 404, `999503` → 503, `100016` answers with `100001` (a merged duplicate). Scenarios:
  * `empty`, `few` and `page2_error` (feed), `new_none` and `new_one` (new-since), `contact_unavailable`,
- * `translation_unavailable`. `{media}` and `{api}` in the fixture become `config('media.public_url')` and
- * `config('app.url')`. The `stub` object of an entry (city, synthetic phone) is stub data, never answered.
+ * `translation_unavailable`. A cursor the feed did not give ends the list quietly (`StubCursor`). `{media}` and
+ * `{api}` in the fixture become `config('media.public_url')` and `config('app.url')`. The `stub` object of an
+ * entry (city, synthetic phone) is stub data, never answered.
  */
 final class StubListingSource implements ListingSource
 {
@@ -64,7 +64,11 @@ final class StubListingSource implements ListingSource
     public function feed(ListingQuery $query, SourceContext $context): ListingPage
     {
         $this->fixtures->failForReserved($context);
-        $offset = $this->offset($query->cursor);
+        $offset = StubCursor::offset($query->cursor);
+
+        if ($offset === null) {
+            return new ListingPage([], null);
+        }
 
         if ($context->scenario === 'page2_error' && $offset > 0) {
             throw new SourceUnavailable('Stub scenario page2_error.');
@@ -318,20 +322,6 @@ final class StubListingSource implements ListingSource
         });
 
         return $entries;
-    }
-
-    /** The offset of a cursor `s1.<offset>`; null is the first page. */
-    private function offset(?string $cursor): int
-    {
-        if ($cursor === null) {
-            return 0;
-        }
-
-        if (preg_match('/^s1\.(\d{1,6})$/', $cursor, $match) !== 1) {
-            throw ValidationException::withMessages(['cursor' => 'The cursor is not one this feed gave.']);
-        }
-
-        return (int) $match[1];
     }
 
     /** @param  array<array-key, mixed>  $entry */

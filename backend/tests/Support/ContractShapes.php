@@ -137,4 +137,13 @@ final class ContractShapes
 
     /** The answer of `GET /listings/count` and `GET /listings/new`; `count` is an integer in every case (fix of LB-API-055). */
     public const array LISTING_COUNT = ['success' => 'bool', 'data' => ['count' => 'int'], 'meta' => ['source' => 'string']];
+
+    /** A blocked author of `GET /hidden` (WP-13); `label` is a masked phone or `@channel`. */
+    public const array BLOCKED_AUTHOR = ['id' => 'string', 'kind' => 'string', 'label' => 'string', 'count' => 'int'];
+
+    /** The answer of `PUT /listings/{number}/blocked-author` (WP-13). */
+    public const array BLOCKED_AUTHOR_RESULT = [...self::BLOCKED_AUTHOR, 'listing_numbers' => ['*' => 'int']];
+
+    /** `data` of `GET /hidden` (WP-13): both lists are always present. */
+    public const array HIDDEN = ['listings' => ['*' => self::LISTING_PREVIEW], 'authors' => ['*' => self::BLOCKED_AUTHOR]];
 }
