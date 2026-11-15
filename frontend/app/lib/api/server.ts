@@ -11,14 +11,14 @@ import {
   type SuccessData,
 } from "@homi/api-client";
 import { isLocale, type Locale } from "@homi/config";
-import type { ApiSuccess } from "@homi/types";
 import { cookies } from "next/headers";
 import { locale as rootLocale } from "next/root-params";
 
 import { apiBaseUrl, getSessionToken } from "@/lib/session/server";
 
-import { type ApiFailure, failureOf } from "./errors";
+import { failureOf } from "./errors";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "./scenario";
+import type { ApiMeta, ApiResult } from "./types";
 
 /**
  * Typed server calls of `/api/v1` (WP-22, DEC-44, `25` §3.1): one function per method of `25` §4.2, with the
@@ -29,8 +29,7 @@ import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "./scenario";
 
 export const API_TIMEOUT_MS = 15_000;
 
-export type ApiMeta = NonNullable<ApiSuccess<unknown>["meta"]>;
-export type ApiResult<T> = { ok: true; data: T; meta: ApiMeta } | ApiFailure;
+export type { ApiMeta, ApiResult };
 
 type Query = NonNullable<RequestOptions["query"]>;
 type Data<P extends keyof import("@homi/types").paths, M extends HttpMethod> = SuccessData<OperationOf<P, M>>;

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
+import { sameOrigin } from "@/lib/security/sameOrigin";
 import { apiBaseUrl, SESSION_COOKIE, SESSION_USER_COOKIE, telegramUserTag } from "@/lib/session/server";
 import { accessReason } from "@/lib/session/types";
 
@@ -26,23 +27,6 @@ function clearSession(response: NextResponse): NextResponse {
     response.cookies.set(name, "", { ...cookieAttributes, maxAge: 0 });
   }
   return response;
-}
-
-/** `POST` needs the app's own `Origin`; any request is refused when it says it comes from another site. */
-function sameOrigin(request: NextRequest, requireOrigin: boolean): boolean {
-  const origin = request.headers.get("origin");
-  const site = request.headers.get("sec-fetch-site");
-  if (site !== null && site !== "same-origin") {
-    return false;
-  }
-  if (origin === null) {
-    return !requireOrigin;
-  }
-  try {
-    return new URL(origin).host === (request.headers.get("host") ?? request.nextUrl.host);
-  } catch {
-    return false;
-  }
 }
 
 type ApiAnswer = { status: number; body: Record<string, unknown> | null } | { status: 0; body: null };
