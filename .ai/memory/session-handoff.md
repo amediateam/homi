@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (WP-12 in REVIEW on `feat/wp-12-contract-listings`; WP-11 merged #45/#46/#47, WAITING for the production track; WP-10 merged #42/#43/#44, WAITING for the production track; WP-03 WAITING deploy; WP-00/01/02 WAITING)
+updated: 2026-11-15 (WP-12 merged #48, WAITING for the production track; WP-11 merged #45/#46/#47, WAITING for the production track; WP-10 merged #42/#43/#44, WAITING for the production track; WP-03 WAITING deploy; WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,10 +11,10 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «сливай #39» … «сливай #46» (each PR merged on its own word); «тебе можно править .env пока я сам не запрещу» (the committed deny `Edit(**/.env)` and the guard hook still block the agent; it never bypasses them and never prints values); «сделай все сам и добав все что не хватает» (the follow-up docs PR #47 of WP-11, opened and merged by the agent); «бери WP-12».
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail for project mail); «бери WP-03»; «сливай #39» … «сливай #46» (each PR merged on its own word); «тебе можно править .env пока я сам не запрещу» (the committed deny `Edit(**/.env)` and the guard hook still block the agent; it never bypasses them and never prints values); «сделай все сам и добав все что не хватает» (the follow-up docs PR #47 of WP-11, opened and merged by the agent); «бери WP-12»; «сливай #48»; «погнали, открывай docs-PR» (this follow-up).
 
 ## State at handoff
-- `main` = `03c55b6` (#47 merged). **WP-12** taken on «бери WP-12»: branch `feat/wp-12-contract-listings`, all 9 steps done, PR **#48**, status `REVIEW (#48)`. Merged today: #42, #44, #43 (WP-10), #45 (WP-11) and #46 (its env keys). `backend` green on `main` after #45 (run 43657763081, `frontend` 43657762964) and after #46 (run 43658186462).
+- `main` = `b16993e` (#48 merged after green CI; `backend` 43662113261 and `frontend` 43662113325 green on `main`) plus the WP-12 follow-up docs PR (branch `docs/wp-12-after-merge`). WP-12 is `WAITING` for the production track. Merged today: #42, #44, #43 (WP-10), #45 (WP-11) and #46 (its env keys). `backend` green on `main` after #45 (run 43657763081, `frontend` 43657762964) and after #46 (run 43658186462).
 - WP-10 and WP-11 are `WAITING` for the production track; WP-03, WP-00, WP-01 and WP-02 are `WAITING`, unchanged. Open PRs: only Dependabot #5 (not to be merged, KI-4).
 - Local only: `homi_test` on Homebrew PostgreSQL (`127.0.0.1`); Playwright's Chromium in `~/Library/Caches/ms-playwright`.
 - Verify: `make ci-backend` → exit 0 (Pest 343 passed, 4 skipped); `DB_HOST=127.0.0.1 DB_USERNAME=<os user> DB_PASSWORD= make test-pgsql` → 4 passed; `make ci-frontend` → exit 0; `scripts/dev/env-keys.sh` → the four missing keys of item 2 below.
@@ -28,14 +28,14 @@ Written for whoever continues the **development track** (the second developer, a
 ## Waiting for the developer (do NOT start on your own)
 1. **WP-10 (production track):** approve the migration `2026_11_14_224945_create_source_flag_changes_table` on production, deploy, add `/docs/api` to the nginx basic-auth locations, run `php artisan sources:list` on staging; then `DONE`.
 2. **The developer's local `backend/.env`** lacks `SOURCES_ALLOW_STUB`, `TELESCOPE_RECORD_ALL`, `TELEGRAM_SUPPORT_USERNAME` and `RADAR_CREATION_ENABLED` (without the last the local stack runs with radars off). The agent cannot write the file; the developer runs: `! printf '\nSOURCES_ALLOW_STUB=true\nTELESCOPE_RECORD_ALL=false\nTELEGRAM_SUPPORT_USERNAME=\nRADAR_CREATION_ENABLED=true\n' >> backend/.env`.
-3. **WP-12:** review and merge; then the production track deploys and runs `php artisan sources:publish-stub-media` once on staging and once on production, and confirms one fixture photo loads from the CDN host.
+3. **WP-12 (production track):** deploy, then run `php artisan sources:publish-stub-media` once on staging and once on production, and confirm that one fixture photo loads from the CDN host.
 4. **WP-11 (production track):** set `TELEGRAM_SUPPORT_USERNAME` on staging and production, leave `RADAR_CREATION_ENABLED` unset, deploy, check on staging that `GET /api/v1/reference` answers without a token with `radars_enabled: false` and that a sign-in token opens `GET /api/v1/me`; then `DONE`.
 5. **WP-03:** the deploy with the production track (a no-op for users), then `DONE`.
 6. **Operator request:** from the project's own mailbox (WP-02 Part A; never the connected Gmail); then "Sent" in `docs/migration/decisions/2026-11-14-operator-request.md` and WP-02 `DONE`.
 7. **First developer:** accept ADR-0016 … 0019, answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
 8. **WP-00 (production track):** counts, migration approval, deploy, staging check; outbound addresses to the operator (#37).
 9. **Reviewer decisions of #37:** `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding, a WP-30 split. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
-10. **WP-13** (the next queue package after WP-12) only on the developer's word.
+10. **WP-13** (the next queue package) only on the developer's word.
 
 ## Gotchas learned this session
 - Source feature names contain dots: read `config('sources.features')` whole; a dotted key reads a nested array.

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | REVIEW (#48) |
+| Status | WAITING (merged in #48 on 2026-11-15; production track: deploy, `sources:publish-stub-media` on staging and production, one fixture photo from the CDN host) |
 | Depends on | WP-11 |
 | Size | about 3 000 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.1, §4.2, §4.5; `08` §1.7, §1.8 and the rows of API-004 … API-010, API-017 and API-035, RES-001, RES-002; `02` BR-API-156 … BR-API-158, LB-API-055, Q-API-065, Q-API-066; `03` §1.12 and §4 (BR-APP-001 … BR-APP-009, BR-APP-020, BR-APP-023, BR-APP-024, BR-APP-026 … BR-APP-035, BR-APP-059, BR-APP-062, BR-APP-070, BR-APP-071); tasks `tasks/backend/KV-BE-016-search-filters-normaliser.md`, `KV-BE-037-call-links.md`, `KV-BE-048-translation.md`, `KV-BE-046-share.md` (rules only) |
@@ -467,8 +467,11 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
   `https://cdn.homi.loc/stub/100012/1.jpg` answers `200 image/jpeg`.
 - **Decisions taken here:** marked *corrected while executing* or *added while executing* above; AM-54 in
   `docs/ai/reports/phase-3-notes.md` §O.
+- **Merged** on 2026-11-15 on «сливай #48» (merge commit `b16993e`), after `backend`, `frontend` and `frontend-e2e`
+  were green on `5c58f00`; `backend` run 43662113261 and `frontend` run 43662113325 green on `main`. This status and
+  the `CLAUDE.md` update are in the follow-up docs PR.
 - **Next:**
-  1. review and merge;
+  1. ~~review and merge~~ (done);
   2. the production track deploys, runs `php artisan sources:publish-stub-media` once on staging and once on
      production, and confirms that one fixture photo address loads from the CDN host;
   3. set the status to `DONE`.
