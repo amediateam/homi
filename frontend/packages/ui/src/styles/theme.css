@@ -1,0 +1,87 @@
+/*
+ * Tailwind 4 mapping of the roles (WP-20). Tailwind's default palette is removed, so a utility can only name a
+ * role (`bg-bg`, `text-hint`, `bg-accent`); the names shadcn/ui components expect point at the same roles.
+ * `inline` keeps the `var()` references, so a theme switch on <html> recolours every utility.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg2);
+  --color-text: var(--text);
+  --color-hint: var(--hint);
+  --color-sheet: var(--sheet);
+  --color-material: var(--material);
+  --color-dim: var(--dim);
+  --color-sep: var(--sep);
+  --color-fill: var(--fill);
+  --color-good: var(--good);
+  --color-high: var(--high);
+  --color-warn: var(--warn);
+  --color-heart: var(--heart);
+  --color-danger: var(--danger);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-badge-good: var(--badge-good);
+  --color-badge-good-bg: var(--badge-good-bg);
+  --color-badge-high: var(--badge-high);
+  --color-badge-high-bg: var(--badge-high-bg);
+  --color-badge-warn: var(--badge-warn);
+  --color-badge-warn-bg: var(--badge-warn-bg);
+  --color-badge-same: var(--badge-same);
+  --color-badge-same-bg: var(--badge-same-bg);
+
+  /* shadcn/ui names on the roles */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-text);
+  --color-secondary: var(--fill);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--fill);
+  --color-muted-foreground: var(--hint);
+  --color-popover: var(--sheet);
+  --color-popover-foreground: var(--text);
+  --color-card: var(--bg);
+  --color-card-foreground: var(--text);
+  --color-destructive: var(--danger);
+  --color-border: var(--sep);
+  --color-input: var(--sep);
+  --color-ring: var(--accent);
+
+  --radius-*: initial;
+  /* `rounded-small` … — `rounded-s` would collide with Tailwind's logical-corner utilities */
+  --radius-small: var(--r-s);
+  --radius-medium: var(--r-m);
+  --radius-large: var(--r-l);
+  --radius-photo: var(--r-photo);
+  --radius-pill: var(--r-pill);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+
+  --animate-spin: spin 0.8s linear infinite;
+  --animate-shimmer: shimmer 1.3s ease-in-out infinite;
+  --animate-fade: fade var(--dur-base) var(--ease-ios) both;
+  --animate-rise: rise var(--dur-slow) var(--ease-ios) both;
+  --animate-rise-in: rise-in var(--dur-base) var(--ease-ios) both;
+}
+
+/* The z-index ladder of `03` §3.6 and the motion values, as named tokens (`z-(--z-tabbar)`). */
+:root {
+  --z-map-note: 5;
+  --z-topbar: 10;
+  --z-cta: 20;
+  --z-view-toggle: 29;
+  --z-tabbar: 30;
+  --z-map-card: 31;
+  --z-nudge: 35;
+  --z-subpage: 40;
+  --z-listing: 45;
+  --z-backdrop: 50;
+  --z-toast: 60;
+  --z-viewer: 100;
+  --z-pin: 1000;
+  --ease-ios: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --dur-fast: 0.25s;
+  --dur-base: 0.3s;
+  --dur-slow: 0.35s;
+}

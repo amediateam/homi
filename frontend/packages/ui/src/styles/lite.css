@@ -1,0 +1,31 @@
+/*
+ * Lite graphics (`03` §1.7, WP-20): everything under `html.lite`, applied by rule, not per component. The class is
+ * set by WP-21. No blur, solid glass, simpler shadows, translate-only chrome collapse, no mini title,
+ * `content-visibility: auto` on cards, no radar animation.
+ */
+html.lite {
+  --shadow-float: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html.lite .glass {
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html.lite [data-chrome] {
+  transition-property: transform;
+}
+
+html.lite [data-mini-title] {
+  display: none;
+}
+
+html.lite [data-card] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+html.lite [data-radar-animation] {
+  animation: none;
+}

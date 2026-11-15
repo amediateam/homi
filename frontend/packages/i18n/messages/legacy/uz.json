@@ -1,0 +1,592 @@
+{
+  "tab": {
+    "search": "Qidiruv",
+    "favorites": "Saralangan",
+    "subs": "Radar",
+    "settings": "Sozlamalar"
+  },
+  "deal": {
+    "rent_long": "Ijara",
+    "sale": "Sotuv",
+    "rent_daily": "Kunlik"
+  },
+  "rent": {
+    "long": "Uzoq vaqtga"
+  },
+  "common": {
+    "close": "Yopish",
+    "loadFailed": "Yuklanmadi",
+    "noAccess": "Ruxsat yoʻq",
+    "saveFailed": "Saqlab boʻlmadi"
+  },
+  "error": {
+    "offline": "Aloqa yoʻq",
+    "offlineText": "Internetni tekshirib, qayta urinib koʻring.",
+    "serverText": "Server javob bermadi. Bir daqiqadan keyin qayta urinib koʻring.",
+    "retry": "Qayta urinish"
+  },
+  "crash": {
+    "title": "Nimadir xato ketdi",
+    "text": "Xato yozib olindi. Ilovani yangilang — odatda shu yordam beradi.",
+    "reload": "Yangilash"
+  },
+  "listings": "{n, plural, one {eʼlonlar} other {eʼlonlar}}",
+  "app": {
+    "openViaBot": "Ilovani Telegram boti orqali oching.",
+    "saved": {
+      "favorites": "Saralangan",
+      "history": "Koʻrdik"
+    },
+    "view": {
+      "map": "Xarita",
+      "list": "Roʻyxat"
+    }
+  },
+  "noAccess": {
+    "title": {
+      "private": "Maxfiy bot",
+      "invite": "Taklif orqali kirish",
+      "full": "Joy qolmadi",
+      "blocked": "Ruxsat yoʻq",
+      "join": "Avval — bot"
+    },
+    "text": {
+      "private": "Ilova hozir faqat egasi uchun ochiq.",
+      "invite": "Kirish taklif havolasi orqali: uni oching va botda «Start»ni bosing.",
+      "full": "Hozir joy qolmadi. Keyinroq urinib koʻring.",
+      "blocked": "Ilovaga kirish cheklangan.",
+      "join": "Botda «Start»ni bosing — keyin ilova ochiladi."
+    },
+    "back": "Botga qaytish",
+    "toBot": "Botga oʻtish",
+    "checking": "Hozirgina «Start»ni bosdingizmi? Bir necha soniya kuting — kirishni tekshiryapmiz…",
+    "openPost": "📢 Postni kanalda ochish"
+  },
+  "sort": {
+    "title": "Saralash",
+    "new": "Avval yangilari",
+    "cheap": "Oldin arzonlari",
+    "expensive": "Avval qimmatlari",
+    "deal": "Bozordan arzonroq",
+    "center": "Markazga yaqinroq",
+    "ppm": "m² narxi arzonroq",
+    "dealHint": "Avval odatiy narxdan arzonroqlari — eng yaqin oʻxshashlar yoki tuman",
+    "centerHint": "Shahar markazidan uzoqligi boʻyicha",
+    "ppmHint": "Bir kvadrat metr narxi boʻyicha"
+  },
+  "toast": {
+    "subSaved": "Radar yoqildi. {count} allaqachon bot chatida",
+    "subSavedEmpty": "Radar yoqildi — yangilari chiqishi bilan chatga keladi{hint}",
+    "subUpdated": "Radar yangilandi. Yangi shartlarga {count} — bot chatida",
+    "subUpdatedEmpty": "Radar yangilandi. Hozircha boʻsh{hint}",
+    "subSavedFew": "Radar yoqildi, lekin bunday eʼlonlar kam. {what}: {rate}",
+    "subUpdatedFew": "Radar yangilandi, lekin bunday eʼlonlar kam. {what}: {rate}",
+    "relax": "Kengaytirish",
+    "relaxedEmpty": "Radar kengaytirildi — yangilari chiqishi bilan chatga keladi",
+    "subLimit": "Allaqachon {max} ta radar — keraksizini «Radar» boʻlimida oʻchiring",
+    "hidden": "Eʼlon yashirildi",
+    "blocked": "{label} bloklandi",
+    "undo": "Qaytarish",
+    "reported": "Rahmat! Koʻrib chiqamiz",
+    "reportedFraud": "Rahmat, koʻrib chiqamiz. Bu eʼlonni sizdan yashirdik",
+    "reportedRented": "Belgilandi: allaqachon band",
+    "reportedAgent": "Raqam makler raqami deb belgilandi",
+    "alreadyOn": "Bu qidiruvga radar allaqachon yoqilgan",
+    "noChat": "Radar yoqilmadi — bot sizga chatda yozishi uchun ruxsat kerak",
+    "alertOn": "Radar qayta yoqildi"
+  },
+  "sum": {
+    "roomsFrom": "{n}+ xona",
+    "roomsExact": "{n}-xonali",
+    "roomsRange": "{lo}–{hi} xonali",
+    "priceUpto": "{hi} gacha",
+    "priceFrom": "{lo} dan",
+    "wholeCity": "Butun Toshkent",
+    "nearMetro": "metro yonida",
+    "belowMedian": "≤ mediana",
+    "noAgents": "maklersiz",
+    "owners": "uy egalaridan",
+    "polygon": "Oʻz hududingiz",
+    "zonesBoth": "Markaz va yaqinroq"
+  },
+  "sheet": {
+    "districts": "Tumanlar:",
+    "districtsRegion": "Viloyat tumanlari (ixtiyoriy):",
+    "city": "Shahar",
+    "unitPriceHint": "Sotix yoki m² narxi — eʼlondagi maydonga koʻpaytiramiz",
+    "typicalRent": "{city}: kvartiralarning yarmi — oyiga {price} gacha",
+    "typicalDaily": "{city}: kvartiralarning yarmi — sutkasiga {price} gacha",
+    "typicalSale": "{city}: kvartiralarning yarmi — {price} gacha",
+    "title": "Filtrlar",
+    "editTitle": "Radar holati",
+    "reset": "Tozalash",
+    "createTitle": "Yangi radar",
+    "housing": "Uy-joy",
+    "rooms": "Xonalar",
+    "roomsHint": "— ikkita son oraliqni belgilaydi",
+    "roomsAny": "Barchasi",
+    "price": "Narxi, {cur}",
+    "priceMonth": "Oylik narx, {cur}",
+    "priceDay": "Bir sutkalik narxi, {cur}",
+    "rentTerm": "Ijara muddati",
+    "from": "-dan",
+    "to": "...gacha",
+    "anyPrice": "istalgan",
+    "upto": "{amount} gacha",
+    "belowMedian": "📊 Bozordan qimmat emas",
+    "belowMedianHintSale": "1 m² narxi eng yaqin oʻxshash eʼlonlardagi odatiy narxdan (boʻlmasa — tumandagidan) va tumandagidan yuqori emas — +10% gacha «odatiy darajada». Odatiy narx hali yoʻq joylardagi eʼlonlar koʻrsatilmaydi.",
+    "belowMedianHintRent": "Narx shu xonalar soni boʻyicha eng yaqin eʼlonlardagi odatiy narxdan (boʻlmasa — tumandagidan) va tumandagidan yuqori emas — +10% gacha «odatiy darajada». Odatiy narx hali yoʻq joylardagi eʼlonlar koʻrsatilmaydi.",
+    "where": "Qayerda izlash",
+    "zone": {
+      "center": "🏛 Markaz",
+      "near_center": "🏙 Markazga yaqinroq"
+    },
+    "nearMetro": "🚇 Metro yaqinida",
+    "drawArea": "Xaritada belgilash",
+    "drawAreaOn": "Xaritadagi hududingiz",
+    "orDistricts": "Yoki tumanlar:",
+    "who": "Kim joylagan",
+    "tenant": "Kim yashaydi",
+    "pets": "Taqiqlanmagan",
+    "petsOnly": "Ruxsat berilgan",
+    "petsTip": "🐾 Hayvon taqiqlangan eʼlonlarni yashiramiz. Ruxsat berilganlarini birinchi koʻrsatamiz.",
+    "petsOnlyTip": "🐾 Faqat hayvon bilan mumkin deb yozilgan eʼlonlar. Hozircha ular kam.",
+    "matchingNow": "Hozir mos keladi: {n}",
+    "flowDay": "📡 Radar: kuniga ≈{n}",
+    "flowWeek": "📡 Radar: haftasiga {n} ta",
+    "flowNone": "📡 Bir haftada bunday eʼlon boʻlmadi — radar kam ishlaydi",
+    "save": "Saqlash",
+    "subscribe": "Radarni yoqish",
+    "show": "Koʻrsatish",
+    "showN": "{n} koʻrsatish",
+    "nothing": "Hech narsa yoʻq",
+    "petsTitle": "Uy hayvonlari",
+    "new": "Yangi",
+    "furniture": "Mebel",
+    "any": "Muhim emas",
+    "furnished": "Mebelli",
+    "unfurnished": "Mebelsiz",
+    "renovation": "Taʼmirlash",
+    "floor": "Qavat",
+    "notFirst": "Birinchisi emas",
+    "notLast": "Oxirgisi emas",
+    "area": "Maydoni, m²",
+    "anyArea": "istalgan",
+    "market": {
+      "_": "Uy",
+      "new": "Yangi bino",
+      "secondary": "Ikkilamchi"
+    },
+    "appliances": "Texnika",
+    "posted": {
+      "1": "Bir kunda",
+      "3": "3 kun ichida",
+      "7": "Bir haftada",
+      "_": "Eʼlon qilingan"
+    },
+    "postedHint": "Faqat lenta uchun: chatga baribir faqat yangilari keladi."
+  },
+  "fmt": {
+    "area": "{area} m²",
+    "floorOf": "{floor}/{total} qavat",
+    "floor": "{floor}-qavat",
+    "pets": "🐾 hayvon bilan mumkin",
+    "metroDist": "{metro} · {m} m",
+    "centerKm": "Markazgacha {km} km",
+    "marketSame": "Odatdagi narx darajasida",
+    "marketSameShort": "≈ odatiy",
+    "marketMixed": "Qoʻshnilardan {pct}% arzon, lekin tumandan qimmat",
+    "marketMixedShort": "≈ nisbiy",
+    "marketNoRepair": "Qoʻshnilardan {pct}% arzon — taʼmirsiz",
+    "marketCheaper": "Bozor narxidan {pct}% arzonroq",
+    "marketPricier": "Bozordan {pct}% qimmat",
+    "marketTimes": "Bozordan {x} baravar qimmat",
+    "marketSuspicious": "Shubhali arzon: bozordan {pct}% past",
+    "marketCheck": "Narxni tekshiring: bozordan {pct}% past",
+    "marketCheckHigh": "Narxni tekshiring: bozordan {pct}% yuqori"
+  },
+  "card": {
+    "belowMarket": "Bozordan arzon",
+    "suspiciousCheap": "Shubhali arzon",
+    "checkPrice": "Narxni tekshiring",
+    "owner": "Uy egasi",
+    "ownerVerified": "Uy egasi ✓",
+    "negotiable": "Narxi kelishiladi",
+    "downPayment": "boshlangʻich toʻlov",
+    "businessPrice": "biznes narxi, joy ijarada",
+    "viewedTitle": "Bu eʼlonni koʻrgansiz"
+  },
+  "viewer": {
+    "title": "Surat"
+  },
+  "fav": {
+    "add": "Saralanganlarga",
+    "remove": "Saralangandan chiqarish"
+  },
+  "feed": {
+    "retry": "{error} — takrorlash",
+    "clearConfirm": "Koʻrilganlar tarixi tozalansinmi?",
+    "clear": "Tozalash",
+    "favEmpty": "Bu yer hozircha boʻsh",
+    "favEmptyHint": "Eʼlonni saqlash uchun ♡ ni bosing",
+    "histEmpty": "Siz hali hech narsa ochmadingiz",
+    "histEmptyHint": "Siz koʻrgan eʼlonlar shu yerda boʻladi",
+    "fewRent": "Bular ijara haqidagi barcha eʼlonlar",
+    "fewSale": "Sotuv haqidagi barcha eʼlonlar shular",
+    "fewHint": "{city}: yangi eʼlonlar kam. Radarni yoqing — yangilarini chiqishi bilan chatga yuboradi.",
+    "seeRent": "Ijarani koʻrish · {n}",
+    "seeSale": "Sotuvni koʻrish · {n}",
+    "subscribeHere": "Bu qidiruvga radar yoqish",
+    "otherCity": "Boshqa shahar",
+    "nothing": "Hech narsa topilmadi",
+    "nothingHint": "Filtrlarni kamaytirib koʻring",
+    "resetFilters": "Filtrlarni tiklash"
+  },
+  "city": {
+    "title": "Shahar",
+    "counts": "{rent} ta ijara · {sale} ta sotuv",
+    "firstTitle": "Qayerdan uy qidiryapsiz?",
+    "locate": "Joylashuv orqali aniqlash",
+    "locating": "Aniqlanmoqda…",
+    "locateDenied": "Joylashuvga ruxsat yoʻq — roʻyxatdan shahar tanlang. Ruxsatni Telegram sozlamalarida berish mumkin.",
+    "locateFail": "Qayerdaligingizni aniqlab boʻlmadi — roʻyxatdan shaharni tanlang.",
+    "locateFar": "Yaqiningizda hozircha bizning shaharlar yoʻq — roʻyxatdan tanlang."
+  },
+  "map": {
+    "locate": "Joylashuvim",
+    "locateDenied": "Joylashuvga ruxsat yoʻq. Uni Telegram sozlamalarida berish mumkin.",
+    "locateFail": "Qayerdaligingizni aniqlab boʻlmadi.",
+    "stackOf": "{n} / {total}",
+    "area": "Xaritada belgilash",
+    "areaHint": "Qayerdan qidirishni barmogʻingiz bilan chizing",
+    "areaSmall": "Kattaroq chizing",
+    "areaMove": "Ikki barmoq bilan — xaritani surish",
+    "areaCancel": "Bekor qilish",
+    "areaOn": "Oʻz hududingiz",
+    "areaRemove": "Hududni olib tashlash",
+    "note": "Xaritada {shown} / {total} · {missing} faqat tumani maʼlum",
+    "missing": "{n, plural, one {{n} ta eʼlonda} other {{n} ta eʼlonda}}"
+  },
+  "listing": {
+    "loadFailed": "Eʼlon yuklanmadi",
+    "rooms": "{n, plural, one {xonalar} other {xonalar}}",
+    "m2": "m²",
+    "floor": "qavat",
+    "building": "uy",
+    "newBuilding": "Yangi",
+    "secondary": "Ikkilamchi",
+    "call": "Qoʻngʻiroq",
+    "write": "Yozish",
+    "writePaid": "Raqam pullik",
+    "openPost": "Postni ochish",
+    "watchVideo": "Videoni Telegramda koʻrish",
+    "share": "Ulashish",
+    "location": "Joylashuv",
+    "mapOpen": "Xaritani ochish",
+    "nearby": "Yaqinida",
+    "mapApprox": "Joy taxminiy: eʼlondagi mavze, moʻljal yoki metro boʻyicha",
+    "mapFromYou": "Sizdan ≈ {km} km — joy taxminiy",
+    "openYandex": "Yandex Xaritalar",
+    "openGoogle": "Google Xaritalar",
+    "whoPosts": "Kim joylagan",
+    "published": "Eʼlon qilingan vaqti: {when}",
+    "description": "Eʼlondan",
+    "source": "Manba",
+    "originalText": "Asl matn",
+    "translate": "Tarjima qilish",
+    "translating": "Tarjima…",
+    "showOriginal": "Aslini koʻrsatish",
+    "translateFailed": "Tarjima qilib boʻlmadi",
+    "machineTranslation": "AI tarjimasi",
+    "negotiable": "Kelishiladi",
+    "marketDelta": "Bozorga {delta}"
+  },
+  "actions": {
+    "menu": "Yana",
+    "title": "Eʼlon",
+    "back": "Orqaga",
+    "hide": "Eʼlonni yashirish",
+    "hideHint": "Uni va nusxalarini boshqa koʻrsatmaymiz",
+    "block": "Muallifni bloklash",
+    "blockHint": "Uning eʼlonlarini koʻrsatmaslik",
+    "blockHintPhone": "{label} raqamidan eʼlonlarni koʻrsatmaslik",
+    "blockHintSource": "{label} kanalidan eʼlonlarni koʻrsatmaslik",
+    "blockCount": "{n, plural, one {{n} ta eʼlon yashiriladi} other {{n} ta eʼlon yashiriladi}}",
+    "report": "Shikoyat qilish",
+    "support": "Yordamga yozish",
+    "supportHint": "Band boʻlgan, firibgar yoki bu sizning eʼloningiz — hal qilamiz",
+    "reportHint": "Band, makler, xato yoki firibgarlik"
+  },
+  "report": {
+    "title": "Nima notoʻgʻri?",
+    "rented": "Allaqachon band",
+    "rentedHint": "Eʼlon endi dolzarb emas",
+    "agent": "Bu makler, uy egasi emas",
+    "agentHint": "Raqamni makler raqami deb belgilaymiz",
+    "wrong_data": "Maʼlumotlar notoʻgʻri",
+    "wrong_dataHint": "Narx, tuman yoki xonalar mos emas",
+    "detailTitle": "Aynan nima notoʻgʻri?",
+    "d_price": "Narx",
+    "d_priceHint": "Summa yoki valyuta boshqa",
+    "d_rooms": "Xonalar, maydon yoki qavat",
+    "d_roomsHint": "Post yoki kvartiraga mos emas",
+    "d_place": "Tuman yoki xaritadagi joy",
+    "d_placeHint": "Kvartira boshqa tumanda",
+    "d_photos": "Rasmlar",
+    "d_photosHint": "Rasmlar bu kvartiraniki emas",
+    "d_other": "Boshqa",
+    "d_otherHint": "Uy turi, taʼmir, shartlar",
+    "fraud": "Firibgarlik yoki spam",
+    "fraudHint": "Oldindan toʻlov soʻraydi, begona rasmlar, reklama"
+  },
+  "settings": {
+    "group": {
+      "feed": "Lenta",
+      "look": "Koʻrinish",
+      "region": "Til va valyuta",
+      "notify": "Qachon yuborish kerak",
+      "about": "Ilova haqida"
+    },
+    "hidden": "Yashirilganlar",
+    "home": "Telefon ekranidagi belgi",
+    "support": "Yordamga yozish",
+    "instagram": "Instagramdagi sahifamiz",
+    "about": "KvadroApp ochiq Telegram-kanallardan eʼlonlarni yigʻadi. Har bir kartochkada asl eʼlonga havola bor.",
+    "theme": {
+      "_": "Mavzu",
+      "auto": "Telegramʼdagidek",
+      "light": "Yorugʻ",
+      "dark": "Qorongʻi"
+    },
+    "graphics": {
+      "_": "Grafika",
+      "auto": "Avto",
+      "full": "Toʻliq",
+      "lite": "Yengil",
+      "hint": "Yengil — panellar ostida va suratlarda xiralashtirishsiz: kuchsiz telefonlarda lenta silliqroq varaqlanadi. Telefon kuchsiz boʻlsa yoki lenta qotsa, «Avto» uni oʻzi yoqadi."
+    }
+  },
+  "hidden": {
+    "intro": "Bu eʼlonlar va mualliflar lentaga ham, radarga ham kelmaydi.",
+    "empty": "Hech narsa yashirilmagan",
+    "authors": "Bloklangan mualliflar",
+    "listings": "Yashirilgan eʼlonlar",
+    "phone": "Raqam",
+    "channel": "Kanal",
+    "noListings": "hozir eʼlon yoʻq",
+    "return": "Qaytarish",
+    "all": "Hammasini yana koʻrsatish",
+    "confirmAll": "Barcha yashirilgan eʼlonlar va bloklangan mualliflar yana koʻrsatilsinmi?"
+  },
+  "near": {
+    "here": "yonida",
+    "m": "{m} m",
+    "km": "{km} km"
+  },
+  "details": {
+    "facts": "Xususiyatlar",
+    "today": "Bugun",
+    "onMarket": "bozorda",
+    "daysOnMarket": "{n, plural, one {kun bozorda} other {kun bozorda}}",
+    "publications": "{n, plural, one {nashr} other {nashr}}",
+    "channels": "{n, plural, one {kanal} other {kanal}}",
+    "views": "{n, plural, one {marta koʻrilgan} other {marta koʻrilgan}}",
+    "history": "Tarix",
+    "historySingle": "{date} da @{channel} da joylangan. Takrorlar va narx oʻzgarishi hozircha yoʻq.",
+    "priceHistory": "Narx tarixi"
+  },
+  "market": {
+    "title": "Tuman bilan solishtirish",
+    "titleNear": "Atrofdagi oʻxshashlar bilan",
+    "titleCity": "Shahar bilan solishtirish",
+    "cheaper": "arzonroq",
+    "median": "odatda {value}{unit}",
+    "pricier": "qimmatroq",
+    "how": "Bu raqam qayerdan",
+    "clsJk": " (TJM)",
+    "clsHouse": " (oddiy uylar)",
+    "ctxNear": "{n} ta eng yaqin {rooms} xonali{cls} · {km} km gacha",
+    "ctxNearSale": "{n} ta eng yaqin kvartira{cls} · {km} km gacha · 1 m²",
+    "ctxDistrict": "{rooms} xonali · {district} tumani · {n} ta eʼlon",
+    "ctxDistrictSale": "{district} tumani · 1 m² · {n} ta eʼlon",
+    "ctxCity": "{rooms} xonali · {district} shahri · {n} ta eʼlon",
+    "ctxCitySale": "{district} shahri · 1 m² · {n} ta eʼlon",
+    "ctxM2": "1 m² · 3+ xonali · {district}",
+    "ctxPerson": "Bir joy · {district} tumani · {n} ta eʼlon",
+    "ctxPlace": " · tumanda {place}",
+    "info": {
+      "more": "Batafsil",
+      "agoNow": "hozirgina",
+      "agoMin": "{n, plural, one {{n} daqiqa oldin} other {{n} daqiqa oldin}}",
+      "agoHour": "{n, plural, one {{n} soat oldin} other {{n} soat oldin}}",
+      "agoDay": "{n, plural, one {{n} kun oldin} other {{n} kun oldin}}"
+    },
+    "v3": {
+      "m": "{m} m",
+      "km": "{km} km",
+      "times": "{x} baravar",
+      "pct": "{pct}%",
+      "rooms1": "1 xonali",
+      "rooms2": "2 xonali",
+      "rooms3": "3 xonali",
+      "rooms4": "4 va undan koʻp xonali",
+      "jk": "TJMda",
+      "house": "oddiy uyda",
+      "within": "{dist} gacha",
+      "half": "Ularning yarmi {value} dan arzon, yarmi — qimmat.",
+      "halfM2": "1 m² narxini solishtiramiz: yarmida {value} dan arzon, yarmida — qimmat.",
+      "perM2": "m² uchun {value}",
+      "perM2Month": "m² uchun oyiga {value}",
+      "own": "Bu kvartira {value}",
+      "ownM2": "Bu yerda {value}",
+      "pricier": "{how} qimmat.",
+      "cheaper": "{how} arzon.",
+      "same": "deyarli shuncha.",
+      "mixed": "qoʻshnilardan arzon. Lekin butun tumanda bunday kvartiralar odatda {place}, shuning uchun «bozordan arzon» demaymiz.",
+      "noRepair": "qoʻshnilardan arzon, lekin kvartira taʼmirsiz yoki taʼmirtalab — bunday kvartiralar odatda arzonroq, shuning uchun «bozordan arzon» demaymiz.",
+      "suspicious": "yaqindagilardan ancha arzon. Narxni sotuvchidan aniqlang, oldindan toʻlamang.",
+      "check": "yaqindagi narxlardan juda farq qiladi — sotuvchidan aniqlang.",
+      "asking": "Narxlar eʼlonlardan — savdolashsa arzonroq boʻladi",
+      "updated": "yangilangan: {ago}",
+      "found": "{n, plural, one {Yaqinda {n} ta oʻxshash kvartira topdik: {alike}.} other {Yaqinda {n} ta oʻxshash kvartira topdik: {alike}.}}",
+      "district": "{n, plural, one {Yaqinda oʻxshash kvartira kam, shuning uchun butun {place} tumani bilan solishtirdik: {n} ta eʼlon.} other {Yaqinda oʻxshash kvartira kam, shuning uchun butun {place} tumani bilan solishtirdik: {n} ta eʼlon.}}",
+      "city": "{n, plural, one {Tuman koʻrsatilmagan, shuning uchun butun {place} shahri bilan solishtirdik: {n} ta eʼlon.} other {Tuman koʻrsatilmagan, shuning uchun butun {place} shahri bilan solishtirdik: {n} ta eʼlon.}}"
+    },
+    "noteSuspicious": "Narx bunday kvartiralar uchun odatdagidan ancha past — firibgarlar koʻpincha shunday jalb qiladi. Koʻrmasdan va hujjatlarni tekshirmasdan oldindan toʻlov qilmang."
+  },
+  "unit": {
+    "m2": "/m²",
+    "month": "/oyiga",
+    "m2Month": "/m² oyiga"
+  },
+  "radar": {
+    "all": "Barchasi {n}",
+    "instantHint": "Har bir yangisi — paydo boʻlishi bilanoq",
+    "digestHint": "Roʻyxat — {time} da",
+    "digestHintAny": "Roʻyxat — belgilangan vaqtda",
+    "latest": "Soʻnggi topilmalar",
+    "none": "Hozircha yoʻq — chiqishi bilan radar yuboradi",
+    "found": "Topilganlarni koʻrish · {n}",
+    "foundPlain": "Topilganlarni koʻrish",
+    "send": "Chatga yuborib turish",
+    "edit": "Shartlarni oʻzgartirish",
+    "unhide": "Qaytarish",
+    "unhidden": "Yashirilganlar yana koʻrinadi",
+    "delete": "Radarni oʻchirish",
+    "new": "yangi"
+  },
+  "nudge": {
+    "title": "Bu qidiruvga radar yoqilsinmi?",
+    "what": "Yangilar — darhol chatga",
+    "none": "Hozircha bunday yoʻq — chiqishi bilan radar yuboradi",
+    "enable": "Yoqish",
+    "setup": "Sozlash"
+  },
+  "back": {
+    "title": "Oxirgi kirganingizdan beri — {count}",
+    "new": "{n, plural, one {ta yangi} other {ta yangi}}",
+    "what": "Radar keyingilarini darhol yuboradi — birinchilardan boʻlib bilasiz"
+  },
+  "feedRadar": {
+    "titleRent": "Yaxshi kvartiralar birinchi soatlardayoq ijaraga olinadi",
+    "titleSale": "Yaxshi narxdagi kvartiralar tez sotiladi",
+    "what": "Radarni yoqing — bu qidiruv boʻyicha yangilari chiqishi bilan Telegramga keladi.",
+    "enable": "Radarni yoqish",
+    "setup": "Radarni sozlash"
+  },
+  "home": {
+    "title": "Telefon ekranida kvadro²",
+    "what": "Oddiy ilovadek bir bosishda ochish",
+    "add": "Qoʻshish",
+    "added": "kvadro² belgisi telefon ekraniga qoʻshildi"
+  },
+  "chat": {
+    "restart": "Bot sizga yoza olmayapti — u toʻxtatilganga oʻxshaydi. Bot chatini ochaymi? U yerda «Qayta ishga tushirish»ni bosing va radarni yana yoqing."
+  },
+  "head": {
+    "rooms": "Xonalar",
+    "price": "Narxi",
+    "followOn": "Radar yoqilgan"
+  },
+  "alert": {
+    "day": "Kuniga ≈{n}",
+    "week": "Haftasiga {n}",
+    "rare": "hozircha kam"
+  },
+  "type": {
+    "apartment": "Xonadon",
+    "house": "Uy",
+    "room": "Xona",
+    "commercial": "Bino",
+    "land": "Hudud"
+  },
+  "owner": {
+    "any": "Barchasi",
+    "no_agents": "Maklersiz",
+    "owners": "Faqat uy egalari"
+  },
+  "tenant": {
+    "family": "Oila",
+    "men": "Yigitlar",
+    "women": "Qizlar"
+  },
+  "subs": {
+    "empty": "Radar kanallarni siz uchun kuzatadi",
+    "emptyHint": "Nima qidirayotganingizni belgilang: radar kun-u tun oʻnlab Telegram-kanallarni kuzatadi va mos yangi eʼlonlarni darhol chatga yuboradi. Istalgan vaqtda oʻchirish mumkin.",
+    "resumed": "Radar yana yoqildi. Siz koʻrmagan {count} — bot chatida",
+    "deleteConfirm": "«{name}» radari oʻchirilsinmi?",
+    "paused": "Toʻxtatilgan",
+    "hidden": "Yashirilgan: {n}",
+    "mode": {
+      "instant": "Darhol",
+      "digest": "Toʻplam"
+    }
+  },
+  "found": {
+    "title": "Uy topdingizmi?",
+    "text": "Bitta tugma bilan ayting — kvadro² qidiruvda yordam berayotganini bilamiz.",
+    "kvadro": "Ha, kvadro² orqali",
+    "elsewhere": "Ha, boshqa joyda",
+    "searching": "Hali qidiryapman",
+    "thanksYes": "Tabriklaymiz! 🎉 Aytib berganingiz uchun rahmat",
+    "thanksSearching": "Qidiruvda omad! Radarni istalgan vaqtda yana yoqish mumkin",
+    "stopped": "Endi qidirmayman",
+    "thanksStopped": "Tushunarli, rahmat! Radarni istalgan vaqtda yana yoqish mumkin",
+    "whereTitle": "Qayerdan topdingiz?",
+    "whereText": "Ayting — bizga qanday eʼlonlar yetishmayotganini bilamiz.",
+    "where": {
+      "telegram": "Boshqa Telegram-kanal",
+      "olx": "OLX",
+      "site": "Boshqa sayt (Uybor, Uysot...)",
+      "agent": "Makler orqali",
+      "friends": "Tanishlarim tavsiya qilishdi",
+      "street": "Uy devoridagi yoki koʻchadagi eʼlon",
+      "other": "Boshqa"
+    },
+    "congrats": "Yangi uylar muborak boʻlsin!",
+    "congratsText": "Aytganingiz uchun rahmat. kvadro² yordam bergan boʻlsa — doʻstlaringizga ham ayting, ularga ham asqatadi.",
+    "share": "Doʻstlarga ulashish",
+    "shareText": "Kvartira kvadro² orqali topildi 🎉 Bot Telegram-kanallardagi eʼlonlarni bitta lentaga yigʻadi, takrorlarni olib tashlaydi, uy egasi va maklerni ajratadi va filtrlaringizga mos yangilarini oʻzi yuboradi. Uy qidirayotgan boʻlsangiz — sinab koʻring, bu bepul.",
+    "done": "Tayyor"
+  },
+  "notify": {
+    "quiet": "Sokin soatlar",
+    "quietHint": "Kartochkalar kelmaydi; tunda chiqqanlarning hammasi ertalab bitta toʻplamda keladi.",
+    "quietOff": "Oʻchiq",
+    "digest": "Toʻplamlar vaqti",
+    "digestHint": "«Toʻplam» rejimidagi radarlar yangilarini soat nechada yuborsin.",
+    "digestHintNone": "«Toʻplam» rejimidagi radarlar uchun — rejim «Radar» boʻlimida, radar kartochkasida oʻzgaradi.",
+    "and": " va",
+    "tz": "Vaqt — Toshkent vaqti.",
+    "currency": "Valyuta",
+    "currencyHint": "Lenta, xarita va bot kartochkalaridagi narxlar.",
+    "language": "Til",
+    "languageHint": "Ilova, bot va eʼlon kartochkalari uchun."
+  },
+  "money": {
+    "uzs": "{amount} soʻm",
+    "mln": "{value} mln soʻm",
+    "bln": "{value} mlrd soʻm",
+    "unitMln": "mln soʻm"
+  }
+}

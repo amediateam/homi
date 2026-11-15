@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#52) |
 | Depends on | WP-13 (and the packages installed by WP-03) |
 | Size | ≈ 2 800 changed lines without the generated catalogues, L |
 | Behaviour reference | `25` §3.2, §3.6, §3.7, §3.11, §4.4; `03` §1.7, §3.1, §3.6; `05` TMA-017, TMA-018; earlier tasks KV-FE-011, KV-FE-012, KV-FE-015, KV-FE-016 (behaviour, texts and test ideas only — not their file layout, `t()` runtime or navigation) |
@@ -66,10 +66,10 @@ frontend/app/app/
 ├── [locale]/
 │   ├── layout.tsx                   root layout
 │   ├── error.tsx  not-found.tsx     placeholders; WP-23
-│   ├── [...rest]/page.tsx           calls notFound() for unknown addresses
 │   ├── (main)/
 │   │   ├── layout.tsx               renders children, then overlay, then sheet (WP-23 turns it into the shell)
 │   │   ├── default.tsx
+│   │   ├── [...rest]/page.tsx       calls notFound() for unknown addresses (rule 2)
 │   │   ├── page.tsx                                         feed            WP-24
 │   │   ├── map/page.tsx                                     map             WP-27
 │   │   ├── saved/page.tsx  saved/history/page.tsx           saved           WP-29
@@ -80,11 +80,11 @@ frontend/app/app/
 │   │   ├── filters/page.tsx  filters/[kind]/page.tsx  sort/page.tsx  city/page.tsx          WP-25
 │   │   ├── listing/[number]/layout.tsx  page.tsx  photos/  market/  actions/                WP-26
 │   │   ├── listing/[number]/location/page.tsx                                               WP-28
-│   │   ├── @sheet/default.tsx  @sheet/page.tsx  @sheet/[...catchAll]/page.tsx          null
+│   │   ├── @sheet/default.tsx  @sheet/page.tsx  @sheet/[...rest]/page.tsx              null
 │   │   ├── @sheet/(.)filters/page.tsx  (.)filters/[kind]/page.tsx  (.)sort/page.tsx  (.)city/page.tsx
 │   │   ├── @sheet/(.)radars/new/page.tsx  (.)radars/found/page.tsx
 │   │   ├── @sheet/(.)radars/[id]/layout.tsx  page.tsx  edit/page.tsx
-│   │   ├── @overlay/default.tsx  @overlay/page.tsx  @overlay/[...catchAll]/page.tsx    null
+│   │   ├── @overlay/default.tsx  @overlay/page.tsx  @overlay/[...rest]/page.tsx        null
 │   │   └── @overlay/(.)listing/[number]/layout.tsx  page.tsx  photos/  location/  market/  actions/
 │   ├── welcome/language/page.tsx  welcome/city/page.tsx                     WP-23
 │   └── no-access/page.tsx  outside/page.tsx                                 WP-23
@@ -101,31 +101,33 @@ Rules of the tree:
    `params` is a promise (`LayoutProps<'/[locale]'>`). Through `proxy.ts` an unknown first segment (`/de/x`) is
    redirected under a locale and ends in `[...rest]`, which renders `[locale]/not-found.tsx`; the layout's own
    `notFound()` is reached only by paths the matcher skips. What Next.js renders in that case — a root layout
-   under a dynamic segment is the case `not-found.md` names for the experimental `global-not-found` — is
-   **verify before use**; any `404` answer is acceptable there and `globalNotFound` is not switched on.
+   under a dynamic segment is the case `not-found.md` names for the experimental `global-not-found` — was
+   **verify before use**; any `404` answer is acceptable there and `globalNotFound` is not switched on. Verified:
+   `/de/x` redirects to `/ru/de/x` and answers `404` (e2e).
 2. **Slots.** `(main)/layout.tsx` receives `children`, `sheet`, `overlay` and renders them in this DOM order:
    children, overlay, sheet — the legacy stacking (listing layer below sheets, `03` §3.6). Each slot has
    `default.tsx`, a `page.tsx` for the root address and a catch-all page, all returning `null`, so a hard load
    shows no layer and a soft navigation to an unrelated address — the root included — closes the layer
    (`parallel-routes.md`, "Closing the modal", shows the slot page for the root next to the catch-all).
    `children` also has `default.tsx`. The two slot catch-alls and `[locale]/[...rest]` describe the same address
-   pattern from different folders and with different parameter names; the bundled documentation does not say
-   whether the build accepts that. **Verify before use** at step 13 (`pnpm --filter app build`, then a direct load
-   of `/ru/unknown` must answer `404`, not an empty `200`). Default if the build refuses it or the answer is not
-   `404`: name all three `[...rest]` and move the page that calls `notFound()` to `(main)/[...rest]/page.tsx`;
-   record the shape in "Handoff".
+   pattern from different folders and with different parameter names. Verified at step 13: the build refuses it
+   ("Ambiguous route pattern `/[*]/[...*]`" for `[locale]/[...catchAll]` and `[locale]/[...rest]`), so the default
+   applies — all three are named `[...rest]` and the page that calls `notFound()` is `(main)/[...rest]/page.tsx`;
+   a direct load of `/ru/unknown` answers `404` (e2e).
 3. **Interception.** `@sheet/(.)filters` and its siblings intercept soft navigations from any page under `(main)`;
    a hard load of the same address renders the page of the same name outside the slot (`intercepting-routes.md`).
    The bundled documentation says `(.)` ignores `@slot` folders; it does not say the same about route groups.
-   **Verify before use** that `(.)` inside `(main)/@sheet` matches `(main)/filters`; if it does not, use the
-   matcher that does and record it in "Handoff".
+   Verified: `(.)` inside `(main)/@sheet` matches `(main)/filters` and its siblings, and `(.)listing` inside
+   `(main)/@overlay` matches `(main)/listing` (e2e "layers").
 4. **Layouts that keep a layer mounted.** `listing/[number]/layout.tsx` (in both trees) will render the listing
    and `{children}`; `page.tsx` renders `null`; `photos`, `location`, `market`, `actions` are its children. The
    same shape is used for `radars/[id]` with its `edit` child and for `settings` with its seven sub-pages (the
    settings screen stays under a sub-page). In this package these layouts render a placeholder plus `{children}`
-   so the nesting is proven.
+   so the nesting is proven, and their `page.tsx` renders `null`.
 5. **Placeholders.** Every `page.tsx` renders `RoutePlaceholder` (`frontend/app/features/shell/RoutePlaceholder.tsx`)
-   with the route name, the locale, a translated string and one `Button`. A later package replaces the import and
+   with the route name, the locale, a translated string and one `Button`; the copy in a slot passes
+   `layer="sheet"` or `layer="overlay"`. The addresses with a parameter mount the placeholders of
+   `features/shell/RouteParamPlaceholder.tsx`, which validate it. A later package replaces the import and
    nothing else. `filters/[kind]` accepts `rooms`, `price`, `owner` and calls `notFound()` for anything else;
    `listing/[number]` accepts positive integers only; `radars/[id]` accepts a ULID string (26 characters of
    Crockford base32 — the radar identifier of the WP-13 contract, so `routes.radar(id)` takes a string); both
@@ -171,20 +173,30 @@ Pure helpers in the same file, used by WP-21 and WP-32:
   knows; WP-21 replaces the segment after sign-in;
 - the function is written as a small pipeline (`withLocale(request)` returns a response) so WP-21 can add the CSP
   nonce and the security headers to the same response. How next-intl's own middleware composes with a custom
-  `proxy` function on Next.js 16 is **verify before use** (`25` §3.7 marks it unverified).
+  `proxy` function on Next.js 16 was **verify before use** (`25` §3.7 marks it unverified). Resolved: next-intl's
+  middleware is not used. Read in next-intl 4.15.1 (`dist/esm/development/middleware/resolveLocale.js`,
+  `syncCookie.js`): with `localeDetection: true` it falls back to `Accept-Language`, with `false` it ignores the
+  cookie too, and its cookie sync consults `Accept-Language`; none is the rule above. `withLocale` is twelve lines;
+  next-intl gets the locale from the segment (below). The redirect is `307`.
 
 ### next-intl wiring
 
 | File | Content |
 | ---- | ------- |
 | `frontend/app/i18n/routing.ts` | locales and default from `@homi/config`; the prefix is always present |
-| `frontend/app/i18n/request.ts` | request configuration: `getMessages(locale)` from `@homi/i18n`, the error hook and the fallback hook (below) |
+| `frontend/app/i18n/request.ts` | request configuration: the locale from `next/root-params` (`locale()`), `getMessages(locale)` from `@homi/i18n`, `timeZone` `Asia/Tashkent`, the error hook and the fallback hook (below) |
 | `frontend/app/i18n/navigation.ts` | locale-aware `Link`, `useRouter`, `usePathname`, `redirect` |
+| `frontend/app/i18n/IntlClientProvider.tsx` | `NextIntlClientProvider` for Client Components with the same hooks: functions cannot cross from the root layout, so they are set in this Client Component |
+| `frontend/app/i18n/labels.ts` | `labelFor` of `@homi/i18n` bound to `reportError` |
+| `frontend/app/global.d.ts` | next-intl's `AppConfig`: `Locale` and `Messages` from `@homi/i18n` |
 | `frontend/app/next.config.ts` | the next-intl plugin wrapped around the existing configuration; `cacheComponents` and `partialPrefetching` stay on |
 
 Two things to verify before use, because `cacheComponents` is on: that next-intl can supply the locale to Server
 Components without reading request headers (otherwise the static shell is lost), and that its type augmentation
-gives typed keys from the `ru` catalogue.
+gives typed keys from the `ru` catalogue. Both resolved. next-intl 4.15.1 marks `setRequestLocale` deprecated in
+favour of `next/root-params`; `i18n/request.ts` reads `locale()` from it, and the build lists `/ru`, `/uz`, `/en`
+and every address without a parameter as static (`○`). `tests/i18n/typed-keys.test.ts` holds `@ts-expect-error`
+lines that `pnpm typecheck` checks.
 
 ### `@homi/i18n` (new workspace package, `frontend/packages/i18n`)
 
@@ -193,10 +205,11 @@ frontend/packages/i18n/
 ├── package.json  tsconfig.json
 ├── scripts/import-legacy.mjs          Node built-ins only
 ├── messages/legacy/{ru,uz,en}.json    generated, never edited by hand
-├── messages/legacy/keys.json          key list of the pinned release, for the next release diff
+├── messages/legacy/keys.json          { release, keys, dropped }: legacy key names of the pinned release, for the next release diff
 ├── messages/homi/{ru,uz,en}.json      brand overrides and HOMI-only keys, hand-written
 ├── brand-words.json                   patterns that must not reach a user (legacy brand names, handles, hosts)
-└── src/{index,labels,locale}.ts
+├── src/{index,labels,locale,messages,report}.ts
+└── tests/*.test.ts                    Vitest project @homi/i18n (package tests may live in src/ or tests/)
 ```
 
 **Importer.** Input: a directory holding a *copy* of the three legacy locale files of the pinned release
@@ -245,8 +258,15 @@ Later packages add their keys to the same files and list them in their own speci
 | any of the three cases above | `reportError(…, { kind: 'i18n' })` once per key per launch (no-op until WP-32) |
 | server value used as a label (`type`, `deal`, radar mode, sort, report reason, verdict tone, no-access reason) | `labelFor(table, value)` returns the key from an explicit table, or `fallback.other` for an unknown value and reports once; a key is never built by string concatenation from a server value |
 
-The two hooks of next-intl that turn a formatting error into a report and a fallback string are expected to be
-`onError` and `getMessageFallback` — **verify before use**.
+The two hooks of next-intl that turn a formatting error into a report and a fallback string were expected to be
+`onError` and `getMessageFallback` — **verify before use**. Verified in use-intl 4.15.1 (`createBaseTranslator`):
+for a missing message, a formatting error and an invalid message it calls `onError` and then
+`getMessageFallback({ error, namespace, key })`. `createIntlHandlers(report)` therefore reports those from
+`getMessageFallback`, by key, and leaves `onError` to the other codes (once per message).
+
+Label tables (`src/labels.ts`): `type`, `deal`, `radarMode` (`subs.mode.*`), `sort`, `reportReason`, `verdictTone`
+(the long verdict `fmt.market*` of each tone; WP-22's formatter still decides where the wording depends on the
+delta) and the no-access reason as two tables, `noAccessTitle` and `noAccessText`.
 
 `src/locale.ts`: `htmlLang(locale)`; `numberLocale(locale)` (`ru-RU` for ru and uz, `en-GB` for en — the legacy
 rule of `03` §3.1; note that `intlLocale` of `@homi/utils` maps `en` to `en-US` and is not used for Mini App
@@ -264,7 +284,7 @@ display). Formatters themselves arrive with WP-22.
 | `brand.css` | `--accent #ffd23f`, `--accent-text #0b0b0b` — the only colours that belong to the brand |
 | `themes.css` | `html[data-scheme="light"]:not([data-theme])` reads `--tg-theme-bg-color`, `--tg-theme-secondary-bg-color`, `--tg-theme-text-color`, `--tg-theme-hint-color` with the light fallbacks; `html[data-theme="light"]` is the fixed light palette; `html[data-scheme="dark"]` is the fixed dark palette. No `prefers-color-scheme` rule |
 | `layout.css` | `--top-inset = --tg-safe-area-inset-top + --tg-content-safe-area-inset-top`, `--bottom-inset = --tg-safe-area-inset-bottom` (TMA-017); no `env(safe-area-inset-*)`, no `dvh` / `svh`, no `--tg-viewport-*`; full-screen layers are `position: fixed; inset: 0` (TMA-018); 16 px gutters; feed column ≤ 608 px; system font stack `15px/1.4`, tabular numbers; `html.fullscreen` and `html.chrome-mini` hooks declared, filled by WP-23 |
-| `theme.css` | Tailwind `@theme` mapping: colours (`--color-bg` …), radii, font, the z-index ladder as named tokens (map note 5, topbar 10, CTA 20, view toggle 29, tab bar 30, map card and mini title 31, nudge 35, sub-page 40, listing 45, sheet backdrop 50, toast and city sheet 60, viewer and fullscreen map 100, active pin 1000), easing `cubic-bezier(.2,.9,.3,1)`, durations 0.25–0.35 s; the variables shadcn components expect are mapped onto the roles |
+| `theme.css` | Tailwind `@theme` mapping: colours (`--color-bg` …; Tailwind's default palette is removed with `--color-*: initial`), radii as `rounded-small`, `rounded-medium`, `rounded-large`, `rounded-photo`, `rounded-pill` (`rounded-s` would collide with Tailwind's logical-corner utilities), font, the z-index ladder as named `:root` tokens used as `z-(--z-tabbar)` (map note 5, topbar 10, CTA 20, view toggle 29, tab bar 30, map card and mini title 31, nudge 35, sub-page 40, listing 45, sheet backdrop 50, toast and city sheet 60, viewer and fullscreen map 100, active pin 1000), easing `cubic-bezier(.2,.9,.3,1)`, durations 0.25–0.35 s; the variables shadcn components expect are mapped onto the roles |
 | `lite.css` | everything under `html.lite`: no `backdrop-filter`, solid glass, simpler shadows, translate-only chrome collapse, no mini title, `content-visibility: auto` on cards, no radar animation (`03` §1.7). The class is set by WP-21 |
 | `motion.css` | keyframes `spin`, `shimmer`, `fade`, `rise`, `rise-in`; `prefers-reduced-motion` stops shimmer and spinner and removes transitions |
 
@@ -329,7 +349,8 @@ catalogues or under `frontend/app` outside `lib/brand`.
 
 - New package `frontend/packages/i18n/**` (see the tree above), with the `lint`, `typecheck` and `test` scripts
   the other workspace packages have and its own project in `frontend/vitest.config.ts` (WP-03);
-  `frontend/pnpm-lock.yaml` (workspace links; a Radix primitive only in the case named under "Decisions").
+  `frontend/pnpm-lock.yaml` (workspace links; a Radix primitive only in the case named under "Decisions"). The
+  config file is `frontend/vitest.config.mts`.
 - `frontend/app/package.json`: the workspace dependencies `@homi/config`, `@homi/ui`, `@homi/i18n`
   (`workspace:*`). Today the app declares none — its dependencies are `next`, `react` and `react-dom` only.
   `transpilePackages` is not needed: `transpilePackages.md` says Turbopack compiles workspace packages by itself.
@@ -345,8 +366,9 @@ catalogues or under `frontend/app` outside `lib/brand`.
 - `frontend/app/features/shell/{RoutePlaceholder,SourceReporter,DemoDataMarker}.tsx`.
 - `frontend/app/tests/{navigation,i18n,shell}/*.test.ts(x)`, `frontend/app/tests/helpers/flags.ts`,
   `frontend/app/e2e/foundation.spec.ts`.
-- `frontend/app/README.md`, `frontend/app/.env.example` (comments only), `CLAUDE.md` "Layout" paragraph (the new
-  workspace package) through the shared-file rule of `docs/handoff/parallel-work.md`.
+- `frontend/app/README.md`. `frontend/app/.env.example` (comments only) and the `CLAUDE.md` "Layout" paragraph (the
+  new workspace package) are shared files: they travel in the small follow-up PR after the merge
+  (`docs/handoff/parallel-work.md` §2).
 
 ## Steps
 
@@ -435,6 +457,8 @@ navigation; never intercepts taps.
 
 **Component (Vitest + Testing Library).**
 
+- `@testing-library/jest-dom` is not installed (WP-03 did not list it), so component tests assert DOM attributes and
+  text directly.
 - A component asking for an unknown key renders the key path, does not throw, reports once on two renders.
 - A message with a missing argument renders the key path.
 - `DemoDataMarker`: hidden with `legacy` and `native` only; visible after `reportSource('stub')`; hidden again
@@ -481,4 +505,22 @@ Run in ru, uz and en, and in light, explicit light and dark where a line is visu
 
 ## Handoff
 
-Empty.
+- **Shape of the tree.** The slot catch-alls and the not-found page are all `[...rest]`; the page that calls
+  `notFound()` is `app/[locale]/(main)/[...rest]/page.tsx` (rule 2). `(.)` inside `(main)/@sheet` and
+  `(main)/@overlay` matches the `(main)` routes as written (rule 3).
+- **A closed layer stays in the DOM.** With `cacheComponents`, Next.js 16 hides a page it navigated away from in a
+  React `<Activity>` (`display: none`, `02-guides/preserving-ui-state.md`) instead of unmounting it. After Back the
+  sheet or overlay copy is still in the document, hidden. WP-21 (BackButton depth) and WP-23 (sheets) must test
+  visibility, not presence, and reset per-open state in a `useLayoutEffect` cleanup where the guide says so.
+- **Invalid parameters.** `/ru/listing/abc`, `/ru/filters/sort`, `/ru/radars/12` render the not-found placeholder,
+  but with status `200`: the parameter is runtime data, so `notFound()` runs inside `<Suspense>` after the static
+  shell has started streaming (`not-found.md`: "After streaming starts, the status code remains 200"). Unknown
+  addresses answer `404`.
+- **Locale cookie.** `NEXT_LOCALE` keeps next-intl's default attributes (`SameSite=Lax`). Inside Telegram Web's
+  frame a Lax cookie is not sent; WP-21, which writes the locale after sign-in, decides the attributes together
+  with `homi_session` (`25` §3.4).
+- **next-intl in Client Components.** The root layout passes the merged messages of the locale to
+  `IntlClientProvider`; the fallback hooks live there. A later package may narrow the messages per screen.
+- **Soft navigation in end-to-end tests.** `window.next.router.push` (Next.js keeps it for debugging in production
+  builds) stands in for a `Link` until the shell has real links; `e2e/foundation.spec.ts` uses it.
+- **The WP-03 smoke spec** now looks for `[data-route="feed"]` instead of `main`.

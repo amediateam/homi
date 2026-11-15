@@ -1,0 +1,22 @@
+{
+  "settings": {
+    "about": "HOMI collects listings from public Telegram channels. Every card links to the original post."
+  },
+  "home": {
+    "title": "HOMI on your home screen",
+    "added": "HOMI icon added to your home screen"
+  },
+  "found": {
+    "text": "Let us know with one tap — it tells us whether HOMI helps you search.",
+    "kvadro": "Yes, through HOMI",
+    "congratsText": "Thanks for telling us. If HOMI helped, tell your friends — they’ll find it useful too.",
+    "shareText": "Found my new place through HOMI 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. realtors and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free."
+  },
+  "demo": {
+    "label": "Demo data",
+    "hint": "This section still runs on test data"
+  },
+  "fallback": {
+    "other": "Other"
+  }
+}

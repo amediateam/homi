@@ -1,0 +1,22 @@
+{
+  "settings": {
+    "about": "HOMI ochiq Telegram-kanallardan eʼlonlarni yigʻadi. Har bir kartochkada asl eʼlonga havola bor."
+  },
+  "home": {
+    "title": "Telefon ekranida HOMI",
+    "added": "HOMI belgisi telefon ekraniga qoʻshildi"
+  },
+  "found": {
+    "text": "Bitta tugma bilan ayting — HOMI qidiruvda yordam berayotganini bilamiz.",
+    "kvadro": "Ha, HOMI orqali",
+    "congratsText": "Aytganingiz uchun rahmat. HOMI yordam bergan boʻlsa — doʻstlaringizga ham ayting, ularga ham asqatadi.",
+    "shareText": "Kvartira HOMI orqali topildi 🎉 Bot Telegram-kanallardagi eʼlonlarni bitta lentaga yigʻadi, takrorlarni olib tashlaydi, uy egasi va maklerni ajratadi va filtrlaringizga mos yangilarini oʻzi yuboradi. Uy qidirayotgan boʻlsangiz — sinab koʻring, bu bepul."
+  },
+  "demo": {
+    "label": "Demo maʼlumotlar",
+    "hint": "Boʻlim hozircha sinov maʼlumotlarida ishlaydi"
+  },
+  "fallback": {
+    "other": "Boshqa"
+  }
+}

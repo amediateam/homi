@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
   },
   "scripts": {
     "test": "vitest run --config ../../vitest.config.mts --project @homi/ui",
@@ -30,6 +31,7 @@
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "react": "^19",
