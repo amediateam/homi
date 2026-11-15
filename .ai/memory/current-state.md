@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52; `main` = `2ef9b2f`), WAITING for the deploy; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53; `main` = `f3ab4f0`), WAITING for the deploy; WP-21 in REVIEW (#55 on `feat/wp-21-telegram-and-session`, shared files #54), not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -91,6 +91,11 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Tests:** `make ci-frontend` → exit 0 (app 135, `@homi/i18n` 30, `@homi/ui` 24, `@homi/testing` 90 passed);
     `pnpm exec playwright test --project miniapp` → 20 passed; `frontend` and `frontend-e2e` green on the PR,
     `frontend` green on `main` after the merge (run 43697001406).
+- **WP-21 (#55, open; not on `main`):** the Telegram adapter, boot script, session exchange (`/bff/session`), history
+  stack with BackButton and SettingsButton, launch links, locale guard and the nonce CSP of `proxy.ts` live on
+  `feat/wp-21-telegram-and-session`; ADR-0020 and the app's server-only env keys are in #54. On that branch:
+  `make ci-frontend` → exit 0 (app 362 + the launch-order test, `@homi/testing` 95), Playwright `miniapp` → 51 passed
+  against the local API on stubs.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure

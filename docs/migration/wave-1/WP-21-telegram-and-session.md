@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN_PROGRESS (feat/wp-21-telegram-and-session) |
+| Status | REVIEW (#55; shared files #54) |
 | Depends on | WP-20 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1 – §3.4, §3.10; `03` §1.2 – §1.7, §3.2, SCR-001, SCR-044; `05` (all of TMA-001 … TMA-045); earlier tasks KV-FE-024 … KV-FE-033, KV-FE-037, KV-FE-038, KV-FE-040 (behaviour, constants, edge cases and test ideas only — not their layer stack, `Authorization: tma` transport, `kv-*` keys or file layout) |
