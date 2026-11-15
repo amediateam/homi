@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | IN_PROGRESS (`feat/wp-13-contract-personal-radars`) |
+| Status | REVIEW (#50) |
 | Depends on | WP-12 |
 | Size | about 2 800 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.2, §5, §7; `08` rows of API-011 … API-016, API-018 … API-023, API-026 … API-033 and RES-010 … RES-013, §1.8 (`Subscription`, `SubscriptionMutationResult`); `02` BR-API-086, BR-API-101, Q-API-064; `03` §4 (BR-APP-036 … BR-APP-049, BR-APP-063, BR-APP-073); `15` §3.1, §3.4; tasks `tasks/backend/KV-BE-038-…` … `KV-BE-044-…`, `KV-BE-100-…` … `KV-BE-106-…`, `KV-BE-154-…`, `KV-BE-155-…` (rules only) |
@@ -367,7 +367,7 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
 
 ## Handoff
 
-**2026-11-15, development track (Claude Code).** Branch `feat/wp-13-contract-personal-radars`; PR in the status line.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-13-contract-personal-radars`, PR #50, ready for review.
 
 - **Done:** steps 1–9.
   - Step 1 was a read-only subagent pass over the cited audit rows and task rules. Its citations were checked
