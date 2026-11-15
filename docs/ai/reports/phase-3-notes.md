@@ -597,3 +597,29 @@ ASSUMPTION_MISMATCH AM-57 (2026-11-15):
   - `scrubLaunchFragment` passes `null`; `FragmentGuard` removes the fragment after every navigation.
   - The launch redirect replaces first and pushes once the router shows the cleaned address.
   - The restore runs right after the SDK wait.
+
+## S. Development track, 2026-11-15 — WP-22, data layer, formatters and the filter model
+
+Taken on «бери WP-22». Branch `feat/wp-22-data-layer`. A screen now gets its data and rules from one place: typed
+server calls with the session (`lib/api/server.ts`), the read pass-through `/bff/*` with its allow-list and
+`bffFetch` for header mode, `runAction` / `useAction` for Server Actions, `useResource`, one mapping from API answers
+to `UiError`, the cached reference data, the formatters `@homi/i18n/format` and the new package `@homi/search` with
+the address mapping. `@homi/search` and `@homi/i18n/format` were written by two subagents in parallel and
+spot-checked here (contract names against `docs/api/openapi.json`, money rounding, imports). The specification is
+corrected where the code differs (rule 6) and its "Handoff" is filled.
+
+ASSUMPTION_MISMATCH AM-58 (2026-11-15):
+- **Assumption.** The WP-22 specification ("Reference data", build time) assumed `next build` prerenders the
+  reference calls and so calls the API once per locale, with no API in the `Build` step of CI.
+- **What was found.** Since ADR-0020 every document of the app renders at request time (all routes `ƒ`), so the
+  build makes no reference call: `API_URL=http://127.0.0.1:9/api/v1 pnpm --filter app build` → exit 0. The first
+  request fills the cache entry; with the API unreachable the page still answers `200` and the empty reference stands
+  in with the `seconds` profile.
+- **Resolution.** The fallback of the specification is kept (it protects the first request); the specification says
+  that the build makes no call. A count of the app server's API calls behind a counting proxy showed `GET /reference`
+  and `GET /cities` once per locale over eight page loads in three locales, and `GET /me` and `GET /listings/count`
+  once per request with a session (four loads, four calls each) — only the reference is cached.
+
+Own choices (no ADR): `ApiResult` failures carry `method` and `path` besides `error`, `status` and `code`;
+`ReferenceProvider` feeds a client store next to the page instead of wrapping it; the request id waits for `io()`;
+the feed and map placeholders show the proof of step 13 until WP-24 and WP-27.

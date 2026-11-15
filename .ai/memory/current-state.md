@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-15 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 in REVIEW on `feat/wp-22-data-layer`, not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -100,6 +100,12 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   `frontend-e2e.yml` starts the API on stubs. On the branch: `make ci-frontend` → exit 0 (app 362 + the launch-order
   test, `@homi/testing` 95), Playwright `miniapp` → 51 passed; `frontend` and `frontend-e2e` green on the PR,
   `frontend` green on `main` after the merge (run 43732411072).
+- **WP-22 (REVIEW, branch `feat/wp-22-data-layer`; not on `main`):** `lib/api/*` (typed server calls, `UiError`,
+  `/bff/[...path]` with its read allow-list, `bffFetch`, stub scenarios), `lib/actions/{run,validate,useAction}`,
+  `lib/data/{useResource,sessionMaps}`, `lib/reference/*` (cached per locale), `lib/search/*`, `lib/money/useMoney`,
+  the packages `@homi/search` and `@homi/i18n/format`; the feed and map placeholders show a data proof. On the branch:
+  `make ci-frontend` → exit 0 (app 480, `@homi/search` 238 + 1 todo, `@homi/i18n` 108), Playwright `data.spec.ts` → 5
+  passed.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
