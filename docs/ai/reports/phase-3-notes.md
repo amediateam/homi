@@ -625,3 +625,27 @@ Merged on 2026-11-16 as #61 (`e8c8f9e`) after green `frontend` and `frontend-e2e
 Own choices (no ADR): `ApiResult` failures carry `method` and `path` besides `error`, `status` and `code`;
 `ReferenceProvider` feeds a client store next to the page instead of wrapping it; the request id waits for `io()`;
 the feed and map placeholders show the proof of step 13 until WP-24 and WP-27.
+
+## T. Development track, 2026-11-16 — pull onto the developer's machine, dev-check and nginx fixes
+
+Started on «получи последную версию проекта с гит», continued on «да сделай все сам», «да давай сделаем граомтно» and
+«конечно сделай чтобы все граомтно работало», closed on «сохрани сессию и commit push main сделай сво изминение»
+(read as on 2026-11-16 before: into `main` through PRs with merge commits, never a direct push).
+
+Applied:
+- `main` pulled twice (`3bf4f39` → `19048b4` → `a86a41c`); `composer install`, `pnpm install`, two migrations; the
+  developer added the new env keys, because the guard hook blocks shell writes to `.env*`.
+- #63 (`d92f318`, KI-30, resolved): `make dev-check` reported `https://app.homi.loc/ → 307` on a healthy stack after
+  WP-20's locale redirect; `check.sh` now follows redirects on the same host.
+- #64 (`59a34ad`, KI-31): the shared nginx lost `~/Documents` access after a reload, and `nginx.sh stop` + `start`
+  left it down (a graceful quit that did not finish, then a HUP the quitting master ignored). `nginx.sh` got separate
+  `start`/`stop`/`restart`, a TERM fallback, root-only signalling and the "Operation not permitted" diagnosis;
+  `make dev-nginx-restart`.
+- Both merged without the first developer's review on the developer's instruction. #64 was stacked on #63; deleting
+  #63's branch closed #64, which was reopened and retargeted to `main`.
+
+Own choices (no ADR): signals go to the root master's pid (`kill -QUIT/-TERM`) instead of `nginx -s`, which depends
+on the pid file; 10 s before TERM; the stub harness used for the 15 scenarios stayed in the session scratchpad
+(no test runner exists for `scripts/dev`, and no CI covers it).
+
+Verified: `make dev-check` → `dev:check OK (0 warning(s))`, 24 PASS, on `main` = `59a34ad`.

@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-16 (WP-22 merged as #61, WAITING for the deploy; its follow-up docs PR merged; WP-21, WP-20, WP-10 … WP-13 WAITING for the production track; WP-03, WP-00/01/02 WAITING)
+updated: 2026-11-16 (pull of WP-10 … WP-22 onto the developer's machine, local stack repaired; dev-check fix #63 and nginx fix #64 merged; WP-23 next on the developer's word)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,34 +11,35 @@ Written for whoever continues the **development track** (the second developer, a
 - 2026-11-09: «Коллега: продолжает незавершённые задачи по разработке проекта согласно подготовленному плану.» / «Не включай настройку production-среды в задачи коллеги». «Не изменяй legacy-проект. Он является источником истины и эталоном поведения.» «в homi.uz мы будем исправлят старые ошибки и логические не верные решение».
 - 2026-11-14 answer rounds (verbatim in `docs/migration/decisions/2026-11-14-developer-answers.md`), among them: «Сразу новый /api/v1»; «Сначала весь фронтенд на моках»; «фуллстак только по очереди …»; «Всё сразу на prod»; «Срока нет, важнее полнота».
 - 2026-11-14, queue prompt: «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.» «Если спецификация расходится с кодом … исправь её в том же PR …» «Без согласия первого разработчика не делать: новые зависимости, всё, что касается staging и production, миграции на production.» «Legacy production никогда не вызывать».
-- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail); «тебе можно править .env пока я сам не запрещу» (the committed deny `Edit(**/.env)` and the guard hook still block the agent; never bypass, never print values); «сделай все сам и добав все что не хватает»; each PR merged on its own «сливай #N», each follow-up docs PR opened on «погнали, открывай docs-PR»; «бери WP-20» … «сливай #53»; «бери WP-21»; «сливай #54»; «сливай #55»; «погнали, открывай docs-PR»; «сливай #56»; «бери WP-22».
-- 2026-11-16 (end of the day): «на сегожня все завтра продолжим! все commit push main» — read as: everything committed and pushed, the work into `main` through its PRs (never a direct push, per the rule above): #61 merged, its follow-up docs PR merged.
+- 2026-11-15: «Удали черновик gmail это не та почта который нужно использовать» (never use the connected Gmail); «тебе можно править .env пока я сам не запрещу» (the guard hook still blocks the agent; never bypass, never print values); each PR merged on its own word («сливай #N»); «бери WP-22».
+- 2026-11-16: «получи последную версию проекта с гит»; «да сделай все сам»; «да давай сделаем граомтно»; «конечно сделай чтобы все граомтно работало»; «сохрани сессию и commit push main сделай сво изминение» — read, as on 2026-11-16 before, as: into `main` through PRs with merge commits, never a direct push.
 
 ## State at handoff
-- `main` holds **WP-22** (#61, merge commit `e8c8f9e`; `frontend` + `frontend-e2e` green on `3bb7831`, e2e 56 passed; `frontend` on `main`: run 43768797356, green) and this follow-up (status `WAITING`, `CLAUDE.md`, KI-29, memory). No feature branch is open; the tree is clean.
-- WP-22, WP-21, WP-20, WP-10 … WP-13 merged and `WAITING` for the production track; WP-03, WP-00, WP-01, WP-02 `WAITING`. Open PRs: Dependabot #5 (not to be merged, KI-4) and #57–#60 (next/react, posthog-js, maplibre-gl, lucide-react bumps — dependency changes, the first developer's call; untouched).
-- Local only: `homi_test` on Homebrew PostgreSQL; Playwright's Chromium; the local API on stubs behind nginx (`https://api.homi.loc`, used by the e2e sign-in); sanctum tokens of the stub user created by local runs.
-- Verify (on `main`): `make ci-frontend` → exit 0 (run on the WP-22 branch before the merge); `cd frontend && pnpm test:e2e --project=miniapp` → 56 passed in CI (needs the local API when run here).
+- `main` = `59a34ad` (#64), on top of `d92f318` (#63) and WP-22 (#61, #62). Branch `docs/session-2026-11-16-local-tooling` holds this save; its PR goes into `main` on the same instruction (check `git log -1 origin/main`). No feature branch is open.
+- WP-22, WP-21, WP-20, WP-10 … WP-13 merged and `WAITING` for the production track; WP-03, WP-00, WP-01, WP-02 `WAITING`. Open PRs: Dependabot #5 (not to be merged, KI-4) and #57–#60 (dependency bumps, the first developer's call; untouched).
+- The developer's machine is current: `composer install`, `pnpm install` (links `@homi/search`), migrations `2026_11_14_150551_*` and `2026_11_14_224945_*` applied, the new `.env`/`.env.local` keys added by the developer from the templates, nginx master started from Terminal by `make dev-nginx-restart` at 04:03.
+- Verify: `make dev-check` → `dev:check OK (0 warning(s))`, 24 PASS (run on `main` = `59a34ad`).
 
 ## Done this session
-- **WP-21 closed out:** #54, #55, #56 merged on «сливай #N» after green CI.
-- **WP-22** steps 1–14 (#61): `lib/api/*` + `/bff/[...path]`, `lib/actions/*`, `lib/data/{useResource,sessionMaps}`, `lib/reference/*`, `lib/search/*`, `lib/money/useMoney`, `onForbidden`, stub scenarios, the proof on the feed and map, `e2e/data.spec.ts`; `@homi/search` and `@homi/i18n/format` by two subagents (spot-checked; their test and mutation numbers re-run here: search 238 + 1 todo, i18n 108). Verified: `make ci-frontend` → exit 0; `data.spec.ts` 5 passed (15 with `--repeat-each=3`); `API_URL=http://127.0.0.1:9/api/v1 pnpm --filter app build` → exit 0; a counting proxy showed only `/reference` and `/cities` cached; app mutation check 53/53 caught. AM-58 in `docs/ai/reports/phase-3-notes.md` §S; KI-29 (ESLint skips `packages/*`).
+- **Pull.** `main` moved `3bf4f39` → `a86a41c` (166 + 18 commits, WP-00 … WP-22); `git pull --ff-only` both times.
+- **#63, KI-30 (resolved):** `check.sh` follows the app's 307 to `/ru` and passes only on 200 on the same host. Verified: real `make dev-check` → OK; the loop cut from `check.sh` against a fake `curl` (foreign host, 000, redirect loop, empty output) → expected FAIL lines.
+- **#64, KI-31:** `nginx.sh` `stop` waits for the root master and falls back to TERM; `start` is its own command; `reload` of a quitting master starts it; new `restart` and `make dev-nginx-restart`; the "Operation not permitted" diagnosis after start/reload and in `storage.sh check`; only the root master is signalled. Verified: stub harness, 15 scenarios as intended; real `nginx.sh check`, `storage.sh check` → PASS; the developer's `make dev-nginx-restart` → new master pid 10946, then `dev:check OK`.
+- Phase document: `docs/ai/reports/phase-3-notes.md` §T.
 
 ## Waiting for the developer (do NOT start on your own)
 1. **WP-23** (gates and shell) only on the developer's word.
 2. **Reviewer questions of WP-22** (spec Handoff): «{city} целиком» also in the collapsed title?; uz/en wording of the whole-city label; strict price-input parsing; KI-29 fix as a small shared-file PR.
-3. **The developer's local `backend/.env`** lacks `SOURCES_ALLOW_STUB`, `TELESCOPE_RECORD_ALL`, `TELEGRAM_SUPPORT_USERNAME`, `RADAR_CREATION_ENABLED`: `! printf '\nSOURCES_ALLOW_STUB=true\nTELESCOPE_RECORD_ALL=false\nTELEGRAM_SUPPORT_USERNAME=\nRADAR_CREATION_ENABLED=true\n' >> backend/.env`.
-4. **Production track:** WP-22 deploy (nothing beyond WP-21's `API_URL`); WP-21 steps 11–12 (the request in its spec's Handoff, staging in report-only mode, the checks inside Telegram on four clients, then production); WP-20 deploy; WP-13 deploy + staging check; WP-12 deploy + `sources:publish-stub-media`; WP-11 `TELEGRAM_SUPPORT_USERNAME`; WP-10 migration approval, `/docs/api` basic auth, `sources:list`; WP-03 deploy.
+3. **First developer:** #63 and #64 were merged without a review, on the developer's instruction — a look afterwards; accept ADR-0016 … 0020; questions of #30 (WP-01); WP-00 counts, migration approval, deploy; reviewer decisions of #37; Dependabot #57–#60.
+4. **Production track:** deploys of WP-22, WP-21 (steps 11–12), WP-20, WP-13, WP-12 (+ `sources:publish-stub-media`), WP-11 (`TELEGRAM_SUPPORT_USERNAME`), WP-10 (migration approval, `/docs/api` basic auth), WP-03.
 5. **Operator request** from the project's own mailbox (WP-02 Part A; never the connected Gmail).
-6. **First developer:** accept ADR-0016 … 0020; answer the questions of #30 (WP-01); WP-00 counts, migration approval, deploy; reviewer decisions of #37; Dependabot #57–#60.
 
 ## Gotchas learned this session
-- `cacheComponents` reports `crypto.randomUUID()` / `Date.now()` in a Server Component "while prerendering": `await io()` of `next/cache` first (`io.md`).
-- The router may keep an earlier copy of a route hidden in `<Activity>`: an e2e locator for an element of the page needs `.filter({ visible: true })`.
-- Vitest here has no `globals`, so Testing Library does not clean up by itself: call `cleanup()` in `afterEach`.
-- `AbortSignal.timeout` ignores Vitest's fake timers; a `setTimeout` + `AbortController` does not.
-- `pnpm install --offline` fails the supply-chain check here; an online `pnpm install` for workspace links changes only the importers (check the lockfile diff).
-- zsh: never name a loop variable `path` (it is tied to `PATH`). A `brew upgrade` in the developer's terminal can break `node` for minutes (simdutf); wait, do not touch brew. Next numbers: AM-59, KI-32, ADR 0021 (KI-30: the dev-check fix, PR #63; KI-31: the nginx stop/start fix, branch `fix/dev-nginx-restart`).
+- nginx answers 500 with "Operation not permitted" under `~/Documents` although it was started by `sudo nginx`: a reload does not help; `make dev-nginx-restart` from Terminal or iTerm does (KI-31). Root cause unknown.
+- `gh pr merge --delete-branch` on the base of a stacked PR **closes** that PR instead of retargeting it. Merge the lower PR without deleting its branch, retarget the upper one with `gh pr edit <n> --base main`, then delete.
+- The guard hook denies any shell write to `.env*` (even `>>`); hand the developer a `!` command built from the template's key names.
+- A `make … | tail` over `services.sh start|restart` never returns: the detached servers keep the pipe open. Redirect to a file instead.
+- nginx config for the Next hosts lives in `infra/local/nginx/snippets/` (`proxy-next-dev.conf` proxies HMR websockets); grep the snippets, not only `*.conf`.
+- From earlier: `cacheComponents` needs `await io()` before `crypto.randomUUID()`/`Date.now()`; e2e locators need `.filter({ visible: true })`; Vitest has no `globals` (call `cleanup()`); `AbortSignal.timeout` ignores fake timers; `pnpm install --offline` fails the supply-chain check; a `brew upgrade` can break `node` for minutes (wait); zsh: no loop variable named `path`, no bare `echo ===`. Next numbers: AM-59, KI-32, ADR 0021.
 
 ## Active subagent work at handoff
-- None (the two WP-22 subagents finished; their files are on `main`).
+- None. A peer Claude session (smartagent.uz) answered questions about the shared nginx; nothing is pending with it.
