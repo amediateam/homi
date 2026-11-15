@@ -46,7 +46,7 @@ it('masks the phone numbers of every author-written field', function (): void {
 });
 
 it('keeps a price kind only when it is down_payment or business (BR-API-156, Q-API-065)', function (?string $kind, ?string $kept): void {
-    expect(PriceInfo::fromArray(['display' => '$85 000', 'period' => null, 'alt' => null, 'notes' => [], 'usd' => 85000, 'kind' => $kind])->kind)->toBe($kept);
+    expect(PriceInfo::fromArray(['display' => '$85 000', 'period' => null, 'alt' => null, 'notes' => [], 'usd' => 85000, 'kind' => $kind])->kind?->value)->toBe($kept);
 })->with([['down_payment', 'down_payment'], ['business', 'business'], ['installment', null], [null, null]]);
 
 it('reads the card without any phone of the author', function (): void {

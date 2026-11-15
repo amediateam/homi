@@ -57,7 +57,7 @@ class ListingFiltersRequest extends FormRequest
             'price_max' => ['nullable', 'integer', 'min:1'],
             'area_min' => ['nullable', 'integer', 'between:1,10000'],
             'area_max' => ['nullable', 'integer', 'between:1,10000'],
-            'posted_days' => ['nullable', 'integer', Rule::in([1, 3, 7])],
+            'posted_days' => ['nullable', 'integer', 'between:1,7'],
             'furnished' => $flag,
             'renovation' => $codes,
             'renovation.*' => $code,

@@ -15,7 +15,7 @@ class ListingCountController extends ApiController
     {
         $context = SourceContext::fromRequest($request);
         $resolved = $sources->listings('source.listings.count', $context);
-        $count = $resolved->source->count($request->filters(), $context);
+        $count = (int) $resolved->source->count($request->filters(), $context);
 
         return $this->sourced(['count' => $count], $resolved->driver);
     }

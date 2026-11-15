@@ -8,6 +8,7 @@ use App\Enums\OwnerFilter;
 use App\Enums\PropertyType;
 use App\Enums\Tenant;
 use App\Services\Sources\Data\Fields;
+use App\Services\Sources\Data\GeoPoint;
 use InvalidArgumentException;
 
 /**
@@ -32,7 +33,7 @@ final readonly class SearchFilters
      * @param  list<string>  $zones
      * @param  list<string>  $renovation
      * @param  list<string>  $appliances
-     * @param  list<array{0: float, 1: float}>|null  $polygon  latitude, longitude; open, 3 … 40 vertices
+     * @param  list<GeoPoint>|null  $polygon  open, 3 … 40 vertices
      */
     private function __construct(
         public string $city,
@@ -132,7 +133,7 @@ final readonly class SearchFilters
             'market' => $this->market?->value,
             'appliances' => $this->appliances,
             'posted_days' => $this->postedDays,
-            'polygon' => $this->polygon,
+            'polygon' => $this->polygon === null ? null : array_map(fn (GeoPoint $vertex): array => [$vertex->lat, $vertex->lon], $this->polygon),
         ];
     }
 
@@ -207,7 +208,7 @@ final readonly class SearchFilters
 
     /**
      * @param  array<array-key, mixed>  $data
-     * @return list<array{0: float, 1: float}>|null
+     * @return list<GeoPoint>|null
      */
     private static function polygon(array $data): ?array
     {
@@ -226,7 +227,7 @@ final readonly class SearchFilters
                 throw self::invalid('polygon');
             }
 
-            $vertices[] = [(float) $vertex[0], (float) $vertex[1]];
+            $vertices[] = new GeoPoint((float) $vertex[0], (float) $vertex[1]);
         }
 
         return $vertices;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Listings;
 
+use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Listings\ListingNewRequest;
 use App\Services\Sources\SourceContext;
@@ -20,7 +21,15 @@ class ListingNewController extends ApiController
         $context = SourceContext::fromRequest($request);
         $resolved = $sources->listings('source.listings.new', $context);
         $since = $request->since();
-        $count = $since > now()->getTimestamp() ? 0 : max(0, $resolved->source->newSince($request->filters(), $since, $context));
+        $count = 0;
+
+        if ($since <= now()->getTimestamp()) {
+            $count = (int) $resolved->source->newSince($request->filters(), $since, $context);
+        }
+
+        if ($count < 0) {
+            throw new SourceUnavailable('The source answered a negative new-since count.');
+        }
 
         return $this->sourced(['count' => $count], $resolved->driver);
     }

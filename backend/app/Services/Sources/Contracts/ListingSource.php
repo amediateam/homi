@@ -32,7 +32,7 @@ interface ListingSource
 
     /**
      * @param  int  $since  Unix seconds, not later than now
-     * @return int ≥ 0, the listings of the filters that appeared after `$since`
+     * @return int the number (≥ 0) of listings of the filters that appeared after `$since`
      *
      * @throws SourceUnavailable
      */

@@ -25,6 +25,7 @@ class PublishStubMedia extends Command
     public function handle(StubListingSource $listings): int
     {
         $from = (string) ($this->option('from') ?: resource_path('fixtures/media'));
+        /** @var array<int, array{full: string, small: string}> $images placeholder number => its two variants */
         $images = [];
 
         foreach (range(1, self::PLACEHOLDERS) as $k) {
@@ -34,18 +35,21 @@ class PublishStubMedia extends Command
 
                     return self::FAILURE;
                 }
-
-                $images[$name] = (string) file_get_contents("{$from}/{$name}");
             }
+
+            $images[$k] = [
+                'full' => (string) file_get_contents("{$from}/placeholder-{$k}.jpg"),
+                'small' => (string) file_get_contents("{$from}/placeholder-{$k}.s.jpg"),
+            ];
         }
 
         $disk = Storage::disk(Config::string('media.disks.public'));
         $written = 0;
 
         foreach ($this->photoPaths($listings) as [$number, $n]) {
-            $k = ($number + $n - 1) % self::PLACEHOLDERS + 1;
-            $disk->put("stub/{$number}/{$n}.jpg", $images["placeholder-{$k}.jpg"]);
-            $disk->put("stub/{$number}/{$n}.s.jpg", $images["placeholder-{$k}.s.jpg"]);
+            $image = $images[($number + $n - 1) % self::PLACEHOLDERS + 1];
+            $disk->put("stub/{$number}/{$n}.jpg", $image['full']);
+            $disk->put("stub/{$number}/{$n}.s.jpg", $image['small']);
             $written += 2;
         }
 

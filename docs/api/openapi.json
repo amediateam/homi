@@ -100,6 +100,2274 @@
                 }
             }
         },
+        "/listings": {
+            "get": {
+                "operationId": "v1.listings.index",
+                "summary": "`GET /listings`: one page of previews; `meta.next_cursor` null ends the list. A page may hold fewer than\n`limit` items; the client de-duplicates by `number`",
+                "tags": [
+                    "Listing"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Deal"
+                        }
+                    },
+                    {
+                        "name": "owner",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/OwnerFilter"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "types[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "districts[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "zones[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "rooms_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "rooms_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "price_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "price_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "area_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "area_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "posted_days",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    {
+                        "name": "furnished",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "renovation[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "appliances[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "floor_not_first",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "floor_not_last",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "near_metro",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "below_median",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets_only",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "market",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Market"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tenant",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Tenant"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2000
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/ListingSort"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 512
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ListingPreviewResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next_cursor": {
+                                                    "type": "string"
+                                                },
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "next_cursor",
+                                                "source"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/{number}": {
+            "get": {
+                "operationId": "v1.listings.show",
+                "summary": "`GET /listings/{number}`: the full card, or the preview with `preview=1`. A merged duplicate answers with the\nsurviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number",
+                "tags": [
+                    "Listing"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "preview",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/ListingDetailsResource"
+                                                },
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "source": {
+                                                            "$ref": "#/components/schemas/SourceDriver"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "source"
+                                                    ],
+                                                    "additionalProperties": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data",
+                                                "meta"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/ListingPreviewResource"
+                                                },
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "source": {
+                                                            "$ref": "#/components/schemas/SourceDriver"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "source"
+                                                    ],
+                                                    "additionalProperties": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data",
+                                                "meta"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/{number}/contact": {
+            "post": {
+                "operationId": "v1.listings.contact",
+                "tags": [
+                    "ListingContact"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/listings/count": {
+            "get": {
+                "operationId": "v1.listings.count",
+                "tags": [
+                    "ListingCount"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Deal"
+                        }
+                    },
+                    {
+                        "name": "owner",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/OwnerFilter"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "types[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "districts[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "zones[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "rooms_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "rooms_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "price_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "price_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "area_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "area_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "posted_days",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    {
+                        "name": "furnished",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "renovation[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "appliances[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "floor_not_first",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "floor_not_last",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "near_metro",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "below_median",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets_only",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "market",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Market"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tenant",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Tenant"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "count": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "count"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/flow": {
+            "get": {
+                "operationId": "v1.listings.flow",
+                "tags": [
+                    "ListingFlow"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Deal"
+                        }
+                    },
+                    {
+                        "name": "owner",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/OwnerFilter"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "types[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "districts[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "zones[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "rooms_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "rooms_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "price_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "price_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "area_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "area_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "posted_days",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    {
+                        "name": "furnished",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "renovation[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "appliances[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "floor_not_first",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "floor_not_last",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "near_metro",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "below_median",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets_only",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "market",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Market"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tenant",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Tenant"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/FlowResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/map": {
+            "get": {
+                "operationId": "v1.listings.map",
+                "tags": [
+                    "ListingMap"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Deal"
+                        }
+                    },
+                    {
+                        "name": "owner",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/OwnerFilter"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "types[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "districts[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "zones[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "rooms_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "rooms_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "price_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "price_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "area_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "area_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "posted_days",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    {
+                        "name": "furnished",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "renovation[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "appliances[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "floor_not_first",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "floor_not_last",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "near_metro",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "below_median",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets_only",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "market",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Market"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tenant",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Tenant"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MapPointsResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/new": {
+            "get": {
+                "operationId": "v1.listings.new",
+                "tags": [
+                    "ListingNew"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Deal"
+                        }
+                    },
+                    {
+                        "name": "owner",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/OwnerFilter"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "types[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "districts[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "zones[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "rooms_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "rooms_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 10
+                        }
+                    },
+                    {
+                        "name": "price_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "price_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "area_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "area_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 10000
+                        }
+                    },
+                    {
+                        "name": "posted_days",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 7
+                        }
+                    },
+                    {
+                        "name": "furnished",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "renovation[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "appliances[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            },
+                            "maxItems": 100
+                        }
+                    },
+                    {
+                        "name": "floor_not_first",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "floor_not_last",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "near_metro",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "below_median",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pets_only",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "true",
+                                "false",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "market",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Market"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tenant",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/Tenant"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2000
+                        }
+                    },
+                    {
+                        "name": "since",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "count": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "count"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/listings/{number}/share": {
+            "post": {
+                "operationId": "v1.listings.share",
+                "tags": [
+                    "ListingShare"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PreparedShareResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/listings/{number}/translation": {
+            "post": {
+                "operationId": "v1.listings.translation",
+                "tags": [
+                    "ListingTranslation"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TranslationResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/me": {
             "get": {
                 "operationId": "v1.me.show",
@@ -809,6 +3077,36 @@
                 ],
                 "title": "CityStatsResource"
             },
+            "ContactResource": {
+                "type": "object",
+                "properties": {
+                    "call_url": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "phone_display": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "call_url",
+                    "expires_at",
+                    "phone",
+                    "phone_display"
+                ],
+                "title": "ContactResource"
+            },
             "Currency": {
                 "type": "string",
                 "description": "The display currencies of the product. Prices in the reference data are whole USD whatever the user's currency.\n",
@@ -817,6 +3115,1281 @@
                     "UZS"
                 ],
                 "title": "Currency"
+            },
+            "Deal": {
+                "type": "string",
+                "description": "The three deals of the product: long-term rent, daily rent, sale. Keys of every per-deal object of `/api/v1`.\n",
+                "enum": [
+                    "rent_long",
+                    "rent_daily",
+                    "sale"
+                ],
+                "title": "Deal"
+            },
+            "FiltersResource": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string"
+                    },
+                    "deal": {
+                        "$ref": "#/components/schemas/Deal"
+                    },
+                    "types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "districts": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "rooms_min": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "rooms_max": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "price_min": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "price_max": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "zones": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "near_metro": {
+                        "type": "boolean"
+                    },
+                    "below_median": {
+                        "type": "boolean"
+                    },
+                    "owner": {
+                        "$ref": "#/components/schemas/OwnerFilter"
+                    },
+                    "tenant": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Tenant"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "pets": {
+                        "type": "boolean"
+                    },
+                    "pets_only": {
+                        "type": "boolean"
+                    },
+                    "furnished": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "renovation": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "floor_not_first": {
+                        "type": "boolean"
+                    },
+                    "floor_not_last": {
+                        "type": "boolean"
+                    },
+                    "area_min": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "area_max": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "market": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Market"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "appliances": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "posted_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "polygon": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "$ref": "#/components/schemas/PolygonVertexResource"
+                        }
+                    }
+                },
+                "required": [
+                    "city",
+                    "deal",
+                    "types",
+                    "districts",
+                    "rooms_min",
+                    "rooms_max",
+                    "price_min",
+                    "price_max",
+                    "zones",
+                    "near_metro",
+                    "below_median",
+                    "owner",
+                    "tenant",
+                    "pets",
+                    "pets_only",
+                    "furnished",
+                    "renovation",
+                    "floor_not_first",
+                    "floor_not_last",
+                    "area_min",
+                    "area_max",
+                    "market",
+                    "appliances",
+                    "posted_days",
+                    "polygon"
+                ],
+                "title": "FiltersResource"
+            },
+            "FlowOptionResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "rate": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/FiltersResource"
+                    }
+                },
+                "required": [
+                    "code",
+                    "label",
+                    "rate",
+                    "count",
+                    "filters"
+                ],
+                "title": "FlowOptionResource"
+            },
+            "FlowResource": {
+                "type": "object",
+                "properties": {
+                    "week": {
+                        "type": "integer"
+                    },
+                    "days": {
+                        "type": "integer"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FlowOptionResource"
+                        }
+                    }
+                },
+                "required": [
+                    "week",
+                    "days",
+                    "options"
+                ],
+                "title": "FlowResource"
+            },
+            "ListingDetailsResource": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer"
+                    },
+                    "deal": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Deal"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "display": {
+                                "type": "string"
+                            },
+                            "period": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "alt": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "notes": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "usd": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "kind": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/components/schemas/PriceKind"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            }
+                        },
+                        "required": [
+                            "display",
+                            "period",
+                            "alt",
+                            "notes",
+                            "usd",
+                            "kind"
+                        ]
+                    },
+                    "rooms": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "area_total": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "floor": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "floors_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "district": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "name"
+                        ]
+                    },
+                    "place": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "landmark": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metro": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "km": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "km"
+                        ]
+                    },
+                    "center_km": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "location": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "lat": {
+                                "type": "number"
+                            },
+                            "lon": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "lat",
+                            "lon"
+                        ]
+                    },
+                    "photos": {
+                        "type": "object",
+                        "properties": {
+                            "preview": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "count": {
+                                "type": "integer"
+                            },
+                            "cover": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "preview",
+                            "count",
+                            "cover",
+                            "items"
+                        ]
+                    },
+                    "has_video": {
+                        "type": "boolean"
+                    },
+                    "pets_ok": {
+                        "type": "boolean"
+                    },
+                    "is_owner": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "owner_verified": {
+                        "type": "boolean"
+                    },
+                    "posted": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": "string"
+                            },
+                            "when": {
+                                "type": "string"
+                            },
+                            "at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "label",
+                            "when",
+                            "at"
+                        ]
+                    },
+                    "status_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "market": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "median_delta": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "tone": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "label",
+                            "code",
+                            "median_delta",
+                            "tone"
+                        ]
+                    },
+                    "favorite": {
+                        "type": "boolean"
+                    },
+                    "viewed": {
+                        "type": "boolean"
+                    },
+                    "source_ref": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "channel": {
+                                "type": "string"
+                            },
+                            "post_id": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "channel",
+                            "post_id"
+                        ]
+                    },
+                    "facts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingFactResource"
+                        }
+                    },
+                    "nearby": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingNearbyResource"
+                        }
+                    },
+                    "stats": {
+                        "type": "object",
+                        "properties": {
+                            "days_listed": {
+                                "type": "integer"
+                            },
+                            "publications": {
+                                "type": "integer"
+                            },
+                            "channels": {
+                                "type": "integer"
+                            },
+                            "views": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "days_listed",
+                            "publications",
+                            "channels",
+                            "views"
+                        ]
+                    },
+                    "price_history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PriceEventResource"
+                        }
+                    },
+                    "geo_radius_m": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "author": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "kind": {
+                                "type": "string"
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "count": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "kind",
+                            "label",
+                            "count"
+                        ]
+                    },
+                    "owner_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "contact": {
+                        "type": "object",
+                        "properties": {
+                            "has_phone": {
+                                "type": "boolean"
+                            },
+                            "contact_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "contact_paid": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "has_phone",
+                            "contact_url",
+                            "contact_paid"
+                        ]
+                    },
+                    "summary": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "offers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingOfferResource"
+                        }
+                    },
+                    "original": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "deleted": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "text",
+                            "url",
+                            "deleted"
+                        ]
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingSourceLinkResource"
+                        }
+                    },
+                    "comparison": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "value": {
+                                "type": "number"
+                            },
+                            "own": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "n": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "metric": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "scope": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "rooms": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "near_class": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "radius_km": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "district": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "place_value": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "note": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "updated": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "has_reason": {
+                                "type": "boolean"
+                            },
+                            "price_usd": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "price_per_m2": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "value",
+                            "own",
+                            "n",
+                            "metric",
+                            "scope",
+                            "rooms",
+                            "near_class",
+                            "radius_km",
+                            "district",
+                            "place_value",
+                            "note",
+                            "updated",
+                            "has_reason",
+                            "price_usd",
+                            "price_per_m2"
+                        ]
+                    }
+                },
+                "required": [
+                    "number",
+                    "deal",
+                    "type",
+                    "title",
+                    "price",
+                    "rooms",
+                    "area_total",
+                    "floor",
+                    "floors_total",
+                    "district",
+                    "place",
+                    "landmark",
+                    "metro",
+                    "center_km",
+                    "location",
+                    "photos",
+                    "has_video",
+                    "pets_ok",
+                    "is_owner",
+                    "owner_verified",
+                    "posted",
+                    "status_text",
+                    "market",
+                    "favorite",
+                    "viewed",
+                    "source_ref",
+                    "facts",
+                    "nearby",
+                    "stats",
+                    "price_history",
+                    "geo_radius_m",
+                    "author",
+                    "owner_label",
+                    "contact",
+                    "summary",
+                    "offers",
+                    "original",
+                    "sources",
+                    "comparison"
+                ],
+                "title": "ListingDetailsResource"
+            },
+            "ListingFactResource": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "key",
+                    "label",
+                    "value"
+                ],
+                "title": "ListingFactResource"
+            },
+            "ListingNearbyResource": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "km": {
+                        "type": "number"
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "kind",
+                    "name",
+                    "km",
+                    "note"
+                ],
+                "title": "ListingNearbyResource"
+            },
+            "ListingOfferResource": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "text",
+                    "url"
+                ],
+                "title": "ListingOfferResource"
+            },
+            "ListingPreviewResource": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer"
+                    },
+                    "deal": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Deal"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PropertyType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "display": {
+                                "type": "string"
+                            },
+                            "period": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "alt": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "notes": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "usd": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "kind": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/components/schemas/PriceKind"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            }
+                        },
+                        "required": [
+                            "display",
+                            "period",
+                            "alt",
+                            "notes",
+                            "usd",
+                            "kind"
+                        ]
+                    },
+                    "rooms": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "area_total": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "floor": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "floors_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "district": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "name"
+                        ]
+                    },
+                    "place": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "landmark": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metro": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "km": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "km"
+                        ]
+                    },
+                    "center_km": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "location": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "lat": {
+                                "type": "number"
+                            },
+                            "lon": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "lat",
+                            "lon"
+                        ]
+                    },
+                    "photos": {
+                        "type": "object",
+                        "properties": {
+                            "preview": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "count": {
+                                "type": "integer"
+                            },
+                            "cover": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "preview",
+                            "count",
+                            "cover"
+                        ]
+                    },
+                    "has_video": {
+                        "type": "boolean"
+                    },
+                    "pets_ok": {
+                        "type": "boolean"
+                    },
+                    "is_owner": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "owner_verified": {
+                        "type": "boolean"
+                    },
+                    "posted": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": "string"
+                            },
+                            "when": {
+                                "type": "string"
+                            },
+                            "at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "label",
+                            "when",
+                            "at"
+                        ]
+                    },
+                    "status_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "market": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "median_delta": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "tone": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "label",
+                            "median_delta",
+                            "tone"
+                        ]
+                    },
+                    "favorite": {
+                        "type": "boolean"
+                    },
+                    "viewed": {
+                        "type": "boolean"
+                    },
+                    "source_ref": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "channel": {
+                                "type": "string"
+                            },
+                            "post_id": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "channel",
+                            "post_id"
+                        ]
+                    }
+                },
+                "required": [
+                    "number",
+                    "deal",
+                    "type",
+                    "title",
+                    "price",
+                    "rooms",
+                    "area_total",
+                    "floor",
+                    "floors_total",
+                    "district",
+                    "place",
+                    "landmark",
+                    "metro",
+                    "center_km",
+                    "location",
+                    "photos",
+                    "has_video",
+                    "pets_ok",
+                    "is_owner",
+                    "owner_verified",
+                    "posted",
+                    "status_text",
+                    "market",
+                    "favorite",
+                    "viewed",
+                    "source_ref"
+                ],
+                "title": "ListingPreviewResource"
+            },
+            "ListingSort": {
+                "type": "string",
+                "description": "The order of `GET /listings` (WP-12, BR-APP-023). `new` is the default.\n",
+                "enum": [
+                    "new",
+                    "cheap",
+                    "expensive",
+                    "deal",
+                    "center",
+                    "ppm"
+                ],
+                "title": "ListingSort"
+            },
+            "ListingSourceLinkResource": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "url"
+                ],
+                "title": "ListingSourceLinkResource"
             },
             "Locale": {
                 "type": "string",
@@ -827,6 +4400,76 @@
                     "en"
                 ],
                 "title": "Locale"
+            },
+            "MapPointResource": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer"
+                    },
+                    "lat": {
+                        "type": "number"
+                    },
+                    "lon": {
+                        "type": "number"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "tone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "priced": {
+                        "type": "boolean"
+                    },
+                    "usd": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "number",
+                    "lat",
+                    "lon",
+                    "label",
+                    "tone",
+                    "priced",
+                    "usd"
+                ],
+                "title": "MapPointResource"
+            },
+            "MapPointsResource": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MapPointResource"
+                        }
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "points",
+                    "total"
+                ],
+                "title": "MapPointsResource"
+            },
+            "Market": {
+                "type": "string",
+                "description": "New building or secondary market (`market` filter of a sale, BR-API-029).\n",
+                "enum": [
+                    "new",
+                    "secondary"
+                ],
+                "title": "Market"
             },
             "MeResource": {
                 "type": "object",
@@ -1000,6 +4643,46 @@
                 ],
                 "title": "NamedCodeResource"
             },
+            "OwnerFilter": {
+                "type": "string",
+                "description": "The `owner` filter (BR-API-035): everything, without explicit realtors, or only explicit owners.\n",
+                "enum": [
+                    "any",
+                    "no_agents",
+                    "owners"
+                ],
+                "title": "OwnerFilter"
+            },
+            "PolygonVertexResource": {
+                "type": "array",
+                "prefixItems": [
+                    {
+                        "type": "number"
+                    },
+                    {
+                        "type": "number"
+                    }
+                ],
+                "minItems": 2,
+                "maxItems": 2,
+                "title": "PolygonVertexResource"
+            },
+            "PreparedShareResource": {
+                "type": "object",
+                "properties": {
+                    "prepared_message_id": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "prepared_message_id",
+                    "expires_at"
+                ],
+                "title": "PreparedShareResource"
+            },
             "PresignRequest": {
                 "type": "object",
                 "properties": {
@@ -1028,6 +4711,78 @@
                     "bytes"
                 ],
                 "title": "PresignRequest"
+            },
+            "PriceEventResource": {
+                "type": "object",
+                "properties": {
+                    "at": {
+                        "type": "string"
+                    },
+                    "channel": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "price_usd": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "change_pct": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "at",
+                    "channel",
+                    "url",
+                    "text",
+                    "kind",
+                    "price_usd",
+                    "change_pct"
+                ],
+                "title": "PriceEventResource"
+            },
+            "PriceKind": {
+                "type": "string",
+                "description": "The label kind of a price (BR-API-156): a down payment of an instalment sale, or the price of a business with its premises rented out (since legacy release `index-Dbpp463V.js`). Any other legacy value becomes null (Q-API-065).\n",
+                "enum": [
+                    "down_payment",
+                    "business"
+                ],
+                "title": "PriceKind"
+            },
+            "PropertyType": {
+                "type": "string",
+                "description": "What a listing offers (`types[]` of the filters, `type` of a listing; WP-12, BR-API-028).\n",
+                "enum": [
+                    "apartment",
+                    "house",
+                    "room",
+                    "commercial",
+                    "land"
+                ],
+                "title": "PropertyType"
             },
             "ReferenceResource": {
                 "type": "object",
@@ -1393,6 +5148,16 @@
                 ],
                 "title": "TelegramSignInRequest"
             },
+            "Tenant": {
+                "type": "string",
+                "description": "Who the long rent is for (`tenant` filter, BR-API-029).\n",
+                "enum": [
+                    "family",
+                    "men",
+                    "women"
+                ],
+                "title": "Tenant"
+            },
             "Theme": {
                 "type": "string",
                 "description": "The colour theme a user chose; `auto` follows Telegram.\n",
@@ -1402,6 +5167,22 @@
                     "dark"
                 ],
                 "title": "Theme"
+            },
+            "TranslationResource": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    },
+                    "locale": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "text",
+                    "locale"
+                ],
+                "title": "TranslationResource"
             },
             "UpdateSettingsRequest": {
                 "type": "object",

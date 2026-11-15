@@ -2,14 +2,14 @@
 
 namespace App\Services\Sources\Data;
 
+use App\Enums\PriceKind;
+
 /**
  * The price of a listing (WP-12): the display parts next to the raw USD amount (`25` §4.5). `kind` is `down_payment`
  * or `business` (BR-API-156); any other value becomes null, so the client shows no label for it (Q-API-065).
  */
 final readonly class PriceInfo
 {
-    public const array KINDS = ['down_payment', 'business'];
-
     /** @param  list<string>  $notes */
     public function __construct(
         public string $display,
@@ -17,21 +17,19 @@ final readonly class PriceInfo
         public ?string $alt,
         public array $notes,
         public ?int $usd,
-        public ?string $kind,
+        public ?PriceKind $kind,
     ) {}
 
     /** @param  array<array-key, mixed>  $data */
     public static function fromArray(array $data): self
     {
-        $kind = Fields::nullableString($data, 'kind');
-
         return new self(
             display: Fields::string($data, 'display'),
             period: Fields::nullableString($data, 'period'),
             alt: Fields::nullableString($data, 'alt'),
             notes: Fields::strings($data, 'notes'),
             usd: Fields::nullableInt($data, 'usd'),
-            kind: in_array($kind, self::KINDS, true) ? $kind : null,
+            kind: PriceKind::tryFrom((string) Fields::nullableString($data, 'kind')),
         );
     }
 }

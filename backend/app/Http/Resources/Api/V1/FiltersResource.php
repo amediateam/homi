@@ -45,16 +45,6 @@ class FiltersResource extends JsonResource
             $appliances[] = $code;
         }
 
-        $polygon = null;
-
-        if ($f->polygon !== null) {
-            $polygon = [];
-
-            foreach ($f->polygon as [$lat, $lon]) {
-                $polygon[] = [$lat, $lon];
-            }
-        }
-
         return [
             'city' => $f->city,
             'deal' => $f->deal,
@@ -80,7 +70,7 @@ class FiltersResource extends JsonResource
             'market' => $f->market,
             'appliances' => $appliances,
             'posted_days' => $f->postedDays,
-            'polygon' => $polygon,
+            'polygon' => $f->polygon === null ? null : PolygonVertexResource::collection($f->polygon),
         ];
     }
 }

@@ -22,18 +22,10 @@ class FlowResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
-        $options = [];
-
-        foreach ($this->flow->options as $option) {
-            $options[] = [
-                'code' => $option->code,
-                'label' => $option->label,
-                'rate' => $option->rate,
-                'count' => $option->count,
-                'filters' => new FiltersResource($option->filters),
-            ];
-        }
-
-        return ['week' => $this->flow->week, 'days' => $this->flow->days, 'options' => $options];
+        return [
+            'week' => $this->flow->week,
+            'days' => $this->flow->days,
+            'options' => FlowOptionResource::collection($this->flow->options),
+        ];
     }
 }

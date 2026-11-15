@@ -25,33 +25,10 @@ class ListingDetailsResource extends JsonResource
     {
         $card = $this->details;
         $preview = (new ListingPreviewResource($card->preview))->toArray($request);
-        [$items, $facts, $nearby, $history, $offers, $sources] = [[], [], [], [], [], []];
+        $items = [];
 
         foreach ($card->photoItems as $photo) {
             $items[] = $photo;
-        }
-
-        foreach ($card->facts as $fact) {
-            $facts[] = ['key' => $fact->key, 'label' => $fact->label, 'value' => $fact->value];
-        }
-
-        foreach ($card->nearby as $place) {
-            $nearby[] = ['kind' => $place->kind, 'name' => $place->name, 'km' => $place->km, 'note' => $place->note];
-        }
-
-        foreach ($card->priceHistory as $event) {
-            $history[] = [
-                'at' => $event->at, 'channel' => $event->channel, 'url' => $event->url, 'text' => $event->text,
-                'kind' => $event->kind, 'price_usd' => $event->priceUsd, 'change_pct' => $event->changePct,
-            ];
-        }
-
-        foreach ($card->offers as $offer) {
-            $offers[] = ['text' => $offer->text, 'url' => $offer->url];
-        }
-
-        foreach ($card->sources as $source) {
-            $sources[] = ['handle' => $source->handle, 'url' => $source->url];
         }
 
         $comparison = $card->comparison;
@@ -70,23 +47,23 @@ class ListingDetailsResource extends JsonResource
                 'median_delta' => $card->preview->medianDelta,
                 'tone' => $card->preview->marketTone,
             ],
-            'facts' => $facts,
-            'nearby' => $nearby,
+            'facts' => ListingFactResource::collection($card->facts),
+            'nearby' => ListingNearbyResource::collection($card->nearby),
             'stats' => [
                 'days_listed' => $card->daysListed,
                 'publications' => $card->publications,
                 'channels' => $card->channels,
                 'views' => $card->views,
             ],
-            'price_history' => $history,
+            'price_history' => PriceEventResource::collection($card->priceHistory),
             'geo_radius_m' => $card->geoRadiusM,
-            'author' => $card->authorKind === null ? null : ['kind' => $card->authorKind, 'label' => $card->authorLabel, 'count' => $card->authorCount],
+            'author' => $card->authorKind === null ? null : ['kind' => (string) $card->authorKind, 'label' => (string) $card->authorLabel, 'count' => (int) $card->authorCount],
             'owner_label' => $card->ownerLabel,
             'contact' => ['has_phone' => $card->hasPhone, 'contact_url' => $card->contactUrl, 'contact_paid' => $card->contactPaid],
             'summary' => $card->summary,
-            'offers' => $offers,
+            'offers' => ListingOfferResource::collection($card->offers),
             'original' => ['text' => $card->originalText, 'url' => $card->originalUrl, 'deleted' => $card->originalDeleted],
-            'sources' => $sources,
+            'sources' => ListingSourceLinkResource::collection($card->sources),
             'comparison' => $comparison === null ? null : [
                 'value' => $comparison->value,
                 'own' => $comparison->own,

@@ -22,20 +22,6 @@ class MapPointsResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
-        $points = [];
-
-        foreach ($this->map->points as $point) {
-            $points[] = [
-                'number' => $point->number,
-                'lat' => $point->lat,
-                'lon' => $point->lon,
-                'label' => $point->label,
-                'tone' => $point->tone,
-                'priced' => $point->priced,
-                'usd' => $point->usd,
-            ];
-        }
-
-        return ['points' => $points, 'total' => $this->map->total];
+        return ['points' => MapPointResource::collection($this->map->points), 'total' => $this->map->total];
     }
 }

@@ -36,6 +36,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /listings`: one page of previews; `meta.next_cursor` null ends the list. A page may hold fewer than
+         *     `limit` items; the client de-duplicates by `number`
+         */
+        get: operations["v1.listings.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /listings/{number}`: the full card, or the preview with `preview=1`. A merged duplicate answers with the
+         *     surviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number
+         */
+        get: operations["v1.listings.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{number}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.listings.contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.listings.count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.listings.flow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.listings.map"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.listings.new"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{number}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.listings.share"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{number}/translation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.listings.translation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -229,6 +381,13 @@ export interface components {
                 sale?: number;
             };
         };
+        /** ContactResource */
+        ContactResource: {
+            call_url: string;
+            expires_at: string;
+            phone: string | null;
+            phone_display: string | null;
+        };
         /**
          * Currency
          * @description The display currencies of the product. Prices in the reference data are whole USD whatever the user's currency.
@@ -236,11 +395,277 @@ export interface components {
          */
         Currency: "USD" | "UZS";
         /**
+         * Deal
+         * @description The three deals of the product: long-term rent, daily rent, sale. Keys of every per-deal object of `/api/v1`.
+         * @enum {string}
+         */
+        Deal: "rent_long" | "rent_daily" | "sale";
+        /** FiltersResource */
+        FiltersResource: {
+            city: string;
+            deal: components["schemas"]["Deal"];
+            types: string[];
+            districts: string[];
+            rooms_min: number | null;
+            rooms_max: number | null;
+            price_min: number | null;
+            price_max: number | null;
+            zones: string[];
+            near_metro: boolean;
+            below_median: boolean;
+            owner: components["schemas"]["OwnerFilter"];
+            tenant: components["schemas"]["Tenant"] | null;
+            pets: boolean;
+            pets_only: boolean;
+            furnished: boolean | null;
+            renovation: string[];
+            floor_not_first: boolean;
+            floor_not_last: boolean;
+            area_min: number | null;
+            area_max: number | null;
+            market: components["schemas"]["Market"] | null;
+            appliances: string[];
+            posted_days: number | null;
+            polygon: components["schemas"]["PolygonVertexResource"][] | null;
+        };
+        /** FlowOptionResource */
+        FlowOptionResource: {
+            code: string;
+            label: string;
+            rate: string;
+            count: number | null;
+            filters: components["schemas"]["FiltersResource"];
+        };
+        /** FlowResource */
+        FlowResource: {
+            week: number;
+            days: number;
+            options: components["schemas"]["FlowOptionResource"][];
+        };
+        /** ListingDetailsResource */
+        ListingDetailsResource: {
+            number: number;
+            deal: components["schemas"]["Deal"] | null;
+            type: components["schemas"]["PropertyType"] | null;
+            title: string;
+            price: {
+                display: string;
+                period: string | null;
+                alt: string | null;
+                notes: string[];
+                usd: number | null;
+                kind: components["schemas"]["PriceKind"] | null;
+            } | null;
+            rooms: number | null;
+            area_total: number | null;
+            floor: number | null;
+            floors_total: number | null;
+            district: {
+                code: string | null;
+                name: string;
+            } | null;
+            place: string | null;
+            landmark: string | null;
+            metro: {
+                name: string;
+                km: number | null;
+            } | null;
+            center_km: number | null;
+            location: {
+                lat: number;
+                lon: number;
+            } | null;
+            photos: {
+                preview: string[];
+                count: number;
+                cover: string | null;
+                items: string[];
+            };
+            has_video: boolean;
+            pets_ok: boolean;
+            is_owner: boolean | null;
+            owner_verified: boolean;
+            posted: {
+                label: string;
+                when: string;
+                at: string | null;
+            };
+            status_text: string | null;
+            market: {
+                label: string | null;
+                code: string | null;
+                median_delta: number | null;
+                tone: string | null;
+            };
+            favorite: boolean;
+            viewed: boolean;
+            source_ref: {
+                channel: string;
+                post_id: number;
+            } | null;
+            facts: components["schemas"]["ListingFactResource"][];
+            nearby: components["schemas"]["ListingNearbyResource"][];
+            stats: {
+                days_listed: number;
+                publications: number;
+                channels: number;
+                views: number | null;
+            };
+            price_history: components["schemas"]["PriceEventResource"][];
+            geo_radius_m: number | null;
+            author: {
+                kind: string;
+                label: string;
+                count: number;
+            } | null;
+            owner_label: string | null;
+            contact: {
+                has_phone: boolean;
+                contact_url: string | null;
+                contact_paid: boolean;
+            };
+            summary: string | null;
+            offers: components["schemas"]["ListingOfferResource"][];
+            original: {
+                text: string | null;
+                url: string | null;
+                deleted: boolean;
+            };
+            sources: components["schemas"]["ListingSourceLinkResource"][];
+            comparison: {
+                value: number;
+                own: number | null;
+                n: number | null;
+                metric: string | null;
+                scope: string | null;
+                rooms: number | null;
+                near_class: string | null;
+                radius_km: number | null;
+                district: string | null;
+                place_value: number | null;
+                note: string | null;
+                updated: string | null;
+                has_reason: boolean;
+                price_usd: number | null;
+                price_per_m2: number | null;
+            } | null;
+        };
+        /** ListingFactResource */
+        ListingFactResource: {
+            key: string;
+            label: string;
+            value: string;
+        };
+        /** ListingNearbyResource */
+        ListingNearbyResource: {
+            kind: string;
+            name: string;
+            km: number;
+            note: string | null;
+        };
+        /** ListingOfferResource */
+        ListingOfferResource: {
+            text: string;
+            url: string | null;
+        };
+        /** ListingPreviewResource */
+        ListingPreviewResource: {
+            number: number;
+            deal: components["schemas"]["Deal"] | null;
+            type: components["schemas"]["PropertyType"] | null;
+            title: string;
+            price: {
+                display: string;
+                period: string | null;
+                alt: string | null;
+                notes: string[];
+                usd: number | null;
+                kind: components["schemas"]["PriceKind"] | null;
+            } | null;
+            rooms: number | null;
+            area_total: number | null;
+            floor: number | null;
+            floors_total: number | null;
+            district: {
+                code: string | null;
+                name: string;
+            } | null;
+            place: string | null;
+            landmark: string | null;
+            metro: {
+                name: string;
+                km: number | null;
+            } | null;
+            center_km: number | null;
+            location: {
+                lat: number;
+                lon: number;
+            } | null;
+            photos: {
+                preview: string[];
+                count: number;
+                cover: string | null;
+            };
+            has_video: boolean;
+            pets_ok: boolean;
+            is_owner: boolean | null;
+            owner_verified: boolean;
+            posted: {
+                label: string;
+                when: string;
+                at: string | null;
+            };
+            status_text: string | null;
+            market: {
+                label: string | null;
+                median_delta: number | null;
+                tone: string | null;
+            };
+            favorite: boolean;
+            viewed: boolean;
+            source_ref: {
+                channel: string;
+                post_id: number;
+            } | null;
+        };
+        /**
+         * ListingSort
+         * @description The order of `GET /listings` (WP-12, BR-APP-023). `new` is the default.
+         * @enum {string}
+         */
+        ListingSort: "new" | "cheap" | "expensive" | "deal" | "center" | "ppm";
+        /** ListingSourceLinkResource */
+        ListingSourceLinkResource: {
+            handle: string;
+            url: string;
+        };
+        /**
          * Locale
          * @description The languages of `/api/v1` (CF-006: `uz` is the only Uzbek code on this surface; `uz_Latn` lives only inside the legacy driver).
          * @enum {string}
          */
         Locale: "ru" | "uz" | "en";
+        /** MapPointResource */
+        MapPointResource: {
+            number: number;
+            lat: number;
+            lon: number;
+            label: string;
+            tone: string | null;
+            priced: boolean;
+            usd: number | null;
+        };
+        /** MapPointsResource */
+        MapPointsResource: {
+            points: components["schemas"]["MapPointResource"][];
+            total: number;
+        };
+        /**
+         * Market
+         * @description New building or secondary market (`market` filter of a sale, BR-API-029).
+         * @enum {string}
+         */
+        Market: "new" | "secondary";
         /** MeResource */
         MeResource: {
             locale: components["schemas"]["Locale"];
@@ -286,6 +711,22 @@ export interface components {
             code: string;
             name: string;
         };
+        /**
+         * OwnerFilter
+         * @description The `owner` filter (BR-API-035): everything, without explicit realtors, or only explicit owners.
+         * @enum {string}
+         */
+        OwnerFilter: "any" | "no_agents" | "owners";
+        /** PolygonVertexResource */
+        PolygonVertexResource: [
+            number,
+            number
+        ];
+        /** PreparedShareResource */
+        PreparedShareResource: {
+            prepared_message_id: string;
+            expires_at: string;
+        };
         /** PresignRequest */
         PresignRequest: {
             filename: string;
@@ -293,6 +734,28 @@ export interface components {
             mime: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
             bytes: number;
         };
+        /** PriceEventResource */
+        PriceEventResource: {
+            at: string;
+            channel: string;
+            url: string | null;
+            text: string | null;
+            kind: string | null;
+            price_usd: number | null;
+            change_pct: number | null;
+        };
+        /**
+         * PriceKind
+         * @description The label kind of a price (BR-API-156): a down payment of an instalment sale, or the price of a business with its premises rented out (since legacy release `index-Dbpp463V.js`). Any other legacy value becomes null (Q-API-065).
+         * @enum {string}
+         */
+        PriceKind: "down_payment" | "business";
+        /**
+         * PropertyType
+         * @description What a listing offers (`types[]` of the filters, `type` of a listing; WP-12, BR-API-028).
+         * @enum {string}
+         */
+        PropertyType: "apartment" | "house" | "room" | "commercial" | "land";
         /** ReferenceResource */
         ReferenceResource: {
             bot: {
@@ -391,11 +854,22 @@ export interface components {
             init_data: string;
         };
         /**
+         * Tenant
+         * @description Who the long rent is for (`tenant` filter, BR-API-029).
+         * @enum {string}
+         */
+        Tenant: "family" | "men" | "women";
+        /**
          * Theme
          * @description The colour theme a user chose; `auto` follows Telegram.
          * @enum {string}
          */
         Theme: "auto" | "light" | "dark";
+        /** TranslationResource */
+        TranslationResource: {
+            text: string;
+            locale: string;
+        };
         /**
          * UpdateSettingsRequest
          * @description `PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of
@@ -504,6 +978,419 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.index": {
+        parameters: {
+            query: {
+                city: string;
+                deal: components["schemas"]["Deal"];
+                owner?: components["schemas"]["OwnerFilter"] | null;
+                "types[]"?: components["schemas"]["PropertyType"][] | null;
+                "districts[]"?: string[] | null;
+                "zones[]"?: string[] | null;
+                rooms_min?: number | null;
+                rooms_max?: number | null;
+                price_min?: number | null;
+                price_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                posted_days?: number | null;
+                furnished?: "true" | "false" | null;
+                "renovation[]"?: string[] | null;
+                "appliances[]"?: string[] | null;
+                floor_not_first?: "true" | "false" | null;
+                floor_not_last?: "true" | "false" | null;
+                near_metro?: "true" | "false" | null;
+                below_median?: "true" | "false" | null;
+                pets?: "true" | "false" | null;
+                pets_only?: "true" | "false" | null;
+                market?: components["schemas"]["Market"] | null;
+                tenant?: components["schemas"]["Tenant"] | null;
+                polygon?: string | null;
+                sort?: components["schemas"]["ListingSort"] | null;
+                cursor?: string | null;
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ListingPreviewResource"][];
+                        meta: {
+                            next_cursor: string;
+                            source: components["schemas"]["SourceDriver"];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.show": {
+        parameters: {
+            query?: {
+                preview?: boolean | null;
+            };
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ListingDetailsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    } | {
+                        success: boolean;
+                        data: components["schemas"]["ListingPreviewResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ContactResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.listings.count": {
+        parameters: {
+            query: {
+                city: string;
+                deal: components["schemas"]["Deal"];
+                owner?: components["schemas"]["OwnerFilter"] | null;
+                "types[]"?: components["schemas"]["PropertyType"][] | null;
+                "districts[]"?: string[] | null;
+                "zones[]"?: string[] | null;
+                rooms_min?: number | null;
+                rooms_max?: number | null;
+                price_min?: number | null;
+                price_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                posted_days?: number | null;
+                furnished?: "true" | "false" | null;
+                "renovation[]"?: string[] | null;
+                "appliances[]"?: string[] | null;
+                floor_not_first?: "true" | "false" | null;
+                floor_not_last?: "true" | "false" | null;
+                near_metro?: "true" | "false" | null;
+                below_median?: "true" | "false" | null;
+                pets?: "true" | "false" | null;
+                pets_only?: "true" | "false" | null;
+                market?: components["schemas"]["Market"] | null;
+                tenant?: components["schemas"]["Tenant"] | null;
+                polygon?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: {
+                            count: number;
+                        };
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.flow": {
+        parameters: {
+            query: {
+                city: string;
+                deal: components["schemas"]["Deal"];
+                owner?: components["schemas"]["OwnerFilter"] | null;
+                "types[]"?: components["schemas"]["PropertyType"][] | null;
+                "districts[]"?: string[] | null;
+                "zones[]"?: string[] | null;
+                rooms_min?: number | null;
+                rooms_max?: number | null;
+                price_min?: number | null;
+                price_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                posted_days?: number | null;
+                furnished?: "true" | "false" | null;
+                "renovation[]"?: string[] | null;
+                "appliances[]"?: string[] | null;
+                floor_not_first?: "true" | "false" | null;
+                floor_not_last?: "true" | "false" | null;
+                near_metro?: "true" | "false" | null;
+                below_median?: "true" | "false" | null;
+                pets?: "true" | "false" | null;
+                pets_only?: "true" | "false" | null;
+                market?: components["schemas"]["Market"] | null;
+                tenant?: components["schemas"]["Tenant"] | null;
+                polygon?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["FlowResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.map": {
+        parameters: {
+            query: {
+                city: string;
+                deal: components["schemas"]["Deal"];
+                owner?: components["schemas"]["OwnerFilter"] | null;
+                "types[]"?: components["schemas"]["PropertyType"][] | null;
+                "districts[]"?: string[] | null;
+                "zones[]"?: string[] | null;
+                rooms_min?: number | null;
+                rooms_max?: number | null;
+                price_min?: number | null;
+                price_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                posted_days?: number | null;
+                furnished?: "true" | "false" | null;
+                "renovation[]"?: string[] | null;
+                "appliances[]"?: string[] | null;
+                floor_not_first?: "true" | "false" | null;
+                floor_not_last?: "true" | "false" | null;
+                near_metro?: "true" | "false" | null;
+                below_median?: "true" | "false" | null;
+                pets?: "true" | "false" | null;
+                pets_only?: "true" | "false" | null;
+                market?: components["schemas"]["Market"] | null;
+                tenant?: components["schemas"]["Tenant"] | null;
+                polygon?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["MapPointsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.new": {
+        parameters: {
+            query: {
+                city: string;
+                deal: components["schemas"]["Deal"];
+                owner?: components["schemas"]["OwnerFilter"] | null;
+                "types[]"?: components["schemas"]["PropertyType"][] | null;
+                "districts[]"?: string[] | null;
+                "zones[]"?: string[] | null;
+                rooms_min?: number | null;
+                rooms_max?: number | null;
+                price_min?: number | null;
+                price_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                posted_days?: number | null;
+                furnished?: "true" | "false" | null;
+                "renovation[]"?: string[] | null;
+                "appliances[]"?: string[] | null;
+                floor_not_first?: "true" | "false" | null;
+                floor_not_last?: "true" | "false" | null;
+                near_metro?: "true" | "false" | null;
+                below_median?: "true" | "false" | null;
+                pets?: "true" | "false" | null;
+                pets_only?: "true" | "false" | null;
+                market?: components["schemas"]["Market"] | null;
+                tenant?: components["schemas"]["Tenant"] | null;
+                polygon?: string | null;
+                since: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: {
+                            count: number;
+                        };
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.listings.share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["PreparedShareResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.listings.translation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["TranslationResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
         };
     };
     "v1.me.show": {
