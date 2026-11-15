@@ -1,0 +1,12 @@
+{
+    "uz": {
+        "default": "Metro yaqinida yorugʻ kvartira. Toza va shinam.",
+        "100001": "Metro yaqinida yorugʻ kvartira. Qoʻngʻiroq qiling: +998 00 000 00 67",
+        "100013": "Arzon kvartira. Tel. +998 00 000 00 41"
+    },
+    "en": {
+        "default": "A bright flat near the metro. Clean and cosy.",
+        "100001": "A bright flat near the metro. Call +998 00 000 00 67",
+        "100013": "A cheap flat. Phone +998 00 000 00 41"
+    }
+}

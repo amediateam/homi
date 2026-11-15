@@ -116,6 +116,10 @@ it('lists every feature with its capability, default, rule and bound drivers', f
             [
                 ['source.reference', 'reference', 'stub', '(none)', 'stub'],
                 ['source.cities', 'reference', 'stub', '(none)', 'stub'],
+                ...array_map(
+                    fn (string $method): array => ["source.listings.{$method}", 'listings', 'stub', '(none)', 'stub'],
+                    ['feed', 'count', 'new', 'flow', 'map', 'card', 'contact', 'translation'],
+                ),
                 [FakeCapabilityController::FEATURE, 'fake', 'stub', '{"everyone":"legacy"}', 'stub, legacy'],
             ],
         )
