@@ -35,9 +35,13 @@ only on `422` and maps each field to its messages.
 | 401 | `auth_expired` | Sign-in: the launch data is too old; the client asks to reopen the app |
 | 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked` or `join` (show an unknown or missing reason as `private`) |
 | 403 | `forbidden` | Not allowed, or the token lacks the ability |
+| 403 | `radars_disabled` | Radars are switched off (`radars_enabled: false` of `GET /reference`): every radar create or change; `GET /radars` answers `[]` and `DELETE` works |
 | 404 | `not_found` | Unknown route, or a resource or listing that does not exist |
 | 404 | `contact_unavailable` | `POST /listings/{number}/contact`: the listing has no phone, or the disclosure limit is reached |
 | 422 | `translation_not_needed` | `POST /listings/{number}/translation` with locale `ru`, the language of the originals |
+| 409 | `no_chat` | Radar writes: the bot cannot write to the user yet; nothing was changed |
+| 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
+| 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
 | 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds |
 | 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
@@ -73,8 +77,9 @@ Feed-like lists return a page and a cursor:
 ```
 
 Pass `next_cursor` back as `?cursor=` to get the next page. `meta.next_cursor` is always present, and `null` means
-the list has ended. The cursor is opaque: do not parse it or build it. Favourites and history are paged the same way,
-20 per page.
+the list has ended. The cursor is opaque: do not parse it or build it. A cursor the list did not give (for example
+one from before a driver switch) ends the list quietly: an empty page and `null`. Favourites and history are paged
+the same way, 20 per page, with `limit` 1 … 50.
 
 Older page-number lists (`?page[number]=&page[size]=`) put `page`, `size`, `total` and `last_page` in `meta` and
 `next`/`prev` in `links`.
@@ -155,6 +160,46 @@ Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `ne
 `contact_unavailable`; `translation_unavailable`; `share_failed`. Reserved numbers: `999404` answers `404`, `999503`
 answers `503`, `100016` answers with `100001`, and `100015` is withdrawn. Photo addresses resolve after
 `php artisan sources:publish-stub-media`.
+
+## Methods (Wave 1)
+
+The whole `/api/v1` surface of Wave 1 (`25` §4.2). "Public" methods need no token; the others need a bearer token
+with `app:read` for reads and `app:write` for writes. The driver is the Wave 1 target; until the legacy and native
+packages land every method answers from stubs (`meta.source = stub`), and `php artisan sources:list` shows the current
+driver of each source method.
+
+| Method | Route name | Access | Wave 1 driver |
+| ------ | ---------- | ------ | ------------- |
+| `POST /auth/telegram` | `api.v1.auth.telegram` | public | native |
+| `GET /me` | `api.v1.me.show` | `app:read` | native |
+| `GET /settings`, `PATCH /settings` | `api.v1.settings.show`, `.update` | `app:read`, `app:write` | native |
+| `GET /reference` | `api.v1.reference.show` | public | legacy, cached (`source.reference`) |
+| `GET /cities` | `api.v1.cities.index` | public | legacy, cached (`source.cities`) |
+| `GET /listings` | `api.v1.listings.index` | `app:read` | legacy + overlay (`source.listings.feed`) |
+| `GET /listings/count`, `GET /listings/flow` | `api.v1.listings.count`, `.flow` | `app:read` | legacy (`source.listings.count`, `.flow`) |
+| `GET /listings/new` | `api.v1.listings.new` | `app:read` | legacy (`source.listings.new`) |
+| `GET /listings/map` | `api.v1.listings.map` | `app:read` | legacy + overlay (`source.listings.map`) |
+| `GET /listings/{number}` | `api.v1.listings.show` | `app:read` | legacy + overlay (`source.listings.card`) |
+| `POST /listings/{number}/contact` | `api.v1.listings.contact` | `app:read` | legacy (`source.listings.contact`) |
+| `POST /listings/{number}/translation` | `api.v1.listings.translation` | `app:read` | legacy (`source.listings.translation`) |
+| `POST /listings/{number}/share` | `api.v1.listings.share` | `app:read` | native |
+| `GET /favorites`, `PUT /favorites/{number}`, `DELETE /favorites/{number}` | `api.v1.favorites.index`, `.update`, `.destroy` | `app:read`, `app:write` | native |
+| `GET /history`, `DELETE /history` | `api.v1.history.index`, `.destroy` | `app:read`, `app:write` | native |
+| `PUT /hidden/listings/{number}`, `DELETE /hidden/listings/{number}` | `api.v1.hidden.listings.update`, `.destroy` | `app:write` | native |
+| `PUT /listings/{number}/blocked-author`, `DELETE /listings/{number}/blocked-author` | `api.v1.listings.blocked-author.update`, `.destroy` | `app:write` | native |
+| `GET /hidden`, `DELETE /hidden/authors/{id}`, `DELETE /hidden` | `api.v1.hidden.index`, `.authors.destroy`, `.destroy` | `app:read`, `app:write` | native |
+| `POST /listings/{number}/reports` | `api.v1.listings.reports.store` | `app:write` | native |
+| `POST /surveys/found`, `POST /surveys/found/where` | `api.v1.surveys.found.store`, `.where` | `app:write` | native |
+| `GET /radars` | `api.v1.radars.index` | `app:read` | native |
+| `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `POST /radars/{id}/relax` | `api.v1.radars.store`, `.update`, `.patch`, `.relax` | `app:write`, behind the radar switch | native |
+| `DELETE /radars/{id}` | `api.v1.radars.destroy` | `app:write` | native |
+| `POST /events` | `api.v1.events.store` | `app:write` | native |
+| `GET /landing/live`, `GET /landing/pins` | `api.v1.landing.live`, `.pins` | public, cacheable | legacy, cached (`source.landing.live`, `.pins`) |
+
+`{number}` is a listing number (a positive integer); `{id}` is a ULID. A foreign id answers like an unknown one,
+`404 not_found`. Stub scenarios of the personal and radar methods: `empty` (favourites, history, hidden, radars);
+`no_chat`, `radar_limit`, `radar_duplicate` (radar writes); `existing`, `starter`, `few` (radar create); `ask_found`
+(radar pause and delete).
 
 ## Keeping the contract current
 

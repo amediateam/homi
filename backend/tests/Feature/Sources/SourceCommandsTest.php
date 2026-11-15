@@ -120,6 +120,8 @@ it('lists every feature with its capability, default, rule and bound drivers', f
                     fn (string $method): array => ["source.listings.{$method}", 'listings', 'stub', '(none)', 'stub'],
                     ['feed', 'count', 'new', 'flow', 'map', 'card', 'contact', 'translation'],
                 ),
+                ['source.landing.live', 'landing', 'stub', '(none)', 'stub'],
+                ['source.landing.pins', 'landing', 'stub', '(none)', 'stub'],
                 [FakeCapabilityController::FEATURE, 'fake', 'stub', '{"everyone":"legacy"}', 'stub, legacy'],
             ],
         )

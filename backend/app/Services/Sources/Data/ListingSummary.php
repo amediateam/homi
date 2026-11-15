@@ -104,4 +104,13 @@ final readonly class ListingSummary
             sourceRef: $sourceRef === null ? null : SourceRef::fromArray($sourceRef),
         );
     }
+
+    /**
+     * The same preview with HOMI's per-user flags (the overlay of `25` §4.5): a favourites list marks every item a
+     * favourite, the history every item viewed.
+     */
+    public function withFlags(?bool $favorite = null, ?bool $viewed = null): self
+    {
+        return clone ($this, ['favorite' => $favorite ?? $this->favorite, 'viewed' => $viewed ?? $this->viewed]);
+    }
 }

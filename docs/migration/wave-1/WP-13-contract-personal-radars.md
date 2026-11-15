@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | A |
-| Status | TODO |
+| Status | REVIEW (#50) |
 | Depends on | WP-12 |
 | Size | about 2 800 changed lines without generated files and fixtures, L |
 | Behaviour reference | `25` §4.2, §5, §7; `08` rows of API-011 … API-016, API-018 … API-023, API-026 … API-033 and RES-010 … RES-013, §1.8 (`Subscription`, `SubscriptionMutationResult`); `02` BR-API-086, BR-API-101, Q-API-064; `03` §4 (BR-APP-036 … BR-APP-049, BR-APP-063, BR-APP-073); `15` §3.1, §3.4; tasks `tasks/backend/KV-BE-038-…` … `KV-BE-044-…`, `KV-BE-100-…` … `KV-BE-106-…`, `KV-BE-154-…`, `KV-BE-155-…` (rules only) |
@@ -51,8 +51,8 @@ unknown number is `404 not_found`. "Preview" is the listing preview object of WP
 | Method | Answer | Notes |
 | ------ | ------ | ----- |
 | `GET /favorites` | `200`, `data`: previews, newest first; `meta.next_cursor` | the cursor paging of the feed (WP-12): query `cursor` (opaque string, at most 512 characters) and `limit` (1 … 50, default 20); pages hold at most `limit` items and may hold fewer; `null` ends the list. Every item has `favorite: true` |
-| `PUT /favorites/{number}` | `200 {"data": {"favorite": true}}` | idempotent; `503 source_unavailable` when the listing cannot be checked and is not known locally |
-| `DELETE /favorites/{number}` | `200 {"data": {"favorite": false}}` | idempotent; never `404` for a listing that was not a favourite |
+| `PUT /favorites/{number}` | `200 {"data": {"favorite": true}}` | idempotent; `404 not_found` for an unknown listing; `503 source_unavailable` when the listing cannot be checked and is not known locally |
+| `DELETE /favorites/{number}` | `200 {"data": {"favorite": false}}` | idempotent; never `404` for a listing that was not a favourite; does not look the listing up |
 | `GET /history` | `200`, previews by last view, newest first; `meta.next_cursor` | the same paging. Items carry `viewed: true` |
 | `DELETE /history` | `204` | clears the whole history; idempotent |
 
@@ -71,7 +71,7 @@ the source no longer knows are left out. Scenarios: `empty` for both lists.
 | `DELETE /hidden/listings/{number}` | `204` | idempotent; also the undo after a `fraud` report |
 | `PUT /listings/{number}/blocked-author` | `200`, body below | blocks the author of that listing; idempotent (same body); `404 not_found` when the listing has no author |
 | `DELETE /listings/{number}/blocked-author` | `204` | undo by listing; idempotent |
-| `GET /hidden` | `200`, body below | both arrays always present |
+| `GET /hidden` | `200`, body below | both arrays always present; listings newest first (KV-BE-042) |
 | `DELETE /hidden/authors/{id}` | `204` | `{id}` is the entry id; a second call or a foreign id → `404 not_found` |
 | `DELETE /hidden` | `204` | clears hidden listings and blocked authors of the caller |
 
@@ -147,7 +147,7 @@ is used.
 | `GET /radars` | query `include=previews` (optional) | `200`, `data`: radar objects in creation order; `[]` when there are none and while the switch is off |
 | `POST /radars` | `filters` (object, required, normalised by the filter rules of WP-12), `entry` (required: `filters`, `empty`, `few`, `prompt`, `feed`, `return`), `relaxed` (optional, `[a-z_]{1,32}`) | `201` (created) or `200` (existing or reactivated) with the mutation result |
 | `PUT /radars/{id}` | `filters` (required), `relaxed` (optional) | `200`, mutation result; replaces the filters, keeps `active` |
-| `PATCH /radars/{id}` | exactly one of `active` (boolean), `mode` (`instant`, `digest`), `unhide` (`true`) | `200 {"data": {"radar": {…}, "starter": 2, "ask_found": false}}`; `starter` only for `active: true`, `ask_found` only for `active: false` |
+| `PATCH /radars/{id}` | exactly one of `active` (boolean), `mode` (`instant`, `digest`), `unhide` (`true`); any other key is `422` (`08` API-021) | `200 {"data": {"radar": {…}, "starter": 2, "ask_found": false}}`; `starter` only for `active: true`, `ask_found` only for `active: false` |
 | `DELETE /radars/{id}` | — | `200 {"data": {"ask_found": false}}`; a second call → `404 not_found` |
 | `POST /radars/{id}/relax` | `code` (required, a code from `options`) | `200 {"data": {"radar": {…}, "starter": 3}}` |
 
@@ -173,12 +173,12 @@ Radar errors, each with its own code so the client can tell them apart (fix of L
 | `409 no_chat` | the bot cannot write to the user; checked before any write on `POST`, `PUT`, `PATCH {active: true}` and relax; nothing is changed |
 | `409 radar_limit` | creating or switching on would exceed `limits.radars` of `GET /reference`; `message` names the limit |
 | `409 radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
-| `422 validation_failed` | bad filters (`errors.filters.<key>`), bad `entry`, a `PATCH` body with no or several keys, `unhide: false`, unknown `code` |
+| `422 validation_failed` | bad filters (`errors.filters.<key>`), bad `entry`, a `PATCH` body with no, several or unknown keys, `unhide: false`, unknown `code` |
 | `404 not_found` | unknown or foreign `{id}` |
 
 Changed against legacy: `subscriptions` became `radars`; ids are ULID strings; `hidden` kept its name;
 `subscription` in results became `radar`; create-or-reactivate moved from the client to the server and reports its
-outcome in `kind`; `DELETE` always answers JSON; previews are part of the list on request instead of three requests
+outcome in `kind`; a created radar answers `201` (legacy `200`); `DELETE` always answers JSON; previews are part of the list on request instead of three requests
 per radar (fix of LB-API-038); `403 radars_disabled` and the empty list of the switched-off state are new (legacy
 has no such switch). Scenarios: `empty` (list); `no_chat`, `radar_limit`, `radar_duplicate` (writes);
 `existing`, `starter` (create with `starter: 3`), `few` (create with options), `ask_found` (pause and delete: the
@@ -212,7 +212,9 @@ Public, no token, cacheable; display names follow `Accept-Language`.
 or `null`; `bargains_week` is `null` for `sale`; `medians` is `[]` for `sale`; `link` points at HOMI's bot (brand).
 The answers carry no phone, no listing text and no author. Changed: two files by deal became one method with a
 parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `district_code` became one object;
-`photo` became an absolute `photo_url`; the unused `dots` and `since` are dropped; `generated_at` is new.
+`photo` became an absolute `photo_url`; the unused `dots` and `since` are dropped; `generated_at` is new; times are
+ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `area` may be `null` (RES-010, RES-011);
+`rooms` of `medians` is 1 … 3.
 
 ### Server classes
 
@@ -225,6 +227,43 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
   radar write routes and stays there when WP-45 gives the controllers their real bodies.
 - Routes named `api.v1.favorites.*`, `history.*`, `hidden.*`, `listings.blocked-author.*`, `listings.reports.store`,
   `surveys.found.*`, `radars.*`, `landing.*`; `{id}` is constrained with `whereUlid`.
+
+*Corrected and added while executing (rule 6).*
+- **Listing references.** The personal and radar fixtures hold listing numbers of the WP-12 catalogue, as HOMI's
+  tables will. `StubListingRefs` resolves them through `ListingSource::previews()` of the card feature and drops
+  numbers the source does not know (one per list, so a page may hold fewer than `limit`). `ListingSummary::withFlags()`
+  sets `favorite` and `viewed` (the overlay of `25` §4.5). The fixtures are therefore
+  `favorites/{default,empty}.json` and `history/{default,empty}.json` with `numbers` (26 each, one of them unknown,
+  so 25 items), and `hidden/*.json` with `listings` numbers and `authors` entries.
+- **Cursors.** `StubCursor` is the one cursor of the stub lists. A cursor it did not give ends the list quietly on
+  every list, the feed of WP-12 included; there it was `422` and is corrected.
+- **Lookups.** `PUT /favorites/{number}`, `PUT /hidden/listings/{number}`, blocking and reports look the listing up
+  (`404`/`503` from the card source). The two `DELETE`s by number do not, so an entry whose listing the source no
+  longer knows can still be removed.
+- **Blocked authors.** The author of a block is the card's `author`; the entry id and `listing_numbers` come from
+  `hidden/blocked_author.json`. The data objects are `App\Services\Personal\{BlockedAuthor, HiddenOverview}`.
+- **Radars.**
+  - The data objects are `App\Services\Radars\{Radar, RadarPreview, RadarOption, RadarMutation, RadarChange}`.
+  - The enums are `RadarMode` and `RadarMutationKind`.
+  - The exceptions are `App\Exceptions\Radar\{RadarsDisabled, NoChat, RadarLimit, RadarDuplicate}`.
+  - The stub reads `StubRadars`.
+  - `radars/updated.json` is added for `PUT`; `list.previews.json` maps a radar id to its preview (one of them is
+    `null`).
+  - A created or updated radar carries the request's normalised filters.
+  - `radar_duplicate` applies to `PUT` and relax; `radar_limit` to create and switching on.
+  - The relax codes are the options of `radars/few.json`, checked in the controller, so the request rule stays a
+    plain code pattern.
+  - `filters` is checked in `after()` and documented with `#[BodyParameter]`, because Scramble reads the `array` rule
+    as a list of strings.
+- **Item resources for the export.** Scramble types list elements only through a typed constructor: `RadarResource`,
+  `RadarPreviewResource`, `RadarOptionResource`, `RadarRelaxedResource`, `BlockedAuthorResource`,
+  `LandingLatestResource`, `LandingPinResource`, `LandingMedianResource`.
+- **Landing.**
+  - The data objects are `LandingLatest`, `LandingPin` and `LandingMedian` besides `LandingLive` and `LandingPins`.
+  - The fixtures name districts by `district_code`; `StubLandingSource` adds the name in the request locale from the
+    reference data.
+  - Both methods answer `Cache-Control: public, max-age=300` and `Vary: Accept-Language`, like `GET /reference`.
+- **Route table.** The route list of `/api/v1`, without the media routes of Phase 3, equals the 39 pairs of `25` §4.2.
 
 ## Files
 
@@ -328,4 +367,22 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 
 ## Handoff
 
-Empty.
+**2026-11-15, development track (Claude Code).** Branch `feat/wp-13-contract-personal-radars`, PR #50, ready for review.
+
+- **Done:** steps 1–9.
+  - Step 1 was a read-only subagent pass over the cited audit rows and task rules. Its citations were checked
+    against the lines; the results are the corrections above and AM-55.
+  - Each contract test was seen failing before its code; the route-table test was seen failing with one route
+    removed.
+  - Mutation checks: without `EnsureRadarsEnabled` on the write routes 9 tests fail; without the empty list of the
+    switched-off state 1 fails.
+  - Checks: `make ci-backend` → exit 0 (Pest 720 passed, 4 skipped; PHPStan 0; `openapi:check` clean);
+    `make ci-frontend` → exit 0 (`types:check` clean).
+- **Decisions taken here:** marked *corrected and added while executing* above; AM-55 in
+  `docs/ai/reports/phase-3-notes.md` §P.
+- **Next:**
+  1. review and merge;
+  2. the production track deploys; on staging `GET /api/v1/radars` answers `[]` and `POST /api/v1/radars` answers
+     `403 radars_disabled` while `RADAR_CREATION_ENABLED` is unset;
+  3. set the status to `DONE`. With WP-11 … WP-13 the whole `/api/v1` surface of Wave 1 is fixed; stage B (WP-20)
+     builds the Mini App on it.

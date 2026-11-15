@@ -493,3 +493,33 @@ ASSUMPTION_MISMATCH AM-54 (2026-11-15):
     `int`.
   - The command writes `stub/<number>/<n>.jpg` and `.s.jpg` for every photo address of the catalogue, from six
     generated placeholders.
+
+## P. Development track, 2026-11-15 — WP-13, contract: personal lists, reports, surveys, radars, landing
+
+Taken on «бери WP-13». Branch `feat/wp-13-contract-personal-radars`. The last 23 methods of `25` §4.2 answer on
+stubs. With WP-11 and WP-12, the route list of `/api/v1` (without the media routes of Phase 3) equals the 39 pairs of
+the Wave 1 table. The corrections are recorded in the specification (rule 6).
+
+ASSUMPTION_MISMATCH AM-55 (2026-11-15):
+- **Assumption.** The WP-13 specification assumed several things:
+  - a radar `PATCH` needs no rule for unknown keys;
+  - the hidden list has no order;
+  - the landing's `area` is always a number;
+  - a created radar answers `200` as in legacy;
+  - the stub feed of WP-12 may refuse a foreign cursor with `422`.
+- **What was found.** A read-only subagent compared the specification with `02`, `03`, `08` and the task rules; its
+  citations were checked against the cited lines.
+  - `08` API-021 (lines 929, 952) refuses an unknown `PATCH` key with `422`.
+  - KV-BE-042 (line 71) orders hidden listings newest first.
+  - RES-010 and RES-011 (`08` lines 1439, 1453) give `area: number|null`.
+  - Legacy creates with `200` (`08` line 872).
+  - WP-42 (line 153) ends a list quietly on a foreign cursor.
+  - BR-API-090 lets legacy send `ask_found` on any `PATCH {active}`; KV-BE-104 and the specification keep it for
+    pauses.
+  - BR-API-151 writes landing times with `Z`; v1 writes `+00:00` everywhere.
+- **Resolution.**
+  - An unknown `PATCH` key is `422`.
+  - Hidden listings are newest first.
+  - `area` is nullable.
+  - `201` for a created radar is listed among the changes, as are the time form and `ask_found` on pauses only.
+  - `StubCursor` ends every stub list quietly on a foreign cursor; the WP-12 note and its test are corrected.

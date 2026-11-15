@@ -71,7 +71,6 @@ it('refuses a malformed page request with 422 naming the parameter', function (s
     'limit 51' => ['city=tashkent&deal=rent_long&limit=51', 'limit'],
     'unknown sort' => ['city=tashkent&deal=rent_long&sort=random', 'sort'],
     'long cursor' => ['city=tashkent&deal=rent_long&cursor='.str_repeat('c', 513), 'cursor'],
-    'foreign cursor' => ['city=tashkent&deal=rent_long&cursor=x9', 'cursor'],
     'missing city' => ['deal=rent_long', 'city'],
     'unknown deal' => ['city=tashkent&deal=x', 'deal'],
     'unknown district' => ['city=tashkent&deal=rent_long&districts[]=atlantis', 'districts'],

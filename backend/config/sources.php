@@ -3,6 +3,7 @@
 use App\Services\Sources\Contracts\LandingSource;
 use App\Services\Sources\Contracts\ListingSource;
 use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Stub\StubLandingSource;
 use App\Services\Sources\Stub\StubListingSource;
 use App\Services\Sources\Stub\StubReferenceSource;
 
@@ -31,7 +32,7 @@ return [
     'capabilities' => [
         'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class]],
         'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class]],
-        'landing' => ['contract' => LandingSource::class, 'drivers' => []],
+        'landing' => ['contract' => LandingSource::class, 'drivers' => ['stub' => StubLandingSource::class]],
     ],
 
     'features' => [
@@ -48,5 +49,9 @@ return [
         'source.listings.card' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
         'source.listings.contact' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
         'source.listings.translation' => ['capability' => 'listings', 'default' => ['*' => 'stub']],
+
+        // WP-13
+        'source.landing.live' => ['capability' => 'landing', 'default' => ['*' => 'stub']],
+        'source.landing.pins' => ['capability' => 'landing', 'default' => ['*' => 'stub']],
     ],
 ];

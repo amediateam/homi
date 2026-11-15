@@ -11,6 +11,90 @@
         }
     ],
     "paths": {
+        "/listings/{number}/blocked-author": {
+            "put": {
+                "operationId": "v1.listings.blocked-author.update",
+                "summary": "`PUT /listings/{number}/blocked-author`",
+                "tags": [
+                    "BlockedAuthor"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BlockedAuthorResultResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.listings.blocked-author.destroy",
+                "summary": "`DELETE /listings/{number}/blocked-author`: the undo by listing",
+                "tags": [
+                    "BlockedAuthor"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/cities": {
             "get": {
                 "operationId": "v1.cities.index",
@@ -93,6 +177,622 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/favorites": {
+            "get": {
+                "operationId": "v1.favorites.index",
+                "summary": "`GET /favorites`: previews, newest first, each with `favorite: true`. Scenario `empty`",
+                "tags": [
+                    "Favorite"
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 512
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ListingPreviewResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "next_cursor",
+                                                "source"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/favorites/{number}": {
+            "put": {
+                "operationId": "v1.favorites.update",
+                "summary": "`PUT /favorites/{number}`: idempotent; the listing must exist (`404`), or be checkable (`503`)",
+                "tags": [
+                    "Favorite"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/FavoriteStateResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.favorites.destroy",
+                "summary": "`DELETE /favorites/{number}`: idempotent, never `404` for a listing that was not a favourite",
+                "tags": [
+                    "Favorite"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/FavoriteStateResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/surveys/found": {
+            "post": {
+                "operationId": "v1.surveys.found.store",
+                "summary": "`POST /surveys/found`",
+                "tags": [
+                    "FoundSurvey"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreFoundAnswerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/surveys/found/where": {
+            "post": {
+                "operationId": "v1.surveys.found.where",
+                "summary": "`POST /surveys/found/where`",
+                "tags": [
+                    "FoundSurvey"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreFoundWhereRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/hidden": {
+            "get": {
+                "operationId": "v1.hidden.index",
+                "summary": "`GET /hidden`: hidden listings, newest first, and blocked authors",
+                "tags": [
+                    "Hidden"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HiddenOverviewResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.hidden.destroy",
+                "summary": "`DELETE /hidden`: clears hidden listings and blocked authors of the caller",
+                "tags": [
+                    "Hidden"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/hidden/authors/{id}": {
+            "delete": {
+                "operationId": "v1.hidden.authors.destroy",
+                "summary": "`DELETE /hidden/authors/{id}`: removes one blocked author by entry id",
+                "tags": [
+                    "Hidden"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/hidden/listings/{number}": {
+            "put": {
+                "operationId": "v1.hidden.listings.update",
+                "summary": "`PUT /hidden/listings/{number}`: the listing must exist",
+                "tags": [
+                    "HiddenListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.hidden.listings.destroy",
+                "summary": "`DELETE /hidden/listings/{number}`",
+                "tags": [
+                    "HiddenListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/history": {
+            "get": {
+                "operationId": "v1.history.index",
+                "summary": "`GET /history`: previews by last view, newest first, each with `viewed: true`. Scenario `empty`",
+                "tags": [
+                    "History"
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 512
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ListingPreviewResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "next_cursor",
+                                                "source"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.history.destroy",
+                "summary": "`DELETE /history`: clears the whole history; idempotent",
+                "tags": [
+                    "History"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/landing/live": {
+            "get": {
+                "operationId": "v1.landing.live",
+                "tags": [
+                    "LandingLive"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LandingLiveResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/landing/pins": {
+            "get": {
+                "operationId": "v1.landing.pins",
+                "tags": [
+                    "LandingPins"
+                ],
+                "parameters": [
+                    {
+                        "name": "deal",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "rent",
+                                "sale",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LandingPinsResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
@@ -2696,6 +3396,481 @@
                 }
             }
         },
+        "/radars": {
+            "get": {
+                "operationId": "v1.radars.index",
+                "summary": "`GET /radars`: the radars in creation order; `include=previews` adds each radar's preview",
+                "tags": [
+                    "Radar"
+                ],
+                "parameters": [
+                    {
+                        "name": "include",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "previews",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/RadarResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.radars.store",
+                "summary": "`POST /radars`: creates a radar, or answers the active radar with the same filters (`existing`, `200`) or\nswitches on a paused one (`reactivated`, `200`). The same filters ignore `posted_days` and the order of keys\nand lists (BR-APP-012)",
+                "tags": [
+                    "Radar"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/StoreRadarRequest"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "filters": {
+                                                "type": "object",
+                                                "description": "The filters object of WP-12; any subset of its 25 keys, normalised for a radar.",
+                                                "additionalProperties": {}
+                                            }
+                                        },
+                                        "required": [
+                                            "filters"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RadarMutationResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RadarMutationResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/radars/{id}": {
+            "delete": {
+                "operationId": "v1.radars.destroy",
+                "summary": "`DELETE /radars/{id}`: works while the switch is off, so nothing can be left behind",
+                "tags": [
+                    "Radar"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "ask_found": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "ask_found"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1.radars.update",
+                "summary": "`PUT /radars/{id}`: replaces the filters and keeps `active`",
+                "tags": [
+                    "Radar"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/UpdateRadarRequest"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "filters": {
+                                                "type": "object",
+                                                "description": "The filters object of WP-12; any subset of its 25 keys, normalised for a radar.",
+                                                "additionalProperties": {}
+                                            }
+                                        },
+                                        "required": [
+                                            "filters"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RadarMutationResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.radars.patch",
+                "summary": "`PATCH /radars/{id}`: switches on (with `starter`), pauses (with `ask_found`), changes the mode or unhides",
+                "tags": [
+                    "Radar"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchRadarRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RadarPatchResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/radars/{id}/relax": {
+            "post": {
+                "operationId": "v1.radars.relax",
+                "tags": [
+                    "RadarRelax"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RelaxRadarRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RadarPatchResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/reference": {
             "get": {
                 "operationId": "v1.reference.show",
@@ -2737,6 +3912,77 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/listings/{number}/reports": {
+            "post": {
+                "operationId": "v1.listings.reports.store",
+                "tags": [
+                    "Report"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreReportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReportResultResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -2944,6 +4190,61 @@
                 ],
                 "title": "ApiError"
             },
+            "BlockedAuthorResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "label",
+                    "count"
+                ],
+                "title": "BlockedAuthorResource"
+            },
+            "BlockedAuthorResultResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "listing_numbers": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "label",
+                    "count",
+                    "listing_numbers"
+                ],
+                "title": "BlockedAuthorResultResource"
+            },
             "CityResource": {
                 "type": "object",
                 "properties": {
@@ -3125,6 +4426,18 @@
                     "sale"
                 ],
                 "title": "Deal"
+            },
+            "FavoriteStateResource": {
+                "type": "object",
+                "properties": {
+                    "favorite": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "favorite"
+                ],
+                "title": "FavoriteStateResource"
             },
             "FiltersResource": {
                 "type": "object",
@@ -3346,6 +4659,337 @@
                     "options"
                 ],
                 "title": "FlowResource"
+            },
+            "HiddenOverviewResource": {
+                "type": "object",
+                "properties": {
+                    "listings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingPreviewResource"
+                        }
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BlockedAuthorResource"
+                        }
+                    }
+                },
+                "required": [
+                    "listings",
+                    "authors"
+                ],
+                "title": "HiddenOverviewResource"
+            },
+            "LandingLatestResource": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer"
+                    },
+                    "rooms": {
+                        "type": "integer"
+                    },
+                    "price_usd": {
+                        "type": "integer"
+                    },
+                    "delta_pct": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "tone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "district": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "name"
+                        ]
+                    },
+                    "area": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "seen_at": {
+                        "type": "string"
+                    },
+                    "link": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "number",
+                    "rooms",
+                    "price_usd",
+                    "delta_pct",
+                    "tone",
+                    "district",
+                    "area",
+                    "seen_at",
+                    "link"
+                ],
+                "title": "LandingLatestResource"
+            },
+            "LandingLiveResource": {
+                "type": "object",
+                "properties": {
+                    "now": {
+                        "type": "string"
+                    },
+                    "generated_at": {
+                        "type": "string"
+                    },
+                    "day": {
+                        "type": "integer"
+                    },
+                    "week": {
+                        "type": "integer"
+                    },
+                    "latest": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LandingLatestResource"
+                        }
+                    },
+                    "sheet": {
+                        "type": "object",
+                        "properties": {
+                            "all": {
+                                "type": "object",
+                                "properties": {
+                                    "count": {
+                                        "type": "integer"
+                                    },
+                                    "per_day": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "count",
+                                    "per_day"
+                                ]
+                            },
+                            "demo": {
+                                "type": "object",
+                                "properties": {
+                                    "count": {
+                                        "type": "integer"
+                                    },
+                                    "per_day": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "count",
+                                    "per_day"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "all",
+                            "demo"
+                        ]
+                    }
+                },
+                "required": [
+                    "now",
+                    "generated_at",
+                    "day",
+                    "week",
+                    "latest",
+                    "sheet"
+                ],
+                "title": "LandingLiveResource"
+            },
+            "LandingMedianResource": {
+                "type": "object",
+                "properties": {
+                    "district_code": {
+                        "type": "string"
+                    },
+                    "rooms": {
+                        "type": "integer"
+                    },
+                    "median_usd": {
+                        "type": "integer"
+                    },
+                    "n": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "district_code",
+                    "rooms",
+                    "median_usd",
+                    "n"
+                ],
+                "title": "LandingMedianResource"
+            },
+            "LandingPinResource": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer"
+                    },
+                    "x": {
+                        "type": "number"
+                    },
+                    "y": {
+                        "type": "number"
+                    },
+                    "rooms": {
+                        "type": "integer"
+                    },
+                    "price_usd": {
+                        "type": "integer"
+                    },
+                    "delta_pct": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "tone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "area": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "floor": {
+                        "type": "integer"
+                    },
+                    "floors_total": {
+                        "type": "integer"
+                    },
+                    "district": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "name"
+                        ]
+                    },
+                    "point": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "photo_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "link": {
+                        "type": "string"
+                    },
+                    "age_min": {
+                        "type": "integer"
+                    },
+                    "is_owner": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "in_all": {
+                        "type": "boolean"
+                    },
+                    "in_rooms": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "number",
+                    "x",
+                    "y",
+                    "rooms",
+                    "price_usd",
+                    "delta_pct",
+                    "tone",
+                    "area",
+                    "floor",
+                    "floors_total",
+                    "district",
+                    "point",
+                    "photo_url",
+                    "link",
+                    "age_min",
+                    "is_owner",
+                    "in_all",
+                    "in_rooms"
+                ],
+                "title": "LandingPinResource"
+            },
+            "LandingPinsResource": {
+                "type": "object",
+                "properties": {
+                    "generated_at": {
+                        "type": "string"
+                    },
+                    "bargains_week": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "pins": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LandingPinResource"
+                        }
+                    },
+                    "medians": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LandingMedianResource"
+                        }
+                    }
+                },
+                "required": [
+                    "generated_at",
+                    "bargains_week",
+                    "pins",
+                    "medians"
+                ],
+                "title": "LandingPinsResource"
             },
             "ListingDetailsResource": {
                 "type": "object",
@@ -4653,6 +6297,22 @@
                 ],
                 "title": "OwnerFilter"
             },
+            "PatchRadarRequest": {
+                "type": "object",
+                "description": "`PATCH /radars/{id}` (WP-13): exactly one known change \u2014 `active` (switch on or pause), `mode` or `unhide: true`.\nNo key, several keys or an unknown key is `422` (`08` API-021).",
+                "properties": {
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/RadarMode"
+                    },
+                    "unhide": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "PatchRadarRequest"
+            },
             "PolygonVertexResource": {
                 "type": "array",
                 "prefixItems": [
@@ -4783,6 +6443,200 @@
                     "land"
                 ],
                 "title": "PropertyType"
+            },
+            "RadarMode": {
+                "type": "string",
+                "description": "How a radar sends (WP-13): each listing at once, or a digest at the user's digest hours.\n",
+                "enum": [
+                    "instant",
+                    "digest"
+                ],
+                "title": "RadarMode"
+            },
+            "RadarMutationKind": {
+                "type": "string",
+                "description": "What `POST /radars` or `PUT /radars/{id}` did (WP-13): a new radar, an active radar with the same filters already existed (nothing written; the client shows \"already on\"), a paused one was switched on, or the filters changed.\n",
+                "enum": [
+                    "created",
+                    "existing",
+                    "reactivated",
+                    "updated"
+                ],
+                "title": "RadarMutationKind"
+            },
+            "RadarMutationResource": {
+                "type": "object",
+                "properties": {
+                    "radar": {
+                        "$ref": "#/components/schemas/RadarResource"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/RadarMutationKind"
+                    },
+                    "starter": {
+                        "type": "integer"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RadarOptionResource"
+                        }
+                    },
+                    "relaxed": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RadarRelaxedResource"
+                        }
+                    }
+                },
+                "required": [
+                    "radar",
+                    "kind",
+                    "starter",
+                    "options",
+                    "relaxed"
+                ],
+                "title": "RadarMutationResource"
+            },
+            "RadarOptionResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "rate": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "code",
+                    "label",
+                    "rate",
+                    "count"
+                ],
+                "title": "RadarOptionResource"
+            },
+            "RadarPatchResource": {
+                "type": "object",
+                "properties": {
+                    "radar": {
+                        "$ref": "#/components/schemas/RadarResource"
+                    },
+                    "starter": {
+                        "type": "integer"
+                    },
+                    "ask_found": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "radar"
+                ],
+                "title": "RadarPatchResource"
+            },
+            "RadarPreviewResource": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListingPreviewResource"
+                        }
+                    },
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "flow": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "week": {
+                                "type": "integer"
+                            },
+                            "days": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "week",
+                            "days"
+                        ]
+                    }
+                },
+                "required": [
+                    "items",
+                    "count",
+                    "flow"
+                ],
+                "title": "RadarPreviewResource"
+            },
+            "RadarRelaxedResource": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "text"
+                ],
+                "title": "RadarRelaxedResource"
+            },
+            "RadarResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/RadarMode"
+                    },
+                    "hidden": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/FiltersResource"
+                    },
+                    "preview": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/RadarPreviewResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "active",
+                    "mode",
+                    "hidden",
+                    "created_at",
+                    "filters"
+                ],
+                "title": "RadarResource"
             },
             "ReferenceResource": {
                 "type": "object",
@@ -4961,6 +6815,32 @@
                 ],
                 "title": "RegisterUploadRequest"
             },
+            "RelaxRadarRequest": {
+                "type": "object",
+                "description": "`POST /radars/{id}/relax` (WP-13): `code` of one of the options the radar offered; the controller checks it\nagainst the radar's options (`422` on `code` otherwise).",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[a-z_]{1,32}$"
+                    }
+                },
+                "required": [
+                    "code"
+                ],
+                "title": "RelaxRadarRequest"
+            },
+            "ReportResultResource": {
+                "type": "object",
+                "properties": {
+                    "hidden": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "hidden"
+                ],
+                "title": "ReportResultResource"
+            },
             "SessionResource": {
                 "type": "object",
                 "properties": {
@@ -5116,6 +6996,55 @@
                 ],
                 "title": "StoreEventRequest"
             },
+            "StoreFoundAnswerRequest": {
+                "type": "object",
+                "description": "`POST /surveys/found` (WP-13, API-032): the answer to \u00ab\u041d\u0430\u0448\u043b\u0438 \u0436\u0438\u043b\u044c\u0451?\u00bb and what asked it. The legacy answer `kvadro`\nis `homi` (brand, DEC-40). Extra keys are ignored.",
+                "properties": {
+                    "answer": {
+                        "type": "string",
+                        "enum": [
+                            "homi",
+                            "elsewhere",
+                            "searching",
+                            "stopped"
+                        ]
+                    },
+                    "trigger": {
+                        "type": "string",
+                        "enum": [
+                            "pause",
+                            "delete"
+                        ]
+                    }
+                },
+                "required": [
+                    "answer",
+                    "trigger"
+                ],
+                "title": "StoreFoundAnswerRequest"
+            },
+            "StoreFoundWhereRequest": {
+                "type": "object",
+                "description": "`POST /surveys/found/where` (WP-13, API-033): where the home was found. Extra keys are ignored.",
+                "properties": {
+                    "where": {
+                        "type": "string",
+                        "enum": [
+                            "telegram",
+                            "olx",
+                            "site",
+                            "agent",
+                            "friends",
+                            "street",
+                            "other"
+                        ]
+                    }
+                },
+                "required": [
+                    "where"
+                ],
+                "title": "StoreFoundWhereRequest"
+            },
             "StoreMediaRequest": {
                 "type": "object",
                 "properties": {
@@ -5133,6 +7062,67 @@
                     "file"
                 ],
                 "title": "StoreMediaRequest"
+            },
+            "StoreRadarRequest": {
+                "type": "object",
+                "description": "`POST /radars` (WP-13): the filters and `entry`, where the radar was turned on, kept for statistics (BR-API-086):\nthe filters sheet, the new-radar sheet, the few-results note, the follow nudge, the feed card and the return banner.",
+                "properties": {
+                    "relaxed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^[a-z_]{1,32}$"
+                    },
+                    "entry": {
+                        "type": "string",
+                        "enum": [
+                            "filters",
+                            "empty",
+                            "few",
+                            "prompt",
+                            "feed",
+                            "return"
+                        ]
+                    }
+                },
+                "required": [
+                    "entry"
+                ],
+                "title": "StoreRadarRequest"
+            },
+            "StoreReportRequest": {
+                "type": "object",
+                "description": "`POST /listings/{number}/reports` (WP-13, API-016): `reason`, and `detail` only with `wrong_data` (the third step\nof the report sheet, BR-API-101). `wrong_data` without a detail is accepted for older bundles; a null detail counts\nas absent.",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "enum": [
+                            "rented",
+                            "agent",
+                            "wrong_data",
+                            "fraud"
+                        ]
+                    },
+                    "detail": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "price",
+                            "rooms",
+                            "place",
+                            "photos",
+                            "other",
+                            null
+                        ]
+                    }
+                },
+                "required": [
+                    "reason"
+                ],
+                "title": "StoreReportRequest"
             },
             "TelegramSignInRequest": {
                 "type": "object",
@@ -5183,6 +7173,20 @@
                     "locale"
                 ],
                 "title": "TranslationResource"
+            },
+            "UpdateRadarRequest": {
+                "type": "object",
+                "description": "`PUT /radars/{id}` (WP-13): replaces the filters and keeps `active`.",
+                "properties": {
+                    "relaxed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^[a-z_]{1,32}$"
+                    }
+                },
+                "title": "UpdateRadarRequest"
             },
             "UpdateSettingsRequest": {
                 "type": "object",

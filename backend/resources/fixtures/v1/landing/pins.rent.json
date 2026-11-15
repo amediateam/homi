@@ -1,0 +1,132 @@
+{
+    "generated_at": "2026-11-14T08:45:00+00:00",
+    "bargains_week": 37,
+    "pins": [
+        {
+            "number": 100012,
+            "x": 41.2,
+            "y": 63.5,
+            "rooms": 2,
+            "price_usd": 600,
+            "delta_pct": -12,
+            "tone": "good",
+            "area": 54,
+            "floor": 3,
+            "floors_total": 9,
+            "district_code": "yunusobod",
+            "point": "Мегапланет",
+            "photo_url": "{media}/stub/100012/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100012-web",
+            "age_min": 35,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": true
+        },
+        {
+            "number": 100001,
+            "x": 42.0,
+            "y": 61.8,
+            "rooms": 2,
+            "price_usd": 600,
+            "delta_pct": -12,
+            "tone": "good",
+            "area": 54,
+            "floor": 3,
+            "floors_total": 9,
+            "district_code": "yunusobod",
+            "point": null,
+            "photo_url": "{media}/stub/100001/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100001-web",
+            "age_min": 52,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": true
+        },
+        {
+            "number": 100013,
+            "x": 30.4,
+            "y": 70.1,
+            "rooms": 2,
+            "price_usd": 350,
+            "delta_pct": -45,
+            "tone": "suspicious",
+            "area": 48,
+            "floor": 1,
+            "floors_total": 4,
+            "district_code": "chilonzor",
+            "point": null,
+            "photo_url": "{media}/stub/100013/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100013-web",
+            "age_min": 61,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": true
+        },
+        {
+            "number": 100014,
+            "x": 48.9,
+            "y": 52.3,
+            "rooms": 3,
+            "price_usd": 900,
+            "delta_pct": -2,
+            "tone": "same",
+            "area": 82,
+            "floor": 7,
+            "floors_total": 12,
+            "district_code": "mirobod",
+            "point": null,
+            "photo_url": "{media}/stub/100014/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100014-web",
+            "age_min": 140,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": false
+        },
+        {
+            "number": 100003,
+            "x": 28.7,
+            "y": 66.0,
+            "rooms": 1,
+            "price_usd": 200,
+            "delta_pct": null,
+            "tone": null,
+            "area": 16,
+            "floor": 2,
+            "floors_total": 4,
+            "district_code": "chilonzor",
+            "point": null,
+            "photo_url": "{media}/stub/100003/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100003-web",
+            "age_min": 300,
+            "is_owner": false,
+            "in_all": true,
+            "in_rooms": false
+        }
+    ],
+    "medians": [
+        {
+            "district_code": "yunusobod",
+            "rooms": 2,
+            "median_usd": 680,
+            "n": 14
+        },
+        {
+            "district_code": "chilonzor",
+            "rooms": 2,
+            "median_usd": 520,
+            "n": 21
+        },
+        {
+            "district_code": "mirobod",
+            "rooms": 3,
+            "median_usd": 920,
+            "n": 9
+        },
+        {
+            "district_code": "chilonzor",
+            "rooms": 1,
+            "median_usd": 300,
+            "n": 17
+        }
+    ]
+}

@@ -122,3 +122,43 @@ it('types the new-since count as an integer (WP-12, fix of LB-API-055)', functio
     expect($schema['properties']['data']['properties']['count'])->toBe(['type' => 'integer'])
         ->and($schema['properties']['data']['required'])->toContain('count');
 });
+
+it('has every method of the Wave 1 table (25 §4.2) as a route and an OpenAPI path, and no other (WP-13)', function (): void {
+    $table = [
+        'POST /auth/telegram', 'GET /me', 'GET /settings', 'PATCH /settings', 'GET /reference', 'GET /cities',
+        'GET /listings', 'GET /listings/count', 'GET /listings/flow', 'GET /listings/new', 'GET /listings/map',
+        'GET /listings/{number}', 'POST /listings/{number}/contact', 'POST /listings/{number}/translation',
+        'POST /listings/{number}/share', 'GET /favorites', 'PUT /favorites/{number}', 'DELETE /favorites/{number}',
+        'GET /history', 'DELETE /history', 'PUT /hidden/listings/{number}', 'DELETE /hidden/listings/{number}',
+        'PUT /listings/{number}/blocked-author', 'DELETE /listings/{number}/blocked-author', 'GET /hidden',
+        'DELETE /hidden/authors/{id}', 'DELETE /hidden', 'POST /listings/{number}/reports', 'POST /surveys/found',
+        'POST /surveys/found/where', 'GET /radars', 'POST /radars', 'PUT /radars/{id}', 'PATCH /radars/{id}',
+        'DELETE /radars/{id}', 'POST /radars/{id}/relax', 'POST /events', 'GET /landing/live', 'GET /landing/pins',
+    ];
+    $routes = [];
+
+    foreach (Route::getRoutes()->getRoutes() as $route) {
+        $uri = '/'.$route->uri();
+
+        if (! str_starts_with($uri, '/api/v1/') || str_starts_with($uri, '/api/v1/media') || str_starts_with($uri, '/api/v1/_test')) {
+            continue;
+        }
+
+        foreach (array_diff($route->methods(), ['HEAD']) as $method) {
+            $routes[] = $method.' '.substr($uri, strlen('/api/v1'));
+        }
+    }
+
+    sort($routes);
+    $expected = $table;
+    sort($expected);
+    $paths = exportedOpenApi()['paths'];
+
+    expect($table)->toHaveCount(39)
+        ->and($routes)->toBe($expected);
+
+    foreach ($table as $pair) {
+        [$method, $path] = explode(' ', $pair, 2);
+        expect($paths[$path] ?? [])->toHaveKey(strtolower($method));
+    }
+});

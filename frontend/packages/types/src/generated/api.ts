@@ -4,6 +4,24 @@
  */
 
 export interface paths {
+    "/listings/{number}/blocked-author": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /listings/{number}/blocked-author` */
+        put: operations["v1.listings.blocked-author.update"];
+        post?: never;
+        /** `DELETE /listings/{number}/blocked-author`: the undo by listing */
+        delete: operations["v1.listings.blocked-author.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cities": {
         parameters: {
             query?: never;
@@ -30,6 +48,178 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["v1.events.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /favorites`: previews, newest first, each with `favorite: true`. Scenario `empty` */
+        get: operations["v1.favorites.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/favorites/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /favorites/{number}`: idempotent; the listing must exist (`404`), or be checkable (`503`) */
+        put: operations["v1.favorites.update"];
+        post?: never;
+        /** `DELETE /favorites/{number}`: idempotent, never `404` for a listing that was not a favourite */
+        delete: operations["v1.favorites.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/surveys/found": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /surveys/found` */
+        post: operations["v1.surveys.found.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/surveys/found/where": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /surveys/found/where` */
+        post: operations["v1.surveys.found.where"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /hidden`: hidden listings, newest first, and blocked authors */
+        get: operations["v1.hidden.index"];
+        put?: never;
+        post?: never;
+        /** `DELETE /hidden`: clears hidden listings and blocked authors of the caller */
+        delete: operations["v1.hidden.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hidden/authors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** `DELETE /hidden/authors/{id}`: removes one blocked author by entry id */
+        delete: operations["v1.hidden.authors.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hidden/listings/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /hidden/listings/{number}`: the listing must exist */
+        put: operations["v1.hidden.listings.update"];
+        post?: never;
+        /** `DELETE /hidden/listings/{number}` */
+        delete: operations["v1.hidden.listings.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /history`: previews by last view, newest first, each with `viewed: true`. Scenario `empty` */
+        get: operations["v1.history.index"];
+        put?: never;
+        post?: never;
+        /** `DELETE /history`: clears the whole history; idempotent */
+        delete: operations["v1.history.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/landing/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.landing.live"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/landing/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.landing.pins"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -281,6 +471,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/radars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview */
+        get: operations["v1.radars.index"];
+        put?: never;
+        /**
+         * `POST /radars`: creates a radar, or answers the active radar with the same filters (`existing`, `200`) or
+         *     switches on a paused one (`reactivated`, `200`). The same filters ignore `posted_days` and the order of keys
+         *     and lists (BR-APP-012)
+         */
+        post: operations["v1.radars.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/radars/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /radars/{id}`: replaces the filters and keeps `active` */
+        put: operations["v1.radars.update"];
+        post?: never;
+        /** `DELETE /radars/{id}`: works while the switch is off, so nothing can be left behind */
+        delete: operations["v1.radars.destroy"];
+        options?: never;
+        head?: never;
+        /** `PATCH /radars/{id}`: switches on (with `starter`), pauses (with `ask_found`), changes the mode or unhides */
+        patch: operations["v1.radars.patch"];
+        trace?: never;
+    };
+    "/radars/{id}/relax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.radars.relax"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reference": {
         parameters: {
             query?: never;
@@ -291,6 +538,22 @@ export interface paths {
         get: operations["v1.reference.show"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{number}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.listings.reports.store"];
         delete?: never;
         options?: never;
         head?: never;
@@ -347,6 +610,21 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** BlockedAuthorResource */
+        BlockedAuthorResource: {
+            id: string;
+            kind: string;
+            label: string;
+            count: number;
+        };
+        /** BlockedAuthorResultResource */
+        BlockedAuthorResultResource: {
+            id: string;
+            kind: string;
+            label: string;
+            count: number;
+            listing_numbers: number[];
+        };
         /** CityResource */
         CityResource: {
             code: string;
@@ -400,6 +678,10 @@ export interface components {
          * @enum {string}
          */
         Deal: "rent_long" | "rent_daily" | "sale";
+        /** FavoriteStateResource */
+        FavoriteStateResource: {
+            favorite: boolean;
+        };
         /** FiltersResource */
         FiltersResource: {
             city: string;
@@ -441,6 +723,82 @@ export interface components {
             week: number;
             days: number;
             options: components["schemas"]["FlowOptionResource"][];
+        };
+        /** HiddenOverviewResource */
+        HiddenOverviewResource: {
+            listings: components["schemas"]["ListingPreviewResource"][];
+            authors: components["schemas"]["BlockedAuthorResource"][];
+        };
+        /** LandingLatestResource */
+        LandingLatestResource: {
+            number: number;
+            rooms: number;
+            price_usd: number;
+            delta_pct: number | null;
+            tone: string | null;
+            district: {
+                code: string;
+                name: string;
+            } | null;
+            area: number | null;
+            seen_at: string;
+            link: string;
+        };
+        /** LandingLiveResource */
+        LandingLiveResource: {
+            now: string;
+            generated_at: string;
+            day: number;
+            week: number;
+            latest: components["schemas"]["LandingLatestResource"][];
+            sheet: {
+                all: {
+                    count: number;
+                    per_day: number;
+                };
+                demo: {
+                    count: number;
+                    per_day: number;
+                };
+            };
+        };
+        /** LandingMedianResource */
+        LandingMedianResource: {
+            district_code: string;
+            rooms: number;
+            median_usd: number;
+            n: number;
+        };
+        /** LandingPinResource */
+        LandingPinResource: {
+            number: number;
+            x: number;
+            y: number;
+            rooms: number;
+            price_usd: number;
+            delta_pct: number | null;
+            tone: string | null;
+            area: number | null;
+            floor: number;
+            floors_total: number;
+            district: {
+                code: string;
+                name: string;
+            } | null;
+            point: string | null;
+            photo_url: string | null;
+            link: string;
+            age_min: number;
+            is_owner: boolean | null;
+            in_all: boolean;
+            in_rooms: boolean;
+        };
+        /** LandingPinsResource */
+        LandingPinsResource: {
+            generated_at: string;
+            bargains_week: number | null;
+            pins: components["schemas"]["LandingPinResource"][];
+            medians: components["schemas"]["LandingMedianResource"][];
         };
         /** ListingDetailsResource */
         ListingDetailsResource: {
@@ -717,6 +1075,16 @@ export interface components {
          * @enum {string}
          */
         OwnerFilter: "any" | "no_agents" | "owners";
+        /**
+         * PatchRadarRequest
+         * @description `PATCH /radars/{id}` (WP-13): exactly one known change — `active` (switch on or pause), `mode` or `unhide: true`.
+         *     No key, several keys or an unknown key is `422` (`08` API-021).
+         */
+        PatchRadarRequest: {
+            active?: boolean;
+            mode?: components["schemas"]["RadarMode"];
+            unhide?: boolean;
+        };
         /** PolygonVertexResource */
         PolygonVertexResource: [
             number,
@@ -756,6 +1124,62 @@ export interface components {
          * @enum {string}
          */
         PropertyType: "apartment" | "house" | "room" | "commercial" | "land";
+        /**
+         * RadarMode
+         * @description How a radar sends (WP-13): each listing at once, or a digest at the user's digest hours.
+         * @enum {string}
+         */
+        RadarMode: "instant" | "digest";
+        /**
+         * RadarMutationKind
+         * @description What `POST /radars` or `PUT /radars/{id}` did (WP-13): a new radar, an active radar with the same filters already existed (nothing written; the client shows "already on"), a paused one was switched on, or the filters changed.
+         * @enum {string}
+         */
+        RadarMutationKind: "created" | "existing" | "reactivated" | "updated";
+        /** RadarMutationResource */
+        RadarMutationResource: {
+            radar: components["schemas"]["RadarResource"];
+            kind: components["schemas"]["RadarMutationKind"];
+            starter: number;
+            options: components["schemas"]["RadarOptionResource"][];
+            relaxed: components["schemas"]["RadarRelaxedResource"][];
+        };
+        /** RadarOptionResource */
+        RadarOptionResource: {
+            code: string;
+            label: string;
+            rate: string;
+            count: number | null;
+        };
+        /** RadarPatchResource */
+        RadarPatchResource: {
+            radar: components["schemas"]["RadarResource"];
+            starter?: number;
+            ask_found?: boolean;
+        };
+        /** RadarPreviewResource */
+        RadarPreviewResource: {
+            items: components["schemas"]["ListingPreviewResource"][];
+            count: number | null;
+            flow: {
+                week: number;
+                days: number;
+            } | null;
+        };
+        /** RadarRelaxedResource */
+        RadarRelaxedResource: {
+            text: string;
+        };
+        /** RadarResource */
+        RadarResource: {
+            id: string;
+            active: boolean;
+            mode: components["schemas"]["RadarMode"];
+            hidden: number;
+            created_at: string;
+            filters: components["schemas"]["FiltersResource"];
+            preview?: components["schemas"]["RadarPreviewResource"] | null;
+        };
         /** ReferenceResource */
         ReferenceResource: {
             bot: {
@@ -792,6 +1216,18 @@ export interface components {
             /** @description Keys are issued by POST /media/presign as uploads/{owner_type}/{owner_id}/{ulid}.{ext}. */
             key: string;
             visibility?: components["schemas"]["MediaVisibility"];
+        };
+        /**
+         * RelaxRadarRequest
+         * @description `POST /radars/{id}/relax` (WP-13): `code` of one of the options the radar offered; the controller checks it
+         *     against the radar's options (`422` on `code` otherwise).
+         */
+        RelaxRadarRequest: {
+            code: string;
+        };
+        /** ReportResultResource */
+        ReportResultResource: {
+            hidden: boolean;
         };
         /** SessionResource */
         SessionResource: {
@@ -837,6 +1273,25 @@ export interface components {
         StoreEventRequest: {
             name: string;
         };
+        /**
+         * StoreFoundAnswerRequest
+         * @description `POST /surveys/found` (WP-13, API-032): the answer to «Нашли жильё?» and what asked it. The legacy answer `kvadro`
+         *     is `homi` (brand, DEC-40). Extra keys are ignored.
+         */
+        StoreFoundAnswerRequest: {
+            /** @enum {string} */
+            answer: "homi" | "elsewhere" | "searching" | "stopped";
+            /** @enum {string} */
+            trigger: "pause" | "delete";
+        };
+        /**
+         * StoreFoundWhereRequest
+         * @description `POST /surveys/found/where` (WP-13, API-033): where the home was found. Extra keys are ignored.
+         */
+        StoreFoundWhereRequest: {
+            /** @enum {string} */
+            where: "telegram" | "olx" | "site" | "agent" | "friends" | "street" | "other";
+        };
         /** StoreMediaRequest */
         StoreMediaRequest: {
             /**
@@ -845,6 +1300,28 @@ export interface components {
              */
             file: string;
             visibility?: components["schemas"]["MediaVisibility"];
+        };
+        /**
+         * StoreRadarRequest
+         * @description `POST /radars` (WP-13): the filters and `entry`, where the radar was turned on, kept for statistics (BR-API-086):
+         *     the filters sheet, the new-radar sheet, the few-results note, the follow nudge, the feed card and the return banner.
+         */
+        StoreRadarRequest: {
+            relaxed?: string | null;
+            /** @enum {string} */
+            entry: "filters" | "empty" | "few" | "prompt" | "feed" | "return";
+        };
+        /**
+         * StoreReportRequest
+         * @description `POST /listings/{number}/reports` (WP-13, API-016): `reason`, and `detail` only with `wrong_data` (the third step
+         *     of the report sheet, BR-API-101). `wrong_data` without a detail is accepted for older bundles; a null detail counts
+         *     as absent.
+         */
+        StoreReportRequest: {
+            /** @enum {string} */
+            reason: "rented" | "agent" | "wrong_data" | "fraud";
+            /** @enum {string|null} */
+            detail?: "price" | "rooms" | "place" | "photos" | "other" | null;
         };
         /**
          * TelegramSignInRequest
@@ -869,6 +1346,13 @@ export interface components {
         TranslationResource: {
             text: string;
             locale: string;
+        };
+        /**
+         * UpdateRadarRequest
+         * @description `PUT /radars/{id}` (WP-13): replaces the filters and keeps `active`.
+         */
+        UpdateRadarRequest: {
+            relaxed?: string | null;
         };
         /**
          * UpdateSettingsRequest
@@ -925,6 +1409,57 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "v1.listings.blocked-author.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["BlockedAuthorResultResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.listings.blocked-author.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "v1.cities.index": {
         parameters: {
             query?: never;
@@ -977,6 +1512,362 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.favorites.index": {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ListingPreviewResource"][];
+                        meta: {
+                            next_cursor: string | null;
+                            source: components["schemas"]["SourceDriver"];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.favorites.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["FavoriteStateResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.favorites.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["FavoriteStateResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.surveys.found.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreFoundAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.surveys.found.where": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreFoundWhereRequest"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.hidden.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["HiddenOverviewResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.hidden.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.hidden.authors.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.hidden.listings.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.hidden.listings.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.history.index": {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ListingPreviewResource"][];
+                        meta: {
+                            next_cursor: string | null;
+                            source: components["schemas"]["SourceDriver"];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.history.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.landing.live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["LandingLiveResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "v1.landing.pins": {
+        parameters: {
+            query?: {
+                deal?: "rent" | "sale" | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["LandingPinsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             422: components["responses"]["ValidationException"];
         };
     };
@@ -1567,6 +2458,233 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "v1.radars.index": {
+        parameters: {
+            query?: {
+                include?: "previews" | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarResource"][];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.radars.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StoreRadarRequest"] & {
+                    /** @description The filters object of WP-12; any subset of its 25 keys, normalised for a radar. */
+                    filters: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarMutationResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarMutationResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.radars.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateRadarRequest"] & {
+                    /** @description The filters object of WP-12; any subset of its 25 keys, normalised for a radar. */
+                    filters: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarMutationResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.radars.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: {
+                            ask_found: boolean;
+                        };
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "v1.radars.patch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchRadarRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarPatchResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "v1.radars.relax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelaxRadarRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["RadarPatchResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "v1.reference.show": {
         parameters: {
             query?: never;
@@ -1592,6 +2710,41 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "v1.listings.reports.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreReportRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ReportResultResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "v1.settings.show": {

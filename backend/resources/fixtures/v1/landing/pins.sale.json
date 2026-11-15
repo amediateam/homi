@@ -1,0 +1,47 @@
+{
+    "generated_at": "2026-11-14T08:45:00+00:00",
+    "bargains_week": null,
+    "pins": [
+        {
+            "number": 100008,
+            "x": 40.8,
+            "y": 60.9,
+            "rooms": 3,
+            "price_usd": 85000,
+            "delta_pct": -3,
+            "tone": "good",
+            "area": 78,
+            "floor": 6,
+            "floors_total": 9,
+            "district_code": "yunusobod",
+            "point": null,
+            "photo_url": "{media}/stub/100008/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100008-web",
+            "age_min": 95,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": true
+        },
+        {
+            "number": 100010,
+            "x": 26.2,
+            "y": 44.6,
+            "rooms": 1,
+            "price_usd": 220000,
+            "delta_pct": null,
+            "tone": null,
+            "area": null,
+            "floor": 1,
+            "floors_total": 3,
+            "district_code": "olmazor",
+            "point": null,
+            "photo_url": "{media}/stub/100010/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100010-web",
+            "age_min": 420,
+            "is_owner": null,
+            "in_all": true,
+            "in_rooms": false
+        }
+    ],
+    "medians": []
+}

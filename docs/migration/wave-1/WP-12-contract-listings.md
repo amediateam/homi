@@ -347,7 +347,8 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
   - A map pin's tone is the market tone when it is `good`, `check` or `suspicious`, else `high` for a median delta
     above 0.1.
   - Filters other than those listed above are accepted and ignored.
-  - A cursor this feed did not give is `422 validation_failed` on `cursor`.
+  - A cursor this feed did not give ends the list quietly (empty `data`, `null` cursor), as the legacy driver does
+    (WP-42). *Corrected in WP-13:* it was `422` here at first.
   - `contact_unavailable` is also a scenario.
   - Share checks the number through the card source (`404`).
   - `listings/translation.json` holds, per locale, a `default` text and texts by number.

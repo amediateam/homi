@@ -137,4 +137,53 @@ final class ContractShapes
 
     /** The answer of `GET /listings/count` and `GET /listings/new`; `count` is an integer in every case (fix of LB-API-055). */
     public const array LISTING_COUNT = ['success' => 'bool', 'data' => ['count' => 'int'], 'meta' => ['source' => 'string']];
+
+    /** A blocked author of `GET /hidden` (WP-13); `label` is a masked phone or `@channel`. */
+    public const array BLOCKED_AUTHOR = ['id' => 'string', 'kind' => 'string', 'label' => 'string', 'count' => 'int'];
+
+    /** The answer of `PUT /listings/{number}/blocked-author` (WP-13). */
+    public const array BLOCKED_AUTHOR_RESULT = [...self::BLOCKED_AUTHOR, 'listing_numbers' => ['*' => 'int']];
+
+    /** `data` of `GET /hidden` (WP-13): both lists are always present. */
+    public const array HIDDEN = ['listings' => ['*' => self::LISTING_PREVIEW], 'authors' => ['*' => self::BLOCKED_AUTHOR]];
+
+    /** A radar (WP-13) without its preview; `GET /radars?include=previews` adds `preview`. */
+    public const array RADAR = [
+        'id' => 'string', 'active' => 'bool', 'mode' => 'string', 'hidden' => 'int', 'created_at' => 'string',
+        'filters' => self::FILTERS,
+    ];
+
+    /** The preview of a radar (WP-13): at most five items, the count and the flow; null when not computed. */
+    public const array RADAR_PREVIEW = [
+        'items' => ['*' => self::LISTING_PREVIEW], 'count' => 'int', 'flow' => ['week' => 'int', 'days' => 'int'],
+    ];
+
+    /** The mutation result of `POST /radars` and `PUT /radars/{id}` (WP-13). */
+    public const array RADAR_MUTATION = [
+        'radar' => self::RADAR, 'kind' => 'string', 'starter' => 'int',
+        'options' => ['*' => ['code' => 'string', 'label' => 'string', 'rate' => 'string', 'count' => 'int']],
+        'relaxed' => ['*' => ['text' => 'string']],
+    ];
+
+    /** `data` of `GET /landing/live` (WP-13): public; no phone, no listing text, no author. */
+    public const array LANDING_LIVE = [
+        'now' => 'string', 'generated_at' => 'string', 'day' => 'int', 'week' => 'int',
+        'latest' => ['*' => [
+            'number' => 'int', 'rooms' => 'int', 'price_usd' => 'int', 'delta_pct' => 'int', 'tone' => 'string',
+            'district' => ['code' => 'string', 'name' => 'string'], 'area' => 'float|int', 'seen_at' => 'string', 'link' => 'string',
+        ]],
+        'sheet' => ['all' => ['count' => 'int', 'per_day' => 'float|int'], 'demo' => ['count' => 'int', 'per_day' => 'float|int']],
+    ];
+
+    /** `data` of `GET /landing/pins` (WP-13): `bargains_week` is null and `medians` empty for sale. */
+    public const array LANDING_PINS = [
+        'generated_at' => 'string', 'bargains_week' => 'int',
+        'pins' => ['*' => [
+            'number' => 'int', 'x' => 'float|int', 'y' => 'float|int', 'rooms' => 'int', 'price_usd' => 'int', 'delta_pct' => 'int',
+            'tone' => 'string', 'area' => 'float|int', 'floor' => 'int', 'floors_total' => 'int',
+            'district' => ['code' => 'string', 'name' => 'string'], 'point' => 'string', 'photo_url' => 'string', 'link' => 'string',
+            'age_min' => 'int', 'is_owner' => 'bool', 'in_all' => 'bool', 'in_rooms' => 'bool',
+        ]],
+        'medians' => ['*' => ['district_code' => 'string', 'rooms' => 'int', 'median_usd' => 'int', 'n' => 'int']],
+    ];
 }
