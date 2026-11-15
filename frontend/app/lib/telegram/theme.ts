@@ -1,7 +1,7 @@
 import { storageGet, storageSet } from "@/lib/storage";
 
 import { supportsFeature } from "./gates";
-import { hasInitData, safeCallback, webApp } from "./sdk";
+import { attempt, hasInitData, safeCallback, webApp } from "./sdk";
 import type { TgWebApp } from "./types";
 
 /**
@@ -16,14 +16,6 @@ export type ThemePreference = "auto" | "light" | "dark";
 export function getThemePreference(): ThemePreference {
   const stored = storageGet("homi-theme");
   return stored === "light" || stored === "dark" ? stored : "auto";
-}
-
-function attempt(run: () => void): void {
-  try {
-    run();
-  } catch {
-    // A refused colour call leaves Telegram's own colour.
-  }
 }
 
 /** The exact `--bg` from 6.9, else Telegram's `bg_color` key (TMA-020). */

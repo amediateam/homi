@@ -85,7 +85,8 @@ export interface HomiBoot {
 
 /** The globals this layer reads; only `lib/telegram/sdk.ts` touches them. */
 export interface TelegramHost {
-  Telegram?: { WebApp?: TgWebApp };
+  /** `WebView.receiveEvent` is the SDK's own event entry point, used once by the share recovery (TMA-030). */
+  Telegram?: { WebApp?: TgWebApp; WebView?: { receiveEvent?(eventType: string, eventData?: unknown): void } };
   __homiBoot?: HomiBoot;
   TelegramWebviewProxy?: { postEvent?(eventType: string, eventData?: string): void };
   external?: { notify?(message: string): void };

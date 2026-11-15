@@ -31,6 +31,11 @@ export const GRAPHICS_RULES = {
 /** `Telegram-Android/<version> (<device>; <os>; <sdk>; LOW|AVERAGE|HIGH)` (TMA-041). */
 const TELEGRAM_ANDROID_CLASS = /Telegram-Android\/[^(]*\([^)]*;\s*(LOW|AVERAGE|HIGH)\s*\)/;
 
+/** The class Telegram for Android writes into its User-Agent, or `null` (TMA-041). */
+export function performanceClassOf(userAgent: string): "LOW" | "AVERAGE" | "HIGH" | null {
+  return (TELEGRAM_ANDROID_CLASS.exec(userAgent)?.[1] as "LOW" | "AVERAGE" | "HIGH" | undefined) ?? null;
+}
+
 export function currentProfile(): DeviceProfile {
   if (typeof navigator === "undefined") {
     return { userAgent: "" };
@@ -45,8 +50,8 @@ function isAndroid(profile: DeviceProfile): boolean {
 
 /** The Telegram-Android class decides when present; else Android with few cores or little memory. iOS and desktop never. */
 export function isLowEndDevice(profile: DeviceProfile = currentProfile()): boolean {
-  const telegramClass = TELEGRAM_ANDROID_CLASS.exec(profile.userAgent)?.[1];
-  if (telegramClass !== undefined) {
+  const telegramClass = performanceClassOf(profile.userAgent);
+  if (telegramClass !== null) {
     return telegramClass !== "HIGH";
   }
   if (!isAndroid(profile)) {

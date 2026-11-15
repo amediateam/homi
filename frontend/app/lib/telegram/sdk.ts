@@ -1,4 +1,4 @@
-import type { HomiBoot, TelegramHost, TgWebApp } from "./types";
+import type { HomiBoot, TelegramHost, TgUser, TgWebApp } from "./types";
 
 /**
  * The only module that reads `window.Telegram`, the native bridges and the launch fragment (DEC-44, `25` §3.3).
@@ -57,6 +57,47 @@ export function bootState(): HomiBoot | null {
 
 export function sdkTag(): HTMLScriptElement | null {
   return typeof document === "undefined" ? null : (document.getElementById("tg-sdk") as HTMLScriptElement | null);
+}
+
+export function webView(): NonNullable<NonNullable<TelegramHost["Telegram"]>["WebView"]> | null {
+  return host()?.Telegram?.WebView ?? null;
+}
+
+/** Inside Telegram: an SDK object that carries launch data. A desktop browser that loaded the SDK is outside. */
+export function insideTelegram(): TgWebApp | null {
+  const app = webApp();
+  return app !== null && hasInitData() ? app : null;
+}
+
+/** The unsigned user of the launch data: only to pick a language and to tell two accounts apart (`25` §3.4). */
+export function launchUser(): TgUser | null {
+  const fromSdk = webApp()?.initDataUnsafe?.user;
+  if (fromSdk) {
+    return fromSdk;
+  }
+  try {
+    const user = new URLSearchParams(initData()).get("user");
+    return user ? (JSON.parse(user) as TgUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function platform(): string {
+  return webApp()?.platform || fragment.platform || "unknown";
+}
+
+export function version(): string {
+  return webApp()?.version || fragment.version || "";
+}
+
+/** A call a client refuses degrades to nothing (TMA-042). */
+export function attempt(run: () => void): void {
+  try {
+    run();
+  } catch {
+    // Refused by this client: nothing to do.
+  }
 }
 
 /** The SDK's `initData`, else the fragment's (TMA-006). Sent once to `POST /bff/session`, nowhere else (TMA-007). */

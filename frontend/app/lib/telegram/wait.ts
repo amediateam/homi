@@ -33,7 +33,7 @@ export function waitForSdk(timeoutMs: number = SDK_WAIT_MS, onLate?: () => void)
     }
     const seen = bootState()?.sdk;
     if (seen === "error" || seen === "ok") {
-      // "ok" without `window.Telegram.WebApp` means the script ran but did not install the SDK.
+      // "ok" without an SDK object means the script ran but did not install the SDK.
       settle("error");
       return;
     }

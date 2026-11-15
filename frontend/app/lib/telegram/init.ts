@@ -1,5 +1,5 @@
 import { supportsFeature } from "./gates";
-import { safeCallback, webApp } from "./sdk";
+import { attempt, safeCallback, webApp } from "./sdk";
 import { watchTheme } from "./theme";
 import type { TgWebApp } from "./types";
 
@@ -7,15 +7,6 @@ import type { TgWebApp } from "./types";
 export const FULLSCREEN_PLATFORMS: readonly string[] = ["ios", "android", "android_x"];
 
 const initialised = new WeakSet<TgWebApp>();
-
-/** A call a client refuses degrades to nothing (TMA-042). */
-function attempt(run: () => void): void {
-  try {
-    run();
-  } catch {
-    // Refused by this client: nothing to do.
-  }
-}
 
 function syncFullscreen(app: TgWebApp): void {
   document.documentElement.classList.toggle("fullscreen", app.isFullscreen === true);
