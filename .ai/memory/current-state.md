@@ -100,7 +100,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   `frontend-e2e.yml` starts the API on stubs. On the branch: `make ci-frontend` → exit 0 (app 362 + the launch-order
   test, `@homi/testing` 95), Playwright `miniapp` → 51 passed; `frontend` and `frontend-e2e` green on the PR,
   `frontend` green on `main` after the merge (run 43732411072).
-- **WP-22 (REVIEW, branch `feat/wp-22-data-layer`; not on `main`):** `lib/api/*` (typed server calls, `UiError`,
+- **WP-22 (REVIEW, #61 on `feat/wp-22-data-layer`; not on `main`):** `lib/api/*` (typed server calls, `UiError`,
   `/bff/[...path]` with its read allow-list, `bffFetch`, stub scenarios), `lib/actions/{run,validate,useAction}`,
   `lib/data/{useResource,sessionMaps}`, `lib/reference/*` (cached per locale), `lib/search/*`, `lib/money/useMoney`,
   the packages `@homi/search` and `@homi/i18n/format`; the feed and map placeholders show a data proof. On the branch:
