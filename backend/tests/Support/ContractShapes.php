@@ -15,6 +15,19 @@ final class ContractShapes
         'analytics' => ['distinct_id' => 'string', 'autocapture' => 'bool', 'replay' => 'bool', 'replay_rate' => 'float|int'],
     ];
 
+    /** The object of `GET /api/v1/settings` and of `PATCH /api/v1/settings` (WP-11). */
+    public const array SETTINGS = [
+        'locale' => 'string', 'currency' => 'string', 'theme' => 'string', 'city' => 'string',
+        'quiet_hours' => ['from' => 'int', 'to' => 'int'],
+        'digest_hours' => ['*' => 'int'],
+        'options' => [
+            'locales' => ['*' => ['code' => 'string', 'name' => 'string']],
+            'currencies' => ['*' => ['code' => 'string', 'name' => 'string']],
+            'quiet_hours' => ['*' => ['from' => 'int', 'to' => 'int']],
+            'digest_hours' => ['*' => ['*' => 'int']],
+        ],
+    ];
+
     /**
      * The contract of `GET /api/v1/reference` (WP-11): public, per locale, HOMI's configuration added for every driver.
      * A JSON number without a fraction decodes as an int, so rates and coordinates are `float|int`.

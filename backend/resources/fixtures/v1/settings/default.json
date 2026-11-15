@@ -1,0 +1,14 @@
+{
+    "locale": "ru",
+    "currency": "USD",
+    "theme": "auto",
+    "city": "tashkent",
+    "quiet_hours": {
+        "from": 23,
+        "to": 8
+    },
+    "digest_hours": [
+        9,
+        19
+    ]
+}

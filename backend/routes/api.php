@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
 use App\Http\Controllers\Api\V1\ReferenceController;
+use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,8 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
     Route::middleware('auth:sanctum')->group(function (): void {
         // The Mini App session (WP-11): abilities app:read and app:write.
         Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
+        Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
+        Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
