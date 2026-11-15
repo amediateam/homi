@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Sources\Stub\StubListingSource;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\Stub\FixtureStore;
@@ -99,28 +100,61 @@ it('ignores the scenario header for the legacy driver', function (): void {
         ->assertJsonPath('meta.source', 'legacy');
 });
 
-it('copies the stub images to the public media disk under stub/', function (): void {
+it('writes a placeholder and its small variant for every photo of the catalogue', function (): void {
     $disk = (string) config('media.disks.public');
     Storage::fake($disk);
     $from = storage_path('framework/testing/stub-media-'.Str::random(8));
-    File::ensureDirectoryExists("{$from}/listings");
-    File::put("{$from}/listings/flat-1.jpg", 'jpeg bytes');
-    File::put("{$from}/.gitkeep", '');
+    File::ensureDirectoryExists($from);
+
+    foreach (range(1, 6) as $k) {
+        File::put("{$from}/placeholder-{$k}.jpg", "full {$k}");
+        File::put("{$from}/placeholder-{$k}.s.jpg", "small {$k}");
+    }
 
     $this->artisan('sources:publish-stub-media', ['--from' => $from])->assertSuccessful();
     $this->artisan('sources:publish-stub-media', ['--from' => $from])->assertSuccessful();
 
-    Storage::disk($disk)->assertExists('stub/listings/flat-1.jpg');
-    Storage::disk($disk)->assertMissing('stub/.gitkeep');
-    expect(Storage::disk($disk)->get('stub/listings/flat-1.jpg'))->toBe('jpeg bytes')
-        ->and(Storage::disk($disk)->allFiles())->toBe(['stub/listings/flat-1.jpg']);
+    $paths = [];
+
+    foreach (app(StubListingSource::class)->entries() as $entry) {
+        foreach ([...$entry['photos']['preview'], ...$entry['photos']['items']] as $address) {
+            expect(preg_match('#/stub/(\d+)/(\d+)\.jpg\?#', $address, $match))->toBe(1);
+            $paths["stub/{$match[1]}/{$match[2]}.jpg"] = true;
+            $paths["stub/{$match[1]}/{$match[2]}.s.jpg"] = true;
+        }
+    }
+
+    $files = Storage::disk($disk)->allFiles();
+    sort($files);
+    $expected = array_keys($paths);
+    sort($expected);
+
+    expect($files)->toBe($expected)
+        ->and(Storage::disk($disk)->get('stub/100012/1.jpg'))->toStartWith('full ')
+        ->and(Storage::disk($disk)->get('stub/100012/1.s.jpg'))->toStartWith('small ');
     File::deleteDirectory($from);
 });
 
-it('publishes from resources/fixtures/media by default', function (): void {
+it('fails without the six placeholders', function (): void {
     Storage::fake((string) config('media.disks.public'));
+    $from = storage_path('framework/testing/stub-media-'.Str::random(8));
+    File::ensureDirectoryExists($from);
+    File::put("{$from}/placeholder-1.jpg", 'full 1');
+
+    $this->artisan('sources:publish-stub-media', ['--from' => $from])->assertFailed();
+    File::deleteDirectory($from);
+});
+
+it('publishes the generated placeholders of resources/fixtures/media by default', function (): void {
+    $disk = (string) config('media.disks.public');
+    Storage::fake($disk);
 
     $this->artisan('sources:publish-stub-media')->assertSuccessful();
 
-    expect(is_dir(resource_path('fixtures/media')))->toBeTrue();
+    $full = getimagesizefromstring(Storage::disk($disk)->get('stub/100012/1.jpg'));
+    $small = getimagesizefromstring(Storage::disk($disk)->get('stub/100012/1.s.jpg'));
+
+    expect($full['mime'] ?? null)->toBe('image/jpeg')
+        ->and($small['mime'] ?? null)->toBe('image/jpeg')
+        ->and($small[0])->toBeLessThan($full[0]);
 });
