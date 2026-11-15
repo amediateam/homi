@@ -83,7 +83,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
 | [WP-20](WP-20-app-foundation.md) | App foundation: routes, localisation, tokens, themes, brand, base components | WP-13 | WAITING (merged in #52; production track: deploy, then staging and production serve the placeholder app) |
-| [WP-21](WP-21-telegram-and-session.md) | Telegram layer and session | WP-20 | TODO |
+| [WP-21](WP-21-telegram-and-session.md) | Telegram layer and session | WP-20 | REVIEW (#55; shared files #54) |
 | [WP-22](WP-22-data-layer.md) | Data layer, formatters and the filter model | WP-21 | TODO |
 | [WP-23](WP-23-gates-and-shell.md) | Gates and shell | WP-22 | TODO |
 | [WP-24](WP-24-feed.md) | Feed and listing card | WP-23 | TODO |

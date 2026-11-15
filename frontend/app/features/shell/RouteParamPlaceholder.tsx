@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { isListingNumber, isQuickFilterKind, isRadarId } from "@/lib/navigation/routes";
+import { isListingNumber, isQuickFilterKind, isRadarId, routes } from "@/lib/navigation/routes";
 
 import { type RouteLayer, RoutePlaceholder } from "./RoutePlaceholder";
 
@@ -31,8 +31,9 @@ export async function ListingPlaceholder({
   if (!isListingNumber(number)) {
     notFound();
   }
+  const listing = Number(number);
   return (
-    <RoutePlaceholder name="listing" layer={layer}>
+    <RoutePlaceholder name="listing" layer={layer} links={[routes.listingPhotos(listing), routes.listingActions(listing)]}>
       {children}
     </RoutePlaceholder>
   );

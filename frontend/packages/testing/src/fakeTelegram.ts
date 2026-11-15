@@ -18,8 +18,12 @@ export interface FakeTelegramAnswers {
   confirm: boolean;
   /** `requestWriteAccess` result (TMA-033). */
   writeAccess: boolean;
-  /** `shareMessage` result (TMA-030). */
-  shareSent: boolean;
+  /**
+   * `shareMessage` result (TMA-030). `"stuck"` never answers and keeps the share window open, as a real client
+   * does after a lost callback: the next `shareMessage` throws `WebAppShareMessageOpened` until the SDK's
+   * `prepared_message_failed` event closes it.
+   */
+  shareSent: boolean | "stuck";
   /** `checkHomeScreenStatus` result (TMA-036). */
   homeScreenStatus: HomeScreenStatus;
   /** `LocationManager.getLocation` result; `null` = access denied (TMA-035). */
@@ -37,7 +41,17 @@ export interface FakeTelegramOptions {
   colorScheme?: TelegramColorScheme;
   themeParams?: Record<string, string>;
   viewport?: { height?: number; stableHeight?: number; isExpanded?: boolean };
+  /** Safe-area insets in px (8.0+); the double writes them as `--tg-safe-area-inset-*` like the real client. */
+  safeArea?: Partial<FakeInsets>;
+  contentSafeArea?: Partial<FakeInsets>;
   answers?: Partial<FakeTelegramAnswers>;
+}
+
+export interface FakeInsets {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
 }
 
 /** Plain, serialisable configuration of the double: what `installFakeTelegram` receives, also inside a page. */
@@ -48,6 +62,10 @@ export interface FakeTelegramConfig {
   colorScheme: TelegramColorScheme;
   themeParams: Record<string, string>;
   viewport: { height: number; stableHeight: number; isExpanded: boolean };
+  safeArea: FakeInsets;
+  contentSafeArea: FakeInsets;
+  /** Both palettes, so that `setColorScheme` can switch inside a page. */
+  palettes: Record<TelegramColorScheme, Record<string, string>>;
   answers: FakeTelegramAnswers;
 }
 
@@ -88,8 +106,8 @@ export interface FakeWebApp {
   readonly viewportStableHeight: number;
   readonly isFullscreen: boolean;
   readonly isVerticalSwipesEnabled: boolean;
-  readonly safeAreaInset: { top: number; bottom: number; left: number; right: number };
-  readonly contentSafeAreaInset: { top: number; bottom: number; left: number; right: number };
+  readonly safeAreaInset: FakeInsets;
+  readonly contentSafeAreaInset: FakeInsets;
   isVersionAtLeast(version: string): boolean;
   ready(): void;
   expand(): void;
@@ -143,6 +161,12 @@ export interface FakeTelegram {
   readonly closed: boolean;
   /** Fires a client event, e.g. `backButtonClicked`, `settingsButtonClicked`, `themeChanged`, `homeScreenAdded`. */
   emit(eventType: string, payload?: unknown): void;
+  /** The user switches Telegram's theme: `colorScheme` and `themeParams` change, then `themeChanged` fires. */
+  setColorScheme(scheme: TelegramColorScheme): void;
+  /** New safe-area insets (8.0+): the CSS variables change, then `safeAreaChanged` fires. */
+  setSafeArea(insets: Partial<FakeInsets>): void;
+  /** A new viewport: `--tg-viewport-*` change, then `viewportChanged` fires. */
+  setViewport(viewport: { height?: number; stableHeight?: number }): void;
   /** Removes `window.Telegram` again. */
   uninstall(): void;
 }
@@ -152,7 +176,8 @@ export interface FakeTelegram {
  * type check, and the double's types must not leak into the apps' `Window`.
  */
 export interface FakeTelegramWindow {
-  Telegram?: { WebApp: FakeWebApp };
+  /** `WebView.receiveEvent` is the SDK's own event entry point (the share recovery of WP-21 uses it). */
+  Telegram?: { WebApp: FakeWebApp; WebView?: { receiveEvent(eventType: string, eventData?: unknown): void } };
   __homiFakeTelegram?: FakeTelegram;
 }
 
@@ -187,6 +212,7 @@ export function resolveFakeTelegramConfig(options: FakeTelegramOptions = {}): Fa
     throw new Error(`fakeTelegram: version must look like "8.0", got "${version}"`);
   }
   const colorScheme = options.colorScheme ?? "light";
+  const insets = (partial: Partial<FakeInsets> = {}): FakeInsets => ({ top: 0, bottom: 0, left: 0, right: 0, ...partial });
   return {
     version,
     platform: options.platform ?? "ios",
@@ -198,6 +224,9 @@ export function resolveFakeTelegramConfig(options: FakeTelegramOptions = {}): Fa
       stableHeight: options.viewport?.stableHeight ?? options.viewport?.height ?? 844,
       isExpanded: options.viewport?.isExpanded ?? false,
     },
+    safeArea: insets(options.safeArea),
+    contentSafeArea: insets(options.contentSafeArea),
+    palettes: themes,
     answers: {
       confirm: true,
       writeAccess: true,
@@ -240,6 +269,7 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     shareMessage: "8.0",
     checkHomeScreenStatus: "8.0",
     addToHomeScreen: "8.0",
+    safeArea: "8.0",
     LocationManager: "8.0",
     DeviceStorage: "9.0",
   };
@@ -266,6 +296,12 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     queueMicrotask(run);
   };
   const state = {
+    colorScheme: config.colorScheme,
+    themeParams: { ...config.themeParams },
+    viewport: { height: config.viewport.height, stableHeight: config.viewport.stableHeight },
+    safeArea: { ...config.safeArea },
+    contentSafeArea: { ...config.contentSafeArea },
+    share: null as null | { callback?: (sent: boolean) => void },
     closed: false,
     isExpanded: config.viewport.isExpanded,
     isFullscreen: false,
@@ -274,6 +310,31 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     settingsVisible: false,
     location: { isInited: false, isAccessRequested: false, isAccessGranted: false },
   };
+
+  /** The CSS variables a real client writes on `<html>` (`--tg-viewport-*` always, safe areas from 8.0). */
+  const cssVariables: string[] = [];
+  function writeCss(): void {
+    // An init script of Playwright can run before <html> exists; the variables follow once it does.
+    if (document.documentElement === null) {
+      document.addEventListener("readystatechange", writeCss, { once: true });
+      return;
+    }
+    const style = document.documentElement.style;
+    const set = (name: string, px: number): void => {
+      style.setProperty(name, `${px}px`);
+      if (!cssVariables.includes(name)) {
+        cssVariables.push(name);
+      }
+    };
+    set("--tg-viewport-height", state.viewport.height);
+    set("--tg-viewport-stable-height", state.viewport.stableHeight);
+    if (versionAtLeast(gates.safeArea)) {
+      for (const side of ["top", "bottom", "left", "right"] as const) {
+        set(`--tg-safe-area-inset-${side}`, state.safeArea[side]);
+        set(`--tg-content-safe-area-inset-${side}`, state.contentSafeArea[side]);
+      }
+    }
+  }
 
   function record<T>(member: string, args: unknown[], run: () => T): T {
     calls.push({ member, args });
@@ -369,7 +430,6 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
 
   const impactStyles = ["light", "medium", "heavy", "rigid", "soft"];
   const notificationTypes = ["error", "success", "warning"];
-  const inset = { top: 0, bottom: 0, left: 0, right: 0 };
 
   const HapticFeedback: FakeWebApp["HapticFeedback"] = {
     impactOccurred: (style) =>
@@ -460,21 +520,33 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     platform: config.platform,
     initData: config.initData,
     initDataUnsafe,
-    colorScheme: config.colorScheme,
-    themeParams: { ...config.themeParams },
+    get colorScheme() {
+      return state.colorScheme;
+    },
+    get themeParams() {
+      return state.themeParams;
+    },
     get isExpanded() {
       return state.isExpanded;
     },
-    viewportHeight: config.viewport.height,
-    viewportStableHeight: config.viewport.stableHeight,
+    get viewportHeight() {
+      return state.viewport.height;
+    },
+    get viewportStableHeight() {
+      return state.viewport.stableHeight;
+    },
     get isFullscreen() {
       return state.isFullscreen;
     },
     get isVerticalSwipesEnabled() {
       return state.isVerticalSwipesEnabled;
     },
-    safeAreaInset: { ...inset },
-    contentSafeAreaInset: { ...inset },
+    get safeAreaInset() {
+      return { ...state.safeArea };
+    },
+    get contentSafeAreaInset() {
+      return { ...state.contentSafeArea };
+    },
     isVersionAtLeast: (version) => versionAtLeast(version),
     ready: () => record("ready", [], () => undefined),
     expand: () =>
@@ -520,8 +592,18 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     openTelegramLink: (url) => record("openTelegramLink", [url], () => checkUrl(url, true)),
     shareMessage: (messageId, callback) =>
       record("shareMessage", callback ? [messageId, callback] : [messageId], () => {
+        if (state.share !== null) {
+          throw new Error("WebAppShareMessageOpened");
+        }
         const sent = answers.shareSent;
-        later(() => callback?.(sent));
+        state.share = { callback };
+        if (sent === "stuck") {
+          return;
+        }
+        later(() => {
+          state.share = null;
+          callback?.(sent);
+        });
       }),
     requestWriteAccess: (callback) =>
       record("requestWriteAccess", callback ? [callback] : [], () => {
@@ -544,6 +626,19 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     DeviceStorage,
   };
 
+  const webView = {
+    /** Only `prepared_message_failed` is modelled: it closes a stale share window, as in the real SDK. */
+    receiveEvent: (eventType: string, eventData?: unknown): void => {
+      if (eventType !== "prepared_message_failed" || state.share === null) {
+        return;
+      }
+      const pending = state.share;
+      state.share = null;
+      pending.callback?.(false);
+      emit("shareMessageFailed", eventData);
+    },
+  };
+
   const fake: FakeTelegram = {
     webApp,
     calls,
@@ -552,13 +647,35 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
       return state.closed;
     },
     emit,
+    setColorScheme: (scheme) => {
+      state.colorScheme = scheme;
+      state.themeParams = { ...config.palettes[scheme] };
+      emit("themeChanged");
+    },
+    setSafeArea: (partial) => {
+      if (!versionAtLeast(gates.safeArea)) {
+        throw unsupported("safeArea", gates.safeArea);
+      }
+      state.safeArea = { ...state.safeArea, ...partial };
+      writeCss();
+      emit("safeAreaChanged");
+    },
+    setViewport: (viewport) => {
+      state.viewport = { ...state.viewport, ...viewport };
+      writeCss();
+      emit("viewportChanged", { isStateStable: true });
+    },
     uninstall: () => {
+      for (const name of cssVariables) {
+        document.documentElement?.style.removeProperty(name);
+      }
       delete host.Telegram;
       delete host.__homiFakeTelegram;
     },
   };
 
-  host.Telegram = { WebApp: webApp };
+  host.Telegram = { WebApp: webApp, WebView: webView };
+  writeCss();
   host.__homiFakeTelegram = fake;
   return fake;
 }

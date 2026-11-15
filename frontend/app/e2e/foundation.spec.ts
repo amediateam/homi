@@ -62,11 +62,13 @@ async function mark(page: Page, selector: string, value: string) {
 
 test.describe("locale redirect", () => {
   test("/ goes to /ru and keeps the query and the launch fragment", async ({ page }) => {
+    // The adapter removes the fragment once the SDK wait settled (TMA-009, WP-21), so it is read on arrival.
+    await page.addInitScript(() => Object.assign(window, { __arrivedHash: location.hash }));
     await page.goto("/?listing=7#tgWebAppData=x");
 
     expect(new URL(page.url()).pathname).toBe("/ru");
     expect(new URL(page.url()).search).toBe("?listing=7");
-    expect(await page.evaluate(() => location.hash)).toBe("#tgWebAppData=x");
+    expect(await page.evaluate(() => (window as unknown as { __arrivedHash: string }).__arrivedHash)).toBe("#tgWebAppData=x");
   });
 
   test("a deeper path keeps its query under the locale", async ({ page }) => {
@@ -111,10 +113,13 @@ test.describe("addresses", () => {
     });
   }
 
-  test("an unknown address and an unknown locale answer 404", async ({ request }) => {
+  // Documents render at request time for the CSP nonce (ADR-0020); the not-found screen then answers 200 with
+  // noindex instead of 404 (AM-57).
+  test("an unknown address and an unknown locale render the not-found screen with noindex", async ({ page }) => {
     for (const path of ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/de/x"]) {
-      const response = await request.get(path);
-      expect(response.status(), path).toBe(404);
+      await page.goto(path);
+      await expect(page.locator('[data-route="not-found"]'), path).toBeVisible();
+      await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", "noindex");
     }
   });
 

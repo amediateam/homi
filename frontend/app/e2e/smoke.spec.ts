@@ -27,6 +27,8 @@ test.describe("Mini App smoke", () => {
     await playwrightTelegram(page);
     await page.goto("/");
 
-    await page.evaluate(() => fetch("https://telegram.org/js/telegram-web-app.js").catch(() => undefined));
+    // The CSP of WP-21 stops a fetch before it leaves the page; a navigation is not subject to it.
+    await page.evaluate(() => location.assign("https://telegram.org/js/telegram-web-app.js")).catch(() => undefined);
+    await page.waitForTimeout(300);
   });
 });

@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# development Telegram emulator, built by dev/build.mjs before next dev (WP-21)
+/public/__dev/

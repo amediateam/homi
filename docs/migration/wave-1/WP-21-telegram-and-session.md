@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#55; shared files #54) |
 | Depends on | WP-20 |
 | Size | ≈ 3 000 changed lines, L |
 | Behaviour reference | `25` §3.1 – §3.4, §3.10; `03` §1.2 – §1.7, §3.2, SCR-001, SCR-044; `05` (all of TMA-001 … TMA-045); earlier tasks KV-FE-024 … KV-FE-033, KV-FE-037, KV-FE-038, KV-FE-040 (behaviour, constants, edge cases and test ideas only — not their layer stack, `Authorization: tma` transport, `kv-*` keys or file layout) |
@@ -63,33 +63,36 @@ routing"), `preventing-flash-before-hydration.md`, `data-security.md`; and
 
 | # | Element | Purpose |
 | - | ------- | ------- |
-| 1 | inline script: stubs | `window.__tg__postBackgroundChange` and `window.TelegramGameProxy.receiveEvent` as no-ops when absent (TMA-002) |
-| 2 | inline script: boot | engine test, watchdog, pre-paint theme and lite class, the update screen (below) |
-| 3 | development only: emulator script | must run before the SDK, which picks its bridge at load |
-| 4 | `preconnect` to `https://telegram.org`, then `<script id="tg-sdk" async crossorigin="anonymous" src="https://telegram.org/js/telegram-web-app.js">` | `async` so a hanging host cannot keep the page white; `crossorigin` so SDK errors are readable (TMA-001) |
-| 5 | providers: `SessionProvider`, `TelegramButtons`, `LocaleGuard`, `LaunchRedirector`, `BootGuard` | client side of everything below |
+| 1 | inline script: stubs (`boot/stubs.js`) | `window.__tg__postBackgroundChange` and `window.TelegramGameProxy.receiveEvent` as no-ops when absent (TMA-002) |
+| 2 | development only: emulator script | must run before the SDK; it keeps its double against the SDK's own assignment |
+| 3 | inline script: boot (`<script id="homi-boot" data-bot>`) | engine test, watchdog, pre-paint theme and lite class, the update screen (below); at its end it **inserts** `<script id="tg-sdk" async crossorigin="anonymous" src="https://telegram.org/js/telegram-web-app.js">` with its own nonce |
+| 4 | `preconnect` to `https://telegram.org` | `async` so a hanging host cannot keep the page white; `crossorigin` so SDK errors are readable (TMA-001) |
+| 5 | providers: `SessionProvider`, `NavigationBinder`, `TelegramButtons`, `LocaleGuard`, `FragmentGuard`, `LaunchRedirector`, `BootGuard` | client side of everything below |
 
 All inline and external scripts carry the request nonce. `script.md` says a `beforeInteractive` script is
-downloaded before any Next.js module and executed in order — which is exactly what the SDK must **not** do, so
-tag 4 is a plain `async` script. Whether a plain `<script async>` rendered by the root layout keeps its place and
-receives the nonce is **verify before use**.
+downloaded before any Next.js module and executed in order — which is exactly what the SDK must **not** do. Measured
+(WP-21): a plain `<script async>` rendered by the root layout receives the nonce, but React 19 hoists it above the
+inline scripts of `<head>`, so the SDK could fail before the watchdog listens; the boot script therefore inserts the
+SDK tag itself (with `'strict-dynamic'` a script inserted by a nonce-carrying script is trusted).
 
 ### Boot script (`frontend/app/boot/`)
 
-- `boot/boot.js` is hand-written in ES5 syntax (it must parse on engines below the floor) and linted with an
-  ES5 parser setting (a block for `boot/boot.js` in `frontend/app/eslint.config.mjs`). `boot/build.mjs` (run by
-  `predev` and `prebuild`) writes its text to `boot/inline.generated.ts`, which the layout injects. No bundler
-  touches it. Whether pnpm 11 runs `pre*` scripts by itself depends on its `enablePrePostScripts` setting —
-  verify in the pnpm documentation; if it does not, chain the call inside the scripts instead
-  (`"dev": "node boot/build.mjs && next dev -p 3001"`, the same for `build`), because CI and the Playwright
-  `webServer` of WP-03 build through `pnpm`.
+- `boot/boot.js` and `boot/stubs.js` are hand-written in ES5 syntax (they must parse on engines below the floor) and
+  linted with ESLint's own parser `espree` at `ecmaVersion: 5` (a block in `frontend/app/eslint.config.mjs`;
+  eslint-config-next parses `.js` with typescript-eslint, which does not enforce `ecmaVersion`). `boot/build.mjs` (run
+  by `predev` and `prebuild`) writes their text to `boot/inline.generated.ts`, which the layout injects. No bundler
+  touches them. pnpm 11.24 runs `pre*` scripts by itself (verified with `pnpm hello` and `pnpm --filter app hello`).
 - State: `window.__homiBoot = { ok: false, watching: false, sdk: null, show, errors: [] }`.
-- **Engine test.** Proposed feature probe for "at or above the floor": `CSS.supports('color', 'color-mix(in srgb,
-  red, blue)')` and `HTMLScriptElement.supports('importmap')`. Check both against current compatibility data
-  before use; the pair must be false on Chrome 110 and Safari 16.3 and true on Chrome 111 and Safari 16.4.
-- **Watchdog** (TMA-003), active until `ok`: a capturing `error` listener. A failed script from `/_next/static/`,
-  or an uncaught error that is not «Script error.» and not from `telegram.org`, shows the update screen. An error
-  from the SDK is recorded only. A failed `#tg-sdk` sets `sdk = 'error'` and shows nothing.
+- **Engine test.** `CSS.supports('color', 'color-mix(in srgb, red, blue)')` and `HTMLScriptElement.supports('importmap')`
+  (a missing `HTMLScriptElement.supports` counts as false). Checked: `color-mix()` ships in Chrome 111 and Safari 16.2
+  (Chrome for Developers, caniuse `mdn-css_types_color_color-mix`), import maps in Chrome 89 and Safari 16.4
+  (caniuse-lite 1.0.30001823 of the workspace), so the pair is false on Chrome 110 and Safari 16.3 and true on Chrome
+  111 and Safari 16.4.
+- **Watchdog** (TMA-003), active until `ok`: a capturing `error` listener on `window`. A failed script from
+  `/_next/static/`, or an uncaught error that is not «Script error.» and not from `telegram.org`, shows the update
+  screen. An error from the SDK is recorded only. A failed `#tg-sdk` sets `sdk = 'error'` and shows nothing — also
+  after `ok`, because the session's SDK wait reads it whenever it starts; its load (captured on `document`: a load
+  event never reaches `window`) sets `sdk = 'ok'`. The message drops `#…` and `tgWebAppData…` before it is recorded.
 - **Report.** Every watchdog hit is pushed to `errors` (name, message ≤ 300 characters, source without query and
   fragment, `tg` version, platform) and posted by `XMLHttpRequest` to `/bff/boot-error`. That route arrives with
   WP-32; until then the request fails silently. Nothing is posted without launch data.
@@ -175,7 +178,8 @@ on an old segment. The first-launch choice itself is WP-23.
   with storage disabled reads give `null`, writes are ignored and the app still starts.
 - Fix of LB-APP-012: a key is mirrored to DeviceStorage (9.0+) only if it is also restored.
 - Fix of LB-APP-021: `restoreFromDeviceStorage()` fills missing local keys, 1.5 s per key, all in parallel, never
-  rejects; the session bootstrap awaits it together with the SDK wait, i.e. before the first data request. Since
+  rejects; the session bootstrap awaits it right after the SDK wait (DeviceStorage is part of the SDK), i.e. before
+  the first data request. Since
   legacy release `index-DY_DH7h-.js` the same race also loses `kv-visits` (no previous visit, no return banner, and
   a single-entry write over the DeviceStorage copy); awaiting the restore before the first data request fixes it
   for `homi-visits` too, because no visit is recorded before the reference data has loaded (WP-30).
@@ -194,8 +198,8 @@ else Android with ≤ 4 cores or ≤ 3 GB (missing values count as 8); iOS and d
 
 | Method | Input | Does | Answers |
 | ------ | ----- | ---- | ------- |
-| `POST` | JSON `{ initData }`, at most 4 KB, same-origin `Origin` only | calls `POST /auth/telegram` per the WP-11 contract; on success sets `homi_session` with `httpOnly`, `secure`, `sameSite: 'none'`, `partitioned`, `path: '/'` and the token's expiry | `200 { token, expiresAt, me }`; `401` with the API's code when the signature or the age of `auth_date` is refused (the cookie is deleted); `403` with the access reason of the contract; `502` for anything else |
-| `GET` | the cookie, or `Authorization: Bearer` | calls `GET /me` with that token | `200 { mode: 'cookie', me }`, `200 { mode: 'header', me }`, or `200 { mode: 'none' }` when neither is present; `401` when the API refuses the token; `403` with the access reason, as on `POST`, when `GET /me` answers `access_denied` (a user refused after an earlier launch) |
+| `POST` | JSON `{ initData }`, at most 4 KB, same-origin `Origin` only (compared with `Host`) | calls `POST /auth/telegram` per the WP-11 contract; on success sets `homi_session` with `httpOnly`, `secure`, `sameSite: 'none'`, `partitioned`, `path: '/'` and the token's expiry, and `homi_session_user` (same attributes) with the SHA-256 of the Telegram user id — `MeResource` carries no Telegram id | `200 { token, expiresAt, me }`; `401` with the API's code when the signature or the age of `auth_date` is refused (both cookies are deleted); `403` with the access reason of the contract; `502` for anything else |
+| `GET` | the cookie, or `Authorization: Bearer`; refused when `Origin` or `Sec-Fetch-Site` names another site | calls `GET /me` with that token | `200 { mode: 'cookie', me, user }` (`user` = the `homi_session_user` value), `200 { mode: 'header', me }`, or `200 { mode: 'none' }` when neither is present; `401` when the API refuses the token; `403` with the access reason, as on `POST`, when `GET /me` answers `access_denied` (a user refused after an earlier launch) |
 
 Both answers are `Cache-Control: no-store`; the handler never logs a body or a header.
 
@@ -203,8 +207,11 @@ Both answers are `Cache-Control: no-store`; the handler never logs a body or a h
 
 1. No launch data → status `outside`.
 2. `track('app_launch', { entry, ms, v, sdk, js, platform })`, `entry` from the launch parser.
-3. `GET /bff/session`. If it says `cookie` and `me` belongs to the Telegram user of the launch data (the unsigned
-   user id is used only to decide whether to sign in again) → ready, no sign-in.
+3. `GET /bff/session`. If it says `cookie` and its `user` equals the SHA-256 of the Telegram user id of the launch
+   data (the unsigned user id is used only to decide whether to sign in again) → ready, no sign-in. Before this
+   step the SDK wait ends, then the DeviceStorage restore runs (it needs the SDK), `initTelegramApp`, the fragment
+   scrub and `app_launch`; the state's `prepared` turns true, and navigations of `LocaleGuard` wait for it, because
+   the scrub's `history.replaceState` undoes a navigation still pending.
 4. Otherwise `POST /bff/session` with the launch data, then `GET /bff/session`: `cookie` → cookie mode, the token
    from the body is dropped; `none` → header mode, the token stays in module memory and `GET /bff/session` is
    repeated with the bearer header to read `me`. Outcomes other than success, in step 3 or here: `403` → status
@@ -248,8 +255,10 @@ hidden, no request is retried. The same check runs when the app becomes visible 
   directly; that is what makes the depth counter exact. `nav.tab` is what the tab bar and the list/map toggle use.
 - `history.ts`: the app's own stack of addresses pushed in this launch. `depth` is its length. `nav.push` and
   `useLayerState().open` append; a `popstate` pops down to the entry that matches the new address; `nav.replace`
-  rewrites the top; `nav.tab` clears the stack (`resetDepth()`). The Navigation API, where the engine has it, may
-  replace the address matching — verify before use.
+  rewrites the top; `nav.tab` clears the stack (`resetDepth()`). The stack matches addresses on `popstate`; the
+  Navigation API is not used. The counted `useRouter` and `Link` live in the client module
+  `i18n/CountedNavigation.tsx`, re-exported by `i18n/navigation.ts`, so `redirect` and `getPathname` stay usable on
+  the server; `features/shell/NavigationBinder.tsx` hands the plain next-intl router to `nav`.
 - `useBack()` → `{ canGoBack, back }`. `canGoBack = depth > 0 || parentOf(pathname, searchParams) !== null`
   (WP-20). `back()` is `router.back()` when `depth > 0`, else `nav.replace(parentOf(…))` — a direct load of a layer
   address, or a layer parameter present at depth 0, still closes in the legacy order.
@@ -280,10 +289,15 @@ listing, then nothing (root tab: BackButton hidden, Telegram shows Close).
 | `entry` | `link` with a listing, else `news`, else `menu` |
 
 `LaunchRedirector`, once per launch after the session is ready and while `launchGate()` allows it (WP-23
-registers its gate check with `setLaunchGate(fn)`): a listing → `nav.push(routes.listing(n))` from the feed, so
-the listing opens over the feed and Back returns to it; `news = 'pets'` without a listing →
-`nav.push(routes.filters({ focus: 'pets' }))`. The `listing` and `news` parameters are then removed from the
-address. Whether the bot's buttons use `?listing=` or `startapp` is open (Q-APP-019); both work.
+registers its gate check with `setLaunchGate(fn)` and calls `releaseLaunchGate()` when it opens): a listing →
+`nav.push(routes.listing(n))` from the feed, so the listing opens over the feed and Back returns to it;
+`news = 'pets'` without a listing → `nav.push(routes.filters({ focus: 'pets' }))`. The `listing` and `news`
+parameters leave the address first, by `nav.replace`; the push waits until `useSearchParams` shows the cleaned
+address (a native `replaceState` followed by a push in the same tick collapsed into one entry — measured).
+`scrubLaunchFragment` passes a `null` state to `history.replaceState`: the App Router's patched `replaceState`
+ignores the address under a state it wrote and put the fragment back on the next Back (measured).
+`features/shell/FragmentGuard.tsx` removes the launch fragment again after every navigation, because the App Router
+brought it back on the locale switch after sign-in (measured, TMA-009). Whether the bot's buttons use `?listing=` or `startapp` is open (Q-APP-019); both work.
 
 `build.ts` — the only place a Telegram link is built: `botUrl()`, `botStartUrl(payload?)`,
 `botStartAppUrl(number)`, `noAccessStartUrl(source, number?)` (`s_<source>[--l<number>]`),
@@ -338,21 +352,26 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
 - `style-src 'unsafe-inline'` is a recorded residual risk (gesture transforms, map libraries).
 - `CSP_REPORT_ONLY=1` sends the header as report-only for the first staging deploy.
 - Also set: `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`,
-  `Permissions-Policy` with `geolocation=(self)` and everything else off, `Cache-Control: no-store` on documents.
-  No `X-Frame-Options`.
+  `Permissions-Policy` with `geolocation=(self)`, `clipboard-write=(self)` (copying the original, WP-26) and
+  everything else off (Chromium rejects `browsing-topics` with a console error, so it is not listed),
+  `Cache-Control: no-store` on documents. No `X-Frame-Options`. An empty `CSP_FRAME_ANCESTORS` means
+  `https://web.telegram.org`; `'none'` is refused.
 
 ## Files
 
-- `frontend/app/boot/{boot.js,build.mjs,inline.generated.ts}`, `frontend/app/features/shell/BootGuard.tsx`.
+- `frontend/app/boot/{boot.js,stubs.js,build.mjs,inline.generated.ts}`, `frontend/app/features/shell/BootGuard.tsx`.
 - `frontend/app/lib/telegram/{sdk,types,gates,wait,init,theme,haptics,dialogs,links,phone,share,access,location,
   homeScreen,deviceStorage,buttons,language,index}.ts`, `useTelegram.ts`.
 - `frontend/app/lib/{storage,graphics}.ts`.
-- `frontend/app/app/bff/session/route.ts`; `frontend/app/lib/session/{server,store,bootstrap}.ts`,
-  `SessionProvider.tsx`, `LocaleGuard.tsx`.
+- `frontend/app/app/bff/session/route.ts`; `frontend/app/lib/session/{server,store,bootstrap,types}.ts`,
+  `SessionProvider.tsx`, `LocaleGuard.tsx`; `frontend/server-only.test-stub.ts` (Vitest stands it in for
+  `server-only`, which Next.js resolves itself and which is not installed).
 - `frontend/app/lib/navigation/{nav,history,useBack,closeThen,useLayerState}.ts`;
-  `frontend/app/features/shell/TelegramButtons.tsx`.
+  `frontend/app/features/shell/{TelegramButtons,NavigationBinder,FragmentGuard}.tsx`,
+  `frontend/app/i18n/CountedNavigation.tsx`.
 - `frontend/app/lib/deeplinks/{parse,build,launch}.ts`, `frontend/app/features/shell/LaunchRedirector.tsx`.
-- `frontend/app/dev/telegram-emulator.ts`, `frontend/packages/testing/**`.
+- `frontend/app/dev/{telegram-emulator.ts,build.mjs}` (the emulator is built with Node's `module.stripTypeScriptTypes`:
+  no bundler), `frontend/packages/testing/**`.
 - Changed: `frontend/app/proxy.ts`, `frontend/app/lib/security/csp.ts` (new), `frontend/app/app/[locale]/layout.tsx`,
   `frontend/app/i18n/navigation.ts` (its `useRouter` rebuilt on `nav`), `frontend/app/eslint.config.mjs` (the
   ES5 block for `boot/boot.js`), `frontend/app/package.json` (scripts only), `frontend/app/.env.example` (the
@@ -367,9 +386,10 @@ frame-ancestors <CSP_FRAME_ANCESTORS>
   and `session.spec.ts` cannot sign in without the API and the workflow runs on every frontend pull request, so
   the service is added here: PHP and Composer install, `php artisan migrate` on SQLite, the API served by PHP's
   built-in server on a local port (CI only — never on a developer machine), `API_URL` pointing at it, the app
-  built and started with `NEXT_PUBLIC_APP_ENV=ci`. Whether the engines keep a `Secure`, `Partitioned` cookie on
-  `http://localhost` is **verify before use**; if not, the job terminates TLS with a throwaway certificate and
-  the project sets `ignoreHTTPSErrors`. WP-33 adds the remaining steps (stub media, WebKit, nightly, checks).
+  built and started with `NEXT_PUBLIC_APP_ENV=ci`. Chromium keeps the `Secure`, `Partitioned` cookie on
+  `http://localhost` (the cookie-mode specs pass there), so no TLS is needed. On a developer machine
+  `playwright.config.ts` gives the app server `API_URL` (default the local stack) and the mkcert root through
+  `NODE_EXTRA_CA_CERTS`. WP-33 adds the remaining steps (stub media, WebKit, nightly, checks).
 
 ## Steps
 
@@ -409,7 +429,9 @@ script, not in the catalogues:
 The paragraph per language is copied from the pinned legacy release, with the brand untouched (it names
 Telegram and the system WebView only). Language: the address segment if it is a known locale, else
 `detectLocale` of the Telegram language. First button: `Telegram.WebApp.close()`, or without the SDK
-`location.href = https://t.me/<bot>` with the bot name baked in at build time. Second button: `location.reload()`.
+a link to `https://t.me/<bot>`; the bot name comes from the boot tag's `data-bot`, rendered by the layout from
+`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the generated file is committed, so nothing environment-specific is baked into
+it), and without SDK and bot name the button is left out. Second button: `location.reload()`.
 A slow or failed SDK shows no screen: the app starts without it after at most 3 s.
 
 **Launch.**
@@ -502,7 +524,9 @@ constants exported for tests.
 
 - `launch.spec.ts`: launch → ready; `start_param=l_42-web` → listing placeholder over the feed, Back → feed;
   `?listing=7`; `?news=pets` → filters placeholder with `focus=pets`; the fragment is gone from the address after
-  launch; an `uz` Telegram user lands on `/uz`.
+  launch and after Back; an `uz` Telegram user lands on `/uz` before sign-in, and the stub user's `me.locale` (`ru`)
+  wins after it. The session status is read from `html[data-session]`; the placeholders link to the next addresses
+  through the counted `Link`.
 - `session.spec.ts`: cookie mode — one `Set-Cookie` with the attributes, no token in `localStorage`,
   `sessionStorage` or the address; header mode (the test strips `Set-Cookie`) — requests carry the bearer header;
   an intercepted `401` then a successful sign-in is invisible to the user; a refused sign-in shows the expired
@@ -555,4 +579,45 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
 
 ## Handoff
 
-Empty.
+- **Step 1 (2026-11-15): option (a)** — nonce and `'strict-dynamic'`, every document rendered at request time: the
+  root layout reads `x-nonce` with `headers()` outside `<Suspense>` and exports `instant = false`. Measured on a
+  production build: with the static shell no script tag carries the nonce (23 of 23 blocked); with the request-time
+  layout all 31 carry it and nothing is blocked. Recorded in ADR-0020 (amends ADR-0018; a shared file, so it travels
+  in its own small PR). Side effect: an unknown address answers `200` with the not-found screen and `noindex`
+  (AM-57).
+- **Steps 2–10 are done** on `feat/wp-21-telegram-and-session`, tests first, mutation-checked: the adapter `tg` with
+  every row of the table, storage and graphics, the boot script and the update screen, the fake Telegram, `launchApp`
+  and the emulator, the session route and bootstrap, navigation with BackButton and SettingsButton, launch links and
+  the locale guard, the CSP. `make ci-frontend` and the Playwright `miniapp` project pass locally (numbers in the PR).
+- **Corrections made in this specification (rule 6):** the SDK tag inserted by the boot script (React 19 hoists an
+  `async` script above the inline ones); the emulator before the boot script; `boot/stubs.js`; the bot name through
+  `data-bot`; ES5 linting with `espree`; `homi_session_user` and the `user` of `GET`; the restore after the SDK wait;
+  `prepared` and the wait of `LocaleGuard`; `FragmentGuard` and the `null` state of the scrub; the two-phase launch
+  redirect; the counted navigation in a client module plus `NavigationBinder`; `clipboard-write`, no
+  `browsing-topics`; the default frame ancestor; the cookie on `http://localhost`; the `uz` launch case.
+- **Decisions of the implementation** (no ADR): `Me` is typed by hand in `lib/session/types.ts` with a test against
+  `docs/api/openapi.json`, because adding `@homi/types` to the app needs a lockfile change (WP-22 switches);
+  `app_launch` sends `v` = `NEXT_PUBLIC_APP_VERSION` (empty until WP-32), `sdk` = the outcome of the SDK wait and
+  `js` = the time the bootstrap module was evaluated; the e2e specs read the session from `html[data-session]` and
+  follow the placeholders' links; outside production the stub-scenario cookie is not forwarded yet (WP-22).
+- **Shared files** travel separately: ADR-0020 with its index row, and the server-only keys of
+  `frontend/app/.env.example` (`API_URL`, `CSP_FRAME_ANCESTORS`, `CSP_TILE_HOSTS`, `CSP_ANALYTICS_HOSTS`,
+  `CSP_REPORT_ONLY`). `.github/workflows/frontend-e2e.yml` (the API on stubs) and `frontend/playwright.config.ts`
+  (`webServer.env`) are in the package PR and announced there.
+- **Steps 11–12 wait for the production track** (first developer's consent): the request below, the deploy to
+  staging in report-only mode, the checks inside Telegram on iOS, Android, Desktop and Web with the session mode each
+  client got, then enforcing the policy and the same check on production. The (T) lines of the checklist and the
+  framing line stay open until then.
+- **Request to the production track:** (1) the app vhosts stop sending `X-Frame-Options`; (2) documents of the app are
+  not cached by nginx, `Set-Cookie` passes, and `Host` reaches the app (the session route compares `Origin` with it);
+  (3) the app's server environment on staging and production: `API_URL`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`,
+  `CSP_FRAME_ANCESTORS` (Telegram Web origins, Q-SEC-012; empty means `https://web.telegram.org`), `CSP_TILE_HOSTS`,
+  `CSP_ANALYTICS_HOSTS`, `CSP_REPORT_ONLY=1` for the first deploy; (4) the Mini App address of each environment
+  attached to its bot (DEC-45).
+- **For the next packages:** WP-22 calls `reauthenticate()` on `unauthorized`, takes the token from `getAuth()`, and
+  reads the cookie server-side with `getSessionToken()` inside `<Suspense>`; WP-23 renders the gates from
+  `useSession()` (`outside`, `denied` with `reason`, `expired`, `booting` with `error` and `retry()`), registers its
+  launch gate with `setLaunchGate` / `releaseLaunchGate`, and calls `patchMe` after a saved setting; WP-24 calls
+  `measureScrollPerformance()` on the first scroll; WP-26 adds the call-page host to `LINK_HOSTS`, WP-27 the map
+  attribution hosts and the tile hosts of `CSP_TILE_HOSTS`; WP-32 sets `__homiBoot.watching` and the boot-error
+  route.

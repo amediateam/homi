@@ -1,8 +1,9 @@
 name: frontend-e2e
 
 # End-to-end tests of the frontend (WP-03): Playwright against a production build of `app` on :3001, with the fake
-# Telegram of `@homi/testing`. Its guard fails a test that sends a request to an external host. The nightly run,
-# WebKit and the API on stubs come with WP-21 and WP-33.
+# Telegram of `@homi/testing`. Its guard fails a test that sends a request to an external host. The app signs in
+# through the API on stubs, started here on SQLite with PHP's built-in server (WP-21; CI only — developer machines
+# use the API behind nginx). The nightly run, WebKit and stub media come with WP-33.
 on:
   pull_request:
     paths:
@@ -52,8 +53,45 @@ jobs:
       - name: Install Chromium and its system libraries
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      # The variables override `.env`, which is copied from `.env.example`; the server inherits them.
+      - name: Start the API on stubs
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/backend/database/e2e.sqlite
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          TELESCOPE_ENABLED: 'false'
+          PULSE_ENABLED: 'false'
+          SOURCES_ALLOW_STUB: 'true'
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          touch database/e2e.sqlite
+          php artisan migrate --force --no-interaction
+          # Laravel's router script takes the public directory from the working directory, as `artisan serve` does.
+          (cd public && nohup php -S 127.0.0.1:8080 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php > "$RUNNER_TEMP/api.log" 2>&1 &)
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/api/v1/reference > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/api.log"
+          exit 1
+
       - name: End-to-end tests
         run: pnpm test:e2e
+        env:
+          API_URL: http://127.0.0.1:8080/api/v1
+          NEXT_PUBLIC_APP_ENV: ci
 
       - name: Upload traces and report
         if: failure()
@@ -63,4 +101,5 @@ jobs:
           path: |
             frontend/test-results/
             frontend/playwright-report/
+            ${{ runner.temp }}/api.log
           retention-days: 7
