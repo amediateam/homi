@@ -1,0 +1,23 @@
+{
+  "name": "@homi/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./brand-words.json": "./brand-words.json"
+  },
+  "scripts": {
+    "import-legacy": "node scripts/import-legacy.mjs",
+    "test": "vitest run --config ../../vitest.config.mts --project @homi/i18n",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"@homi/i18n: no lint rules yet\""
+  },
+  "dependencies": {
+    "@homi/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26",
+    "typescript": "^6"
+  }
+}

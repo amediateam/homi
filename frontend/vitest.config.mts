@@ -42,7 +42,7 @@ function workspacePackage(name: string, environment: "node" | "jsdom") {
       name: `@homi/${name}`,
       root: path(`./packages/${name}`),
       environment,
-      include: ["src/**/*.test.{ts,tsx}"],
+      include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
       setupFiles,
     },
   };
@@ -55,6 +55,7 @@ export default defineConfig({
       app("landing"),
       app("arm"),
       workspacePackage("ui", "jsdom"),
+      workspacePackage("i18n", "node"),
       workspacePackage("testing", "jsdom"),
       workspacePackage("config", "node"),
       workspacePackage("types", "node"),
