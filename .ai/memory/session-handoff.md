@@ -35,7 +35,7 @@ Written for whoever continues the **development track** (the second developer, a
 7. **First developer:** accept ADR-0016 … 0019, answer the PR-size and deploy questions of #30; then WP-01 `DONE`.
 8. **WP-00 (production track):** counts, migration approval, deploy, staging check; outbound addresses to the operator (#37).
 9. **Reviewer decisions of #37:** `GET /listings/new`, the `503` on a malformed `count`, DEC-51 hiding, a WP-30 split. Unchanged: Q-API-059 … 062, Q-APP-025, DEC-13 / Q-SEC-021, DEC-47, WP-59 operators, DEC-08/12/19/20.
-10. **WP-14** (the next queue package after WP-13) only on the developer's word.
+10. **WP-20** (the next queue package after WP-13, stage B) only on the developer's word.
 
 ## Gotchas learned this session
 - Source feature names contain dots: read `config('sources.features')` whole; a dotted key reads a nested array.
