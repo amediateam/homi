@@ -38,7 +38,7 @@ Written for whoever continues the **development track** (the second developer, a
 - Vitest here has no `globals`, so Testing Library does not clean up by itself: call `cleanup()` in `afterEach`.
 - `AbortSignal.timeout` ignores Vitest's fake timers; a `setTimeout` + `AbortController` does not.
 - `pnpm install --offline` fails the supply-chain check here; an online `pnpm install` for workspace links changes only the importers (check the lockfile diff).
-- zsh: never name a loop variable `path` (it is tied to `PATH`). A `brew upgrade` in the developer's terminal can break `node` for minutes (simdutf); wait, do not touch brew. Next numbers: AM-59, KI-30, ADR 0021.
+- zsh: never name a loop variable `path` (it is tied to `PATH`). A `brew upgrade` in the developer's terminal can break `node` for minutes (simdutf); wait, do not touch brew. Next numbers: AM-59, KI-31, ADR 0021 (KI-30 taken by the dev-check fix, branch `fix/dev-check-app-locale-redirect`).
 
 ## Active subagent work at handoff
 - None (the two WP-22 subagents finished; their files are on `main`).
