@@ -382,7 +382,7 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
   `docs/ai/reports/phase-3-notes.md` §P.
 - **Merged** on 2026-11-15 on «сливай #50» (merge commit `6c48ce6`), after `backend`, `frontend` and `frontend-e2e`
   were green on `5c93ca9`; `backend` run 43665456702 and `frontend` run 43665456689 green on `main`. This
-  status and the `CLAUDE.md` update are in the follow-up docs PR.
+  status and the `CLAUDE.md` update are in the follow-up docs PR #51.
 - **Next:**
   1. ~~review and merge~~ (done);
   2. the production track deploys; on staging `GET /api/v1/radars` answers `[]` and `POST /api/v1/radars` answers
