@@ -1,0 +1,4 @@
+{
+  "description": "Legacy brand names, handles and hosts that must never reach a HOMI user (WP-20). JavaScript regular expressions, matched case-insensitively. The catalogue test checks every merged message; the app test checks frontend/app outside lib/brand. The legacy key name found.kvadro is a key, not a value, and deliberately matches none of them.",
+  "patterns": ["kvadro²", "kvadro ?app", "kvadro\\.(app|uz)", "@kvadro", "t\\.me/kvadro", "kvadro_?bot", "квадро"]
+}
