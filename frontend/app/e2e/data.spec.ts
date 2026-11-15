@@ -7,7 +7,11 @@ import type { Page } from "@playwright/test";
  * `/bff` in header mode.
  */
 
-const proof = (page: Page, name: string) => page.locator(`[data-proof="${name}"]`);
+/**
+ * The visible proof only: with `cacheComponents` the router may keep an earlier copy of the route hidden in
+ * `<Activity>` (`preserving-ui-state.md`), so the same element can be in the document twice, once hidden.
+ */
+const proof = (page: Page, name: string) => page.locator(`[data-proof="${name}"]`).filter({ visible: true });
 const isCountRead = (url: string) => new URL(url).pathname === "/bff/listings/count";
 
 async function ready(page: Page) {
