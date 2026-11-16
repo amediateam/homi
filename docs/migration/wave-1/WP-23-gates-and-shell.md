@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (this PR) |
+| Status | REVIEW (#68) |
 | Depends on | WP-22 |
 | Size | ≈ 3 000 changed lines, L — the largest package of stage B; the steps are grouped in four parts (A–D) and each part ends in a mergeable state, so the package can change hands midway |
 | Behaviour reference | `03` §1.2 (back, gestures, collapsing chrome), §1.4 (render gating), §1.6 (error layers), §2 screens SCR-002 … SCR-006, SCR-010, SCR-042, SCR-043, SCR-045, §3.4 (constants), §3.6 (z-index, safe areas); `05` TMA-011, TMA-013, TMA-022, TMA-025, TMA-026, TMA-035, TMA-039, TMA-040; task files KV-FE-012, KV-FE-013, KV-FE-014, KV-FE-031 (nearest city), KV-FE-036, KV-FE-040, KV-FE-041, KV-FE-042, KV-FE-043, KV-FE-044, KV-FE-045, KV-FE-046 — behaviour, texts, edge cases and test ideas only; their file layout, layer stack, API paths and transport are not taken |

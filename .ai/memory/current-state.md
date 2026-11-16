@@ -106,7 +106,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   the packages `@homi/search` and `@homi/i18n/format`; the feed and map placeholders show a data proof. On the branch:
   `make ci-frontend` → exit 0 (app 480, `@homi/search` 238 + 1 todo, `@homi/i18n` 108), Playwright `data.spec.ts` → 5
   passed; `frontend` and `frontend-e2e` green on the PR (`3bb7831`, e2e 56 passed).
-- **WP-23 (REVIEW, branch `feat/wp-23-gates-and-shell`, five commits on `7792c67`; not on `main`):** `@homi/ui` shell
+- **WP-23 (REVIEW in #68, branch `feat/wp-23-gates-and-shell`, five commits on `7792c67`; not on `main`):** `@homi/ui` shell
   primitives (`BottomSheet`, `SubPageFrame`, `FilterChip`/`HeaderChip`, `SegmentedControl`, `ChoiceList`,
   `EmptyState`, `ErrorState`, the gesture hooks, the icons) and the gallery `/dev/ui` (`local`, `ci`, `staging`
   builds); `lib/ui/*` (toast, feedback, confirm, `shellState`); `features/shell/*` (`AppShell`, top bar, tab bar, view
