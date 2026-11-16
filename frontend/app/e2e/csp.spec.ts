@@ -23,7 +23,8 @@ test.describe("content security policy", () => {
     expect(headers["x-frame-options"]).toBeUndefined();
     await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
 
-    await page.locator('[data-link="/listing/42"]').filter({ visible: true }).first().click();
+    // The feed's first card (WP-24): its photos are images too.
+    await page.locator("article[data-listing] a").filter({ visible: true }).first().click();
     await expect(page.locator('[data-route="listing"]').filter({ visible: true })).toBeVisible();
     await page.evaluate(async () => {
       const image = new Image();

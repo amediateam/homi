@@ -17,7 +17,9 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `boot/` | `stubs.js` and `boot.js` (ES5, inlined by the root layout from the committed `inline.generated.ts`; `build.mjs` writes it before `dev` and `build`): theme and lite class before paint, the engine test, the boot watchdog, «Обновите Telegram», the SDK tag |
 | `dev/` | The development Telegram emulator; `build.mjs` turns it into `public/__dev/telegram-emulator.js` (git-ignored) before `next dev` and deletes it before a build |
 | `features/` | One folder per feature; route files mount their components |
-| `features/shell/` | `AppShell` (the variant of the address by `shellVariantOf`; a layer keeps the chrome of the page below), `TopBar`, `TabBar`, `ViewToggle`, `MiniTitle` and `useMiniChrome` (the collapsing chrome), `PullToRefresh` and `usePullToRefresh`, `RouteSheet` and `RouteOverlay` (layer or standalone), `SubPage`, `ToastHost` (WP-23); `RefreshProof` is the feed's pull handler until WP-24; the placeholders, `BootGuard`, `TelegramButtons`, `LaunchRedirector`, `FragmentGuard`, `NavigationBinder`, the demo marker (WP-20 … WP-22) |
+| `features/shell/` | `AppShell` (the variant of the address by `shellVariantOf`; a layer keeps the chrome of the page below), `TopBar`, `TabBar`, `ViewToggle`, `MiniTitle` and `useMiniChrome` (the collapsing chrome), `PullToRefresh` and `usePullToRefresh`, `RouteSheet` and `RouteOverlay` (layer or standalone), `SubPage`, `ToastHost` (WP-23); the placeholders, `BootGuard`, `TelegramButtons`, `LaunchRedirector`, `FragmentGuard`, `NavigationBinder`, the demo marker (WP-20 … WP-22); `SearchProof` / `SearchProofServer`, the WP-22 data proof on the map placeholder until WP-27 |
+| `features/feed/` | The search list (WP-24): `FeedServer` (page one with the cookie, `readFirstPage`; the small-photo hint of the request), `FeedScreen` (the feed's own search state, the list key, pull-to-refresh, the top on a new key), `feedQuery` (the query and the list key both sides build), `ListingFeed` and `useCursorFeed` (the cursor list WP-29 reuses), the card (`ListingCard`, `PhotoStrip`, `Photo`, `FavButton`, `ListingCardSkeleton`, `FeedSkeleton`), `FeedHeader` (the chips of the top bar), `FewResultsNote`, `FeedEmpty`, and the pure rules `cardText`, `verdict`, `badges`, `images`, `fewResults`, `inlineSlot` |
+| `features/radars/` | `capability.ts` (`radarsReady`, `useRadarsEnabled`) and the `subscribe.ts` stub that WP-30 fills |
 | `features/gates/` | `resolveGate` (the gate table), `gateState` (return address, picks, `isGatePending()`), `GateRedirector` (every navigation into and out of a gate; runs `useBootRetry`), `bootRetryStore` (`useBootRetryState()`, `retryBoot()`), `GateWait`, `OutsideScreen`, `NoAccessScreen` with `accessReason.ts` (which rows it shows), `LanguagePicker`, `WelcomeCity`, `SessionExpired` / `SessionExpiredScreen`, `CrashScreen`, `useRenderReport` |
 | `features/city/` | `CityList` (rows with counts, the locate row with its own 12 s limit) and `nearestCity` (a town within 16 km, then a region within 110 km, then a town within 110 km); `/welcome/city` uses them, WP-25's city sheet reuses them |
 | `i18n/` | next-intl: `routing.ts`, `request.ts` (locale from `next/root-params`), `navigation.ts` (`Link`, `useRouter` — both counted in the history stack, `usePathname`, `redirect`), `IntlClientProvider.tsx`, `labels.ts` |
@@ -25,17 +27,17 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `lib/session/` | The bootstrap of a launch, `SessionProvider` / `useSession()`, `reauthenticate()`, the in-memory token of header mode, `LocaleGuard`, server-only `getSessionToken()` |
 | `lib/navigation/` | `routes.ts` (the only place an address is spelled; `matchRoute` and `searchKeysOf` read one), `nav`, the history stack, `useBack`, `closeThen`, `useLayerState` |
 | `lib/deeplinks/` | `parseLaunch` (start_param, `?listing=`, `?news=`, `?map=`), the link builders, the launch gate, `launchTarget` and `launchPending()` (the city gate waits for the launch target) |
-| `lib/storage.ts`, `lib/graphics.ts` | The client storage keys with their DeviceStorage policy; lite graphics |
+| `lib/storage.ts`, `lib/graphics.ts`, `lib/device.ts` | The client storage keys with their DeviceStorage policy; lite graphics; the device rule of lite graphics, which a Server Component can import (`graphics.ts` re-exports it) |
 | `lib/security/csp.ts` | The nonce CSP of `proxy.ts` (ADR-0020) |
 | `lib/brand/` | HOMI's name, bot, links and artwork paths; the only place a brand word may appear |
 | `lib/flags.ts` | `devFlags`: the 17 `DEV` switches, all off |
 | `lib/analytics/events.ts`, `lib/errors/report.ts` | `track` and `reportError` facades (no-ops until WP-32) |
 | `lib/api/` | `server.ts` (server-only: one typed function per `/api/v1` method, `serverApi()` with the session, `publicApi()` without), `browser.ts` (`bffFetch`), `errors.ts` (`UiError`, the mapping table), `scenario.ts` (stub scenarios outside production), `bffAllowList.ts` |
-| `lib/actions/` | `runAction` (the one shape of a Server Action), `validate.ts`, `useAction`; `settings.ts` (`updateSettings`, the first `'use server'` file, WP-23); the other actions arrive with the packages that need them (WP-22 "Server Actions") |
+| `lib/actions/` | `runAction` (the one shape of a Server Action), `validate.ts`, `useAction`; `settings.ts` (`updateSettings`, the first `'use server'` file, WP-23), `favorites.ts` (`setFavorite`, WP-24); the other actions arrive with the packages that need them (WP-22 "Server Actions") |
 | `lib/ui/` | `toast.ts` (one toast per scope, 4 s, 6 s with an action), `feedback.ts` (`failed()`, `saved()`), `confirm.ts` (`confirmText`), `shellState.ts` (the launch's memory: the last search and saved addresses of the tabs, the pull handlers, the drawing request) |
-| `lib/data/` | `useResource` (the small client data hook), `sessionMaps` (favourites, seen and hidden of this launch), `sources.ts` (which drivers answered the current screen; drives the "demo data" marker) |
+| `lib/data/` | `useResource` (the small client data hook), `sessionMaps` (favourites, seen and hidden of this launch), `sources.ts` (which drivers answered the current screen; drives the "demo data" marker), `previewCache` (the last 200 cards opened, for WP-26) |
 | `lib/reference/` | The cached reference data (`getReference`, `getCities`), `ReferenceFeed` → `ReferenceProvider`, `useReference()`, `useCityStats()`, `useCitiesStats()` |
-| `lib/search/` | `useSearchState`, `readSearchState`, `searchStateFromHref`, `searchRules` over `@homi/search` |
+| `lib/search/` | `useSearchState`, `useScreenSearchState` (the search of a screen's own address, held under a layer or another tab, KI-43), `readSearchState`, `addressCity`, `searchStateFromHref`, `searchRules` over `@homi/search` |
 | `lib/money/useMoney.ts` | `createMoney` of `@homi/i18n/format` bound to the profile's currency and the reference rate |
 | `proxy.ts` | Locale redirect (cookie `NEXT_LOCALE`, else `ru`), then the CSP with a fresh nonce and the security headers |
 | `styles/app.css`, `styles/shell.css` | Tailwind and `@homi/ui/styles.css` (tokens, themes, lite, motion), then the shell's own rules: the tab bar and its lens, the collapsed chrome (`html.chrome-mini`) of the tab bar, top bar, mini title and view toggle, their lite form, long tab labels |
@@ -51,15 +53,21 @@ layer, and the runtime rules — a missing key renders its path and is reported 
   `x-nonce` and exports `instant = false`. An unknown address shows the not-found screen with `noindex` and status
   `200`; `notFound()` is thrown under `<Suspense>`, or Next.js serves a shell without the boot script (AM-59).
 - A launch: the SDK wait (3 s at most), the DeviceStorage restore, `ready`/`expand`, the fragment scrub, then a
-  valid cookie of the same Telegram user or one sign-in through `/bff/session`. Cookie mode refreshes the router once
-  so Server Components render with the session; header mode keeps the token in memory only. `html[data-session]`
-  mirrors the status (`booting`, `ready`, `outside`, `denied`, `expired`).
+  valid cookie of the same Telegram user or one sign-in through `/bff/session`. After a sign-in of the launch
+  (`useSession().renewed`) cookie mode refreshes the router once, so Server Components render with the new cookie; a
+  launch that confirmed the document's cookie does not. Header mode keeps the token in memory only.
+  `html[data-session]` mirrors the status (`booting`, `ready`, `outside`, `denied`, `expired`).
 - The app server calls the API at `API_URL` (server-only), else `NEXT_PUBLIC_API_URL`.
 
 ## Data
 
 - A screen reads on the server with `serverApi()` inside `<Suspense>` and hands the answer to the client as
-  `initial` of `useResource`; without a cookie (header mode) the same read goes through `bffFetch` and `/bff/*`.
+  `initial` of `useResource` (of `useCursorFeed` for a listing list); without a cookie (header mode) the same read goes
+  through `bffFetch` and `/bff/*`. The client adopts `initial` only for the key it was read for, so both sides build
+  the key from the same pure module (`features/feed/feedQuery.ts` for the feed), and the hydration render must list
+  what the server rendered: the saved city is read through `useSyncExternalStore` (none at hydration), and the feed
+  gets the profile city the server read (`profileCity`). A listing list drops a page one adopted before `ready` when
+  the launch signed in (`renewed`): it was read with another cookie.
   Every call returns `ApiResult` and never throws for an answer; screens decide by `UiError`.
 - Mutations are Server Actions built on `runAction`, called through `useAction` (the header-mode token travels in
   the action's body). Nothing per-user is cached; only `lib/reference` is (`'use cache'`, ten minutes, per locale).

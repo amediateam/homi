@@ -1,7 +1,7 @@
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { restoreFromDeviceStorage, RESTORE_TIMEOUT_MS, STORAGE_POLICY, storageGet, storageSet } from "@/lib/storage";
+import { restoreFromDeviceStorage, RESTORE_TIMEOUT_MS, STORAGE_POLICY, storageGet, storageSet, subscribeStorage } from "@/lib/storage";
 
 let fake: FakeTelegram | null = null;
 
@@ -90,6 +90,28 @@ describe("storage policy", () => {
 
     expect(() => storageSet("homi-theme", "dark")).not.toThrow();
     expect(storageGet("homi-theme")).toBeNull();
+  });
+});
+
+describe("subscribeStorage (WP-24)", () => {
+  it("reports every write and every restore, until unsubscribed; a refused value is no write", async () => {
+    fake = fakeTelegram({ version: "9.0" });
+    fake.webApp.DeviceStorage.setItem("homi-city", "samarkand");
+    await flush();
+    const listener = vi.fn(() => `${storageGet("homi-theme")} ${storageGet("homi-city")}`);
+    const unsubscribe = subscribeStorage(listener);
+
+    storageSet("homi-theme", "dark");
+    storageSet("homi-theme", null);
+    storageSet("homi-nudge", "hash=abc");
+    expect(listener.mock.results.map((call) => call.value)).toEqual(["dark null", "null null"]);
+
+    await restoreFromDeviceStorage();
+    expect(listener.mock.results.at(-1)?.value).toBe("null samarkand");
+
+    unsubscribe();
+    storageSet("homi-city", "bukhara");
+    expect(listener).toHaveBeenCalledTimes(3);
   });
 });
 

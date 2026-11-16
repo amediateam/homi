@@ -17,9 +17,11 @@ afterEach(() => {
   router.refresh.mockReset();
 });
 
-async function mount(answer: unknown) {
+/** Answers the session exchange in this order; the last answer repeats. */
+async function mount(...answers: unknown[]) {
   fake = fakeTelegram({ initData: syntheticInitData({ id: 5 }) });
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(answer), { status: 200 })));
+  const queue = [...answers];
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(queue.length > 1 ? queue.shift() : queue[0]), { status: 200 })));
   vi.resetModules();
   const { SessionProvider, useSession } = await import("@/lib/session/SessionProvider");
   function Probe() {
@@ -36,12 +38,20 @@ async function mount(answer: unknown) {
 }
 
 describe("SessionProvider", () => {
-  it("starts the session and refreshes the router once in cookie mode", async () => {
-    await mount({ mode: "cookie", me, user: createHash("sha256").update("5").digest("hex") });
+  it("starts the session and refreshes the router once in cookie mode after a sign-in of this launch", async () => {
+    const user = createHash("sha256").update("5").digest("hex");
+    await mount({ mode: "none" }, { token: "1|abc", expiresAt: "2099-01-01T00:00:00+00:00", me }, { mode: "cookie", me, user });
 
     await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("ready cookie"));
     expect(router.refresh).toHaveBeenCalledTimes(1);
     expect(document.documentElement.dataset.session).toBe("ready");
+  });
+
+  it("does not refresh when the launch confirmed the cookie the document came with (WP-24)", async () => {
+    await mount({ mode: "cookie", me, user: createHash("sha256").update("5").digest("hex") });
+
+    await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("ready cookie"));
+    expect(router.refresh).not.toHaveBeenCalled();
   });
 
   it("at sign-in the profile's city overwrites the saved homi-city, without a server call (WP-22, BR-APP-010)", async () => {

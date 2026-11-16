@@ -1,66 +1,18 @@
 import { useSyncExternalStore } from "react";
 
+import { currentProfile, type DeviceProfile, GRAPHICS_RULES, isAndroid, isLowEndDevice } from "@/lib/device";
 import { storageGet, storageSet } from "@/lib/storage";
+
+export { currentProfile, type DeviceProfile, GRAPHICS_RULES, isAndroid, isLowEndDevice, performanceClassOf } from "@/lib/device";
 
 /**
  * Lite graphics (`03` §1.7). The choice is `homi-graphics` (`full` / `lite`, absent = auto), a measured result
  * `homi-graphics-measured` (`lite`). `html.lite` switches the CSS of `@homi/ui` (`lite.css`). The boot script
  * (`boot/boot.js`) repeats the auto rule in ES5 from the same constants before paint; a unit test compares both.
+ * The device rule lives in `lib/device.ts`, which a Server Component can import, and is re-exported here.
  */
 
 export type GraphicsMode = "auto" | "full" | "lite";
-
-export interface DeviceProfile {
-  userAgent: string;
-  /** `navigator.hardwareConcurrency`. */
-  cores?: number;
-  /** `navigator.deviceMemory`, in GB. */
-  memory?: number;
-}
-
-export const GRAPHICS_RULES = {
-  lowEndCores: 4,
-  lowEndMemoryGb: 3,
-  /** A missing core or memory value counts as this. */
-  missingValue: 8,
-  frameIntervals: 150,
-  slowFrameMs: 28,
-  slowShare: 0.2,
-} as const;
-
-/** `Telegram-Android/<version> (<device>; <os>; <sdk>; LOW|AVERAGE|HIGH)` (TMA-041). */
-const TELEGRAM_ANDROID_CLASS = /Telegram-Android\/[^(]*\([^)]*;\s*(LOW|AVERAGE|HIGH)\s*\)/;
-
-/** The class Telegram for Android writes into its User-Agent, or `null` (TMA-041). */
-export function performanceClassOf(userAgent: string): "LOW" | "AVERAGE" | "HIGH" | null {
-  return (TELEGRAM_ANDROID_CLASS.exec(userAgent)?.[1] as "LOW" | "AVERAGE" | "HIGH" | undefined) ?? null;
-}
-
-export function currentProfile(): DeviceProfile {
-  if (typeof navigator === "undefined") {
-    return { userAgent: "" };
-  }
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-  return { userAgent: navigator.userAgent, cores: navigator.hardwareConcurrency || undefined, memory };
-}
-
-function isAndroid(profile: DeviceProfile): boolean {
-  return /Android/i.test(profile.userAgent);
-}
-
-/** The Telegram-Android class decides when present; else Android with few cores or little memory. iOS and desktop never. */
-export function isLowEndDevice(profile: DeviceProfile = currentProfile()): boolean {
-  const telegramClass = performanceClassOf(profile.userAgent);
-  if (telegramClass !== null) {
-    return telegramClass !== "HIGH";
-  }
-  if (!isAndroid(profile)) {
-    return false;
-  }
-  const cores = profile.cores ?? GRAPHICS_RULES.missingValue;
-  const memory = profile.memory ?? GRAPHICS_RULES.missingValue;
-  return cores <= GRAPHICS_RULES.lowEndCores || memory <= GRAPHICS_RULES.lowEndMemoryGb;
-}
 
 export function getGraphicsMode(): GraphicsMode {
   const stored = storageGet("homi-graphics");

@@ -2,10 +2,10 @@ import { expect, launchApp, test, type LaunchedApp } from "@homi/testing/playwri
 import type { Page } from "@playwright/test";
 
 /**
- * The shell of WP-23 (SCR-006, SCR-010, `03` §1.2) over the placeholder routes and the API on stubs: the tab bar and
- * its memory, the collapsing chrome, the list / map switch and the map bar, the deal switch, pull-to-refresh on the
- * feed's stand-in handler, and a sheet route closed four ways, in cookie mode and (the tests that navigate, pull and
- * open a sheet) in header mode. The last block keeps the browser proof of the part B wrappers on the dev gallery
+ * The shell of WP-23 (SCR-006, SCR-010, `03` §1.2) over the feed of WP-24, the placeholder routes and the API on
+ * stubs: the tab bar and its memory, the collapsing chrome, the list / map switch and the map bar, the deal switch,
+ * pull-to-refresh on the feed, and a sheet route closed four ways, in cookie mode and (the tests that navigate, pull
+ * and open a sheet) in header mode. The last block keeps the browser proof of the part B wrappers on the dev gallery
  * (`/dev/ui`): the toast host, `RouteSheet`, `SubPage` and `RouteOverlay`.
  */
 
@@ -35,6 +35,21 @@ const tab = (page: Page, key: "search" | "saved" | "radars" | "settings") => vis
 const toggle = (page: Page) => visible(page, "[data-view-toggle]");
 const html = (page: Page) => page.locator("html");
 const filtersSheet = (page: Page) => visible(page, '[data-slot="bottom-sheet"] [data-route="filters"][data-layer="sheet"]');
+/** The filters chip of the feed's top bar (WP-24): it pushes the filters sheet with the search state. */
+const filtersChip = (page: Page) => visible(page, '[data-topbar="search-list"] [data-chip="filters"]');
+const cards = (page: Page) => visible(page, "article[data-listing]");
+
+/** The feed's page-one reads through `/bff` from now on: `/bff/listings` without a cursor (WP-24). */
+function recordFirstPages(page: Page): string[] {
+  const seen: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/bff/listings" && !url.searchParams.has("cursor")) {
+      seen.push(request.url());
+    }
+  });
+  return seen;
+}
 const MINI = /(^|\s)chrome-mini(\s|$)/;
 
 /** Light impacts the page asked the fake Telegram for so far (TMA-025). */
@@ -151,20 +166,21 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => backVisible(page)).toBe(false);
     });
 
-    test("a pull on the feed calls its handler once; a short pull and a pull under a sheet do nothing", async ({ page }) => {
+    test("a pull on the feed asks for page one again; a short pull and a pull under a sheet do nothing", async ({ page }) => {
       const app = await open(page, mode, "/");
       await expect(route(page, "feed")).toBeVisible();
-      const counter = visible(page, '[data-proof="refresh"]');
+      await expect(cards(page).first()).toBeVisible();
       const indicator = page.locator("[data-ptr]");
-      await expect(counter).toHaveAttribute("data-refresh-count", "0");
       await expect(indicator).toHaveAttribute("aria-hidden", "true");
+      const firstPages = recordFirstPages(page);
 
-      // 200 px of finger travel moves the indicator 100 px, past the 72 px trigger: one haptic, the spinner, one call.
+      // 200 px of finger travel moves the indicator 100 px, past the 72 px trigger: one haptic, the spinner, page one.
       const before = await impacts(app);
       await touchDrag(page, { x: 195, y: 300 }, { x: 195, y: 500 });
       await expect(indicator).toHaveAttribute("data-ptr", "refreshing");
-      await expect(counter).toHaveAttribute("data-refresh-count", "1");
+      await expect.poll(() => firstPages.length).toBe(1);
       await expect(indicator).toHaveAttribute("data-ptr", "idle");
+      await expect(cards(page).first()).toBeVisible();
       expect(await impacts(app)).toBe(before + 1);
 
       // 100 px of travel stays below the trigger.
@@ -172,23 +188,24 @@ for (const mode of ["cookie", "header"] as const) {
       expect(await indicator.getAttribute("data-ptr")).toBe("idle");
 
       // Under a sheet the pull is off.
-      await visible(page, '[data-link="/filters"]').first().click();
+      await filtersChip(page).click();
       await expect(filtersSheet(page)).toBeVisible();
       await settled(page, '[data-slot="bottom-sheet"]');
       await touchDrag(page, { x: 195, y: 60 }, { x: 195, y: 260 });
       expect(await indicator.getAttribute("data-ptr")).toBe("idle");
       await press(page, "backButtonClicked");
       await expect(page).toHaveURL(/\/ru$/);
-      await expect(counter).toHaveAttribute("data-refresh-count", "1");
+      await expect(cards(page).first()).toBeVisible();
+      expect(firstPages).toHaveLength(1);
     });
 
     test("a sheet route closes by BackButton, backdrop, × and drag; the page below is locked meanwhile", async ({ page }) => {
       await open(page, mode, "/");
       await expect(route(page, "feed")).toBeVisible();
       const openFilters = async () => {
-        await visible(page, '[data-link="/filters"]').first().click();
+        await filtersChip(page).click();
         await expect(filtersSheet(page)).toBeVisible();
-        await expect(page).toHaveURL(/\/ru\/filters$/);
+        await expect(page).toHaveURL(/\/ru\/filters\?city=tashkent$/);
         await expect(page.locator("body")).toHaveClass(/(^|\s)sheet-open(\s|$)/);
       };
       const closed = async () => {
@@ -223,10 +240,8 @@ test.describe("shell", () => {
   test("the chrome collapses on scroll, expands on the way up, and the first tap only expands", async ({ page }) => {
     const app = await open(page, "cookie", "/");
     await expect(route(page, "feed")).toBeVisible();
-    // The placeholder feed is shorter than the screen: give the page something to scroll.
-    await page.locator("[data-shell-content]").evaluate((element) => {
-      element.style.minHeight = "4000px";
-    });
+    // Page one of the stub feed (20 cards) is several screens tall.
+    await expect(cards(page).first()).toBeVisible();
     const miniTitle = page.locator("[data-mini-title]");
     await expect(miniTitle).toBeHidden();
 

@@ -98,6 +98,11 @@ describe("the merged catalogues", () => {
     expect(merged.ru["error.retry"]).toBe("Повторить");
     expect(merged.ru["city.counts"]).toBe("{rent} аренда · {sale} продажа");
   });
+
+  it("carry the key of WP-24 next to the legacy feed keys: the list's status for screen readers", () => {
+    expect(locales.map((locale) => merged[locale]["feed.loading"])).toEqual(["Загрузка…", "Yuklanmoqda…", "Loading…"]);
+    expect(merged.ru["feed.retry"]).toBe("{error} — повторить");
+  });
 });
 
 describe("the legacy layer", () => {

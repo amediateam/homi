@@ -85,16 +85,27 @@ app/[locale]/(main)/page.tsx
 - `FeedServer`: `readSearchState()` of WP-22 (the server-side wrapper of `fromSearchParams()` of `@homi/search`)
   gives `filters` and `sort`. With a session token it calls
   `serverApi()` for `GET /listings` (`toApiQuery(filters)`, `sort` unless `new`, page size 20) and passes
-  `initial = { key, result }`, where `result` is the `ApiResult` (a failure is passed on, not thrown). Without a
-  token, or when the address has no city and the server cannot resolve one from `me` (the fallback chain is
-  WP-22's), it passes `initial = null`.
-- `FeedScreen` (`features/feed/FeedScreen.tsx`): reads `useSearchState()`, builds the list key, registers the
-  pull-to-refresh handler and renders `ListingFeed` plus the empty and few-results slot.
+  `initial = { key, result }`, where `result` is the `ApiResult` (a failure is passed on, not thrown). On an address
+  without a city it reads `GET /me` first and lists the profile's city (BR-APP-010); it hands that city to
+  `FeedScreen` as `profileCity`, which the client's server render and hydration render use as the profile while
+  `useSession().me` is still `null`, so both build the server's key. The two reads run one after the other, because
+  the listings query depends on the city (one API round trip more on such an address). Without a token, without
+  `/me` or a profile city, and when `GET /listings` or `/me` answers `unauthorized`, it passes `initial = null`: the
+  browser asks for page one after the bootstrap has signed in again (WP-21).
+- `FeedScreen` (`features/feed/FeedScreen.tsx`): reads `useScreenSearchState('feed', { profileCity })` (the search
+  of its own address, KI-43), builds the list key, registers the pull-to-refresh handler and renders `ListingFeed`
+  plus the empty and few-results slot. A pull bumps the refresh version of the search shown; any other search, a
+  return to an earlier one included, starts again at version 0, the version of the server's page one.
 - **List key** = canonical query of `toSearchParams(filters, sort)` + `|` + refresh version. `filtersKey()` is not
   used for it, because it ignores `posted_days` (BR-APP-012) and the list must be re-created when that changes.
 - `useCursorFeed({ key, path, query, initial, enabled })` → `{ items, status, error, done, loadingMore, loadMore,
   retry }`:
-  - adopts `initial` only when `initial.key` equals `key`; otherwise fetches page one through `bffFetch`;
+  - adopts `initial` only when `initial.key` equals `key`; otherwise fetches page one through `bffFetch`; a later
+    `initial` for the same key (the router refresh after a sign-in, a tab tapped back to the list, which re-reads the
+    dynamic page) is not adopted;
+  - a page one adopted while the session was booting is kept once it is ready, unless the launch signed in
+    (`useSession().renewed`, WP-21): then it was read with the document's cookie (none, a revoked one, another
+    Telegram user's), and the list starts again from page one through `bffFetch`;
   - `enabled` is `useSession().status === 'ready'`; while the session is booting the list shows skeletons and
     sends nothing;
   - next page with the last `meta.next_cursor`; `null`, a missing cursor, or a cursor equal to the previous one
@@ -105,8 +116,9 @@ app/[locale]/(main)/page.tsx
   the place `inlineSlotIndex(visible, done, noteShown)` of `features/feed/inlineSlot.ts` gives: after the 8th
   visible card; with 8 or fewer visible cards after the last one, but only when the list is fully loaded without
   an error and the few-results note is not shown; otherwise not at all. With 9 visible cards it stands after the
-  8th and the note below the list (SCR-007, BR-APP-072). This package passes nothing into it; WP-30 passes the
-  radar card. It reads the session maps of WP-22: `favorite = favs[number] ?? item.favorite`,
+  8th and the note below the list (SCR-007, BR-APP-072). It is one keyed row among the cards, so a card hidden above
+  it moves it without a remount (the radar card keeps its state). This package passes nothing into it; WP-30 passes
+  the radar card. It reads the session maps of WP-22: `favorite = favs[number] ?? item.favorite`,
   `viewed = seen[number] ?? item.viewed`, items in `hidden` are not rendered.
 - The sentinel is an `IntersectionObserver` with a root margin of 800 px.
 
@@ -178,8 +190,13 @@ Changed:
 - `app/[locale]/(main)/page.tsx` (placeholder of WP-20 replaced)
 - `features/shell/TopBar.tsx` (mount `FeedHeader` in the `chips` region)
 - `app/[locale]/dev/ui/page.tsx` (card states for review)
-- No catalogue change: `card.businessPrice` is a legacy key of the pinned release and arrives with the import of
-  WP-20
+- `card.businessPrice` is a legacy key of the pinned release and arrives with the import of WP-20. One `homi` key
+  is added: `feed.loading` («Загрузка…», «Yuklanmoqda…», «Loading…»), the list's status line for screen readers
+  (`packages/i18n/messages/homi/*.json`, checked in `packages/i18n/tests/catalogue.test.ts`)
+- `lib/search/useSearchState.ts` (the saved city through `useSyncExternalStore`, the `profileCity` option),
+  `lib/search/useScreenSearchState.ts` (passes the option on), `lib/storage.ts` (`subscribeStorage`)
+- `lib/session/bootstrap.ts` (`SessionState.renewed`) and `lib/session/SessionProvider.tsx` (the router refreshes
+  only after a sign-in of the launch)
 
 ## Steps
 
@@ -318,7 +335,12 @@ current search parameters:
 - With `dev001AnyForbiddenShowsAccess` on, a `forbidden` answer never reaches the list: the error mapper of WP-22
   sends the user to the no-access screen (LB-APP-045 is owned there).
 - `unauthorized` is handled below the list: `bffFetch` re-authenticates once (WP-21, WP-22); if that fails the
-  session-expired screen of WP-23 replaces the app.
+  session-expired screen of WP-23 replaces the app. The server's page one never carries it: `FeedServer` passes
+  `initial = null` instead, and the browser asks after the sign-in.
+- For screen readers (WCAG 4.1.3, 2.4.3): the list is `aria-busy` while page one loads; one status line reads
+  «Загрузка…» (`feed.loading`) while a page loads and «Не загрузилось» / «Нет доступа» once the inline retry shows
+  (`ErrorState` is an alert itself); the sentinel spinner is hidden from them; a retry moves the focus to the list,
+  because the button it was on goes away.
 
 ### Empty and few results (SCR-009)
 
@@ -351,7 +373,13 @@ current search parameters:
 ### Server rendering and the two modes
 
 - Cookie mode, session present: the HTML of the page already contains the first cards; the browser sends no
-  request for page one. Later pages go through `/bff/listings`.
+  request for page one. Later pages go through `/bff/listings`. This holds for a launch whose document came with
+  the session's own cookie (a reload, a later launch): the bootstrap confirms it and the router does not refresh.
+- A launch that signs in (the first one, a revoked cookie, another Telegram user's cookie on the same device)
+  refreshes the router once at `ready`. A page one the server rendered with the old cookie is dropped at `ready`
+  and read through `/bff/listings`; the refresh's server read for the same key is not adopted (one server read
+  wasted per such launch). Until `ready`, the HTML of a launch on another user's cookie shows that user's hearts and
+  eyes: the server cannot know the launch user, whose data is only in the address fragment (limit).
 - First request of a launch (no cookie yet) and header mode: the page shows skeletons until the session is ready,
   then the client fetches page one through `/bff/listings` with the bearer token.
 - A server-side failure of page one arrives as `initial.result` and shows the matching error state; «Повторить»
@@ -378,7 +406,8 @@ Unit (Vitest, `frontend/app/tests/feed/`):
 - `useCursorFeed`: pages until `null`; duplicate number across pages appears once; missing cursor ends; repeated
   cursor ends; no automatic retry; `retry()` repeats the failed page; key change aborts and drops the old answer;
   matching `initial` sends no request for page one; mismatching `initial` is ignored; `enabled = false` sends
-  nothing.
+  nothing; a page one adopted while booting is kept at `ready`, and read again through the browser when the launch
+  signed in (`renewed`); one adopted while ready is kept whatever `renewed` says.
 
 Component (Vitest + Testing Library):
 
@@ -390,15 +419,21 @@ Component (Vitest + Testing Library):
   owner chip for `any`, `no_agents`, `owners`; badge count; labels in three locales.
 - `ListingFeed`: three skeletons; each row of the error table; inline retry keeps the cards; hidden items removed;
   favourites source hides items un-favourited in this launch; an `inline` node renders once at the place of
-  `inlineSlotIndex` with `source: 'feed'` and never with the other sources.
+  `inlineSlotIndex` with `source: 'feed'` and never with the other sources, and keeps its state when a card above
+  it is hidden; the status line, `aria-busy` and the focus after a retry.
+- `FeedScreen`: the list key of the server's page one equals the browser's in the server render and at hydration
+  for any address, profile city and saved city (D2); the server HTML hydrates without a mismatch and keeps its
+  cards; the server's small-photo hint reaches the cards; a return to a search pulled before adopts the server's
+  page one; the note replaces the empty state when the city's stats arrive.
 - `FewResultsNote`, `FeedEmpty`: every text; button visibility; radar button absent while `radarsReady` is false,
   and — with the constant forced on — absent for `radars_enabled` `false` or missing, present for `true`;
   DEV-024 branch with the flag off and on; favourites and history variants.
 
 End to end (Playwright, fake Telegram, stubs; `e2e/feed.spec.ts` in cookie mode and header mode):
 
-- Cookie mode: after the session refresh the document contains cards and no `/bff/listings` request without a
-  cursor was sent. Header mode: page one is requested through `/bff/listings` with `Authorization`.
+- Cookie mode, after a reload: the document contains cards, no `/bff/listings` request without a cursor is sent
+  and the router does not refresh; on the first launch one page-one request goes through `/bff/listings` and the
+  router refreshes once. Header mode: page one is requested through `/bff/listings` with `Authorization`.
 - Scrolling loads pages until the stub's last page; the number of cards equals the number of distinct listings.
 - Changing a search parameter in the address re-creates the list and scrolls to top.
 - Heart: a tap fills it and sends one Server Action request, a second tap empties it. The browser never sees the
@@ -409,6 +444,8 @@ End to end (Playwright, fake Telegram, stubs; `e2e/feed.spec.ts` in cookie mode 
   position is kept.
 - `/bff/listings` fulfilled with `500` for page two → inline «Не загрузилось — повторить»; aborted (offline) for
   page one in header mode → «Нет связи»; `403` → «Нет доступа — повторить».
+- Header mode on `/ru`: `/bff/listings` answers `401` for page two and the new sign-in is refused as too old → the
+  session-expired screen of WP-23 (the case `gates.spec.ts` runs on `/ru/map` since WP-24).
 - Each chip pushes its route with the current parameters; the owner chip reads «Кто размещает» by default.
 - Pull-to-refresh sends a new page-one request.
 - The demo-data marker is visible on the feed while the listings source is `stub`.

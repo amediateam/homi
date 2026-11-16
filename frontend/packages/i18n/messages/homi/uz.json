@@ -29,5 +29,8 @@
   },
   "city": {
     "countsDaily": "{rent} ijara · {daily} kunlik · {sale} sotuv"
+  },
+  "feed": {
+    "loading": "Yuklanmoqda…"
   }
 }

@@ -17,7 +17,6 @@ const SHEET_FRAME =
 
 /** Where a placeholder links to, so that soft navigation and Back can be followed before the real screens exist. */
 const LINKS: Record<string, string[]> = {
-  feed: [routes.filters(), routes.quickFilter("rooms"), routes.sort(), routes.city(), routes.listing(42), routes.map()],
   map: [routes.filters({ from: "map" }), routes.feed()],
   radars: [routes.radarNew()],
   settings: [routes.settingsPage("theme")],

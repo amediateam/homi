@@ -7,6 +7,7 @@ export {
   ArrowDown,
   ArrowUpDown,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CloudOff,

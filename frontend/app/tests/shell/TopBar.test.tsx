@@ -119,7 +119,7 @@ afterEach(() => {
 });
 
 describe("TopBar variants (SCR-006), in ru, uz and en", () => {
-  it.each(LOCALES)("search list (%s): the deal as title tabs, daily rent as rent, and an empty chips region", (locale) => {
+  it.each(LOCALES)("search list (%s): the deal as title tabs, daily rent as rent, and the feed's chips", (locale) => {
     at("/", "city=tashkent&deal=rent_daily");
     const { container } = bar("search-list", locale);
 
@@ -129,8 +129,16 @@ describe("TopBar variants (SCR-006), in ru, uz and en", () => {
     expect(rent.getAttribute("aria-checked")).toBe("true");
     expect(sale.getAttribute("aria-checked")).toBe("false");
     expect(rent.hasAttribute("aria-pressed")).toBe(false);
+    // FeedHeader (WP-24) in the chips region; one city in the reference data, so no city chip.
     const chips = container.querySelector("[data-topbar-chips]");
-    expect(chips?.childNodes.length).toBe(0);
+    expect(chips?.children).toHaveLength(1);
+    expect([...(chips?.querySelectorAll<HTMLElement>("[data-chip]") ?? [])].map((chip) => chip.dataset.chip)).toEqual([
+      "filters",
+      "sort",
+      "rooms",
+      "price",
+      "owner",
+    ]);
     expect(container.querySelector("header")?.getAttribute("data-topbar")).toBe("search-list");
     expect(container.textContent).not.toMatch(/undefined/);
   });
@@ -201,13 +209,28 @@ describe("TopBar variants (SCR-006), in ru, uz and en", () => {
     expect(bar("none").container.innerHTML).toBe("");
   });
 
-  it("before the reference data arrives the deal tabs render and no text is undefined", () => {
+  it("before the reference data arrives the deal tabs and the chips render and no text is undefined", () => {
     state.loaded = false;
     at("/", "deal=sale");
     const { container } = bar("search-list");
 
     expect(screen.getByRole("radio", { name: "Продажа" }).getAttribute("aria-checked")).toBe("true");
-    expect(container.textContent).toBe("АрендаПродажа");
+    expect(container.textContent).toBe("АрендаПродажаСначала новыеКомнатыЦенаКто размещает");
+  });
+
+  it("the search list kept under a listing shows the feed's deal and chips (KI-43)", () => {
+    at("/", "city=tashkent&deal=sale&rooms_min=2");
+    const { container, rerender } = bar("search-list");
+
+    at("/listing/42");
+    rerender(
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <TopBar variant="search-list" />
+      </NextIntlClientProvider>,
+    );
+
+    expect(screen.getByRole("radio", { name: "Продажа" }).getAttribute("aria-checked")).toBe("true");
+    expect(container.querySelector('[data-chip="rooms"]')?.getAttribute("data-state")).toBe("on");
   });
 });
 

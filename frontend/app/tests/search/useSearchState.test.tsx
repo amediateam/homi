@@ -1,5 +1,8 @@
 import { switchDeal } from "@homi/search";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { devFlags } from "@/lib/flags";
@@ -13,8 +16,9 @@ vi.mock("@/lib/navigation/nav", () => ({ nav: { replace: (href: string) => repla
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: session.me }) }));
 
 const { useSearchState } = await import("@/lib/search/useSearchState");
-const { readSearchState, searchStateFromHref } = await import("@/lib/search/readSearchState");
+const { addressCity, readSearchState, searchStateFromHref } = await import("@/lib/search/readSearchState");
 const { searchRules } = await import("@/lib/search/rules");
+const { storageSet } = await import("@/lib/storage");
 
 beforeEach(() => {
   address.pathname = "/";
@@ -38,6 +42,37 @@ describe("useSearchState (WP-22)", () => {
 
     address.search = "city=fergana";
     expect(renderHook(() => useSearchState()).result.current.filters.city).toBe("fergana");
+  });
+
+  it("hydrates as the server rendered, without the saved city, and takes it right after (WP-24)", async () => {
+    function City({ profileCity }: { profileCity?: string }) {
+      return <output>{useSearchState({ profileCity }).filters.city}</output>;
+    }
+    window.localStorage.setItem("homi-city", "samarkand");
+    const hydrated = async (element: ReactElement) => {
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(element);
+      const server = container.textContent;
+      const recoverable: unknown[] = [];
+      await act(async () => {
+        hydrateRoot(container, element, { onRecoverableError: (error) => void recoverable.push(error) });
+      });
+      return { server, after: container.textContent, recoverable };
+    };
+
+    expect(await hydrated(<City />)).toEqual({ server: "tashkent", after: "samarkand", recoverable: [] });
+    // The server's reading of the profile wins over the saved city in both renders, and `me` over both once known.
+    expect(await hydrated(<City profileCity="bukhara" />)).toEqual({ server: "bukhara", after: "bukhara", recoverable: [] });
+    session.me = { city: "fergana" };
+    expect(renderHook(() => useSearchState({ profileCity: "bukhara" })).result.current.filters.city).toBe("fergana");
+  });
+
+  it("follows a write of the saved city at once (the sign-in's, WelcomeCity's)", () => {
+    const { result } = renderHook(() => useSearchState());
+    expect(result.current.filters.city).toBe("tashkent");
+
+    act(() => storageSet("homi-city", "namangan"));
+    expect(result.current.filters.city).toBe("namangan");
   });
 
   it("setFilters writes the state with replace on the current root and keeps a reserved parameter", () => {
@@ -104,6 +139,23 @@ describe("readSearchState and searchStateFromHref (WP-22)", () => {
   it("the server reads the same state, with the profile's city as the fallback", () => {
     expect(readSearchState({ deal: "sale", focus: "x" }, { city: "bukhara" })).toMatchObject({ filters: { deal: "sale", city: "bukhara" }, sort: "new" });
     expect(readSearchState({}, null).filters.city).toBe("tashkent");
+  });
+
+  it.each([
+    [{ city: "samarkand", deal: "sale" }, "samarkand"],
+    [{ city: ["andijan", "tashkent"] }, "andijan"],
+    [{ city: ["not a code", "tashkent"] }, null],
+    [{ city: "" }, null],
+    [{ city: "not a code" }, null],
+    [{ deal: "sale" }, null],
+    [{}, null],
+    ["city=fergana&deal=sale", "fergana"],
+    ["city=not%20a%20code&city=tashkent", null],
+    ["deal=sale", null],
+    [new URLSearchParams("city=bukhara&rooms_min=2"), "bukhara"],
+    [new URLSearchParams("city="), null],
+  ] as const)("addressCity(%j) is %j: the address's first city when it has the shape of a code (WP-24)", (input, expected) => {
+    expect(addressCity(input)).toBe(expected);
   });
 
   it("a remembered address gives its state", () => {

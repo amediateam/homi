@@ -29,5 +29,8 @@
   },
   "city": {
     "countsDaily": "{rent} rent · {daily} daily · {sale} sale"
+  },
+  "feed": {
+    "loading": "Loading…"
   }
 }

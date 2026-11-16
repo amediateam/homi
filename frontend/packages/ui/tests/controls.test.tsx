@@ -247,6 +247,7 @@ describe("icons", () => {
     const names = [
       "ArrowDown",
       "Check",
+      "ChevronDown",
       "ChevronLeft",
       "CloudOff",
       "Eye",
