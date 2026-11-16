@@ -10,7 +10,7 @@
   "scripts": {
     "test": "vitest run --config ../../vitest.config.mts --project @homi/testing",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"@homi/testing: no lint rules yet\""
+    "lint": "node ../../app/node_modules/eslint/bin/eslint.js ."
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
