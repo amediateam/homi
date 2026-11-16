@@ -8,7 +8,7 @@ export type MapOverride = "gl" | "leaflet" | "auto";
 
 export interface Launch {
   listingNumber: number | null;
-  /** `web`, a campaign code `fb` / `tg` / `ig`, `seo`, `share` for any other `l_…`; `null` without a listing link. */
+  /** `web`, a campaign code (`fb12`, `tg3`), `seo`, `share` for any other `l_…`; `null` without a listing link. */
   source: string | null;
   /** `https://t.me/<channel>/<post>` named by an SEO or channel link, offered on the no-access screen. */
   postUrl: string | null;
@@ -33,11 +33,12 @@ function sourceOf(startParam: string): string | null {
   if (rest === "-web") {
     return "web";
   }
-  const campaign = /^-(fb|tg|ig)\d{1,4}$/.exec(rest);
+  // The whole campaign code (`fb12`), as legacy `getStartSource()` and the bot's attribution (BOT-031) read it.
+  const campaign = /^-((?:fb|tg|ig)\d{1,4})$/.exec(rest);
   if (campaign) {
     return campaign[1];
   }
-  return rest.startsWith("-seo") ? "seo" : "share";
+  return /^-seo(-|$)/.test(rest) ? "seo" : "share";
 }
 
 function postUrlOf(startParam: string): string | null {
