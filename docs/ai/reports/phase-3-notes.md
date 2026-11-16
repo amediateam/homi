@@ -897,5 +897,13 @@ test of a telegram.org request is an expected `test.fail`), no `429` in those ru
 run took every file of `app/e2e/` alone on the same tree: data 5, back 11, boot-failure 6, crash 4, csp 2, feed 19
 (three runs), foundation 19, gates 8, launch 5, session 7, smoke 2 passed; shell 15 of 16 on the first try with three
 `429`s (KI-32), 16 passed when rerun alone a minute later. Screenshots at 390 px in ru, uz and en, light and dark,
-were looked at
-locally and are not committed.
+were looked at locally and are not committed.
+
+Work given to Grok in parallel, on the developer's choice («давай 1 и 3»), each in its own worktree from `origin/main`
+with a written brief (no servers, no e2e, no files of this branch): KI-29 as PR #70 (the workspace packages are
+linted with the app's rules; reviewed here — a probe error fails the lint, and this branch's package files pass
+it), merged on «сливай #70» (`d2a4722`) and merged into this branch (`5fd06c9`; `pnpm -r lint` then lints 8
+packages, exit 0); and a read-only audit of the WP-25 … WP-33 specifications against `1d1c964`, whose findings
+for this PR were applied (rule 6) and whose findings for later packages are listed in the WP-24 Handoff. Next
+for Grok, on «да, подготовь промты для 1–3 и 4»: KI-38, KI-39, KI-40 and KI-28, one PR each. The WP-24 PR is
+#71.

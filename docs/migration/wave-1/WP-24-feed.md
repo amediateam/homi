@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (this PR) |
+| Status | REVIEW (#71) |
 | Depends on | WP-23 |
 | Size | ≈ 2 400 changed lines, M |
 | Behaviour reference | `03` §1.11 (session-only state), §1.12 (server-formatted values), §2 screens SCR-007, SCR-008, SCR-009 and the place of SCR-047 in the list, §2.1 (shared components), §3.4 (constants), §4 rules listed under Scope; `02` BR-API-111, BR-API-156; task files KV-FE-047, KV-FE-048, KV-FE-049, KV-FE-023 (session maps and first-paint ideas only) — behaviour, texts, edge cases and test ideas only; their file layout, request cache, API paths and transport are not taken |
