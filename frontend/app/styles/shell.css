@@ -1,0 +1,246 @@
+/*
+ * The shell of the Mini App (WP-23, SCR-006): what utilities cannot say — the tab bar's place in the column, its lens,
+ * the collapsed chrome (`html.chrome-mini`) and its lite form, long tab labels. The legacy values are re-typed from
+ * SCR-006 of `03` §2 and the shell task KV-FE-045; no legacy file is copied. `prefers-reduced-motion` drops every
+ * transition here (motion.css). The other parts of the shell add their own sections below this one.
+ */
+
+:root {
+  /* The springs of the chrome (legacy, off the motion scale): the collapse morph, the tab buttons, the lens. */
+  --ease-chrome: cubic-bezier(0.3, 1.1, 0.45, 1);
+  --ease-tab: cubic-bezier(0.3, 1.2, 0.45, 1);
+  --ease-lens: cubic-bezier(0.3, 1.35, 0.45, 1);
+  --dur-chrome: 0.42s;
+  /* Floating chrome sits 20 px inside the phone column, which a wider window centres. */
+  --chrome-side: max(20px, calc(50% - var(--feed-max) / 2 + 20px));
+}
+
+/* Tab bar: the glass pill 10 px above the bottom inset; the clip leaves room for its shadow until it collapses. */
+[data-tabbar] {
+  left: var(--chrome-side);
+  right: var(--chrome-side);
+  clip-path: inset(-30px round 60px);
+  transition: clip-path var(--dur-chrome) var(--ease-chrome);
+  will-change: clip-path;
+}
+
+/* The lens under the active tab, one column wide, moved by the tab's index (`--tab`) with a spring. */
+[data-tab-lens] {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc((100% - 10px) / 4);
+  border-radius: calc((var(--tabbar-h) - 10px) / 2);
+  background: var(--sep);
+  transform: translateX(calc(var(--tab, 0) * 100%));
+  transition:
+    transform 0.45s var(--ease-lens),
+    opacity 0.2s;
+}
+
+[data-tab] {
+  transition:
+    opacity 0.2s,
+    scale 0.15s,
+    transform var(--dur-chrome) var(--ease-tab);
+}
+
+[data-tab] svg,
+[data-tab] span {
+  transition:
+    transform var(--dur-chrome) var(--ease-tab),
+    opacity 0.2s;
+}
+
+/* A label never wraps; a long one (more than 13 characters) is smaller, and at 320 px it ends in an ellipsis. */
+[data-tab] span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+[data-tab] span.long {
+  font-size: 9.5px;
+  letter-spacing: -0.02em;
+}
+
+/*
+ * Collapsed: the bar is clipped to the circle at its left end, every tab slides so that the active one's icon is
+ * centred in it, the labels and the lens fade. The ring gives the circle the shadow the clip cut off.
+ */
+html.chrome-mini [data-tabbar] {
+  clip-path: inset(0 calc(100% - var(--tabbar-h)) 0 0 round calc(var(--tabbar-h) / 2));
+}
+
+html.chrome-mini [data-tab] {
+  transform: translateX(calc(var(--tabbar-h) / 2 - 5px - (var(--tab, 0) + 0.5) * 100%));
+}
+
+html.chrome-mini [data-tab] span,
+html.chrome-mini [data-tab-lens] {
+  opacity: 0;
+}
+
+html.chrome-mini [data-tab] svg {
+  transform: translateY(7px);
+}
+
+[data-mini-ring] {
+  position: fixed;
+  z-index: var(--z-tabbar);
+  left: var(--chrome-side);
+  bottom: calc(10px + var(--bottom-inset));
+  width: var(--tabbar-h);
+  height: var(--tabbar-h);
+  border-radius: 50%;
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+html.chrome-mini [data-mini-ring] {
+  opacity: 1;
+  transition-delay: 0.2s;
+}
+
+/* Lite graphics (`03` §1.7): no morph — the whole bar slides below the screen, its tabs and lens unchanged. */
+html.lite [data-tabbar] {
+  clip-path: none;
+  will-change: transform;
+  transition: transform var(--dur-fast) var(--ease-ios);
+}
+
+html.lite.chrome-mini [data-tabbar] {
+  transform: translateY(calc(100% + 10px + var(--bottom-inset)));
+}
+
+html.lite.chrome-mini [data-tab],
+html.lite.chrome-mini [data-tab] svg {
+  transform: none;
+}
+
+html.lite.chrome-mini [data-tab] span,
+html.lite.chrome-mini [data-tab-lens] {
+  opacity: 1;
+}
+
+html.lite [data-mini-ring] {
+  display: none;
+}
+
+/*
+ * Top bar, mini title, view toggle (TopBar.tsx, MiniTitle.tsx, ViewToggle.tsx): their collapsed state, the mini
+ * title's place in Telegram's full-screen header row, and the lite form. Values re-typed from SCR-006 of `03` §2 and
+ * KV-FE-045. `html.chrome-mini` is set on the search list only.
+ */
+
+/* The search list's top bar slides up out of the screen while collapsed. */
+[data-topbar="search-list"] {
+  transition: transform var(--dur-slow) var(--ease-ios);
+  will-change: transform;
+}
+
+html.chrome-mini [data-topbar="search-list"] {
+  transform: translateY(calc(-100% - 12px));
+}
+
+/* The mini title waits above its place, hidden and out of the accessibility tree, until the chrome collapses. */
+[data-mini-title] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -16px) scale(0.92);
+  transition:
+    opacity var(--dur-fast),
+    transform var(--dur-slow) var(--ease-ios),
+    visibility 0s linear var(--dur-slow);
+  will-change: transform, opacity;
+}
+
+html.chrome-mini [data-mini-title] {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%) scale(1);
+  transition:
+    opacity var(--dur-fast),
+    transform var(--dur-slow) var(--ease-ios),
+    visibility 0s;
+}
+
+/* Full screen: centred in Telegram's header row, between its buttons. */
+html.fullscreen [data-mini-title] {
+  top: max(
+    calc(var(--tg-safe-area-inset-top, 0px) + 4px),
+    calc(var(--tg-safe-area-inset-top, 0px) + (var(--tg-content-safe-area-inset-top, 0px) - 36px) / 2)
+  );
+  max-width: calc(100% - 176px);
+  padding: 0 14px;
+}
+
+/*
+ * The view toggle, centred in the column. Collapsed, it is clipped to the circle at its icon and moved, enlarged to
+ * the tab bar's height, to the right end of the column — the mirror of the tab bar's circle at the left end. A translate
+ * percentage is the element's own, so the column edge is measured in `vw` here.
+ */
+[data-view-toggle] {
+  --toggle-side: max(20px, calc(50vw - var(--feed-max) / 2 + 20px));
+  transform: translateX(-50%);
+  transform-origin: 27px 50%;
+  clip-path: inset(-30px round 60px);
+  transition:
+    transform var(--dur-chrome) var(--ease-chrome),
+    clip-path var(--dur-chrome) var(--ease-chrome);
+  will-change: transform, clip-path;
+}
+
+[data-view-toggle]:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+[data-view-toggle] span {
+  transition: opacity 0.18s;
+}
+
+html.chrome-mini [data-view-toggle] {
+  clip-path: inset(0 calc(100% - 49px) 0 5px round 22px);
+  transform: translate(calc(50vw - var(--toggle-side) - var(--tabbar-h) / 2 - 27px), calc(var(--tabbar-h) + 3px))
+    scale(1.41);
+}
+
+html.chrome-mini [data-view-toggle]:active {
+  transform: translate(calc(50vw - var(--toggle-side) - var(--tabbar-h) / 2 - 27px), calc(var(--tabbar-h) + 3px))
+    scale(1.3);
+}
+
+html.chrome-mini [data-view-toggle] span {
+  opacity: 0;
+}
+
+/* Lite graphics: no morph — the top bar slides up, the toggle down below the screen with its label; no mini title. */
+html.lite [data-topbar="search-list"] {
+  transition-duration: var(--dur-fast);
+}
+
+html.lite.chrome-mini [data-topbar="search-list"] {
+  transform: translateY(-100%);
+}
+
+html.lite [data-view-toggle] {
+  clip-path: none;
+  will-change: transform;
+  transition: transform var(--dur-fast) var(--ease-ios);
+}
+
+html.lite.chrome-mini [data-view-toggle] {
+  clip-path: none;
+  transform: translate(-50%, calc(100% + var(--tabbar-h) + 32px + var(--bottom-inset)));
+}
+
+html.lite.chrome-mini [data-view-toggle] span {
+  opacity: 1;
+}

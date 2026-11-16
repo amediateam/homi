@@ -17,6 +17,11 @@ export interface SearchStateApi {
   sort: ListingSort;
   setFilters: (next: SearchFilters) => void;
   setSort: (sort: ListingSort) => void;
+  /**
+   * Filters and sort in one replace (WP-23, D-SH-2): the deal switch writes `switchDeal()` and the sort it still
+   * allows together, which `setFilters` then `setSort` cannot — each writes the other half from the current address.
+   */
+  write: (filters: SearchFilters, sort: ListingSort) => void;
   /** Another address with the current state, e.g. `href(routes.map)`. */
   href: (builder: (params: URLSearchParams) => string) => string;
 }
@@ -51,6 +56,7 @@ export function useSearchState(): SearchStateApi {
     sort,
     setFilters: (next) => write(next, sort),
     setSort: (nextSort) => write(filters, nextSort),
+    write,
     href: (builder) => builder(toSearchParams(filters, sort)),
   };
 }

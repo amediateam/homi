@@ -62,7 +62,10 @@ body.locked {
   --material: color-mix(in srgb, var(--sheet) 72%, transparent);
 }
 
-/* Hooks of the shell; WP-23 fills them (fullscreen mode, collapsed chrome). */
+/*
+ * The two states of the shell as variables (fullscreen mode, collapsed chrome). Nothing reads them yet: the app's
+ * `styles/shell.css` (WP-23) styles the `html.fullscreen` and `html.chrome-mini` classes directly.
+ */
 html.fullscreen {
   --chrome-fullscreen: 1;
 }
