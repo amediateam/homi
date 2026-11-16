@@ -654,3 +654,127 @@ Afterwards, on «да сделай, и сразу commit push main»: the smarta
 the six project agents. Their `description` held an unquoted ": ", which is invalid as strict YAML. The descriptions
 are now double-quoted, and `.ai/agents/README.md` states the rule. Verified: Symfony YAML parses all six, and every
 `description` equals the old text; `grok inspect --json` lists 1 project agent before and 6 after.
+
+## U. Development track, 2026-11-16 — WP-23, gates and shell
+
+Taken on «Погнали WP-23». Branch `feat/wp-23-gates-and-shell`. The `composer update` found in the working tree
+(«это я») went first into its own PR #67 («да, сделай отдельный PR для composer.lock»), merged on «сливай #67»
+(`7792c67`); the branch starts there. Each part ran as its own ultracode workflow and is its own commit: A (`@homi/ui`
+primitives and the gallery), B (toast, feedback, confirm, the route wrappers), C (the shell), D1 (the settings
+action, the gate machinery, the boot retry, the error screens), D2 (the four gate screens, `CityList`,
+`nearestCity`). The specification is corrected where the code differs (rule 6) and its "Handoff" is filled.
+
+The Mini App now has its frame. `@homi/ui` adds the shell primitives (`BottomSheet` with drag, `SubPageFrame` with
+swipe back, `FilterChip`, `HeaderChip`, `SegmentedControl`, `ChoiceList`, `EmptyState`, `ErrorState`, the icons),
+shown by the gallery at `/dev/ui` in `local`, `ci` and `staging` builds. The app has the toast store and host,
+`feedback`, `confirmText`, the route wrappers `RouteSheet`, `RouteOverlay` and `SubPage`, and `AppShell` with the
+top-bar variants, the tab bar, the list/map toggle, the collapsing chrome with its one-line title and pull-to-refresh.
+`GateRedirector` sends every launch through the gate table (`resolveGate`) and runs the boot retry; the gate screens
+are `/outside`, `/no-access`, `/welcome/language` and `/welcome/city`; an expired session, a render error, an unknown
+address and a failed root layout have their screens; `updateSettings` is the first Server Action. The screens behind
+the tabs are still placeholders.
+
+ASSUMPTION_MISMATCH AM-59 (2026-11-16):
+- **Assumption.** WP-20 and AM-57 assumed the catch-all `(main)/[...rest]/page.tsx`, which calls `notFound()`,
+  renders the not-found screen inside the normal document of the root layout; WP-23's checklist line «An unknown
+  address inside the app shows «Такой страницы нет»» builds on it.
+- **What was found.** Thrown with no `<Suspense>` boundary above the page, `notFound()` makes Next.js 16.4.5 serve
+  its `<html id="__next_error__">` shell, which the client renders with `createRoot`. React does not run inline
+  scripts it creates, so the boot script and the stubs of `<head>` never run and the SDK tag is never inserted:
+  inside Telegram the page has no `window.Telegram`, the session goes `outside`, and with `GateRedirector` a hard load
+  of `/ru/unknown` ended on `/outside`. A build with the root layout and not-found page from before part D1 showed
+  the same shell, so the defect predates the gates; the end-to-end tests passed because the fake Telegram is an init
+  script. `/ru/listing/abc`, whose `notFound()` runs under `<Suspense>`, kept the normal document.
+- **Resolution.** The catch-all throws from an async child under `<Suspense fallback={null}>`, as the parameter
+  placeholders do. `/ru/unknown`, `/en/listing` and `/uz/settings/nope` answer `200` with `id="homi-boot"`,
+  `noindex` and `<template data-dgst="NEXT_HTTP_ERROR_FALLBACK;404">` (curl on a production build);
+  `foundation.spec.ts` asserts it at request level. The client head then holds two identical `noindex` tags (one
+  inserted by the server, one by the not-found boundary), as `/ru/listing/abc` already did; the test checks that
+  every robots tag says `noindex`.
+
+ASSUMPTION_MISMATCH AM-60 (2026-11-16):
+- **Assumption.** The Next.js 16.4 guide `03-architecture/accessibility.md` (required reading before Next.js code)
+  says client-side transitions are announced by the route announcer, which reads `document.title`, then the `<h1>`,
+  then the path. The WP-23 specification asks nothing more of the screens that replace the route.
+- **What was found.** `app-router-announcer.js` reads the `<h1>` only while `document.title` is empty and speaks only
+  when the text changes; the app's title is the constant `brand.name` (`app/[locale]/layout.tsx`), so
+  `GateRedirector`'s replace into a gate is silent. `layout-router.js` leaves focus untouched on a navigation
+  ("resetting focus on navigation is deferred"), and with `cacheComponents` the page that held the focus is hidden.
+- **Resolution.** The headings of `/no-access`, `/welcome/language` and `/welcome/city` (`tabIndex=-1`) take the focus
+  when their view first shows; `SessionExpiredScreen` focuses «Закрыть» and `CrashScreen` «Обновить» on mount. The
+  `/outside` sentence, the crash and not-found titles and the expired sentence are `h1` elements (`EmptyState` got
+  `titleAs`). The language buttons are a `role="group"` named by the heading; busy buttons and the locate row use
+  `aria-disabled`, so the tapped control keeps the focus. `RouteOverlay` and `SubPage` still move no focus: a KI
+  candidate for WP-26, WP-31 and WP-33.
+
+ASSUMPTION_MISMATCH AM-61 (2026-11-16):
+- **Assumption.** The WP-23 specification ("Tests") runs every end-to-end spec in cookie mode and header mode.
+- **What was found.** Every end-to-end sign-in is the one stub user, and the `api` limiter allows 120 requests per
+  minute per actor (`AppServiceProvider::configureRateLimiting`). A full local `miniapp` run with one worker sits at
+  the limit (110–138 `/api/v1` requests per minute in the nginx log, 183 in one minute of a D2 run); a `429` on `/me`
+  makes `/bff/session` answer `502`, and the session stays `booting`. Doubling every shell test pushed the full
+  local run over the limit. In header mode `launchApp` answers `/bff/session` itself in front of any route a spec
+  registers before the launch, so a refusal at launch cannot be staged there, and a sign-in refused at launch never
+  reaches a session mode anyway. CI starts the API with `CACHE_STORE=array` under PHP's built-in server, so its
+  limiter does not accumulate between requests.
+- **Resolution.** Every spec runs in cookie mode; header mode repeats the tests that hold the session across soft
+  navigations or carry the token: in `shell.spec.ts` the tab round trip, the pull and the sheet closed four ways; in
+  `gates.spec.ts` the first-launch pick through the Server Action (the token in the action's arguments, no
+  `homi_session` cookie) and the expired screen (made mid-session: a read answers `401`, the re-sign-in
+  `auth_expired`); `crash.spec.ts` runs ru and uz in both modes. The local limit is a KI candidate for the follow-up
+  docs PR.
+
+ASSUMPTION_MISMATCH AM-62 (2026-11-16):
+- **Assumption.** `25` §3.6 turns the legacy spacing into Tailwind 4 tokens; WP-20 kept the legacy root font
+  `15px/1.4` (`packages/ui/src/styles/layout.css`) next to Tailwind's default spacing scale.
+- **What was found.** Tailwind's spacing step is `0.25rem`, 3.75 px under a 15 px root, so every rem utility is
+  6.25 % small: `h-11` is 41.25 px, `h-9` 33.75, `size-10` 37.5, `px-4` 15. The view toggle's collapse (27 px origin,
+  49 px clip) needs exact pixels, and the language picker's globe circle measured 60 px instead of 64.
+- **Resolution.** The shell, `NoAccessScreen` and `LanguagePicker` spell the legacy pixels of the legacy CSS
+  (`h-[44px]`, `gap-[8px]`, …). The primitives of WP-20 and part A (Button `size-10`, `SegmentedControl` `h-9`,
+  `Chip` `h-9`/`px-3.5`, their gaps and paddings) and the city page keep rem classes. The one-line fix, `--spacing:
+  4px` in `@theme`, grows every primitive to its legacy size and needs the gallery checked: a reviewer question and
+  a KI candidate.
+
+ASSUMPTION_MISMATCH AM-63 (2026-11-16):
+- **Assumption.** The WP-23 specification takes the no-access source from WP-21's parser: `web`, a campaign code,
+  `seo` or `share`, with `l_123-fb12` among the main-button cases. WP-21's table maps `l_<n>-(fb|tg|ig)<1–4 digits>`
+  to that code; KV-FE-042 expects `s_fb12--l123` for `l_123-fb12`, and `04` BOT-031 reads the source as
+  `fb12`/`tg3`/`ig5`.
+- **What was found.** `sourceOf()` in `lib/deeplinks/parse.ts` returned only the prefix (`fb`), and
+  `tests/deeplinks/parse.test.ts` pinned `fb`/`tg`/`ig`, so «Перейти в бота» would carry `s_fb--l123` and the bot
+  would lose the campaign. It also read any `-seo…` as `seo`: `l_123-seoul_flats-45` gave `seo` where KV-FE-037 gives
+  `share`. `source` is read only by `features/gates/accessReason.ts`.
+- **Resolution.** Fixed here: the whole code (`fb12`), and `seo` only for `-seo` followed by `-` or the end.
+  `parse.test.ts` pins `fb12`, `tg7`, `ig1234` and the `seoul_flats` row; `accessReason.test.ts` expects
+  `s_fb12--l123`.
+
+ASSUMPTION_MISMATCH AM-64 (2026-11-16):
+- **Assumption.** The WP-23 specification ends a location request on the city page by "failure or the 12 s timeout
+  of WP-21"; WP-21's `lib/telegram/location.ts` says the whole request never takes longer than 12 s (TMA-035).
+- **What was found.** The LocationManager path has its own 12 s timer, but the browser path (`viaBrowser()`) passes
+  the limit only as `timeout` to `getCurrentPosition`, which does not count the time the permission prompt is open:
+  a browser request can stay pending indefinitely.
+- **Resolution.** `CityList` races `tg.location.get()` against its own 12 s timer (`LOCATION_TIMEOUT_MS`); WP-25's
+  city sheet reuses `CityList`. The adapter bounding its own promise is a KI candidate for the follow-up docs PR.
+
+Own choices (no ADR): `ToastHost` is a plain `role="status"` live region, not Radix Toast, which pauses on blur,
+pointer movement and focus and defaults to 5 s (D-T-1); the boot retry makes six attempts and shows `ErrorState`
+after the sixth failure (D-S-3); `GateRedirector` owns every navigation into and out of a gate, and the pickers never
+navigate (D-S-6); `launchPending()` waits until the address shows the launch target, not for `history.length` to grow
+(the first D1 version: Chromium caps it at 50, and Telegram Web's iframe shares the tab's history); a layer opened
+over a page keeps that page's chrome (`isLayerAddress`, `useDrawnVariant`); swipe back is touch-only; SettingsButton
+shows only while the session is `ready` and the address is not a gate (D-S-15); the first-launch city save is not
+awaited (legacy); `RefreshProof` gives the feed's pull a handler until WP-24.
+
+Verified (on `fb4a2b2`, from `frontend/`): `pnpm --filter @homi/ui test` → 8 files, 111 tests passed;
+`pnpm --filter @homi/i18n test` → 10 files, 109 passed; `pnpm --filter app test` → 81 files, 977 passed;
+`pnpm -r lint` and `pnpm -r typecheck` → exit 0. `env -u CI pnpm exec playwright test --project=miniapp --workers=1`
+(85 tests, local API on stubs, 18:49–18:51) → 82 passed, 3 failed: `shell.spec.ts:319`, `:330` and `:365`, each
+waiting for `data-session="ready"`; the nginx API log shows `429` on `GET /api/v1/me` and `/api/v1/listings/count`
+at 18:51:22–18:51:35 and 122 `/api/v1` requests in the minute 18:50 (AM-61). `shell.spec.ts` alone at 18:52 → 16
+passed (51.3 s). The D2 integrator's second full run, before the D2 review fixes → 85 passed (2.2 min), no `429` in
+that window; the D2 verifier's full run, after them → 84 passed, 1 failed (`shell.spec.ts:319` on `429`s), the file
+alone → 16 passed. The `✘` on `smoke.spec.ts:25` is its expected `test.fail`. `make ci-frontend` (from the root)
+→ exit 0 (tests: app 977, `@homi/search` 238 + 1 todo, `@homi/ui` 111, `@homi/i18n` 109, `@homi/testing` 95,
+`@homi/api-client` 14, `@homi/utils` 2).

@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-16 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-16 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 in REVIEW on `feat/wp-23-gates-and-shell`, not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -65,7 +65,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     `StubLandingSource` and the features `source.landing.live`, `source.landing.pins`.
 
 ## Frontend (`frontend/`)
-- pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 5 packages).
+- pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages, on the WP-23 branch `fb4a2b2`).
 - `packages/`: `@homi/config`, `@homi/types`, `@homi/utils`, `@homi/api-client`, `@homi/ui`, `@homi/i18n` (WP-20; `./format` since WP-22), `@homi/search` (WP-22) — each with lint/typecheck/test scripts (the `lint` scripts are placeholders, KI-29); `app` uses `@homi/config`, `@homi/i18n` and `@homi/ui` since WP-20, `@homi/search`, `@homi/api-client` and `@homi/types` since WP-22.
 - Since WP-03 (#39, merged 2026-11-15):
   - **Packages:** the 31 Wave 1 npm packages are installed (lockfile 665 entries). The install scripts of `@parcel/watcher`, `@swc/core` and `core-js` are denied in `allowBuilds`. No product code imports them.
@@ -106,6 +106,19 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   the packages `@homi/search` and `@homi/i18n/format`; the feed and map placeholders show a data proof. On the branch:
   `make ci-frontend` → exit 0 (app 480, `@homi/search` 238 + 1 todo, `@homi/i18n` 108), Playwright `data.spec.ts` → 5
   passed; `frontend` and `frontend-e2e` green on the PR (`3bb7831`, e2e 56 passed).
+- **WP-23 (REVIEW, branch `feat/wp-23-gates-and-shell`, five commits on `7792c67`; not on `main`):** `@homi/ui` shell
+  primitives (`BottomSheet`, `SubPageFrame`, `FilterChip`/`HeaderChip`, `SegmentedControl`, `ChoiceList`,
+  `EmptyState`, `ErrorState`, the gesture hooks, the icons) and the gallery `/dev/ui` (`local`, `ci`, `staging`
+  builds); `lib/ui/*` (toast, feedback, confirm, `shellState`); `features/shell/*` (`AppShell`, top bar, tab bar, view
+  toggle, mini title, pull-to-refresh, `RouteSheet`, `RouteOverlay`, `SubPage`, `ToastHost`); `features/gates/*`
+  (`resolveGate`, `GateRedirector`, the boot retry, `/outside`, `/no-access`, `/welcome/language`, `/welcome/city`,
+  the expired and crash screens); `features/city/*`; `lib/actions/settings.ts` (`updateSettings`, the first Server
+  Action); `error.tsx`, `not-found.tsx` (the catch-all throws under `<Suspense>`, AM-59), `global-error.tsx`; WP-21's
+  parser keeps the whole campaign code (AM-63). The screens behind the tabs are still placeholders. On `fb4a2b2`:
+  app 977, `@homi/ui` 111, `@homi/i18n` 109 tests passed, `pnpm -r lint` and `pnpm -r typecheck` exit 0,
+  `make ci-frontend` exit 0; Playwright
+  `miniapp` (85 tests, one worker, local API) → 82 passed, 3 failed on the stub user's 120/min API limit (AM-61),
+  `shell.spec.ts` alone 16 passed; the D2 integrator's full run, before the D2 review fixes → 85 passed.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
