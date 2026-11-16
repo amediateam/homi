@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#68) |
+| Status | WAITING (merged in #68 on 2026-11-16; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-22 |
 | Size | ≈ 3 000 changed lines, L — the largest package of stage B; the steps are grouped in four parts (A–D) and each part ends in a mergeable state, so the package can change hands midway |
 | Behaviour reference | `03` §1.2 (back, gestures, collapsing chrome), §1.4 (render gating), §1.6 (error layers), §2 screens SCR-002 … SCR-006, SCR-010, SCR-042, SCR-043, SCR-045, §3.4 (constants), §3.6 (z-index, safe areas); `05` TMA-011, TMA-013, TMA-022, TMA-025, TMA-026, TMA-035, TMA-039, TMA-040; task files KV-FE-012, KV-FE-013, KV-FE-014, KV-FE-031 (nearest city), KV-FE-036, KV-FE-040, KV-FE-041, KV-FE-042, KV-FE-043, KV-FE-044, KV-FE-045, KV-FE-046 — behaviour, texts, edge cases and test ideas only; their file layout, layer stack, API paths and transport are not taken |
@@ -1012,8 +1012,9 @@ Feedback and errors
   - `usePathname` / `useSearchParams` are global, so the page kept below an intercepted layer, and the chrome, read
     the layer's address (under `/listing/42` the feed's `useSearchState()` sees no filters); out of sight under the
     opaque listing, visible during WP-26's swipe back (WP-24, WP-26);
-  - Playwright with `CI=1` on a developer machine drops `NODE_EXTRA_CA_CERTS` (mkcert), so every sign-in answers
-    `502`: run it locally without `CI` and with `--workers=1`.
+  - Playwright with `CI=1` on a developer machine skips the mkcert `NODE_EXTRA_CA_CERTS` that `playwright.config.ts`
+    adds otherwise, so every sign-in answers `502` unless the shell exports it: run it locally without `CI` and with
+    `--workers=1`.
 - **Shared files:** none in this PR besides `.ai/memory/current-state.md` and `.ai/memory/session-handoff.md`, as
   in #61. `CLAUDE.md` "Current state" (the WP-23 sentence) and `.ai/memory/known-issues.md` (the candidates above)
   follow in the follow-up docs PR after the merge, as for WP-20 … WP-22. No CI workflow, lockfile, `package.json`,
@@ -1038,12 +1039,16 @@ Feedback and errors
   `AbortError` skip, and writes `errors.spec.ts` on the gallery; WP-33 decides the gallery, the focus of the
   full-screen layers and the rem-to-pixel fix with the gallery, and runs the manual lines (long tab labels at
   320 px, the lite collapse, light and dark, inside Telegram).
+- **Merged** on 2026-11-16 on the developer's «сливай #68» (merge commit `901eaad`), after `frontend` (run
+  43887095870) and `frontend-e2e` (run 43887095850, 85 passed) were green on `f12574c`; `frontend` on `main` after
+  the merge: run 43888986489, green. This status, the queue row, `CLAUDE.md` ("Current state" and "Layout"), the
+  known issues KI-32 … KI-43 (the candidates above; the two local Playwright ones are one entry, KI-32) and the
+  memory are in the follow-up docs PR.
 - **Next:**
-  1. review and merge on the developer's word after green `frontend` and `frontend-e2e`;
-  2. the follow-up docs PR: this status, the queue row, `CLAUDE.md` "Current state", the KI-32+ entries of
-     `known-issues.md`, the memory;
+  1. ~~review and merge~~ (done);
+  2. ~~the follow-up docs PR~~ (this status, the queue row, `CLAUDE.md`, KI-32 … KI-43, the memory);
   3. the production track deploys — nothing beyond the regular deploy (see the header);
   4. check inside Telegram on staging the lines that need it: the shell lines, long tab labels at 320 px, the lite
      collapse, a real client's native confirm, light and dark; the no-access screen stays unreachable there
      (mode "open", DEC-43);
-  5. set the status to `DONE`.
+  5. set the status to `DONE`. WP-24 (feed and listing card) builds on this package.
