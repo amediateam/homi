@@ -21,5 +21,13 @@
   },
   "sum": {
     "wholeCity": "{city} целиком"
+  },
+  "error": {
+    "sessionExpired": "Сессия устарела — закройте и откройте приложение снова",
+    "notFound": "Такой страницы нет",
+    "toSearch": "К поиску"
+  },
+  "city": {
+    "countsDaily": "{rent} аренда · {daily} посуточно · {sale} продажа"
   }
 }

@@ -86,6 +86,18 @@ describe("the merged catalogues", () => {
       "Other",
     ]);
   });
+
+  it("carry the four keys of WP-23 next to the legacy keys of their namespaces", () => {
+    const values = (key: string) => locales.map((locale) => merged[locale][key]);
+    expect(values("error.notFound")).toEqual(["Такой страницы нет", "Bunday sahifa yoʻq", "This page doesn’t exist"]);
+    expect(values("error.toSearch")).toEqual(["К поиску", "Qidiruvga", "Back to search"]);
+    expect(values("error.sessionExpired")[0]).toBe("Сессия устарела — закройте и откройте приложение снова");
+    for (const locale of locales) {
+      expect(merged[locale]["city.countsDaily"].match(/\{\w+\}/g)).toEqual(["{rent}", "{daily}", "{sale}"]);
+    }
+    expect(merged.ru["error.retry"]).toBe("Повторить");
+    expect(merged.ru["city.counts"]).toBe("{rent} аренда · {sale} продажа");
+  });
 });
 
 describe("the legacy layer", () => {

@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { fakeTelegram, syntheticInitData, type FakeTelegram } from "@homi/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SDK_WAIT_MS } from "@/lib/telegram/wait";
+
 /** The address fragment at each `track` call: the scrub must come first (TMA-009). */
 const tracked = vi.hoisted(() => ({ hashes: [] as string[] }));
 vi.mock("@/lib/analytics/events", async (importOriginal) => {
@@ -30,8 +32,8 @@ interface Calls {
 let fake: FakeTelegram | null = null;
 let calls: Calls;
 
-/** A fake `/bff/session`: `get` answers by the bearer header, `post` by the launch data. */
-function server(handlers: { get?: (bearer: string | null) => Answer; post?: () => Answer }): void {
+/** A fake `/bff/session`: `get` answers by the bearer header, `post` by the launch data; an answer may be held. */
+function server(handlers: { get?: (bearer: string | null) => Answer | Promise<Answer>; post?: () => Answer | Promise<Answer> }): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -41,11 +43,11 @@ function server(handlers: { get?: (bearer: string | null) => Answer; post?: () =
       let answer: Answer;
       if (method === "POST") {
         calls.post.push(String(init?.body));
-        answer = handlers.post?.() ?? [500, {}];
+        answer = (await handlers.post?.()) ?? [500, {}];
       } else {
         const bearer = headers.get("authorization");
         calls.get.push(bearer);
-        answer = handlers.get?.(bearer) ?? [200, { mode: "none" }];
+        answer = (await handlers.get?.(bearer)) ?? [200, { mode: "none" }];
       }
       if (answer === "network") {
         throw new TypeError("Failed to fetch");
@@ -77,9 +79,19 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   fake?.uninstall();
   fake = null;
+  document.getElementById("tg-sdk")?.remove();
+  delete (window as unknown as Record<string, unknown>).__homiBoot;
 });
+
+/** An answer that waits until `release()`. */
+function held(answer: Answer): { answer: () => Promise<Answer>; release: () => void } {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  return { answer: async () => (await gate, answer), release };
+}
 
 describe("session bootstrap (25 §3.4)", () => {
   it("without launch data is outside and asks nothing", async () => {
@@ -215,6 +227,169 @@ describe("session bootstrap (25 §3.4)", () => {
     await Promise.all([session.startSession(), session.startSession()]);
 
     expect(calls.get).toHaveLength(1);
+  });
+});
+
+describe("attempts in flight and the re-check of a refusal (WP-23, D-S-2)", () => {
+  it("pending is true while an attempt is in flight; retry() then returns that attempt and starts no second one", async () => {
+    const cookie = held([200, { mode: "cookie", me, user: tag(USER) }]);
+    server({ get: cookie.answer });
+    const { session } = await load();
+    expect(session.getSession().pending).toBe(false);
+
+    const first = session.startSession();
+    expect(session.getSession()).toMatchObject({ status: "booting", pending: true });
+    expect(session.retry()).toBe(first);
+    await vi.waitFor(() => expect(calls.get).toHaveLength(1));
+    expect(session.retry()).toBe(first);
+
+    cookie.release();
+    await first;
+    expect(session.getSession()).toMatchObject({ status: "ready", pending: false });
+    expect(calls.get).toHaveLength(1);
+  });
+
+  it("a failed attempt ends with pending false, and the next retry() runs a new attempt", async () => {
+    let answer: Answer = "network";
+    server({ get: () => answer });
+    const { session } = await load();
+
+    await session.startSession();
+    expect(session.getSession()).toMatchObject({ status: "booting", error: "offline", pending: false });
+
+    answer = [200, { mode: "cookie", me, user: tag(USER) }];
+    const again = session.retry();
+    expect(session.getSession().pending).toBe(true);
+    await again;
+    expect(session.getSession()).toMatchObject({ status: "ready", error: null, pending: false });
+    expect(calls.get).toHaveLength(2);
+  });
+
+  it("a re-check from denied stays denied with its reason while pending, then goes ready when access was granted", async () => {
+    let answer: () => Answer | Promise<Answer> = () => [403, { code: "access_denied", reason: "join" }];
+    server({ get: () => answer() });
+    const { session } = await load();
+    await session.startSession();
+    expect(session.getSession()).toMatchObject({ status: "denied", reason: "join", pending: false });
+
+    const granted = held([200, { mode: "cookie", me, user: tag(USER) }]);
+    answer = granted.answer;
+    const statuses: string[] = [];
+    session.subscribeSession(() => statuses.push(session.getSession().status));
+    const recheck = session.retry();
+    await vi.waitFor(() => expect(calls.get).toHaveLength(2));
+    expect(session.getSession()).toMatchObject({ status: "denied", reason: "join", pending: true });
+    expect(session.retry()).toBe(recheck);
+
+    granted.release();
+    await recheck;
+    expect(session.getSession()).toMatchObject({ status: "ready", reason: null, error: null, pending: false });
+    expect(statuses).not.toContain("booting");
+  });
+
+  it("another refusal of a re-check stays denied with the new reason, also when the sign-in refuses", async () => {
+    let get: Answer = [403, { code: "access_denied", reason: "invite" }];
+    server({ get: () => get, post: () => [403, { code: "access_denied", reason: "full" }] });
+    const { session } = await load();
+    await session.startSession();
+    const statuses: string[] = [];
+    session.subscribeSession(() => statuses.push(session.getSession().status));
+
+    get = [403, { code: "access_denied", reason: "blocked" }];
+    await session.retry();
+    expect(session.getSession()).toMatchObject({ status: "denied", reason: "blocked", pending: false });
+
+    get = [200, { mode: "none" }];
+    await session.retry();
+    expect(session.getSession()).toMatchObject({ status: "denied", reason: "full", pending: false });
+    expect(calls.post).toHaveLength(1);
+    expect(statuses).not.toContain("booting");
+  });
+
+  it("a re-check that cannot reach the API leaves the refusal as it was", async () => {
+    let get: Answer = [403, { code: "access_denied", reason: "invite" }];
+    server({ get: () => get });
+    const { session } = await load();
+    await session.startSession();
+
+    for (const failure of ["network", [502, { code: "bad_gateway" }], [429, { code: "rate_limited" }]] as Answer[]) {
+      get = failure;
+      await session.retry();
+      expect(session.getSession(), JSON.stringify(failure)).toMatchObject({ status: "denied", reason: "invite", error: null, pending: false });
+    }
+  });
+
+  it("retry() leaves ready, outside and expired alone", async () => {
+    server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });
+    const ready = await load();
+    await ready.session.startSession();
+    await ready.session.retry();
+    expect(calls.get).toHaveLength(1);
+
+    fake?.uninstall();
+    fake = null;
+    const outside = await load({ telegram: false });
+    await outside.session.startSession();
+    await outside.session.retry();
+    expect(outside.session.getSession()).toMatchObject({ status: "outside", pending: false });
+
+    server({ post: () => [401, { code: "invalid_init_data" }] });
+    calls = { get: [], post: [] };
+    const expired = await load();
+    await expired.session.startSession();
+    await expired.session.retry();
+    expect(expired.session.getSession().status).toBe("expired");
+    expect(calls.post).toHaveLength(1);
+  });
+});
+
+describe("a late SDK (SCR-002)", () => {
+  function addSdkTag(): HTMLScriptElement {
+    (window as unknown as Record<string, unknown>).__homiBoot = { ok: true, watching: false, sdk: null, errors: [] };
+    const script = document.createElement("script");
+    script.id = "tg-sdk";
+    document.head.append(script);
+    return script;
+  }
+
+  it("that brings launch data while outside starts the session", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const script = addSdkTag();
+    server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });
+    const { session, events } = await load({ telegram: false });
+
+    const first = session.startSession();
+    await vi.advanceTimersByTimeAsync(SDK_WAIT_MS);
+    await first;
+    expect(session.getSession()).toMatchObject({ status: "outside", pending: false });
+    expect(calls.get).toEqual([]);
+    vi.useRealTimers();
+
+    fake = fakeTelegram({ initData: syntheticInitData({ id: USER }) });
+    script.dispatchEvent(new Event("load"));
+    expect(session.getSession().pending).toBe(true);
+
+    await vi.waitFor(() => expect(session.getSession()).toMatchObject({ status: "ready", mode: "cookie", pending: false }));
+    expect(calls.get).toHaveLength(1);
+    expect(events.recentTracked().map((event) => event.name)).toEqual(["app_launch", "app_opened"]);
+  });
+
+  it("without launch data stays outside", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const script = addSdkTag();
+    server({});
+    const { session } = await load({ telegram: false });
+
+    const first = session.startSession();
+    await vi.advanceTimersByTimeAsync(SDK_WAIT_MS);
+    await first;
+
+    fake = fakeTelegram({ initData: "" });
+    script.dispatchEvent(new Event("load"));
+    await Promise.resolve();
+
+    expect(session.getSession()).toMatchObject({ status: "outside", pending: false });
+    expect(calls.get).toEqual([]);
   });
 });
 

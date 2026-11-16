@@ -210,6 +210,16 @@ describe("EmptyState", () => {
     expect(document.querySelector('[data-slot="empty-state-hint"]')).toBeNull();
     expect(document.querySelector('[data-slot="empty-state-action"]')).toBeNull();
   });
+
+  it("renders the title as a paragraph, or as the heading of a whole screen", () => {
+    const { rerender } = render(<EmptyState title="Здесь пока пусто" />);
+    expect(document.querySelector('[data-slot="empty-state-title"]')?.tagName).toBe("P");
+    expect(screen.queryByRole("heading")).toBeNull();
+
+    rerender(<EmptyState tall titleAs="h1" title="Такой страницы нет" />);
+    const heading = screen.getByRole("heading", { level: 1, name: "Такой страницы нет" });
+    expect(heading.getAttribute("data-slot")).toBe("empty-state-title");
+  });
 });
 
 describe("icons", () => {

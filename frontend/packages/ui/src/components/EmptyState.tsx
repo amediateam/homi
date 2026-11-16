@@ -20,13 +20,15 @@ export type EmptyStateProps = Omit<ComponentProps<"div">, "title" | "children"> 
   action?: ReactNode;
   /** The taller variant for a whole screen. */
   tall?: boolean;
+  /** The title's element: `h1` when the state is the whole screen (the crash and not-found screens), else `p`. */
+  titleAs?: "p" | "h1" | "h2";
 };
 
 /**
  * An empty list or screen (WP-23, legacy `empty` with a 120 px mascot): image, title, hint and an optional action.
  * The image is decorative (`alt=""`); the texts and the image address come from the caller.
  */
-export function EmptyState({ image, title, hint, action, tall = false, className, ...props }: EmptyStateProps) {
+export function EmptyState({ image, title, hint, action, tall = false, titleAs: Title = "p", className, ...props }: EmptyStateProps) {
   return (
     <div data-slot="empty-state" className={cn(stateLayout({ tall }), className)} {...props}>
       <div data-slot="empty-state-media" className="mb-1.5 size-[120px] shrink-0">
@@ -40,9 +42,9 @@ export function EmptyState({ image, title, hint, action, tall = false, className
           />
         ) : null}
       </div>
-      <p data-slot="empty-state-title" className="text-[17px] font-bold text-text">
+      <Title data-slot="empty-state-title" className="text-[17px] font-bold text-text">
         {title}
-      </p>
+      </Title>
       {hint ? (
         <p data-slot="empty-state-hint" className={cn(tall && "max-w-[300px]")}>
           {hint}

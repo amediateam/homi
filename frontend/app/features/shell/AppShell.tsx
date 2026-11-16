@@ -1,8 +1,11 @@
 "use client";
 
+import { ErrorState } from "@homi/ui";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
 
+import { useBootRetryState } from "@/features/gates/bootRetryStore";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
 import { rememberHref } from "@/lib/ui/shellState";
@@ -84,6 +87,28 @@ function ShellBottom() {
 }
 
 /**
+ * The page, or `ErrorState` once the sign-in failed six times in a row (BR-APP-054, D-S-3): the visible equivalent
+ * of the legacy feed error. «Повторить» resets the boot retry's counter and signs in again; the page returns with the
+ * session.
+ */
+function ShellContent({ children }: { children: ReactNode }) {
+  const t = useTranslations();
+  const { failed, kind, retry } = useBootRetryState();
+  if (!failed || kind === null) {
+    return children;
+  }
+  return (
+    <ErrorState
+      kind={kind}
+      title={kind === "offline" ? t("error.offline") : t("common.loadFailed")}
+      text={kind === "offline" ? t("error.offlineText") : t("error.serverText")}
+      retryLabel={t("error.retry")}
+      onRetry={retry}
+    />
+  );
+}
+
+/**
  * The shell of `(main)` (WP-23, SCR-006), in the legacy order: mini title, top bar, the page, view toggle,
  * pull-to-refresh indicator, tab bar, then the overlay slot below the sheet slot (`03` §3.6). The page is one phone
  * column of at most 608 px with no width breakpoints; the chrome reads the address inside `<Suspense>`
@@ -100,7 +125,7 @@ export function AppShell({ children, overlay, sheet }: { children: ReactNode; ov
         <ShellTop />
       </Suspense>
       <main data-shell-content="" className="mx-auto w-full max-w-(--feed-max)">
-        {children}
+        <ShellContent>{children}</ShellContent>
       </main>
       <Suspense fallback={null}>
         <ShellBottom />

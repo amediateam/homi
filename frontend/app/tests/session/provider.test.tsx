@@ -60,6 +60,38 @@ describe("SessionProvider", () => {
     expect(window.localStorage.getItem("homi-city")).toBe("samarkand");
   });
 
+  it("exposes pending while the attempt is in flight, and retry() on the context (WP-23)", async () => {
+    fake = fakeTelegram({ initData: syntheticInitData({ id: 5 }) });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const answer = { mode: "cookie", me, user: createHash("sha256").update("5").digest("hex") };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => (await gate, new Response(JSON.stringify(answer), { status: 200 }))),
+    );
+    vi.resetModules();
+    const { SessionProvider, useSession } = await import("@/lib/session/SessionProvider");
+    const bootstrap = await import("@/lib/session/bootstrap");
+    const seen: { retry: unknown }[] = [];
+    function Probe() {
+      const session = useSession();
+      seen.push({ retry: session.retry });
+      return <output>{`${session.status} ${String(session.pending)}`}</output>;
+    }
+    await act(async () => {
+      render(
+        <SessionProvider>
+          <Probe />
+        </SessionProvider>,
+      );
+    });
+
+    expect(screen.getByRole("status").textContent).toBe("booting true");
+    expect(seen.at(-1)?.retry).toBe(bootstrap.retry);
+    await act(async () => release());
+    await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("ready false"));
+  });
+
   it("does not refresh outside cookie mode", async () => {
     await mount({ mode: "none" });
     await vi.waitFor(() => expect(screen.getByRole("status").textContent).toBe("booting -"));

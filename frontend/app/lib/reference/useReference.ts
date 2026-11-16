@@ -1,15 +1,15 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { DEFAULT_RADAR_LIMIT, EMPTY_REFERENCE } from "./empty";
 import type { Cached, City, CityStats, Reference } from "./types";
 
 /**
  * The reference data on the client (WP-22): fed by `ReferenceProvider` from the cached server call, read with
- * `useReference()` and `useCityStats()`. Until it arrives — and whenever the API could not be read — the defaults
- * hold: radar limit 10, `radars_enabled` false (no radar is offered), no support account (its rows are hidden), no
- * cities (nothing that needs a city is offered).
+ * `useReference()`, `useCityStats()` and `useCitiesStats()`. Until it arrives — and whenever the API could not be
+ * read — the defaults hold: radar limit 10, `radars_enabled` false (no radar is offered), no support account (its
+ * rows are hidden), no cities (nothing that needs a city is offered).
  */
 
 interface State {
@@ -80,4 +80,16 @@ export function useReference(): ReferenceView {
 export function useCityStats(code: string | null | undefined): CityStats | null {
   const { cities } = useState();
   return cities.data.find((city) => city.code === code) ?? null;
+}
+
+/**
+ * The stats of every city of `GET /cities`, by code (WP-23, D-S-12: the counts of the city list). `stats` is `null`
+ * while they are not there and when the API could not be read: the rows go without their count line then.
+ */
+export function useCitiesStats(): { stats: Record<string, CityStats> | null; loaded: boolean } {
+  const { cities } = useState();
+  return useMemo(
+    () => ({ stats: cities.loaded ? Object.fromEntries(cities.data.map((city) => [city.code, city])) : null, loaded: cities.loaded }),
+    [cities],
+  );
 }

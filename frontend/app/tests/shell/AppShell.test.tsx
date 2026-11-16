@@ -11,6 +11,7 @@ vi.mock("@/features/shell/MiniTitle", () => ({ MiniTitle: () => <button type="bu
 vi.mock("@/features/shell/ViewToggle", () => ({ ViewToggle: ({ variant }: { variant: string }) => <button type="button" data-part="view-toggle" data-variant={variant} /> }));
 vi.mock("@/features/shell/PullToRefresh", () => ({ PullToRefresh: () => <div data-part="ptr" /> }));
 
+import { BOOT_RETRY_IDLE, publishBootRetry, resetBootRetry, setBootRetryHandler } from "@/features/gates/bootRetryStore";
 import { AppShell } from "@/features/shell/AppShell";
 import { lastSavedHref, lastSearchHref, rememberHref } from "@/lib/ui/shellState";
 
@@ -67,6 +68,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetBootRetry();
   document.documentElement.classList.remove("chrome-mini");
 });
 
@@ -203,5 +205,32 @@ describe("AppShell (SCR-006)", () => {
       expect(document.documentElement.classList.contains("chrome-mini")).toBe(false);
       cleanup();
     }
+  });
+
+  it("shows ErrorState in the content area after the sixth failed sign-in, the chrome around it (D-S-3)", () => {
+    const retry = vi.fn();
+    setBootRetryHandler(retry);
+    publishBootRetry({ failed: true, kind: "offline", checking: false });
+    const view = renderShell("/");
+    const content = document.querySelector("[data-shell-content]")!;
+    expect(content.querySelector('[data-part="page"]')).toBeNull();
+    const error = content.querySelector<HTMLElement>('[data-slot="error-state"]')!;
+    expect(error.dataset.kind).toBe("offline");
+    expect(error.textContent).toContain("Нет связи");
+    expect(error.textContent).toContain("Проверьте интернет и попробуйте ещё раз.");
+    expect(parts()).toEqual(["mini-title", "topbar", "view-toggle", "ptr", "tabbar", "overlay", "sheet"]);
+
+    act(() => error.querySelector("button")!.click());
+    expect(retry).toHaveBeenCalledTimes(1);
+
+    act(() => publishBootRetry({ failed: true, kind: "server", checking: false }));
+    expect(content.textContent).toContain("Не загрузилось");
+    expect(content.textContent).toContain("Сервер не ответил. Попробуйте ещё раз через минуту.");
+    expect(content.textContent).toContain("Повторить");
+
+    act(() => publishBootRetry(BOOT_RETRY_IDLE));
+    view.rerender(shell());
+    expect(content.querySelector('[data-part="page"]')).not.toBeNull();
+    expect(content.querySelector('[data-slot="error-state"]')).toBeNull();
   });
 });

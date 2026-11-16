@@ -6,6 +6,7 @@ import { useEffect } from "react";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_COOKIE } from "@/i18n/routing";
+import { matchRoute } from "@/lib/navigation/routes";
 import { detectLocale, tg } from "@/lib/telegram";
 
 import { useSession } from "./SessionProvider";
@@ -21,7 +22,8 @@ function storedLocale(): string | null {
  * locale, the Telegram language picks it (`detectLocale`, LB-APP-032); after sign-in `me.locale` wins and is checked
  * on every navigation, so Back cannot land on an old segment. next-intl's router stores the switched locale in its
  * cookie. It waits until the launch is prepared, because the fragment scrub would undo a pending navigation. The
- * first-launch choice itself is WP-23.
+ * first-launch choice itself is WP-23. On a gate route it does nothing: `GateRedirector` owns every navigation into
+ * and out of the gates, with the locale it wants (WP-23, D-S-6), so a pick there navigates once.
  */
 export function LocaleGuard(): null {
   const { status, prepared, me } = useSession();
@@ -30,7 +32,7 @@ export function LocaleGuard(): null {
   const router = useRouter();
 
   useEffect(() => {
-    if (!prepared) {
+    if (!prepared || matchRoute(pathname).route === "gate") {
       return;
     }
     let wanted: Locale | null = null;

@@ -56,6 +56,42 @@ describe("TelegramButtons (TMA-022, TMA-023)", () => {
     expect(state.push).toHaveBeenCalledTimes(1);
   });
 
+  it("SettingsButton is hidden while the session is not ready and on the gate routes (WP-23, D-S-15)", () => {
+    fake = fakeTelegram({ version: "7.0" });
+    state.status = "booting";
+    const { rerender } = render(<TelegramButtons />);
+    expect(fake.webApp.SettingsButton.isVisible).toBe(false);
+
+    for (const status of ["denied", "outside", "expired"]) {
+      state.status = status;
+      rerender(<TelegramButtons />);
+      expect(fake.webApp.SettingsButton.isVisible, status).toBe(false);
+    }
+
+    state.status = "ready";
+    for (const pathname of ["/welcome/language", "/welcome/city", "/no-access", "/outside"]) {
+      state.pathname = pathname;
+      rerender(<TelegramButtons />);
+      expect(fake.webApp.SettingsButton.isVisible, pathname).toBe(false);
+    }
+
+    state.pathname = "/map";
+    rerender(<TelegramButtons />);
+    expect(fake.webApp.SettingsButton.isVisible).toBe(true);
+
+    // Shown, then hidden again: a refusal while ready (onForbidden) and a city gate after Back from a launch listing.
+    state.status = "denied";
+    rerender(<TelegramButtons />);
+    expect(fake.webApp.SettingsButton.isVisible).toBe(false);
+
+    state.status = "ready";
+    rerender(<TelegramButtons />);
+    expect(fake.webApp.SettingsButton.isVisible).toBe(true);
+    state.pathname = "/welcome/city";
+    rerender(<TelegramButtons />);
+    expect(fake.webApp.SettingsButton.isVisible).toBe(false);
+  });
+
   it("6.0 has no SettingsButton", () => {
     fake = fakeTelegram({ version: "6.0" });
     render(<TelegramButtons />);
