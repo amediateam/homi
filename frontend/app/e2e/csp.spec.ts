@@ -1,4 +1,4 @@
-import { expect, launchApp, test } from "@homi/testing/playwright";
+import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /** The nonce policy of `proxy.ts` (WP-21, ADR-0020, `25` §3.10). */
@@ -15,6 +15,8 @@ async function watchViolations(page: Page): Promise<() => Promise<string[]>> {
 test.describe("content security policy", () => {
   test("launch, soft navigation and an image raise no violation", async ({ page }) => {
     const violations = await watchViolations(page);
+    // The card photos come from the stub CDN, which CI cannot resolve: answered here, they load as on a developer machine.
+    const photos = await stubMedia(page);
     const response = page.waitForResponse((answer) => answer.request().resourceType() === "document" && answer.status() === 200);
     await launchApp(page);
     const headers = (await response).headers();
@@ -24,6 +26,7 @@ test.describe("content security policy", () => {
     await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
 
     // The feed's first card (WP-24): its photos are images too.
+    await expect.poll(() => photos.length, { message: "no stub photo was asked for: is NEXT_PUBLIC_CDN_URL in img-src?" }).toBeGreaterThan(0);
     await page.locator("article[data-listing] a").filter({ visible: true }).first().click();
     await expect(page.locator('[data-route="listing"]').filter({ visible: true })).toBeVisible();
     await page.evaluate(async () => {

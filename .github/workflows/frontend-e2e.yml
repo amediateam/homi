@@ -91,6 +91,9 @@ jobs:
         run: pnpm test:e2e
         env:
           API_URL: http://127.0.0.1:8080/api/v1
+          # The stub media base of `backend/.env.example` (`MEDIA_PUBLIC_URL`): the CSP's `img-src` must allow the stub
+          # photos, which the specs answer themselves (`stubMedia` of `@homi/testing/playwright`).
+          NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
           NEXT_PUBLIC_APP_ENV: ci
 
       - name: Upload traces and report
