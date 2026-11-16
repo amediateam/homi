@@ -557,7 +557,8 @@ outside the allow-list answers 404.
   `frontend/pnpm-lock.yaml` (workspace links only) are in this PR and announced there.
 - **For the next packages:** WP-23 renders `ErrorState` from `UiError` (`error.offline`, `common.loadFailed`, …),
   writes `lib/actions/settings.ts` with `runAction` and calls `patchMe` after it; WP-24 builds `useCursorFeed` on
-  `bffFetch` / `serverApi().listings` with `toApiQuery(…, { cursor, limit })` and replaces the feed proof; WP-25
+  `bffFetch` / `serverApi().listings` with `toApiQuery(…, { cursor, limit })` and replaces the feed proof (as built,
+  WP-24: the caller owns the query and `limit`, the hook only appends `cursor`, and the proof moved to `/map`); WP-25
   builds the filters UI on `sectionsFor`, the transitions and `useMoney().presets`; WP-27 replaces the map proof;
   WP-33 adds the `setScenario` helper over the `homi_stub_scenario` cookie.
 - **Merged** on 2026-11-16 on the developer's «все commit push main» (merge commit `e8c8f9e`), after `frontend`
@@ -568,5 +569,6 @@ outside the allow-list answers 404.
 - **Next:**
   1. ~~review and merge~~ (done);
   2. the production track deploys; the app server reaches the API over the `API_URL` WP-21 asked for, and the feed
-     and map placeholders show the proof on staging;
+     and map placeholders show the proof on staging (once WP-24 is deployed, only the map shows it; the feed lists
+     listings);
   3. set the status to `DONE`. WP-23 (gates and shell) builds on this package.

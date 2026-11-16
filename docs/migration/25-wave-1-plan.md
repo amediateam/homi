@@ -74,7 +74,8 @@ versions (`proxy.ts` replaces `middleware.ts`; `cacheComponents` is on).
   (DEC-44). Everything interactive is a Client Component that receives the server-fetched data as `initial` props.
 - The first request of a launch has no session: Telegram hands `initData` to the page in the browser only. The page
   therefore renders a shell, the client creates the session (section 3.4), and the router refreshes into
-  server-rendered content.
+  server-rendered content; a later document that already carries the launch user's cookie is server-rendered at
+  once and not refreshed (WP-24, AM-66).
 - `cacheComponents: true` is set in `frontend/app/next.config.ts`. Anything that reads cookies is dynamic and sits
   inside a `<Suspense>` boundary; nothing per-user is ever cached. Only reference data (directories, cities) is cached
   on the server, keyed by locale. Read `01-app/02-guides/authentication-with-cache-components.md` and
@@ -137,7 +138,7 @@ Telegram in a desktop browser; it is never part of a production bundle.
 | 2 | That route calls `POST /api/v1/auth/telegram`; Laravel verifies the signature with the environment's bot token and the age of `auth_date`, creates or updates the user and issues a token with an expiry |
 | 3 | The route sets the cookie `homi_session`: `HttpOnly`, `Secure`, `SameSite=None`, `Partitioned`, lifetime of the token. It also returns the token in the body |
 | 4 | The client asks `GET /bff/session`. If the cookie came back, the app is in **cookie mode** and forgets the token. If not, it is in **header mode** and keeps the token in memory only |
-| 5 | The router refreshes. If the user's locale differs from the address, it replaces the address |
+| 5 | In cookie mode the router refreshes, but only when this launch signed in (steps 1–3 ran, `SessionState.renewed`); a launch that confirmed the cookie its document already carried does not refresh (WP-24, AM-66). If the user's locale differs from the address, it replaces the address |
 
 - **Cookie mode** (native clients, most browsers): Server Components fetch with the cookie; mutations are Server
   Actions.

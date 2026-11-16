@@ -781,3 +781,121 @@ that window; the D2 verifier's full run, after them → 84 passed, 1 failed (`sh
 alone → 16 passed. The `✘` on `smoke.spec.ts:25` is its expected `test.fail`. `make ci-frontend` (from the root)
 → exit 0 (tests: app 977, `@homi/search` 238 + 1 todo, `@homi/ui` 111, `@homi/i18n` 109, `@homi/testing` 95,
 `@homi/api-client` 14, `@homi/utils` 2).
+
+## V. Development track, 2026-11-16/17 — WP-24, feed and listing card
+
+Taken on «Погнали WP-24» and continued on «давай, продолжай». Branch `feat/wp-24-feed`, on `main` = `d76a0c0` (after
+#69); its first commit `f9cc818` marks the package `IN_PROGRESS`. Each part ran as its own ultracode workflow and is
+its own commit: A `8b64b19` (the card rules, `Photo` and `PhotoStrip`, `ListingCard`, `FavButton` with
+`setFavorite`, the preview cache, the gallery's card states), the contract fix `9163d26` (AM-65), B `1d1c964`
+(`useCursorFeed`, `ListingFeed`, the header chips, the few-results and empty states, the radar seam, `FeedServer`,
+`FeedScreen`, the page) and C `f58cf88` (`e2e/feed.spec.ts`, `stubMedia`, the CI variable). The specification is
+corrected where the code differs (rule 6) and its "Handoff" is filled.
+
+The search tab now shows the feed. With the session cookie `FeedServer` reads page one on the server (on an address
+without a city for the profile's city, read from `/me` first), and `ListingFeed` adopts it without a request; header
+mode and a first launch read page one in the browser; `useCursorFeed` pages through `/bff/listings` (20 a page, the
+sentinel 800 px ahead, every listing once). The card — full and compact, the photo strip with the small variant and
+the server's Save-Data / Telegram-Android hint, the badge, verdict, price, facts and location rules, the heart saving
+through `setFavorite` — records `seen` and the preview cache when opened. The chips sit in the top bar and push the
+WP-20 sheet placeholders with the search state; the few-results note, the empty states of the three lists, the
+loading and error states of SCR-008 with a status line for screen readers, pull-to-refresh and the inline slot of
+WP-30's radar card are built, and the radar button stays hidden behind `radarsReady`. The feed keeps its own search
+under a layer, a sheet or another tab (`useScreenSearchState`, the feed's fix of KI-43), the router refreshes only
+after a sign-in of the launch, and the saved city is read hydration-safe.
+
+ASSUMPTION_MISMATCH AM-65 (2026-11-16):
+- **Assumption.** WP-12's contract ends the feed on `meta.next_cursor: null` (`string | null`, DEC-41), and WP-24's
+  step 1 takes the generated types of `GET /listings` to say so, as those of `/favorites` and `/history` do.
+- **What was found.** `operations["v1.listings.index"]` of `@homi/types` typed `meta.next_cursor` as `string`:
+  Scramble inferred the source's cursor as a plain string, although `ApiController::cursorPage()` and
+  `ListingPage::$nextCursor` take `?string`. A PHPDoc `@var ListingPage $page` and a `@param string|null` on
+  `ListingPage` changed nothing; a remark in the method's PHPDoc would be copied into the operation's description
+  (and the comment of `@homi/types`). `useCursorFeed`'s comparison with `null` would not have compiled (TS2367).
+- **Resolution.** `9163d26`: `$nextCursor = $page->nextCursor ?? null` in a typed local of
+  `ListingController::index()`, with a one-line comment; `docs/api/openapi.json` and `@homi/types` regenerated. On
+  that commit `php artisan test --compact` → 720 passed, 4 skipped, and `pnpm types:check` → exit 0.
+
+ASSUMPTION_MISMATCH AM-66 (2026-11-16):
+- **Assumption.** `25` §3.4 step 5 ("The router refreshes") and WP-21's step 5 refresh the router once per launch in
+  cookie mode "so Server Components render with the session"; `SessionProvider` refreshed once, at the first
+  cookie-mode `ready` of every launch, whether the launch signed in or only confirmed the document's cookie.
+- **What was found.** A launch whose document already carried the launch user's cookie (a reload, a later launch)
+  had been rendered with the session, so the refresh re-ran `FeedServer` (`/me` and `GET /listings`) for nothing:
+  `useCursorFeed` adopts `initial` only when a key's list starts, and adopting a later one would silently replace a
+  page the user may be scrolling — a tab tapped back to the list re-reads the dynamic page as well
+  (`segment-cache/bfcache.js` skips the stale check only for Back and Forward, and `DYNAMIC_STALETIME_MS` is 0). A
+  launch that signs in — the first one, a revoked cookie, another Telegram user's cookie on the same device — kept
+  the page one read with the old cookie: a revoked token showed «Не загрузилось» until a tap, another user's page one
+  kept that user's hearts and eyes.
+- **Resolution.** `SessionState.renewed` is set when the bootstrap's `run()` signs in and never cleared;
+  `SessionProvider` refreshes only when `ready`, cookie mode and `renewed`; `useCursorFeed` reads a page one adopted
+  before `ready` again through `/bff` when `renewed`; `readFirstPage` returns `initial = null` on `unauthorized`.
+  `provider.test.tsx` covers a sign-in (one refresh) and a confirmed cookie (none); `feed.spec.ts` checks one `/bff`
+  page one and one refresh on a first launch, and neither after a reload. `25` §3.4 and WP-21 step 5 now say so.
+  What remains — one server read dropped per sign-in launch, the other user's hearts in the HTML until `ready` — are
+  KI candidates.
+
+ASSUMPTION_MISMATCH AM-67 (2026-11-16):
+- **Assumption.** WP-22's `useSearchState` takes the city of an address without one from `me.city`, else the saved
+  `homi-city`, else Tashkent (BR-APP-010), and WP-22 adopts a server `initial` "only when the keys of server and
+  client agree"; the WP-24 specification had `FeedServer` read page one for the city of the profile.
+- **What was found.** In the server render of a Client Component `useSession().me` is `null` and there is no
+  storage, so the HTML lists Tashkent, while the hydration render read `homi-city` synchronously during render. The
+  first `FeedServer` read page one for `me.city`: for a profile outside Tashkent the HTML had skeletons and hydration
+  adopted cards; for a Tashkent profile with another saved city (changed elsewhere, or a first-launch pick whose save
+  failed) the HTML had 20 cards and the hydration render skeletons, a recoverable hydration error after which React
+  rendered the boundary again on the client. The parity test always saved the profile's city.
+- **Resolution.** `useSearchState` reads the saved city through `useSyncExternalStore` with a server snapshot of
+  `null` (`subscribeStorage` of `lib/storage.ts`) and takes `profileCity`, the city `readFirstPage` read from `/me`
+  on an address without one, as the profile until `me` is known. `FeedScreen.test.tsx` hydrates the real
+  `readFirstPage` HTML in six cases (profile and saved city equal, different or missing; an address with a city)
+  without a recoverable error; a `useSearchState` test hydrates with a saved Samarkand. The chips, the mini title and
+  the title tabs get no `profileCity` and change their text after hydration on such an address: a KI candidate.
+
+ASSUMPTION_MISMATCH AM-68 (2026-11-16):
+- **Assumption.** WP-24's "Loading and errors" said that with `dev001AnyForbiddenShowsAccess` on a `forbidden`
+  answer never reaches the list, because the error mapper of WP-22 sends the user to the no-access screen (row 6 of
+  WP-22's table).
+- **What was found.** Row 6 describes what screens do. `onForbidden()` of `lib/session/bootstrap.ts` is called by
+  `useResource` only; `lib/api/errors.ts` maps the answer to `forbidden`, and `bffFetch` returns it. A cursor list
+  read through `bffFetch` would have kept the inline «Нет доступа — повторить» with the flag on.
+- **Resolution.** `useCursorFeed` calls `onForbidden()` itself when a page is `forbidden`, the flag is on (its
+  `flags` option defaults to `devFlags`, as `useResource`'s) and the session is ready; a forbidden `initial` waits
+  for `ready`, because `onForbidden()` acts only then. Two unit tests cover it; every `DEV` flag stays off, so no
+  end-to-end test reaches the branch.
+
+ASSUMPTION_MISMATCH AM-69 (2026-11-16):
+- **Assumption.** WP-20's `lite.css` gave every lite card `contain-intrinsic-size: auto 420px`, the estimate that
+  `03` §3.6 records for the feed cards (line 1757).
+- **What was found.** The pinned release's CSS has a lite rule of its own, `.lite .lc:not(.compact)`, at 360 px;
+  420 px is the size outside lite.
+- **Resolution.** `lite.css` uses `auto 360px` with a comment, `packages/ui/tests/tokens.test.ts` pins it, and the
+  specification states both sizes. Adding the lite rule to the audit is a reviewer question.
+
+Own choices (no ADR): a screen reads the search of its own address through `useScreenSearchState`, held under a
+layer, a sheet or another tab (D1); `feedQuery.ts` builds the query and the list key for the server and the browser
+from the canonical `toSearchParams` (D2); an adopted page one renders on the server and at hydration whatever the
+session status, `enabled` gating sending only (D3); the device rule lives in `lib/device.ts`, so `FeedServer` can
+compute the small-photo hint, which seeds only the server and hydration renders of `Photo` (D4); any cursor already
+sent ends a list; the refresh version is per search; the inline block is one keyed row among the cards; a list
+reports its `meta.source` only on its own address; the heart is a sibling of the card's link, with a busy set per
+listing and no error haptic; eager photos are not faded, so a server-rendered photo shows before hydration (legacy
+faded every photo); the dots count `photos.preview`; the few-results deal switch is one replace, as the title tabs;
+`feed.loading` is the one new `homi` key; `FeedScreen` starts the lite scroll measurement on the first scroll; the
+end-to-end photos are answered by `stubMedia`, and `frontend-e2e.yml` sets `NEXT_PUBLIC_CDN_URL` so the CSP allows
+them.
+
+Verified (on `1d1c964`, from `frontend/`): `pnpm --filter app test` → 102 files, 1402 tests passed;
+`pnpm --filter @homi/i18n test` → 10 files, 110 passed; `pnpm --filter @homi/ui test` → 8 files, 112 passed;
+`pnpm -r lint`, `pnpm -r typecheck`, `pnpm types:check` and `pnpm --filter app build` → exit 0. Backend on `9163d26`:
+`php artisan test --compact` → 720 passed, 4 skipped; PHPStan on the controller → 0 errors; Pint passed. On `f58cf88`:
+`make ci-frontend` (orchestrator) → exit 0: types:check, lint, typecheck and every build clean; unit tests app 102
+files / 1402, `@homi/search` 238 + 1 todo, `@homi/testing` 95, `@homi/ui` 112, `@homi/i18n` 110, `@homi/api-client`
+14, `@homi/utils` 2 passed; `feed.spec.ts` alone → 19 passed, `csp.spec.ts` and `smoke.spec.ts` → 4 passed (the smoke
+test of a telegram.org request is an expected `test.fail`), no `429` in those runs (orchestrator). The part C verify
+run took every file of `app/e2e/` alone on the same tree: data 5, back 11, boot-failure 6, crash 4, csp 2, feed 19
+(three runs), foundation 19, gates 8, launch 5, session 7, smoke 2 passed; shell 15 of 16 on the first try with three
+`429`s (KI-32), 16 passed when rerun alone a minute later. Screenshots at 390 px in ru, uz and en, light and dark,
+were looked at
+locally and are not committed.
