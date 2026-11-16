@@ -10,7 +10,7 @@
   "scripts": {
     "test": "vitest run --config ../../vitest.config.mts --project @homi/ui",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"@homi/ui: no lint rules yet\""
+    "lint": "node ../../app/node_modules/eslint/bin/eslint.js ."
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.3.1",

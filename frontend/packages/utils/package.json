@@ -9,7 +9,7 @@
   "scripts": {
     "test": "vitest run --config ../../vitest.config.mts --project @homi/utils",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"@homi/utils: no lint rules yet\""
+    "lint": "node ../../app/node_modules/eslint/bin/eslint.js ."
   },
   "dependencies": {
     "@homi/config": "workspace:*"
