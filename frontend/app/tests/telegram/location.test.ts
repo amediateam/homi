@@ -79,6 +79,46 @@ describe("location (TMA-035)", () => {
     await expect(getLocation()).resolves.toBe("fail");
   });
 
+  it("a browser request that never calls back fails at 12 s and does not keep the pending request", async () => {
+    stubGeolocation(() => undefined);
+    const result = getLocation();
+    await vi.advanceTimersByTimeAsync(LOCATION_TIMEOUT_MS - 1);
+    let settled = false;
+    void result.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(result).resolves.toBe("fail");
+
+    stubGeolocation((success) => success({ coords: { latitude: 3, longitude: 4, accuracy: 1 } } as GeolocationPosition));
+    await expect(getLocation()).resolves.toEqual({ lat: 3, lon: 4, accuracy: 1 });
+  });
+
+  it("a browser answer that arrives after the bound is ignored", async () => {
+    let success: PositionCallback | undefined;
+    stubGeolocation((ok) => {
+      success = ok;
+    });
+    const result = getLocation();
+    await vi.advanceTimersByTimeAsync(LOCATION_TIMEOUT_MS);
+    await expect(result).resolves.toBe("fail");
+
+    success?.({ coords: { latitude: 9, longitude: 9, accuracy: 1 } } as GeolocationPosition);
+    await expect(result).resolves.toBe("fail");
+  });
+
+  it("a fast browser answer clears the bound", async () => {
+    stubGeolocation((success) => success({ coords: { latitude: 1, longitude: 2, accuracy: 5 } } as GeolocationPosition));
+    await expect(getLocation()).resolves.toEqual({ lat: 1, lon: 2, accuracy: 5 });
+    expect(vi.getTimerCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(LOCATION_TIMEOUT_MS);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("a second call while one is pending shares its promise", async () => {
     fake = fakeTelegram({ version: "8.0", answers: { location: { latitude: 1, longitude: 2 } } });
     const first = getLocation();
