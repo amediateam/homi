@@ -26,8 +26,10 @@ class ListingController extends ApiController
         $context = SourceContext::fromRequest($request);
         $resolved = $this->sources->listings('source.listings.feed', $context);
         $page = $resolved->source->feed($request->listingQuery(), $context);
+        /** Scramble types the source's cursor as a plain string; `?? null` keeps the documented one nullable (WP-24). */
+        $nextCursor = $page->nextCursor ?? null;
 
-        return $this->cursorPage(ListingPreviewResource::collection($page->items), $page->nextCursor, $resolved->driver);
+        return $this->cursorPage(ListingPreviewResource::collection($page->items), $nextCursor, $resolved->driver);
     }
 
     /**
