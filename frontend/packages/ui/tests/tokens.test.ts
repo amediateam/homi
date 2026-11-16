@@ -170,6 +170,13 @@ describe("rules of the stylesheet", () => {
     expect(css["motion.css"]).toMatch(/transition: none !important/);
   });
 
+  it("skips every full card off screen under html.lite with the pinned release's 360 px estimate", () => {
+    expect(declarations("lite.css", "html.lite [data-card]")).toEqual({
+      "content-visibility": "auto",
+      "contain-intrinsic-size": "auto 360px",
+    });
+  });
+
   it("stops every keyframe animation on reduced motion, the entrances of sheets, dialogs, toasts and sub-pages too", () => {
     const motion = css["motion.css"].replace(/\/\*[\s\S]*?\*\//g, "");
     const reduced = motion.slice(motion.indexOf("@media (prefers-reduced-motion: reduce)"));

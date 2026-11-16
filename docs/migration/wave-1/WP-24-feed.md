@@ -117,7 +117,7 @@ app/[locale]/(main)/page.tsx
 
 | File | Content |
 | ---- | ------- |
-| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `href`, `onOpen`, `onFavorite`. Compact: one photo, short verdict only, no badge, no eye, no dots |
+| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite`. Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay |
 | `ListingCardSkeleton.tsx` | Shimmer photo and three bars (62 %, 80 %, 35 %) |
 | `PhotoStrip.tsx`, `Photo.tsx` | Scroll-snap strip with lazy slides, dots, video badge, placeholder |
 | `FavButton.tsx` | Heart with optimistic state |
@@ -131,7 +131,10 @@ app/[locale]/(main)/page.tsx
 
 - The card is a link: `<Link href={routes.listing(number)} prefetch={false} scroll={false}>`, with `Link` from
   `i18n/navigation.ts` (the wrapped one of WP-21, so the push is counted for Back); on click it adds the number
-  to `seen`, calls `setPreview(number, item)` and lets the router push. The heart stops the click.
+  to `seen`, calls `setPreview(number, item)` and lets the router push. The heart sits beside the link, over the
+  photo: a `<button>` may not sit inside an `<a>`, and its label would join the link's name. The focus ring is drawn
+  by the card's `<article>` (`:has(a:focus-visible)`; the card holds one link), because the `content-visibility` of later cards clips
+  anything drawn outside the link's box.
 - Photos are plain `<img>` elements, not `next/image`: the addresses are signed and must reach the browser
   unchanged. The lint rule `@next/next/no-img-element` is disabled for `Photo.tsx` with a comment that says why.
 - `lib/data/previewCache.ts`: `setPreview(number, card)`, `getPreview(number)`; module memory, last 200 cards;
@@ -206,8 +209,10 @@ Changed:
   pull-to-refresh, re-creates it from page one and scrolls to top.
 - Paging (BR-APP-024): pages of 20; the next page loads when the sentinel is within 800 px; the list ends on a
   `null` cursor; an item whose number was already shown is skipped.
-- The first two cards load their photo eagerly with high priority; later cards are lazy and use
-  `content-visibility: auto` with an intrinsic size of 420 px.
+- The first two cards load their photo eagerly with high priority and without the fade-in, so a server-rendered
+  photo shows before hydration (legacy faded every photo); later cards are lazy, fade in, and use
+  `content-visibility: auto` with an intrinsic size of 420 px. Under lite graphics every full card, the first two
+  too, uses it with 360 px (`lite.css` of `@homi/ui`; the pinned release's `.lite .lc:not(.compact)`).
 - Listings hidden or blocked in this launch disappear from the list at once (session map `hidden`); the server
   excludes them after the next fetch.
 - Opening a card marks it viewed for this launch and opens the listing over the feed; the feed keeps its scroll
@@ -238,13 +243,25 @@ current search parameters:
 ### Card (SCR-007, 03 §2.1)
 
 - Photo strip: scroll-snap; slides mount lazily (those seen plus the next; pointer-down mounts the next); dots
-  when there is more than one photo; a ▶ badge when the listing has a video; no photos → placeholder; a photo that
-  fails to load → placeholder, no retry.
+  when there is more than one photo; a ▶ badge when the listing has a video (a mark hidden from assistive
+  technology: the card's link opens the listing, and «Смотреть видео в Telegram» is the listing screen's button);
+  no photos → placeholder; a photo that fails to load → placeholder, no retry (a new address for the slide, e.g. a
+  re-signed one after a refresh, is a new photo).
 - Photos (BR-APP-059): the small variant `.s.jpg` (480 px) is derived only for addresses of the form
   `…/<digits>/<digits>.jpg?…`; other addresses are used as they are. With Save-Data, a connection of 3g or
   slower, or lite graphics only the small variant is requested; otherwise `srcset` offers 480w and 800w with
   `sizes="(min-width: 640px) 608px, calc(100vw - 32px)"` (compact: `112px`). Every photo has
-  `referrerPolicy="no-referrer"` and `decoding="async"`.
+  `referrerPolicy="no-referrer"` and `decoding="async"`, the blurred copy behind a video photo too.
+- Server-rendered photos (cookie mode): the server cannot read `navigator.connection` or storage, so the server
+  render and the hydration render use the card's `serverSmallOnly`, and the client's own answer applies from
+  hydration on. `FeedServer` sets it for the first page from the request: `Save-Data: on`, or a Telegram-Android
+  performance class below `HIGH` in the User-Agent (the pure rule `isLowEndDevice({ userAgent })` of
+  `lib/graphics.ts`; that module imports a React client hook, so part B moves the device rule into a module a
+  Server Component can import, and `lib/graphics.ts` re-exports it). Limit:
+  what only the client knows — a lite choice or a measured lite result in storage, a connection of 3g or slower,
+  an Android device judged by its cores and memory — reaches the first page's photos at hydration, so the browser
+  may start them from the full `srcset` first; a hint the client does not confirm (a stored `full` choice) switches
+  them to the full set at hydration.
 - Over the photo: the badge (not in compact), the heart, the «viewed» eye (aria `card.viewedTitle` «Вы открывали
   это объявление»), and the status text of the listing as a warning tag at the bottom.
 - Badge priority (BR-APP-026, BR-API-111), first match wins: «Подозрительно дёшево» (`card.suspiciousCheap`, warn) >
@@ -435,7 +452,8 @@ Card
 - [ ] The location line shows district, landmark and the metro within 1.5 km, else the distance to the centre.
 - [ ] Photos swipe inside the card with dots; a video listing shows ▶; a listing without photos, and a broken
       photo, show the placeholder.
-- [ ] On Save-Data or lite graphics only small photos are requested.
+- [ ] On Save-Data or lite graphics only small photos are requested; in cookie mode the first page's photos
+      follow the server's hint (Save-Data header, Telegram-Android class) until hydration (limit above).
 - [ ] (T) The heart fills at once with a haptic; a failed save empties it again; the state survives scrolling
       away and back.
 

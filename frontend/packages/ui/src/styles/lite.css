@@ -21,9 +21,10 @@ html.lite [data-mini-title] {
   display: none;
 }
 
+/* Every full card, the first two too; the pinned release estimates 360 px here, 420 px outside lite. */
 html.lite [data-card] {
   content-visibility: auto;
-  contain-intrinsic-size: auto 420px;
+  contain-intrinsic-size: auto 360px;
 }
 
 html.lite [data-radar-animation] {
