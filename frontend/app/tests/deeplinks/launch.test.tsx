@@ -2,6 +2,8 @@ import { fakeTelegram, syntheticInitData, type FakeTelegram } from "@homi/testin
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { resolveGate } from "@/features/gates/resolveGate";
+
 const state = vi.hoisted(() => ({
   status: "booting",
   push: vi.fn(),
@@ -25,6 +27,8 @@ async function mount(address: string, startParam?: string) {
 }
 
 afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
   cleanup();
   fake?.uninstall();
   fake = null;
@@ -215,5 +219,62 @@ describe("launchPending (WP-23, D-S-8, BR-APP-055)", () => {
 
     expect(state.push.mock.calls).toEqual([["/listing/5"]]);
     expect(launch.launchPending()).toBe(false);
+  });
+
+  it("a landed push still ends the launch before the bound, and the bound does not bring it back", async () => {
+    vi.useFakeTimers();
+    const launch = await fresh("/ru", "l_42-web");
+    await vi.advanceTimersByTimeAsync(launch.LAUNCH_PENDING_MS);
+    expect(launch.launchPending()).toBe(true);
+
+    launch.consumeLaunch();
+    await vi.advanceTimersByTimeAsync(launch.LAUNCH_PENDING_MS - 1);
+    expect(launch.launchPending()).toBe(true);
+
+    window.history.pushState(null, "", "/ru/listing/42");
+    expect(launch.launchPending()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(launch.LAUNCH_PENDING_MS);
+    window.history.replaceState(null, "", "/ru");
+    expect(launch.launchPending()).toBe(false);
+  });
+
+  it("a push that never lands stops being pending at the bound, and the city gate can then fire", async () => {
+    vi.useFakeTimers();
+    const launch = await fresh("/ru", "l_42-web");
+    function Probe() {
+      return <span data-version={launch.useLaunchGate()} />;
+    }
+    const view = render(<Probe />);
+    const version = () => view.container.querySelector("span")!.getAttribute("data-version");
+    const before = version();
+
+    launch.consumeLaunch();
+    window.history.pushState(null, "", "/ru/map");
+    await vi.advanceTimersByTimeAsync(launch.LAUNCH_PENDING_MS - 1);
+    expect(launch.launchPending()).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(launch.launchPending()).toBe(false);
+    expect(window.location.pathname).toBe("/ru/map");
+    expect(version()).not.toBe(before);
+    expect(
+      resolveGate({
+        status: "ready",
+        me: { locale: "uz", locale_chosen: true, city_chosen: false },
+        reason: null,
+        locale: "uz",
+        pathname: "/map",
+        searchParams: new URLSearchParams(),
+        citiesCount: 3,
+        localePicked: false,
+        cityPicked: false,
+        launchPending: launch.launchPending(),
+        telegramLocale: "en",
+        returnTo: null,
+      }),
+    ).toEqual({ href: "/welcome/city", locale: "uz" });
   });
 });

@@ -63,6 +63,39 @@ let target: string | null = null;
 /** The query the Mini App was opened with, read when the module loads: on a gate route the address has none. */
 const launchSearch = typeof window === "undefined" ? "" : window.location.search;
 
+/**
+ * How long a consumed launch may wait for its push. An address that is not the target does not end the wait: the
+ * replace that drops `?listing=` / `?news=` is part of the normal path, and so is any other page the redirect has not
+ * finished with. A dropped push changes nothing, so only this bound can release row 6 of `resolveGate`. It starts at
+ * `consumeLaunch()`, after the language gate, not for the whole time the launch is merely pending.
+ */
+export const LAUNCH_PENDING_MS = 12_000;
+
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearPendingTimer(): void {
+  if (pendingTimer !== null) {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+  }
+}
+
+/** Node tests must not stay alive for a timer the browser is meant to keep. */
+function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+  if (typeof timer === "object" && timer !== null && "unref" in timer && typeof timer.unref === "function") {
+    timer.unref();
+  }
+}
+
+function dropTarget(): void {
+  clearPendingTimer();
+  if (target === null) {
+    return;
+  }
+  target = null;
+  changed();
+}
+
 /** True once per launch: the redirect runs a single time. */
 export function consumeLaunch(): boolean {
   if (consumed) {
@@ -71,6 +104,11 @@ export function consumeLaunch(): boolean {
   consumed = true;
   // What the redirect opens now, from the address it reads (`LaunchRedirector`).
   target = typeof window === "undefined" ? null : launchTarget(parseLaunch(tg.initData(), window.location.search));
+  if (target !== null) {
+    clearPendingTimer();
+    pendingTimer = setTimeout(dropTarget, LAUNCH_PENDING_MS);
+    unrefTimer(pendingTimer);
+  }
   return true;
 }
 
@@ -80,8 +118,9 @@ export function consumeLaunch(): boolean {
  * was opened with), and after it until the address has shown the target's path, i.e. the router committed the push.
  * The first read that sees it forgets the target, so Back from the listing does not make the launch pending again;
  * `GateRedirector` reads it on every address. The city gate waits for it, so a launch by a listing link shows the
- * listing first. Not `history.length`: Chromium caps it at 50, and in Telegram Web the Mini App is an iframe that
- * shares the tab's history.
+ * listing first. A consumed launch whose push never lands is forgotten `LAUNCH_PENDING_MS` later (`dropTarget` tells
+ * `useLaunchGate`), so row 6 is not blocked for the rest of the launch. Not `history.length`: Chromium caps it at 50,
+ * and in Telegram Web the Mini App is an iframe that shares the tab's history.
  */
 export function launchPending(): boolean {
   if (typeof window === "undefined") {
@@ -92,6 +131,7 @@ export function launchPending(): boolean {
   }
   if (target !== null && normaliseAddress(window.location.pathname) === target.split("?")[0]) {
     target = null;
+    clearPendingTimer();
   }
   return target !== null;
 }
