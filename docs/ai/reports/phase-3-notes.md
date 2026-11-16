@@ -758,6 +758,9 @@ ASSUMPTION_MISMATCH AM-64 (2026-11-16):
 - **Resolution.** `CityList` races `tg.location.get()` against its own 12 s timer (`LOCATION_TIMEOUT_MS`); WP-25's
   city sheet reuses `CityList`. The adapter bounding its own promise is a KI candidate for the follow-up docs PR.
 
+Merged on 2026-11-16 as #68 (`901eaad`) after green `frontend` and `frontend-e2e` (85 passed); `WAITING` for the
+deploy and the checks inside Telegram on staging. KI-32 … KI-43 record the known-issue candidates.
+
 Own choices (no ADR): `ToastHost` is a plain `role="status"` live region, not Radix Toast, which pauses on blur,
 pointer movement and focus and defaults to 5 s (D-T-1); the boot retry makes six attempts and shows `ErrorState`
 after the sixth failure (D-S-3); `GateRedirector` owns every navigation into and out of a gate, and the pickers never
