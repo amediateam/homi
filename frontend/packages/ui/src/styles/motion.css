@@ -1,6 +1,6 @@
 /*
  * Keyframes of the base components (WP-20, `03` §3.6). Reduced motion stops the shimmer and the spinner and removes
- * transitions, as legacy does; JavaScript gestures settle instantly (WP-23).
+ * transitions, as legacy does, and stops every entrance too (WP-23); JavaScript gestures settle instantly.
  */
 @keyframes spin {
   to {
@@ -46,9 +46,29 @@
   }
 }
 
+/*
+ * Sub-page entrance (WP-23, legacy `subpage-in`): from 24 % to the right, faded in. Only the start is a keyframe and
+ * the utility (`animate-subpage-in`, theme.css) sets no fill mode, so once the entrance is over a swipe back moves the
+ * layer by its inline transform.
+ */
+@keyframes subpage-in {
+  from {
+    opacity: 0;
+    transform: translateX(24%);
+  }
+}
+
+/*
+ * Reduced motion: no keyframe animation and no transition anywhere. Legacy stopped the shimmer, the spinner and
+ * transitions; WP-23 (D-UI-7) adds the entrances — the sheet's rise, the rise-in of dialogs and toasts, the
+ * backdrop's fade, the sub-page's slide. One rule here rather than a variant per component: a
+ * `motion-reduce:animate-none` would lose to a `data-[state=open]:animate-*` rule. Every layer stands at its end
+ * state at once, and Radix unmounts a closing layer at once, as no animation runs.
+ */
 @media (prefers-reduced-motion: reduce) {
-  [data-shimmer],
-  [data-spinner] {
+  *,
+  ::before,
+  ::after {
     animation: none !important;
   }
 

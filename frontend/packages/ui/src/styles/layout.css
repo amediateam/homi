@@ -46,6 +46,22 @@ body {
   backdrop-filter: var(--glass);
 }
 
+/*
+ * The page under a sheet (WP-23, `03` §1.2): no scroll and no rubber band while any sheet is open (`sheet-open`,
+ * counted across stacked sheets) or a full sheet holds the page (`locked`). Pull-to-refresh reads both classes.
+ */
+body.sheet-open,
+body.locked {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Inside a sheet the page colour and its glass are the sheet's (legacy `.fsheet, .csheet`). */
+[data-slot="bottom-sheet"] {
+  --bg: var(--sheet);
+  --material: color-mix(in srgb, var(--sheet) 72%, transparent);
+}
+
 /* Hooks of the shell; WP-23 fills them (fullscreen mode, collapsed chrome). */
 html.fullscreen {
   --chrome-fullscreen: 1;

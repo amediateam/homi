@@ -63,9 +63,15 @@
   --animate-fade: fade var(--dur-base) var(--ease-ios) both;
   --animate-rise: rise var(--dur-slow) var(--ease-ios) both;
   --animate-rise-in: rise-in var(--dur-base) var(--ease-ios) both;
+  /* No fill mode: after the entrance a swipe back moves the sub-page by its inline transform (WP-23). */
+  --animate-subpage-in: subpage-in var(--dur-fast) var(--ease-ios);
 }
 
-/* The z-index ladder of `03` §3.6 and the motion values, as named tokens (`z-(--z-tabbar)`). */
+/*
+ * The z-index ladder of `03` §3.6 and the motion values, as named tokens (`z-(--z-tabbar)`). The shell's mini title
+ * shares the map card's level and the overlay slot the listing's (WP-23, D-UI-8): aliases, so the ladder keeps
+ * legacy's values.
+ */
 :root {
   --z-map-note: 5;
   --z-topbar: 10;
@@ -73,9 +79,11 @@
   --z-view-toggle: 29;
   --z-tabbar: 30;
   --z-map-card: 31;
+  --z-mini-title: var(--z-map-card);
   --z-nudge: 35;
   --z-subpage: 40;
   --z-listing: 45;
+  --z-overlay: var(--z-listing);
   --z-backdrop: 50;
   --z-toast: 60;
   --z-viewer: 100;
