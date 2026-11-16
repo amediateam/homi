@@ -6,12 +6,15 @@ import { hasLocale } from "next-intl";
 import { Suspense } from "react";
 
 import { BOOT_SCRIPT, BOOT_STUBS } from "@/boot/inline.generated";
+import { GateRedirector } from "@/features/gates/GateRedirector";
+import { SessionExpired } from "@/features/gates/SessionExpired";
 import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
 import { FragmentGuard } from "@/features/shell/FragmentGuard";
 import { LaunchRedirector } from "@/features/shell/LaunchRedirector";
 import { NavigationBinder } from "@/features/shell/NavigationBinder";
 import { TelegramButtons } from "@/features/shell/TelegramButtons";
+import { ToastHost } from "@/features/shell/ToastHost";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
 import { ReferenceFeed } from "@/lib/reference/ReferenceFeed";
@@ -49,7 +52,8 @@ export function generateStaticParams() {
  * script inserts the Telegram SDK tag itself (TMA-001): React hoists an `async` `<script src>` above inline scripts,
  * and the watchdog must listen before the SDK can fail. `data-scheme="light"` is the server's first paint; the boot script changes the attributes of
  * `<html>` before React hydrates, hence `suppressHydrationWarning`. The body feeds the cached reference data to the
- * client (`ReferenceFeed`, inside `<Suspense>` because its entry may be resolved at request time).
+ * client (`ReferenceFeed`, inside `<Suspense>` because its entry may be resolved at request time). The gates of WP-23
+ * redirect from `GateRedirector`; an expired session replaces the page in place (`SessionExpired`).
  */
 export default async function LocaleLayout({ children, params }: LayoutProps<"/[locale]">) {
   const { locale } = await params;
@@ -72,7 +76,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       <body>
         <IntlClientProvider locale={locale} messages={getMessages(locale)}>
           <SessionProvider>
-            {children}
+            <SessionExpired>{children}</SessionExpired>
             <Suspense fallback={null}>
               <ReferenceFeed locale={locale} />
             </Suspense>
@@ -85,10 +89,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             </Suspense>
             <LocaleGuard />
             <FragmentGuard />
+            {/* The gates' effects run after the locale guard's and before the launch redirect's (WP-23). */}
+            <Suspense fallback={null}>
+              <GateRedirector />
+            </Suspense>
             <Suspense fallback={null}>
               <LaunchRedirector />
             </Suspense>
             <BootGuard />
+            <ToastHost />
           </SessionProvider>
         </IntlClientProvider>
       </body>

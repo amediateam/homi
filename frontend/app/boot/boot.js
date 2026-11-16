@@ -25,6 +25,9 @@
     en: ['Update Telegram', 'The app couldn’t start: Telegram or its built-in browser (Android System WebView) is out of date. Update them in Google Play or the App Store and open the app again. You can also browse listings in the bot.', 'Back to the bot', 'Try again']
   };
   var state = 0;
+  /* The texts of the screen, picked when show() decides: the app may switch the locale segment of the address
+     (LocaleGuard) before DOMContentLoaded renders the screen. */
+  var words = null;
   var boot = { ok: false, watching: false, sdk: null, show: show, errors: [] };
   w.__homiBoot = boot;
 
@@ -160,7 +163,6 @@
 
   function render() {
     state = 2;
-    var words = TEXTS[language()];
     var app = sdk();
     var dark = (app && app.colorScheme === 'dark') || !!(w.matchMedia && w.matchMedia('(prefers-color-scheme: dark)').matches);
     var pill = 'display:block;box-sizing:border-box;width:100%;max-width:320px;height:48px;margin:12px auto 0;padding:0 20px;' +
@@ -211,6 +213,7 @@
       return;
     }
     state = 1;
+    words = TEXTS[language()];
     if (d.body) {
       render();
     } else {

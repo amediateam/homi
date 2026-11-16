@@ -21,5 +21,13 @@
   },
   "sum": {
     "wholeCity": "All of {city}"
+  },
+  "error": {
+    "sessionExpired": "The session has expired — close the app and open it again",
+    "notFound": "This page doesn’t exist",
+    "toSearch": "Back to search"
+  },
+  "city": {
+    "countsDaily": "{rent} rent · {daily} daily · {sale} sale"
   }
 }

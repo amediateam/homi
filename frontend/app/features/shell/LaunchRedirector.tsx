@@ -3,11 +3,10 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { consumeLaunch, launchGate, useLaunchGate } from "@/lib/deeplinks/launch";
+import { consumeLaunch, launchGate, launchTarget, useLaunchGate } from "@/lib/deeplinks/launch";
 import { parseLaunch } from "@/lib/deeplinks/parse";
 import { normaliseAddress } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
-import { routes } from "@/lib/navigation/routes";
 import { useSession } from "@/lib/session/SessionProvider";
 import { tg } from "@/lib/telegram";
 
@@ -31,9 +30,7 @@ export function LaunchRedirector(): null {
     if (status !== "ready" || !launchGate() || !consumeLaunch()) {
       return;
     }
-    const launch = parseLaunch(tg.initData(), window.location.search);
-    const target =
-      launch.listingNumber !== null ? routes.listing(launch.listingNumber) : launch.news === "pets" ? routes.filters({ focus: "pets" }) : null;
+    const target = launchTarget(parseLaunch(tg.initData(), window.location.search));
     const url = new URL(window.location.href);
     if (!LAUNCH_PARAMS.some((name) => url.searchParams.has(name))) {
       if (target !== null) {

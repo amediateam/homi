@@ -93,3 +93,127 @@ describe("LaunchRedirector (TMA-010 … TMA-012)", () => {
     expect(state.push).not.toHaveBeenCalled();
   });
 });
+
+describe("launchTarget (the one rule of LaunchRedirector and launchPending)", () => {
+  it("is the listing, else the filters on the pets section for ?news=pets, else nothing", async () => {
+    const { launchTarget } = await import("@/lib/deeplinks/launch");
+    const { parseLaunch } = await import("@/lib/deeplinks/parse");
+    const withStart = syntheticInitData({}, { startParam: "l_42-web" });
+
+    expect(launchTarget(parseLaunch(withStart, "?listing=7&news=pets"))).toBe("/listing/42");
+    expect(launchTarget(parseLaunch("", "?listing=7&news=pets"))).toBe("/listing/7");
+    expect(launchTarget(parseLaunch("", "?news=pets"))).toBe("/filters?focus=pets");
+    expect(launchTarget(parseLaunch("", "?news=other"))).toBeNull();
+    expect(launchTarget(parseLaunch("", ""))).toBeNull();
+  });
+});
+
+describe("launchPending (WP-23, D-S-8, BR-APP-055)", () => {
+  async function fresh(address: string, startParam?: string) {
+    window.history.replaceState(null, "", address);
+    fake = fakeTelegram({ initData: syntheticInitData({}, { startParam }) });
+    vi.resetModules();
+    return import("@/lib/deeplinks/launch");
+  }
+
+  it("a plain launch, or ?news= other than pets, is never pending", async () => {
+    for (const address of ["/ru", "/ru/map?deal=sale", "/ru?news=other"]) {
+      const launch = await fresh(address);
+      expect(launch.launchPending(), address).toBe(false);
+      launch.consumeLaunch();
+      expect(launch.launchPending(), address).toBe(false);
+      fake?.uninstall();
+      fake = null;
+    }
+  });
+
+  it("a listing of start_param is pending until the push of the redirect is committed, and stays done after Back", async () => {
+    const launch = await fresh("/ru", "l_42-web");
+    expect(launch.launchPending()).toBe(true);
+
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(true);
+
+    window.history.pushState(null, "", "/ru/listing/42");
+    expect(launch.launchPending()).toBe(false);
+
+    window.history.replaceState(null, "", "/ru");
+    expect(launch.launchPending()).toBe(false);
+  });
+
+  it("does not count the history: Telegram Web's iframe at Chromium's cap of 50 entries still ends it", async () => {
+    const length = vi.spyOn(History.prototype, "length", "get").mockReturnValue(50);
+    const launch = await fresh("/ru", "l_42-web");
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(true);
+
+    window.history.pushState(null, "", "/ru/listing/42");
+    expect(launch.launchPending()).toBe(false);
+
+    window.history.replaceState(null, "", "/ru");
+    expect(launch.launchPending()).toBe(false);
+    length.mockRestore();
+  });
+
+  it("an address other than the target does not end it", async () => {
+    const launch = await fresh("/ru", "l_42-web");
+    launch.consumeLaunch();
+    for (const address of ["/ru/map", "/ru/listing/43", "/ru/filters?focus=pets"]) {
+      window.history.pushState(null, "", address);
+      expect(launch.launchPending(), address).toBe(true);
+    }
+  });
+
+  it("?listing= and ?news=pets stay pending through the replace that drops them", async () => {
+    for (const [address, target] of [
+      ["/ru?listing=7&deal=rent", "/ru/listing/7"],
+      ["/ru?news=pets", "/ru/filters?focus=pets"],
+    ]) {
+      const launch = await fresh(address);
+      expect(launch.launchPending(), address).toBe(true);
+
+      launch.consumeLaunch();
+      window.history.replaceState(null, "", "/ru?deal=rent");
+      expect(launch.launchPending(), address).toBe(true);
+
+      window.history.pushState(null, "", target);
+      expect(launch.launchPending(), address).toBe(false);
+      fake?.uninstall();
+      fake = null;
+    }
+  });
+
+  it("?listing= stays pending while a gate route without the query is shown before the redirect", async () => {
+    const launch = await fresh("/ru?listing=7");
+    window.history.replaceState(null, "", "/uz/welcome/language");
+    expect(launch.launchPending()).toBe(true);
+
+    window.history.replaceState(null, "", "/uz?listing=7");
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(true);
+  });
+
+  it("a launch consumed where its query got lost opens nothing and is not pending", async () => {
+    const launch = await fresh("/ru?listing=7");
+    window.history.replaceState(null, "", "/ru/map");
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(false);
+  });
+
+  it("follows LaunchRedirector: pending until its push lands, also while the launch gate is closed", async () => {
+    state.push.mockImplementation((href: string) => window.history.pushState(null, "", `/ru${href}`));
+    let open = false;
+    const launch = await fresh("/ru", "l_5");
+    launch.setLaunchGate(() => open);
+    state.status = "ready";
+    const { LaunchRedirector } = await import("@/features/shell/LaunchRedirector");
+    render(<LaunchRedirector />);
+    expect(launch.launchPending()).toBe(true);
+
+    open = true;
+    act(() => launch.releaseLaunchGate());
+
+    expect(state.push.mock.calls).toEqual([["/listing/5"]]);
+    expect(launch.launchPending()).toBe(false);
+  });
+});

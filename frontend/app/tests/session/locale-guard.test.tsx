@@ -72,6 +72,26 @@ describe("LocaleGuard (BR-APP-050, 25 §3.4 step 5)", () => {
     expect(state.replace).toHaveBeenLastCalledWith("/", { locale: "en" });
   });
 
+  it("does nothing on a gate route, before or after sign-in: GateRedirector navigates there (WP-23, D-S-6)", () => {
+    fake = fakeTelegram({ initData: syntheticInitData({ language_code: "uz" }) });
+    for (const pathname of ["/welcome/language", "/welcome/city", "/no-access", "/outside"]) {
+      state.pathname = pathname;
+      state.status = "booting";
+      state.me = null;
+      const view = render(<LocaleGuard />);
+      Object.assign(state, { status: "ready", me: { locale: "en" } });
+      view.rerender(<LocaleGuard />);
+      view.unmount();
+    }
+    expect(state.replace).not.toHaveBeenCalled();
+
+    // Out of the gate, me.locale wins again.
+    state.pathname = "/";
+    window.history.replaceState(null, "", "/ru");
+    render(<LocaleGuard />);
+    expect(state.replace).toHaveBeenCalledWith("/", { locale: "en" });
+  });
+
   it("does nothing outside Telegram", () => {
     render(<LocaleGuard />);
     expect(state.replace).not.toHaveBeenCalled();

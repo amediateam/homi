@@ -6,8 +6,10 @@ import type { ComponentProps } from "react";
 import { cn } from "../cn";
 
 /**
- * Bottom sheet (shadcn/ui `Sheet` on Radix Dialog, restyled, WP-20): the legacy sheet rises from the bottom over a
- * dimmed backdrop and keeps the bottom inset clear. Drag-to-close with velocity is written on top of it by WP-23.
+ * The plain shadcn/ui `Sheet` on Radix Dialog, restyled (WP-20): it rises from the bottom over a dimmed backdrop and
+ * keeps the bottom inset clear, with no gestures. The app's sheets use `BottomSheet` (WP-23), which composes the
+ * Radix parts itself and adds the drag to close, the body classes, the focus on the title, the sticky header and
+ * footer and the stacking; these parts stay as WP-20 left them.
  */
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
@@ -43,7 +45,7 @@ export function SheetContent({ className, children, ...props }: ComponentProps<t
   );
 }
 
-/** The grab handle at the top of a sheet; WP-23 makes it draggable. */
+/** The grab handle at the top of a plain sheet, for show only: the draggable one is `BottomSheet`'s header. */
 export function SheetHandle({ className, ...props }: ComponentProps<"div">) {
   return (
     <div data-slot="sheet-handle" aria-hidden className={cn("flex justify-center pt-2 pb-1", className)} {...props}>

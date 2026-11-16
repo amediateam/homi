@@ -10,12 +10,14 @@ describe("parseLaunch (TMA-010 … TMA-012)", () => {
     const cases: [string, number, string][] = [
       ["l_123", 123, "share"],
       ["l_123-web", 123, "web"],
-      ["l_123-fb12", 123, "fb"],
-      ["l_123-tg7", 123, "tg"],
-      ["l_123-ig1234", 123, "ig"],
+      ["l_123-fb12", 123, "fb12"],
+      ["l_123-tg7", 123, "tg7"],
+      ["l_123-ig1234", 123, "ig1234"],
       ["l_123-ig12345", 123, "share"],
+      ["l_123-fb", 123, "share"],
       ["l_123-seo", 123, "seo"],
       ["l_123-seo-example_channel-45", 123, "seo"],
+      ["l_123-seoul_flats-45", 123, "share"],
     ];
     for (const [startParam, number, source] of cases) {
       expect(parseLaunch(launch(startParam), ""), startParam).toMatchObject({ listingNumber: number, source, entry: "link" });
@@ -25,6 +27,7 @@ describe("parseLaunch (TMA-010 … TMA-012)", () => {
   it("a post address comes from l_<n>-[seo-]<channel>-<post>", () => {
     expect(parseLaunch(launch("l_123-seo-example_channel-45"), "").postUrl).toBe("https://t.me/example_channel/45");
     expect(parseLaunch(launch("l_9-homi_rent-123456"), "").postUrl).toBe("https://t.me/homi_rent/123456");
+    expect(parseLaunch(launch("l_9-seoul_flats-45"), "").postUrl).toBe("https://t.me/seoul_flats/45");
     expect(parseLaunch(launch("l_9-abc-1"), "").postUrl).toBeNull();
     expect(parseLaunch(launch("l_9-web"), "").postUrl).toBeNull();
   });

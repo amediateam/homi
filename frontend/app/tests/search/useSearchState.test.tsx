@@ -69,6 +69,17 @@ describe("useSearchState (WP-22)", () => {
     expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&sort=expensive&from=map");
   });
 
+  it("write(filters, sort) changes both in one replace (the deal switch, D-SH-2)", () => {
+    address.pathname = "/map";
+    address.search = "city=tashkent&sort=deal&pin=5";
+    const { result } = renderHook(() => useSearchState());
+
+    act(() => result.current.write(switchDeal(result.current.filters, "sale"), "ppm"));
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenLastCalledWith("/map?city=tashkent&deal=sale&sort=ppm&pin=5");
+  });
+
   it("equal states give equal addresses, whatever the order of the current one", () => {
     address.search = "rooms_min=2&city=tashkent&types=house&types=apartment";
     const first = renderHook(() => useSearchState()).result.current;

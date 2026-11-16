@@ -201,6 +201,20 @@ describe("update screen", () => {
     }
   });
 
+  it("keeps the language of the address when it decided, though the app switches the segment before the body is there", () => {
+    // The head script decides before <body> exists and renders at DOMContentLoaded; meanwhile LocaleGuard may replace
+    // /uz by the Telegram language (e2e boot-failure.spec.ts).
+    const body = vi.spyOn(document, "body", "get").mockReturnValue(null as unknown as HTMLElement);
+    runBoot({ address: "/uz", colorMix: false });
+    expect(screen()).toHaveLength(0);
+
+    window.history.replaceState(null, "", "/ru");
+    body.mockRestore();
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+
+    expect(texts()).toEqual(uz);
+  });
+
   it("else the Telegram language: uz* → uz, anything else → ru while the one-detector flag is off", () => {
     const cases: [string, unknown[]][] = [
       ["uz-UZ", uz],

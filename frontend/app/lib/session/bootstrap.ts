@@ -36,14 +36,20 @@ export interface SessionState {
   mode: SessionMode | null;
   me: Me | null;
   reason: AccessReason | null;
+  /** The outcome of the last attempt that failed without an answer of the API; set only while `booting`. */
   error: SessionError | null;
+  /**
+   * An attempt (the first one, a `retry()`, the start after a late SDK) is in flight. A re-check of a refusal keeps
+   * `status: 'denied'` and its `reason` meanwhile, so the access screen can say it is checking (WP-23).
+   */
+  pending: boolean;
 }
 
 const REQUEST_TIMEOUT_MS = 15_000;
 /** `v` of `app_launch`: the app build; empty until WP-32 sets the build version. */
 const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
-const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null };
+const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false };
 let state: SessionState = initial;
 const listeners = new Set<() => void>();
 
@@ -208,7 +214,14 @@ let prepared: Promise<SdkOutcome> | null = null;
 /** Once per launch: the SDK wait, then the DeviceStorage restore (it needs the SDK), init, and the fragment scrub. */
 function prepare(): Promise<SdkOutcome> {
   prepared ??= (async () => {
-    const outcome = await waitForSdk(SDK_WAIT_MS, () => initTelegramApp());
+    const outcome = await waitForSdk(SDK_WAIT_MS, () => {
+      initTelegramApp();
+      // SCR-002: a late SDK that brings launch data starts the session the outside page waits for. Earlier, while the
+      // bootstrap still prepares, `run()` finds the launch data itself.
+      if (state.status === "outside" && tg.hasInitData()) {
+        void attempt();
+      }
+    });
     await restoreFromDeviceStorage();
     initTelegramApp();
     // After the SDK read its launch parameters and before any analytics call (TMA-009).
@@ -226,6 +239,11 @@ function prepare(): Promise<SdkOutcome> {
 
 const jsStart = typeof performance === "undefined" ? 0 : Math.round(performance.now());
 
+/**
+ * One attempt. A re-check of a refusal (`retry()` while `denied`) stays `denied` until the answer: `ready` when
+ * access was granted meanwhile, `denied` with the new reason on another refusal, and the refusal as it was when the
+ * API could not be reached.
+ */
 async function run(): Promise<void> {
   const outcome = await prepare();
   if (!tg.hasInitData()) {
@@ -236,7 +254,13 @@ async function run(): Promise<void> {
     launch = parseLaunch(tg.initData(), typeof window === "undefined" ? "" : window.location.search);
     track("app_launch", { entry: launch.entry, ms: Math.round(performance.now()), v: BUILD_VERSION, sdk: outcome, js: String(jsStart), platform: tg.platform() });
   }
-  update({ status: "booting", prepared: true, error: null });
+  const recheck = state.status === "denied";
+  update(recheck ? { prepared: true, error: null } : { status: "booting", prepared: true, error: null });
+  const failed = (error: SessionError): void => {
+    if (!recheck) {
+      update({ status: "booting", error });
+    }
+  };
 
   const current = await readSession();
   if (current.kind === "session" && current.mode === "cookie" && (await belongsToLaunchUser(current.user))) {
@@ -249,29 +273,50 @@ async function run(): Promise<void> {
     return;
   }
   if (current.kind === "failed") {
-    update({ status: "booting", error: current.error });
+    failed(current.error);
     return;
   }
   const result = await establish();
   if (result !== "ready" && result !== "expired" && result !== "denied") {
-    update({ status: "booting", error: result });
+    failed(result);
   }
 }
 
 let started: Promise<void> | null = null;
+let inFlight: Promise<void> | null = null;
+
+/** Runs one attempt with `pending` set; while one is in flight every caller gets its promise. */
+function attempt(): Promise<void> {
+  if (inFlight !== null) {
+    return inFlight;
+  }
+  update({ pending: true });
+  inFlight = run().finally(() => {
+    inFlight = null;
+    update({ pending: false });
+  });
+  return inFlight;
+}
 
 /** Starts the session once per launch; a second call (a double effect) gets the same promise. */
 export function startSession(): Promise<void> {
-  started ??= run();
+  started ??= attempt();
   return started;
 }
 
-/** Runs the bootstrap again while it is still booting with an error; WP-23 owns the timers that call it. */
+/**
+ * Runs the bootstrap again while it is booting (after a failed attempt) or `denied` (the re-check of a refusal);
+ * anything else is left alone. It never starts a second attempt while one is in flight: it returns that attempt.
+ * WP-23 owns the timers that call it (`features/gates/useBootRetry.ts`).
+ */
 export function retry(): Promise<void> {
-  if (state.status !== "booting") {
+  if (inFlight !== null) {
+    return inFlight;
+  }
+  if (state.status !== "booting" && state.status !== "denied") {
     return Promise.resolve();
   }
-  started = run();
+  started = attempt();
   return started;
 }
 
@@ -302,7 +347,6 @@ export async function refresh(): Promise<void> {
   }
 }
 
-/** Merges a saved change (`locale`, `currency`, `theme`, `city`, the two "chosen" marks) into `me` at once. */
 /**
  * A `403` of a later read while `dev001AnyForbiddenShowsAccess` is on (LB-APP-045, WP-22): the session turns
  * `denied` and the access screen replaces the app, as the refusal at launch does.
@@ -313,6 +357,7 @@ export function onForbidden(reason?: unknown): void {
   }
 }
 
+/** Merges a saved change (`locale`, `currency`, `theme`, `city`, the two "chosen" marks) into `me` at once. */
 export function patchMe(change: Partial<Pick<Me, "locale" | "currency" | "theme" | "city" | "locale_chosen" | "city_chosen">>): void {
   patches = { ...patches, ...change };
   if (state.me !== null) {

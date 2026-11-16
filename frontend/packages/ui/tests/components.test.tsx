@@ -212,10 +212,26 @@ describe("the package sources", () => {
     expect(offenders.map(([name]) => name)).toEqual([]);
   });
 
-  it("import nothing from an app and nothing about Telegram or routing", () => {
-    const offenders = sources.filter(([, text]) =>
-      /from\s+["'](?:@\/|\.\.\/\.\.\/(?:app|landing|arm)|next\/|next-intl|@homi\/testing)|window\.Telegram/.test(text),
-    );
+  /** An app, Next, next-intl, the catalogues, the search model, the API client, the test kit, Telegram. */
+  const FORBIDDEN_IMPORT =
+    /from\s+["'](?:@\/|\.\.\/\.\.\/(?:app|landing|arm)|next\/|next["']|next-intl|@homi\/(?:testing|i18n|search|api-client))|window\.Telegram/;
+
+  it("import nothing from an app, Next, the catalogues, search or the API, and nothing about Telegram", () => {
+    const caught = [
+      'from "next"',
+      'from "next/navigation"',
+      'from "next-intl"',
+      'from "@homi/i18n/format"',
+      'from "@homi/search"',
+      'from "@homi/api-client"',
+      'from "@homi/testing"',
+      "window.Telegram",
+    ];
+    const allowed = ['from "react"', 'from "lucide-react"', 'from "./Button"'];
+    expect(caught.filter((line) => !FORBIDDEN_IMPORT.test(line))).toEqual([]);
+    expect(allowed.filter((line) => FORBIDDEN_IMPORT.test(line))).toEqual([]);
+
+    const offenders = sources.filter(([, text]) => FORBIDDEN_IMPORT.test(text));
     expect(offenders.map(([name]) => name)).toEqual([]);
   });
 });

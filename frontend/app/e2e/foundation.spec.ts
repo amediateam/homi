@@ -1,9 +1,12 @@
-import { expect, test } from "@homi/testing/playwright";
+import { expect, launchApp, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
  * The app foundation end to end (WP-20): the locale redirect with the launch fragment, the route tree in three
- * locales, interception into the sheet and overlay slots, and the theme and lite attributes.
+ * locales, interception into the sheet and overlay slots, and the theme and lite attributes. Since WP-23 the gates
+ * send a page opened without Telegram to `/outside`, so the checks of the redirect read the server's answer, those of
+ * the route tree the server HTML, and the tests that use a page in the browser launch the app in the fake Telegram
+ * with a sign-in that never reaches the app server (`launchSigningIn`).
  */
 const LOCALES = ["ru", "uz", "en"] as const;
 const RADAR = "01JD7K3QZ8V6R3M2N4P5Q6R7S8";
@@ -42,6 +45,21 @@ const ADDRESSES: [string, string[]][] = [
 
 type NextWindow = Window & { next: { router: { push(href: string): void } } };
 
+/** The session is still being created: no gate has moved the page (row 1). */
+const signingIn = (page: Page, path: string) => expect(page.locator("html"), path).toHaveAttribute("data-session", "booting");
+
+/**
+ * Opens the app at `path` inside the fake Telegram while every session request fails as offline: the session stays
+ * `booting` (the boot retry keeps trying), so the gates leave every address alone (row 1) and these WP-20 checks run
+ * on the page they loaded, as before WP-23, without a request to the API — the full run shares one stub user's API
+ * limit. The gates and the session have their own specs.
+ */
+async function launchSigningIn(page: Page, path: string) {
+  await page.route("**/bff/session", (route) => route.abort("internetdisconnected"));
+  await launchApp(page, { path });
+  await signingIn(page, path);
+}
+
 /** A client-side navigation through the app router, as a `Link` would make it. */
 async function softNavigate(page: Page, href: string) {
   await page.evaluate((target) => (window as unknown as NextWindow).next.router.push(target), href);
@@ -60,28 +78,38 @@ async function mark(page: Page, selector: string, value: string) {
   await page.locator(selector).first().evaluate((element, probe) => element.setAttribute("data-probe", probe), value);
 }
 
+/**
+ * The address the document was served at after the redirects. Without Telegram the gates soon replace the page's
+ * address with `/outside` (WP-23), so `page.url()` would race them.
+ */
+async function servedAt(page: Page, path: string): Promise<URL> {
+  const response = await page.goto(path);
+  expect(response, path).not.toBeNull();
+  return new URL(response?.url() ?? page.url());
+}
+
 test.describe("locale redirect", () => {
   test("/ goes to /ru and keeps the query and the launch fragment", async ({ page }) => {
     // The adapter removes the fragment once the SDK wait settled (TMA-009, WP-21), so it is read on arrival.
     await page.addInitScript(() => Object.assign(window, { __arrivedHash: location.hash }));
-    await page.goto("/?listing=7#tgWebAppData=x");
+    const served = await servedAt(page, "/?listing=7#tgWebAppData=x");
 
-    expect(new URL(page.url()).pathname).toBe("/ru");
-    expect(new URL(page.url()).search).toBe("?listing=7");
+    expect(served.pathname).toBe("/ru");
+    expect(served.search).toBe("?listing=7");
     expect(await page.evaluate(() => (window as unknown as { __arrivedHash: string }).__arrivedHash)).toBe("#tgWebAppData=x");
   });
 
   test("a deeper path keeps its query under the locale", async ({ page }) => {
-    await page.goto("/listing/5?x=1");
+    const served = await servedAt(page, "/listing/5?x=1");
 
-    expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe("/ru/listing/5?x=1");
+    expect(served.pathname + served.search).toBe("/ru/listing/5?x=1");
   });
 
   test("next-intl's cookie picks the locale", async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: "NEXT_LOCALE", value: "uz", url: baseURL }]);
-    await page.goto("/");
+    const served = await servedAt(page, "/");
 
-    expect(new URL(page.url()).pathname).toBe("/uz");
+    expect(served.pathname).toBe("/uz");
   });
 
   test("Accept-Language is not used", async ({ request }) => {
@@ -106,27 +134,55 @@ test.describe("addresses", () => {
       }
     });
 
+    // Without Telegram the gates move the page to `/outside` in the locale of its address (WP-23).
     test(`the lang attribute follows the segment in ${locale}`, async ({ page }) => {
       await page.goto(`/${locale}/map`);
 
+      await expect(page).toHaveURL(new RegExp(`/${locale}/outside$`));
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
     });
   }
 
   // Documents render at request time for the CSP nonce (ADR-0020); the not-found screen then answers 200 with
-  // noindex instead of 404 (AM-57).
+  // noindex instead of 404 (AM-57). The first address is the launch, the others are loaded in the same Telegram. A
+  // `notFound()` under `<Suspense>` gets two identical tags: the server inserts one into the head and Next.js's
+  // not-found boundary adds its own when the client renders the screen; no robots tag may say anything else.
   test("an unknown address and an unknown locale render the not-found screen with noindex", async ({ page }) => {
-    for (const path of ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/de/x"]) {
-      await page.goto(path);
-      await expect(page.locator('[data-route="not-found"]'), path).toBeVisible();
-      await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", "noindex");
+    const [first, ...others] = ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/de/x"];
+    await launchSigningIn(page, first);
+    for (const path of [first, ...others]) {
+      if (path !== first) {
+        await page.goto(path);
+      }
+      await signingIn(page, path);
+      await expect(page.locator('[data-route="not-found"]').filter({ visible: true }), path).toBeVisible();
+      await expect(page.locator('meta[name="robots"][content="noindex"]').first(), path).toBeAttached();
+      await expect(page.locator('meta[name="robots"]:not([content="noindex"])'), path).toHaveCount(0);
     }
   });
 
-  test("an invalid parameter renders the not-found placeholder", async ({ page }) => {
-    for (const path of ["/ru/listing/abc", "/ru/listing/0", "/ru/filters/sort", "/ru/radars/12"]) {
-      await page.goto(path);
-      await expect(page.locator('[data-route="not-found"]'), path).toBeVisible();
+  // The fake Telegram is an init script, so the browser tests above pass without the boot script; real Telegram needs
+  // it to insert the SDK tag. A `notFound()` outside `<Suspense>` would serve Next.js's `__next_error__` shell instead.
+  test("an unknown address or parameter is a normal document with the boot script", async ({ request }) => {
+    for (const path of ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/ru/listing/abc"]) {
+      const response = await request.get(path);
+      expect(response.status(), path).toBe(200);
+      const html = await response.text();
+      expect(html, path).toContain('id="homi-boot"');
+      expect(html, path).not.toContain('id="__next_error__"');
+      expect(html, path).toContain('<meta name="robots" content="noindex"/>');
+    }
+  });
+
+  test("an invalid parameter renders the not-found screen", async ({ page }) => {
+    const [first, ...others] = ["/ru/listing/abc", "/ru/listing/0", "/ru/filters/sort", "/ru/radars/12"];
+    await launchSigningIn(page, first);
+    for (const path of [first, ...others]) {
+      if (path !== first) {
+        await page.goto(path);
+      }
+      await signingIn(page, path);
+      await expect(page.locator('[data-route="not-found"]').filter({ visible: true }), path).toBeVisible();
     }
   });
 });
@@ -135,7 +191,7 @@ test.describe("layers", () => {
   test("a sheet opened by navigation shows over the feed, Back closes it, reload shows the direct page", async ({
     page,
   }) => {
-    await page.goto("/ru");
+    await launchSigningIn(page, "/ru");
     await mark(page, '[data-route="feed"]', "feed");
 
     await softNavigate(page, "/ru/filters?city=x");
@@ -154,7 +210,7 @@ test.describe("layers", () => {
   });
 
   test("a quick filter, the sort and the radar sheets intercept the same way", async ({ page }) => {
-    await page.goto("/ru");
+    await launchSigningIn(page, "/ru");
     for (const [href, name] of [
       ["/ru/filters/rooms", "filters/rooms"],
       ["/ru/sort", "sort"],
@@ -168,6 +224,7 @@ test.describe("layers", () => {
     }
 
     await page.goto("/ru/radars");
+    await signingIn(page, "/ru/radars");
     await mark(page, '[data-route="radars"]', "radars");
     await softNavigate(page, `/ru/radars/${RADAR}`);
     await expect(page.locator('[data-route="radar"][data-layer="sheet"]')).toBeVisible();
@@ -177,7 +234,7 @@ test.describe("layers", () => {
   });
 
   test("the listing stays mounted under its child layer in the overlay", async ({ page }) => {
-    await page.goto("/ru");
+    await launchSigningIn(page, "/ru");
     await mark(page, '[data-route="feed"]', "feed");
 
     await softNavigate(page, "/ru/listing/1");
@@ -200,7 +257,7 @@ test.describe("layers", () => {
   });
 
   test("a direct load of a listing child shows the listing under it", async ({ page }) => {
-    await page.goto("/ru/listing/1/market");
+    await launchSigningIn(page, "/ru/listing/1/market");
 
     await expect(page.locator('[data-route="listing"]:not([data-layer]) [data-route="listing/market"]')).toBeVisible();
   });
@@ -212,7 +269,7 @@ test.describe("themes and lite", () => {
     page.locator("[data-glass-sample]").first().evaluate((element) => getComputedStyle(element).backdropFilter);
 
   test("the three theme states and the lite class change the computed styles", async ({ page }) => {
-    await page.goto("/ru");
+    await launchSigningIn(page, "/ru");
     await expect(page.locator("html")).toHaveAttribute("data-scheme", "light");
     expect(await background(page)).toBe("rgb(255, 255, 255)");
     expect(await glassFilter(page)).toContain("blur(22px)");
@@ -234,7 +291,7 @@ test.describe("themes and lite", () => {
   });
 
   test("the accent is the brand yellow in every state", async ({ page }) => {
-    await page.goto("/ru");
+    await launchSigningIn(page, "/ru");
     const accent = () =>
       page.evaluate(() => getComputedStyle(document.querySelector('[data-slot="button"]') as Element).backgroundColor);
 

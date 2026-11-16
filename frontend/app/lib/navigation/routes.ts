@@ -128,8 +128,11 @@ type Match =
   | { route: "radarNew" | "radarFound" }
   | { route: "radar"; id: string; edit: boolean }
   | { route: "settingsPage" }
-  | { route: "gate" }
+  | { route: "gate"; gate: GateName }
   | { route: "unknown"; pattern: string };
+
+/** The four gates (WP-23): `/welcome/language`, `/welcome/city`, `/no-access`, `/outside`. */
+export type GateName = "language" | "city" | "noAccess" | "outside";
 
 const LISTING_CHILDREN = ["photos", "location", "market", "actions"] as const;
 
@@ -158,10 +161,13 @@ function match(pathname: string): Match {
     case "/radars/found":
       return { route: "radarFound" };
     case "/welcome/language":
+      return { route: "gate", gate: "language" };
     case "/welcome/city":
+      return { route: "gate", gate: "city" };
     case "/no-access":
+      return { route: "gate", gate: "noAccess" };
     case "/outside":
-      return { route: "gate" };
+      return { route: "gate", gate: "outside" };
   }
   if (s[0] === "filters" && s.length === 2) {
     return isQuickFilterKind(s[1]) ? { route: "quickFilter", kind: s[1] } : { route: "unknown", pattern: "/filters/[kind]" };
@@ -184,6 +190,15 @@ function match(pathname: string): Match {
   return { route: "unknown", pattern: path };
 }
 
+/** The route of a locale-less pathname: its kind and its parts (`gate` with the gate's name, `unknown` with its pattern). */
+export type RouteMatch = Match;
+
+/**
+ * The one parser of the app's addresses (WP-23, D-S-9): the gate redirect and the shell variant read an address with
+ * it, so they agree with Back and the screen names below on what the address is.
+ */
+export const matchRoute: (pathname: string) => RouteMatch = match;
+
 /** True for the six addresses of the tab bar and the list/map switch, which have no Back. */
 export function isRootTab(pathname: string): boolean {
   return ["feed", "map", "saved", "history", "radars", "settings"].includes(match(pathname).route);
@@ -200,7 +215,8 @@ export function searchStateOf(searchParams: URLSearchParams): URLSearchParams {
   return out;
 }
 
-function searchKeysOf(searchParams: URLSearchParams): URLSearchParams {
+/** The search state only: the filter keys and `sort` (`SEARCH_KEYS`), without reserved or foreign parameters. */
+export function searchKeysOf(searchParams: URLSearchParams): URLSearchParams {
   const out = new URLSearchParams();
   for (const [key, value] of searchStateOf(searchParams)) {
     if ((SEARCH_KEYS as readonly string[]).includes(key.replace(/\[\]$/, ""))) {

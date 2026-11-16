@@ -15,7 +15,7 @@ export interface Session extends SessionState {
 
 const actions = { retry, refresh, patchMe };
 const SessionContext = createContext<Session | null>(null);
-const serverState: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null };
+const serverState: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false };
 
 /**
  * Starts the session of the launch and renders the screens from it (WP-21). In cookie mode the router refreshes once

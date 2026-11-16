@@ -32,7 +32,10 @@ export function SearchProof({ initial }: { initial?: { query: string; count: num
 
   return (
     <div className="flex flex-col gap-1 text-[13px]" data-proof="">
-      <output data-proof="filters">{toSearchParams(filters, sort).toString()}</output>
+      {/* A query (a drawn polygon above all) has no break opportunity: unwrapped it widens the phone's layout viewport. */}
+      <output data-proof="filters" className="break-all">
+        {toSearchParams(filters, sort).toString()}
+      </output>
       <output data-proof="cities">{cities.length}</output>
       <output data-proof="count" data-status={count.status}>
         {count.data?.count ?? ""}

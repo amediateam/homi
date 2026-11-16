@@ -144,6 +144,13 @@ describe("tokens of 03 §3.6", () => {
       "--dur-slow": "0.35s",
     });
   });
+
+  it("the shell's aliases point at legacy levels: mini title 31, overlay slot 45 (WP-23)", () => {
+    expect(declarations("theme.css", ":root")).toMatchObject({
+      "--z-mini-title": "var(--z-map-card)",
+      "--z-overlay": "var(--z-listing)",
+    });
+  });
 });
 
 describe("rules of the stylesheet", () => {
@@ -161,6 +168,12 @@ describe("rules of the stylesheet", () => {
     });
     expect(css["motion.css"]).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
     expect(css["motion.css"]).toMatch(/transition: none !important/);
+  });
+
+  it("stops every keyframe animation on reduced motion, the entrances of sheets, dialogs, toasts and sub-pages too", () => {
+    const motion = css["motion.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    const reduced = motion.slice(motion.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced).toMatch(/(?:^|\n)\s*\*,\s*::before,\s*::after\s*\{\s*animation: none !important;\s*\}/);
   });
 
   it("declares the hooks WP-23 fills", () => {

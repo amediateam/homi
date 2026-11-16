@@ -21,5 +21,13 @@
   },
   "sum": {
     "wholeCity": "Butun {city}"
+  },
+  "error": {
+    "sessionExpired": "Seans eskirdi — ilovani yopib, qayta oching",
+    "notFound": "Bunday sahifa yoʻq",
+    "toSearch": "Qidiruvga"
+  },
+  "city": {
+    "countsDaily": "{rent} ijara · {daily} kunlik · {sale} sotuv"
   }
 }
