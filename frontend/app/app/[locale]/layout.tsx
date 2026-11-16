@@ -12,6 +12,7 @@ import { FragmentGuard } from "@/features/shell/FragmentGuard";
 import { LaunchRedirector } from "@/features/shell/LaunchRedirector";
 import { NavigationBinder } from "@/features/shell/NavigationBinder";
 import { TelegramButtons } from "@/features/shell/TelegramButtons";
+import { ToastHost } from "@/features/shell/ToastHost";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
 import { routing } from "@/i18n/routing";
 import { ReferenceFeed } from "@/lib/reference/ReferenceFeed";
@@ -89,6 +90,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
               <LaunchRedirector />
             </Suspense>
             <BootGuard />
+            <ToastHost />
           </SessionProvider>
         </IntlClientProvider>
       </body>

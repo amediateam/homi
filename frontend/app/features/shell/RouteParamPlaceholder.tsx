@@ -32,8 +32,15 @@ export async function ListingPlaceholder({
     notFound();
   }
   const listing = Number(number);
+  // Inside `RouteOverlay`, full screen in both presentations and without a top inset of its own (legacy
+  // `listing-layer`: WP-26's hero runs under Telegram's header), the placeholder clears the inset itself.
   return (
-    <RoutePlaceholder name="listing" layer={layer} links={[routes.listingPhotos(listing), routes.listingActions(listing)]}>
+    <RoutePlaceholder
+      name="listing"
+      layer={layer}
+      links={[routes.listingPhotos(listing), routes.listingActions(listing)]}
+      className="pt-[calc(16px+var(--top-inset))]"
+    >
       {children}
     </RoutePlaceholder>
   );

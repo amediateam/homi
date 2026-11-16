@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BottomSheet, type BottomSheetProps, SHEET_DRAG_SETTLE_MS } from "../src/index";
@@ -344,5 +345,35 @@ describe("BottomSheet", () => {
     body.scrollTop = 0;
     fireEvent.scroll(body);
     expect(sheet.hasAttribute("data-scrolled")).toBe(false);
+  });
+
+  it("portal={false} renders in place and into the server HTML; the portal renders nothing on the server", () => {
+    const { container } = render(
+      <div data-testid="page">
+        <Sheet portal={false} />
+      </div>,
+    );
+    expect(screen.getByTestId("page").contains(screen.getByRole("dialog", { name: "Filters" }))).toBe(true);
+    expect(screen.getByTestId("page").contains(overlay())).toBe(true);
+    expect(container.contains(screen.getByText("Body"))).toBe(true);
+
+    expect(renderToString(<Sheet portal={false} />)).toContain('data-slot="bottom-sheet"');
+    expect(renderToString(<Sheet portal={false} />)).toContain("Body");
+    expect(renderToString(<Sheet />)).not.toContain("Body");
+  });
+
+  it("closeOnEscape keeps Escape on a sheet whose backdrop and drag are off", async () => {
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(400);
+    const onClose = vi.fn();
+    render(<Sheet onClose={onClose} dismissible={false} closeOnEscape portal={false} />);
+    await outsideListenersReady();
+
+    tapBackdrop();
+    dragDown(part(sheets()[0], "header"), 300);
+    await act(() => new Promise((resolve) => setTimeout(resolve, SHEET_DRAG_SETTLE_MS + 20)));
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

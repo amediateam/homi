@@ -36,14 +36,25 @@ import {
   WifiOff,
   X,
 } from "@homi/ui";
-import { type ReactNode, useLayoutEffect, useState } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
+import { Link } from "@/i18n/navigation";
 import { brand } from "@/lib/brand";
+import { devFlags } from "@/lib/flags";
+import { routes } from "@/lib/navigation/routes";
+import { confirmText } from "@/lib/ui/confirm";
+import { failed, saved } from "@/lib/ui/feedback";
+import { showToast } from "@/lib/ui/toast";
+
+/** The gallery's replacement toast follows the first one after this long, while the first is still shown. */
+const REPLACEMENT_MS = 1500;
 
 /**
  * The gallery of the `@homi/ui` primitives of WP-23 (D-E-4): one entry per primitive with a stable `data-testid`,
- * for review on a device and for the end-to-end specs (`crash.spec.ts`, `errors.spec.ts` of WP-32). Development
- * only, so its texts are literals, not catalogue keys; `app/[locale]/dev/ui/page.tsx` guards it.
+ * for review on a device and for the end-to-end specs (`crash.spec.ts`, `errors.spec.ts` of WP-32). The toast,
+ * confirm and feedback entries drive the app's own helpers (`lib/ui`, shown by the `ToastHost` of the root layout);
+ * the routes entry opens the real addresses whose wrappers are `RouteSheet`, `SubPage` and `RouteOverlay`.
+ * Development only, so its texts are literals, not catalogue keys; `app/[locale]/dev/ui/page.tsx` guards it.
  */
 export function UiGallery() {
   const [sheet, setSheet] = useState<"full" | "compact" | "fixed" | null>(null);
@@ -84,6 +95,9 @@ export function UiGallery() {
       <ErrorStates />
       <EmptyStates />
       <Icons />
+      <Toasts onEvent={record} />
+      <Confirm onEvent={record} events={events} />
+      <Feedback onEvent={record} />
 
       <Entry id="bottom-sheet" title="BottomSheet">
         <div className="flex flex-wrap gap-2">
@@ -105,6 +119,8 @@ export function UiGallery() {
           Открыть подстраницу
         </Button>
       </Entry>
+
+      <RouteLinks />
 
       <Entry id="crash" title="Ошибка рендера">
         <p className="text-[13px] text-hint">Дочерний компонент бросает исключение при рендере: экран сбоя сегмента.</p>
@@ -411,6 +427,130 @@ function Icons() {
   );
 }
 
+function Toasts({ onEvent }: { onEvent: (event: string) => void }) {
+  const replacement = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // A hidden page keeps its state but runs its cleanups: the pending replacement goes with it.
+  useLayoutEffect(() => () => clearTimeout(replacement.current), []);
+
+  const showWithReplacement = () => {
+    clearTimeout(replacement.current);
+    showToast("Первый тост: через полторы секунды его заменит второй");
+    replacement.current = setTimeout(() => showToast("Второй тост заменил первый и отсчитывает свои 4 секунды"), REPLACEMENT_MS);
+  };
+
+  return (
+    <Entry id="toast" title="Toast">
+      <p className="text-[13px] text-hint">Простой тост уходит через 4 с или по тапу, с действием — через 6 с или после кнопки.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="md" variant="secondary" data-testid="gallery-toast-plain" onClick={() => showToast("Ссылка скопирована")}>
+          Простой
+        </Button>
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-toast-action"
+          onClick={() => showToast({ text: "Объявление скрыто", action: "Вернуть", run: () => onEvent("toast action") })}
+        >
+          С действием
+        </Button>
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-toast-key"
+          onClick={() => showToast({ key: "toast.blocked", values: { label: "@realtor_uz" } })}
+        >
+          Ключ каталога
+        </Button>
+        <Button size="md" variant="secondary" data-testid="gallery-toast-replace" onClick={showWithReplacement}>
+          Замена
+        </Button>
+      </div>
+    </Entry>
+  );
+}
+
+function Confirm({ onEvent, events }: { onEvent: (event: string) => void; events: string[] }) {
+  return (
+    <Entry id="confirm" title="confirmText">
+      <p className="text-[13px] text-hint">Нативный диалог Telegram с версии 6.2, вне Telegram — браузерный.</p>
+      <Button
+        size="md"
+        variant="secondary"
+        data-testid="gallery-confirm-ask"
+        onClick={() => confirmText("Очистить историю просмотров?").then((answer) => onEvent(`confirm ${String(answer)}`))}
+      >
+        Спросить
+      </Button>
+      <EventLog testId="gallery-confirm-events" events={events} />
+    </Entry>
+  );
+}
+
+function Feedback({ onEvent }: { onEvent: (event: string) => void }) {
+  return (
+    <Entry id="feedback" title="failed() и saved()">
+      <p className="text-[13px] text-hint">Вибрация Telegram; с DEV-016 failed() добавляет тост «Не получилось сохранить».</p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-feedback-failed"
+          onClick={() => {
+            failed();
+            onEvent("failed");
+          }}
+        >
+          failed()
+        </Button>
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-feedback-failed-dev016"
+          onClick={() => {
+            failed({ flags: { ...devFlags, dev016ErrorToastOnFailure: true } });
+            onEvent("failed, DEV-016");
+          }}
+        >
+          failed() с DEV-016
+        </Button>
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-feedback-saved"
+          onClick={() => {
+            saved();
+            onEvent("saved");
+          }}
+        >
+          saved()
+        </Button>
+      </div>
+    </Entry>
+  );
+}
+
+/** The real addresses of the three wrappers, through the counted `Link`, so that Telegram's BackButton shows. */
+function RouteLinks() {
+  return (
+    <Entry id="routes" title="RouteSheet, SubPage, RouteOverlay">
+      <p className="text-[13px] text-hint">
+        Настоящие адреса: BackButton Telegram закрывает каждый слой. Адрес, открытый напрямую, показывает отдельное
+        представление — без тапа по фону и без жеста.
+      </p>
+      <ul className="flex flex-col overflow-hidden rounded-medium bg-fill">
+        {ROUTE_LINKS.map((link) => (
+          <li key={link.id} className="border-b-[0.5px] border-sep last:border-b-0">
+            <Link href={link.href} data-testid={`gallery-route-${link.id}`} className="flex flex-col gap-0.5 px-4 py-3">
+              <span className="text-[15px] font-medium">{link.title}</span>
+              <span className="text-[13px] text-hint">{link.hint}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Entry>
+  );
+}
+
 function CityChoice({ onPick }: { onPick: () => void }) {
   const [city, setCity] = useState<string | null>(null);
   return (
@@ -476,6 +616,27 @@ const CITIES = [
   { value: "tashkent", label: "Ташкент" },
   { value: "tashkent_region", label: "Ташкентская область" },
   { value: "andijan", label: "Андижан" },
+];
+
+const ROUTE_LINKS = [
+  {
+    id: "filters",
+    href: routes.filters(),
+    title: "RouteSheet · фильтры",
+    hint: "Лист поверх страницы: ×, тап по фону, жест вниз за шапку, Escape и Back.",
+  },
+  {
+    id: "settings-theme",
+    href: routes.settingsPage("theme"),
+    title: "SubPage · тема",
+    hint: "Подстраница: Back и свайп вправо на сенсорном экране; на Android свайпа нет.",
+  },
+  {
+    id: "listing",
+    href: routes.listing(42),
+    title: "RouteOverlay · объявление 42",
+    hint: "Слой объявления: закрывается Back; свайп назад включает WP-26.",
+  },
 ];
 
 const ICONS: [string, LucideIcon][] = [

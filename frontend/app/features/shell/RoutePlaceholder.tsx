@@ -8,10 +8,12 @@ import { routes } from "@/lib/navigation/routes";
 /** The layer an address renders into: a sheet or overlay slot when intercepted, the page itself otherwise. */
 export type RouteLayer = "sheet" | "overlay";
 
-const LAYER_CLASSES: Record<RouteLayer, string> = {
-  overlay: "fixed inset-0 z-(--z-listing) overflow-y-auto bg-bg pt-(--top-inset)",
-  sheet: "fixed inset-x-0 bottom-0 z-(--z-backdrop) max-h-[85%] overflow-y-auto rounded-t-large bg-sheet pb-(--bottom-inset) shadow-(--shadow-float)",
-};
+/**
+ * The frame of a sheet placeholder that no `RouteSheet` draws yet (sort, city, quick filters, radar sheets). The
+ * overlay has none: `RouteOverlay` draws the listing layer in both of its presentations.
+ */
+const SHEET_FRAME =
+  "fixed inset-x-0 bottom-0 z-(--z-backdrop) max-h-[85%] overflow-y-auto rounded-t-large bg-sheet pb-(--bottom-inset) shadow-(--shadow-float)";
 
 /** Where a placeholder links to, so that soft navigation and Back can be followed before the real screens exist. */
 const LINKS: Record<string, string[]> = {
@@ -24,18 +26,23 @@ const LINKS: Record<string, string[]> = {
 /**
  * What every address shows until its package replaces the import (WP-20): the route name, the locale, a translated
  * string and one `Button`. `children` is the nested layer of a layout (listing, radar, settings), so the nesting is
- * visible; `layer` marks the intercepted copy in a slot. The links (WP-21) go through the counted `Link`. Works in
- * Server and Client Components.
+ * visible; `layer` marks the intercepted copy in a slot (`data-layer`, which the end-to-end specs select). A sheet
+ * placeholder draws its own frame unless `framed`: then a `RouteSheet` around it draws the sheet (WP-23). `className`
+ * goes last. The links (WP-21) go through the counted `Link`. Works in Server and Client Components.
  */
 export function RoutePlaceholder({
   name,
   layer,
+  framed = false,
   links = LINKS[name] ?? [],
+  className,
   children,
 }: {
   name: string;
   layer?: RouteLayer;
+  framed?: boolean;
   links?: string[];
+  className?: string;
   children?: ReactNode;
 }) {
   const t = useTranslations();
@@ -45,7 +52,11 @@ export function RoutePlaceholder({
     <section
       data-route={name}
       data-layer={layer}
-      className={cn("mx-auto flex w-full max-w-(--feed-max) flex-col gap-3 px-(--gutter) py-4", layer && LAYER_CLASSES[layer])}
+      className={cn(
+        "mx-auto flex w-full max-w-(--feed-max) flex-col gap-3 px-(--gutter) py-4",
+        layer === "sheet" && !framed && SHEET_FRAME,
+        className,
+      )}
     >
       <h1 className="text-[20px] font-bold">{name}</h1>
       <p className="text-hint">

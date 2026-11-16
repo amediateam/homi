@@ -28,6 +28,16 @@ export interface BottomSheetProps {
   closeLabel?: string;
   /** A sheet over another open sheet (the city sheet over the filters): 60 over 50, as legacy (`03` §3.6). */
   stacked?: boolean;
+  /**
+   * Escape asks `onClose`. Default: `dismissible`. A sheet whose backdrop and drag are off only because no page lies
+   * below it (the standalone route sheet of the app) still closes on Escape, as by its ×.
+   */
+  closeOnEscape?: boolean;
+  /**
+   * `false` renders the sheet where it stands instead of in a portal at the end of `body`, so the server HTML holds
+   * it (a sheet address loaded directly; a portal has nothing to render into on the server). Default `true`.
+   */
+  portal?: boolean;
   /** A drag on the header starts. */
   onDragStart?: () => void;
   /** A drag closes the sheet; legacy plays a light impact here (TMA-025). `onClose` follows after the slide. */
@@ -45,8 +55,10 @@ function dragOwnsSheet(sheet: HTMLElement | null): boolean {
  * Bottom sheet (WP-23, `03` §1.2) on the Radix Dialog parts of WP-20: a modal dialog (`aria-modal`, focus trapped,
  * moved to the title on open and back to the element that had it on close) that rises over a dimmed backdrop,
  * capped at the 608 px column. It closes by the ×, a backdrop tap, a drag down from the header (`useSheetDrag`) and
- * Escape — every one only asks `onClose`; a non-dismissible sheet ignores all but the ×. Dragging inside the body
- * never closes it. A stacked sheet is the top layer: a tap on its backdrop and Escape close it alone.
+ * Escape — every one only asks `onClose`; a non-dismissible sheet ignores all but the × (and Escape with
+ * `closeOnEscape`). Dragging inside the body never closes it. A stacked sheet is the top layer: a tap on its backdrop
+ * and Escape close it alone. The backdrop and the sheet go to a portal at the end of `body` unless `portal={false}`
+ * renders them in place; positioned `fixed`, they then need an ancestor without a transform.
  *
  * The header (grab handle, title, ×) and the footer are glass over the body, which scrolls under them with the
  * paddings `useSheetChrome` measures. While open, `body` carries `sheet-open` (and `locked` for the full variant),
@@ -63,6 +75,8 @@ export function BottomSheet({
   footer,
   closeLabel,
   stacked = false,
+  closeOnEscape = dismissible,
+  portal = true,
   onDragStart,
   onDragCommit,
   className,
@@ -83,6 +97,75 @@ export function BottomSheet({
   };
   const layer = stacked ? "z-(--z-toast)" : "z-(--z-backdrop)";
 
+  const backdrop = (
+    <DialogPrimitive.Overlay
+      ref={overlayRef}
+      data-slot="bottom-sheet-overlay"
+      className={cn("fixed inset-0 bg-dim data-[state=open]:animate-fade", layer)}
+    />
+  );
+  const sheet = (
+    <DialogPrimitive.Content
+      ref={sheetRef}
+      data-slot="bottom-sheet"
+      data-variant={variant}
+      aria-modal="true"
+      aria-describedby={undefined}
+      className={cn(
+        "group/sheet fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-(--feed-max) flex-col overflow-hidden rounded-t-large bg-sheet text-text shadow-(--shadow-float) outline-none data-[state=open]:animate-rise",
+        variant === "full"
+          ? "h-[calc(100%-var(--top-inset)-24px)]"
+          : "max-h-[calc(100%-var(--top-inset)-24px)]",
+        layer,
+        className,
+      )}
+      onOpenAutoFocus={(event) => {
+        event.preventDefault();
+        const active = document.activeElement;
+        openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+        titleRef.current?.focus({ preventScroll: true });
+      }}
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        const opener = openerRef.current;
+        openerRef.current = null;
+        if (opener?.isConnected) {
+          opener.focus({ preventScroll: true });
+        }
+      }}
+      onEscapeKeyDown={(event) => {
+        if (!closeOnEscape) {
+          event.preventDefault();
+        }
+      }}
+      onPointerDownOutside={(event) => {
+        // Only the backdrop is a tap away; anything else outside (a toast, a second sheet) is not.
+        const target = event.detail.originalEvent.target;
+        if (!dismissible || !(target instanceof Node && overlayRef.current?.contains(target))) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <SheetFrame
+        sheetRef={sheetRef}
+        overlayRef={overlayRef}
+        titleRef={titleRef}
+        variant={variant}
+        title={title}
+        header={header}
+        footer={footer}
+        closeLabel={closeLabel}
+        dismissible={dismissible}
+        onClose={onClose}
+        onRequestClose={requestClose}
+        onDragStart={onDragStart}
+        onDragCommit={onDragCommit}
+      >
+        {children}
+      </SheetFrame>
+    </DialogPrimitive.Content>
+  );
+
   return (
     <DialogPrimitive.Root
       open={open}
@@ -92,72 +175,17 @@ export function BottomSheet({
         }
       }}
     >
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          ref={overlayRef}
-          data-slot="bottom-sheet-overlay"
-          className={cn("fixed inset-0 bg-dim data-[state=open]:animate-fade", layer)}
-        />
-        <DialogPrimitive.Content
-          ref={sheetRef}
-          data-slot="bottom-sheet"
-          data-variant={variant}
-          aria-modal="true"
-          aria-describedby={undefined}
-          className={cn(
-            "group/sheet fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-(--feed-max) flex-col overflow-hidden rounded-t-large bg-sheet text-text shadow-(--shadow-float) outline-none data-[state=open]:animate-rise",
-            variant === "full"
-              ? "h-[calc(100%-var(--top-inset)-24px)]"
-              : "max-h-[calc(100%-var(--top-inset)-24px)]",
-            layer,
-            className,
-          )}
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            const active = document.activeElement;
-            openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
-            titleRef.current?.focus({ preventScroll: true });
-          }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            const opener = openerRef.current;
-            openerRef.current = null;
-            if (opener?.isConnected) {
-              opener.focus({ preventScroll: true });
-            }
-          }}
-          onEscapeKeyDown={(event) => {
-            if (!dismissible) {
-              event.preventDefault();
-            }
-          }}
-          onPointerDownOutside={(event) => {
-            // Only the backdrop is a tap away; anything else outside (a toast, a second sheet) is not.
-            const target = event.detail.originalEvent.target;
-            if (!dismissible || !(target instanceof Node && overlayRef.current?.contains(target))) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <SheetFrame
-            sheetRef={sheetRef}
-            overlayRef={overlayRef}
-            titleRef={titleRef}
-            variant={variant}
-            title={title}
-            header={header}
-            footer={footer}
-            closeLabel={closeLabel}
-            dismissible={dismissible}
-            onClose={onClose}
-            onRequestClose={requestClose}
-            onDragStart={onDragStart}
-            onDragCommit={onDragCommit}
-          >
-            {children}
-          </SheetFrame>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
+      {portal ? (
+        <DialogPrimitive.Portal>
+          {backdrop}
+          {sheet}
+        </DialogPrimitive.Portal>
+      ) : (
+        <>
+          {backdrop}
+          {sheet}
+        </>
+      )}
     </DialogPrimitive.Root>
   );
 }

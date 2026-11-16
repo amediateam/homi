@@ -1,17 +1,31 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { Component, type ReactNode } from "react";
+import { fakeTelegram, type FakeTelegram } from "@homi/testing";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { Component, type ComponentProps, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Page from "@/app/[locale]/dev/ui/page";
+import { currentToast, dismissToast } from "@/lib/ui/toast";
 
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("not found");
   },
 }));
+/** The counted `Link` needs the App Router; a plain anchor keeps its address. */
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, ...props }: ComponentProps<"a"> & { href: string }) => <a href={href} {...props} />,
+}));
+
+let fake: FakeTelegram | null = null;
+const haptics = () =>
+  (fake?.calls ?? []).filter((entry) => entry.member.startsWith("HapticFeedback")).map((entry) => `${entry.member}(${String(entry.args[0])})`);
 
 afterEach(() => {
   cleanup();
+  dismissToast("app");
+  fake?.uninstall();
+  fake = null;
+  vi.useRealTimers();
   vi.unstubAllEnvs();
 });
 
@@ -49,15 +63,34 @@ const ENTRIES = [
   "gallery-empty-no-image",
   "gallery-icons",
   "gallery-radar-icon",
+  "gallery-toast",
+  "gallery-toast-plain",
+  "gallery-toast-action",
+  "gallery-toast-key",
+  "gallery-toast-replace",
+  "gallery-confirm",
+  "gallery-confirm-ask",
+  "gallery-confirm-events",
+  "gallery-feedback",
+  "gallery-feedback-failed",
+  "gallery-feedback-failed-dev016",
+  "gallery-feedback-saved",
   "gallery-bottom-sheet",
   "gallery-open-sheet-full",
   "gallery-open-sheet-compact",
   "gallery-open-sheet-fixed",
   "gallery-subpage",
   "gallery-open-subpage",
+  "gallery-routes",
+  "gallery-route-filters",
+  "gallery-route-settings-theme",
+  "gallery-route-listing",
   "gallery-crash",
   "gallery-throw",
 ];
+
+const click = (testId: string) => fireEvent.click(screen.getByTestId(testId));
+const eventLog = () => screen.getByTestId("gallery-sheet-events").textContent;
 
 describe("the primitives gallery (D-E-4)", () => {
   it.each(["production", "", "preview"])("answers not-found when NEXT_PUBLIC_APP_ENV is %j", (env) => {
@@ -109,5 +142,89 @@ describe("the primitives gallery (D-E-4)", () => {
     fireEvent.click(screen.getByTestId("gallery-throw"));
 
     expect(screen.getByTestId("boundary").textContent).toBe("UI gallery: a render error on purpose");
+  });
+});
+
+describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
+  it("shows a plain, a catalogue-key and an action toast through the app's store; the action is logged", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    render(Page());
+
+    click("gallery-toast-plain");
+    expect(currentToast()?.message).toBe("Ссылка скопирована");
+    click("gallery-toast-key");
+    expect(currentToast()?.message).toEqual({ key: "toast.blocked", values: { label: "@realtor_uz" } });
+    click("gallery-toast-action");
+    const message = currentToast()?.message;
+    expect(message).toMatchObject({ text: "Объявление скрыто", action: "Вернуть" });
+
+    act(() => (message as { run: () => void }).run());
+    expect(eventLog()).toBe("События: toast action");
+  });
+
+  it("replaces the visible toast with a second one, and drops a pending replacement when the page goes", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    const { unmount } = render(Page());
+
+    click("gallery-toast-replace");
+    const first = currentToast();
+    expect(String(first?.message)).toMatch(/^Первый тост/);
+    act(() => vi.advanceTimersByTime(1499));
+    expect(currentToast()).toBe(first);
+    act(() => vi.advanceTimersByTime(1));
+    expect(String(currentToast()?.message)).toMatch(/^Второй тост/);
+    expect(currentToast()?.id).not.toBe(first?.id);
+
+    click("gallery-toast-replace");
+    const pending = currentToast();
+    unmount();
+    act(() => vi.advanceTimersByTime(1500));
+    expect(currentToast()).toBe(pending);
+  });
+
+  it("logs the answer of the confirm dialog into the event log", async () => {
+    fake = fakeTelegram({ version: "6.2", answers: { confirm: false } });
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    render(Page());
+
+    await act(async () => click("gallery-confirm-ask"));
+    fake.answers.confirm = true;
+    await act(async () => click("gallery-confirm-ask"));
+
+    expect(fake.calls.filter((entry) => entry.member === "showConfirm").map((entry) => entry.args[0])).toEqual([
+      "Очистить историю просмотров?",
+      "Очистить историю просмотров?",
+    ]);
+    expect(screen.getByTestId("gallery-confirm-events").textContent).toBe("События: confirm true · confirm false");
+    expect(eventLog()).toBe("События: confirm true · confirm false");
+  });
+
+  it("plays failed() with the flag off and on, and saved()", () => {
+    fake = fakeTelegram();
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    render(Page());
+
+    click("gallery-feedback-failed");
+    expect(currentToast()).toBeNull();
+    click("gallery-feedback-failed-dev016");
+    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+    click("gallery-feedback-saved");
+
+    expect(haptics()).toEqual([
+      "HapticFeedback.notificationOccurred(error)",
+      "HapticFeedback.notificationOccurred(error)",
+      "HapticFeedback.notificationOccurred(success)",
+    ]);
+    expect(eventLog()).toBe("События: saved · failed, DEV-016 · failed");
+  });
+
+  it("links the three route wrappers through their real addresses", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
+    render(Page());
+
+    expect(screen.getByTestId("gallery-route-filters").getAttribute("href")).toBe("/filters");
+    expect(screen.getByTestId("gallery-route-settings-theme").getAttribute("href")).toBe("/settings/theme");
+    expect(screen.getByTestId("gallery-route-listing").getAttribute("href")).toBe("/listing/42");
   });
 });

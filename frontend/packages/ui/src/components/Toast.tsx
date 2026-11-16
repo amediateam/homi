@@ -6,8 +6,9 @@ import type { ComponentProps } from "react";
 import { cn } from "../cn";
 
 /**
- * The Radix Toast primitive with the legacy look (WP-20): a glass pill above the tab bar. Queueing, timing and the
- * single-toast rule of SCR-042 are WP-23.
+ * The Radix Toast primitive (WP-20): a glass card above the tab bar. The Mini App does not use it — its `ToastHost`
+ * (WP-23) renders SCR-042 itself, because Radix pauses the timer on blur, pointer and focus and SCR-042 keeps strict
+ * times. The viewport sits at the same legacy offset as that host.
  */
 export const ToastProvider = ToastPrimitive.Provider;
 
@@ -16,7 +17,7 @@ export function ToastViewport({ className, ...props }: ComponentProps<typeof Toa
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
       className={cn(
-        "fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--bottom-inset)+12px)] z-(--z-toast) m-0 flex list-none flex-col items-center gap-2 px-(--gutter) outline-none",
+        "fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--bottom-inset)+78px)] z-(--z-toast) m-0 flex list-none flex-col items-center gap-2 px-(--gutter) outline-none",
         className,
       )}
       {...props}
