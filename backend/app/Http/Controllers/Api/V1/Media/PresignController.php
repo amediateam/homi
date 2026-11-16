@@ -16,6 +16,7 @@ use Illuminate\Filesystem\AwsS3V3Adapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use League\Flysystem\UnableToRetrieveMetadata;
 
 /**
  * Direct-to-storage uploads (master prompt §7.3): the client PUTs the bytes to a presigned
@@ -58,6 +59,11 @@ class PresignController extends ApiController
 
     /**
      * Register an object uploaded through a presigned URL as a media file.
+     *
+     * The size is read before the bytes, so an oversized object is never loaded.
+     * The presigned URL can still replace the object between those two calls; the
+     * length of the bytes is checked again and that replacement is deleted. A failed
+     * delete is ignored, as on the success path: the tmp disk swallows storage errors.
      */
     public function register(RegisterUploadRequest $request, HashedUploader $uploader): JsonResponse
     {
@@ -69,10 +75,30 @@ class PresignController extends ApiController
         }
 
         $tmp = Storage::disk((string) config('media.disks.tmp'));
+        $maxBytes = (int) config('media.max_bytes');
+
+        try {
+            $size = $tmp->size($key);
+        } catch (UnableToRetrieveMetadata) {
+            throw MediaException::uploadNotFound($key);
+        }
+
+        if ($size > $maxBytes) {
+            $tmp->delete($key);
+
+            throw MediaException::tooLarge($size, $maxBytes);
+        }
+
         $bytes = $tmp->get($key);
 
         if ($bytes === null) {
             throw MediaException::uploadNotFound($key);
+        }
+
+        if (strlen($bytes) > $maxBytes) {
+            $tmp->delete($key);
+
+            throw MediaException::tooLarge(strlen($bytes), $maxBytes);
         }
 
         $visibility = $request->visibility();
