@@ -1006,3 +1006,7 @@ Verified (from `frontend/`):
   - End to end: city 6, filters 20 (one KI-32 rerun) and feed 19 passed.
 
 Known issues: KI-54 (the draft re-created on an address without `city`) and KI-55 (resolved here).
+
+Merged on 2026-11-17 as #79 (`f2f58cc`), on «сливай #79», after green `frontend` (run 44048799579) and
+`frontend-e2e` (run 44048799675, 130 passed). WAITING for the regular deploy of the production track and the checks
+inside Telegram on staging.

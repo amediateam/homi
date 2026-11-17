@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#79) |
+| Status | WAITING (merged in #79 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-24 |
 | Size | about 2 900 changed lines, L |
 | Behaviour reference | `03` §2 (SCR-014, SCR-015, SCR-016, SCR-017; SCR-029 and SCR-030 for the two radar layouts), §3.4 (debounce, focus delay, area cap), §3.5 (price input), §4 (BR-APP-001 … BR-APP-023, BR-APP-057), §5/§5b (LB-APP-007, LB-APP-023, LB-APP-029, LB-APP-030, LB-APP-043); `05` (TMA-012, TMA-022, TMA-025, TMA-035, TMA-037); task files `tasks/frontend/KV-FE-050` … `KV-FE-056`, `KV-FE-044` (sheet variants), `KV-FE-020` (functions the sheet calls). Their file layout, navigation stack, API paths and transport are not taken |
@@ -836,7 +836,8 @@ All sheets:
 - **Known issues:** KI-54 (low: the draft re-created on an address without `city` when the city arrives; C-2) and
   KI-55 (resolved here).
 - **Next:**
-  1. Review and merge, on «сливай #N».
+  1. ~~Review and merge~~ (merged in #79 on 2026-11-17, `f2f58cc`, after green `frontend` and `frontend-e2e` — 130
+     passed); the follow-up docs PR records this status, the queue row, `CLAUDE.md` and the memory.
   2. The production track deploys.
   3. Check inside Telegram on staging: the sheets' drag, BackButton and haptics, the geolocation row, the pets
      launch. Run the checklist in ru / uz / en, light and dark; WP-33 runs the manual lines.
