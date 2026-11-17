@@ -31,6 +31,27 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Text only on the maps (WP-27, LB-APP-020): markers, cards and popups set every server string with textContent
+    // on nodes made by createElement; no HTML parser is reachable from these folders. `setHTML` is MapLibre's Popup.
+    files: ["features/map/**", "features/listing/spot/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...["innerHTML", "outerHTML", "insertAdjacentHTML", "setHTML"].map((property) => ({
+          property,
+          message: `LB-APP-020: no ${property} in the map code; set text with textContent on nodes from document.createElement.`,
+        })),
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXAttribute[name.name='dangerouslySetInnerHTML'], Property[key.name='dangerouslySetInnerHTML']",
+          message: "LB-APP-020: no dangerouslySetInnerHTML in the map code; render server strings as text.",
+        },
+      ],
+    },
+  },
+  {
     // The boot scripts are inlined as written and must parse on engines below the Next.js floor (WP-21).
     files: ["boot/boot.js", "boot/stubs.js"],
     languageOptions: { parser: espree, ecmaVersion: 5, sourceType: "script", parserOptions: {} },

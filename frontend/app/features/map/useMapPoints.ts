@@ -1,0 +1,156 @@
+"use client";
+
+import { type SearchFilters, toApiQuery } from "@homi/search";
+import type { components } from "@homi/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { bffFetch } from "@/lib/api/browser";
+import { type ApiFailure, failureOf, type UiError } from "@/lib/api/errors";
+import type { ApiResult } from "@/lib/api/types";
+import { useSessionMap } from "@/lib/data/sessionMaps";
+import { type DevFlags, devFlags } from "@/lib/flags";
+import { searchRules } from "@/lib/search/rules";
+import { onForbidden } from "@/lib/session/bootstrap";
+
+import { groupByLocation, mapCounts } from "./pins";
+import type { MapGroup, MapPoint } from "./types";
+
+type MapAnswer = components["schemas"]["MapPointsResource"];
+
+const PATH = "listings/map";
+
+export interface MapPointsOptions {
+  /** Gates sending only (`useSession().status === 'ready'`); `true` by default. */
+  enabled?: boolean;
+  /** The app's flags; tests pass overrides (`withDevFlags`). */
+  flags?: DevFlags;
+}
+
+/** `loading` while the request for these filters is pending; `empty` = no point shown and nothing without one. */
+export type MapPointsStatus = "loading" | "ready" | "empty" | "error";
+
+export interface MapPoints {
+  status: MapPointsStatus;
+  /** The points not hidden, one group per rounded location, cheapest first (`pins.ts`). */
+  groups: MapGroup[];
+  shown: number;
+  /** The answer's `total` minus the hidden points. */
+  total: number;
+  /** Listings of the search without a location: the "N of M" note (BR-APP-062). */
+  missing: number;
+  /** Grows by one with each successful answer, never with a change of the hidden set: the view refits on it. */
+  responseId: number;
+  error: UiError | null;
+  /** Asks again after an error; ignored otherwise. */
+  retry: () => void;
+}
+
+/** A request sent: a new object per send, so an answer is matched to its request. */
+type Request = object;
+
+interface State {
+  /** The query of the filters these points belong to. */
+  key: string;
+  points: readonly MapPoint[];
+  /** `null` when the answer has none: `mapCounts` counts the points then. */
+  answerTotal: number | null;
+  loaded: boolean;
+  error: ApiFailure | null;
+  /** The request the effect sends while `enabled`; `null` once answered. */
+  request: Request | null;
+  responseId: number;
+}
+
+function start(key: string, responseId: number): State {
+  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId };
+}
+
+function settle(state: State, result: ApiResult<MapAnswer>): State {
+  if (!result.ok) {
+    return { ...state, error: result, request: null };
+  }
+  const points = Array.isArray(result.data?.points) ? result.data.points : [];
+  const answerTotal = result.data?.total ?? null;
+  return { ...state, points, answerTotal, loaded: true, error: null, request: null, responseId: state.responseId + 1 };
+}
+
+function statusOf(state: State, counts: { shown: number; total: number }): MapPointsStatus {
+  if (state.error !== null) {
+    return "error";
+  }
+  if (!state.loaded) {
+    return "loading";
+  }
+  return counts.shown === 0 && counts.total === 0 ? "empty" : "ready";
+}
+
+/**
+ * The points of the map (SCR-011, BR-APP-062): one `GET /listings/map` per change of the search, with the filters'
+ * v1 query (`toApiQuery`, the feed's rules) and no sort, paging or viewport. The request is keyed by that query, not
+ * by `filtersKey()`, which ignores `posted_days` (`feedQuery.ts`). A change aborts the pending request and starts
+ * from nothing, so no pin of the old search is shown under the new one; an answer for older filters is dropped
+ * (`useCursorFeed`'s guards). Listings hidden in this launch (`useSessionMap('hidden')`) are left out when grouping:
+ * a change of that set regroups and recounts without a new `responseId`, so the camera stays.
+ *
+ * The request lives in an effect and is aborted by its cleanup, on unmount and while the route is hidden by
+ * `cacheComponents`; a pending one is sent again when shown. A failure is a status, never an empty map (LB-APP-008),
+ * and nothing retries by itself. `bffFetch` reports `meta.source` for the demo marker. With
+ * `dev001AnyForbiddenShowsAccess` a `forbidden` answer turns the session `denied` (LB-APP-045).
+ */
+export function useMapPoints(filters: SearchFilters, options: MapPointsOptions = {}): MapPoints {
+  const { enabled = true, flags = devFlags } = options;
+  const key = toApiQuery(filters, { rules: searchRules(flags) }).toString();
+  const [stored, setState] = useState<State>(() => start(key, 0));
+  let state = stored;
+  if (stored.key !== key) {
+    state = start(key, stored.responseId);
+    setState(state);
+  }
+
+  const { request } = state;
+  useEffect(() => {
+    if (!enabled || request === null) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    const apply = (result: ApiResult<MapAnswer>) => {
+      if (!controller.signal.aborted) {
+        setState((current) => (current.key === key && current.request === request ? settle(current, result) : current));
+      }
+    };
+    bffFetch<MapAnswer>(PATH, { query: new URLSearchParams(key), signal: controller.signal }).then(apply, () => {
+      // `bffFetch` rejects only for the abort of its caller; anything else is a bug, shown as "could not load".
+      apply(failureOf({ method: "GET", path: PATH }, { status: 0 }));
+    });
+    return () => controller.abort();
+  }, [enabled, request, key]);
+
+  const forbidden = state.error?.error === "forbidden";
+  useEffect(() => {
+    if (enabled && forbidden && flags.dev001AnyForbiddenShowsAccess) {
+      onForbidden();
+    }
+  }, [enabled, forbidden, flags]);
+
+  const retry = useCallback(() => {
+    setState((current) =>
+      current.key === key && current.error !== null && current.request === null ? { ...current, error: null, request: {} } : current,
+    );
+  }, [key]);
+
+  const hidden = useSessionMap("hidden");
+  const { points, answerTotal } = state;
+  const groups = useMemo(() => groupByLocation(points, hidden), [points, hidden]);
+  const counts = useMemo(() => mapCounts(points, answerTotal, hidden), [points, answerTotal, hidden]);
+
+  return {
+    status: statusOf(state, counts),
+    groups,
+    shown: counts.shown,
+    total: counts.total,
+    missing: counts.missing,
+    responseId: state.responseId,
+    error: state.error?.error ?? null,
+    retry,
+  };
+}

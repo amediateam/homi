@@ -47,5 +47,10 @@
   },
   "toast": {
     "reportedAgentReview": "Thanks, we’ll check"
+  },
+  "map": {
+    "empty": "Nothing found in this area",
+    "loading": "Loading listings…",
+    "unavailable": "The map is not available on this device yet"
   }
 }
