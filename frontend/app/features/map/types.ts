@@ -2,6 +2,8 @@ import type { Locale } from "@homi/config";
 import type { Polygon } from "@homi/search";
 import type { components } from "@homi/types";
 
+import type { Basemap } from "./tiles";
+
 /**
  * The view contract both map engines implement (WP-27 for MapLibre GL, WP-28 for Leaflet): `MapScreen` owns the
  * search, the points, the grouping, the selection, the note and the card; a view only draws and reports gestures.
@@ -55,4 +57,6 @@ export type MapViewProps = {
   onDrawn?(polygon: Polygon): void;
   onTooSmall?(): void;
   onFail(reason: MapFailReason): void;
+  /** The basemap the view draws: the raster after a vector failure, so the attribution follows it. */
+  onBasemap?(basemap: Basemap): void;
 };

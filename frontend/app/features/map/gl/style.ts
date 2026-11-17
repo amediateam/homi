@@ -1,5 +1,11 @@
 import type { Locale } from "@homi/config";
-import type { ExpressionSpecification, LayerSpecification, SourceSpecification, StyleSpecification } from "maplibre-gl";
+import type {
+  ExpressionSpecification,
+  GeoJSONSourceSpecification,
+  LayerSpecification,
+  SourceSpecification,
+  StyleSpecification,
+} from "maplibre-gl";
 
 import { type Palette, paletteOf } from "../palette";
 import { type Basemap, OSM_TILE_URL } from "../tiles";
@@ -51,8 +57,9 @@ export type StyleFeature = {
 };
 
 /**
- * Inline GeoJSON of a `geojson` source: the mask of `maskGeometry()` (`mask.ts`). MapLibre's own `data` type names
- * `@types/geojson`, which the app does not resolve, so this structural shape types it instead.
+ * Inline GeoJSON of a `geojson` source: the mask of `maskGeometry()` (`mask.ts`). A structural shape, so the pure
+ * modules need no GeoJSON types; MapLibre's `data` type is mutable `@types/geojson` (resolved through
+ * `@types/supercluster`), hence the casts where the sources are built.
  */
 export type StyleGeoJSON = { type: "FeatureCollection"; features: readonly StyleFeature[] };
 
@@ -443,11 +450,11 @@ export function buildStyle({ basemap, scheme, lite, locale, mask, me }: StyleInp
     ...basemapLayers(basemap, palette, lite, locale),
   ];
   if (mask !== null) {
-    sources[MASK_SOURCE] = { type: "geojson", data: mask };
+    sources[MASK_SOURCE] = { type: "geojson", data: mask as GeoJSONSourceSpecification["data"] };
     layers.push(...maskLayers(palette));
   }
   if (me !== null) {
-    sources[ME_SOURCE] = { type: "geojson", data: meData(me) };
+    sources[ME_SOURCE] = { type: "geojson", data: meData(me) as GeoJSONSourceSpecification["data"] };
     layers.push(...meLayers(palette));
   }
   const style: StyleSpecification = { version: 8, sources, layers };

@@ -6,6 +6,7 @@ import {
   pinElement,
   setActive,
   spreadDotElement,
+  spreadPinElement,
   stackElement,
 } from "@/features/map/gl/markerElements";
 import type { MapGroup, MapPoint } from "@/features/map/types";
@@ -102,5 +103,25 @@ describe("setActive and the spread dot", () => {
     const el = spreadDotElement();
     expect(el.className).toBe("spread-dot");
     expect(el.childNodes).toHaveLength(0);
+  });
+});
+
+describe("test hooks", () => {
+  it("names each kind in data-marker, and the count of a stack and a cluster in data-count", () => {
+    const items = [point(1), point(2), point(3)];
+
+    expect(pinElement(point(1)).dataset.marker).toBe("pin");
+    expect(stackElement(group(items)).dataset).toMatchObject({ marker: "stack", key: "41.31110,69.27970", count: "3" });
+    expect(clusterElement(12).dataset).toMatchObject({ marker: "cluster", count: "12" });
+    expect(spreadDotElement().dataset.marker).toBe("dot");
+  });
+
+  it("a spread pin is a pin by its classes and text, a spread one by its data-marker", () => {
+    const el = spreadPinElement(point(7, { label: MARKUP, tone: "good" }), { active: true });
+
+    expect(el.dataset).toMatchObject({ marker: "spread", number: "7" });
+    expect(el.className).toBe("pin good active");
+    expect(el.textContent).toBe(MARKUP);
+    expect(el.childElementCount).toBe(0);
   });
 });

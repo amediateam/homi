@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
 
 import { useBootRetryState } from "@/features/gates/bootRetryStore";
+import { warmMap } from "@/features/map/engine";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
 import { rememberHref } from "@/lib/ui/shellState";
@@ -78,7 +79,9 @@ function ShellBottom() {
 
   return (
     <>
-      {variant === "search-list" || variant === "map" ? <ViewToggle variant={variant} /> : null}
+      {variant === "search-list" || variant === "map" ? (
+        <ViewToggle variant={variant} onIntent={() => void warmMap().catch(() => undefined)} />
+      ) : null}
       <PullToRefresh />
       {tab ? <TabBar active={tab} /> : null}
       <div aria-hidden className={tab ? "h-(--bottom-chrome)" : "h-(--bottom-inset)"} />

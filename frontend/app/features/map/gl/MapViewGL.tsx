@@ -2,53 +2,57 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { MapViewProps } from "../types";
-import { loadMapLibre } from "./library";
+import { buildStyle } from "./style";
+import { useAreaMask } from "./useAreaMask";
+import { useClusterIndex } from "./useClusterIndex";
+import { spreadGroupOf, useClusterMarkers } from "./useClusterMarkers";
+import { useBasemap, useMapCamera, useMapInstance } from "./useMapInstance";
+import { useMeLayer } from "./useMeLayer";
 
-/** SLICE: the MapLibre GL view on the OSM raster source only; WP-27's waves replace this body. */
-export default function MapViewGL({ cityView, onFail }: MapViewProps) {
+/**
+ * The MapLibre GL view of the map (WP-27, SCR-011, `03` §1.8): the main engine, loaded on demand by `MapScreen`
+ * through `next/dynamic` with `ssr: false`, so neither this chunk nor `maplibre-gl` and its CSS are in the first load
+ * of any page. It owns everything MapLibre does — the map and its failures, the style (basemap, theme, lite mode,
+ * locale, area mask, "me"; rebuilt with a diff, never a new map), the markers and their taps, and the camera — and
+ * reports gestures through the view contract (`types.ts`). It never fetches and never formats a price.
+ */
+export default function MapViewGL({
+  groups,
+  responseId,
+  selection,
+  onSelect,
+  onBackground,
+  polygon,
+  cityView,
+  tiles,
+  locale,
+  scheme,
+  lite,
+  me,
+  onFail,
+  onBasemap,
+}: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
-
+  const mask = useAreaMask(polygon);
+  const { basemap, failVector } = useBasemap(tiles);
   useEffect(() => {
-    let cancelled = false;
-    let map: InstanceType<Awaited<ReturnType<typeof loadMapLibre>>["Map"]> | null = null;
-    loadMapLibre().then(
-      (maplibre) => {
-        if (cancelled || container.current === null) {
-          return;
-        }
-        try {
-          map = new maplibre.Map({
-            container: container.current,
-            center: [cityView.center[1], cityView.center[0]],
-            zoom: cityView.zoom - 1,
-            attributionControl: false,
-            style: {
-              version: 8,
-              sources: {
-                osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19 },
-              },
-              layers: [{ id: "osm", type: "raster", source: "osm" }],
-            },
-            transformRequest: (url) => ({ url, referrerPolicy: "strict-origin-when-cross-origin" }),
-          });
-          map.on("error", (event) => console.warn("[map] error", String(event.error?.message ?? event.error)));
-          map.on("load", () => console.warn("[map] load"));
-          map.on("idle", () => console.warn("[map] idle"));
-        } catch (error) {
-          console.warn("[map] throw", String(error));
-          onFail(error instanceof maplibre.GPUInitializationError ? "webgl" : "style");
-        }
-      },
-      () => onFail("chunk"),
-    );
-    return () => {
-      cancelled = true;
-      map?.remove();
-    };
-  }, [cityView, onFail]);
+    onBasemap?.(basemap);
+  }, [basemap, onBasemap]);
+  const style = useMemo(
+    () => buildStyle({ basemap, scheme, lite, locale, mask, me }),
+    [basemap, scheme, lite, locale, mask, me],
+  );
+  const handle = useMapInstance(container, { style, cityView, lite, onFail, onBackground, onVectorError: failVector });
+  useMapCamera(handle, { responseId, groups, polygon, cityView });
+  useMeLayer(handle, me);
+
+  const spread = useMemo(() => spreadGroupOf(groups, selection), [groups, selection]);
+  const clustered = useMemo(() => (spread === null ? groups : groups.filter((group) => group !== spread)), [groups, spread]);
+  const index = useClusterIndex(clustered);
+  useClusterMarkers(handle, { index, spread, selection, onSelect });
 
   return <div ref={container} data-map-view="gl" className="absolute inset-0" />;
 }

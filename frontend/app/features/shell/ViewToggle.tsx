@@ -15,9 +15,10 @@ import { expandChrome } from "./useMiniChrome";
  * The floating list / map switch (SCR-006, legacy `view-toggle`): it names the view it switches to — «Карта» on the
  * list, «Список» on the map — and carries the search state there with `nav.tab`, the replace of the tab bar. Search
  * tab only and hidden while drawing (`map-drawing`). While the chrome is collapsed the first tap only expands it
- * (`expandChrome` plays the haptic); the collapse morph is in `styles/shell.css`.
+ * (`expandChrome` plays the haptic); the collapse morph is in `styles/shell.css`. A pointer-down on «Карта» calls
+ * `onIntent` at once, also on the collapsed chrome: the shell warms the map's code with it (WP-27, LB-APP-018).
  */
-export function ViewToggle({ variant }: { variant: ShellVariant }) {
+export function ViewToggle({ variant, onIntent }: { variant: ShellVariant; onIntent?: () => void }) {
   const t = useTranslations();
   const { href } = useSearchState();
   if (variant !== "search-list" && variant !== "map") {
@@ -30,6 +31,7 @@ export function ViewToggle({ variant }: { variant: ShellVariant }) {
       type="button"
       data-view-toggle={toMap ? "list" : "map"}
       data-chrome=""
+      onPointerDown={toMap && onIntent ? () => onIntent() : undefined}
       onClick={() => {
         if (expandChrome()) {
           return;
