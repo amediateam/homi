@@ -31,7 +31,8 @@ function Warmup() {
         return;
       }
       warmMap(currentEngine()).catch(() => undefined);
-      if (isTileTemplate(tiles)) {
+      // A city reference data does not know has no centre to prefetch around (KV-FE-062), not Tashkent's.
+      if (isTileTemplate(tiles) && city !== null) {
         void prefetchTiles({
           template: tiles,
           city: cityViewOf(city),

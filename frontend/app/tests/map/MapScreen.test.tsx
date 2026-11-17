@@ -1,7 +1,7 @@
 import { getMessages } from "@homi/i18n";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { Activity, type ActivityProps, createElement, type ReactNode } from "react";
+import { Activity, type ActivityProps, createElement, type ReactNode, StrictMode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -101,6 +101,7 @@ vi.mock("@/features/map/useCardLayer", () => ({
 import { resetEngineForTests } from "@/features/map/engine";
 import { LOCATE_NOTE_MS, MapScreen, NOTE_MS } from "@/features/map/MapScreen";
 import { hide, resetSessionMaps } from "@/lib/data/sessionMaps";
+import { pushEntry, resetDepth } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
 import { resetReference } from "@/lib/reference/useReference";
 import { consumeDrawRequest, requestDraw } from "@/lib/ui/shellState";
@@ -177,6 +178,7 @@ afterEach(() => {
   resetSessionMaps();
   resetReference();
   consumeDrawRequest();
+  resetDepth("/");
 });
 
 describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
@@ -195,6 +197,7 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
       selection: null,
       polygon: null,
       cityView: { center: [41.3111, 69.2797], zoom: 12 },
+      cityKnown: true,
       tiles: null,
       locale: "ru",
       scheme: "light",
@@ -470,6 +473,42 @@ describe("MapScreen: drawing until WP-28", () => {
     expect(locateButton()).toBeNull();
   });
 
+  it("the same draw=1 address opened again after its close is closed again, once per opening", async () => {
+    at("/map", "city=tashkent&draw=1");
+    const view = await mount();
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+
+    at("/map", "city=tashkent");
+    view.rerender();
+    at("/map", "city=tashkent&draw=1");
+    view.rerender();
+    expect(nav.replace).toHaveBeenCalledTimes(2);
+    expect(nav.replace).toHaveBeenLastCalledWith("/map?city=tashkent");
+
+    view.rerender();
+    expect(nav.replace).toHaveBeenCalledTimes(2);
+    expect(nav.back).not.toHaveBeenCalled();
+  });
+
+  it("with a step behind it, each opening is closed with exactly one Back, also when StrictMode runs the effects twice", async () => {
+    // StrictMode at the root: React double-invokes the effects of a newly mounted tree only there.
+    const strict = () => <StrictMode>{intl(<MapScreen />)}</StrictMode>;
+    act(() => pushEntry("/map?city=tashkent&draw=1"));
+    at("/map", "city=tashkent&draw=1");
+    const view = render(strict());
+    await act(() => vi.dynamicImportSettled());
+    expect(nav.back).toHaveBeenCalledTimes(1);
+
+    at("/map", "city=tashkent");
+    view.rerender(strict());
+    expect(nav.back).toHaveBeenCalledTimes(1);
+    at("/map", "city=tashkent&draw=1");
+    view.rerender(strict());
+    view.rerender(strict());
+    expect(nav.back).toHaveBeenCalledTimes(2);
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
   it("a pending draw request is discarded when the map shows, also when a sheet over it returns to it", async () => {
     requestDraw();
     const view = await mount();
@@ -503,6 +542,29 @@ describe("MapScreen: the basemap's inputs (WP-27 \"Basemap and tiles\", \"Camera
     await answer(0, answered([point(1)]));
     select([1]);
     expect(props().cityView).toBe(cityView);
+  });
+
+  it("tells the view whether the city view is known: not without reference data, nor for a city they do not list", async () => {
+    feedReference({ reference: null });
+    const view = await mount();
+    expect(props()).toMatchObject({ cityView: { center: [41.3111, 69.2797], zoom: 12 }, cityKnown: false });
+
+    act(() => feedReference({}));
+    expect(props().cityKnown).toBe(true);
+
+    at("/map", "city=nukus");
+    view.rerender();
+    expect(props()).toMatchObject({ cityView: { center: [41.3111, 69.2797], zoom: 12 }, cityKnown: false });
+  });
+
+  it("the attribution follows the basemap the view reports: «© OpenStreetMap» once a vector basemap fell back to the raster", async () => {
+    feedReference({ reference: { map: { tiles_url: "https://x.example/a.pmtiles" } } });
+    await mount();
+    expect(attribution()?.textContent).toBe("© OpenStreetMap · Protomaps");
+
+    act(() => props().onBasemap!({ kind: "raster" }));
+
+    expect(attribution()?.textContent).toBe("© OpenStreetMap");
   });
 
   it("without reference data there are no tiles and no attribution; `null` tiles are the raster, whose link opens outside", async () => {

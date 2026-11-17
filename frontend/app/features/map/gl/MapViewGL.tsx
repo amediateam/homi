@@ -2,9 +2,10 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { MapViewProps } from "../types";
+import { MapLoading } from "../MapLoading";
+import type { MapFailReason, MapViewProps } from "../types";
 import { buildStyle } from "./style";
 import { useAreaMask } from "./useAreaMask";
 import { useClusterIndex } from "./useClusterIndex";
@@ -17,7 +18,8 @@ import { useMeLayer } from "./useMeLayer";
  * through `next/dynamic` with `ssr: false`, so neither this chunk nor `maplibre-gl` and its CSS are in the first load
  * of any page. It owns everything MapLibre does — the map and its failures, the style (basemap, theme, lite mode,
  * locale, area mask, "me"; rebuilt with a diff, never a new map), the markers and their taps, and the camera — and
- * reports gestures through the view contract (`types.ts`). It never fetches and never formats a price.
+ * reports gestures through the view contract (`types.ts`). It never fetches and never formats a price. Until its
+ * first map exists, and unless it failed, the centred spinner of "Engine loading" covers the library's download.
  */
 export default function MapViewGL({
   groups,
@@ -27,6 +29,7 @@ export default function MapViewGL({
   onBackground,
   polygon,
   cityView,
+  cityKnown,
   tiles,
   locale,
   scheme,
@@ -36,6 +39,14 @@ export default function MapViewGL({
   onBasemap,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
+  const [failed, setFailed] = useState(false);
+  const fail = useCallback(
+    (reason: MapFailReason) => {
+      setFailed(true);
+      onFail(reason);
+    },
+    [onFail],
+  );
   const mask = useAreaMask(polygon);
   const { basemap, failVector } = useBasemap(tiles);
   useEffect(() => {
@@ -45,8 +56,8 @@ export default function MapViewGL({
     () => buildStyle({ basemap, scheme, lite, locale, mask, me }),
     [basemap, scheme, lite, locale, mask, me],
   );
-  const handle = useMapInstance(container, { style, cityView, lite, onFail, onBackground, onVectorError: failVector });
-  useMapCamera(handle, { responseId, groups, polygon, cityView });
+  const handle = useMapInstance(container, { style, cityView, cityKnown, lite, onFail: fail, onBackground, onVectorError: failVector });
+  useMapCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
   useMeLayer(handle, me);
 
   const spread = useMemo(() => spreadGroupOf(groups, selection), [groups, selection]);
@@ -55,5 +66,11 @@ export default function MapViewGL({
   useClusterMarkers(handle, { index, spread, selection, onSelect });
 
   // Sized by its fixed parent: MapLibre's CSS gives the container `position: relative`, so insets would not size it.
-  return <div ref={container} data-map-view="gl" className="size-full" />;
+  // The spinner is a sibling: MapLibre fills the container, which must exist before the library has loaded.
+  return (
+    <>
+      <div ref={container} data-map-view="gl" className="size-full" />
+      {handle.generation === 0 && !failed ? <MapLoading /> : null}
+    </>
+  );
 }

@@ -1,7 +1,7 @@
 import type { Locale } from "@homi/config";
 import { getMessages } from "@homi/i18n";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { type ComponentProps, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -73,15 +73,20 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 
+import { useSearchParams } from "next/navigation";
+
 import { resetPendingFavorites } from "@/features/feed/FavButton";
 import { MapSelectionCard } from "@/features/map/MapSelectionCard";
 import { useCardLayer } from "@/features/map/useCardLayer";
+import { usePathname } from "@/i18n/navigation";
 import { failureOf } from "@/lib/api/errors";
 import { getPreview, resetPreviews } from "@/lib/data/previewCache";
 import { isSeen, resetSessionMaps } from "@/lib/data/sessionMaps";
 import { resetResources } from "@/lib/data/useResource";
+import { closeThen } from "@/lib/navigation/closeThen";
 import { depth, resetDepth } from "@/lib/navigation/history";
 import { bindRouter, nav } from "@/lib/navigation/nav";
+import { useBack } from "@/lib/navigation/useBack";
 
 import { withDevFlags } from "../helpers/flags";
 import { previewOf } from "../helpers/listing";
@@ -108,7 +113,22 @@ const router = {
 const STACK = [100001, 100002, 100003, 100004, 100005, 100006, 100007];
 const STEP = 320;
 
-/** The card as `MapScreen` drives it: the selection is its state, a swipe moves `at`, × and Back close it. */
+/** The search of the map's own address (`pin` is not part of it); `null` while a sheet or a listing covers the map. */
+function useMapSearch(): string | null {
+  const params = useSearchParams();
+  const pathname = usePathname();
+  if (pathname !== "/map") {
+    return null;
+  }
+  const search = new URLSearchParams(params);
+  search.delete("pin");
+  return search.toString();
+}
+
+/**
+ * The card as `MapScreen` drives it: the selection is its state, a swipe moves `at`, × and Back close it, and another
+ * search on the map's own address closes it while rendering. The Back of the shell is in `data-test-can-go-back`.
+ */
 function Card({
   initial,
   onIndex,
@@ -121,13 +141,21 @@ function Card({
   flags?: DevFlags;
 }) {
   const [selection, setSelection] = useState<Selection>(initial);
+  const search = useMapSearch();
+  const [openFor, setOpenFor] = useState(search);
+  if (search !== null && search !== openFor) {
+    setOpenFor(search);
+    setSelection(null);
+  }
   const close = () => {
     onClose?.();
     setSelection(null);
   };
   useCardLayer(selection, close, flags);
+  const { canGoBack } = useBack();
   return (
     <>
+      <output data-test-can-go-back={String(canGoBack)} />
       <button type="button" data-test-open="" onClick={() => setSelection({ numbers: [100001], at: 0 })}>
         open
       </button>
@@ -170,6 +198,7 @@ const pending = (number: number) => state.sent.findLast((sent) => sent.path === 
 const answer = (number: number, value: Answer = { ok: true, data: previewOf({ number }), meta: { source: "stub" } }) =>
   act(async () => pending(number).resolve(value));
 const here = () => window.location.pathname + window.location.search;
+const canGoBack = () => document.querySelector<HTMLElement>("[data-test-can-go-back]")?.dataset.testCanGoBack ?? null;
 const popped = () => new Promise<void>((resolve) => window.addEventListener("popstate", () => resolve(), { once: true }));
 
 let fake: FakeTelegram | null = null;
@@ -532,6 +561,83 @@ describe("DEV-013 'Back closes the map card' (LB-APP-024)", () => {
       expect(here()).toBe("/ru/map?city=tashkent&pin=100001");
       expect(card()).not.toBeNull();
       expect(depth()).toBe(1);
+    });
+  });
+
+  it("on: the deal switch under the card steps back over the pin entry, so the root map tab has no Back", async () => {
+    await withDevFlags({ dev013BackClosesMapCard: true }, async (flags) => {
+      renderCard({ initial: { numbers: [100001], at: 0 }, flags });
+      expect(depth()).toBe(1);
+      expect(canGoBack()).toBe("true");
+
+      // `useSearchState().write` of the map bar: the search keys replaced, every other parameter (`pin`) kept.
+      act(() => nav.replace("/map?city=tashkent&deal=sale&pin=100001"));
+
+      await waitFor(() => {
+        expect(here()).toBe("/ru/map?city=tashkent&deal=sale");
+        expect(depth()).toBe(0);
+      });
+      expect(card()).toBeNull();
+      expect(canGoBack()).toBe("false");
+      expect(router.back).toHaveBeenCalledTimes(1);
+      expect(router.replace.mock.calls.at(-1)).toEqual(["/map?city=tashkent&deal=sale", { scroll: false }]);
+    });
+  });
+
+  it.each([
+    ["another search", "/map?city=tashkent&deal=sale"],
+    ["the same search", "/map?city=tashkent"],
+  ])("on: «Показать» of the filters sheet over the card with %s steps back over the pin entry too", async (_, applied) => {
+    await withDevFlags({ dev013BackClosesMapCard: true }, async (flags) => {
+      renderCard({ initial: { numbers: [100001], at: 0 }, flags });
+      act(() => nav.push("/filters?city=tashkent&from=map"));
+      expect(depth()).toBe(2);
+
+      // `applyFilters`: back to the map with the card, then a replace with the search keys only (no `pin`).
+      const back = popped();
+      await act(async () => {
+        void closeThen(applied);
+        await back;
+      });
+
+      await waitFor(() => {
+        expect(here()).toBe(`/ru${applied}`);
+        expect(depth()).toBe(0);
+      });
+      expect(card()).toBeNull();
+      expect(canGoBack()).toBe("false");
+      expect(router.back).toHaveBeenCalledTimes(2);
+      expect(router.replace.mock.calls.at(-1)).toEqual([applied, { scroll: false }]);
+    });
+  });
+
+  it("off (legacy): the deal switch and «Показать» under the card leave the map tab without a Back", async () => {
+    await withDevFlags({}, async (flags) => {
+      renderCard({ initial: { numbers: [100001], at: 0 }, flags });
+
+      act(() => nav.replace("/map?city=tashkent&deal=sale"));
+
+      expect(card()).toBeNull();
+      expect(depth()).toBe(0);
+      expect(router.back).not.toHaveBeenCalled();
+
+      fireEvent.click(document.querySelector("[data-test-open]")!);
+      act(() => nav.push("/filters?city=tashkent&deal=sale&from=map"));
+      const back = popped();
+      await act(async () => {
+        void closeThen("/map?city=tashkent");
+        await back;
+      });
+
+      expect(here()).toBe("/ru/map?city=tashkent");
+      expect(depth()).toBe(0);
+      expect(canGoBack()).toBe("false");
+      expect(card()).toBeNull();
+      expect(router.back).toHaveBeenCalledTimes(1);
+      expect(router.replace.mock.calls).toEqual([
+        ["/map?city=tashkent&deal=sale", { scroll: false }],
+        ["/map?city=tashkent", { scroll: false }],
+      ]);
     });
   });
 

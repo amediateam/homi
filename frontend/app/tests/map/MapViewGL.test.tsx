@@ -10,6 +10,7 @@ import { BASEMAP_SOURCE, MASK_SOURCE, ME_SOURCE, OSM_SOURCE } from "@/features/m
 import { resetMapInstanceForTests } from "@/features/map/gl/useMapInstance";
 import { spreadStackLabels } from "@/features/map/pins";
 import { osmTransformRequest } from "@/features/map/tiles";
+import type { Basemap } from "@/features/map/tiles";
 import type { CityView, MapGroup, MapPoint, MapViewProps, MePosition } from "@/features/map/types";
 import type { LaunchMapOptions } from "@/lib/deeplinks/launch";
 
@@ -250,6 +251,7 @@ function viewProps(overrides: Partial<MapViewProps> = {}): MapViewProps {
     onBackground: vi.fn(),
     polygon: null,
     cityView: DEFAULT_CITY_VIEW,
+    cityKnown: true,
     tiles: null,
     locale: "ru",
     scheme: "light",
@@ -409,6 +411,38 @@ describe("MapViewGL: the map (WP-27 'Camera', 'Basemap and tiles')", () => {
   });
 });
 
+describe("MapViewGL: engine loading (WP-27 'States')", () => {
+  const spinner = (root: ParentNode) => root.querySelector("[data-map-engine-loading]");
+
+  it("shows the centred spinner beside the container until the library has loaded and the first map exists", async () => {
+    let loaded: (module: MapLibreModule) => void = () => undefined;
+    state.load.mockReturnValue(new Promise((resolve) => (loaded = resolve)));
+    const { container } = await mount();
+
+    expect(spinner(container)).not.toBeNull();
+    expect(spinner(container)?.textContent).toBe("");
+    expect(container.querySelector('[data-map-view="gl"]')).not.toBeNull();
+    expect(FakeMap.created).toEqual([]);
+
+    await act(async () => loaded(maplibre));
+
+    expect(FakeMap.created).toHaveLength(1);
+    expect(spinner(container)).toBeNull();
+  });
+
+  it.each([
+    ["the library chunk rejects", () => state.load.mockRejectedValue(new Error("ChunkLoadError"))],
+    ["the constructor throws", () => (FakeMap.throwOnCreate = new FakeGPUInitializationError("webgl2"))],
+  ] as const)("drops the spinner when %s", async (_case, arrange) => {
+    arrange();
+    const onFail = vi.fn();
+    const { container } = await mount({ onFail });
+
+    expect(onFail).toHaveBeenCalledOnce();
+    expect(spinner(container)).toBeNull();
+  });
+});
+
 describe("MapViewGL: failures (LB-APP-019)", () => {
   it.each([
     ["no WebGL2: the constructor throws GPUInitializationError", () => (FakeMap.throwOnCreate = new FakeGPUInitializationError("webgl2")), "webgl"],
@@ -468,6 +502,18 @@ describe("MapViewGL: failures (LB-APP-019)", () => {
     const second = await mount({ tiles });
     expect(Object.keys((second.map.options.style as StyleSpecification).sources)).toEqual([OSM_SOURCE]);
     expect(state.reportError).toHaveBeenCalledOnce();
+  });
+
+  it("reports the basemap it draws: the vector source, then the raster after the source failed", async () => {
+    const onBasemap = vi.fn<(basemap: Basemap) => void>();
+    const tiles = "https://cdn.homi.uz/map/uzbekistan.pmtiles";
+    const { map } = await mount({ tiles, onBasemap });
+    expect(onBasemap.mock.calls).toEqual([[{ kind: "pmtiles", url: tiles }]]);
+
+    map.fire("error", { error: new Error("404"), sourceId: BASEMAP_SOURCE });
+    await flush();
+
+    expect(onBasemap.mock.calls).toEqual([[{ kind: "pmtiles", url: tiles }], [{ kind: "raster" }]]);
   });
 });
 
@@ -569,6 +615,62 @@ describe("MapViewGL: the camera (SCR-011)", () => {
     await update({ groups: [there], responseId: 2 });
     expect(map.moves[2].kind).toBe("easeTo");
     expect(readFit(samarkand.center)).toEqual({ center: [39.65, 66.96], zoom: 13 });
+  });
+
+  describe("until the city view is known (the Tashkent stand-in)", () => {
+    const samarkand: CityView = { center: [39.6542, 66.9597], zoom: 12 };
+    const there = group(39.65, 66.96, point(40));
+
+    it("opens at the stand-in itself, not at Tashkent's fit memory, and saves no fit for it", async () => {
+      const tashkentFit: CityView = { center: [41.29, 69.24], zoom: 13 };
+      writeFit(DEFAULT_CITY_VIEW.center, tashkentFit);
+      const { map } = await mount({ cityKnown: false, groups: [there], responseId: 1 });
+
+      expect(map.options).toMatchObject({ center: [69.2797, 41.3111], zoom: 11 });
+      expect(map.moves).toHaveLength(1);
+      expect(readFit(DEFAULT_CITY_VIEW.center)).toEqual(tashkentFit);
+    });
+
+    it("the first known view after a fit is not a city change: the fit stays, and the next answer is the city's memory", async () => {
+      const { map, update } = await mount({ cityKnown: false, groups: [there], responseId: 1 });
+      expect(map.moves).toHaveLength(1);
+      expect(readFit(DEFAULT_CITY_VIEW.center)).toBeNull();
+
+      await update({ cityView: { ...samarkand }, cityKnown: true });
+      expect(map.moves).toHaveLength(1);
+      expect(readFit(samarkand.center)).toBeNull();
+
+      await update({ groups: [there, group(39.66, 66.97, point(41))], responseId: 2 });
+      expect(map.moves).toHaveLength(2);
+      expect(map.moves[1].kind).toBe("easeTo");
+      expect(readFit(samarkand.center)).toEqual({ center: [39.655, 66.965], zoom: 13 });
+      expect(readFit(DEFAULT_CITY_VIEW.center)).toBeNull();
+    });
+
+    it("the first known view before any fit opens that city: its fit memory, else its view", async () => {
+      writeFit(samarkand.center, { center: [39.66, 66.97], zoom: 14 });
+      const { map, update } = await mount({ cityKnown: false });
+      expect(map.moves).toEqual([]);
+
+      await update({ cityView: { ...samarkand }, cityKnown: true });
+      expect(map.moves).toEqual([{ kind: "jumpTo", options: { center: [66.97, 39.66], zoom: 13 } }]);
+
+      const other = await mount({ cityKnown: false });
+      await other.update({ cityView: { center: [40.1, 65.4], zoom: 13 }, cityKnown: true });
+      expect(other.map.moves).toEqual([{ kind: "jumpTo", options: { center: [65.4, 40.1], zoom: 12 } }]);
+    });
+
+    it("a known city whose view is lost does not move the camera, and its next fit saves nothing under the stand-in", async () => {
+      const { map, update } = await mount({ cityView: { ...samarkand }, groups: [there], responseId: 1 });
+      expect(readFit(samarkand.center)).toEqual({ center: [39.65, 66.96], zoom: 13 });
+
+      await update({ cityView: DEFAULT_CITY_VIEW, cityKnown: false });
+      expect(map.moves).toHaveLength(1);
+
+      await update({ groups: [group(41.3, 69.2, point(42))], responseId: 2 });
+      expect(map.moves).toHaveLength(2);
+      expect(readFit(DEFAULT_CITY_VIEW.center)).toBeNull();
+    });
   });
 
   it("flies to each new position object, to zoom 15 (Leaflet) or closer, in 600 ms", async () => {

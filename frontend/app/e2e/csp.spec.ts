@@ -1,7 +1,17 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
-/** The nonce policy of `proxy.ts` (WP-21, ADR-0020, `25` §3.10). */
+/** The nonce policy of `proxy.ts` (WP-21, ADR-0020, `25` §3.10) and the policy of MapLibre's worker (WP-27). */
+
+/** The version in the worker's address, `public/maplibre/<version>/` (`scripts/copy-maplibre-worker.mjs`). */
+const mapLibreVersion = () =>
+  (JSON.parse(readFileSync(join(test.info().project.testDir, "../node_modules/maplibre-gl/package.json"), "utf8")) as { version: string }).version;
+
+const directives = (policy: string): Record<string, string[]> =>
+  Object.fromEntries(policy.split(";").map((part) => part.trim().split(/\s+/)).filter(([name]) => name).map(([name, ...sources]) => [name, sources]));
 
 async function watchViolations(page: Page): Promise<() => Promise<string[]>> {
   await page.addInitScript(() => {
@@ -57,5 +67,24 @@ test.describe("content security policy", () => {
 
     expect(await page.evaluate(() => (window as unknown as { __injected?: boolean }).__injected)).toBeUndefined();
     expect((await violations()).some((entry) => entry.startsWith("script-src"))).toBe(true);
+  });
+
+  test("MapLibre's worker has its own policy: its shared module and the page's tile hosts, cached for a year", async ({ page }) => {
+    // A same-origin worker does not inherit the page's policy, and it fetches the tiles of a tile template itself.
+    const app = await page.goto("/ru");
+    const worker = await page.goto(`/maplibre/${mapLibreVersion()}/maplibre-gl-worker.mjs`);
+    expect(worker?.status()).toBe(200);
+    const headers = worker?.headers() ?? {};
+    const policy = directives(headers["content-security-policy"] ?? "");
+    expect(policy["default-src"]).toEqual(["'none'"]);
+    expect(policy["script-src"]).toEqual(["'self'"]);
+    expect(headers["content-security-policy"]).not.toContain("'nonce-");
+    // `CSP_TILE_HOSTS` of the end-to-end server (`playwright.config.ts`), the same hosts as in the page's connect-src.
+    expect(policy["connect-src"]).toContain("https://tile.openstreetmap.org");
+    const appPolicy = directives(app?.headers()["content-security-policy"] ?? "");
+    expect(appPolicy["connect-src"]).toEqual(expect.arrayContaining(policy["connect-src"] ?? []));
+    expect(headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["content-type"]).toContain("javascript");
   });
 });

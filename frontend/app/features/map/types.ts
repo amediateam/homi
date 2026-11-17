@@ -30,7 +30,7 @@ export type MapScheme = "light" | "dark";
 
 export type LatLon = readonly [lat: number, lon: number];
 
-/** The city's view from reference data, else Tashkent at zoom 12 (`camera.ts`). */
+/** The city's view from reference data, else Tashkent at zoom 12 (`camera.ts`; `MapViewProps.cityKnown` tells them apart). */
 export type CityView = { center: LatLon; zoom: number };
 
 export type MePosition = { lat: number; lon: number; accuracy: number | null };
@@ -46,6 +46,11 @@ export type MapViewProps = {
   onBackground(): void;
   polygon: Polygon | null;
   cityView: CityView;
+  /**
+   * `cityView` is the searched city's own view of reference data, not the Tashkent stand-in used until one is known
+   * (WP-27 "Camera"): only a known view is saved as fit memory, and replacing the stand-in is not a city change.
+   */
+  cityKnown: boolean;
   /** `map.tiles_url` of `GET /reference`: `undefined` while reference data is absent, `null` or `""` in Wave 1. */
   tiles: string | null | undefined;
   locale: Locale;

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { MapLoading, MapScreen } from "@/features/map/MapScreen";
+import { MapLoading } from "@/features/map/MapLoading";
+import { MapScreen } from "@/features/map/MapScreen";
 
 /**
  * The search map (SCR-011 … SCR-013, WP-27). The route marker is in the server's HTML; the screen reads the address

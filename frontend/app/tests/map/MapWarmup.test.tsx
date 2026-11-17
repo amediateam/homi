@@ -171,6 +171,17 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
     expect(state.prefetchTiles).not.toHaveBeenCalled();
   });
 
+  it("a city reference data does not know prefetches nothing, not Tashkent's tiles", async () => {
+    state.search = "city=bukhara";
+    feedReference({ cities: [cityOf(), SAMARKAND], reference: { map: { tiles_url: TEMPLATE } } });
+    render(<MapWarmup />);
+
+    await wait(WARMUP_DELAY_MS);
+
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+    expect(state.prefetchTiles).not.toHaveBeenCalled();
+  });
+
   it("reference data that did not load prefetches nothing", async () => {
     feedReference({ reference: null });
     render(<MapWarmup />);

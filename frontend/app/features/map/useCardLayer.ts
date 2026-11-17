@@ -5,6 +5,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { usePathname } from "@/i18n/navigation";
 import { type DevFlags, devFlags } from "@/lib/flags";
+import { closeThen } from "@/lib/navigation/closeThen";
+import { depth, replaceTop } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
 import { matchRoute, routes } from "@/lib/navigation/routes";
 import { useLayerState } from "@/lib/navigation/useLayerState";
@@ -17,11 +19,23 @@ import type { Selection } from "./types";
  */
 type Phase = "none" | "pushed" | "shown" | "leaving";
 
-/** The map's address without `pin`, written over the current entry. */
-function stripPin(query: string): void {
+/** The map's address without `pin`. */
+function withoutPin(query: string): string {
   const next = new URLSearchParams(query);
   next.delete("pin");
-  nav.replace(routes.map(next));
+  return routes.map(next);
+}
+
+/**
+ * Steps back over the pushed entry, then replaces the map's address without `pin` (`closeThen`). The app's stack
+ * matches a `popstate` by address, so the top entry is first written back as the layer's own (`pin` set): a replace
+ * that left it equal to the entry below (a filters apply that kept the search) would make the step read as no step.
+ */
+function stepOver(query: string, pin: string): void {
+  const layer = new URLSearchParams(query);
+  layer.set("pin", pin);
+  replaceTop(routes.map(layer));
+  void closeThen(withoutPin(query));
 }
 
 /**
@@ -29,10 +43,13 @@ function stripPin(query: string): void {
  * the address (`25` §3.2), so Telegram's Back closes the card and collapses the stack. A selection that opens pushes
  * `pin=<first number>` (a change of the selection while it is open pushes nothing); Back — the layer gone while the
  * selection is open — calls `close`; a selection closed another way (×, a background tap, a new answer) pops the
- * layer with Back, or, when the address changed under it (the deal switch replaces the address and keeps `pin`),
- * removes `pin` with a replace, so the change is not undone; a `pin` the hook did not push (a direct load) is removed
- * with a replace. Only on the map's own address: a listing opened from the card covers the map, which stays mounted
- * with its card. Off: the card is not a history layer, as in legacy, and the hook does nothing.
+ * layer with Back. An address replaced under the layer (the deal switch keeps `pin`, a filters apply drops it) leaves
+ * the pushed entry in the stack holding the new search, so the hook steps back over it and replaces the new address
+ * without `pin` (`closeThen`, WP-27 "Selection card"): the root map tab gets no Back that would undo the change. The
+ * history level tells the two apart: a Back took the entry, a replace wrote over it. A `pin` the hook did not push (a
+ * direct load) is removed with a replace. Only on the map's own address: a listing opened from the card covers the
+ * map, which stays mounted with its card. Off: the card is not a history layer, as in legacy, and the hook does
+ * nothing.
  */
 export function useCardLayer(selection: Selection, close: () => void, flags: DevFlags = devFlags): void {
   const on = flags.dev013BackClosesMapCard;
@@ -44,6 +61,8 @@ export function useCardLayer(selection: Selection, close: () => void, flags: Dev
   const phase = useRef<Phase>("none");
   /** The query when the pushed layer was read back. */
   const shownQuery = useRef("");
+  /** The pushed entry: its history level and its `pin`. */
+  const pushed = useRef({ at: 0, pin: "" });
   const latest = useRef({ close, layer });
 
   useLayoutEffect(() => {
@@ -62,29 +81,36 @@ export function useCardLayer(selection: Selection, close: () => void, flags: Dev
       phase.current = "none";
     }
 
+    const entryKept = depth() === pushed.current.at;
     if (phase.current === "shown" && value === null) {
       phase.current = "none";
+      if (entryKept) {
+        stepOver(query, pushed.current.pin);
+      }
       if (open) {
         latest.current.close();
-        return;
       }
+      return;
     }
     if (phase.current === "shown" && !open) {
       phase.current = "leaving";
       if (query === shownQuery.current) {
         latest.current.layer.close();
+      } else if (entryKept) {
+        stepOver(query, pushed.current.pin);
       } else {
-        stripPin(query);
+        nav.replace(withoutPin(query));
       }
       return;
     }
     if (phase.current === "none" && value !== null) {
-      stripPin(query);
+      nav.replace(withoutPin(query));
       return;
     }
     if (phase.current === "none" && open && first !== null) {
       phase.current = "pushed";
       latest.current.layer.open(String(first));
+      pushed.current = { at: depth(), pin: String(first) };
     }
   }, [on, own, open, first, value, query]);
 }

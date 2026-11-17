@@ -2,15 +2,14 @@
 
 import type { Locale } from "@homi/config";
 import { toSearchParams } from "@homi/search";
-import { cn, Spinner } from "@homi/ui";
+import { cn } from "@homi/ui";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { usePathname } from "@/i18n/navigation";
 import { useSessionMap } from "@/lib/data/sessionMaps";
 import { matchRoute } from "@/lib/navigation/routes";
-import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 import { useLayerState } from "@/lib/navigation/useLayerState";
 import { useReference } from "@/lib/reference/useReference";
 import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
@@ -22,6 +21,7 @@ import { cityViewOf } from "./camera";
 import { markGlFailed, useEngine } from "./engine";
 import { LocateButton } from "./LocateButton";
 import { MapAttribution } from "./MapAttribution";
+import { MapLoading } from "./MapLoading";
 import { MapNote } from "./MapNote";
 import { MapSelectionCard } from "./MapSelectionCard";
 import { MapStatusPill } from "./MapStatusPill";
@@ -38,15 +38,6 @@ export const NOTE_MS = 6000;
 
 /** How long a locate failure stays in the note's place (KV-FE-031). */
 export const LOCATE_NOTE_MS = 5000;
-
-/** The engine or the view's code is loading: a centred spinner, no text. */
-export function MapLoading() {
-  return (
-    <div data-map-engine-loading="" className="fixed inset-0 grid place-items-center">
-      <Spinner className="size-[28px]" />
-    </div>
-  );
-}
 
 /** The view's chunk did not load: a GL failure like any other, so the session falls back (WP-27 "Engine choice"). */
 function ViewChunkFailed({ onFail }: MapViewProps) {
@@ -84,8 +75,8 @@ type Note = { kind: "points" } | { kind: LocateFailure };
  * Over the map, below the top bar: the points' pill and the note — «На карте {shown} из {total} · …» for 6 s after an
  * answer with listings that have no location, or a locate failure for 5 s in its place. The locate button shows when
  * the adapter can locate, no card is open and nothing is drawn; the position stays in this state (TMA-035). Until
- * WP-28 a `draw` layer is closed as soon as it opens and a pending draw request is discarded, so every entry point
- * lands on the plain map. The map sends no analytics events of its own.
+ * WP-28 a `draw` layer is closed as soon as it opens, each time it opens, and a pending draw request is discarded, so
+ * every entry point lands on the plain map. The map sends no analytics events of its own.
  */
 export function MapScreen() {
   const t = useTranslations();
@@ -99,7 +90,8 @@ export function MapScreen() {
   const { loaded, reference, findCity } = useReference();
   const { scheme, lite } = useDocumentLook();
 
-  const view = cityViewOf(findCity(filters.city));
+  const city = findCity(filters.city);
+  const view = cityViewOf(city);
   const [cityLat, cityLon] = view.center;
   const cityZoom = view.zoom;
   const cityView = useMemo<CityView>(() => ({ center: [cityLat, cityLon], zoom: cityZoom }), [cityLat, cityLon, cityZoom]);
@@ -109,14 +101,20 @@ export function MapScreen() {
   const [drawn, setDrawn] = useState<Basemap | null>(null);
   const attribution = attributionOf(drawn ?? basemapOf(tiles));
 
+  // Once per opening: a second Back for the same opening would close the page below as well.
   const draw = useLayerState("draw");
-  const drawing = own && draw.value !== null;
-  const closeDraw = useCloseOnce(draw.close);
+  const layerOpen = draw.value !== null;
+  const drawing = own && layerOpen;
+  const closingDraw = useRef(false);
+  const closeDraw = useEffectEvent(() => draw.close());
   useEffect(() => {
-    if (drawing) {
+    if (!layerOpen) {
+      closingDraw.current = false;
+    } else if (drawing && !closingDraw.current) {
+      closingDraw.current = true;
       closeDraw();
     }
-  }, [drawing, closeDraw]);
+  }, [layerOpen, drawing]);
   useEffect(() => {
     if (own) {
       consumeDrawRequest();
@@ -207,6 +205,7 @@ export function MapScreen() {
           onBackground={close}
           polygon={polygon}
           cityView={cityView}
+          cityKnown={city !== null}
           tiles={tiles}
           locale={locale}
           scheme={scheme}

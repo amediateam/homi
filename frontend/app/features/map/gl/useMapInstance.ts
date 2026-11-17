@@ -104,6 +104,8 @@ export type MapInstanceInput = {
   /** The style of the current inputs (`buildStyle`); a new object is applied with a diff, never a new map. */
   style: StyleSpecification;
   cityView: CityView;
+  /** `cityView` is the city's own (`MapViewProps.cityKnown`); the stand-in opens without fit memory. */
+  cityKnown: boolean;
   lite: boolean;
   onFail(reason: MapFailReason): void;
   onBackground(): void;
@@ -118,11 +120,11 @@ export type MapInstanceInput = {
  * constructor → `style`; each reported once per map. A vector source error is not a failure (`onVectorError`). A
  * map `click` whose target is not a marker is a background tap. Rotation, pitch and the keyboard are off, there are
  * no world copies and no built-in attribution (`MapAttribution` draws it); the first camera is the one the route had
- * when it was hidden, else the city's fit memory, else the city view. `?mapdebug` exposes the map as
- * `window.homiMap` outside production (TMA-012).
+ * when it was hidden, else the known city's fit memory, else the city view (the Tashkent stand-in until a city view
+ * is known, WP-27 "Camera"). `?mapdebug` exposes the map as `window.homiMap` outside production (TMA-012).
  */
 export function useMapInstance(container: RefObject<HTMLElement | null>, input: MapInstanceInput): MapHandle {
-  const { style, cityView, lite, onFail, onBackground, onVectorError } = input;
+  const { style, cityView, cityKnown, lite, onFail, onBackground, onVectorError } = input;
   const mapRef = useRef<MapInstance | null>(null);
   const kept = useRef<CityView | null>(null);
   const applied = useRef<StyleSpecification | null>(null);
@@ -130,7 +132,7 @@ export function useMapInstance(container: RefObject<HTMLElement | null>, input: 
 
   const initial = useEffectEvent(() => ({
     style,
-    view: kept.current ?? readFit(cityView.center) ?? cityView,
+    view: kept.current ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView,
     pixelRatio: pixelRatioOf(lite),
   }));
   const fail = useEffectEvent((reason: MapFailReason) => onFail(reason));
@@ -258,6 +260,7 @@ export type MapCameraInput = {
   groups: readonly MapGroup[];
   polygon: Polygon | null;
   cityView: CityView;
+  cityKnown: boolean;
 };
 
 /** Every shown listing's location, a stack once per listing: the robust box weighs points, not groups. */
@@ -269,18 +272,28 @@ function pointsOf(groups: readonly MapGroup[]): MapGroup[] {
  * The camera rules of WP-27 "Camera" (SCR-011). A new answer (`responseId`) fits the polygon's box, else the robust
  * box of the points, with `FIT_PADDING` up to zoom 14 (Leaflet scale): the first fit of a mount jumps, later ones
  * ease for 500 ms. A regrouping without a new answer (a hidden listing) does not move the camera. A new city jumps
- * to its view and the next answer fits; the first fit for a city is kept as its fit memory (`writeFit`). An Activity
- * re-show keeps the camera the route had. Reduced motion turns the eases into jumps (MapLibre, non-essential).
+ * to its view and the next answer fits; the first fit for a city is kept as its fit memory (`writeFit`). Until the
+ * city's view is known the camera shows the Tashkent stand-in, which keeps no fit memory; its replacement by the
+ * first known view is not a city change: the camera opens that city (fit memory, else its view) only when no fit has
+ * moved it yet, so a fit to the points is never thrown away. An Activity re-show keeps the camera the route had.
+ * Reduced motion turns the eases into jumps (MapLibre, non-essential).
  */
-export function useMapCamera({ mapRef, generation }: MapHandle, { responseId, groups, polygon, cityView }: MapCameraInput): void {
+export function useMapCamera(
+  { mapRef, generation }: MapHandle,
+  { responseId, groups, polygon, cityView, cityKnown }: MapCameraInput,
+): void {
   const fitted = useRef(0);
   const animate = useRef(false);
+  /** The known city the camera was last set for. */
   const shownCity = useRef<string | null>(null);
+  /** A map was shown on the stand-in before any city view was known. */
+  const standIn = useRef(false);
   const savedCity = useRef<string | null>(null);
-  const city = fitKey(cityView.center);
+  const city = cityKnown ? fitKey(cityView.center) : null;
 
-  const jumpToCity = useEffectEvent((map: GlMap) => {
-    map.jumpTo({ center: [cityView.center[1], cityView.center[0]], zoom: toGlZoom(cityView.zoom) });
+  const jumpToCity = useEffectEvent((map: GlMap, opening: boolean) => {
+    const view = (opening ? readFit(cityView.center) : null) ?? cityView;
+    map.jumpTo({ center: [view.center[1], view.center[0]], zoom: toGlZoom(view.zoom) });
   });
 
   const fit = useEffectEvent(({ map, maplibre }: MapInstance) => {
@@ -306,7 +319,7 @@ export function useMapCamera({ mapRef, generation }: MapHandle, { responseId, gr
       map.jumpTo({ center, zoom });
     }
     animate.current = true;
-    if (savedCity.current !== city) {
+    if (city !== null && savedCity.current !== city) {
       savedCity.current = city;
       writeFit(cityView.center, { center: [center.lat, center.lng], zoom: fromGlZoom(zoom) });
     }
@@ -317,10 +330,19 @@ export function useMapCamera({ mapRef, generation }: MapHandle, { responseId, gr
     if (instance === null) {
       return;
     }
+    if (city === null) {
+      if (shownCity.current === null) {
+        standIn.current = true;
+      }
+      return;
+    }
     if (shownCity.current !== null && shownCity.current !== city) {
-      jumpToCity(instance.map);
+      jumpToCity(instance.map, false);
+    } else if (shownCity.current === null && standIn.current && !animate.current) {
+      jumpToCity(instance.map, true);
     }
     shownCity.current = city;
+    standIn.current = false;
   }, [mapRef, generation, city]);
 
   useEffect(() => {
