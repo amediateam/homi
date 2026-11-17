@@ -95,6 +95,9 @@ jobs:
           # photos, which the specs answer themselves (`stubMedia` of `@homi/testing/playwright`).
           NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
           NEXT_PUBLIC_APP_ENV: ci
+          # The stub `call_url` of `POST /listings/{number}/contact` is on `APP_URL` of `backend/.env.example`; the link
+          # allow-list of the app takes the host of this variable (WP-26), so the call page opens in the specs.
+          NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
 
       - name: Upload traces and report
         if: failure()

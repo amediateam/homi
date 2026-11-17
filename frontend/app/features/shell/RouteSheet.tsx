@@ -11,9 +11,14 @@ import { tg } from "@/lib/telegram";
 export type RoutePresentation = "layer" | "standalone";
 
 export interface RouteSheetProps
-  extends Pick<BottomSheetProps, "title" | "variant" | "header" | "footer" | "closeLabel" | "dismissible"> {
+  extends Pick<BottomSheetProps, "title" | "variant" | "header" | "leading" | "footer" | "closeLabel" | "dismissible"> {
   /** `layer` (default): the copy in the `@sheet` slot; `standalone`: the page of a sheet address loaded directly. */
   presentation?: RoutePresentation;
+  /**
+   * Replaces the one `back()` of the ×, the backdrop, the drag and Escape, still once per address (the actions sheet
+   * of WP-26 closes all its steps at once). Telegram's BackButton keeps `back()`.
+   */
+  onClose?: () => void;
   children?: ReactNode;
 }
 
@@ -77,9 +82,9 @@ function useRiseAfterDrag(): { generation: number; slidOut: () => void } {
  *   not in a portal, so the server HTML of the direct load already holds it; the content area around it must not
  *   carry a transform.
  */
-export function RouteSheet({ presentation = "layer", dismissible = true, children, ...sheet }: RouteSheetProps) {
+export function RouteSheet({ presentation = "layer", dismissible = true, onClose, children, ...sheet }: RouteSheetProps) {
   const { back } = useBack();
-  const close = useCloseOnce(back);
+  const close = useCloseOnce(onClose ?? back);
   const { generation, slidOut } = useRiseAfterDrag();
   const layer = presentation === "layer";
 

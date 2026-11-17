@@ -1,0 +1,91 @@
+import type { Locale } from "@homi/config";
+import { getMessages } from "@homi/i18n";
+import { cleanup, render } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { KeyFacts, type KeyFactsProps } from "@/features/listing/KeyFacts";
+
+const ITEM: KeyFactsProps["item"] = { rooms: 2, area_total: 54, floor: 3, floors_total: 9 };
+
+/** The details' tiles of 100001; `marketCode` defaults to `secondary`. */
+function facts(item: Partial<KeyFactsProps["item"]> = {}, { marketCode = "secondary", locale = "ru" }: { marketCode?: KeyFactsProps["marketCode"]; locale?: Locale } = {}) {
+  return render(
+    <NextIntlClientProvider locale={locale} messages={getMessages(locale)} timeZone="Asia/Tashkent">
+      <KeyFacts item={{ ...ITEM, ...item }} marketCode={marketCode} />
+    </NextIntlClientProvider>,
+  );
+}
+
+const tiles = () => [...document.querySelectorAll("[data-key-facts] [data-fact]")].map((tile) => [tile.getAttribute("data-fact"), tile.textContent]);
+
+afterEach(cleanup);
+
+describe("KeyFacts (SCR-018 block 4)", () => {
+  it("rooms, m², floor n/total and the building, in this order", () => {
+    facts();
+
+    expect(tiles()).toEqual([
+      ["rooms", "2комнаты"],
+      ["area", "54м²"],
+      ["floor", "3/9этаж"],
+      ["building", "Вторичкадом"],
+    ]);
+  });
+
+  it.each([
+    [1, "комната"],
+    [2, "комнаты"],
+    [5, "комнат"],
+    [11, "комнат"],
+    [21, "комната"],
+  ])("ru plural of %i rooms: «%s»", (rooms, noun) => {
+    facts({ rooms });
+
+    expect(document.querySelector('[data-fact="rooms"] span')?.textContent).toBe(noun);
+  });
+
+  it("en plural", () => {
+    facts({ rooms: 1 }, { locale: "en" });
+    expect(document.querySelector('[data-fact="rooms"] span')?.textContent).toBe("room");
+    cleanup();
+
+    facts({ rooms: 3 }, { locale: "en" });
+    expect(document.querySelector('[data-fact="rooms"] span')?.textContent).toBe("rooms");
+  });
+
+  it("the code `new` is a new building, any other code a resale one, no code no tile", () => {
+    facts({}, { marketCode: "new" });
+    expect(document.querySelector('[data-fact="building"]')?.textContent).toBe("Новыйдом");
+    cleanup();
+
+    facts({}, { marketCode: null });
+    expect(document.querySelector('[data-fact="building"]')).toBeNull();
+    cleanup();
+
+    render(
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <KeyFacts item={ITEM} marketCode={undefined} />
+      </NextIntlClientProvider>,
+    );
+    expect(document.querySelector('[data-fact="building"]')).toBeNull();
+  });
+
+  it("a floor without a total is the floor alone", () => {
+    facts({ floors_total: null });
+
+    expect(document.querySelector('[data-fact="floor"] b')?.textContent).toBe("3");
+  });
+
+  it("leaves unknown and zero values out", () => {
+    facts({ rooms: null, area_total: 0, floor: 0 });
+
+    expect(tiles().map(([fact]) => fact)).toEqual(["building"]);
+  });
+
+  it("nothing when all four are absent", () => {
+    facts({ rooms: null, area_total: null, floor: null, floors_total: null }, { marketCode: null });
+
+    expect(document.querySelector("[data-key-facts]")).toBeNull();
+  });
+});

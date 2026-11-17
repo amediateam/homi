@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { type ApiFailure, failureOf } from "@/lib/api/errors";
 import type { ApiResult } from "@/lib/api/types";
@@ -56,7 +56,7 @@ interface Entry {
 }
 
 const EMPTY: Snapshot = { data: undefined, error: null, inflight: false };
-/** `fetchedAt` of an entry seeded from `initial` during render; its first effect stamps the time. */
+/** `fetchedAt` of an entry seeded from `initial` during render; the seeding commit stamps the time. */
 const SEEDED = -1;
 const DEFAULT_STALE_MS = 30_000;
 
@@ -179,6 +179,17 @@ export function invalidate(prefix: string): void {
   emit();
 }
 
+/**
+ * Writes `data` into the entry of `key` as a fresh read and tells every user at once (WP-26: the listing seeds the
+ * number a merged listing answered with before it replaces the address). Called from an effect or a handler, never
+ * during render.
+ */
+export function seedResource<T>(key: string, data: T): void {
+  const entry = ensure(key);
+  entry.fetchedAt = Date.now();
+  write(entry, { data, error: null, inflight: false });
+}
+
 /** Forgets every entry; tests only. */
 export function resetResources(): void {
   for (const entry of entries.values()) {
@@ -207,6 +218,18 @@ export function useResource<T>(key: string | null, fetcher: Fetcher<T>, options:
     entries.set(key, { ...ensure(key), snapshot: { data: initial, error: null, inflight: false }, fetchedAt: SEEDED });
   }
 
+  // The seed above is announced by its commit, whether or not this user reads: a user of the key that committed
+  // earlier with nothing (a child route outside the listing's boundary, WP-26) re-reads only on an `emit`. `seeds`
+  // also covers an `initial` that arrives after the first commit.
+  const seeds = initial !== undefined;
+  useLayoutEffect(() => {
+    const entry = key === null ? undefined : entries.get(key);
+    if (entry?.fetchedAt === SEEDED) {
+      entry.fetchedAt = Date.now();
+      emit();
+    }
+  }, [key, seeds]);
+
   const fetcherRef = useRef<Fetcher<T>>(fetcher);
   useEffect(() => {
     fetcherRef.current = fetcher;
@@ -225,9 +248,6 @@ export function useResource<T>(key: string | null, fetcher: Fetcher<T>, options:
     }
     retain(key);
     const entry = ensure(key);
-    if (entry.fetchedAt === SEEDED) {
-      entry.fetchedAt = Date.now();
-    }
     // Kept even when nothing is read now, so `invalidate` can read a seeded entry again.
     entry.fetcher = fetcherRef.current as Fetcher<unknown>;
     entry.flags = flags;

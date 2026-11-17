@@ -166,6 +166,74 @@ describe("PhotoStrip (SCR-007)", () => {
     expect(images[0].getAttribute("fetchpriority")).toBe("high");
     expect(images[1].getAttribute("loading")).toBe("lazy");
   });
+
+  it("the card's slides are plain boxes, not buttons", () => {
+    strip();
+
+    expect(document.querySelectorAll("button[data-slide]")).toHaveLength(0);
+    expect(document.querySelectorAll("div[data-slide]")).toHaveLength(3);
+  });
+});
+
+describe("PhotoStrip of the listing's hero (WP-26)", () => {
+  /** jsdom lays nothing out: every element of the strip is `width` px wide from the start. */
+  function laidOut(width: number): () => void {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
+    Object.defineProperty(Element.prototype, "clientWidth", { configurable: true, get: () => width });
+    return () => Object.defineProperty(Element.prototype, "clientWidth", descriptor);
+  }
+
+  it("starts at initialIndex: scrolled there before the first paint, that slide and the ones before it mounted", () => {
+    const restore = laidOut(300);
+    try {
+      strip({ initialIndex: 2 });
+    } finally {
+      restore();
+    }
+
+    expect(scroller().scrollLeft).toBe(600);
+    expect(activeDot()).toBe(2);
+    expect(mounted()).toEqual([true, true, true]);
+  });
+
+  it("an eager strip started further on loads that slide first", () => {
+    strip({ initialIndex: 1, eager: true });
+
+    const images = document.querySelectorAll("img");
+    expect(images[0].getAttribute("loading")).toBe("lazy");
+    expect(images[1].getAttribute("loading")).toBe("eager");
+  });
+
+  it("an initialIndex past the end is the last slide", () => {
+    strip({ initialIndex: 9 });
+
+    expect(activeDot()).toBe(2);
+  });
+
+  it("reports the slide it settles on after a scroll", () => {
+    const onActiveChange = vi.fn();
+    strip({ onActiveChange });
+
+    scrollTo(scroller(), 0, 0);
+    expect(onActiveChange).not.toHaveBeenCalled();
+
+    scrollTo(scroller(), 600);
+    expect(onActiveChange).toHaveBeenLastCalledWith(2);
+  });
+
+  it("with onPhotoTap every slide is a named button that reports its index", () => {
+    const onPhotoTap = vi.fn();
+    strip({ onPhotoTap, tapLabel: "Фото" });
+
+    const slides = document.querySelectorAll<HTMLButtonElement>("button[data-slide]");
+    expect(slides).toHaveLength(3);
+    expect(slides[1].getAttribute("type")).toBe("button");
+    expect(slides[1].getAttribute("aria-label")).toBe("Фото");
+
+    fireEvent.click(slides[1]);
+    expect(onPhotoTap).toHaveBeenCalledWith(1);
+    expect(scroller().hasAttribute("data-no-swipe")).toBe(true);
+  });
 });
 
 describe("Photo (BR-APP-059)", () => {

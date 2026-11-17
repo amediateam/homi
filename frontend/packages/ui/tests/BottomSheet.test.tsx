@@ -85,6 +85,30 @@ describe("BottomSheet", () => {
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
   });
 
+  it("compact: `leading` takes the cell left of the title; the full variant ignores it", () => {
+    const onBack = vi.fn();
+    const leading = (
+      <button type="button" data-testid="leading" aria-label="Back" onClick={onBack}>
+        ‹
+      </button>
+    );
+    const { rerender } = render(<Sheet leading={leading} closeLabel="Close" />);
+
+    const dialog = screen.getByRole("dialog", { name: "Filters" });
+    const row = part(dialog, "title").parentElement!;
+    expect(row.firstElementChild).toBe(screen.getByTestId("leading"));
+    expect(row.children).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    rerender(<Sheet closeLabel="Close" />);
+    expect(part(dialog, "title").parentElement!.firstElementChild?.getAttribute("aria-hidden")).toBe("true");
+    expect(part(dialog, "title").parentElement!.children).toHaveLength(3);
+
+    rerender(<Sheet variant="full" leading={leading} closeLabel="Close" />);
+    expect(screen.queryByTestId("leading")).toBeNull();
+  });
+
   it("closes on a backdrop tap and on Escape, not on a tap inside", async () => {
     const onClose = vi.fn();
     render(<Sheet onClose={onClose} />);

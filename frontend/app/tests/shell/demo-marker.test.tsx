@@ -51,6 +51,14 @@ describe("DemoDataMarker", () => {
     expect(marker.className).toMatch(/pointer-events-none/);
   });
 
+  it("sits above the listing layer and below the sheets' backdrop (WP-26: 46 between 45 and 50)", () => {
+    renderMarker(<SourceReporter source="stub" />);
+
+    const marker = screen.getByText("Демо-данные").closest("[data-demo-marker]") as HTMLElement;
+    expect(marker.className).toMatch(/(?:^|\s)z-\[calc\(var\(--z-listing\)\+1\)\](?:\s|$)/);
+    expect(marker.className).not.toMatch(/z-tabbar/);
+  });
+
   it("shows for a stub reported by a Server Component's SourceReporter", () => {
     renderMarker(<SourceReporter source="stub" />);
 

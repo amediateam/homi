@@ -6,10 +6,26 @@ import { insideTelegram } from "./sdk";
 export const LINK_DEBOUNCE_MS = 1500;
 
 /**
- * Hosts a link may leave the app for, besides the app's own origin and its landing (`app.<x>` → `<x>`) and the
- * brand links. An entry also matches its `www.` form. WP-26 adds the call-page host, WP-27 the map attribution hosts.
+ * Hosts a link may leave the app for, besides the app's own origin and its landing (`app.<x>` → `<x>`), the brand
+ * links and the API host (`linkHosts`). An entry also matches its `www.` form. WP-27 adds the map attribution hosts.
  */
 export const LINK_HOSTS: readonly string[] = ["t.me", "yandex.uz", "google.com"];
+
+/**
+ * The host of `NEXT_PUBLIC_API_URL`: the call page of `POST /listings/{number}/contact` is served there (WP-26,
+ * `{api}/call/…`). Read at each call and spelled out, so Next.js inlines it; an empty or malformed value adds nothing.
+ */
+function apiHost(): string | null {
+  const value = process.env.NEXT_PUBLIC_API_URL;
+  if (!value) {
+    return null;
+  }
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
+}
 
 function brandHosts(): string[] {
   const hosts: string[] = [];
@@ -29,6 +45,10 @@ function brandHosts(): string[] {
 
 export function linkHosts(appHost: string = typeof window === "undefined" ? "" : window.location.hostname): string[] {
   const hosts = [...LINK_HOSTS, ...brandHosts()];
+  const api = apiHost();
+  if (api !== null) {
+    hosts.push(api);
+  }
   if (appHost !== "") {
     hosts.push(appHost);
     if (appHost.startsWith("app.")) {

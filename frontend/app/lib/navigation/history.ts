@@ -63,6 +63,34 @@ export function replaceTop(href: string): void {
   notify();
 }
 
+/** How long `backBy` waits for the `popstate` of its steps. */
+const POPSTATE_CAP_MS = 500;
+
+/**
+ * Steps back over `steps` entries at once (WP-26: the actions sheet, its step layers and the listing close together),
+ * never below the first entry of this launch. Resolves with the steps taken once the `popstate` has landed (at most
+ * 500 ms); when fewer were taken (a direct load), the caller replaces the address itself — `nav` imports this
+ * module, so the fallback is not here.
+ */
+export function backBy(steps: number): Promise<number> {
+  stack();
+  const wanted = Math.floor(steps);
+  const taken = Number.isNaN(wanted) ? 0 : Math.min(Math.max(0, wanted), depth());
+  if (taken === 0) {
+    return Promise.resolve(0);
+  }
+  return new Promise((resolve) => {
+    const done = (): void => {
+      window.removeEventListener("popstate", done);
+      clearTimeout(timer);
+      resolve(taken);
+    };
+    const timer = setTimeout(done, POPSTATE_CAP_MS);
+    window.addEventListener("popstate", done);
+    window.history.go(-taken);
+  });
+}
+
 /** A tab press or a view switch: nothing is behind the new address any more. */
 export function resetDepth(href: string): void {
   stack();
