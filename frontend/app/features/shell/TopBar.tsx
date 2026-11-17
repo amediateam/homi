@@ -5,11 +5,13 @@ import { Button, cn, HeaderChip, Lasso, Plus, SegmentedControl, SlidersHorizonta
 import { useTranslations } from "next-intl";
 import type { KeyboardEvent, ReactNode } from "react";
 
+import { FeedHeader } from "@/features/feed/FeedHeader";
 import { Link, usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
 import { matchRoute, routes } from "@/lib/navigation/routes";
 import { useBack } from "@/lib/navigation/useBack";
 import { useReference } from "@/lib/reference/useReference";
+import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
 import { type SearchStateApi, useSearchState } from "@/lib/search/useSearchState";
 import { tg } from "@/lib/telegram";
 import { lastSearchQuery, setAreaTooSmall, useAreaTooSmall } from "@/lib/ui/shellState";
@@ -131,16 +133,18 @@ function useDealTabs(): readonly TitleTab<BaseDeal>[] {
 }
 
 /**
- * Search list: the deal as title tabs, and the `chips` region where WP-24 mounts `FeedHeader`; it renders nothing
- * until then.
+ * Search list: the deal as title tabs, and the `chips` region with `FeedHeader` (WP-24). Both read the feed's own
+ * search state (`useScreenSearchState`, KI-43), so the bar kept under a listing or a sheet shows the list below it.
  */
 function SearchListBar() {
   const tabs = useDealTabs();
-  const { deal, pick } = useDealSwitch(useSearchState());
+  const { deal, pick } = useDealSwitch(useScreenSearchState("feed"));
   return (
     <>
       <TitleTabs tabs={tabs} value={deal} onSelect={pick} current="radio" />
-      <div data-topbar-chips="" />
+      <div data-topbar-chips="">
+        <FeedHeader />
+      </div>
     </>
   );
 }
@@ -331,7 +335,8 @@ const BARS: Readonly<Record<Exclude<ShellVariant, "none">, () => ReactNode>> = {
 
 /**
  * The top bar of the shell (SCR-006, legacy `header.topbar`). It holds no data: the search variants read the address
- * through `useSearchState()` and write it back; the others are titles. Over the map it is a transparent layer whose
+ * through `useSearchState()` (the list through the feed's own state of `useScreenSearchState`) and write it back; the
+ * others are titles. Over the map it is a transparent layer whose
  * controls float; elsewhere it is sticky glass that slides away while the chrome is collapsed (`html.chrome-mini`,
  * search list only). `none` (a listing loaded directly, a gate) renders nothing.
  */

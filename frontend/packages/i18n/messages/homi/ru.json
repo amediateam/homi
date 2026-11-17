@@ -29,5 +29,8 @@
   },
   "city": {
     "countsDaily": "{rent} аренда · {daily} посуточно · {sale} продажа"
+  },
+  "feed": {
+    "loading": "Загрузка…"
   }
 }

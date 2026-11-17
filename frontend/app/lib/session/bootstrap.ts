@@ -43,13 +43,19 @@ export interface SessionState {
    * `status: 'denied'` and its `reason` meanwhile, so the access screen can say it is checking (WP-23).
    */
   pending: boolean;
+  /**
+   * This launch signed in (`establish()`) instead of confirming the cookie the document came with, so what the
+   * server rendered before was read with no cookie, a revoked one or another user's (the feed's page one, WP-24).
+   * Decided before the first `ready` of the launch and kept: a later re-authentication does not change it.
+   */
+  renewed: boolean;
 }
 
 const REQUEST_TIMEOUT_MS = 15_000;
 /** `v` of `app_launch`: the app build; empty until WP-32 sets the build version. */
 const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
-const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false };
+const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false, renewed: false };
 let state: SessionState = initial;
 const listeners = new Set<() => void>();
 
@@ -157,11 +163,13 @@ async function belongsToLaunchUser(user: string | null): Promise<boolean> {
 let patches: Partial<Me> = {};
 let launch: Launch | null = null;
 let opened = false;
+/** `renewed` of the launch: set once `run()` signs in, never cleared. */
+let renewed = false;
 
 function ready(mode: SessionMode, me: Me): "ready" {
   const merged = { ...me, ...patches };
   setThemePreference(merged.theme);
-  update({ status: "ready", mode, me: merged, reason: null, error: null });
+  update({ status: "ready", mode, me: merged, reason: null, error: null, renewed });
   if (!opened && launch !== null) {
     opened = true;
     const ms = Math.round(performance.now());
@@ -276,6 +284,8 @@ async function run(): Promise<void> {
     failed(current.error);
     return;
   }
+  // A sign-in may set the cookie even when its attempt fails later: a retry that then confirms it still renews.
+  renewed = true;
   const result = await establish();
   if (result !== "ready" && result !== "expired" && result !== "denied") {
     failed(result);

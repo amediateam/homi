@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { useMoney } from "@/lib/money/useMoney";
 import { useReference } from "@/lib/reference/useReference";
-import { useSearchState } from "@/lib/search/useSearchState";
+import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
 
 import { expandChrome } from "./useMiniChrome";
 
@@ -21,11 +21,12 @@ export const miniTitleSummary = filtersSummary;
  * The deal is the base deal of the title tabs, so daily rent reads «Аренда · … · Посуточно» rather than naming the
  * day rate twice. Until the reference data arrives the summary waits (it names the city and its districts) and the
  * title is the deal alone. It shows only under `html.chrome-mini` and never in lite graphics (`[data-mini-title]` in
- * `lite.css`); in Telegram's full-screen mode it sits in the header row (`styles/shell.css`). A tap only expands.
+ * `lite.css`); in Telegram's full-screen mode it sits in the header row (`styles/shell.css`). A tap only expands. It
+ * names the feed's own search (`useScreenSearchState`, KI-43), also while a listing or a sheet lies over the feed.
  */
 export function MiniTitle() {
   const t = useTranslations();
-  const { filters } = useSearchState();
+  const { filters } = useScreenSearchState("feed");
   const { loaded, cities } = useReference();
   const money = useMoney();
   const deal = t(`deal.${baseDeal(filters.deal)}`);

@@ -1,7 +1,7 @@
 import { expect, launchApp, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
-/** Telegram's BackButton and SettingsButton over the placeholder routes (WP-21, `25` §3.2, `03` §1.2). */
+/** Telegram's BackButton and SettingsButton over the feed and the placeholder routes (WP-21, `25` §3.2, `03` §1.2). */
 
 interface Fake {
   webApp: { BackButton: { isVisible: boolean } };
@@ -13,6 +13,16 @@ const backVisible = (page: Page) => page.evaluate(() => (window as unknown as { 
 const press = async (page: Page, eventType: "backButtonClicked" | "settingsButtonClicked") => (await fake(page)).evaluate((telegram, type) => telegram.emit(type), eventType);
 const route = (page: Page, name: string) => page.locator(`[data-route="${name}"]`).filter({ visible: true });
 const link = (page: Page, href: string) => page.locator(`[data-link="${href}"]`).filter({ visible: true }).first();
+/** The filters chip of the feed's top bar (WP-24). */
+const filtersChip = (page: Page) => page.locator('[data-topbar="search-list"] [data-chip="filters"]').filter({ visible: true });
+
+/** Opens the feed's first card (WP-24) and gives its number: the stub catalogue decides which one it is. */
+async function openFirstCard(page: Page): Promise<number> {
+  const card = page.locator("article[data-listing]").filter({ visible: true }).first();
+  const number = Number(await card.getAttribute("data-listing"));
+  await card.locator("a").click();
+  return number;
+}
 
 async function ready(page: Page): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
@@ -30,7 +40,7 @@ test.describe("Back and Settings", () => {
   test("a sheet opened in the app: Back closes it", async ({ page }) => {
     await launchApp(page);
     await ready(page);
-    await link(page, "/filters").click();
+    await filtersChip(page).click();
     await expect(page.locator('[data-route="filters"][data-layer="sheet"]').filter({ visible: true })).toBeVisible();
     await expect.poll(() => backVisible(page)).toBe(true);
 
@@ -44,13 +54,13 @@ test.describe("Back and Settings", () => {
   test("listing → photos → Back → Back returns to the feed", async ({ page }) => {
     await launchApp(page);
     await ready(page);
-    await link(page, "/listing/42").click();
+    const number = await openFirstCard(page);
     await expect(route(page, "listing")).toBeVisible();
-    await link(page, "/listing/42/photos").click();
+    await link(page, `/listing/${number}/photos`).click();
     await expect(route(page, "listing/photos")).toBeVisible();
 
     await press(page, "backButtonClicked");
-    await expect(page).toHaveURL(/\/ru\/listing\/42$/);
+    await expect(page).toHaveURL(new RegExp(`/ru/listing/${number}$`));
     await expect(route(page, "listing/photos")).toHaveCount(0);
     await expect(route(page, "listing")).toBeVisible();
 
@@ -75,7 +85,7 @@ test.describe("Back and Settings", () => {
   test("SettingsButton from an open sheet shows settings with no layer over it (fix of LB-APP-046)", async ({ page }) => {
     await launchApp(page);
     await ready(page);
-    await link(page, "/filters").click();
+    await filtersChip(page).click();
     await expect(page.locator('[data-route="filters"][data-layer="sheet"]').filter({ visible: true })).toBeVisible();
 
     await press(page, "settingsButtonClicked");

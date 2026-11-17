@@ -58,6 +58,23 @@ function isSynced(key: StorageKey): key is SyncedKey {
   return (SYNCED_KEYS as string[]).includes(key);
 }
 
+const listeners = new Set<() => void>();
+
+/**
+ * Called after every write of this module (`storageSet`, the DeviceStorage restore), for `useSyncExternalStore`
+ * readers of a key (the saved city of `useSearchState`). Writes of another document are not reported.
+ */
+export function subscribeStorage(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function notify(): void {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function storageGet(key: StorageKey): string | null {
   try {
     return local()?.getItem(key) ?? null;
@@ -80,6 +97,7 @@ export function storageSet(key: StorageKey, value: string | null): void {
   } catch {
     // Storage disabled or full: the value lives for this launch only.
   }
+  notify();
   if (isSynced(key) && deviceStorage.available()) {
     void (value === null ? deviceStorage.removeItem(key) : deviceStorage.setItem(key, value));
   }
@@ -115,4 +133,5 @@ export async function restoreFromDeviceStorage(): Promise<void> {
       }
     }),
   );
+  notify();
 }

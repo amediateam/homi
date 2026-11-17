@@ -220,7 +220,8 @@ Both answers are `Cache-Control: no-store`; the handler never logs a body or a h
    with `error` set.
 5. Ready: apply `me.theme` (it replaces `homi-theme` on every start, TMA-021), let `LocaleGuard` replace the
    locale segment if it differs, `track('app_opened', …)`, then `router.refresh()` in cookie mode so Server
-   Components render with the session.
+   Components render with the session — since WP-24 only when step 4 signed this launch in
+   (`SessionState.renewed`), never when step 3 confirmed the document's own cookie (AM-66).
 
 `SessionProvider` / `useSession()`:
 

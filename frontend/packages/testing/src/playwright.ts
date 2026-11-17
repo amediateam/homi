@@ -167,6 +167,32 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
   };
 }
 
+/** The stub catalogue's photos (WP-12): `{media}/stub/<number>/<n>[.s].jpg?…` under `MEDIA_PUBLIC_URL` of `backend/.env.example`. */
+export const STUB_MEDIA = /^https:\/\/cdn\.homi\.loc\/stub\//;
+
+/** An 8 × 6 grey baseline JPEG of 338 bytes: an `<img>` answered with it decodes, so its `naturalWidth` is 8. */
+const STUB_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAASABIAAD/wAALCAAGAAgBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9sAQwAJCQkJCQkQCQkQFhAQEBYeFhYWFh4mHh4eHh4mLiYmJiYmJi4uLi4uLi4uNzc3Nzc3QEBAQEBISEhISEhISEhI/90ABAAB/9oACAEBAAA/APRK/9k=",
+  "base64",
+);
+
+/**
+ * Answers every stub photo of the local CDN (`STUB_MEDIA`) with `STUB_JPEG` (WP-24): CI has no DNS for
+ * `cdn.homi.loc` and no stub media on disk (WP-33 brings them), and a developer machine may not have published them
+ * (`php artisan sources:publish-stub-media`), so a spec that looks at photos answers them itself and the same images
+ * load everywhere. It is a page route, so it answers before the guard, which lets `*.homi.loc` through to the network;
+ * the browser still checks the address against the page's `img-src` first, so a policy without the CDN still blocks
+ * the photo before any request. The returned list grows with the address of each photo answered.
+ */
+export async function stubMedia(page: Page): Promise<readonly string[]> {
+  const answered: string[] = [];
+  await page.route(STUB_MEDIA, async (route) => {
+    answered.push(route.request().url());
+    await route.fulfill({ status: 200, contentType: "image/jpeg", body: STUB_JPEG });
+  });
+  return answered;
+}
+
 export const test = base.extend<{ externalRequestGuard: void }>({
   externalRequestGuard: [
     async ({ page }, use) => {

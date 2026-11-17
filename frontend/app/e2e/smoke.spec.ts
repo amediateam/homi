@@ -1,4 +1,4 @@
-import { expect, playwrightTelegram, test } from "@homi/testing/playwright";
+import { expect, playwrightTelegram, stubMedia, test } from "@homi/testing/playwright";
 
 /** First end-to-end test (WP-03): the runner, the fake Telegram and the external-request guard work. */
 test.describe("Mini App smoke", () => {
@@ -10,6 +10,8 @@ test.describe("Mini App smoke", () => {
       }
     });
     page.on("pageerror", (error) => errors.push(error.message));
+    // The feed's card photos come from the stub CDN, which CI cannot resolve: a photo that fails to load logs an error.
+    await stubMedia(page);
     await playwrightTelegram(page, { version: "8.0", platform: "ios" });
 
     await page.goto("/");

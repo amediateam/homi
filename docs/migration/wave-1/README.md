@@ -86,7 +86,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-21](WP-21-telegram-and-session.md) | Telegram layer and session | WP-20 | WAITING (merged in #55, shared files #54; production track: the request in the Handoff, then steps 11–12 — staging in report-only mode, the checks inside Telegram, production) |
 | [WP-22](WP-22-data-layer.md) | Data layer, formatters and the filter model | WP-21 | WAITING (merged in #61; production track: deploy, with the `API_URL` of WP-21) |
 | [WP-23](WP-23-gates-and-shell.md) | Gates and shell | WP-22 | WAITING (merged in #68; production track: the regular deploy; then the manual checks inside Telegram on staging) |
-| [WP-24](WP-24-feed.md) | Feed and listing card | WP-23 | TODO |
+| [WP-24](WP-24-feed.md) | Feed and listing card | WP-23 | REVIEW (#71) |
 | [WP-25](WP-25-filters.md) | Filters, quick filter, sort, city | WP-24 | TODO |
 | [WP-26](WP-26-listing.md) | Listing screen | WP-24 | TODO |
 | [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | TODO |

@@ -110,7 +110,7 @@ describe("session bootstrap (25 §3.4)", () => {
 
     await session.startSession();
 
-    expect(session.getSession()).toMatchObject({ status: "ready", mode: "cookie", me });
+    expect(session.getSession()).toMatchObject({ status: "ready", mode: "cookie", me, renewed: false });
     expect(calls.post).toEqual([]);
     expect(store.getAuth()).toEqual({ mode: "cookie" });
     expect(events.recentTracked().map((event) => event.name)).toEqual(["app_launch", "app_opened"]);
@@ -133,7 +133,8 @@ describe("session bootstrap (25 §3.4)", () => {
 
     expect(calls.post).toHaveLength(1);
     expect(JSON.parse(calls.post[0])).toEqual({ initData: fake?.webApp.initData });
-    expect(session.getSession()).toMatchObject({ status: "ready", mode: "cookie" });
+    // What the server rendered with the other user's cookie is not this session's (WP-24).
+    expect(session.getSession()).toMatchObject({ status: "ready", mode: "cookie", renewed: true });
   });
 
   it("cookie mode drops the token from the sign-in answer", async () => {
@@ -418,6 +419,17 @@ describe("launch order", () => {
 });
 
 describe("re-authentication (fix of LB-APP-047)", () => {
+  it("leaves renewed as the launch decided it: a launch on a confirmed cookie stays not renewed (WP-24)", async () => {
+    server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }], post: signedIn });
+    const { session } = await load();
+    await session.startSession();
+    expect(session.getSession()).toMatchObject({ status: "ready", renewed: false });
+
+    await expect(session.reauthenticate()).resolves.toBe(true);
+    expect(calls.post).toHaveLength(1);
+    expect(session.getSession()).toMatchObject({ status: "ready", renewed: false });
+  });
+
   it("parallel callers share one sign-in", async () => {
     server({ get: (bearer) => (bearer ? [200, { mode: "header", me }] : [200, { mode: "none" }]), post: signedIn });
     const { session } = await load();

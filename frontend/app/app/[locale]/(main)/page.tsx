@@ -1,20 +1,19 @@
 import { Suspense } from "react";
 
-import { RefreshProof } from "@/features/shell/RefreshProof";
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
-import { SearchProofServer } from "@/features/shell/SearchProofServer";
+import { FeedServer } from "@/features/feed/FeedServer";
+import { FeedSkeleton } from "@/features/feed/ListingCardSkeleton";
 
 /**
- * Feed (SCR-007 … SCR-010); WP-24 replaces the placeholder. Until then it shows the WP-22 data proof and the
- * stand-in pull-to-refresh handler of WP-23.
+ * Search list (SCR-007 … SCR-010, WP-24): a static shell, and under `<Suspense>` the part that reads the cookie and
+ * the address (DEC-44, `streaming.md`); the `searchParams` promise is passed down unawaited. Nothing per-user is
+ * cached.
  */
 export default function FeedPage({ searchParams }: PageProps<"/[locale]">) {
   return (
-    <RoutePlaceholder name="feed">
-      <Suspense fallback={null}>
-        <SearchProofServer searchParams={searchParams} />
+    <div data-route="feed">
+      <Suspense fallback={<FeedSkeleton />}>
+        <FeedServer searchParams={searchParams} />
       </Suspense>
-      <RefreshProof />
-    </RoutePlaceholder>
+    </div>
   );
 }

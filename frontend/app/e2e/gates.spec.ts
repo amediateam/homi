@@ -23,6 +23,8 @@ interface Fake {
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 const route = (page: Page, name: string) => visible(page, `[data-route="${name}"]`);
 const noAccess = (page: Page) => visible(page, '[data-screen="no-access"]');
+/** The city chip of the feed's top bar (WP-24): the city of the feed's search. */
+const cityChip = (page: Page) => visible(page, '[data-topbar="search-list"] [data-chip="city"]');
 const session = (page: Page) => page.locator("html");
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: Fake }).__homiFakeTelegram.emit("backButtonClicked"));
 const backVisible = (page: Page) =>
@@ -181,7 +183,7 @@ test.describe("gates", () => {
 
     await visible(page, '[data-row="locate"]').click();
     await expect(page).toHaveURL(/\/ru\?city=andijan$/);
-    await expect(visible(page, '[data-proof="filters"]')).toHaveText("city=andijan");
+    await expect(cityChip(page)).toHaveText("Андижан");
   });
 });
 
@@ -224,7 +226,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       await expect(page).toHaveURL(/\/en\?city=andijan$/);
       await expect(route(page, "feed")).toBeVisible();
-      await expect(visible(page, '[data-proof="filters"]')).toHaveText("city=andijan");
+      await expect(cityChip(page)).toHaveText("Andijan");
       await expect.poll(() => actions.length).toBe(2);
       expect(await stillMarked(page)).toBe(true);
     });
@@ -270,10 +272,11 @@ test.describe("session expired", () => {
   /**
    * Header mode keeps the token in memory, so its sign-in is repeated when a read is refused (WP-22). The refusal is
    * registered after the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front
-   * of a route registered before it, and a sign-in refused at launch never reaches a session mode anyway.
+   * of a route registered before it, and a sign-in refused at launch never reaches a session mode anyway. The read is
+   * the count of the WP-22 proof on the map placeholder.
    */
   test("header mode: a read refused mid-session and the new sign-in refused as too old show the expired screen; «Закрыть» closes", async ({ page }) => {
-    const app = await launchApp(page, { mode: "header", path: "/ru" });
+    const app = await launchApp(page, { mode: "header", path: "/ru/map" });
     await expect(session(page)).toHaveAttribute("data-session", "ready");
     await expect(visible(page, '[data-proof="count"]')).toHaveAttribute("data-status", "success");
 
@@ -283,6 +286,6 @@ test.describe("session expired", () => {
     await refuseAsTooOld(page);
     await visible(page, '[data-proof="deal"]').click();
 
-    await expectExpiredAndClose(page, app, "feed");
+    await expectExpiredAndClose(page, app, "map");
   });
 });

@@ -263,13 +263,14 @@ test.describe("layers", () => {
   });
 });
 
+/** On a placeholder route: its glass sample and its primary button (WP-20); the feed of WP-24 has neither. */
 test.describe("themes and lite", () => {
   const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const glassFilter = (page: Page) =>
     page.locator("[data-glass-sample]").first().evaluate((element) => getComputedStyle(element).backdropFilter);
 
   test("the three theme states and the lite class change the computed styles", async ({ page }) => {
-    await launchSigningIn(page, "/ru");
+    await launchSigningIn(page, "/ru/settings");
     await expect(page.locator("html")).toHaveAttribute("data-scheme", "light");
     expect(await background(page)).toBe("rgb(255, 255, 255)");
     expect(await glassFilter(page)).toContain("blur(22px)");
@@ -291,7 +292,7 @@ test.describe("themes and lite", () => {
   });
 
   test("the accent is the brand yellow in every state", async ({ page }) => {
-    await launchSigningIn(page, "/ru");
+    await launchSigningIn(page, "/ru/settings");
     const accent = () =>
       page.evaluate(() => getComputedStyle(document.querySelector('[data-slot="button"]') as Element).backgroundColor);
 

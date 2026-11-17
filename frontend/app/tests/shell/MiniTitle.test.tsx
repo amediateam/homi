@@ -45,6 +45,7 @@ let fake: FakeTelegram | null = null;
 const haptics = () => (fake?.calls ?? []).filter((entry) => entry.member.startsWith("HapticFeedback")).length;
 
 beforeEach(() => {
+  state.pathname = "/";
   state.search = "";
   state.loaded = true;
   fake = fakeTelegram({ version: "8.0" });
@@ -95,6 +96,22 @@ describe("MiniTitle (SCR-006, BR-APP-064)", () => {
     expect(button.hasAttribute("data-mini-title")).toBe(true);
     expect(button.className).toMatch(/(?:^|\s)z-\(--z-mini-title\)(?:\s|$)/);
     expect(button.className).toMatch(/(?:^|\s)glass(?:\s|$)/);
+  });
+
+  it("names the feed's own search while a listing lies over the feed (KI-43)", () => {
+    state.search = "city=tashkent&deal=sale";
+    const tree = () => (
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <MiniTitle />
+      </NextIntlClientProvider>
+    );
+    const { rerender } = render(tree());
+
+    state.pathname = "/listing/42";
+    state.search = "";
+    rerender(tree());
+
+    expect(screen.getByRole("button").textContent).toBe("Продажа · Ташкент");
   });
 
   it("a tap on the collapsed chrome only expands it, with one light haptic", () => {

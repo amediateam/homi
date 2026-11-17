@@ -36,7 +36,7 @@ import {
   WifiOff,
   X,
 } from "@homi/ui";
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { brand } from "@/lib/brand";
@@ -46,6 +46,9 @@ import { confirmText } from "@/lib/ui/confirm";
 import { failed, saved } from "@/lib/ui/feedback";
 import { showToast } from "@/lib/ui/toast";
 
+import { CardStates } from "./CardStates";
+import { Entry } from "./Entry";
+
 /** The gallery's replacement toast follows the first one after this long, while the first is still shown. */
 const REPLACEMENT_MS = 1500;
 
@@ -53,7 +56,8 @@ const REPLACEMENT_MS = 1500;
  * The gallery of the `@homi/ui` primitives of WP-23 (D-E-4): one entry per primitive with a stable `data-testid`,
  * for review on a device and for the end-to-end specs (`crash.spec.ts`, `errors.spec.ts` of WP-32). The toast,
  * confirm and feedback entries drive the app's own helpers (`lib/ui`, shown by the `ToastHost` of the root layout);
- * the routes entry opens the real addresses whose wrappers are `RouteSheet`, `SubPage` and `RouteOverlay`.
+ * the routes entry opens the real addresses whose wrappers are `RouteSheet`, `SubPage` and `RouteOverlay`; the card
+ * entry shows the listing card's states with fixture data (`CardStates`, WP-24).
  * Development only, so its texts are literals, not catalogue keys; `app/[locale]/dev/ui/page.tsx` guards it.
  */
 export function UiGallery() {
@@ -94,6 +98,7 @@ export function UiGallery() {
       <Choices />
       <ErrorStates />
       <EmptyStates />
+      <CardStates />
       <Icons />
       <Toasts onEvent={record} />
       <Confirm onEvent={record} events={events} />
@@ -214,17 +219,6 @@ export function UiGallery() {
         </SubPageFrame>
       ) : null}
     </main>
-  );
-}
-
-function Entry({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <section data-testid={`gallery-${id}`} aria-labelledby={`gallery-${id}-title`} className="flex flex-col gap-3">
-      <h2 id={`gallery-${id}-title`} className="text-[17px] font-bold">
-        {title}
-      </h2>
-      {children}
-    </section>
   );
 }
 

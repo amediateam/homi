@@ -2080,7 +2080,7 @@ export interface operations {
                         success: boolean;
                         data: components["schemas"]["ListingPreviewResource"][];
                         meta: {
-                            next_cursor: string;
+                            next_cursor: string | null;
                             source: components["schemas"]["SourceDriver"];
                         };
                     };

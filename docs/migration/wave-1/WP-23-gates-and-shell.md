@@ -1011,7 +1011,9 @@ Feedback and errors
     across its own `back()`, it needs the remount of `RouteSheet` (WP-26, WP-31);
   - `usePathname` / `useSearchParams` are global, so the page kept below an intercepted layer, and the chrome, read
     the layer's address (under `/listing/42` the feed's `useSearchState()` sees no filters); out of sight under the
-    opaque listing, visible during WP-26's swipe back (WP-24, WP-26);
+    opaque listing, visible during WP-26's swipe back (WP-24, WP-26; since WP-24 the feed list and its top bar hold
+    their own search through `useScreenSearchState('feed')`, while `ViewToggle` and `MapBar` still read the global
+    address);
   - Playwright with `CI=1` on a developer machine skips the mkcert `NODE_EXTRA_CA_CERTS` that `playwright.config.ts`
     adds otherwise, so every sign-in answers `502` unless the shell exports it: run it locally without `CI` and with
     `--workers=1`.
