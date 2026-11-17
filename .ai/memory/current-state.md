@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-17 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); KI-29 fixed by #70 (`main` = `d2a4722`); WP-24 merged (#71; `main` = `780aea9`), WAITING for the production track's photo check and deploy and the checks inside Telegram on staging, its follow-up docs PR #76 merged (`main` = `157790d`); Grok's fixes merged: #72 (KI-38), #73 (KI-28 narrowed), #74 (KI-39), #75 (KI-40) (`main` = `11c75b2`), their docs PR #77 merged (`main` = `a4c388c`); session memory #78 merged (`main` = `4f91f8a`); WP-25 merged (#79; `main` = `f2f58cc`), WAITING for the deploy and the checks inside Telegram on staging; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-17 (WP-26 merged as #81, WAITING; development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); KI-29 fixed by #70 (`main` = `d2a4722`); WP-24 merged (#71; `main` = `780aea9`), WAITING for the production track's photo check and deploy and the checks inside Telegram on staging, its follow-up docs PR #76 merged (`main` = `157790d`); Grok's fixes merged: #72 (KI-38), #73 (KI-28 narrowed), #74 (KI-39), #75 (KI-40) (`main` = `11c75b2`), their docs PR #77 merged (`main` = `a4c388c`); session memory #78 merged (`main` = `4f91f8a`); WP-25 merged (#79; `main` = `f2f58cc`), WAITING for the deploy and the checks inside Telegram on staging; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -50,8 +50,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     (three DEV switches off), `ListingFiltersRequest`.
   - **No phone on the card:** `PhoneMasker` masks every author number to its last two digits; only `POST …/contact`
     gives a number (DEC-52).
-  - **Stub:** `StubListingSource` over `resources/fixtures/v1/listings/catalog.json` (16 listings, 45 for the default
-    filters); the eight `source.listings.*` features; six placeholder photos and `sources:publish-stub-media`.
+  - **Stub:** `StubListingSource` over `resources/fixtures/v1/listings/catalog.json` (20 listings — 100018–100021 are WP-26's
+    listing-screen variants outside the default set — 45 for the default filters); the eight `source.listings.*` features; six placeholder photos and `sources:publish-stub-media`.
   - **Tests:** `make ci-backend` → exit 0 (603 passed, 4 skipped); `make test-pgsql` → 4 passed; `backend` and
     `frontend` green on `main` after the merge (runs 43662113261, 43662113325).
 - **Since WP-13 (#50, merged 2026-11-15 as `6c48ce6`; staging and production do not run it yet):**
@@ -164,6 +164,21 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - Tests: `e2e/filters.spec.ts` and `e2e/city.spec.ts`.
   - On `37ffd27`, `make ci-frontend` → exit 0, with the app at 120 files / 1731 tests. End to end: city 6, filters 20
     and feed 19 passed; on `c41d07c` every related spec passed as well (KI-32 reruns). Known issue KI-54.
+- **Since WP-26 (#81 merged 2026-11-17 as `95315fd`; staging and production do not run it yet):** `/listing/[number]`
+  and its `photos`, `market` and `actions` children render the real listing screen in both route trees (`location`
+  stays the WP-20 placeholder until WP-28).
+  - `features/listing/*`: `ListingLayer`, `ListingServer`, `ListingScreen`, `useListing` (string key `listing:<n>`,
+    the merge redirect, the seen map), the hero, title row, key facts, the sections, the CTA bar with `useContact`
+    (only on a tap) and `useTranslation`, the viewer (`gestures.ts`, `ZoomableImage`), the market block and sheet
+    (`marketText.ts`), the actions sheet with `useListingActions`, `closeListing` and `useShareListing`.
+  - `lib/actions/{listing,hidden,reports}.ts`; `lib/phone/masked.ts`; `lib/navigation/{useCloseOnce,history}`
+    (`backBy`); `lib/data/useResource.ts` (`seedResource`, a render-time seed announced, an entry without data
+    dropped when its last user leaves); `lib/telegram/links.ts` allows the host of `NEXT_PUBLIC_API_URL` (the stub
+    call page); `@homi/ui` gained 28 icons, `prefersReducedMotion` and `BottomSheet`'s `leading`.
+  - Backend: stub listings 100018–100021 and the per-m² values of 100008/100009 (contract tests).
+  - Tests: `e2e/{listing-open,listing-contact,listing-actions,photo-viewer}.spec.ts`. On `fed314d`,
+    `make ci-frontend` → exit 0 with the app at 153 files / 2304 tests, `composer ci:check` clean; in CI on
+    `43d558a` the 18 e2e files passed in one run (180). Known issues KI-56, KI-57, KI-58.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
