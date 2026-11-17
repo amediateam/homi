@@ -1,19 +1,37 @@
 "use client";
 
-import { cn, ErrorState, Skeleton } from "@homi/ui";
-import { useTranslations } from "next-intl";
+import type { Locale } from "@homi/config";
+import type { Translate } from "@homi/i18n/format";
+import { cn, ErrorState } from "@homi/ui";
+import { useLocale, useTranslations } from "next-intl";
 import { useContext, useLayoutEffect } from "react";
 
+import { marketVerdict } from "@/features/feed/verdict";
 import { SourceReporter } from "@/features/shell/SourceReporter";
 import { useRouter } from "@/i18n/navigation";
+import { devFlags } from "@/lib/flags";
 import { routes } from "@/lib/navigation/routes";
 
+import { ListingCtaBar } from "./cta/ListingCtaBar";
+import { type ListingContactView, useListingContact } from "./cta/useContact";
 import { KeyFacts } from "./KeyFacts";
 import { ListingHero } from "./ListingHero";
 import { ListingSkeleton, SectionSkeleton } from "./ListingSkeleton";
 import { ListingTitleRow } from "./ListingTitleRow";
 import { type ListingDetails, type ListingInitial, type ListingPreview, placeLine } from "./listingData";
 import { openOriginal } from "./openOriginal";
+import { AuthorSection } from "./sections/AuthorSection";
+import type { TranslationControl } from "./sections/controls";
+import { DescriptionSection } from "./sections/DescriptionSection";
+import { FactsSection } from "./sections/FactsSection";
+import { HistorySection } from "./sections/HistorySection";
+import { LocationSection } from "./sections/LocationSection";
+import { MarketBlock } from "./sections/MarketBlock";
+import { OriginalText } from "./sections/OriginalText";
+import { SourcesSection } from "./sections/SourcesSection";
+import { StatsSection } from "./sections/StatsSection";
+import { useShareListing } from "./share/useShareListing";
+import { useTranslation } from "./translation/useTranslation";
 import { ListingLayerContext, useListing, type ListingView } from "./useListing";
 import { heroIndexOf, rememberHeroIndex } from "./viewState";
 
@@ -101,12 +119,18 @@ function ListingContent({ number, initial }: { number: number; initial?: Listing
 }
 
 /**
- * The preview and the loaded screen share one tree, so the hero keeps its photo and scroll when the details replace
- * the preview in the same instance.
+ * The preview and the loaded screen share one tree, so the hero keeps its photo and scroll, and the contact a tap
+ * revealed, when the details replace the preview in the same instance. Top to bottom (`03` SCR-018): the hero, the
+ * status banner, the title row and the key facts; then, with the details, the sections of blocks 5–13, or two section
+ * skeletons while only the preview is there; the CTA bar fixed to the bottom inside the layer (pending until the
+ * details are there). The contact, the translation and the share own their taps and haptics.
  */
 function ListingBody({ number, item, details }: { number: number; item: ListingPreview; details: ListingDetails | null }) {
   const t = useTranslations();
   const router = useRouter();
+  const contact = useListingContact(number, details);
+  const translation = useTranslation(number);
+  const { share, shareable } = useShareListing(number, item);
   const videoUrl = details && details.has_video && !details.original.deleted ? details.original.url : null;
 
   return (
@@ -121,45 +145,71 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
         onOpenVideo={videoUrl === null ? undefined : () => openOriginal(number, videoUrl, "video")}
         photoLabel={t("viewer.title")}
       />
-      <div className="mx-auto flex max-w-[608px] flex-col gap-[16px] px-[16px] pt-[16px]">
-        {item.status_text ? (
-          <p
-            data-status-banner=""
-            className="rounded-medium bg-badge-warn-bg px-[14px] py-[10px] text-[15px] font-medium text-badge-warn"
-          >
-            {item.status_text}
-          </p>
-        ) : null}
-        <ListingTitleRow
-          number={number}
-          title={item.title}
-          place={placeLine(item)}
-          favorite={item.favorite}
-          onMenu={() => router.push(routes.listingActions(number))}
-        />
-        <KeyFacts item={item} marketCode={details?.market.code} />
-        {details ? (
-          <div data-slot="listing-sections" />
-        ) : (
-          <>
-            <SectionSkeleton lines={3} />
-            <SectionSkeleton lines={4} />
-          </>
-        )}
-      </div>
-      {details ? null : (
-        <div
-          data-cta=""
-          className="fixed inset-x-0 bottom-0 z-(--z-cta) border-t border-sep bg-bg pb-[calc(12px+var(--bottom-inset))]"
-        >
-          <div className="mx-auto flex max-w-[608px] items-center gap-[12px] px-[16px] pt-[12px]">
-            <Skeleton className="h-[22px] w-[40%]" />
-            <div data-cta-action="pending" className="ml-auto w-[45%]">
-              <Skeleton className="h-[48px] w-full rounded-large" />
-            </div>
-          </div>
+      <div className="mx-auto max-w-[608px]">
+        <div className="flex flex-col gap-[16px] px-[16px] pt-[16px]">
+          {item.status_text ? (
+            <p
+              data-status-banner=""
+              className="rounded-medium bg-badge-warn-bg px-[14px] py-[10px] text-[15px] font-medium text-badge-warn"
+            >
+              {item.status_text}
+            </p>
+          ) : null}
+          <ListingTitleRow
+            number={number}
+            title={item.title}
+            place={placeLine(item)}
+            favorite={item.favorite}
+            onShare={shareable ? share : undefined}
+            onMenu={() => router.push(routes.listingActions(number))}
+          />
+          <KeyFacts item={item} marketCode={details?.market.code} />
+          {details ? null : (
+            <>
+              <SectionSkeleton lines={3} />
+              <SectionSkeleton lines={4} />
+            </>
+          )}
         </div>
-      )}
+        {details ? <ListingSections number={number} details={details} phone={contact.phone} translation={translation} /> : null}
+      </div>
+      <ListingCtaBar item={item} details={details} cta={contact.cta} />
+    </div>
+  );
+}
+
+/**
+ * Blocks 5–13 of the loaded screen in legacy's order: market, facts, stats, history, location (with «Рядом»),
+ * author, description, and the source with the original text inside its disclosure. Each section brings its own
+ * gutter and leaves itself out when it has nothing to show.
+ */
+function ListingSections({
+  number,
+  details,
+  phone,
+  translation,
+}: {
+  number: number;
+  details: ListingDetails;
+  phone: ListingContactView["phone"];
+  translation: TranslationControl | null;
+}) {
+  const t = useTranslations();
+  const locale = useLocale() as Locale;
+  const translate: Translate = (key, values) => t(key as never, values as never);
+
+  return (
+    <div data-slot="listing-sections" className="flex flex-col pt-[4px]">
+      <MarketBlock number={number} details={details} verdict={marketVerdict(details, locale, translate)} />
+      <FactsSection facts={details.facts} />
+      <StatsSection stats={details.stats} />
+      <HistorySection number={number} history={details.price_history} tashkentDates={devFlags.dev014TashkentDates} />
+      <LocationSection number={number} details={details} place={placeLine(details)} />
+      <AuthorSection number={number} ownerLabel={details.owner_label} offers={details.offers} posted={details.posted} phone={phone} />
+      <DescriptionSection summary={details.summary} />
+      <SourcesSection number={number} sources={details.sources} originalText={details.original.text}>
+        <OriginalText number={number} text={details.original.text ?? ""} phone={phone} translation={translation} />
+      </SourcesSection>
     </div>
   );
 }

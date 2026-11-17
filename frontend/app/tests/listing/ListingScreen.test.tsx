@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ListingDetails, ListingInitial, ListingShowData } from "@/features/listing/listingData";
+import type { ActionResult } from "@/lib/actions/run";
 import type { ApiFailure, UiError } from "@/lib/api/errors";
 import type { ApiResult } from "@/lib/api/types";
 
@@ -16,6 +17,10 @@ const state = vi.hoisted(() => ({
   replace: vi.fn(),
   reportView: vi.fn(),
   scrollToTop: vi.fn(),
+  /** The listing screen's Server Actions (contact, translation, share): none is called by these cases. */
+  getContact: vi.fn<(input: { number: number }) => Promise<ActionResult<unknown>>>(() => new Promise(() => {})),
+  translate: vi.fn<(input: { number: number }) => Promise<ActionResult<unknown>>>(() => new Promise(() => {})),
+  prepareShare: vi.fn<(input: { number: number }) => Promise<ActionResult<unknown>>>(() => new Promise(() => {})),
 }));
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: (path: string) =>
@@ -23,14 +28,18 @@ vi.mock("@/lib/api/browser", () => ({
       state.sent.push({ path, resolve });
     }),
 }));
-vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready" }) }));
+/** `useMoney` (history prices, the market block) without a profile currency prints dollars. */
+vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready", me: null }) }));
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate: vi.fn() }));
 vi.mock("@/lib/actions/favorites", () => ({ setFavorite: vi.fn(() => new Promise(() => {})) }));
+vi.mock("@/lib/actions/listing", () => ({ getContact: state.getContact, translate: state.translate, prepareShare: state.prepareShare }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: state.push, replace: state.replace }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/ru/listing/100001" }));
 
 import { resetPendingFavorites } from "@/features/feed/FavButton";
 import { ListingScreen, type ListingScreenProps } from "@/features/listing/ListingScreen";
+import { resetMarkerShows } from "@/features/listing/sections/MarketBlock";
+import { resetTranslations } from "@/features/listing/translation/translationCache";
 import { ListingLayerContext } from "@/features/listing/useListing";
 import { heroIndexOf, rememberHeroIndex, resetViewStates } from "@/features/listing/viewState";
 import { clearTracked, recentTracked } from "@/lib/analytics/events";
@@ -86,6 +95,8 @@ afterEach(() => {
   resetSources();
   resetViewStates();
   resetPendingFavorites();
+  resetTranslations();
+  resetMarkerShows();
   clearTracked();
   fake?.uninstall();
   fake = null;
@@ -134,25 +145,31 @@ describe("ListingScreen (WP-26, SCR-018, SCR-019)", () => {
     expect(counter()).toBeNull();
   });
 
-  it("loaded: the full set of photos, the building tile, the sections slot and no pending CTA", () => {
+  it("loaded: the full set of photos, the building tile, the sections and the CTA's action", () => {
     screen({ initial: initialOk() });
 
     expect(root().getAttribute("data-listing-state")).toBe("loaded");
     expect(document.querySelectorAll("[data-hero] [data-slide]")).toHaveLength(8);
     expect(counter()).toBe("1 / 8");
     expect(document.querySelector('[data-fact="building"]')?.textContent).toBe("Вторичкадом");
-    expect(document.querySelector('[data-slot="listing-sections"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="listing-sections"] [data-section]')).not.toBeNull();
     expect(document.querySelector("[data-section-skeleton]")).toBeNull();
     expect(document.querySelector('[data-cta-action="pending"]')).toBeNull();
+    expect(document.querySelector('[data-cta] button[data-cta-action="call"]')).not.toBeNull();
     expect(state.sent).toEqual([]);
+    expect(state.getContact).not.toHaveBeenCalled();
     expect(state.reportView).toHaveBeenLastCalledWith("loaded");
   });
 
-  it("the shell renders no author text: no masked number reaches the document", () => {
+  it("no digit of the author's number before a tap (DEC-52): only the masked forms reach the document", () => {
     screen({ initial: initialOk() });
 
-    expect(document.body.textContent).not.toMatch(/\+998/);
-    expect(document.body.textContent).not.toMatch(/\d{3}[\s-]?\d{2}[\s-]?\d{2}/);
+    const html = document.body.innerHTML;
+    for (const form of ["+998000000067", "000000067", "000 00 67", "000-00-67", "+998 00 000-00-67"]) {
+      expect(html).not.toContain(form);
+    }
+    expect(document.body.textContent).toContain("+998 ** *** ** 67");
+    expect(state.getContact).not.toHaveBeenCalled();
   });
 
   it("the details replace the preview in the same hero: the photo shown stays", async () => {

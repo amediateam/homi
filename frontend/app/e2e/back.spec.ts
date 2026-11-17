@@ -12,7 +12,8 @@ const fake = (page: Page) => page.evaluateHandle(() => (window as unknown as { _
 const backVisible = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: Fake }).__homiFakeTelegram.webApp.BackButton.isVisible);
 const press = async (page: Page, eventType: "backButtonClicked" | "settingsButtonClicked") => (await fake(page)).evaluate((telegram, type) => telegram.emit(type), eventType);
 const route = (page: Page, name: string) => page.locator(`[data-route="${name}"]`).filter({ visible: true });
-const link = (page: Page, href: string) => page.locator(`[data-link="${href}"]`).filter({ visible: true }).first();
+/** The first photo of the open listing's hero (WP-26): a tap opens the viewer at it. */
+const heroPhoto = (page: Page) => page.locator('[data-hero] [data-slide="0"]').filter({ visible: true }).first();
 /** The filters chip of the feed's top bar (WP-24). */
 const filtersChip = (page: Page) => page.locator('[data-topbar="search-list"] [data-chip="filters"]').filter({ visible: true });
 
@@ -56,7 +57,7 @@ test.describe("Back and Settings", () => {
     await ready(page);
     const number = await openFirstCard(page);
     await expect(route(page, "listing")).toBeVisible();
-    await link(page, `/listing/${number}/photos`).click();
+    await heroPhoto(page).click();
     await expect(route(page, "listing/photos")).toBeVisible();
 
     await press(page, "backButtonClicked");

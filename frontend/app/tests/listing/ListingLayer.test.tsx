@@ -19,6 +19,8 @@ vi.mock("@/lib/api/browser", () => ({ bffFetch: () => new Promise(() => {}) }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready" }) }));
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate: vi.fn() }));
 vi.mock("@/lib/actions/favorites", () => ({ setFavorite: vi.fn(() => new Promise(() => {})) }));
+/** The screen's contact, translation and share actions (WP-26 W3): Server Action modules, never called here. */
+vi.mock("@/lib/actions/listing", () => ({ getContact: vi.fn(), translate: vi.fn(), prepareShare: vi.fn() }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
 vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname, useRouter: () => ({ push: state.push, replace: vi.fn() }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => `/ru${state.pathname}` }));
