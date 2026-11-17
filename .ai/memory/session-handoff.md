@@ -12,13 +12,13 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-16/17, this session: «Погнали WP-24»; «давай, продолжай»; «как там часть C, есть результаты?»; «Пока ты работает какую большие и механические хадачи можем отдат grok 4.6 ?»; «давай 1 и 3, подготовь детальный промт для Grok главное чтобы он помог нам ускориться не мешат»; «Дай короткий промпт для grok ссо сыдкой»; «grok закончил оба задачи принимай»; «сливай #70»; «Какую след задачу можем дат grok»; «да, подготовь промты для 1–3 и 4»; «сливай #71»; «сливай #76»; «сливай #72»; «сливай #73»; «сливай #74»; «сливай #75».
 
 ## State at handoff
-- `main` = `780aea9`: **#71 merged** on «сливай #71» (WP-24, feed and listing card; merge commit, branch deleted). Before it: `frontend` run 43966127819, `frontend-e2e` run 43966127916 (104 passed) and `backend` run 43966127625 green on `6ae7331`; after it on `main`: `frontend` 44002675075 and `backend` 44002675246 green (`gh run view`).
+- **#71 merged** on «сливай #71» as `780aea9` (WP-24, feed and listing card; merge commit, branch deleted). Before it: `frontend` run 43966127819, `frontend-e2e` run 43966127916 (104 passed) and `backend` run 43966127625 green on `6ae7331`; after it on `main`: `frontend` 44002675075 and `backend` 44002675246 green (`gh run view`).
 - `main` = `11c75b2`: after #71, the docs PR **#76** (`157790d`) and Grok's **#72** (KI-38, `265f475`), **#73** (KI-28, `4041d4c`), **#74** (KI-39, `c390374`), **#75** (KI-40, `11c75b2`), each on its own «сливай #N». CI on `main`: `backend` 44011150612 (#72) and 44015741988 (#73), `frontend` 44016146059 (#74) and 44016720103 (#75) green (`gh run view`).
-- `docs/grok-ki-fixes` (from `11c75b2`): this follow-up — KI-38, KI-39, KI-40 resolved, KI-28 narrowed (the tmp bucket bound open), phase-3-notes §V, this memory. Docs only. No Grok worktree is left (`git worktree list`).
+- `docs/grok-ki-fixes` (from `11c75b2`): this follow-up — KI-38, KI-39, KI-40 resolved, KI-28 narrowed (the tmp bucket bound and the replace race open), phase-3-notes §V, this memory. Docs only. No Grok worktree is left (`git worktree list`).
 
 ## Done this session
 - **WP-24** in three parts plus the docs pass, each an ultracode workflow with review, fix and verify stages; checks in the spec Handoff (`make ci-frontend` exit 0 on `f58cf88`; `feed.spec.ts` 19 passed; CI of #71 green, see above). Merged on the developer's word.
-- **Grok work reviewed and merged:** #70 (KI-29) and #72 … #75. Each was checked here: merged in pairs onto `780aea9` (backend 725 passed, 4 skipped, Pint and PHPStan clean; app 1407 tests, lint and typecheck clean), each fix reverted → its new tests fail, and a security review of #72 (approve) and #73 (approve with follow-ups). Plus a read-only audit of WP-25 … WP-33 (applied in #71).
+- **Grok work reviewed and merged:** #70 (KI-29, `d2a4722`; a probe error fails the package lint). #72 … #75: merged in pairs onto `780aea9` (backend 725 passed, 4 skipped, Pint and PHPStan clean; app 1407 tests, lint and typecheck clean), each fix reverted → its new tests fail, and a security review of #72 (approve) and #73 (approve with follow-ups). Plus a read-only audit of WP-25 … WP-33 (applied in #71).
 
 ## Waiting for the developer (do NOT start on your own)
 1. **«сливай #N»** for this docs PR (`docs/grok-ki-fixes`).

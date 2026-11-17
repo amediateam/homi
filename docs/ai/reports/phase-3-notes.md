@@ -926,7 +926,8 @@ The review merged them in pairs onto `780aea9`:
 - **The fix reverted (probe).** With each fix reverted, its new tests fail: #72 1, #73 2, #74 3 (plus two later
   tests on the stuck promise), #75 1.
 - **Security review.** It approved #72 (only the error shape changes) and approved #73 with follow-ups. KI-28
-  stays open for the tmp bucket's size bound (a presigned POST with `content-length-range`).
+  stays open for the tmp bucket's size bound and the replace race between the size check and the read (a presigned
+  POST with `content-length-range` closes both).
 
 The 12 s bound of #75 was raised before its merge: a slower listing push on a first launch meets the city gate.
 It is recorded in KI-40. KI-38, KI-39 and KI-40 are resolved.
