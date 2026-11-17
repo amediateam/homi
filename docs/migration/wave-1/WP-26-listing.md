@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#81) |
+| Status | WAITING (merged in #81 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-24 |
 | Size | ≈ 3 000 changed lines (upper end of the PR rule), L |
 | Behaviour reference | `03` §2 (SCR-018, SCR-019, SCR-020, SCR-022, SCR-023), §1.2, §1.12, §3.3–§3.5, §4, §5; `05` §1.7; `08` §1.8 and the row of API-016; `02` BR-API-101, BR-API-156; `09` F-REPORT-001; task files KV-FE-063 … KV-FE-071, KV-FE-029, KV-FE-030 — behaviour, texts, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
@@ -1156,8 +1156,9 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
   direct load), KI-57 (low: a contact revealed in the fallback instance), KI-58 (info: the stub listing methods ignore
   the `access_*` scenarios).
 - **Next:**
-  1. Review and merge; the follow-up docs PR records the status, the queue row,
-     `CLAUDE.md`, `.ai/memory/current-state.md` (the catalogue has 20 base listings) and the memory.
+  1. ~~Review and merge~~ (merged in #81 on 2026-11-17, `95315fd`, after green `frontend`, `backend` and
+     `frontend-e2e` — 180 passed in one run); the follow-up docs PR records this status, the queue row, `CLAUDE.md`,
+     `.ai/memory/current-state.md` (the catalogue has 20 base listings) and the memory.
   2. The production track deploys (the regular deploy; nothing else on stubs).
   3. Check inside Telegram on staging: the swipe back on iOS and never on Android, BackButton and SettingsButton,
      the haptics, the call on Android (`tel:` first), the share picker, the viewer's gestures. Run the checklist in

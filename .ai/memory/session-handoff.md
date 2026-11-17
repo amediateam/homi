@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-17 (WP-26 in review as #81 on `wp-26-listing`; WP-25 merged as #79 + docs #80, `main` = `3b98be2`; WP-25 … WP-10 merged and WAITING; WP-03, WP-00/01/02 WAITING)
+updated: 2026-11-17 (WP-26 merged as #81, `main` = `95315fd`; its follow-up docs PR on `docs/wp-26-after-merge`; WP-26 … WP-10 merged and WAITING; WP-03, WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -9,11 +9,11 @@ Written for whoever continues the **development track**. The production track's 
 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-17 (verbatim in the earlier handoffs and `docs/migration/decisions/2026-11-14-developer-answers.md`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; each PR merged on its own «сливай #N».
-- 2026-11-17, this session: «сливай #79»; «сливай #80»; «Погнали WP-26»; the two WP-26 answers — stub fixtures «В PR WP-26», `splitMaskedPhones` «lib приложения» (phase-3 notes §X).
+- 2026-11-17, this session: «сливай #79»; «сливай #80»; «Погнали WP-26»; «сливай #81»; the two WP-26 answers — stub fixtures «В PR WP-26», `splitMaskedPhones` «lib приложения» (phase-3 notes §X).
 
 ## State at handoff
-- `main` = `3b98be2` (#80 merged on «сливай #80»; docs only).
-- `wp-26-listing` → PR #81 (WP-26, listing screen): 13 commits `8d8b8f1` … `9aa4aa5` plus this status commit; it waits for CI and «сливай #81».
+- `main` = `95315fd`: #81 (WP-26, 14 commits `8d8b8f1` … `43d558a`) merged on «сливай #81» after green `frontend` (run 44146798245), `backend` (run 44146798129) and `frontend-e2e` (run 44146798203, 180 passed in one run); branch deleted. `frontend` and `backend` on `main` after the merge: runs 44150307254 and 44150307380, both success.
+- `docs/wp-26-after-merge`: WP-26 `WAITING`, queue row, `CLAUDE.md` (current state), `.ai/memory/current-state.md` (since WP-26; 20 base stub listings), phase-3 notes §X merged line, this memory. Docs only; it waits for «сливай #N».
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend` (root) and `cd backend && composer ci:check`.
 
@@ -27,7 +27,7 @@ Written for whoever continues the **development track**. The production track's 
 - A WP-25 flake fixed in `ca5f5a2` (`FiltersSheetRoute.test.tsx`: `scrollIntoView` stub).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **«сливай #81»** once `frontend`, `backend` and `frontend-e2e` of PR #81 are green; then the after-merge docs PR (status WAITING, queue row, `CLAUDE.md`, `.ai/memory/current-state.md` — 20 base stub listings — and this memory).
+1. **«сливай #N»** for the PR of `docs/wp-26-after-merge`.
 2. **#81 reviewer questions** (spec Handoff "Open for the reviewer"): the D-5 share fallback; uz «rieltor»/«makler» and «ham»; the X2 direct-load normalisation (needs a spec/ADR line); KI-57; the legacy departures list.
 3. **#79 reviewer questions** (WP-25 Handoff) and the earlier items: #71's area on cards; KI-44 small PR; KI-32 limit; KI-28's rest; #75's 12 s bound.
 4. The first developer's list and the production track's deploys of WP-03 … WP-25, plus the Telegram checks on staging.

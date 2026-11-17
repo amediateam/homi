@@ -1175,8 +1175,13 @@ Verified (from `frontend/` unless marked):
   clean.
 - **On `23ec0bf`:** app 153 files / 2287 + 1 todo.
 - **On `99b032a`:** `make ci-frontend` clean, app 153 files / 2304 + 1 todo; the packages as above.
-- **End to end:** recorded in the specification's "Handoff" once the specs are run.
+- **End to end:** each of the 18 files alone against a local `next start` of the `99b032a` build, 180 passed (the
+  specification's "Handoff" lists the reruns); in CI on `43d558a` all 18 files in one run, 180 passed.
 
 Known issues: KI-56 (low: the duplicate overlay copy of a directly loaded listing), KI-57 (low: a contact revealed in
 the fallback instance), KI-58 (info: the stub listing methods ignore `access_*`); KI-41 partly done (minimal focus on
 the listing layer, the rest WP-33's), KI-42 resolved for the listing layer, KI-43's listing part done.
+
+Merged on 2026-11-17 as #81 (`95315fd`), on «сливай #81», after green `frontend` (run 44146798245), `backend` (run
+44146798129) and `frontend-e2e` (run 44146798203, 180 passed). WAITING for the regular deploy of the production track
+and the checks inside Telegram on staging.
