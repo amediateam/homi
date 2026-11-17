@@ -273,18 +273,19 @@ test.describe("session expired", () => {
    * Header mode keeps the token in memory, so its sign-in is repeated when a read is refused (WP-22). The refusal is
    * registered after the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front
    * of a route registered before it, and a sign-in refused at launch never reaches a session mode anyway. The read is
-   * the count of the WP-22 proof on the map placeholder.
+   * the map's points (`GET /listings/map` through `/bff`, WP-27), asked for again when the deal switch of the map's
+   * top bar changes the search.
    */
   test("header mode: a read refused mid-session and the new sign-in refused as too old show the expired screen; «Закрыть» closes", async ({ page }) => {
     const app = await launchApp(page, { mode: "header", path: "/ru/map" });
     await expect(session(page)).toHaveAttribute("data-session", "ready");
-    await expect(visible(page, '[data-proof="count"]')).toHaveAttribute("data-status", "success");
+    await expect(visible(page, '[data-marker="stack"]').first()).toBeVisible();
 
-    await page.route("**/bff/listings/count**", (route) =>
+    await page.route("**/bff/listings/map**", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ code: "unauthenticated" }) }),
     );
     await refuseAsTooOld(page);
-    await visible(page, '[data-proof="deal"]').click();
+    await visible(page, '[data-topbar="map"]').getByRole("radio", { name: "Продажа" }).click();
 
     await expectExpiredAndClose(page, app, "map");
   });
