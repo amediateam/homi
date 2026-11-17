@@ -29,14 +29,20 @@ function viaBrowser(): Promise<LocationResult> {
     return Promise.resolve("fail");
   }
   return new Promise((resolve) => {
+    // `timeout` on getCurrentPosition does not run while the permission prompt is open (AM-64).
+    const timer = setTimeout(() => resolve("fail"), LOCATION_TIMEOUT_MS);
+    const done = (result: LocationResult): void => {
+      clearTimeout(timer);
+      resolve(result);
+    };
     try {
       geo.getCurrentPosition(
-        (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy ?? null }),
-        (error) => resolve(error.code === 1 ? "denied" : "fail"),
+        (position) => done({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy ?? null }),
+        (error) => done(error.code === 1 ? "denied" : "fail"),
         { enableHighAccuracy: true, timeout: LOCATION_TIMEOUT_MS, maximumAge: MAX_AGE_MS },
       );
     } catch {
-      resolve("fail");
+      done("fail");
     }
   });
 }
@@ -76,8 +82,9 @@ function viaTelegram(target: Manager): Promise<LocationResult> {
 let pending: Promise<LocationResult> | null = null;
 
 /**
- * The user's position (TMA-035): LocationManager from 8.0, else browser geolocation (high accuracy, 12 s, at most
- * 60 s old). One request at a time; the coordinates are handed to the caller only — never stored, logged or sent.
+ * The user's position (TMA-035): LocationManager from 8.0, else browser geolocation (high accuracy, at most 60 s
+ * old). Either path settles within `LOCATION_TIMEOUT_MS`, including while a permission prompt is open. One
+ * request at a time; the coordinates are handed to the caller only — never stored, logged or sent.
  */
 export function getLocation(): Promise<LocationResult> {
   if (pending === null) {
