@@ -34,14 +34,14 @@ const MAPLIBRE_FILE = /^\/maplibre\/.*\./;
 
 /**
  * MapLibre's worker and its shared module (WP-27, "Basemap and tiles"): the worker runs under the policy of its own
- * response, so the static file gets the worker policy of `lib/security/csp.ts`. The version in the path names the
- * file, so it is cached for a year; it has no nonce and is not a document.
+ * response, so the static file gets the worker policy of `lib/security/csp.ts`. It has no nonce and is not a document.
+ * Its cache stays Next.js's `public, max-age=0` with an ETag (a 304 per map open): the proxy cannot tell a file from a
+ * missing version, and a one-year cache would also keep the 404 of a version that a rollback brings back.
  */
 function mapLibreFile(): NextResponse {
   const { header, reportOnly } = workerCspFromEnv();
   const response = NextResponse.next();
   response.headers.set(reportOnly ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy", header);
-  response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
   return securityHeaders(response);
 }
 

@@ -83,7 +83,8 @@ test.describe("content security policy", () => {
     expect(policy["connect-src"]).toContain("https://tile.openstreetmap.org");
     const appPolicy = directives(app?.headers()["content-security-policy"] ?? "");
     expect(appPolicy["connect-src"]).toEqual(expect.arrayContaining(policy["connect-src"] ?? []));
-    expect(headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+    // Next.js's own revalidated cache: the proxy sets none, so a 404 of a missing version is not kept for a year.
+    expect(headers["cache-control"]).toBe("public, max-age=0");
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["content-type"]).toContain("javascript");
   });

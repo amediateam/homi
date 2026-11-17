@@ -159,7 +159,8 @@ describe("proxy headers", () => {
       expect(response.headers.get("content-security-policy-report-only")).toBeNull();
       expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
       expect(response.headers.get("x-middleware-request-content-security-policy")).toBeNull();
-      expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+      // No cache of its own: a one-year cache would also keep the 404 of a missing version.
+      expect(response.headers.get("cache-control")).toBeNull();
       expect(response.headers.get("x-content-type-options")).toBe("nosniff");
       expect(response.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
       expect(response.headers.get("permissions-policy")).toBe(PERMISSIONS_POLICY);
