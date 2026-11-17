@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#81) |
 | Depends on | WP-24 |
 | Size | ≈ 3 000 changed lines (upper end of the PR rule), L |
 | Behaviour reference | `03` §2 (SCR-018, SCR-019, SCR-020, SCR-022, SCR-023), §1.2, §1.12, §3.3–§3.5, §4, §5; `05` §1.7; `08` §1.8 and the row of API-016; `02` BR-API-101, BR-API-156; `09` F-REPORT-001; task files KV-FE-063 … KV-FE-071, KV-FE-029, KV-FE-030 — behaviour, texts, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
