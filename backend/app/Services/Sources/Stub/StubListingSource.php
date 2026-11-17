@@ -26,10 +26,14 @@ use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 
 /**
- * The stub driver of the listing capability (WP-12) over `listings/catalog.json`: 16 invented listings covering
+ * The stub driver of the listing capability (WP-12) over `listings/catalog.json`: 20 invented listings covering
  * every deal × type and the special cases (video, no photos, no coordinates, suspicious price, verified owner, the two
- * price kinds, two raw synthetic numbers in texts). The Tashkent long-rent apartments are repeated with shifted
- * numbers (`101001` …) until the default filters find 45, so the feed has three pages.
+ * price kinds, raw synthetic numbers in texts). `100018` … `100021` are Tashkent-region long-rent apartments, outside
+ * the default set, with the listing-screen variants of WP-26: a chat link or a paid number without a phone, no
+ * contact at all, a video of a deleted post, an author of 24 listings, one and three price events, the `near` and
+ * `city` comparisons, the stats edge cases, an offer link and a second number that is not the author's. The Tashkent
+ * long-rent apartments are repeated with shifted numbers (`101001` …) until the default filters find 45, so the feed
+ * has three pages.
  *
  * Filters applied in memory: city, deal, types, rooms (a maximum of 4 or more is open), price, districts,
  * `near_metro` (metro within 1 km), `below_median` (a negative median delta) and owner; the others are accepted and

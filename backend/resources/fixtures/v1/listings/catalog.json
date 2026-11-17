@@ -1312,8 +1312,8 @@
             }
         ],
         "comparison": {
-            "value": 87550,
-            "own": 85000,
+            "value": 1122.44,
+            "own": 1089.74,
             "n": 14,
             "metric": "m2",
             "scope": "district",
@@ -1487,8 +1487,8 @@
             }
         ],
         "comparison": {
-            "value": 133500,
-            "own": 150000,
+            "value": 563.06,
+            "own": 625.0,
             "n": 14,
             "metric": "m2",
             "scope": "district",
@@ -2694,6 +2694,684 @@
         "stub": {
             "city": "andijan",
             "phone": "+998000000017"
+        }
+    },
+    {
+        "number": 100018,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "1-комн. квартира, 38 м²",
+        "price": {
+            "display": "$400",
+            "period": "/мес",
+            "alt": "≈ 5,1 млн сум",
+            "notes": ["депозит $400"],
+            "usd": 400,
+            "kind": null
+        },
+        "rooms": 1,
+        "area_total": 38,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "chirchiq",
+            "name": "Чирчик"
+        },
+        "place": null,
+        "landmark": null,
+        "metro": null,
+        "center_km": null,
+        "location": {
+            "lat": 41.47012,
+            "lon": 69.58433
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100017/1.jpg?e=0&s=stub",
+                "{media}/stub/100017/2.jpg?e=0&s=stub",
+                "{media}/stub/100017/3.jpg?e=0&s=stub"
+            ],
+            "count": 4,
+            "cover": null,
+            "items": [
+                "{media}/stub/100017/1.jpg?e=0&s=stub",
+                "{media}/stub/100017/2.jpg?e=0&s=stub",
+                "{media}/stub/100017/3.jpg?e=0&s=stub",
+                "{media}/stub/100017/4.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": false,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "сегодня",
+            "at": "2026-11-14T07:30:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": null,
+            "tone": null
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": {
+            "channel": "stub_channel_c",
+            "post_id": 5018
+        },
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "1"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "38 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 0,
+            "publications": 1,
+            "channels": 1,
+            "views": null
+        },
+        "price_history": [
+            {
+                "at": "2026-11-14T07:30:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5018",
+                "text": null,
+                "kind": "published",
+                "price_usd": 400,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "source",
+            "label": "stub_channel_c",
+            "count": 1
+        },
+        "owner_label": "Хозяин",
+        "contact": {
+            "has_phone": false,
+            "contact_url": "https://t.me/stub_author_7",
+            "contact_paid": false
+        },
+        "summary": "1-комн. квартира, 38 м². Пишите в Telegram.",
+        "offers": [
+            {
+                "text": "Торг",
+                "url": "https://t.me/stub_channel_c/5018"
+            }
+        ],
+        "original": {
+            "text": "Сдаётся 1-комн. квартира, 38 м². Пишите в личные сообщения.",
+            "url": "https://t.me/stub_channel_c/5018",
+            "deleted": false
+        },
+        "sources": [
+            {
+                "handle": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5018"
+            }
+        ],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent_region",
+            "phone": null
+        }
+    },
+    {
+        "number": 100019,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 60 м²",
+        "price": {
+            "display": "$711",
+            "period": "/мес",
+            "alt": "≈ 9,1 млн сум",
+            "notes": ["депозит $711"],
+            "usd": 711,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 60,
+        "floor": 7,
+        "floors_total": 12,
+        "district": {
+            "code": "chirchiq",
+            "name": "Чирчик"
+        },
+        "place": null,
+        "landmark": null,
+        "metro": null,
+        "center_km": null,
+        "location": {
+            "lat": 41.46522,
+            "lon": 69.57811
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100014/1.jpg?e=0&s=stub",
+                "{media}/stub/100014/2.jpg?e=0&s=stub",
+                "{media}/stub/100014/3.jpg?e=0&s=stub"
+            ],
+            "count": 4,
+            "cover": null,
+            "items": [
+                "{media}/stub/100014/1.jpg?e=0&s=stub",
+                "{media}/stub/100014/2.jpg?e=0&s=stub",
+                "{media}/stub/100014/3.jpg?e=0&s=stub",
+                "{media}/stub/100014/4.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": false,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T08:10:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": 0.11,
+            "tone": "check"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": {
+            "channel": "stub_channel_c",
+            "post_id": 5019
+        },
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "60 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "7 из 12"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 12,
+            "publications": 3,
+            "channels": 1,
+            "views": 0
+        },
+        "price_history": [
+            {
+                "at": "2026-11-02T09:00:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/4870",
+                "text": null,
+                "kind": "published",
+                "price_usd": 700,
+                "change_pct": null
+            },
+            {
+                "at": "2026-11-07T10:30:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/4950",
+                "text": null,
+                "kind": "price_up",
+                "price_usd": 735,
+                "change_pct": 5.0
+            },
+            {
+                "at": "2026-11-13T08:10:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5019",
+                "text": null,
+                "kind": "price_down",
+                "price_usd": 711,
+                "change_pct": -3.3
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "source",
+            "label": "stub_channel_c",
+            "count": 1
+        },
+        "owner_label": "Хозяин",
+        "contact": {
+            "has_phone": false,
+            "contact_url": "https://t.me/stub_author_8",
+            "contact_paid": true
+        },
+        "summary": "2-комн. квартира, 60 м² в ЖК. Новый ремонт.",
+        "offers": [],
+        "original": {
+            "text": "Сдаётся 2-комн. квартира, 60 м² в ЖК. Новый ремонт, вся техника.",
+            "url": "https://t.me/stub_channel_c/5019",
+            "deleted": false
+        },
+        "sources": [
+            {
+                "handle": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5019"
+            }
+        ],
+        "comparison": {
+            "value": 640,
+            "own": 711,
+            "n": 9,
+            "metric": "month",
+            "scope": "near",
+            "rooms": 2,
+            "near_class": "jk",
+            "radius_km": 0.34,
+            "district": "Чирчик",
+            "place_value": null,
+            "note": "Цена выше похожих рядом — уточните условия",
+            "updated": "2026-11-12",
+            "has_reason": false,
+            "price_usd": 711,
+            "price_per_m2": null
+        },
+        "stub": {
+            "city": "tashkent_region",
+            "phone": null
+        }
+    },
+    {
+        "number": 100020,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 52 м²",
+        "price": {
+            "display": "$480",
+            "period": "/мес",
+            "alt": "≈ 6,1 млн сум",
+            "notes": ["депозит $480"],
+            "usd": 480,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 52,
+        "floor": 4,
+        "floors_total": 9,
+        "district": {
+            "code": "chirchiq",
+            "name": "Чирчик"
+        },
+        "place": null,
+        "landmark": null,
+        "metro": null,
+        "center_km": null,
+        "location": {
+            "lat": 41.47233,
+            "lon": 69.59012
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100013/1.jpg?e=0&s=stub",
+                "{media}/stub/100013/2.jpg?e=0&s=stub",
+                "{media}/stub/100013/3.jpg?e=0&s=stub"
+            ],
+            "count": 4,
+            "cover": null,
+            "items": [
+                "{media}/stub/100013/1.jpg?e=0&s=stub",
+                "{media}/stub/100013/2.jpg?e=0&s=stub",
+                "{media}/stub/100013/3.jpg?e=0&s=stub",
+                "{media}/stub/100013/4.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": false,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T08:10:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.14,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": {
+            "channel": "stub_channel_c",
+            "post_id": 5020
+        },
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "52 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "4 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 3,
+            "publications": 2,
+            "channels": 2,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-10T07:00:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/4990",
+                "text": null,
+                "kind": "published",
+                "price_usd": 500,
+                "change_pct": null
+            },
+            {
+                "at": "2026-11-13T08:10:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5020",
+                "text": null,
+                "kind": "price_down",
+                "price_usd": 480,
+                "change_pct": -4.0
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "source",
+            "label": "stub_channel_c",
+            "count": 1
+        },
+        "owner_label": "Хозяин",
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false
+        },
+        "summary": "2-комн. квартира, 52 м². Рядом парк.",
+        "offers": [],
+        "original": {
+            "text": "Сдаётся 2-комн. квартира, 52 м². Рядом парк и школа.",
+            "url": "https://t.me/stub_channel_c/5020",
+            "deleted": false
+        },
+        "sources": [
+            {
+                "handle": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5020"
+            }
+        ],
+        "comparison": {
+            "value": 560,
+            "own": 480,
+            "n": 31,
+            "metric": "month",
+            "scope": "city",
+            "rooms": 2,
+            "near_class": null,
+            "radius_km": null,
+            "district": "Чирчик",
+            "place_value": null,
+            "note": null,
+            "updated": "2026-11-12",
+            "has_reason": false,
+            "price_usd": 480,
+            "price_per_m2": null
+        },
+        "stub": {
+            "city": "tashkent_region",
+            "phone": null
+        }
+    },
+    {
+        "number": 100021,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 56 м²",
+        "price": {
+            "display": "$550",
+            "period": "/мес",
+            "alt": "≈ 7,0 млн сум",
+            "notes": ["депозит $550"],
+            "usd": 550,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 56,
+        "floor": 5,
+        "floors_total": 9,
+        "district": {
+            "code": "chirchiq",
+            "name": "Чирчик"
+        },
+        "place": null,
+        "landmark": null,
+        "metro": null,
+        "center_km": null,
+        "location": {
+            "lat": 41.46310,
+            "lon": 69.58640
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100002/1.jpg?e=0&s=stub",
+                "{media}/stub/100002/2.jpg?e=0&s=stub",
+                "{media}/stub/100002/3.jpg?e=0&s=stub"
+            ],
+            "count": 4,
+            "cover": null,
+            "items": [
+                "{media}/stub/100002/1.jpg?e=0&s=stub",
+                "{media}/stub/100002/2.jpg?e=0&s=stub",
+                "{media}/stub/100002/3.jpg?e=0&s=stub",
+                "{media}/stub/100002/4.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": true,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": false,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T08:10:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": null,
+            "tone": null
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": {
+            "channel": "stub_channel_c",
+            "post_id": 5021
+        },
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "56 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "5 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 3,
+            "publications": 2,
+            "channels": 2,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-10T07:00:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/4995",
+                "text": null,
+                "kind": "published",
+                "price_usd": 590,
+                "change_pct": null
+            },
+            {
+                "at": "2026-11-13T08:10:00+00:00",
+                "channel": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5021",
+                "text": null,
+                "kind": "price_down",
+                "price_usd": 550,
+                "change_pct": -6.8
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "+998 ** *** ** 21",
+            "count": 24
+        },
+        "owner_label": "Хозяин",
+        "contact": {
+            "has_phone": true,
+            "contact_url": "https://t.me/stub_author_9",
+            "contact_paid": false
+        },
+        "summary": "Квартира с видео. Тел. +998 00 000 00 21",
+        "offers": [
+            {
+                "text": "Торг",
+                "url": null
+            }
+        ],
+        "original": {
+            "text": "Сдаётся квартира. Звоните: +998 00 000 00 21, запасной: +998 00 000 00 99",
+            "url": "https://t.me/stub_channel_c/5021",
+            "deleted": true
+        },
+        "sources": [
+            {
+                "handle": "stub_channel_c",
+                "url": "https://t.me/stub_channel_c/5021"
+            }
+        ],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent_region",
+            "phone": "+998000000021"
         }
     }
 ]

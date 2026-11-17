@@ -20,9 +20,15 @@ it('gives the author\'s number with a call link', function (): void {
         ->and(strtotime($response->json('data.expires_at')))->toBeGreaterThanOrEqual(time() + 9 * 60);
 });
 
+it('gives the own number of a listing whose post is deleted (WP-26)', function (): void {
+    $this->postJson('/api/v1/listings/100021/contact')->assertOk()
+        ->assertJsonPath('data.phone', '+998000000021')
+        ->assertJsonPath('data.phone_display', '+998 00 000-00-21');
+});
+
 it('answers contact_unavailable without a phone or past the limit', function (int $number, array $headers): void {
     $this->postJson("/api/v1/listings/{$number}/contact", [], $headers)->assertStatus(404)->assertJsonPath('code', 'contact_unavailable');
-})->with([[100015, []], [100001, ['X-Stub-Scenario' => 'contact_unavailable']]]);
+})->with([[100015, []], [100018, []], [100019, []], [100020, []], [100001, ['X-Stub-Scenario' => 'contact_unavailable']]]);
 
 it('translates the original text into the request locale, masked', function (): void {
     $response = $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertOk();
