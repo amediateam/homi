@@ -54,5 +54,6 @@ export default function MapViewGL({
   const index = useClusterIndex(clustered);
   useClusterMarkers(handle, { index, spread, selection, onSelect });
 
-  return <div ref={container} data-map-view="gl" className="absolute inset-0" />;
+  // Sized by its fixed parent: MapLibre's CSS gives the container `position: relative`, so insets would not size it.
+  return <div ref={container} data-map-view="gl" className="size-full" />;
 }

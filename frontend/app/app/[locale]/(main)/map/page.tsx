@@ -8,7 +8,8 @@ import { MapLoading, MapScreen } from "@/features/map/MapScreen";
  */
 export default function MapPage() {
   return (
-    <div data-route="map">
+    // `contents`: the screen is fixed to the viewport, so the marker has no box of its own.
+    <div data-route="map" className="contents">
       <Suspense fallback={<MapLoading />}>
         <MapScreen />
       </Suspense>
