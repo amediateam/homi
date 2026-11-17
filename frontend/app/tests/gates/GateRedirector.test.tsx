@@ -31,6 +31,7 @@ vi.mock("@/lib/deeplinks/launch", () => ({
   launchPending: () => state.launchPending,
   setLaunchGate: state.setLaunchGate,
   releaseLaunchGate: state.releaseLaunchGate,
+  useLaunchGate: () => 0,
 }));
 vi.mock("@/lib/navigation/history", () => ({ resetDepth: state.resetDepth }));
 vi.mock("@/features/gates/useBootRetry", () => ({ useBootRetry: () => undefined }));

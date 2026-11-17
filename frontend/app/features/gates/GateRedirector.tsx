@@ -5,7 +5,7 @@ import { useLocale } from "next-intl";
 import { useEffect, useRef } from "react";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { launchPending, releaseLaunchGate, setLaunchGate } from "@/lib/deeplinks/launch";
+import { launchPending, releaseLaunchGate, setLaunchGate, useLaunchGate } from "@/lib/deeplinks/launch";
 import { resetDepth } from "@/lib/navigation/history";
 import { matchRoute } from "@/lib/navigation/routes";
 import { useReference } from "@/lib/reference/useReference";
@@ -27,7 +27,8 @@ import { useBootRetry } from "./useBootRetry";
  * Entering a gate from the app remembers the address with its query (`gateState.returnTo`, D-S-7); row 7 returns to
  * it. The launch redirect of WP-21 waits while the language gate is pending or a gate page is shown (`setLaunchGate`)
  * and is released once the address is back in the app, because it pushes over the address it finds; it is mounted
- * after this component, so a decision here reads `launchPending()` before the redirect consumes the launch. Like the
+ * after this component, so a decision here reads `launchPending()` before the redirect consumes the launch. A dropped
+ * push never changes the address; `useLaunchGate` re-runs this decision when that launch is forgotten. Like the
  * locale guard it waits until the launch is prepared: the fragment scrub would undo a navigation made before. Runs
  * the boot retry (`useBootRetry`), whose single instance this is. Reads the search parameters, so it renders inside
  * `<Suspense>`.
@@ -39,6 +40,7 @@ export function GateRedirector(): null {
   const query = useSearchParams()?.toString() ?? "";
   const citiesCount = useReference().cities.length;
   const router = useRouter();
+  const launchVersion = useLaunchGate();
   const issued = useRef<string | null>(null);
 
   useBootRetry();
@@ -95,7 +97,7 @@ export function GateRedirector(): null {
     }
     router.replace(decision.href, { locale: decision.locale });
     resetDepth(decision.href);
-  }, [prepared, status, me, reason, locale, pathname, query, citiesCount, router]);
+  }, [prepared, status, me, reason, locale, pathname, query, citiesCount, router, launchVersion]);
 
   return null;
 }
