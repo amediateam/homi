@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Photo viewer (SCR-020); WP-26 replaces the placeholder. */
+import { PhotoViewerRoute } from "@/features/listing/viewer/PhotoViewerRoute";
+
+/** Photo viewer (SCR-020) over the listing; the index `i` is read on the client, so the page waits in `<Suspense>`. */
 export default function Page() {
-  return <RoutePlaceholder name="listing/photos" />;
+  return (
+    <Suspense fallback={null}>
+      <PhotoViewerRoute />
+    </Suspense>
+  );
 }

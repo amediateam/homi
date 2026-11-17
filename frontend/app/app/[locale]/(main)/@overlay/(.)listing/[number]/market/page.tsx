@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Market explanation «Откуда эта цифра» (SCR-022); WP-26 replaces the placeholder. */
+import { MarketSheetRoute } from "@/features/listing/market/MarketSheetRoute";
+
+/** Market explanation «Откуда эта цифра» (SCR-022), a sheet over the listing. */
 export default function Page() {
-  return <RoutePlaceholder name="listing/market" />;
+  return (
+    <Suspense fallback={null}>
+      <MarketSheetRoute />
+    </Suspense>
+  );
 }
