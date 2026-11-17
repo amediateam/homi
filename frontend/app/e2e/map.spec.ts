@@ -129,7 +129,8 @@ async function openMap(page: Page, query = "", options: Parameters<typeof launch
 
 /** Waits until the stub answer is drawn: four stacks of eleven and no status pill. */
 async function stacksDrawn(page: Page): Promise<void> {
-  await expect(stacks(page)).toHaveCount(STACKS);
+  // The first map of a page loads the library and starts its worker: slow on a loaded machine.
+  await expect(stacks(page)).toHaveCount(STACKS, { timeout: 15_000 });
   await expect(visible(page, `[data-marker="stack"][data-count="${STACK_SIZE}"]`)).toHaveCount(STACKS);
   await expect(pill(page)).toHaveCount(0);
 }
@@ -556,13 +557,15 @@ test.describe("map (cookie mode)", () => {
     expect(before?.layers).not.toContain("me-dot");
 
     await locateButton(page).click();
-    await expect.poll(async () => {
-      const after = await camera(page);
-      return after !== null && Math.abs(after.lat - 41.3) < 1e-4 && Math.abs(after.lon - 69.25) < 1e-4;
-    }).toBe(true);
+    // Until the fly has ended: zoom 15 on the Leaflet scale is 14 on MapLibre's, reached at the end of the flight
+    // (the centre is within the tolerance a little earlier).
+    await expect
+      .poll(async () => {
+        const after = await camera(page);
+        return after !== null && Math.abs(after.lat - 41.3) < 1e-4 && Math.abs(after.lon - 69.25) < 1e-4 && after.zoom >= 14;
+      })
+      .toBe(true);
     const after = await camera(page);
-    // Zoom 15 on the Leaflet scale is 14 on MapLibre's.
-    expect(after?.zoom).toBeGreaterThanOrEqual(14);
     expect(after?.layers).toEqual(expect.arrayContaining(["me-accuracy", "me-dot"]));
     await expect(locateButton(page)).toHaveAttribute("aria-busy", "false");
 
