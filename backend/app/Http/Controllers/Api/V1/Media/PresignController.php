@@ -11,11 +11,13 @@ use App\Http\Resources\Api\V1\MediaFileResource;
 use App\Jobs\Media\GenerateImageVariantsJob;
 use App\Models\MediaFile;
 use App\Services\Media\HashedUploader;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\AwsS3V3Adapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use League\Flysystem\UnableToRetrieveMetadata;
 
 /**
  * Direct-to-storage uploads (master prompt §7.3): the client PUTs the bytes to a presigned
@@ -69,12 +71,7 @@ class PresignController extends ApiController
         }
 
         $tmp = Storage::disk((string) config('media.disks.tmp'));
-        $bytes = $tmp->get($key);
-
-        if ($bytes === null) {
-            throw MediaException::uploadNotFound($key);
-        }
-
+        $bytes = $this->bytesWithinLimit($tmp, $key);
         $visibility = $request->visibility();
         $stored = $uploader->storeBytes($bytes, $visibility);
         $media = MediaFile::recordFor($actor, $stored, $visibility);
@@ -85,6 +82,45 @@ class PresignController extends ApiController
         }
 
         return $this->success(new MediaFileResource($media), status: 201);
+    }
+
+    /**
+     * Read a tmp object only after its size is within media.max_bytes.
+     *
+     * The presigned URL can still replace the object between the size check and the
+     * read; the length of the bytes is checked again and that replacement is deleted.
+     * That second check does not bound the memory of the replacement. A failed delete
+     * is ignored, as on the success path: the tmp disk swallows storage errors.
+     */
+    private function bytesWithinLimit(Filesystem $disk, string $key): string
+    {
+        $maxBytes = (int) config('media.max_bytes');
+
+        try {
+            $size = $disk->size($key);
+        } catch (UnableToRetrieveMetadata) {
+            throw MediaException::uploadNotFound($key);
+        }
+
+        if ($size > $maxBytes) {
+            $disk->delete($key);
+
+            throw MediaException::tooLarge($size, $maxBytes);
+        }
+
+        $bytes = $disk->get($key);
+
+        if ($bytes === null) {
+            throw MediaException::uploadNotFound($key);
+        }
+
+        if (strlen($bytes) > $maxBytes) {
+            $disk->delete($key);
+
+            throw MediaException::tooLarge(strlen($bytes), $maxBytes);
+        }
+
+        return $bytes;
     }
 
     private function uploadPrefix(Model $actor): string

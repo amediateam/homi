@@ -185,3 +185,81 @@ it('refuses to register a key that belongs to another user', function (): void {
         ->assertForbidden()
         ->assertJsonPath('success', false);
 });
+
+it('refuses an oversized presigned upload before reading it', function (): void {
+    config(['media.max_bytes' => 1024]);
+    $user = uploaderUser();
+    $key = "uploads/user/{$user->id}/01JTOOBIGULID.jpg";
+    $disk = Storage::disk('tmp');
+    $disk->put($key, str_repeat('x', 1025));
+
+    $tmp = Mockery::mock($disk)->makePartial();
+    $tmp->shouldReceive('get')->andThrow(new RuntimeException('register read the tmp object before rejecting its size'));
+    Storage::set('tmp', $tmp);
+
+    $this->postJson('/api/v1/media/register', ['key' => $key, 'visibility' => 'public'])
+        ->assertUnprocessable()
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('code', 'too_large')
+        ->assertJsonPath('reason', 'too_large')
+        ->assertJsonPath('message', 'The file is 1025 bytes; the limit is 1024 bytes.')
+        ->assertJsonPath('errors.file.0', 'The file is 1025 bytes; the limit is 1024 bytes.');
+
+    $disk->assertMissing($key);
+    expect(MediaFile::query()->count())->toBe(0)
+        ->and(Storage::disk('public')->allFiles())->toBe([]);
+    Queue::assertNothingPushed();
+});
+
+it('registers a presigned upload that is exactly the size limit', function (): void {
+    $user = uploaderUser();
+    $bytes = UploadedFile::fake()->image('edge.jpg', 40, 30)->getContent();
+    config(['media.max_bytes' => strlen($bytes)]);
+    $key = "uploads/user/{$user->id}/01JEXACTULID.jpg";
+    Storage::disk('tmp')->put($key, $bytes);
+
+    $this->postJson('/api/v1/media/register', ['key' => $key, 'visibility' => 'public'])
+        ->assertCreated()
+        ->assertJsonPath('data.visibility', 'public');
+
+    expect(MediaFile::query()->count())->toBe(1);
+    Storage::disk('public')->assertExists(MediaFile::query()->sole()->key);
+    Storage::disk('tmp')->assertMissing($key);
+});
+
+it('answers a missing presigned upload as not found', function (): void {
+    $user = uploaderUser();
+    $key = "uploads/user/{$user->id}/01JMISSINGULID.jpg";
+
+    $this->postJson('/api/v1/media/register', ['key' => $key])
+        ->assertNotFound()
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('code', 'upload_not_found')
+        ->assertJsonPath('reason', 'upload_not_found')
+        ->assertJsonPath('message', "No uploaded object found at \"{$key}\" (expired or never uploaded).");
+
+    expect(MediaFile::query()->count())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
+it('refuses a presigned upload replaced with a larger object before storing it', function (): void {
+    config(['media.max_bytes' => 1024]);
+    $user = uploaderUser();
+    $key = "uploads/user/{$user->id}/01JREPLACEDULID.jpg";
+    $disk = Storage::disk('tmp');
+    $disk->put($key, str_repeat('x', 1025));
+
+    $tmp = Mockery::mock($disk)->makePartial();
+    $tmp->shouldReceive('size')->andReturn(1024);
+    Storage::set('tmp', $tmp);
+
+    $this->postJson('/api/v1/media/register', ['key' => $key])
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'too_large')
+        ->assertJsonPath('message', 'The file is 1025 bytes; the limit is 1024 bytes.');
+
+    $disk->assertMissing($key);
+    expect(MediaFile::query()->count())->toBe(0)
+        ->and(Storage::disk('public')->allFiles())->toBe([]);
+    Queue::assertNothingPushed();
+});
