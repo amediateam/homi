@@ -911,3 +911,23 @@ packages, exit 0); and a read-only audit of the WP-25 … WP-33 specifications a
 for this PR were applied (rule 6) and whose findings for later packages are listed in the WP-24 Handoff. Next
 for Grok, on «да, подготовь промты для 1–3 и 4»: KI-38, KI-39, KI-40 and KI-28, one PR each. The WP-24 PR is
 #71.
+
+Merged on 2026-11-17 as #71 (`780aea9`); its follow-up docs PR #76 (`157790d`). Grok's four PRs were reviewed
+here and merged on the developer's word, one «сливай #N» each:
+- #72 (KI-38, `265f475`);
+- #73 (KI-28, `4041d4c`);
+- #74 (KI-39, `c390374`);
+- #75 (KI-40, `11c75b2`).
+
+The review merged them in pairs onto `780aea9`:
+- **#72 and #73.** `php artisan test --compact` → 725 passed, 4 skipped. Pint and `composer types:check` passed.
+- **#74 and #75.** The app's Vitest project → 102 files, 1407 tests passed. ESLint on the changed files and
+  `next typegen` + `tsc --noEmit` were clean.
+- **The fix reverted (probe).** With each fix reverted, its new tests fail: #72 1, #73 2, #74 3 (plus two later
+  tests on the stuck promise), #75 1.
+- **Security review.** It approved #72 (only the error shape changes) and approved #73 with follow-ups. KI-28
+  stays open for the tmp bucket's size bound and the replace race between the size check and the read (a presigned
+  POST with `content-length-range` closes both).
+
+The 12 s bound of #75 was raised before its merge: a slower listing push on a first launch meets the city gate.
+It is recorded in KI-40. KI-38, KI-39 and KI-40 are resolved.
