@@ -52,3 +52,13 @@ it('needs a session and the app:read ability', function (): void {
     actAsAppUser(['media:write']);
     $this->getJson('/api/v1/me')->assertForbidden()->assertJsonPath('code', 'forbidden');
 });
+
+it('answers 401 when the caller omits Accept and when it sends it', function (): void {
+    $this->get('/api/v1/me')
+        ->assertUnauthorized()
+        ->assertJsonPath('code', 'unauthenticated');
+
+    $this->getJson('/api/v1/me')
+        ->assertUnauthorized()
+        ->assertJsonPath('code', 'unauthenticated');
+});
