@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#83) |
 | Depends on | WP-25 |
 | Size | ≈ 3 000 changed lines without the glyph font files, L |
 | Behaviour reference | `03` §1.7–§1.9, §2 (SCR-011, SCR-013), §3.2, §3.4 ("Map", "Tile prefetch budget"), §3.6 (z-index ladder), §4 (BR-APP-062), §5 and §5b (LB-APP-008, LB-APP-017 … LB-APP-020, LB-APP-024, LB-APP-044); `05` (TMA-012, TMA-035); task files KV-FE-057, KV-FE-058, KV-FE-061, KV-FE-062, KV-FE-031. From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
