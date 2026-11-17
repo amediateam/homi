@@ -12,8 +12,8 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-17, this session: «Продолжим разработку по плану ? где мы остоновились»; «Погнали WP-25»; «сливай #79».
 
 ## State at handoff
-- `main` = `f2f58cc`: #79 (WP-25: `c41d07c` package, `37ffd27` review fixes, `1b02049` + `0315987` docs) merged on «сливай #79» after green `frontend` (run 44048799579) and `frontend-e2e` (run 44048799675, 130 passed); branch deleted. `frontend` on `main` after the merge: run 44050535246 (in progress at handoff).
-- `docs/wp-25-after-merge`: WP-25 `WAITING`, queue row, `CLAUDE.md` (current state, `@homi/ui` layout), KI-55 resolved in #79, this memory. Docs only; it waits for «сливай #N».
+- `main` = `f2f58cc`: #79 (WP-25: `c41d07c` package, `37ffd27` review fixes, `1b02049` + `0315987` docs) merged on «сливай #79» after green `frontend` (run 44048799579) and `frontend-e2e` (run 44048799675, 130 passed); branch deleted. `frontend` on `main` after the merge: run 44050535246, success.
+- `docs/wp-25-after-merge`: WP-25 `WAITING`, queue row, `CLAUDE.md` (current state, `@homi/ui` layout), KI-55 resolved in #79, this memory. Docs only, PR #80; it waits for «сливай #80».
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend` (root) → exit 0 on `37ffd27` (app 120 files / 1731 tests).
 
@@ -25,7 +25,7 @@ Written for whoever continues the **development track**. The production track's 
 - Spec corrected to the code (67 corrections by a subagent, five spot-checked here with `rg`), Handoff filled; AM-70 in phase-3 notes §W; KI-54 (low), KI-55 (resolved in #79: `AbortSignal.any` on Chrome 111–115 / Safari 16.4–17.3).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **«сливай #N»** for the PR of `docs/wp-25-after-merge`.
+1. **«сливай #80»** for the PR of `docs/wp-25-after-merge`.
 2. **#79 reviewer questions** (spec Handoff "Open for the reviewer"): the flow line on a failed request, the sort pick dropping `from=map`, «1.000.000» in сум parsing to ~79 bn USD, appliances as one list, the deal heading, the nested drag haptic.
 3. Earlier open items: #71's area repeated on cards (contract title vs `factsLine`); KI-44 (locale switch drops `fullscreen` and dark) as a small PR; KI-32 limit; KI-28's rest (presigned POST `content-length-range`); #75's 12 s bound.
 4. The first developer's list (#63/#64 review, ADR-0016 … 0020, #30, #37, Dependabot #5, #57–#60) and the production track's deploys of WP-03 … WP-24, plus the checks inside Telegram on staging.
