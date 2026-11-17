@@ -22,6 +22,10 @@ const state = vi.hoisted(() => ({
   replace: vi.fn(),
   onForbidden: vi.fn(),
   scrollToTop: vi.fn(),
+  /** The redirect's navigation in order: `backBy <steps>` and `replace <href>`. */
+  order: [] as string[],
+  /** Lands the `popstate` of each `backBy`, with the steps it took (all it was asked for by default). */
+  backs: [] as ((taken?: number) => void)[],
 }));
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: (path: string, options: BffOptions = {}) =>
@@ -31,7 +35,23 @@ vi.mock("@/lib/api/browser", () => ({
 }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: state.status }) }));
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: (...args: unknown[]) => state.onForbidden(...args), reauthenticate: vi.fn() }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: state.replace }) }));
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: (href: string) => {
+      state.order.push(`replace ${href}`);
+      state.replace(href);
+    },
+  }),
+}));
+vi.mock("@/lib/navigation/history", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/navigation/history")>()),
+  backBy: (steps: number) =>
+    new Promise<number>((resolve) => {
+      state.order.push(`backBy ${steps}`);
+      state.backs.push((taken = steps) => resolve(taken));
+    }),
+}));
 
 import { ListingLayerContext, useListing, type UseListingOptions, useListingRecord } from "@/features/listing/useListing";
 import { setPreview, resetPreviews } from "@/lib/data/previewCache";
@@ -66,10 +86,14 @@ beforeEach(() => {
   state.replace.mockReset();
   state.onForbidden.mockReset();
   state.scrollToTop.mockReset();
+  state.order = [];
+  state.backs = [];
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  window.history.replaceState(null, "", "/");
   resetResources();
   resetPreviews();
   resetSessionMaps();
@@ -185,6 +209,45 @@ describe("useListing (WP-26, SCR-018, SCR-019)", () => {
     expect(state.sent).toHaveLength(1);
   });
 
+  describe("the redirect from a child of the alias (the viewer or the sheet opened over its preview)", () => {
+    async function redirectAt(address: string) {
+      window.history.replaceState(null, "", address);
+      listing(100016, { initial: null });
+      await act(async () => state.sent[0].resolve(ok(detailsOf({ number: 100001 }))));
+    }
+
+    it("the photos: Back over the viewer first, then one replace with the surviving listing", async () => {
+      await redirectAt("/ru/listing/100016/photos?i=0");
+      expect(state.order).toEqual(["backBy 1"]);
+
+      await act(async () => state.backs[0]());
+
+      expect(state.order).toEqual(["backBy 1", "replace /listing/100001"]);
+    });
+
+    it("the actions sheet on its report step: Back over the step and the sheet", async () => {
+      await redirectAt("/ru/listing/100016/actions?step=report");
+
+      await act(async () => state.backs[0]());
+
+      expect(state.order).toEqual(["backBy 2", "replace /listing/100001"]);
+    });
+
+    it("the alias's own address: no Back, the replace at once", async () => {
+      await redirectAt("/ru/listing/100016");
+
+      expect(state.order).toEqual(["replace /listing/100001"]);
+    });
+
+    it("at depth 0 (a direct load of the alias's photos) Back takes nothing and the replace lands on the bare listing", async () => {
+      await redirectAt("/ru/listing/100016/photos?i=2");
+
+      await act(async () => state.backs[0](0));
+
+      expect(state.order).toEqual(["backBy 1", "replace /listing/100001"]);
+    });
+  });
+
   it("an answer for a number already left is dropped", async () => {
     const { result, rerender } = listing(100001, { initial: null });
 
@@ -269,6 +332,43 @@ describe("useListing (WP-26, SCR-018, SCR-019)", () => {
 
       setPreview(100001, previewOf());
       expect(listing(100001, {}).result.current.state).toBe("preview");
+    });
+  });
+
+  describe("a failed background refetch of a stale entry keeps the details on screen", () => {
+    async function staleOpening() {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const first = listing(100001, { initial: null });
+      await act(async () => state.sent[0].resolve(ok()));
+      expect(first.result.current.state).toBe("loaded");
+      first.unmount();
+      vi.setSystemTime(Date.now() + 31_000);
+    }
+
+    const resourceOf = () => renderHook(() => useResource<ListingRecord>("listing:100001", vi.fn(), { enabled: false })).result.current;
+
+    it("header mode: the details while the stale entry is read again, and after that read fails", async () => {
+      await staleOpening();
+
+      const { result } = listing(100001, { initial: null });
+      expect(result.current.state).toBe("loaded");
+      expect(state.sent).toHaveLength(2);
+      await act(async () => state.sent[1].resolve(failure("offline", 0)));
+
+      expect(resourceOf()).toMatchObject({ status: "error", error: { error: "offline" }, data: { listing: { number: 100001 } } });
+      expect(result.current).toMatchObject({ state: "loaded", details: { number: 100001 } });
+    });
+
+    it("cookie mode: the kept entry is not seeded again, its stale read still runs, and its failure keeps the details", async () => {
+      await staleOpening();
+
+      const { result } = listing(100001, { initial: initialOk() });
+      expect(result.current.state).toBe("loaded");
+      expect(state.sent).toHaveLength(2);
+      await act(async () => state.sent[1].resolve(failure("offline", 0)));
+
+      expect(resourceOf()).toMatchObject({ status: "error", error: { error: "offline" }, data: { listing: { number: 100001 } } });
+      expect(result.current).toMatchObject({ state: "loaded", details: { number: 100001 } });
     });
   });
 

@@ -12,6 +12,7 @@ import type { ApiFailure } from "@/lib/api/errors";
 
 const state = vi.hoisted(() => ({
   pathname: "/listing/100001",
+  depth: 1,
   back: vi.fn(),
   push: vi.fn(),
 }));
@@ -24,6 +25,11 @@ vi.mock("@/lib/actions/listing", () => ({ getContact: vi.fn(), translate: vi.fn(
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
 vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname, useRouter: () => ({ push: state.push, replace: vi.fn() }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => `/ru${state.pathname}` }));
+/** The app's depth: 1 (the feed pushed the listing) unless a case loads the listing directly. */
+vi.mock("@/lib/navigation/history", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/navigation/history")>()),
+  useDepth: () => state.depth,
+}));
 
 import { resetPendingFavorites } from "@/features/feed/FavButton";
 import { ListingLayer, type ListingLayerProps } from "@/features/listing/ListingLayer";
@@ -52,13 +58,13 @@ function Streaming(): ReactNode {
   return use(pending);
 }
 
-/** A child route that reads the layer, in place and through a portal. */
-function Child() {
+/** A child route that reads the layer, in place and through a portal; `label` tells the copies apart. */
+function Child({ label = "" }: { label?: string }) {
   const number = useListingNumber();
   return (
     <>
-      <span data-child="">{String(number)}</span>
-      {createPortal(<span data-portal="">{String(number)}</span>, document.body)}
+      <span data-child={label}>{String(number)}</span>
+      {createPortal(<span data-portal={label}>{String(number)}</span>, document.body)}
     </>
   );
 }
@@ -123,6 +129,7 @@ let fake: FakeTelegram | null = null;
 
 beforeEach(() => {
   state.pathname = "/listing/100001";
+  state.depth = 1;
   state.back.mockReset();
   state.push.mockReset();
   fake = fakeTelegram({ version: "8.0" });
@@ -238,6 +245,53 @@ describe("ListingLayer (WP-26, D-20)", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  describe("a standalone copy under an overlay copy (a direct load, then an intercepted soft navigation)", () => {
+    const standaloneChild = () => document.querySelector('[data-child="standalone"]');
+    const standalonePortal = () => document.querySelector('[data-portal="standalone"]');
+
+    it("once an overlay copy has shown, the standalone copy drops its child routes for good, portals included", async () => {
+      state.depth = 0;
+      state.pathname = "/listing/100001/actions";
+      const standalone = await mount({ presentation: "standalone", children: <Child label="standalone" /> });
+      expect(standaloneChild()).not.toBeNull();
+      expect(standalonePortal()).not.toBeNull();
+
+      // The depth-0 close replaces the address with the listing; Next intercepts it into @overlay.
+      state.pathname = "/listing/100001";
+      const copy = await mount();
+
+      expect(standaloneChild()).toBeNull();
+      expect(standalonePortal()).toBeNull();
+      expect(document.querySelector('[data-presentation="standalone"] [data-listing-state="loaded"]')).not.toBeNull();
+
+      // A later child of the overlay copy does not revive it, nor does the copy leaving.
+      state.pathname = "/listing/100001/photos";
+      await copy.rerender({ children: <Child label="overlay" /> });
+      await standalone.rerender({ presentation: "standalone", children: <Child label="standalone" /> });
+      expect(document.querySelector('[data-portal="overlay"]')).not.toBeNull();
+      expect(standaloneChild()).toBeNull();
+      expect(standalonePortal()).toBeNull();
+
+      await copy.rerender({ mode: "hidden" });
+      copy.unmount();
+      await standalone.rerender({ presentation: "standalone", children: <Child label="standalone" /> });
+      expect(standaloneChild()).toBeNull();
+      expect(standalonePortal()).toBeNull();
+    });
+
+    it("without an overlay copy the standalone copy keeps its child routes, so the ?step pushes still work", async () => {
+      state.depth = 0;
+      state.pathname = "/listing/100001/actions";
+      const standalone = await mount({ presentation: "standalone", children: <Child label="standalone" /> });
+
+      await standalone.rerender({ presentation: "standalone", children: <Child label="standalone" /> });
+      await standalone.rerender({ presentation: "standalone", children: <Child label="standalone" /> });
+
+      expect(standaloneChild()?.textContent).toBe("100001");
+      expect(standalonePortal()?.textContent).toBe("100001");
+    });
+  });
+
   describe("swipe back", () => {
     beforeEach(() => {
       vi.useFakeTimers();
@@ -286,6 +340,17 @@ describe("ListingLayer (WP-26, D-20)", () => {
     it("off while a child route is open over the listing", async () => {
       state.pathname = "/listing/100001/photos";
       await mount();
+
+      swipe();
+
+      expect(state.back).not.toHaveBeenCalled();
+    });
+
+    it("off at the app's depth 0, also on an overlay copy with data (only a directly loaded copy lies below)", async () => {
+      state.depth = 0;
+      await mount();
+      expect(overlay().getAttribute("data-presentation")).toBe("layer");
+      expect(layer().querySelector('[data-listing-state="loaded"]')).not.toBeNull();
 
       swipe();
 

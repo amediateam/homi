@@ -28,6 +28,7 @@ import { previewOf } from "../helpers/listing";
 
 const PHOTOS = detailsOf().photos.items;
 const WIDTH = 390;
+const HEIGHT = 800;
 
 let fake: FakeTelegram | null = null;
 const haptics = () =>
@@ -37,6 +38,19 @@ beforeEach(() => {
   state.back.mockReset();
   fake = fakeTelegram({ version: "8.0" });
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(WIDTH);
+  // Every element is a 390 × 800 slide at the page's origin, so a tap's offset from the centre (195, 400) is known.
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(HEIGHT);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    left: 0,
+    top: 0,
+    width: WIDTH,
+    height: HEIGHT,
+    right: WIDTH,
+    bottom: HEIGHT,
+    x: 0,
+    y: 0,
+    toJSON() {},
+  } as DOMRect);
   window.history.replaceState(null, "", "/ru/listing/100001/photos?i=2");
   resetDepth("/ru/listing/100001/photos?i=2");
 });
@@ -100,6 +114,8 @@ function drag(target: Element, dx: number, dy: number, { release = true }: { rel
 }
 
 const scaleOf = (element: HTMLElement) => Number(/scale\(([\d.]+)\)/.exec(element.style.transform)?.[1] ?? "1");
+/** The horizontal offset of `translate(x[, y])`. */
+const offsetX = (element: HTMLElement) => Number(/translate\((-?[\d.]+)px/.exec(element.style.transform)?.[1] ?? "0");
 /** The vertical offset of `translate(x[, y])`; jsdom writes `translate(0px, 0px)` back as `translate(0px)`. */
 const offsetY = (element: HTMLElement) => Number(/translate\([^,)]+(?:,\s*(-?[\d.]+)px)?\)/.exec(element.style.transform)?.[1] ?? "0");
 const dragVar = () => dialog()?.style.getPropertyValue("--drag") ?? "";
@@ -248,6 +264,34 @@ describe("PhotoViewer (WP-26, SCR-020)", () => {
     tap(box(2));
     expect(scaleOf(layer(2))).toBe(1);
     expect(strip().className).toContain("overflow-x-auto");
+  });
+
+  it("a double tap zooms around the tapped point, not the centre of the slide", () => {
+    render(intl(viewer()));
+
+    // 100 px right of the centre: that point stays under the finger, 100 − 100 × 2.5 = −150.
+    tap(box(2), { x: 295, y: 400 });
+    tap(box(2), { x: 295, y: 400 });
+    expect(scaleOf(layer(2))).toBe(2.5);
+    expect(offsetX(layer(2))).toBe(-150);
+    expect(offsetY(layer(2))).toBe(0);
+  });
+
+  it("a zoomed photo pans with the finger only as far as its edges", () => {
+    render(intl(viewer()));
+    tap(box(2), { x: 195, y: 400 });
+    tap(box(2), { x: 195, y: 400 });
+    expect(offsetX(layer(2))).toBe(0);
+
+    // At 2.5× the photo overhangs the slide by 390 × 1.5 / 2 sideways and 800 × 1.5 / 2 up and down.
+    drag(box(2), 1000, 0);
+    expect(offsetX(layer(2))).toBe(292.5);
+    expect(offsetY(layer(2))).toBe(0);
+
+    drag(box(2), 0, 1000);
+    expect(offsetX(layer(2))).toBe(292.5);
+    expect(offsetY(layer(2))).toBe(600);
+    expect(scaleOf(layer(2))).toBe(2.5);
   });
 
   it("two taps 300 ms apart, or 30 px apart, are not a double tap; a swipe down while zoomed does not close", () => {
@@ -426,6 +470,53 @@ describe("ZoomableImage (WP-26)", () => {
 
     drag(only(), 0, 55);
     expect(onDrag.mock.calls.map(([progress]) => progress)).toEqual([12 / 275, 55 / 275, 0]);
+  });
+
+  it("zoomed, any second tap within 300 ms zooms back to 1×, however far from the first", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      render(image());
+      tap(only());
+      tap(only());
+      expect(scaleOf(onlyLayer())).toBe(2.5);
+
+      tap(only(), { x: 100, y: 200 });
+      vi.advanceTimersByTime(299);
+      tap(only(), { x: 350, y: 200 });
+      expect(scaleOf(onlyLayer())).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the drag direction is decided once: a close drag that swings sideways still follows the finger and springs back", () => {
+    const onDrag = vi.fn();
+    const onClose = vi.fn();
+    render(image({ onDrag, onClose }));
+
+    touch(only(), "touchstart", [{ x: 200, y: 300 }]);
+    touch(only(), "touchmove", [{ x: 200, y: 312 }]);
+    touch(only(), "touchmove", [{ x: 380, y: 320 }]);
+    expect(offsetY(onlyLayer())).toBe(20);
+
+    touch(only(), "touchend", [], [{ x: 380, y: 320 }]);
+    expect(onDrag.mock.calls.map(([progress]) => progress)).toEqual([12 / 275, 20 / 275, 0]);
+    expect(offsetY(onlyLayer())).toBe(0);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("the drag direction is decided once: a sideways drag that turns down is never a close", () => {
+    const onDrag = vi.fn();
+    const onClose = vi.fn();
+    render(image({ onDrag, onClose }));
+
+    touch(only(), "touchstart", [{ x: 200, y: 300 }]);
+    touch(only(), "touchmove", [{ x: 212, y: 300 }]);
+    touch(only(), "touchmove", [{ x: 212, y: 500 }]);
+    touch(only(), "touchend", [], [{ x: 212, y: 500 }]);
+    expect(onDrag).not.toHaveBeenCalled();
+    expect(offsetY(onlyLayer())).toBe(0);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("settles instantly under reduced motion", () => {

@@ -224,6 +224,7 @@ describe("useShareListing (TMA-030, TMA-031)", () => {
     const prepared = deferred<ActionResult<PreparedShare>>();
     state.prepareShare.mockReturnValueOnce(prepared.promise).mockResolvedValue(PREPARED);
     const { result } = hook(100008);
+    expect(SHARE_LOCK_MS).toBe(1500);
 
     act(() => result.current.share());
     act(() => result.current.share());
@@ -231,7 +232,7 @@ describe("useShareListing (TMA-030, TMA-031)", () => {
 
     prepared.resolve(PREPARED);
     await settle();
-    await act(() => vi.advanceTimersByTimeAsync(SHARE_LOCK_MS - 1));
+    await act(() => vi.advanceTimersByTimeAsync(1499));
     act(() => result.current.share());
     expect(state.prepareShare).toHaveBeenCalledTimes(1);
     expect(recentTracked()).toHaveLength(1);

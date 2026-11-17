@@ -10,10 +10,12 @@ import { markSeen } from "@/lib/data/sessionMaps";
 import type { DataSource } from "@/lib/data/sources";
 import { seedResource, useResource } from "@/lib/data/useResource";
 import { type DevFlags, devFlags } from "@/lib/flags";
-import { routes } from "@/lib/navigation/routes";
+import { backBy, normaliseAddress } from "@/lib/navigation/history";
+import { matchRoute, routes } from "@/lib/navigation/routes";
 import { onForbidden } from "@/lib/session/bootstrap";
 import { useSession } from "@/lib/session/SessionProvider";
 
+import { stepLayersOf } from "./closeListing";
 import {
   type ListingDetails,
   type ListingInitial,
@@ -60,6 +62,16 @@ function fetchListing(number: number) {
   return (signal: AbortSignal) => bffFetch<ListingShowData>(`listings/${number}`, { signal }).then(toRecord);
 }
 
+/**
+ * The history entries open above the listing's own address when the redirect runs: a child route (photos, location,
+ * market, actions) and the actions sheet's steps over it, read from the live address.
+ */
+function entriesAboveListing(): number {
+  const route = matchRoute(normaliseAddress(window.location.pathname));
+  const steps = stepLayersOf(new URLSearchParams(window.location.search).get("step"));
+  return route.route === "listing" && route.child !== null ? 1 + steps : steps;
+}
+
 /** The error states of SCR-019; an `unauthorized` that survived the re-sign-in is the session's expired screen. */
 function errorView(error: ApiFailure, retry: () => void): ListingView {
   switch (error.error) {
@@ -80,7 +92,9 @@ function errorView(error: ApiFailure, retry: () => void): ListingView {
  * through `/bff` once the session is ready when there was none (header mode) or it was `unauthorized`; any other
  * server failure shows its state without a browser read. «Повторить» scrolls the layer to the top and always reads
  * through `/bff`, showing the preview or the skeleton meanwhile; from then on the server's failure no longer counts.
- * An answer for another number (a merged listing) seeds that number and replaces the address once; a number left
+ * An answer for another number (a merged listing) seeds that number and replaces the address once; a child route or
+ * a sheet step opened over the alias's preview is stepped back over first, so the replace takes the alias's own entry
+ * and Back reaches the page below (at depth 0 nothing is stepped over and the replace drops the child). A number left
  * before its answer came drops that answer (the resource aborts it). The resolved instance marks the number seen.
  */
 export function useListing(number: number, { initial, flags = devFlags }: UseListingOptions): ListingView {
@@ -121,7 +135,13 @@ export function useListing(number: number, { initial, flags = devFlags }: UseLis
     if (other !== null && !redirected.current) {
       redirected.current = true;
       seedResource(listingKey(other.listing.number), other);
-      router.replace(routes.listing(other.listing.number));
+      const target = routes.listing(other.listing.number);
+      const above = entriesAboveListing();
+      if (above === 0) {
+        router.replace(target);
+      } else {
+        void backBy(above).then(() => router.replace(target));
+      }
     }
   }, [other, router]);
 

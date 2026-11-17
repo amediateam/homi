@@ -119,6 +119,13 @@ describe("the context line", () => {
     expect(contextLine(details(city, {}, "sale"), ru)).toBe("Город Чирчик · за м² · 31 объявл.");
   });
 
+  it("a comparison that meets two triggers takes the first of person → near → per m² with a reason → city", () => {
+    expect(contextLine(details({ metric: "person", scope: "near", radius_km: 0.34 }), ru)).toBe("Место при подселении · район Юнусабад · 14 объявл.");
+    expect(contextLine(details({ metric: "person", scope: "city", district: "Чирчик", n: 31 }), ru)).toBe("Место при подселении · район Чирчик · 31 объявл.");
+    expect(contextLine(details({ metric: "m2", has_reason: true, scope: "near", near_class: "jk", radius_km: 0.34 }), ru)).toBe("14 ближайших 2-комн. в ЖК · до 0,3 км");
+    expect(contextLine(details({ metric: "m2", has_reason: true, scope: "city", district: "Чирчик" }), ru)).toBe("За м² · квартиры от 3 комнат · Чирчик");
+  });
+
   it("a mixed tone with a place value appends the district price", () => {
     expect(contextLine(details({ place_value: 700 }, { tone: "mixed" }), ru)).toBe("2-комн. · район Юнусабад · 14 объявл. · по району $700");
     expect(contextLine(details({ place_value: null }, { tone: "mixed" }), ru)).toBe("2-комн. · район Юнусабад · 14 объявл.");

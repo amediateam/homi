@@ -101,6 +101,12 @@ describe("isStale", () => {
     expect(isStale(contact({ expiresAt: START + 3 * MINUTE }), START + MINUTE)).toBe(true);
   });
 
+  it("a readable expiry replaces the eight minutes: a 30-minute contact is fresh until 28 minutes", () => {
+    expect(isStale(contact({ expiresAt: START + 30 * MINUTE }), START + 9 * MINUTE)).toBe(false);
+    expect(isStale(contact({ expiresAt: START + 30 * MINUTE }), START + 28 * MINUTE - 1)).toBe(false);
+    expect(isStale(contact({ expiresAt: START + 30 * MINUTE }), START + 28 * MINUTE)).toBe(true);
+  });
+
   it("without an expiry, is stale eight minutes after the receipt", () => {
     expect(CONTACT_FRESH_MS).toBe(8 * MINUTE);
     expect(isStale(contact({ expiresAt: null }), START + 8 * MINUTE - 1)).toBe(false);
@@ -177,7 +183,7 @@ describe("useContact (WP-26, DEC-52)", () => {
     expect(state.getContact).toHaveBeenCalledTimes(1);
   });
 
-  it("a contact stale by the eight minutes is fetched again on the next tap", async () => {
+  it("the stub's ten-minute contact, stale two minutes before it expires, is fetched again on the next tap", async () => {
     state.getContact.mockResolvedValueOnce(answer());
     const { result } = contactHook();
     await act(async () => {
@@ -215,6 +221,26 @@ describe("useContact (WP-26, DEC-52)", () => {
     state.getContact.mockResolvedValueOnce(answer());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
+      await result.current.reveal();
+    });
+    expect(state.getContact).toHaveBeenCalledTimes(2);
+  });
+
+  it("a contact valid for 30 minutes is not fetched again after eight; it is two minutes before its expiry", async () => {
+    state.getContact.mockResolvedValue(answer({ expires_at: new Date(START + 30 * MINUTE).toISOString() }));
+    const { result } = contactHook();
+    await act(async () => {
+      await result.current.reveal();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9 * MINUTE);
+      await result.current.reveal();
+    });
+    expect(state.getContact).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(19 * MINUTE);
       await result.current.reveal();
     });
     expect(state.getContact).toHaveBeenCalledTimes(2);
