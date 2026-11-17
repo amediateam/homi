@@ -7,7 +7,8 @@ import { useHasStubData } from "@/lib/data/sources";
 
 /**
  * The "demo data" pill (WP-20, `25` §4.4, RK-27, DEC-50): shown while an answer of the current screen came from a
- * stub. Fixed under the top inset on the trailing side, above the tab bar, never intercepting a tap.
+ * stub. Fixed under the top inset on the trailing side, above the tab bar and the listing layer (46 over 45, WP-26)
+ * but below the sheets' backdrop, never intercepting a tap.
  */
 export function DemoDataMarker() {
   const t = useTranslations("demo");
@@ -20,7 +21,7 @@ export function DemoDataMarker() {
     <div
       data-demo-marker=""
       aria-describedby={hintId}
-      className="pointer-events-none fixed top-[calc(var(--top-inset)+6px)] right-(--gutter) z-[calc(var(--z-tabbar)+1)] rounded-pill bg-fill px-2.5 py-1 text-[12px] leading-none font-semibold text-hint select-none"
+      className="pointer-events-none fixed top-[calc(var(--top-inset)+6px)] right-(--gutter) z-[calc(var(--z-listing)+1)] rounded-pill bg-fill px-2.5 py-1 text-[12px] leading-none font-semibold text-hint select-none"
     >
       {t("label")}
       <span id={hintId} hidden>

@@ -32,5 +32,20 @@
   },
   "feed": {
     "loading": "Загрузка…"
+  },
+  "listing": {
+    "showPhone": "Показать номер"
+  },
+  "market": {
+    "v3": {
+      "rooms0": "тоже студии",
+      "roomsN": "тоже {n}-комн."
+    }
+  },
+  "report": {
+    "agentHintReview": "Проверим номер — если это риелтор, отметим его"
+  },
+  "toast": {
+    "reportedAgentReview": "Спасибо, проверим"
   }
 }

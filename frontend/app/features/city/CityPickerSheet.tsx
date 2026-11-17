@@ -2,9 +2,10 @@
 
 import { BottomSheet } from "@homi/ui";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useLayoutEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 import { type RoutePresentation, RouteSheet } from "@/features/shell/RouteSheet";
+import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 import { useCitiesStats, useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
 
@@ -23,27 +24,7 @@ export interface CityPickerSheetProps {
   onClose?: () => void;
 }
 
-/**
- * `onClose` once per address: a second ×, Escape or backdrop tap before Back has landed would step back twice and
- * close the filters sheet below too. Forgotten when the layer is hidden or left, and stale once the address changes.
- */
-function useCloseOnce(onClose: (() => void) | undefined): () => void {
-  const closedAt = useRef<string | null>(null);
-  useLayoutEffect(
-    () => () => {
-      closedAt.current = null;
-    },
-    [],
-  );
-  return () => {
-    const here = window.location.pathname + window.location.search;
-    if (closedAt.current !== here) {
-      closedAt.current = here;
-      onClose?.();
-    }
-  };
-}
-
+/** `onClose` once per address (`useCloseOnce`): a second tap before Back has landed would close the filters sheet too. */
 function NestedSheet({ title, closeLabel, onClose, children }: { title: string; closeLabel: string; onClose?: () => void; children: ReactNode }) {
   const close = useCloseOnce(onClose);
   return (

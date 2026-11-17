@@ -291,6 +291,14 @@ describe("FiltersSheetRoute: «Обвести на карте»", () => {
 });
 
 describe("FiltersSheetRoute: the pets entry (BR-APP-057)", () => {
+  // jsdom has no `scrollIntoView`: an apply case slower than the 350 ms focus delay would throw from the timer.
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => {};
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+
   it.each([
     ["sale", "city=tashkent&deal=sale&rooms_min=2&focus=pets", "/?city=tashkent"],
     ["daily rent", "city=tashkent&deal=rent_daily&rooms_min=2&focus=pets", "/?city=tashkent"],

@@ -14,6 +14,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   fake?.uninstall();
   fake = null;
 });
@@ -64,5 +65,28 @@ describe("openLink (TMA-028)", () => {
     expect(openLink("https://t.me/homi_bot")).toBe(true);
 
     expect(open).toHaveBeenCalledWith("https://t.me/homi_bot", "_blank", "noopener");
+  });
+});
+
+describe("the call-page host (WP-26)", () => {
+  it("allows the host of NEXT_PUBLIC_API_URL: the call link of the contact answer opens", () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.homi.loc/api/v1");
+    fake = fakeTelegram();
+
+    expect(linkHosts()).toContain("api.homi.loc");
+    expect(openLink("https://api.homi.loc/call/stub-token-100001")).toBe(true);
+    expect(opened(fake)).toEqual(["openLink https://api.homi.loc/call/stub-token-100001"]);
+  });
+
+  it("an empty or malformed value adds no host and throws nothing", () => {
+    fake = fakeTelegram();
+    for (const [index, value] of ["", "not a url"].entries()) {
+      vi.stubEnv("NEXT_PUBLIC_API_URL", value);
+
+      expect(() => linkHosts(), value).not.toThrow();
+      expect(linkHosts(), value).not.toContain("api.homi.loc");
+      expect(openLink(`https://api.homi.loc/call/stub-token-10000${index + 2}`), value).toBe(false);
+    }
+    expect(opened(fake)).toEqual([]);
   });
 });

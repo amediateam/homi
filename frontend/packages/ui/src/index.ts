@@ -50,6 +50,7 @@ export {
   ToastViewport,
 } from "./components/Toast";
 export { ToggleGroup, ToggleGroupItem, toggleVariants } from "./components/ToggleGroup";
+export { prefersReducedMotion } from "./hooks/prefersReducedMotion";
 export { useBodyClass } from "./hooks/useBodyClass";
 export { useSheetChrome } from "./hooks/useSheetChrome";
 export {

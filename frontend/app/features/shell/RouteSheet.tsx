@@ -2,42 +2,25 @@
 
 import { BottomSheet, type BottomSheetProps } from "@homi/ui";
 import { usePathname, useSearchParams } from "next/navigation";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { useBack } from "@/lib/navigation/useBack";
+import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 import { tg } from "@/lib/telegram";
 
 /** How a layer address renders: intercepted into its slot over the page below, or loaded directly as the page. */
 export type RoutePresentation = "layer" | "standalone";
 
 export interface RouteSheetProps
-  extends Pick<BottomSheetProps, "title" | "variant" | "header" | "footer" | "closeLabel" | "dismissible"> {
+  extends Pick<BottomSheetProps, "title" | "variant" | "header" | "leading" | "footer" | "closeLabel" | "dismissible"> {
   /** `layer` (default): the copy in the `@sheet` slot; `standalone`: the page of a sheet address loaded directly. */
   presentation?: RoutePresentation;
+  /**
+   * Replaces the one `back()` of the ×, the backdrop, the drag and Escape, still once per address (the actions sheet
+   * of WP-26 closes all its steps at once). Telegram's BackButton keeps `back()`.
+   */
+  onClose?: () => void;
   children?: ReactNode;
-}
-
-/**
- * `back` once per address. A second ×, Escape or backdrop tap before the navigation has landed would step back twice
- * and close the page below as well. The guard is dropped when the copy is hidden or unmounted (a cached copy shown
- * again closes anew), and it no longer matches once the address changes under a copy that stays, as when a layer
- * parameter closes at depth 0.
- */
-function useCloseOnce(back: () => void): () => void {
-  const closedAt = useRef<string | null>(null);
-  useEffect(
-    () => () => {
-      closedAt.current = null;
-    },
-    [],
-  );
-  return () => {
-    const here = window.location.pathname + window.location.search;
-    if (closedAt.current !== here) {
-      closedAt.current = here;
-      back();
-    }
-  };
 }
 
 /**
@@ -77,9 +60,9 @@ function useRiseAfterDrag(): { generation: number; slidOut: () => void } {
  *   not in a portal, so the server HTML of the direct load already holds it; the content area around it must not
  *   carry a transform.
  */
-export function RouteSheet({ presentation = "layer", dismissible = true, children, ...sheet }: RouteSheetProps) {
+export function RouteSheet({ presentation = "layer", dismissible = true, onClose, children, ...sheet }: RouteSheetProps) {
   const { back } = useBack();
-  const close = useCloseOnce(back);
+  const close = useCloseOnce(onClose ?? back);
   const { generation, slidOut } = useRiseAfterDrag();
   const layer = presentation === "layer";
 

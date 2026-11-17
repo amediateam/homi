@@ -158,7 +158,11 @@ follows the answer.
 
 Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `new_none`, `new_one` (new-since);
 `contact_unavailable`; `translation_unavailable`; `share_failed`. Reserved numbers: `999404` answers `404`, `999503`
-answers `503`, `100016` answers with `100001`, and `100015` is withdrawn. Photo addresses resolve after
+answers `503`, `100016` answers with `100001`, and `100015` is withdrawn. `100018` … `100021` carry the
+listing-screen variants of WP-26, in the Tashkent region outside the default feed: `100018` a chat link without a
+number (one price event, listed today in one channel, no views, an offer link), `100019` a paid number (three price events, the `near`
+comparison), `100020` no contact with the post kept (the `city` comparison), `100021` a video of a deleted post whose
+text holds the author's number and a second one (an author of 24 listings). Photo addresses resolve after
 `php artisan sources:publish-stub-media`.
 
 ## Methods (Wave 1)

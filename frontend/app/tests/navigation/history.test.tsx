@@ -116,6 +116,78 @@ describe("closeThen", () => {
   });
 });
 
+describe("backBy (WP-26)", () => {
+  it("steps back over several entries at once and resolves with the steps taken", async () => {
+    const { history, nav } = await fresh("/ru");
+    nav.push("/listing/100001");
+    nav.push("/listing/100001/actions");
+    nav.push("/listing/100001/actions?step=report");
+    const length = window.history.length;
+
+    await expect(history.backBy(3)).resolves.toBe(3);
+
+    expect(here()).toBe("/ru");
+    expect(history.depth()).toBe(0);
+    expect(window.history.length).toBe(length);
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it("never goes below the first entry of the launch: a direct load takes fewer", async () => {
+    const { history, nav } = await fresh("/ru/listing/100001");
+    nav.push("/listing/100001/actions");
+
+    await expect(history.backBy(2)).resolves.toBe(1);
+
+    expect(here()).toBe("/ru/listing/100001");
+    expect(history.depth()).toBe(0);
+  });
+
+  it("at depth 0, or for no steps, does nothing", async () => {
+    const go = vi.spyOn(window.history, "go");
+    const { history, nav } = await fresh("/ru/listing/100001/actions");
+
+    await expect(history.backBy(2)).resolves.toBe(0);
+    nav.push("/listing/100001/actions?step=report");
+    for (const steps of [0, -1, 0.5, Number.NaN]) {
+      await expect(history.backBy(steps), String(steps)).resolves.toBe(0);
+    }
+
+    expect(go).not.toHaveBeenCalled();
+    expect(history.depth()).toBe(1);
+    go.mockRestore();
+  });
+
+  it("takes whole steps only", async () => {
+    const { history, nav } = await fresh("/ru");
+    nav.push("/listing/100001");
+    nav.push("/listing/100001/actions");
+
+    await expect(history.backBy(1.7)).resolves.toBe(1);
+
+    expect(here()).toBe("/ru/listing/100001");
+  });
+
+  it("gives up waiting for popstate after 500 ms", async () => {
+    const { history, nav } = await fresh("/ru");
+    nav.push("/listing/100001");
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    vi.useFakeTimers();
+
+    let taken: number | null = null;
+    void history.backBy(1).then((value) => {
+      taken = value;
+    });
+    await vi.advanceTimersByTimeAsync(499);
+    expect(taken).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(taken).toBe(1);
+    expect(go).toHaveBeenCalledWith(-1);
+    vi.useRealTimers();
+    go.mockRestore();
+  });
+});
+
 describe("useBack", () => {
   function Probe({ useBack }: { useBack: () => { canGoBack: boolean; back: () => void } }) {
     const { canGoBack, back } = useBack();

@@ -22,6 +22,11 @@ export interface BottomSheetProps {
   title: ReactNode;
   /** More header: the trailing action of the full row (× · title · «Сбросить»), a line under the compact row. */
   header?: ReactNode;
+  /**
+   * The control left of the title in the compact row's 40 px cell (the ‹ of a report step, WP-26); empty without one.
+   * The full variant has no such cell and ignores it.
+   */
+  leading?: ReactNode;
   /** Sticky footer above the bottom inset. */
   footer?: ReactNode;
   /** Label of the ×; without one there is no × (the market sheet of WP-26). */
@@ -72,6 +77,7 @@ export function BottomSheet({
   variant = "compact",
   title,
   header,
+  leading,
   footer,
   closeLabel,
   stacked = false,
@@ -153,6 +159,7 @@ export function BottomSheet({
         variant={variant}
         title={title}
         header={header}
+        leading={leading}
         footer={footer}
         closeLabel={closeLabel}
         dismissible={dismissible}
@@ -191,7 +198,7 @@ export function BottomSheet({
 }
 
 interface SheetFrameProps
-  extends Pick<BottomSheetProps, "title" | "header" | "footer" | "closeLabel" | "onDragStart" | "onDragCommit"> {
+  extends Pick<BottomSheetProps, "title" | "header" | "leading" | "footer" | "closeLabel" | "onDragStart" | "onDragCommit"> {
   sheetRef: RefObject<HTMLDivElement | null>;
   overlayRef: RefObject<HTMLDivElement | null>;
   titleRef: RefObject<HTMLHeadingElement | null>;
@@ -213,6 +220,7 @@ function SheetFrame({
   variant,
   title,
   header,
+  leading,
   footer,
   closeLabel,
   dismissible,
@@ -285,7 +293,7 @@ function SheetFrame({
           <>
             <span data-slot="bottom-sheet-handle" aria-hidden className={cn(grab, "mx-auto mb-1.5")} />
             <div className="grid grid-cols-[40px_1fr_40px] items-center px-(--gutter) pt-0.5 pb-1">
-              <span aria-hidden />
+              {leading ?? <span aria-hidden />}
               {heading}
               <div className="justify-self-end">{close}</div>
             </div>

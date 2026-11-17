@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-17 (WP-25 merged as #79, `main` = `f2f58cc`; its follow-up docs PR on `docs/wp-25-after-merge`; WP-25 … WP-10 merged and WAITING; WP-03, WP-00/01/02 WAITING)
+updated: 2026-11-17 (WP-26 in review as #81 on `wp-26-listing`; WP-25 merged as #79 + docs #80, `main` = `3b98be2`; WP-25 … WP-10 merged and WAITING; WP-03, WP-00/01/02 WAITING)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -9,34 +9,37 @@ Written for whoever continues the **development track**. The production track's 
 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-17 (verbatim in the earlier handoffs and `docs/migration/decisions/2026-11-14-developer-answers.md`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; each PR merged on its own «сливай #N».
-- 2026-11-17, this session: «Продолжим разработку по плану ? где мы остоновились»; «Погнали WP-25»; «сливай #79».
+- 2026-11-17, this session: «сливай #79»; «сливай #80»; «Погнали WP-26»; the two WP-26 answers — stub fixtures «В PR WP-26», `splitMaskedPhones` «lib приложения» (phase-3 notes §X).
 
 ## State at handoff
-- `main` = `f2f58cc`: #79 (WP-25: `c41d07c` package, `37ffd27` review fixes, `1b02049` + `0315987` docs) merged on «сливай #79» after green `frontend` (run 44048799579) and `frontend-e2e` (run 44048799675, 130 passed); branch deleted. `frontend` on `main` after the merge: run 44050535246, success.
-- `docs/wp-25-after-merge`: WP-25 `WAITING`, queue row, `CLAUDE.md` (current state, `@homi/ui` layout), KI-55 resolved in #79, this memory. Docs only, PR #80; it waits for «сливай #80».
+- `main` = `3b98be2` (#80 merged on «сливай #80»; docs only).
+- `wp-26-listing` → PR #81 (WP-26, listing screen): 13 commits `8d8b8f1` … `9aa4aa5` plus this status commit; it waits for CI and «сливай #81».
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
-- Verify: `make ci-frontend` (root) → exit 0 on `37ffd27` (app 120 files / 1731 tests).
+- Verify: `make ci-frontend` (root) and `cd backend && composer ci:check`.
 
 ## Done this session
-- **WP-25** (filters, quick filter, sort, city), three subagents at most in parallel, two waves plus e2e; the orchestrator re-ran every part:
-  - `make ci-frontend` → exit 0 on `c41d07c` (app 1713) and on `37ffd27` (app 1731; search 238, testing 95, ui 120, i18n 110, api-client 14, utils 2);
-  - e2e alone against a local `next start`: foundation 19, back + launch 16, shell 16 (2 KI-32 reruns), feed 19, city 6, filters 20 on `c41d07c`; city 6, filters 20 (1 KI-32 rerun), feed 19 on `37ffd27`;
-  - two read-only reviews (behaviour/React, security): every confirmed finding fixed in `37ffd27` except C-2 (KI-54); security: six requirements met, S-1/S-2 fixed.
-- Spec corrected to the code (67 corrections by a subagent, five spot-checked here with `rg`), Handoff filled; AM-70 in phase-3 notes §W; KI-54 (low), KI-55 (resolved in #79: `AbortSignal.any` on Chrome 111–115 / Safari 16.4–17.3).
+- **WP-26** built in waves of plain subagents (at most three at a time, disjoint files), orchestrator gates between waves:
+  - `make ci-frontend` → exit 0 on `fed314d` (app 153 files / 2304 + 1 todo; search 238, testing 95, ui 121, i18n 111, api-client 14, utils 2);
+  - `composer ci:check` → clean on `fed314d` (Pint, PHPStan 0, Pest 745 passed / 4 skipped, openapi:check);
+  - e2e, each of the 18 files alone against `next start` of the `99b032a` build: 180 passed (city, gates, csp, data on a rerun alone; W4's four new specs with single-test reruns) — details in the spec's Handoff.
+- Two review rounds (behaviour/React, security, conformance; then test strength, cross-module flows), each finding verified by a refuting agent: B1, B2, X1, X3, T1–T6 fixed; X2 swipe guard + KI-56; SEC-1, T7 rejected.
+- Spec corrected to the code (rule 6), Handoff filled; KI-41 partly done, KI-42 resolved for the listing layer, KI-56 … KI-58; phase-3 notes §X with AM-71 … AM-79; WP-12 catalogue count; app README rows.
+- A WP-25 flake fixed in `ca5f5a2` (`FiltersSheetRoute.test.tsx`: `scrollIntoView` stub).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **«сливай #80»** for the PR of `docs/wp-25-after-merge`.
-2. **#79 reviewer questions** (spec Handoff "Open for the reviewer"): the flow line on a failed request, the sort pick dropping `from=map`, «1.000.000» in сум parsing to ~79 bn USD, appliances as one list, the deal heading, the nested drag haptic.
-3. Earlier open items: #71's area repeated on cards (contract title vs `factsLine`); KI-44 (locale switch drops `fullscreen` and dark) as a small PR; KI-32 limit; KI-28's rest (presigned POST `content-length-range`); #75's 12 s bound.
-4. The first developer's list (#63/#64 review, ADR-0016 … 0020, #30, #37, Dependabot #5, #57–#60) and the production track's deploys of WP-03 … WP-24, plus the checks inside Telegram on staging.
-5. The next queue package (WP-26, listing screen) only on the developer's word.
+1. **«сливай #81»** once `frontend`, `backend` and `frontend-e2e` of PR #81 are green; then the after-merge docs PR (status WAITING, queue row, `CLAUDE.md`, `.ai/memory/current-state.md` — 20 base stub listings — and this memory).
+2. **#81 reviewer questions** (spec Handoff "Open for the reviewer"): the D-5 share fallback; uz «rieltor»/«makler» and «ham»; the X2 direct-load normalisation (needs a spec/ADR line); KI-57; the legacy departures list.
+3. **#79 reviewer questions** (WP-25 Handoff) and the earlier items: #71's area on cards; KI-44 small PR; KI-32 limit; KI-28's rest; #75's 12 s bound.
+4. The first developer's list and the production track's deploys of WP-03 … WP-25, plus the Telegram checks on staging.
+5. The next queue package (WP-27, map GL) only on the developer's word.
 
 ## Gotchas learned this session
-- Subagent idle reports arrive truncated: have each agent write its report to a scratch file and send one line.
-- `closeThen` goes back first and replaces after: an e2e assertion on `/ru?` matches the old address; poll the whole final address.
-- Playwright: `--project=miniapp` (with `=`); a server already on :3001 is reused locally, so build + `next start` once and run specs one at a time (KI-32). Rerun a spec that waits at `data-session="booting"`.
-- `bfcacheId` survives the shallow `pick=city` pushState (proven by `e2e/city.spec.ts`).
-- Next numbers: AM-71, KI-56, ADR 0021.
+- A hand-started `next start` must get `NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"`, else every sign-in stays `booting` (the app server cannot reach `https://api.homi.loc`); Playwright adds it only to the server it starts itself.
+- Machine load (vitest runs of agents, another project's test suite) also leaves sign-ins at `booting`, apart from KI-32: run e2e only while no agent runs tests; check `uptime`.
+- Workflow/subagents cannot write report files to the scratchpad: their final message is the report; save it yourself.
+- `pnpm -r test` can fail on a missing `node_modules/.vitest-cache` file (two package runs racing); rerun.
+- `composer ci:check` runs `vp check`, which also formats `backend/resources/fixtures/**/*.json` (trailing zeros of numbers).
+- Next numbers: AM-80, KI-59, ADR 0021.
 
 ## Active subagent work at handoff
-- None running. Idle teammates of this session (wp25-logic, wp25-sections-a, wp25-sections-b, wp25-review, wp25-security) end with it.
+- None running.

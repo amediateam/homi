@@ -183,6 +183,61 @@ describe("RouteSheet, layer (the copy in @sheet)", () => {
   });
 });
 
+describe("RouteSheet, onClose and leading (WP-26)", () => {
+  it("onClose replaces back() for the ×, once per address", () => {
+    const onClose = vi.fn();
+    render(<Sheet onClose={onClose} />);
+
+    close();
+    close();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(state.back).not.toHaveBeenCalled();
+
+    window.history.replaceState(null, "", "/ru/filters?step=report");
+    close();
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("onClose replaces back() for the backdrop, Escape and the drag", async () => {
+    const onClose = vi.fn();
+    const { unmount } = render(<Sheet onClose={onClose} />);
+    await outsideListenersReady();
+    tapBackdrop();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    unmount();
+
+    render(<Sheet onClose={onClose} />);
+    await outsideListenersReady();
+    escape();
+    expect(onClose).toHaveBeenCalledTimes(2);
+    cleanup();
+
+    render(<Sheet onClose={onClose} />);
+    await outsideListenersReady();
+    dragDown(part("-header"), 300);
+    expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+    await act(() => vi.advanceTimersByTimeAsync(SHEET_DRAG_SETTLE_MS));
+    expect(onClose).toHaveBeenCalledTimes(3);
+    expect(state.back).not.toHaveBeenCalled();
+  });
+
+  it("leading goes to the cell left of the compact title", () => {
+    render(
+      <Sheet
+        variant="compact"
+        leading={
+          <button type="button" data-sheet-back="">
+            ‹
+          </button>
+        }
+      />,
+    );
+
+    const row = part("-title").parentElement!;
+    expect(row.firstElementChild?.hasAttribute("data-sheet-back")).toBe(true);
+  });
+});
+
 describe("RouteSheet, standalone (a sheet address loaded directly)", () => {
   it("ignores a backdrop tap and the drag: no page lies below", async () => {
     render(<Sheet presentation="standalone" />);

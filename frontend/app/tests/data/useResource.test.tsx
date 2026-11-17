@@ -8,7 +8,7 @@ import { withDevFlags } from "../helpers/flags";
 const onForbidden = vi.fn();
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: (...args: unknown[]) => onForbidden(...args) }));
 
-const { invalidate, resetResources, useResource } = await import("@/lib/data/useResource");
+const { invalidate, resetResources, seedResource, useResource } = await import("@/lib/data/useResource");
 
 type Item = { n: number };
 const ok = (n: number): ApiResult<Item> => ({ ok: true, data: { n }, meta: {} });
@@ -92,6 +92,34 @@ describe("useResource (WP-22)", () => {
     expect(pending[1].signal.aborted).toBe(true);
   });
 
+  it("an entry that holds only an error is forgotten with its last user: a later initial seeds it without a read", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const user = renderHook(() => useResource("listing:3", fetcher));
+    await act(async () => pending[0].resolve(failed(503, "source_unavailable", "source_unavailable")));
+    const reader = renderHook(() => useResource("listing:3", fetcher, { enabled: false }));
+    expect(reader.result.current.status).toBe("error");
+
+    user.unmount();
+
+    expect(reader.result.current).toMatchObject({ data: undefined, error: null, status: "idle" });
+    const { result } = renderHook(() => useResource("listing:3", fetcher, { initial: { n: 5 } }));
+    expect(result.current).toMatchObject({ data: { n: 5 }, error: null, status: "success" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("an entry with data is kept when its last user leaves, also after a failed refetch", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const user = renderHook(() => useResource("feed", fetcher, { initial: { n: 1 } }));
+    act(() => void user.result.current.refetch());
+    await act(async () => pending[0].resolve(failed(503, "source_unavailable", "source_unavailable")));
+
+    user.unmount();
+
+    const { result } = renderHook(() => useResource("feed", fetcher));
+    expect(result.current).toMatchObject({ data: { n: 1 }, error: { error: "source_unavailable" }, refreshing: false });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("reuses a fresh entry and shows a stale one while it refetches", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { fetcher, pending } = controlledFetcher();
@@ -145,6 +173,61 @@ describe("useResource (WP-22)", () => {
 
     await act(async () => pending[0].resolve(ok(5)));
     expect(result.current.data).toEqual({ n: 5 });
+  });
+
+  it("a seed by initial reaches a user that committed earlier without one (WP-26)", () => {
+    const { fetcher } = controlledFetcher();
+    const reader = renderHook(() => useResource("listing:1", fetcher, { enabled: false }));
+    expect(reader.result.current.data).toBeUndefined();
+
+    renderHook(() => useResource("listing:1", fetcher, { initial: { n: 7 }, enabled: false }));
+
+    expect(reader.result.current).toMatchObject({ data: { n: 7 }, status: "success" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("a seeded entry is fresh from its first commit, also for a user that never reads", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { fetcher } = controlledFetcher();
+    renderHook(() => useResource("listing:1", fetcher, { initial: { n: 1 }, enabled: false })).unmount();
+
+    vi.setSystemTime(Date.now() + 31_000);
+    renderHook(() => useResource("listing:1", fetcher));
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  describe("seedResource (WP-26)", () => {
+    it("writes the entry and tells every user at once, without a read", () => {
+      const { fetcher } = controlledFetcher();
+      const { result } = renderHook(() => useResource("listing:2", fetcher, { enabled: false }));
+
+      act(() => seedResource("listing:2", { n: 8 }));
+
+      expect(result.current).toMatchObject({ data: { n: 8 }, error: null, status: "success" });
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+
+    it("a seeded entry is fresh: a user that mounts after it reads nothing", () => {
+      const { fetcher } = controlledFetcher();
+      act(() => seedResource("listing:2", { n: 8 }));
+
+      const { result } = renderHook(() => useResource("listing:2", fetcher));
+
+      expect(result.current).toMatchObject({ data: { n: 8 }, status: "success", refreshing: false });
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+
+    it("replaces an error of the entry", async () => {
+      const { fetcher, pending } = controlledFetcher();
+      const { result } = renderHook(() => useResource("listing:2", fetcher));
+      await act(async () => pending[0].resolve(failed(503, "source_unavailable", "source_unavailable")));
+      expect(result.current.status).toBe("error");
+
+      act(() => seedResource("listing:2", { n: 9 }));
+
+      expect(result.current).toMatchObject({ data: { n: 9 }, error: null, status: "success" });
+    });
   });
 
   it("enabled false neither reads nor reports loading", () => {

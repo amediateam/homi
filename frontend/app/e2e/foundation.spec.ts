@@ -22,10 +22,12 @@ const ADDRESSES: [string, string[]][] = [
   ["/sort", ["sort"]],
   ["/city", ["city"]],
   ["/listing/1", ["listing"]],
-  ["/listing/1/photos", ["listing", "listing/photos"]],
+  // The viewer and the two sheets are portalled and rendered in the browser only (WP-26): the server HTML holds the
+  // listing alone. The location child is still a placeholder inside the layer.
+  ["/listing/1/photos", ["listing"]],
   ["/listing/1/location", ["listing", "listing/location"]],
-  ["/listing/1/market", ["listing", "listing/market"]],
-  ["/listing/1/actions", ["listing", "listing/actions"]],
+  ["/listing/1/market", ["listing"]],
+  ["/listing/1/actions", ["listing"]],
   ["/saved", ["saved"]],
   ["/saved/history", ["saved/history"]],
   ["/radars", ["radars"]],
@@ -243,7 +245,8 @@ test.describe("layers", () => {
     await mark(page, '[data-route="listing"][data-layer="overlay"]', "listing");
 
     await softNavigate(page, "/ru/listing/1/photos");
-    await expect(listing.locator('[data-route="listing/photos"]')).toBeVisible();
+    // The viewer is portalled to the body (WP-26): over the listing, not inside it.
+    await expect(visible(page, '[data-route="listing/photos"]')).toBeVisible();
     await expect(page.locator('[data-route="listing"][data-probe="listing"]')).toBeAttached();
     await expect(page.locator('[data-route="feed"][data-probe="feed"]')).toBeAttached();
 
@@ -259,7 +262,9 @@ test.describe("layers", () => {
   test("a direct load of a listing child shows the listing under it", async ({ page }) => {
     await launchSigningIn(page, "/ru/listing/1/market");
 
-    await expect(page.locator('[data-route="listing"]:not([data-layer]) [data-route="listing/market"]')).toBeVisible();
+    // The market sheet is portalled to the body (WP-26), so the two are checked apart.
+    await expect(page.locator('[data-route="listing"]:not([data-layer])')).toBeVisible();
+    await expect(page.locator('[data-route="listing/market"]')).toBeVisible();
   });
 });
 
