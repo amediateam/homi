@@ -922,8 +922,8 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 
 ## Handoff
 
-- **Steps 1–16 are done** on `wp-26-listing` (from `main` = `3b98be2`, after #80) in eight commits; step 17's four
-  end-to-end specs follow on the same branch. It ran as plain subagents, at most three at a time, each owning its own
+- **Steps 1–17 are done** on `wp-26-listing` (from `main` = `3b98be2`, after #80) in the commits below. It ran as
+  plain subagents, at most three at a time, each owning its own
   files, between one shared-first wave and one integration wave; the orchestrator ran the gates between the waves.
   Two independent review rounds followed, each with its fixes. The decisions taken before the build (D-1 … D-30),
   the shared interface contract and the legacy details are reports kept with the session, not committed.
@@ -941,6 +941,9 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
   - `830b541` wave 2: A — contact and translation; B — viewer and market; C — actions, share and close.
   - `82719e1` wave 3: the screen wired end to end; `e2e/foundation.spec.ts` and `e2e/back.spec.ts` adjusted.
   - `23ec0bf` review round 1 fixes (B1, B2); `99b032a` review round 2 fixes (X1, X2, X3, T1 … T6).
+  - `cb5c977` this specification, the known issues, the phase-3 notes §X, the app README; `f4badd0` the four
+    end-to-end specs (step 17); `fed314d` the stub catalogue formatted as `vp check` writes it (two coordinates of
+    `100021`, values unchanged).
   - **Mutation checks:**
     - W1-A: the two-commit seed test fails on the old `useResource`. W2-C: removing the share lock's reset, or the
       route's double-push guard, fails one test each. W2-B: the swipe-close-then-show-again test fails without its
@@ -970,7 +973,18 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
     `pnpm --filter app build` (183 pages) clean.
   - **`23ec0bf`:** the app project 153 files / 2287 + 1 todo; ESLint and the app typecheck clean.
   - **`99b032a`:** `make ci-frontend` clean: app 153 files / 2304 + 1 todo; the packages as above.
-  - **End to end:** (filled in by the orchestrator).
+  - **`fed314d`** (the final gates): `make ci-frontend` clean — app 153 files / 2304 + 1 todo, `@homi/search` 238 +
+    1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 111, `@homi/api-client` 14, `@homi/utils` 2 (a first run
+    failed in `@homi/search` on a missing `node_modules/.vitest-cache` file, two package runs sharing the cache; the
+    rerun was clean). From `backend/`: `composer ci:check` clean — Pint, PHPStan 0 errors, Pest 749 (745 passed, 4
+    skipped), `openapi:check`; its first run found the catalogue's format, fixed in `fed314d`.
+  - **End to end**, each file alone against a local `next start` of the `99b032a` build (the later commits change
+    no app code), started with the mkcert CA, with a pause between files (KI-32): foundation 19, back 11, feed 19,
+    launch 5, shell 16, filters 20, boot-failure 6, crash 4, session 7, smoke 2; city 6, gates 8, csp 2 and data 5
+    on a rerun alone (sign-ins stuck at `booting` while the machine was loaded, load average up to about 90); the
+    new listing-open 16, photo-viewer 6, listing-contact 14 and listing-actions 14 (some tests rerun alone once for
+    the same reason). 180 tests in 18 files. Earlier builds: foundation, feed, launch and gates on `ab33858`; foundation, back, feed,
+    launch, gates, csp and shell on `82719e1`.
 - **Corrections made in this specification (rule 6)**, by section:
   - **Scope:** the stub variants and the per-m² fix are in (D-1); `PhotoStrip`'s hero props; the focus rules beyond
     the minimal handling are WP-33's.
@@ -1110,7 +1124,8 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
   - **Focus:** the layer root also takes the focus on a direct load; it has no visible ring.
   - **Not covered by an automated test:** the texts per locale; the share button in CI (`frontend-e2e.yml` sets no
     `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`); the support row end to end (`TELEGRAM_SUPPORT_USERNAME` is blank); the
-    restore of focus on a real unmount; the swipe back end to end.
+    restore of focus on a real unmount; the swipe back end to end; the preview state in cookie mode (it comes in
+    the same server response as the details, so only header mode can hold it in `listing-open.spec.ts`).
 - **For later packages:**
   - **WP-27, WP-28:** the map card opens the listing with `router.push(routes.listing(number))` after the preview is
     cached. WP-28's `SpotMap` replaces `sections/SpotMapSlot.tsx` (keep the button, aria `listing.mapOpen`, the
@@ -1141,7 +1156,7 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
   direct load), KI-57 (low: a contact revealed in the fallback instance), KI-58 (info: the stub listing methods ignore
   the `access_*` scenarios).
 - **Next:**
-  1. The four end-to-end specs, then review and merge; the follow-up docs PR records the status, the queue row,
+  1. Review and merge; the follow-up docs PR records the status, the queue row,
      `CLAUDE.md`, `.ai/memory/current-state.md` (the catalogue has 20 base listings) and the memory.
   2. The production track deploys (the regular deploy; nothing else on stubs).
   3. Check inside Telegram on staging: the swipe back on iOS and never on Android, BackButton and SettingsButton,
