@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** City picker (SCR-017); WP-25 replaces the placeholder. Intercepted into the sheet slot. */
+import { CitySheetRoute } from "@/features/city/CitySheetRoute";
+
+/** City picker (SCR-017), intercepted into the sheet slot over the feed. */
 export default function Page() {
-  return <RoutePlaceholder name="city" layer="sheet" />;
+  return (
+    <Suspense fallback={null}>
+      <CitySheetRoute presentation="layer" />
+    </Suspense>
+  );
 }

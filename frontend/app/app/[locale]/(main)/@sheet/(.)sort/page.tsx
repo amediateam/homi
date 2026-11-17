@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Sort (SCR-016); WP-25 replaces the placeholder. Intercepted into the sheet slot. */
+import { SortSheetRoute } from "@/features/filters/SortSheetRoute";
+
+/** Sort (SCR-016), intercepted into the sheet slot over the feed. */
 export default function Page() {
-  return <RoutePlaceholder name="sort" layer="sheet" />;
+  return (
+    <Suspense fallback={null}>
+      <SortSheetRoute presentation="layer" />
+    </Suspense>
+  );
 }

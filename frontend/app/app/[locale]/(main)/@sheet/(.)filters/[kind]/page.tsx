@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 
-import { QuickFilterPlaceholder } from "@/features/shell/RouteParamPlaceholder";
+import { QuickFilterPage } from "@/features/filters/QuickFilterPage";
 
-/** Quick filter rooms, price or owner (SCR-015); WP-25 replaces the placeholder. Intercepted into the sheet slot. */
+/** Quick filter rooms, price or owner (SCR-015), intercepted into the sheet slot over the feed. */
 export default function Page({ params }: { params: Promise<{ kind: string }> }) {
   return (
     <Suspense fallback={null}>
-      <QuickFilterPlaceholder params={params} layer="sheet" />
+      <QuickFilterPage params={params} presentation="layer" />
     </Suspense>
   );
 }

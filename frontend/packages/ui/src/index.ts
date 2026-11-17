@@ -20,6 +20,8 @@ export {
 } from "./components/Dialog";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
 export { ErrorState, type ErrorStateKind, type ErrorStateProps } from "./components/ErrorState";
+export { IntInput, type IntInputProps, numberFieldClass } from "./components/IntInput";
+export { PriceInput, type PriceInputProps } from "./components/PriceInput";
 export { RadioGroup, RadioGroupItem } from "./components/RadioGroup";
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from "./components/SegmentedControl";
 export {
