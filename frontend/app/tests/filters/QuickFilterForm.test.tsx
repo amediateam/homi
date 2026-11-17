@@ -4,6 +4,7 @@ import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
+import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -355,6 +356,38 @@ describe("QuickFilterSheetRoute", () => {
     route("price");
 
     expect(dialog().querySelector('[data-route="filters/price"]')).not.toBeNull();
+  });
+
+  it("a direct load without `city`: the draft and the apply take the saved city, not the hydration render's (review C-3)", async () => {
+    state.search = "rooms_min=2";
+    state.count = ok(7);
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    feedReference({ cities: [TASHKENT, cityOf({ code: "samarkand", name: "Самарканд" })], stats: [STATS] });
+    window.localStorage.setItem("homi-city", "samarkand");
+    try {
+      const element = intl(<QuickFilterSheetRoute kind="owner" presentation="standalone" />);
+      const container = document.createElement("div");
+      document.body.append(container);
+      container.innerHTML = renderToString(element);
+      const recoverable: unknown[] = [];
+      let root: Root | null = null;
+      await act(async () => {
+        root = hydrateRoot(container, element, { onRecoverableError: (error) => void recoverable.push(error) });
+      });
+      await wait(250);
+
+      expect(recoverable).toEqual([]);
+      expect(new URLSearchParams(state.sent.at(-1)?.query).get("city")).toBe("samarkand");
+      fireEvent.click(apply());
+      await act(async () => undefined);
+      const target = new URL(state.closeThen.mock.calls[0][0], "https://app.homi.loc");
+      expect(target.searchParams.get("city")).toBe("samarkand");
+      expect(target.searchParams.get("rooms_min")).toBe("2");
+      act(() => root?.unmount());
+      container.remove();
+    } finally {
+      window.localStorage.clear();
+    }
   });
 });
 

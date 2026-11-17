@@ -64,8 +64,21 @@ describe("refreshCitiesStats (WP-25)", () => {
     await refresh({ ok: false, error: "source_unavailable", status: 503, code: "source_unavailable", method: "GET", path: "cities" });
     await refresh({ ok: false, error: "offline", status: 0, method: "GET", path: "cities" });
     await refresh({ ok: true, data: null, meta: {} });
+    await refresh({ ok: true, data: { code: "tashkent" }, meta: {} });
 
     expect(stats.result.current?.counts).toEqual(OLD[0].counts);
+  });
+
+  it("keeps only the elements with a code: a null, a number or a codeless element never reaches a render (S-2)", async () => {
+    const andijan = { code: "andijan", counts: { rent_long: 210, rent_daily: 5, sale: 430 }, price_presets: {}, typical_price: {} };
+    const one = renderHook(() => useCityStats("andijan"));
+    const all = renderHook(() => useCitiesStats());
+
+    await refresh({ ok: true, data: [null, 1, "tashkent", [], { counts: {} }, { code: 7 }, ...NEW, andijan], meta: {} });
+
+    expect(one.result.current).toEqual(andijan);
+    expect(all.result.current).toEqual({ stats: { tashkent: NEW[0], andijan }, loaded: true });
+    expect(renderHook(() => useCityStats("nowhere")).result.current).toBeNull();
   });
 
   it("opens close together share one request; a later open asks again", async () => {

@@ -3,7 +3,7 @@ import { defaultFilters, fromSearchParams, type ListingSort, type SearchFilters,
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { ReactNode } from "react";
+import { Activity, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -216,6 +216,40 @@ describe("SortSheetRoute", () => {
     const target = new URL(state.closeThen.mock.calls[0][0], "https://app.homi.loc");
     expect(target.searchParams.has("sort")).toBe(false);
     expect(target.searchParams.get("city")).toBe("tashkent");
+  });
+
+  it("one pick per showing: a second tap before the address changed does nothing; a new address or a hidden sheet takes picks again", async () => {
+    state.search = "city=tashkent&sort=cheap";
+    scrolls();
+    const shown = (mode: "visible" | "hidden") =>
+      intl(
+        <Activity mode={mode}>
+          <SortSheetRoute presentation="layer" />
+        </Activity>,
+      );
+    const view = render(shown("visible"));
+
+    fireEvent.click(row("Сначала дороже"));
+    fireEvent.click(row("Сначала дороже"));
+    fireEvent.click(row("Сначала новые"));
+    await act(() => Promise.resolve());
+    expect(state.closeThen.mock.calls.map(([href]) => new URL(href, "https://app.homi.loc").searchParams.get("sort"))).toEqual(["expensive"]);
+    expect(impacts()).toEqual(["light"]);
+
+    // The address changed under the copy that stays: picks are taken again.
+    state.search = "city=tashkent&sort=expensive";
+    view.rerender(shown("visible"));
+    fireEvent.click(row("Сначала новые"));
+    expect(state.closeThen).toHaveBeenCalledTimes(2);
+    fireEvent.click(row("Сначала новые"));
+    expect(state.closeThen).toHaveBeenCalledTimes(2);
+
+    // Hidden with its cached route and shown again at the same address: a fresh showing.
+    view.rerender(shown("hidden"));
+    view.rerender(shown("visible"));
+    fireEvent.click(row("Сначала дешевле"));
+    expect(state.closeThen).toHaveBeenCalledTimes(3);
+    expect(impacts()).toEqual(["light", "light", "light"]);
   });
 
   it("× closes without a pick", () => {

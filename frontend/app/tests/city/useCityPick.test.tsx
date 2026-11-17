@@ -307,4 +307,28 @@ describe("useSaveCity", () => {
     expect(state.updateSettings.mock.calls[0][0]).toEqual({ city: "samarkand" });
     await act(async () => settle(SAVED));
   });
+
+  it("saves nothing for a code outside the reference data — a relax option's server city (S-1)", async () => {
+    storageSet("homi-city", "tashkent");
+    const { result } = renderHook(() => useSaveCity(), { wrapper });
+
+    result.current("bukhara");
+    await flush();
+
+    expect(storageGet("homi-city")).toBe("tashkent");
+    expect(state.updateSettings).not.toHaveBeenCalled();
+    expect(state.patchMe).not.toHaveBeenCalled();
+  });
+
+  it("saves nothing while the reference data is missing", async () => {
+    state.cities = [];
+    const { result } = renderHook(() => useSaveCity(), { wrapper });
+
+    result.current("samarkand");
+    await flush();
+
+    expect(storageGet("homi-city")).toBeNull();
+    expect(state.updateSettings).not.toHaveBeenCalled();
+    expect(state.patchMe).not.toHaveBeenCalled();
+  });
 });

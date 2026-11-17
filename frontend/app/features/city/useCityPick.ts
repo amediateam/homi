@@ -17,17 +17,27 @@ import { storageSet } from "@/lib/storage";
  * awaited — its errors are ignored and the local choice stands — and `patchMe`, without which the profile's old city
  * would win `cityFallback` on the next address without a city (and `SessionProvider` would write it back to
  * `homi-city`). The header pick calls it at once; the full sheet on «Показать» and on the draw hand-off.
+ *
+ * Only a city of the reference data is saved: the full sheet's draft may carry a city that came from the server (a
+ * relax option's filters), and a code the app does not know would otherwise become the user's city on the device
+ * while the API refuses it (WP-25 security review, S-1). An unknown code — or any code while the reference data is
+ * missing — saves nothing.
  */
 export function useSaveCity(): (code: string) => void {
   const save = useAction(updateSettings);
   const { patchMe } = useSession();
+  const { findCity } = useReference();
   return useCallback(
     (code: string) => {
-      storageSet("homi-city", code);
-      void save({ city: code });
-      patchMe({ city: code });
+      const city = findCity(code);
+      if (city === null) {
+        return;
+      }
+      storageSet("homi-city", city.code);
+      void save({ city: city.code });
+      patchMe({ city: city.code });
     },
-    [save, patchMe],
+    [save, patchMe, findCity],
   );
 }
 

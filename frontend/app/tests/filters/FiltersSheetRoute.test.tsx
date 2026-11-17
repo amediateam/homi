@@ -263,6 +263,22 @@ describe("FiltersSheetRoute: «Обвести на карте»", () => {
     expect(state.updateSettings).not.toHaveBeenCalled();
   });
 
+  it("runs once per showing: a second tap steps back no second time; a changed address takes it again (review P-2)", async () => {
+    const { rerender } = route();
+    const chip = () => within(content()).getByRole("button", { name: "Обвести на карте" });
+
+    fireEvent.click(chip());
+    fireEvent.click(chip());
+    await settle();
+    expect(navigated()).toEqual(["/map?city=tashkent"]);
+
+    state.search = "city=tashkent&pick=city";
+    rerender(intl(<FiltersSheetRoute presentation="layer" />));
+    fireEvent.click(chip());
+    await settle();
+    expect(navigated()).toEqual(["/map?city=tashkent", "/map?city=tashkent"]);
+  });
+
   it("saves a city the nested picker changed", async () => {
     route();
 

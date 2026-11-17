@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 
 import { bffFetch } from "@/lib/api/browser";
 
+import { cityStatsOf } from "./cityStats";
 import { DEFAULT_RADAR_LIMIT, EMPTY_REFERENCE } from "./empty";
 import type { Cached, City, CityStats, Reference } from "./types";
 
@@ -44,17 +45,19 @@ let refreshing: Promise<void> | null = null;
 
 /**
  * Reads `GET /cities` again in the browser and replaces the city statistics with the answer (WP-25: legacy refreshed
- * them on every open of the full filters sheet). The reference part is left as it is; a failed or malformed answer
- * changes nothing and is not reported — the cached statistics, or none, stay on screen. Opens close together share
- * one request. Never rejects.
+ * them on every open of the full filters sheet). The reference part is left as it is. Only the elements with a code
+ * are kept (`cityStatsOf`, as the server loader does); a failed answer, or one that is not a list, changes nothing and
+ * is not reported — the cached statistics, or none, stay on screen. Opens close together share one request. Never
+ * rejects.
  */
 export function refreshCitiesStats(): Promise<void> {
-  refreshing ??= bffFetch<CityStats[]>("cities")
+  refreshing ??= bffFetch<unknown>("cities")
     .then(
       (result) => {
-        if (result.ok && Array.isArray(result.data)) {
+        const data = result.ok ? cityStatsOf(result.data) : null;
+        if (result.ok && data !== null) {
           const source = result.meta.source;
-          setReference({ ...state, cities: { loaded: true, data: result.data, ...(source === undefined ? {} : { source }) } });
+          setReference({ ...state, cities: { loaded: true, data, ...(source === undefined ? {} : { source }) } });
         }
       },
       () => undefined,

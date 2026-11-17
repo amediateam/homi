@@ -70,6 +70,15 @@ export interface FiltersFormProps {
   submitting: boolean;
 }
 
+/**
+ * A layer parameter is already in the address (WP-25 review P-3). `pushState` changes `window.location` at once, while
+ * the router's `useSearchParams` follows in a transition: a second tap on the city field in between would push
+ * `pick=city` twice, and the picker would then ignore its rows and its × until Telegram's Back.
+ */
+function layerInAddress(): boolean {
+  return new URLSearchParams(window.location.search).has("pick");
+}
+
 /** Scrolls the section marked `data-focus={focus}` to the middle of the sheet once, `FOCUS_DELAY_MS` after mounting. */
 function useFocusSection(root: RefObject<HTMLElement | null>, focus: string | null | undefined): void {
   useEffect(() => {
@@ -97,8 +106,8 @@ function useFocusSection(root: RefObject<HTMLElement | null>, focus: string | nu
  * - «Сбросить» is `resetAll` of the rules (BR-APP-022; `dev018ResetKeepsDaily`, LB-APP-030); a relax chip replaces
  *   the draft with its re-normalised filters and remembers its code, which a reset keeps and a later subscribe or
  *   save sends.
- * - The city field opens the nested picker as the `pick=city` layer (`useLayerState`): Back closes it before the
- *   sheet, and a pick changes the draft only (`useCityPick`, BR-APP-009).
+ * - The city field opens the nested picker as the `pick=city` layer (`useLayerState`), once while it is open or on
+ *   its way: Back closes it before the sheet, and a pick changes the draft only (`useCityPick`, BR-APP-009).
  * - The pets tips show in the sheet's own toast host, which takes them along when the sheet closes (SCR-042).
  *
  * The content carries `data-route={route}` (with `data-layer="sheet"` for the copy in `@sheet`) as the child of the
@@ -170,7 +179,14 @@ export function FiltersForm({
     >
       <div ref={content} data-route={route} data-layer={presentation === "layer" ? "sheet" : undefined}>
         <DealSection {...section} />
-        <CitySection {...section} onOpenCity={() => picker.open("city")} />
+        <CitySection
+          {...section}
+          onOpenCity={() => {
+            if (picker.value === null && !layerInAddress()) {
+              picker.open("city");
+            }
+          }}
+        />
         <TypeSection {...section} />
         {sections.rentTerm ? <RentTermSection {...section} /> : null}
         {sections.rooms ? <RoomsSection {...section} /> : null}

@@ -20,7 +20,10 @@ const state = vi.hoisted(() => ({
   active: false,
 }));
 
-/** The `pick` layer as a tiny store: `open` and `close` re-render the form as the address change would. */
+/**
+ * The `pick` layer as a tiny store: `open` and `close` re-render the form as the address change would. With `lag`,
+ * `open` only pushes the parameter into `window.location`, as `pushState` does before the router's transition lands.
+ */
 const layer = vi.hoisted(() => {
   let value: string | null = null;
   const listeners = new Set<() => void>();
@@ -37,6 +40,8 @@ const layer = vi.hoisted(() => {
       return () => void listeners.delete(listener);
     },
     closes: 0,
+    opens: 0,
+    lag: false,
   };
 });
 
@@ -51,7 +56,14 @@ vi.mock("@/lib/navigation/useLayerState", async () => {
   return {
     useLayerState: () => ({
       value: useSyncExternalStore(layer.subscribe, layer.get, layer.get),
-      open: (value: string) => layer.set(value),
+      open: (value: string) => {
+        layer.opens += 1;
+        if (layer.lag) {
+          window.history.pushState(null, "", `?pick=${value}`);
+        } else {
+          layer.set(value);
+        }
+      },
       close: () => {
         layer.closes += 1;
         layer.set(null);
@@ -156,6 +168,9 @@ beforeEach(() => {
   }
   layer.set(null);
   layer.closes = 0;
+  layer.opens = 0;
+  layer.lag = false;
+  window.history.replaceState(null, "", "/");
   reference();
   window.localStorage.clear();
   fake = fakeTelegram({ version: "8.0" });
@@ -424,5 +439,24 @@ describe("FiltersForm: the nested city picker", () => {
     expect(state.updateSettings).not.toHaveBeenCalled();
     expect(window.localStorage.getItem("homi-city")).toBeNull();
     expect(applied()).toMatchObject({ city: "samarkand", districts: [], near_metro: false });
+  });
+
+  it("a double tap on the city field opens the layer once, also before the router has the parameter (review P-3)", () => {
+    form();
+    const field = content().querySelector<HTMLButtonElement>('[data-field="city"]')!;
+
+    layer.lag = true;
+    fireEvent.click(field);
+    fireEvent.click(field);
+    expect(layer.opens).toBe(1);
+    expect(window.location.search).toBe("?pick=city");
+
+    window.history.replaceState(null, "", "/");
+    layer.lag = false;
+    fireEvent.click(field);
+    expect(layer.opens).toBe(2);
+    expect(layer.get()).toBe("city");
+    fireEvent.click(field);
+    expect(layer.opens).toBe(2);
   });
 });

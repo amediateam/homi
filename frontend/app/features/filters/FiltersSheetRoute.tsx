@@ -2,7 +2,7 @@
 
 import { defaultFilters, normalizeSort, type SearchFilters, sortOptions, toSearchParams } from "@homi/search";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useSaveCity } from "@/features/city/useCityPick";
 import { subscribe } from "@/features/radars/subscribe";
@@ -20,24 +20,37 @@ import { requestDraw } from "@/lib/ui/shellState";
 
 import { applyFilters } from "./applyFilters";
 import { FiltersForm } from "./FiltersForm";
+import { formKey } from "./formKey";
 
 /** The search sheet has no «Сохранить»: that is the radar editor's (WP-30). */
 const noSave = (): void => undefined;
 
 /**
- * The form's key, computed here only (WP-25 "State and navigation"; swap it here if a browser disproves it).
- * `bfcacheId` changes when a push or replace opens the sheet afresh and stays through back/forward and the shallow
- * `pick=city` layer, so every open starts from the address while the nested picker keeps the draft. An address
- * without a city also keys on the city it falls back to: the hydration render of a direct load does not know the
- * saved city yet (`useSearchState`), and the draft must not keep the city it was first seeded with.
+ * `take()` is `true` once per showing of the sheet (WP-25 review P-2): «Обвести на карте» leaves through `closeThen`,
+ * whose Back step lands only with its `popstate`, so a second tap before that would step back twice and close what
+ * lies below. The address changing, or the sheet being hidden or left, takes the action again (as `useCityPick`).
  */
-function formKey(bfcacheId: string, address: URLSearchParams | null, city: string): string {
-  return address?.has("city") ? bfcacheId : `${bfcacheId}:${city}`;
+function useOncePerShowing(address: string): () => boolean {
+  const taken = useRef(false);
+  useLayoutEffect(() => {
+    taken.current = false;
+    return () => {
+      taken.current = false;
+    };
+  }, [address]);
+  return () => {
+    if (taken.current) {
+      return false;
+    }
+    taken.current = true;
+    return true;
+  };
 }
 
 /**
  * The full filters sheet at `/filters` (SCR-014, WP-25): `FiltersForm` in search mode over the live search of the
- * address (`useSearchState`), and the one place its flags are read (`searchRules(devFlags)`, `dev021OneFlowVocabulary`).
+ * address (`useSearchState`), keyed with `formKey`, and the one place its flags are read (`searchRules(devFlags)`,
+ * `dev021OneFlowVocabulary`).
  *
  * - Opening refreshes the cities' statistics once (legacy did on every open), errors ignored.
  * - `focus=pets` (BR-APP-057, legacy `useAppBootstrap.js:114-123`): a search that is not long-term rent — daily rent
@@ -47,7 +60,8 @@ function formKey(bfcacheId: string, address: URLSearchParams | null, city: strin
  * - «Включить радар»: `subscribe(draft, "filters", relaxed)` while the button is disabled; on success the sheet
  *   closes without applying, on failure it stays (the toasts are WP-30's).
  * - «Обвести на карте»: the city saved when it changed, `requestDraw()`, then `closeThen` to the map with the draft
- *   without districts and zones and no `draw` parameter (the map opens drawing as a pushed layer, WP-28).
+ *   without districts and zones and no `draw` parameter (the map opens drawing as a pushed layer, WP-28); once per
+ *   showing of the sheet.
  *
  * ×, the backdrop, the drag and Telegram's Back close without a change (`RouteSheet`).
  */
@@ -62,6 +76,7 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
   const rules = searchRules(devFlags);
   const focus = address?.get("focus") ?? null;
   const target = address?.get("from") === "map" ? routes.map : routes.feed;
+  const takeDraw = useOncePerShowing(address?.toString() ?? "");
 
   useEffect(() => {
     void refreshCitiesStats();
@@ -101,6 +116,9 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
   };
 
   const draw = (cleared: SearchFilters) => {
+    if (!takeDraw()) {
+      return;
+    }
     keepCity(cleared);
     requestDraw();
     const kept = normalizeSort(sort, sortOptions(cleared, findCity(cleared.city)));

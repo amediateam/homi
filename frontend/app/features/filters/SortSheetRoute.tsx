@@ -1,7 +1,9 @@
 "use client";
 
 import { type ListingSort, toSearchParams } from "@homi/search";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useLayoutEffect, useRef } from "react";
 
 import { type RoutePresentation, RouteSheet } from "@/features/shell/RouteSheet";
 import { closeThen } from "@/lib/navigation/closeThen";
@@ -19,13 +21,30 @@ import { SortList } from "./SortList";
  * where the feed re-creates itself for the new key. ×, the backdrop, the drag and Telegram's Back close without a
  * change. `data-route="sort"` (with `data-layer="sheet"` for the copy in `@sheet`) is what the end-to-end specs
  * select; the direct load renders it in place, so its server HTML holds it.
+ *
+ * One pick per showing, as `useCityPick`: `closeThen` learns the depth only from the `popstate` of its own Back, so a
+ * second tap before the address changed would step back twice and leave the feed. The address changing, or the
+ * sheet being hidden or left, takes picks again.
  */
 export function SortSheetRoute({ presentation }: { presentation: RoutePresentation }) {
   const t = useTranslations();
   const { filters, sort } = useSearchState();
   const { findCity } = useReference();
+  const address = useSearchParams()?.toString() ?? "";
+  const picking = useRef(false);
+
+  useLayoutEffect(() => {
+    picking.current = false;
+    return () => {
+      picking.current = false;
+    };
+  }, [address]);
 
   const pick = (picked: ListingSort) => {
+    if (picking.current) {
+      return;
+    }
+    picking.current = true;
     tg.haptic.impact("light");
     void closeThen(routes.feed(toSearchParams(filters, picked))).then(() => window.scrollTo(0, 0));
   };
