@@ -40,7 +40,8 @@ export type JournalEvents = {
   listing_shared: { listing_id: number };
   original_opened: { listing_id: number; src: "button" | "video" | "sources" | "price_history" | "offers" };
   original_copied: { listing_id: number };
-  contact_call: { listing_id: number; via: "tel" | "browser"; src?: "text" };
+  /** `src`: none from the action bar (legacy), `author` from the author row (WP-26, HOMI), `text` from the original text. */
+  contact_call: { listing_id: number; via: "tel" | "browser"; src?: "text" | "author" };
   contact_write: { listing_id: number };
 };
 

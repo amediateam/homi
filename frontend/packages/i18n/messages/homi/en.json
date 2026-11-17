@@ -32,5 +32,20 @@
   },
   "feed": {
     "loading": "Loading…"
+  },
+  "listing": {
+    "showPhone": "Show number"
+  },
+  "market": {
+    "v3": {
+      "rooms0": "also studios",
+      "roomsN": "also {n}-room"
+    }
+  },
+  "report": {
+    "agentHintReview": "We’ll check the number and mark it if it’s an agent"
+  },
+  "toast": {
+    "reportedAgentReview": "Thanks, we’ll check"
   }
 }
