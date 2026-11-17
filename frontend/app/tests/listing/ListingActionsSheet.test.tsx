@@ -370,6 +370,23 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
     expect(haptics()).toEqual([LIGHT, LIGHT]);
   });
 
+  it("a second tap on the chevron before Back has landed steps back once: report → menu, the sheet stays", async () => {
+    route();
+    await screen.findByRole("dialog", { name: "Объявление" });
+    fireEvent.click(row("report")!);
+    expect(title()).toBe("Что не так?");
+    const historyBack = vi.spyOn(window.history, "back");
+
+    const back = popped();
+    fireEvent.click(chevron()!);
+    fireEvent.click(chevron()!);
+    expect(historyBack).toHaveBeenCalledTimes(1);
+    await back;
+    await waitFor(() => expect(title()).toBe("Объявление"));
+    expect(here()).toBe("/ru/listing/100001/actions");
+    historyBack.mockRestore();
+  });
+
   it("a second tap on «Пожаловаться» before the router follows the address pushes nothing", async () => {
     route();
     await screen.findByRole("dialog");

@@ -2,9 +2,10 @@
 
 import { BottomSheet, type BottomSheetProps } from "@homi/ui";
 import { usePathname, useSearchParams } from "next/navigation";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { useBack } from "@/lib/navigation/useBack";
+import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 import { tg } from "@/lib/telegram";
 
 /** How a layer address renders: intercepted into its slot over the page below, or loaded directly as the page. */
@@ -20,29 +21,6 @@ export interface RouteSheetProps
    */
   onClose?: () => void;
   children?: ReactNode;
-}
-
-/**
- * `back` once per address. A second ×, Escape or backdrop tap before the navigation has landed would step back twice
- * and close the page below as well. The guard is dropped when the copy is hidden or unmounted (a cached copy shown
- * again closes anew), and it no longer matches once the address changes under a copy that stays, as when a layer
- * parameter closes at depth 0.
- */
-function useCloseOnce(back: () => void): () => void {
-  const closedAt = useRef<string | null>(null);
-  useEffect(
-    () => () => {
-      closedAt.current = null;
-    },
-    [],
-  );
-  return () => {
-    const here = window.location.pathname + window.location.search;
-    if (closedAt.current !== here) {
-      closedAt.current = here;
-      back();
-    }
-  };
 }
 
 /**

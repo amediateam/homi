@@ -92,6 +92,34 @@ describe("useResource (WP-22)", () => {
     expect(pending[1].signal.aborted).toBe(true);
   });
 
+  it("an entry that holds only an error is forgotten with its last user: a later initial seeds it without a read", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const user = renderHook(() => useResource("listing:3", fetcher));
+    await act(async () => pending[0].resolve(failed(503, "source_unavailable", "source_unavailable")));
+    const reader = renderHook(() => useResource("listing:3", fetcher, { enabled: false }));
+    expect(reader.result.current.status).toBe("error");
+
+    user.unmount();
+
+    expect(reader.result.current).toMatchObject({ data: undefined, error: null, status: "idle" });
+    const { result } = renderHook(() => useResource("listing:3", fetcher, { initial: { n: 5 } }));
+    expect(result.current).toMatchObject({ data: { n: 5 }, error: null, status: "success" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("an entry with data is kept when its last user leaves, also after a failed refetch", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const user = renderHook(() => useResource("feed", fetcher, { initial: { n: 1 } }));
+    act(() => void user.result.current.refetch());
+    await act(async () => pending[0].resolve(failed(503, "source_unavailable", "source_unavailable")));
+
+    user.unmount();
+
+    const { result } = renderHook(() => useResource("feed", fetcher));
+    expect(result.current).toMatchObject({ data: { n: 1 }, error: { error: "source_unavailable" }, refreshing: false });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("reuses a fresh entry and shows a stale one while it refetches", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { fetcher, pending } = controlledFetcher();

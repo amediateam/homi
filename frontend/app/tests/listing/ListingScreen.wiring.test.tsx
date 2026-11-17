@@ -275,6 +275,27 @@ describe("ListingScreen wiring (WP-26, SCR-018)", () => {
       expect(document.body.classList.contains("locked")).toBe(true);
     });
 
+    it("the viewer closes once per address: ×, Escape and × again before it has left step back once", async () => {
+      window.history.replaceState(null, "", "/ru/listing/100001/photos?i=2");
+      state.pathname = "/listing/100001/photos";
+      await mount({ child: <PhotoViewerRoute /> });
+      await settleChild();
+      const viewer = await screen.findByRole("dialog", { name: "Фото" });
+      const close = () => fireEvent.click(viewer.querySelector("button[data-viewer-close]")!);
+
+      act(() => {
+        close();
+        fireEvent.keyDown(viewer, { key: "Escape" });
+        close();
+      });
+      expect(state.back).toHaveBeenCalledTimes(1);
+
+      // Another address (paging replaces `i`) closes again.
+      window.history.replaceState(null, "", "/ru/listing/100001/photos?i=3");
+      close();
+      expect(state.back).toHaveBeenCalledTimes(2);
+    });
+
     it("the market sheet is portalled to the body at the backdrop level and reads the layer's listing", async () => {
       window.history.replaceState(null, "", "/ru/listing/100001/market");
       state.pathname = "/listing/100001/market";

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useListingNumber, useListingRecord } from "@/features/listing/useListing";
 import { devFlags } from "@/lib/flags";
 import { useBack } from "@/lib/navigation/useBack";
+import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 import { useLayerState } from "@/lib/navigation/useLayerState";
 import { useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
@@ -23,6 +24,8 @@ function stepOf(value: string | null): ActionsStep {
 function ActionsSheet({ number }: { number: number }) {
   const layer = useLayerState("step");
   const { back } = useBack();
+  // Its own guard, apart from the sheet's ×: a double tap on the chevron would walk report → menu → listing.
+  const stepBack = useCloseOnce(back);
   const { supportUsername } = useReference();
   const { details, preview } = useListingRecord(number);
   const author = details?.author ?? null;
@@ -46,7 +49,7 @@ function ActionsSheet({ number }: { number: number }) {
       supportUsername={supportUsername}
       actions={actions}
       onOpenStep={openStep}
-      onBack={back}
+      onBack={stepBack}
       agentReview={devFlags.dev010RealtorVoteWording}
     />
   );

@@ -10,7 +10,8 @@ import { onForbidden } from "@/lib/session/bootstrap";
 /**
  * The small client data hook of WP-22 (`25` §3.5; no query library, DEC-49). One module-level map in memory, keyed
  * by `key`: `initial` (the server's read in cookie mode) seeds it, equal keys share one in-flight request, a key
- * change or the last unmount aborts, a fresh entry is reused and a stale one is shown while it refetches — with
+ * change or the last unmount aborts and forgets an entry without data (an old failure never reaches the next mount,
+ * which seeds or shows its pending state), a fresh entry is reused and a stale one is shown while it refetches — with
  * `cacheComponents` hidden routes re-run their effects when shown again, and the stale check is what stops a
  * refetch storm on every Back. A failed read keeps the data that is already on screen (`03` §1.6).
  *
@@ -151,15 +152,18 @@ function release(key: string): void {
   if (entry.users > 0) {
     return;
   }
-  if (entry.controller !== null) {
+  const reading = entry.controller !== null;
+  if (reading) {
     abort(entry);
-    if (entry.snapshot.data === undefined) {
-      entries.delete(key);
-    } else {
-      entry.snapshot = { ...entry.snapshot, inflight: false };
-    }
-    emit();
   }
+  if (entry.snapshot.data === undefined) {
+    entries.delete(key);
+  } else if (reading) {
+    entry.snapshot = { ...entry.snapshot, inflight: false };
+  } else {
+    return;
+  }
+  emit();
 }
 
 /** Drops every entry whose key starts with `prefix`; a key that is on screen is read again. */

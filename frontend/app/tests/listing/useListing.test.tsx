@@ -243,6 +243,35 @@ describe("useListing (WP-26, SCR-018, SCR-019)", () => {
     });
   });
 
+  describe("an opening after one whose read failed (the failure leaves with its last user)", () => {
+    async function failedOpening() {
+      const first = listing(100001, { initial: null });
+      await act(async () => state.sent[0].resolve(failure("server")));
+      expect(first.result.current.state).toBe("server");
+      first.unmount();
+    }
+
+    it("initial.ok: the details at once, without a browser read", async () => {
+      await failedOpening();
+
+      const { result } = listing(100001, { initial: initialOk() });
+
+      expect(result.current).toMatchObject({ state: "loaded", details: { number: 100001 } });
+      expect(state.sent).toHaveLength(1);
+    });
+
+    it("header mode: the skeleton while its new read runs; the fallback: the card's preview, not the old error", async () => {
+      await failedOpening();
+
+      const { result } = listing(100001, { initial: null });
+      expect(result.current.state).toBe("skeleton");
+      expect(state.sent).toHaveLength(2);
+
+      setPreview(100001, previewOf());
+      expect(listing(100001, {}).result.current.state).toBe("preview");
+    });
+  });
+
   describe("a server 403 with dev001AnyForbiddenShowsAccess", () => {
     it("opens the access screen only once the session is ready, and once", () => {
       state.status = "booting";

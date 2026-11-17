@@ -26,7 +26,7 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `i18n/` | next-intl: `routing.ts`, `request.ts` (locale from `next/root-params`), `navigation.ts` (`Link`, `useRouter` — both counted in the history stack, `usePathname`, `redirect`), `IntlClientProvider.tsx`, `labels.ts` |
 | `lib/telegram/` | The only way to Telegram (`tg`); `sdk.ts` alone reads `window.Telegram`. Version gates, the SDK wait, init, theme, links, calls, sharing, location, home screen, DeviceStorage |
 | `lib/session/` | The bootstrap of a launch, `SessionProvider` / `useSession()`, `reauthenticate()`, the in-memory token of header mode, `LocaleGuard`, server-only `getSessionToken()` |
-| `lib/navigation/` | `routes.ts` (the only place an address is spelled; `matchRoute` and `searchKeysOf` read one), `nav`, the history stack, `useBack`, `closeThen`, `useLayerState` |
+| `lib/navigation/` | `routes.ts` (the only place an address is spelled; `matchRoute` and `searchKeysOf` read one), `nav`, the history stack, `useBack`, `useCloseOnce`, `closeThen`, `useLayerState` |
 | `lib/deeplinks/` | `parseLaunch` (start_param, `?listing=`, `?news=`, `?map=`), the link builders, the launch gate, `launchTarget` and `launchPending()` (the city gate waits for the launch target) |
 | `lib/storage.ts`, `lib/graphics.ts`, `lib/device.ts` | The client storage keys with their DeviceStorage policy; lite graphics; the device rule of lite graphics, which a Server Component can import (`graphics.ts` re-exports it) |
 | `lib/security/csp.ts` | The nonce CSP of `proxy.ts` (ADR-0020) |

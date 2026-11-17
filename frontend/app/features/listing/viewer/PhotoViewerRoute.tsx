@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { replaceTop } from "@/lib/navigation/history";
 import { useBack } from "@/lib/navigation/useBack";
+import { useCloseOnce } from "@/lib/navigation/useCloseOnce";
 
 import { useListingNumber, useListingRecord } from "../useListing";
 
@@ -25,13 +26,15 @@ function photoIndex(value: string | null, count: number): number {
  * the full set once the answer is there, the card's preview photos while it is pending (G-10), none before either —
  * the dialog still opens, empty. Paging replaces `i` in the current address, locale included, with no new history
  * entry (`history.replaceState` and the app's stack); ×, Escape, the swipe down and Telegram's Back close it through
- * `back()`. The hero does not follow the photo the viewer closed on (legacy).
+ * `back()`, the first three once per address (`useCloseOnce`). The hero does not follow the photo the viewer closed
+ * on (legacy).
  */
 export function PhotoViewerRoute() {
   const number = useListingNumber();
   const { details, preview } = useListingRecord(number);
   const searchParams = useSearchParams();
   const { back } = useBack();
+  const close = useCloseOnce(back);
 
   if (number === null) {
     return null;
@@ -47,5 +50,5 @@ export function PhotoViewerRoute() {
     replaceTop(href);
   };
 
-  return <PhotoViewer photos={photos} index={photoIndex(searchParams?.get("i") ?? null, photos.length)} onIndexChange={page} onClose={back} />;
+  return <PhotoViewer photos={photos} index={photoIndex(searchParams?.get("i") ?? null, photos.length)} onIndexChange={page} onClose={close} />;
 }
