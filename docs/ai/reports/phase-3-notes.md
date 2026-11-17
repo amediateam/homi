@@ -931,3 +931,5 @@ The review merged them in pairs onto `780aea9`:
 
 The 12 s bound of #75 was raised before its merge: a slower listing push on a first launch meets the city gate.
 It is recorded in KI-40. KI-38, KI-39 and KI-40 are resolved.
+Their follow-up docs PR #77 merged on 2026-11-17 (`a4c388c`). Session end: WP-25 and the open questions wait for
+the developer.
