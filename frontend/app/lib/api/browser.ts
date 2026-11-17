@@ -37,6 +37,42 @@ function search(query: BffOptions["query"]): string {
   return text === "" ? "" : `?${text}`;
 }
 
+/**
+ * One signal that aborts when any of `signals` does, with the reason of the first. `AbortSignal.any` where the engine
+ * has it; the boot test admits Chrome 111+ and Safari 16.4+ (`boot/boot.js`), and `AbortSignal.any` arrived only in
+ * Chrome 116 and Safari 17.4, so older engines get a controller linked by listeners. `release()` removes those
+ * listeners once the request is over, so a long-lived caller signal keeps none of them.
+ */
+export function anySignal(signals: readonly AbortSignal[]): { signal: AbortSignal; release: () => void } {
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any([...signals]), release: () => undefined };
+  }
+  const controller = new AbortController();
+  const onAbort = (event: Event) => {
+    release();
+    controller.abort((event.target as AbortSignal).reason);
+  };
+  let linked = false;
+  const release = () => {
+    if (linked) {
+      linked = false;
+      for (const signal of signals) {
+        signal.removeEventListener("abort", onAbort);
+      }
+    }
+  };
+  const aborted = signals.find((signal) => signal.aborted);
+  if (aborted !== undefined) {
+    controller.abort(aborted.reason);
+    return { signal: controller.signal, release };
+  }
+  for (const signal of signals) {
+    signal.addEventListener("abort", onAbort);
+  }
+  linked = true;
+  return { signal: controller.signal, release };
+}
+
 async function readOnce<T>(path: string, options: BffOptions): Promise<ApiResult<T>> {
   const where = { method: "GET", path: readTemplate(path) ?? path };
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -51,7 +87,7 @@ async function readOnce<T>(path: string, options: BffOptions): Promise<ApiResult
 
   const timeout = new AbortController();
   const timer = setTimeout(() => timeout.abort(new DOMException("No answer in time.", "TimeoutError")), BFF_TIMEOUT_MS);
-  const signal = options.signal === undefined ? timeout.signal : AbortSignal.any([options.signal, timeout.signal]);
+  const { signal, release } = options.signal === undefined ? { signal: timeout.signal, release: () => undefined } : anySignal([options.signal, timeout.signal]);
   let response: Response;
   let text: string;
   try {
@@ -64,6 +100,7 @@ async function readOnce<T>(path: string, options: BffOptions): Promise<ApiResult
     return failureOf(where, timeout.signal.aborted ? "timeout" : "offline");
   } finally {
     clearTimeout(timer);
+    release();
   }
 
   let body: ApiEnvelope<T> | null = null;

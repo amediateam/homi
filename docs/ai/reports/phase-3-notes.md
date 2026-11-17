@@ -933,3 +933,76 @@ The 12 s bound of #75 was raised before its merge: a slower listing push on a fi
 It is recorded in KI-40. KI-38, KI-39 and KI-40 are resolved.
 Their follow-up docs PR #77 merged on 2026-11-17 (`a4c388c`). Session end: WP-25 and the open questions wait for
 the developer.
+
+## W. Development track, 2026-11-17 — WP-25, filters, quick filter, sort and city
+
+Taken on «Погнали WP-25». Branch `wp-25-filters`, on `main` = `4f91f8a` (after #78). The package is `c41d07c`; the
+review fixes are `37ffd27`. It ran as plain subagents, at most three at a time, each owning its own files:
+- **Wave 1:** the logic (`useDraft`, `applyFilters`, `useLiveStats`, `useCityPick`, `refreshCitiesStats`),
+  sections 1–6 with `RoomsPicker` and the sort sheet, and sections 7–16 with `newFeatures`.
+- **Wave 2:** the full sheet, the quick sheet and the city sheet, then the two end-to-end specs.
+
+The orchestrator wrote `IntInput`, `PriceInput` and the section frame, and re-ran every part's tests itself. Two
+independent read-only reviews followed (behaviour and React/Next; security), and their fixes are `37ffd27`. The
+specification is corrected where the code differs (rule 6), and its "Handoff" is filled.
+
+The four sheet addresses now render the real sheets, both intercepted over the feed and on a direct load:
+- **Full sheet:** `FiltersForm`, with the seventeen stateless sections over `sectionsFor`, the live count and flow
+  (`useLiveStats`), the relax chips, the radar seam (off), the nested city picker on `pick=city`, the pets entry and
+  the draw hand-off.
+- **Quick sheets:** `QuickFilterForm`, whose server `QuickFilterPage` renders the not-found screen for an unknown
+  kind.
+- **Sort sheet:** `SortList`, an own radiogroup.
+- **City sheet:** `CityPickerSheet`, over WP-23's `CityList`.
+
+Every apply goes through `applyFilters`, a back step and then a replace, so history does not grow. The forms are
+keyed by `formKey`, so each open starts from the address, and the draft survives the nested picker (proven by
+`city.spec.ts`).
+
+ASSUMPTION_MISMATCH AM-70 (2026-11-17):
+- **Assumption.** WP-25's "Data" said: "On opening the full sheet: `useCityStats().refetch()`, errors ignored".
+- **What was found.** WP-22's `useCityStats(code)` returns the statistics of one city from the reference store. It
+  fetches nothing and has no `refetch`. The statistics arrive once, with the reference data of the server render
+  (`lib/reference/server.ts`).
+- **Resolution.** `refreshCitiesStats()` in `lib/reference/useReference.ts` reads `GET /cities` again through
+  `bffFetch`. It replaces only the statistics, ignores a failed or malformed answer, shares one request between
+  opens close together, and never rejects. `FiltersSheetRoute` calls it once per mount. The specification names it.
+
+Review findings and fixes (`37ffd27`):
+- **Behaviour review:**
+  - C-1: `bffFetch` used `AbortSignal.any`, which the engines the boot test admits (Chrome 111–115, Safari
+    16.4–17.3) lack, so every read with a signal threw. This is WP-22 code, and the feed's next pages were affected
+    too. KI-55, resolved by `anySignal()`.
+  - C-3: the quick sheet's key on an address without `city`.
+  - P-2: double taps on a sort row and on «Обвести на карте».
+  - P-3: a double tap on the city field.
+  - P-4: the JSDoc of the listeners.
+  - Not fixed: C-2, a rise of the sheet on a city-less address, joins KI-54. P-1, a stale `back()` after a
+    subscribe, waits for WP-30.
+- **Security review:** all six requirements were met.
+  - S-1: only a city of the reference data is saved.
+  - S-2: `GET /cities` keeps only elements with a code, both in the browser and on the server.
+  - Info: S-3 and S-4 (the relax code is WP-30's to validate).
+
+Own choices (no ADR):
+- **Sheet ownership:** each form owns its `RouteSheet`, and `formKey` keys both drafts.
+- **Haptics:** they follow legacy (no section plays one; opening plays nothing).
+- **Saving the city:** `useSaveCity` calls `patchMe` with the saved city.
+- **Live stats:** a change is a change of the count query, and a failed request keeps the previous count and flow.
+- **Guards:**
+  - one apply in flight;
+  - once per showing for the sort pick, the city pick and the draw hand-off;
+  - one `pick=city` push.
+- **Reused as is:** `CityList` (WP-23), with its own flags default.
+
+Verified (from `frontend/`):
+- **On `c41d07c`:**
+  - `make ci-frontend` → exit 0. Unit tests: app 118 files / 1713, `@homi/search` 238 + 1 todo, `@homi/testing` 95,
+    `@homi/ui` 120, `@homi/i18n` 110, `@homi/api-client` 14, `@homi/utils` 2.
+  - End to end, each file alone against a local `next start`: foundation 19, back + launch 16, feed 19, city 6 and
+    filters 20 passed. Shell passed 16, two of them after a rerun: a sign-in stuck at `booting` (KI-32).
+- **On `37ffd27`:**
+  - `make ci-frontend` → exit 0, with app 120 files / 1731.
+  - End to end: city 6, filters 20 (one KI-32 rerun) and feed 19 passed.
+
+Known issues: KI-54 (the draft re-created on an address without `city`) and KI-55 (resolved here).

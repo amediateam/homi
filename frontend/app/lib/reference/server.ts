@@ -5,6 +5,7 @@ import { cacheLife, cacheTag } from "next/cache";
 
 import { publicApi } from "@/lib/api/server";
 
+import { cityStatsOf } from "./cityStats";
 import { EMPTY_REFERENCE } from "./empty";
 import type { Cached, CityStats, Reference } from "./types";
 
@@ -19,7 +20,8 @@ export { EMPTY_REFERENCE };
  * reach it for a moment: then the empty value is returned with the `seconds` profile, whose expiry under five
  * minutes keeps it out of prerenders (`cacheLife.md`, "Prerendering behavior"), so the next request asks again.
  * `ReferenceProvider` therefore sits inside `<Suspense>`. A change of `radars_enabled` on the server reaches a running
- * app when the entry is revalidated, after about ten minutes.
+ * app when the entry is revalidated, after about ten minutes. `GET /cities` keeps only the elements with a code
+ * (`cityStatsOf`); an answer that is not a list counts as failed.
  */
 export const REFERENCE_LIFE = { stale: 300, revalidate: 600, expire: 3600 } as const;
 
@@ -39,10 +41,11 @@ export async function getCities(locale: Locale): Promise<Cached<CityStats[]>> {
   "use cache";
   cacheTag("reference");
   const result = await publicApi(locale).cities();
-  if (!result.ok) {
+  const data = result.ok ? cityStatsOf(result.data) : null;
+  if (!result.ok || data === null) {
     cacheLife("seconds");
     return { loaded: false, data: [] };
   }
   cacheLife(REFERENCE_LIFE);
-  return { loaded: true, data: result.data, ...(result.meta.source === undefined ? {} : { source: result.meta.source }) };
+  return { loaded: true, data, ...(result.meta.source === undefined ? {} : { source: result.meta.source }) };
 }
