@@ -1010,3 +1010,173 @@ Known issues: KI-54 (the draft re-created on an address without `city`) and KI-5
 Merged on 2026-11-17 as #79 (`f2f58cc`), on «сливай #79», after green `frontend` (run 44048799579) and
 `frontend-e2e` (run 44048799675, 130 passed). WAITING for the regular deploy of the production track and the checks
 inside Telegram on staging.
+
+## X. Development track, 2026-11-17 — WP-26, listing screen
+
+Branch `wp-26-listing`, on `main` = `3b98be2` (after #80). Eight commits: `8d8b8f1` (shared-first), `ca5f5a2` (a
+WP-25 test stub), `ab33858` (wave 1), `d2280b5` (the backend stub variants), `830b541` (wave 2), `82719e1` (wave 3),
+`23ec0bf` and `99b032a` (the two review rounds); the four end-to-end specs follow on the branch. It ran as plain
+subagents, at most three at a time, each owning its own files:
+- **Wave 0 (shared-first, alone):** the listing types, the section control types, `openOriginal`, the test helper
+  `detailsOf`, the icons, the five `homi` keys and `contact_call.src`, so every later part imports only files that
+  exist.
+- **Wave 1:** the layer, the screen shell and the data hook; the Server Actions and the pure modules (`marketText`,
+  `gestures`, `backBy`) with the shared component props; the eleven sections and `splitMaskedPhones`.
+- **Wave 2:** contact and translation; the viewer and the market sheet; the actions sheet, share and close; the
+  backend fixtures.
+- **Wave 3 (alone):** the screen wired end to end, and the existing specs that read the placeholder markup.
+
+The orchestrator wrote the decisions (D-1 … D-30) and the shared interface contract before the build, settled the
+open legacy details by a read-only look at the legacy source (D-30), and ran the gates between the waves. Two
+independent review rounds followed, each with its fixes. The specification is corrected where the code differs
+(rule 6), and its "Handoff" is filled.
+
+The listing addresses now render the real screen, intercepted over the page below and on a direct load:
+- **Layer:** `ListingLayer` owns the overlay in both trees, reads its number from its own `params`, keys the overlay
+  by number and opening (every opening starts at the top and photo 1), takes the focus and gives it back, and holds
+  the body class and the swipe gate.
+- **Screen:** every block of SCR-018 and every state of SCR-019 — skeleton, the card's preview with section skeletons,
+  the details, not found, offline, server — with no digit of the author's number before a tap (DEC-52).
+- **Children:** the photo viewer, the market sheet and the actions sheet (menu, report, detail) as client-only,
+  portalled child routes that read the listing's resource without a request of their own.
+- **Actions:** contact, translation, share, hide, block and report as Server Actions with one input object.
+
+Developer decisions (2026-11-17):
+- **Fixtures** («В PR WP-26»): the stub catalogue gets `100018` … `100021`, Tashkent-region long-rent apartments
+  outside the default set with the listing-screen variants, and the per-m² comparisons of `100008` and `100009` are
+  fixed, in a backend commit of this PR.
+- **`splitMaskedPhones`** («lib приложения»): in `frontend/app/lib/phone/masked.ts`, not in `@homi/utils`, so no
+  package or lockfile change.
+
+ASSUMPTION_MISMATCH AM-71 (2026-11-17):
+- **Assumption.** WP-26's "Components" put `splitMaskedPhones` into `frontend/packages/utils/src/phone.ts`, "exported
+  from `@homi/utils`", for the app to import.
+- **What was found.** `@homi/utils` is not a dependency of `frontend/app` (its `package.json` lists no such entry), so
+  the import needs a `package.json` and lockfile change, which needs approval.
+- **Resolution.** The developer chose the app's own lib: `lib/phone/masked.ts` with `tests/phone/masked.test.ts`. The
+  specification names it.
+
+ASSUMPTION_MISMATCH AM-72 (2026-11-17):
+- **Assumption.** The first text left open whether a `[number]` layout is remounted when the number changes, and read
+  the number in the fallback with `useParams()`; the pre-build decision D-20 reasoned that Next keys the segment by its
+  name.
+- **What was found.** The browser keys a dynamic segment by its value (`create-segment-key.browser.js` re-exports
+  `createRouterCacheKey`); the server build's key, without the value (`name|type`), serves only to resume HTML. So
+  every number has its own layout instance and bfcache entry. `useParams()` reads one app-wide context, so a hidden
+  copy of listing A would read B's number while B is open.
+- **Resolution.** `ListingLayer` reads its number with `use(params)` from its own layout and provides it to the screen
+  and the child routes; it keeps the key by number and opening for the per-opening reset (D-11, KI-42).
+
+ASSUMPTION_MISMATCH AM-73 (2026-11-17):
+- **Assumption.** The actions table said "Any failure → `common.saveFailed`", and the binding decisions had
+  `dev016ErrorToastOnFailure` consumed through the helpers of WP-23 — that is, `failed()`.
+- **What was found.** `failed()` of `lib/ui/feedback.ts` plays the error haptic and shows the toast only with
+  `dev016ErrorToastOnFailure` on, which is off. Through it, a failed hide, block or report would only vibrate, while
+  legacy shows the toast in the actions sheet (`03` SCR-023).
+- **Resolution.** The actions sheet shows `common.saveFailed` with the error haptic itself, always, in its own toast
+  host (D-6); only contact failures go through `failed()`.
+
+ASSUMPTION_MISMATCH AM-74 (2026-11-17):
+- **Assumption.** WP-26's "Share" fell back to the share link "on any error, an old client or `false`" of
+  `shareMessage`.
+- **What was found.** `05` TMA-030 records that legacy uses neither the result callback nor the share events: a `false`
+  means the user closed a picker that was shown. A fallback then would open a second share window.
+- **Resolution.** The fallback is taken only for an old client, a failed `prepareShare` or a `shareMessage` that
+  throws; a `false` ends quietly (D-5). It is a reviewer question.
+
+ASSUMPTION_MISMATCH AM-75 (2026-11-17):
+- **Assumption.** The checklist and the end-to-end lines of WP-26 took the stub catalogue of WP-12 to hold the
+  listing-screen variants, and its comparisons to be in the metric they name.
+- **What was found.** The catalogue had no listing with a chat link or a paid number instead of a phone, none without
+  any contact and with its post kept, no video of a deleted post, no author with 20 or more listings, no history with
+  one or with three events, no `near` or `city` comparison, no stats edge cases, no offer link and no second masked
+  number that is not the author's. `100008` and `100009` carried whole prices in their per-m² comparison fields.
+- **Resolution.** On the developer's word (D-1): `100018` … `100021` outside the default set, so the feed counts do
+  not change; the per-m² values of `100008` and `100009`; `CardContractTest`, `ContactTranslationShareContractTest`,
+  the docblock of `StubListingSource` and the reserved-number note of `docs/api/README.md`.
+
+ASSUMPTION_MISMATCH AM-76 (2026-11-17):
+- **Assumption.** WP-26 keyed the resource `useResource(['listing', number], …)` and took the children of the listing
+  to read the server's answer from it "without a second request".
+- **What was found.** `useResource` takes a string key. Its render-time seed of `initial` was written without an
+  announcement, and the mount effect stamped it only for a reading user: a child route that had committed earlier
+  with nothing (outside the listing's inner boundary) was never told. On a direct load in cookie mode, and whenever
+  the server part streamed in after the child, the viewer, the market sheet and the actions menu would have stayed
+  empty.
+- **Resolution.** The key is `listing:${number}` (`listingKey`, D-18). The seed is announced by its commit in a layout
+  effect that does not depend on `enabled`; a two-commit test fails on the old code. `seedResource` serves the merge
+  redirect.
+
+ASSUMPTION_MISMATCH AM-77 (2026-11-17):
+- **Assumption.** WP-26's "Routes" took the intercepted tree for soft navigations and the plain tree for a hard load,
+  and the directly loaded listing to stay the one listing on screen while its children change.
+- **What was found.** The interception rewrite matches any address under the locale, so a soft navigation from a
+  directly loaded listing, or one of its children, to a listing address is intercepted too, while the `children` slot
+  keeps the standalone tree. A depth-0 close of a directly loaded child (a replace with the listing) left its portalled
+  viewer or sheet above the new overlay copy, with a dead actions sheet (review X1); every such navigation mounts a
+  second copy (X2).
+- **Resolution.** The standalone copy drops its child routes for good once an overlay copy has shown (a latch), and
+  swipe back needs `depth > 0`. The duplicate copy is KI-56; normalising a direct load into feed + pushed listing is a
+  reviewer question.
+
+ASSUMPTION_MISMATCH AM-78 (2026-11-17):
+- **Assumption.** The first text gave several legacy details from the audit, and left others unverified.
+- **What was found** (read-only look at the legacy source, D-30): `change_pct` is shown as the server's percent in the
+  number locale, `+` only above zero, no space and no rounding (not «−7 %»); `nearby[].note` is rendered; a double tap
+  needs less than 300 ms and less than 30 px; a video tap while the answer is pending does nothing but the haptic;
+  legacy sends no `src` from the author row; offer links play no haptic and a hero video tap plays the light one even
+  when nothing opens; the market marker's first show counts the preview's mount, so on the card → listing path it
+  never ran; the hero counter shows only for more than one photo in the array on screen; the hero does not follow the
+  viewer; an error replaces the whole screen.
+- **Resolution.** The specification follows legacy for these, except where it records a HOMI departure (the pending
+  video tap opens the viewer, `src: 'author'`, the marker runs on the first render with a median); the departures are
+  reviewer questions.
+
+ASSUMPTION_MISMATCH AM-79 (2026-11-17):
+- **Assumption.** WP-26's "Contact" added the origin of `NEXT_PUBLIC_API_URL` to the link allow-list, taking the
+  variable to be set wherever the app is built.
+- **What was found.** Next.js inlines `NEXT_PUBLIC_*` at build time, and the end-to-end build of
+  `.github/workflows/frontend-e2e.yml` set only `API_URL` (the API at `127.0.0.1:8080`), while the stub `call_url` is
+  on `APP_URL` of `backend/.env.example` (`https://api.homi.loc`). The call page would have been refused in CI.
+- **Resolution.** `linkHosts()` reads the variable inside the function, spelled out (an empty or malformed value adds
+  nothing), and the workflow sets `NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1` for the end-to-end step (D-8).
+
+Review findings and fixes:
+- **Round 1** (on `82719e1`; behaviour, conformance, security), fixed in `23ec0bf`:
+  - B1: the viewer's close and the actions chevron had no once-guard, so a quick second close also closed the
+    listing. `useCloseOnce` moved into `lib/navigation` and guards both (and `RouteSheet`, the nested city picker).
+  - B2 / SPEC-01: an entry holding only a failed read survived its last reader, so a reopening showed the old error
+    and ignored a good server answer. `useResource` forgets an entry without data when its last reader leaves.
+  - Rejected: SEC-1 (the end-to-end specs are a later step of the branch).
+- **Round 2** (on the tree of `23ec0bf`; tests, cross-cutting), fixed in `99b032a`:
+  - X1 (AM-77): the latch of the standalone copy. X2: swipe back needs `depth > 0`; the duplicate is KI-56. X3: the
+    merge redirect steps back over an open child before its replace, so Back no longer loops through the alias.
+  - T1 … T6: six tests that could not fail now fail on the broken version.
+  - Rejected: T7 (a non-fraud report answered `hidden: true` cannot happen under the contract).
+
+Own choices (no ADR):
+- **One layer owner:** `ListingLayer` in both trees; route files hold no logic.
+- **One body:** the preview and the details share one tree, so the hero keeps its photo; an error replaces it.
+- **Resource rules** for every `useResource` user: a seed announced by its commit; an entry without data forgotten
+  with its last reader.
+- **Contact:** in the screen instance only, never in a module map (DEC-52; the fallback-instance gap is KI-57); the
+  lock is per control and covers the whole tap; `src: 'author'` from the author row.
+- **Children:** client-only `next/dynamic`, portalled; the actions route opens the steps, reads the flags and guards a
+  double push.
+- **Failures:** the actions sheet's own toast host (D-6); success toasts in the app's host as the close starts.
+- **Fixtures** outside the default set, reusing the existing stub media.
+
+Verified (from `frontend/` unless marked):
+- **On `ab33858`:** `make ci-frontend` clean. Unit tests: app 141 files / 2035, `@homi/search` 238 + 1 todo,
+  `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 111, `@homi/api-client` 14, `@homi/utils` 2.
+- **On `d2280b5`** (from `backend/`): `php artisan test --compact` → 745 passed, 4 skipped; Pint passed.
+- **On `830b541`:** `make ci-frontend` clean, app 152 files / 2269 + 1 todo.
+- **On `82719e1`:** app 153 files / 2281 + 1 todo; `pnpm -r lint`, the app typecheck and `pnpm --filter app build`
+  clean.
+- **On `23ec0bf`:** app 153 files / 2287 + 1 todo.
+- **On `99b032a`:** `make ci-frontend` clean, app 153 files / 2304 + 1 todo; the packages as above.
+- **End to end:** recorded in the specification's "Handoff" once the specs are run.
+
+Known issues: KI-56 (low: the duplicate overlay copy of a directly loaded listing), KI-57 (low: a contact revealed in
+the fallback instance), KI-58 (info: the stub listing methods ignore `access_*`); KI-41 partly done (minimal focus on
+the listing layer, the rest WP-33's), KI-42 resolved for the listing layer, KI-43's listing part done.

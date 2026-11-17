@@ -302,10 +302,12 @@ feature; the stub controller answers with `meta.source = stub`. Scenario `share_
   the contact method) is the only object with one. `PriceInfo::fromArray()` keeps `kind` only when it is
   `down_payment` or `business`, else `null`.
 - `App\Services\Listings\PhoneMasker` (above), called from the three `fromArray()` methods named there.
-- `ListingSource` gains the ten methods of WP-10. `StubListingSource` loads `listings/catalog.json` (16 base
-  listings covering every deal × type, a video listing, one without photos, one without coordinates, one suspicious
-  price, one verified owner, a sale with `price.kind` `down_payment` and a commercial rent with `business`; two
-  entries carry a raw synthetic number in `summary` and in `original.text`, so the masker is seen to work), repeats
+- `ListingSource` gains the ten methods of WP-10. `StubListingSource` loads `listings/catalog.json` (20 base
+  listings: 16 covering every deal × type, a video listing, one without photos, one without coordinates, one
+  suspicious price, one verified owner, a sale with `price.kind` `down_payment` and a commercial rent with `business`,
+  two of them with a raw synthetic number in `summary` and in `original.text`, so the masker is seen to work; and
+  `100018` … `100021`, the listing-screen variants of WP-26, Tashkent-region long-rent apartments outside the default
+  set, of which `100021` carries two raw numbers in its texts), repeats
   the Tashkent long-rent apartments with shifted numbers up to 45 entries, and filters in memory by city, deal,
   types, rooms, price, districts, `near_metro`, `below_median` and owner. Sorts are applied; the cursor is
   `s1.<offset>`. Count and map follow the same filter; flow returns `week = count`, `days = 7` and the options of
