@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-17 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); WP-24 in REVIEW on `feat/wp-24-feed` (PR #71), not on `main`; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-17 (development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); KI-29 fixed by #70 (`main` = `d2a4722`); WP-24 merged (#71; `main` = `780aea9`), WAITING for the production track's photo check and deploy and the checks inside Telegram on staging, its follow-up docs PR (`docs/wp-24-after-merge`) in review; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -65,8 +65,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     `StubLandingSource` and the features `source.landing.live`, `source.landing.pins`.
 
 ## Frontend (`frontend/`)
-- pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `1d1c964` of the WP-24 branch).
-- `packages/`: `@homi/config`, `@homi/types`, `@homi/utils`, `@homi/api-client`, `@homi/ui`, `@homi/i18n` (WP-20; `./format` since WP-22), `@homi/search` (WP-22) — each with lint/typecheck/test scripts (the `lint` scripts are placeholders, KI-29); `app` uses `@homi/config`, `@homi/i18n` and `@homi/ui` since WP-20, `@homi/search`, `@homi/api-client` and `@homi/types` since WP-22.
+- pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).
+- `packages/`: `@homi/config`, `@homi/types`, `@homi/utils`, `@homi/api-client`, `@homi/ui`, `@homi/i18n` (WP-20; `./format` since WP-22), `@homi/search` (WP-22) — each with lint/typecheck/test scripts (since #70 the `lint` scripts run the app's ESLint binary with `packages/eslint.config.mjs`; KI-29 resolved); `app` uses `@homi/config`, `@homi/i18n` and `@homi/ui` since WP-20, `@homi/search`, `@homi/api-client` and `@homi/types` since WP-22.
 - Since WP-03 (#39, merged 2026-11-15):
   - **Packages:** the 31 Wave 1 npm packages are installed (lockfile 665 entries). The install scripts of `@parcel/watcher`, `@swc/core` and `core-js` are denied in `allowBuilds`. No product code imports them.
   - **Unit tests:** Vitest 5 runs through `frontend/vitest.config.mts`, with one project per package. `pnpm test` → `@homi/testing` 89 passed, `@homi/utils` 2 passed.
@@ -121,8 +121,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   `miniapp` (85 tests, one worker, local API) → 82 passed, 3 failed on the stub user's 120/min API limit (AM-61),
   `shell.spec.ts` alone 16 passed; the D2 integrator's full run, before the D2 review fixes → 85 passed; `frontend` and `frontend-e2e` green on the PR
   (`f12574c`, e2e 85 passed), `frontend` green on `main` after the merge (run 43888986489). Known issues KI-32 … KI-43.
-- **WP-24 (REVIEW, branch `feat/wp-24-feed`, PR #71; on `d76a0c0`: `f9cc818`, A `8b64b19`,
-  `9163d26`, B `1d1c964`, C `f58cf88`, then the docs pass; not on `main`):** the search tab shows the feed.
+- **Since WP-24 (#71 merged 2026-11-17 as `780aea9`; staging and production do not run it yet):** the search tab
+  shows the feed.
   `features/feed/*`: `FeedServer` (`readFirstPage`: page one with the cookie; on an address without a city `/me` first and
   `profileCity`; `unauthorized` → `null`), `FeedScreen` (`useScreenSearchState('feed')`, the per-search refresh
   version, the scroll to the top, the lite scroll measurement on the first scroll), `feedQuery.ts` (the query and
@@ -143,11 +143,10 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   On `f58cf88`: `make ci-frontend` exit 0 (app 1402, search 238, testing 95, ui 112, i18n 110, api-client 14, utils 2
   tests); `feed.spec.ts` 19 passed, csp + smoke 4 passed; every e2e file alone green in the verify run (shell after a
   `429` rerun).
-  Gotchas: one `feed.spec.ts` run makes about 100 of the stub user's 120 API requests a minute (KI-32); the local
-  `composer openapi:export` needs DB overrides when the DB host of `backend/.env` is unreachable (the migrated local
-  `homi_test` reproduces the committed file); `pnpm --filter app test -- <path>` does not filter (use
-  `pnpm exec vitest run --config ../vitest.config.mts --project app <paths>` from `frontend/app`). KI candidates
-  (KI-44 onward) are in the spec's Handoff.
+  `frontend`, `frontend-e2e` (104 passed) and `backend` green on the PR (`6ae7331`); `frontend` and `backend` green on
+  `main` after the merge (runs 44002675075, 44002675246). Known issues KI-44 … KI-53 (among them the local OpenAPI
+  export, KI-47, and the Vitest path filter, KI-52); KI-32 counts the feed spec's share of the API limit, and KI-43
+  names the feed's fix and what is left.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
