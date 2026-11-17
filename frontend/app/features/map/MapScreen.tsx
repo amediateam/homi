@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { SourceReporter } from "@/features/shell/SourceReporter";
 import { usePathname } from "@/i18n/navigation";
 import { useSessionMap } from "@/lib/data/sessionMaps";
 import { matchRoute } from "@/lib/navigation/routes";
@@ -64,7 +65,9 @@ type Note = { kind: "points" } | { kind: LocateFailure };
  * of the session (`useEngine`) picks the view — a spinner until it is known, `MapUnavailable` for Leaflet until WP-28
  * — and a GL failure the view reports moves the session to the fallback (LB-APP-019). The map lists the search of
  * its own address (`useScreenSearchState`, KI-43); its points are a browser read (`useMapPoints`, `25` §3.5), asked
- * for only while the session is ready and a GL view can draw them.
+ * for only while the session is ready and a GL view can draw them. Their answer's `meta.source` reaches the demo
+ * marker again each time the map's own address is shown — Back from a listing opened from the card, a closed sheet, a
+ * tab round trip — and never under a layer (`25` §4.4, KI-43).
  *
  * The selection is this screen's state. A pin, a stack, a spread pin or a cluster at maximum zoom selects; a light
  * haptic plays when the selected listings change, not when a spread pin only moves the track. The card closes on a
@@ -237,6 +240,7 @@ export function MapScreen() {
         </div>
       ) : null}
       {selection !== null ? <MapSelectionCard selection={selection} onIndex={onIndex} onClose={close} /> : null}
+      <SourceReporter source={own ? points.source : undefined} />
     </>
   );
 }

@@ -101,6 +101,7 @@ vi.mock("@/features/map/useCardLayer", () => ({
 import { resetEngineForTests } from "@/features/map/engine";
 import { LOCATE_NOTE_MS, MapScreen, NOTE_MS } from "@/features/map/MapScreen";
 import { hide, resetSessionMaps } from "@/lib/data/sessionMaps";
+import { reportSource, resetSources, useHasStubData } from "@/lib/data/sources";
 import { pushEntry, resetDepth } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
 import { resetReference } from "@/lib/reference/useReference";
@@ -179,6 +180,7 @@ afterEach(() => {
   resetReference();
   consumeDrawRequest();
   resetDepth("/");
+  resetSources();
 });
 
 describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
@@ -458,6 +460,71 @@ describe("MapScreen: the selection (SCR-013)", () => {
     expect(state.view.mounts).toBe(2);
     expect(card()).toBeNull();
     expect(props().selection).toBeNull();
+  });
+});
+
+describe("MapScreen: the demo marker (`25` §4.4, DEC-50, KI-43)", () => {
+  /** The root layout's marker: shown while an answer of the current pathname came from a stub. */
+  function Marker() {
+    return useHasStubData() ? <i data-demo-marker="" /> : null;
+  }
+  const marker = () => document.querySelector("[data-demo-marker]") !== null;
+
+  /** The answer as `bffFetch` gives it: reported once, for the pathname it arrived at. */
+  const answerFromStub = (points: MapPoint[]) =>
+    act(async () => {
+      reportSource("stub", `/ru${state.pathname}`);
+      state.sent[0].resolve(answered(points));
+    });
+
+  it("is raised again when the map's own address is shown again after a listing or a sheet over it, never under them", async () => {
+    const view = await mount(() => (
+      <>
+        <MapScreen />
+        <Marker />
+      </>
+    ));
+    await answerFromStub([point(1)]);
+    expect(marker()).toBe(true);
+
+    for (const [path, query] of [
+      ["/listing/1", ""],
+      ["/filters", "city=tashkent&from=map"],
+    ]) {
+      at(path, query);
+      view.rerender();
+      await act(async () => undefined);
+      expect(marker()).toBe(false);
+
+      at("/map", "city=tashkent");
+      view.rerender();
+      await act(async () => undefined);
+      expect(marker()).toBe(true);
+    }
+    expect(state.sent).toHaveLength(1);
+  });
+
+  it("is raised again when the map's route is shown again after another tab", async () => {
+    const tree = (mode: "visible" | "hidden") => (
+      <>
+        {createElement(Activity, { mode } as ActivityProps, <MapScreen />)}
+        <Marker />
+      </>
+    );
+    const view = await mount(() => tree("visible"));
+    await answerFromStub([point(1)]);
+    expect(marker()).toBe(true);
+
+    at("/saved", "");
+    view.rerender(tree("hidden"));
+    await act(async () => undefined);
+    expect(marker()).toBe(false);
+
+    at("/map", "city=tashkent");
+    view.rerender(tree("visible"));
+    await act(async () => undefined);
+    expect(marker()).toBe(true);
+    expect(state.sent).toHaveLength(1);
   });
 });
 

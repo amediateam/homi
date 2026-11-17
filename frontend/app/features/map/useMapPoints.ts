@@ -8,6 +8,7 @@ import { bffFetch } from "@/lib/api/browser";
 import { type ApiFailure, failureOf, type UiError } from "@/lib/api/errors";
 import type { ApiResult } from "@/lib/api/types";
 import { useSessionMap } from "@/lib/data/sessionMaps";
+import type { DataSource } from "@/lib/data/sources";
 import { type DevFlags, devFlags } from "@/lib/flags";
 import { searchRules } from "@/lib/search/rules";
 import { onForbidden } from "@/lib/session/bootstrap";
@@ -40,6 +41,8 @@ export interface MapPoints {
   missing: number;
   /** Grows by one with each successful answer, never with a change of the hidden set: the view refits on it. */
   responseId: number;
+  /** `meta.source` of the answer these points come from (`25` §4.4); `undefined` until it answered, or without one. */
+  source: DataSource | undefined;
   error: UiError | null;
   /** Asks again after an error; ignored otherwise. */
   retry: () => void;
@@ -59,10 +62,11 @@ interface State {
   /** The request the effect sends while `enabled`; `null` once answered. */
   request: Request | null;
   responseId: number;
+  source: DataSource | undefined;
 }
 
 function start(key: string, responseId: number): State {
-  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId };
+  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined };
 }
 
 function settle(state: State, result: ApiResult<MapAnswer>): State {
@@ -71,7 +75,16 @@ function settle(state: State, result: ApiResult<MapAnswer>): State {
   }
   const points = Array.isArray(result.data?.points) ? result.data.points : [];
   const answerTotal = result.data?.total ?? null;
-  return { ...state, points, answerTotal, loaded: true, error: null, request: null, responseId: state.responseId + 1 };
+  return {
+    ...state,
+    points,
+    answerTotal,
+    loaded: true,
+    error: null,
+    request: null,
+    responseId: state.responseId + 1,
+    source: result.meta.source,
+  };
 }
 
 function statusOf(state: State, counts: { shown: number; total: number }): MapPointsStatus {
@@ -94,8 +107,9 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
  *
  * The request lives in an effect and is aborted by its cleanup, on unmount and while the route is hidden by
  * `cacheComponents`; a pending one is sent again when shown. A failure is a status, never an empty map (LB-APP-008),
- * and nothing retries by itself. `bffFetch` reports `meta.source` for the demo marker. With
- * `dev001AnyForbiddenShowsAccess` a `forbidden` answer turns the session `denied` (LB-APP-045).
+ * and nothing retries by itself. `bffFetch` reports each answer's `meta.source` to the demo marker once; the hook
+ * only keeps it in `source`, for the screen to report again whenever its own address is shown (`SourceReporter`,
+ * `25` §4.4). With `dev001AnyForbiddenShowsAccess` a `forbidden` answer turns the session `denied` (LB-APP-045).
  */
 export function useMapPoints(filters: SearchFilters, options: MapPointsOptions = {}): MapPoints {
   const { enabled = true, flags = devFlags } = options;
@@ -150,6 +164,7 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
     total: counts.total,
     missing: counts.missing,
     responseId: state.responseId,
+    source: state.source,
     error: state.error?.error ?? null,
     retry,
   };

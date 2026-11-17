@@ -212,6 +212,24 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(sent).toHaveLength(1);
   });
 
+  it("keeps the answer's meta.source for the screen, also when hiding regroups; a new search has none until it answers", async () => {
+    const { result, rerender } = points();
+    expect(result.current.source).toBeUndefined();
+
+    await answer(0, answered(POINTS, 5));
+    expect(result.current).toMatchObject({ source: "stub", responseId: 1 });
+
+    act(() => hide([2]));
+    expect(result.current).toMatchObject({ source: "stub", responseId: 1, shown: 2 });
+    expect(sent).toHaveLength(1);
+
+    rerender({ filters: { ...TASHKENT, deal: "sale" } });
+    expect(result.current.source).toBeUndefined();
+    await answer(1, { ok: true, data: { points: [point(9, 41.2, 69.2, 400)], total: 1 }, meta: { source: "legacy" } });
+    expect(result.current).toMatchObject({ source: "legacy", responseId: 2 });
+    expect(reportSource).not.toHaveBeenCalled();
+  });
+
   it("hiding every listing of a search without unlocated ones is the empty status", async () => {
     const { result } = points();
     await answer(0, answered(POINTS, 3));

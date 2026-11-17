@@ -46,10 +46,12 @@ function stepOver(query: string, pin: string): void {
  * layer with Back. An address replaced under the layer (the deal switch keeps `pin`, a filters apply drops it) leaves
  * the pushed entry in the stack holding the new search, so the hook steps back over it and replaces the new address
  * without `pin` (`closeThen`, WP-27 "Selection card"): the root map tab gets no Back that would undo the change. The
- * history level tells the two apart: a Back took the entry, a replace wrote over it. A `pin` the hook did not push (a
- * direct load) is removed with a replace. Only on the map's own address: a listing opened from the card covers the
- * map, which stays mounted with its card. Off: the card is not a history layer, as in legacy, and the hook does
- * nothing.
+ * history level tells the two apart: a Back took the entry, a replace wrote over it. A layer pushed over the card on
+ * the map's own address (the map bar's lasso pushes `draw=1` without `pin`) closes it and leaves the pushed entry
+ * below; the Back that closes that layer lands there, and the hook pops the entry with one more Back. A `pin` the hook
+ * did not push (a direct load) is removed with a replace. Only on the map's own address: a listing opened from the
+ * card covers the map, which stays mounted with its card. Off: the card is not a history layer, as in legacy, and the
+ * hook does nothing.
  */
 export function useCardLayer(selection: Selection, close: () => void, flags: DevFlags = devFlags): void {
   const on = flags.dev013BackClosesMapCard;
@@ -61,8 +63,8 @@ export function useCardLayer(selection: Selection, close: () => void, flags: Dev
   const phase = useRef<Phase>("none");
   /** The query when the pushed layer was read back. */
   const shownQuery = useRef("");
-  /** The pushed entry: its history level and its `pin`. */
-  const pushed = useRef({ at: 0, pin: "" });
+  /** The pushed entry: its history level and its `pin`; `null` until the hook pushes one. */
+  const pushed = useRef<{ at: number; pin: string } | null>(null);
   const latest = useRef({ close, layer });
 
   useLayoutEffect(() => {
@@ -81,11 +83,12 @@ export function useCardLayer(selection: Selection, close: () => void, flags: Dev
       phase.current = "none";
     }
 
-    const entryKept = depth() === pushed.current.at;
+    const entry = pushed.current;
+    const entryKept = entry !== null && depth() === entry.at;
     if (phase.current === "shown" && value === null) {
       phase.current = "none";
       if (entryKept) {
-        stepOver(query, pushed.current.pin);
+        stepOver(query, entry.pin);
       }
       if (open) {
         latest.current.close();
@@ -97,14 +100,19 @@ export function useCardLayer(selection: Selection, close: () => void, flags: Dev
       if (query === shownQuery.current) {
         latest.current.layer.close();
       } else if (entryKept) {
-        stepOver(query, pushed.current.pin);
+        stepOver(query, entry.pin);
       } else {
         nav.replace(withoutPin(query));
       }
       return;
     }
     if (phase.current === "none" && value !== null) {
-      nav.replace(withoutPin(query));
+      if (entryKept && value === entry.pin) {
+        phase.current = "leaving";
+        latest.current.layer.close();
+      } else {
+        nav.replace(withoutPin(query));
+      }
       return;
     }
     if (phase.current === "none" && open && first !== null) {

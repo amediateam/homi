@@ -611,6 +611,62 @@ describe("DEV-013 'Back closes the map card' (LB-APP-024)", () => {
     });
   });
 
+  it("on: the lasso over the card closes it, and the Back that closes `draw=1` pops the pin entry, so the root map tab has no Back", async () => {
+    await withDevFlags({ dev013BackClosesMapCard: true }, async (flags) => {
+      renderCard({ initial: { numbers: [100001], at: 0 }, flags });
+      expect(depth()).toBe(1);
+
+      // `TopBar` starts drawing: a push of the map's search with `draw=1` (its `href` drops `pin`), which closes the card.
+      act(() => nav.push("/map?city=tashkent&draw=1"));
+      expect(card()).toBeNull();
+      expect(depth()).toBe(2);
+
+      // `MapScreen` closes the `draw=1` layer at once with Back (WP-28 draws there); it lands on the pin entry.
+      const back = popped();
+      await act(async () => {
+        nav.back();
+        await back;
+      });
+
+      await waitFor(() => {
+        expect(here()).toBe("/ru/map?city=tashkent");
+        expect(depth()).toBe(0);
+      });
+      expect(canGoBack()).toBe("false");
+      expect(card()).toBeNull();
+      expect(router.back).toHaveBeenCalledTimes(2);
+      expect(router.replace).not.toHaveBeenCalled();
+    });
+  });
+
+  it("on: a pin tap while that Back is on its way sends no second Back and pushes the new card's layer once it lands", async () => {
+    await withDevFlags({ dev013BackClosesMapCard: true }, async (flags) => {
+      renderCard({ initial: { numbers: [100001], at: 0 }, flags });
+      act(() => nav.push("/map?city=tashkent&draw=1"));
+      const back = popped();
+      await act(async () => {
+        nav.back();
+        await back;
+      });
+      // The hook's Back over the pin entry has been sent and has not landed yet.
+      expect(router.back).toHaveBeenCalledTimes(2);
+      expect(here()).toBe("/ru/map?city=tashkent&pin=100001");
+
+      const landed = popped();
+      fireEvent.click(document.querySelector("[data-test-open]")!);
+      await act(async () => {
+        await landed;
+      });
+
+      expect(router.back).toHaveBeenCalledTimes(2);
+      expect(router.replace).not.toHaveBeenCalled();
+      expect(here()).toBe("/ru/map?city=tashkent&pin=100001");
+      expect(depth()).toBe(1);
+      expect(card()).not.toBeNull();
+      expect(History.prototype.pushState).toHaveBeenCalledTimes(3);
+    });
+  });
+
   it("off (legacy): the deal switch and «Показать» under the card leave the map tab without a Back", async () => {
     await withDevFlags({}, async (flags) => {
       renderCard({ initial: { numbers: [100001], at: 0 }, flags });

@@ -24,8 +24,9 @@ import { ViewToggle } from "./ViewToggle";
  * was opened from, which stays mounted below (`isLayerAddress`): the chrome keeps the variant it drew there, so the
  * page keeps its top bar, tab bar and spacers — its height and scroll position — and the swipe back of the listing
  * (WP-26) uncovers it whole. The first address the shell draws has nothing below it, so a direct load draws the
- * address's own variant (`none` for a listing). Only the variant is kept: the bars still read the live address for
- * their contents (the deal, the badge), as the page below does — out of sight under the opaque listing. State adjusted
+ * address's own variant (`none` for a listing). Only the variant is kept: the list and map bars and the view toggle
+ * read their own screen's search (`useScreenSearchState`, KI-43), so the swipe back uncovers the right deal, badge
+ * and area. State adjusted
  * while rendering, as `RouteSheet` does: each of the two chrome parts keeps its own copy and sees the same addresses,
  * and a render that never commits leaves no trace.
  */
