@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#71) |
+| Status | WAITING (merged in #71 on 2026-11-17; production track: the photo check of the header, then the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-23 |
 | Size | ≈ 2 400 changed lines, M |
 | Behaviour reference | `03` §1.11 (session-only state), §1.12 (server-formatted values), §2 screens SCR-007, SCR-008, SCR-009 and the place of SCR-047 in the list, §2.1 (shared components), §3.4 (constants), §4 rules listed under Scope; `02` BR-API-111, BR-API-156; task files KV-FE-047, KV-FE-048, KV-FE-049, KV-FE-023 (session maps and first-paint ideas only) — behaviour, texts, edge cases and test ideas only; their file layout, request cache, API paths and transport are not taken |
@@ -881,10 +881,16 @@ States
     listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:273`).
   - WP-32: `whenFirstContent(timeoutMs)` races the existing `firstContentShown()`; the mark comes from the first
     `Photo` that loads anywhere, not only a feed card (`WP-32-analytics-errors.md:78`).
+- **Merged** on 2026-11-17 on the developer's «сливай #71» (merge commit `780aea9`), after `frontend` (run
+  43966127819), `frontend-e2e` (run 43966127916, 104 passed) and `backend` (run 43966127625) were green on `6ae7331`;
+  on `main` after the merge: `frontend` run 44002675075 and `backend` run 44002675246, green. This status, the queue
+  row, `CLAUDE.md` ("Current state" and "Layout"), the known issues KI-44 … KI-53 (the candidates above; the
+  `feed.spec.ts` budget joins KI-32, and the `reportSource` pathname joins KI-43, which now names the feed's fix),
+  KI-29 resolved (#70) and the memory are in the follow-up docs PR.
 - **Next:**
-  1. review and merge on the developer's word after green `frontend` and `frontend-e2e`;
-  2. the follow-up docs PR after the merge: this status (`WAITING`), the queue row, `CLAUDE.md` "Current state"
-     (the WP-24 sentence), the known issues (the candidates above, the KI-43 update), the memory;
+  1. ~~review and merge~~ (done);
+  2. ~~the follow-up docs PR~~ (this status, the queue row, `CLAUDE.md`, KI-44 … KI-53, the KI-32 and KI-43 updates,
+     the memory);
   3. the production track deploys — before it, confirm that the photo addresses of the stub fixtures load on
      staging and production and that their host is in `img-src` (the header);
   4. check inside Telegram on staging the (T) lines — the first two photos without scrolling, the scroll and the

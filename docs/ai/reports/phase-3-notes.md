@@ -873,6 +873,10 @@ ASSUMPTION_MISMATCH AM-69 (2026-11-16):
 - **Resolution.** `lite.css` uses `auto 360px` with a comment, `packages/ui/tests/tokens.test.ts` pins it, and the
   specification states both sizes. Adding the lite rule to the audit is a reviewer question.
 
+Merged on 2026-11-17 as #71 (`780aea9`) after green `frontend`, `frontend-e2e` (104 passed) and `backend`; `WAITING`
+for the photo check and the deploy of the production track and the checks inside Telegram on staging. KI-44 … KI-53
+record the known-issue candidates; KI-32 and KI-43 are updated, and KI-29 is resolved by #70.
+
 Own choices (no ADR): a screen reads the search of its own address through `useScreenSearchState`, held under a
 layer, a sheet or another tab (D1); `feedQuery.ts` builds the query and the list key for the server and the browser
 from the canonical `toSearchParams` (D2); an adopted page one renders on the server and at hydration whatever the
