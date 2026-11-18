@@ -5,12 +5,15 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ tab: vi.fn() }));
+const state = vi.hoisted(() => ({ tab: vi.fn(), pathname: "/", search: "" }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { tab: state.tab } }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.search) }));
+vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname }));
 
+import { clearRadarReturn, peekRadarReturn, rememberRadarReturn } from "@/features/radars/radarReturn";
 import type { ShellTab } from "@/features/shell/shellVariant";
-import { LONG_LABEL_CHARS, TabBar } from "@/features/shell/TabBar";
-import { rememberHref } from "@/lib/ui/shellState";
+import { LONG_LABEL_CHARS, radarFeedAsSearch, TabBar } from "@/features/shell/TabBar";
+import { lastSearchHref, rememberHref } from "@/lib/ui/shellState";
 
 let fake: FakeTelegram | null = null;
 const scrollTo = vi.fn();
@@ -36,6 +39,9 @@ const label = (key: ShellTab) => button(key).querySelector("span")!;
 beforeEach(() => {
   fake = fakeTelegram({ version: "8.0" });
   state.tab.mockReset();
+  state.pathname = "/";
+  state.search = "";
+  clearRadarReturn();
   scrollTo.mockReset();
   vi.stubGlobal("scrollTo", scrollTo);
   rememberHref("/", "");
@@ -131,5 +137,60 @@ describe("TabBar (SCR-006)", () => {
 
     fireEvent.click(button("settings"));
     expect(state.tab).toHaveBeenCalledWith("/settings");
+  });
+
+  describe("a radar's feed (from=radar, WP-30 «Return from a radar feed»)", () => {
+    const RADAR_FEED = "deal=rent_long&rooms_min=2&rooms_max=2&price_max=600&from=radar";
+
+    it("radarFeedAsSearch: a search root with from=radar, without the mark; anything else is null", () => {
+      expect(radarFeedAsSearch("/", RADAR_FEED)).toBe("/?deal=rent_long&rooms_min=2&rooms_max=2&price_max=600");
+      expect(radarFeedAsSearch("/map", "city=tashkent&from=radar")).toBe("/map?city=tashkent");
+      expect(radarFeedAsSearch("/", "from=radar")).toBe("/");
+      expect(radarFeedAsSearch("/", "deal=sale")).toBeNull();
+      expect(radarFeedAsSearch("/filters", "from=map")).toBeNull();
+      expect(radarFeedAsSearch("/filters", "from=radar")).toBeNull();
+      expect(radarFeedAsSearch("/radars", "from=radar")).toBeNull();
+    });
+
+    it("a press on the search tab there makes the radar's filters the search: the address without from, the stack cleared, the top", () => {
+      rememberHref("/", "deal=sale");
+      rememberRadarReturn("01JD0000000000000000000001", 300);
+      state.search = RADAR_FEED;
+      renderBar("search");
+
+      fireEvent.click(button("search"));
+      expect(state.tab).toHaveBeenCalledExactlyOnceWith("/?deal=rent_long&rooms_min=2&rooms_max=2&price_max=600");
+      expect(scrollTo).toHaveBeenCalledWith(0, 0);
+      expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+      // Back no longer reopens the radar sheet: the return is forgotten.
+      expect(peekRadarReturn("01JD0000000000000000000001")).toBeNull();
+    });
+
+    it("a press on another tab there remembers the radar's filters as the search first", () => {
+      rememberHref("/", "deal=sale");
+      state.search = RADAR_FEED;
+      const view = renderBar("search");
+
+      fireEvent.click(button("radars"));
+      expect(lastSearchHref()).toBe("/?deal=rent_long&rooms_min=2&rooms_max=2&price_max=600");
+      expect(state.tab).toHaveBeenCalledExactlyOnceWith("/radars");
+
+      view.rerender(bar("radars"));
+      state.pathname = "/radars";
+      state.search = "";
+      fireEvent.click(button("search"));
+      expect(state.tab).toHaveBeenLastCalledWith("/?deal=rent_long&rooms_min=2&rooms_max=2&price_max=600");
+    });
+
+    it("on the user's own search a press on the search tab only scrolls", () => {
+      rememberHref("/", "deal=sale");
+      state.search = "deal=sale";
+      renderBar("search");
+
+      fireEvent.click(button("search"));
+      expect(state.tab).not.toHaveBeenCalled();
+      expect(scrollTo).toHaveBeenCalledWith(0, 0);
+      expect(lastSearchHref()).toBe("/?deal=sale");
+    });
   });
 });

@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
-import { RadarPlaceholder } from "@/features/shell/RouteParamPlaceholder";
+import { RadarSheetServer } from "@/features/radars/server";
 
-/** Radar sheet (SCR-028), kept mounted under its editor; WP-30 replaces the placeholder. Intercepted into the sheet slot. */
+/** Radar sheet (SCR-028), intercepted into the sheet slot over the radar tab; it stays mounted under its editor. */
 export default function Layout({ children, params }: { children: ReactNode; params: Promise<{ id: string }> }) {
   return (
     <Suspense fallback={null}>
-      <RadarPlaceholder params={params} layer="sheet">{children}</RadarPlaceholder>
+      <RadarSheetServer params={params} presentation="layer">
+        {children}
+      </RadarSheetServer>
     </Suspense>
   );
 }

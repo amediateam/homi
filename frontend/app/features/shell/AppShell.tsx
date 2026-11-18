@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
 
 import { useBootRetryState } from "@/features/gates/bootRetryStore";
+import { NudgeHost } from "@/features/nudges/NudgeHost";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
 import { rememberHref } from "@/lib/ui/shellState";
@@ -62,9 +63,10 @@ function ShellTop() {
 
 /**
  * The chrome below the page and the shell's memory. The list/map toggle shows on the search tab and not while
- * drawing; the tab bar wherever the variant has a tab. The collapsing chrome follows the feed itself — not a sheet over
- * it, nor a layer parameter on it (`parentOf` of the feed is not `null` only then). The search and saved roots are
- * remembered for the tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
+ * drawing; the nudges (WP-30, `NudgeHost`, z 35 above the tab bar) everywhere, since each decides where it shows; the
+ * tab bar wherever the variant has a tab. The collapsing chrome follows the feed itself — not a sheet over it, nor a
+ * layer parameter on it (`parentOf` of the feed is not `null` only then). The search and saved roots are remembered
+ * for the tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
  */
 function ShellBottom() {
   const { pathname, query, searchParams, variant } = useShellAddress();
@@ -80,6 +82,7 @@ function ShellBottom() {
     <>
       {variant === "search-list" || variant === "map" ? <ViewToggle variant={variant} /> : null}
       <PullToRefresh />
+      <NudgeHost searchTab={tab === "search"} />
       {tab ? <TabBar active={tab} /> : null}
       <div aria-hidden className={tab ? "h-(--bottom-chrome)" : "h-(--bottom-inset)"} />
     </>
@@ -116,7 +119,7 @@ function ShellContent({ children }: { children: ReactNode }) {
  *
  * Nothing that wraps the page or the slots carries a transform, a filter or a z-index of its own: the in-place
  * standalone sheet and the sub-page are `position: fixed` inside them and must stay fixed to the viewport, above the
- * chrome. The z-order is the chrome's own: top bar 10, toggle 29, tab bar 30, mini title 31.
+ * chrome. The z-order is the chrome's own: top bar 10, toggle 29, tab bar 30, mini title 31, nudge 35.
  */
 export function AppShell({ children, overlay, sheet }: { children: ReactNode; overlay: ReactNode; sheet: ReactNode }) {
   return (

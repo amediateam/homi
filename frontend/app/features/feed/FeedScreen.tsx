@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { FeedRadarCard, useFeedRadar } from "@/features/nudges/FeedRadarCard";
 import { usePathname } from "@/i18n/navigation";
 import { measureScrollPerformance } from "@/lib/graphics";
 import { matchRoute, routes } from "@/lib/navigation/routes";
@@ -47,13 +48,16 @@ let measured = false;
  * search, re-creates the list from page one through `/bff/listings`, and the indicator spins until page one has
  * answered; another search resets the version, so the server's page one of any later search is adopted. A new key
  * scrolls to the top before it is painted (SCR-007), never on the first render and never while the feed is covered.
- * After the cards: the few-results note (BR-APP-025) or the search empty state (SCR-009), as `listEnd` decides.
+ * After the cards: the few-results note (BR-APP-025) or the search empty state (SCR-009), as `listEnd` decides. Among
+ * them, in the `inline` slot, the radar card (SCR-047, WP-30) while `useFeedRadar` holds — never while radars are
+ * switched off (DEC-51).
  */
 export function FeedScreen({ initial, serverSmallOnly, profileCity }: FeedScreenProps) {
   const search = useScreenSearchState("feed", { profileCity });
   const { filters, sort } = search;
   const own = matchRoute(usePathname()).route === "feed";
   const few = useFewResultsContext(filters);
+  const radarCard = useFeedRadar(filters);
 
   const searchKey = feedSearchKey(filters, sort);
   const [stored, setRefreshed] = useState<Refreshed>({ search: searchKey, version: FIRST_VERSION });
@@ -122,6 +126,7 @@ export function FeedScreen({ initial, serverSmallOnly, profileCity }: FeedScreen
       serverSmallOnly={serverSmallOnly}
       few={{ context: few, render: (visible) => <FewResultsNote search={search} count={visible} /> }}
       emptySlot={<FeedEmpty source="feed" search={search} />}
+      inline={radarCard ? <FeedRadarCard filters={filters} /> : undefined}
       onFirstPage={settlePulls}
     />
   );

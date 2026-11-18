@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** «Нашли жильё?» survey (SCR-031); WP-30 replaces the placeholder. Intercepted into the sheet slot. */
+import { FoundSheet } from "@/features/radars/FoundSheet";
+
+/** «Нашли жильё?» survey (SCR-031), intercepted into the sheet slot over the radar tab. */
 export default function Page() {
-  return <RoutePlaceholder name="radars/found" layer="sheet" />;
+  return (
+    <Suspense fallback={null}>
+      <FoundSheet presentation="layer" />
+    </Suspense>
+  );
 }

@@ -1,0 +1,301 @@
+"use client";
+
+import type { Locale } from "@homi/config";
+import { labelFor } from "@homi/i18n";
+import type { Translate } from "@homi/i18n/format";
+import { findCity } from "@homi/search";
+import { Button, Check, ChevronRight, cn, Switch } from "@homi/ui";
+import { useLocale, useTranslations } from "next-intl";
+import { type ReactNode, useId, useRef, useState } from "react";
+
+import type { ListingPreview } from "@/features/feed/types";
+import { digestHours, formatDigestHours, useSettings } from "@/features/settings/useSettings";
+import { RouteSheet, type RoutePresentation } from "@/features/shell/RouteSheet";
+import { deleteRadar, patchRadar } from "@/lib/actions/radars";
+import { invokeAction } from "@/lib/actions/useAction";
+import { setPreview } from "@/lib/data/previewCache";
+import { markSeen } from "@/lib/data/sessionMaps";
+import { type DevFlags, devFlags } from "@/lib/flags";
+import { nav } from "@/lib/navigation/nav";
+import { routes } from "@/lib/navigation/routes";
+import { useBack } from "@/lib/navigation/useBack";
+import { useReference } from "@/lib/reference/useReference";
+import { tg } from "@/lib/telegram";
+import { confirmText } from "@/lib/ui/confirm";
+import { lastSearchHref } from "@/lib/ui/shellState";
+import { showToast } from "@/lib/ui/toast";
+
+import { normalizePatch, type Radar, type RadarMode } from "./normalize";
+import { radarFeedHref, rememberRadarReturn } from "./radarReturn";
+import { RadarStrip } from "./RadarStrip";
+import { radarActionFailed, useRadarSwitch, useRadarText } from "./RadarTiles";
+import { radarFinds } from "./useRadarPreviews";
+import { dropRadar, putRadar } from "./useRadars";
+
+/** The delivery modes in the order of the sheet's rows. */
+const MODES: readonly RadarMode[] = ["instant", "digest"];
+
+/** A row of the sheet's cards (legacy `set-row`): 52 px, 14 px sides. */
+const ROW = "flex min-h-[52px] w-full items-center gap-[12px] px-[14px] text-left outline-none focus-visible:bg-sep";
+/** The separator above every row but a card's first (legacy `set-row:before`, 16 px in from the left in this sheet). */
+const AFTER_FIRST = "relative before:absolute before:top-0 before:right-0 before:left-[16px] before:h-[0.5px] before:bg-sep";
+
+export interface RadarSheetProps {
+  /** The id of the address. */
+  id: string;
+  /** The radar of the tab's list; `undefined` while the list is not there. */
+  radar: Radar | undefined;
+  presentation: RoutePresentation;
+  /** This opening shows the sheet without the rise (the return from the radar's feed or a find). */
+  instant?: boolean;
+  /** The sheet is about to leave by itself (deleted, or gone on the server): the route stops its unknown-radar rule. */
+  onLeave: () => void;
+  /** The app's flags; tests pass overrides (`withDevFlags`). */
+  flags?: DevFlags;
+  /** The editor (`/radars/<id>/edit`), rendered inside the sheet so the sheet stays mounted under it. */
+  children?: ReactNode;
+}
+
+/**
+ * The radar sheet (SCR-028, BR-APP-047, BR-APP-048): a compact `RouteSheet` — closed by ×, the backdrop, a drag,
+ * Telegram's Back (`back()`), opening the feed and deleting — with:
+ *
+ * - the header: the title (`filtersTitle`), the area and the status dot with the status line (`radarStatus`);
+ * - «Последние находки» (`RadarStrip`): ghosts, «Пока ничего…» or the finds; a find opens the listing over the tab
+ *   (`seen` and the preview recorded, the return stored, so Back brings the sheet back without the rise);
+ * - the settings card: «Присылать в чат» with the same switch as the tile (a pause with `ask_found` replaces the sheet
+ *   with the survey), and while the radar is on the two mode rows — «Сразу» («Каждое новое — как только появится») and
+ *   «Подборкой» («Списком в 9 и 21» with the user's digest hours, «Списком в заданное время» while the settings are
+ *   not there); a change to the other mode is a light impact and optimistic, the answer replaces the radar, a failure
+ *   reverts it;
+ * - the actions card: «Изменить условия ›» (the editor), «Скрыто: N — Вернуть» only while `hidden > 0` (success
+ *   haptic and «Скрытое снова показывается»), and the red «Удалить радар»: `tg.confirm` «Удалить радар «{name}»?»,
+ *   Cancel sends nothing; OK deletes — success haptic, the radar leaves both lists, then the survey with the trigger
+ *   `delete` replaces the sheet when the server asks for it, else `back()`; «Радар удалён» only with
+ *   `dev016ErrorToastOnFailure`;
+ * - the sticky footer «Смотреть найденное · {n}» (`radar.foundPlain` while the count is unknown): the feed of the
+ *   radar's filters with `from=radar`, the return stored.
+ *
+ * `dev022RadarCountLabel` (LB-APP-034) on: the footer and the strip link read «Смотреть найденное» and a muted line
+ * above the footer reads «Сейчас подходит: {n}». Every failure goes to `radarActionFailed`; an unknown radar
+ * (`not_found`) gives way to the tab. While the radar is not known yet the sheet shows its title «Радар» and the
+ * strip's ghosts.
+ */
+export function RadarSheet({ id, radar, presentation, instant = false, onLeave, flags = devFlags, children }: RadarSheetProps) {
+  const t = useTranslations();
+  const locale = useLocale() as Locale;
+  const translate: Translate = (key, values) => t(key as never, values as never);
+  const text = useRadarText(flags);
+  const { cities } = useReference();
+  const { back } = useBack();
+  const toggle = useRadarSwitch(flags);
+  const { settings } = useSettings({ enabled: radar?.active === true });
+  const sendId = useId();
+  const running = useRef(false);
+  const [busy, setBusy] = useState(false);
+
+  const finds = radarFinds(radar);
+  const countLabel = flags.dev022RadarCountLabel;
+  const foundLabel = !countLabel && finds.count !== null ? t("radar.found", { n: finds.count }) : t("radar.foundPlain");
+  const allLabel = !countLabel && finds.count !== null ? t("radar.all", { n: finds.count }) : t("radar.foundPlain");
+  const title = radar ? text.title(radar) : t("tab.subs");
+
+  /** The radar is gone on the server: the lists are read again (`radarActionFailed`) and the sheet gives way to the tab. */
+  const gone = () => {
+    onLeave();
+    nav.replace(routes.radars());
+  };
+
+  /** Runs one action of the cards at a time: a tap while one runs is ignored (`aria-disabled` shows it). */
+  const once = (action: (current: Radar) => Promise<void>) => async () => {
+    if (radar === undefined || running.current) {
+      return;
+    }
+    running.current = true;
+    setBusy(true);
+    try {
+      await action(radar);
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
+  };
+
+  const openFeed = () => {
+    if (radar === undefined) {
+      return;
+    }
+    tg.haptic.impact();
+    rememberRadarReturn(radar.id, window.scrollY);
+    nav.push(radarFeedHref(radar, lastSearchHref(), findCity(cities, radar.filters.city)));
+  };
+
+  const openListing = (item: ListingPreview) => {
+    markSeen(item.number);
+    setPreview(item.number, item);
+    rememberRadarReturn(id, window.scrollY);
+    nav.push(routes.listing(item.number));
+  };
+
+  /** Only a change to the other mode does anything (legacy). */
+  const changeMode = (mode: RadarMode) =>
+    once(async (current) => {
+      if (mode === current.mode) {
+        return;
+      }
+      tg.haptic.impact();
+      putRadar({ ...current, mode });
+      const result = await invokeAction(patchRadar, { id: current.id, mode }, locale);
+      if (!result.ok) {
+        putRadar(current);
+        radarActionFailed(result, { flags, gone });
+        return;
+      }
+      putRadar(normalizePatch(result.data).radar ?? { ...current, mode });
+    });
+
+  const unhide = once(async (current) => {
+    tg.haptic.impact();
+    const result = await invokeAction(patchRadar, { id: current.id, unhide: true }, locale);
+    if (!result.ok) {
+      radarActionFailed(result, { flags, gone });
+      return;
+    }
+    putRadar(normalizePatch(result.data).radar ?? { ...current, hidden: 0 });
+    tg.haptic.success();
+    showToast({ key: "radar.unhidden" });
+  });
+
+  const remove = once(async (current) => {
+    if (!(await confirmText(t("subs.deleteConfirm", { name: text.title(current) })))) {
+      return;
+    }
+    const result = await invokeAction(deleteRadar, { id: current.id }, locale);
+    if (!result.ok) {
+      radarActionFailed(result, { flags, gone });
+      return;
+    }
+    tg.haptic.success();
+    onLeave();
+    dropRadar(current.id);
+    if (flags.dev016ErrorToastOnFailure) {
+      showToast({ key: "toast.subDeleted" });
+    }
+    if (result.data.ask_found) {
+      nav.replace(routes.radarFound({ trigger: "delete" }));
+    } else {
+      back();
+    }
+  });
+
+  const digest = digestHours(settings);
+  const hints: Record<RadarMode, string> = {
+    instant: t("radar.instantHint"),
+    digest: digest === null ? t("radar.digestHintAny") : t("radar.digestHint", { time: formatDigestHours(digest, translate) }),
+  };
+
+  const area = radar ? text.area(radar) : "";
+  const header = radar ? (
+    <div data-radar-head="" className="flex flex-col items-center gap-[2px] px-(--gutter) pb-[10px] text-center">
+      {area ? <span className="text-[13px] text-hint">{area}</span> : null}
+      <span data-radar-status="" className="flex items-center gap-[6px] text-[13px] text-text opacity-85">
+        <i aria-hidden data-radar-dot="" className={cn("size-[8px] shrink-0 rounded-pill", radar.active ? "bg-accent" : "bg-hint")} />
+        {text.status(radar, finds.flow)}
+      </span>
+    </div>
+  ) : null;
+
+  const footer = radar ? (
+    <div className="flex flex-col gap-[8px]">
+      {countLabel && finds.count !== null ? (
+        <p data-radar-matching="" className="text-center text-[13px] text-hint">
+          {t("sheet.matchingNow", { n: finds.count })}
+        </p>
+      ) : null}
+      <Button data-radar-feed="" className="h-[48px] w-full" onClick={openFeed}>
+        {foundLabel}
+      </Button>
+    </div>
+  ) : undefined;
+
+  return (
+    <RouteSheet presentation={presentation} instant={instant} title={title} header={header} footer={footer} closeLabel={t("common.close")}>
+      <div
+        data-route="radar"
+        data-layer={presentation === "layer" ? "sheet" : undefined}
+        data-radar-id={id}
+        data-active={radar?.active}
+        className="flex flex-col gap-[14px] px-(--gutter) pt-[6px]"
+      >
+        <section data-radar-finds="" className={cn(radar?.active === false && "[&_[data-radar-strip=finds]]:opacity-45")}>
+          <h3 className="mb-[8px] text-[13px] font-semibold text-hint">{t("radar.latest")}</h3>
+          <RadarStrip
+            finds={finds.finds}
+            active={radar?.active === true}
+            allLabel={allLabel}
+            onListing={openListing}
+            onAll={openFeed}
+          />
+        </section>
+        {radar ? (
+          <>
+            <div data-radar-settings="" className="overflow-hidden rounded-medium bg-fill">
+              <div className={ROW}>
+                <span id={sendId} className="min-w-0 flex-1 text-[16px]">
+                  {t("radar.send")}
+                </span>
+                <Switch
+                  checked={radar.active}
+                  aria-labelledby={sendId}
+                  onCheckedChange={(next) => void toggle(radar, next, { from: "sheet", gone })}
+                />
+              </div>
+              {radar.active ? (
+                <div role="radiogroup" aria-labelledby={sendId}>
+                  {MODES.map((mode) => {
+                    const selected = radar.mode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        data-radar-mode={mode}
+                        onClick={changeMode(mode)}
+                        className={cn(ROW, AFTER_FIRST, "min-h-[56px] py-[8px]")}
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-px">
+                          <span className="text-[16px]">{t(labelFor("radarMode", mode))}</span>
+                          <span data-radar-mode-hint="" className="text-[13px] text-hint">
+                            {hints[mode]}
+                          </span>
+                        </span>
+                        {selected ? <Check size={20} aria-hidden className="shrink-0 text-text" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div data-radar-actions="" className="overflow-hidden rounded-medium bg-fill">
+              <button type="button" data-radar-edit="" onClick={() => nav.push(routes.radarEdit(radar.id))} className={ROW}>
+                <span className="min-w-0 flex-1 text-[16px]">{t("radar.edit")}</span>
+                <ChevronRight size={18} aria-hidden className="-mr-[4px] shrink-0 text-hint" />
+              </button>
+              {radar.hidden > 0 ? (
+                <button type="button" data-radar-unhide="" aria-disabled={busy || undefined} onClick={unhide} className={cn(ROW, AFTER_FIRST)}>
+                  <span className="min-w-0 flex-1 text-[16px]">{t("subs.hidden", { n: radar.hidden })}</span>
+                  <span className="max-w-[45%] shrink-0 text-[15px] text-hint">{t("radar.unhide")}</span>
+                </button>
+              ) : null}
+              <button type="button" data-radar-delete="" aria-disabled={busy || undefined} onClick={remove} className={cn(ROW, AFTER_FIRST)}>
+                <span className="min-w-0 flex-1 text-[16px] text-danger">{t("radar.delete")}</span>
+              </button>
+            </div>
+          </>
+        ) : null}
+        {children}
+      </div>
+    </RouteSheet>
+  );
+}

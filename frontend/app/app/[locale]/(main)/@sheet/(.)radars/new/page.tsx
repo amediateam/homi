@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** New radar (SCR-030); WP-30 replaces the placeholder. Intercepted into the sheet slot. */
+import { RadarCreateSheet } from "@/features/radars/RadarCreateSheet";
+
+/** New radar (SCR-030), intercepted into the sheet slot over the page it was opened from. */
 export default function Page() {
-  return <RoutePlaceholder name="radars/new" layer="sheet" />;
+  return (
+    <Suspense fallback={null}>
+      <RadarCreateSheet presentation="layer" />
+    </Suspense>
+  );
 }

@@ -10,6 +10,10 @@ vi.mock("@/features/shell/TopBar", () => ({ TopBar: ({ variant }: { variant: str
 vi.mock("@/features/shell/MiniTitle", () => ({ MiniTitle: () => <button type="button" data-part="mini-title" /> }));
 vi.mock("@/features/shell/ViewToggle", () => ({ ViewToggle: ({ variant }: { variant: string }) => <button type="button" data-part="view-toggle" data-variant={variant} /> }));
 vi.mock("@/features/shell/PullToRefresh", () => ({ PullToRefresh: () => <div data-part="ptr" /> }));
+/** The nudges are `NudgeHost`'s (tested in `tests/nudges/NudgeHost.test.tsx`); the shell only mounts it. */
+vi.mock("@/features/nudges/NudgeHost", () => ({
+  NudgeHost: ({ searchTab }: { searchTab: boolean }) => <div data-nudge-host={searchTab ? "search" : "other"} />,
+}));
 
 import { BOOT_RETRY_IDLE, publishBootRetry, resetBootRetry, setBootRetryHandler } from "@/features/gates/bootRetryStore";
 import { AppShell } from "@/features/shell/AppShell";
@@ -158,6 +162,25 @@ describe("AppShell (SCR-006)", () => {
     cleanup();
     renderShell("/filters", "from=map");
     expect(topBar()).toBe("map");
+  });
+
+  it("mounts the nudge host once, right above the tab bar, and tells it whether the search tab is drawn (WP-30)", () => {
+    const hosts = () => [...document.querySelectorAll<HTMLElement>("[data-nudge-host]")].map((host) => host.dataset.nudgeHost);
+    const view = renderShell("/", "deal=sale");
+    expect(hosts()).toEqual(["search"]);
+    const order = [...document.querySelectorAll<HTMLElement>('[data-part="ptr"], [data-nudge-host], [data-tabbar]')];
+    expect(order.map((element) => (element.dataset.nudgeHost === undefined ? (element.dataset.part ?? "tabbar") : "nudges"))).toEqual([
+      "ptr",
+      "nudges",
+      "tabbar",
+    ]);
+
+    navigate(view, "/listing/42");
+    expect(hosts()).toEqual(["search"]);
+    navigate(view, "/radars");
+    expect(hosts()).toEqual(["other"]);
+    navigate(view, "/map");
+    expect(hosts()).toEqual(["search"]);
   });
 
   it("wraps the page and the slots in nothing that moves fixed layers or stacks them", () => {

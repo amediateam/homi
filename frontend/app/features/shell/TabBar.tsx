@@ -2,19 +2,36 @@
 
 import type { MessageKey } from "@homi/i18n";
 import { cn, Heart, type LucideIcon, RadarIcon, Search, Settings } from "@homi/ui";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, useLayoutEffect, useRef } from "react";
 
+import { clearRadarReturn } from "@/features/radars/radarReturn";
+import { usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
-import { routes } from "@/lib/navigation/routes";
+import { matchRoute, routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
-import { lastSavedHref, lastSearchHref } from "@/lib/ui/shellState";
+import { lastSavedHref, lastSearchHref, rememberHref } from "@/lib/ui/shellState";
 
 import type { ShellTab } from "./shellVariant";
 import { expandChrome } from "./useMiniChrome";
 
 /** Legacy shrinks a label longer than this (some uz and en texts) with the `long` class. */
 export const LONG_LABEL_CHARS = 13;
+
+/**
+ * The address of a radar's feed as the search: a search root (`/`, `/map`) whose query has `from=radar`, without that
+ * mark; `null` for any other address.
+ */
+export function radarFeedAsSearch(pathname: string, query: string): string | null {
+  const { route } = matchRoute(pathname);
+  const params = new URLSearchParams(query);
+  if ((route !== "feed" && route !== "map") || params.get("from") !== "radar") {
+    return null;
+  }
+  params.delete("from");
+  return route === "feed" ? routes.feed(params) : routes.map(params);
+}
 
 const TABS: readonly { key: ShellTab; label: MessageKey; Icon: LucideIcon; href: () => string }[] = [
   { key: "search", label: "tab.search", Icon: Search, href: lastSearchHref },
@@ -33,10 +50,17 @@ const TABS: readonly { key: ShellTab; label: MessageKey; Icon: LucideIcon; href:
  * commit that makes it active, before the paint, and the old tab never jumps to its top. Collapsed
  * (`html.chrome-mini`), the bar shrinks to a circle around the active tab's icon; under lite graphics it slides away
  * instead.
+ *
+ * A radar's feed («Смотреть найденное», a search root with `from=radar`, WP-30) is not the user's search until a tab
+ * press makes it so (legacy `switchTab` ended the radar return): a press on the search tab there replaces the address
+ * with the same one without `from` and clears the stack, so Back no longer reopens the radar sheet and the shell
+ * remembers it as the search (`rememberHref`); a press on another tab remembers it first, so the search tab returns
+ * to the radar's filters. Every press forgets a stored radar return (`clearRadarReturn`).
  */
 export function TabBar({ active }: { active: ShellTab }) {
   const t = useTranslations();
   const scrollOnArrival = useRef(false);
+  const radarFeed = radarFeedAsSearch(usePathname(), useSearchParams()?.toString() ?? "");
 
   useLayoutEffect(() => {
     if (scrollOnArrival.current) {
@@ -50,9 +74,17 @@ export function TabBar({ active }: { active: ShellTab }) {
       return;
     }
     tg.haptic.impact();
+    clearRadarReturn();
     if (key === active) {
+      if (radarFeed !== null) {
+        nav.tab(radarFeed);
+      }
       window.scrollTo(0, 0);
       return;
+    }
+    if (radarFeed !== null) {
+      const [path, query = ""] = radarFeed.split("?");
+      rememberHref(path, query);
     }
     scrollOnArrival.current = true;
     nav.tab(href());
