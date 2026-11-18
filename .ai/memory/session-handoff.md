@@ -13,7 +13,7 @@ Written for whoever continues the **development track**. The production track's 
 
 ## State at handoff
 - `main` = `d4c0d88`. `wp-27-map-gl` → PR #83 (WP-27, CI green on `94a414d`), waits for «сливай #83».
-- `wp-28-map-leaflet-lasso` (from `94a414d`) → PR #84 with base `wp-27-map-gl`: 13 commits `7d57dc7` … `ae87c6d` plus this docs commit. After #83 merges: `gh pr edit 84 --base main`, wait for CI, then «сливай #84». Review commits on #83, if any, are merged into `wp-28-map-leaflet-lasso` (no rebase).
+- `wp-28-map-leaflet-lasso` (from `94a414d`) → PR #84 with base `wp-27-map-gl`: 14 commits `7d57dc7` … `fc93076` and the docs commits. After #83 merges: `gh pr edit 84 --base main`, wait for CI, then «сливай #84». Review commits on #83, if any, are merged into `wp-28-map-leaflet-lasso` (no rebase).
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend` (root); e2e from `frontend/` against a hand-started `next start` (see Gotchas), each file alone.
 
@@ -23,7 +23,7 @@ Written for whoever continues the **development track**. The production track's 
   - `make ci-frontend` on `f7ba4b2`: types, lint, typecheck, build passed; the test step hit a `.vitest-cache` `ENOENT` once in `@homi/search`, then `pnpm test` passed (app 183 files / 2831 + 1 todo; search 238 + 1 todo, testing 95, ui 121, i18n 112, api-client 14, utils 2).
   - e2e on a `next start` of the `f7ba4b2` build, each of 22 files alone: 237 passed (also 237 on `f4a7c5b`).
   - Each review fix's test shown failing against the unfixed code by the orchestrator; the builders' own mutation checks are reported, not re-run.
-- #84's CI: not seen yet at handoff — check `gh pr checks 84`.
+- #84's CI on `fc93076`: `frontend` 44251346950 success; `frontend-e2e` 44251347049 failed once on an unrelated foundation test (KI-63), the rerun passed 237. Before that, 44249016942 on `eb9369e`: 2 failed — a race in the new `spot-map.spec.ts` (fixed in `fc93076`) and the shell pull test (KI-63).
 
 ## Waiting for the developer (do NOT start on your own)
 1. **«сливай #83»**, then retarget #84 to `main`, its green CI, **«сливай #84»**; then the after-merge docs PR (`WAITING` for WP-27 and WP-28, `CLAUDE.md` current state, `current-state.md`).
@@ -40,7 +40,7 @@ Written for whoever continues the **development track**. The production track's 
 - Three e2e writers at once against one server: sign-ins stuck at `booting` (KI-32) and shared `test-results` collided; give each its own `--output` and rerun files alone.
 - `pnpm -r test` once failed with `ENOENT` on `node_modules/.vitest-cache` (parallel packages sharing the cache); rerun.
 - A hand-started `next start` for e2e: `NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" CSP_TILE_HOSTS=https://tile.openstreetmap.org pnpm exec next start -p 3001`.
-- Next numbers: AM-94, KI-63, ADR 0021.
+- Next numbers: AM-94, KI-64, ADR 0021.
 
 ## Active subagent work at handoff
 - None running.

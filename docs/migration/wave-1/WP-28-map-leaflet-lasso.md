@@ -429,6 +429,9 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
     listing-actions 14, photo-viewer 6, launch 5, city 6, session 7, boot-failure 6, crash 4, smoke 2 — 237 passed,
     none failed or skipped. The same 237 passed on the `f4a7c5b` build before the reviews. While the three spec writers
     ran at once, sign-ins stuck at `booting` (KI-32) and artefact folders collided; every file then passed alone, twice.
+  - **CI on #84:** `frontend` green; `frontend-e2e` on `eb9369e` failed 2 (a race in the new spot-map spec, fixed in
+    `fc93076`, and the shell pull test); on `fc93076` it failed 1 (a foundation test) and passed 237 on the rerun of
+    the job. Both unrelated failures are KI-63.
   - No backend change, so no `composer ci:check`.
 - **Open for the reviewer:**
   - Lite mode on Leaflet keeps markercluster's animations, Leaflet's zoom and fade animations and the dark raster
