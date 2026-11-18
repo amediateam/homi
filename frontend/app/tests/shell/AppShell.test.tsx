@@ -140,6 +140,20 @@ describe("AppShell (SCR-006)", () => {
     expect(document.querySelector('[data-part="view-toggle"]')?.getAttribute("data-variant")).toBe("map");
   });
 
+  it("a radar sheet draws the radar tab's chrome, also on Back from the radar's feed (WP-30)", () => {
+    const view = renderShell("/radars");
+    navigate(view, "/radars/01JD0000000000000000000001");
+    expect(topBar()).toBe("radars");
+    navigate(view, "/", "city=tashkent&deal=rent_long&from=radar");
+    expect(topBar()).toBe("search-list");
+    expect(currentTab()).toBe("search");
+    navigate(view, "/radars/01JD0000000000000000000001");
+    expect(topBar()).toBe("radars");
+    expect(currentTab()).toBe("radars");
+    navigate(view, "/listing/42");
+    expect(topBar()).toBe("radars");
+  });
+
   it("a sheet keeps the chrome of the page it opened over; loaded directly it draws its own", () => {
     const view = renderShell("/");
     navigate(view, "/radars/new", "entry=feed");

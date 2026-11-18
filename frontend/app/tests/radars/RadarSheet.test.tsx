@@ -438,12 +438,14 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(state.replace).toHaveBeenCalledExactlyOnceWith("/radars");
   });
 
-  it("the editor renders inside the sheet, so the sheet stays mounted under it", async () => {
+  it("the editor renders next to the sheet, not inside its content, and the sheet stays mounted under it", async () => {
     state.pathname = `/radars/${A}/edit`;
     seed(radar(A));
     renderSheet({ children: <p data-route="radar/edit">editor</p> });
     await settle();
-    expect(sheet().querySelector('[data-route="radar/edit"]')).not.toBeNull();
+    expect(document.querySelector('[data-route="radar/edit"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-route="radar/edit"]')).toBeNull();
+    expect(sheet()).not.toBeNull();
   });
 
   it("a stored return to this radar opens the sheet without the rise and scrolls the tab back; it is forgotten", async () => {

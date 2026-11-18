@@ -32,7 +32,9 @@ import { ViewToggle } from "./ViewToggle";
 function useDrawnVariant(pathname: string, searchParams: URLSearchParams): ShellVariant {
   const own = shellVariantOf(pathname, searchParams);
   const [drawn, setDrawn] = useState(own);
-  const variant = isLayerAddress(pathname) ? drawn : own;
+  // A radar sheet lies only over the radar tab: a tile opens it, a direct load renders the tab under it, and Back from
+  // the radar's feed («Смотреть найденное», WP-30) restores the tab under it although the feed was drawn last.
+  const variant = isLayerAddress(pathname) && matchRoute(pathname).route !== "radar" ? drawn : own;
   if (variant !== drawn) {
     setDrawn(variant);
   }

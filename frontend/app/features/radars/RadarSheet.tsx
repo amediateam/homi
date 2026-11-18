@@ -52,7 +52,11 @@ export interface RadarSheetProps {
   onLeave: () => void;
   /** The app's flags; tests pass overrides (`withDevFlags`). */
   flags?: DevFlags;
-  /** The editor (`/radars/<id>/edit`), rendered inside the sheet so the sheet stays mounted under it. */
+  /**
+   * The editor (`/radars/<id>/edit`): the layout keeps the sheet mounted under it. It renders next to the sheet, not
+   * inside its content — a direct load renders the editor in place, and inside the sheet's dialog the sheet's page lock
+   * would take every touch move of the editor's body.
+   */
   children?: ReactNode;
 }
 
@@ -219,7 +223,8 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
   ) : undefined;
 
   return (
-    <RouteSheet presentation={presentation} instant={instant} title={title} header={header} footer={footer} closeLabel={t("common.close")}>
+    <>
+      <RouteSheet presentation={presentation} instant={instant} title={title} header={header} footer={footer} closeLabel={t("common.close")}>
       <div
         data-route="radar"
         data-layer={presentation === "layer" ? "sheet" : undefined}
@@ -294,8 +299,9 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
             </div>
           </>
         ) : null}
-        {children}
       </div>
     </RouteSheet>
+      {children}
+    </>
   );
 }

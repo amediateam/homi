@@ -9,7 +9,8 @@ import type { Page } from "@playwright/test";
  * with a sign-in that never reaches the app server (`launchSigningIn`).
  */
 const LOCALES = ["ru", "uz", "en"] as const;
-const RADAR = "01JD7K3QZ8V6R3M2N4P5Q6R7S8";
+/** The first radar of the stub list (`radars/list.json`, WP-13): an id the radar sheet knows. */
+const RADAR = "01JD0000000000000000000001";
 
 /** Every address of `25` §3.2 with the placeholder each one shows on a direct load. */
 const ADDRESSES: [string, string[]][] = [
@@ -231,7 +232,10 @@ test.describe("layers", () => {
     await softNavigate(page, `/ru/radars/${RADAR}`);
     await expect(page.locator('[data-route="radar"][data-layer="sheet"]')).toBeVisible();
     await softNavigate(page, `/ru/radars/${RADAR}/edit`);
-    await expect(page.locator('[data-route="radar"][data-layer="sheet"] [data-route="radar/edit"]')).toBeVisible();
+    // The editor is portalled to the body (WP-30), a sibling of the radar sheet that stays mounted under it, so the
+    // two are checked apart.
+    await expect(page.locator('[data-route="radar"][data-layer="sheet"]')).toBeVisible();
+    await expect(page.locator('[data-route="radar/edit"][data-layer="sheet"]')).toBeVisible();
     await expect(page.locator('[data-route="radars"][data-probe="radars"]')).toBeAttached();
   });
 
