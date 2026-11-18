@@ -1,22 +1,25 @@
 "use client";
 
 import type { Locale } from "@homi/config";
-import { toSearchParams } from "@homi/search";
+import { type Polygon, setGeography, toSearchParams } from "@homi/search";
 import { cn } from "@homi/ui";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { type ComponentType, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { applyFilters } from "@/features/filters/applyFilters";
 import { SourceReporter } from "@/features/shell/SourceReporter";
 import { usePathname } from "@/i18n/navigation";
 import { useSessionMap } from "@/lib/data/sessionMaps";
-import { matchRoute } from "@/lib/navigation/routes";
+import { devFlags } from "@/lib/flags";
+import { matchRoute, routes } from "@/lib/navigation/routes";
 import { useLayerState } from "@/lib/navigation/useLayerState";
 import { useReference } from "@/lib/reference/useReference";
+import { searchRules } from "@/lib/search/rules";
 import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
 import { useSession } from "@/lib/session/SessionProvider";
 import { tg } from "@/lib/telegram";
-import { consumeDrawRequest } from "@/lib/ui/shellState";
+import { consumeDrawRequest, setAreaTooSmall } from "@/lib/ui/shellState";
 
 import { cityViewOf } from "./camera";
 import { markGlFailed, useEngine } from "./engine";
@@ -27,7 +30,7 @@ import { MapNote } from "./MapNote";
 import { MapSelectionCard } from "./MapSelectionCard";
 import { MapStatusPill } from "./MapStatusPill";
 import { attributionOf, type Basemap, basemapOf } from "./tiles";
-import type { CityView, MapViewProps, Selection } from "./types";
+import type { CityView, MapFailReason, MapViewProps, Selection } from "./types";
 import { useCardLayer } from "./useCardLayer";
 import { useDocumentLook } from "./useDocumentLook";
 import { type LocateFailure, useLocate } from "./useLocate";
@@ -98,11 +101,11 @@ type Note = { kind: "points" } | { kind: LocateFailure };
  * The search map (SCR-011 … SCR-013, `03` §1.8, BR-APP-062): everything that is the same on both engines. The engine
  * of the session (`useEngine`) picks the view — a spinner until it is known, then GL or Leaflet — and a GL failure
  * the view reports moves the session to Leaflet for good (LB-APP-019, `markGlFailed`). Leaflet failing too (its
- * chunk or its library) shows the error pill, whose «Повторить» mounts the view anew and so loads it again. The map lists the search of
- * its own address (`useScreenSearchState`, KI-43); its points are a browser read (`useMapPoints`, `25` §3.5), asked
- * for only while the session is ready and the engine is known. Their answer's `meta.source` reaches the demo
- * marker again each time the map's own address is shown — Back from a listing opened from the card, a closed sheet, a
- * tab round trip — and never under a layer (`25` §4.4, KI-43).
+ * chunk or its library) shows the error pill, whose «Повторить» mounts the view anew and so loads it again. The map
+ * lists the search of its own address (`useScreenSearchState`, KI-43); its points are a browser read (`useMapPoints`,
+ * `25` §3.5), asked for only while the session is ready and the engine is known. Their answer's `meta.source` reaches
+ * the demo marker again each time the map's own address is shown — Back from a listing opened from the card, a closed
+ * sheet, a tab round trip — and never under a layer (`25` §4.4, KI-43).
  *
  * The selection is this screen's state. A pin, a stack, a spread pin or a cluster at maximum zoom selects; a light
  * haptic plays when the selected listings change, not when a spread pin only moves the track. The card closes on a
@@ -112,16 +115,26 @@ type Note = { kind: "points" } | { kind: LocateFailure };
  *
  * Over the map, below the top bar: the points' pill and the note — «На карте {shown} из {total} · …» for 6 s after an
  * answer with listings that have no location, or a locate failure for 5 s in its place. The locate button shows when
- * the adapter can locate, no card is open and nothing is drawn; the position stays in this state (TMA-035). Until
- * WP-28 a `draw` layer is closed as soon as it opens, each time it opens, and a pending draw request is discarded, so
- * every entry point lands on the plain map. The map sends no analytics events of its own.
+ * the adapter can locate, no card is open and nothing is drawn; the position stays in this state (TMA-035). The map
+ * sends no analytics events of its own.
+ *
+ * Drawing (SCR-012, WP-28 "Drawing layer") is the `draw=1` layer on the map's own address; the view mounts the lasso
+ * meanwhile, the card closes and no marker opens it, and the locate button hides (the top bar and the view toggle
+ * follow the address, WP-23). The top bar's lasso button and area pill push the layer themselves; the filters sheet's
+ * «Обвести на карте» asks with `requestDraw()`, which the screen takes once each time it is activated — mounted, shown
+ * again by Activity, or its address back from a sheet or a listing — and then starts drawing (`startDrawing`). A
+ * finished stroke plays the success haptic and applies the area through `applyFilters` (`setGeography` clears
+ * districts and zones, BR-APP-008), which leaves the layer; a stroke too small plays the error haptic and sets
+ * `areaTooSmall` for the top bar, and drawing goes on. Back and «Отмена» close the layer (`useBack`; a reload on
+ * `draw=1` keeps drawing, and Back then replaces to the address without it). GL failing while drawing closes the
+ * layer as it mounts Leaflet; the filters stay.
  */
 export function MapScreen() {
   const t = useTranslations();
   const locale = useLocale() as Locale;
   const engine = useEngine();
   const own = matchRoute(usePathname()).route === "map";
-  const { filters } = useScreenSearchState("map");
+  const { filters, sort } = useScreenSearchState("map");
   const { status } = useSession();
   const points = useMapPoints(filters, { enabled: status === "ready" && engine !== null });
   const hidden = useSessionMap("hidden");
@@ -139,26 +152,12 @@ export function MapScreen() {
   const [drawn, setDrawn] = useState<Basemap | null>(null);
   const attribution = attributionOf(drawn ?? basemapOf(tiles));
 
-  // Once per opening: a second Back for the same opening would close the page below as well.
   const draw = useLayerState("draw");
-  const layerOpen = draw.value !== null;
-  const drawing = own && layerOpen;
-  const closingDraw = useRef(false);
-  const closeDraw = useEffectEvent(() => draw.close());
-  useEffect(() => {
-    if (!layerOpen) {
-      closingDraw.current = false;
-    } else if (drawing && !closingDraw.current) {
-      closingDraw.current = true;
-      closeDraw();
-    }
-  }, [layerOpen, drawing]);
-  useEffect(() => {
-    if (own) {
-      consumeDrawRequest();
-    }
-  }, [own]);
-
+  const drawing = own && draw.value === "1";
+  const latestDraw = useRef({ drawing, closeDraw: draw.close });
+  useLayoutEffect(() => {
+    latestDraw.current = { drawing, closeDraw: draw.close };
+  });
   // Adjusted while rendering, as `useMapPoints` does: another search, a new answer or drawing closes the card.
   const closeKey = `${toSearchParams(filters).toString()}|${points.responseId}|${drawing}`;
   const [selection, setSelection] = useState<Selection>(null);
@@ -199,6 +198,10 @@ export function MapScreen() {
     shown.current = selection;
   }, [selection]);
   const onSelect = useCallback((numbers: number[], at = 0) => {
+    // A marker the lasso leaves uncovered (under the bars) opens no card while drawing.
+    if (latestDraw.current.drawing) {
+      return;
+    }
     const open = shown.current;
     if (open !== null && sameNumbers(open.numbers, numbers)) {
       if (open.at !== at) {
@@ -214,6 +217,39 @@ export function MapScreen() {
   }, []);
   const close = useCallback(() => setSelection(null), []);
   useCardLayer(selection, close);
+
+  // As the top bar's lasso button does; the card closes when the layer reaches the address (`closeKey`).
+  const startDrawing = useEffectEvent(() => {
+    tg.haptic.impact();
+    setAreaTooSmall(false);
+    draw.open("1");
+  });
+  useEffect(() => {
+    if (own && consumeDrawRequest()) {
+      startDrawing();
+    }
+  }, [own]);
+
+  const onDrawn = (area: Polygon) => {
+    tg.haptic.success();
+    void applyFilters(setGeography(filters, { polygon: area }), {
+      sort,
+      target: routes.map,
+      city,
+      rules: searchRules(devFlags),
+    });
+  };
+  const onTooSmall = () => {
+    tg.haptic.error();
+    setAreaTooSmall(true);
+  };
+  // GL failed: the session moves to Leaflet, and a drawing under way is cancelled with its layer (WP-28).
+  const onGlFail = useCallback((reason: MapFailReason) => {
+    markGlFailed(reason);
+    if (latestDraw.current.drawing) {
+      latestDraw.current.closeDraw();
+    }
+  }, []);
 
   const onLocateFailure = useCallback((failure: LocateFailure) => setNote({ kind: failure }), []);
   const locate = useLocate(onLocateFailure);
@@ -257,8 +293,10 @@ export function MapScreen() {
           scheme={scheme}
           lite={lite}
           me={locate.me}
-          drawing={false}
-          onFail={engine === "gl" ? markGlFailed : onLeafletFail}
+          drawing={drawing}
+          onDrawn={onDrawn}
+          onTooSmall={onTooSmall}
+          onFail={engine === "gl" ? onGlFail : onLeafletFail}
           onBasemap={setDrawn}
         />
       </div>

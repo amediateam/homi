@@ -31,7 +31,9 @@ const state = vi.hoisted(() => ({
   reportError: vi.fn(),
   impact: vi.fn(),
   success: vi.fn(),
+  error: vi.fn(),
   openLink: vi.fn(),
+  applyFilters: vi.fn(() => Promise.resolve()),
   locationAvailable: vi.fn(),
   getLocation: vi.fn<() => Promise<LocationResult>>(),
   cardLayer: vi.fn(),
@@ -60,7 +62,7 @@ vi.mock("@/lib/telegram", async (importOriginal) => {
     ...original,
     tg: {
       ...original.tg,
-      haptic: { impact: state.impact, success: state.success, error: vi.fn() },
+      haptic: { impact: state.impact, success: state.success, error: state.error },
       openLink: state.openLink,
       location: { available: state.locationAvailable, get: state.getLocation },
     },
@@ -112,6 +114,7 @@ vi.mock("@/features/map/MapSelectionCard", () => ({
 vi.mock("@/features/map/useCardLayer", () => ({
   useCardLayer: (selection: Selection, close: () => void) => state.cardLayer(selection, close),
 }));
+vi.mock("@/features/filters/applyFilters", () => ({ applyFilters: state.applyFilters }));
 
 import { resetEngineForTests } from "@/features/map/engine";
 import { LOCATE_NOTE_MS, MapScreen, NOTE_MS } from "@/features/map/MapScreen";
@@ -119,8 +122,10 @@ import { hide, resetSessionMaps } from "@/lib/data/sessionMaps";
 import { reportSource, resetSources, useHasStubData } from "@/lib/data/sources";
 import { pushEntry, resetDepth } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
+import { routes } from "@/lib/navigation/routes";
 import { resetReference } from "@/lib/reference/useReference";
-import { consumeDrawRequest, requestDraw } from "@/lib/ui/shellState";
+import { searchRules } from "@/lib/search/rules";
+import { areaTooSmall, consumeDrawRequest, requestDraw, setAreaTooSmall } from "@/lib/ui/shellState";
 
 import { cityOf, feedReference } from "../helpers/reference";
 
@@ -169,9 +174,20 @@ beforeEach(() => {
   state.view = { props: null, mounts: 0 };
   state.leaflet = { props: null, mounts: 0 };
   at("/map", "city=tashkent");
-  for (const mock of [state.reportError, state.impact, state.success, state.openLink, state.locationAvailable, state.getLocation, state.cardLayer]) {
+  for (const mock of [
+    state.reportError,
+    state.impact,
+    state.success,
+    state.error,
+    state.openLink,
+    state.locationAvailable,
+    state.getLocation,
+    state.cardLayer,
+    state.applyFilters,
+  ]) {
     mock.mockReset();
   }
+  state.applyFilters.mockResolvedValue(undefined);
   state.locationAvailable.mockReturnValue(true);
   state.openLink.mockReturnValue(true);
   for (const mock of Object.values(nav)) {
@@ -195,8 +211,10 @@ afterEach(() => {
   resetSessionMaps();
   resetReference();
   consumeDrawRequest();
+  setAreaTooSmall(false);
   resetDepth("/");
   resetSources();
+  window.history.replaceState(null, "", "/");
 });
 
 describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
@@ -246,6 +264,9 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
     expect(state.reportError.mock.calls[0][1]).toMatchObject({ kind: "error", reason: "webgl" });
     // The points are the screen's: one read per mount of the screen, whichever view draws them.
     expect(state.sent).toHaveLength(2);
+    // Not drawing: nothing to close.
+    expect(nav.back).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it("without WebGL2 the rule picks Leaflet: it gets the same props, and the points are asked for", async () => {
@@ -558,66 +579,173 @@ describe("MapScreen: the demo marker (`25` §4.4, DEC-50, KI-43)", () => {
   });
 });
 
-describe("MapScreen: drawing until WP-28", () => {
-  it("an opened draw=1 layer is closed at once, and only once", async () => {
-    at("/map", "city=tashkent&draw=1");
-    const view = await mount();
+describe("MapScreen: drawing (SCR-012, WP-28 \"Drawing layer\")", () => {
+  const AREA = [
+    [41.31, 69.24],
+    [41.32, 69.26],
+    [41.3, 69.27],
+  ] as const;
 
-    expect(nav.replace).toHaveBeenCalledTimes(1);
-    expect(nav.replace).toHaveBeenCalledWith("/map?city=tashkent");
-    view.rerender();
-    expect(nav.replace).toHaveBeenCalledTimes(1);
-    expect(locateButton()).toBeNull();
-  });
+  /** The browser's address, which `useLayerState` pushes `draw=1` onto. */
+  const browserAt = (href: string) => window.history.replaceState(null, "", `/ru${href}`);
+  const pushed = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map((call) => String(call[2]));
 
-  it("the same draw=1 address opened again after its close is closed again, once per opening", async () => {
-    at("/map", "city=tashkent&draw=1");
-    const view = await mount();
-    expect(nav.replace).toHaveBeenCalledTimes(1);
-
-    at("/map", "city=tashkent");
-    view.rerender();
-    at("/map", "city=tashkent&draw=1");
-    view.rerender();
-    expect(nav.replace).toHaveBeenCalledTimes(2);
-    expect(nav.replace).toHaveBeenLastCalledWith("/map?city=tashkent");
-
-    view.rerender();
-    expect(nav.replace).toHaveBeenCalledTimes(2);
-    expect(nav.back).not.toHaveBeenCalled();
-  });
-
-  it("with a step behind it, each opening is closed with exactly one Back, also when StrictMode runs the effects twice", async () => {
-    // StrictMode at the root: React double-invokes the effects of a newly mounted tree only there.
-    const strict = () => <StrictMode>{intl(<MapScreen />)}</StrictMode>;
-    act(() => pushEntry("/map?city=tashkent&draw=1"));
-    at("/map", "city=tashkent&draw=1");
-    const view = render(strict());
+  it("a draw request is taken once when the screen is activated: light haptic, `areaTooSmall` reset, `draw=1` pushed", async () => {
+    const pushState = vi.spyOn(window.history, "pushState");
+    browserAt("/map?city=tashkent");
+    act(() => setAreaTooSmall(true));
+    requestDraw();
+    // StrictMode at the root: React runs the activation effect twice; the request is taken once.
+    const view = render(<StrictMode>{intl(<MapScreen />)}</StrictMode>);
     await act(() => vi.dynamicImportSettled());
-    expect(nav.back).toHaveBeenCalledTimes(1);
 
+    expect(pushed(pushState)).toEqual(["/ru/map?city=tashkent&draw=1"]);
+    expect(state.impact).toHaveBeenCalledTimes(1);
+    expect(areaTooSmall()).toBe(false);
+    expect(consumeDrawRequest()).toBe(false);
+
+    view.rerender(<StrictMode>{intl(<MapScreen />)}</StrictMode>);
+    expect(pushState).toHaveBeenCalledTimes(1);
+  });
+
+  it("is activated again when the address is back from a sheet, and when Activity shows the route again", async () => {
+    const pushState = vi.spyOn(window.history, "pushState");
+    browserAt("/map?city=tashkent");
+    const tree = (mode: "visible" | "hidden") => createElement(Activity, { mode } as ActivityProps, <MapScreen />);
+    const view = await mount(() => tree("visible"));
+    expect(pushState).not.toHaveBeenCalled();
+    // A request while the map is shown waits for its next activation.
+    requestDraw();
+    view.rerender(tree("visible"));
+    expect(pushState).not.toHaveBeenCalled();
+
+    at("/filters", "city=tashkent&from=map");
+    view.rerender(tree("visible"));
     at("/map", "city=tashkent");
-    view.rerender(strict());
-    expect(nav.back).toHaveBeenCalledTimes(1);
+    view.rerender(tree("visible"));
+    expect(pushState).toHaveBeenCalledTimes(1);
+
+    requestDraw();
+    view.rerender(tree("hidden"));
+    expect(consumeDrawRequest()).toBe(true);
+    requestDraw();
+    view.rerender(tree("visible"));
+    await act(async () => undefined);
+    expect(pushState).toHaveBeenCalledTimes(2);
+    expect(consumeDrawRequest()).toBe(false);
+  });
+
+  it("drawing closes the card, hides locate and keeps markers from opening it; both views get the lasso's inputs", async () => {
+    const view = await mount();
+    await answer(0, answered([point(1)]));
+    select([1]);
+    expect(card()).not.toBeNull();
+    expect(props()).toMatchObject({ drawing: false });
+
     at("/map", "city=tashkent&draw=1");
-    view.rerender(strict());
-    view.rerender(strict());
-    expect(nav.back).toHaveBeenCalledTimes(2);
+    view.rerender();
+
+    expect(card()).toBeNull();
+    expect(locateButton()).toBeNull();
+    expect(props()).toMatchObject({ drawing: true, onDrawn: expect.any(Function), onTooSmall: expect.any(Function) });
+    state.impact.mockClear();
+    select([1]);
+    expect(card()).toBeNull();
+    expect(state.impact).not.toHaveBeenCalled();
+
+    // The address without `draw`: the layer closed, the map is back as it was.
+    at("/map", "city=tashkent");
+    view.rerender();
+    expect(props().drawing).toBe(false);
+    expect(locateButton()).not.toBeNull();
+    // The same parameter under a listing opened over the map is not drawing on the map.
+    at("/listing/1", "draw=1");
+    view.rerender();
+    expect(props().drawing).toBe(false);
+  });
+
+  it("on Leaflet as on GL", async () => {
+    state.webgl2 = false;
+    at("/map", "city=tashkent&draw=1");
+    await mount();
+    await act(() => vi.dynamicImportSettled());
+
+    expect(state.leaflet.props).toMatchObject({ drawing: true, onDrawn: expect.any(Function), onTooSmall: expect.any(Function) });
+  });
+
+  it("a drawn area applies through `applyFilters`: the polygon, no districts or zones, the sort, the map as target", async () => {
+    at("/map", "city=tashkent&zones=center&rooms_min=2&sort=cheap&draw=1");
+    await mount();
+
+    act(() => props().onDrawn!(AREA));
+
+    expect(state.success).toHaveBeenCalledTimes(1);
+    expect(state.applyFilters).toHaveBeenCalledTimes(1);
+    const [next, options] = state.applyFilters.mock.calls[0] as unknown as [Record<string, unknown>, Record<string, unknown>];
+    expect(next).toMatchObject({ city: "tashkent", rooms_min: 2, polygon: AREA, districts: [], zones: [] });
+    expect(options).toMatchObject({ sort: "cheap", target: routes.map, city: { code: "tashkent" } });
+    expect(options.rules).toEqual(searchRules());
+    expect(state.error).not.toHaveBeenCalled();
+  });
+
+  it("a stroke too small: the error haptic and `areaTooSmall` for the top bar; drawing goes on", async () => {
+    at("/map", "city=tashkent&draw=1");
+    await mount();
+
+    act(() => props().onTooSmall!());
+
+    expect(state.error).toHaveBeenCalledTimes(1);
+    expect(areaTooSmall()).toBe(true);
+    expect(props().drawing).toBe(true);
+    expect(state.applyFilters).not.toHaveBeenCalled();
+    expect(nav.back).not.toHaveBeenCalled();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  it("a pending draw request is discarded when the map shows, also when a sheet over it returns to it", async () => {
-    requestDraw();
+  it("a reload on `draw=1` keeps drawing: nothing closes the layer", async () => {
+    at("/map", "city=tashkent&draw=1");
     const view = await mount();
-    expect(consumeDrawRequest()).toBe(false);
-
-    at("/filters", "city=tashkent&from=map");
-    view.rerender();
-    requestDraw();
-    at("/map", "city=tashkent");
     view.rerender();
 
-    expect(consumeDrawRequest()).toBe(false);
+    expect(props().drawing).toBe(true);
+    expect(locateButton()).toBeNull();
+    expect(nav.back).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it("GL failing while drawing mounts Leaflet and closes the layer; the filters stay", async () => {
+    at("/map", "city=tashkent&rooms_min=2&draw=1");
+    await mount();
+
+    act(() => props().onFail("webgl"));
+    await act(() => vi.dynamicImportSettled());
+
+    expect(document.querySelector('[data-map-view="stub-leaflet"]')).not.toBeNull();
+    expect(state.reportError).toHaveBeenCalledTimes(1);
+    // At depth 0 the layer closes to its parent address: the same search without `draw`.
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(nav.replace).toHaveBeenCalledWith("/map?city=tashkent&rooms_min=2");
+  });
+
+  it("GL failing while not drawing closes nothing, also with a step behind", async () => {
+    act(() => pushEntry("/map?city=tashkent"));
+    await mount();
+
+    act(() => props().onFail("webgl"));
+
+    expect(nav.back).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it("GL failing while drawing with the layer pushed closes it with one Back", async () => {
+    act(() => pushEntry("/map?city=tashkent&draw=1"));
+    at("/map", "city=tashkent&draw=1");
+    await mount();
+
+    act(() => props().onFail("style"));
+
+    expect(nav.back).toHaveBeenCalledTimes(1);
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });
 

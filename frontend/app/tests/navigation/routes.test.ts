@@ -126,13 +126,16 @@ describe("parentOf", () => {
     ["/outside", "", null],
     ["/unknown/address", "", null],
     // (1) layer parameters
+    ["/map", "draw=1", "/map"],
     ["/map", "draw=1&city=x", "/map?city=x"],
+    ["/map", "pin=7", "/map"],
     ["/map", "pick=12&city=x", "/map?city=x"],
     ["/map", "pin=5", "/map"],
     ["/listing/5/actions", "step=detail", "/listing/5/actions?step=report"],
     ["/listing/5/actions", "step=report", "/listing/5/actions"],
     // (2) search sheets
     ["/filters", "city=x&from=map", "/map?city=x"],
+    ["/filters", "from=map&city=tashkent&zones=center&focus=pets", "/map?city=tashkent&zones=center"],
     ["/filters", "city=x", "/?city=x"],
     ["/filters/rooms", "rooms_min=2&from=map", "/map?rooms_min=2"],
     ["/filters/price", "", "/"],
