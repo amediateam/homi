@@ -89,8 +89,8 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-24](WP-24-feed.md) | Feed and listing card | WP-23 | WAITING (merged in #71 on 2026-11-17; production track: the photo check of the header, then the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-25](WP-25-filters.md) | Filters, quick filter, sort, city | WP-24 | WAITING (merged in #79 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-26](WP-26-listing.md) | Listing screen | WP-24 | WAITING (merged in #81 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
-| [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | TODO |
-| [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | TODO |
+| [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | REVIEW (#83) |
+| [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | REVIEW (#84, stacked on #83) |
 | [WP-29](WP-29-saved.md) | Favourites and history | WP-26 | REVIEW (#85) |
 | [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | TODO |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23 | TODO |

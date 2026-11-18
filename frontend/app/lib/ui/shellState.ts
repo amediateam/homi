@@ -14,7 +14,8 @@ export type RefreshHandler = () => Promise<unknown>;
 let searchHref: string = routes.feed();
 let savedHref: string = routes.saved();
 let tooSmall = false;
-let drawRequested = false;
+/** When `requestDraw()` was last called (`Date.now()`), until the map consumes it. */
+let drawRequestedAt: number | null = null;
 
 /** Per address, the handlers in the order they registered; the last one answers (a hidden copy may still hold one). */
 const refreshHandlers = new Map<string, { handler: RefreshHandler }[]>();
@@ -123,17 +124,20 @@ export function useRefreshHandler(pathname: string): RefreshHandler | undefined 
   );
 }
 
+/** How long a draw request waits for the map (WP-28): a hand-off that did not reach it cannot start drawing later. */
+export const DRAW_REQUEST_MS = 3000;
+
 /**
  * The one-shot request to start drawing (WP-25's «Обвести на карте» in the filters sheet): the map (WP-28) consumes it
- * when it shows and opens drawing as a pushed `draw=1` layer, so Back cancels it.
+ * when it shows and opens drawing as a pushed `draw=1` layer, so Back cancels it. A later request replaces the time.
  */
 export function requestDraw(): void {
-  drawRequested = true;
+  drawRequestedAt = Date.now();
 }
 
-/** True once after `requestDraw()`. */
+/** Clears the request; true only if there was one younger than `DRAW_REQUEST_MS`. */
 export function consumeDrawRequest(): boolean {
-  const requested = drawRequested;
-  drawRequested = false;
-  return requested;
+  const at = drawRequestedAt;
+  drawRequestedAt = null;
+  return at !== null && Date.now() - at < DRAW_REQUEST_MS;
 }

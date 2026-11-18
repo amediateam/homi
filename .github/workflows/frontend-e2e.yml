@@ -98,6 +98,9 @@ jobs:
           # The stub `call_url` of `POST /listings/{number}/contact` is on `APP_URL` of `backend/.env.example`; the link
           # allow-list of the app takes the host of this variable (WP-26), so the call page opens in the specs.
           NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
+          # The map's raster fallback (WP-27): the CSP lets the tile requests out of the page, and the guard of
+          # `@homi/testing/playwright` (or a spec's own route) answers them; nothing reaches the tile server.
+          CSP_TILE_HOSTS: https://tile.openstreetmap.org
 
       - name: Upload traces and report
         if: failure()

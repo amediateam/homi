@@ -4,7 +4,7 @@ import { normaliseAddress } from "@/lib/navigation/history";
 import { routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
 
-import { type Launch, parseLaunch } from "./parse";
+import { type Launch, type MapOverride, parseLaunch } from "./parse";
 
 /**
  * The gate in front of the launch redirect (WP-21): WP-23 registers its check with `setLaunchGate` (the first-launch
@@ -62,6 +62,22 @@ let consumed = false;
 let target: string | null = null;
 /** The query the Mini App was opened with, read when the module loads: on a gate route the address has none. */
 const launchSearch = typeof window === "undefined" ? "" : window.location.search;
+
+export interface LaunchMapOptions {
+  override: MapOverride | null;
+  /** `?mapdebug`, never in a production build. */
+  debug: boolean;
+}
+
+/**
+ * The map's launch parameters (TMA-012, WP-27): `?map=` and `?mapdebug` of the query the Mini App was opened with.
+ * The view toggle keeps only search keys, so the map route never sees them in its own address. The engine applies
+ * the override once per session (`features/map/engine.ts`).
+ */
+export function launchMapOptions(): LaunchMapOptions {
+  const launch = parseLaunch(tg.initData(), launchSearch);
+  return { override: launch.mapOverride, debug: launch.mapDebug && process.env.NEXT_PUBLIC_APP_ENV !== "production" };
+}
 
 /**
  * How long a consumed launch may wait for its push. An address that is not the target does not end the wait: the

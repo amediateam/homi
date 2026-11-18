@@ -7,9 +7,10 @@ export const LINK_DEBOUNCE_MS = 1500;
 
 /**
  * Hosts a link may leave the app for, besides the app's own origin and its landing (`app.<x>` → `<x>`), the brand
- * links and the API host (`linkHosts`). An entry also matches its `www.` form. WP-27 adds the map attribution hosts.
+ * links and the API host (`linkHosts`). An entry also matches its `www.` form. `openstreetmap.org` (its copyright
+ * page is on `www.`) and `protomaps.com` are the map attribution links (WP-27).
  */
-export const LINK_HOSTS: readonly string[] = ["t.me", "yandex.uz", "google.com"];
+export const LINK_HOSTS: readonly string[] = ["t.me", "yandex.uz", "google.com", "openstreetmap.org", "protomaps.com"];
 
 /**
  * The host of `NEXT_PUBLIC_API_URL`: the call page of `POST /listings/{number}/contact` is served there (WP-26,

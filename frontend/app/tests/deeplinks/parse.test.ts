@@ -53,6 +53,17 @@ describe("parseLaunch (TMA-010 … TMA-012)", () => {
     expect(parseLaunch(launch(), "")).toMatchObject({ entry: "menu", listingNumber: null, news: null, source: null });
   });
 
+  it("?map= takes gl, leaflet and auto only; ?mapdebug counts when present, with or without a value", () => {
+    expect(parseLaunch(launch(), "?map=gl").mapOverride).toBe("gl");
+    expect(parseLaunch(launch(), "?map=auto").mapOverride).toBe("auto");
+    expect(parseLaunch(launch(), "?map=GL").mapOverride).toBeNull();
+    expect(parseLaunch(launch(), "?mapdebug").mapDebug).toBe(true);
+    expect(parseLaunch(launch(), "?map=gl&mapdebug=1")).toMatchObject({ mapOverride: "gl", mapDebug: true });
+    expect(parseLaunch(launch(), "?map=gl").mapDebug).toBe(false);
+    expect(parseLaunch(launch(), "?mapdebugger").mapDebug).toBe(false);
+    expect(parseLaunch(launch(), "").mapDebug).toBe(false);
+  });
+
   it("never throws on garbage", () => {
     expect(() => parseLaunch("%%%", "?%%")).not.toThrow();
     expect(parseLaunch("", "").entry).toBe("menu");

@@ -3,11 +3,11 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#84, stacked on #83) |
 | Depends on | WP-27 |
 | Size | ≈ 2 800 changed lines, L |
 | Behaviour reference | `03` §1.2 (Back while drawing), §1.7, §1.8, §2 (SCR-011 "Differences between engines", SCR-012, SCR-021, the location part of SCR-018), §3.2, §3.4 ("Lasso", "Map", "Geolocation"), §4 (BR-APP-061, BR-APP-008), §5 (LB-APP-001, LB-APP-013, LB-APP-020); `05` (TMA-015, TMA-022, TMA-028, TMA-035); task files KV-FE-059, KV-FE-060, KV-FE-067 (spot map parts). From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
-| Needs from the production track | `CSP_TILE_HOSTS` of WP-27 must also cover `img-src` (Leaflet loads raster tiles as images) and the app's `Referrer-Policy` must not strip the origin from tile requests; a low-end Android device (lite mode) for the pass on staging. Nothing else |
+| Needs from the production track | A low-end Android device (lite mode) for the pass on staging. Nothing else: `CSP_TILE_HOSTS` of WP-27 already reaches `img-src` (`lib/security/csp.ts`) and the app's `Referrer-Policy` is `strict-origin-when-cross-origin` (`proxy.ts`), so Leaflet's tile images carry the origin (checked on `next start`, AM-91) |
 
 ## Goal
 
@@ -70,19 +70,25 @@ versions; the list is in step 1.
 
 - `MapViewLeaflet.tsx` implements `MapViewProps` of `features/map/types.ts` unchanged. `MapScreen` loads it with
   `next/dynamic(() => import('./leaflet/MapViewLeaflet'), { ssr: false })`. Leaflet, its plugins and their CSS are
-  imported only inside this chunk.
+  imported only inside this chunk. `leaflet/library.ts` `loadLeaflet()` loads `leaflet`, then `leaflet.markercluster`,
+  then `protomaps-leaflet`, once per session: Leaflet 1.9.4 ships only a UMD build, which sets `window.L`, and both
+  plugins read that global; every other module imports Leaflet's types only and gets the library with the map
+  (AM-90).
 - `MapScreen` changes: `MapUnavailable.tsx` and the key `map.unavailable` are deleted. The Leaflet view mounts when
   `pickEngine` says so, when the GL chunk fails to load, or when the GL view calls `onFail` (then `markGlFailed`
   of WP-27 runs once). A fallback during drawing closes the `draw` layer; filters are kept. If the Leaflet chunk
   fails too, the error pill of WP-27 is shown and «Повторить» retries the import. `warmMap()` warms the chunk of
   the engine `pickEngine` picks.
-- Map: maximum zoom 18; attribution through Leaflet's control without its prefix — «© OpenStreetMap», plus
-  «· Protomaps» with vector tiles; link clicks are routed to `tg.openLink`.
+- Map: maximum zoom 18; no attribution control: `MapAttribution` of `MapScreen` draws «© OpenStreetMap», plus
+  «· Protomaps» with vector tiles, for both engines and routes its links to `tg.openLink` (AM-88).
 - Basemap (`basemap.ts`, `useDeferredBasemap.ts`): added after the first fit or after 1.2 s, whichever comes first;
   before that the palette's land colour. `tiles` empty → OSM raster layer, maximum zoom 19, tile images requested
   with an origin referrer; a string → the protomaps-leaflet vector layer with the palettes of WP-27 and label rules
-  in the interface locale (`basemapRules.ts`), `maxDataZoom` 15. A vector failure switches to raster and reports
-  `map_tiles_failed` once. The layer is re-created when the scheme, lite mode or locale changes.
+  in the interface locale (`basemapRules.ts`: GL's style layers with the palette's colours, not protomaps'
+  `paintRules(flavor)`, AM-89), `maxDataZoom` 15. A vector failure switches to raster and reports `map_tiles_failed`
+  once per session, shared with GL (`features/map/useBasemap.ts`); protomaps-leaflet 5.1.0 reports no tile failure of
+  its own, so the layer's sources are watched (`watchVectorErrors`, AM-89). The layer is re-created when the scheme,
+  lite mode or locale changes.
 - Listings layer (`listingLayer.ts`, `icons.ts`, `useSpiderfy.ts`): marker clusters with `maxClusterRadius` 48 and
   `spiderfyOnMaxZoom` off. Pin, stack and cluster icons come from one builder shared with GL: move
   `gl/markerElements.ts` of WP-27 to `features/map/markerElements.ts`. Icons are DOM nodes filled with
@@ -94,7 +100,8 @@ versions; the list is in step 1.
 - Mask: `maskGeometry()` of WP-27 as a polygon with a hole. Locate: a circle marker of radius 7 and an accuracy
   circle under 2 km (`useMyLocation.ts`).
 - In-map tile prefetch on `moveend`, only for a `{z}/{x}/{y}` template: tiles around the stopped view within the
-  per-stop budget and the session cap of `tilePrefetch.ts` (WP-27); nothing with Save-Data or on `2g`.
+  per-stop budget and the session cap of `tilePrefetch.ts` (WP-27), one cap for the list's warm-up and the map
+  (`prefetchTileUrls`); nothing with Save-Data or on `2g`.
 
 ### Drawing layer (`MapScreen`, `lib/ui/shellState.ts`)
 
@@ -129,7 +136,7 @@ versions; the list is in step 1.
 | ---- | ----- |
 | Drawing pointer | the first pointer, with pointer capture; a mouse works the same (Telegram Desktop) |
 | Point spacing | a point closer than 4 px to the previous one is skipped; points outside the overlay clamp to its box |
-| Second pointer | drops the stroke; the two pointers pan and pinch the map, applied once per animation frame; marker re-sync is deferred 150 ms |
+| Second pointer | drops the stroke; the two pointers pan and pinch the map, applied once per animation frame; marker re-sync is deferred 150 ms (GL: camera moves tagged `LASSO_MOVE` re-sync the marker layer once; Leaflet: the host fires one `moveend` 150 ms after the last move, AM-93) |
 | Stroke end | lifting the drawing pointer, or losing pointer capture |
 | Rejected | fewer than 3 points, or a span under 40 px on either axis |
 | Simplification | Douglas–Peucker from a 3 px tolerance, × 1.5 per pass, until at most 40 vertices |
@@ -153,37 +160,52 @@ versions; the list is in step 1.
   viewport (`IntersectionObserver`, `rootMargin: '300px'`) and reference data is loaded; it ignores pan and zoom.
 - `SpotMapRoute.tsx` is what `location/page.tsx` renders in `(main)/listing/[number]/` and in
   `(main)/@overlay/(.)listing/[number]/` (both route files replace the WP-20 placeholder and hold no logic). It
-  reads the listing with `useListing()` of WP-26 from the resource cache — no second request — and renders
-  `SpotMapFullscreen` in a `RouteOverlay` at z-index 100. No coordinates, or a listing error: `back()`.
+  reads the listing with `useListingRecord()` of WP-26 from the resource cache — no request of its own — and the
+  screen's reported state from the listing layer's context, and renders `SpotMapFullscreen` in a `RouteOverlay` at
+  z-index 100. No coordinates, or a listing error (in the cache, or a cookie-mode server failure that stays in the
+  screen's first answer): `back()` (AM-92).
 - `SpotMapFullscreen.tsx`: interactive map, close button, locate button, bottom card. The user's position lives in
   component state, is dropped on close and is never sent (TMA-035).
 
 ## Files
 
-New, under `frontend/app/`:
+New, under `frontend/app/` (as built; the files beyond the first plan are marked ⁺):
 
 - `features/map/leaflet/{MapViewLeaflet.tsx,useLeafletMap.ts,listingLayer.ts,icons.ts,useSpiderfy.ts}`,
-  `features/map/leaflet/{basemap.ts,basemapRules.ts,useDeferredBasemap.ts,useMyLocation.ts,lassoHandlers.ts}`
+  `features/map/leaflet/{basemap.ts,basemapRules.ts,useDeferredBasemap.ts,useMyLocation.ts,lassoHandlers.ts}`,
+  `features/map/leaflet/library.ts`⁺ (the load order, AM-90), `features/map/leaflet/useLeafletMask.ts`⁺,
+  `features/map/useBasemap.ts`⁺ (GL's basemap rule and its session failure state, moved to serve both engines)
 - `features/map/lasso/{polygon.ts,LassoOverlay.tsx}`, `features/map/gl/GlLasso.tsx`
 - `features/listing/spot/{SpotMap,SpotMapFullscreen,SpotMapRoute}.tsx`,
   `features/listing/spot/{useSpotMap,spotGeometry,spotGL,spotLeaflet}.ts`
 - `tests/map/{lassoPolygon,leafletIcons,useSpiderfy,drawRequest}.test.ts`, `tests/map/LassoOverlay.test.tsx`,
-  `tests/listing/{spotGeometry,useSpotMap}.test.ts`, `tests/listing/SpotMapFullscreen.test.tsx`
+  `tests/listing/{spotGeometry,useSpotMap}.test.ts`, `tests/listing/SpotMapFullscreen.test.tsx`;
+  `tests/map/{leafletBasemap,leafletListingLayer,useClusterMarkers}.test.ts`⁺, `tests/map/leafletView.test.tsx`⁺,
+  `tests/listing/spotEngines.test.ts`⁺, `tests/listing/SpotMap.test.tsx`⁺
 - `e2e/{map-leaflet,map-lasso,spot-map}.spec.ts`
 
 Changed:
 
 - `features/map/MapScreen.tsx` (fallback, drawing, draw request), `features/map/engine.ts` (`warmMap`),
-  `features/map/markerElements.ts` (moved from `gl/`), `tests/map/MapScreen.test.tsx`.
+  `features/map/markerElements.ts` (moved from `gl/`), `tests/map/MapScreen.test.tsx`, `tests/map/MapScreen.chunk.test.tsx`.
+- `features/map/gl/MapViewGL.tsx` (the lasso while drawing), `features/map/gl/useMapInstance.ts` (re-exports
+  `useBasemap`), `features/map/gl/useClusterMarkers.ts` (the deferred re-sync, AM-93), `features/map/tilePrefetch.ts`
+  (`prefetchTileUrls`, one session cap), `features/map/map.css` (the Leaflet icon box, font, dark raster), with
+  `tests/map/{tilePrefetch,markerElements}.test.ts` and `tests/map/MapViewGL.test.tsx`.
 - `app/[locale]/(main)/listing/[number]/location/page.tsx`,
   `app/[locale]/(main)/@overlay/(.)listing/[number]/location/page.tsx`.
-- `features/listing/sections/LocationSection.tsx` (uses `SpotMap`).
-- `lib/ui/shellState.ts`, `lib/navigation/routes.ts`, `lib/navigation/useBack.ts`,
-  `frontend/packages/search/src/*` (reserved parameters): only where the settled rules are missing.
-- `e2e/map.spec.ts` (the "unavailable" case becomes a Leaflet case).
+- `features/listing/sections/LocationSection.tsx` (uses `SpotMap`); `features/listing/{ListingLayer.tsx,useListing.ts}`
+  (the screen's reported state in the layer's context, AM-92) with the tests that build that context.
+- `lib/ui/shellState.ts` (the draw request's timestamp); `tests/navigation/routes.test.ts` (the `parentOf` and
+  reserved-parameter cases). `lib/navigation/routes.ts`, `lib/navigation/useBack.ts` and `@homi/search` already had
+  the three settled rows and are unchanged.
+- `frontend/packages/ui/src/icons/index.ts` (`Maximize2`, with its test and the dev gallery),
+  `frontend/app/eslint.config.mjs` (ignores the copied MapLibre worker under `public/maplibre/`).
+- `e2e/map.spec.ts` (the "unavailable" case becomes a Leaflet case, as does the `?map=` persistence case),
+  `e2e/shell.spec.ts` (the lasso step now reaches drawing), `e2e/foundation.spec.ts` (a comment).
 
 Deleted: `features/map/MapUnavailable.tsx`, `features/listing/sections/SpotMapSlot.tsx`, the key `map.unavailable`
-in `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`.
+in `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (and its row in `packages/i18n/tests/catalogue.test.ts`).
 
 ## Steps
 
@@ -301,8 +323,8 @@ No new i18n keys. `map.unavailable` (added by WP-27) is removed.
   `shellState.areaTooSmall`; fallback during drawing closes the layer.
 - `SpotMapFullscreen.test.tsx`: locate states and texts; external links per radius; close calls `back()`.
 
-**End to end (fake Telegram, stubs, cookie mode and header mode).** Headless Chromium falls to Leaflet by rule; GL
-cases launch with `?map=gl`.
+**End to end (fake Telegram, stubs, cookie mode and header mode).** Headless Chromium passes the WebGL2 probe and
+picks GL (as WP-27 found, AM-84); Leaflet cases launch with `?map=leaflet` (AM-87).
 
 - `map-leaflet.spec.ts`: the scenarios of `map.spec.ts` (pins, stack, cluster, card, error, empty, locate) on
   Leaflet; a max-zoom cluster tap with a spread stack collapses the stack first.
@@ -357,4 +379,75 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 
 ## Handoff
 
-Empty.
+- **Steps 1–12 are done**, and step 13's specs; its checklist on staging waits for the production track (below). The
+  branch `wp-28-map-leaflet-lasso` starts from `wp-27-map-gl` at `94a414d` (the developer's «Следующий пакет — WP-28»
+  came while #83 was in review), so its PR is stacked on #83 until that merges. The orchestrator built a vertical
+  slice first and checked it on `next start`; then plain subagents, at most three at a time, each owning its own
+  files, in one build wave, one follow-up wave and one end-to-end wave, with two review rounds after them. What the
+  slice and the builds found is written into the text above (rule 6) and recorded as AM-87 … AM-93 in the phase-3
+  notes §Z.
+  - `7d57dc7` slice: `leaflet/library.ts`, the map and camera, raster tiles, clusters, the engine switch in `MapScreen`,
+    `MapUnavailable` and `map.unavailable` removed, `markerElements.ts` moved up. `0db8dea`: the skeleton of stub hooks.
+  - `949696b` the Leaflet view; `c6dea7f` the lasso and drawing; `6b14977` the spot map.
+  - `6a6d124` one prefetch cap and the GL markers' deferred re-sync; `297ca2c` the spot route's leave rule on a
+    cookie-mode server failure, `Maximize2`.
+  - `f4a7c5b` the end-to-end specs, and the two bugs they found (the Leaflet icon box shrank a cluster and the spread
+    dot; the spot map's container was 0 px high on GL).
+  - `31aa139` review round 1 fixes, `f7ba4b2` review round 2 fix.
+  - Size: 81 files, +9 735 / −371 against `94a414d`, of which tests and specs are +6 365. The header's estimate was
+    ≈ 2 800 changed lines.
+  - The checklist lines stay unticked: each asks for ru / uz / en, light / dark and a GL and a non-GL profile, several
+    for Telegram on staging.
+- **Step 1, verified at the installed versions:** Leaflet 1.9.4 and markercluster are imported only on the client,
+  through `loadLeaflet()` in this order (UMD and the global `L`, AM-90); `divIcon` takes an `Element` as `html` and
+  appends it (`options.html instanceof Element` in `DivIcon.createIcon`), so the icon needs no empty-then-fill step;
+  `TileLayer`'s option is `referrerPolicy`; protomaps-leaflet 5.1.0's layer is `leafletLayer({ url, flavor, lang,
+  paintRules, labelRules, maxDataZoom, backgroundColor, attribution })`, it reads `L.GridLayer` when a layer is made,
+  and pnpm installed its own `pmtiles` 3.2.1 next to the app's 4.5.0.
+- **Reviews** (each finding checked by a refuting agent):
+  - Round 1 (the Leaflet view, drawing, the spot map, security and regressions; 4 findings, 1 refuted), fixed in
+    `31aa139`: a Leaflet pin kept for another listing at the same address with the same label; a Leaflet map removed
+    during a zoom animation or a pinch threw from Leaflet's timer; a GL chunk failure while drawing ran Back twice
+    under StrictMode (`next dev` only).
+  - Round 2 (the fixes, cross-module flows; 1 finding), fixed in `f7ba4b2`: the wheel's debounce timer outlived the
+    removal too.
+- **Checks** (from `frontend/` unless marked):
+  - **Slice (`7d57dc7`):** a production build and a throwaway Playwright probe against `next start` with
+    `?map=leaflet&mapdebug`: four stacks drawn, one cluster of 44 at zoom 9, the stack's card opens, the icon roots
+    carry no size of their own, OSM tiles requested as images with `referer: http://localhost:3001/`, no console error
+    or CSP report. Repeated on the `6a6d124`/`297ca2c` build with the same result.
+  - **Builders:** each ran its own tests, ESLint (0 warnings) and the app typecheck, and showed its new tests failing
+    against a broken version (reported by the builders, not re-run by the orchestrator). The orchestrator showed each
+    review fix's test failing against the unfixed code.
+  - **`f7ba4b2`:** `make ci-frontend` — types, lint, typecheck and the build (its `prebuild` copied the MapLibre
+    worker) passed; the test step failed once with `ENOENT` on `node_modules/.vitest-cache` in `@homi/search` (two
+    files, no assertion), and `pnpm test` again passed: app 183 files / 2831 + 1 todo, `@homi/search` 238 + 1 todo,
+    `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112, `@homi/api-client` 14, `@homi/utils` 2.
+  - **End to end**, each of the 22 files alone against a local `next start`, with a pause between files (KI-32):
+    on the `f7ba4b2` build (the `make ci-frontend` one): map 17, map-leaflet 17, map-lasso 9, spot-map 13, csp 3,
+    shell 16, data 5, gates 8, foundation 19, back 11, feed 19, filters 20, listing-open 16, listing-contact 14,
+    listing-actions 14, photo-viewer 6, launch 5, city 6, session 7, boot-failure 6, crash 4, smoke 2 — 237 passed,
+    none failed or skipped. The same 237 passed on the `f4a7c5b` build before the reviews. While the three spec writers
+    ran at once, sign-ins stuck at `booting` (KI-32) and artefact folders collided; every file then passed alone, twice.
+  - **CI on #84:** `frontend` green; `frontend-e2e` on `eb9369e` failed 2 (a race in the new spot-map spec, fixed in
+    `fc93076`, and the shell pull test); on `fc93076` it failed 1 (a foundation test) and passed 237 on the rerun of
+    the job. Both unrelated failures are KI-63.
+  - No backend change, so no `composer ci:check`.
+- **Open for the reviewer:**
+  - Lite mode on Leaflet keeps markercluster's animations, Leaflet's zoom and fade animations and the dark raster
+    filter; the spec names no lite reduction for Leaflet beyond the basemap rules.
+  - The dark raster on Leaflet is a CSS filter approximating GL's raster paint; to be compared by eye.
+  - The spot circle uses the mask outline colour of the palette (the theme's text colour), fill 0.12; the palette has
+    no spot colour of its own.
+  - The fullscreen spot map shows no spinner while an engine loads (the spec rules one out only for the mini map).
+  - A GL failure first met on the spot map moves the whole session, the search map included, to Leaflet
+    (`markGlFailed`, as the spec says).
+  - KI-61 (library internals at the pinned versions) and KI-62 (a template's 404 tile on Leaflet).
+  - Not automated: two-finger pan and pinch while drawing, whole versus fractional zoom, a lost pointer capture, the
+    native location sheet, the vector basemap and its prefetch (no tile file is hosted), the restyle on a theme or
+    language change, the Leaflet chunk failing (its file name is a build hash), the spot map's "both engines failed",
+    the locate failure text on the spot map (unit test only), uz / en and dark, tile likeness, scrolling on a lite
+    device, the follow nudge (WP-30).
+- **Needs from the production track:** nothing beyond WP-27's (`CSP_TILE_HOSTS` before the deploy; the build through
+  `pnpm -r build`): `img-src` and the referrer are already right (AM-91). Then the regular deploy and the checklist
+  inside Telegram on staging: iOS, Android with one lite device, Desktop (mouse drawing) and Web.

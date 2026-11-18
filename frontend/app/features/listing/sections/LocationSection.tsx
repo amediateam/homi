@@ -5,14 +5,15 @@ import { formatCenter, type Translate } from "@homi/i18n/format";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { ListingDetails } from "../listingData";
+import { SpotMap } from "../spot/SpotMap";
+import { spotOf } from "../spot/spotGeometry";
 import { NearbySection, nearbyRows } from "./NearbySection";
-import { SpotMapSlot } from "./SpotMapSlot";
 
 /**
- * «Расположение» (`03` SCR-018, block 9): with coordinates the spot map slot and the hint that the place is
- * approximate; the place line («district · landmark», `placeLine` of the caller); the distance to the centre; then
- * «Рядом». The heading stays while any of them is there, also when «Рядом» is empty (legacy); nothing at all → no
- * section.
+ * «Расположение» (`03` SCR-018, block 9): with coordinates the mini map (`SpotMap`, WP-28) and the hint that the
+ * place is approximate; the place line («district · landmark», `placeLine` of the caller); the distance to the
+ * centre; then «Рядом». The heading stays while any of them is there, also when «Рядом» is empty (legacy); nothing at
+ * all → no section.
  */
 export function LocationSection({
   number,
@@ -28,16 +29,17 @@ export function LocationSection({
   const translate: Translate = (key, values) => t(key as never, values as never);
   const center = formatCenter(details.center_km, locale, translate);
   const hasNearby = nearbyRows(details.metro, details.nearby).length > 0;
-  if (details.location === null && !place && center === null && !hasNearby) {
+  const spot = spotOf(details.location, details.geo_radius_m);
+  if (spot === null && !place && center === null && !hasNearby) {
     return null;
   }
 
   return (
     <section data-section="location" className="flex flex-col gap-[10px] px-(--gutter) py-[12px]">
       <h2 className="text-[17px] font-bold">{t("listing.location")}</h2>
-      {details.location !== null ? (
+      {spot !== null ? (
         <>
-          <SpotMapSlot number={number} />
+          <SpotMap number={number} spot={spot} />
           <p className="text-[13px] leading-snug text-hint">{t("listing.mapApprox")}</p>
         </>
       ) : null}

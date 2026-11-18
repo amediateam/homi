@@ -39,6 +39,7 @@ export {
   Map,
   MapIcon,
   MapPin,
+  Maximize2,
   Megaphone,
   MessageCircle,
   PaintRoller,

@@ -90,3 +90,29 @@ describe("the call-page host (WP-26)", () => {
     expect(opened(fake)).toEqual([]);
   });
 });
+
+describe("map attribution hosts (WP-27)", () => {
+  it("opens the OpenStreetMap copyright page and Protomaps through openLink", () => {
+    fake = fakeTelegram();
+
+    expect(openLink("https://www.openstreetmap.org/copyright")).toBe(true);
+    expect(openLink("https://protomaps.com")).toBe(true);
+
+    expect(opened(fake)).toEqual(["openLink https://www.openstreetmap.org/copyright", "openLink https://protomaps.com"]);
+  });
+
+  it("refuses look-alike hosts and the tile server", () => {
+    fake = fakeTelegram();
+    for (const url of [
+      "https://openstreetmap.org.evil.example/copyright",
+      "https://www.openstreetmap.org.evil.example/copyright",
+      "https://protomaps.com.evil.example/",
+      "https://evilopenstreetmap.org/copyright",
+      "https://tile.openstreetmap.org/0/0/0.png",
+      "http://www.openstreetmap.org/copyright",
+    ]) {
+      expect(openLink(url), url).toBe(false);
+    }
+    expect(opened(fake)).toEqual([]);
+  });
+});

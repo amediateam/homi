@@ -23,7 +23,8 @@ const ADDRESSES: [string, string[]][] = [
   ["/city", ["city"]],
   ["/listing/1", ["listing"]],
   // The viewer and the two sheets are portalled and rendered in the browser only (WP-26): the server HTML holds the
-  // listing alone. The location child is still a placeholder inside the layer.
+  // listing alone. The location child (WP-28) renders inside the layer on the server too: the fullscreen spot map's
+  // frame (its `RouteOverlay` with × over the map's background); the map itself mounts in the browser only.
   ["/listing/1/photos", ["listing"]],
   ["/listing/1/location", ["listing", "listing/location"]],
   ["/listing/1/market", ["listing"]],

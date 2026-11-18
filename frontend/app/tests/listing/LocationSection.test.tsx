@@ -27,7 +27,7 @@ function location(overrides: Partial<Location> = {}, place: string | null = plac
 }
 
 const root = () => document.querySelector<HTMLElement>('[data-section="location"]');
-const slot = () => document.querySelector<HTMLButtonElement>("button[data-spot-map]");
+const miniMap = () => document.querySelector<HTMLButtonElement>("button[data-spot-map]");
 const text = (selector: string) => document.querySelector(selector)?.textContent ?? null;
 
 let fake: FakeTelegram;
@@ -45,21 +45,21 @@ afterEach(() => {
 });
 
 describe("LocationSection (03 SCR-018, block 9)", () => {
-  it("with coordinates: the heading, the map slot, the approximate hint, the place, the centre and «Рядом»", () => {
+  it("with coordinates: the heading, the mini map, the approximate hint, the place, the centre and «Рядом»", () => {
     location();
 
     expect(root()?.querySelector("h2")?.textContent).toBe("Расположение");
-    expect(slot()).not.toBeNull();
+    expect(miniMap()).not.toBeNull();
     expect(root()?.textContent).toContain("Место примерное: по кварталу, ориентиру или метро из объявления");
     expect(text("[data-location-place]")).toBe("Юнусабад · Мегапланет");
     expect(text("[data-location-center]")).toBe("4,2 км до центра");
     expect(root()?.querySelector('[data-section="nearby"]')).not.toBeNull();
   });
 
-  it("without coordinates: neither the map slot nor the hint", () => {
+  it("without coordinates: neither the mini map nor the hint", () => {
     location({ location: null });
 
-    expect(slot()).toBeNull();
+    expect(miniMap()).toBeNull();
     expect(root()?.textContent).not.toContain("Место примерное");
     expect(text("[data-location-place]")).toBe("Юнусабад · Мегапланет");
   });
@@ -91,23 +91,33 @@ describe("LocationSection (03 SCR-018, block 9)", () => {
 
     expect(root()?.querySelector("h2")?.textContent).toBe("Location");
     expect(text("[data-location-center]")).toBe("4.2 km to the centre");
-    expect(slot()?.getAttribute("aria-label")).toBe("Open map");
+    expect(miniMap()?.getAttribute("aria-label")).toBe("Open map");
   });
 });
 
-describe("SpotMapSlot", () => {
+describe("SpotMap in the section (WP-28)", () => {
   it("is a 2:1 button named «Открыть карту» that a swipe back never starts on", () => {
     location();
 
-    expect(slot()?.getAttribute("aria-label")).toBe("Открыть карту");
-    expect(slot()?.className).toContain("aspect-[2/1]");
-    expect(slot()?.hasAttribute("data-no-swipe")).toBe(true);
-    expect(slot()?.matches(SWIPE_BACK_EXCLUDED)).toBe(true);
+    expect(miniMap()?.getAttribute("aria-label")).toBe("Открыть карту");
+    expect(miniMap()?.className).toContain("aspect-[2/1]");
+    expect(miniMap()?.hasAttribute("data-no-swipe")).toBe(true);
+    expect(miniMap()?.matches(SWIPE_BACK_EXCLUDED)).toBe(true);
+  });
+
+  it("waits in the background colour while it is not near the viewport: no map, no spinner, no attribution", () => {
+    location();
+
+    expect(miniMap()?.dataset.spotStatus).toBe("idle");
+    expect(miniMap()?.className).toContain("bg-bg2");
+    // The map inside is no landmark of its own: the button names it.
+    expect(miniMap()?.querySelector("[data-spot-map-view]")?.getAttribute("aria-hidden")).toBe("true");
+    expect(root()?.querySelector('[role="presentation"], [data-map-attribution]')).toBeNull();
   });
 
   it("opens the full-screen map of the listing with the light haptic", () => {
     location();
-    fireEvent.click(slot()!);
+    fireEvent.click(miniMap()!);
 
     expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/listing/100001/location");

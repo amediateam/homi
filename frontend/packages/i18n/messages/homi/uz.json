@@ -47,5 +47,9 @@
   },
   "toast": {
     "reportedAgentReview": "Rahmat, tekshiramiz"
+  },
+  "map": {
+    "empty": "Bu hududda hech narsa topilmadi",
+    "loading": "Eʼlonlar yuklanmoqda…"
   }
 }

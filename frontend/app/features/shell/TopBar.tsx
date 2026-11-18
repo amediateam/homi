@@ -12,7 +12,7 @@ import { matchRoute, routes } from "@/lib/navigation/routes";
 import { useBack } from "@/lib/navigation/useBack";
 import { useReference } from "@/lib/reference/useReference";
 import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
-import { type SearchStateApi, useSearchState } from "@/lib/search/useSearchState";
+import type { SearchStateApi } from "@/lib/search/useSearchState";
 import { tg } from "@/lib/telegram";
 import { lastSearchQuery, setAreaTooSmall, useAreaTooSmall } from "@/lib/ui/shellState";
 
@@ -152,11 +152,13 @@ function SearchListBar() {
 /**
  * Map: the compact deal control, the lasso (highlighted while an area is drawn) and the filters with their badge,
  * whose count is also in the button's name (the badge itself is decorative). Below 346 px (a 320 px phone) the deal
- * control gives up width so the round buttons stay on the screen.
+ * control gives up width so the round buttons stay on the screen. It reads the map's own search state
+ * (`useScreenSearchState`, KI-43), so the bar kept under a listing opened from the map card shows the map below it;
+ * on the map the state is the live address, which the switch, the × and the pushes write as before.
  */
 function MapBar() {
   const t = useTranslations();
-  const state = useSearchState();
+  const state = useScreenSearchState("map");
   const { filters, sort, write, href } = state;
   const { deal, pick } = useDealSwitch(state);
   const tabs = useDealTabs();
@@ -335,10 +337,10 @@ const BARS: Readonly<Record<Exclude<ShellVariant, "none">, () => ReactNode>> = {
 
 /**
  * The top bar of the shell (SCR-006, legacy `header.topbar`). It holds no data: the search variants read the address
- * through `useSearchState()` (the list through the feed's own state of `useScreenSearchState`) and write it back; the
- * others are titles. Over the map it is a transparent layer whose
- * controls float; elsewhere it is sticky glass that slides away while the chrome is collapsed (`html.chrome-mini`,
- * search list only). `none` (a listing loaded directly, a gate) renders nothing.
+ * of their own screen through `useScreenSearchState` (the list's or the map's, KI-43) and write it back; the others
+ * are titles. Over the map it is a transparent layer whose controls float; elsewhere it is sticky glass that slides
+ * away while the chrome is collapsed (`html.chrome-mini`, search list only). `none` (a listing loaded directly, a gate)
+ * renders nothing.
  */
 export function TopBar({ variant }: { variant: ShellVariant }) {
   if (variant === "none") {
