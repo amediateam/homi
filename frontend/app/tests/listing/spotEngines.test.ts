@@ -57,7 +57,9 @@ vi.mock("@/features/map/gl/library", () => {
   return { loadMapLibre: () => Promise.resolve({ Map: FakeMap, GPUInitializationError }) };
 });
 
-vi.mock("@/features/map/leaflet/library", () => {
+vi.mock("@/features/map/leaflet/library", async (importOriginal) => {
+  // The real removal: on these fakes it clears the zoom flags, then calls `off` and `remove`.
+  const { removeLeafletMap } = await importOriginal<typeof import("@/features/map/leaflet/library")>();
   const layer = (kind: string) =>
     (...args: unknown[]) => {
       const made: Made = { kind, args, addTo: vi.fn(), remove: vi.fn() };
@@ -76,7 +78,7 @@ vi.mock("@/features/map/leaflet/library", () => {
     circleMarker: layer("circleMarker"),
     tileLayer: layer("tileLayer"),
   };
-  return { loadLeaflet: () => Promise.resolve({ L, protomaps: {} }) };
+  return { loadLeaflet: () => Promise.resolve({ L, protomaps: {} }), removeLeafletMap };
 });
 
 /** The search map's vector layer is tested with the Leaflet view; here only its input counts. */

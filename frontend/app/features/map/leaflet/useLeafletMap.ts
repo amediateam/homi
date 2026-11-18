@@ -8,7 +8,7 @@ import { launchMapOptions } from "@/lib/deeplinks/launch";
 
 import { FIT_MAX_ZOOM, FIT_MS, FIT_PADDING, fitKey, polygonBounds, readFit, robustBounds, writeFit } from "../camera";
 import type { CityView, MapFailReason, MapGroup } from "../types";
-import { type LeafletLibrary, loadLeaflet } from "./library";
+import { type LeafletLibrary, loadLeaflet, removeLeafletMap } from "./library";
 
 /**
  * The Leaflet map of the Leaflet view (WP-28 "Leaflet view"): created after `loadLeaflet()`, removed in the effect
@@ -114,8 +114,7 @@ export function useLeafletMap(container: RefObject<HTMLElement | null>, input: L
         delete (window as DebugWindow).homiMap;
       }
       mapRef.current = null;
-      map.off();
-      map.remove();
+      removeLeafletMap(map);
     };
   }, [container]);
 

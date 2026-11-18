@@ -180,6 +180,21 @@ describe("createListingLayer (WP-28 'Listings layer', SCR-011)", () => {
     expect(container.querySelector('[data-number="11"]')).toBeNull();
   });
 
+  it("replaces a pin when another listing with the same label takes its address: the tap selects the new one", () => {
+    mount([41.31, 69.28], 15);
+    layer.update({ groups: [group(41.3111, 69.2797, [100], "$400")], spread: null, active: null });
+    const before = container.querySelector('[data-number="100"]');
+
+    layer.update({ groups: [group(41.3111, 69.2797, [200], "$400")], spread: null, active: 200 });
+
+    const pin = container.querySelector<HTMLElement>('[data-marker="pin"]');
+    expect(pin).not.toBe(before);
+    expect(pin?.dataset.number).toBe("200");
+    expect(pin?.classList.contains("active")).toBe(true);
+    tap(pin);
+    expect(callbacks.select).toHaveBeenCalledWith([200]);
+  });
+
   it("leaves no marker or listener on the map once destroyed", () => {
     mount([41.31, 69.28], 15);
     const stack = group(41.3111, 69.2797, [11, 12]);

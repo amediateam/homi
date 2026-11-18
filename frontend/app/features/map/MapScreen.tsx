@@ -42,10 +42,18 @@ export const NOTE_MS = 6000;
 /** How long a locate failure stays in the note's place (KV-FE-031). */
 export const LOCATE_NOTE_MS = 5000;
 
-/** The view's chunk did not load: a GL failure like any other, so the session falls back (WP-27 "Engine choice"). */
+/**
+ * The view's chunk did not load: a GL failure like any other, so the session falls back (WP-27 "Engine choice").
+ * Reported once per mount, also when StrictMode runs the effect twice: the screen closes a drawing on the report, and a
+ * second Back would leave the map.
+ */
 function ViewChunkFailed({ onFail }: MapViewProps) {
+  const reported = useRef(false);
   useEffect(() => {
-    onFail("chunk");
+    if (!reported.current) {
+      reported.current = true;
+      onFail("chunk");
+    }
   }, [onFail]);
   return null;
 }

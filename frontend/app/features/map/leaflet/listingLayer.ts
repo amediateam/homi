@@ -52,11 +52,14 @@ type Entry = { marker: Marker; element: HTMLElement; numbers: readonly number[];
 
 type GroupEntry = Entry & { signature: string };
 
-/** A group's content: a reused marker must show the same. */
+/**
+ * A group's listings and content: a reused marker must show the same. Groups are keyed by location only, so the
+ * numbers belong to the signature even for one listing — another listing at the same address with the same label is
+ * a new marker, whose tap selects it (GL keys a pin by its number).
+ */
 function signatureOf(group: MapGroup): string {
   const [first] = group.items;
-  const numbers = group.items.map((item) => item.number);
-  return JSON.stringify(numbers.length === 1 ? [first.label, first.tone, first.priced] : [numbers, first.label, first.tone, first.priced]);
+  return JSON.stringify([group.items.map((item) => item.number), first.label, first.tone, first.priced]);
 }
 
 /** The largest laid-out label of a spread, or the default box when nothing is laid out (no layout engine). */

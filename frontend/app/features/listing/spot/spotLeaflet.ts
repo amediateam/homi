@@ -4,7 +4,7 @@ import type { CircleMarker, FitBoundsOptions, LatLngBounds, Layer, Map as LMap }
 
 import { LOCATE_MS } from "@/features/map/camera";
 import { rasterLayer, vectorLayer } from "@/features/map/leaflet/basemap";
-import { type LeafletLibrary, loadLeaflet } from "@/features/map/leaflet/library";
+import { type LeafletLibrary, loadLeaflet, removeLeafletMap } from "@/features/map/leaflet/library";
 import { LEAFLET_MAX_ZOOM } from "@/features/map/leaflet/useLeafletMap";
 import { paletteOf } from "@/features/map/palette";
 import type { MapFailReason } from "@/features/map/types";
@@ -110,8 +110,7 @@ function create(library: LeafletLibrary, element: HTMLElement, input: SpotInput,
       }
     },
     remove() {
-      map.off();
-      map.remove();
+      removeLeafletMap(map);
     },
   };
 }

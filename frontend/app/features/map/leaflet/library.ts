@@ -1,4 +1,5 @@
 import type * as Leaflet from "leaflet";
+import type { Map as LMap } from "leaflet";
 import type * as ProtomapsLeaflet from "protomaps-leaflet";
 
 export type LeafletModule = typeof Leaflet;
@@ -28,4 +29,27 @@ export function loadLeaflet(): Promise<LeafletLibrary> {
       throw error;
     });
   return loading;
+}
+
+type ZoomInternals = { _animatingZoom?: boolean; touchZoom?: { _animRequest?: number; _zooming?: boolean } };
+
+/**
+ * Removes a map with its listeners. Leaflet 1.9.4's `remove()` leaves two callbacks of a zoom in flight: the 250 ms
+ * timer that ends a zoom animation (`_onZoomTransitionEnd`) and a pinch's animation frame (`touchZoom._animRequest`);
+ * on a removed map both read the deleted map pane and throw. Clearing the two flags first makes them return at once
+ * (private fields of the pinned version, re-checked on an upgrade, KI-61); a pinch's document listeners then stay
+ * until the page unloads, doing nothing.
+ */
+export function removeLeafletMap(map: LMap): void {
+  const internals = map as unknown as ZoomInternals;
+  internals._animatingZoom = false;
+  const pinch = internals.touchZoom;
+  if (pinch !== undefined) {
+    if (pinch._animRequest !== undefined) {
+      cancelAnimationFrame(pinch._animRequest);
+    }
+    pinch._zooming = false;
+  }
+  map.off();
+  map.remove();
 }
