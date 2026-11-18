@@ -2,7 +2,7 @@ import type { Locale } from "@homi/config";
 import { getMessages } from "@homi/i18n";
 import { defaultFilters, resolveRules, type SearchFilters, toRadarFilters } from "@homi/search";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { type ComponentProps, createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,7 +49,7 @@ import {
 } from "@/features/radars/subscribe";
 import * as toasts from "@/features/radars/toasts";
 import { RADARS_KEY } from "@/features/radars/useRadars";
-import { readResource, resetResources, seedResource } from "@/lib/data/useResource";
+import { readResource, resetResources, seedResource, useResource } from "@/lib/data/useResource";
 import type { DevFlags } from "@/lib/flags";
 import { resetReference } from "@/lib/reference/useReference";
 import { withChatAccess } from "@/lib/telegram/chatAccess";
@@ -775,10 +775,18 @@ describe("useSubscribe(): the flow bound to the page", () => {
 
     await act(() => result.current.subscribe(SEARCH, "filters"));
     expect(readResource<Radar[]>(RADARS_KEY)?.map((radar) => radar.id)).toEqual([B]);
+    // The failure left the fresh read fresh: a new user shows it without reading.
+    const early = vi.fn(async () => ok([raw(B, OTHER)]));
+    renderHook(() => useResource(RADARS_KEY, early)).unmount();
+    expect(early).not.toHaveBeenCalled();
 
     await act(() => result.current.subscribe(SEARCH, "filters"));
-    // `refreshRadars()`: no list is on screen here, so the entry is forgotten and the next user reads it again.
-    expect(readResource(RADARS_KEY)).toBeUndefined();
     expect(lists.sent).toHaveLength(2);
+    // `refreshRadars()` with no list on screen keeps the entry, stale: the next user shows it and reads it again.
+    expect(readResource<Radar[]>(RADARS_KEY)?.map((radar) => radar.id)).toEqual([B]);
+    const late = vi.fn(async () => ok([raw(B, OTHER)]));
+    const reader = renderHook(() => useResource(RADARS_KEY, late));
+    expect((reader.result.current.data as Radar[] | undefined)?.map((radar) => radar.id)).toEqual([B]);
+    await waitFor(() => expect(late).toHaveBeenCalledOnce());
   });
 });

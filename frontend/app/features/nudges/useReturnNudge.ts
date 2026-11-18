@@ -97,7 +97,10 @@ function radarsKey(radars: readonly Radar[] | undefined): string | null {
  *    only the banner).
  * 3. A change of the filters, of the radar list (`radarsKey`) or of the radars switch, a layer that opens, or another
  *    tab drops the candidate during the wait or the request (the request is aborted) and clears `returnPending`; it
- *    leaves no trace (LB-APP-050). Coming back to the search tab records a visit again.
+ *    leaves no trace (LB-APP-050). Coming back to the search tab records a visit again. A candidate that has not
+ *    started — a visit recorded while a listing or a sheet covers the search, as a new visit session's is when the
+ *    app comes back under one — waits under the layer and starts once the feed list shows again (legacy kept its
+ *    candidate while nudges were not allowed); a filter or radar change still drops it there.
  * 4. After the wait, `shouldCheckReturn` once more and `GET /listings/new` with `since` in whole seconds; only a
  *    positive integer count goes on (LB-APP-048), anything else ends the check silently.
  * 5. The count takes the slot once the feed list is allowed with no toast: `takeSlot("return")` always succeeds and
@@ -221,12 +224,19 @@ export function createReturnNudge(deps: ReturnNudgeDeps): ReturnNudge {
     }
     const radars = radarsKey(at.radars);
     const radarsChanged = candidate.radars !== null && radars !== null && radars !== candidate.radars;
-    if (!at.radarsEnabled || at.layer || at.filters === null || !sameFilters(at.filters, candidate.filters) || radarsChanged) {
+    const filtersChanged = at.filters !== null && !sameFilters(at.filters, candidate.filters);
+    if (!at.radarsEnabled || radarsChanged || filtersChanged || (at.filters === null && !at.layer)) {
       drop();
       return;
     }
     if (candidate.radars === null && radars !== null) {
       candidate = { ...candidate, radars };
+    }
+    if (at.layer) {
+      if (candidate.phase !== "idle") {
+        drop();
+      }
+      return;
     }
 
     const started = at.allowed && at.referenceLoaded && at.radars !== undefined;

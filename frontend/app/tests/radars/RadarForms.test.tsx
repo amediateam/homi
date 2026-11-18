@@ -3,13 +3,14 @@ import { defaultFilters, normalizeFilters, type SearchFilters } from "@homi/sear
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { type ReactNode, Suspense } from "react";
+import { Activity, type ReactNode, Suspense } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LiveStats } from "@/features/filters/useLiveStats";
 import type { Radar } from "@/features/radars/normalize";
 import type { SubscribeOptions, SubscribeResult } from "@/features/radars/subscribe";
+import type { ToastScope } from "@/lib/ui/toast";
 import type { RadarList } from "@/features/radars/useRadars";
 import type { ActionResult } from "@/lib/actions/run";
 
@@ -18,6 +19,9 @@ type SaveEdit = (id: string, filters: SearchFilters, relaxed?: string | null, op
 
 const state = vi.hoisted(() => ({
   search: "",
+  pathname: "/radars/new",
+  /** What `currentAddress()` answers: the tests move it to show that the user left the sheet. */
+  address: "/ru/radars/new",
   bfcacheId: "open-1",
   back: vi.fn(),
   replace: vi.fn(),
@@ -36,7 +40,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(state.search),
   useRouter: () => ({ bfcacheId: state.bfcacheId }),
 }));
-vi.mock("@/i18n/navigation", () => ({ usePathname: () => "/radars/new" }));
+vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname }));
+vi.mock("@/lib/navigation/address", () => ({ currentAddress: () => state.address }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { replace: (href: string) => state.replace(href) } }));
 vi.mock("@/lib/navigation/useLayerState", () => ({ useLayerState: () => ({ value: null, open: vi.fn(), close: vi.fn() }) }));
@@ -111,6 +116,22 @@ async function edit(id = ID, presentation: "layer" | "standalone" = "layer") {
   return { again: () => view.rerender(editor(params, presentation)) };
 }
 
+/** The toast scope a failure would use, read as `present()` reads it when the answer arrives. */
+function scopeOf(options: SubscribeOptions | undefined): ToastScope {
+  const scope = options?.scope ?? "app";
+  return typeof scope === "function" ? scope() : scope;
+}
+
+/** A copy that `<Activity>` can hide and show again with its state, as Next keeps a cached route. */
+const cached = (node: ReactNode, hidden: boolean) => <Activity mode={hidden ? "hidden" : "visible"}>{node}</Activity>;
+
+/** The pending request of a form: resolve it later with `answer`. */
+function pending(spy: typeof state.subscribe | typeof state.saveEdit) {
+  let answer: (result: SubscribeResult) => void = () => undefined;
+  spy.mockReturnValue(new Promise((done) => (answer = done)));
+  return { answer: (result: SubscribeResult) => act(async () => answer(result)) };
+}
+
 const sheet = () => screen.getByRole("dialog");
 const footer = () => sheet().querySelector<HTMLElement>('[data-slot="filters-footer"]')!;
 const actions = () => [...footer().querySelectorAll("[data-action]")].map((node) => node.getAttribute("data-action"));
@@ -130,6 +151,8 @@ const impacts = () => (fake?.calls ?? []).filter((entry) => entry.member === "Ha
 
 beforeEach(() => {
   state.search = "city=tashkent";
+  state.pathname = "/radars/new";
+  state.address = "/ru/radars/new?city=tashkent";
   state.bfcacheId = "open-1";
   state.live = { count: null, flow: null };
   state.list = { radars: [radarOf()], status: "success", error: null };
@@ -215,12 +238,13 @@ describe("RadarForms: the new radar", () => {
     create();
 
     fireEvent.click(action("subscribe"));
+    // A failure shows in the sheet while the user is still on it (read when the answer arrives).
+    expect(scopeOf(state.subscribe.mock.calls[0][3])).toBe("sheet");
     await settle();
     const { filters, entry } = subscribed();
     expect(filters).toEqual(normalizeFilters({ ...defaultFilters("sale", "samarkand"), rooms_min: 2 }));
     expect(entry).toBe("empty");
     expect(state.subscribe.mock.calls[0][2]).toBeNull();
-    expect(state.subscribe.mock.calls[0][3]).toEqual({ scope: "sheet" });
   });
 
   it("a bare address starts from the shell's last search", async () => {
@@ -282,6 +306,51 @@ describe("RadarForms: the new radar", () => {
     expect(state.subscribe.mock.calls[1][0]).toEqual(expect.objectContaining({ rooms_min: 3 }));
   });
 
+  it("a sheet left while the request runs (Back, ×) is not closed again by its `ok`; its failure toast goes to the app's host", async () => {
+    const request = pending(state.subscribe);
+    create();
+
+    fireEvent.click(action("subscribe"));
+    expect(scopeOf(state.subscribe.mock.calls[0][3])).toBe("sheet");
+    state.address = "/ru";
+    expect(scopeOf(state.subscribe.mock.calls[0][3])).toBe("app");
+    await request.answer({ ok: true });
+    expect(state.back).not.toHaveBeenCalled();
+    expect(action("subscribe").disabled).toBe(false);
+  });
+
+  it("a copy hidden while the request runs and shown again is not closed by the old answer", async () => {
+    const request = pending(state.subscribe);
+    const view = render(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+
+    fireEvent.click(action("subscribe"));
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), true));
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+    expect(action("subscribe").disabled).toBe(false);
+    expect(scopeOf(state.subscribe.mock.calls[0][3])).toBe("app");
+    await request.answer({ ok: true });
+    expect(state.back).not.toHaveBeenCalled();
+  });
+
+  it("the standalone copy yields while a @sheet copy shows (a directly loaded picker closed at depth 0) and comes back after it", () => {
+    const both = (hidden: boolean) => (
+      <>
+        {intl(<RadarCreateSheet presentation="standalone" />)}
+        {cached(intl(<RadarCreateSheet presentation="layer" />), hidden)}
+      </>
+    );
+    const standalone = () => document.querySelectorAll('[data-route="radars/new"]:not([data-layer])');
+    const view = render(intl(<RadarCreateSheet presentation="standalone" />));
+    expect(standalone()).toHaveLength(1);
+
+    view.rerender(both(false));
+    expect(standalone()).toHaveLength(0);
+    expect(document.querySelectorAll('[data-route="radars/new"][data-layer="sheet"]')).toHaveLength(1);
+
+    view.rerender(both(true));
+    expect(standalone()).toHaveLength(1);
+  });
+
   it("a relax chip's code goes with the subscribe", async () => {
     state.live = {
       count: 2,
@@ -303,8 +372,9 @@ describe("RadarForms: the editor", () => {
 
     fireEvent.click(action("save"));
     expect(impacts()).toEqual(["medium"]);
+    expect(scopeOf(state.saveEdit.mock.calls[0][3])).toBe("sheet");
     await settle();
-    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: "sheet" });
+    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: expect.any(Function) });
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(state.listOptions[0]).toEqual(expect.objectContaining({ previews: true }));
   });
@@ -333,13 +403,56 @@ describe("RadarForms: the editor", () => {
     expect(screen.getByRole("dialog", { name: "Условия радара" })).toBeTruthy();
   });
 
+  it("an editor left while saving (Back to the radar sheet) is not closed again by its `ok`; its failure toast goes to the app's host", async () => {
+    const request = pending(state.saveEdit);
+    state.address = `/ru/radars/${ID}/edit`;
+    await edit();
+
+    fireEvent.click(action("save"));
+    expect(scopeOf(state.saveEdit.mock.calls[0][3])).toBe("sheet");
+    state.address = `/ru/radars/${ID}`;
+    expect(scopeOf(state.saveEdit.mock.calls[0][3])).toBe("app");
+    await request.answer({ ok: true });
+    expect(state.back).not.toHaveBeenCalled();
+    expect(action("save").disabled).toBe(false);
+  });
+
+  it("an editor hidden while saving and shown again is not closed by the old answer", async () => {
+    const request = pending(state.saveEdit);
+    const params = Object.assign(Promise.resolve({ id: ID }), { status: "fulfilled", value: { id: ID } });
+    const view = render(cached(editor(params, "layer"), false));
+    await settle();
+
+    fireEvent.click(action("save"));
+    view.rerender(cached(editor(params, "layer"), true));
+    view.rerender(cached(editor(params, "layer"), false));
+    expect(action("save").disabled).toBe(false);
+    await request.answer({ ok: true });
+    expect(state.back).not.toHaveBeenCalled();
+  });
+
+  it("the standalone copy renders only on its own address (Back from a direct load leaves it in `children`)", async () => {
+    state.pathname = `/radars/${ID}`;
+    state.list = { radars: [radarOf({ id: OTHER })], status: "success", error: null };
+    await edit(ID, "standalone");
+    expect(document.querySelector('[data-route="radar/edit"]')).toBeNull();
+    expect(state.replace).not.toHaveBeenCalled();
+    expect(state.listOptions.at(-1)).toEqual(expect.objectContaining({ enabled: false }));
+    cleanup();
+
+    state.pathname = `/radars/${ID.toLowerCase()}/edit`;
+    state.list = { radars: [radarOf()], status: "success", error: null };
+    await edit(ID, "standalone");
+    expect(sheet().querySelector('[data-route="radar/edit"]')?.hasAttribute("data-layer")).toBe(false);
+  });
+
   it("before the list is there: the title, a spinner and data-route, no request of its own", async () => {
     state.list = { radars: undefined, status: "loading", error: null };
     await edit();
 
-    const frame = screen.getByRole("dialog", { name: "Условия радара" }).querySelector('[data-route="radar/edit"]');
-    expect(frame?.getAttribute("data-state")).toBe("loading");
-    expect(frame?.querySelector('[data-slot="spinner"]')).toBeTruthy();
+    const frame = screen.getByRole("dialog", { name: "Условия радара" }).querySelector<HTMLElement>('[data-route="radar/edit"]')!;
+    expect(frame.getAttribute("data-state")).toBe("loading");
+    expect(within(frame).getByRole("status", { name: "Загрузка…" }).getAttribute("data-slot")).toBe("spinner");
     expect(state.replace).not.toHaveBeenCalled();
     expect(state.refetch).not.toHaveBeenCalled();
   });

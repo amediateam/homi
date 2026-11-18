@@ -116,6 +116,14 @@ const button = (name: string) => sheet().querySelector<HTMLButtonElement>(`[data
 /** Lets the promise chains of an apply, a subscribe or a save settle. */
 const settle = () => act(async () => undefined);
 const navigated = () => state.closeThen.mock.calls.map(([href]) => href);
+/** The toast scope a subscribe call passed, read as `useSubscribe` reads it when the answer arrives. */
+const scopeOf = (call: number) => {
+  const scope = state.subscribe.mock.calls[call][3]?.scope;
+  if (typeof scope !== "function") {
+    throw new Error(`the subscribe call passed the scope ${String(scope)}, not a function`);
+  }
+  return scope;
+};
 
 async function apply(): Promise<string> {
   state.closeThen.mockClear();
@@ -148,10 +156,13 @@ beforeEach(() => {
   consumeDrawRequest();
   fake = fakeTelegram({ version: "8.0" });
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+  // The sheet's address in the browser (`currentAddress()`); jsdom shares `window.location` across tests.
+  window.history.replaceState(null, "", "/ru/filters?city=tashkent");
 });
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, "", "/");
   resetReference();
   fake?.uninstall();
   fake = null;
@@ -231,14 +242,32 @@ describe("FiltersSheetRoute: «Включить радар»", () => {
     route();
 
     fireEvent.click(button("subscribe"));
-    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: "sheet" });
+    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: expect.any(Function) });
     expect(button("subscribe").disabled).toBe(true);
     fireEvent.click(button("subscribe"));
     expect(state.subscribe).toHaveBeenCalledTimes(1);
+    // Still on the sheet: a failure would show inside it.
+    expect(scopeOf(0)()).toBe("sheet");
 
     await act(async () => resolve({ ok: true }));
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(state.closeThen).not.toHaveBeenCalled();
+  });
+
+  it("an answer that finds the user elsewhere (×, Back, «Показать») neither steps back nor toasts in the closed sheet", async () => {
+    let resolve: (result: SubscribeResult) => void = () => undefined;
+    state.subscribe.mockReturnValue(new Promise((done) => (resolve = done)));
+    route();
+
+    fireEvent.click(button("subscribe"));
+    // «Показать» while the request runs: `applyFilters` went back to the feed and replaced it.
+    window.history.pushState(null, "", "/ru?city=tashkent&rooms_min=2");
+    expect(scopeOf(0)()).toBe("app");
+
+    await act(async () => resolve({ ok: true }));
+    expect(state.back).not.toHaveBeenCalled();
+    // The route outlives the sheet under <Activity>: the button is not left disabled for the next showing.
+    expect(button("subscribe").disabled).toBe(false);
   });
 
   it("on failure the sheet stays open and the button comes back", async () => {

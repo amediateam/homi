@@ -9,6 +9,7 @@ import { useSubscribe } from "@/features/radars/subscribe";
 import type { RoutePresentation } from "@/features/shell/RouteSheet";
 import { reportError } from "@/lib/errors/report";
 import { devFlags } from "@/lib/flags";
+import { currentAddress } from "@/lib/navigation/address";
 import { closeThen } from "@/lib/navigation/closeThen";
 import { routes } from "@/lib/navigation/routes";
 import { useBack } from "@/lib/navigation/useBack";
@@ -57,9 +58,11 @@ function useOncePerShowing(address: string): () => boolean {
  *   included — starts from the long-term defaults of its city; the form scrolls to the pets section.
  * - «Показать …»: a medium impact; the draft's city saved when the nested picker changed it (`useSaveCity`); then
  *   `applyFilters` to the map with `from=map`, else to the feed — the sort kept only where the city still offers it.
- * - «Включить радар»: `useSubscribe().subscribe(draft, "filters", relaxed, { scope: "sheet" })` while the button is
- *   disabled (WP-30): on success the sheet closes without applying and the toast shows over the feed; on failure it
- *   stays and the toast shows inside it.
+ * - «Включить радар»: `useSubscribe().subscribe(draft, "filters", relaxed, { scope })` while the button is disabled
+ *   (WP-30): on success the sheet closes without applying and the toast shows over the feed; on failure it stays and
+ *   the toast shows inside it. The sheet's address is read at the tap (`currentAddress()`): when the answer finds the
+ *   user elsewhere (×, Back, «Показать», a listing), the sheet is gone already — success does not step back once more
+ *   (it would leave the page the user went to), and a failure's toast shows in the app's host, not in a closed sheet.
  * - «Обвести на карте»: the city saved when it changed, `requestDraw()`, then `closeThen` to the map with the draft
  *   without districts and zones and no `draw` parameter (the map opens drawing as a pushed layer, WP-28); once per
  *   showing of the sheet.
@@ -103,10 +106,12 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
       return;
     }
     setSubmitting(true);
-    void subscribe(draft, "filters", relaxed, { scope: "sheet" }).then(
+    const at = currentAddress();
+    const here = () => currentAddress() === at;
+    void subscribe(draft, "filters", relaxed, { scope: () => (here() ? "sheet" : "app") }).then(
       (result) => {
         setSubmitting(false);
-        if (result.ok) {
+        if (result.ok && here()) {
           back();
         }
       },

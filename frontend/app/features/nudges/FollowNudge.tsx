@@ -19,14 +19,17 @@ import type { NudgeKind } from "./store";
  * The legacy `.nudge` card (`nudges.css`), shared by the follow nudge and the return banner: fixed 12 px from the
  * column's edges — not the 16 px gutter — and above the tab bar and the floating toggle at the toast's height, on the
  * nudge level of the ladder (35: above the tab bar 30 and the mini title 31, below sub-pages 40 and the listing 45).
- * A solid sheet surface in every mode, 18 px corners, legacy's own shadow, `rise-in`; a live region (`role=status`).
- * No Back handler and no tap outside: only its own buttons end it.
+ * A solid sheet surface in every mode, 18 px corners, legacy's own shadow, `rise-in`. A status card (`role=status`)
+ * that is not itself a live region (`aria-live="off"`): it is inserted already filled, which screen readers do not
+ * reliably announce, so `NudgeHost` announces its title through a live line that is always in the document, and
+ * the card is not read a second time. No Back handler and no tap outside: only its own buttons end it.
  */
 export function NudgeFrame({ kind, children }: { kind: NudgeKind; children: ReactNode }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--bottom-inset)+78px)] z-(--z-nudge) mx-auto max-w-(--feed-max) px-[12px]">
       <div
         role="status"
+        aria-live="off"
         data-nudge={kind}
         className="pointer-events-auto flex animate-rise-in items-center gap-[10px] rounded-[18px] bg-sheet py-[12px] pr-[8px] pl-[14px] text-text shadow-[0_12px_32px_#00000047,0_0_0_0.5px_var(--sep)]"
       >

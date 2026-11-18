@@ -17,6 +17,11 @@ import { RETURN_SHOW_MS } from "./constants";
 import { NudgeClose, NudgeFrame, NudgeGo } from "./FollowNudge";
 import { useMarkShownOnRender } from "./shown";
 
+/** «С вашего прошлого захода — 12 новых»: the banner's title, which `NudgeHost` also announces. */
+export function returnTitle(count: number, locale: Locale, translate: Translate): string {
+  return translate("back.title", { count: formatCount(count, "back.new", locale, translate) });
+}
+
 export interface ReturnNudgeProps {
   /** The search the banner counts new listings for. */
   filters: SearchFilters;
@@ -79,7 +84,7 @@ export function ReturnNudge({ filters, count, onShown, onExpire, onClose, onEnab
     <NudgeFrame kind="return">
       <RadarIcon size={20} aria-hidden className="shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col gap-px leading-[1.3]">
-        <b className="text-[14px] font-semibold">{t("back.title", { count: formatCount(count, "back.new", locale, translate) })}</b>
+        <b className="text-[14px] font-semibold">{returnTitle(count, locale, translate)}</b>
         <span className="text-[12.5px] text-hint">{t("back.what")}</span>
       </div>
       <NudgeGo onClick={act}>{t(custom ? "nudge.enable" : "nudge.setup")}</NudgeGo>

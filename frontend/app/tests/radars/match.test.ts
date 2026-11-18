@@ -154,6 +154,24 @@ describe("useHasActiveRadar (filters footer ✓, few-results note)", () => {
     expect(state.sent).toEqual([]);
   });
 
+  it("the caller's gate off (the footer of the radar forms): false and nothing requested; on, it reads", async () => {
+    const { result, rerender } = renderHook(({ enabled }: { enabled: boolean }) => useHasActiveRadar(SEARCH, enabled), {
+      initialProps: { enabled: false },
+    });
+    expect(result.current).toBe(false);
+    expect(state.sent).toEqual([]);
+
+    rerender({ enabled: true });
+    expect(state.sent.map((call) => [call.path, call.query])).toEqual([["radars", undefined]]);
+    await act(async () => state.sent[0].resolve(ok([raw(A, SEARCH)])));
+    expect(result.current).toBe(true);
+
+    // Gated off again over the loaded list: still false, no second read.
+    rerender({ enabled: false });
+    expect(result.current).toBe(false);
+    expect(state.sent).toHaveLength(1);
+  });
+
   it("before the session is ready: false and nothing requested", () => {
     state.status = "booting";
 

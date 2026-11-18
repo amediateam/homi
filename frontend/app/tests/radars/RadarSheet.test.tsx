@@ -135,6 +135,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  // jsdom shares `window.location` across tests (`currentAddress()`).
+  window.history.replaceState(null, "", "/");
   resetReference();
   vi.unstubAllGlobals();
   fake?.uninstall();
@@ -303,7 +305,8 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
   it("«Смотреть найденное»: the feed of the radar's filters with the last search's sort when offered, from=radar; the return stored", async () => {
     feedReference({ cities: [cityOf()], reference: { radars_enabled: true } });
     rememberHref("/", "deal=sale&sort=cheap");
-    scrollTo.mockImplementation(() => undefined);
+    // The window really moves: a scroll before the return is stored would store 0.
+    scrollTo.mockImplementation((_x: number, y: number) => Object.defineProperty(window, "scrollY", { configurable: true, value: y }));
     Object.defineProperty(window, "scrollY", { configurable: true, value: 340 });
     seed(radar(A));
     renderSheet();
@@ -316,7 +319,36 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(params.get("from")).toBe("radar");
     expect(params.get("sort")).toBe("cheap");
     expect(params.get("price_max")).toBe("600");
+    // K3: the tab's position stored for Back, then the feed starts at its top, mounted before or not.
     expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 340 });
+    expect(scrollTo).toHaveBeenCalledExactlyOnceWith(0, 0);
+    expect(window.scrollY).toBe(0);
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("«Все N» of the strip opens the feed the same way: the return stored, then the top", async () => {
+    scrollTo.mockImplementation((_x: number, y: number) => Object.defineProperty(window, "scrollY", { configurable: true, value: y }));
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 145 });
+    seed(radar(A, { preview: { items: [previewOf({ number: 100001 })], count: 3, flow: null } }));
+    renderSheet();
+    await settle();
+
+    fireEvent.click(strip().querySelector("[data-radar-all]")!);
+    expect(new URL(state.push.mock.lastCall?.[0] as string, "https://app.homi.loc").searchParams.get("from")).toBe("radar");
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145 });
+    expect(window.scrollY).toBe(0);
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("a find keeps the tab's scroll: the listing opens over it", async () => {
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 145 });
+    seed(radar(A, { preview: { items: [previewOf({ number: 100001 })], count: 1, flow: null } }));
+    renderSheet();
+    await settle();
+
+    fireEvent.click(strip().querySelector("[data-radar-find]")!);
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145 });
+    expect(scrollTo).not.toHaveBeenCalled();
     Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
   });
 
@@ -324,6 +356,38 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     const href = radarFeedHref(radar(A), "/?deal=sale&sort=ppm", cityOf());
     expect(new URL(href, "https://app.homi.loc").searchParams.has("sort")).toBe(false);
     expect(new URL(href, "https://app.homi.loc").searchParams.get("from")).toBe("radar");
+  });
+
+  it("the mode rows: a radiogroup «Когда присылать», one tab stop; the arrow keys, Home and End move the focus without a write", async () => {
+    seed(radar(A));
+    renderSheet();
+    await settle();
+
+    const group = screen.getByRole("radiogroup", { name: "Когда присылать" });
+    const rows = screen.getAllByRole("radio");
+    expect(rows.map((row) => [row.getAttribute("data-radar-mode"), row.tabIndex])).toEqual([
+      ["instant", 0],
+      ["digest", -1],
+    ]);
+    const focused = () => document.activeElement?.getAttribute("data-radar-mode");
+    rows[0].focus();
+
+    fireEvent.keyDown(group, { key: "ArrowDown" });
+    expect(focused()).toBe("digest");
+    fireEvent.keyDown(group, { key: "ArrowRight" });
+    expect(focused()).toBe("instant");
+    fireEvent.keyDown(group, { key: "ArrowUp" });
+    expect(focused()).toBe("digest");
+    fireEvent.keyDown(group, { key: "Home" });
+    expect(focused()).toBe("instant");
+    fireEvent.keyDown(group, { key: "End" });
+    expect(focused()).toBe("digest");
+    fireEvent.keyDown(group, { key: "ArrowLeft" });
+    expect(focused()).toBe("instant");
+
+    expect(state.patchRadar).not.toHaveBeenCalled();
+    expect(haptics()).toEqual([]);
+    expect(rows.map((row) => row.getAttribute("aria-checked"))).toEqual(["true", "false"]);
   });
 
   it("a mode change is optimistic; the same mode sends nothing; a failure reverts it", async () => {
@@ -375,6 +439,29 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(state.replace).not.toHaveBeenCalled();
     expect(currentToast("app")).toBeNull();
   });
+
+  it.each([true, false])(
+    "delete answered after the user left the sheet (ask_found %s): the haptic and the lists, but no back() and no survey",
+    async (askFound) => {
+      window.history.replaceState(null, "", `/ru/radars/${A}`);
+      seed(radar(A), radar(B));
+      let answer: (value: ApiResult<unknown>) => void = () => undefined;
+      state.deleteRadar.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+      renderSheet();
+      await settle();
+
+      await act(async () => fireEvent.click(sheet().querySelector("[data-radar-delete]")!));
+      expect(state.deleteRadar).toHaveBeenCalledTimes(1);
+      // × or Telegram's Back while the request runs: the tab is shown.
+      window.history.pushState(null, "", "/ru/radars");
+      await act(async () => answer(ok({ ask_found: askFound })));
+
+      expect(haptics()).toContain("HapticFeedback.notificationOccurred(success)");
+      expect(readResource<Radar[]>(RADARS_PREVIEWS_KEY)?.map((item) => item.id)).toEqual([B]);
+      expect(state.back).not.toHaveBeenCalled();
+      expect(state.replace).not.toHaveBeenCalled();
+    },
+  );
 
   it("delete with ask_found replaces the sheet with the survey; dev016 shows «Радар удалён»", async () => {
     seed(radar(A));

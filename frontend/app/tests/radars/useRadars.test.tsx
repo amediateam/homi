@@ -118,7 +118,7 @@ describe("useRadars (WP-30)", () => {
     expect(state.sent).toHaveLength(1);
   });
 
-  it("the server's initial is shown without a request; a launch that signed in reads once more", async () => {
+  it("the server's initial is shown without a request, also in a launch that signed in (K4)", () => {
     const initial = [radar(A, { preview: PREVIEW })];
     const first = renderHook(() => useRadars({ previews: true, initial }));
     expect(first.result.current).toMatchObject({ radars: initial, status: "success" });
@@ -126,12 +126,26 @@ describe("useRadars (WP-30)", () => {
     first.unmount();
     resetResources();
 
+    // The refresh render after the sign-in, or a tab press, read it with the new cookie (`RadarScreen` adopts it).
     state.renewed = true;
     const second = renderHook(() => useRadars({ previews: true, initial }));
     second.rerender();
-    expect(state.sent.map((call) => call.query)).toEqual([{ include: "previews" }]);
-    await answer(0, ok([raw(B)]));
-    expect(second.result.current.radars?.map((item) => item.id)).toEqual([B]);
+    expect(second.result.current).toMatchObject({ radars: initial, status: "success" });
+    expect(state.sent).toHaveLength(0);
+  });
+
+  it("a first launch without initial reads once; the refresh render's list then replaces it, its read dropped (K4)", async () => {
+    state.renewed = true;
+    const tab = renderHook(({ initial }: { initial?: Radar[] }) => useRadars({ previews: true, initial }), { initialProps: {} });
+    expect(state.sent).toHaveLength(1);
+
+    // `RadarScreen` adopts the refresh render: `seedResource` of its list.
+    const fresh = [radar(B, { preview: PREVIEW })];
+    act(() => seedResource(RADARS_PREVIEWS_KEY, fresh));
+    tab.rerender({ initial: fresh });
+    await answer(0, ok([raw(A)]));
+
+    expect(tab.result.current.radars?.map((item) => item.id)).toEqual([B]);
     expect(state.sent).toHaveLength(1);
   });
 
@@ -194,6 +208,22 @@ describe("putRadar, dropRadar, refreshRadars (WP-30)", () => {
     expect(readResource<Radar[]>(RADARS_PREVIEWS_KEY)?.map((item) => item.id)).toEqual([B]);
   });
 
+  it.each([
+    ["putRadar (a pause)", () => putRadar(radar(A, { active: false })), [[A, false], [B, true]]],
+    ["dropRadar (a delete)", () => dropRadar(A), [[B, true]]],
+  ] as const)("%s outranks a list read in flight: its older answer does not land over the write", async (_name, write, expected) => {
+    const tab = renderHook(() => useRadars({ previews: true }));
+    await answer(0, ok([raw(A, { preview: PREVIEW }), raw(B, { preview: PREVIEW })]));
+    // A pull, or the tab entered again: the read was answered from the server's state before the write.
+    act(() => void tab.result.current.refetch());
+
+    act(() => write());
+    await answer(1, ok([raw(A, { preview: PREVIEW }), raw(B, { preview: PREVIEW })]));
+
+    expect(tab.result.current.radars?.map((item) => [item.id, item.active])).toEqual(expected);
+    expect(tab.result.current.refreshing).toBe(false);
+  });
+
   it("refreshRadars reads both lists on screen again", async () => {
     renderHook(() => useRadars());
     renderHook(() => useRadars({ previews: true }));
@@ -203,6 +233,19 @@ describe("putRadar, dropRadar, refreshRadars (WP-30)", () => {
     act(() => refreshRadars());
 
     expect(state.sent.slice(2).map((call) => call.query)).toEqual([undefined, { include: "previews" }]);
+  });
+
+  it("refreshRadars keeps a hidden tab's tiles as stale: shown again, they stay while the list is read again", async () => {
+    const hidden = renderHook(() => useRadars({ previews: true }));
+    await answer(0, ok([raw(A, { preview: PREVIEW })]));
+    hidden.unmount();
+
+    act(() => refreshRadars());
+    const shown = renderHook(() => useRadars({ previews: true }));
+
+    expect(shown.result.current).toMatchObject({ status: "success", refreshing: true });
+    expect(shown.result.current.radars?.map((item) => item.id)).toEqual([A]);
+    expect(state.sent.map((call) => call.query)).toEqual([{ include: "previews" }, { include: "previews" }]);
   });
 });
 

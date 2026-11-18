@@ -215,6 +215,30 @@ describe("NudgeHost: the follow nudge (SCR-040, BR-APP-043, BR-APP-046)", () => 
     expect(state.radarsAsked.at(-1)).toBe(false);
   });
 
+  it("is announced: a polite live line, in the document before the card appears, holds its title while it is shown", async () => {
+    const live = document.querySelector<HTMLElement>("[data-nudge-live]")!;
+    expect(live.getAttribute("role")).toBe("status");
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.hasAttribute("data-nudge")).toBe(false);
+    expect(live.textContent).toBe("");
+
+    await showFor(CUSTOM);
+    expect(document.querySelector("[data-nudge-live]")).toBe(live);
+    expect(live.textContent).toBe(t("nudge.title"));
+    expect(card()!.contains(live)).toBe(false);
+    expect(card()!.getAttribute("aria-live")).toBe("off");
+
+    await act(async () => showToast("Готово"));
+    expect(live.textContent).toBe("");
+    await act(async () => dismissToast());
+    expect(live.textContent).toBe(t("nudge.title"));
+
+    await wait(FOLLOW_SHOW_MS);
+    expect(card()).toBeNull();
+    expect(document.querySelector("[data-nudge-live]")).toBe(live);
+    expect(live.textContent).toBe("");
+  });
+
   it("hides itself after 10 s: follow_prompt_expired, the slot free", async () => {
     await showFor(CUSTOM);
     await wait(FOLLOW_SHOW_MS - 1);

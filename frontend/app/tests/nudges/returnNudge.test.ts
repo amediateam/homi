@@ -297,6 +297,49 @@ describe("createReturnNudge: the timing of the check (SCR-046 steps 1–5)", () 
     expect(getNudgeSlot().returnPending).toBeNull();
   });
 
+  it("a visit recorded under a layer waits for it to close, then the 1 800 ms and the request", () => {
+    back.sync(envOf({ allowed: false, layer: true, filters: null }));
+    visit(CUSTOM);
+    vi.advanceTimersByTime(10 * RETURN_DELAY_MS);
+    expect(asked).toHaveLength(0);
+    expect(getNudgeSlot().returnPending).toBeNull();
+
+    back.sync(envOf({ allowed: false, layer: true }));
+    vi.advanceTimersByTime(10 * RETURN_DELAY_MS);
+    expect(asked).toHaveLength(0);
+
+    back.sync(envOf());
+    expect(getNudgeSlot().returnPending).toBe(filtersHash(CUSTOM));
+    vi.advanceTimersByTime(RETURN_DELAY_MS - 1);
+    expect(asked).toHaveLength(0);
+    vi.advanceTimersByTime(1);
+    expect(asked.map((request) => request.filters)).toEqual([CUSTOM]);
+  });
+
+  it("a visit recorded under a layer is still dropped by another search, another tab or a radar-list change", () => {
+    back.sync(envOf({ allowed: false, layer: true, filters: null }));
+    visit(CUSTOM);
+    back.sync(envOf({ allowed: false, layer: true, filters: OTHER }));
+    back.sync(envOf());
+    vi.advanceTimersByTime(10 * RETURN_DELAY_MS);
+    expect(asked).toHaveLength(0);
+
+    back.sync(envOf({ allowed: false, layer: true, filters: null }));
+    visit(CUSTOM);
+    back.sync(envOf({ allowed: false, filters: null }));
+    back.sync(envOf());
+    vi.advanceTimersByTime(10 * RETURN_DELAY_MS);
+    expect(asked).toHaveLength(0);
+
+    back.sync(envOf({ allowed: false, layer: true, filters: null }));
+    visit(CUSTOM);
+    back.sync(envOf({ allowed: false, layer: true, filters: null, radars: [radarOf(A, OTHER)] }));
+    back.sync(envOf({ radars: [radarOf(A, OTHER)] }));
+    vi.advanceTimersByTime(10 * RETURN_DELAY_MS);
+    expect(asked).toHaveLength(0);
+    expect(getNudgeSlot().returnPending).toBeNull();
+  });
+
   it("the map pauses it; the list starts the 1 800 ms afresh", () => {
     visit(CUSTOM);
     vi.advanceTimersByTime(RETURN_DELAY_MS - 1);

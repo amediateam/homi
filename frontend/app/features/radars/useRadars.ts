@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
 import { bffFetch } from "@/lib/api/browser";
 import type { ApiFailure } from "@/lib/api/errors";
 import type { ApiResult } from "@/lib/api/types";
@@ -87,7 +85,9 @@ export async function fetchRadarList(): Promise<Radar[] | null> {
  * without it, or not loaded, is left as it is — a created radar arrives with the re-read that follows every success
  * (subscribe flow step 9), and on stubs, whose list never changes, it would vanish again. A mutation answer has no
  * `preview`, so the tab's list keeps the radar's old one; the plain list never holds one. The write goes through
- * `seedResource`, which also counts as a fresh read and clears a shown failure — right after the server answered.
+ * `seedResource`, which also counts as a fresh read and clears a shown failure — right after the server answered —
+ * and drops a list read in flight (a pull, a re-entry of the tab): that read was answered before this write, and
+ * landing after it would bring the old switch, mode or deleted radar back.
  */
 export function putRadar(radar: Radar): void {
   for (const key of LIST_KEYS) {
@@ -110,7 +110,7 @@ export function putRadar(radar: Radar): void {
   }
 }
 
-/** Takes a deleted radar out of both cached lists. */
+/** Takes a deleted radar out of both cached lists (through `seedResource`, as `putRadar`). */
 export function dropRadar(id: string): void {
   for (const key of LIST_KEYS) {
     const list = readResource<Radar[]>(key);
@@ -123,7 +123,10 @@ export function dropRadar(id: string): void {
   }
 }
 
-/** Reads both lists again where they are on screen and forgets them elsewhere (after every radar success). */
+/**
+ * Reads both lists again where they are on screen and makes them stale elsewhere (after every radar success): a tab
+ * hidden under `<Activity>` keeps its tiles and reads again over them when Back shows it (`invalidate`).
+ */
 export function refreshRadars(): void {
   invalidate(RADARS_KEY);
 }
@@ -131,8 +134,12 @@ export function refreshRadars(): void {
 /**
  * A radar list on `useResource` (WP-22), read through `/bff` in both session modes; in cookie mode the tab's server
  * read comes in as `initial`. Nothing is requested while radars are switched off (`useRadarsEnabled()`, DEC-51), before
- * the session is ready, or while the caller's `enabled` is `false`. A launch that signed in (`renewed`) reads once
- * more over an `initial`, which the document's old cookie read.
+ * the session is ready, or while the caller's `enabled` is `false`.
+ *
+ * A launch that signed in (`renewed`) reads nothing more over an `initial`: the router refresh after the sign-in
+ * renders the tab with the new cookie, and `RadarScreen` adopts that render's list (`renderId`) — or reads through
+ * `/bff` when that render has none — so a first launch reads once and a tab press sends no browser read (the feed's
+ * rule, WP-24).
  */
 export function useRadars({ previews = false, initial, enabled = true, flags = devFlags }: UseRadarsOptions = {}): RadarList {
   const radarsOn = useRadarsEnabled();
@@ -144,22 +151,12 @@ export function useRadars({ previews = false, initial, enabled = true, flags = d
     flags,
   });
 
-  const { refetch } = resource;
-  const hadInitial = initial !== undefined;
-  const reread = useRef(false);
-  useEffect(() => {
-    if (active && session.renewed && hadInitial && !reread.current) {
-      reread.current = true;
-      void refetch();
-    }
-  }, [active, session.renewed, hadInitial, refetch]);
-
   return {
     radars: resource.data,
     status: resource.status,
     error: resource.error,
     refreshing: resource.refreshing,
-    refetch,
+    refetch: resource.refetch,
     replace: putRadar,
     remove: dropRadar,
   };

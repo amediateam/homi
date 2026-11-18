@@ -281,6 +281,25 @@ describe("NudgeHost: the return banner (SCR-046, BR-APP-070, BR-APP-071)", () =>
     expect(readNudgeState()).toEqual(emptyNudgeState());
   });
 
+  it("is announced: the host's live line, there before the banner, holds its title while it is shown", async () => {
+    visited(CUSTOM, NOW - 7 * HOUR);
+    launch(CUSTOM);
+    const live = document.querySelector<HTMLElement>("[data-nudge-live]")!;
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toBe("");
+
+    await wait(RETURN_DELAY_MS);
+    await answer({ count: 12 });
+    expect(card()).not.toBeNull();
+    expect(document.querySelector("[data-nudge-live]")).toBe(live);
+    expect(live.textContent).toBe("С вашего прошлого захода — 12 новых");
+    expect(card()!.getAttribute("aria-live")).toBe("off");
+
+    await wait(RETURN_SHOW_MS);
+    expect(card()).toBeNull();
+    expect(live.textContent).toBe("");
+  });
+
   it("a failed read ends the check silently: no banner, no toast", async () => {
     visited(CUSTOM, NOW - 7 * HOUR);
     launch(CUSTOM);
@@ -455,6 +474,36 @@ describe("NudgeHost: the return banner (SCR-046, BR-APP-070, BR-APP-071)", () =>
     await wait(RETURN_DELAY_MS);
     expect(newRequests()).toHaveLength(1);
     expect(new URLSearchParams(newRequests()[0].query as URLSearchParams).get("since")).toBe(String(Math.floor(hiddenAt / 1000)));
+  });
+
+  it("back after 6 h under a listing opened from the feed: the check waits for the listing to close, then the banner", async () => {
+    visited(CUSTOM, NOW - HOUR);
+    launch(CUSTOM);
+    await wait(10 * RETURN_DELAY_MS);
+    go("/listing/42");
+    await wait(RETURN_DELAY_MS);
+
+    const hiddenAt = Date.now();
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    vi.setSystemTime(hiddenAt + 7 * HOUR);
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(state.refresh).toHaveBeenCalledTimes(1);
+    await wait(10 * RETURN_DELAY_MS);
+    expect(newRequests()).toHaveLength(0);
+    expect(getNudgeSlot().returnPending).toBeNull();
+
+    go("/", CUSTOM);
+    await wait(RETURN_DELAY_MS - 1);
+    expect(newRequests()).toHaveLength(0);
+    await wait(1);
+    expect(newRequests()).toHaveLength(1);
+    expect(new URLSearchParams(newRequests()[0].query as URLSearchParams).get("since")).toBe(String(Math.floor(hiddenAt / 1000)));
+    await answer({ count: 12 });
+    expect(card()?.querySelector("b")?.textContent).toBe("С вашего прошлого захода — 12 новых");
   });
 });
 

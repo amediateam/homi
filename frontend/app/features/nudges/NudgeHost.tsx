@@ -1,7 +1,11 @@
 "use client";
 
+import type { Locale } from "@homi/config";
+import type { Translate } from "@homi/i18n/format";
 import { sameFilters, type SearchFilters } from "@homi/search";
 import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { useRadarsEnabled } from "@/features/radars/capability";
 import { useRadars } from "@/features/radars/useRadars";
@@ -15,7 +19,7 @@ import { useSession } from "@/lib/session/SessionProvider";
 import { useToast } from "@/lib/ui/toast";
 
 import { FollowNudge } from "./FollowNudge";
-import { ReturnNudge } from "./ReturnNudge";
+import { ReturnNudge, returnTitle } from "./ReturnNudge";
 import { type NudgeEnv, useNudgeSlot } from "./store";
 import { useFollowNudge } from "./useFollowNudge";
 import { useReturnNudge } from "./useReturnNudge";
@@ -75,7 +79,12 @@ export interface NudgeHostProps {
  *
  * The return banner's hook comes first, so its effects — the search visits among them (`useSearchVisits`) — run before
  * the follow nudge's: a return check of the applied filters is pending before the follow nudge's wait could start
- * (BR-APP-046). Seam: the home offer of WP-31 renders last, while `useNudgeSlot().active === "home"`.
+ * (BR-APP-046). Seam: the home offer of WP-31 renders last, while `useNudgeSlot().active === "home"`, and names its
+ * title in the live line.
+ *
+ * The live line (`data-nudge-live`, visually hidden) is always in the document and holds the title of the nudge on
+ * screen, empty while none is: a polite live region announces only a change inside it, and the card is inserted
+ * already filled (the ToastHost rule of WP-23). A suspended nudge that renders again is announced again.
  */
 export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
   const env = useNudgeEnv(searchTab);
@@ -83,9 +92,16 @@ export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
   const back = useReturnNudge(env, { searchTab, flags });
   const follow = useFollowNudge(env, { flags });
 
+  const t = useTranslations();
+  const locale = useLocale() as Locale;
+  const translate: Translate = (key, values) => t(key, values);
+
+  let nudge: ReactNode = null;
+  let title = "";
   if (slot.active === "return" && back.view !== null && rendersIn(env, back.view.filters)) {
     const { view } = back;
-    return (
+    title = returnTitle(view.count, locale, translate);
+    nudge = (
       <ReturnNudge
         key={view.id}
         filters={view.filters}
@@ -97,10 +113,10 @@ export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
         flags={flags}
       />
     );
-  }
-  if (slot.active === "follow" && follow.view !== null && rendersIn(env, follow.view.filters)) {
+  } else if (slot.active === "follow" && follow.view !== null && rendersIn(env, follow.view.filters)) {
     const { view } = follow;
-    return (
+    title = t("nudge.title");
+    nudge = (
       <FollowNudge
         key={view.id}
         filters={view.filters}
@@ -113,5 +129,12 @@ export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
       />
     );
   }
-  return null;
+  return (
+    <>
+      <p role="status" aria-live="polite" data-nudge-live="" className="sr-only">
+        {title}
+      </p>
+      {nudge}
+    </>
+  );
 }

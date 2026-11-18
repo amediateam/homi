@@ -18,6 +18,8 @@ const state = vi.hoisted(() => ({
   liveOptions: [] as (LiveStatsOptions | undefined)[],
   ready: true,
   active: false,
+  /** The `enabled` argument of every `useHasActiveRadar` call. */
+  radarGates: [] as (boolean | undefined)[],
 }));
 
 /**
@@ -87,7 +89,10 @@ vi.mock("@/features/radars/capability", async (importOriginal) => {
 /** The footer's ✓ asks `useHasActiveRadar` of `match.ts` (tested in `tests/radars/match.test.ts`). */
 vi.mock("@/features/radars/match", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/radars/match")>()),
-  useHasActiveRadar: () => state.active,
+  useHasActiveRadar: (_filters: SearchFilters, enabled?: boolean) => {
+    state.radarGates.push(enabled);
+    return state.active;
+  },
 }));
 
 import { FiltersForm, type FiltersFormProps } from "@/features/filters/FiltersForm";
@@ -217,6 +222,18 @@ describe("FiltersForm: the three modes", () => {
     expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe("Сейчас подходит: 14");
     fireEvent.click(action("save")!);
     expect(handlers.onSave).toHaveBeenCalledWith(expect.objectContaining({ city: "tashkent" }), null);
+  });
+
+  it.each([
+    ["search", true],
+    ["radar-new", false],
+    ["radar-edit", false],
+  ] as const)("%s: the footer asks useHasActiveRadar with the gate %s (only search mode reads the plain list)", (mode, gate) => {
+    state.radarGates.length = 0;
+    form({ mode });
+
+    expect(state.radarGates.length).toBeGreaterThan(0);
+    expect(new Set(state.radarGates)).toEqual(new Set([gate]));
   });
 
   it("asks for the count and the forecast with the rules", () => {

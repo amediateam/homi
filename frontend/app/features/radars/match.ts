@@ -43,10 +43,12 @@ export function hasActiveRadar(filters: SearchFilters, radars: readonly Radar[])
 /**
  * An active radar with the same filters is on the plain radar list of the search tab (`useRadars()`), so the filters
  * footer shows ✓ «Радар включён» and the few-results note hides «Включить радар по этому поиску» (legacy
- * `FiltersSheet.jsx`: active radars only). `false` while the list is not loaded, before the session is ready and while
- * radars are switched off (DEC-51: then nothing is requested). The first caller on the search tab reads the list.
+ * `FiltersSheet.jsx`: active radars only). `false` while the list is not loaded, before the session is ready, while
+ * radars are switched off (DEC-51: then nothing is requested) and while the caller's `enabled` is `false` — the
+ * footer of the radar forms, which never shows the ✓, so the radar tab sends no plain read. The first caller on the
+ * search tab reads the list.
  */
-export function useHasActiveRadar(filters: SearchFilters): boolean {
-  const { radars } = useRadars();
-  return radars === undefined ? false : hasActiveRadar(filters, radars);
+export function useHasActiveRadar(filters: SearchFilters, enabled = true): boolean {
+  const { radars } = useRadars({ enabled });
+  return !enabled || radars === undefined ? false : hasActiveRadar(filters, radars);
 }

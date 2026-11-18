@@ -261,8 +261,11 @@ export function resetSubscribes(): void {
 }
 
 export interface SubscribeOptions {
-  /** Where a failure's toast shows: the filters sheet and the radar forms pass `"sheet"`, so it shows over them. */
-  scope?: ToastScope;
+  /**
+   * Where a failure's toast shows: the filters sheet and the radar forms pass `"sheet"`, so it shows over them — or a
+   * function read when the answer arrives, so a sheet the user already closed sends its failure to the app's host.
+   */
+  scope?: ToastScope | (() => ToastScope);
 }
 
 export interface Subscriber {
@@ -278,7 +281,7 @@ const presented = new WeakSet<Outcome>();
  * Plays the outcome's haptic, then shows its toast — in the app's host on success (the sheet that asked closes on
  * `ok`), in `scope` on failure (the sheet stays open) — and answers `{ ok }`.
  */
-function present(outcome: Outcome, scope: ToastScope): SubscribeResult {
+function present(outcome: Outcome, scope: ToastScope | (() => ToastScope) = "app"): SubscribeResult {
   if (!presented.has(outcome)) {
     presented.add(outcome);
     if (outcome.haptic === "success") {
@@ -287,7 +290,7 @@ function present(outcome: Outcome, scope: ToastScope): SubscribeResult {
       tg.haptic.error();
     }
     if (outcome.toast !== null) {
-      showToast(outcome.toast, outcome.ok ? "app" : scope);
+      showToast(outcome.toast, outcome.ok ? "app" : typeof scope === "function" ? scope() : scope);
     }
   }
   return { ok: outcome.ok };
@@ -321,9 +324,9 @@ export function useSubscribe({ flags = devFlags }: { flags?: DevFlags } = {}): S
     const relax = (id: string, code: string) => runRelax(deps, id, code).then((outcome) => present(outcome, "app"));
     return {
       subscribe: (filters, entry, relaxed, options) =>
-        runSubscribe(deps, filters, entry, relaxed).then((outcome) => present(outcome, options?.scope ?? "app")),
+        runSubscribe(deps, filters, entry, relaxed).then((outcome) => present(outcome, options?.scope)),
       saveEdit: (id, filters, relaxed, options) =>
-        runSaveEdit(deps, id, filters, relaxed).then((outcome) => present(outcome, options?.scope ?? "app")),
+        runSaveEdit(deps, id, filters, relaxed).then((outcome) => present(outcome, options?.scope)),
       relax,
     };
   }, [locale, t, radarLimit, flags]);

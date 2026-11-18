@@ -6,7 +6,7 @@ import type { Translate } from "@homi/i18n/format";
 import { findCity } from "@homi/search";
 import { Button, Check, ChevronRight, cn, Switch } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from "react";
 
 import type { ListingPreview } from "@/features/feed/types";
 import { digestHours, formatDigestHours, useSettings } from "@/features/settings/useSettings";
@@ -16,6 +16,7 @@ import { invokeAction } from "@/lib/actions/useAction";
 import { setPreview } from "@/lib/data/previewCache";
 import { markSeen } from "@/lib/data/sessionMaps";
 import { type DevFlags, devFlags } from "@/lib/flags";
+import { currentAddress } from "@/lib/navigation/address";
 import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
 import { useBack } from "@/lib/navigation/useBack";
@@ -71,14 +72,19 @@ export interface RadarSheetProps {
  *   with the survey), and while the radar is on the two mode rows — «Сразу» («Каждое новое — как только появится») and
  *   «Подборкой» («Списком в 9 и 21» with the user's digest hours, «Списком в заданное время» while the settings are
  *   not there); a change to the other mode is a light impact and optimistic, the answer replaces the radar, a failure
- *   reverts it;
+ *   reverts it. The rows are a `radiogroup` named «Когда присылать» (`settings.group.notify`) whose selection does not
+ *   follow the focus, as `SortList`'s: a pick is a server write, so the arrow keys, Home and End only move the focus
+ *   (one tab stop, on the selected row) and Enter, Space or a tap picks;
  * - the actions card: «Изменить условия ›» (the editor), «Скрыто: N — Вернуть» only while `hidden > 0` (success
  *   haptic and «Скрытое снова показывается»), and the red «Удалить радар»: `tg.confirm` «Удалить радар «{name}»?»,
  *   Cancel sends nothing; OK deletes — success haptic, the radar leaves both lists, then the survey with the trigger
- *   `delete` replaces the sheet when the server asks for it, else `back()`; «Радар удалён» only with
- *   `dev016ErrorToastOnFailure`;
+ *   `delete` replaces the sheet when the server asks for it, else `back()` — both only while the address is still the
+ *   one of the request (`currentAddress()`): a user who left the sheet meanwhile (×, Back) is neither stepped back
+ *   once more nor sent to the survey; «Радар удалён» only with `dev016ErrorToastOnFailure`;
  * - the sticky footer «Смотреть найденное · {n}» (`radar.foundPlain` while the count is unknown): the feed of the
- *   radar's filters with `from=radar`, the return stored.
+ *   radar's filters with `from=radar`, the return stored with the tab's scroll, then the window scrolled to the top —
+ *   the feed starts at its top whether or not it was mounted before (legacy `switchTab` scrolled to 0; `nav.push`
+ *   keeps the scroll).
  *
  * `dev022RadarCountLabel` (LB-APP-034) on: the footer and the strip link read «Смотреть найденное» and a muted line
  * above the footer reads «Сейчас подходит: {n}». Every failure goes to `radarActionFailed`; an unknown radar
@@ -95,6 +101,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
   const toggle = useRadarSwitch(flags);
   const { settings } = useSettings({ enabled: radar?.active === true });
   const sendId = useId();
+  const modeRows = useRef<(HTMLButtonElement | null)[]>([]);
   const running = useRef(false);
   const [busy, setBusy] = useState(false);
 
@@ -130,7 +137,9 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
       return;
     }
     tg.haptic.impact();
+    // The tab's position first (Back restores it), then the top for the feed.
     rememberRadarReturn(radar.id, window.scrollY);
+    window.scrollTo(0, 0);
     nav.push(radarFeedHref(radar, lastSearchHref(), findCity(cities, radar.filters.city)));
   };
 
@@ -139,6 +148,26 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     setPreview(item.number, item);
     rememberRadarReturn(id, window.scrollY);
     nav.push(routes.listing(item.number));
+  };
+
+  /** The arrow keys, Home and End move the focus between the mode rows (wrapping); they never pick (`SortList`). */
+  const onModeKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const at = modeRows.current.findIndex((row) => row === document.activeElement);
+    const count = MODES.length;
+    const next =
+      event.key === "ArrowDown" || event.key === "ArrowRight"
+        ? (at + 1) % count
+        : event.key === "ArrowUp" || event.key === "ArrowLeft"
+          ? (at - 1 + count) % count
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? count - 1
+              : null;
+    if (next !== null && at >= 0) {
+      event.preventDefault();
+      modeRows.current[next]?.focus();
+    }
   };
 
   /** Only a change to the other mode does anything (legacy). */
@@ -174,6 +203,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     if (!(await confirmText(t("subs.deleteConfirm", { name: text.title(current) })))) {
       return;
     }
+    const at = currentAddress();
     const result = await invokeAction(deleteRadar, { id: current.id }, locale);
     if (!result.ok) {
       radarActionFailed(result, { flags, gone });
@@ -184,6 +214,9 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     dropRadar(current.id);
     if (flags.dev016ErrorToastOnFailure) {
       showToast({ key: "toast.subDeleted" });
+    }
+    if (currentAddress() !== at) {
+      return;
     }
     if (result.data.ask_found) {
       nav.replace(routes.radarFound({ trigger: "delete" }));
@@ -256,15 +289,19 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
                 />
               </div>
               {radar.active ? (
-                <div role="radiogroup" aria-labelledby={sendId}>
-                  {MODES.map((mode) => {
+                <div role="radiogroup" aria-label={t("settings.group.notify")} onKeyDown={onModeKeyDown}>
+                  {MODES.map((mode, index) => {
                     const selected = radar.mode === mode;
                     return (
                       <button
                         key={mode}
+                        ref={(row) => {
+                          modeRows.current[index] = row;
+                        }}
                         type="button"
                         role="radio"
                         aria-checked={selected}
+                        tabIndex={selected ? 0 : -1}
                         data-radar-mode={mode}
                         onClick={changeMode(mode)}
                         className={cn(ROW, AFTER_FIRST, "min-h-[56px] py-[8px]")}

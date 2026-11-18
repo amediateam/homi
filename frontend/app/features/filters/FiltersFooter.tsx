@@ -59,7 +59,8 @@ export function FiltersFooter({
   const t = useTranslations();
   const translate: Translate = (key, values) => t(key, values);
   const radarsEnabled = useRadarsEnabled();
-  const radarOn = useHasActiveRadar(draft);
+  // Only search mode shows the ✓: the radar forms send no plain radar read (the radar tab reads its own list only).
+  const radarOn = useHasActiveRadar(draft, mode === "search");
   const flowLine = formatFlow(flowRate(flow), "sheet", translate, { oneVocabulary });
   const options = flowLine === null ? [] : (flow?.options ?? []);
 
