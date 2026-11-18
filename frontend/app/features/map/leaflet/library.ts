@@ -31,14 +31,19 @@ export function loadLeaflet(): Promise<LeafletLibrary> {
   return loading;
 }
 
-type ZoomInternals = { _animatingZoom?: boolean; touchZoom?: { _animRequest?: number; _zooming?: boolean } };
+type ZoomInternals = {
+  _animatingZoom?: boolean;
+  touchZoom?: { _animRequest?: number; _zooming?: boolean };
+  scrollWheelZoom?: { _timer?: ReturnType<typeof setTimeout> };
+};
 
 /**
- * Removes a map with its listeners. Leaflet 1.9.4's `remove()` leaves two callbacks of a zoom in flight: the 250 ms
- * timer that ends a zoom animation (`_onZoomTransitionEnd`) and a pinch's animation frame (`touchZoom._animRequest`);
- * on a removed map both read the deleted map pane and throw. Clearing the two flags first makes them return at once
- * (private fields of the pinned version, re-checked on an upgrade, KI-61); a pinch's document listeners then stay
- * until the page unloads, doing nothing.
+ * Removes a map with its listeners. Leaflet 1.9.4's `remove()` leaves three callbacks of a zoom in flight: the 250 ms
+ * timer that ends a zoom animation (`_onZoomTransitionEnd`), a pinch's animation frame (`touchZoom._animRequest`) and
+ * the wheel's debounce timer (`scrollWheelZoom._timer`, kept pending by a trackpad's momentum); on a removed map each
+ * reads the deleted map pane and throws. They are cleared first, so none runs or each returns at once (private fields
+ * of the pinned version, re-checked on an upgrade, KI-61); a pinch's document listeners then stay until the page
+ * unloads, doing nothing.
  */
 export function removeLeafletMap(map: LMap): void {
   const internals = map as unknown as ZoomInternals;
@@ -50,6 +55,7 @@ export function removeLeafletMap(map: LMap): void {
     }
     pinch._zooming = false;
   }
+  clearTimeout(internals.scrollWheelZoom?._timer);
   map.off();
   map.remove();
 }

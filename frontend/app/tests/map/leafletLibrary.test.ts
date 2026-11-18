@@ -1,5 +1,5 @@
 import type { Map as LMap } from "leaflet";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { type LeafletLibrary, loadLeaflet, removeLeafletMap } from "@/features/map/leaflet/library";
 
@@ -14,6 +14,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   container.remove();
+  vi.useRealTimers();
 });
 
 function mount(): LMap {
@@ -41,6 +42,16 @@ describe("removeLeafletMap (WP-28)", () => {
     removeLeafletMap(map);
 
     expect(internals.touchZoom._zooming).toBe(false);
+  });
+
+  it("a wheel zoom still waiting for its debounce does nothing after the removal (WP-28 review, round 2)", () => {
+    vi.useFakeTimers();
+    const map = mount();
+    container.dispatchEvent(new WheelEvent("wheel", { deltaY: -120, clientX: 200, clientY: 300, bubbles: true, cancelable: true }));
+
+    removeLeafletMap(map);
+
+    expect(() => vi.advanceTimersByTime(400)).not.toThrow();
   });
 
   it("removes the map and its listeners, so the container takes a new map", () => {
