@@ -1,11 +1,12 @@
 import type { LeafletEvent, Marker, MarkerCluster, MarkerClusterGroup, MarkerOptions } from "leaflet";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { tg } from "@/lib/telegram";
 
 import { CLUSTER_PADDING } from "../camera";
-import type { MapGroup, MapViewProps } from "../types";
+import type { MapGroup, MapViewProps, Selection } from "../types";
 import { clusterIcon, pinIcon, stackIcon } from "./icons";
-import { LEAFLET_MAX_ZOOM, type LeafletInstance } from "./useLeafletMap";
+import { LEAFLET_MAX_ZOOM, type LeafletHandle, type LeafletInstance } from "./useLeafletMap";
 
 /**
  * The listings of the Leaflet view (WP-28 "Listings layer", SCR-011): one marker per location group — a pin for one
@@ -74,4 +75,31 @@ export function createListingLayer({ map, L }: LeafletInstance, select: Select):
       clusters.remove();
     },
   };
+}
+
+export type ListingLayerInput = {
+  groups: readonly MapGroup[];
+  selection: Selection;
+  onSelect: Select;
+};
+
+/** The listings layer of the current map: made with each map, given each new grouping. */
+export function useListingLayer({ mapRef, generation }: LeafletHandle, { groups, onSelect }: ListingLayerInput): void {
+  const select = useEffectEvent((numbers: number[], at?: number) => onSelect(numbers, at));
+  const layer = useRef<ListingLayer | null>(null);
+  useEffect(() => {
+    const instance = mapRef.current;
+    if (instance === null) {
+      return undefined;
+    }
+    const created = createListingLayer(instance, (numbers, at) => select(numbers, at));
+    layer.current = created;
+    return () => {
+      layer.current = null;
+      created.destroy();
+    };
+  }, [mapRef, generation]);
+  useEffect(() => {
+    layer.current?.update(groups);
+  }, [generation, groups]);
 }

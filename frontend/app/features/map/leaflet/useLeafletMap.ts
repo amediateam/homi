@@ -140,13 +140,15 @@ function pointsOf(groups: readonly MapGroup[]): MapGroup[] {
  * ones fly for 500 ms; a regrouping without a new answer does not move the camera; a new city jumps to its view; the
  * first fit for a city is its fit memory; the Tashkent stand-in keeps none and is replaced by the first known city
  * only while no fit has moved the camera. Leaflet snaps to whole zooms, so a fit's zoom is a whole one. Reduced
- * motion turns the flights into jumps.
+ * motion turns the flights into jumps. Answers whether the current map has had its first fit.
  */
 export function useLeafletCamera(
   { mapRef, generation }: LeafletHandle,
   { responseId, groups, polygon, cityView, cityKnown }: LeafletCameraInput,
-): void {
+): boolean {
   const fitted = useRef(0);
+  // The first fit of the current map: the deferred basemap waits for it (WP-28 "Basemap").
+  const [firstFit, setFirstFit] = useState(0);
   const animate = useRef(false);
   const shownCity = useRef<string | null>(null);
   const standIn = useRef(false);
@@ -161,7 +163,7 @@ export function useLeafletCamera(
   const fit = useEffectEvent(({ map, L }: LeafletInstance) => {
     const box = polygon !== null ? polygonBounds(polygon) : robustBounds(pointsOf(groups));
     if (box === null) {
-      return;
+      return false;
     }
     const bounds = L.latLngBounds([box.south, box.west], [box.north, box.east]);
     const topLeft = L.point(FIT_PADDING.left, FIT_PADDING.top);
@@ -184,6 +186,7 @@ export function useLeafletCamera(
       savedCity.current = city;
       writeFit(cityView.center, { center: [center.lat, center.lng], zoom });
     }
+    return true;
   });
 
   useEffect(() => {
@@ -212,6 +215,10 @@ export function useLeafletCamera(
       return;
     }
     fitted.current = responseId;
-    fit(instance);
+    if (fit(instance)) {
+      setFirstFit(generation);
+    }
   }, [mapRef, generation, responseId]);
+
+  return generation > 0 && firstFit === generation;
 }

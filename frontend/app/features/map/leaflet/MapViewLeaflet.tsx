@@ -3,13 +3,17 @@
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
+import { LassoOverlay } from "../lasso/LassoOverlay";
 import { MapLoading } from "../MapLoading";
 import type { MapFailReason, MapViewProps } from "../types";
-import { rasterLayer } from "./basemap";
-import { createListingLayer, type ListingLayer } from "./listingLayer";
+import { useLassoHost } from "./lassoHandlers";
+import { useListingLayer } from "./listingLayer";
+import { useDeferredBasemap } from "./useDeferredBasemap";
 import { useLeafletCamera, useLeafletMap } from "./useLeafletMap";
+import { useLeafletMask } from "./useLeafletMask";
+import { useMyLocation } from "./useMyLocation";
 
 /**
  * The Leaflet view of the map (WP-28, SCR-011): the fallback engine, loaded by `MapScreen` through `next/dynamic`
@@ -21,11 +25,20 @@ import { useLeafletCamera, useLeafletMap } from "./useLeafletMap";
 export default function MapViewLeaflet({
   groups,
   responseId,
+  selection,
   onSelect,
   onBackground,
   polygon,
   cityView,
   cityKnown,
+  tiles,
+  locale,
+  scheme,
+  lite,
+  me,
+  drawing,
+  onDrawn,
+  onTooSmall,
   onFail,
   onBasemap,
 }: MapViewProps) {
@@ -39,43 +52,21 @@ export default function MapViewLeaflet({
     [onFail],
   );
   const handle = useLeafletMap(container, { cityView, cityKnown, onFail: fail, onBackground });
-  useLeafletCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
-
-  useEffect(() => {
-    const instance = handle.mapRef.current;
-    if (instance === null) {
-      return undefined;
-    }
-    const layer = rasterLayer(instance.L).addTo(instance.map);
-    onBasemap?.({ kind: "raster" });
-    return () => {
-      layer.remove();
-    };
-  }, [handle.mapRef, handle.generation, onBasemap]);
-
-  const select = useEffectEvent((numbers: number[], at?: number) => onSelect(numbers, at));
-  const layer = useRef<ListingLayer | null>(null);
-  useEffect(() => {
-    const instance = handle.mapRef.current;
-    if (instance === null) {
-      return undefined;
-    }
-    const created = createListingLayer(instance, (numbers, at) => select(numbers, at));
-    layer.current = created;
-    return () => {
-      layer.current = null;
-      created.destroy();
-    };
-  }, [handle.mapRef, handle.generation]);
-  useEffect(() => {
-    layer.current?.update(groups);
-  }, [handle.generation, groups]);
+  const fitted = useLeafletCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
+  useDeferredBasemap(handle, { tiles, scheme, lite, locale, fitted, onBasemap });
+  useLeafletMask(handle, polygon, scheme);
+  useMyLocation(handle, me);
+  useListingLayer(handle, { groups, selection, onSelect });
+  const lasso = useLassoHost(handle, drawing);
 
   // Sized by its fixed parent, as the GL view: Leaflet gives a static container `position: relative`.
   return (
     <>
       <div ref={container} data-map-view="leaflet" className="size-full" />
       {handle.generation === 0 && !failed ? <MapLoading /> : null}
+      {drawing && lasso !== null && onDrawn !== undefined && onTooSmall !== undefined ? (
+        <LassoOverlay host={lasso} onDrawn={onDrawn} onTooSmall={onTooSmall} />
+      ) : null}
     </>
   );
 }
