@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW |
+| Status | REVIEW (#84, stacked on #83) |
 | Depends on | WP-27 |
 | Size | ≈ 2 800 changed lines, L |
 | Behaviour reference | `03` §1.2 (Back while drawing), §1.7, §1.8, §2 (SCR-011 "Differences between engines", SCR-012, SCR-021, the location part of SCR-018), §3.2, §3.4 ("Lasso", "Map", "Geolocation"), §4 (BR-APP-061, BR-APP-008), §5 (LB-APP-001, LB-APP-013, LB-APP-020); `05` (TMA-015, TMA-022, TMA-028, TMA-035); task files KV-FE-059, KV-FE-060, KV-FE-067 (spot map parts). From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
