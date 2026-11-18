@@ -1,6 +1,7 @@
 "use client";
 
 import type { Locale } from "@homi/config";
+import { Maximize2 } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
@@ -42,28 +43,6 @@ function useNearViewport(ref: RefObject<HTMLElement | null>): boolean {
     return () => observer.disconnect();
   }, [ref, near]);
   return near;
-}
-
-/** The box's «open» corner: lucide's `maximize-2`, which `@homi/ui` does not re-export. */
-function ExpandIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={16}
-      height={16}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.25}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M15 3h6v6" />
-      <path d="m21 3-7 7" />
-      <path d="m3 21 7-7" />
-      <path d="M9 21H3v-6" />
-    </svg>
-  );
 }
 
 /**
@@ -109,7 +88,7 @@ export function SpotMap({ number, spot }: { number: number; spot: Spot }) {
           style={{ backgroundColor: "var(--bg2)" }}
         />
         <span className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)">
-          <ExpandIcon />
+          <Maximize2 size={16} strokeWidth={2.25} aria-hidden />
         </span>
       </button>
       {attribution !== null ? (

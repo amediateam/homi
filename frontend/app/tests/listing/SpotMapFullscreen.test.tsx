@@ -44,7 +44,7 @@ vi.mock("@/features/listing/spot/useSpotMap", () => ({
 import { listingKey, type ListingRecord } from "@/features/listing/listingData";
 import { SpotMapFullscreen, type SpotMapFullscreenProps } from "@/features/listing/spot/SpotMapFullscreen";
 import { SpotMapRoute } from "@/features/listing/spot/SpotMapRoute";
-import { ListingLayerContext } from "@/features/listing/useListing";
+import { ListingLayerContext, type ListingView } from "@/features/listing/useListing";
 import { failureOf } from "@/lib/api/errors";
 import { resetResources, seedResource, useResource } from "@/lib/data/useResource";
 import { resetReference } from "@/lib/reference/useReference";
@@ -297,9 +297,13 @@ function FailingRead({ number }: { number: number }) {
   return null;
 }
 
-function route(number: number | null = 100001, { mode = "visible", extra = null }: { mode?: "visible" | "hidden"; extra?: ReactNode } = {}) {
+/** The route in its layer; `view` is the state the listing screen reported to the layer (`null`: none yet). */
+function route(
+  number: number | null = 100001,
+  { mode = "visible", extra = null, view = null }: { mode?: "visible" | "hidden"; extra?: ReactNode; view?: ListingView["state"] | null } = {},
+) {
   return intl(
-    <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {} }}>
+    <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view }}>
       {extra}
       <Activity mode={mode}>
         <SpotMapRoute />
@@ -366,6 +370,37 @@ describe("SpotMapRoute (/listing/{number}/location)", () => {
   it("stays when a refetch fails over details already shown", async () => {
     seedResource(listingKey(100001), { listing: detailsOf() });
     render(route(100001, { extra: <FailingRead number={100001} /> }));
+    await act(async () => {});
+
+    expect(document.querySelector("[data-spot-card]")).not.toBeNull();
+    expect(state.back).not.toHaveBeenCalled();
+    expect(lastMap().spot).not.toBeNull();
+  });
+
+  it.each(["not_found", "offline", "server"] as const)(
+    "goes back when the listing screen shows %s with nothing in the resource (the server's read in cookie mode)",
+    (view) => {
+      render(route(100001, { view }));
+
+      expect(state.back).toHaveBeenCalledOnce();
+      expect(lastMap().spot).toBeNull();
+    },
+  );
+
+  it("goes back once the screen's failure arrives after the frame waited (a direct load)", () => {
+    const view = render(route(100001, { view: "skeleton" }));
+    view.rerender(route(100001, { view: "preview" }));
+    expect(state.back).not.toHaveBeenCalled();
+
+    view.rerender(route(100001, { view: "server" }));
+    view.rerender(route(100001, { view: "server" }));
+
+    expect(state.back).toHaveBeenCalledOnce();
+  });
+
+  it("stays over details already shown whatever failure the screen reports", async () => {
+    seedResource(listingKey(100001), { listing: detailsOf() });
+    render(route(100001, { view: "server", extra: <FailingRead number={100001} /> }));
     await act(async () => {});
 
     expect(document.querySelector("[data-spot-card]")).not.toBeNull();

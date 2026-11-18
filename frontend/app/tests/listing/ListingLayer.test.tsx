@@ -75,6 +75,12 @@ function ScrollButton() {
   return <button type="button" data-scroll-top="" onClick={scrollToTop} />;
 }
 
+/** A child route that shows the state the screen reported to the layer, as the location child reads it. */
+function ViewProbe() {
+  const { view } = useContext(ListingLayerContext);
+  return <span data-view-probe="">{String(view)}</span>;
+}
+
 function tree(props: Partial<ListingLayerProps> & { number?: string; mode?: "visible" | "hidden" } = {}) {
   const { number = "100001", mode = "visible", ...rest } = props;
   return (
@@ -124,6 +130,7 @@ async function mount(props: Parameters<typeof tree>[0] = {}) {
 
 const layer = () => document.querySelector<HTMLElement>('[data-route="listing"]')!;
 const overlay = () => document.querySelector<HTMLElement>('[data-slot="route-overlay"]')!;
+const probe = () => document.querySelector("[data-view-probe]")?.textContent ?? null;
 
 let fake: FakeTelegram | null = null;
 
@@ -189,6 +196,30 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
     expect(document.querySelector("[data-child]")?.textContent).toBe("100001");
     expect(document.querySelector("[data-portal]")?.textContent).toBe("100001");
+  });
+
+  it("a child route reads the state the screen shows: the fallback's preview, then the details", async () => {
+    setPreview(100001, previewOf());
+    const view = await mount({ screen: <Streaming />, children: <ViewProbe /> });
+    expect(probe()).toBe("preview");
+
+    await view.rerender({ children: <ViewProbe /> });
+
+    expect(probe()).toBe("loaded");
+  });
+
+  it.each([
+    ["not_found", 404],
+    ["offline", 0],
+    ["server", 500],
+  ] as const)("a child route reads the screen's %s when the server's read failed (cookie mode, never in the resource)", async (error, status) => {
+    await mount({
+      screen: <ListingScreen number={100001} initial={{ ok: false, error, status, method: "GET", path: "listings/:number" }} />,
+      children: <ViewProbe />,
+    });
+
+    expect(layer().querySelector(`[data-listing-state="${error}"]`)).not.toBeNull();
+    expect(probe()).toBe(error);
   });
 
   it("scrollToTop scrolls the overlay, the layer's scroll container", async () => {
