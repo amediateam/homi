@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiResult } from "@/lib/api/types";
 
-/** What the server part did, in order: the reference read, the cookie read, `io()`, the radar read. */
+/** What the server part did, in order: the cookie read, the reference read, `io()`, the radar read. */
 const state = vi.hoisted(() => ({
   steps: [] as string[],
   reference: { loaded: true, data: { radars_enabled: true } } as { loaded: boolean; data: Record<string, unknown> },
@@ -60,17 +60,17 @@ describe("readRadarTab (SCR-026, DEC-44, DEC-51)", () => {
     ["radars_enabled false", { loaded: true, data: { radars_enabled: false } }],
     ["radars_enabled missing", { loaded: true, data: {} }],
     ["the reference data not read", { loaded: false, data: { radars_enabled: true } }],
-  ])("%s: the soon state — no cookie read, no radar request", async (_, reference) => {
+  ])("%s: the soon state — the cookie read first, no radar request", async (_, reference) => {
     state.reference = reference;
     expect(await readRadarTab()).toEqual({ renderId: OFF_RENDER_ID, serverOff: true });
-    expect(state.steps).toEqual(["reference:uz"]);
+    expect(state.steps).toEqual(["cookie", "reference:uz"]);
     expect(state.radars).not.toHaveBeenCalled();
   });
 
   it("with the cookie: one GET /radars?include=previews, normalised, the source passed on; the render id drawn after io()", async () => {
     const read = await readRadarTab();
 
-    expect(state.steps).toEqual(["reference:uz", "cookie", "io", "radars?include=previews"]);
+    expect(state.steps).toEqual(["cookie", "reference:uz", "io", "radars?include=previews"]);
     expect(read.serverOff).toBe(false);
     expect(read.renderId).toMatch(UUID);
     expect(read.source).toBe("stub");
@@ -84,7 +84,7 @@ describe("readRadarTab (SCR-026, DEC-44, DEC-51)", () => {
     state.token = null;
     const read = await readRadarTab();
 
-    expect(state.steps).toEqual(["reference:uz", "cookie", "io"]);
+    expect(state.steps).toEqual(["cookie", "reference:uz", "io"]);
     expect(read).toEqual({ renderId: expect.stringMatching(UUID), serverOff: false });
   });
 

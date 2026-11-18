@@ -37,9 +37,9 @@ async function requestLocale(): Promise<Locale> {
 }
 
 /**
- * The radar tab's server read (SCR-026, DEC-44, `25` §3.4). The cached reference data comes first: while it says
- * radars are switched off — or it could not be read, which the client treats the same way (`useRadarsEnabled()`) —
- * the user is not looked at and no radar request is sent (DEC-51). Otherwise, with the session cookie, one
+ * The radar tab's server read (SCR-026, DEC-44, `25` §3.4), at request time only (the cookie is read first). Then the
+ * cached reference data: while it says radars are switched off — or it could not be read, which the client treats the
+ * same way (`useRadarsEnabled()`) — no radar request is sent (DEC-51). Otherwise, with the session cookie, one
  * `GET /radars?include=previews` (BR-APP-063: the whole tab in one request), normalised here (`normalize.ts` has no
  * directive). Without the cookie (header mode, the first request of a launch) and on `unauthorized` the browser
  * reads through `/bff` once the session is ready; any other failure is left to the browser too, whose read shows the
@@ -51,11 +51,14 @@ async function requestLocale(): Promise<Locale> {
  * read (legacy read the radar list on every entry of the tab); Back and the return from a layer keep the old one.
  */
 export async function readRadarTab(): Promise<RadarTabRead> {
+  // The cookie first: the tab is the user's, so nothing of it is prerendered. Read before the cookie, the cached
+  // reference ran in the prerender of the sheet addresses, whose prospective render can stop before its fetch ends,
+  // and the final render then missed the entry ("Unexpected cache miss after cache warming").
+  const token = await getSessionToken();
   const reference = await getReference(await requestLocale());
   if (!reference.loaded || reference.data.radars_enabled !== true) {
     return { renderId: OFF_RENDER_ID, serverOff: true };
   }
-  const token = await getSessionToken();
   await io();
   const renderId = crypto.randomUUID();
   if (token === null) {

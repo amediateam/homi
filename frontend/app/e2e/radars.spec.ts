@@ -447,8 +447,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
     });
 
-    // The radar sheet stays open over the listing (its portalled dialog is not hidden with the `@sheet` slot).
-    test.fixme("a find opens its listing over the tab; Back brings the radar sheet back, the find no longer «новое»", async ({ page }) => {
+    test("a find opens its listing over the tab; Back brings the radar sheet back, the find no longer «новое»", async ({ page }) => {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, ACTIVE);
@@ -492,8 +491,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator(`[data-radar-tile="${ACTIVE}"]`)).toBeAttached();
     });
 
-    // After Back the directly loaded editor stays open, and the radar sheet shows twice (its standalone and its layer copy).
-    test.fixme("Back from a directly loaded editor closes it to the radar sheet, then to the tab", async ({ page }) => {
+    test("Back from a directly loaded editor closes it to the radar sheet, then to the tab", async ({ page }) => {
       await open(page, mode, `/radars/${ACTIVE}/edit`);
       await expect(visible(page, '[data-route="radar/edit"]:not([data-state])')).toBeVisible();
 
@@ -524,9 +522,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolled);
     });
 
-    // The feed opens at the radar tab's scroll position (145 px here): `nav.push` keeps the scroll, and a feed mounted
-    // for the first time does not scroll itself.
-    test.fixme("«Смотреть найденное» opens the radar's feed at its top, wherever the tab was scrolled", async ({ page }) => {
+    test("«Смотреть найденное» opens the radar's feed at its top, wherever the tab was scrolled", async ({ page }) => {
       await scrollTheTab(page, mode);
       await openSheet(page, DIGEST);
 
@@ -562,8 +558,7 @@ test.describe("radar tab (cookie mode only)", () => {
    * sign-in renders with the new cookie. A reload carries the cookie: the server's read is in the document and the
    * browser asks for nothing.
    */
-  // Observed: the first launch sends `/bff/radars?include=previews` twice, and the refresh render reads it on the server too.
-  test.fixme("a first launch on /radars reads the list once through /bff; after a reload the server's read is used", async ({ page }) => {
+  test("a first launch on /radars reads the list once through /bff; after a reload the server's read is used", async ({ page }) => {
     const radarReads = recordRequests(page, isRadarRead);
     await open(page, "cookie");
     await onTab(page);
