@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Spot map, fullscreen (SCR-021); WP-28 replaces the placeholder. */
+import { SpotMapRoute } from "@/features/listing/spot/SpotMapRoute";
+
+/** Spot map, fullscreen (SCR-021) over the listing; Back reads the search params, so the page waits in `<Suspense>`. */
 export default function Page() {
-  return <RoutePlaceholder name="listing/location" />;
+  return (
+    <Suspense fallback={null}>
+      <SpotMapRoute />
+    </Suspense>
+  );
 }
