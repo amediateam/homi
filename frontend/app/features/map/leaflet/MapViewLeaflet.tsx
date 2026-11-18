@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { LassoOverlay } from "../lasso/LassoOverlay";
 import { MapLoading } from "../MapLoading";
+import { paletteOf } from "../palette";
 import type { MapFailReason, MapViewProps } from "../types";
 import { useLassoHost } from "./lassoHandlers";
 import { useListingLayer } from "./listingLayer";
@@ -14,13 +15,15 @@ import { useDeferredBasemap } from "./useDeferredBasemap";
 import { useLeafletCamera, useLeafletMap } from "./useLeafletMap";
 import { useLeafletMask } from "./useLeafletMask";
 import { useMyLocation } from "./useMyLocation";
+import { useSpiderfy } from "./useSpiderfy";
 
 /**
  * The Leaflet view of the map (WP-28, SCR-011): the fallback engine, loaded by `MapScreen` through `next/dynamic`
  * with `ssr: false` when `pickEngine` says so or GL failed, so neither this chunk nor Leaflet, its plugins and their
  * CSS are in the first load of any page. It implements the view contract of `types.ts` unchanged and never fetches
  * or formats a price. Until its first map exists, and unless it failed, the centred spinner covers the library's
- * download.
+ * download. Every layer, listener and the map itself is removed in an effect cleanup, so a removed map leaves nothing
+ * behind and StrictMode's second run, like an Activity re-show, ends with one map.
  */
 export default function MapViewLeaflet({
   groups,
@@ -55,14 +58,16 @@ export default function MapViewLeaflet({
   const fitted = useLeafletCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
   useDeferredBasemap(handle, { tiles, scheme, lite, locale, fitted, onBasemap });
   useLeafletMask(handle, polygon, scheme);
-  useMyLocation(handle, me);
-  useListingLayer(handle, { groups, selection, onSelect });
+  useMyLocation(handle, me, scheme);
+  const spiderfy = useSpiderfy(handle, groups, selection);
+  useListingLayer(handle, { groups, selection, onSelect, spiderfy });
   const lasso = useLassoHost(handle, drawing);
 
-  // Sized by its fixed parent, as the GL view: Leaflet gives a static container `position: relative`.
+  // Sized by its fixed parent, as the GL view: Leaflet gives a static container `position: relative`. The land colour
+  // is the map until the deferred basemap is added, and the whole map while reference data is absent.
   return (
     <>
-      <div ref={container} data-map-view="leaflet" className="size-full" />
+      <div ref={container} data-map-view="leaflet" className="size-full" style={{ backgroundColor: paletteOf(scheme).land }} />
       {handle.generation === 0 && !failed ? <MapLoading /> : null}
       {drawing && lasso !== null && onDrawn !== undefined && onTooSmall !== undefined ? (
         <LassoOverlay host={lasso} onDrawn={onDrawn} onTooSmall={onTooSmall} />

@@ -27,7 +27,8 @@ export const LEAFLET_MAX_ZOOM = 18;
 
 type DebugWindow = Window & { homiMap?: unknown };
 
-function reducedMotion(): boolean {
+/** Leaflet animates whatever the system asks (MapLibre jumps by itself): the view's flights check this first. */
+export function reducedMotion(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
@@ -140,7 +141,8 @@ function pointsOf(groups: readonly MapGroup[]): MapGroup[] {
  * ones fly for 500 ms; a regrouping without a new answer does not move the camera; a new city jumps to its view; the
  * first fit for a city is its fit memory; the Tashkent stand-in keeps none and is replaced by the first known city
  * only while no fit has moved the camera. Leaflet snaps to whole zooms, so a fit's zoom is a whole one. Reduced
- * motion turns the flights into jumps. Answers whether the current map has had its first fit.
+ * motion turns the flights into jumps. Answers whether the current map has had its first fit — also a map made again
+ * after an Activity re-show once an earlier map was fitted, since it opens at that camera.
  */
 export function useLeafletCamera(
   { mapRef, generation }: LeafletHandle,
@@ -169,6 +171,10 @@ export function useLeafletCamera(
     const topLeft = L.point(FIT_PADDING.left, FIT_PADDING.top);
     const bottomRight = L.point(FIT_PADDING.right, FIT_PADDING.bottom);
     const zoom = Math.min(map.getBoundsZoom(bounds, false, topLeft.add(bottomRight)), FIT_MAX_ZOOM);
+    // A container smaller than the padding has no zoom that fits (Leaflet answers NaN): the camera stays.
+    if (!Number.isFinite(zoom)) {
+      return false;
+    }
     // The centre `fitBounds` would pick, so the fit memory holds the camera the map ends at.
     const middle = map
       .project(bounds.getSouthWest(), zoom)
@@ -211,7 +217,14 @@ export function useLeafletCamera(
 
   useEffect(() => {
     const instance = mapRef.current;
-    if (instance === null || responseId === fitted.current) {
+    if (instance === null) {
+      return;
+    }
+    if (responseId === fitted.current) {
+      // A map made again after an Activity re-show opens at the camera of the earlier fit: it is settled.
+      if (animate.current) {
+        setFirstFit(generation);
+      }
       return;
     }
     fitted.current = responseId;

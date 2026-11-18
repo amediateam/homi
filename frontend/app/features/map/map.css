@@ -148,6 +148,15 @@ html.lite .spread-dot {
   overflow: visible;
 }
 
-.leaflet-marker-icon.homi-icon:has(> .active) {
-  z-index: var(--z-pin) !important;
+/*
+ * Leaflet's own stylesheet sets Helvetica at 12 px on its container; the markers take the page's font, as on GL. The
+ * selected marker is raised through Leaflet's z-index offset (`listingLayer.ts`), not here.
+ */
+.leaflet-container[data-map-view] {
+  font: inherit;
+}
+
+/* The OSM raster in the dark scheme: inverted and dimmed with the hue kept, as GL's raster paint (`palette.ts`). */
+html[data-scheme="dark"] .homi-raster {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.7);
 }

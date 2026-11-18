@@ -3,7 +3,9 @@ import type * as ProtomapsLeaflet from "protomaps-leaflet";
 
 export type LeafletModule = typeof Leaflet;
 
-export type LeafletLibrary = { L: LeafletModule; protomaps: typeof ProtomapsLeaflet };
+export type ProtomapsModule = typeof ProtomapsLeaflet;
+
+export type LeafletLibrary = { L: LeafletModule; protomaps: ProtomapsModule };
 
 let loading: Promise<LeafletLibrary> | null = null;
 
