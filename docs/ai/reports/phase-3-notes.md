@@ -1410,3 +1410,59 @@ Verified (from `frontend/`):
 - **End to end:** each of the 22 files alone against a local `next start` of the `f7ba4b2` build, with a pause between
   files (KI-32): 237 passed (map 17, map-leaflet 17, map-lasso 9, spot-map 13 and the 18 earlier files as in §Y plus
   their changes); the same on the `f4a7c5b` build.
+
+## AA. Development track, 2026-11-18 — WP-29, favourites and history
+
+Branch `wp-29-saved`, on `main` = `d4c0d88` (after #82). WP-29 depends only on WP-26, so it does not stack on #83 or
+#84; its docs touch the same files as theirs (the queue, these notes, the session handoff) and are merged by hand
+when those land. Developer's word: «Следующий пакет — WP-29».
+
+The Heart tab's two lists now render: `/saved` (SCR-024) and `/saved/history` (SCR-025).
+- **Rendering:** page one is read on the server with the session cookie, else in the browser through `/bff`, both in
+  WP-24's `ListingFeed`, 20 at a time with the feed's cursor (DEC-53).
+- **Session maps:** favourites drop listings un-favourited or hidden in this launch. History shows every entry and
+  never the eye.
+- **«Очистить»:** it asks first, then sends `DELETE /history` and shows the empty state with the success haptic.
+- **Refresh:** pull-to-refresh reloads either list from page one.
+
+WP-24 had shipped every prop and the cursor guard, so `ListingFeed` and `useCursorFeed` are unchanged. The build ran
+in two workflows:
+1. Two builders on disjoint files against the orchestrator's decisions and a read-only look at the legacy source,
+   then a gate.
+2. One end-to-end writer, and two review lenses with a refuting verifier per finding (5 of 5 confirmed, 4 distinct,
+   fixed before `fcba4ca`).
+
+Assumption mismatches (rule 6, in the specification):
+- **AM-94.** The specification took a tab entering a saved page to re-create its list, as legacy's re-mount did
+  (`App.jsx:618`). Next keeps up to three routes alive under `<Activity>` (`preserving-ui-state.md`), so the old list
+  would stay. Every server render of the page now brings a new `renderId` in the list key:
+  - cookie mode adopts the fresh server page one with no browser request;
+  - header mode asks `/bff`.
+- **AM-95.** The specification put the size of the `seen` map into history's key, as legacy did. That re-creates the
+  list at the card's tap, under the listing's layer, racing the server's write of the view. The size is now latched
+  per version and compared on the return to the list's address.
+
+The legacy history rule (no filtering by the hidden map, `ListingFeed.jsx:86-91`) was read in the reconstructed
+source at SVN r29. That source is synced to release `index-BnFvC-Ft`, one newer than the pinned `index-DY_DH7h-`, and
+its delta report does not touch the saved views. Read it again when WP-02 pins the baseline.
+
+Review fixes:
+- the `renderId` drawn after `io()` (the runtime shell stage of `partialPrefetching`);
+- the list shown when `DELETE /history` answers is the one cleared;
+- `aria-disabled` keeps the focus on «Очистить»;
+- after a clear, the empty state takes the focus and a status line reads it;
+- a new key gives the list a lost focus (the card the listing's layer returns it to is gone after history's
+  re-creation).
+
+Own choices (no ADR):
+- **One hook** (`useSavedList`) for both lists' keys, pulls, the top and the focus.
+- **The cleared state** replaces the list until the next key, as legacy emptied its items with no refetch.
+- **The `Trash` icon** is re-exported from `@homi/ui`, as legacy's `Trash` 15 px.
+
+Verified (from the repository root unless marked):
+- `make ci-frontend` on `fcba4ca` passed: types, lint, typecheck and the build. Unit tests: app 157 files / 2405 +
+  1 todo, `@homi/search` 238 + 1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 111, `@homi/api-client`
+  14, `@homi/utils` 2.
+- End to end: each of the 19 files alone against a local `next start` of the `fcba4ca` build, 190 passed, none skipped: back 11, boot-failure 6, city 6, crash 4, csp 2, data 5, feed 19, filters 20, foundation 19, gates 8, launch 5, listing-actions 14, listing-contact 14, listing-open 16, photo-viewer 6, saved 10, session 7, shell 16, smoke 2. Before the review fixes the end-to-end writer ran `saved.spec.ts` 10/10 three times and the neighbouring specs green (listing-open once 15/16, then 16/16 twice; not reproduced).
+
+Known issues: none new. LB-APP-027 (a silent failed clear with DEV-016 off) stays as the flag decides.

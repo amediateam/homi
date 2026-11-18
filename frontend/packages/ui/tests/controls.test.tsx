@@ -269,6 +269,7 @@ describe("icons", () => {
       "Search",
       "Settings",
       "SlidersHorizontal",
+      "Trash",
       "WifiOff",
       "X",
     ] as const;

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#85) |
 | Depends on | WP-26 |
 | Size | about 700 changed lines, S |
 | Behaviour reference | `03` §2 (SCR-024, SCR-025; shared states SCR-008, SCR-009; confirm SCR-043), §1.11 (session maps), §4 (BR-APP-067; used: BR-APP-039, BR-APP-040, BR-APP-058), §5 (LB-APP-022; used: LB-APP-027, LB-APP-045); `05` (TMA-025, TMA-026); task files `tasks/frontend/KV-FE-072-favourites.md`, `KV-FE-073-history.md`. Their file layout, navigation stack, API paths and transport are not taken |
@@ -49,13 +49,16 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 
 | Address under `/[locale]` | File | Renders |
 | ------------------------- | ---- | ------- |
-| `/saved` | `(main)/saved/page.tsx` | static shell + `<Suspense>` with three `ListingCardSkeleton`s as fallback + `FavoritesServer` |
-| `/saved/history` | `(main)/saved/history/page.tsx` | the same with `HistoryServer` |
+| `/saved` | `(main)/saved/page.tsx` | static shell `data-route="saved"` + `<Suspense>` with WP-24's `FeedSkeleton` (three `ListingCardSkeleton`s) as fallback + `FavoritesServer` |
+| `/saved/history` | `(main)/saved/history/page.tsx` | the same with `data-route="saved/history"` and `HistoryServer` |
 
-- `FavoritesServer` / `HistoryServer` (async Server Components in `features/saved/server.tsx`): call
-  `getSessionToken()`; with a token, `serverApi()` fetches the first page and passes the `ApiResult` as `initial`;
-  without one, `initial` is `null`. They never throw for an API failure: a failed `ApiResult` is passed down and
-  becomes the error state.
+- `FavoritesServer` / `HistoryServer` (async Server Components in `features/saved/server.tsx`, over `readSaved`):
+  call `getSessionToken()`; with a token, `serverApi()` fetches the first page and passes the `ApiResult` as
+  `initial`; without one, or on `unauthorized`, `initial` is `null` (the browser asks once the bootstrap has signed
+  in again, as `readFirstPage` of the feed). They never throw for an API failure: any other failed `ApiResult` is
+  passed down and becomes the error state. Each render also makes a `renderId` (`crypto.randomUUID()`, after the
+  cookie read, so never in a prerender) and passes the feed's `serverSmallOnly` photo rule (`smallPhotosOnly`,
+  exported from `features/feed/FeedServer.tsx`).
 - Both addresses are root tabs: the title tabs and the tab bar switch between them with `router.replace` (WP-23), so
   there is no Back button here. A card opens the listing with `router.push(routes.listing(number))`, intercepted
   into `@overlay`; the list stays mounted below.
@@ -63,8 +66,9 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 ### Client screens
 
 - `features/saved/FavoritesScreen.tsx` and `HistoryScreen.tsx` (Client Components) mount WP-24's
-  `ListingFeed` with `source="favorites"` or `source="history"`. Props are WP-24's; if one of these is missing, add it
-  there in this PR: an item filter, a switch for the «viewed» eye, a slot above the first card, a version key.
+  `ListingFeed` with `source="favorites"` or `source="history"`. WP-24 already shipped every prop this needs (the
+  item filter and the eye by `source`, `above`, `emptySlot`, `onFirstPage`, the list key) and the whole cursor guard,
+  so `ListingFeed` and `useCursorFeed` are unchanged; only tests were added.
 - Loading: `useCursorFeed` of WP-24 with the path `favorites` or `history`, used exactly as the feed uses it: the
   first page comes from `initial` or from one `bffFetch`, and the sentinel asks for the next page with the last
   `meta.next_cursor` until it is `null`. No `limit` is sent: the server's default is 20. The guard of the hook is
@@ -77,19 +81,43 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
 - Favourites visibility: an item shows unless `favs[number] === false` or `hidden[number]` in the session maps
   (`useSessionMap`). Heart state is `favs[number] ?? item.favorite`; the eye is `seen[number] ?? item.viewed`.
 - History visibility: every returned item shows; the session `hidden` map is not applied (legacy behaviour recorded in
-  KV-FE-073). The eye is never shown. The audit's SCR-025 does not state this either way: **verify against legacy
-  when the baseline is pinned (WP-02)** and, if legacy does filter, change this line and its test in the same PR.
-- History refetch: the list's version key includes the number of entries in the `seen` session map. Opening a
-  listing in this launch and returning to «Смотрели» therefore re-creates the list once; the re-created list fetches
-  through `bffFetch` and ignores the stale `initial`.
-- Pull-to-refresh: each screen registers a reload with WP-23's `PullToRefresh` (its registration API); the reload
-  bumps the version key, so the list starts again from the first page.
-- «Очистить»: `features/saved/ClearHistoryButton.tsx`, in the slot above the first card, only when the list has
-  items.
+  KV-FE-073). The eye is never shown. Checked against the legacy source: `ListingFeed.jsx:86-91` filters only the
+  favourites and the search, history gets every item. The check read the reconstructed `demo/app/src` at SVN r29,
+  synced to release `index-BnFvC-Ft`, one release newer than the pinned `index-DY_DH7h-`; that release's delta
+  report changes nothing in the saved views. Read it again when WP-02 pins the baseline.
+- List key (`features/saved/listKey.ts`, `useSavedList.ts`): `savedListKey(source, renderId, version)`; the server
+  builds the key of its page one with `FIRST_VERSION`, so the hydration render adopts it.
+  - **Entering the page:** every server render of the page brings a new `renderId` and re-creates the list from that
+    render: cookie mode adopts the fresh server page one with no browser request, header mode asks `/bff`. A server
+    render happens when the tab bar or a title tab enters the page. Next keeps up to three routes alive under
+    `<Activity>` (`preserving-ui-state.md`), so without it a list entered again would keep its old items (AM-94);
+    legacy re-mounted the list on every tab and title-tab entry (`App.jsx:618`). Closing a listing over the list does
+    not render the page again, so the list stays.
+  - **History refetch:** history bumps the version once when its own address is shown again after the `seen` session
+    map grew (the size is latched with each version and each render). Opening a listing in this launch and
+    returning to «Смотрели» therefore re-creates the list once; the re-created list fetches through `bffFetch` and
+    ignores the stale `initial`. The check runs on the return, not when the card's tap marks the listing seen while
+    the list is still shown. Legacy keys the list by `seen`'s size and so re-creates it under the listing's layer
+    at the tap, racing the server's write of the view (AM-95).
+  - A new key scrolls to the top before it is painted while the list's own address is shown, never on the first
+    render (as `FeedScreen`).
+- Pull-to-refresh: each screen registers a reload with WP-23's `PullToRefresh` (`registerRefresh`); the reload
+  bumps the version, so the list starts again from the first page, and the indicator spins until page one has
+  answered.
+- «Очистить»: `features/saved/ClearHistoryButton.tsx`, in the slot above the first card, only while a card is
+  visible. The markup follows legacy's `.feed-tools` (`ListingFeed.jsx:120-127`):
+  - a right-aligned row with 2 px side padding;
+  - a text button in the text colour (not accent), 15 px, weight 600, opacity 0.7 when pressed;
+  - lucide `Trash` at 15 px with a 5 px gap.
+
+  After a successful clear `HistoryScreen` shows the history empty state in place of the list, with no refetch (legacy
+  `setItems([])`). The next new key (a pull, the history refetch, a new render) shows the list again. On the static
+  stubs a pull after a clear therefore brings the 25 entries back.
 
 ### Server Action
 
-`lib/actions/history.ts` — `clearHistory(_: void, auth?)` → `ActionResult<void>`: `DELETE /history` with the cookie
+`lib/actions/history.ts` — `clearHistory(_input?: undefined, auth?, locale?)` → `ActionResult<null>` (the shape of
+every action, `run.ts`; a 204 is `{ ok: true, data: null }`, as `hideListing`): `DELETE /history` with the cookie
 token or `auth.token`; any 2xx is success, the body is not read. Called through `useAction`, so header mode passes
 the token as an argument.
 
@@ -99,13 +127,19 @@ New, under `frontend/app/`:
 
 - `app/[locale]/(main)/saved/page.tsx`, `app/[locale]/(main)/saved/history/page.tsx` (replace the WP-20
   placeholders)
-- `features/saved/server.tsx`, `features/saved/{FavoritesScreen,HistoryScreen,ClearHistoryButton}.tsx`
+- `features/saved/server.tsx`, `features/saved/{FavoritesScreen,HistoryScreen,ClearHistoryButton}.tsx`,
+  `features/saved/{listKey,useSavedList}.ts`
 - `lib/actions/history.ts` (WP-22 only reserved the file name and `clearHistory`), `tests/actions/history.test.ts`
-- `tests/saved/{FavoritesScreen,HistoryScreen}.test.tsx`, `e2e/saved.spec.ts`
+- `tests/saved/{FavoritesScreen,HistoryScreen,server}.test.tsx` (`server.test.ts`), `e2e/saved.spec.ts`
 
-Changed: `lib/api/bffAllowList.ts` (only if `GET favorites` and
-`GET history` are not yet allowed); `features/feed/ListingFeed.tsx` or `useCursorFeed.ts` (only for a missing prop
-or a gap in the cursor guard, with their tests).
+Changed:
+- `features/feed/FeedServer.tsx`: `smallPhotosOnly` exported.
+- `tests/feed/useCursorFeed.test.ts`: the cursor cases for the paths `favorites` and `history`.
+- The `Trash` icon: re-exported from `@homi/ui` (`packages/ui/src/icons/index.ts`, `tests/controls.test.tsx`) and
+  shown in the gallery (`features/gallery/UiGallery.tsx`).
+
+`lib/api/bffAllowList.ts`, `features/feed/ListingFeed.tsx` and `useCursorFeed.ts` needed no change: both reads were
+allowed, and WP-24 had shipped the props and the guard.
 
 ## Steps
 
@@ -185,9 +219,14 @@ Component (Vitest + Testing Library):
   used without a request; `initial = null` fetches through `bffFetch`; a second page is appended when the sentinel
   is reached, and a card of the second page un-favourited in this launch disappears and returns on failure; empty,
   offline, server and inline-retry states; 403 with `dev001AnyForbiddenShowsAccess` off and on.
-- `HistoryScreen.test.tsx`: no eye; hidden items still shown; growth of the `seen` map triggers exactly one refetch;
-  clear — cancel sends nothing, OK empties the list and disables the button meanwhile, failure keeps the list with
-  `dev016ErrorToastOnFailure` off (no toast) and on (toast); no tool row when empty.
+- `HistoryScreen.test.tsx`: no eye; hidden items still shown; growth of the `seen` map triggers exactly one refetch,
+  on the return to the list and not while it is shown; a new `renderId` adopts its page one; clear — cancel sends
+  nothing, OK empties the list and disables the button meanwhile, failure keeps the list with
+  `dev016ErrorToastOnFailure` off (no toast) and on (toast); a pull during the request still ends in the empty state;
+  the focus moves to the empty state after a success, stays on the button after a failure and goes to the list when
+  a return re-creates it; no tool row when empty.
+- `server.test.ts`: `readSaved` for both lists — no cookie, the cookie's token and no query, `unauthorized`, other
+  failures passed down, a new `renderId` per render drawn after `io()`, the small-photo rule.
 
 End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 
@@ -234,4 +273,49 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 
 ## Handoff
 
-Empty.
+- **Done** on `wp-29-saved` (from `main` = `d4c0d88`, after #82; independent of #83 and #84, which are open) in
+  `fcba4ca` (code and tests) and the docs commit. Two builders worked in parallel on disjoint files against the
+  orchestrator's decisions, a gate checked how the halves fit, then one end-to-end writer and two review lenses ran
+  with a refuting verifier per finding. The decisions and the legacy read are reports kept with the session, not
+  committed.
+- **Steps 1–2:** no gap. WP-24 had shipped every `ListingFeed` prop this needs and the whole cursor guard of
+  `useCursorFeed`, so neither file changed; the cursor cases for the paths `favorites` and `history` were added to
+  its tests.
+- **The legacy history rule** (acceptance line): legacy does not filter history by the hidden map
+  (`ListingFeed.jsx:86-91`). The read was of the reconstructed source at SVN r29 (release `index-BnFvC-Ft`, one
+  newer than the pinned `index-DY_DH7h-`, with no change to the saved views in its delta), not of the pinned
+  release. Read it again when WP-02 pins the baseline.
+- **Departures recorded under rule 6:**
+  - AM-94: a list entered again re-creates from that server render.
+  - AM-95: history's `seen` rule is checked on the return to the list.
+  - `clearHistory`'s signature and result are `(_input?, auth?, locale?)` → `ActionResult<null>`.
+  - `renderId` is drawn after `io()`.
+- **Review** (two lenses; each finding checked by a verifier asked to refute it; 5 of 5 confirmed, 4 distinct; all
+  fixed before the commit):
+  - `crypto.randomUUID()` ran right after the cookie read. Under `partialPrefetching` that is the runtime shell
+    stage, so it aborted the runtime prefetch, logged an error on every render and warned in dev. Fix: `await io()`
+    first.
+  - A pull while `DELETE /history` ran kept the success haptic but never showed the empty state. Fix: the screen
+    marks as cleared the list shown when the server answers.
+  - «Очистить» dropped the keyboard focus to the body, and nothing was announced. Fixes:
+    - the button uses `aria-disabled` while the request runs;
+    - the empty state takes the focus after a success;
+    - a status line, mounted before, reads «Вы ещё ничего не открывали».
+  - The return that re-creates history removed the card the listing's layer gives the focus back to. Fix: a new key
+    gives the list the focus when it was lost, i.e. on the body, detached, or in a hidden part; a visible focus
+    stays.
+  - **Mutation checks:** each fix's test fails against the unfixed code. The stale key fails 1, the missing focus
+    after a clear 1, native `disabled` 2, the missing focus on return 1, no status text 1, and `io()` after the id 4.
+- **Size** of `fcba4ca`: 19 files, +2 311 / −9 against `main`; the tests and the end-to-end spec are +1 879 of it.
+  The header's estimate was 700.
+- **Checks:** see the PR. `make ci-frontend` on `fcba4ca` was clean: app 157 files / 2405 + 1 todo, `@homi/search`
+  238 + 1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 111, `@homi/api-client` 14, `@homi/utils` 2.
+  End to end: each of the 19 files alone against a local `next start` of the `fcba4ca` build, 190 passed, none skipped: back 11, boot-failure 6, city 6, crash 4, csp 2, data 5, feed 19, filters 20, foundation 19, gates 8, launch 5, listing-actions 14, listing-contact 14, listing-open 16, photo-viewer 6, saved 10, session 7, shell 16, smoke 2. Before the review fixes the end-to-end writer ran `saved.spec.ts` 10/10 three times and the neighbouring specs green (listing-open once 15/16, then 16/16 twice; not reproduced).
+- **Open for the reviewer:**
+  - A failed clear with `dev016ErrorToastOnFailure` off is silent for a screen reader and on Desktop and Web, which
+    have no haptics. This is LB-APP-027, kept as the flag decides (DEC-36).
+  - On the static stubs a pull after a clear brings the 25 entries back.
+  - Entering a saved page reads its list again on the server each time, as legacy re-mounted it. The feed instead
+    keeps its list when a tab is entered again.
+- **Not automated:** the checklist lines stay unticked. Each also asks for ru / uz / en and light / dark, and the
+  last one for Telegram on staging (iOS, Android, Desktop, Web).

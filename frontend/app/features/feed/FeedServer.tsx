@@ -15,7 +15,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
  * Telegram for Android names a performance class below `HIGH` in its User-Agent. What only the browser knows (a lite
  * choice in storage, a slow connection, the cores and memory of the device) applies from hydration on.
  */
-async function smallPhotosOnly(): Promise<boolean> {
+export async function smallPhotosOnly(): Promise<boolean> {
   const request = await headers();
   return request.get("save-data")?.trim().toLowerCase() === "on" || isLowEndDevice({ userAgent: request.get("user-agent") ?? "" });
 }
