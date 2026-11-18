@@ -37,6 +37,8 @@ const state = vi.hoisted(() => ({
   cardLayer: vi.fn(),
   /** The stub view: its latest props and how often its mount effect ran. */
   view: { props: null as MapViewProps | null, mounts: 0 },
+  /** The stub Leaflet view (WP-28). */
+  leaflet: { props: null as MapViewProps | null, mounts: 0 },
 }));
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: (path: string, options: BffOptions) =>
@@ -73,7 +75,7 @@ vi.mock("@/lib/errors/report", async (importOriginal) => ({
   reportError: state.reportError,
 }));
 vi.mock("@/features/map/gl/library", () => ({ loadMapLibre: vi.fn() }));
-/** The view the screen loads with `next/dynamic`: it only exposes the props it is given (WP-27 step 5). */
+/** The views the screen loads with `next/dynamic`: they only expose the props they are given (WP-27 step 5). */
 vi.mock("@/features/map/gl/MapViewGL", async () => {
   const { useEffect } = await import("react");
   return {
@@ -83,6 +85,19 @@ vi.mock("@/features/map/gl/MapViewGL", async () => {
         state.view.mounts += 1;
       }, []);
       return <div data-map-view="stub" />;
+    },
+  };
+});
+vi.mock("@/features/map/leaflet/library", () => ({ loadLeaflet: vi.fn() }));
+vi.mock("@/features/map/leaflet/MapViewLeaflet", async () => {
+  const { useEffect } = await import("react");
+  return {
+    default: function StubLeafletView(props: MapViewProps) {
+      state.leaflet.props = props;
+      useEffect(() => {
+        state.leaflet.mounts += 1;
+      }, []);
+      return <div data-map-view="stub-leaflet" />;
     },
   };
 });
@@ -152,6 +167,7 @@ beforeEach(() => {
   state.status = "ready";
   state.webgl2 = true;
   state.view = { props: null, mounts: 0 };
+  state.leaflet = { props: null, mounts: 0 };
   at("/map", "city=tashkent");
   for (const mock of [state.reportError, state.impact, state.success, state.openLink, state.locationAvailable, state.getLocation, state.cardLayer]) {
     mock.mockReset();
@@ -211,40 +227,54 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
     expect(state.sent[0].path).toBe("listings/map");
   });
 
-  it("a failure of the view moves the session to the fallback: reported once, and the next mount does not try GL", async () => {
+  it("a failure of the view moves the session to Leaflet: reported once, and the next mount does not try GL", async () => {
     const first = await mount();
     act(() => props().onFail("webgl"));
+    await act(() => vi.dynamicImportSettled());
 
-    expect(document.querySelector("[data-map-unavailable]")).not.toBeNull();
-    expect(document.querySelector("[data-map-view]")).toBeNull();
+    expect(document.querySelector('[data-map-view="stub-leaflet"]')).not.toBeNull();
+    expect(document.querySelector('[data-map-view="stub"]')).toBeNull();
 
     first.unmount();
     state.view.mounts = 0;
     await mount();
 
-    expect(document.querySelector("[data-map-unavailable]")).not.toBeNull();
+    expect(document.querySelector('[data-map-view="stub-leaflet"]')).not.toBeNull();
     expect(state.view.mounts).toBe(0);
     expect(state.reportError).toHaveBeenCalledTimes(1);
     expect(state.reportError.mock.calls[0][0]).toEqual(new Error("map_gl_failed"));
     expect(state.reportError.mock.calls[0][1]).toMatchObject({ kind: "error", reason: "webgl" });
-    expect(state.sent).toHaveLength(1);
+    // The points are the screen's: one read per mount of the screen, whichever view draws them.
+    expect(state.sent).toHaveLength(2);
   });
 
-  it("without WebGL2 the rule picks Leaflet: «map unavailable», nothing asked, and the list button carries the search", async () => {
+  it("without WebGL2 the rule picks Leaflet: it gets the same props, and the points are asked for", async () => {
     state.webgl2 = false;
     at("/map", "city=tashkent&rooms_min=2");
     await mount();
+    await act(() => vi.dynamicImportSettled());
 
-    expect(screen.getByText("Карта на этом устройстве пока недоступна")).toBeTruthy();
-    expect(state.sent).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "Список" }));
+    expect(state.leaflet.mounts).toBe(1);
+    expect(state.view.mounts).toBe(0);
+    expect(state.leaflet.props).toMatchObject({ polygon: null, cityKnown: true, tiles: null, drawing: false });
+    expect(state.sent).toHaveLength(1);
+    expect(state.sent[0].path).toBe("listings/map");
+    expect(screen.queryByText("Карта на этом устройстве пока недоступна")).toBeNull();
+  });
 
-    expect(state.impact).toHaveBeenCalledTimes(1);
-    expect(nav.tab).toHaveBeenCalledTimes(1);
-    const href = vi.mocked(nav.tab).mock.calls[0][0];
-    expect(href.startsWith("/?")).toBe(true);
-    expect(new URLSearchParams(href.slice(2)).get("rooms_min")).toBe("2");
-    expect(new URLSearchParams(href.slice(2)).get("city")).toBe("tashkent");
+  it("a Leaflet failure shows the error pill; «Повторить» mounts the view anew", async () => {
+    state.webgl2 = false;
+    await mount();
+    await act(() => vi.dynamicImportSettled());
+    act(() => state.leaflet.props?.onFail("chunk"));
+
+    const pill = document.querySelector('[data-map-status="error"]');
+    expect(pill).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+    await act(() => vi.dynamicImportSettled());
+
+    expect(state.leaflet.mounts).toBe(2);
+    expect(state.reportError).not.toHaveBeenCalled();
   });
 });
 

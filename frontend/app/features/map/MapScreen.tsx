@@ -5,7 +5,7 @@ import { toSearchParams } from "@homi/search";
 import { cn } from "@homi/ui";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { SourceReporter } from "@/features/shell/SourceReporter";
 import { usePathname } from "@/i18n/navigation";
@@ -26,7 +26,6 @@ import { MapLoading } from "./MapLoading";
 import { MapNote } from "./MapNote";
 import { MapSelectionCard } from "./MapSelectionCard";
 import { MapStatusPill } from "./MapStatusPill";
-import { MapUnavailable } from "./MapUnavailable";
 import { attributionOf, type Basemap, basemapOf } from "./tiles";
 import type { CityView, MapViewProps, Selection } from "./types";
 import { useCardLayer } from "./useCardLayer";
@@ -54,6 +53,41 @@ const MapViewGL = dynamic<MapViewProps>(() => import("./gl/MapViewGL").catch(() 
   loading: MapLoading,
 });
 
+/**
+ * The Leaflet view after its chunk failed to load: `next/dynamic` keeps a loader's first answer, so each mount of
+ * this stand-in asks for the chunk again and renders the view once it arrives; a failure is reported to `MapScreen`,
+ * which shows the error pill whose «Повторить» mounts it anew (WP-28 "Leaflet view").
+ */
+function LeafletChunkRetry(props: MapViewProps) {
+  const { onFail } = props;
+  const [View, setView] = useState<ComponentType<MapViewProps> | null>(null);
+  useEffect(() => {
+    let live = true;
+    import("./leaflet/MapViewLeaflet").then(
+      (module) => {
+        if (live) {
+          setView(() => module.default);
+        }
+      },
+      () => {
+        if (live) {
+          onFail("chunk");
+        }
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [onFail]);
+  return View === null ? <MapLoading /> : <View {...props} />;
+}
+
+/** Leaflet's view: client only, loaded when the engine is Leaflet — by the rule or after a GL failure (WP-28). */
+const MapViewLeaflet = dynamic<MapViewProps>(
+  () => import("./leaflet/MapViewLeaflet").catch(() => ({ default: LeafletChunkRetry })),
+  { ssr: false, loading: MapLoading },
+);
+
 function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
   return a.length === b.length && a.every((number, index) => number === b[index]);
 }
@@ -62,10 +96,11 @@ type Note = { kind: "points" } | { kind: LocateFailure };
 
 /**
  * The search map (SCR-011 … SCR-013, `03` §1.8, BR-APP-062): everything that is the same on both engines. The engine
- * of the session (`useEngine`) picks the view — a spinner until it is known, `MapUnavailable` for Leaflet until WP-28
- * — and a GL failure the view reports moves the session to the fallback (LB-APP-019). The map lists the search of
+ * of the session (`useEngine`) picks the view — a spinner until it is known, then GL or Leaflet — and a GL failure
+ * the view reports moves the session to Leaflet for good (LB-APP-019, `markGlFailed`). Leaflet failing too (its
+ * chunk or its library) shows the error pill, whose «Повторить» mounts the view anew and so loads it again. The map lists the search of
  * its own address (`useScreenSearchState`, KI-43); its points are a browser read (`useMapPoints`, `25` §3.5), asked
- * for only while the session is ready and a GL view can draw them. Their answer's `meta.source` reaches the demo
+ * for only while the session is ready and the engine is known. Their answer's `meta.source` reaches the demo
  * marker again each time the map's own address is shown — Back from a listing opened from the card, a closed sheet, a
  * tab round trip — and never under a layer (`25` §4.4, KI-43).
  *
@@ -88,7 +123,7 @@ export function MapScreen() {
   const own = matchRoute(usePathname()).route === "map";
   const { filters } = useScreenSearchState("map");
   const { status } = useSession();
-  const points = useMapPoints(filters, { enabled: status === "ready" && engine === "gl" });
+  const points = useMapPoints(filters, { enabled: status === "ready" && engine !== null });
   const hidden = useSessionMap("hidden");
   const { loaded, reference, findCity } = useReference();
   const { scheme, lite } = useDocumentLook();
@@ -183,11 +218,17 @@ export function MapScreen() {
   const onLocateFailure = useCallback((failure: LocateFailure) => setNote({ kind: failure }), []);
   const locate = useLocate(onLocateFailure);
 
+  // Leaflet is the last engine: its failure is shown, and «Повторить» mounts the view anew.
+  const [leafletFailed, setLeafletFailed] = useState(false);
+  const [leafletAttempt, setLeafletAttempt] = useState(0);
+  const onLeafletFail = useCallback(() => setLeafletFailed(true), []);
+  const retryLeaflet = useCallback(() => {
+    setLeafletFailed(false);
+    setLeafletAttempt((attempt) => attempt + 1);
+  }, []);
+
   if (engine === null) {
     return <MapLoading />;
-  }
-  if (engine === "leaflet") {
-    return <MapUnavailable />;
   }
 
   let noteText: string | null = null;
@@ -197,10 +238,12 @@ export function MapScreen() {
     noteText = t(note.kind === "denied" ? "map.locateDenied" : "map.locateFail");
   }
 
+  const View = engine === "gl" ? MapViewGL : MapViewLeaflet;
   return (
     <>
       <div data-map-screen="" className="fixed inset-0">
-        <MapViewGL
+        <View
+          key={engine === "gl" ? "gl" : `leaflet-${leafletAttempt}`}
           groups={points.groups}
           responseId={points.responseId}
           selection={selection}
@@ -215,7 +258,7 @@ export function MapScreen() {
           lite={lite}
           me={locate.me}
           drawing={false}
-          onFail={markGlFailed}
+          onFail={engine === "gl" ? markGlFailed : onLeafletFail}
           onBasemap={setDrawn}
         />
       </div>
@@ -226,7 +269,11 @@ export function MapScreen() {
           polygon === null ? "top-[calc(var(--top-inset)+70px)]" : "top-[calc(var(--top-inset)+114px)]",
         )}
       >
-        <MapStatusPill status={points.status} error={points.error} onRetry={points.retry} />
+        {engine === "leaflet" && leafletFailed ? (
+          <MapStatusPill status="error" error={null} onRetry={retryLeaflet} />
+        ) : (
+          <MapStatusPill status={points.status} error={points.error} onRetry={points.retry} />
+        )}
         <MapNote text={noteText} />
       </div>
       {locate.available && selection === null && !drawing ? (

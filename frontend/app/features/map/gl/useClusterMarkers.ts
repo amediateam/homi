@@ -8,7 +8,7 @@ import { tg } from "@/lib/telegram";
 import { CLUSTER_MS, CLUSTER_PADDING, GL_MAX_ZOOM } from "../camera";
 import { SPREAD_LABEL_BOX, spreadStackLabels } from "../pins";
 import type { MapGroup, MapViewProps, Selection } from "../types";
-import { clusterElement, pinElement, setActive, spreadDotElement, spreadPinElement, stackElement } from "./markerElements";
+import { clusterElement, pinElement, setActive, spreadDotElement, spreadPinElement, stackElement } from "../markerElements";
 import { type ClusterIndex, clusterZoom, type GroupFeature, isCluster, leavesByPrice } from "./useClusterIndex";
 import { type GlMap, type MapHandle, type MapInstance, markerRoot } from "./useMapInstance";
 
