@@ -89,8 +89,8 @@ export async function RadarTabServer() {
 
 /**
  * The radar sheet of `/radars/<id>` (SCR-028) for both layouts: the layout's own `params` (a hidden copy of another
- * radar keeps its id), an id that is not a ULID is the not-found screen, and the editor (`children`) renders inside
- * the sheet, so the sheet stays mounted under it.
+ * radar keeps its id), an id that is not a ULID is the not-found screen, and the editor (`children`) renders beside
+ * the sheet, which the layout keeps mounted under it.
  */
 export async function RadarSheetServer({
   params,

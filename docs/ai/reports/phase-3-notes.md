@@ -1185,3 +1185,106 @@ the listing layer, the rest WP-33's), KI-42 resolved for the listing layer, KI-4
 Merged on 2026-11-17 as #81 (`95315fd`), on «сливай #81», after green `frontend` (run 44146798245), `backend` (run
 44146798129) and `frontend-e2e` (run 44146798203, 180 passed). WAITING for the regular deploy of the production track
 and the checks inside Telegram on staging.
+
+## AB. Development track, 2026-11-18/19 — WP-30, radars
+
+Branch `wp-30-radars`, on `main` = `d4c0d88` (after #82). WP-30 depends on WP-25 and WP-26 only, so it does not stack
+on #83, #84 or #85; §Y, §Z and §AA are on those open PRs, and this letter keeps the order once they merge. Five
+commits: `7c573de` (the radar data layer, the subscribe flow and the seams of the earlier packages), `1350bc2` (the
+radar tab, the sheets, the survey, the nudges and the feed card), `22bd976` (the end-to-end specs, the `@radars-off`
+run and its CI step; the editor beside the radar sheet, the radar tab's chrome on Back), `dafe3bb` (the review and
+end-to-end fixes) and `0eafcf8` (the tab read at request time only, the cookie first). It ran as plain subagents, each
+owning its own files, against the orchestrator's decisions and three fact maps (the seams, the libraries and the
+contract) and a read-only look at the legacy source:
+- **Stage 1:** the data layer (Server Actions, `normalize.ts`, `useRadars`, chat access, settings, `filtersHash`)
+  beside the UI and shell seams (`instant`, the sweep art, the switched-off redirect, routes, `from=radar`, «+», the
+  catalogues).
+- **Stage 2:** the subscribe flow (`subscribe.ts`, `toasts.ts`, `match.ts`) and its callers.
+- **Stage 3:** the radar tab and sheet; the new-radar, editor and survey sheets; the nudge host and the follow nudge.
+- **Stage 4:** the visits, the return banner and the radar card in the feed.
+- **End to end:** three writers (the radar screens and forms; the nudges; the switched-off run with its config and
+  workflow step).
+- **Review:** three lenses (state and navigation; data and API; parity, accessibility and tests), each finding checked
+  by a verifier asked to refute it, then one round of three fixers.
+
+The specification is corrected where the code differs (rule 6), and its "Handoff" is filled with the review, the
+mutation checks and the questions for the reviewer.
+
+The radar part of the Mini App now works on stubs:
+- **Radar tab:** the "soon", loading, error, empty and tile states, from one `GET /radars?include=previews`; the tile
+  switch; pull-to-refresh; «+» only while radars are on.
+- **Radar sheet:** the strip of finds, the send switch, the mode rows with the digest hours, the editor, unhide,
+  delete with the survey, and «Смотреть найденное» with the return to the same sheet and scroll position.
+- **Forms:** «Новый радар» and «Условия радара» over `FiltersForm`, and «Нашли жильё?».
+- **One subscribe flow** with the chat-access flow, for the filters footer, the few-results note, the forms and the
+  three offers.
+- **Nudges:** `NudgeHost` with one slot (return banner > follow nudge > home offer), the follow nudge, the search
+  visits, the return banner and the radar card in the feed; "shown" marked on the first render (LB-APP-050).
+- **Switched off (DEC-51):** no radar request, no offer and no radar sheet; the tab says radars are coming soon.
+- **Shared changes:** `invokeAction`, `readResource`, `seedResource` aborting a read in flight and `invalidate`
+  keeping a user-less entry with data as stale; `currentAddress()`; `routes.radarNew(q?, entry?)` and
+  `routes.radarFound({ trigger })`; `write` dropping `from=radar`, `rememberHref` skipping it, the `TabBar` rule and
+  the radar tab's chrome under a radar sheet; `instant` of `RouteSheet` and `BottomSheet`; the restyled `Switch`;
+  `filtersHash` of `@homi/search`; the second end-to-end run in CI.
+
+ASSUMPTION_MISMATCH AM-96 (2026-11-18):
+- **Assumption.** WP-30's tab read `GET /radars?include=previews` on the server and handed it to `useRadars` as
+  `initial`, taking the tab entered again to show a fresh list, as legacy re-mounted `RadarScreen` on every entry.
+- **What was found.** `useResource` ignores a second `initial` for a key it already holds, and Next keeps up to three
+  routes alive under `<Activity>` (`preserving-ui-state.md`), so a tab entered again would keep its old list — the
+  class of WP-29's AM-94.
+- **Resolution.** Every server render that reads the user draws a new `renderId` after `io()`, and `RadarScreen`
+  adopts each new one once: a seed of the render's list, or a `/bff` re-read when the render has none (header mode).
+  A `renderId` seen before (Back, the return from a layer) changes nothing. The read runs at request time only, the
+  cookie first.
+
+ASSUMPTION_MISMATCH AM-97 (2026-11-18):
+- **Assumption.** WP-30's "Tests" had the default run exclude the tag `@radars-off` in `frontend/playwright.config.ts`
+  and the second CI step run `pnpm test:e2e --grep @radars-off`.
+- **What was found.** Playwright 1.65.1 applies a CLI `--grep` in addition to the config's `grepInvert`, never instead
+  of it, so the excluded tests cannot be selected that way.
+- **Resolution.** `E2E_RADARS_OFF=1` switches the config to `grep: /@radars-off/` (`@flaky` stays out in CI). The
+  workflow starts a second API on stubs on `127.0.0.1:8081` with `RADAR_CREATION_ENABLED: 'false'`, checks that
+  `GET /reference` answers `"radars_enabled":false`, and runs the tagged tests against it after a green first run.
+
+ASSUMPTION_MISMATCH AM-98 (2026-11-18):
+- **Assumption.** WP-30 had `return-nudge.spec.ts` and `feed-radar.spec.ts` use a search that no fixture radar of
+  WP-13 covers.
+- **What was found.** By `hasRadarFor` (for default filters, any radar of the same base deal and city) the fixtures
+  `…0001`, `…0002` (Tashkent long rent) and `…0003` (Tashkent sale) cover every default Tashkent search. The
+  uncovered default searches of the other stub cities are too short for the 8th-card slot and show the few-results
+  note.
+- **Resolution.** The default-filter cases answer `**/bff/radars*` themselves through `page.route`, registered before
+  the launch, with the API envelope (a bare `[]` reads as a failed read and shows no offer). Custom searches keep the
+  real list, and each spec checks that the offer is absent while the fixture radars are in place.
+
+ASSUMPTION_MISMATCH AM-99 (2026-11-18):
+- **Assumption.** WP-30's checklist and "Tests" took the local stack's backend env to have
+  `RADAR_CREATION_ENABLED=true`, as `backend/.env.example` does.
+- **What was found.** `GET /reference` on `api.homi.loc` answered `radars_enabled: false` on 2026-11-18: the developer
+  machine's backend env has radars switched off.
+- **Resolution.** The local end-to-end runs with radars on used a second stub API (`php -S 127.0.0.1:8092` from
+  `backend/public` with `RADAR_CREATION_ENABLED=true` in the process env and `PHP_CLI_SERVER_WORKERS=6`); the
+  radars-off spec ran against `api.homi.loc`. KI-65.
+
+Review findings and fixes, all in `dafe3bb`: 20 findings, 13 confirmed by the verifiers (12 distinct, one found by two
+lenses), 7 refuted; the end-to-end stage found four app bugs (K1 … K4: a find's listing under the radar sheet, Back
+from a directly loaded editor, the radar feed opened at the tab's scroll, one radar read too many after a sign-in).
+Each fix has a test that fails on the unfixed code; the specification's "Handoff" lists them with their mutation
+counts.
+
+Verified:
+- **On `7c573de` … `0eafcf8`, between the stages:** the app typecheck, `pnpm -r lint` and the unit suite after each
+  stage (app 164 files / 2510 + 1 todo after the subscribe stage, 180 / 2797 after the screens, 181 / 2833 after the
+  fixes).
+- **`make ci-frontend` on `0eafcf8`:** exit 0, the build without a prerender warning. Unit tests: app 181 files /
+  2833 + 1 todo, `@homi/search` 241 + 1 todo, `@homi/testing` 95, `@homi/ui` 138, `@homi/i18n` 112,
+  `@homi/api-client` 14, `@homi/utils` 2.
+- **End to end, locally** (a `next start` on :3001 against a second stub API with radars on, KI-65; one on :3003
+  against `api.homi.loc` with radars off): before the fixes every default file green, each at least twice, and
+  `radars-soon` 14 passed four times; after the fixes, on the `0eafcf8` build, `radars.spec.ts` 31 passed (its seven
+  former `fixme` cases included), back 11, boot-failure 6 and city 6 — then the local database host went down (a power
+  cut, 2026-11-19) and the run stopped there. The whole suite, both runs, is CI's.
+
+Known issues: KI-64 (info: the stub radar writes are not stored), KI-65 (low: radars switched off in this machine's
+backend env), KI-66 (low: a directly loaded `/filters?pick=city` closed at depth 0 stacks two filter sheets, WP-25).

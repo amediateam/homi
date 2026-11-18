@@ -23,7 +23,7 @@ const LIST_KEYS = [RADARS_KEY, RADARS_PREVIEWS_KEY] as const;
 export interface UseRadarsOptions {
   /** The radar tab's list, with the previews; the plain list by default. */
   previews?: boolean;
-  /** The server's read in cookie mode, normalised on the client (`normalize.ts` is client only). */
+  /** The server's read in cookie mode, normalised on the server (`RadarTabServer`). */
   initial?: Radar[];
   /** The caller's own gate; ANDed with `useRadarsEnabled()` and a ready session. */
   enabled?: boolean;

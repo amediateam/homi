@@ -92,7 +92,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | TODO |
 | [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | TODO |
 | [WP-29](WP-29-saved.md) | Favourites and history | WP-26 | TODO |
-| [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | TODO |
+| [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | REVIEW (#86) |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23 | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
 | [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32 | TODO |
