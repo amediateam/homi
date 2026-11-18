@@ -13,8 +13,22 @@ export type QuickFilterKind = (typeof QUICK_FILTER_KINDS)[number];
 export const SETTINGS_PAGES = ["theme", "graphics", "language", "currency", "quiet-hours", "digest", "hidden"] as const;
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
-/** Parameters that are never filter keys: where a sheet came from, the focused section, and the layer parameters. */
-export const RESERVED_PARAMS = ["from", "focus", "pick", "draw", "pin", "step", "i"] as const;
+/**
+ * Where a new radar was asked for from a nudge (the return banner, the radar card in the feed; WP-30): the `entry` of
+ * the new-radar sheet's address, which its create sends. Without one the sheet creates with `empty`.
+ */
+export const RADAR_NEW_ENTRIES = ["return", "feed"] as const;
+export type RadarNewEntry = (typeof RADAR_NEW_ENTRIES)[number];
+
+/** What opened the survey «Нашли жильё?» (SCR-031): a radar paused or deleted with `ask_found`. */
+export const FOUND_TRIGGERS = ["pause", "delete"] as const;
+export type FoundTrigger = (typeof FOUND_TRIGGERS)[number];
+
+/**
+ * Parameters that are never filter keys: where a sheet came from, the focused section, the layer parameters, the
+ * entry of a new radar and the trigger of the survey.
+ */
+export const RESERVED_PARAMS = ["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger"] as const;
 
 /** Parameters that open a layer over the address they are on; Back removes them first. */
 const LAYER_PARAMS = ["pick", "draw", "pin", "step"] as const;
@@ -52,11 +66,12 @@ export const SEARCH_KEYS = [
   "sort",
 ] as const;
 
-function withQuery(path: string, query?: Query): string {
-  if (!query) {
-    return path;
-  }
+/** A query as parameters, in its order; `null` and `undefined` values are left out, an array repeats its key. */
+function paramsOf(query?: Query): URLSearchParams {
   const search = new URLSearchParams();
+  if (!query) {
+    return search;
+  }
   const entries: Iterable<[string, QueryValue]> = query instanceof URLSearchParams ? query.entries() : Object.entries(query);
   for (const [key, value] of entries) {
     if (value === null || value === undefined) {
@@ -66,8 +81,24 @@ function withQuery(path: string, query?: Query): string {
       search.append(key, String(item));
     }
   }
-  const text = search.toString();
+  return search;
+}
+
+function withQuery(path: string, query?: Query): string {
+  const text = paramsOf(query).toString();
   return text ? `${path}?${text}` : path;
+}
+
+/**
+ * The new-radar address: `q` (the search state the sheet starts from) with `entry` set last. A copy, never a spread:
+ * `{ ...new URLSearchParams() }` is `{}`.
+ */
+function radarNewHref(q?: Query, entry?: RadarNewEntry): string {
+  const params = paramsOf(q);
+  if (entry) {
+    params.set("entry", entry);
+  }
+  return withQuery("/radars/new", params);
 }
 
 export const routes = {
@@ -85,10 +116,10 @@ export const routes = {
   saved: () => "/saved",
   history: () => "/saved/history",
   radars: () => "/radars",
-  radarNew: (q?: Query) => withQuery("/radars/new", q),
+  radarNew: (q?: Query, entry?: RadarNewEntry) => radarNewHref(q, entry),
   radar: (id: string) => `/radars/${id}`,
   radarEdit: (id: string) => `/radars/${id}/edit`,
-  radarFound: (q: Query) => withQuery("/radars/found", q),
+  radarFound: (q: { trigger: FoundTrigger }) => withQuery("/radars/found", q),
   settings: () => "/settings",
   settingsPage: (name: SettingsPage) => `/settings/${name}`,
   welcomeLanguage: () => "/welcome/language",
@@ -113,6 +144,14 @@ export function isQuickFilterKind(value: string): value is QuickFilterKind {
 
 export function isSettingsPage(value: string): value is SettingsPage {
   return (SETTINGS_PAGES as readonly string[]).includes(value);
+}
+
+export function isRadarNewEntry(value: string | null | undefined): value is RadarNewEntry {
+  return (RADAR_NEW_ENTRIES as readonly (string | null | undefined)[]).includes(value);
+}
+
+export function isFoundTrigger(value: string | null | undefined): value is FoundTrigger {
+  return (FOUND_TRIGGERS as readonly (string | null | undefined)[]).includes(value);
 }
 
 /** The segments of a locale-less pathname: `/listing/5/` → `["listing", "5"]`. */

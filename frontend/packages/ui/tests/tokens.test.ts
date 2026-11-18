@@ -183,6 +183,19 @@ describe("rules of the stylesheet", () => {
     expect(reduced).toMatch(/(?:^|\n)\s*\*,\s*::before,\s*::after\s*\{\s*animation: none !important;\s*\}/);
   });
 
+  it("animates the radar art with legacy's two keyframes, stopped under lite and on reduced motion (WP-30)", () => {
+    const motion = css["motion.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(motion).toMatch(/@keyframes radar-turn\s*\{\s*to\s*\{\s*transform: rotate\(360deg\);\s*\}\s*\}/);
+    expect(motion).toMatch(
+      /@keyframes radar-blip\s*\{\s*0%,\s*8%\s*\{\s*opacity: 1;\s*transform: scale\(1\);\s*\}\s*60%,\s*100%\s*\{\s*opacity: 0\.15;\s*transform: scale\(0\.8\);\s*\}\s*\}/,
+    );
+    const theme = css["theme.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(theme).toMatch(/--animate-radar-turn: radar-turn 3\.2s linear infinite;/);
+    expect(theme).toMatch(/--animate-radar-blip: radar-blip 3\.2s ease-out infinite;/);
+    expect(declarations("lite.css", "html.lite [data-radar-animation]")).toEqual({ animation: "none" });
+    // Reduced motion needs no rule of its own: the global one stops every keyframe animation (the test above).
+  });
+
   it("declares the hooks WP-23 fills", () => {
     expect(css["layout.css"]).toMatch(/html\.fullscreen\s*\{/);
     expect(css["layout.css"]).toMatch(/html\.chrome-mini\s*\{/);

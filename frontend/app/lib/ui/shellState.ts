@@ -50,12 +50,19 @@ export function lastSavedHref(): string {
 /**
  * Called by `AppShell` on every address. A search root (`/`, `/map`) is kept with its filter keys and sort only — a
  * layer (`draw`, `pin`), a sheet's `from` and foreign parameters (`listing`, `utm_*`) are not brought back by a tab
- * press. A saved root is kept as it is. Every other address leaves both alone.
+ * press. A search root with `from=radar` is a radar's feed («Смотреть найденное», WP-30), not the user's search: it
+ * is not kept, so the search tab and the radar «+» still hold the user's own filters after Back; once a change on
+ * that feed drops the mark (`useSearchState`), the address is the search and is kept again. A saved root is kept as it
+ * is. Every other address leaves both alone.
  */
 export function rememberHref(pathname: string, search: string | URLSearchParams): void {
   const { route } = matchRoute(pathname);
   if (route === "feed" || route === "map") {
-    const query = searchKeysOf(new URLSearchParams(search));
+    const params = new URLSearchParams(search);
+    if (params.get("from") === "radar") {
+      return;
+    }
+    const query = searchKeysOf(params);
     searchHref = route === "feed" ? routes.feed(query) : routes.map(query);
   } else if (route === "saved" || route === "history") {
     savedHref = route === "saved" ? routes.saved() : routes.history();

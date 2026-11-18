@@ -120,6 +120,20 @@ describe("the merged catalogues", () => {
     expect(merged.ru["report.agentHint"]).toBe("Отметим номер как риелторский");
     expect(merged.ru["toast.reportedAgent"]).toBe("Отметили номер как риелторский");
   });
+
+  it("carry the three keys of WP-30 next to the legacy radar and toast keys", () => {
+    const values = (key: string) => locales.map((locale) => merged[locale][key]);
+    expect(values("radar.soon.title")).toEqual(["Радар скоро заработает", "Radar tez orada ishga tushadi", "Radar is coming soon"]);
+    expect(values("radar.soon.body")).toEqual([
+      "Мы включим уведомления о новых объявлениях в ближайшее время.",
+      "Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz.",
+      "We’ll turn on alerts about new listings shortly.",
+    ]);
+    expect(values("toast.subDeleted")).toEqual(["Радар удалён", "Radar oʻchirildi", "Radar deleted"]);
+    // The legacy keys of the two namespaces stay beside them.
+    expect(merged.ru["radar.delete"]).toBe(legacyRu.radar.delete);
+    expect(merged.ru["toast.subLimit"]).toBe(legacyRu.toast.subLimit);
+  });
 });
 
 describe("the legacy layer", () => {

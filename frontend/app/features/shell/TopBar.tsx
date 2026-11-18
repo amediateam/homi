@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { FeedHeader } from "@/features/feed/FeedHeader";
+import { useRadarsEnabled } from "@/features/radars/capability";
 import { Link, usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
 import { matchRoute, routes } from "@/lib/navigation/routes";
@@ -290,22 +291,27 @@ function SavedBar() {
 }
 
 /**
- * Radar: the title and «+», a new radar from the search keys of the last search (`lastSearchQuery`, D-SH-4). WP-30
- * gives it its action and hides it while radars are switched off (DEC-51).
+ * Radar: the title and «+» (SCR-026). «+» pushes the new-radar sheet with the search keys of the last search
+ * (`lastSearchQuery`, D-SH-4) after a light impact, in every state of the tab and at the radar limit too (legacy);
+ * without an `entry` the sheet creates with `empty`. It is not rendered while radars are switched off
+ * (`useRadarsEnabled()`, DEC-51), nor before the reference data says they are on; the title stays.
  */
 function RadarsBar() {
   const t = useTranslations();
+  const radarsEnabled = useRadarsEnabled();
   return (
     <ScreenHead title={t("tab.subs")}>
-      <Button asChild variant="secondary" size="icon">
-        <Link
-          href={routes.radarNew(lastSearchQuery())}
-          aria-label={t("sheet.createTitle")}
-          onClick={() => tg.haptic.impact()}
-        >
-          <Plus size={20} />
-        </Link>
-      </Button>
+      {radarsEnabled ? (
+        <Button asChild variant="secondary" size="icon">
+          <Link
+            href={routes.radarNew(lastSearchQuery())}
+            aria-label={t("sheet.createTitle")}
+            onClick={() => tg.haptic.impact()}
+          >
+            <Plus size={20} />
+          </Link>
+        </Button>
+      ) : null}
     </ScreenHead>
   );
 }

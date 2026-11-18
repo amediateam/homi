@@ -46,6 +46,13 @@
     "agentHintReview": "We’ll check the number and mark it if it’s an agent"
   },
   "toast": {
-    "reportedAgentReview": "Thanks, we’ll check"
+    "reportedAgentReview": "Thanks, we’ll check",
+    "subDeleted": "Radar deleted"
+  },
+  "radar": {
+    "soon": {
+      "title": "Radar is coming soon",
+      "body": "We’ll turn on alerts about new listings shortly."
+    }
   }
 }

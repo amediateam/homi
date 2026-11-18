@@ -10,7 +10,7 @@ vi.mock("@/lib/session/bootstrap", () => ({ reauthenticate: () => reauthenticate
 const reportSource = vi.fn();
 vi.mock("@/lib/data/sources", () => ({ reportSource: (...args: unknown[]) => reportSource(...args) }));
 
-const { useAction } = await import("@/lib/actions/useAction");
+const { invokeAction, useAction } = await import("@/lib/actions/useAction");
 const { clearAuth, setCookieAuth, setHeaderAuth } = await import("@/lib/session/store");
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -79,5 +79,24 @@ describe("useAction (WP-22)", () => {
     const { result } = renderHook(() => useAction(action), { wrapper });
 
     await expect(result.current(42)).resolves.toMatchObject({ ok: false, error: "offline", status: 0 });
+  });
+});
+
+describe("invokeAction (WP-30)", () => {
+  it("is the same call outside a component: the locale it is given, the token in header mode, one re-authentication", async () => {
+    setHeaderAuth("old-token", null);
+    const action = vi.fn<(input: number, auth?: { token?: string }, locale?: string) => Promise<ActionResult<{ favorite: boolean }>>>();
+    action.mockResolvedValueOnce(unauthorized).mockResolvedValueOnce(success);
+    reauthenticate.mockImplementation(async () => {
+      setHeaderAuth("new-token", null);
+      return true;
+    });
+
+    await expect(invokeAction(action, 42, "en")).resolves.toEqual(success);
+    expect(action.mock.calls).toEqual([
+      [42, { token: "old-token" }, "en"],
+      [42, { token: "new-token" }, "en"],
+    ]);
+    expect(reportSource).toHaveBeenCalledWith("stub");
   });
 });

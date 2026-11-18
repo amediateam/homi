@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isFoundTrigger,
   isListingNumber,
   isQuickFilterKind,
   isRadarId,
+  isRadarNewEntry,
   isRootTab,
   parentOf,
   RESERVED_PARAMS,
@@ -40,7 +42,11 @@ describe("builders", () => {
     [routes.radarNew({ city: "x" }), "/radars/new?city=x"],
     [routes.radar(RADAR), `/radars/${RADAR}`],
     [routes.radarEdit(RADAR), `/radars/${RADAR}/edit`],
-    [routes.radarFound({ radar: RADAR }), `/radars/found?radar=${RADAR}`],
+    [routes.radarNew(params("city=x&rooms_min=2"), "return"), "/radars/new?city=x&rooms_min=2&entry=return"],
+    [routes.radarNew({ city: "x", types: ["flat", "house"] }, "feed"), "/radars/new?city=x&types=flat&types=house&entry=feed"],
+    [routes.radarNew(undefined, "feed"), "/radars/new?entry=feed"],
+    [routes.radarFound({ trigger: "pause" }), "/radars/found?trigger=pause"],
+    [routes.radarFound({ trigger: "delete" }), "/radars/found?trigger=delete"],
     [routes.settings(), "/settings"],
     [routes.settingsPage("quiet-hours"), "/settings/quiet-hours"],
     [routes.welcomeLanguage(), "/welcome/language"],
@@ -54,6 +60,18 @@ describe("builders", () => {
 
   it("encodes values", () => {
     expect(routes.feed({ city: "a b&c" })).toBe("/?city=a+b%26c");
+  });
+
+  it("radarNew copies the query it is given: the caller's parameters are left as they were", () => {
+    const query = params("city=x&deal=sale");
+    expect(routes.radarNew(query, "return")).toBe("/radars/new?city=x&deal=sale&entry=return");
+    expect(query.toString()).toBe("city=x&deal=sale");
+  });
+
+  it("radarNew sets one entry: the given one replaces an entry already in the query; none keeps the query's", () => {
+    expect(routes.radarNew(params("entry=return&city=x"), "feed")).toBe("/radars/new?entry=feed&city=x");
+    expect(routes.radarNew({ entry: "return", city: "x" }, "feed")).toBe("/radars/new?entry=feed&city=x");
+    expect(routes.radarNew(params("city=x&entry=feed"))).toBe("/radars/new?city=x&entry=feed");
   });
 });
 
@@ -69,6 +87,13 @@ describe("parameter checks", () => {
     expect([RADAR.slice(1), `${RADAR}0`, "81JD7K3QZ8V6R3M2N4P5Q6R7S8", "01JD7K3QZ8V6R3M2N4P5Q6R7SU", "12"].some(isRadarId)).toBe(
       false,
     );
+  });
+
+  it("accepts the two entries of a new radar and the two triggers of the survey", () => {
+    expect(["return", "feed"].every(isRadarNewEntry)).toBe(true);
+    expect(["empty", "filters", "Return", "", null, undefined].some(isRadarNewEntry)).toBe(false);
+    expect(["pause", "delete"].every(isFoundTrigger)).toBe(true);
+    expect(["paused", "Delete", "", null, undefined].some(isFoundTrigger)).toBe(false);
   });
 
   it("accepts the three quick filters", () => {
@@ -98,10 +123,11 @@ describe("isRootTab", () => {
 
 describe("searchStateOf", () => {
   it("drops the reserved parameters and keeps the rest", () => {
-    expect([...RESERVED_PARAMS]).toEqual(["from", "focus", "pick", "draw", "pin", "step", "i"]);
+    expect([...RESERVED_PARAMS]).toEqual(["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger"]);
     expect(searchStateOf(params("city=x&from=map&focus=pets&i=2&sort=cheap&utm=1")).toString()).toBe(
       "city=x&sort=cheap&utm=1",
     );
+    expect(searchStateOf(params("entry=return&city=x&trigger=pause&from=radar")).toString()).toBe("city=x");
   });
 
   it("knows the 25 filter keys and sort", () => {
@@ -148,7 +174,7 @@ describe("parentOf", () => {
     ["/listing/5/actions", "", "/listing/5"],
     ["/radars/new", "city=x", "/radars"],
     [`/radars/${RADAR}`, "", "/radars"],
-    ["/radars/found", `radar=${RADAR}`, "/radars"],
+    ["/radars/found", "trigger=pause", "/radars"],
     [`/radars/${RADAR}/edit`, "", `/radars/${RADAR}`],
     ["/settings/theme", "", "/settings"],
     ["/settings/graphics", "", "/settings"],

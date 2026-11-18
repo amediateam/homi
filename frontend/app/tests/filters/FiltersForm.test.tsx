@@ -84,7 +84,11 @@ vi.mock("@/features/radars/capability", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/features/radars/capability")>();
   return { ...real, useRadarsEnabled: () => real.useRadarsEnabled({ ready: state.ready }) };
 });
-vi.mock("@/features/radars/subscribe", () => ({ subscribe: vi.fn(), useHasActiveRadar: () => state.active }));
+/** The footer's ✓ asks `useHasActiveRadar` of `match.ts` (tested in `tests/radars/match.test.ts`). */
+vi.mock("@/features/radars/match", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/radars/match")>()),
+  useHasActiveRadar: () => state.active,
+}));
 
 import { FiltersForm, type FiltersFormProps } from "@/features/filters/FiltersForm";
 import { normalizeFlow } from "@/features/filters/useLiveStats";

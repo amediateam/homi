@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useSaveCity } from "@/features/city/useCityPick";
-import { subscribe } from "@/features/radars/subscribe";
+import { useSubscribe } from "@/features/radars/subscribe";
 import type { RoutePresentation } from "@/features/shell/RouteSheet";
 import { reportError } from "@/lib/errors/report";
 import { devFlags } from "@/lib/flags";
@@ -57,8 +57,9 @@ function useOncePerShowing(address: string): () => boolean {
  *   included — starts from the long-term defaults of its city; the form scrolls to the pets section.
  * - «Показать …»: a medium impact; the draft's city saved when the nested picker changed it (`useSaveCity`); then
  *   `applyFilters` to the map with `from=map`, else to the feed — the sort kept only where the city still offers it.
- * - «Включить радар»: `subscribe(draft, "filters", relaxed)` while the button is disabled; on success the sheet
- *   closes without applying, on failure it stays (the toasts are WP-30's).
+ * - «Включить радар»: `useSubscribe().subscribe(draft, "filters", relaxed, { scope: "sheet" })` while the button is
+ *   disabled (WP-30): on success the sheet closes without applying and the toast shows over the feed; on failure it
+ *   stays and the toast shows inside it.
  * - «Обвести на карте»: the city saved when it changed, `requestDraw()`, then `closeThen` to the map with the draft
  *   without districts and zones and no `draw` parameter (the map opens drawing as a pushed layer, WP-28); once per
  *   showing of the sheet.
@@ -72,6 +73,7 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
   const { findCity } = useReference();
   const { back } = useBack();
   const saveCity = useSaveCity();
+  const { subscribe } = useSubscribe();
   const [submitting, setSubmitting] = useState(false);
   const rules = searchRules(devFlags);
   const focus = address?.get("focus") ?? null;
@@ -101,7 +103,7 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
       return;
     }
     setSubmitting(true);
-    void subscribe(draft, "filters", relaxed).then(
+    void subscribe(draft, "filters", relaxed, { scope: "sheet" }).then(
       (result) => {
         setSubmitting(false);
         if (result.ok) {

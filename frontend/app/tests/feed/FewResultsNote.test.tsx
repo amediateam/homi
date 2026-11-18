@@ -12,13 +12,22 @@ const state = vi.hoisted(() => ({
   push: vi.fn(),
   subscribe: vi.fn(),
   hasRadar: false,
-  /** `null`: the real `radarsReady`; a boolean forces the constant (WP-30 flips it). */
+  /** The filters `useHasActiveRadar` was asked about, render by render. */
+  asked: [] as unknown[],
+  /** `null`: the real `radarsReady` (on since WP-30); a boolean forces the constant. */
   ready: null as boolean | null,
 }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: (href: string) => state.push(href) } }));
+/** The flow is `useSubscribe()`'s (tested in `tests/radars/subscribe.test.ts`); the note only calls it. */
 vi.mock("@/features/radars/subscribe", () => ({
-  subscribe: (...args: unknown[]) => state.subscribe(...args),
-  useHasActiveRadar: () => state.hasRadar,
+  useSubscribe: () => ({ subscribe: (...args: unknown[]) => state.subscribe(...args), saveEdit: vi.fn(), relax: vi.fn() }),
+}));
+/** The matching is `match.ts`'s (tested in `tests/radars/match.test.ts`); the note asks it about its own filters. */
+vi.mock("@/features/radars/match", () => ({
+  useHasActiveRadar: (filters: unknown) => {
+    state.asked.push(filters);
+    return state.hasRadar;
+  },
 }));
 /** The real hook; only the build-time constant is forced, so the server's half is still the code under test. */
 vi.mock("@/features/radars/capability", async (importOriginal) => {
@@ -71,6 +80,7 @@ beforeEach(() => {
   state.push.mockReset();
   state.subscribe.mockReset();
   state.hasRadar = false;
+  state.asked.length = 0;
   state.ready = null;
   scrollTo.mockReset();
   vi.stubGlobal("scrollTo", scrollTo);
@@ -194,8 +204,20 @@ describe("«Другой город»", () => {
 });
 
 describe("«Включить радар по этому поиску» (DEC-51)", () => {
-  it("is absent while radarsReady is false, even with radars_enabled true", () => {
-    expect(radarsReady).toBe(false);
+  it("follows the server's switch with the real constant: absent for radars_enabled false, shown for true", () => {
+    expect(radarsReady).toBe(true);
+    feedReference({ stats: STATS, reference: { radars_enabled: false } });
+    note(searchOf(defaultFilters()).search, 3);
+    expect(action("radar")).toBeNull();
+    cleanup();
+
+    feedReference({ stats: STATS, reference: { radars_enabled: true } });
+    note(searchOf(defaultFilters()).search, 3);
+    expect(action("radar")).not.toBeNull();
+  });
+
+  it("is absent without the radar screens (the constant forced off), even with radars_enabled true", () => {
+    state.ready = false;
     feedReference({ stats: STATS, reference: { radars_enabled: true } });
     note(searchOf(defaultFilters()).search, 3);
     expect(action("radar")).toBeNull();
@@ -230,12 +252,15 @@ describe("«Включить радар по этому поиску» (DEC-51)"
     expect(actions()).toEqual(["deal", "radar", "city"]);
   });
 
-  it("is hidden when a radar with these filters exists", () => {
+  it("is hidden while an active radar has the note's filters (useHasActiveRadar of match.ts)", () => {
     state.ready = true;
     state.hasRadar = true;
     feedReference({ stats: STATS, reference: { radars_enabled: true } });
-    note(searchOf(defaultFilters()).search, 3);
+    const filters = { ...defaultFilters("sale"), rooms_min: 3 };
+    note(searchOf(filters).search, 3);
     expect(action("radar")).toBeNull();
+    expect(state.asked.length).toBeGreaterThan(0);
+    expect(state.asked.every((asked) => asked === filters)).toBe(true);
   });
 
   it("a tap calls subscribe(filters, 'few') with a light haptic; the button is disabled while it runs", async () => {
@@ -249,6 +274,7 @@ describe("«Включить радар по этому поиску» (DEC-51)"
     fireEvent.click(action("radar")!);
     fireEvent.click(action("radar")!);
 
+    // The feed's own toast host: no scope is passed, so a failure's toast shows in the app's.
     expect(state.subscribe).toHaveBeenCalledExactlyOnceWith(filters, "few");
     expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
     expect(action("radar")?.disabled).toBe(true);

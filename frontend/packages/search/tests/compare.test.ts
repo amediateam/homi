@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countActiveFilters, filtersKey, isCustomFilters, sameFilters } from "../src/compare";
+import { countActiveFilters, filtersHash, filtersKey, isCustomFilters, sameFilters } from "../src/compare";
 import { defaultFilters } from "../src/defaults";
 import type { SearchFilters } from "../src/types";
 
@@ -52,6 +52,36 @@ describe("filtersKey / sameFilters", () => {
     const names = (JSON.parse(key) as [string, unknown][]).map(([name]) => name);
     expect(names).toEqual([...names].sort());
     expect(names).toHaveLength(25);
+  });
+});
+
+/** The same djb2 in another arithmetic: `h * 33 + code` modulo 2^32, so an int32 slip of `filtersHash` shows. */
+function referenceHash(key: string): string {
+  let hash = 5381;
+  for (const unit of Array.from({ length: key.length }, (_, index) => key.charCodeAt(index))) {
+    hash = (hash * 33 + unit) % 2 ** 32;
+  }
+  return hash.toString(36);
+}
+
+describe("filtersHash (WP-30, the nudge and visit records)", () => {
+  it("equal searches give one hash: posted_days, missing keys and list order do not count", () => {
+    expect(filtersHash({ ...base, posted_days: 7 })).toBe(filtersHash(base));
+    expect(filtersHash({ deal: "rent_long" })).toBe(filtersHash(base));
+    expect(filtersHash({ ...base, districts: ["yunusabad", "chilanzar"] })).toBe(filtersHash({ ...base, districts: ["chilanzar", "yunusabad"] }));
+  });
+
+  it("different searches give different hashes", () => {
+    const hashes = new Set([base, defaultFilters("sale"), { ...base, near_metro: true }, { ...base, city: "fergana" }].map(filtersHash));
+    expect(hashes.size).toBe(4);
+  });
+
+  it("is djb2 of filtersKey, unsigned, in base 36, and stable", () => {
+    expect(filtersHash(base)).toBe(referenceHash(filtersKey(base)));
+    expect(filtersHash(defaultFilters("sale", "fergana"))).toBe(referenceHash(filtersKey(defaultFilters("sale", "fergana"))));
+    expect(filtersHash(base)).toMatch(/^[0-9a-z]{1,7}$/);
+    expect(filtersHash(base)).toBe("19lfhk");
+    expect(filtersHash(defaultFilters("sale", "fergana"))).toBe("1yu99av");
   });
 });
 

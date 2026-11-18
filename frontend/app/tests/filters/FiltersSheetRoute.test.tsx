@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SubscribeResult } from "@/features/radars/subscribe";
+import type { SubscribeOptions, SubscribeResult } from "@/features/radars/subscribe";
 import type { ActionResult } from "@/lib/actions/run";
 import type { DevFlags } from "@/lib/flags";
 
@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
   patchMe: vi.fn(),
   updateSettings: vi.fn<(input: unknown) => Promise<ActionResult<unknown>>>(),
   fetched: [] as string[],
-  subscribe: vi.fn<(filters: SearchFilters, entry: string, relaxed?: string | null) => Promise<SubscribeResult>>(),
+  subscribe: vi.fn<(filters: SearchFilters, entry: string, relaxed?: string | null, options?: SubscribeOptions) => Promise<SubscribeResult>>(),
 }));
 
 /** The `pick` layer as a tiny store: `open` and `close` re-render the form as the address change would. */
@@ -84,10 +84,11 @@ vi.mock("@/features/radars/capability", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/features/radars/capability")>();
   return { ...real, useRadarsEnabled: () => real.useRadarsEnabled({ ready: true }) };
 });
+/** The flow is `useSubscribe()`'s (tested in `tests/radars/subscribe.test.ts`); the route only calls it. */
 vi.mock("@/features/radars/subscribe", () => ({
-  subscribe: (filters: SearchFilters, entry: string, relaxed?: string | null) => state.subscribe(filters, entry, relaxed),
-  useHasActiveRadar: () => false,
+  useSubscribe: () => ({ subscribe: state.subscribe, saveEdit: vi.fn(), relax: vi.fn() }),
 }));
+vi.mock("@/features/radars/match", () => ({ useHasActiveRadar: () => false }));
 
 import { FiltersSheetRoute } from "@/features/filters/FiltersSheetRoute";
 import { resetReference } from "@/lib/reference/useReference";
@@ -223,14 +224,14 @@ describe("FiltersSheetRoute: «Показать …»", () => {
 });
 
 describe("FiltersSheetRoute: «Включить радар»", () => {
-  it("subscribes the draft from the filters entry; on success the sheet closes without applying", async () => {
+  it("subscribes the draft from the filters entry, failures toasted in the sheet; on success it closes without applying", async () => {
     let resolve: (result: SubscribeResult) => void = () => undefined;
     state.subscribe.mockReturnValue(new Promise((done) => (resolve = done)));
     state.search = "city=tashkent&rooms_min=2";
     route();
 
     fireEvent.click(button("subscribe"));
-    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null);
+    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: "sheet" });
     expect(button("subscribe").disabled).toBe(true);
     fireEvent.click(button("subscribe"));
     expect(state.subscribe).toHaveBeenCalledTimes(1);

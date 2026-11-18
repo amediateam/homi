@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 
 import { cn } from "../cn";
 import { useBodyClass } from "../hooks/useBodyClass";
@@ -43,6 +43,12 @@ export interface BottomSheetProps {
    * it (a sheet address loaded directly; a portal has nothing to render into on the server). Default `true`.
    */
   portal?: boolean;
+  /**
+   * This opening shows the sheet in place: no rise and no backdrop fade (legacy `.instant`; the radar sheet on the
+   * return from a radar's feed, WP-30). Read when the sheet opens; a later change does nothing to a sheet already up,
+   * so dropping the flag after the first render never starts the rise late. Default `false`.
+   */
+  instant?: boolean;
   /** A drag on the header starts. */
   onDragStart?: () => void;
   /** A drag closes the sheet; legacy plays a light impact here (TMA-025). `onClose` follows after the slide. */
@@ -57,6 +63,18 @@ function dragOwnsSheet(sheet: HTMLElement | null): boolean {
 }
 
 /**
+ * `instant` as it was when the sheet last opened (on mount, or when `open` turned `true`): the entrance classes may
+ * not change on a sheet that is up, since adding `animate-rise` to an open sheet would start the rise then.
+ */
+function useInstantOpening(open: boolean, instant: boolean): boolean {
+  const [opening, setOpening] = useState({ open, instant });
+  if (open !== opening.open) {
+    setOpening({ open, instant: open ? instant : opening.instant });
+  }
+  return opening.instant;
+}
+
+/**
  * Bottom sheet (WP-23, `03` §1.2) on the Radix Dialog parts of WP-20: a modal dialog (`aria-modal`, focus trapped,
  * moved to the title on open and back to the element that had it on close) that rises over a dimmed backdrop,
  * capped at the 608 px column. It closes by the ×, a backdrop tap, a drag down from the header (`useSheetDrag`) and
@@ -68,7 +86,8 @@ function dragOwnsSheet(sheet: HTMLElement | null): boolean {
  * The header (grab handle, title, ×) and the footer are glass over the body, which scrolls under them with the
  * paddings `useSheetChrome` measures. While open, `body` carries `sheet-open` (and `locked` for the full variant),
  * counted across stacked sheets; the page under the sheet does not scroll or rubber-band, while the sheet body and
- * horizontal strips marked `data-scroll-x` do. Under `prefers-reduced-motion` the entrance does not play (motion.css).
+ * horizontal strips marked `data-scroll-x` do. Under `prefers-reduced-motion` the entrance does not play (motion.css);
+ * an `instant` opening has none either (`data-instant` on the sheet).
  */
 export function BottomSheet({
   open,
@@ -83,6 +102,7 @@ export function BottomSheet({
   stacked = false,
   closeOnEscape = dismissible,
   portal = true,
+  instant = false,
   onDragStart,
   onDragCommit,
   className,
@@ -95,6 +115,7 @@ export function BottomSheet({
   const openerRef = useRef<HTMLElement | null>(null);
   useBodyClass("sheet-open", open);
   useBodyClass("locked", open && variant === "full");
+  const still = useInstantOpening(open, instant);
 
   const requestClose = () => {
     if (!dragOwnsSheet(sheetRef.current)) {
@@ -107,7 +128,7 @@ export function BottomSheet({
     <DialogPrimitive.Overlay
       ref={overlayRef}
       data-slot="bottom-sheet-overlay"
-      className={cn("fixed inset-0 bg-dim data-[state=open]:animate-fade", layer)}
+      className={cn("fixed inset-0 bg-dim", !still && "data-[state=open]:animate-fade", layer)}
     />
   );
   const sheet = (
@@ -115,10 +136,12 @@ export function BottomSheet({
       ref={sheetRef}
       data-slot="bottom-sheet"
       data-variant={variant}
+      data-instant={still ? "" : undefined}
       aria-modal="true"
       aria-describedby={undefined}
       className={cn(
-        "group/sheet fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-(--feed-max) flex-col overflow-hidden rounded-t-large bg-sheet text-text shadow-(--shadow-float) outline-none data-[state=open]:animate-rise",
+        "group/sheet fixed inset-x-0 bottom-0 mx-auto flex w-full max-w-(--feed-max) flex-col overflow-hidden rounded-t-large bg-sheet text-text shadow-(--shadow-float) outline-none",
+        !still && "data-[state=open]:animate-rise",
         variant === "full"
           ? "h-[calc(100%-var(--top-inset)-24px)]"
           : "max-h-[calc(100%-var(--top-inset)-24px)]",

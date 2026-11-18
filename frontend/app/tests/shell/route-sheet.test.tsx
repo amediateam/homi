@@ -238,6 +238,51 @@ describe("RouteSheet, onClose and leading (WP-26)", () => {
   });
 });
 
+describe("RouteSheet, instant (WP-30: the return from a radar's feed)", () => {
+  const RISE = /(?:^|\s)data-\[state=open\]:animate-rise(?:\s|$)/;
+  const FADE = /(?:^|\s)data-\[state=open\]:animate-fade(?:\s|$)/;
+
+  it("passes instant to the sheet: no rise, no backdrop fade, as a layer and standalone", () => {
+    const { unmount } = render(<Sheet instant />);
+    expect(part("").className).not.toMatch(RISE);
+    expect(part("-overlay").className).not.toMatch(FADE);
+    expect(part("").hasAttribute("data-instant")).toBe(true);
+    unmount();
+
+    render(<Sheet instant presentation="standalone" />);
+    expect(part("").className).not.toMatch(RISE);
+    expect(part("").hasAttribute("data-instant")).toBe(true);
+  });
+
+  it("without it the sheet rises as before", () => {
+    render(<Sheet />);
+    expect(part("").className).toMatch(RISE);
+    expect(part("-overlay").className).toMatch(FADE);
+    expect(part("").hasAttribute("data-instant")).toBe(false);
+  });
+
+  it("holds for that mount: the flag dropped after the first render does not start the rise", () => {
+    const { rerender } = render(<Sheet instant />);
+    rerender(<Sheet instant={false} />);
+    expect(part("").className).not.toMatch(RISE);
+  });
+
+  it("a copy mounted anew after a drag slid it out rises again, though the flag is still passed", async () => {
+    window.history.replaceState(null, "", "/ru/radars/01JD0000000000000000000001?pick=x");
+    const { rerender } = render(<Sheet instant />);
+    await outsideListenersReady();
+    dragDown(part("-header"), 300);
+    await act(() => vi.advanceTimersByTimeAsync(SHEET_DRAG_SETTLE_MS));
+    expect(state.back).toHaveBeenCalledTimes(1);
+
+    window.history.replaceState(null, "", "/ru/radars/01JD0000000000000000000001");
+    rerender(<Sheet instant />);
+    expect(part("").style.transform).toBe("");
+    expect(part("").className).toMatch(RISE);
+    expect(part("").hasAttribute("data-instant")).toBe(false);
+  });
+});
+
 describe("RouteSheet, standalone (a sheet address loaded directly)", () => {
   it("ignores a backdrop tap and the drag: no page lies below", async () => {
     render(<Sheet presentation="standalone" />);

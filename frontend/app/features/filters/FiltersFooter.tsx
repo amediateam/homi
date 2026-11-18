@@ -6,7 +6,7 @@ import { Button, Check, FilterChip, RadarIcon } from "@homi/ui";
 import { useTranslations } from "next-intl";
 
 import { useRadarsEnabled } from "@/features/radars/capability";
-import { useHasActiveRadar } from "@/features/radars/subscribe";
+import { useHasActiveRadar } from "@/features/radars/match";
 import { tg } from "@/lib/telegram";
 
 import type { LiveFlow, LiveFlowOption } from "./useLiveStats";

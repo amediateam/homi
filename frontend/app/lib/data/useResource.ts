@@ -194,6 +194,14 @@ export function seedResource<T>(key: string, data: T): void {
   write(entry, { data, error: null, inflight: false });
 }
 
+/**
+ * The data the entry of `key` holds now, `undefined` without one — the read of code outside a component (WP-30: the
+ * radar lists, which a mutation rewrites through `seedResource`). It does not subscribe and never reads.
+ */
+export function readResource<T>(key: string): T | undefined {
+  return entries.get(key)?.snapshot.data as T | undefined;
+}
+
 /** Forgets every entry; tests only. */
 export function resetResources(): void {
   for (const entry of entries.values()) {

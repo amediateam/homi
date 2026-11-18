@@ -12,6 +12,9 @@ import { storageGet, subscribeStorage } from "@/lib/storage";
 
 const SEARCH_KEYS: ReadonlySet<string> = new Set(SEARCH_PARAM_KEYS);
 
+/** The `from` of a radar's feed («Смотреть найденное», WP-30), the one reserved value a write removes. */
+const FROM_RADAR = "radar";
+
 const savedCity = (): string | null => storageGet("homi-city");
 /** The server knows no saved city, and neither does the hydration render, so both list the same city. */
 const noSavedCity = (): null => null;
@@ -42,11 +45,16 @@ export interface SearchStateApi {
  * The search state in the address (WP-22, `25` §3.2). A Client Component under `<Suspense>`
  * (`use-search-params.md`). It reads the 25 keys and `sort` with `fromSearchParams` and writes them with
  * `nav.replace` on the current root (`/` or `/map`): the search keys first, in their fixed order, then every other
- * parameter of the address as it was, so a reserved parameter (`from`, `focus`, …) is never touched and equal states
- * give equal addresses. An address without a city takes the profile's city, else the saved one, else Tashkent
+ * parameter of the address as it was, so a reserved parameter (`from`, `focus`, …) is kept and equal states give
+ * equal addresses. An address without a city takes the profile's city, else the saved one, else Tashkent
  * (BR-APP-001, BR-APP-010); an address that carries a city keeps it. Before the session knows `me` the profile is
  * `profileCity`, and the saved city is read through `useSyncExternalStore`: the hydration render takes none, as the
  * server render did, and the next render takes it (WP-24).
+ *
+ * The one reserved value a write removes is `from=radar`, the mark of a radar's feed (WP-30): the deal switch, the
+ * few-results actions, the empty state's reset, `setFilters` and `setSort` all write through `write`, so any change
+ * on that feed makes the radar's filters the user's search, which the shell then remembers again (`rememberHref`;
+ * legacy "a tab press clears the radar return", `03` §1.2). Another `from` (`map`) stays.
  */
 export function useSearchState(options: SearchStateOptions = {}): SearchStateApi {
   const params = useSearchParams();
@@ -59,7 +67,7 @@ export function useSearchState(options: SearchStateOptions = {}): SearchStateApi
   const write = (next: SearchFilters, nextSort: ListingSort) => {
     const query = toSearchParams(next, nextSort);
     for (const [key, value] of params) {
-      if (!SEARCH_KEYS.has(key)) {
+      if (!SEARCH_KEYS.has(key) && !(key === "from" && value === FROM_RADAR)) {
         query.append(key, value);
       }
     }

@@ -59,6 +59,31 @@
 }
 
 /*
+ * The radar art (WP-30, SCR-027 and SCR-047, legacy `radar-turn` and `radar-blip`, 3.2 s): the wedge turns once per
+ * cycle, a blip flashes at the start of its cycle and fades to 15 % by 60 %. Each element that plays them carries
+ * `data-radar-animation`, so lite graphics stop them (lite.css) as reduced motion does (below). The rest state is the
+ * static picture: the wedge at 0°, the blips at full opacity.
+ */
+@keyframes radar-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-blip {
+  0%,
+  8% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  60%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+}
+
+/*
  * Reduced motion: no keyframe animation and no transition anywhere. Legacy stopped the shimmer, the spinner and
  * transitions; WP-23 (D-UI-7) adds the entrances — the sheet's rise, the rise-in of dialogs and toasts, the
  * backdrop's fade, the sub-page's slide. One rule here rather than a variant per component: a
