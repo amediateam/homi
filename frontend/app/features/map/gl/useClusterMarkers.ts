@@ -6,18 +6,22 @@ import { useEffect, useEffectEvent, useRef } from "react";
 import { tg } from "@/lib/telegram";
 
 import { CLUSTER_MS, CLUSTER_PADDING, GL_MAX_ZOOM } from "../camera";
+import { LASSO_RESYNC_MS } from "../lasso/polygon";
 import { SPREAD_LABEL_BOX, spreadStackLabels } from "../pins";
 import type { MapGroup, MapViewProps, Selection } from "../types";
 import { clusterElement, pinElement, setActive, spreadDotElement, spreadPinElement, stackElement } from "../markerElements";
+import type { LASSO_MOVE } from "./GlLasso";
 import { type ClusterIndex, clusterZoom, type GroupFeature, isCluster, leavesByPrice } from "./useClusterIndex";
 import { type GlMap, type MapHandle, type MapInstance, markerRoot } from "./useMapInstance";
 
 /**
  * The markers of the GL view (WP-27 "Pins, stacks, clusters" and "Actions", SCR-011): DOM elements of
  * `markerElements.ts` placed as MapLibre markers for the viewport plus 10 % on each side, synced on `moveend` and
- * when the whole zoom changes, and reused by key while their content stays the same. A tap is read from the map's
- * own `click` (markers live in its canvas container), so a pan that starts on a marker selects nothing. The markers
- * are pointer targets only, as in legacy: the list view is the keyboard and screen-reader path to the same listings.
+ * when the whole zoom changes — the moves of the lasso's two-finger gesture (`LASSO_MOVE`) once, `LASSO_RESYNC_MS`
+ * after the last one (WP-28 "Lasso") — and reused by key while their content stays the same. A tap is read from the
+ * map's own `click` (markers live in its canvas container), so a pan that starts on a marker selects nothing. The
+ * markers are pointer targets only, as in legacy: the list view is the keyboard and screen-reader path to the same
+ * listings.
  */
 
 /** Markers are kept for the viewport plus this share of its width and height on each side. */
@@ -59,6 +63,11 @@ type Entry = { marker: Marker; element: HTMLElement; signature: string; numbers:
 type LayerView = { index: ClusterIndex; spread: MapGroup | null; active: number | null };
 
 type MarkerLayer = { update(view: LayerView): void; destroy(): void };
+
+/** A camera move of the lasso's two-finger gesture: MapLibre copies its event data (`LASSO_MOVE`) onto the events. */
+function isLassoMove(event: object): boolean {
+  return (event as Partial<typeof LASSO_MOVE>).lasso === true;
+}
 
 function viewportBox(map: GlMap): [west: number, south: number, east: number, north: number] {
   const [[west, south], [east, north]] = map.getBounds().toArray();
@@ -102,6 +111,7 @@ function createMarkerLayer({ map, maplibre }: MapInstance, select: Select): Mark
   let spreadSignature: string | null = null;
   let view: LayerView | null = null;
   let level = clusterZoom(map.getZoom());
+  let resync: ReturnType<typeof setTimeout> | null = null;
 
   function place(element: HTMLElement, lngLat: LngLat, offset?: PointLike): Marker {
     return new maplibre.Marker({ element, anchor: "center", offset }).setLngLat(lngLat).addTo(map);
@@ -228,11 +238,36 @@ function createMarkerLayer({ map, maplibre }: MapInstance, select: Select): Mark
     }
   }
 
-  const onZoom = () => {
+  function cancelResync(): void {
+    if (resync !== null) {
+      clearTimeout(resync);
+      resync = null;
+    }
+  }
+
+  /** A lasso move restarts the deferred sync; any other stop drops it and syncs at once. */
+  const onMoveEnd = (event: object) => {
+    cancelResync();
+    if (isLassoMove(event)) {
+      resync = setTimeout(() => {
+        resync = null;
+        sync();
+      }, LASSO_RESYNC_MS);
+    } else {
+      sync();
+    }
+  };
+  /**
+   * A lasso zoom only records the level: MapLibre fires it in the same call as the move's `moveend`, which syncs
+   * later, so a pinch across (or around) a whole zoom does not sync every frame.
+   */
+  const onZoom = (event: object) => {
     const next = clusterZoom(map.getZoom());
     if (next !== level) {
       level = next;
-      sync();
+      if (!isLassoMove(event)) {
+        sync();
+      }
     }
   };
   const onClick = (event: MapMouseEvent) => {
@@ -241,7 +276,7 @@ function createMarkerLayer({ map, maplibre }: MapInstance, select: Select): Mark
       taps.get(root)?.();
     }
   };
-  map.on("moveend", sync);
+  map.on("moveend", onMoveEnd);
   map.on("zoom", onZoom);
   map.on("click", onClick);
 
@@ -252,7 +287,8 @@ function createMarkerLayer({ map, maplibre }: MapInstance, select: Select): Mark
       sync();
     },
     destroy() {
-      map.off("moveend", sync);
+      cancelResync();
+      map.off("moveend", onMoveEnd);
       map.off("zoom", onZoom);
       map.off("click", onClick);
       for (const entry of [...entries.values(), ...spreadEntries]) {

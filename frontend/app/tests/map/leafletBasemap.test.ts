@@ -9,7 +9,6 @@ import {
   attachTilePrefetch,
   RASTER_CLASS,
   RASTER_MAX_ZOOM,
-  resetMapPrefetchForTests,
   ringTiles,
   watchVectorErrors,
 } from "@/features/map/leaflet/basemap";
@@ -18,7 +17,7 @@ import { type LeafletLibrary, loadLeaflet } from "@/features/map/leaflet/library
 import { BASEMAP_DELAY_MS, type DeferredBasemapInput, useDeferredBasemap } from "@/features/map/leaflet/useDeferredBasemap";
 import { LEAFLET_MAX_ZOOM, type LeafletHandle } from "@/features/map/leaflet/useLeafletMap";
 import { paletteOf } from "@/features/map/palette";
-import { MAX_DATA_ZOOM, prefetchTilesFor, type TileFetcher } from "@/features/map/tilePrefetch";
+import { MAX_DATA_ZOOM, prefetchTiles, prefetchTilesFor, prefetchTileUrls, resetPrefetchForTests, type TileFetcher } from "@/features/map/tilePrefetch";
 import type { Basemap } from "@/features/map/tiles";
 import type { CityView, MapScheme } from "@/features/map/types";
 import { resetBasemapForTests } from "@/features/map/useBasemap";
@@ -47,7 +46,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   resetBasemapForTests();
-  resetMapPrefetchForTests();
+  resetPrefetchForTests();
   state.reportError.mockReset();
   vectors = [];
   tileError = new Error("Bad response code: 404");
@@ -352,6 +351,47 @@ describe("attachTilePrefetch (WP-28, KV-FE-062 step 6)", () => {
 
     // 4 MB per session: three tiles of 1.5 MB, the third crossing the cap.
     expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  describe("shares the session's byte cap with the list-view prefetch", () => {
+    const warmup = (fetcher: TileFetcher) =>
+      prefetchTiles({ template: TEMPLATE, city: { center: [41.3111, 69.2797], zoom: 12 }, viewport: { width: 400, height: 800 }, lite: false, network: {}, fetcher });
+
+    it("asks for nothing once the list view's tiles reached it", async () => {
+      mount();
+      const list = fetcherOf(4 * 1024 * 1024);
+      await warmup(list);
+      expect(list).toHaveBeenCalledTimes(1);
+
+      const inMap = fetcherOf(10);
+      attachTilePrefetch(live, TEMPLATE, false, { network: () => ({}), fetcher: inMap });
+      await settle();
+
+      expect(inMap).not.toHaveBeenCalled();
+    });
+
+    it("leaves nothing to the list view once its own tiles reached it", async () => {
+      mount();
+      attachTilePrefetch(live, TEMPLATE, false, { network: () => ({}), fetcher: fetcherOf(1.5 * 1024 * 1024) });
+      await settle();
+
+      const list = fetcherOf(10);
+      await expect(warmup(list)).resolves.toEqual({ tiles: 0, bytes: 0 });
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it("skips a ring tile already asked for in this launch through prefetchTileUrls, and takes the next one", async () => {
+      mount();
+      const view: CityView = { center: [41.3111, 69.2797], zoom: 12 };
+      const ring = ringTiles(view, { width: 400, height: 800 }).map(({ z, x, y }) => `https://tiles.homi.test/v4/${z}/${x}/${y}.mvt`);
+      await prefetchTileUrls(ring.slice(0, 2), { sessionBytes: 1024 * 1024, fetcher: fetcherOf(10) });
+
+      const inMap = fetcherOf(10);
+      attachTilePrefetch(live, TEMPLATE, false, { network: () => ({}), fetcher: inMap });
+      await settle();
+
+      expect(inMap.mock.calls.map(([url]) => url)).toEqual(ring.slice(2, 6));
+    });
   });
 
   it("never prefetches a .pmtiles file or OpenStreetMap's tiles", async () => {

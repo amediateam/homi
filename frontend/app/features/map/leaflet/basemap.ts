@@ -5,7 +5,7 @@ import type { View } from "protomaps-leaflet";
 import { currentNetwork, type NetworkProfile } from "@/features/feed/images";
 
 import { paletteOf } from "../palette";
-import { budgetFor, MAX_DATA_ZOOM, prefetchTilesFor, type TileFetcher, type TileId } from "../tilePrefetch";
+import { budgetFor, MAX_DATA_ZOOM, prefetchTilesFor, prefetchTileUrls, type TileFetcher, type TileId, tileUrl } from "../tilePrefetch";
 import { isOsmUrl, OSM_TILE_URL } from "../tiles";
 import type { CityView, MapScheme } from "../types";
 import { basemapRules } from "./basemapRules";
@@ -114,15 +114,6 @@ export function ringTiles(view: CityView, viewport: { width: number; height: num
   return prefetchTilesFor(view, around).filter((candidate) => !shown.has(key(candidate)));
 }
 
-const requested = new Set<string>();
-let sessionBytes = 0;
-
-/** Forgets the tiles and bytes of the in-map prefetch of this launch; tests only. */
-export function resetMapPrefetchForTests(): void {
-  requested.clear();
-  sessionBytes = 0;
-}
-
 export type MapPrefetchOptions = {
   /** `currentNetwork()` when not given; read at every stop. */
   network?: () => Pick<NetworkProfile, "saveData" | "effectiveType">;
@@ -130,57 +121,35 @@ export type MapPrefetchOptions = {
   fetcher?: TileFetcher;
 };
 
-function tileUrl(template: string, { z, x, y }: TileId): string {
-  return template.replace("{z}", String(z)).replace("{x}", String(x)).replace("{y}", String(y));
-}
-
 /**
  * The in-map prefetch of a `{z}/{x}/{y}` template (WP-28 "Leaflet view", KV-FE-062 step 6): when attached and on
- * every `moveend`, the ring around the stopped view, at most `perStop` tiles not asked for in this launch, one at a time at low priority,
- * until the launch's bytes reach `sessionBytes` (`budgetFor`: nothing with Save-Data or on `2g` / `slow-2g`, less in
- * lite mode). A new stop aborts what is left of the previous one; a failed tile is skipped silently. OpenStreetMap's
- * tiles are never prefetched. Returns the function that stops it.
+ * every `moveend`, the ring around the stopped view, at most `perStop` tiles not asked for in this launch, through
+ * `prefetchTileUrls` of the list-view prefetch, whose tiles and bytes it shares: one at a time at low priority, until
+ * the launch's bytes reach `sessionBytes` (`budgetFor`: nothing with Save-Data or on `2g` / `slow-2g`, less in lite
+ * mode). A new stop aborts what is left of the previous one; a failed tile is skipped silently. OpenStreetMap's tiles
+ * are never prefetched. Returns the function that stops it.
  */
 export function attachTilePrefetch(map: LMap, template: string, lite: boolean, options: MapPrefetchOptions = {}): () => void {
   if (!template.includes("{z}/{x}/{y}") || isOsmUrl(template)) {
     return () => undefined;
   }
   const network = options.network ?? currentNetwork;
-  const fetcher: TileFetcher = options.fetcher ?? ((url, init) => fetch(url, init));
   let controller: AbortController | null = null;
-
-  async function prefetch(urls: string[], limit: number, signal: AbortSignal): Promise<void> {
-    for (const url of urls) {
-      if (signal.aborted || sessionBytes >= limit) {
-        return;
-      }
-      requested.add(url);
-      try {
-        const response = await fetcher(url, { signal, priority: "low" });
-        sessionBytes += (await response.arrayBuffer()).byteLength;
-      } catch {
-        requested.delete(url);
-      }
-    }
-  }
 
   const onMoveEnd = () => {
     controller?.abort();
     controller = null;
     const budget = budgetFor(network(), lite);
-    if (budget.perStop === 0 || sessionBytes >= budget.sessionBytes) {
+    if (budget.perStop === 0) {
       return;
     }
     const center = map.getCenter();
     const size = map.getSize();
-    const urls = ringTiles({ center: [center.lat, center.lng], zoom: Math.round(map.getZoom()) }, { width: size.x, height: size.y })
-      .map((tile) => tileUrl(template, tile))
-      .filter((url) => !requested.has(url))
-      .slice(0, budget.perStop);
-    if (urls.length > 0) {
-      controller = new AbortController();
-      void prefetch(urls, budget.sessionBytes, controller.signal);
-    }
+    const urls = ringTiles({ center: [center.lat, center.lng], zoom: Math.round(map.getZoom()) }, { width: size.x, height: size.y }).map(
+      (tile) => tileUrl(template, tile),
+    );
+    controller = new AbortController();
+    void prefetchTileUrls(urls, { sessionBytes: budget.sessionBytes, maxTiles: budget.perStop, signal: controller.signal, fetcher: options.fetcher });
   };
 
   map.on("moveend", onMoveEnd);

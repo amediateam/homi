@@ -61,9 +61,9 @@ export type GlLassoProps = {
  * meanwhile, so only the overlay's two-finger pan and pinch move it (fractional zoom, WP-28 "Differences between
  * engines"). Rendered by `MapViewGL` only while `drawing`; nothing until the first map exists.
  *
- * Marker re-sync: every camera call fires `moveend` at once (MapLibre's camera is read-only in its typings), and the
- * marker layer syncs on `moveend`, so the markers follow each applied frame; the moves carry `LASSO_MOVE`, so a layer
- * can defer its sync to `LASSO_RESYNC_MS` after the last one.
+ * Marker re-sync: every camera call fires `moveend` at once (MapLibre's camera is read-only in its typings); the moves
+ * carry `LASSO_MOVE`, so the marker layer (`useClusterMarkers`) re-syncs once, `LASSO_RESYNC_MS` after the last of
+ * them, and a lasso zoom only records its whole level.
  */
 export function GlLasso({ handle, onDrawn, onTooSmall }: GlLassoProps) {
   const { mapRef, generation } = handle;

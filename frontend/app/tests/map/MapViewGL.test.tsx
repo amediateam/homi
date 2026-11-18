@@ -54,6 +54,20 @@ function toLngLat(value: unknown): LngLatLiteral {
 
 class FakeGPUInitializationError extends Error {}
 
+/** One of the map's gesture handlers (`dragPan`, `scrollZoom`, …): enabled until disabled. */
+function gestureHandler() {
+  let enabled = true;
+  return {
+    isEnabled: () => enabled,
+    enable: () => {
+      enabled = true;
+    },
+    disable: () => {
+      enabled = false;
+    },
+  };
+}
+
 /** The parts of MapLibre's `Map` the view uses, recording every call; moves fire `zoom` and `moveend` at once. */
 class FakeMap {
   static created: FakeMap[] = [];
@@ -71,7 +85,11 @@ class FakeMap {
   readonly handlers = new Map<string, Set<Handler>>();
   readonly canvasContainer = document.createElement("div");
   readonly canvas = document.createElement("canvas");
-  readonly touchZoomRotate = { disableRotation: vi.fn() };
+  readonly dragPan = gestureHandler();
+  readonly touchZoomRotate = { ...gestureHandler(), disableRotation: vi.fn() };
+  readonly scrollZoom = gestureHandler();
+  readonly doubleClickZoom = gestureHandler();
+  readonly boxZoom = gestureHandler();
   removed = false;
   center: LngLatLiteral;
   zoom: number;
@@ -831,5 +849,34 @@ describe("MapViewGL: markers and taps (SCR-011, LB-APP-020)", () => {
     ];
     map.moveTo({ lng: 69.45, lat: 41.25 }, map.getZoom());
     expect(numbersOf(markers(container, "pin"))).toEqual(["1", "2"]);
+  });
+});
+
+describe("MapViewGL: the lasso (WP-28 'Lasso', SCR-012)", () => {
+  const lasso = (root: ParentNode) => root.querySelector("[data-lasso]");
+  const gestures = (map: FakeMap) => [map.dragPan, map.touchZoomRotate, map.scrollZoom, map.doubleClickZoom, map.boxZoom].map((handler) => handler.isEnabled());
+
+  it("covers the map with the lasso overlay while drawing, once a map exists, with the map's own gestures off", async () => {
+    let loaded: (module: MapLibreModule) => void = () => undefined;
+    state.load.mockReturnValue(new Promise((resolve) => (loaded = resolve)));
+    const { container, update } = await mount({ drawing: true, onDrawn: vi.fn(), onTooSmall: vi.fn() });
+    expect(lasso(container)).toBeNull();
+
+    await act(async () => loaded(maplibre));
+    const [map] = FakeMap.created;
+    expect(lasso(container)).not.toBeNull();
+    expect(gestures(map)).toEqual([false, false, false, false, false]);
+
+    await update({ drawing: false });
+    expect(lasso(container)).toBeNull();
+    expect(gestures(map)).toEqual([true, true, true, true, true]);
+  });
+
+  it("draws no overlay while not drawing", async () => {
+    const { container, map } = await mount({ drawing: false, onDrawn: vi.fn(), onTooSmall: vi.fn() });
+
+    expect(FakeMap.created).toEqual([map]);
+    expect(lasso(container)).toBeNull();
+    expect(gestures(map)).toEqual([true, true, true, true, true]);
   });
 });
