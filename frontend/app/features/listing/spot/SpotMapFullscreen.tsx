@@ -105,8 +105,11 @@ export function SpotMapFullscreen({ spot, place, onClose }: SpotMapFullscreenPro
       }}
       className="relative size-full outline-none"
     >
-      {/* The map's own background beats the library's grey (`.leaflet-container`), and the theme's at the first paint. */}
-      <div ref={container} data-spot-map-view="" data-no-swipe="" className="absolute inset-0" style={{ backgroundColor: "var(--bg2)" }} />
+      {/* The map's own background beats the library's grey (`.leaflet-container`), and the theme's at the first paint.
+          Sized by its box, as the mini map: the libraries' CSS gives the container `position: relative`. */}
+      <div className="absolute inset-0">
+        <div ref={container} data-spot-map-view="" data-no-swipe="" className="size-full" style={{ backgroundColor: "var(--bg2)" }} />
+      </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-end px-(--gutter) pt-[calc(8px+var(--top-inset))]">
         <button
           type="button"

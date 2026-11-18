@@ -1,5 +1,5 @@
 import { expect, launchApp, test, type LaunchedApp } from "@homi/testing/playwright";
-import type { Frame, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 /**
  * The shell of WP-23 (SCR-006, SCR-010, `03` §1.2) over the feed of WP-24, the placeholder routes and the API on
@@ -313,19 +313,19 @@ test.describe("shell", () => {
     const mapBar = visible(page, '[data-topbar="map"]');
     await expect(mapBar.getByRole("button", { name: "Фильтры, 1", exact: true })).toContainText("1");
 
-    // The lasso pushes the `draw` layer, and until WP-28 the map closes it as soon as it opens (WP-27, "Out"): the tap
-    // lands back on the plain map. WP-28 restores the drawing bar, its BackButton and «Отмена» here.
-    const addresses: string[] = [];
-    const onNavigated = (frame: Frame) => {
-      if (frame === page.mainFrame()) {
-        addresses.push(frame.url());
-      }
-    };
-    page.on("framenavigated", onNavigated);
+    // The lasso pushes the `draw` layer (WP-28): the drawing bar takes the map bar's place, the toggle hides and the
+    // BackButton shows; «Отмена» returns to the plain map with the search. The drawing itself: `map-lasso.spec.ts`.
     await mapBar.getByRole("button", { name: "Обвести на карте" }).click();
-    await expect.poll(() => addresses.some((address) => /[?&]draw=1(&|$)/.test(address)), { message: "the lasso pushed no draw layer" }).toBe(true);
-    page.off("framenavigated", onNavigated);
-    await expect(page).not.toHaveURL(/draw=1/);
+    await expect(page).toHaveURL(/[?&]draw=1(&|$)/);
+    const drawBar = visible(page, '[data-topbar="map-drawing"] [data-slot="draw-bar"]');
+    await expect(drawBar.getByRole("status")).toContainText("Обведите пальцем, где искать");
+    await expect(mapBar).toHaveCount(0);
+    await expect(toggle(page)).toHaveCount(0);
+    await expect.poll(() => backVisible(page)).toBe(true);
+    expect(searchOf(page).get("rooms_min")).toBe("2");
+
+    await drawBar.getByRole("button", { name: "Отмена" }).click();
+    await expect(page).not.toHaveURL(/[?&]draw=/);
     expect(searchOf(page).get("rooms_min")).toBe("2");
     await expect(visible(page, '[data-topbar="map-drawing"]')).toHaveCount(0);
     await expect(mapBar).toBeVisible();

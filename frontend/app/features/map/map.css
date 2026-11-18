@@ -148,6 +148,11 @@ html.lite .spread-dot {
   overflow: visible;
 }
 
+/* The element keeps its own size in the empty box: a cluster's circle and the spread dot have a fixed one. */
+.leaflet-marker-icon.homi-icon > * {
+  flex-shrink: 0;
+}
+
 /*
  * Leaflet's own stylesheet sets Helvetica at 12 px on its container; the markers take the page's font, as on GL. The
  * selected marker is raised through Leaflet's z-index offset (`listingLayer.ts`), not here.

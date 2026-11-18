@@ -79,14 +79,12 @@ export function SpotMap({ number, spot }: { number: number; spot: Spot }) {
         }}
         className="relative block aspect-[2/1] w-full overflow-hidden rounded-medium bg-bg2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {/* The map's own background beats the library's grey (`.leaflet-container`), and the theme's at the first paint. */}
-        <div
-          ref={container}
-          data-spot-map-view=""
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{ backgroundColor: "var(--bg2)" }}
-        />
+        {/* The map's own background beats the library's grey (`.leaflet-container`), and the theme's at the first paint.
+            The box positions and the container is sized by it: both libraries' CSS give the container `position:
+            relative` (`.maplibregl-map`, `.leaflet-container`), which would beat insets on the container itself. */}
+        <div className="pointer-events-none absolute inset-0">
+          <div ref={container} data-spot-map-view="" aria-hidden className="size-full" style={{ backgroundColor: "var(--bg2)" }} />
+        </div>
         <span className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)">
           <Maximize2 size={16} strokeWidth={2.25} aria-hidden />
         </span>
