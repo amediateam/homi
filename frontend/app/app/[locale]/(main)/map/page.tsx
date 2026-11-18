@@ -1,15 +1,19 @@
 import { Suspense } from "react";
 
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
-import { SearchProofServer } from "@/features/shell/SearchProofServer";
+import { MapLoading } from "@/features/map/MapLoading";
+import { MapScreen } from "@/features/map/MapScreen";
 
-/** Search map, lasso and selection card (SCR-011 … SCR-013); WP-27 replaces the placeholder. Until then it shows the WP-22 data proof. */
-export default function Page({ searchParams }: PageProps<"/[locale]/map">) {
+/**
+ * The search map (SCR-011 … SCR-013, WP-27). The route marker is in the server's HTML; the screen reads the address
+ * inside `<Suspense>` (`use-search-params.md`), and every map read is a browser read through `/bff/*` (`25` §3.5).
+ */
+export default function MapPage() {
   return (
-    <RoutePlaceholder name="map">
-      <Suspense fallback={null}>
-        <SearchProofServer searchParams={searchParams} />
+    // `contents`: the screen is fixed to the viewport, so the marker has no box of its own.
+    <div data-route="map" className="contents">
+      <Suspense fallback={<MapLoading />}>
+        <MapScreen />
       </Suspense>
-    </RoutePlaceholder>
+    </div>
   );
 }

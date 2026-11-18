@@ -1,9 +1,11 @@
 /*
  * The Mini App stylesheet (WP-20): Tailwind, then the tokens, themes, lite and motion CSS of @homi/ui, then the
- * shell's own rules (WP-23). Tailwind also scans the sources of @homi/ui for the classes its components use.
+ * shell's own rules (WP-23) and the map's markers, which WP-28's spot map shares (WP-27). Tailwind also scans the
+ * sources of @homi/ui for the classes its components use.
  */
 @import "tailwindcss";
 @import "@homi/ui/styles.css";
 @import "./shell.css";
+@import "../features/map/map.css";
 
 @source "../../packages/ui/src";

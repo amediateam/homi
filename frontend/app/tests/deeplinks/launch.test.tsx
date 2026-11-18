@@ -278,3 +278,41 @@ describe("launchPending (WP-23, D-S-8, BR-APP-055)", () => {
     ).toEqual({ href: "/welcome/city", locale: "uz" });
   });
 });
+
+describe("launchMapOptions (TMA-012)", () => {
+  async function opened(address: string) {
+    window.history.replaceState(null, "", address);
+    fake = fakeTelegram({ initData: syntheticInitData({}) });
+    vi.resetModules();
+    return import("@/lib/deeplinks/launch");
+  }
+
+  it("reads ?map= and ?mapdebug of the launch query, also after the address dropped them", async () => {
+    const launch = await opened("/ru?map=gl&mapdebug");
+    window.history.replaceState(null, "", "/ru/map?deal=rent");
+
+    expect(launch.launchMapOptions()).toEqual({ override: "gl", debug: true });
+  });
+
+  it("an address set after the launch does not count", async () => {
+    const launch = await opened("/ru");
+    window.history.replaceState(null, "", "/ru/map?map=leaflet&mapdebug");
+
+    expect(launch.launchMapOptions()).toEqual({ override: null, debug: false });
+  });
+
+  it("an unknown ?map= value is no override", async () => {
+    const launch = await opened("/ru?map=svg");
+    expect(launch.launchMapOptions().override).toBeNull();
+  });
+
+  it("?mapdebug is off in a production build", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
+    try {
+      const launch = await opened("/ru?map=auto&mapdebug");
+      expect(launch.launchMapOptions()).toEqual({ override: "auto", debug: false });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});

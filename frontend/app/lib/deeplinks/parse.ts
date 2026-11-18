@@ -14,6 +14,8 @@ export interface Launch {
   postUrl: string | null;
   news: string | null;
   mapOverride: MapOverride | null;
+  /** `?mapdebug` is present, with or without a value: the map view exposes its map object outside production. */
+  mapDebug: boolean;
   entry: LaunchEntry;
 }
 
@@ -71,6 +73,7 @@ function read(initData: string, search: string): Launch {
     postUrl: fromStart !== null ? postUrlOf(startParam) : null,
     news,
     mapOverride,
+    mapDebug: query.has("mapdebug"),
     entry: listingNumber !== null ? "link" : news !== null ? "news" : "menu",
   };
 }

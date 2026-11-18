@@ -120,6 +120,20 @@ describe("the merged catalogues", () => {
     expect(merged.ru["report.agentHint"]).toBe("Отметим номер как риелторский");
     expect(merged.ru["toast.reportedAgent"]).toBe("Отметили номер как риелторский");
   });
+
+  it("carry the three keys of WP-27 next to the legacy map keys", () => {
+    const values = (key: string) => locales.map((locale) => merged[locale][key]);
+    expect(values("map.empty")).toEqual(["Ничего не найдено в этой области", "Bu hududda hech narsa topilmadi", "Nothing found in this area"]);
+    expect(values("map.loading")).toEqual(["Загружаем объявления…", "Eʼlonlar yuklanmoqda…", "Loading listings…"]);
+    expect(values("map.unavailable")).toEqual([
+      "Карта на этом устройстве пока недоступна",
+      "Bu qurilmada xarita hozircha ishlamaydi",
+      "The map is not available on this device yet",
+    ]);
+    expect(merged.uz["map.loading"]).toContain("ʼ");
+    expect(merged.ru["map.stackOf"]).toBe(legacyRu.map.stackOf);
+    expect(merged.ru["map.note"]).toBe("На карте {shown} из {total} · {missing} известен только район");
+  });
 });
 
 describe("the legacy layer", () => {

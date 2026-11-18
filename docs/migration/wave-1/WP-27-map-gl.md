@@ -3,11 +3,11 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#83) |
 | Depends on | WP-25 |
 | Size | ≈ 3 000 changed lines without the glyph font files, L |
 | Behaviour reference | `03` §1.7–§1.9, §2 (SCR-011, SCR-013), §3.2, §3.4 ("Map", "Tile prefetch budget"), §3.6 (z-index ladder), §4 (BR-APP-062), §5 and §5b (LB-APP-008, LB-APP-017 … LB-APP-020, LB-APP-024, LB-APP-044); `05` (TMA-012, TMA-035); task files KV-FE-057, KV-FE-058, KV-FE-061, KV-FE-062, KV-FE-031. From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
-| Needs from the production track | (1) `CSP_TILE_HOSTS` in the app's server environment of staging and production, starting with `https://tile.openstreetmap.org`; (2) the PMTiles file on the media host with `Range` and CORS for the app origins (KV-INF-021) and the name of its Protomaps basemap schema version; until then `tiles` stays empty; (3) a long-lived cache rule in nginx for `/map-fonts/` |
+| Needs from the production track | (1) `CSP_TILE_HOSTS` in the app's server environment of staging and production, starting with `https://tile.openstreetmap.org`, plus the origin of the PMTiles file once it is hosted (the PMTiles reader uses `fetch` with `Range`, so its origin must be in `connect-src`; the same list feeds the MapLibre worker's policy); (2) the PMTiles file on the media host with `Range` (206), CORS for the app origins with `Access-Control-Expose-Headers: ETag` (KV-INF-021) and the name of its Protomaps basemap schema version; until then `tiles` stays empty; (3) a long-lived cache rule in nginx for `/map-fonts/`; `/maplibre/<version>/` must keep going to the app, not be served by nginx from disk: the proxy answers it with the worker's policy (its cache stays Next.js's revalidated `max-age=0`, so a rollback never meets a cached 404); (4) the build goes through `pnpm` (`homi-deploy` runs `pnpm -r build`), whose `prebuild` writes `frontend/app/public/maplibre/<version>/`: a bare `next build` leaves it out and every GL device falls back to «Карта … недоступна»; the files must be readable by the Next unit's user, like `.next` |
 
 ## Goal
 
@@ -73,10 +73,12 @@ package's own documentation at the installed version; the list is in step 1.
 ```text
 app/[locale]/(main)/map/page.tsx          route file: <Suspense><MapScreen initialQuery=…/></Suspense>
 features/map/MapScreen.tsx                'use client': engine, lazy view, points, selection, states
+├── MapLoading.tsx                        the centred spinner (engine, view chunk, library)
 ├── gl/MapViewGL.tsx                      next/dynamic(…, { ssr: false }); this package
 ├── leaflet/MapViewLeaflet.tsx            WP-28; until then MapUnavailable.tsx
 ├── MapStatusPill.tsx  MapNote.tsx  LocateButton.tsx  MapAttribution.tsx
-└── MapSelectionCard.tsx                  compact ListingCard of WP-24 per slot
+├── MapSelectionCard.tsx                  compact ListingCard of WP-24 per slot; useCardLayer.ts (DEV-013)
+└── useLocate.ts  useDocumentLook.ts  useMapPoints.ts
 features/map/MapWarmup.tsx                rendered by (main)/page.tsx (the feed): idle warm-up and tile prefetch
 ```
 
@@ -91,10 +93,12 @@ type MapViewProps = {
   groups: MapGroup[]; responseId: number;            // responseId changes only with a new answer → refit
   selection: Selection; onSelect(numbers: number[], at?: number): void; onBackground(): void;
   polygon: Polygon | null; cityView: { center: [number, number]; zoom: number };
+  cityKnown: boolean;                                // false while cityView is the Tashkent stand-in
   tiles: string | null | undefined; locale: Locale; scheme: 'light' | 'dark'; lite: boolean;
   me: { lat: number; lon: number; accuracy: number | null } | null;
   drawing: boolean; onDrawn?(p: Polygon): void; onTooSmall?(): void;      // used from WP-28
   onFail(reason: 'webgl' | 'chunk' | 'style'): void;
+  onBasemap?(basemap: Basemap): void;                // the basemap drawn: raster after a vector failure
 };
 ```
 
@@ -107,27 +111,35 @@ type MapViewProps = {
 | 1 | launch address has `?map=gl` or `?map=leaflet` | store it in `homi-map-engine`, continue with it as `saved`; `?map=auto` removes the key |
 | 2 | a GL failure happened in this session (`glFailed`) | Leaflet |
 | 3 | saved `leaflet` | Leaflet |
-| 4 | saved `gl` | GL when any WebGL context can be created, else Leaflet |
+| 4 | saved `gl` | GL when a WebGL2 context can be created (MapLibre 6 needs WebGL2: `new Map` throws `GPUInitializationError` without it), else Leaflet |
 | 5 | nothing saved | GL when a WebGL2 context with `failIfMajorPerformanceCaveat: true` can be created **and** lite mode is off; else Leaflet |
 
-- `?map=` is a launch parameter (TMA-012, parsed by WP-21's `lib/deeplinks/parse.ts`). If the parser does not return
-  it yet, add the field there in this PR. `?mapdebug` exposes the map object only when `NEXT_PUBLIC_APP_ENV` is not
-  `production`.
+- `?map=` is a launch parameter (TMA-012, parsed by WP-21's `lib/deeplinks/parse.ts`, with `mapDebug` for
+  `?mapdebug`). The view toggle keeps only the search keys, so the map reads the query captured when
+  `lib/deeplinks/launch.ts` loads, through `launchMapOptions()`. `?mapdebug` sets `window.homiMap` to the map object
+  only when `NEXT_PUBLIC_APP_ENV` is not `production`.
 - The probe context is released at once. The key is local-only in `lib/storage.ts`.
 - `markGlFailed(reason)` sets the session flag and calls `reportError(new Error('map_gl_failed'), { kind: 'error' })`
   once (LB-APP-019). The engine never changes mid-session for any other reason.
-- `warmMap()` loads the view chunk, `maplibre-gl` and `pmtiles` once; a failed load may be retried. It is called
-  only from an effect, an idle callback or a pointer event, never while rendering (LB-APP-018).
+- `warmMap()` loads the view chunk, `maplibre-gl` and `pmtiles` once (`gl/library.ts`: the worker URL, the
+  `pmtiles://` protocol and `prewarm()`, which also keeps the worker alive while the route is hidden); a failed load
+  may be retried. It is called only from an effect, an idle callback or a pointer event, never while rendering
+  (LB-APP-018). `useEngine()` answers `null` on the server and until its first effect, so rendering never probes
+  WebGL.
 
 ### Data (`features/map/useMapPoints.ts`, `pins.ts`)
 
 - Request: `bffFetch('listings/map', { query: toApiQuery(filters), signal })` (the signature of WP-22) on every
-  change of the filters; no sort, no paging, no viewport. The previous request is aborted and an answer for older
-  filters is dropped. Check that `lib/api/bffAllowList.ts` has `listings/map` and the card read; add them if WP-22
-  left them out.
-- Answer, per the contract of WP-12: points with the listing number, `lat`, `lon`, a display label, an optional tone,
-  the "priced" flag and the USD price used for ordering; and `total`. A missing `total` counts as the number of
-  points.
+  change of the query string (`filtersKey` ignores `posted_days`, which the map takes); no sort, no paging, no
+  viewport. The previous request is aborted and an answer for older filters is dropped. `lib/api/bffAllowList.ts`
+  already has `listings/map` and `listings/:number`. Points are read only while the session is ready and the engine
+  is GL (WP-28 drops the engine condition).
+- Answer, per the contract of WP-12: points `{ number, lat, lon, label, tone, priced, usd }` (`tone` may be `null`,
+  `usd` orders a stack) and `total`. A missing `total` counts as the number of points. `bffFetch` already reports
+  each answer's `meta.source` (`reportSource`), so the hook does not; it keeps the last answer's source, and
+  `MapScreen` renders `<SourceReporter>` with it while the map is its own address, so the demo marker comes back when
+  the map is shown again (Back from a listing, a closed sheet, a tab round trip). The filters are those of the map's
+  own address, `useScreenSearchState("map")` (KI-43).
 - `groupByLocation(points, hidden)`: drop numbers present in `useSessionMap('hidden')`; group by `lat` and `lon`
   rounded to 5 decimals; sort each group by price ascending, missing price last. `shown` = points kept;
   `total` = answer total minus hidden points.
@@ -136,8 +148,11 @@ type MapViewProps = {
 
 ### Pins, stacks, clusters (`gl/useClusterIndex.ts`, `gl/useClusterMarkers.ts`, `gl/markerElements.ts`)
 
-- Supercluster over the groups: radius 48, `maxZoom` 17, extent 512, group sizes summed.
-- Markers are DOM elements synced to the viewport plus 10 % on `moveend` and on integer-zoom changes.
+- Supercluster over the groups: radius 48, `maxZoom` 17, extent 512, queried with `Math.floor` of the GL zoom (so
+  radius 48 is 48 px); one point per group with its size, summed by `map` / `reduce` (`point_count` counts groups).
+- Markers are DOM elements synced to the viewport plus 10 % on `moveend` and on integer-zoom changes. Marker taps
+  come from the map's own `click`; a click whose target is inside `.maplibregl-marker` is never a background tap.
+  A spread stack is taken out of the index and stays open while zooming (legacy GL); it closes with the card.
 - Pin: class `pin` plus the tone (`good`, `high`, `suspicious`, `check`), `nego` when the point is not priced,
   `active` when selected (z-index 1000). Stack: the cheapest label plus a count badge. Cluster: a circle with the
   count, 32 / 38 / 44 px for fewer than 10 / fewer than 50 / more.
@@ -154,12 +169,14 @@ type MapViewProps = {
 - A change of the hidden set rebuilds markers and does not move the camera.
 - A city change jumps to the city's centre and zoom from reference data, then the new answer fits. Until a city
   view is known: Tashkent `[41.3111, 69.2797]`, zoom 12.
-- After the first fit for a city the view is saved as `homi-map-fit:<lat>,<lon>` → `[lat, lon, zoom]` (4 decimals);
-  corrupt JSON is ignored.
+- After the first fit for a city the view is saved as `homi-map-fit:<lat>,<lon>` → `[lat, lon, zoom]` (4 decimals,
+  Leaflet scale); corrupt JSON is ignored. Nothing is saved, and no city jump is made, while the city view is still
+  the Tashkent stand-in (`cityKnown: false`).
 - Area mask: with a polygon, a dimmed world rectangle with the polygon cut out and an outline
   (`maskGeometry(polygon)`).
 - Map options: maximum zoom 17 (GL scale), rotation, pitch and keyboard off, no world copies, pixel ratio
-  `min(devicePixelRatio, 2)` (1 in lite), no built-in attribution control. A `ResizeObserver` resizes the canvas.
+  `min(devicePixelRatio, 2)` (1 in lite), no built-in attribution control, `validateStyle: false` (the style builder
+  is validated offline). MapLibre's own `trackResize` resizes the canvas.
 
 ### Basemap and tiles (`features/map/tiles.ts`, `gl/style.ts`, `palette.ts`, `gl/fonts.ts`)
 
@@ -170,52 +187,71 @@ type MapViewProps = {
 | a string ending in `.pmtiles` | vector source through the PMTiles protocol | «© OpenStreetMap · Protomaps» |
 | a string with `{z}/{x}/{y}` | vector tile template | «© OpenStreetMap · Protomaps» |
 
-- Raster tiles are fetched through a custom protocol `homiosm://` registered with MapLibre's `addProtocol`, so the
-  request carries `referrerPolicy: 'strict-origin-when-cross-origin'` whatever the page policy is (the tile server
-  asks for a referrer). OSM tiles are never prefetched.
-- `registerPmtiles()` registers the `pmtiles://` protocol once. A rejected registration, a missing file or a source
-  error rebuilds the style on the raster source and reports `map_tiles_failed` once (tile half of LB-APP-008).
+- Raster tiles carry `referrerPolicy: 'strict-origin-when-cross-origin'` whatever the page policy is (the tile server
+  asks for a referrer): the map's `transformRequest` sets it for `https://tile.openstreetmap.org/` (MapLibre fetches
+  raster tiles with `fetch`, which honours it), so no custom protocol is needed. Raster source: `tileSize` 256,
+  `maxzoom` 19. OSM tiles are never prefetched.
+- `loadMapLibre()` registers the `pmtiles://` protocol once (`new Protocol({ metadata: false })`). A rejected read, a
+  missing file or a source error of the vector source rebuilds the style on the raster source for the rest of the
+  session and reports `map_tiles_failed` once (tile half of LB-APP-008); the view reports the basemap it draws
+  (`onBasemap`), so the attribution follows.
 - The vector style is written for the Protomaps basemap schema of the hosted file: land, water, green, roads,
   buildings, boundaries, place and road labels. Label text uses the name field of the interface locale with a
   fallback to the default name. Light and dark palettes are derived from the design tokens of WP-20 and compared
   by eye with legacy screenshots. Lite mode uses fewer layers.
-- Label glyphs: 12 Noto Sans subsets (latin, latin-ext, cyrillic, cyrillic-ext × 400, 500, 600) taken from the
-  upstream Noto release under OFL 1.1, stored in `frontend/app/public/map-fonts/` with `OFL.txt`. How MapLibre 6
-  consumes them is **verify before use**. Files in `public/` are served with `Cache-Control: public, max-age=0`
-  (bundled `public-folder.md`), hence the nginx rule in the field table.
+- Label glyphs: 12 Noto Sans 2.015 subsets (latin, latin-ext, cyrillic, cyrillic-ext × 400, 500, 600) under OFL 1.1,
+  stored in `frontend/app/public/map-fonts/` with `OFL.txt`. Upstream publishes no woff2 subsets, so they were made
+  with fonttools 4.68 (`pyftsubset <ttf> --unicodes=<ranges> --flavor=woff2`, the ranges in `gl/fonts.ts`) from the
+  unhinted TTFs of `notofonts.github.io` (developer, 2026-11-18: «Поставить fonttools»). MapLibre 6 takes them
+  through the style's `font-faces` (`{ url, "unicode-range" }` per face, one range per element; keys equal the
+  `text-font` names `Noto Sans Regular | Medium | SemiBold`; the weight comes from the file); there is no `glyphs`
+  URL, a face loads only when a label needs it, and a codepoint outside the faces is drawn locally. Files in `public/`
+  are served with `Cache-Control: public, max-age=0` (bundled `public-folder.md`), hence the nginx rule in the field
+  table.
 - The style is rebuilt without re-creating the map when `html[data-scheme]`, `html.lite` or the locale changes
-  (`MutationObserver` on `<html>`).
+  (`MutationObserver` on `<html>`), and when the polygon, the "me" position or the basemap changes:
+  `setStyle(buildStyle(…), { diff: true })`. A diff also compares GeoJSON data set at runtime, so the mask and "me"
+  sources travel in the built style.
+- Worker: MapLibre 6 ships its worker as an ES module that imports a shared module, and Turbopack emits the worker
+  without that sibling. `scripts/copy-maplibre-worker.mjs` (`predev`, `prebuild`) copies both into
+  `public/maplibre/<version>/` (gitignored) and `loadMapLibre()` calls `setWorkerUrl`. MapLibre 6 has no CSP build and
+  needs neither `'unsafe-eval'` nor WebAssembly.
 - `MapAttribution` renders the two links (`https://www.openstreetmap.org/copyright`, `https://protomaps.com`) and
   opens them with `tg.openLink`. The strings are not translated, as in legacy. The link allow-list of WP-21
   (`lib/telegram/links.ts`) names neither host, so `tg.openLink` would refuse both: this package adds
   `www.openstreetmap.org` and `protomaps.com` to the constant, with a case in `tests/telegram/links.test.ts`.
 - CSP (WP-21 reads the keys; this package documents them in `frontend/app/.env.example`): `CSP_TILE_HOSTS`, a
-  space-separated list of origins added to `connect-src` and `img-src`; MapLibre also needs `worker-src blob:` and
-  `img-src blob: data:` — **verify before use** against the nonce policy of WP-21, including whether the CSP build
-  of MapLibre is needed.
+  space-separated list of origins added to `connect-src` and `img-src`. The page policy of WP-21 already has what
+  MapLibre needs (`worker-src 'self' blob:`, `img-src … data: blob:`). The worker is a same-origin file, so it takes
+  the policy of its own response: the proxy answers `/maplibre/` with a worker policy whose `connect-src` carries
+  the same tile hosts (vector template tiles are fetched inside the worker).
 
 ### Selection card (`features/map/MapSelectionCard.tsx`)
 
 - Selection is state of `MapScreen`. One number: one glass card with the compact `ListingCard` (one photo, short
   verdict, no badges, no "viewed" eye) and a × (aria `common.close`). Several numbers: header `map.stackOf` and a
   horizontal scroll-snap track with one slot per number; only slots within ±1 of the current index render content;
-  slots are 85–90 % wide so neighbours peek. Z-index 31, above the tab bar and the bottom inset.
+  slots are 85–90 % wide so neighbours peek. Z-index 31, above the tab bar and the bottom inset. The track follows the
+  selection's index: a spread-pin tap scrolls it, a swipe reports the new index, new numbers start it again.
 - Preview per slot: `GET /listings/{number}?preview=1` — the preview form of WP-12, which returns the preview
   object only and records no view — through `bffFetch('listings/' + number, { query: { preview: 1 } })` and
   `useResource('listing-preview:' + number, …)`, for the current and adjacent slots, once each.
 - A failed slot shows an inline retry for that slot (LB-APP-017).
-- With `dev013BackClosesMapCard` on, the selection is mirrored into `useLayerState('pin')`: opening pushes
-  `pin=<number>`, Back closes the card and collapses the stack. A direct load with `pin` strips the parameter.
-  Off (default): the card is not a history layer.
+- With `dev013BackClosesMapCard` on, the selection is mirrored into `useLayerState('pin')` (`useCardLayer`): opening
+  pushes `pin=<number>`, Back closes the card and collapses the stack, a card closed another way pops the entry, and
+  an address replaced under the card (the deal switch, a filters apply) steps back over the entry first, so the root
+  map tab gets no Back. A direct load with `pin` strips the parameter. Off (default): the card is not a history
+  layer.
 - Because the map route stays mounted under an intercepted listing, returning from the listing shows the same card.
   When the route is hidden and shown again by a tab switch, the view effect re-creates the map; `MapScreen` clears
   the selection in that effect so no card survives without its pin.
 
 ### Warm-up and tile prefetch (`features/map/MapWarmup.tsx`, `tilePrefetch.ts`)
 
-- On the list view, 2.5 s after it settles (timer reset on change, cancelled on leaving): `warmMap()` for the
-  engine `pickEngine` would choose. A pointer-down on «Карта» in the view toggle calls `warmMap()` at once (add an
-  `onIntent` prop to `ViewToggle` if WP-23 has none). Nothing runs with Save-Data or on `2g` / `slow-2g`.
+- On the list view, 2.5 s after it settles (timer reset when the address changes, cancelled on leaving): `warmMap()`
+  for the engine `pickEngine` would choose. A pointer-down on «Карта» in the view toggle calls `warmMap()` at once
+  (`ViewToggle`'s `onIntent`, passed by `AppShell`). Nothing runs with Save-Data or on `2g` / `slow-2g`. With no saved
+  fit the view is the city centre at `zoom − 1`, so the data zoom is two below the city's (Tashkent 12 → z10).
 - Tile prefetch only for a `{z}/{x}/{y}` template: once per (template, city centre) per session; view = the saved
   fit, else the city centre at `zoom − 1`; data zoom `min(fitZoom − 1, 15)`; the tiles covering half a screen
   (512 px tiles), nearest first; a shared set of requested URLs prevents duplicates; bytes are counted from the
@@ -231,26 +267,39 @@ type MapViewProps = {
 
 New, under `frontend/app/`:
 
-- `app/[locale]/(main)/map/page.tsx` (replaces the placeholder of WP-20).
-- `features/map/{MapScreen,MapUnavailable,MapStatusPill,MapNote,LocateButton,MapAttribution}.tsx`,
-  `features/map/{MapSelectionCard,MapWarmup}.tsx`
-- `features/map/{types,engine,useMapPoints,pins,camera,mask,tiles,palette,tilePrefetch,useLocate}.ts`
-- `features/map/gl/{MapViewGL.tsx,useMapInstance.ts,style.ts,fonts.ts,useClusterIndex.ts}`,
+- `app/[locale]/(main)/map/page.tsx` (replaces the placeholder of WP-20; the route marker is `display: contents`).
+- `features/map/{MapScreen,MapLoading,MapUnavailable,MapStatusPill,MapNote,LocateButton,MapAttribution}.tsx`,
+  `features/map/{MapSelectionCard,MapWarmup}.tsx`, `features/map/map.css` (the markers, imported by
+  `styles/app.css`).
+- `features/map/{types,engine,useMapPoints,pins,camera,mask,tiles,palette,tilePrefetch,useLocate}.ts`,
+  `features/map/{useCardLayer,useDocumentLook}.ts`
+- `features/map/gl/{MapViewGL.tsx,library.ts,useMapInstance.ts,style.ts,fonts.ts,useClusterIndex.ts}`,
   `features/map/gl/{useClusterMarkers.ts,markerElements.ts,useAreaMask.ts,useMeLayer.ts}`
+- `scripts/copy-maplibre-worker.mjs` (run by `predev` and `prebuild`; its output `public/maplibre/` is gitignored).
 - `public/map-fonts/*.woff2` (12 files) and `public/map-fonts/OFL.txt`.
-- `tests/map/{engine,pins,camera,mask,tiles,tilePrefetch,style,markerElements,useMapPoints}.test.ts`,
-  `tests/map/{MapScreen,MapSelectionCard,MapWarmup}.test.tsx`, `e2e/map.spec.ts`.
+- `tests/map/{engine,pins,camera,mask,tiles,tilePrefetch,style,markerElements,useMapPoints,useClusterIndex}.test.ts`,
+  `tests/map/{MapScreen,MapScreen.chunk,MapSelectionCard,MapWarmup,MapViewGL}.test.tsx`, `e2e/map.spec.ts`.
 
 Changed:
 
 - `app/[locale]/(main)/page.tsx`: renders `<MapWarmup />`.
-- `features/shell/ViewToggle.tsx`: `onIntent` (only if missing).
-- `lib/api/bffAllowList.ts`, `lib/deeplinks/parse.ts`, `lib/storage.ts` (keys `homi-map-engine`, `homi-map-fit:*`):
-  only if the entries are missing.
+- `features/shell/ViewToggle.tsx` (`onIntent`; its address from the screen state of its view) and
+  `features/shell/AppShell.tsx` (passes it); `features/shell/TopBar.tsx`: `MapBar` reads `useScreenSearchState("map")`,
+  so under a listing opened from the card it keeps the map's deal, badge and area (KI-43);
+  `features/shell/SearchProof.tsx` and `SearchProofServer.tsx` (the WP-22 proof on the placeholder) are deleted.
+- `lib/deeplinks/parse.ts` (`mapDebug`) and `lib/deeplinks/launch.ts` (`launchMapOptions()`). The allow-list, the
+  storage keys, `requestDraw()` / `consumeDrawRequest()` and `tg.location.available()` were already there.
 - `lib/telegram/links.ts` (the two attribution hosts) and `tests/telegram/links.test.ts`.
-- `lib/ui/shellState.ts`: `requestDraw()` and `consumeDrawRequest()` (only if WP-23 or WP-25 have not added them).
-- `eslint.config.mjs` (the HTML-injection rule), `.env.example` (`CSP_TILE_HOSTS`).
+- `proxy.ts` and `lib/security/csp.ts` (the worker's policy on `/maplibre/`).
+- `eslint.config.mjs` (the HTML-injection rule, also `setHTML`), `.env.example` (`CSP_TILE_HOSTS`), `package.json`
+  (`predev`, `prebuild`), `.gitignore`, `styles/app.css`.
 - `frontend/packages/i18n/messages/homi/{ru,uz,en}.json`: the new keys of "Behaviour to reproduce".
+- `frontend/packages/testing/src/playwright.ts`: the guard answers a tile of the OSM raster with a blank PNG (the map
+  shows that basemap while `tiles` is `null`); `frontend/playwright.config.ts` and
+  `.github/workflows/frontend-e2e.yml`: `CSP_TILE_HOSTS` for the end-to-end server.
+- `e2e/data.spec.ts` (the WP-22 checks re-hosted on the map and the feed), `e2e/gates.spec.ts` (the header-mode
+  refusal on the map's read), `e2e/shell.spec.ts` (the lasso lands on the plain map until WP-28),
+  `e2e/csp.spec.ts` (the worker's policy).
 
 ## Steps
 
@@ -314,7 +363,7 @@ New keys (HOMI layer; uz wording to be confirmed by the reviewer):
 | Tap a pin | light haptic; any open stack collapses; the card opens for that listing; the pin becomes `active` |
 | Tap a stack | light haptic; all listings of the group are selected, cheapest first; the stack spreads into labelled pins on a spiral without overlaps, with a dot at the centre |
 | Tap a spread pin | the card track scrolls to that listing |
-| Swipe the card track | light haptic per slot; the matching spread pin becomes `active` |
+| Swipe the card track | light haptic per slot (`tg.haptic.impact()`; the facade has no selection haptic); the matching spread pin becomes `active` |
 | Tap a cluster below maximum zoom | light haptic; the camera eases (500 ms) to the bounds of its leaves, at least to the expansion zoom, padding 120 / 130 / 56 / 56 |
 | Tap a cluster at maximum zoom | the card opens with all its listings sorted by price |
 | Tap the map background | the card closes and the stack collapses |
@@ -349,7 +398,8 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
   on vector failure; no layer refers to a missing source.
 - `tilePrefetch.test.ts`: budget table; tile set for a known centre and zoom; once per region; session byte cap.
 - `markerElements.test.ts`: a label `<b>x</b>` renders literally in pins and stacks; tone classes; cluster sizes.
-- `useMapPoints.test.ts`: abort on change; stale answer dropped; each status; `reportSource` called.
+- `useMapPoints.test.ts`: abort on change; stale answer dropped; each status; the answer's source kept, no second
+  `reportSource`.
 
 **Component (Testing Library, map library mocked).**
 
@@ -363,12 +413,12 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; cancelled on unmount before 2.5 s;
   skipped with Save-Data.
 
-**End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium is
-expected to render WebGL in software, which the caveat probe rejects, so GL scenarios launch with `?map=gl`
-(confirm on the first run and note the result in the PR). OSM tile requests are fulfilled with a fixture image by
-a route the spec registers after `launchApp`; `playwrightTelegram` of WP-03 blocks that host, so verify in the
-Playwright documentation that the later route is the one that answers, and extend the helper with an allow option
-if it is not.
+**End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium renders
+WebGL2 in software (SwiftShader) and passes the caveat probe (checked on the first run), so GL is the default pick
+and the unavailable state is launched with `?map=leaflet`. The CSP checks a tile request before any route sees it,
+so the end-to-end server gets `CSP_TILE_HOSTS`; the guard of `@homi/testing/playwright` answers OSM tiles with a
+blank PNG, and a spec's own `page.route` runs before it (`allowHosts` already existed). The default stub search draws
+four stacks of eleven on the fitted camera (45 points; repeats keep their base's location).
 
 - Open the map from the toggle: pins from the stub answer are visible; the demo marker shows.
 - Pin → card → listing → Back: the map and the same card are still there.
@@ -376,7 +426,7 @@ if it is not.
 - `listings/map` answered 500 → error pill → «Повторить» → pins; answered with no points → `map.empty`.
 - Preview answered 500 → slot retry → card.
 - Locate with a fake LocationManager: denied text; success moves the camera; no request carries coordinates.
-- Launch without `?map=gl` → `map.unavailable` and the button returns to the list (changed by WP-28).
+- Launch with `?map=leaflet` → `map.unavailable` and the button returns to the list (changed by WP-28).
 
 **Not automated:** real GPU rendering and performance, pinch on devices, the native permission sheet, the vector
 basemap until a file is hosted (checked on staging when `tiles` is first set), palette likeness.
@@ -416,4 +466,80 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 
 ## Handoff
 
-Empty.
+- **Steps 1–13 are done** on `wp-27-map-gl` (from `main` = `d4c0d88`, after #82); step 14, the checklist on staging,
+  waits for the production track (below). The orchestrator built a vertical slice first and checked it on
+  `next start` (the worker and its shared module load under the nonce CSP, `load` and `idle` fire, the OSM tiles
+  carry the origin-only referrer, headless Chromium passes the caveat probe); then plain subagents, at most three at
+  a time, each owning its own files, in two build waves and one end-to-end wave, with two review rounds after them.
+  The facts the slice and the research verified are written into "Design" above (rule 6) and recorded as AM-80 …
+  AM-86 in the phase-3 notes §Y.
+  - `bca55ab` slice: the worker copy script, `gl/library.ts`, `types.ts`, the twelve label fonts with `OFL.txt`.
+  - `bcd58f8` wave 1: the engine rule and launch options; basemap, palette, fonts and the style builder; pins,
+    camera, mask and prefetch; `useMapPoints`; the marker DOM and `map.css`; the ESLint rule; the link hosts; the
+    three keys.
+  - `aa60ff3` wave 2: the screen, the GL view, the card with `useCardLayer`, the warm-up and `onIntent`; the e2e guard
+    and the end-to-end server's `CSP_TILE_HOSTS`. `c8ec053`: the GL container sized by its parent (MapLibre's CSS made
+    it `position: relative`, 0 px high) and the route marker `display: contents`.
+  - `d4e077c` the end-to-end specs: `map.spec.ts`, and `data.spec.ts` / one `gates.spec.ts` test re-hosted.
+  - `c11aefd` review round 1 fixes, `f7100dc` the worker's cache, `782216a` review round 2 fixes, `192f285` two map
+    tests wait for what they assert.
+  - Size of the code commits: 96 files, +9 559 / −175 against `main`, of which tests are +5 536; the twelve fonts are
+    296 KB. The header's estimate was 3 000 lines without the fonts.
+  - The checklist lines stay unticked: each asks for ru / uz / en, light / dark and a GL and a non-GL profile, several
+    for Telegram on staging.
+- **Reviews** (each finding checked by a refuting agent):
+  - Round 1 (behaviour, security, conformance; 11 findings, 5 refuted), fixed in `c11aefd`: a `draw=1` layer opened
+    again at the same address was never closed (now once per opening); no spinner while `maplibre-gl` loaded; the
+    Tashkent stand-in wrote fit memory and caused a city jump before the city view was known (`cityKnown`); DEV-013
+    left a Back after a replace under the card (KI-59); the worker had no CSP of its own (SEC-1); the lasso step of
+    `shell.spec.ts`. `f7100dc`: the worker keeps Next.js's revalidated cache, because a one-year header also landed on
+    the 404 of a missing version.
+  - Round 2 (the fixes, cross-module flows; 3 findings), fixed in `782216a`: the map bar under a listing showed the
+    default search (KI-43's map part); the demo marker did not come back with the map; DEV-013's lasso over an open
+    card left a Back that did nothing.
+- **Checks** (from `frontend/` unless marked):
+  - **Slice (`bca55ab`):** a production build and a throwaway Playwright probe against `next start` (started with the
+    mkcert CA and `CSP_TILE_HOSTS`): the worker and `maplibre-gl-shared.mjs` load from `/maplibre/6.11.2/`, the map
+    fires `load` and `idle`, six OSM tiles requested with `referer: http://localhost:3001/`, and
+    `getContext("webgl2", { failIfMajorPerformanceCaveat: true })` is non-null under SwiftShader.
+  - **Waves 1 and 2:** each builder ran its own test files, ESLint and the app typecheck; the orchestrator's gate:
+    app typecheck exit 0, `tests/map`, `tests/shell`, `tests/deeplinks`, `tests/telegram` 47 files / 639 tests, ESLint
+    clean (on `aa60ff3`). A build plus a probe of `/ru/map` showed four stacks of eleven, the spread and the card.
+  - **Mutation checks** (reported by the builders, not re-run by the orchestrator): every new test of the fixes fails
+    against the broken version (the builders' reports list each break: the draw close per address, the spinner, the
+    stand-in's fit memory and jump, the card layer's step-over and lasso pop, the worker policy, the matcher, the
+    unknown-city prefetch, the bar's screen state, the re-reported source).
+  - **`c11aefd`:** `make ci-frontend` clean — app 168 files / 2600 + 1 todo, `@homi/search` 238 + 1 todo,
+    `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112, `@homi/api-client` 14, `@homi/utils` 2.
+  - **`782216a`** (the final code): `make ci-frontend` clean — app 168 files / 2608 + 1 todo, the packages as above.
+  - **End to end**, each of the 19 files alone against a local `next start` of the `782216a` build, with a pause
+    between files (KI-32): map 17, csp 3, shell 16, data 5, gates 8, foundation 19, back 11, feed 19, filters 20,
+    listing-open 16, listing-contact 14, listing-actions 14, photo-viewer 6, launch 5, city 6, session 7,
+    boot-failure 6, crash 4, smoke 2 — 198 passed. In the batch two map tests failed under machine load (load average
+    up to 36): the first map's stacks after the default 5 s, and the locate zoom read before the flight ended
+    (13.9999); `192f285` makes them wait for what they assert, and the whole `map.spec.ts` then passed alone, 17 of
+    17. An earlier batch on
+    the `c11aefd` build, while a second machine load was running, left several sign-ins at `booting` in csp, shell,
+    data, gates, back and launch; all passed in the final batch.
+  - No backend change, so no `composer ci:check`.
+- **Open for the reviewer:**
+  - The uz texts of `map.empty`, `map.loading`, `map.unavailable` (the spec's wording, U+02BC in «Eʼlonlar»).
+  - The palette: background, land, labels, halo and the mask come from the tokens; water, green, roads, buildings,
+    boundaries and the "me" blue are designed (DEC-46), not compared with legacy screenshots — the vector basemap
+    cannot be seen before a file is hosted.
+  - The prefetch view without a saved fit is the city centre at `zoom − 1` and its data zoom `fitZoom − 1`, so two
+    below the city's zoom, as written in `KV-FE-062`.
+  - The fit takes the 3–97 % box, so in the default stub search one listing is outside the first view.
+  - KI-59 (`history.ts` matches a `popstate` by address; worked around in the card layer) and KI-60 (a spread-pin tap
+    during the card's snap).
+  - Not automated: real GPU rendering, pinch, the native permission sheet, the vector basemap and palette likeness,
+    a cluster at maximum zoom (no stub listings are that close), the theme and language restyle on a live map, a
+    forced GL failure in a browser, the DEV-013 branch (unit tests only), hiding a listing from the card, the mask and
+    the camera rules beyond "the stacks are on screen".
+- **Needs from the production track** (the field above): `CSP_TILE_HOSTS=https://tile.openstreetmap.org` in the app's
+  environment of staging and production before this deploys, or the map shows pins on an empty background; later the
+  PMTiles file with `Range`, CORS and `ETag` exposed, and its origin added to `CSP_TILE_HOSTS`; the nginx cache rule for
+  `/map-fonts/`; `/maplibre/<version>/` keeps going to the app (served as `application/javascript` by Next.js, checked
+  locally); the build through `pnpm -r build` as `homi-deploy` does (its `prebuild` writes `public/maplibre/<version>/`,
+  checked in the local `make ci-frontend` log), never a bare `next build`. Then the regular deploy and the checks inside
+  Telegram on staging (iOS, Android, Desktop, Web: the map or the unavailable state).

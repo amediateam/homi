@@ -6,13 +6,25 @@ import { syntheticInitData } from "./initData";
 /**
  * Playwright side of `@homi/testing` (WP-03). Specs import `test` and `expect` from here: every test then runs behind
  * a guard that stops each request to a host other than the app under test and fails the test when one was stopped
- * (`telegram.org`, PostHog, OpenStreetMap, any tile host — DEC-33). The one exception is the SDK tag of the Mini
- * App's layout (WP-21): it is answered here with an empty script, so the fake stays the SDK and nothing leaves the
- * machine. Any other request to telegram.org — a `fetch` of the same address included — still fails the test.
+ * (`telegram.org`, PostHog, any tile host — DEC-33). Two exceptions are answered here, so nothing leaves the
+ * machine: the SDK tag of the Mini App's layout (WP-21) gets an empty script, so the fake stays the SDK; and a tile of
+ * the OpenStreetMap raster fallback (WP-27) gets a blank PNG, because the map shows that basemap while `tiles` is
+ * `null` and any spec that opens the map would otherwise fail. Any other request to telegram.org — a `fetch` of the
+ * same address included — or to another OpenStreetMap address still fails the test; a spec may answer tiles itself
+ * with `page.route`, which runs first.
  */
 
 /** The `<script id="tg-sdk">` of `frontend/app/app/[locale]/layout.tsx` (TMA-001). */
 export const TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js";
+
+/** A tile of the raster fallback, `OSM_TILE_URL` of `frontend/app/features/map/tiles.ts`. */
+const OSM_TILE = /^https:\/\/tile\.openstreetmap\.org\/\d+\/\d+\/\d+\.png$/;
+
+/** A transparent 1×1 PNG: the guard's answer to an OpenStreetMap tile, and a fixture for specs that answer tiles. */
+export const BLANK_TILE_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=",
+  "base64",
+);
 
 export interface PlaywrightTelegramOptions extends FakeTelegramOptions {
   /**
@@ -69,6 +81,10 @@ async function guard(page: Page): Promise<GuardState> {
     if (url.href === TELEGRAM_SDK_URL && route.request().resourceType() === "script") {
       // The tag is `crossorigin="anonymous"`, so the answer needs the CORS header telegram.org sends.
       await route.fulfill({ status: 200, contentType: "text/javascript", headers: { "access-control-allow-origin": "*" }, body: "" });
+      return;
+    }
+    if (OSM_TILE.test(url.href)) {
+      await route.fulfill({ status: 200, contentType: "image/png", headers: { "access-control-allow-origin": "*" }, body: BLANK_TILE_PNG });
       return;
     }
     if (!state.allowHosts.has(url.hostname)) {

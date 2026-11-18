@@ -232,6 +232,34 @@ describe("TopBar variants (SCR-006), in ru, uz and en", () => {
     expect(screen.getByRole("radio", { name: "Продажа" }).getAttribute("aria-checked")).toBe("true");
     expect(container.querySelector('[data-chip="rooms"]')?.getAttribute("data-state")).toBe("on");
   });
+
+  it("the map bar kept under a listing opened from the map shows the map's deal, badge and area (KI-43)", () => {
+    at("/map", `city=tashkent&deal=sale&rooms_min=2&polygon=${POLYGON}`);
+    const { container, rerender } = bar("map");
+    const rerenderAt = (pathname: string, search = "") => {
+      at(pathname, search);
+      rerender(
+        <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+          <TopBar variant="map" />
+        </NextIntlClientProvider>,
+      );
+    };
+    const badge = () => container.querySelector('[data-slot="header-chip-badge"]')?.textContent ?? null;
+
+    rerenderAt("/listing/42");
+
+    expect(screen.getByRole("radio", { name: "Продажа" }).getAttribute("aria-checked")).toBe("true");
+    expect(badge()).toBe("2");
+    expect(screen.getByRole("button", { name: "Фильтры, 2" })).toBeTruthy();
+    expect(screen.getByText("Своя область")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Убрать область" })).toBeTruthy();
+
+    // Back on the map the bar reads the live address again.
+    rerenderAt("/map", "city=tashkent");
+    expect(screen.getByRole("radio", { name: "Аренда" }).getAttribute("aria-checked")).toBe("true");
+    expect(badge()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Убрать область" })).toBeNull();
+  });
 });
 
 describe("the deal switch (BR-APP-002, BR-APP-023)", () => {

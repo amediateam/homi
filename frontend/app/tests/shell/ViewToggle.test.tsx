@@ -14,12 +14,16 @@ vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: null 
 import type { ShellVariant } from "@/features/shell/shellVariant";
 import { ViewToggle } from "@/features/shell/ViewToggle";
 
-function toggle(variant: ShellVariant, locale: Locale = "ru") {
-  return render(
+function tree(variant: ShellVariant, locale: Locale = "ru", onIntent?: () => void) {
+  return (
     <NextIntlClientProvider locale={locale} messages={getMessages(locale)} timeZone="Asia/Tashkent">
-      <ViewToggle variant={variant} />
-    </NextIntlClientProvider>,
+      <ViewToggle variant={variant} onIntent={onIntent} />
+    </NextIntlClientProvider>
   );
+}
+
+function toggle(variant: ShellVariant, locale: Locale = "ru", onIntent?: () => void) {
+  return render(tree(variant, locale, onIntent));
 }
 
 const at = (pathname: string, search = "") => {
@@ -82,6 +86,30 @@ describe("ViewToggle (SCR-006)", () => {
     expect(state.tab).toHaveBeenCalledWith("/?city=tashkent&deal=sale");
   });
 
+  it("kept under a listing opened from the map, «Список» carries the map's search, not the listing's address (KI-43)", () => {
+    at("/", "city=tashkent&deal=sale");
+    const { rerender } = toggle("search-list");
+    at("/map", "city=tashkent&rooms_min=3");
+    rerender(tree("map"));
+    at("/listing/42");
+    rerender(tree("map"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Список" }));
+
+    expect(state.tab).toHaveBeenCalledWith("/?city=tashkent&rooms_min=3");
+  });
+
+  it("kept under a listing opened from the list, «Карта» carries the list's search (KI-43)", () => {
+    at("/", "city=tashkent&deal=sale&rooms_min=2");
+    const { rerender } = toggle("search-list");
+    at("/listing/42");
+    rerender(tree("search-list"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Карта" }));
+
+    expect(state.tab).toHaveBeenCalledWith("/map?city=tashkent&deal=sale&rooms_min=2");
+  });
+
   it.each(["map-drawing", "saved", "radars", "settings", "none"] as const)("is hidden for %s", (variant) => {
     at("/map", "city=tashkent&draw=1");
     expect(toggle(variant).container.innerHTML).toBe("");
@@ -100,6 +128,46 @@ describe("ViewToggle (SCR-006)", () => {
 
     fireEvent.click(screen.getByRole("button"));
     expect(state.tab).toHaveBeenCalledTimes(1);
+  });
+
+  it("a pointer-down on «Карта» calls onIntent at once, before the tap and without navigating (WP-27)", () => {
+    at("/", "city=tashkent");
+    const onIntent = vi.fn();
+    toggle("search-list", "ru", onIntent);
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Карта" }));
+
+    expect(onIntent).toHaveBeenCalledTimes(1);
+    expect(onIntent).toHaveBeenCalledWith();
+    expect(state.tab).not.toHaveBeenCalled();
+    expect(haptics()).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Карта" }));
+    expect(onIntent).toHaveBeenCalledTimes(1);
+    expect(state.tab).toHaveBeenCalledTimes(1);
+  });
+
+  it("the intent is also called on the collapsed chrome, whose tap only expands it", () => {
+    at("/", "city=tashkent");
+    const onIntent = vi.fn();
+    toggle("search-list", "ru", onIntent);
+    document.documentElement.classList.add("chrome-mini");
+
+    fireEvent.pointerDown(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(onIntent).toHaveBeenCalledTimes(1);
+    expect(state.tab).not.toHaveBeenCalled();
+  });
+
+  it("«Список» on the map has no intent", () => {
+    at("/map", "city=tashkent");
+    const onIntent = vi.fn();
+    toggle("map", "ru", onIntent);
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Список" }));
+
+    expect(onIntent).not.toHaveBeenCalled();
   });
 
   it("floats at the toggle's layer with the hooks of the collapse rules", () => {

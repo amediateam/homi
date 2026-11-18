@@ -1185,3 +1185,118 @@ the listing layer, the rest WP-33's), KI-42 resolved for the listing layer, KI-4
 Merged on 2026-11-17 as #81 (`95315fd`), on «сливай #81», after green `frontend` (run 44146798245), `backend` (run
 44146798129) and `frontend-e2e` (run 44146798203, 180 passed). WAITING for the regular deploy of the production track
 and the checks inside Telegram on staging.
+
+## Y. Development track, 2026-11-17/18 — WP-27, map: MapLibre GL engine
+
+Branch `wp-27-map-gl`, on `main` = `d4c0d88` (after #82). It ran as plain subagents, at most three at a time, each
+owning its own files, after a vertical slice the orchestrator built and checked on `next start` first (the worker,
+the CSP, WebGL in headless Chromium):
+- **Slice (`bca55ab`):** the worker copy script, `gl/library.ts`, the view contract `types.ts`, the twelve label
+  fonts.
+- **Wave 1 (`bcd58f8`):** the pure modules with their unit tests — the engine rule and launch options; the basemap,
+  palette, fonts and style builder; grouping, spread, camera, mask and prefetch; `useMapPoints`, the marker DOM and
+  its CSS, the ESLint rule, the link hosts, the three keys.
+- **Wave 2 (`aa60ff3`, `c8ec053`):** the screen; the selection card, the card layer and the warm-up; the GL view.
+- **Wave 3:** the end-to-end specs (`d4e077c`) and, in parallel, one review in three lenses (behaviour, security,
+  conformance) with one refuting agent per finding; the fixes follow.
+
+The search map now renders: the engine of the session, the points of the map's own search as pins, stacks and
+clusters, the spread and the selection card with lazy previews, the camera rules, the area mask, locate, the
+attribution, the loading, empty and error states, and the warm-up from the list. A device the rule sends to Leaflet
+sees «Карта на этом устройстве пока недоступна» until WP-28 (DEC-45).
+
+Developer decision (2026-11-18): **label fonts** («Поставить fonttools») — upstream Noto publishes no woff2 subsets,
+so fonttools 4.68 (with brotli) was installed in a throwaway virtual environment on the development machine only, and
+the twelve subsets were cut from the unhinted Noto Sans 2.015 TTFs; nothing is added to the repository's toolchain.
+
+ASSUMPTION_MISMATCH AM-80 (2026-11-18):
+- **Assumption.** WP-27's engine table chose GL for a saved `gl` "when any WebGL context can be created".
+- **What was found.** MapLibre 6 needs WebGL2: `new Map` throws `GPUInitializationError` without it (CHANGELOG
+  6.0.0, `src/ui/map.ts`). A WebGL1-only device with a saved `gl` would fail on every open.
+- **Resolution.** Row 4 probes WebGL2 without the caveat flag; the specification says so.
+
+ASSUMPTION_MISMATCH AM-81 (2026-11-18):
+- **Assumption.** WP-27 left open how MapLibre's worker loads under the bundler and the nonce CSP, and whether its
+  CSP build is needed.
+- **What was found.** MapLibre 6 has no CSP build; its worker is an ES module that imports a shared module, and
+  Turbopack emits the worker without that sibling (maplibre-gl 6.11.2 `docs/index.md`). A same-origin worker also
+  takes the policy of its own response, and the proxy skipped every path with a dot, so vector template tiles fetched
+  inside the worker were outside `connect-src` (review SEC-1).
+- **Resolution.** `scripts/copy-maplibre-worker.mjs` copies both files into `public/maplibre/<version>/` before
+  `dev` and `build`; `loadMapLibre()` sets the worker URL; the proxy answers `/maplibre/` with a worker policy
+  (`default-src 'none'; script-src 'self'; connect-src 'self' <CSP_TILE_HOSTS>`); its cache stays Next.js's
+  revalidated `max-age=0`, because the proxy cannot tell a file from a missing version and a one-year cache would keep
+  a 404 that a rollback brings back.
+
+ASSUMPTION_MISMATCH AM-82 (2026-11-18):
+- **Assumption.** WP-27 fetched OSM raster tiles through a custom `homiosm://` protocol so the requests carry a
+  referrer whatever the page policy is.
+- **What was found.** MapLibre fetches raster tiles with `fetch` and honours a `referrerPolicy` returned by
+  `transformRequest`; the slice showed the tile requests with the origin-only referrer.
+- **Resolution.** `osmTransformRequest` sets `strict-origin-when-cross-origin` for `https://tile.openstreetmap.org/`;
+  no protocol.
+
+ASSUMPTION_MISMATCH AM-83 (2026-11-18):
+- **Assumption.** WP-27 took the twelve Noto Sans woff2 subsets "from the upstream Noto release" and left open how
+  MapLibre 6 consumes them.
+- **What was found.** Upstream publishes TTF/OTF only, no woff2 and no subsets; this machine had no subsetting tool.
+  MapLibre 6 reads woff2 through the style's `font-faces` (one `unicode-range` element per range, keys equal to the
+  `text-font` names, the weight from the file), with no `glyphs` URL.
+- **Resolution.** The developer chose fonttools (above); `gl/fonts.ts` holds the ranges, the specification the
+  command.
+
+ASSUMPTION_MISMATCH AM-84 (2026-11-18):
+- **Assumption.** WP-27 expected headless Chromium to fail the caveat probe (so GL specs would launch with
+  `?map=gl`), and an OSM tile route registered after `launchApp` to answer the tiles.
+- **What was found.** Under Playwright's SwiftShader the WebGL2 probe with `failIfMajorPerformanceCaveat` succeeds, so
+  GL is the default pick; and the page's CSP refuses a tile request before any route sees it.
+- **Resolution.** The end-to-end server (`playwright.config.ts`, the CI workflow) gets `CSP_TILE_HOSTS`, the guard
+  of `@homi/testing/playwright` answers OSM tiles with a blank PNG, and the unavailable state is launched with
+  `?map=leaflet`.
+
+ASSUMPTION_MISMATCH AM-85 (2026-11-18):
+- **Assumption.** WP-27 read `?map=` and `?mapdebug` from the launch when the map shows.
+- **What was found.** The launch query was private to `lib/deeplinks/launch.ts`, and the view toggle keeps only the
+  search keys, so the map's address has neither parameter.
+- **Resolution.** `launchMapOptions()` reads the query captured when the module loads; `Launch.mapDebug` is parsed.
+
+ASSUMPTION_MISMATCH AM-86 (2026-11-18):
+- **Assumption.** WP-27's file list named no existing end-to-end spec.
+- **What was found.** `data.spec.ts` (the whole WP-22 proof), one test of `gates.spec.ts` and the lasso step of
+  `shell.spec.ts` depended on the map placeholder or on a drawing mode that WP-27 closes at once.
+- **Resolution.** `data.spec.ts` keeps every check, re-hosted on the map's read and the feed; the gates test refuses
+  the map's read; the lasso step lands on the plain map until WP-28.
+
+Review findings and fixes (each finding checked by a refuting agent; each fix came with a test that its builder
+showed failing against the broken version — reported by the builders, not re-run by the orchestrator):
+- **Round 1** (on `d4e077c`; behaviour, security, conformance — 11 findings, 5 refuted), fixed in `c11aefd` and
+  `f7100dc`: the `draw=1` layer closed once per address instead of once per opening; no spinner during the library
+  load; fit memory and a city jump on the Tashkent stand-in (`cityKnown`); DEV-013's pin entry left behind by a replace
+  (KI-59); the worker without a policy of its own (AM-81); the shell spec's lasso step. The worker's one-year cache
+  went again in `f7100dc` (a 404 of a missing version would have been kept).
+- **Round 2** (on `f7100dc`; the fixes, cross-module flows — 3 findings), fixed in `782216a`: the map bar read the
+  default search under a listing opened from the card (KI-43's map part); the demo marker did not come back with the
+  map (`SourceReporter`, as the feed); DEV-013's lasso over an open card left a Back that did nothing.
+
+Own choices (no ADR):
+- **Worker files** generated before `dev` and `build`, git-ignored, under a versioned path; `prewarm()` keeps the
+  worker alive across the route's Activity hide and show.
+- **Style rebuilds** always through `setStyle(…, { diff: true })` from one pure builder that carries the mask and
+  "me" data; the map is created once per mount.
+- **Markers** as DOM elements (text only), taps from the map's own `click`, the spread taken out of the cluster index.
+- **The test hooks** (`data-map-*`, `data-marker`) named in the build notes and used by `e2e/map.spec.ts`.
+- **The e2e guard** answers OSM tiles itself, so no spec can reach the public tile server.
+
+Known issues: KI-59 (low: `history.ts` matches a `popstate` by address), KI-60 (low: a spread-pin tap during the
+card's snap); KI-43's map part done.
+
+Verified (from `frontend/`):
+- **The slice (`bca55ab`):** a production build and a probe against `next start`: the worker and its shared module
+  load under the nonce CSP, `load` and `idle` fire, OSM tiles carry the origin-only referrer, headless Chromium passes
+  the caveat probe.
+- **On `c11aefd`:** `make ci-frontend` clean, app 168 files / 2600 + 1 todo.
+- **On `782216a`:** `make ci-frontend` clean — app 168 files / 2608 + 1 todo, `@homi/search` 238 + 1 todo,
+  `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112, `@homi/api-client` 14, `@homi/utils` 2.
+- **End to end:** each of the 19 files alone against a local `next start` of the `782216a` build, 198 passed (two map
+  tests made to wait for what they assert in `192f285` after failing under machine load, then `map.spec.ts` 17 of 17
+  alone).
