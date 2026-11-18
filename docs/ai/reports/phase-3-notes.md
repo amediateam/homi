@@ -1300,3 +1300,113 @@ Verified (from `frontend/`):
 - **End to end:** each of the 19 files alone against a local `next start` of the `782216a` build, 198 passed (two map
   tests made to wait for what they assert in `192f285` after failing under machine load, then `map.spec.ts` 17 of 17
   alone).
+
+## Z. Development track, 2026-11-18 — WP-28, map: Leaflet engine, lasso, spot map
+
+Developer's word (2026-11-18): «Следующий пакет — WP-28», given while #83 (WP-27) was in review. The branch
+`wp-28-map-leaflet-lasso` therefore starts from `wp-27-map-gl` at `94a414d` and its PR is stacked on #83: its base is
+`wp-27-map-gl` until #83 merges, then `main`. It ran as in §Y — a vertical slice the orchestrator built and checked on
+`next start` first, then plain subagents, at most three at a time, each owning its own files:
+- **Slice (`7d57dc7`):** `leaflet/library.ts`, the map and its camera, the raster tiles, the clusters; `MapUnavailable`
+  and `map.unavailable` removed; the marker elements moved to `features/map/` for both engines. **Skeleton
+  (`0db8dea`):** the stub hooks the builders filled in, so that no two of them edited one file.
+- **Wave 1 (`949696b`, `c6dea7f`, `6b14977`):** the Leaflet view; the lasso and drawing on both engines; the spot map.
+  **Follow-ups (`6a6d124`, `297ca2c`):** the changes the builders could not make in their own files (one prefetch cap,
+  the GL markers' deferred re-sync, the spot route's leave rule, `Maximize2`).
+- **Wave 2 (`f4a7c5b`):** the end-to-end specs, which found two bugs fixed in the same commit (a Leaflet cluster and the
+  spread dot shrank in the empty icon box; the spot map's container was 0 px high on GL, the cause of `c8ec053`).
+- **Reviews (`31aa139`, `f7ba4b2`):** below.
+
+ASSUMPTION_MISMATCH AM-87 (2026-11-18):
+- **Assumption.** WP-28's end-to-end section expected headless Chromium to fall to Leaflet by rule, with GL cases
+  launched with `?map=gl`.
+- **What was found.** As in AM-84, SwiftShader passes the WebGL2 probe, so GL is the default pick.
+- **Resolution.** The Leaflet cases launch with `?map=leaflet`; `map-lasso.spec.ts` and `spot-map.spec.ts` run on both.
+
+ASSUMPTION_MISMATCH AM-88 (2026-11-18):
+- **Assumption.** WP-28 drew the Leaflet attribution with Leaflet's control without its prefix.
+- **What was found.** The control writes its attribution as an HTML string, and `MapScreen` already draws the same
+  attribution for GL with `MapAttribution`, whose links go through `tg.openLink`.
+- **Resolution.** No attribution control on either engine: `MapAttribution` serves both maps and the spot map;
+  protomaps-leaflet's own attribution (an HTML string by default) is emptied.
+
+ASSUMPTION_MISMATCH AM-89 (2026-11-18):
+- **Assumption.** WP-28 named protomaps-leaflet's layer with "the palettes of WP-27 and label rules", leaving open how a
+  vector failure is seen.
+- **What was found.** At 5.1.0, `paintRules(flavor)` / `labelRules(flavor, lang)` paint every road class in one colour,
+  ignore lite mode and need a full `@protomaps/basemaps` flavor; and the library reports no tile failure:
+  `renderTile` logs a rejected tile, paints it without the source and tells Leaflet it loaded.
+- **Resolution.** `basemapRules.ts` writes the rules layer by layer from GL's style with the palette's colours (zooms on
+  the Leaflet scale); `watchVectorErrors` wraps the layer's sources and switches to the raster; the failure state and
+  its one report per session are shared with GL in `features/map/useBasemap.ts`. A template's 404 counts as a failure
+  on Leaflet (KI-62).
+
+ASSUMPTION_MISMATCH AM-90 (2026-11-18):
+- **Assumption.** WP-28 imported Leaflet, its plugins and their CSS inside the view's chunk, as one import.
+- **What was found.** Leaflet 1.9.4 ships only a UMD build, which sets `window.L` when it runs; markercluster reads
+  that global when it runs and protomaps-leaflet when a layer is made.
+- **Resolution.** `leaflet/library.ts` `loadLeaflet()` loads the three in order once per session (GL's
+  `loadMapLibre()` pattern); the other modules import Leaflet's types only.
+
+ASSUMPTION_MISMATCH AM-91 (2026-11-18):
+- **Assumption.** WP-28 asked the production track to extend `img-src` with the tile hosts and to keep the origin in
+  tile requests.
+- **What was found.** `lib/security/csp.ts` already lists `CSP_TILE_HOSTS` in `img-src`, and `proxy.ts` sets
+  `Referrer-Policy: strict-origin-when-cross-origin`; the slice showed Leaflet's tile images requested with
+  `referer: http://localhost:3001/` and no CSP report. `TileLayer`'s `referrerPolicy` also sets it per image.
+- **Resolution.** Nothing new is asked of the production track beyond WP-27's `CSP_TILE_HOSTS`.
+
+ASSUMPTION_MISMATCH AM-92 (2026-11-18):
+- **Assumption.** WP-28's `SpotMapRoute` read the listing with `useListing()` from the resource cache and left on a
+  listing error.
+- **What was found.** `useListing()` makes the read and needs the server's first answer; the cache-only reader is
+  `useListingRecord()`, as the photo viewer, market and actions children use. In cookie mode a server failure stays in
+  the screen's first answer and never reaches the resource.
+- **Resolution.** `SpotMapRoute` reads `useListingRecord(useListingNumber())`; the listing layer's context carries the
+  screen's reported state, so the route also leaves on a cookie-mode `not_found`, `offline` or `server`.
+
+ASSUMPTION_MISMATCH AM-93 (2026-11-18):
+- **Assumption.** WP-28's lasso table deferred the marker re-sync by 150 ms during a two-finger move, without saying how
+  on each engine.
+- **What was found.** MapLibre's `panBy` / `zoomTo` without animation fire `moveend` at once, and GL's marker layer
+  syncs on every `moveend`; Leaflet's public `panBy` fires `moveend` on every call.
+- **Resolution.** GL: the lasso's camera moves carry `LASSO_MOVE`, and the marker layer re-syncs once,
+  `LASSO_RESYNC_MS` after the last of them. Leaflet: the host moves the pane as Leaflet's own drag does
+  (`_rawPanBy`, KI-61) and fires one `moveend` 150 ms after the last move; a pinch steps whole zooms.
+
+Review findings and fixes (each finding checked by a refuting agent; each fix came with a test shown failing against
+the broken version by the orchestrator):
+- **Round 1** (on `f4a7c5b`; the Leaflet view, drawing, the spot map, security and regressions — 4 findings, 1 refuted),
+  fixed in `31aa139`: a Leaflet pin was reused for another listing at the same address with the same label, so its
+  tap opened a listing no longer in the search (the signature now names the listings); a Leaflet map removed within
+  250 ms of a zoom animation (or mid-pinch) threw from Leaflet's timer (`removeLeafletMap`); under StrictMode in
+  `next dev` a GL chunk failure while drawing was reported twice and Back ran twice (a once-guard in
+  `ViewChunkFailed`). Refuted: a lint guard for Leaflet's HTML-string options (no such sink is used).
+- **Round 2** (on `31aa139`; the fixes and cross-module flows — 1 finding), fixed in `f7ba4b2`: the wheel's debounce
+  timer also outlived the removal. The flows lens (the filters hand-off, the finished stroke, the spot map's Back
+  order, the session's engine across both maps, the shared prefetch cap) found nothing.
+
+Own choices (no ADR):
+- **Skeleton first:** stub hooks with fixed signatures, so three builders could fill one view without sharing a file.
+- **One prefetch cap:** `prefetchTileUrls` in `tilePrefetch.ts` serves the list's warm-up and Leaflet's in-map
+  prefetch.
+- **Gestures paused while drawing** on both engines, and marker taps ignored, so the strips the overlay leaves under the
+  bars neither pan the map nor open a card.
+- **The spot map** is re-created rather than restyled on a theme, lite or locale change; the fullscreen map is a
+  dialog (focus, Escape) like the photo viewer; `SpotMapRoute` is imported statically, only the engines are lazy.
+- **Leaflet's selected marker** raised with `setZIndexOffset`, not CSS; a dark raster filter approximates GL's paint.
+
+Known issues: KI-61 (low: Leaflet and protomaps-leaflet internals at the pinned versions), KI-62 (low: a template's 404
+tile switches Leaflet to the raster).
+
+Verified (from `frontend/`):
+- **The slice (`7d57dc7`):** a production build and a probe against `next start` with `?map=leaflet&mapdebug`: four
+  stacks, one cluster of 44 zoomed out, the card, icon roots without a size, OSM tile images with the origin-only
+  referrer, no console error or CSP report.
+- **On `f7ba4b2`:** `make ci-frontend` — types, lint, typecheck and the build passed; the test step failed once with
+  `ENOENT` on `node_modules/.vitest-cache` in `@homi/search` (no assertion failed), and `pnpm test` again passed: app 183
+  files / 2831 + 1 todo, `@homi/search` 238 + 1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112,
+  `@homi/api-client` 14, `@homi/utils` 2.
+- **End to end:** each of the 22 files alone against a local `next start` of the `f7ba4b2` build, with a pause between
+  files (KI-32): 237 passed (map 17, map-leaflet 17, map-lasso 9, spot-map 13 and the 18 earlier files as in §Y plus
+  their changes); the same on the `f4a7c5b` build.
