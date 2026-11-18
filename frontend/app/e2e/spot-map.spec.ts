@@ -167,9 +167,15 @@ async function scrollMiniBelow(page: Page, number: number, gap: number): Promise
 /** The scroll offset of the listing layer that holds the mini map. */
 const layerScroll = (page: Page, number: number) => mini(page, number).evaluate((box) => box.closest('[data-slot="route-overlay"]')?.scrollTop ?? -1);
 
-/** Brings the mini map into view and waits for its map (the first map of a page loads the library: 15 s). */
+/**
+ * Brings the mini map into view and waits for its map (the first map of a page loads the library: 15 s). A listing
+ * opened again from the feed can still show the box of its earlier opening for a moment, which is then removed: the
+ * scroll is retried until it lands on the box that stays.
+ */
 async function miniReady(page: Page, engine: Engine, number = LISTING): Promise<void> {
-  await mini(page, number).scrollIntoViewIfNeeded();
+  await expect(async () => {
+    await mini(page, number).scrollIntoViewIfNeeded({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
   await expect(mini(page, number)).toHaveAttribute("data-spot-status", "ready", { timeout: 15_000 });
   await expect(mapView(mini(page, number))).toHaveClass(new RegExp(`(^|\\s)${engine.map}(\\s|$)`));
 }
