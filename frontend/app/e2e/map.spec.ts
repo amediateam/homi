@@ -9,11 +9,12 @@ import type { Page, Request, Route } from "@playwright/test";
  *
  * Headless Chromium creates a WebGL2 context that passes the major-performance-caveat probe, so the engine rule of
  * WP-27 "Engine choice" picks GL without `?map=gl` (the spec expected software rendering to fail the probe; noted for
- * the PR). The unavailable state of E7 is reached with `?map=leaflet`, the override of TMA-012. The OpenStreetMap
- * raster tiles are answered by the guard of `@homi/testing/playwright` with a blank PNG; `stubMedia` answers the
- * previews' photos. Markers are plain DOM elements in MapLibre's canvas container, and a tap reaches them through
- * the map's own `click`, so `locator.click()` is the tap. `?mapdebug` exposes the map as `window.homiMap` in every
- * build but production (the e2e builds are `local` and `ci`); the locate test reads the camera from it.
+ * the PR). E7 launches with `?map=leaflet`, the override of TMA-012: the map opens on the Leaflet view of WP-28, which
+ * replaced the unavailable state (`map-leaflet.spec.ts` covers that view). The OpenStreetMap raster tiles are answered
+ * by the guard of `@homi/testing/playwright` with a blank PNG; `stubMedia` answers the previews' photos. Markers are
+ * plain DOM elements in MapLibre's canvas container, and a tap reaches them through the map's own `click`, so
+ * `locator.click()` is the tap. `?mapdebug` exposes the map as `window.homiMap` in every build but production (the e2e
+ * builds are `local` and `ci`); the locate test reads the camera from it.
  *
  * The map's answers that the stubs cannot give (no points, a server error, a failed preview) are page routes
  * registered after `launchApp` and before the map opens from the feed's view toggle. Header mode runs the core path
@@ -45,8 +46,9 @@ const STACK_SIZE = 11;
 
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 const html = (page: Page) => page.locator("html");
-const route = (page: Page, name: string) => visible(page, `[data-route="${name}"]`);
 const view = (page: Page) => visible(page, '[data-map-view="gl"]');
+/** The Leaflet view of WP-28, which `?map=leaflet` opens. */
+const leafletView = (page: Page) => visible(page, '[data-map-view="leaflet"]');
 const stacks = (page: Page) => visible(page, '[data-marker="stack"]');
 const spread = (page: Page) => visible(page, '[data-marker="spread"]');
 const card = (page: Page) => visible(page, "[data-map-card]");
@@ -577,34 +579,36 @@ test.describe("map (cookie mode)", () => {
     }
   });
 
-  /** E7; States "Map unavailable"; acceptance "Non-GL profile: `map.unavailable` with a working button back to the list". */
-  test("?map=leaflet shows «Карта на этом устройстве пока недоступна»; «Список» goes to the feed", async ({ page }) => {
+  /**
+   * E7 as WP-28 changed it ("`e2e/map.spec.ts` (the "unavailable" case becomes a Leaflet case)"); acceptance of WP-28
+   * "Non-GL profile: the map opens on Leaflet; the "map unavailable" state no longer exists anywhere".
+   */
+  test("?map=leaflet opens the map on Leaflet with the stub's stacks; the unavailable state is gone", async ({ page }) => {
     await openMap(page, "?map=leaflet");
-    const unavailable = visible(page, "[data-map-unavailable]");
-    await expect(unavailable).toContainText("Карта на этом устройстве пока недоступна");
+    // The first map of a page loads the library: slow on a loaded machine.
+    await expect(leafletView(page)).toBeVisible({ timeout: 15_000 });
+    await stacksDrawn(page);
     await expect(view(page)).toHaveCount(0);
-
-    await unavailable.getByRole("button", { name: "Список" }).click();
-    await expect(page).toHaveURL(/\/ru(\?|$)/);
-    await expect(route(page, "feed")).toBeVisible();
-    await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+    await expect(page.locator("[data-map-unavailable]")).toHaveCount(0);
+    await expect(page.getByText("Карта на этом устройстве пока недоступна")).toHaveCount(0);
   });
 
   /** Acceptance "`?map=gl`, `?map=leaflet`, `?map=auto` persist and clear the choice across launches" (TMA-012). */
   test("the ?map= choice persists across launches; ?map=auto clears it", async ({ page, context }) => {
     await openMap(page, "?map=leaflet");
-    await expect(visible(page, "[data-map-unavailable]")).toBeVisible();
+    await expect(leafletView(page)).toBeVisible({ timeout: 15_000 });
+    await expect(view(page)).toHaveCount(0);
 
     // The next launch in the same Telegram (the same storage) without the parameter keeps the choice.
     const second = await context.newPage();
     await openMap(second);
-    await expect(visible(second, "[data-map-unavailable]")).toBeVisible();
+    await expect(leafletView(second)).toBeVisible({ timeout: 15_000 });
     await expect(view(second)).toHaveCount(0);
 
     const third = await context.newPage();
     await openMap(third, "?map=auto");
     await expect(view(third)).toBeVisible();
-    await expect(visible(third, "[data-map-unavailable]")).toHaveCount(0);
+    await expect(leafletView(third)).toHaveCount(0);
     await expect(stacks(third)).toHaveCount(STACKS);
   });
 

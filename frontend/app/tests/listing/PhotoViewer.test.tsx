@@ -534,7 +534,7 @@ describe("PhotoViewerRoute (WP-26)", () => {
   function route(number: number | null = 100001) {
     return render(
       intl(
-        <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {} }}>
+        <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view: null }}>
           <PhotoViewerRoute />
         </ListingLayerContext>,
       ),

@@ -8,7 +8,7 @@ import {
   spreadDotElement,
   spreadPinElement,
   stackElement,
-} from "@/features/map/gl/markerElements";
+} from "@/features/map/markerElements";
 import type { MapGroup, MapPoint } from "@/features/map/types";
 
 function point(number: number, overrides: Partial<MapPoint> = {}): MapPoint {

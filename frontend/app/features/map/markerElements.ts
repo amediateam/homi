@@ -1,9 +1,9 @@
-import { type MapGroup, type MapPoint, PIN_TONES, type PinTone } from "../types";
+import { type MapGroup, type MapPoint, PIN_TONES, type PinTone } from "./types";
 
 /**
  * The DOM of the map's markers (SCR-011, KV-FE-058): a price pin, a stack, a cluster and the dot at the centre of a
- * spread stack, styled by `features/map/map.css`. No engine is imported here (WP-28 moves the file to
- * `features/map/` for Leaflet). Every server string is set with `textContent` on nodes made by `createElement`
+ * spread stack, styled by `features/map/map.css`, shared by both engines: GL places the roots as markers, Leaflet as
+ * `divIcon` elements (WP-28). No engine is imported here. Every server string is set with `textContent` on nodes made by `createElement`
  * (LB-APP-020); the classes are fixed names, a tone only when it is one of `PIN_TONES`. For tests, `data-marker` names
  * the kind (`pin`, `stack`, `cluster`, `spread`, `dot`), `data-number` the listing, `data-key` the group and
  * `data-count` the listings of a stack or a cluster. The engine owns each root's position and transform.

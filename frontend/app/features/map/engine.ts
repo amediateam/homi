@@ -7,6 +7,7 @@ import { isLiteGraphics } from "@/lib/graphics";
 import { storageGet, storageSet } from "@/lib/storage";
 
 import { loadMapLibre } from "./gl/library";
+import { loadLeaflet } from "./leaflet/library";
 import type { MapFailReason } from "./types";
 
 /**
@@ -79,7 +80,7 @@ function liteNow(): boolean {
 let engine: Engine | null = null;
 let glFailed = false;
 let failureReported = false;
-let warming: Promise<void> | null = null;
+const warming: Record<Engine, Promise<void> | null> = { gl: null, leaflet: null };
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -169,22 +170,23 @@ export function useEngine(): Engine | null {
 }
 
 /**
- * Loads the code of an engine ahead of the map (LB-APP-018): for GL the view chunk and `maplibre-gl` with `pmtiles`;
- * Leaflet has nothing to load until WP-28. Single-flight; a rejection is passed on and forgotten, so the next call
- * retries. Called from an effect, an idle callback or a pointer event, never while rendering; a caller that does not
+ * Loads the code of an engine ahead of the map (LB-APP-018): its view chunk and its library — for GL `maplibre-gl`
+ * with `pmtiles`, for Leaflet `leaflet` with its two plugins. Single-flight per engine; a rejection is passed on and
+ * forgotten, so the next call retries. Called from an effect, an idle callback or a pointer event, never while rendering; a caller that does not
  * wait catches the rejection.
  */
 export function warmMap(target: Engine = currentEngine()): Promise<void> {
-  if (target === "leaflet") {
-    return Promise.resolve();
-  }
-  warming ??= Promise.all([import("./gl/MapViewGL"), loadMapLibre()])
+  warming[target] ??= (
+    target === "gl"
+      ? Promise.all([import("./gl/MapViewGL"), loadMapLibre()])
+      : Promise.all([import("./leaflet/MapViewLeaflet"), loadLeaflet()])
+  )
     .then(() => undefined)
     .catch((error: unknown) => {
-      warming = null;
+      warming[target] = null;
       throw error;
     });
-  return warming;
+  return warming[target];
 }
 
 /** Forgets the session's engine, failure, report and warm-up; tests only. */
@@ -192,5 +194,6 @@ export function resetEngineForTests(): void {
   engine = null;
   glFailed = false;
   failureReported = false;
-  warming = null;
+  warming.gl = null;
+  warming.leaflet = null;
 }

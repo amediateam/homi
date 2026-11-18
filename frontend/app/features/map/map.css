@@ -1,5 +1,5 @@
 /*
- * The map's markers (WP-27, SCR-011, KV-FE-058): the classes `features/map/gl/markerElements.ts` sets, for both
+ * The map's markers (WP-27, SCR-011, KV-FE-058): the classes `features/map/markerElements.ts` sets, for both
  * engines (WP-28 reuses them). Values are designed on the tokens of @homi/ui (`03` §3.6), so `html[data-scheme]`
  * recolours every marker and the pins need no scheme selector. The engine owns each root's place: MapLibre writes
  * `position`, `top`, `left` and an inline `transform`, so no rule here sets those, nor `scale` or `translate`, which
@@ -132,4 +132,36 @@ html.lite .pin,
 html.lite .cluster,
 html.lite .spread-dot {
   box-shadow: none;
+}
+
+/*
+ * Leaflet (WP-28): the `divIcon` root that holds one of the elements above. Leaflet places the root's top-left
+ * corner on the marker's point and writes its transform; the empty box centres its element on that point, whatever
+ * the element's width, so the icon needs no size or anchor of its own.
+ */
+.leaflet-marker-icon.homi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+
+/* The element keeps its own size in the empty box: a cluster's circle and the spread dot have a fixed one. */
+.leaflet-marker-icon.homi-icon > * {
+  flex-shrink: 0;
+}
+
+/*
+ * Leaflet's own stylesheet sets Helvetica at 12 px on its container; the markers take the page's font, as on GL. The
+ * selected marker is raised through Leaflet's z-index offset (`listingLayer.ts`), not here.
+ */
+.leaflet-container[data-map-view] {
+  font: inherit;
+}
+
+/* The OSM raster in the dark scheme: inverted and dimmed with the hue kept, as GL's raster paint (`palette.ts`). */
+html[data-scheme="dark"] .homi-raster {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.7);
 }

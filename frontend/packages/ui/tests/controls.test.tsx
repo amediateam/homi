@@ -261,6 +261,7 @@ describe("icons", () => {
       "Lock",
       "Map",
       "MapIcon",
+      "Maximize2",
       "Megaphone",
       "Play",
       "Plus",

@@ -7,7 +7,8 @@ import type { CityView } from "./types";
  * Tile prefetch from the list view (`03` §3.4 "Tile prefetch budget", KV-FE-062): a few vector tiles of the view the
  * map will open on, fetched in the background within a per-session byte budget, so the first map frame comes from the
  * HTTP cache. Only for a `{z}/{x}/{y}` template: a `.pmtiles` address gets the code warm-up only, and OpenStreetMap's
- * raster tiles are never prefetched (its tile policy). `MapWarmup` calls it; failures are silent.
+ * raster tiles are never prefetched (its tile policy). `MapWarmup` calls it; failures are silent. Leaflet's in-map
+ * prefetch (WP-28) fetches through `prefetchTileUrls` too, so both share the tiles asked for and the bytes of a launch.
  */
 
 export type PrefetchBudget = {
@@ -99,11 +100,82 @@ function isPrefetchTemplate(template: string): boolean {
   }
 }
 
-function tileUrl(template: string, tile: TileId): string {
+/** The address of one tile of a `{z}/{x}/{y}` template. */
+export function tileUrl(template: string, tile: TileId): string {
   return template.replace("{z}", String(tile.z)).replace("{x}", String(tile.x)).replace("{y}", String(tile.y));
 }
 
 export type TileFetcher = (url: string, init: RequestInit) => Promise<Response>;
+
+export type PrefetchResult = { tiles: number; bytes: number };
+
+export interface PrefetchUrlsOptions {
+  /** The bytes of all prefetches of this launch (`PrefetchBudget.sessionBytes`). */
+  sessionBytes: number;
+  /** The bytes of this call; no cap of its own when not given. */
+  maxBytes?: number;
+  /** The tiles this call asks for, a skipped one not counted; all of them when not given. */
+  maxTiles?: number;
+  /** Aborts the pending tile and the rest. */
+  signal?: AbortSignal;
+  /** Tests inject one; the default is `fetch`. */
+  fetcher?: TileFetcher;
+}
+
+/** The tiles asked for and the bytes fetched in this launch, by the list-view prefetch and the in-map one alike. */
+const requested = new Set<string>();
+let sessionBytes = 0;
+
+/**
+ * Fetches tiles into the HTTP cache within the budget of the launch that the list-view prefetch (`prefetchTiles`) and
+ * Leaflet's in-map prefetch (`attachTilePrefetch`, WP-28) share: one at a time in order, at low priority; a tile
+ * already asked for in this launch, by either, is skipped; the bytes of each response body count for the launch, and
+ * the next tile is not asked for once the launch's bytes reach `sessionBytes`, this call's bytes reach `maxBytes` or
+ * it asked for `maxTiles`, so the tile that crosses a byte cap is the last. A failed tile is forgotten, so a later
+ * call asks for it again; an abort stops at once and forgets the pending tile. Resolves with what was fetched.
+ */
+export async function prefetchTileUrls(urls: readonly string[], options: PrefetchUrlsOptions): Promise<PrefetchResult> {
+  const { signal, maxBytes = Infinity, maxTiles = Infinity } = options;
+  const fetcher: TileFetcher = options.fetcher ?? ((url, init) => fetch(url, init));
+  const done: PrefetchResult = { tiles: 0, bytes: 0 };
+  let asked = 0;
+  let pending: string | null = null;
+  // Forgets the pending tile at once on an abort (a new stop may ask for it again before the fetch rejects), and
+  // only once: a later call may have asked for it meanwhile.
+  const forget = () => {
+    if (pending !== null) {
+      requested.delete(pending);
+      pending = null;
+    }
+  };
+  signal?.addEventListener("abort", forget, { once: true });
+  try {
+    for (const url of urls) {
+      if (signal?.aborted || asked >= maxTiles || done.bytes >= maxBytes || sessionBytes >= options.sessionBytes) {
+        break;
+      }
+      if (requested.has(url)) {
+        continue;
+      }
+      asked += 1;
+      pending = url;
+      requested.add(url);
+      try {
+        const response = await fetcher(url, { signal, priority: "low" });
+        const bytes = (await response.arrayBuffer()).byteLength;
+        done.tiles += 1;
+        done.bytes += bytes;
+        sessionBytes += bytes;
+      } catch {
+        forget();
+      }
+      pending = null;
+    }
+  } finally {
+    signal?.removeEventListener("abort", forget);
+  }
+  return done;
+}
 
 export interface PrefetchOptions {
   /** `map.tiles_url` of the reference data; anything but a `{z}/{x}/{y}` template prefetches nothing. */
@@ -121,73 +193,41 @@ export interface PrefetchOptions {
   fetcher?: TileFetcher;
 }
 
-export type PrefetchResult = { tiles: number; bytes: number };
-
-const requested = new Set<string>();
 const regions = new Set<string>();
-let sessionBytes = 0;
 
 /**
  * Prefetches the tiles of the view the map will open on for `city` (KV-FE-062): the saved fit (`readFit`) or else the
- * city's centre at `zoom − 1`; once per (template, city centre) per launch. Tiles go one at a time, nearest first, at
- * low priority; a tile already asked for in this launch is skipped; the bytes of each response body are counted and
- * the next tile is not asked for once the tile count, the bytes of this prefetch or the bytes of the launch reach
- * the budget (`budgetFor`), so the tile that crosses a byte cap is the last. A failed tile is skipped silently. An
- * abort stops at once and forgets the region, so a later call fetches what is left. Resolves with what was fetched.
+ * city's centre at `zoom − 1`; once per (template, city centre) per launch. The first `preloadTiles` of them, nearest
+ * first, go through `prefetchTileUrls` within the bytes of this prefetch and of the launch (`budgetFor`), so a tile
+ * the in-map prefetch already asked for is skipped and its bytes count here too. A failed tile is skipped silently.
+ * An abort stops at once and forgets the region, so a later call fetches what is left. Resolves with what was fetched.
  */
 export async function prefetchTiles(options: PrefetchOptions): Promise<PrefetchResult> {
   const { template, city, viewport, lite, signal } = options;
-  const done: PrefetchResult = { tiles: 0, bytes: 0 };
   if (!template || city === null || signal?.aborted || !isPrefetchTemplate(template)) {
-    return done;
+    return { tiles: 0, bytes: 0 };
   }
   const budget = budgetFor(options.network ?? currentNetwork(), lite);
   const region = `${template}|${city.center[0].toFixed(4)},${city.center[1].toFixed(4)}`;
   if (budget.preloadTiles === 0 || regions.has(region) || sessionBytes >= budget.sessionBytes) {
-    return done;
+    return { tiles: 0, bytes: 0 };
   }
   regions.add(region);
 
   const view = readFit(city.center) ?? { center: city.center, zoom: city.zoom - 1 };
   const urls = prefetchTilesFor(view, viewport)
     .slice(0, budget.preloadTiles)
-    .map((tile) => tileUrl(template, tile))
-    .filter((url) => !requested.has(url));
-  const fetcher: TileFetcher = options.fetcher ?? ((url, init) => fetch(url, init));
-
-  let pending: string | null = null;
-  const forget = () => {
-    regions.delete(region);
-    if (pending !== null) {
-      requested.delete(pending);
-    }
-  };
+    .map((tile) => tileUrl(template, tile));
+  const forget = () => regions.delete(region);
   signal?.addEventListener("abort", forget, { once: true });
   try {
-    for (const url of urls) {
-      if (signal?.aborted || done.bytes >= budget.preloadBytes || sessionBytes >= budget.sessionBytes) {
-        break;
-      }
-      pending = url;
-      requested.add(url);
-      try {
-        const response = await fetcher(url, { signal, priority: "low" });
-        const bytes = (await response.arrayBuffer()).byteLength;
-        done.tiles += 1;
-        done.bytes += bytes;
-        sessionBytes += bytes;
-      } catch {
-        requested.delete(url);
-      }
-      pending = null;
-    }
+    return await prefetchTileUrls(urls, { sessionBytes: budget.sessionBytes, maxBytes: budget.preloadBytes, signal, fetcher: options.fetcher });
   } finally {
     signal?.removeEventListener("abort", forget);
   }
-  return done;
 }
 
-/** Forgets the regions, the requested tiles and the byte count of this launch. */
+/** Forgets the regions, the requested tiles and the byte count of this launch, the in-map prefetch's included. */
 export function resetPrefetchForTests(): void {
   requested.clear();
   regions.clear();

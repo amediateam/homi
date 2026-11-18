@@ -7,6 +7,7 @@ import {
   prefetchTiles,
   type PrefetchOptions,
   prefetchTilesFor,
+  prefetchTileUrls,
   resetPrefetchForTests,
   type TileFetcher,
 } from "@/features/map/tilePrefetch";
@@ -272,5 +273,106 @@ describe("prefetchTiles (KV-FE-062)", () => {
     await prefetchTiles(options({ viewport: { width: 1, height: 1 } }));
 
     expect(fetch).toHaveBeenCalledWith("https://tiles.homi.test/v4/10/709/382.mvt", { signal: undefined, priority: "low" });
+  });
+});
+
+describe("prefetchTileUrls (the budget both prefetches share)", () => {
+  const MB = KB * KB;
+  const url = (n: number) => `https://tiles.homi.test/v4/12/0/${n}.mvt`;
+
+  it("asks for the tiles in order, one at a time, at low priority", async () => {
+    const answers: (() => void)[] = [];
+    const fetcher = vi.fn<TileFetcher>(() => new Promise((resolve) => answers.push(() => resolve(new Response(new Uint8Array(KB))))));
+
+    const pending = prefetchTileUrls([url(1), url(2)], { sessionBytes: MB, fetcher });
+    expect(urlsOf(fetcher)).toEqual([url(1)]);
+    answers[0]();
+    await vi.waitFor(() => expect(urlsOf(fetcher)).toEqual([url(1), url(2)]));
+    answers[1]();
+
+    await expect(pending).resolves.toEqual({ tiles: 2, bytes: 2 * KB });
+    expect(fetcher.mock.calls[0][1]).toEqual({ signal: undefined, priority: "low" });
+  });
+
+  it("skips a tile asked for in this launch, and counts only the tiles it asks for against maxTiles", async () => {
+    await prefetchTileUrls([url(2)], { sessionBytes: MB, fetcher: answering(KB) });
+    const fetcher = answering(KB);
+
+    await expect(prefetchTileUrls([url(1), url(2), url(3), url(4)], { sessionBytes: MB, maxTiles: 2, fetcher })).resolves.toEqual({
+      tiles: 2,
+      bytes: 2 * KB,
+    });
+    expect(urlsOf(fetcher)).toEqual([url(1), url(3)]);
+  });
+
+  it("stops at maxBytes of the call and at the launch's sessionBytes: the tile that crosses a cap is the last", async () => {
+    const fetcher = answering(300 * KB);
+
+    await expect(prefetchTileUrls([url(1), url(2), url(3)], { sessionBytes: MB, maxBytes: 500 * KB, fetcher })).resolves.toEqual({
+      tiles: 2,
+      bytes: 600 * KB,
+    });
+    await expect(prefetchTileUrls([url(4), url(5), url(6)], { sessionBytes: MB, fetcher })).resolves.toEqual({ tiles: 2, bytes: 600 * KB });
+    await expect(prefetchTileUrls([url(7)], { sessionBytes: MB, fetcher })).resolves.toEqual({ tiles: 0, bytes: 0 });
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("shares the tiles and the bytes of the launch with prefetchTiles, both ways", async () => {
+    const first = answering(10 * KB);
+    await prefetchTileUrls(["https://tiles.homi.test/v4/10/709/382.mvt"], { sessionBytes: MB, fetcher: first });
+    const list = answering(10 * KB);
+
+    await prefetchTiles(options({ fetcher: list }));
+    expect(urlsOf(list)).toEqual([
+      "https://tiles.homi.test/v4/10/708/382.mvt",
+      "https://tiles.homi.test/v4/10/709/383.mvt",
+      "https://tiles.homi.test/v4/10/708/383.mvt",
+    ]);
+
+    // The bytes of the list view count against another caller's cap, and that caller's against the list view's.
+    const capped = answering(10 * KB);
+    await expect(prefetchTileUrls([url(1)], { sessionBytes: 40 * KB, fetcher: capped })).resolves.toEqual({ tiles: 0, bytes: 0 });
+    expect(capped).not.toHaveBeenCalled();
+    await prefetchTileUrls([url(2)], { sessionBytes: PREFETCH_BUDGET.full.sessionBytes, fetcher: answering(PREFETCH_BUDGET.full.sessionBytes) });
+    const later = answering(10 * KB);
+    await expect(prefetchTiles(options({ fetcher: later, city: cityAt(0) }))).resolves.toEqual({ tiles: 0, bytes: 0 });
+    expect(later).not.toHaveBeenCalled();
+  });
+
+  it("forgets a failed tile, so a later call asks for it again", async () => {
+    const failing = vi.fn<TileFetcher>(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(prefetchTileUrls([url(1)], { sessionBytes: MB, fetcher: failing })).resolves.toEqual({ tiles: 0, bytes: 0 });
+    const fetcher = answering(KB);
+
+    await prefetchTileUrls([url(1)], { sessionBytes: MB, fetcher });
+
+    expect(urlsOf(fetcher)).toEqual([url(1)]);
+  });
+
+  it("stops on abort and forgets the pending tile at once, and only once", async () => {
+    const controller = new AbortController();
+    const aborting = vi.fn<TileFetcher>(
+      (_, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        }),
+    );
+    const first = prefetchTileUrls([url(1), url(2)], { sessionBytes: MB, signal: controller.signal, fetcher: aborting });
+    controller.abort();
+    // Asked for again before the aborted fetch has rejected.
+    const fetcher = answering(KB);
+    const second = prefetchTileUrls([url(1)], { sessionBytes: MB, fetcher });
+
+    await expect(first).resolves.toEqual({ tiles: 0, bytes: 0 });
+    await second;
+    // The late rejection leaves the tile the second call fetched as asked for.
+    const third = answering(KB);
+    await prefetchTileUrls([url(1)], { sessionBytes: MB, fetcher: third });
+
+    expect(urlsOf(aborting)).toEqual([url(1)]);
+    expect(urlsOf(fetcher)).toEqual([url(1)]);
+    expect(third).not.toHaveBeenCalled();
   });
 });

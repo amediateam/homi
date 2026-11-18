@@ -2,10 +2,9 @@
 
 import type { Polygon } from "@homi/search";
 import type { ErrorEvent, MapMouseEvent, StyleSpecification } from "maplibre-gl";
-import { type RefObject, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { type RefObject, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { launchMapOptions } from "@/lib/deeplinks/launch";
-import { reportError } from "@/lib/errors/report";
 
 import {
   FIT_MAX_ZOOM,
@@ -20,8 +19,9 @@ import {
   toGlZoom,
   writeFit,
 } from "../camera";
-import { type Basemap, basemapOf, osmTransformRequest } from "../tiles";
+import { osmTransformRequest } from "../tiles";
 import type { CityView, MapFailReason, MapGroup } from "../types";
+import { resetBasemapForTests } from "../useBasemap";
 import { loadMapLibre, type MapLibreModule } from "./library";
 import { BASEMAP_SOURCE } from "./style";
 
@@ -62,42 +62,12 @@ export function markerRoot(target: EventTarget | null): HTMLElement | null {
 
 type DebugWindow = Window & { homiMap?: unknown };
 
-/** The vector address that failed in this session: later maps start on the raster. */
-let failedVector: string | null = null;
-let tilesReported = false;
+/** The shared basemap rule moved to `features/map/useBasemap.ts` (WP-28), so Leaflet reads the same session state. */
+export { useBasemap } from "../useBasemap";
 
 /** Forgets the session's vector failure and its report; tests only. */
 export function resetMapInstanceForTests(): void {
-  failedVector = null;
-  tilesReported = false;
-}
-
-const RASTER: Basemap = { kind: "raster" };
-
-function isVector(basemap: Basemap): basemap is Extract<Basemap, { url: string }> {
-  return basemap.kind === "pmtiles" || basemap.kind === "template";
-}
-
-/**
- * The basemap `tiles` asks for, or the OSM raster once its vector source failed in this session (tile half of
- * LB-APP-008: the map is never blank). The first failure is reported as `map_tiles_failed`, once per session.
- */
-export function useBasemap(tiles: string | null | undefined): { basemap: Basemap; failVector(): void } {
-  const [failed, setFailed] = useState(failedVector);
-  const requested = useMemo(() => basemapOf(tiles), [tiles]);
-  const basemap = isVector(requested) && requested.url === failed ? RASTER : requested;
-  const failVector = useCallback(() => {
-    if (!isVector(requested)) {
-      return;
-    }
-    failedVector = requested.url;
-    setFailed(requested.url);
-    if (!tilesReported) {
-      tilesReported = true;
-      reportError(new Error("map_tiles_failed"), { kind: "error" });
-    }
-  }, [requested]);
-  return { basemap, failVector };
+  resetBasemapForTests();
 }
 
 export type MapInstanceInput = {

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MapLoading } from "../MapLoading";
 import type { MapFailReason, MapViewProps } from "../types";
+import { GlLasso } from "./GlLasso";
 import { buildStyle } from "./style";
 import { useAreaMask } from "./useAreaMask";
 import { useClusterIndex } from "./useClusterIndex";
@@ -20,6 +21,7 @@ import { useMeLayer } from "./useMeLayer";
  * locale, area mask, "me"; rebuilt with a diff, never a new map), the markers and their taps, and the camera — and
  * reports gestures through the view contract (`types.ts`). It never fetches and never formats a price. Until its
  * first map exists, and unless it failed, the centred spinner of "Engine loading" covers the library's download.
+ * While `drawing`, the lasso of WP-28 (`GlLasso`) covers the map and reports the drawn area.
  */
 export default function MapViewGL({
   groups,
@@ -35,6 +37,9 @@ export default function MapViewGL({
   scheme,
   lite,
   me,
+  drawing,
+  onDrawn,
+  onTooSmall,
   onFail,
   onBasemap,
 }: MapViewProps) {
@@ -71,6 +76,9 @@ export default function MapViewGL({
     <>
       <div ref={container} data-map-view="gl" className="size-full" />
       {handle.generation === 0 && !failed ? <MapLoading /> : null}
+      {drawing && onDrawn !== undefined && onTooSmall !== undefined ? (
+        <GlLasso handle={handle} onDrawn={onDrawn} onTooSmall={onTooSmall} />
+      ) : null}
     </>
   );
 }

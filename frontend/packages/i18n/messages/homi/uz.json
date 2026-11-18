@@ -50,7 +50,6 @@
   },
   "map": {
     "empty": "Bu hududda hech narsa topilmadi",
-    "loading": "Eʼlonlar yuklanmoqda…",
-    "unavailable": "Bu qurilmada xarita hozircha ishlamaydi"
+    "loading": "Eʼlonlar yuklanmoqda…"
   }
 }

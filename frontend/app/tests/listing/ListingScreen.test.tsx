@@ -63,7 +63,7 @@ const failure = (error: UiError, status = 500): ApiFailure => ({ ok: false, erro
 function screen(props: Partial<ListingScreenProps> = {}) {
   return render(
     <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
-      <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: state.reportView }}>
+      <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: state.reportView, view: null }}>
         <ListingScreen number={100001} {...props} />
       </ListingLayerContext>
     </NextIntlClientProvider>,
