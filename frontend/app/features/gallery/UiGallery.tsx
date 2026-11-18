@@ -33,6 +33,7 @@ import {
   Settings,
   SlidersHorizontal,
   SubPageFrame,
+  Trash,
   WifiOff,
   X,
 } from "@homi/ui";
@@ -657,5 +658,6 @@ const ICONS: [string, LucideIcon][] = [
   ["ChevronLeft", ChevronLeft],
   ["ChevronRight", ChevronRight],
   ["ArrowDown", ArrowDown],
+  ["Trash", Trash],
   ["RadarIcon", RadarIcon],
 ];

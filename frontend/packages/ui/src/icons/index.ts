@@ -56,6 +56,7 @@ export {
   SlidersHorizontal,
   Sofa,
   TrainFront,
+  Trash,
   Trees,
   TrendingDown,
   TrendingUp,
