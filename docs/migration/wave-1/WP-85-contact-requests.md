@@ -29,12 +29,15 @@ In:
   window, «Оказался риелтором» within seven days; `owner.pending` of `GET /me`; the request counts of the owner
   listing's `stats`; `owner.response_minutes`.
 - Expiry, and one new request after it (DEV-060); `rented` cancels the pending requests.
-- The overlay part of the card: `contact.request` and, for a `request`-mode listing, `contact.has_phone`.
+- The overlay part of the card: `contact.request` and, for a `request`-mode listing, `contact.has_phone`, on every
+  number; `owner.mine` and `owner.listing_id` on every native number.
 - The rule inside `ContactService::disclose()` (WP-43, "Contact: two variants, one shape"): a `request`-mode listing
-  gives its number only to a seeker whose request is `given`; that disclosure is counted and never refused.
+  gives its number only to a seeker whose request is `given`; that disclosure is counted and never refused. The one
+  implementation of a native number's disclosure, `NativeContact`.
 - The events `ContactRequested`, `RequestAnswered`, `RequestDeclined`, `RequestsCancelledByRent`, `RequestExpired`,
   with no listener until WP-89.
-- Erasure entries (as seeker and as owner) and the retention rule.
+- Erasure entries (as seeker and as owner), the retention rule and the erasure of the request texts 90 days after a
+  request closed; the leak protections of WP-84 extended to `contact_requests`.
 
 Out:
 
@@ -55,26 +58,37 @@ Out:
   request, stored with the request and erased with it; nothing else of the seeker is shown. SEC-039 and SEC-REQ-053
   apply.
 - DEC-19 (open): the thresholds of the disclosure quota are not decided. A `given` number is counted by the quota and
-  never refused by it.
+  never refused by it (integrator default 23 of the owner-cabinet plan).
 - SEC-REQ-003 names the v1 sign-in as the only body that accepts `initData`. By DEC-76 and the default below the
   request method is a second one: JSON body only, never a query or a header, it issues no token, does not touch the
-  exchange counter of sign-in, and logs only the fingerprint. The security review of WP-70 records it.
+  exchange counter of sign-in, and logs only the fingerprint. Its verification window never changes the exchange
+  window of sign-in (SEC-REQ-002): a value accepted here is not accepted by `POST /auth/telegram` after that
+  method's own window. The raw value stays out of Telescope (WP-84, "Leak protections") and of the Mini App's logs,
+  error reports and analytics (WP-83). The security review of WP-70 records it.
 - *Integrator defaults, listed for the reviewer* (the owner-cabinet plan's defaults, not decisions of the developer;
   listed in that PR):
   - the request limits answer `429 rate_limited` with `reason` `requests_fast`, `requests_day` or `requests_week` and
     `Retry-After`, following WP-10's one-code-per-limit rule;
   - the first name of DEC-76: the Mini App sends the current launch's `initData` with the request; the server verifies
     it with WP-40's verifier (window = the session's lifetime, same user as the token) and keeps `first_name` only;
-  - the request lifecycle: expiry after 48 h (configuration); the soft refusal at the end of the 10-minute undo
-    window; «Оказался риелтором» for 7 days after `given`; `undo` returns the previous answer; a `given` number
-    counts against the disclosure quota of DEC-19 and is never refused by it; `agent` shows to the seeker as
-    `declined`;
-  - defaults of this specification: the pause (`requests_fast`) follows three requests within ten minutes
-    (`owner.limits.requests.burst`), because legacy's texts say only «несколько подряд»; a day is the Tashkent
-    calendar day and a week the last seven times 24 hours; the global block is an operator command
+  - the request lifecycle (integrator default 13): expiry after 48 h (configuration); the soft refusal at the end of
+    the 10-minute undo window; «Оказался риелтором» for 7 days after `given`;
+  - a `given` number counts against the disclosure quota of DEC-19 and is never refused by it (integrator default
+    23);
+  - the request texts (`seeker_first_name`, `message`, `move_in`) are erased 90 days after the request closed; the
+    row keeps its status and times for the owner's stats;
+  - defaults of this specification: `undo` returns the previous answer; the pause (`requests_fast`) follows three
+    requests within ten minutes (`owner.limits.requests.burst`), because legacy's texts say only «несколько
+    подряд»; a day is the Tashkent calendar day and a week the last seven times 24 hours; the counts come from
+    `contact_requests`, not from a cache entry; a listing takes at most 30 new requests a Tashkent day
+    (`owner.limits.requests.per_listing_day`), then `409 request_closed`; the global block is an operator command
     (`requests:block`), because HOMI has no rule for legacy's `blocked` and `harvest` (Q-API-089);
     `response_minutes` is the median answer time of the owner's last 20 answers, `null` below three; a request on a
-    listing that was removed or withdrawn is left to expire.
+    listing that was removed or withdrawn is left to expire; the first name is normalised before it is stored
+    ("The seeker's first name"); a seeker whom an owner closed his flats to learns it from `409 request_closed` on
+    that owner's other listings, as legacy answers `closed` (BR-API-181, BR-API-185) — accepted, recorded for
+    WP-70's review.
+- `agent` shows to the seeker as `declined`: legacy behaviour (BR-APP-098), not a default.
 
 ## Design
 
@@ -87,13 +101,16 @@ real bodies; the stub bodies move into `NativeStubs` (WP-40, "Stub mode for the 
 
 | Table | Columns | Notes |
 | ----- | ------- | ----- |
-| `contact_requests` | `id` (ULID); `owner_listing_id` (foreign key to `owner_listings`, cascade); `listing_number` (`unsignedBigInteger`); `seeker_id`, `owner_id` (foreign keys to `users`, cascade); `who` (string 16); `people` (smallint); `move_in` (string 32, nullable); `message` (string 500, nullable); `seeker_first_name` (string 64, nullable); `status` (string 16); `reason` (`found`, `agent`, `late`, nullable); `previous_status` (string 16, nullable); `agent_marked` (boolean, default false); `answered_at`, `undo_until`, `late_until`, `expires_at`, `closed_at` (`timestampTz`, nullable); timestamps | index (`owner_listing_id`, `created_at`); index (`seeker_id`, `listing_number`, `created_at`); index (`status`, `expires_at`); on PostgreSQL a partial unique index on (`seeker_id`, `listing_number`) where `status <> 'expired'` |
+| `contact_requests` | `id` (ULID); `owner_listing_id` (foreign key to `owner_listings`, cascade); `listing_number` (`unsignedBigInteger`); `seeker_id`, `owner_id` (foreign keys to `users`, cascade); `who` (string 16); `people` (smallint); `move_in` (string 32, nullable); `message` (string 500, nullable); `seeker_first_name` (string 64, nullable); `status` (string 16); `reason` (`found`, `agent`, `late`, nullable); `previous_status` (string 16, nullable); `agent_marked` (boolean, default false); `answered_at`, `undo_until`, `late_until`, `expires_at`, `closed_at`, `texts_erased_at` (`timestampTz`, nullable); `consent_version` (string 16, nullable: `config('owner.consent_version')` when the request was sent); timestamps | index (`owner_listing_id`, `created_at`); index (`seeker_id`, `listing_number`, `created_at`); index (`seeker_id`, `created_at`) for the limits; index (`status`, `expires_at`); on PostgreSQL a partial unique index on (`seeker_id`, `listing_number`) where `status <> 'expired'` |
 | `owner_seeker_blocks` | `owner_id`, `seeker_id` (foreign keys to `users`, cascade); `reason` (`agent`, `late`); `created_at` | primary key (`owner_id`, `seeker_id`) |
-| `request_blocks` | `user_id` (primary key, foreign key, cascade); `reason` (string 64); `by` (string 64); `created_at` | the global block of `requests_blocked` |
+| `request_blocks` | `user_id` (primary key, foreign key, cascade); `reason` (string 64); `by` (string 64); `system_user` (string 64: `SUDO_USER`, else the process owner); `created_at` | the global block of `requests_blocked` |
 
 `php artisan make:model ContactRequest --factory --migration` and the same for `OwnerSeekerBlock` and `RequestBlock`
 (the latter two with migrations only and factories). `ContactRequest` uses `HasUlids`; `message`, `move_in` and
-`seeker_first_name` are in `$hidden`, so a model never lands in a log or a job payload with them.
+`seeker_first_name` are in `$hidden`, which keeps them out of `toArray()` only. The leak protections of WP-84
+("Leak protections") already name `contact_requests` and `ContactRequest`: Telescope records no request, job, query
+or model entry of them and hides `init_data`, `message` and `move_in`; a `QueryException` on the table becomes
+`PersonalDataWriteFailed`, and every write of this package runs through `PersonalWrites::run()`.
 
 ### Creating a request (`ContactRequestService`)
 
@@ -105,7 +122,8 @@ answers `409 request_closed` until it exists. In this order, before anything is 
 2. The caller's own listing → `OwnListing` (`409 own_listing`).
 3. `contact_mode: phone` → `ContactOpen` (`409 contact_open`).
 4. The listing is not `active`, or it is `held` or `withdrawn`, or its owner blocked this seeker
-   (`owner_seeker_blocks`) → `RequestClosed` (`409 request_closed`); the seeker is not told why.
+   (`owner_seeker_blocks`), or it already took `owner.limits.requests.per_listing_day` (30) new requests this Tashkent
+   day → `RequestClosed` (`409 request_closed`); the seeker is not told why.
 5. The caller's existing request on this listing whose status is not `expired` → that request's status, `200`
    (a repeat creates nothing; after `declined` the answer is `declined`; the seeker form of `agent` is `declined`).
 6. `request_blocks` holds the caller → `RequestsBlocked` (`403 requests_blocked`).
@@ -126,11 +144,13 @@ A request after `expired` is a new row (DEV-060); the expired one stays for the 
 
 1. `TelegramInitDataVerifier::verify($raw, $window)` of WP-40 ("Verifier"), with `$window` the lifetime of a
    session token (24 hours, `docs/api/README.md`, "Session"); `InvalidInitData` or `InitDataExpired` → the `422`
-   above.
+   above. This window serves the request only; the exchange window of `POST /auth/telegram` stays its own.
 2. `telegramUserId` of the result must equal `$seeker->telegram_user_id`; another user → the `422`.
-3. Only after the verification, the `user` pair of the raw value is decoded once more and its `first_name` read,
-   trimmed and cut at 64 characters; absent or empty → `null`. Verify the field name against the Bot API
-   documentation (`WebAppUser`).
+3. Only after the verification, the `user` pair of the raw value is decoded once more and its `first_name` read —
+   never `last_name`, `username` or `photo_url`. Verify the field name against the Bot API documentation
+   (`WebAppUser`). The name is normalised: Unicode NFC; control, format (`Cf`: bidi marks and overrides,
+   zero-width characters) and private-use characters removed; runs of whitespace collapsed to one space; trimmed;
+   cut at 64 characters. Absent or empty after that → `null`.
 
 The name goes into `contact_requests.seeker_first_name` and nowhere else: neither `users` nor `TelegramInitData`
 holds it (WP-40, "Verifier"), it is not logged, and the raw `init_data` is never stored, logged or echoed (logs carry
@@ -144,17 +164,25 @@ the fingerprint only, SEC-REQ-003). The owner's request object shows it as `name
 | `requests_day` | `day` (10) requests in the current day in Asia/Tashkent | until the next Tashkent midnight |
 | `requests_week` | `week` (30) requests in the last 7 × 24 hours | until the oldest of them leaves the window |
 
-- The counter is one cache entry per seeker, `requests:<user id>`: the creation times of the last seven days,
-  read and written through the `Cache` facade under `Cache::lock`, as the disclosure quota of WP-43 does ("Disclosure
-  quota"), because the tests and CI run on the `array` store. WP-87 counts relayed requests through the same
-  `hit()`, so one counter serves both (Q-API-089 asks whether legacy counts per person or per key).
-- `check()` tests the three rules in the order of the table and throws the first that applies. A cache store that
-  cannot answer fails closed with `503 source_unavailable`, logged once; never a `500`.
+- The counts come from `contact_requests` (the `created_at` of the seeker's rows of the last seven days, through the
+  index (`seeker_id`, `created_at`)), so a flushed or evicted cache never resets a seeker's day or week. The cache
+  only memoises them: one entry per seeker, `requests:<user id>`, read and written through the `Cache` facade under
+  `Cache::lock`, as the disclosure quota of WP-43 does ("Disclosure quota"), because the tests and CI run on the
+  `array` store; `hit()` forgets it after a new row. WP-87 stores its relayed requests in the same table, so one
+  count serves both (Q-API-089 asks whether legacy counts per person or per key).
+- `check()` tests the three rules in the order of the table and throws the first that applies. A database or cache
+  that cannot answer fails closed with `503 source_unavailable`, logged once; never a `500`.
+- Per listing: at most `owner.limits.requests.per_listing_day` (30) new requests a Tashkent day reach one listing
+  (step 4 of "Creating a request"), so a crowd of fresh accounts cannot flood one owner.
+- When one seeker has been marked `agent` or `late` by three different owners within 30 days, the service logs one
+  `warning` with his user id (an alert input of WP-70's monitoring); it never blocks him by itself.
 - `config/owner.php`: `limits.requests.day` ← `REQUEST_LIMIT_DAY` (10), `week` ← `REQUEST_LIMIT_WEEK` (30),
-  `pause_minutes` ← `REQUEST_PAUSE_MINUTES` (10), `burst` (3, new); `GET /reference` serves `day`, `week` and
-  `pause_minutes` (WP-80), so the sheet's texts follow the configuration (fix of LB-APP-064 of the seeker side).
+  `pause_minutes` ← `REQUEST_PAUSE_MINUTES` (10), `burst` (3, new), `per_listing_day` (30, new); `GET /reference`
+  serves `day`, `week` and `pause_minutes` (WP-80), so the sheet's texts follow the configuration (fix of LB-APP-057
+  for the request limits).
 - Global block: `php artisan requests:block {user} --reason= --by=` and `requests:unblock {user} --by=`, logged with
-  who; legacy's `blocked` and `harvest` both become `requests_blocked` (BR-API-185).
+  who and the system user (`request_blocks.system_user`); legacy's `blocked` and `harvest` both become
+  `requests_blocked` (BR-API-185).
 
 ### The owner's answers (`RequestAnswers`)
 
@@ -180,7 +208,7 @@ request_answer_closed`). The flags of the owner request object: `can_undo` = now
 - `RequestAnswered` (request id, action) is dispatched after commit for every action; WP-89 tells the seeker on
   `give` (with «📞 Показать номер», which discloses through `ContactService`, DEC-52).
 - `agent` appears to the seeker as `declined` (BR-APP-098); his later requests on this owner's listings answer `409
-  request_closed`.
+  request_closed` (the residual of "Decisions that bind this package").
 
 ### Expiry and the let flat
 
@@ -189,8 +217,8 @@ request_answer_closed`). The flags of the owner request object: `can_undo` = now
   expiry is unknown (Q-API-075); 48 hours is this package's default, `owner.requests.expire_hours` ←
   `REQUEST_EXPIRE_HOURS`.
 - A listener on `OwnerListingRented` (WP-84) sets every `pending` request of that listing to `cancelled` with
-  `closed_at` and dispatches `RequestsCancelledByRent` (listing id, request ids) — WP-89 tells the waiting seekers
-  that the flat is let (BR-API-176). `given` requests stay `given`.
+  `closed_at` and dispatches `RequestsCancelledByRent` (listing id, or `null` for a relayed request of WP-87; request
+  ids) — WP-89 tells the waiting seekers that the flat is let (BR-API-176). `given` requests stay `given`.
 - A paused, held, removed or withdrawn listing takes no new request (step 4) and its pending requests run to expiry.
 
 ### What the owner sees
@@ -209,23 +237,31 @@ request_answer_closed`). The flags of the owner request object: `can_undo` = now
 ### The card and the disclosure
 
 - `App\Services\Requests\RequestStates::forUser(User $user, list<int> $numbers): array<int, ContactRequestState>` —
-  the caller's latest request per native number, mapped to the seeker form (`agent` → `declined`) with `sent_at` =
-  `created_at`. The overlay of WP-42 ("Overlay") writes `contact.request` from it for every card and, for a
-  `request`-mode listing, sets `contact.has_phone` to `true` only when that state is `given`. Like `favorite` and
-  `viewed`, the per-user part is never cached with the card, and while `sources.native_stubs` is on the fixed values
-  of the fixtures stay.
+  the caller's latest request per listing number, native or legacy (the relayed rows of WP-87 are in the same
+  table), mapped to the seeker form (`agent` → `declined`) with `sent_at` = `created_at`. The overlay of WP-42
+  ("Overlay") writes `contact.request` from it for every card and, for a `request`-mode listing, sets
+  `contact.has_phone` to `true` only when that state is `given`. The same overlay step writes `owner.mine` (the
+  number is one of the caller's owner listings, WP-84) and `owner.listing_id` (that listing's ULID, else `null`) for
+  every native number. Like `favorite` and `viewed`, the per-user part is never cached with the card, and while
+  `sources.native_stubs` is on the fixed values of the fixtures stay.
 - `ContactService::disclose()` of WP-43 gains one rule before its step 1: for a listing whose `contact.mode` is
   `request`, the caller's request must be `given`, else `404 contact_unavailable`; a `hidden` listing always answers
-  it. For a native number step 1 reads `OwnerListing::phoneForDisclosure()` (WP-84) and variant A issues HOMI's call
-  link. A disclosure on a `given` request is recorded by `ContactDisclosure::record()` (counted against the quota of
-  DEC-19) and skips the refusal of `decide()` (never refused by it). `ContactDisclosed` gains `origin` (`legacy` or
-  `native`). A `phone`-mode native listing is disclosed like any listing, under the quota.
+  it. A disclosure on a `given` request is recorded by `ContactDisclosure::record()` (counted against the quota of
+  DEC-19) and skips the refusal of `decide()` (never refused by it; integrator default 23). `ContactDisclosed` gains
+  `origin` (`legacy` or `native`). A `phone`-mode native listing is disclosed like any listing, under the quota.
+- A native number's disclosure has one implementation: `App\Services\Requests\NativeContact::read(int $number):
+  ListingContact` — WP-84's `OwnerListing::phoneForDisclosure()` of an `active` listing that is not `held` or
+  `withdrawn`, in the shape of variant A (HOMI's call link, WP-43), else `ContactUnavailable`. It is the only caller
+  of `phoneForDisclosure()`. `ContactService::disclose()` takes step 1 from it for `ListingNumber::isNative()`
+  numbers instead of `ListingSource::contact()`; WP-86's merged source answers `ContactUnavailable` for a native
+  number and reads the number nowhere.
 
 ### Events
 
 `App\Events\Requests\{ContactRequested, RequestAnswered, RequestDeclined, RequestsCancelledByRent, RequestExpired}`:
 ids and the action or reason only — no name, no message, no number. They are dispatched after commit and have no
-listener until WP-89, which sends the bot's messages through the outbox of WP-57.
+listener until WP-89, which sends the bot's messages as paced jobs with its own ledger `bot_notices` (WP-89, "Notices
+— how a cabinet message leaves the bot"; not the radar outbox).
 
 ### The scenarios of WP-80 in real code
 
@@ -250,7 +286,8 @@ WP-83 and the tests here describe one behaviour:
 
 - `ListingContactRequestController` routes by number: `ListingNumber::isNative()` → `ContactRequestService::create()`;
   a legacy number → WP-87's relay when it is bound, else `RequestClosed`. It answers `ContactRequestResultResource`
-  with `201` or `200` through `sourced()` and `meta.source = native`.
+  with `201` or `200` through `sourced()`: `meta.source = native` for a native number; WP-86 and WP-87 give a legacy
+  number its driver.
 - `OwnerRequestController@index` reads the owner listing scoped to the caller, then its requests with
   `ListPersonalRequest`'s cursor and limit; `@answer` reads the request through the caller's owner listings and calls
   `RequestAnswers::answer()`.
@@ -261,9 +298,10 @@ WP-83 and the tests here describe one behaviour:
 ### Configuration
 
 `backend/config/owner.php` (WP-80, extended by WP-84) gains here: `limits.requests.day`, `.week` and
-`.pause_minutes` read from their env keys, `limits.requests.burst` (3), `requests.expire_hours` (←
-`REQUEST_EXPIRE_HOURS`, 48), `requests.undo_minutes` (10), `requests.late_days` (7), `requests.response_sample` (20)
-and `requests.response_minimum` (3). Every value is a default of this package or of the plan; changing one is a
+`.pause_minutes` read from their env keys, `limits.requests.burst` (3), `limits.requests.per_listing_day` (30),
+`requests.expire_hours` (← `REQUEST_EXPIRE_HOURS`, 48), `requests.undo_minutes` (10), `requests.late_days` (7),
+`requests.response_sample` (20), `requests.response_minimum` (3) and `requests.texts_retention_days` (90);
+`consent_version` is WP-84's. Every value is a default of this package or of the plan; changing one is a
 configuration change.
 
 ### Erasure and retention
@@ -273,17 +311,25 @@ configuration change.
   `seeker_id`, `request_blocks` by `user_id`; the cache key `requests:<user id>` joins the keys forgotten after
   commit. The foreign keys cascade as well, so a listing deleted by its owner takes its requests with it.
 - `config/retention.php` (WP-47, "Retention"): `contact_requests` go with their owner listing; when WP-84's purge
-  erases a listing 90 days after it left the feed, its requests are deleted in the same run. `owner_seeker_blocks` and
+  erases a listing 90 days after it left the feed, its requests are deleted in the same run. Before that,
+  `requests:prune-texts` (daily, registered as the executor) sets `seeker_first_name`, `message` and `move_in` to
+  `null` and `texts_erased_at` 90 days (`owner.requests.texts_retention_days`) after a request closed (`closed_at`,
+  else `answered_at`); the row keeps its status and times for the owner's stats. `owner_seeker_blocks` and
   `request_blocks` are kept while both users exist.
+- WP-89's `SeekerNoticeEraser` is registered before the `contact_requests` entry: while a seeker's requests still
+  exist it edits every sent `request_new` notice about them to a text without his name and message (WP-89,
+  "Configuration, erasure, retention"). This entry therefore stays after it in `config/erasure.php`, and
+  `requests:prune-texts` leaves sent notices to WP-89's retention of `bot_notices`.
 
 ## Files
 
 - Three migrations; `backend/app/Models/{ContactRequest,OwnerSeekerBlock,RequestBlock}.php` with factories and seeders
-- `backend/app/Services/Requests/{ContactRequestService,ContactRequestResult,RequestForm,SeekerFirstName,RequestLimiter,RequestAnswers,RequestStates,RequestCounts,ResponseTime}.php`
+- `backend/app/Services/Requests/{ContactRequestService,ContactRequestResult,RequestForm,SeekerFirstName,RequestLimiter,RequestAnswers,RequestStates,RequestCounts,ResponseTime,NativeContact}.php`
 - `backend/app/Jobs/Requests/FinalizeDecline.php`; `backend/app/Listeners/Requests/CancelRequestsOnRent.php`
+  (discovered, not registered by hand)
 - `backend/app/Events/Requests/{ContactRequested,RequestAnswered,RequestDeclined,RequestsCancelledByRent,RequestExpired}.php`
-- `backend/app/Console/Commands/Requests/{ExpireRequests,BlockRequests,UnblockRequests}.php`; `backend/routes/console.php`
-  (the schedule of `requests:expire`)
+- `backend/app/Console/Commands/Requests/{ExpireRequests,PruneRequestTexts,BlockRequests,UnblockRequests}.php`;
+  `backend/routes/console.php` (the schedules of `requests:expire` and `requests:prune-texts`)
 - Real bodies: `backend/app/Http/Controllers/Api/V1/Listings/ListingContactRequestController.php`,
   `backend/app/Http/Controllers/Api/V1/Owner/OwnerRequestController.php` (WP-80), `MeController.php`; the stub bodies
   into `backend/app/Services/Sources/Stub/NativeStubs.php` (WP-40)
@@ -291,7 +337,7 @@ configuration change.
   (WP-43, WP-42), `backend/app/Events/Listings/ContactDisclosed.php` (WP-43), `backend/app/Services/Owner/OwnerStats.php`
   (WP-84)
 - `backend/config/owner.php` (WP-80), `backend/config/{erasure,retention}.php` (WP-47)
-- `backend/tests/Feature/Requests/{CreateRequestTest,SeekerFirstNameTest,RequestLimiterTest,RequestAnswersTest,ExpiryTest,RentCancelsTest,RequestStatesTest,DisclosureTest,ResponseTimeTest,RequestErasureTest,RequestLeakTest}.php`,
+- `backend/tests/Feature/Requests/{CreateRequestTest,SeekerFirstNameTest,RequestLimiterTest,RequestAnswersTest,ExpiryTest,RentCancelsTest,RequestStatesTest,DisclosureTest,ResponseTimeTest,RequestErasureTest,RequestTextsRetentionTest,RequestLeakTest}.php`,
   `backend/tests/Feature/Api/V1/Owner/RequestIdorTest.php`, `backend/tests/Pgsql/Requests/OneOpenRequestRaceTest.php`
 - `backend/.env.example` (the four `REQUEST_*` keys, blank), `docs/infrastructure/environments.md` — separate
   shared-file PR
@@ -309,9 +355,10 @@ configuration change.
    real code.
 7. `RequestAnswers`, `FinalizeDecline`, the owner's list and answer controllers; the IDOR rows.
 8. `requests:expire` and its schedule; the listener on `OwnerListingRented`.
-9. `RequestStates` in the overlay; the rule in `ContactService::disclose()`; `ContactDisclosed` with `origin`.
+9. `RequestStates`, `owner.mine` and `owner.listing_id` in the overlay; `NativeContact` and the rule in
+   `ContactService::disclose()`; `ContactDisclosed` with `origin`.
 10. `RequestCounts` in `GET /me` and in `OwnerStats`; `ResponseTime`.
-11. Erasure and retention entries; the registry tests pass.
+11. Erasure and retention entries, `requests:prune-texts`; the registry tests pass.
 12. Pint, PHPStan, `make ci-backend`, `make test-pgsql`; the PR names the migrations and the env keys.
 
 ## Behaviour to reproduce
@@ -338,16 +385,20 @@ configuration change.
 - Create: a valid request → `201 pending`, one row, `ContactRequested` once; a repeat → `200 pending`, no new row;
   after `declined` → `200 declined`; after `agent` → `200 declined`; after `expired` → `201 pending`, a second row;
   the caller's own listing → `409 own_listing`; `phone` mode → `409 contact_open`; a paused, held, removed or
-  withdrawn listing, and an owner who blocked the seeker → `409 request_closed`; a legacy number → `409
+  withdrawn listing, an owner who blocked the seeker, and the thirty-first request of a Tashkent day on one listing
+  (from 31 seekers) → `409 request_closed`; a legacy number → `409
   request_closed`; an unknown number → `404`; `bot_chat_state` `never` → `409 no_chat` and no row; a blocked seeker →
   `403 requests_blocked`.
 - First name: a value signed for the seeker → the name stored; signed for another user, expired, with a bad hash, or
   over 4 096 bytes → `422` naming `init_data`, no row; without `first_name` → `null`; a name of 80 characters → 64;
-  the `users` row and every log line of the test hold no name and no `init_data` (a scan of the test's log output).
+  a name with a right-to-left override, a zero-width space and a private-use character is stored without them; a
+  name of spaces only → `null`; the `users` row and every log line of the test hold no name and no `init_data` (a
+  scan of the test's log output).
 - Limits (time travel, Asia/Tashkent): the third request within ten minutes → `429` with `reason: requests_fast` and
   the right `Retry-After`; the eleventh of a day → `requests_day`, allowed again after Tashkent midnight; the
   thirty-first of a week → `requests_week`; the counter is shared with a second `hit()` from another caller of the
-  class; a cache store that throws → `503`.
+  class; after `Cache::flush()` the eleventh request of the day is still refused; a cache store that throws → `503`;
+  three owners marking one seeker `agent` within 30 days → one `warning`, no block.
 - Answers: each row of the table from each allowed state, and every other combination → `409
   request_answer_closed`; `undo` at 9 min 59 s works, at 10 min 1 s does not; `late` at day 6 works, at day 8 does
   not; `FinalizeDecline` dispatches `RequestDeclined` when the request is still declined and nothing after an undo;
@@ -357,33 +408,41 @@ configuration change.
   `RequestExpired`; the command is idempotent.
 - Rent: `OwnerListingRented` cancels the two pending requests, leaves the `given` one, dispatches one
   `RequestsCancelledByRent`.
-- Card: `contact.request` shows the caller's own state only (user B sees `null` on A's request); `agent` reads
-  `declined`; `contact.has_phone` is `true` only with a `given` request on a `request`-mode listing.
+- Card: `contact.request` shows the caller's own state only (user B sees `null` on A's request), on a native and on a
+  legacy number; `agent` reads `declined`; `contact.has_phone` is `true` only with a `given` request on a
+  `request`-mode listing; `owner.mine` and `owner.listing_id` are set for the owner's own native listing only.
 - Disclosure: a `request`-mode listing without a `given` request → `404 contact_unavailable`; with one → the number
-  through variant A, counted by the quota and answered above the soft limit; a `hidden` listing → `404`;
-  `ContactDisclosed` carries `origin`.
+  through variant A, counted by the quota and answered above the soft limit; a `hidden` listing → `404`; a held or
+  withdrawn native listing → `404 contact_unavailable`; `ContactDisclosed` carries `origin`; `NativeContact` is the
+  only caller of `phoneForDisclosure()` (`PhoneLeakTest` of WP-84).
 - `GET /me`: `owner.pending` counts pending requests of the caller's listings only. `ResponseTime`: two answers →
   `null`; five answers → their median in minutes.
 - IDOR (`RequestIdorTest`): the list and the answer with another owner's listing or request id → `404`, nothing
   changes.
 - Erasure: erasing a seeker deletes his requests and their names; erasing an owner deletes the requests on his
-  listings and his blocks; `ErasureRegistryTest` passes with the new `owner_id` and `seeker_id` columns.
-- Leak (SEC-REQ-053): after a request, an answer and an expiry, no log line, job payload or analytics event holds the
-  message, `move_in`, the first name or `init_data`.
+  listings and his blocks; `ErasureRegistryTest` passes with the new `owner_id` and `seeker_id` columns. Texts
+  (`RequestTextsRetentionTest`, time travel): 90 days − 1 s after a request closed its name, message and `move_in`
+  stay, at + 1 s they are `null` and the status and times stay; an open request keeps them.
+- Leak (SEC-REQ-053): after a request, an answer and an expiry, no log line, job payload, analytics event, Telescope
+  entry (WP-84's `TelescopeRedactionTest` configuration) or forced `QueryException` holds the message, `move_in`,
+  the first name or `init_data`.
 - Pgsql: two concurrent requests of one seeker on one listing create one row.
 
 ## Acceptance checklist
 
 - [ ] Every request scenario of WP-80 answers from native code locally and in CI, with `meta.source = native`.
 - [ ] A repeat answers the current status; a new request is possible only after `expired`.
-- [ ] The three limits answer `429 rate_limited` with their `reason` and a correct `Retry-After`.
+- [ ] The three limits answer `429 rate_limited` with their `reason` and a correct `Retry-After`, counted from the
+      table; a listing takes at most 30 new requests a day.
 - [ ] The owner sees the seeker's first name and the form's answers, nothing else; the name exists only in
-      `contact_requests` and is erased with the request, the listing or either user.
+      `contact_requests`, normalised, and is erased 90 days after the request closed, or with the request, the
+      listing or either user.
 - [ ] `undo` works for ten minutes; the decline becomes final after it; «Оказался риелтором» works for seven days
       after `given` and closes that owner's flats to the seeker.
 - [ ] An unanswered request expires after 48 hours; «Сдано» cancels the pending requests.
-- [ ] The card of a native listing shows the caller's own request state only; the number comes only from the contact
-      method and only after `given`, counted and never refused by the quota.
+- [ ] The card shows the caller's own request state only; the number of a native listing comes only from the
+      contact method through `NativeContact`, and in `request` mode only after `given`, counted and never refused by
+      the quota.
 - [ ] The five events are dispatched with ids only.
 - [ ] `owner.pending` of `GET /me` is correct; no separate pending call exists.
 - [ ] The migrations and the env keys are named in the PR; `make ci-backend` and `make test-pgsql` are green.

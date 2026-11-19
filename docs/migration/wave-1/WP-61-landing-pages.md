@@ -289,13 +289,16 @@ kvadro² [brand → HOMI] в Telegram», «Как удалить свои дан
   wording as the answer to Q-SEC-021. The page and the bot text are changed together.
 - Since the owner cabinet (DEC-69) the text has the owner paragraphs, the same facts as the bot text of WP-56: the
   owner's number is kept in plain text with his listing, to be shown to him and given to a seeker he answers or, in
-  «Показывать номер» mode, to a seeker who taps (DEC-72); the photos are kept while the listing is shown or paused;
-  the form until the owner deletes it; number, texts and photos are erased 90 days after the listing left the feed
-  for good (WP-84). «Отклики»: a request keeps the seeker's answers and his Telegram first name, which the owner sees,
-  and is erased with the listing or with either user (DEC-76, WP-85). One sentence names the relay: a request on a
-  listing of another service is passed to that service with the first name and the answers only (DEC-71, WP-87).
-  The paragraphs are final before the cabinet or the relay is switched on for real users (gate 1 of `25` §5, DEC-81);
-  until then they are marked "pending legal review" with the rest (*added by the owner-cabinet plan*).
+  «Показывать номер» mode, to a seeker who taps (DEC-72); the photos are kept while the listing is shown or paused; the
+  form until the owner deletes it, or 180 days after he last changed a draft; number, texts and photos are erased 90
+  days after the listing left the feed for good (WP-84). «Отклики»: a request keeps the seeker's answers and his
+  Telegram first name, which the owner sees; those texts are erased 90 days after the request closed, and the request
+  with the listing or with either user (DEC-76, WP-85). One sentence names the relay: a request on a listing of another
+  service is passed to that service with the first name and the answers only (DEC-71, WP-87). Erased cabinet data leaves
+  the database backups after up to 21 days, deleted photos the media storage after up to 30 days and the edge cache
+  after up to an hour, as the bot text says (WP-56). The paragraphs are final before the cabinet or the relay is
+  switched on for real users (gate 1 of `25` §5, DEC-81); until then they are marked "pending legal review" with the
+  rest (*added by the owner-cabinet plan*).
 
 ## Files
 

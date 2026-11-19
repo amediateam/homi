@@ -78,26 +78,28 @@ and need nothing from you, except what point 22 asks. Points 23 to 28 follow you
 Please answer in writing.
 
 14. Request route. May the service key call POST /api/listings/:id/contact with the body
-    {who, people, move_in, message} on behalf of one HOMI user? If yes: the same key or a separate
-    key or scope for this write; the same validation as for your app (who values, people 1-20,
+    {who, people, move_in, message} on behalf of one HOMI user? If yes: we would prefer a separate
+    key or scope for this write, accepted only from HOMI's server addresses (point 2d) and revocable
+    on its own; or the same key? The same validation as for your app (who values, people 1-20,
     move_in up to 32 characters, message up to 500)? What do you answer in place of 409 no_chat,
     which checks your bot's chat and cannot apply to a HOMI user?
 
 15. User identity. Limits, blocks and request statuses are per person. We propose to send a stable
     opaque id per HOMI user (not the Telegram id) with each such call. Which header and format do
     you accept? Your app tells the owner that he sees the requester's Telegram name. HOMI keeps the
-    first name a user has in Telegram with his request and deletes it with the request. Do you need
-    a name; if so, may we send that first name with each request, and do you store it? On which
-    legal basis do you process it, how long do you keep the request, and will you delete it when
-    we tell you that the HOMI user deleted his data?
+    first name a user has in Telegram with his request and deletes it with the request, and we plan
+    to send that first name with each request. May we, and do you store it? If you do not want it,
+    we leave it out. On which legal basis do you process it, how long do you keep the request, and
+    will you delete it when we tell you that the HOMI user deleted his data?
 
 16. Outcome. How does HOMI learn the owner's answer to a request it sent: (a) my_request on
     GET /api/listings/:id read with the identity of point 15, (b) a callback to an address we give
-    you, (c) a status read by a request id returned on creation, or (d) not at all? When the owner
-    gives the number, how do we receive it for that user: the phone on the card read with that
-    identity, a call link (valid how long), or in the callback? Please define each status (given,
-    declined, agent, expired, cancelled), the expiry time, and whether a user may send a new request
-    after expired or declined.
+    you, signed with a secret we share over a timestamp and the body and carrying an event id and
+    the status time, (c) a status read by a request id returned on creation, or (d) not at all?
+    When the owner gives the number, how do we receive it for that user: the phone on the card read
+    with that identity, a call link (valid how long), or in the callback? Please define each status
+    (given, declined, agent, expired, cancelled), the expiry time, and whether a user may send a new
+    request after expired or declined.
 
 17. Owner's side. Will the owner see that the request came through HOMI? Does the owner's answer
     contain anything other than the decision (a text)? How should a HOMI user report that the owner

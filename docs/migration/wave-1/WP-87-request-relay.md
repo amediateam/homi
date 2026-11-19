@@ -4,10 +4,10 @@
 | ----- | ----- |
 | Stage | C |
 | Status | WAITING (operator, points 14 – 21 of the addendum) |
-| Depends on | WP-85, WP-41 |
+| Depends on | WP-85, WP-41, WP-50 (`BotMetrics`, the metrics of this package) |
 | Size | about 1 500 changed lines with tests, M |
 | Behaviour reference | `08` API-054; `02` BR-API-183 … BR-API-189; `24` §8.2 (Q-API-075 … Q-API-078, Q-API-087 … Q-API-089, Q-SEC-021); `decisions/2026-11-14-operator-request.md` points 14 – 21; `16` SEC-039, SEC-REQ-053 |
-| Needs from the production track | After the operator's answer: (1) the scope of the service key for the write route, as the operator grants it; (2) if the operator chooses a callback, an nginx location for it on the API host (described under "Outcome channel"), and `LEGACY_RELAY_CALLBACK_SECRET` in the server env; (3) `LEGACY_RELAY_ID_KEY` (random, at least 32 bytes, per environment, in the password manager, never rotated without a plan: a new key gives every user a new identity on the operator's side); (4) approval of one additive migration of `contact_requests`; (5) `LEGACY_RELAY_ENABLED=true` only after the legal gate of `25` §5 (gate 1) and the product owner's go, on staging first |
+| Needs from the production track | After the operator's answer: (1) the scope of the service key for the write route, as the operator grants it; (2) if the operator chooses a callback, an nginx location for it on the API host (described under "Outcome channel"), and `LEGACY_RELAY_CALLBACK_SECRET` in the server env (random, at least 32 bytes, per environment, shared with the operator; on a rotation the old value goes to `LEGACY_RELAY_CALLBACK_SECRET_PREVIOUS` for 24 hours, then is removed); (3) `LEGACY_RELAY_ID_KEY` (random, at least 32 bytes, per environment, in the password manager, never rotated without a plan: a new key gives every user a new identity on the operator's side); (4) approval of one additive migration of `contact_requests`; (5) `LEGACY_RELAY_ENABLED=true` only after the legal gate of `25` §5 (gate 1) and the product owner's go, on staging first |
 
 ## Goal
 
@@ -29,8 +29,8 @@ In:
   written below as three alternatives; the package implements the one the operator names.
 - `given` → `contact.has_phone: true` for that seeker, and the disclosure through `ContactService::disclose()` of
   WP-43 with the identity of the caller.
-- The payload: the first name (only when the operator asks for it, point 15) and the four answers of the form
-  (SEC-REQ-053).
+- The payload: the first name (with every relayed request, DEC-76; left out only if the operator refuses to receive
+  it, point 15) and the four answers of the form (SEC-REQ-053).
 - One limit counter per seeker shared with native requests (WP-85's limiter).
 - `contact.mode` of such listings: `hidden` while the relay is off, `request` once it is on (DEC-75, item 3).
 - Erasure: relayed requests leave with the seeker's data; a deletion notice to the operator when point 15 offers one.
@@ -53,8 +53,8 @@ Out:
   the map, and its card has no contact action and a neutral bar (WP-42, WP-83). This package is the only place that
   changes `hidden` into `request`.
 - DEC-76: the seeker's Telegram first name is read from the signed launch data at the time of the request and stored
-  with the request (WP-85); it goes to the operator with a relayed request only if the operator's answer to point 15
-  asks for it.
+  with the request (WP-85); it goes to the operator with every relayed request. `relay.send_first_name` is switched
+  off only if the operator refuses to receive it in its answer to point 15.
 - DEC-48: reports and votes are HOMI's; nothing of them reaches legacy.
 - DEC-33, DEC-42: the service key exists only in the server env of staging and production; tests and local runs use
   the fixture server of WP-41.
@@ -64,12 +64,15 @@ Out:
   production until the legal basis and the privacy text name it (WP-56, WP-61, WP-70).
 - *Integrator defaults, listed for the reviewer:* item 2 (the request limits answer `429 rate_limited` with `reason`
   `requests_fast`, `requests_day` or `requests_week` and `Retry-After`), item 3 (`contact.mode: hidden` while the
-  relay is off), item 7 (the first name from verified launch data), item 13 (`agent` shows to the seeker as
-  `declined`), item 14 (the relay's own switch `LEGACY_RELAY_ENABLED`, off by default). Defaults of this
-  specification, in the same list: the identity is an HMAC of HOMI's user id with `LEGACY_RELAY_ID_KEY`; relayed
-  requests live in `contact_requests` with an empty owner; HOMI never expires a relayed request by its own clock;
-  legacy's `no_chat` is a contract error; the number of a `given` relayed request is read per disclosure and never
-  stored; without an outcome channel (point 16 (d)) the relay is not built and the package stays `WAITING`.
+  relay is off), item 7 (the first name from verified launch data), item 14 (the relay's own switch
+  `LEGACY_RELAY_ENABLED`, off by default). That the seeker sees an `agent` answer as `declined` is legacy's behaviour
+  (BR-APP-098), not a default. Defaults of this specification, in the same list: the identity is an HMAC of HOMI's
+  user id with `LEGACY_RELAY_ID_KEY`; relayed requests live in `contact_requests` with an empty owner; HOMI never
+  expires a relayed request by its own clock; legacy's `no_chat` is a contract error; the number of a `given` relayed
+  request is read per disclosure and never stored; the callback of alternative B is signed over a timestamp and the
+  body, carries an event id, is applied only in event order and has its own limiter (60 a minute per source address);
+  the callback secret is at least 32 bytes and a previous one is accepted for 24 hours during a rotation; without an
+  outcome channel (point 16 (d)) the relay is not built and the package stays `WAITING`.
 
 ## Design
 
@@ -99,11 +102,13 @@ Each answer changes configuration values or one alternative below; nothing else 
 | `relay.path` | — | `/api/listings/{id}/contact` | the write route (API-054; point 14) |
 | `relay.identity.header` | — | `X-Homi-User` | header that carries the identity (point 15) |
 | `relay.identity.key` | `LEGACY_RELAY_ID_KEY` | empty | empty ⇒ the relay is unavailable, whatever `enabled` says |
-| `relay.send_first_name` | — | `false` | send the first name (point 15) |
+| `relay.send_first_name` | — | `true` | send the first name (DEC-76); set to `false` only if the operator refuses it (point 15) |
 | `relay.first_name_field` | — | `name` | its body field |
 | `relay.outcome` | — | `card` | `card`, `callback` or `status` (point 16) |
 | `relay.poll.interval_minutes`, `relay.poll.max_hours`, `relay.poll.max_per_minute` | — | 15, 72, 30 | alternatives A and C |
-| `relay.callback.secret` | `LEGACY_RELAY_CALLBACK_SECRET` | empty | alternative B; empty ⇒ the route answers `404` |
+| `relay.callback.secret` | `LEGACY_RELAY_CALLBACK_SECRET` | empty | alternative B; empty ⇒ the route answers `404`; at least 32 bytes (`security:check`, WP-70) |
+| `relay.callback.previous_secret` | `LEGACY_RELAY_CALLBACK_SECRET_PREVIOUS` | empty | alternative B; also accepted during a rotation, removed after 24 hours |
+| `relay.callback.max_skew_seconds`, `relay.callback.per_minute` | — | 300, 60 | alternative B: the accepted age of a timestamp; the limiter per source address |
 | `relay.status.path` | — | `null` | alternative C |
 | `relay.erasure.path` | — | `null` | the operator's deletion route, if any (point 15) |
 
@@ -137,11 +142,11 @@ order, before anything is sent:
 7. The first name through WP-85's verification of `init_data` (WP-85, "The seeker's first name"); a failure →
    `422 validation_failed` naming `init_data`.
 8. Insert the row (below) with `status: pending`, `relay_state: sending`; commit.
-9. `LegacyClient::post(relay.path, body, call)` (WP-41, "`LegacyClient`"): the body `{who, people, move_in,
-   message}` and, only with `relay.send_first_name`, the first name under `relay.first_name_field`; the header
-   `relay.identity.header: RelayIdentity::for($seeker)`; `LegacyCall` with `background: false` and the detail codes
-   of the error table, so the client returns them as `LegacyDetailError` instead of its generic mapping. No retry
-   (WP-41 never retries a `POST`).
+9. `LegacyClient::post(relay.path, body, call)` (WP-41, "`LegacyClient`"): the body `{who, people, move_in, message}`
+   and the first name under `relay.first_name_field` (left out only while `relay.send_first_name` is off); the header
+   `relay.identity.header: RelayIdentity::for($seeker)`; `LegacyCall` with `background: false` and the detail codes of
+   the error table, so the client returns them as `LegacyDetailError` instead of its generic mapping. No retry (WP-41
+   never retries a `POST`).
 10. Success → `relay_state: sent`, `relay_ref` from the answer when the operator returns a request id
     (alternative C), the limiter's `hit()`, and WP-85's `ContactRequested` after commit; answer `201 {status:
     "pending"}` (or the status legacy answered, mapped by the status table). Failure → the row is deleted and the
@@ -176,7 +181,8 @@ users, fires one `critical` log line "the relay may be blocked for the key" (an 
 ### Storage (an additive migration of WP-85's `contact_requests`)
 
 - `owner_listing_id` and `owner_id` become nullable: a relayed request has no owner in HOMI.
-- New columns: `origin` (string 8, default `native`; `relay` for this package), `relay_ref` (string 64, nullable,
+- New columns: `channel` (string 8, default `native`; `relay` for this package; named apart from the card's
+  `origin`, whose values are `legacy` and `native`), `relay_ref` (string 64, nullable,
   unique), `relay_state` (string 8: `sending`, `sent`, `final`; nullable), `relay_checked_at` (`timestampTz`,
   nullable).
 - A relayed row has `expires_at: null`: WP-85's `requests:expire` selects rows with `expires_at` in the past, so it
@@ -194,16 +200,18 @@ All three end in `App\Services\Sources\Legacy\RelayOutcome::apply(ContactRequest
 | `pending` | unchanged | none |
 | `given` | `given`, `answered_at` | `RequestAnswered` (action `give`) |
 | `declined` | `declined`, `answered_at` | `RequestAnswered` (action `decline`), then `RequestDeclined` |
-| `agent` | `agent`, `reason: agent`, `agent_marked: true`, `answered_at` (the seeker sees `declined`, item 13) | `RequestAnswered` (action `reason_agent`), then `RequestDeclined` |
+| `agent` | `agent`, `reason: agent`, `agent_marked: true`, `answered_at` (the seeker sees `declined`, BR-APP-098, legacy) | `RequestAnswered` (action `reason_agent`), then `RequestDeclined` |
 | `expired` | `expired`, `closed_at` | `RequestExpired` |
 | `cancelled` | `cancelled`, `closed_at` | `RequestsCancelledByRent` (with this request; it has no owner listing) |
 | any other | unchanged; one contract-error log line | none |
 
-A final status sets `relay_state: final` and ends the polling of that row. A status that goes back (legacy's undo
-within its window, `declined` → `pending`, Q-API-088) restores `pending` without an event. Legacy's own soft refusal
-and its own «Квартиру сдали» message go to legacy's bot users; a HOMI seeker gets WP-89's messages from these events.
-While `RelaySwitch::on()` is false nothing new is sent, but the chosen channel keeps applying the statuses of rows
-already sent (A and C keep polling them, B keeps accepting callbacks), so a seeker still learns the answer.
+A final status sets `relay_state: final` and ends the polling of that row. A status that goes back (legacy's undo within
+its window, `declined` → `pending`, Q-API-088) restores `pending` without an event, and only from a status time newer
+than the one the row last applied (under B also a new event id), so a replayed or late `given` never re-opens a
+disclosure the owner withdrew. Legacy's own soft refusal and its own «Квартиру сдали» message go to legacy's bot users;
+a HOMI seeker gets WP-89's messages from these events. While `RelaySwitch::on()` is false nothing new is sent, but the
+chosen channel keeps applying the statuses of rows already sent (A and C keep polling them, B keeps accepting
+callbacks), so a seeker still learns the answer.
 
 **A — per-user card read** (point 16 (a)). `App\Jobs\Relay\PollRelayedRequest`, queue `default`, unique per request:
 every `relay.poll.interval_minutes` for each row with `relay_state: sent`, at most `relay.poll.max_per_minute` per
@@ -217,11 +225,15 @@ shows the state as WP-83 draws it.
 
 **B — callback** (point 16 (b)). `POST /api/internal/legacy/relay` in `backend/routes/api.php`, outside the `v1`
 group and its `auth:sanctum` middleware (as WP-70's `internal/metrics`, "Requests to the production track"):
-`App\Http\Controllers\Internal\LegacyRelayCallbackController`. The header `X-Homi-Signature` holds the HMAC-SHA-256
-of the raw body with `LEGACY_RELAY_CALLBACK_SECRET`, compared with `hash_equals` before the body is decoded; a
-missing or wrong signature → `403`, an empty secret → `404`. The body names the request by `relay_ref`, or by the
-listing number and the identity, and carries the status and its time; a repeat is idempotent (`204`). The operator's
-field names are configuration. Request to the production track:
+`App\Http\Controllers\Internal\LegacyRelayCallbackController`. The header `X-Homi-Timestamp` carries Unix seconds
+and `X-Homi-Signature` the hex HMAC-SHA-256 of `"<timestamp>.<raw body>"` with `LEGACY_RELAY_CALLBACK_SECRET` (or,
+during a rotation, `LEGACY_RELAY_CALLBACK_SECRET_PREVIOUS`), compared with `hash_equals` before the body is decoded;
+a missing or wrong signature, or a timestamp more than `relay.callback.max_skew_seconds` (300) from the server
+clock → `403`; an empty secret → `404`. The body names the request by `relay_ref`, or by the listing number and the
+identity, and carries an event id, the status and its time. An event id already applied, or a status time not newer
+than the row's last applied one, answers `204` and changes nothing. The route has its own limiter,
+`relay.callback.per_minute` (60) per source address, besides the nginx allow-list. The operator's field names are
+configuration. Request to the production track:
 
 ```nginx
 location = /api/internal/legacy/relay {          # on the API host of each environment
@@ -229,7 +241,13 @@ location = /api/internal/legacy/relay {          # on the API host of each envir
     allow <the operator's addresses>; deny all;   # from the operator's answer
     client_max_body_size 16k;
     access_log off;                                # the body names a user's request
-    include fastcgi_php.conf;                      # the usual PHP location of the host
+    # PHP as in the host's dashboard location (infra/<env>/nginx/api.*.conf):
+    fastcgi_pass  unix:/run/php/php8.5-fpm.sock;
+    include       fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $realpath_root/index.php;
+    fastcgi_param SCRIPT_NAME     /index.php;
+    fastcgi_param DOCUMENT_ROOT   $realpath_root;
+    fastcgi_param HTTPS           on;
 }
 ```
 
@@ -249,7 +267,7 @@ package stays `WAITING`, the listings keep the neutral bar of DEC-75, and RK-35 
   `LegacyListingSource::contact()`; for a number on which the caller has a `given` relayed request, this package
   makes that call send the caller's identity header, so the operator answers the number or the call link for that
   user (variant A or B of WP-43, decided per answer as today). The disclosure is counted against the quota of
-  DEC-19 and never refused by it (item 13, WP-85's rule).
+  DEC-19 and never refused by it (WP-85's rule, item 23 of the plan's defaults; DEC-19 itself is open).
 - A callback that carries a number (alternative B) is not stored: only its status is applied, and the number is read
   at the disclosure.
 
@@ -271,9 +289,19 @@ erases his data and returns is a new user with a new identity.
 
 ### Metrics
 
-Through `BotMetrics` of WP-50, no user id as a label: `legacy_relay_total{result}` (each code of the error table and
-`sent`), `legacy_relay_outcome_total{status}`, `legacy_relay_blocked_total`, `legacy_relay_poll_total{result}`,
+Through `BotMetrics` of WP-50 (the counters every package writes, read by WP-70's `GET /api/internal/metrics`;
+hence WP-50 under "Depends on"), no user id as a label: `legacy_relay_total{result}` (each code of the error table
+and `sent`), `legacy_relay_outcome_total{status}`, `legacy_relay_blocked_total`, `legacy_relay_poll_total{result}`,
 `legacy_relay_callback_total{result}`.
+
+### Observability
+
+The relay's values stay out of the observability tools as the owner's number does (WP-84 ships those filters, and the
+staging switch-on waits for them, `25` §5 gate 5): the callback path is not recorded by Telescope; the legacy client's
+relay calls and the per-user card reads of alternative A, which carry the identity header and, after `given`, a number,
+are not recorded with their bodies (the client-request watcher ignores the legacy API host, which every call of WP-41
+reaches with the service key anyway); a failed call is reported with its detail code and status only, never with the
+response body.
 
 ## Files
 
@@ -284,7 +312,8 @@ Through `BotMetrics` of WP-50, no user id as a label: `legacy_relay_total{result
   (WP-42: `hidden` → `request` with the switch)
 - `backend/app/Jobs/Relay/{PollRelayedRequest,NotifyLegacyOfErasure}.php`
 - `backend/app/Console/Commands/Relay/{PollCommand,ReconcileCommand}.php` (`relay:poll`, `relay:reconcile`)
-- `backend/app/Http/Controllers/Internal/LegacyRelayCallbackController.php` and its route in `backend/routes/api.php`
+- `backend/app/Http/Controllers/Internal/LegacyRelayCallbackController.php`, its route in `backend/routes/api.php`
+  and its limiter `legacy-relay-callback` beside the others in `backend/app/Providers/AppServiceProvider.php`
   (alternative B only)
 - `backend/app/Http/Controllers/Api/V1/Listings/ListingContactRequestController.php` (WP-80, WP-85: the binding of
   the relay for a legacy number)
@@ -292,7 +321,8 @@ Through `BotMetrics` of WP-50, no user id as a label: `legacy_relay_total{result
 - `backend/config/legacy.php` (`relay.*`), `backend/config/erasure.php`, `backend/routes/console.php`
 - `backend/resources/fixtures/legacy/relay/*.json` (the operator's answers, recorded; until then synthetic, named
   `*.draft.json`)
-- `backend/.env.example` (`LEGACY_RELAY_ENABLED`, `LEGACY_RELAY_ID_KEY`, `LEGACY_RELAY_CALLBACK_SECRET`, blank) —
+- `backend/.env.example` (`LEGACY_RELAY_ENABLED`, `LEGACY_RELAY_ID_KEY`, `LEGACY_RELAY_CALLBACK_SECRET`,
+  `LEGACY_RELAY_CALLBACK_SECRET_PREVIOUS`, blank) —
   separate shared-file PR, with `docs/infrastructure/environments.md`
 - Tests: `backend/tests/Unit/Sources/Legacy/{RelayIdentityTest,RelayOutcomeTest}.php`;
   `backend/tests/Feature/Relay/{RelaySendTest,RelayErrorMappingTest,RelaySwitchTest,RelayLimitSharedTest,RelayOutcomeCardTest,RelayCallbackTest,RelayStatusReadTest,RelayDisclosureTest,RelayErasureTest,RelayLeakTest}.php`
@@ -329,7 +359,7 @@ Generators always with `--no-interaction`; tests first inside each step; Pint af
   (BR-API-184): here the chat is HOMI's bot's.
 - The refusals of BR-API-185 reach the seeker as the codes of WP-80, so the sheet of WP-83 shows the same texts for a
   relayed and a native request.
-- The statuses of BR-API-186; the seeker never sees `agent` (item 13).
+- The statuses of BR-API-186; the seeker never sees `agent` (BR-APP-098).
 - After `given` the seeker can call: legacy expects `phone` on the seeker's card (BR-API-187); HOMI gives it only
   through the counted contact method (DEC-52).
 - The card fields of a self-placed legacy listing (BR-API-188) come from the service read if the operator sends them
@@ -346,34 +376,35 @@ time frozen with `travelTo` in Asia/Tashkent.
 | # | Test | Cases |
 | - | ---- | ----- |
 | 1 | `RelayIdentityTest` (unit) | the same user → the same 32 hex; two users → different values; no digit run of the Telegram id; an empty key → the switch is off |
-| 2 | `RelaySendTest` | a `request`-mode legacy card → one `POST` to `relay.path` with exactly `who`, `people`, `move_in`, `message` and the identity header, `201 pending`, one row `origin: relay`, `ContactRequested`; with `relay.send_first_name` the name is added under its field, without it absent; a repeat → the current status, no second `POST`; `has_phone` true → `409 contact_open`, nothing sent; a legacy failure → the row deleted, `503` |
+| 2 | `RelaySendTest` | a `request`-mode legacy card → one `POST` to `relay.path` with exactly `who`, `people`, `move_in`, `message` and the identity header, `201 pending`, one row `channel: relay`, `ContactRequested`; by default the first name is added under its field, with `relay.send_first_name` off it is absent; a repeat → the current status, no second `POST`; `has_phone` true → `409 contact_open`, nothing sent; a legacy failure → the row deleted, `503` |
 | 3 | `RelayErrorMappingTest` | each row of the error table, under three HTTP statuses (`400`, `409`, `429`) → the listed v1 answer; the detail codes do not open the breaker; five `blocked` in an hour → one `critical` line |
 | 4 | `RelaySwitchTest` | switch off → `contact.mode: hidden` on the card of a self-placed `gate` listing, the request answers `409 request_closed`, no `POST`; switch on and key set → `request`; switch on and key empty → off |
 | 5 | `RelayLimitSharedTest` | nine native requests and one relayed in a Tashkent day → the eleventh, of either kind, `429 rate_limited` with `reason: requests_day` and `Retry-After`; the relayed request counts only after legacy accepted it |
 | 6 | `RelayOutcomeCardTest` (alternative A) | the poll reads the card with the identity header in the background share, never from the card cache; `given` → `RequestAnswered` once; `declined` → `RequestAnswered` and `RequestDeclined`; `agent` → the seeker form `declined`; `expired`, `cancelled`; a final status stops the poll; `max_hours` stops it; at most `max_per_minute` reads a minute |
-| 7 | `RelayCallbackTest` (alternative B) | a correct signature → `204` and the status applied; wrong or missing → `403`, nothing applied; secret empty → `404`; the same body twice → applied once; a body naming another user's request through a forged identity → nothing applied |
+| 7 | `RelayCallbackTest` (alternative B) | a correct signature → `204` and the status applied; wrong or missing → `403`, nothing applied; a timestamp 301 s old → `403`; the previous secret during a rotation → accepted; secret empty → `404`; the same body twice → applied once; an old `given` replayed after the row went back to `pending` → not applied; a body naming another user's request through a forged identity → nothing applied; the 61st call in a minute from one address → `429` |
 | 8 | `RelayStatusReadTest` (alternative C) | `relay_ref` stored from the create answer; the status read applies each status as in test 6 |
 | 9 | `RelayDisclosureTest` | after `given`, `POST /listings/{number}/contact` of that seeker reaches legacy with his identity header and answers the number or the link; another seeker → `404 contact_unavailable`; nothing of the number is stored in any table |
 | 10 | `RelayErasureTest` | «Удалить мои данные» of a seeker with two relayed requests → the rows gone; with `relay.erasure.path` one queued notice carrying the identity and the two refs only; without it none |
-| 11 | `RelayLeakTest` | after a send, a poll and a disclosure, the logs, `failed_jobs` and the Horizon payloads hold no request text, no first name, no full identity and no digit run of a number (SEC-REQ-053) |
+| 11 | `RelayLeakTest` | after a send, a poll, a callback and a disclosure, the logs, `failed_jobs`, the Horizon payloads and `telescope_entries` (Telescope on with its configuration of WP-84, as in WP-84's leak test) hold no request text, no first name, no full identity and no digit run of a number; a failed legacy call leaves no response body in the exception message (SEC-REQ-053) |
 
 ## Acceptance checklist
 
 - [ ] The operator's answer to points 14 – 21 is recorded in the log, and the chosen alternative is named in the PR.
 - [ ] With the switch off (the default), every self-placed `gate` listing shows the neutral bar of DEC-75 and no
       request reaches the operator.
-- [ ] Every request the relay sends holds exactly the four answers, the identity and, only when the operator asked
-      for it, the first name.
+- [ ] Every request the relay sends holds exactly the four answers, the identity and the first name (left out only
+      if the operator refused it, point 15).
 - [ ] Every refusal of legacy reaches the seeker as the code of WP-80; `no_chat` of legacy is logged as a contract
       error.
 - [ ] One limit counter covers native and relayed requests.
 - [ ] `given`, `declined`, `expired` and `cancelled` of a relayed request each produce WP-85's event once.
 - [ ] No legacy owner's number is stored by HOMI; a `given` seeker gets it only through the counted contact method.
 - [ ] Erasure removes the seeker's relayed requests and, where the operator offers it, tells the operator.
-- [ ] The nginx location (alternative B) and the three env keys are in the PR description; the migration is named.
+- [ ] The nginx location (alternative B) and the four env keys are in the PR description; the migration is named.
 - [ ] On staging, with the switch on, the operator's test account and the product owner's approval: a test seeker's
-      request on a legacy `gate` listing reaches the owner, and its outcome reaches the seeker in HOMI's bot (the
-      messages of WP-89); the number is shown only after «📞 Показать номер».
+      request on a legacy `gate` listing reaches the owner, and its outcome is applied to the row and raises WP-85's
+      event; the number is given only through `POST /listings/{number}/contact`. That the outcome reaches the seeker
+      in HOMI's bot is checked in WP-89's checklist, once both packages are merged.
 - [ ] The switch stays off on production until gate 1 of `25` §5 is closed.
 - [ ] `make ci-backend` is green; the security review is recorded in the PR.
 

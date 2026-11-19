@@ -967,12 +967,12 @@ States
     starts (`WP-29-saved.md:63`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
     not `seen[number]` (`:78`); `ListingFeed` already has every prop WP-29 needs (`:66`).
   - WP-27: `MapScreen`, `MapBar` and `ViewToggle` should read `useScreenSearchState('map')`, not `useSearchState()`
-    (`WP-27-map-gl.md:84`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
+    (`WP-27-map-gl.md:86`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
     `data.spec.ts` and the header-mode expired case of `gates.spec.ts` run on, which its PR moves (`:234`).
   - WP-30: `useRadarsEnabled()` reads `useReference().radarsEnabled`, not `radars_enabled`, and tests pass
     `{ ready: true }` (`WP-30-radars.md:173`).
   - WP-26: the contract has no `short_title`; the market block uses `marketVerdict({ market }, locale, t)`; the
-    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:293`).
+    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:430`).
   - WP-32: `whenFirstContent(timeoutMs)` races the existing `firstContentShown()`; the mark comes from the first
     `Photo` that loads anywhere, not only a feed card (`WP-32-analytics-errors.md:78`).
 - **Merged** on 2026-11-17 on the developer's «сливай #71» (merge commit `780aea9`), after `frontend` (run

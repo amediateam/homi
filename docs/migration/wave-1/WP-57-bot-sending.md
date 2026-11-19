@@ -229,8 +229,9 @@ How HOMI learns of a withdrawal in Wave 1 — legacy sends no events:
    migration) and makes `EloquentOverlayData::rentedByVotes()` of WP-44 return such numbers too, also while the
    rented detector is off. Until the admin panel exists this is the operator's tool (SEC-REQ-040).
 4. The status changes of a HOMI owner listing (WP-84) raise the same event through WP-89's listener: `source` when it
-   is removed, let or held, `takedown` when it is withdrawn by votes or the operators, nothing when it is paused. So
-   its sent cards become «Объявление снято» as any other listing's (*added by the owner-cabinet plan*).
+   is removed, let or held (by the operators or by votes), `takedown` when the operators withdraw it (votes only hold
+   it), nothing when it is paused. So its sent cards become «Объявление снято» as any other listing's
+   (*added by the owner-cabinet plan*).
 
 Editing:
 

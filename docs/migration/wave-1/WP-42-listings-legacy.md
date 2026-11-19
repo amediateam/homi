@@ -112,7 +112,8 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   maps legacy's self fields (`owner_self`, `contact_mode`, `response_minutes`, `owner_description`, `owner_mine`,
   `my_request`; `02` BR-API-188) to `owner {}` and `contact.mode`: `owner.tier` is `self` with `owner_self`,
   `verified` with `owner_verified`, `claimed` with `is_owner` alone, else `null`; `open` → `phone`; a `gate` listing
-  → `hidden` until WP-87 switches the relay on (DEC-75), then `request`. `owner_mine` and `my_request` belong to
+  with no phone → `hidden` (integrator default 3 of the owner-cabinet plan) until WP-87 switches the relay on
+  (DEC-75), then `request`. `owner_mine` and `my_request` belong to
   nobody under a service key and are ignored, like `favorite`. An owner label that the tier already says («Проверенный
   хозяин…», «Хозяин — со слов объявления», BR-API-189) is dropped from `owner_label`. A legacy id at or above the
   native floor (`ListingNumber::isNative()`, WP-80) raises `LegacyContractError`, so a collision is never served.
@@ -157,7 +158,8 @@ The card method answers the legacy `429 too many today` as it arrives from the c
 Without a user (system context) only step 1's vote part and step 4 run.
 
 The owner cabinet adds two per-user parts (*added by the owner-cabinet plan*): the overlay writes `owner.mine` and
-`owner.listing_id` (from WP-84's owner listings of the user) and `contact.request` (from WP-85's request states, and
+`owner.listing_id` (from WP-84's owner listings of the user, written by WP-85) and `contact.request` (from WP-85's
+request states, and
 for a `request`-mode listing `contact.has_phone` only with a `given` request), on legacy and native items alike; the
 card cache never holds them. A realtor mark of step 4 also sets `owner.tier` to `null`, so HOMI's mark wins over a
 legacy «Проверенный хозяин» (an integrator default of that plan; reports are still not passed to legacy, DEC-48).
@@ -166,7 +168,8 @@ The controllers apply the overlay and the view recorder to the answer of every d
 own `favorite` and `viewed` values are overwritten like legacy's, so a favourite saved by real code shows on a stub
 feed. One exception: while `sources.native_stubs` is on (WP-40), both are skipped, so the end-to-end suite keeps the
 fixed flags of the fixtures and leaves no rows behind (`25` §4.4: stubs are deterministic). Author keys exist only
-for cards that came through the legacy driver (`AuthorKey::fromCard()` reads the legacy card).
+for cards that came through the legacy driver (`AuthorKey::fromCard()` reads the legacy card) and, once WP-86 is
+merged, for native listings, filed under their owner's phone key (*added by the owner-cabinet plan*).
 
 **Feed paging and top-up.** Legacy is always asked for pages of 20. To build one HOMI page: fetch the legacy page the
 cursor names, apply the overlay, skip the offset the cursor carries, and take items up to `limit`. While fewer than
@@ -182,7 +185,11 @@ does not decode, or has another prefix (for example a stub cursor after a flag s
 Table `listing_refs`: `listing_number` (`unsignedBigInteger`, primary key), `source_channel` (string 64, nullable),
 `source_post_id` (`unsignedBigInteger`, nullable), `author_key` (string 96, nullable, indexed), `author_kind`
 (string 8, nullable), `district_code` (string 64, nullable), `merged_into` (`unsignedBigInteger`, nullable),
-`first_seen_at`, `last_seen_at`, `gone_at` (`timestampTz`, nullable). No personal data: the author key is opaque.
+`first_seen_at`, `last_seen_at`, `gone_at` (`timestampTz`, nullable). The author key is pseudonymous, not opaque: a
+`phone:` key is a keyed hash of a person's number and is used for decisions about that person (the votes of WP-44,
+the realtor check of WP-84), so the security review of WP-70 checks its retention. A native listing is filed under
+its owner's phone key (`phone_author_key` of WP-84; WP-86 writes the row), so blocking and votes reach that person's
+legacy listings with the same number too (*added by the owner-cabinet plan*).
 
 `App\Services\Listings\AuthorKey::fromCard(array $legacyCard): ?AuthorKey`:
 

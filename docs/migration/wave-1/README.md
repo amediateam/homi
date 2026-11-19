@@ -117,7 +117,7 @@ its row is its place in the queue.
 | [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | TODO |
 | [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36 | TODO |
 | [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26 | TODO |
-| [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-26, WP-30, WP-36 | TODO |
+| [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | TODO |
 | [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-38, WP-80 … WP-83 | TODO |
 
 ## Stage C — API
@@ -136,7 +136,7 @@ its row is its place in the queue.
 | [WP-85](WP-85-contact-requests.md) | Contact requests: native service and the owner's answers | WP-84, WP-43 | TODO |
 | [WP-86](WP-86-mixed-feed.md) | The mixed feed: owner listings in feed, count, new, flow, map and card | WP-84, WP-85, WP-42, WP-46 | TODO |
 | [WP-48](WP-48-stubs-off.md) | Stubs off: contract tests across drivers, flags to real sources | WP-41 … WP-47, WP-84 … WP-86 | TODO |
-| [WP-87](WP-87-request-relay.md) | Relay of requests on legacy `gate` listings | WP-85, WP-41 | WAITING (operator, points 14 – 21 of the addendum) |
+| [WP-87](WP-87-request-relay.md) | Relay of requests on legacy `gate` listings | WP-85, WP-41, WP-50 | WAITING (operator, points 14 – 21 of the addendum) |
 
 ## Stage D — Bot
 
@@ -151,7 +151,7 @@ its row is its place in the queue.
 | [WP-56](WP-56-bot-settings-owner-privacy.md) | Settings, owner verification, privacy, erasure | WP-52, WP-47 | TODO |
 | [WP-88](WP-88-bot-owner-phone.md) | Bot: the owner's phone and the way back to the draft | WP-56, WP-84 | TODO |
 | [WP-57](WP-57-bot-sending.md) | Sending: pacing, outbox, quiet hours, digest, withdrawn cards, broadcasts; the radar launch link `?radar=<id>` (DEC-61) | WP-53, WP-46 | TODO |
-| [WP-89](WP-89-bot-requests-switch-on.md) | Bot: requests to owners, answers to seekers, the operators' notice, the switch-on | WP-57, WP-85, WP-88, WP-53 | TODO |
+| [WP-89](WP-89-bot-requests-switch-on.md) | Bot: requests to owners, answers to seekers, the operators' notice, the switch-on | WP-57, WP-85, WP-88, WP-53, WP-86 | TODO |
 | [WP-58](WP-58-bot-profile-tests.md) | Bot profile as code, action log, conversation tests, pass inside Telegram | WP-52 … WP-57, WP-88, WP-89 | TODO |
 | [WP-59](WP-59-support-bot.md) | Support bot: a second bot that relays between a person and the operators' private chats | WP-58 | TODO |
 

@@ -7,7 +7,7 @@
 | Depends on | Owner-cabinet plan, WP-13 |
 | Size | about 2 800 changed lines with tests and fixtures, L |
 | Behaviour reference | `08` §1.8 (`OwnerListing`, `OwnerRequest`), API-037 … API-054; `02` §12a (BR-API-159 … BR-API-189), LB-API-056; `03` SCR-049 … SCR-062, BR-APP-098 … BR-APP-103; `24` DEC-69 … DEC-81; `25` §4.2 |
-| Needs from the production track | The regular deploy; `php artisan sources:publish-stub-media` again on staging and production (the new stub numbers). One new env key, `OWNER_CABINET_ENABLED` (blank = off), through a shared-file PR (`backend/.env.example`, `docs/infrastructure/environments.md`); it stays unset on the servers (DEC-81) |
+| Needs from the production track | The regular deploy; `php artisan sources:publish-stub-media` again on staging and production (the new stub numbers). Three new env keys through a shared-file PR (`backend/.env.example`, `docs/infrastructure/environments.md`, `docs/infrastructure/local-development.md`): `OWNER_CABINET_ENABLED` (blank = off; it stays unset on the servers, DEC-81), `OWNER_CABINET_ALLOWED_IDS` (blank = no allow-list) and `OWNER_LISTINGS_PUBLIC` (blank = on). The API host's access log writes `/api/v1/owner/place` without its query string, so no owner's point lands in it (SEC-REQ-052) |
 
 ## Goal
 
@@ -52,21 +52,22 @@ Out:
   where it comes from (`origin`); native numbers come from a range legacy never uses (the floor below).
 - DEC-71: the request method covers legacy numbers as well; a legacy self-placed listing in `gate` mode is relayed
   by WP-87. The stub scenario `relay_on` shows that state.
-- DEC-72: the owner's own number appears in one answer only, `GET /owner/listings/{id}` (`phone_display`). No card,
-  no list and no other method carries it; a seeker gets a number only from `POST /listings/{number}/contact`.
+- DEC-72: the owner's own number appears only in the owner listing object (`phone_display`), which `GET
+  /owner/listings/{id}` and the owner's writes answer to the owner himself. No card, no list and no other method
+  carries it; a seeker gets a number only from `POST /listings/{number}/contact`.
 - DEC-75: while the relay does not work, a legacy self-placed listing that hides its number has `contact.mode:
   hidden`: shown in the feed and on the map, with no contact action on its card.
 - DEC-76: the Mini App sends the current launch's `init_data` with a request, so that the owner can see the seeker's
-  Telegram first name; this package requires the field and never echoes it.
+  Telegram first name (how: integrator default 7); this package requires the field and never echoes it.
 - DEC-77: native items have `owner_verified: true` and `owner.tier: self`.
 - DEC-78: native items may carry the market verdict (`market`, `comparison`) and `GET /owner/demand` the usual
   price; both are `null` where no harvested median exists.
 - DEC-79: `GET /owner/place` answers `{city, district_code}` only; no street address and no landmark.
 - DEC-80: every `PATCH` and photo change of a published listing is live; `publish` on an `active` listing answers it
   unchanged.
-- DEC-81: the server switch `OWNER_CABINET_ENABLED`, off by default. While it is off, creating a draft, asking for
-  the phone and publishing answer `403 owner_disabled`, `GET /reference` says `owner_enabled: false`; everything else
-  works.
+- DEC-81: the server switch `OWNER_CABINET_ENABLED`, off by default. While it is off no draft can be created or
+  published and the settings have no group «Сдаю квартиру»; taking a listing down, pausing it, «Сдано» and answering a
+  request always work. Which methods the switch closes is the plan's reading of DEC-81, below ("The switch (DEC-81)").
 - DEC-52: no number in any card or preview; `owner.description` is masked in `fromArray()` like every author-written
   text (WP-12, "Phone numbers in listing texts").
 - DEC-51: while radars are off, `GET /owner/demand` answers `count: 0`, on stubs too.
@@ -85,10 +86,29 @@ Out:
     page one;
   - the cabinet's renovation list is HOMI's configuration (`backend/config/owner.php`, served as
     `renovations.owner`), not legacy's `owner` key, which WP-41 drops;
+  - the plan's reading of DEC-81 (beside DEC-81 in the plan's list): the switch freezes the content of the cabinet and
+    leaves every way down open (the table of "The switch (DEC-81)"); `owner_enabled` of `GET /reference` follows the
+    switch, and the Mini App ignores an `owner_new` launch while it is off;
+  - a native listing's `author` is a `phone` author without a digit of the number, `{"kind": "phone", "label":
+    "Хозяин", "count": …}`; its author key is the owner's phone author key (WP-84), so «Скрыть автора» on it also
+    hides that person's legacy listings with the same number, and HOMI's realtor votes and the check of DEC-77 count
+    on the same key; no new `kind` (default 24);
+  - HOMI's realtor check and the report votes never reject or withdraw on their own: they hold the listing
+    (`hold_reason`) for the operators to decide (WP-84); a publish they hold answers `200` with `status: paused`,
+    `held: true` and `hold_reason` (default 26); `reject_reason` is `denied` (the operators' deny list, legacy's
+    `fraud`; default 32) or `limit` (the phone limit at the confirmation), and legacy's `agent` is not produced;
+  - `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft, ask for the phone and publish
+    (the staging run with staff accounts; WP-84 enforces it; default 30); `OWNER_LISTINGS_PUBLIC` (on unless set to
+    `false`): off takes every native listing out of every public answer at once (WP-86 enforces it; default 31);
+  - the consent of an owner and of a seeker is recorded on the server with the version of the privacy text in force
+    (`config('owner.consent_version')`, WP-84 and WP-85), so no method takes a consent field;
   - defaults of this specification: the shapes of the owner listing and owner request objects below (the legacy
     models of `08` §1.8 in v1 form); the value ranges of the form fields; `201` for a created draft, photo or
-    request and `200` for an existing one; `422 validation_failed` naming `init_data` when the launch data does not
-    verify; `422` (not `409`) for a status change that the listing's status does not offer.
+    request and `200` for an existing one; an untouched draft is answered whatever the limit; `422
+    validation_failed` naming `init_data` when the launch data does not verify; `422` (not `409`) for a status
+    change that the listing's status does not offer; the place lookup reads its point at 3 decimals; the block answer
+    of a native author lists native numbers only; the rate limits of the owner routes ("Methods of the owner
+    cabinet").
 
 ## Design
 
@@ -102,7 +122,8 @@ every method: `401 unauthenticated`, `403 access_denied`, `422 validation_failed
 source_unavailable`; the four reserved scenarios and the six `access_*` of WP-10 apply.
 
 An owner listing has a ULID from its creation and a listing number only from its first publish. The cabinet is long
-rent only: a native listing's `deal` is always `rent_long` and its `type` `apartment` or `room`.
+rent only: a native listing's `deal` is always `rent_long` and its `type` `apartment` or `room` (integrator default 18
+of the owner-cabinet plan).
 
 ### The switch (DEC-81)
 
@@ -111,6 +132,8 @@ rent only: a native listing's `deal` is always `rent_long` and its `type` `apart
 | Key | Value | Read by |
 | --- | ----- | ------- |
 | `enabled` | `(bool) env('OWNER_CABINET_ENABLED', false)` | the middleware below; `owner_enabled` of `GET /reference` |
+| `allowed_ids` | `OWNER_CABINET_ALLOWED_IDS`: comma-separated Telegram ids, a list of integers; empty = no allow-list | WP-84's middleware check (create, phone request, publish) |
+| `public` | `env('OWNER_LISTINGS_PUBLIC') !== false`: blank or unset = on, only `false` turns it off (a blank value reads as `''`, which a `(bool)` cast would turn off) | WP-86's merge: off takes every native listing out of every list, count, map, card and radar |
 | `limits.listings` | `2` — the listings that count, per account and per phone alike | `max` of the list; `limits.owner_listings` |
 | `limits.photos` | `10` | `limits.owner_photos`; the photo method |
 | `limits.requests` | `['day' => 10, 'week' => 30, 'pause_minutes' => 10]` | `limits.requests`; WP-85 reads them from env |
@@ -123,23 +146,35 @@ them to the filter's long-rent codes.
 
 `App\Http\Middleware\EnsureOwnerCabinetEnabled`, the twin of `EnsureRadarsEnabled`: while `owner.enabled` is false
 it throws `App\Exceptions\Owner\OwnerCabinetDisabled` (an `ApiException`: 403, `owner_disabled`) after
-authentication and before validation or any lookup. It is attached by class to exactly three routes —
-`POST /owner/listings`, `POST /owner/listings/{id}/phone-request`, `POST /owner/listings/{id}/publish` — and stays
-there when WP-84 gives them real bodies. Reading, editing, photos, the contact mode, the status (pause, «Сдано»,
-«Снять»), deleting, requests, answers, the waitlist, place and demand work with the switch off, so nothing an owner
-already has is stuck.
+authentication and before validation or any lookup. The switch freezes the content of the cabinet and leaves every
+way down open, so nothing an owner already has is stuck (the plan's reading of DEC-81, listed for the reviewer):
 
-`backend/.env.example` sets `OWNER_CABINET_ENABLED=true` and `backend/phpunit.xml` sets it as well, as WP-11 did for
-`RADAR_CREATION_ENABLED`, so the local stack, the suites and CI run with the cabinet on; blank or unset means off.
-The key enters through a shared-file PR.
+| While the switch is off | Methods |
+| ----------------------- | ------- |
+| `403 owner_disabled` from the middleware, attached by class | `POST /owner/listings`; `PATCH /owner/listings/{id}`; `POST /owner/listings/{id}/photos`, `DELETE /owner/listings/{id}/photos/{photo}`, `PUT /owner/listings/{id}/photos/order`; `PUT /owner/listings/{id}/contact-mode`; `POST /owner/listings/{id}/phone-request`; `POST /owner/listings/{id}/publish` |
+| `403 owner_disabled` from `OwnerStatusController`, after validation and before the lookup | `PUT /owner/listings/{id}/status` with `status: active` (a resume puts a listing back into the feed) |
+| allowed | every read (`GET /owner/listings`, `GET /owner/listings/{id}`, `GET /owner/listings/{id}/requests`); `PUT /owner/listings/{id}/status` with `paused`, `rented` or `removed`; `DELETE /owner/listings/{id}` of a draft or a rejected listing; `POST /owner/requests/{id}/answer`; `PUT /owner/waitlist`; `GET /owner/place`; `GET /owner/demand`; the seeker's `POST /listings/{number}/contact-request` on a listing still in the feed |
+
+The middleware and the status check stay when WP-84 gives the controllers real bodies; WP-84 adds the allow-list of
+`owner.allowed_ids` to the middleware of the create, phone-request and publish routes (the same `403
+owner_disabled`). Listings that exist when the switch goes off stay in the feed until their owner pauses or removes
+them or the operators hold them. The Mini App closes the form's addresses while `owner_enabled` is false and keeps
+«Мои объявления», «Отклики» and the owner panel for a user whose `GET /me` says `owner.has_listings` (WP-81, WP-82).
+
+`backend/.env.example` carries `OWNER_CABINET_ENABLED=` blank, with the comment «true locally; unset on the servers
+until DEC-81's gates», because the servers' env files were built from it; `OWNER_CABINET_ALLOWED_IDS=` and
+`OWNER_LISTINGS_PUBLIC=` are blank beside it. `docs/infrastructure/local-development.md` tells the developer to set
+`OWNER_CABINET_ENABLED=true` in the local `.env`, and `backend/phpunit.xml` sets it to `true`, so the local stack, the
+suites and CI run with the cabinet on; blank or unset means off. The keys enter through a shared-file PR.
 
 ### The owner listing object
 
-`GET /owner/listings/{id}` and every owner write that answers a listing:
+`GET /owner/listings/{id}` and every owner write that answers the listing use this shape (`OwnerListingResource`);
+the list uses the item shape below (`OwnerListingItemResource`):
 
 ```json
 {"id": "01JF0000000000000000000003", "number": 10000008, "status": "active", "withdrawn": false, "held": false,
- "published_at": "2026-11-18T07:00:00+00:00",
+ "hold_reason": null, "published_at": "2026-11-18T07:00:00+00:00",
  "photos": [{"id": "01JF0000000000000000000031", "url": "https://cdn.homi.loc/stub/10000008/1.jpg?e=0&s=stub"}],
  "form": {"city": "tashkent", "district_code": "yunusobod", "landmark": "Мегапланет", "lat": 41.36512, "lon": 69.28431,
           "room": false, "rooms": 2, "area_m2": 54, "floor": 3, "floors_total": 9, "price": 600, "currency": "USD",
@@ -155,16 +190,17 @@ The key enters through a shared-file PR.
 | `id` | ULID | `id` |
 | `number` | the public listing number, `null` before the first publish | `listing_id` |
 | `status` | `draft`, `active`, `paused`, `rented`, `removed`, `rejected` | same |
-| `withdrawn`, `held` | booleans, always present: `withdrawn` taken down for good by votes or the operators; `held` paused by the operators (with `status: paused`), not resumable by the owner (BR-API-177) | `withdrawn?`, `held?` |
-| `published_at` | ISO 8601 or `null` | same |
-| `photos` | always an array, at most `limits.owner_photos`, the first is the cover; `url` absolute; a published listing's addresses have the media form `…/<digits>/<digits>.jpg?…`, so the client's small variant `.s.jpg` works (RES-002); a draft's are owner-only addresses valid for at least 10 minutes | `photos` |
+| `withdrawn`, `held` | booleans, always present: `withdrawn` taken down for good by the operators; `held` on hold, with `status: paused` — put there by the operators or, for the operators to decide, by HOMI's realtor check or the report votes (WP-84); not resumable by the owner (BR-API-177) | `withdrawn?`, `held?` |
+| `hold_reason` | with `held`: `check_agent` (the realtor check at publish), `votes_agent`, `votes_fraud`, `votes_rented` (a vote threshold), `moderator` (an operator); else `null`. The client shows every hold as «На проверке» and never names a realtor | none |
+| `published_at` | ISO 8601 or `null`; `null` until the listing first enters the feed (a listing held at its first publish has a `number` and no `published_at`) | same |
+| `photos` | always an array, at most `limits.owner_photos`, the first is the cover; `url` absolute; a published listing's addresses have the media form `…/<digits>/<digits>.jpg?…` (`owner/<token>/<n>.jpg?v=<version>`, WP-84), so the client's small variant `.s.jpg` works (RES-002); a draft's are owner-only addresses valid for at least 10 minutes | `photos` |
 | `form` | always an object, every key present, `null` = not set (table below) | `form` |
 | `stats` | `null` for a draft; else `pending`, `requests`, `given`, `sent`, `opened` (integers ≥ 0), `favorites`, `days_listed` (integer or `null`), `daily` (opens per day, oldest first, the last value is today in Asia/Tashkent, 7 values), `price_delta` (fraction, negative = below the median) and `price_tone` (a tone of WP-12's `market`), both `null` without a harvested median (DEC-78) | `stats` |
 | `contact_mode` | `request` or `phone`, never `null`; a new listing starts with `request` (DEV-055) | `gate`, `open`, `null` |
 | `phone_set` | boolean | same |
 | `phone_display` | the owner's own number in display form, or `null` (DEC-72) | same |
 | `phone_error` | `not_uz`, `not_own` or `null`: the last shared contact was refused (DEV-056) | part of `reject_reason` |
-| `reject_reason` | `agent`, `fraud`, `limit` with `status: rejected`, else `null` (DEV-056) | `reject_reason?` |
+| `reject_reason` | with `status: rejected`: `denied` (the number is on the operators' deny list) or `limit` (the number already had `limits.owner_listings` listings that count at its confirmation); else `null` (DEV-056). Legacy's `agent` is not produced: HOMI's realtor check holds instead (`hold_reason`) | `reject_reason?` (`agent`, `fraud`, `limit`) |
 | `shown_point` | `{lat, lon, radius_m}`, the circle seekers see, or `null` without a point | `shown_point?` |
 
 `form`:
@@ -188,8 +224,9 @@ The key enters through a shared-file PR.
 | `description` | text, at most 600 characters | shown to the owner as written |
 
 `GET /owner/listings` items are the same object without `phone_display` and without `form.lat` and `form.lon`
-(`phone_set` and `shown_point` stay): the show method is the only answer with the true point and the owner's own
-number. Two resources, `OwnerListingResource` and `OwnerListingItemResource`, keep the two shapes apart in OpenAPI.
+(`phone_set` and `shown_point` stay): only the owner listing object — the show answer and the owner's writes that
+answer the listing, all to the owner himself — carries the true point and the owner's own number. Two resources,
+`OwnerListingResource` and `OwnerListingItemResource`, keep the two shapes apart in OpenAPI.
 
 ### The owner request object
 
@@ -213,28 +250,32 @@ answers the owner may still give (BR-API-180).
 | v1 method | Route name | Access | Legacy | Notes |
 | --------- | ---------- | ------ | ------ | ----- |
 | `GET /owner/listings` | `api.v1.owner.listings.index` | `app:read` | API-037 | `items`, `max`, `can_add`, `past`; the pending count moved to `GET /me` (fix of LB-APP-066) |
-| `POST /owner/listings` | `api.v1.owner.listings.store` | `app:write`, switch | API-038 | the caller's untouched draft when one exists (DEV-054); `409 owner_limit` |
-| `GET /owner/listings/{id}` | `api.v1.owner.listings.show` | `app:read` | API-039 | also the phone poll; the only answer with the true point and the owner's own number |
-| `PATCH /owner/listings/{id}` | `api.v1.owner.listings.update` | `app:write` | API-040 | changed fields only, `null` clears; `422 validation_failed` with `errors` per field; `409 owner_listing_locked`; live on a published listing (DEC-80) |
-| `DELETE /owner/listings/{id}` | `api.v1.owner.listings.destroy` | `app:write` | part of API-046 | a draft or a rejected listing (DEV-056); anything else `409 owner_listing_locked` |
-| `POST /owner/listings/{id}/photos` | `api.v1.owner.listings.photos.store` | `app:write`, `throttle:uploads` | API-041 | multipart `file`; `HashedUploader`; the media codes and `409 owner_photo_limit` |
-| `DELETE /owner/listings/{id}/photos/{photo}` | `api.v1.owner.listings.photos.destroy` | `app:write` | API-042 | `{photo}` a ULID |
-| `PUT /owner/listings/{id}/photos/order` | `api.v1.owner.listings.photos.order` | `app:write` | API-043 | `{ids}`: the full order, the cover first; another set → `422` |
-| `PUT /owner/listings/{id}/contact-mode` | `api.v1.owner.listings.contact-mode` | `app:write` | API-044 | `{mode: "request" \| "phone"}` (legacy `gate` \| `open`); a new listing starts with `request` (DEV-055) |
-| `POST /owner/listings/{id}/phone-request` | `api.v1.owner.listings.phone-request` | `app:write`, switch | none | opens the ten-minute phone window; answers the listing |
-| `POST /owner/listings/{id}/publish` | `api.v1.owner.listings.publish` | `app:write`, switch | API-045 | `422` naming `city`, `place`, `rooms`, `price`, `photos`; `409 owner_phone_required`; `409 owner_limit`; `409 owner_rejected` |
-| `PUT /owner/listings/{id}/status` | `api.v1.owner.listings.status` | `app:write` | API-046 | `{status: "active" \| "paused" \| "rented" \| "removed"}`; `active` refused for `held` and `withdrawn`; nothing leaves `rented` or `removed` |
+| `POST /owner/listings` | `api.v1.owner.listings.store` | `app:write`, switch, `throttle:owner-writes` | API-038 | the caller's untouched draft when one exists (DEV-054), else `409 owner_limit` at the limit |
+| `GET /owner/listings/{id}` | `api.v1.owner.listings.show` | `app:read` | API-039 | also the phone poll; with the owner's writes, the only answers with the true point and the owner's own number |
+| `PATCH /owner/listings/{id}` | `api.v1.owner.listings.update` | `app:write`, switch, `throttle:owner-writes` | API-040 | changed fields only, `null` clears; `422 validation_failed` with `errors` per field; `409 owner_listing_locked`; live on a published listing (DEC-80) |
+| `DELETE /owner/listings/{id}` | `api.v1.owner.listings.destroy` | `app:write`, `throttle:owner-writes` | part of API-046 | a draft or a rejected listing (DEV-056); anything else `409 owner_listing_locked` |
+| `POST /owner/listings/{id}/photos` | `api.v1.owner.listings.photos.store` | `app:write`, switch, `throttle:uploads` | API-041 | multipart `file`; `HashedUploader`; the media codes and `409 owner_photo_limit` |
+| `DELETE /owner/listings/{id}/photos/{photo}` | `api.v1.owner.listings.photos.destroy` | `app:write`, switch, `throttle:owner-writes` | API-042 | `{photo}` a ULID |
+| `PUT /owner/listings/{id}/photos/order` | `api.v1.owner.listings.photos.order` | `app:write`, switch, `throttle:owner-writes` | API-043 | `{ids}`: the full order, the cover first; another set → `422` |
+| `PUT /owner/listings/{id}/contact-mode` | `api.v1.owner.listings.contact-mode` | `app:write`, switch, `throttle:owner-writes` | API-044 | `{mode: "request" \| "phone"}` (legacy `gate` \| `open`); a new listing starts with `request` (DEV-055) |
+| `POST /owner/listings/{id}/phone-request` | `api.v1.owner.listings.phone-request` | `app:write`, switch, `throttle:owner-publish` | none | opens the ten-minute phone window; answers the listing |
+| `POST /owner/listings/{id}/publish` | `api.v1.owner.listings.publish` | `app:write`, switch, `throttle:owner-publish` | API-045 | `422` naming `city`, `place`, `rooms`, `price`, `photos`; `409 owner_phone_required`; `409 owner_limit`; `409 owner_rejected`; a listing the checks hold answers `200` with `held: true` |
+| `PUT /owner/listings/{id}/status` | `api.v1.owner.listings.status` | `app:write`, switch for `active`, `throttle:owner-writes` | API-046 | `{status: "active" \| "paused" \| "rented" \| "removed"}`; `active` refused for `held`; nothing leaves `withdrawn`, `rented` or `removed` |
 | `GET /owner/listings/{id}/requests` | `api.v1.owner.listings.requests.index` | `app:read` | API-048 | cursor list, newest first, 20 a page; the "all requests" form is not built |
-| `POST /owner/requests/{id}/answer` | `api.v1.owner.requests.answer` | `app:write` | API-049 | `{action}`; `409 request_answer_closed` |
-| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (fix of LB-APP-071) |
-| `GET /owner/place` | `api.v1.owner.place` | `app:read` | API-051 | `?lat=&lon=` (5 decimals) → `{city, district_code}`, either `null` (DEC-79) |
-| `GET /owner/demand` | `api.v1.owner.demand` | `app:read` | API-053 | `?city=&district=&rooms=&room=&price=&currency=` → `{count, usual_low_usd, usual_high_usd}` |
+| `POST /owner/requests/{id}/answer` | `api.v1.owner.requests.answer` | `app:write`, `throttle:owner-writes` | API-049 | `{action}`; `409 request_answer_closed` |
+| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (fix of LB-APP-071) |
+| `GET /owner/place` | `api.v1.owner.place` | `app:read`, `throttle:owner-place` | API-051 | `?lat=&lon=` (3 decimals) → `{city, district_code}`, either `null` (DEC-79) |
+| `GET /owner/demand` | `api.v1.owner.demand` | `app:read`, `throttle:owner-demand` | API-053 | `?city=&district=&rooms=&room=&price=&currency=` → `{count, usual_low_usd, usual_high_usd}` |
 
 Not built: `GET /owner/pending` (API-047: its number is `owner.pending` of `GET /me`); `GET /owner/map-start`
 (API-052, DEV-061: the picker starts at the centre of the form's city or at the user's own location).
 
 The owner routes form one group `Route::prefix('owner')->name('owner.')` inside the `auth:sanctum` group of
-`backend/routes/api.php`, each route with its own ability, as the personal routes of WP-13 are written.
+`backend/routes/api.php`, each route with its own ability, as the personal routes of WP-13 are written. The rate
+limits of SEC-REQ-027 (`16`) for the cabinet are named limiters in `AppServiceProvider`, beside `uploads`, keyed like
+it per actor: `owner-writes` (60 a minute: every owner write), `owner-publish` (10 an hour: publish and the phone
+request, on top of `owner-writes`), `owner-place` (60 a minute) and `owner-demand` (30 a minute); they answer `429
+rate_limited` without a `reason`, like every limit but the daily one (WP-10).
 
 #### Drafts, form and status
 
@@ -243,29 +284,32 @@ The owner routes form one group `Route::prefix('owner')->name('owner.')` inside 
   `limits.owner_listings`; `can_add` is `false` while the caller has `max` listings that count (`active` or `paused`
   and not `withdrawn`; drafts do not count); `past` is the number of the caller's listings that left the feed for
   good, always present (BR-API-162; «С возвращением!», BR-APP-095).
-- `POST /owner/listings` — no body. `201` with a new draft; `200` with the caller's untouched draft when one exists
-  (no form field set and no photo; DEV-054). `409 owner_limit` (`limit: "account"`, `max`) when `can_add` is false.
-  A new draft has `contact_mode: "request"`, `currency: "USD"`, the caller's city in `form.city` (or `null`) and
-  every other form key `null` or empty.
+- `POST /owner/listings` — no body. `200` with the caller's untouched draft when one exists (no form field set and
+  no photo; DEV-054), whatever the limit; else `409 owner_limit` (`limit: "account"`, `max`) when `can_add` is false;
+  else `201` with a new draft. Behind the switch. A new draft has `contact_mode: "request"`, `currency: "USD"`, the
+  caller's city in `form.city` (or `null`) and every other form key `null` or empty.
 - `PATCH /owner/listings/{id}` — a body with any subset of the `form` keys; a key with `null` clears it, an absent
   key is unchanged; unknown keys are ignored. `lat` and `lon` come together. `200` with the listing. `422
   validation_failed` names each rejected key in `errors`; a point outside the country or outside `form.city` is
   `errors.point` (WP-84 checks it; the stub accepts every point). `409 owner_listing_locked` for a `held`,
-  `withdrawn`, `rented` or `removed` listing. A change of a published listing is live at once (DEC-80).
+  `withdrawn`, `rented` or `removed` listing. A change of a published listing is live at once (DEC-80). Behind the
+  switch.
 - `DELETE /owner/listings/{id}` → `204` for a draft or a `rejected` listing (DEV-056); any other status `409
   owner_listing_locked`. A second call → `404 not_found`.
 - `PUT /owner/listings/{id}/status` — `{status}` of `active`, `paused`, `rented`, `removed`. Allowed: `active` ↔
-  `paused`; `active` or `paused` → `rented` or `removed`. `active` for a `held` or `withdrawn` listing, and anything
-  for a `rented` or `removed` one → `409 owner_listing_locked`. A status the current one does not offer (a draft, a
-  rejected listing, the same status) → `422` naming `status`. `200` with the listing. `rented` closes the pending
-  requests of the listing (`cancelled`, BR-API-176; WP-85).
+  `paused`; `active` or `paused` → `rented` or `removed`. `active` for a `held` listing, and anything for a
+  `withdrawn`, `rented` or `removed` one → `409 owner_listing_locked`. A status the current one does not offer (a
+  draft, a rejected listing, the same status) → `422` naming `status`. `200` with the listing. `rented` closes the
+  pending requests of the listing (`cancelled`, BR-API-176; WP-85). With the switch off `active` answers `403
+  owner_disabled` (after validation, before the lookup); `paused`, `rented` and `removed` work.
 
 #### Photos
 
 - `POST /owner/listings/{id}/photos` — `multipart/form-data` with one field `file`. `201` with the listing, the new
   photo last. Errors: the media codes of `HashedUploader` (`unsupported_mime`, `too_large`, `too_big`, `undecodable`;
   `docs/api/README.md`, "Error codes") and `409 owner_photo_limit` when the listing has `limits.owner_photos`
-  photos; `409 owner_listing_locked`. The route also carries `throttle:uploads`. The upload never goes through
+  photos; `409 owner_listing_locked`. The route also carries `throttle:uploads`; the three photo methods are behind
+  the switch. The upload never goes through
   `POST /media`, whose `media:write` ability the Mini App's token does not have (`backend/routes/api.php:105`).
 - `DELETE /owner/listings/{id}/photos/{photo}` → `200` with the listing; an unknown photo → `404 not_found`. The
   Mini App offers an undo before it sends this (DEV-057).
@@ -276,16 +320,24 @@ The owner routes form one group `Route::prefix('owner')->name('owner.')` inside 
 
 - `PUT /owner/listings/{id}/contact-mode` — `{"mode": "request" | "phone"}` → `200` with the listing; any other
   value `422`. `request` hides the number and takes requests (legacy `gate`); `phone` shows it through the counted
-  contact method (legacy `open`).
+  contact method (legacy `open`). Behind the switch.
 - `POST /owner/listings/{id}/phone-request` — no body. Opens the ten-minute phone window of WP-84: a contact the
   caller shares with HOMI's bot inside it becomes the listing's number (WP-88). `200` with the listing; the client
-  then calls `tg.requestContact()` and polls `GET /owner/listings/{id}` (BR-API-170). Behind the switch.
+  then calls `tg.requestContact()` and polls `GET /owner/listings/{id}` (BR-API-170). Behind the switch. The method
+  takes no consent field: when the number is accepted, WP-84 records the moment and the version of the privacy text
+  the phone step shows (`config('owner.consent_version')`, kept in step with that text), and erases both with the
+  number; WP-85 records the same version with a seeker's request.
 - `POST /owner/listings/{id}/publish` — no body. `200` with the listing, `status: active` and its `number`.
-  Refusals, in this order: `409 owner_listing_locked` (`held`, `withdrawn`, `rented`, `removed`); `422
-  validation_failed` whose `errors` name the missing parts among `city`, `place` (no point), `rooms` (neither `rooms`
-  nor `room`), `price` and `photos` (none); `409 owner_phone_required` (no confirmed number); `409 owner_limit`
-  (`limit` `account` or `phone`, `max`); `409 owner_rejected` (`reason` `agent`, `fraud` or `limit`). On an `active`
-  listing `publish` answers it unchanged (DEC-80); on a `paused` listing it keeps it paused. Behind the switch.
+  Refusals, in this order (WP-84, "Publish and checks"): `409 owner_listing_locked` (`held`, `withdrawn`, `rented`,
+  `removed`), and `409 owner_rejected` with its `reason` for a `rejected` listing; `422 validation_failed` whose
+  `errors` name the missing parts among `city`, `place` (no point), `rooms` (neither `rooms` nor `room`), `price` and
+  `photos` (none); `409 owner_phone_required` (no confirmed number); `409 owner_limit` (`limit` `account` or `phone`,
+  `max`); `422 validation_failed` naming `price` (outside 50 … 20 000 USD a month) or `point` (outside the country
+  or the city); `409 owner_rejected` (`reason: denied`: the number is on the operators' deny list). A listing that
+  HOMI's realtor check flags is not refused: the answer is `200` with its `number`, `status: paused`, `held: true`
+  and `hold_reason: check_agent`, and the listing waits for the operators (WP-84); the client shows «На проверке». On
+  an `active` listing `publish` answers it unchanged (DEC-80); on a `paused` listing it keeps it paused. Behind the
+  switch.
 
 #### Requests and the waitlist (owner side)
 
@@ -301,8 +353,10 @@ The owner routes form one group `Route::prefix('owner')->name('owner.')` inside 
 
 #### Place and demand
 
-- `GET /owner/place?lat=&lon=` — both required, numbers rounded to 5 decimals → `200 {"data": {"city": "tashkent",
-  "district_code": "yunusobod"}}`; either may be `null` (outside HOMI's boundaries, DEC-79).
+- `GET /owner/place?lat=&lon=` — both required numbers; the client sends them rounded to 3 decimals (about 100 m;
+  a district needs no more) and the server rounds a finer value to 3 before the lookup, so no owner's exact point
+  travels in a query string (SEC-REQ-052) → `200 {"data": {"city": "tashkent", "district_code": "yunusobod"}}`;
+  either may be `null` (outside HOMI's boundaries, DEC-79).
 - `GET /owner/demand?city=&district=&rooms=&room=&price=&currency=` — `city` required; `district` a district code;
   `rooms` 1 … 5; `room` boolean; `price` an integer and `currency` `USD` or `UZS`, both optional → `200 {"data":
   {"count": 7, "usual_low_usd": 550, "usual_high_usd": 680}}`. `count` is the number of active radars that would
@@ -336,7 +390,7 @@ Errors, checked before anything is created:
 | `409 no_chat` | HOMI's bot cannot write to the seeker yet; nothing was created (BR-API-184); the client asks for write access and repeats once |
 | `429 rate_limited` | `reason` `requests_fast` (the pause after several requests in a row), `requests_day` or `requests_week`; `Retry-After` in seconds |
 | `403 requests_blocked` | requests of this user are closed (legacy `blocked` and `harvest` alike) |
-| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, or the owner marked this seeker as a realtor |
+| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, the owner marked this seeker as a realtor, or the listing already took its requests of the day (`owner.limits.requests.per_listing_day`, WP-85) |
 | `409 own_listing` | the caller's own listing |
 | `409 contact_open` | the listing shows its number now (`phone` mode); the client reads the card again |
 
@@ -361,16 +415,20 @@ included; `waitlisted` whether `PUT /owner/waitlist` was called. Values come fro
 ```
 
 `owner_enabled` is a boolean, always present. `renovations.owner` is localised by `Accept-Language` from the names
-in the configuration. The cache of five minutes means the switch reaches clients within five minutes.
+in the configuration. The answer may be cached for five minutes (`max-age` 300, WP-11); the Mini App's reference
+cache revalidates after ten (`REFERENCE_LIFE` of `frontend/app/lib/reference/server.ts`, WP-22), so a running Mini App
+sees a change of the switch within about ten minutes.
 
 #### Listing items and the card
 
 Every preview (feed, favourites, history, radar previews, the card's `preview=1` form) and every map point gains
 `origin`: `legacy` or `native`. Native items have `is_owner: true` and `owner_verified: true`, so the chip shows from
-the preview (BR-APP-100). The full card gains `owner` and two keys of `contact`:
+the preview (BR-APP-100). The full card gains `owner` and two keys of `contact`, and a native card has an `author`
+without a digit of the owner's number:
 
 ```json
 {"origin": "native",
+ "author": {"kind": "phone", "label": "Хозяин", "count": 1},
  "owner": {"tier": "self", "mine": false, "listing_id": null, "response_minutes": 15, "description": "…"},
  "contact": {"has_phone": false, "contact_url": null, "contact_paid": false, "mode": "request",
              "request": {"status": "pending", "sent_at": "2026-11-19T07:00:00+00:00"}}}
@@ -386,11 +444,19 @@ the preview (BR-APP-100). The full card gains `owner` and two keys of `contact`:
 | `owner.description` | the owner's own text, masked in `fromArray()` (DEC-52), or `null` |
 | `contact.mode` | `phone`, `request`, `hidden` (DEC-75) or `null` (a listing that is not self-placed) |
 | `contact.request` | the caller's request on this listing, `{status, sent_at}`, or `null`; `status` is `pending`, `given`, `declined`, `expired` or `cancelled` — never `agent` |
+| `author` of a native item | `{"kind": "phone", "label": <the catalogue text «Хозяин» in the request locale>, "count": <the owner's listings in the feed>}`; never a digit of the number, no new `kind` (WP-12's `author` shape). The real driver takes the label from `backend/lang/{ru,uz,en}/listings.php` (WP-86); the stub entries carry «Хозяин» |
 
 For an owner listing `price_history[].channel` and `.url` are `null` (one entry, `kind: published`), `sources` is
 `[]`, `original.text` and `original.url` are `null`, `source_ref` is `null`, `owner_label` is `null` (the tier says
 it), and `geo_radius_m` is the shown circle's radius. `location`, `center_km` and `metro` of a native item are those
 of the shown point (SEC-REQ-052). `market` and `comparison` follow DEC-78.
+
+The author key behind a native `author` is the owner's phone author key (WP-84, `phone_author_key`), not a key of
+its own: `PUT /listings/{number}/blocked-author` on a native number blocks that key, so the person's legacy listings
+with the same number are hidden too, and HOMI's realtor votes (WP-44) and the realtor check of DEC-77 (WP-84) count
+on the same key. WP-26's rule offers «Это риелтор» on a `phone` author, so native cards offer it without a change.
+The block answer of a native author (WP-13) and its entry in `GET /hidden` carry `kind: phone`, the label above and
+`listing_numbers` with native numbers only, so no answer links a native owner to his legacy listings by number.
 
 The new keys are required in the resources (always present, nullable where stated). The Mini App's typed test
 objects and the dev emulator's fixtures that build a card, a preview or `GET /me` gain them in this PR, so `pnpm
@@ -410,16 +476,16 @@ keys.
 
 | Status | `code` | When | Class |
 | ------ | ------ | ---- | ----- |
-| 403 | `owner_disabled` | The cabinet is switched off (`owner_enabled: false`): creating a draft, asking for the phone, publishing | `App\Exceptions\Owner\OwnerCabinetDisabled` |
+| 403 | `owner_disabled` | The cabinet is switched off (`owner_enabled: false`) and the method changes content or creates or resumes a listing (the table of "The switch (DEC-81)"), or the caller is not on `owner.allowed_ids` when it is set (create, phone request, publish) | `App\Exceptions\Owner\OwnerCabinetDisabled` |
 | 409 | `owner_limit` | The account or the phone already has `max` listings that count; `limit` is `account` or `phone`, `max` the number | `…\Owner\OwnerLimitReached` |
 | 409 | `owner_listing_locked` | The listing cannot be changed in its state (`held`, `withdrawn`, `rented`, `removed`) | `…\Owner\OwnerListingLocked` |
 | 409 | `owner_phone_required` | Publish without a confirmed number | `…\Owner\OwnerPhoneRequired` |
-| 409 | `owner_rejected` | The number failed a check; `reason` is `agent`, `fraud` or `limit` | `…\Owner\OwnerRejected` |
+| 409 | `owner_rejected` | The listing is rejected; `reason` is `denied` (the operators' deny list) or `limit` (the phone limit at the confirmation) | `…\Owner\OwnerRejected` |
 | 409 | `owner_photo_limit` | One photo more than `limits.owner_photos` | `…\Owner\OwnerPhotoLimit` |
 | 409 | `no_chat` | Also the request method: the bot cannot write to the user yet; nothing was created | `App\Exceptions\Radar\NoChat` (its message is not radar-specific) |
 | 429 | `rate_limited` | Also the request limits: `reason` `requests_fast`, `requests_day` or `requests_week`, with `Retry-After` | `App\Exceptions\Requests\RequestLimitReached` |
 | 403 | `requests_blocked` | Requests of this user are closed | `…\Requests\RequestsBlocked` |
-| 409 | `request_closed` | The listing takes no requests from the caller | `…\Requests\RequestClosed` |
+| 409 | `request_closed` | The listing takes no requests from the caller, or none more today | `…\Requests\RequestClosed` |
 | 409 | `own_listing` | The caller's own listing | `…\Requests\OwnListing` |
 | 409 | `contact_open` | The listing shows its number now; read the card again | `…\Requests\ContactOpen` |
 | 409 | `request_answer_closed` | The owner's answer is no longer possible (the undo window passed, or the request changed meanwhile) | `…\Requests\RequestAnswerClosed` |
@@ -462,9 +528,9 @@ verified, else `null`) and `contact.mode: null`, `contact.request: null`.
   repeats never copy a native entry, so every repeated number stays below the floor. `100024` and `100025` are in
   the Tashkent region outside the default feed, like `100018` … `100023`.
 - Native entries carry the shapes of "Listing items and the card": `is_owner` and `owner_verified` true, `tier:
-  self`, `source_ref: null`, `sources: []`, `author: null`, one history entry without a channel, `geo_radius_m: 500`,
-  a shown point as `location`. Their photos use the stub form `{media}/stub/<number>/<n>.jpg?e=0&s=stub`, so
-  `sources:publish-stub-media` writes them.
+  self`, `source_ref: null`, `sources: []`, `author: {"kind": "phone", "label": "Хозяин", "count": 1}`, one history
+  entry without a channel, `geo_radius_m: 500`, a shown point as `location`. Their photos use the stub form
+  `{media}/stub/<number>/<n>.jpg?e=0&s=stub`, so `sources:publish-stub-media` writes them.
 - The per-user parts (`owner.mine`, `contact.request`) are fixed in the entries, as `favorite` and `viewed` are while
   `sources.native_stubs` is on (WP-42, "Overlay").
 - `StubListingSource`: the contact method answers the synthetic number of `10000003` and `10000007` and `404
@@ -479,19 +545,21 @@ verified, else `null`) and `contact.mode: null`, `contact.request: null`.
 
 `backend/resources/fixtures/v1/owner/*.json`, read through `StubResponder` by `App\Services\Sources\Stub\StubOwner`:
 
-- `list.json` — eight listings: a draft without a point, a complete draft without a phone, an active listing with
-  two pending requests (number `10000008`), a paused, a held (`paused`, `held: true`), a withdrawn, a let
-  (`rented`) and a rejected listing (`reject_reason: "agent"`); `max: 2`, `can_add: false`, `past: 3` (the list
-  holds three listings that count, more than `max`, so that every status is seen on one screen).
-  `list.empty.json` (`items: []`, `can_add: true`, `past: 0`) and `list.returning.json` (`items: []`, `past: 3`).
+- `list.json` — nine listings: an untouched draft (no form key set beyond the defaults, no photo), a draft without
+  a point, a complete draft without a phone, an active listing with two pending requests (number `10000008`), a
+  paused, a held (`paused`, `held: true`, `hold_reason: "moderator"`), a withdrawn, a let (`rented`) and a rejected
+  listing (`reject_reason: "denied"`); `max: 2`, `can_add: false`, `past: 3` (the list holds three listings that
+  count, more than `max`, so that every status is seen on one screen). `list.empty.json` (`items: []`, `can_add:
+  true`, `past: 0`) and `list.returning.json` (`items: []`, `can_add: true`, `past: 3`).
 - `requests.json` — requests in every owner-side status, two of them `pending`, one `declined` with `can_undo`, one
   `given` with `can_late`, one `agent` with `agent_marked`.
 - `demand.json`, `place.json`.
 - Photo addresses reuse the photos of the native catalogue entries, so `sources:publish-stub-media` covers them.
 
 Show answers the entry of `list.json` with that id (`404` for any other id); writes answer that entry with the sent
-fields applied and store nothing: `PATCH` merges the form, `store` answers the complete draft (or a new draft in
-`owner_empty`), publish answers the listing `active` with a number when it has every part and a number, status sets
+fields applied and store nothing: `PATCH` merges the form, `store` answers the untouched draft of `list.json`
+(`200`, DEV-054) and a new draft (`201`) in `owner_empty` and `owner_returning`, publish answers the listing `active`
+with a number when it has every part and a number, status sets
 the status, photo writes add, remove or order photos of the entry. The answer method answers the request of
 `requests.json` with the action applied; the place method answers `tashkent` / `yunusobod` for a point within 0.3°
 of the Tashkent centre of the reference data and both `null` elsewhere. Every owner method of a listing id that is
@@ -502,13 +570,14 @@ not in `list.json` answers `404 not_found`. The `me` fixtures gain `owner` (`{2,
 | Scenario | Methods | Answer |
 | -------- | ------- | ------ |
 | `owner_empty` | list, store, `GET /me` | the empty list; store answers a new draft; `owner {0, false, false}` |
-| `owner_returning` | list | `items: []`, `past: 3` («С возвращением!», BR-APP-095) |
+| `owner_returning` | list, store | `items: []`, `past: 3` («С возвращением!», BR-APP-095); store answers a new draft (`201`) |
 | `owner_limit` | store, publish | `409 owner_limit` (`limit: "account"`, `max: 2`) |
-| `owner_disabled` | store, phone request, publish | `403 owner_disabled` (the switch itself is configuration) |
+| `owner_disabled` | store, update, photo writes, contact mode, phone request, publish, status with `active` | `403 owner_disabled` (the switch itself is configuration) |
 | `owner_waitlisted` | `GET /me` | `owner.waitlisted: true` |
 | `phone_set` | show | the complete draft with `phone_set: true` and `phone_display` |
 | `phone_not_uz`, `phone_not_own` | show | the complete draft with `phone_error` `not_uz` or `not_own` |
-| `rejected_agent`, `rejected_fraud`, `rejected_limit` | publish; show | `409 owner_rejected` with that `reason`; show answers the draft `rejected` with that `reject_reason` |
+| `rejected_denied`, `rejected_limit` | publish; show | `409 owner_rejected` with `reason` `denied` or `limit`; show answers the complete draft `rejected` with that `reject_reason` |
+| `held_check` | publish; show | `200` with the complete draft held by the realtor check: a number, `status: paused`, `held: true`, `hold_reason: check_agent`, `published_at: null` |
 | `publish_missing` | publish | `422` naming `place` and `photos` |
 | `listing_locked` | update, photo writes, contact mode, status, publish, delete | `409 owner_listing_locked` |
 | `request_answer_closed` | answer | `409 request_answer_closed` |
@@ -546,14 +615,16 @@ stub never verifies `init_data` beyond its rules of form.
   `contactMode`, `contactRequest`, and its `fromArray()` masks `owner.description`.
 - Enums in `App\Enums`: `ListingOrigin`, `OwnerTier`, `ContactMode`, `ContactRequestStatus` (the six owner-side
   values; the seeker form maps `agent` to `declined`), `OwnerListingStatus`, `OwnerRequestAction`,
-  `OwnerRejectReason`, `OwnerPhoneError`, `RequestWho`.
+  `OwnerRejectReason` (`denied`, `limit`), `OwnerHoldReason` (`check_agent`, `votes_agent`, `votes_fraud`,
+  `votes_rented`, `moderator`), `OwnerPhoneError`, `RequestWho`.
 - `App\Http\Middleware\EnsureOwnerCabinetEnabled`; the exceptions of "Error codes"; `App\Services\Listings\ListingNumber`;
-  `App\Services\Sources\Stub\StubOwner`.
+  `App\Services\Sources\Stub\StubOwner`; the four named limiters in `App\Providers\AppServiceProvider`.
 
 ## Files
 
 - `backend/config/owner.php` (new); `backend/phpunit.xml` (`OWNER_CABINET_ENABLED=true`)
-- `backend/routes/api.php`; `backend/app/Http/Middleware/EnsureOwnerCabinetEnabled.php`
+- `backend/routes/api.php`; `backend/app/Http/Middleware/EnsureOwnerCabinetEnabled.php`;
+  `backend/app/Providers/AppServiceProvider.php` (the limiters)
 - `backend/app/Http/Controllers/Api/V1/Owner/*.php`, `backend/app/Http/Controllers/Api/V1/Listings/ListingContactRequestController.php`;
   `ListingContactController.php`, `ListingTranslationController.php`, `ListingController.php` (native numbers on stubs)
 - `backend/app/Http/Requests/Api/V1/Owner/*.php`, `backend/app/Http/Requests/Api/V1/Listings/StoreContactRequestRequest.php`
@@ -562,7 +633,7 @@ stub never verifies `init_data` beyond its rules of form.
 - `backend/app/Services/Owner/Data/*.php`; `backend/app/Services/Sources/Data/{ListingOwner,ContactRequestState,ListingSummary,ListingDetails,MapPoint}.php`;
   `backend/app/Services/Listings/ListingNumber.php`
 - `backend/app/Services/Sources/Stub/{StubOwner,StubListingSource,StubListingRefs}.php`
-- `backend/app/Enums/{ListingOrigin,OwnerTier,ContactMode,ContactRequestStatus,OwnerListingStatus,OwnerRequestAction,OwnerRejectReason,OwnerPhoneError,RequestWho}.php`
+- `backend/app/Enums/{ListingOrigin,OwnerTier,ContactMode,ContactRequestStatus,OwnerListingStatus,OwnerRequestAction,OwnerRejectReason,OwnerHoldReason,OwnerPhoneError,RequestWho}.php`
 - `backend/app/Exceptions/Owner/*.php`, `backend/app/Exceptions/Requests/*.php`
 - `backend/resources/fixtures/v1/listings/catalog.json`, `favorites/default.json`, `history/default.json`, `me/*.json`,
   `owner/{list,list.empty,list.returning,requests,demand,place}.json`
@@ -571,8 +642,11 @@ stub never verifies `init_data` beyond its rules of form.
   `FeedContractTest.php`, `CountFlowMapContractTest.php`, `ContactTranslationShareContractTest.php`,
   `MeContractTest.php`, `ReferenceContractTest.php`; `backend/tests/Feature/Http/OpenApiDocumentTest.php`
 - `docs/api/openapi.json`, `frontend/packages/types/src/generated/api.ts`, `docs/api/README.md`
+- `frontend/app/lib/session/types.ts` (`Me.owner: {pending: number; has_listings: boolean; waitlisted: boolean}` and
+  `owner` in `ME_KEYS`, which `frontend/app/tests/session/types.test.ts` compares with `MeResource.required`)
 - Frontend test objects that the regenerated types break (under `frontend/app/tests/` and `frontend/app/dev/`)
-- `backend/.env.example` and `docs/infrastructure/environments.md` (`OWNER_CABINET_ENABLED`) — separate shared-file PR
+- `backend/.env.example`, `docs/infrastructure/environments.md` and `docs/infrastructure/local-development.md`
+  (`OWNER_CABINET_ENABLED`, `OWNER_CABINET_ALLOWED_IDS`, `OWNER_LISTINGS_PUBLIC`) — separate shared-file PR
 
 ## Steps
 
@@ -587,17 +661,17 @@ stub never verifies `init_data` beyond its rules of form.
 4. Enums and data objects; the listing shapes (`origin`, `owner`, `contact.mode`, `contact.request`) in
    `ListingSummary`, `ListingDetails`, `MapPoint` and their resources; the catalogue entries; the existing contract
    tests updated for the new keys.
-5. Owner fixtures, `StubOwner`, the owner controllers, requests and resources; the routes with their abilities and
-   the three switch routes.
+5. Owner fixtures, `StubOwner`, the owner controllers, requests and resources; the routes with their abilities,
+   limiters and the switch of "The switch (DEC-81)".
 6. The request method: its request, controller and the answers by number; the contact and translation rules of
    native numbers on the stub.
-7. `GET /me` and `GET /reference` additions.
+7. `GET /me` and `GET /reference` additions; `owner` in `Me` and `ME_KEYS` of `frontend/app/lib/session/types.ts`.
 8. `OpenApiDocumentTest`: the table gains the 18 pairs and `toHaveCount(59)`; `composer openapi:export`; `pnpm
    types:generate`; check in the generated file that the owner listing, the item, the request and the error codes
    are typed; fix the frontend test objects; `pnpm --filter app typecheck`.
 9. `docs/api/README.md`: the error rows, the method table (18 rows with route names, Wave 1 driver `native`), the
    stub numbers and scenarios, the sentence on `meta.source` of mixed lists (below), "59 pairs".
-10. Pint, PHPStan, `make ci-backend`, `make ci-frontend`; the shared-file PR for the env key.
+10. Pint, PHPStan, `make ci-backend`, `make ci-frontend`; the shared-file PR for the env keys.
 
 The `meta.source` paragraph of `docs/api/README.md` gains: «In listing lists it names the driver of the shared part;
 items placed by HOMI's own owners carry `origin: native`.»
@@ -618,8 +692,8 @@ items placed by HOMI's own owners carry `origin: native`.»
 - The phone is confirmed through the bot and the client polls the listing (BR-API-170); the poll is
   `GET /owner/listings/{id}`.
 - Publish names what is missing (BR-API-174); a published listing's every save is live (DEC-80).
-- `rented` closes the pending requests (BR-API-176); nothing leaves `rented` or `removed`; `held` cannot be resumed by
-  the owner (BR-API-177).
+- `rented` closes the pending requests (BR-API-176, `UNVERIFIED` in legacy); nothing leaves `rented` or `removed`;
+  `held` cannot be resumed by the owner (BR-API-177).
 - The pending count reaches the client in `GET /me`, so no extra call runs for every user on every launch (fix of
   LB-APP-066; BR-API-179).
 - A seeker's request: `who` required, `people` 1 … 20, `move_in` 32 and `message` 500 characters (BR-API-183);
@@ -634,28 +708,33 @@ items placed by HOMI's own owners carry `origin: native`.»
 
 - Route table (`OpenApiDocumentTest`): 59 pairs, each a route and an OpenAPI path; the `listings/{number}/contact-request`
   route requires `app:write` (a token with `app:read` only → `403 forbidden`).
-- Owner listings: list key set in `default`, `owner_empty`, `owner_returning`; store → `201` in `owner_empty`, `200`
-  with the complete draft otherwise, `409 owner_limit` with `limit` and `max` in `owner_limit`; show by id, a
+- Owner listings: list key set in `default`, `owner_empty`, `owner_returning`; store → `201` in `owner_empty` and
+  `owner_returning`, `200` with the untouched draft otherwise, `409 owner_limit` with `limit` and `max` in
+  `owner_limit`; show by id, a
   non-ULID and an unknown ULID → `404`; the item has no `phone_display`, `form.lat` or `form.lon`, the show answer
   has all three; `PATCH` with one key changes only that key, `null` clears, `rooms: 6`, `floor: 10` with
   `floors_total: 9`, `currency: "EUR"`, `tenants: ["pets"]`, a 601-character description and `lat` without `lon` →
   `422` naming the key; `DELETE` of the draft → `204`, of the active listing → `409 owner_listing_locked`.
 - Status: each allowed move → `200`; `active` for the held listing → `409`; `paused` for a draft → `422`; anything
-  for the let listing → `409`.
+  for the let and the withdrawn listing → `409`.
 - Photos: upload of a fixture image → `201` with the photo last; a text file → `unsupported_mime`; in `listing_locked`
   → `409`; the eleventh → `409 owner_photo_limit`; order with a missing id, an extra id and a repeated id → `422`.
 - Phone, mode, publish: mode `request`, `phone` → `200`, `open` → `422`; phone request → `200`; publish of the
-  complete draft → `409 owner_phone_required`, in `phone_set` → `200` with a number; each `rejected_*` → `409
-  owner_rejected` with its `reason`; `publish_missing` → `422` naming `place` and `photos`; show in `phone_not_uz`
-  and `phone_not_own` → `phone_error`.
-- Switch (`config(['owner.enabled' => false])`): store, phone request and publish → `403 owner_disabled`, also with
-  an invalid body and with a scenario in the header; show, update, photos, mode, status, delete, requests, answer,
-  waitlist, place, demand → as with the switch on; `GET /reference` → `owner_enabled: false`; without a token `401`.
+  complete draft → `409 owner_phone_required`, in `phone_set` → `200` with a number; `rejected_denied` and
+  `rejected_limit` → `409 owner_rejected` with `reason` `denied` and `limit`; `held_check` → `200` with `status:
+  paused`, `held: true`, `hold_reason: check_agent`; `publish_missing` → `422` naming `place` and `photos`; show in
+  `phone_not_uz` and `phone_not_own` → `phone_error`; no answer carries `reject_reason` `agent` or `fraud`.
+- Switch (`config(['owner.enabled' => false])`): store, update, the three photo methods, mode, phone request and
+  publish → `403 owner_disabled`, also with an invalid body and with a scenario in the header; status `active` →
+  `403 owner_disabled`, status `paused`, `rented` and `removed` → as with the switch on; show, list, delete of the
+  draft, requests, answer, waitlist, place, demand and the seeker's request → as with the switch on; `GET /reference`
+  → `owner_enabled: false`; without a token `401`. Limiters: the eleventh publish of an hour → `429 rate_limited`
+  without `reason`.
 - Requests (owner side): the cursor walk; the answer with each action → the status of the table; `request_answer_closed`
   → `409`; an unknown request id → `404`.
-- Waitlist: `204` twice. Place: a Tashkent point → `tashkent` / `yunusobod`; a point in Andijan → both `null`; a
-  missing `lon` → `422`. Demand: the fixture with radars on; `count: 0` with `radar.creation_enabled` off;
-  `rooms: 6` → `422`.
+- Waitlist: `204` twice. Place: a Tashkent point → `tashkent` / `yunusobod`, also sent with 6 decimals; a point in
+  Andijan → both `null`; a missing `lon` → `422`. Demand: the fixture with radars on; `count: 0` with
+  `radar.creation_enabled` off; `rooms: 6` → `422`.
 - Request method: the answers by number above; each scenario its code, `Retry-After` on the three limits; a missing
   `init_data`, one over 4 096 bytes, `who: "group"`, `people: 0`, a 33-character `move_in` → `422`; the answer and
   the logs never contain the sent `init_data`.
@@ -663,7 +742,8 @@ items placed by HOMI's own owners carry `origin: native`.»
   description, `contact.mode: request`, `contact.request: null`; `10000003` → `contact.request.status: given` and
   the contact method answers; `10000002` → contact `404 contact_unavailable`; `10000008` → `owner.mine: true` and
   `listing_id`; `100024` → `hidden`, and `request` in `relay_on`; `100025` → `claimed`; translation of `10000001` →
-  `404`; no card holds a key `phone` or the raw synthetic number.
+  `404`; every native card has `author.kind: phone` with the label «Хозяин» and no digit; no card holds a key
+  `phone` or the raw synthetic number.
 - Feed: the default filters find 45 entries in three pages, page one holds `10000001`, no repeated number is at or
   above the floor; `ListingNumber::isNative()` at `9999999`, `10000000` and `10000001`. The end-to-end specs that
   open the first card of the default feed (`frontend/app/e2e/listing-open.spec.ts`) now open a native listing; one
@@ -676,9 +756,11 @@ items placed by HOMI's own owners carry `origin: native`.»
 
 - [ ] The 18 new pairs answer as specified with `meta.source = stub`, or `204`; the route list equals the 59 pairs of
       `25` §4.2 (both tables).
-- [ ] With `OWNER_CABINET_ENABLED` off, creating, asking for the phone and publishing answer `403 owner_disabled`,
-      everything else works, and `GET /reference` says `owner_enabled: false`.
-- [ ] Only `GET /owner/listings/{id}` carries `phone_display` and the true point.
+- [ ] With `OWNER_CABINET_ENABLED` off, the methods of the first two rows of "The switch (DEC-81)" answer `403
+      owner_disabled`, every way down (pause, «Сдано», «Снять», delete of a draft, answers) works, and `GET
+      /reference` says `owner_enabled: false`.
+- [ ] Only the owner listing object (`GET /owner/listings/{id}` and the owner's writes, to the owner himself) carries
+      `phone_display` and the true point.
 - [ ] Every listing item carries `origin`; the card carries `owner`, `contact.mode` and `contact.request`; no card or
       preview carries a number.
 - [ ] The request method refuses with distinct codes and checks `no_chat` before anything is created; the limits
@@ -687,7 +769,8 @@ items placed by HOMI's own owners carry `origin: native`.»
       feed has 45 entries, three pages, a native entry on page one.
 - [ ] `docs/api/README.md` lists the 59 pairs, the new error codes, the stub numbers and the scenarios.
 - [ ] OpenAPI and types are regenerated; `make ci-backend` and `make ci-frontend` are green.
-- [ ] The env key is in the shared-file PR; `CLAUDE.md`'s count is updated by a shared-file PR after the merge.
+- [ ] The three env keys are in the shared-file PR, `OWNER_CABINET_ENABLED` blank in `backend/.env.example`;
+      `CLAUDE.md`'s count is updated by a shared-file PR after the merge.
 - [ ] Deployed to staging and production; `sources:publish-stub-media` run there; with the key unset `POST
       /api/v1/owner/listings` answers `403 owner_disabled` and `GET /api/v1/reference` says `owner_enabled: false`.
 

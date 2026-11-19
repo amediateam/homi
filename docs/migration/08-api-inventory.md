@@ -2079,7 +2079,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1469-1470; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:1639-1655`; the text `src/features/owner/owner.js:110`.
 - **Migration Target:** `PUT /api/v1/owner/waitlist` (native; `owner.waitlisted` of `GET /me`, fix of
-  LB-APP-071).
+  LB-APP-071). The contract keeps it, but HOMI's Mini App offers no entry to it: HOMI rejects nobody as a realtor
+  (defaults 26 and 32 of `decisions/2026-11-19-developer-answers.md`).
 - **Tests:** a second call does not add a second entry; a user without an `agent` rejection → record legacy; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-182; `03` SCR-054,
   LB-APP-071; Q-API-069; Q-BOT-049 in `04`.

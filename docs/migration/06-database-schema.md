@@ -1336,7 +1336,8 @@ Everything in this section is `PROPOSED`: it is the input for `10-target-archite
    routes, deep links, SEO and media paths use `number`; `/api/v1` exposes both. The same pattern applies to radars
    and blocked-author entries, whose ids may be embedded in old bot `callback_data` (`Q-BOT-017`). HOMI's owner
    listings of Wave 1 take numbers from a fixed floor above any legacy id (`owner.native_number_floor`, 10 000 000;
-   WP-80), which serves the Wave 2 sequence as well.
+   WP-80; default 4 of `decisions/2026-11-19-developer-answers.md`, an integrator default), which serves the Wave 2
+   sequence as well.
 2. **USD as the filter currency** (CF-005). Legacy radars and filters are USD integers (LB-API-027); ADR-0006 stores
    source currency. Listings keep both: source amount + currency and `price_usd_cents` derived with HOMI's own rate.
    Migrated radars carry `price_currency = 'USD'`.

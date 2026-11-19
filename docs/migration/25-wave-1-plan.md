@@ -366,8 +366,12 @@ route test pins the 41 pairs of the table above until WP-80 adds these (59).
 | `POST /listings/{number}/contact-request` | API-054 | native; on a legacy `gate` listing relayed through legacy (DEC-71, WP-87) |
 
 While `OWNER_CABINET_ENABLED` is off (DEC-81) creating a draft, asking for the phone and publishing answer
-`403 owner_disabled`, `GET /reference` says `owner_enabled: false`, and the Mini App shows no group «Сдаю квартиру».
-Removing, pausing, «Сдано» and answering a request always work. A request is its own method,
+`403 owner_disabled`, and removing, pausing, «Сдано» and answering a request always work. The details are the plan's
+reading of DEC-81, listed for the reviewer: resuming a paused listing and every content edit (the form, photos, the
+contact mode) are refused as well, while reads, deleting a draft or a rejected listing, the waitlist, the place
+lookup and demand stay open; `GET /reference` says `owner_enabled: false`; the Mini App opens no form, ignores an
+owner launch and shows the group «Сдаю квартиру» only to a user who has listings, with «Мои объявления» alone (WP-80,
+WP-81, WP-82). A request is its own method,
 `POST /listings/{number}/contact-request`; `POST /listings/{number}/contact` stays the only method that returns a
 number (*integrator default, listed for the reviewer*).
 
@@ -454,14 +458,19 @@ source provides them, so the reference can be re-pointed in Wave 2 (Q-API-063). 
 its number is HOMI's.
 
 **The owner cabinet before real owners.** The cabinet's packages are merged and deployed with
-`OWNER_CABINET_ENABLED` off (DEC-81). Four gates stand between them and real owners:
+`OWNER_CABINET_ENABLED` off (DEC-81). Seven gates stand between them and real owners. The developer named the bot
+and the legal gate (answer 14); the others are the plan's (*integrator defaults, listed for the reviewer*), gates
+5 – 7 from the security review of the plan:
 
 | # | Gate | Blocks | Buildable before it |
 | - | ---- | ------ | ------------------- |
-| 1 | **The legal basis** (Q-SEC-021) and the privacy text for the owner's number in plain text, the photos and the true location, the form, the requests with the seeker's first name, and the relay to the operator | The switch-on of DEC-81 on production (on staging only the checks of WP-89 with test accounts: *integrator default, listed for the reviewer*); the final texts of WP-56, WP-61 and WP-70; the relay's switch (WP-87) | WP-80 … WP-83 on stubs; WP-84 … WP-86, WP-88, WP-89 merged with the switch off; the texts marked "pending legal review" as WP-56 does |
+| 1 | **The legal basis** (Q-SEC-021) and the privacy text for the owner's number in plain text, the photos and the true location, the form, the requests with the seeker's first name, and the relay to the operator | The switch-on of DEC-81 on production (on staging only the checks of WP-89 with test accounts, limited by `OWNER_CABINET_ALLOWED_IDS`, defaults 22 and 30: *integrator defaults, listed for the reviewer*); the final texts of WP-56, WP-61 and WP-70; the relay's switch (WP-87) | WP-80 … WP-83 on stubs; WP-84 … WP-86, WP-88, WP-89 merged with the switch off; the texts marked "pending legal review" as WP-56 does |
 | 2 | **The operator's answers** (points 14 – 21 of `decisions/2026-11-14-operator-request.md`) | WP-87 only | The request sheet for a legacy `gate` listing on stubs (`100024`, scenario `relay_on`); the neutral bar of DEC-75 |
 | 3 | **The bot can confirm a phone and deliver requests** (WP-88, WP-89) | The switch-on | Everything; it is why the switch exists |
 | 4 | **Infrastructure**: PostGIS in `homi_db` (`docs/infrastructure/deployment.md:140`); the boundary file loaded (Q-DATA-051); the `owner/` path of the public disk served by the CDN host; `SHOWN_POINT_SECRET`, `OWNER_MODERATOR_IDS` set | The deploy of WP-84 to production (PostGIS); the switch-on (the rest) | Everything else |
+| 5 | **No number in the observability tools** (default 28): the leak protections of WP-84 and WP-88 deployed — Telescope hides the phone, `init_data` and the contact fields, the number's masking cast, an exception reporter that drops the query bindings and messages that carry it — and Telescope records none of the cabinet's requests and jobs with their values. Whether `TELESCOPE_RECORD_ALL` changes on the servers is the production track's to answer | The switch-on of DEC-81, on staging too | Everything else |
+| 6 | **Hardening and a way to contest**: WP-70 merged and deployed (Telescope off on production, `RedactSecrets`, the leak scans and `security:check` green); a working contact for an owner to contest a hold or a rejection — the support bot of WP-59 (DEC-56) or another channel named in the rejection, hold and privacy texts | The switch-on on production (on staging a team contact in the texts is enough) | Everything else |
+| 7 | **The disclosure quota**: DEC-19's soft and hard thresholds and the daily cap of Q-API-085 are numbers in the production env, not blank, so that no account can walk the native numbers and collect every `phone`-mode owner's number | The switch-on on production | Everything else |
 
 ## 6. The bot
 
@@ -488,8 +497,10 @@ audited (GAP-026), so this is HOMI's own design, not a parity item; its package 
 owner's number for that draft and is stored with it in plain text (DEC-72); any other contact goes to `/owner`, which
 keeps a keyed hash only (DEV-011). The update ledger keeps only the hash in both cases. The bot delivers each request
 to the owner with «Дать номер» and «Не подходит», sends the seeker a soft refusal ten minutes after a decline, tells
-waiting seekers when the flat is let, expires unanswered requests, and announces each publication in the operators'
-private chats with «Снять» (DEC-73). A given number reaches the seeker only through «📞 Показать номер» (DEC-52).
+waiting seekers when the flat is let, expires unanswered requests, and announces each new listing to the operators
+with «Снять» (DEC-73): every publication, also the one after a hold was released, and at most once an hour per
+listing a change of an active listing's photos or description (to their private chats from HOMI's main bot, default
+10; the edits, default 25). A given number reaches the seeker only through «📞 Показать номер» (DEC-52).
 
 ## 7. The landing (`frontend/landing`)
 
@@ -596,8 +607,8 @@ needs from that track, and a migration reaches production only with that track's
 
 ## 12. The queue in outline
 
-Sixty work packages in six stages, worked strictly in order by whoever holds the relay (DEC-45). The table of
-record with statuses is `wave-1/README.md`.
+Sixty work packages in seven stages (0, A … F), worked strictly in order by whoever holds the relay (DEC-45). The
+table of record with statuses is `wave-1/README.md`.
 
 | Stage | Packages | Content |
 | ----- | -------- | ------- |
@@ -613,7 +624,10 @@ Three places where a package needs something a later package builds are bridged 
 contract with an empty implementation: the per-user overlay of the listing package (tables come with the personal
 lists), the starter list of the radar package (the delivered set comes with matching), and the share method (the
 Bot API client comes with the bot). The two landing methods keep no driver between the stubs-off package and the
-landing data package; nothing calls them in between.
+landing data package; nothing calls them in between. The owner cabinet adds three more: the owner's request counts
+answer `0` until the contact requests are merged (WP-84, WP-85), the events of the contact requests have no listener
+until the bot's request package (WP-85, WP-89), and the relay writes its counters through the bot's metrics, so it
+waits for the bot's webhook package as well (WP-87, WP-50).
 
 ## 13. Risks of this wave
 

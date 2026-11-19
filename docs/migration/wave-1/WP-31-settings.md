@@ -41,8 +41,9 @@ the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
 - Hiding a listing or blocking an author: WP-26. The radar's delivery mode: WP-30.
 - City, news, account and data deletion are not in the legacy Mini App (SCR-032, `05` §2) and are not added; they
   are bot functions (WP-56).
-- The first group «Сдаю квартиру» (SCR-032 since `index-CBlEKxdL.js`): WP-82; this package leaves its slot first,
-  hidden while `owner_enabled` is `false` (*added by the owner-cabinet plan*).
+- The first group «Сдаю квартиру» (SCR-032 since `index-CBlEKxdL.js`): WP-82; this package leaves its slot first.
+  While `owner_enabled` is `false` the group is hidden for a user without owner listings and shows only «Мои
+  объявления» for one with listings (WP-82, the plan's reading of DEC-81) (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 
@@ -230,8 +231,9 @@ failed, nothing loaded): tall `ErrorState` — offline «Нет связи» (`e
 загрузилось» (`common.loadFailed`) + `error.serverText`; «Повторить» (`error.retry`) runs every request again.
 
 Since `index-CBlEKxdL.js` the first group is «Сдаю квартиру» (`own.group`): `SettingsScreen` renders the slot
-`ownerGroup` before «Оформление» and this package leaves it empty; WP-82 fills it, and it is hidden while
-`GET /reference` says `owner_enabled: false` (*added by the owner-cabinet plan*).
+`ownerGroup` before «Оформление» and this package leaves it empty; WP-82 fills it. While `GET /reference` says
+`owner_enabled: false` the group is hidden for a user without owner listings and keeps only «Мои объявления» for one
+with listings, so DEC-81's actions stay reachable (WP-82) (*added by the owner-cabinet plan*).
 
 | Group | Rows (key, ru) and values |
 | ----- | ------------------------- |

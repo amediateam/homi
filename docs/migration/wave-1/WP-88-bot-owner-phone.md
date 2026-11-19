@@ -7,7 +7,7 @@
 | Depends on | WP-56, WP-84 |
 | Size | about 1 300 changed lines with tests, M |
 | Behaviour reference | `04` BOT-086, §3.18, Q-BOT-047, Q-BOT-049; `05` TMA-034, TMA-046; `03` SCR-053, SCR-054, LB-APP-060, LB-APP-065; `02` BR-API-170 … BR-API-172; `16` SEC-036, SEC-REQ-051 |
-| Needs from the production track | nothing new: `PHONE_HMAC_PEPPER` (WP-50) and `AUTHOR_KEY_SECRET` (WP-42) set. For the checks inside Telegram of the acceptance checklist, `OWNER_CABINET_ENABLED=true` on staging with test accounts, as WP-89's switch-on procedure does it on staging (DEC-81); never on production here |
+| Needs from the production track | `PHONE_HMAC_PEPPER` (WP-50) and `AUTHOR_KEY_SECRET` (WP-42) set. Before the checks inside Telegram: (1) the Main Mini App address of the staging bot in @BotFather (`https://app.staging.homi.uz/`), the setting WP-58 lists, done now because the `startapp` buttons of this package (`o_<id>`) and of WP-89 (`c_<number>`) need it; (2) `OWNER_CABINET_ALLOWED_IDS` on staging set to the test accounts' Telegram ids (WP-80, WP-84); (3) `OWNER_CABINET_ENABLED=true` on staging, as WP-89's switch-on procedure does it on staging (DEC-81), only once gate 5 of `25` §5 holds there (no number in the observability tools); never on production here |
 
 ## Goal
 
@@ -25,8 +25,11 @@ In:
   the number leaves memory; its implementation passes the contact to WP-84's phone window and writes the result as a
   marker without digits into the stored update.
 - The branch of WP-56's `ContactMessage` for that marker: the chat reply of the cabinet, and no `/owner` record.
-- The replies: number set, another person's contact (`not_own`), not `+998` (`not_uz`), refused by the checks
-  (`agent`, `fraud`, `limit`), each with the button back to the draft (fix of LB-APP-060).
+- The replies: number set, another person's contact (`not_own`), not `+998` (`not_uz`), refused at confirmation
+  (`denied`, `limit`), each with the button back to the draft (fix of LB-APP-060).
+- The bot side of the leak protections that ship with the first stored number (WP-84): the webhook request, the
+  Bot API calls and the interceptor's failures never reach Telescope, the log or an exception with a digit of the
+  number ("Observability").
 - The share button in the chat for clients below 6.9: the `/start owner_phone` payload, its prompt with the reply
   keyboard, its conversation and its cancel.
 - `/start owner_new` with a Mini App button to the owner form (TMA-046).
@@ -35,8 +38,8 @@ In:
 
 Out:
 
-- The phone window itself, the checks behind `agent`, `fraud` and `limit`, the storage of the number and its two read
-  paths — WP-84 ("The phone window and the number", "Publish and checks").
+- The phone window itself, the checks behind `denied` and `limit` (and the realtor check at publish), the storage of
+  the number and its two read paths — WP-84 ("The phone window and the number", "Publish and checks").
 - The Mini App's phone step: `tg.requestContact()`, `POST /owner/listings/{id}/phone-request`, the poll of `GET
   /owner/listings/{id}`, the rejection screen and the waitlist, the «Открыть бот» link of an old client — WP-81.
 - `/owner` itself (BOT-075 … BOT-079) — WP-56, unchanged outside an open window (DEV-011).
@@ -50,13 +53,15 @@ Out:
   hold a digit of it (SEC-REQ-051).
 - DEV-011 (`09` §4.2), WP-56: `/owner` keeps a keyed hash only. Outside an open phone window a contact goes to
   `/owner` exactly as today; inside one it is the cabinet's and creates no `owner_verifications` row.
-- DEC-77: the checks that refuse a number (`agent`, `fraud`, `limit`) are HOMI's own (WP-84); the chat says only that
-  the number was not accepted and leaves the reason to the Mini App's rejection screen (DEV-056).
+- DEC-77: the checks are HOMI's own (WP-84). At confirmation a number is refused only by the operators' deny list
+  (`denied`) or the per-phone limit (`limit`); the automatic realtor check does not refuse a number, it holds the
+  listing at publish for the operators (`hold_reason: check_agent`, WP-84). The chat says only that the number was not
+  accepted and leaves the reason to the Mini App's rejection screen (DEV-056).
 - DEC-74, DEV-056: `not_own` and `not_uz` travel in `phone_error`, apart from `reject_reason` (WP-80, WP-84); the chat
   reply follows that split.
-- DEC-81: while `owner.enabled` is false no phone window can open (`POST …/phone-request` answers `403
-  owner_disabled`), so no contact is intercepted, and `/start owner_new` and `/start owner_phone` give the ordinary
-  welcome only.
+- DEC-81: while `owner.enabled` is false no new phone window opens (`POST …/phone-request` answers `403
+  owner_disabled`, WP-80); a window opened before still accepts its contact; `/start owner_new` and `/start
+  owner_phone` give the ordinary welcome only.
 - DEC-46, `04` BOT-086 `UNVERIFIED`: legacy's chat reply, its old-client path and its relation to `/owner` were never
   observed (Q-BOT-047). Every chat text here is HOMI's, written in the brand layer for the product owner to approve;
   the checklist claims no parity for it.
@@ -65,11 +70,14 @@ Out:
   /owner/listings/{id}/phone-request` opens ten minutes in which an own `+998` contact shared with HOMI's bot becomes
   the draft's number; outside a window a contact goes to `/owner`), item 22 (DEC-81's switch goes on on staging, with
   test accounts, for the checks inside Telegram before the legal gate closes; on production only after the gates of
-  `25` §5). Defaults of this specification, in the same list:
+  `25` §5), item 26 (the realtor check holds at publish instead of refusing a number), item 28 (the leak protections
+  ship with the code that first stores the number; this package's part is "Observability"), item 30 (the staging
+  allow-list `OWNER_CABINET_ALLOWED_IDS`) and item 32 (`reject_reason` `denied` or `limit`). Defaults of this
+  specification, in the same list:
   a cabinet contact does not also verify the user for `/owner`; an old client reaches the share button through the
   payload `owner_phone`; the chat names no rejection reason; a contact sent while the cabinet prompt is open but the
   window has closed is refused, not taken by `/owner`; the button back to the draft is a `startapp` link, not a
-  `web_app` button.
+  `web_app` button; Telescope records neither the webhook request nor the Bot API calls ("Observability").
 
 ## Design
 
@@ -118,7 +126,7 @@ public function intercept(int $senderId, ?int $contactUserId, string $e164): ?Ca
 ```
 
 `App\Telegram\Updates\CabinetContactResult` (readonly): `listingId` (the owner listing's ULID), `result` (`set`,
-`not_own`, `not_uz`, `rejected`), `reason` (`agent`, `fraud`, `limit` with `rejected`, else `null`). It holds no
+`not_own`, `not_uz`, `rejected`), `reason` (`denied` or `limit` with `rejected`, else `null`). It holds no
 number.
 
 `UpdateLedger::accept()` (WP-50, "Request path" and "Redaction and encryption") gains one branch for an update whose
@@ -134,7 +142,9 @@ number.
 4. The local variable is unset in a `finally`. An exception of the interceptor is not caught: the transaction rolls
    back, the webhook answers `5xx` and Telegram delivers the update again (WP-50: the only non-2xx answer to an
    authentic request). Neither the interceptor nor WP-84's acceptor puts the number into an exception message, a
-   log context or a job.
+   log context or a job; a database failure inside the insert is reported by WP-84's exception reporter (the SQL
+   with placeholders and the error code, never the message with its bindings), so the number reaches neither the
+   Laravel log, nor `failed_jobs`, nor Telescope's exception entries.
 
 So a contact is applied to a draft at most once (a duplicate delivery is ignored before the interceptor runs), and
 the stored update still holds only the HMAC: WP-50's tests 1 and 2 (`UpdateLedgerPrivacyTest`) pass unchanged, and
@@ -180,7 +190,8 @@ drafts:
 A client below 6.9 has no `requestContact` (TMA-034); the Mini App's phone step then opens the phone window and sends
 the owner to the bot (WP-81). The bot side:
 
-- The link is `https://t.me/<brand.bot_username>?start=owner_phone` (WP-81 builds it with this payload).
+- The link is `https://t.me/<brand.bot_username>?start=owner_phone` (WP-81 builds it with
+  `botStartUrl("owner_phone")` of `frontend/app/lib/deeplinks/build.ts`).
 - `StartPayloadParser` (WP-52, "Payloads and attribution") recognises `owner_phone` as kind `OwnerPhone`. After the
   ordinary welcome, `OwnerPhoneStart` sends a third message:
   - an open window of the sender (WP-84's acceptor-side read: the sender's draft with `phone_window_until` in the
@@ -218,6 +229,22 @@ the owner to the bot (WP-81). The bot side:
   @BotFather, with that parameter (verify against the Bot API documentation). Sent as a `url` button; the host
   `t.me` is on the address allow-list (SEC-REQ-019). WP-89 uses it for `c_<number>`.
 
+### Observability (the bot side of the leak protections)
+
+WP-84 ships the protections of the owner's number with the code that first stores it (the masking cast, the
+exception reporter, the Telescope filters); this package adds the bot's part in the same configuration
+(`backend/config/telescope.php`, `app/Providers/TelescopeServiceProvider.php`), before any staging run with the
+cabinet on (`25` §5 gate 5):
+
+- The webhook path `telegram/webhook` joins Telescope's `ignore_paths`: the request watcher would record the raw
+  update, with `contact.phone_number` and the names, before WP-50's redaction runs.
+- The client-request watcher ignores `api.telegram.org`: a Bot API call carries the token in its address
+  (SEC-REQ-013) and the reply texts.
+- The job of a contact update needs no filter: `ProcessTelegramUpdateJob` carries the bot id and the `update_id`
+  only (WP-50), and the stored update holds only the HMAC and the marker.
+- Whether Telescope records everything on the servers (`TELESCOPE_RECORD_ALL`) is the production track's choice; the
+  filters above hold either way.
+
 ### Registry and metrics
 
 `docs/infrastructure/telegram-webhook.md`: the interceptor in the ledger flow (what it reads, what it stores, that it
@@ -237,7 +264,9 @@ All paths under `backend/`.
 - Changed: `app/Telegram/Updates/UpdateLedger.php` (WP-50), `app/Telegram/Handlers/ContactMessage.php` (WP-56),
   `app/Telegram/Handlers/StartCommand.php`, `app/Telegram/DeepLinks/{StartPayloadParser,MiniAppUrl}.php`,
   `app/Enums/Telegram/StartPayloadKind.php` (WP-52), `app/Enums/Telegram/ConversationKind.php` (WP-51),
-  `app/Providers/TelegramServiceProvider.php` (the binding, the input handler of `OwnerPhone`)
+  `app/Providers/TelegramServiceProvider.php` (the binding, the input handler of `OwnerPhone`),
+  `config/telescope.php` and `app/Providers/TelescopeServiceProvider.php` (the webhook path, the Bot API host;
+  "Observability")
 - `lang/{ru,uz,en}/bot.php`; `tests/Fixtures/Bot/translation-status.json`
 - `tests/Feature/Bot/{CabinetContactLedgerTest,CabinetContactReplyTest,CabinetContactEdgeTest,OwnerPhoneStartTest,OwnerNewStartTest}.php`;
   `tests/Pgsql/CabinetContactRaceTest.php`
@@ -274,7 +303,7 @@ legacy's (BR-API-170 … BR-API-172).
 | # | Trigger | What the user sees |
 | - | ------- | ------------------ |
 | 1 | «Поделиться номером» in the Mini App on 6.9 or later, the own `+998` number, window open | in the Mini App the number within seconds (its poll); in the chat «✅ Номер подтверждён…» with «↩️ Вернуться к объявлению» |
-| 2 | The same, but the number is on two listings already, on HOMI's realtor list or on the deny list | the Mini App shows the rejection screen with its reason (SCR-054); the chat «Не получилось подтвердить этот номер…» with the button back |
+| 2 | The same, but the number is on two listings already or on the operators' deny list | the Mini App shows the rejection screen with its reason (SCR-054); the chat «Не получилось подтвердить этот номер…» with the button back |
 | 3 | A contact of another person forwarded inside the window | the Mini App shows `not_own`; the chat «Это чужой контакт…» with the share keyboard |
 | 4 | A number that is not `+998` | the Mini App shows `not_uz`; the chat «Нужен номер Узбекистана…» with the share keyboard |
 | 5 | A client below 6.9: «Открыть бот» on the phone step | the bot's welcome, then «Чтобы подтвердить номер…» with `📱 Поделиться номером` / `Отмена`; sharing → row 1 … 4 |
@@ -282,7 +311,7 @@ legacy's (BR-API-170 … BR-API-172).
 | 7 | The prompt is open but ten minutes have passed, then the contact | «Время подтверждения вышло…» with `📱 Открыть приложение`; nothing is stored |
 | 8 | A contact with no window and no cabinet prompt | `/owner` exactly as WP-56 specifies (TXT-BOT-078 or `owner.not_own_contact`) |
 | 9 | `/start owner_new` | the welcome, then «Сдать квартиру можно в приложении…» with «🏠 Сдать квартиру», which opens the owner form |
-| 10 | The cabinet switched off | rows 5 and 9 give the welcome only; no contact is intercepted |
+| 10 | The cabinet switched off | rows 5 and 9 give the welcome only; no new phone window opens; a window opened before still accepts its contact |
 
 - The old client returns to the same draft: the button back is `o_<id>` of the listing the window belonged to (fix
   of LB-APP-060; the trigger of the defect is `UNVERIFIED`).
@@ -299,8 +328,8 @@ Edge cases:
 - The draft was deleted, published or locked (`held`, `withdrawn`) between the window and the contact: WP-84's
   acceptor answers nothing, and the contact goes to `/owner` (or to the "window closed" reply while the prompt is
   open).
-- The cabinet is switched off while a window is open: the window still accepts its contact (the switch guards only
-  the three methods of DEC-81); nothing new can open.
+- The cabinet is switched off while a window is open: the window still accepts its contact (the switch refuses
+  opening a window, not a contact: WP-80); nothing new can open.
 - The user blocked the bot right after sharing: the number is set; the failed reply is ignored (WP-51's responder).
 - The user is inside `/owner`'s own conversation (kind `Owner`) and a window is open: the window wins; the marker
   ends that conversation as well, and `/owner` is not verified.
@@ -319,8 +348,9 @@ Defects and behaviour changes:
 Conversation tests use the runner of WP-51; contacts come from `UpdateFactory::contact(userId, phone)` of WP-50 with
 the synthetic numbers `+998000000081` and `+7000000000`; owner listings from WP-84's factories with the window open
 or closed; the cabinet switch on (`phpunit.xml`, WP-80) unless a case says otherwise. After every case a recursive
-scan of the stored payload, the job payloads, the log records and every Bot API call of `FakeBotApi` finds no digit
-run of the synthetic number longer than two digits.
+scan of the stored payload, the job payloads, the log records, every Bot API call of `FakeBotApi` and, in test 1,
+`telescope_entries` (Telescope on with the configuration of WP-84 and "Observability") finds no digit run of the
+synthetic number longer than two digits.
 
 | # | Test | Cases |
 | - | ---- | ----- |
@@ -337,17 +367,19 @@ run of the synthetic number longer than two digits.
 
 ## Acceptance checklist
 
-Run in ru, uz and en on the staging bot, with `OWNER_CABINET_ENABLED=true` on staging for the run and a test owner
-account; attach screenshots to the PR. The texts are HOMI's and wait for the product owner's approval; the checks
-below are about behaviour, not about parity with legacy.
+Run in ru, uz and en on the staging bot, with `OWNER_CABINET_ENABLED=true` on staging for the run (after `25` §5 gate 5
+holds there), `OWNER_CABINET_ALLOWED_IDS` set to the test accounts, and a test owner account; each staff member whose
+real number is shared agrees in writing that it is stored, and at the end of the run every test account is erased with
+«Удалить мои данные» and the erasure is recorded in the PR; attach screenshots to the PR. The texts are HOMI's and wait
+for the product owner's approval; the checks below are about behaviour, not about parity with legacy.
 
 - [ ] iOS, Android and Desktop on 6.9 or later: «Поделиться номером» in the Mini App sets the number within seconds,
       and the chat shows «✅ Номер подтверждён…» with «↩️ Вернуться к объявлению», which opens the same draft's phone
       step.
 - [ ] A forwarded contact of another account is refused in the Mini App (`not_own`) and in the chat.
 - [ ] A non-`+998` test number is refused (`not_uz`).
-- [ ] A test number put on the deny list (`owner:deny-phone`, WP-84) is refused; the chat names no reason; the Mini
-      App shows the rejection screen with the support button.
+- [ ] A test number put on the deny list (`owner:deny-phone {listing}` or `--stdin`, WP-84) is refused; the chat
+      names no reason; the Mini App shows its rejection screen (WP-81).
 - [ ] A client below 6.9 (or the emulated old-client path of WP-81): «Открыть бот» → the prompt with the share
       keyboard; sharing sets the number; «Отмена» removes the keyboard.
 - [ ] With the old-client prompt open, a contact shared ten minutes after the window opened is refused with «Время
@@ -356,7 +388,8 @@ below are about behaviour, not about parity with legacy.
 - [ ] `/start owner_new` opens the owner form from its button.
 - [ ] With the switch off again, `/start owner_new` gives the welcome only.
 - [ ] The production track confirms: the stored update of a test contact holds no number (a staging row decrypted
-      holds `phone_hmac` only).
+      holds `phone_hmac` only), and a scan of `telescope_entries`, the Laravel log and `failed_jobs` on staging after
+      the run finds no test number (SEC-REQ-051).
 - [ ] Tests of this package and of WP-50 and WP-56 are green; `make ci-backend` is green; the security review is
       recorded in the PR.
 

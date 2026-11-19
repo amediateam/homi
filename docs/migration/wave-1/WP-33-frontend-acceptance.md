@@ -491,7 +491,7 @@ approved deviation that is on without a flag (DEC-74, DEC-80) and is checked as 
 | 15 | LB-APP-068 | silent loss of place data | WP-81 | DEV-058 |
 | 16 | LB-APP-069 | request tip leads to Settings | WP-82 | DEV-059 |
 | 17 | LB-APP-070 | empty own-listing footer | WP-82 | fixed |
-| 18 | LB-APP-071 | waitlist not remembered | WP-81 | fixed |
+| 18 | LB-APP-071 | waitlist not remembered | WP-81 | not applicable: no realtor waitlist is offered, since HOMI rejects nobody as a realtor (default 26); `me.owner.waitlisted` stays in the contract |
 | 19 | LB-APP-072 | chip tap before the card | WP-83 | fixed |
 | 20 | LB-APP-073 | stale card after `open`, `closed`, `own` | WP-83 | fixed |
 | 21 | LB-APP-074 | `given` without a phone | WP-83 | fixed |
@@ -500,7 +500,8 @@ approved deviation that is on without a flag (DEC-74, DEC-80) and is checked as 
 | 24 | LB-APP-077 | `who` overwrites the count | WP-83 | fixed |
 | 25 | LB-APP-078 | gate point after the number was given | WP-83 | fixed |
 
-Totals of the cabinet: 17 fixed and 8 approved deviations on without a flag; none flagged, none kept as legacy.
+Totals of the cabinet: 16 fixed, 8 approved deviations on without a flag and 1 not applicable (LB-APP-071); none
+flagged, none kept as legacy.
 
 | # | Points | Group | Package | Automated by | By hand in Telegram |
 | - | ------ | ----- | ------- | ------------ | ------------------- |
@@ -594,10 +595,10 @@ switches it on there (DEC-81; *added by the owner-cabinet plan*).
 | 3 | SCR-051 | Place picker | WP-81 | `/owner/<id>/place` | GL and Leaflet; the label; «Найти меня»; the fill and its «Вернуть»; edge swipe |
 | 4 | SCR-052 | Questionnaire | WP-81 | `/owner/<id>` | every section; autosave; the gate; photos with undo (DEV-057); «Вернуть» after a city change (DEV-058) |
 | 5 | SCR-053 | Phone confirmation | WP-81 | `/owner/<id>/phone` | yes, no, old client, late hint, `not_uz`, `not_own` |
-| 6 | SCR-054 | Rejection and waitlist | WP-81 | the phone step of a rejected listing | three reasons, the support button (DEV-056), the remembered waitlist |
+| 6 | SCR-054 | Rejection | WP-81 | the phone step of a rejected listing | `denied` and `limit` (default 32), the support button (DEV-056); no realtor text and no waitlist (default 26) |
 | 7 | SCR-055 | Contact mode and preview | WP-81 | `/owner/<id>/mode` | «Через HOMI» preselected (DEV-055); the preview; «Опубликовать» or «Готово» (DEV-062) |
-| 8 | SCR-056 | Done | WP-81 | `/owner/<id>/done` | confetti and haptics, the mascot, the edit form, no radar sentence while radars are off |
-| 9 | SCR-057 | «Мои объявления» | WP-82 | `/settings/owner` | two tabs with dots; every status; the actions with their confirms; the rejected card |
+| 8 | SCR-056 | Done | WP-81 | `/owner/<id>/done` | confetti and haptics, the mascot, the edit form, «На проверке» after a held publish (default 26), no radar sentence while radars are off |
+| 9 | SCR-057 | «Мои объявления» | WP-82 | `/settings/owner` | two tabs with dots; every status, «На проверке» for a held one; the actions with their confirms; the rejected card; with the cabinet off only the actions DEC-81 keeps |
 | 10 | SCR-058 | «Отклики» | WP-82 | `/settings/owner/<id>/requests`, `/listing/<n>/requests` | every status line; the answers, reasons, undo, «Оказался риелтором» |
 | 11 | SCR-059 | The owner's own listing | WP-82 | stub 10000008 | the title row, «Цена», no «Источник», the panel and its footer, never an empty footer |
 | 12 | SCR-060 | Request signals | WP-82 | the pending count | the dot on every tab, the tab tip to the listing (DEV-059), the card tip, `homi-req-tip` |

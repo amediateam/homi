@@ -24,13 +24,15 @@ In:
 
 - `OwnerListingMerge`, a decorator of the `listings` capability that `SourceManager::listings()` puts around the
   `legacy` driver; the routing by number (`ListingNumber::isNative()` of WP-80).
-- `NativeListingSource` (feed part, count, new-since, flow part, map part, details, preview, previews, contact,
-  translation) over WP-84's `owner_listings`.
+- `NativeListingSource` (feed part, count, new-since, flow part, map part, details, preview, previews, translation)
+  over WP-84's `owner_listings`.
 - `NativeListingFilter`: the 25 filter keys on native rows, and the agreement test against WP-84's demand rule.
 - `NativeListingPresenter`: the shapes of WP-12 (title, price, facts, posted, stats, the market block, the
   comparison) in the request locale and currency; `backend/lang/{ru,uz,en}/listings.php`.
 - The `m1.` cursor and the cross-source order of every sort.
-- The native author key for "block this author" and the `listing_refs` row of a native number.
+- The author of a native item (the owner's phone author key, so «Скрыть автора» works) and the `listing_refs` row
+  of a native number.
+- The public switch `OWNER_LISTINGS_PUBLIC`, which takes every native listing out of the public answers at once.
 - `meta.source` of the per-number methods for a native number.
 - The guard test that a legacy id at or above the floor is refused and counted (the translator rule itself is
   WP-42's, "Design").
@@ -41,8 +43,9 @@ Out:
 
 - Owner listings themselves: tables, drafts, publish, statuses, photos and their public copies, the shown point's
   computation, the harvested medians, the demand method — WP-84.
-- The caller's request state on the card (`contact.request`, `contact.has_phone` after `given`) and the disclosure
-  rule of `ContactService::disclose()` — WP-85; this package only routes `contact()` by number.
+- The caller's request state on the card (`contact.request`, `contact.has_phone` after `given`) and the whole
+  disclosure of a native number — WP-85's branch of `ContactService::disclose()` (WP-84's disclosure read and the
+  `given` rule). This package reads no owner's number and implements nothing of the disclosure.
 - New matching code: none is needed; the radar poller of WP-46 reads the merged feed (WP-46, "Filter sets and
   polling").
 - The relay of requests on legacy `gate` listings — WP-87.
@@ -56,10 +59,11 @@ Out:
 - DEC-70: owner listings live in HOMI's tables and are shown beside the listings read from legacy, by one merge step
   after the driver of the shared part. Every item carries `origin` (WP-80).
 - DEC-72, DEC-52: the owner's number never travels with a card or a preview. `owner.description` is masked by
-  `ListingDetails::fromArray()` (WP-12, "Phone numbers in listing texts"); `contact()` of a native number is the
-  only read of the number in this package, and only `ContactService::disclose()` (WP-43, with WP-85's rule) calls
-  it.
-- DEC-77: a native item has `is_owner: true`, `owner_verified: true` and `owner.tier: self`.
+  `ListingDetails::fromArray()` (WP-12, "Phone numbers in listing texts"); this package never reads the number: a
+  native number's disclosure is WP-85's branch of `ContactService::disclose()` (WP-43, "Contact: two variants, one
+  shape").
+- DEC-77: a native item has `is_owner: true`, `owner_verified: true` and `owner.tier: self`. HOMI's realtor check and
+  its votes hold a listing for the operators (WP-84, "Moderation"); a held listing is out of every list.
 - DEC-78: wherever a harvested median exists (WP-84's `MedianBook`), a native listing has the verdict, the
   `comparison` block, a key for the `deal` sort and a match for `below_median`; sparse at first.
 - DEC-62: `area_min` and `area_max` apply to every deal; the cabinet has rent only, so they apply to native rows.
@@ -69,18 +73,25 @@ Out:
   therefore names the shared driver; a native card names `native`.
 - `25` §4.4, RK-27: stub and real data never mix. When the shared driver is `stub`, the stub catalogue answers both
   parts (its native entries, WP-80) and real native rows are not merged.
-- *Integrator defaults, listed for the reviewer:* item 4 (the native number floor 10 000 000, routing by range),
-  item 5 (the shown point: a stable offset of at most 250 m, `geo_radius_m` 500), item 11 (harvested medians: 60
-  days, district before city, the usual range ± 10 %, `below_median` = a negative delta), item 9 (two listings per
-  account and two per phone, so the native rows of a city stay few in Wave 1), item 18 (the cabinet is
-  long-term rent only: a native listing's `deal` is always `rent_long`). Defaults of this specification, in the same
-  list: native candidates are read per request in full for the city, capped at `owner.merge.native_cap` (1 000); a
-  native listing has `metro: null` and never matches `near_metro` while HOMI has no station list; `zones[]` never
-  matches a native row while the reference data maps no district to a zone; the cabinet's renovation codes map to
-  the long-rent codes through `owner.renovation_map`; a legacy item whose age cannot be read sorts as newer than
-  every native item, and a `posted_at` without an offset is read in Asia/Tashkent (Q-API-083); a native listing that
-  left the feed answers its card with `status_text`, and a purged one `404`; the tenant mapping of "Filters on
-  native rows"; a room counts as one room.
+- *Integrator defaults, listed for the reviewer:* item 4 (the native number floor 10 000 000, routing by range), item 5
+  (the shown point: derived from the owner and the 100 m grid cell of the true point, 50 … 420 m from the cell centre,
+  at most 491 m from the true point, always inside the circle of `geo_radius_m` 500; WP-84), item 11 (harvested medians:
+  60 days, district before city, the usual range ± 10 %, `below_median` = a negative delta), item 9 (two listings per
+  account and two per phone, so the native rows of a city stay few in Wave 1), item 18 (the cabinet is long-term rent
+  only: a native listing's `deal` is always `rent_long`), item 24 (the author of a native item: `{"kind": "phone",
+  "label": «Хозяин», "count": …}` with the owner's phone author key, no new `kind`), item 26 (the check and the votes
+  hold, the operators decide; WP-84), item 27 (the public photo copies `owner/<token>/<n>.jpg?v=<version>`, WP-84), item
+  29 (the shown point of item 5 replaces the first plan's offset of at most 250 m) and item 31 (the switch
+  `OWNER_LISTINGS_PUBLIC`). Defaults of this specification, in the same list: a native number's disclosure has one
+  implementation, WP-85's, and the merge implements none; a native listing out of the feed answers a card without its
+  description, landmark, point, facts or photos; `landmark` is masked like the owner's description; native candidates
+  are read per request in full for the city, capped at `owner.merge.native_cap` (1 000); a native listing has `metro:
+  null` and never matches `near_metro` while HOMI has no station list; `zones[]` never matches a native row while the
+  reference data maps no district to a zone; the cabinet's renovation codes map to the long-rent codes through
+  `owner.renovation_map`; a legacy item whose age cannot be read sorts as newer than every native item, and a
+  `posted_at` without an offset is read in Asia/Tashkent (Q-API-083); a native listing that left the feed answers its
+  card with `status_text`, and a purged one `404`; the tenant mapping of "Filters on native rows"; a room counts as one
+  room.
 
 ## Design
 
@@ -105,18 +116,24 @@ the personal-list previews — gets the merged answers with no change of its own
 | `map()` | WP-42 | one point per matching native row, at the shown point | points appended; `total` and `with_point` + the native count |
 | `details()`, `preview()` | a legacy number | a native number | routed by number, no merge |
 | `previews()` | the legacy numbers of the list | the native numbers | split by number, answers joined, keyed by the asked number |
-| `contact()` | a legacy number | a native number: the owner listing's number (variant A of WP-43) | routed by number |
+| `contact()` | a legacy number | a native number: never served here — `ContactService::disclose()` serves it through WP-85's branch; the merge answers `ContactUnavailable`, so a native number never reaches legacy | routed by number |
 | `translation()` | a legacy number | a native number: `SourceNotFound` (`404 not_found`; no original text) | routed by number |
 
-A native number is never sent to legacy, and a legacy number is never looked up in HOMI's tables: the routing reads
-only `ListingNumber::isNative()`. The overlay of WP-42 ("Overlay") runs after the merge, in the controllers, on both
-kinds alike (hidden listings, blocked authors, favourites, viewed flags, realtor marks). A page from which the
+A native number is never sent to legacy, and a legacy number is never looked up in HOMI's tables: the routing reads only
+`ListingNumber::isNative()`. While `config('owner.public')` (`OWNER_LISTINGS_PUBLIC`, default `true`; WP-80) is `false`,
+the native part is empty in every list, count, new-since count, flow and map, and every native number answers
+`SourceNotFound` (`404 not_found`), so radars and the bot stop seeing native listings too; the owners' cabinet is not
+touched. It is the lever for an incident with photos, points or texts (WP-70, WP-71), apart from DEC-81's switch, which
+leaves published listings in the feed. The overlay of WP-42 ("Overlay") runs after the merge, in the controllers, on
+both kinds alike (hidden listings, blocked authors, favourites, viewed flags, realtor marks). A page from which the
 overlay removes native items may be shorter than `limit`; the client continues with the cursor as it does today.
 
 `meta.source`: list methods keep `$resolved->driver`. The per-number controllers (`ListingController::show()`,
-`ListingContactController`, `ListingTranslationController`, `ListingShareController`, and the request controller of
-WP-80) answer with `OwnerListingMerge::driverFor($resolved, $number)`: `native` when the resolved source is the merge
-and the number is native, else the resolved driver. On the stub driver a native stub number answers `stub`.
+`ListingContactController`, `ListingTranslationController`, and the request controller of WP-80) answer with
+`OwnerListingMerge::driverFor($resolved, $number)`: `native` when the resolved source is the merge and the number is
+native, else the resolved driver. On the stub driver a native stub number answers `stub`. `ListingShareController` has
+no source feature (a method of HOMI's own) and keeps answering its own driver, `stub` until WP-43
+(`backend/app/Http/Controllers/Api/V1/Listings/ListingShareController.php`).
 
 ### Cross-source order
 
@@ -137,10 +154,11 @@ an item of either origin; `null` means "no key" and sorts last, except for `new`
   key of a legacy item is out of order (legacy sorted by a value HOMI does not see), the item keeps its place in the
   legacy stream and only the native items around it move.
 - `posted_at` without an offset is read in Asia/Tashkent; the time zone of legacy's value is Q-API-083.
-- `PostedWhenParser` (`App\Services\Listings`) reads the `when` forms of the three locales that the stub catalogue
-  and the golden fixtures of WP-42 hold («только что», «N мин назад», «N ч назад», «вчера», «N дн. назад», a date;
-  the uz and en equivalents), relative to the time of the request. Anything else is `null`. It is used only for this
-  sort; the client still computes the age itself (WP-12, "Listing preview").
+- `PostedWhenParser` (`App\Services\Listings`) reads the `when` forms that the stub catalogue holds («сегодня», «вчера»,
+  «N дней назад», `backend/resources/fixtures/v1/listings/catalog.json`; «на днях» for its repeats,
+  `backend/app/Services/Sources/Stub/StubListingSource.php`) and the forms of the three locales in the golden fixtures
+  of WP-42, relative to the time of the request; «сегодня» and «на днях» give a day, not an hour. Anything else is
+  `null`. It is used only for this sort; the client still computes the age itself (WP-12, "Listing preview").
 - `SearchFiltersNormaliser::sortFor()` (`backend/app/Services/Search/SearchFiltersNormaliser.php:113-130`) is
   unchanged: `deal` is offered only for an apartment search in a city with a median, `center` only in a city with
   zones, `ppm` only for a sale.
@@ -192,14 +210,16 @@ does today.
   the true point.
 - `count()`, `newSince()`, the flow part and the map part are counts and projections of the same candidates.
 - `details(int)`, `preview(int)`: the row with that number. `active` → the card of the presenter. `paused`,
-  `rented`, `removed` or `withdrawn` (also `held`) → the card with `status_text` «Снято с публикации» (the text the
-  stub catalogue uses for a withdrawn listing), `contact.has_phone: false`, no photos beyond the cover, and never in
-  a list, a count or the map. Purged by WP-84's retention, or unknown → `SourceNotFound`.
+  `rented`, `removed` or `withdrawn` (also `held`) → the unlisted card: `status_text` «Снято с публикации» (the text
+  the stub catalogue uses for a withdrawn listing), `title`, `price`, `deal` and `district`, with `description`,
+  `landmark`, `location`, `center_km` and `owner.description` `null` and `facts` and `photos` empty,
+  `contact.has_phone: false`; a held and a withdrawn listing answer the same shape as a paused one, and none of them
+  is in a list, a count or the map. Purged by WP-84's retention, or unknown → `SourceNotFound`. (WP-84 deletes the
+  public photo copies of a `held`, `withdrawn`, `rented` or `removed` listing at once.)
 - `previews(list<int>)`: the same rule per number; unknown numbers are absent.
-- `contact(int)`: an `active` native listing → `ListingContact` in the shape of variant A (WP-43, "Contact: two
-  variants, one shape") with the number from WP-84's disclosure read of the owner listing; else
-  `ContactUnavailable`. Which caller may receive it (`phone` mode for everyone under the quota; `request` mode only
-  after `given`) is WP-85's rule inside `ContactService::disclose()`.
+- No `contact()`: the number of a native listing is read only by WP-85's branch of `ContactService::disclose()`
+  over WP-84's disclosure read, which also decides who may receive it (`phone` mode for everyone under the quota;
+  `request` mode only after `given`). So the number has one disclosure path and this package holds none.
 - Every read is in the context's locale and currency; nothing is cached across users. The per-user parts
   (`owner.mine`, `contact.request`) are the overlay's (WP-85), never this class's.
 
@@ -212,7 +232,7 @@ parameters"), after `SearchFiltersNormaliser` (`backend/app/Services/Search/Sear
 | --- | ----------- |
 | `city` | the row's `city` (also the query's condition) |
 | `deal` | only `rent_long` matches (item 18) |
-| `owner` | `any`, `no_agents`, `owners`: every native row matches; a realtor mark by HOMI's votes withdraws the listing (WP-84, "Moderation") instead of relabelling it |
+| `owner` | `any`, `no_agents`, `owners`: every native row matches here; HOMI's realtor votes on a native listing hold it for the operators (`votes_agent`, WP-84, "Moderation"), and the overlay's realtor marks (WP-42, "Overlay") apply to its phone author key as to any listing's |
 | `types[]` | `apartment` ↔ `room: false`; `room` ↔ `room: true`; `house`, `commercial`, `land` never match |
 | `districts[]` | `district_code` |
 | `zones[]` | a zone of the row's district when the reference data maps districts to zones; `CityData` has no such mapping today (`backend/app/Services/Sources/Data/CityData.php:15-25`), so a search with zones matches no native row |
@@ -248,14 +268,15 @@ to approve.
 | ----- | ------------ |
 | `origin` | `native` |
 | `number`, `deal`, `type` | the number; `rent_long`; `apartment` or `room` |
-| `title` | «2-комн. квартира, 54 м²», «Комната, 18 м²», «5+-комн. квартира, …» (rooms 5); the uz and en forms of the catalogue |
+| `title` | «2-комн. квартира, 54 м²», «1-комн. комната, 18 м²» (the catalogue's room form), «5+-комн. квартира, …» (rooms 5); the uz and en forms of the catalogue |
 | `price` | `display` and `alt` in the context's currency with the rate of `GET /reference` (`rates.usd_uzs`), `period` «/мес», `notes` `[]`, `usd` = `price_usd`, `kind` `null` |
-| `rooms`, `area_total`, `floor`, `floors_total`, `landmark` | the form's values; `place` `null` |
+| `rooms`, `area_total`, `floor`, `floors_total` | the form's values; `place` `null` |
+| `landmark` | the form's value through `PhoneMasker::mask()`, which the presenter applies itself (`ListingSummary::fromArray()` masks `title` only, `backend/app/Services/Sources/Data/ListingSummary.php`) |
 | `district` | `{code, name}` from the reference data of the city |
 | `metro` | `null` (no station list) |
 | `center_km` | `NativeGeometry::km(shown point, CityData::$center)`, one decimal |
 | `location` | the shown point (item 5) |
-| `photos` | WP-84's public copies `…/owner/<number>/<n>.jpg?v=<8 hex>`, `preview` the first three, `count`, `cover` `null`; the form `…/<digits>/<digits>.jpg?…` keeps the client's small variant (`frontend/app/features/feed/images.ts:3-7`) |
+| `photos` | WP-84's public copies `<MEDIA_PUBLIC_URL>/owner/<token>/<n>.jpg?v=<version>` (`<token>` 20 random digits, new for every version, no listing number in the path), `preview` the first three, `count`, `cover` `null`; the form `…/<digits>/<digits>.jpg?…` keeps the client's small variant `…/<n>.s.jpg?v=…` (`MEDIA_PHOTO` of `frontend/app/features/feed/images.ts`, which needs the query); a rewrite gives new addresses, because the CDN ignores query strings (`docs/infrastructure/cdn.md`) |
 | `has_video`, `pets_ok` | `false`; `pets === true` |
 | `is_owner`, `owner_verified` | `true`, `true` (DEC-77) |
 | `posted` | `label` «Опубликовано», `when` the age in the catalogue's forms, `at` = `published_at` (ISO 8601 with offset) |
@@ -268,28 +289,31 @@ to approve.
 | `stats` | `days_listed` (WP-84's stats), `publications` 1, `channels` 0, `views` = WP-84's `opened` |
 | `price_history` | one entry: `at` = `published_at`, `channel` and `url` `null`, `text` `null`, `kind` `published`, `price_usd`, `change_pct` `null` (BR-API-188) |
 | `geo_radius_m` | 500 (item 5) |
-| `author` | `null` (WP-80, "Listing items and the card") |
+| `author` | `{"kind": "phone", "label": <the catalogue text «Хозяин» of `listings.php`>, "count": <the owner's listings in the feed>}` (WP-80, "Listing items and the card"); no digit of the owner's number |
 | `owner_label` | `null`: the tier says it |
 | `owner` | `{tier: "self", mine: false, listing_id: null, response_minutes: <WP-85's response time>, description: <the owner's text>}`; `mine` and `listing_id` are the overlay's (WP-85) |
 | `contact` | `{has_phone: <contact_mode = phone>, contact_url: null, contact_paid: false, mode: "phone" or "request", request: null}`; the per-user part is the overlay's (WP-85) |
 | `summary`, `offers`, `original`, `sources`, `source_ref` | `null`, `[]`, `{text: null, url: null, deleted: false}`, `[]`, `null` |
 
-Every object is built through `ListingSummary::fromArray()` and `ListingDetails::fromArray()`, so `PhoneMasker`
-masks `title` and `owner.description` as for any driver (DEC-52). Map points: `{number, lat, lon}` of the shown
-point, `label` = `price.display` with `<` and `&` removed, `tone` `good` when the verdict's tone is `good`, else
-`null` (the map's tones, `backend/app/Services/Sources/Data/MapPoint.php:11`), `priced: true`, `usd`, `origin:
-native`.
+Every object is built through `ListingSummary::fromArray()` and `ListingDetails::fromArray()`, so `PhoneMasker` masks
+`title` and `owner.description` as for any driver (DEC-52); the presenter masks `landmark` before that. Map points:
+`{number, lat, lon}` of the shown point, `label` = `price.display` with `<` and `&` removed, `tone` `good` when the
+verdict's tone is `good`, else `null` (the map's tones, `backend/app/Services/Sources/Data/MapPoint.php:11`), `priced:
+true`, `usd`, `origin: native`.
 
 ### Author key and listing references
 
-- `AuthorKey` of WP-42 ("`listing_refs` and author keys") gains the kind `native`: `native:` + the first 32 hex of
-  HMAC-SHA-256 of the owner's user id with `AUTHOR_KEY_SECRET`. It is not WP-84's `phone_author_key`: the realtor
-  check of WP-84 counts `phone:` keys only, so an owner's own listings never count against him.
+- The author of a native item is the owner's phone author: its key is the owner listing's `phone_author_key` of
+  WP-84, which WP-84 computes as WP-42's `AuthorKey` does for a card with a phone (`phone:` + the first 32 hex of
+  HMAC-SHA-256 of the number in E.164 with `AUTHOR_KEY_SECRET`). `AuthorKey` itself is unchanged, and no new author
+  `kind` exists.
 - `App\Listeners\Listings\RememberNativeListingRef` (on WP-84's `OwnerListingPublished`, queue `default`,
-  idempotent) upserts `listing_refs` for the number: no channel, no post, `author_key` the native key, `author_kind`
-  `native`, `district_code`. So the overlay's blocked-author step (WP-42, "Overlay" step 1) and WP-44's
-  `BlockedAuthorService::block()` work for native numbers without a change; a block lists as `kind: native` in
-  «Скрытое» with the label «Хозяин» (a HOMI text). `blocked_authors.kind` (WP-44, "Tables") gains the value `native`.
+  idempotent) upserts `listing_refs` for the number: no channel, no post, `author_key` the listing's
+  `phone_author_key`, `author_kind` `phone`, `district_code`. So the overlay's blocked-author step (WP-42, "Overlay"
+  step 1) and WP-44's `BlockedAuthorService::block()` work for native numbers without a change: «Скрыть автора» on a
+  native listing writes a `blocked_authors` row of kind `phone` with the card's label «Хозяин», and it also hides
+  that person's legacy listings with the same number. HOMI's realtor votes (WP-44) and the realtor check of DEC-77
+  (WP-84) read the same key.
 - `ListingRefs::pointer()` answers a native number with no channel and no post, so favourites, history and radar
   deliveries of a native listing need no Wave 2 mapping (`24` §5).
 
@@ -311,17 +335,16 @@ page and the stub's native entries never appear on a real one. A test proves bot
 
 - `backend/app/Services/Listings/{OwnerListingMerge,MergeCursor,FeedSortKey,PostedWhenParser}.php`
 - `backend/app/Services/Listings/Native/{NativeListingSource,NativeListingFilter,NativeListingPresenter,NativeGeometry,NativeRow}.php`
-- `backend/app/Listeners/Listings/RememberNativeListingRef.php`
+- `backend/app/Listeners/Listings/RememberNativeListingRef.php` (discovered by Laravel from `app/Listeners`, as
+  `App\Listeners\RecordSourceFlagChange` is today; it is not registered again, which would run it twice)
 - `backend/app/Services/Sources/SourceManager.php` (the wrap in `listings()`)
 - `backend/app/Services/Sources/Legacy/LegacyListingSource.php` and `LegacyFeedSlice.php` (WP-42; the slice read)
-- `backend/app/Services/Listings/AuthorKey.php` (WP-42; the kind `native`)
-- `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingContactController,ListingTranslationController,ListingShareController}.php`
+- `backend/app/Http/Controllers/Api/V1/Listings/{ListingController,ListingContactController,ListingTranslationController}.php`
   (`meta.source` of a native number)
-- `backend/config/owner.php` (WP-80; keys `renovation_map`, `merge.native_cap`)
+- `backend/config/owner.php` (WP-80; keys `renovation_map`, `merge.native_cap`; `public` is WP-80's, read here)
 - `backend/lang/{ru,uz,en}/listings.php` (new)
-- `backend/app/Providers/AppServiceProvider.php` (the listener)
 - Tests: `backend/tests/Unit/Listings/{MergeCursorTest,FeedSortKeyTest,PostedWhenParserTest,NativeGeometryTest,NativeListingFilterTest}.php`;
-  `backend/tests/Feature/Listings/Native/{MixedFeedTest,MixedCountsTest,MixedMapTest,NativeCardTest,NativeRoutingTest,FilterAgreementTest,ShownPointLeakTest,StubNeverMixesTest,NativeAuthorBlockTest,RadarPollNativeTest}.php`;
+  `backend/tests/Feature/Listings/Native/{MixedFeedTest,MixedCountsTest,MixedMapTest,NativeCardTest,NativeRoutingTest,FilterAgreementTest,ShownPointLeakTest,StubNeverMixesTest,NativeAuthorBlockTest,NativePublicSwitchTest,RadarPollNativeTest}.php`;
   `backend/tests/Feature/Sources/Legacy/LegacyFloorGuardTest.php`; `backend/tests/Pgsql/NativeCandidatesTest.php`;
   `backend/tests/Support/NativeFilterCases.php`
 - `docs/api/README.md`: the `meta.source` sentence for mixed lists (written by WP-80) checked against the code; the
@@ -340,11 +363,12 @@ Generators always with `--no-interaction`; tests first inside each step; Pint af
    against WP-84's demand rule.
 4. `backend/lang/{ru,uz,en}/listings.php`; `NativeListingPresenter`; `NativeCardTest` for the card, the preview and a
    map point in three locales and two currencies, with and without a harvested median.
-5. `NativeListingSource` (candidates, counts, details, previews, contact, translation); `NativeRoutingTest`.
+5. `NativeListingSource` (candidates, counts, details, previews, translation); `NativeRoutingTest`.
 6. The slice read in `LegacyListingSource`; WP-42's feed tests stay green.
-7. `OwnerListingMerge` and the wrap in `SourceManager::listings()`; `MixedFeedTest`, `MixedCountsTest`,
-   `MixedMapTest`, `StubNeverMixesTest`; `meta.source` of the per-number controllers.
-8. `AuthorKey` kind `native`, `RememberNativeListingRef`; `NativeAuthorBlockTest`.
+7. `OwnerListingMerge` and the wrap in `SourceManager::listings()`, with `config('owner.public')`; `MixedFeedTest`,
+   `MixedCountsTest`, `MixedMapTest`, `StubNeverMixesTest`, `NativePublicSwitchTest`; `meta.source` of the per-number
+   controllers.
+8. `RememberNativeListingRef` with the phone author key; `NativeAuthorBlockTest`.
 9. `ShownPointLeakTest`, `LegacyFloorGuardTest`, `RadarPollNativeTest` (with WP-46's poller and planner), the
    PostgreSQL test.
 10. Locally: the listing features on `legacy` with `sources:set`, two native listings published with the cabinet
@@ -355,8 +379,8 @@ Generators always with `--no-interaction`; tests first inside each step; Pint af
 - A listing placed by its owner appears in the feed, on the map and in radars like any other listing (F-OWNER-009),
   with the chip «Проверенный хозяин» from the preview (`is_owner`, `owner_verified`; WP-83 draws it).
 - Seekers never learn the exact point: the map, the preview's `location`, `center_km` and the polygon filter use the
-  shown point, and the card's circle has a radius of about 500 m (BR-API-167, SEC-040; the derivation is HOMI's own,
-  item 5; legacy's is Q-API-074).
+  shown point, and the card's circle has a radius of about 500 m, which always holds the true point (BR-API-167,
+  SEC-040; the derivation is HOMI's own, item 5, WP-84; legacy's is Q-API-074).
 - A published listing is in the feed at once and reaches the radars by the next poll (BR-API-175, `UNVERIFIED` in
   legacy).
 - The card of a self-placed listing has no channel source, one history entry without a channel, the owner's own
@@ -380,18 +404,19 @@ server; native rows come from WP-84's factories with the cabinet switch on (`php
 | - | ---- | ----- |
 | 1 | `MergeCursorTest` (unit) | round trip; another sort → ends; an `l1.` cursor → legacy alone; garbage, another prefix → ends; `l: null` and `n: null` → `null` next cursor |
 | 2 | `FeedSortKeyTest` (unit) | per sort, a legacy and a native item give comparable keys; `null` keys last; `new` without `at` and with an unparsable `when` sorts before every native item; equal keys → the higher number first |
-| 3 | `PostedWhenParserTest` (unit, dataset) | every `when` form of the fixtures in ru, uz and en on a frozen clock in Asia/Tashkent; an unknown form → `null`; `posted_at` without an offset read in Asia/Tashkent |
+| 3 | `PostedWhenParserTest` (unit, dataset) | «сегодня», «вчера», «5 дней назад», «на днях» of the stub catalogue and every `when` form of WP-42's fixtures in ru, uz and en on a frozen clock in Asia/Tashkent; an unknown form → `null`; `posted_at` without an offset read in Asia/Tashkent |
 | 4 | `NativeGeometryTest` (unit) | a point inside, outside, on a vertex; a 40-vertex polygon; the haversine distance against two known pairs |
 | 5 | `NativeListingFilterTest` (unit, the table of `NativeFilterCases`) | each of the 25 keys alone on a matching and a non-matching row; `zones[]`, `near_metro`, `appliances[]` never match; `house` never matches; a room and `rooms_min=2`; `rooms_max=4` is open; the tenant mapping; `null` values against set keys |
 | 6 | `FilterAgreementTest` | the same table through WP-84's demand rule gives the same answers |
 | 7 | `MixedFeedTest` | per sort, legacy fixture pages and five native rows: the merged order equals the sorted union; a full walk by cursor delivers every item exactly once; a page never exceeds `limit`; the overlay hides a native number of the user's hidden list; `meta.source` is `legacy` and native items carry `origin: native`; a sale search has no native item |
 | 8 | `MixedCountsTest` | count, new-since and the flow's `week` are legacy + native; a native listing published before `since` is not counted as new; `days` and `options` unchanged |
 | 9 | `MixedMapTest` | native points at the shown point with `origin: native`; `total` and `with_point` grow by the native count; a cut legacy answer keeps its `with_point` plus the native count |
-| 10 | `NativeCardTest` | the card of an `active` row in ru, uz, en and USD, UZS; the masked synthetic number in `owner.description`; `comparison` with a district median, a city median, none; a `paused` row → `status_text` and `has_phone: false`; a purged row → `404 not_found`; no key of the card holds the true point or a digit run of the owner's number |
-| 11 | `NativeRoutingTest` | `details`, `preview`, `previews`, `contact`, `translation` of a native number never reach the legacy fake; of a legacy number never query `owner_listings`; translation of a native number → `404 not_found`; the per-number controllers answer `meta.source: native` |
-| 12 | `ShownPointLeakTest` | shrinking polygons around a native listing (SEC-REQ-052 acceptance): the listing appears only while the polygon contains the shown point, never isolating the true point; feed, map, card and preview answers never contain the true coordinates |
+| 10 | `NativeCardTest` | the card of an `active` row in ru, uz, en and USD, UZS; the masked synthetic number in `owner.description` and in `landmark`; `author` = `{kind: phone, label: «Хозяин», count}` with no digit; the photo addresses `…/owner/<token>/<n>.jpg?v=…` without the listing number, and `smallPhotoUrl`'s rule gives their `.s.jpg`; `comparison` with a district median, a city median, none; a `paused`, a `held` and a `withdrawn` row → the same unlisted shape: `status_text`, `title`, `price`, `deal`, `district`, no description, landmark, location, centre distance, facts or photos, `has_phone: false`; a purged row → `404 not_found`; no key of the card holds the true point or a digit run of the owner's number |
+| 11 | `NativeRoutingTest` | `details`, `preview`, `previews`, `contact`, `translation` of a native number never reach the legacy fake; of a legacy number never query `owner_listings`; `OwnerListingMerge::contact()` of a native number → `ContactUnavailable`, while `POST /listings/{number}/contact` of an `active` native listing answers through WP-85's branch; translation of a native number → `404 not_found`; the per-number controllers answer `meta.source: native`; share keeps its own driver |
+| 12 | `ShownPointLeakTest` | shrinking polygons around a native listing (SEC-REQ-052 acceptance): the listing appears only while the polygon contains the shown point, never the true point; the true point lies 50 … 491 m from the shown point, inside the card's 500 m circle; feed, map, card and preview answers never contain the true coordinates |
 | 13 | `StubNeverMixesTest` | features on `stub` and a real native row in the database: the feed holds the stub's native entries only; features on `legacy`: no stub native number appears |
-| 14 | `NativeAuthorBlockTest` | publishing writes the `listing_refs` row with the native key; `PUT /listings/{number}/blocked-author` on a native number blocks it; the user's feed then omits every listing of that owner; another user still sees them |
+| 14 | `NativeAuthorBlockTest` | publishing writes the `listing_refs` row with the listing's `phone_author_key` and `author_kind: phone`; `PUT /listings/{number}/blocked-author` on a native number answers `kind: phone`, label «Хозяин»; the user's feed then omits every listing of that owner and the legacy fixture listings with the same number; another user still sees them |
+| 14a | `NativePublicSwitchTest` | `owner.public` false: no native item in feed, count, new-since, flow, map or a radar poll; a native card → `404 not_found`; the owner's `GET /owner/listings` unchanged; back to true: everything returns |
 | 15 | `LegacyFloorGuardTest` | a legacy fixture whose item id is `10000000` or above → a contract error, counted, never served |
 | 16 | `RadarPollNativeTest` | with `radar.matching_enabled` on and the feed on the fixture-backed legacy driver: a native listing published between two polls is planned by the next poll (WP-46's planner); a paused one is not |
 | 17 | `NativeCandidatesTest` (`tests/Pgsql`, `make test-pgsql`) | the candidate query on PostgreSQL with geography columns; the cap and its metric |
@@ -410,7 +435,11 @@ server; native rows come from WP-84's factories with the cabinet switch on (`php
 - [ ] A legacy id at or above the native floor is refused as a contract error and counted.
 - [ ] On the stub driver no real native row appears; on the legacy driver no stub native entry appears.
 - [ ] A native listing published between two polls is planned by the next poll of WP-46.
-- [ ] Blocking the author of a native listing hides that owner's listings for the user only.
+- [ ] Blocking the author of a native listing hides that owner's listings, and the legacy listings with his number,
+      for the user only.
+- [ ] With `OWNER_LISTINGS_PUBLIC=false` no public answer holds a native listing, and the cabinet still works.
+- [ ] A native card out of the feed (paused, held, withdrawn, let, removed) holds no description, landmark, point,
+      facts or photo.
 - [ ] On staging (cabinet switch off, no native rows) every listing method answers as before this package.
 - [ ] `make ci-backend` and `make test-pgsql` are green; production flags are unchanged.
 

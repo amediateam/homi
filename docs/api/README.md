@@ -183,10 +183,11 @@ set, carry the floor variants: `100022` is on the ground-level floor (`floor: 0`
 
 ## Methods (Wave 1)
 
-The `/api/v1` surface built so far (the first table of `25` §4.2): 41 pairs of a method and a path; the owner cabinet adds 18 more with WP-80. "Public" methods need no token;
-the others need a bearer token with `app:read` for reads and `app:write` for writes. The driver is the Wave 1 target;
-until the legacy and native packages land every method answers from stubs (`meta.source = stub`), and
-`php artisan sources:list` shows the current driver of each source method.
+The `/api/v1` surface built so far (the first table of `25` §4.2): 41 pairs of a method and a path; the owner
+cabinet adds 18 more with WP-80. "Public" methods need no token; the others need a bearer token with `app:read` for
+reads and `app:write` for writes. The driver is the Wave 1 target; until the legacy and native packages land every
+method answers from stubs (`meta.source = stub`), and `php artisan sources:list` shows the current driver of each
+source method.
 
 | Method | Route name | Access | Wave 1 driver |
 | ------ | ---------- | ------ | ------------- |

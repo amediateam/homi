@@ -7,7 +7,7 @@
 | Depends on | WP-80, WP-28, WP-36 |
 | Size | about 3 000 changed lines with tests, L |
 | Behaviour reference | `03` SCR-050 … SCR-056, §1.9 (lazy chunks), §3.3 (`owner_place_set`, `owner_place_autofill`, `owner_mascot_tap`), BR-APP-075 … BR-APP-087, BR-APP-093, BR-APP-096, BR-APP-097, LB-APP-054 … LB-APP-058, LB-APP-060 … LB-APP-065, LB-APP-067, LB-APP-068, LB-APP-071; `05` TMA-034, TMA-035, TMA-046, TMA-047; `09` DEV-054 … DEV-058, DEV-061, DEV-062 |
-| Needs from the production track | the regular deploy; then the manual checks inside Telegram on staging |
+| Needs from the production track | the regular deploy; `CSP_PRIVATE_MEDIA_HOSTS` in the app's env on staging and production (the origin of the private disk's temporary URLs, for a draft's photos); then the manual checks inside Telegram on staging |
 
 ## Goal
 
@@ -21,9 +21,10 @@ same step. While the server keeps the cabinet switched off (DEC-81) nothing in t
 **In.** Owned audit items: screens SCR-050 … SCR-056; rules BR-APP-075 … BR-APP-087, BR-APP-096, BR-APP-097 and the
 form's half of BR-APP-093 (the `focus` parameter; the panel's half is WP-82); defects LB-APP-054, LB-APP-055,
 LB-APP-056, LB-APP-058 (the form's events and screen name), LB-APP-060, LB-APP-061 (the client's half), LB-APP-063
-(the client's pre-check), LB-APP-064 (the form's labels), LB-APP-065 (the rejection screen), LB-APP-067, LB-APP-068
-and LB-APP-071; the form's limits of LB-APP-057; Telegram points TMA-034, TMA-035 (the picker), TMA-046 and TMA-047
-(the form's close cross); the approved deviations DEV-054 … DEV-058, DEV-061 and DEV-062.
+(the client's pre-check), LB-APP-064 (the form's labels), LB-APP-065 (the rejection screen), LB-APP-067 and
+LB-APP-068 (LB-APP-071 has nothing to fix in the form: section "Rejection"); the form's limits of LB-APP-057;
+Telegram points TMA-034, TMA-035 (the picker), TMA-046 and TMA-047 (the form's close cross); the approved deviations
+DEV-054 … DEV-058, DEV-061 and DEV-062.
 
 - The addresses `/owner/new`, `/owner/[id]`, `/owner/[id]/place`, `/owner/[id]/phone`, `/owner/[id]/mode` and
   `/owner/[id]/done` (`25` §3.2): the builders, `matchRoute`, `parentOf`, the shell variant and the layer rules.
@@ -32,7 +33,7 @@ and LB-APP-071; the form's limits of LB-APP-057; Telegram points TMA-034, TMA-03
 - The questionnaire with its couplings, autosave and the «Дальше» gate; photos with upload, order and the undo of
   DEV-057; the demand line and the usual price.
 - The phone step: `POST /owner/listings/{id}/phone-request`, the new adapter member `tg.requestContact()`, the poll,
-  the bot path below 6.9 and the way back `o_<id>`; the rejection state with the support button and the waitlist.
+  the bot path below 6.9 and the way back `o_<id>`; the rejection state with the support button.
 - The mode step with the preview, publish, and the done step with the celebration; «Готово» for an edit (DEV-062).
 - The launches `owner_new`, `owner-new`, `?owner=new` and `o_<id>` in `lib/deeplinks/`.
 - The edge-only rule of `useSwipeBack` (the layer marked `data-edge-swipe`).
@@ -59,7 +60,9 @@ and LB-APP-071; the form's limits of LB-APP-057; Telegram points TMA-034, TMA-03
   below is the proof for SCR-050 … SCR-056.
 - DEC-72: the phone step and the preview show «Ваш номер: …» from `GET /owner/listings/{id}`, the only answer that
   holds the owner's own number. `tg.requestContact()` answers only yes or no; the number reaches the bot, never the
-  Mini App, and the client never stores or logs it.
+  Mini App, and the client never stores or logs it. The element that shows it carries the `.ph-mask` class of WP-32's
+  replay masking, a failed action reaches the error facade of WP-32 as its `UiError` code only, never with its input
+  or answer, and no analytics property holds the number.
 - DEC-74 (amends DEC-36 for these rows): DEV-054 … DEV-058 and DEV-061 are on without a flag; DEC-80: DEV-062 is on
   without a flag. None of them gets a `dev…` flag in `lib/flags.ts`.
 - DEC-78: the usual price «≈ обычная цена» shows only where `GET /owner/demand` gives both bounds (a harvested
@@ -69,7 +72,10 @@ and LB-APP-071; the form's limits of LB-APP-057; Telegram points TMA-034, TMA-03
 - DEC-80: every save of a published listing is live at once; the last button of an edit reads «Готово» and closes
   the form without a publish call.
 - DEC-81: while `GET /reference` says `owner_enabled: false`, no address of the form opens, an owner launch is
-  ignored, and `403 owner_disabled` closes the form with a toast.
+  ignored, and `403 owner_disabled` closes the form with a toast. The server then refuses every create, content
+  save, phone request, publish and resume (WP-80), so the form has nothing to do; «Мои объявления», «Отклики» and the
+  owner panel stay open for a user who has listings (WP-82), so pausing, «Сдано», «Снять» and the answers work as
+  DEC-81 says (*the plan's reading of DEC-81, listed for the reviewer*).
 - DEC-51: while radars are switched off (`useRadarsEnabled()` of WP-24 is `false`), the demand line and the radar
   sentence of the done step are not shown.
 - DEC-56: the support button of DEV-056 opens HOMI's support bot (`supportUrl` of `lib/deeplinks/build.ts`) and is
@@ -78,14 +84,20 @@ and LB-APP-071; the form's limits of LB-APP-057; Telegram points TMA-034, TMA-03
   override (section "Texts").
 - *Integrator defaults, listed for the reviewer:* default 6 (the ten-minute phone window opened by
   `POST …/phone-request`), default 9 (two listings per account and per phone, ten photos, from `GET /reference`),
-  default 16 (the renovation list `renovations.owner`), default 18 (long-term rent only), default 19 (a non-draft is
-  never published again by the form), default 22 (the cabinet goes on on staging for the checks inside Telegram of
-  WP-89, before the legal gate). New in this specification: (a) the owner dictionary is imported from the
-  pinned release by `scripts/import-legacy.mjs`, not written by hand; (b) photos travel through a Server Action whose
-  body limit is raised to `'4mb'`, and a photo the client cannot shrink is refused, not sent; (c) an owner launch
-  waits behind the first-launch pickers, as legacy's city picker covers the form (`03` SCR-050, `inferred`,
-  Q-APP-028); (d) the form takes the `@overlay` slot, so a form opened from the owner panel replaces the listing
-  there, and Back opens the listing again.
+  default 16 (the renovation list `renovations.owner`), default 18 (long-term rent only), default 19 (publishing a
+  `paused` listing keeps it paused; a `rejected` listing is published again only after the operators release it —
+  so the form never sends a publish for a non-draft), default 22 (the cabinet goes on on staging for the checks
+  inside Telegram of WP-89, before the legal gate). New in this specification: (a) the owner dictionary is imported
+  from the pinned release by `scripts/import-legacy.mjs`, not written by hand; (b) photos travel through a Server
+  Action whose body limit is raised to `'4mb'`, and a photo the client cannot shrink is refused, not sent; (c) an
+  owner launch waits behind the first-launch pickers, as legacy's city picker covers the form (`03` SCR-050,
+  `inferred`, Q-APP-028); (d) the form takes the `@overlay` slot, so a form opened from the owner panel replaces the
+  listing there, and Back opens the listing again; (e) a publish that the server's checks hold for the operators
+  (`held` with `hold_reason`, default 26) ends on the done step's «На проверке» form, which never says why (WP-70
+  row 45), and the realtor waitlist is not offered (section "Rejection"); (f) the place
+  label is read with the map's centre rounded to 3 decimals, so the owner's pin trail does not reach the API's logs
+  at metre precision (`16` SEC-REQ-052); (g) the phone step shows one line on how the number is kept, with the
+  privacy link, and the landmark field the hint that it is public — both texts for the product owner to approve.
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`),
 `intercepting-routes.md`, `03-api-reference/05-config/01-next-config-js/serverActions.md` (`bodySizeLimit`, default
@@ -172,6 +184,7 @@ verify in the installed documentation; the Telegram facts below are verified aga
 | `features/owner/OwnerNewRoute.tsx`, `OwnerFormLayer.tsx`, `OwnerFrame.tsx` | the create-or-resume route; the layer with its states; the full-screen frame with title, subtitle and the scroll shadow |
 | `features/owner/closeOwnerForm.ts` | the close path above |
 | `features/owner/form/{Questionnaire,PlaceSection,PhotosSection,WhereSection,RoomsSection,PriceSection,TenantsSection,DescriptionSection,FormFooter}.tsx` | the sections of SCR-052 in their order |
+| `features/owner/form/NumberTextField.tsx` | the text field of «Площадь» (`inputMode="decimal"`) and «Этаж» (`inputMode="text"`, for «5/9»): `value`, `parse` and `onValueChange` as `PriceInput` of `@homi/ui` has them, the look of `numberFieldClass` |
 | `features/owner/form/useAutosave.ts` | dirty fields, the 600 ms timer, one flush at a time, the flush before «Дальше», publish and unmount (BR-APP-079) |
 | `features/owner/form/rules.ts` | pure: defaults and couplings (BR-APP-080), the gate (BR-APP-081), the floor rule, the inside-the-rectangle pre-check (`inUzbekistanBox`, lat 37–46, lon 55–74) |
 | `features/owner/form/focus.ts` | the `focus` parameter of `/owner/<id>`: scroll its `data-focus` token into the centre and highlight it for 1.6 s, then drop the parameter by `nav.replace` (BR-APP-093) |
@@ -207,18 +220,18 @@ its check makes no request:
 | `setContactMode({ id, mode })` | `PUT /owner/listings/{id}/contact-mode`, `mode` `request` or `phone` |
 | `requestOwnerPhone({ id })` | `POST /owner/listings/{id}/phone-request` |
 | `publishOwnerListing({ id })` | `POST /owner/listings/{id}/publish` |
-| `joinOwnerWaitlist()` | `PUT /owner/waitlist` |
 
 Every answer that is an owner listing goes into the store by `putOwnerListing`, and every successful mutation calls
 `invalidateOwner()`, so the list and the pending count of WP-82 are never stale (fix of LB-APP-059).
 
 `frontend/app/next.config.ts`: `experimental.serverActions.bodySizeLimit` is `'4mb'`. A shrunk photo (long side
 ≤ 2048 px, JPEG quality 0.88) stays well under it; `proxyClientMaxBodySize` keeps its default of 10 MB. The media
-codes `unsupported_mime`, `too_large` and `undecodable` of the contract still name what the server refused.
+codes `unsupported_mime`, `too_large`, `too_big` and `undecodable` of the contract still name what the server
+refused.
 
 Error codes the form reads (WP-80; the client never parses a legacy `detail`): `403 owner_disabled`;
 `409 owner_limit` (`limit` `account` or `phone`, `max`); `409 owner_listing_locked`; `409 owner_phone_required`;
-`409 owner_rejected` (`reason` `agent`, `fraud` or `limit`); `409 owner_photo_limit`; `422 validation_failed` with
+`409 owner_rejected` (`reason` `denied` or `limit`, default 32); `409 owner_photo_limit`; `422 validation_failed` with
 `errors` per field.
 
 ### Telegram: `requestContact` (TMA-034)
@@ -244,7 +257,7 @@ Error codes the form reads (WP-80; the client never parses a legacy `detail`): `
   first launch come first and the form opens after them (default (c)). The once-per-launch mark of WP-36 covers the
   owner targets too: its digest takes the target address instead of the number.
 - `features/shell/LaunchRedirector.tsx`: an owner target is pushed from the feed like a listing, and dropped while
-  `useReference().owner_enabled` is not `true` (DEC-81).
+  `useReference().ownerEnabled` is not `true` (DEC-81).
 - `o_<id>` opens the phone step of that draft (`/owner/<id>/phone`, pushed after `/owner/<id>`), so the owner who
   shared the number in the bot below 6.9 comes back to the same draft (fix of LB-APP-060; the bot's button is WP-88's).
 
@@ -268,8 +281,9 @@ changes for the other callers. The rule that a touch inside a nested sub-page is
 - New `homi` texts, for the product owner to approve: `own.doneTextNoRadar` «Квартира в ленте HOMI.» (radars off),
   `own.photoDeleted` «Фото удалили» (DEV-057), `own.cityChanged` «Район и точку сбросили» (DEV-058),
   `own.disabled` «Сдать квартиру пока нельзя» (DEC-81), `own.photoUnreadable` «Это фото не открылось — выберите
-  другое» (the refused shrink), `own.support` «Написать в поддержку» (DEV-056), and `own.edit.done` «Готово»
-  (DEV-062).
+  другое» (the refused shrink), `own.support` «Написать в поддержку» (DEV-056), `own.edit.done` «Готово»
+  (DEV-062), `own.review.title` and `own.review.text` (the held publish), `own.phoneKept` (the phone step) and
+  `own.landmarkHint` (the landmark field).
 - Texts built from server values (`own.need.*`, the rejection reasons, `phone_error`) are read through `labelFor` of
   `@homi/i18n` with the new label tables `ownerNeed`, `ownerReject` and `phoneError` (WP-82 adds the tables of the
   statuses and the requests); an unknown value reads `fallback.other` and reports once (fix of LB-APP-064). The
@@ -277,16 +291,23 @@ changes for the other callers. The rule that a touch inside a nested sub-page is
 
 ### Cabinet switched off (DEC-81)
 
-`useOwnerEnabled()` (`features/owner/store.ts`) is `useReference().owner_enabled === true`. While it is `false`:
+`useOwnerEnabled()` (`features/owner/store.ts`) is `useReference().ownerEnabled`, a new field of the view of
+`lib/reference/useReference.ts` beside `radarsEnabled` (`owner_enabled === true` of the reference data). While it is
+`false`:
 
 | Place | Behaviour |
 | ----- | --------- |
 | `/owner/new`, `/owner/<id>` and its steps | loaded directly or by a stale link: `useOwnerOffRedirect()` makes one `nav.replace(routes.settings())` once the reference data is there, and nothing of the form is shown; no owner request is sent |
 | `owner_new`, `owner-new`, `?owner=new`, `o_<id>` | `LaunchRedirector` drops the target |
-| `403 owner_disabled` (create, phone request, publish; the reference is cached for about ten minutes) | the toast `own.disabled`, then `closeOwnerForm()` |
+| `403 owner_disabled` (create, every content save — the autosave's `PATCH`, a photo upload, delete or order, the contact mode —, the phone request, publish; the reference is cached for about ten minutes) | the toast `own.disabled`, then `closeOwnerForm()`; a save the toast interrupts stays dirty and is not retried |
 
-The settings group that offers the form is WP-82's and is hidden by the same hook. While the switch is off no server
-holds an owner listing, so the actions that always work (status, answers, delete) are the API's and the bot's.
+The settings group that offers the form is WP-82's and is hidden by the same hook for a user without owner listings.
+Listings that already exist when the switch goes off (staging after WP-89's checks, or production when the switch
+is unset again, WP-89 "Switching the cabinet on") keep every action DEC-81 names: «Мои объявления»
+(`/settings/owner`), «Отклики» and the owner panel (SCR-059) are not closed by the switch (WP-82); only `/owner/new`
+and the form's addresses are, since the server refuses creating, every content edit, the phone request, publish and
+resume while it is off (WP-80). This is the plan's reading of DEC-81, listed for the reviewer: if the developer
+wants the group hidden for everyone, the owner can only act through the bot's answers.
 
 ### Analytics (`03` §3.3, LB-APP-058)
 
@@ -310,15 +331,16 @@ Changed:
 
 - `lib/navigation/routes.ts`, `features/shell/shellVariant.ts`, `features/shell/LaunchRedirector.tsx`,
   `lib/deeplinks/{parse,launch}.ts`, `lib/telegram/{gates,index}.ts`, `lib/telegram/haptics.ts`, `lib/api/server.ts`,
-  `lib/api/bffAllowList.ts`, `lib/analytics/events.ts`, `next.config.ts`.
+  `lib/api/bffAllowList.ts`, `lib/analytics/events.ts`, `lib/reference/useReference.ts` (`ownerEnabled`),
+  `lib/security/csp.ts` (`CSP_PRIVATE_MEDIA_HOSTS`) and `tests/security/csp.test.ts`, `next.config.ts`.
 - `frontend/packages/ui`: `src/hooks/useSwipeBack.ts` (`edgeOnly`), `src/styles/theme.css` (`--z-owner`,
   `--z-owner-bar`), the icons the form needs (house, camera, image-plus, star, trash, shield, locate).
 - `frontend/packages/i18n`: `scripts/import-legacy.mjs`, `messages/legacy/*` (regenerated, never edited by hand),
   `messages/homi/{ru,uz,en}.json`, `src/labels.ts`, `tests/{import,catalogue,labels}.test.ts`.
 - `frontend/packages/testing/src/fakeTelegram.ts` and its test.
 - Shared files, announced in the PR: `frontend/playwright.config.ts` (the tag `@owner-off` joins `@radars-off` in the
-  second run) and `.github/workflows/frontend-e2e.yml` (the first API runs with `OWNER_CABINET_ENABLED: 'true'`, the
-  second keeps it unset).
+  second run), `.github/workflows/frontend-e2e.yml` (the first API runs with `OWNER_CABINET_ENABLED: 'true'`, the
+  second keeps it unset) and `frontend/app/.env.example` (`CSP_PRIVATE_MEDIA_HOSTS`).
 
 ## Steps
 
@@ -332,10 +354,11 @@ Changed:
 6. `features/owner/store.ts`, `normalize.ts`, `useOwnerOffRedirect.ts`; the route files with `OwnerNewRoute` and
    `OwnerFormLayer` (loading, error with retry, limit, the cross, the chunk retry).
 7. The questionnaire: sections, `rules.ts`, `useAutosave.ts`, the footer notes, the highlights, `focus.ts`.
-8. Photos: `shrinkPhoto.ts`, `usePhotos.ts`, the grid and its menu, the undo; `next.config.ts`.
+8. Photos: `shrinkPhoto.ts`, `usePhotos.ts`, the grid and its menu, the undo; `next.config.ts`; the private media
+   host in `img-src` (`CSP_PRIVATE_MEDIA_HOSTS`, `lib/security/csp.ts` and its test).
 9. The picker on GL and on Leaflet with `edgeOnly`; the label; «Найти меня»; `applyPlace.ts` with its toast.
 10. Demand and the usual price.
-11. The phone step, the poll, the old-client path, the rejection state, the waitlist, the support button.
+11. The phone step, the poll, the old-client path, the rejection state, the support button.
 12. The mode step and the preview; publish with every error; the done step and the celebration; «Готово» of an edit.
 13. Launch links and `LaunchRedirector`; the switched-off rule; the events.
 14. Component tests; Playwright specs in both session modes; the `@owner-off` run in the config and the workflow.
@@ -374,7 +397,8 @@ Changed:
   only inside the rectangle (`inUzbekistanBox`); outside it the label is `own.pickNoAddr` at once. «…» while the read
   runs; then the district and the city of the answer by their reference names («Юнусабадский · Ташкент»), else the
   city, else `own.pickNoAddr`. A failed read gives `own.pickNoAddr`. The read sends only the map's centre, rounded to
-  5 decimals; the position of «Найти меня» stays on the page (`useLocate`), and only the centre it leads to is read.
+  3 decimals (about 100 m, enough for a district; default (f)); the position of «Найти меня» stays on the page
+  (`useLocate`), and only the centre it leads to is read. The point saved by «Готово» keeps 5 decimals.
 - «Найти меня» (BR-APP-097, TMA-035): only when `tg.location.available()`; light haptic; denied or failed → warning
   haptic and `own.pickDenied` / `own.pickFailed`; outside the rectangle → `own.pickFarMe`; an accuracy worse than
   100 m → `own.pickRough`; otherwise the "me" dot with its circle and a flight to zoom 17, never zooming out.
@@ -395,9 +419,13 @@ Changed:
 - Title «Сдать квартиру» or «Изменить объявление»; subtitle `own.subtitle` (`homi` override).
 - Sections in this order: the welcome line; the place (the spot preview with the circle of `shown_point` when the
   form's point equals the saved one, with `own.mapNote`; the field «Адрес или ориентир», at most 120 characters,
-  with «Карта» when there is no preview); photos «Фото {n} из {max}»; city chips (only with more than one city) and
-  district chips, which toggle; rooms 1, 2, 3, 4, «5+» and the wide «Комната», with «Площадь» (decimal, a comma
-  works), «Этаж» («5/9» also fills «Этажей») and «Этажей» through `IntInput` of `@homi/ui`; the price «В месяц»
+  with the hint `own.landmarkHint` «Видно всем — без номера дома и квартиры» (default (g)) and «Карта» when there is
+  no preview); photos «Фото {n} из {max}»; city chips (only with more than one city) and district chips, which
+  toggle; rooms 1, 2, 3, 4, «5+» and the wide «Комната», with «Площадь» (decimal, a comma works) and «Этаж» («5/9»
+  also fills «Этажей») through `NumberTextField` of this package (`features/owner/form/NumberTextField.tsx`: a text
+  field with `numberFieldClass` of `@homi/ui` that keeps the text as typed; the decimal and «a/b» parsing are in
+  `rules.ts`), and «Этажей» through `IntInput` of `@homi/ui` (`IntInput` drops every non-digit as it is typed, so
+  «45,5» would become 455 and «5/9» 59); the price «В месяц»
   (digits only, at most 12, grouped, `PriceInput`), the currency «$» / «сум» (USD by default), the usual price,
   renovation chips from `renovations.owner`, furniture «С мебелью» / «Без мебели» (three states); «Кому сдаёте» with
   «Семьям», «Студентам», «Девушкам», «Парням», «Иностранцам» and its hint; pets (three states); the description of
@@ -428,13 +456,19 @@ Changed:
 - A grid in which the first photo carries «Обложка»; a tap opens a mini menu «Сделать обложкой» (from the second
   photo on) and «Удалить фото»; spinner tiles while uploading; the add tile (camera when empty, image-plus otherwise),
   hidden while uploading and at the photo limit; a hidden file input (`accept="image/*"`, `multiple`); an error line;
-  `own.photosTip` with more than one photo. Thumbnails are `thumbUrl()` of `features/feed/images.ts`.
+  `own.photosTip` with more than one photo. Thumbnails are `thumbUrl()` of `features/feed/images.ts`. A draft's
+  photos load from temporary URLs of the private disk (WP-80, WP-84: the API host locally, the S3 endpoint of the
+  private bucket on staging and production), which `img-src` of `lib/security/csp.ts` does not list today (`'self'`,
+  `data:`, `blob:`, the CDN host and the tile hosts): `cspFromEnv` gains the host list `CSP_PRIVATE_MEDIA_HOSTS`,
+  parsed by `parseHosts` like `CSP_TILE_HOSTS`, joined to `img-src` only, and `frontend/app/.env.example` documents
+  it; the production track sets it on staging and production, and the photos of a draft are checked inside Telegram
+  on staging.
 - At most `limits.owner_photos` (10); a larger selection is cut and «Не больше 10 фото.» shows. One batch at a time,
   files one by one: shrunk to a long side of at most 2048 px, JPEG quality 0.88, sent as `file` named `photo.jpg`
   through `uploadOwnerPhoto` with a 90 s limit. A file the browser cannot shrink is not sent: `own.photoUnreadable`
   and the batch goes on (fix of LB-APP-061's client half; the server re-encodes every upload, WP-84).
-  `409 owner_photo_limit` stops the batch; `unsupported_mime`, `too_large`, `undecodable` show their message and the
-  batch goes on.
+  `409 owner_photo_limit` stops the batch; `unsupported_mime`, `too_large`, `too_big`, `undecodable` show their
+  message and the batch goes on.
 - «Сделать обложкой» sends the full order with that id first. «Удалить фото» hides the photo at once and shows
   `own.photoDeleted` with «Вернуть» for 6 s; the delete is sent when the toast ends or the form unmounts, not before;
   «Вернуть» shows it again and sends nothing (DEV-057).
@@ -453,8 +487,13 @@ Changed:
 
 - A card with a shield, `own.phoneText` and `own.phoneHow` (`homi` override: the number goes to HOMI's bot); while
   waiting «Ждём номер от Telegram…»; an inline error for `phone_error` `not_uz` or `not_own`; the denied text; when
-  late, timed out or on an old client the block `own.phoneLate` / `own.phoneOldTg` with «Открыть бот» (`botUrl()`;
-  hidden without `reference.bot.username`). «Поделиться номером» is always enabled; a new tap starts a new attempt.
+  late, timed out or on an old client the block `own.phoneLate` / `own.phoneOldTg` with «Открыть бот»
+  (`botStartUrl("owner_phone")` of `lib/deeplinks/build.ts`, that is `https://t.me/<bot>?start=owner_phone`, the
+  payload WP-88 answers with the share keyboard; hidden when it is `null`, that is without
+  `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, which `brand.botUsername` reads). «Поделиться номером» is always enabled; a
+  new tap starts a new attempt. Above it one line, `own.phoneKept` «Номер хранится в HOMI и виден только тем, кому вы
+  его дадите.» with «Политика конфиденциальности» linked to `brand.links.privacy` of the locale (the link hidden while
+  it is `null`; default (g)).
 - A tap: medium haptic, `requestOwnerPhone({ id })` (opens the window of default 6), then `tg.requestContact()`.
   `null` (below 6.9) → the old-client text, and polling starts anyway; `false` → the denied text; `true` → polling.
 - Polling (`usePhonePoll`): `GET /owner/listings/{id}` at once, then every 1.5 s without overlap, for up to 90 s, and
@@ -463,15 +502,20 @@ Changed:
   state) or on `phone_error`; a `phone_error` equal to the one shown before the tap is ignored for 8 s as stale. A
   failed poll retries on the next tick. `409 owner_phone_required` from publish leads here.
 
-### Rejection and waitlist (SCR-054, BR-APP-085, DEV-056, LB-APP-071)
+### Rejection (SCR-054, BR-APP-085, DEV-056)
 
-- «Не получилось» and one paragraph by `reject_reason`: `agent` (the default), `fraud` or `limit`, the legacy texts.
-  `agent` adds «Сообщите, когда откроете вход для риелторов»; `limit` adds «Мои объявления».
+- «Не получилось» and one paragraph by `reject_reason` (default 32): `denied` (the operators' deny list) with legacy's
+  `fraud` text, and `limit` with legacy's text and «Мои объявления»; an unknown value reads as `denied`. HOMI's
+  automatic realtor check and the report votes never reject: they hold the listing for the operators, who release,
+  withdraw or deny it (default 26, WP-84), and the form then shows «На проверке» (section "Done"), never why — no
+  screen of the form repeats legacy's `agent` text «…так бывает у риелторов» (WP-70 row 45).
 - DEV-056: the support button `own.support` (hidden without a support bot, DEC-56) on every reason. `phone_error`
   (`not_uz`, `not_own`) is an inline error of the phone step and never this state.
-- The waitlist: a tap (light haptic) sends `joinOwnerWaitlist()`; success → «Хорошо, напишем в бот, когда откроем.»;
-  failure → error haptic, the button stays. The line shows whenever `me.owner.waitlisted` is `true`, also on the next
-  visit (fix of LB-APP-071).
+- The realtor waitlist that legacy offered under its `agent` text («Сообщите, когда откроете вход для риелторов»,
+  API-050, LB-APP-071) is not offered: HOMI rejects nobody as a realtor (default 26), and offering it after `denied`
+  or `limit` would tell the owner what HOMI suspects. The form builds no waitlist action; `PUT /owner/waitlist` and
+  `me.owner.waitlisted` stay in the contract (WP-80), and LB-APP-071 has nothing to fix here (*integrator default,
+  listed for the reviewer*).
 - `409 owner_rejected` from publish re-reads the listing; the server's rejected copy is used, else the listing is
   marked rejected locally with the answer's `reason`; then this state shows. Back returns to the questionnaire.
 
@@ -490,7 +534,9 @@ Changed:
 
 - One at a time; first a flush (failure: back to the questionnaire with the save-failed text).
 - A draft: `publishOwnerListing({ id })`. Success → a celebration (BR-APP-096), `invalidateOwner()`, then the done step
-  through `closeThen`. `409 owner_limit` → `own.limitText` and «Мои объявления»; `409 owner_listing_locked` →
+  through `closeThen`; an answer with `status: paused`, `held: true` and a `hold_reason` (the checks held it for the
+  operators, default 26) has no celebration and opens the done step in its «На проверке» form; the client never
+  shows `hold_reason`. `409 owner_limit` → `own.limitText` and «Мои объявления»; `409 owner_listing_locked` →
   `own.notEditable` and «Мои объявления»; `409 owner_rejected` → the rejection state; `409 owner_phone_required` → the
   phone step; `422 validation_failed` → the questionnaire with the highlights (the save-failed text when the client
   sees nothing missing); offline → `own.publishOffline`; anything else → `own.publishFailed`.
@@ -505,6 +551,9 @@ Changed:
   still. Then `own.doneText` (or `own.doneTextNoRadar` with radars off), the demand line when `count > 0`, and
   `own.doneNext` «Отклики придут в бот. Ответить можно там или в «Мои объявления».»
 - An edit: «Сохранили» and «Объявление обновлено.»; confetti only after a mascot tap.
+- A held publish (default 26, default (e)): no confetti and no haptic pattern; the title `own.review.title` «На
+  проверке» and `own.review.text` «Объявление проверяем — пока его не видно в ленте. Как только проверим, оно
+  появится само.»; no demand line, no reason and nothing about realtors (WP-70 row 45).
 - Footer «Мои объявления» and «Готово»; «Готово», Back and the swipe close the form.
 
 ### Defects fixed here
@@ -523,7 +572,6 @@ Changed:
 | 10 | LB-APP-065 | no way forward after a rejection | DEV-056: the support button on the rejection screen (the card: WP-82) |
 | 11 | LB-APP-067 | delete without undo | DEV-057 |
 | 12 | LB-APP-068 | silent loss of place data | DEV-058 |
-| 13 | LB-APP-071 | the waitlist not remembered | `me.owner.waitlisted` |
 
 ## Tests
 
@@ -557,23 +605,29 @@ Changed:
 **Component (Vitest + Testing Library).** `OwnerFormLayer`: loading, error with retry, the limit state, the cross
 without the SDK, the switched-off redirect. `Questionnaire`: the welcome line, the highlights, the footer notes in
 their order, the `focus` scroll. `PlacePicker` (engines mocked): the label states, «Готово» outside, the edge-only
-swipe. `PhoneStep` and `RejectionState`: each reason, the support button with and without a support bot, the waitlist
-line from `me.owner.waitlisted`. `ModeStep`: `request` preselected, the revert on error, «Опубликовать» and «Готово».
-`DoneStep`: the radar sentence with radars on and off, the mascot throttles.
+swipe. `PhoneStep` and `RejectionState`: each reason, an unknown reason read as `denied`, the support button with and
+without a support bot, no waitlist and no realtor text; the old-client button opens
+`https://t.me/<bot>?start=owner_phone` and is absent without a bot username; the line `own.phoneKept` with and without
+a privacy link. `ModeStep`: `request` preselected, the revert on error, «Опубликовать» and «Готово». `DoneStep`: the
+radar sentence with radars on and off, the mascot throttles; a publish answered `held: true` shows «На проверке»
+without confetti or any reason.
 
 **End to end (Playwright, fake Telegram, stubs; cookie mode and header mode).** The stub API runs with
 `OWNER_CABINET_ENABLED=true`; scenarios through the cookie `homi_stub_scenario`.
 
-- `owner-form.spec.ts`: a new draft → step «where» → «Готово» → the questionnaire with the place filled → photos →
-  «Дальше» → phone (scenario `phone_set`) → mode with «Через HOMI» selected → «Опубликовать» → the done step → Back
-  closes the form; a second opening answers the same draft (scenario `owner_returning` shows «С возвращением!»);
+- `owner-form.spec.ts` (starts in `owner_empty`, where «Сдать квартиру» reads «Бесплатно» and opens the form): a new
+  draft → step «where» → «Готово» → the questionnaire with the place filled → photos → «Дальше» → phone (scenario
+  `phone_set`) → mode with «Через HOMI» selected → «Опубликовать» → the done step → Back closes the form; in the
+  default scenario an opening answers the untouched draft of the fixtures (`200`, DEV-054); `owner_returning` answers
+  a new draft and shows «С возвращением!» (WP-80's scenarios);
   `owner_limit` → the limit state; `publish_missing` → the highlights; `listing_locked` → «Мои объявления»; the
   eleventh photo → «Не больше 10 фото.»; an edit of the active fixture listing → «Готово» → «Сохранили».
 - `owner-picker.spec.ts`: the picker on GL and with `?map=leaflet`; the label after a stop; «Указать вручную»;
   the replace toast and «Вернуть».
-- `owner-phone.spec.ts`: `phone_not_uz` and `phone_not_own` inline; `rejected_agent` with the waitlist,
-  `rejected_fraud`, `rejected_limit` with «Мои объявления»; the old-client path at version 6.8; a launch with
-  `startapp=o_<id>` opens the phone step; a launch with `startapp=owner_new` opens the form after the city picker.
+- `owner-phone.spec.ts`: `phone_not_uz` and `phone_not_own` inline; `rejected_denied`, `rejected_limit` with «Мои
+  объявления»; `held_check` → «На проверке» after «Опубликовать», no confetti; the old-client path at version 6.8 opens
+  `?start=owner_phone`; a launch with `startapp=o_<id>` opens the phone step; a launch with `startapp=owner_new` opens
+  the form after the city picker.
 - `owner-off.spec.ts` (`@owner-off`, the second API with the key unset): `/owner/new` returns to Settings; an
   `owner_new` launch opens the feed; the scenario `owner_disabled` on the first API closes the form with the toast.
 
@@ -584,8 +638,8 @@ production keep the cabinet switched off until WP-89 (DEC-81); these lines run o
 has `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and once more inside Telegram on staging when
 WP-89 switches the cabinet on there with test accounts (default 22).
 
-- [ ] With the cabinet off: no address of the form opens, an `owner_new` launch opens the feed, and no owner request
-      is sent. Seen on staging in three languages.
+- [ ] With the cabinet off: no address of the form opens, an `owner_new` launch opens the feed, and the form sends no
+      owner request. Seen on staging in three languages.
 - [ ] «Сдать квартиру» opens the form; a second opening without a saved field answers the same draft (DEV-054).
 - [ ] Step «where»: the pin, the label «район · город», «Найти меня» only where a location can be asked, «Готово»
       fills city and district, the replace toast offers «Вернуть»; Back and the edge swipe close the whole form.
@@ -602,7 +656,9 @@ WP-89 switches the cabinet on there with test accounts (default 22).
 - [ ] The demand line and the usual price show only with their data, and no radar sentence while radars are off.
 - [ ] Phone: «Поделиться номером» asks Telegram; yes → the mode step within seconds; no → the denied text; an old
       client → «Открыть бот»; the late hint after 20 s; `not_uz` and `not_own` inline.
-- [ ] Each rejection reason with its text and the support button; the waitlist confirmation stays on the next visit.
+- [ ] Each rejection reason (`denied`, `limit`) with its text and the support button; no screen mentions realtors
+      and none offers a waitlist.
+- [ ] A publish that the checks hold ends on «На проверке», without confetti and without a reason.
 - [ ] The mode step opens with «Через HOMI» selected; the preview matches the questionnaire; «Ваш номер» shows the
       owner's own number.
 - [ ] «Опубликовать» → confetti, the haptics, the done text; the mascot repeats them; Back from the done step closes

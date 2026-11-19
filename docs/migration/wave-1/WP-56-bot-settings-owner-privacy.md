@@ -295,8 +295,13 @@ Pest `todo` that names it.
 - No promise is cut for length. The legal basis and the operator's name and address are added by WP-70.
 - Since the owner cabinet the text also rewords row 1, states HOMI's own 90 days of row 9 for its owner listings,
   says what the cabinet keeps (the number in plain text and why, the photos while the listing is shown or paused, the
-  form until deletion, the requests with the seeker's first name) and names the relay of a request to the operator
-  (DEC-71). It stays "pending legal review" like the rest (*added by the owner-cabinet plan*).
+  form until deletion or 180 days after a draft was last changed, the requests with the seeker's first name, whose
+  texts go 90 days after the request closed) and names the relay of a request to the operator
+  (DEC-71). It also says how long erased cabinet data lingers outside the database: up to 21 days in the database
+  backups (14 days and 7 of noncurrent versions, `docs/infrastructure/backup-recovery.md`), up to 30 days for deleted
+  photos in the media storage and up to an hour in the edge cache (`docs/infrastructure/cdn.md`), and that the bot's
+  sent messages about erased data are edited to remove it, not deleted (WP-89). It stays "pending legal review" like
+  the rest (*added by the owner-cabinet plan*).
 
 ### «Удалить мои данные» (BOT-080)
 

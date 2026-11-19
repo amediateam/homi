@@ -69,9 +69,9 @@ three is a row here.
 | 1 | The owner cabinet «Сдать квартиру» of release `index-CBlEKxdL.js` (publishing a flat, photos, «Мои объявления», requests): in which wave of HOMI? | «Wave 1» | DEC-69 | Not the recommended option (Wave 2). New packages in the Mini App, the API (about sixteen native methods) and the bot |
 | 2 | Where do HOMI owners' listings live in Wave 1, and where are they shown? | «Свои таблицы (Recommended)» | DEC-70 | Native tables, merged into the feed beside the listings read from legacy |
 | 3 | Legacy's feed now holds listings of its own owners in `gate` mode (no phone; the seeker sends a request). What does HOMI do with them? | «Пересылать отклик в kvadro» | DEC-71 | Not the recommended option (ask the operator, hide them meanwhile). The same request form as for HOMI's owners; the operator is asked in parallel |
-| 4 | How is the owner's phone number stored? «Дать номер» and «Показывать номер» need the number; the plan (DEV-011, WP-56) keeps owners' numbers only as a hash | «Номер открыто, как в kvadro» | DEC-72 | Not the recommended option (encrypted in its own table). `/owner` was not asked and keeps its hash |
+| 4 | How is the owner's phone number stored? «Дать номер» and «Показывать номер» need the number; the plan (DEV-011, WP-56) keeps owners' numbers only as a hash | «Номер открыто, как в kvadro» | DEC-72 | Not the recommended option (encrypted in its own table). `/owner` was named only in the option not chosen; it keeps its hash |
 | 5 | When is a HOMI owner's listing checked? Legacy checks only the phone before publishing | «Постмодерация (Recommended)» | DEC-73 | Automatic checks, then active at once; each publication reaches the operators' chat with «Снять» |
-| 6 | The cabinet's fixes of legacy behaviour (then numbered DEV-053 … DEV-060) go behind flags that are off by DEC-36. What to do? | «Включить решением (Recommended)» | DEC-74 | Now DEV-054 … DEV-061 |
+| 6 | The cabinet's fixes of legacy behaviour (then numbered DEV-053 … DEV-060) go behind flags that are off by DEC-36. What to do? | «Включить решением (Recommended)» | DEC-74 | Now DEV-054 … DEV-061. The question's example «повторный отклик после отказа» is DEV-060, which allows one new request after no answer (`expired`), not after a decline; the reviewer may want the developer to confirm this reading |
 | 7 | What does a legacy owner listing that hides its number show while the relay does not work, or if the operator refuses? | «Показывать с плашкой (Recommended)» | DEC-75 | No contact action, a neutral bar; the product owner approves the words |
 | 8 | What does the owner see about a HOMI seeker, and what goes to the operator with a relayed request? | «Имя из Telegram, хранится с откликом (Recommended)» | DEC-76 | The first name from the signed launch data, kept with the request and erased with it; the sheet says so |
 | 9 | What does «Проверенный хозяин» promise on a HOMI owner listing, and how is a realtor's number recognised? | «Своя проверка (Recommended)» | DEC-77 | The per-phone limit, the author keys HOMI saw, HOMI's realtor votes; the info sheet reworded |
@@ -87,6 +87,17 @@ The question of answer 14, as asked (it fixes what DEC-81 covers): «Кабин�
 отметить «Сдано» и ответить на отклик можно всегда. Включает production track после бота и юридических ворот
 (Q-SEC-021). Так?»
 
+The plan's reading of DEC-81, listed for the reviewer (none of it is the developer's answer): (a) while the switch is
+off, a user without owner listings sees no group «Сдаю квартиру» and no entry to the form; a user whose `GET /me`
+says `owner.has_listings` sees the group with the «Мои объявления» row only and reaches «Мои объявления», «Отклики»
+and the owner panel, so that pausing, «Сдано», «Снять» and the answers work as the answer says — if the developer
+wants the group hidden for everyone, the owner can only act through the bot's answers (WP-81, WP-82); (b) the switch
+freezes content and leaves every way down open: refused with `403 owner_disabled` are creating a draft, the phone
+request, publish, resume (`PUT …/status` with `active`) and every content edit (`PATCH`, photos, the contact mode);
+allowed are all reads, `PUT …/status` with `paused`, `rented` or `removed`, deleting a draft or a rejected listing,
+the answers, the waitlist, the place lookup and demand; listings that exist when the switch goes off stay in the feed
+until their owner takes them down (WP-80).
+
 Technical points that were not asked are defaults of the integrator, written into the specifications WP-80 … WP-89
 and listed in the PR for the reviewer; none is a decision of the developer:
 
@@ -97,20 +108,24 @@ and listed in the PR for the reviewer; none is a decision of the developer:
 3. `contact.mode: hidden` for a legacy listing placed by its owner whose number is hidden while the relay is off
    (DEC-75; WP-80, WP-42, WP-87).
 4. Native numbers start at 10 000 000, from one PostgreSQL sequence, given at the first publish (WP-80, WP-84).
-5. The shown point is a stable offset of at most 250 m, from an HMAC with `SHOWN_POINT_SECRET` (WP-84).
+5. The shown point is derived from the owner and the 100 m grid cell of the true point with `SHOWN_POINT_SECRET`,
+   50 … 420 m from the cell's centre, at most 491 m from the true point and always inside the 500 m circle (WP-84;
+   item 29).
 6. The phone window: for ten minutes after `phone-request` an own `+998` contact shared with the bot becomes the
    draft's number; outside it a contact goes to `/owner` (WP-84, WP-88).
 7. The first name of DEC-76 comes from the current launch's `initData`, checked by WP-40's verifier; only
    `first_name` is kept (WP-85).
-8. The realtor check of DEC-77: `agent` for an author key seen on three or more flats or marked by HOMI's votes,
-   `fraud` from the operators' deny list, `limit` at two listings per phone (WP-84).
+8. The realtor check of DEC-77 at publish: an author key seen on three or more flats or marked by HOMI's votes holds
+   the listing for the operators (item 26); the operators' deny list rejects it (`denied`, item 32); a third listing
+   on one phone is refused when the phone is confirmed (`limit`) (WP-84).
 9. Limits: two listings per account and two per phone, drafts not counted, ten photos (WP-84).
 10. The operators' notice of DEC-73 goes from HOMI's main bot to `OWNER_MODERATOR_IDS`; «Снять» sets `held`; the
     console commands `owner:hold`, `owner:release`, `owner:withdraw`, `owner:deny-phone` (WP-84, WP-89).
 11. Harvested medians (DEC-78) come from the `comparison` block of legacy cards, ignored after 60 days; the usual
     price is the median ± 10 % (WP-84, WP-86).
 12. An owner listing's number, texts and photos are erased 90 days after it left the feed for good; requests with the
-    listing or with either user (WP-84, WP-85).
+    listing or with either user (WP-84, WP-85). Since the security review: a request's texts 90 days after the request
+    closed, and an untouched draft after 180 days (WP-84, WP-85).
 13. Requests expire after 48 h; the soft refusal follows the 10-minute undo window; «Оказался риелтором» stays open
     for 7 days after `given` (WP-85).
 14. The relay has its own server switch `LEGACY_RELAY_ENABLED`, off by default (WP-87).
@@ -122,11 +137,50 @@ and listed in the PR for the reviewer; none is a decision of the developer:
 19. Publishing a `paused` listing keeps it paused; a `rejected` listing is published again only after the operators
     release it (WP-84).
 20. No relisting from «История», as in legacy (WP-82, WP-84).
-21. A HOMI realtor mark hides a legacy «Проверенный хозяин»; HOMI's reports are not passed to legacy (WP-42, WP-44,
-    WP-83).
+21. A HOMI realtor mark hides a legacy «Проверенный хозяин»; HOMI's reports are not passed to legacy (WP-42, WP-83;
+    DEC-48).
 22. DEC-81's switch goes on on staging for the checks of WP-89 with test accounts before the legal gate closes, and
     on production only after the gates of `25` §5. Answer 14 named only «после бота и юридических ворот», so the
     staging step is a reading, not the answer (WP-89).
+
+Items 23 … 32 come from the review of this plan (the consistency, reference and security reviews); they are integrator
+defaults as well, listed for the reviewer:
+
+23. A disclosure on a `given` request is counted against the quota of DEC-19 and never refused by it (WP-85, WP-83,
+    WP-87, WP-43).
+24. A native listing's `author` is `{"kind": "phone", "label": «Хозяин», "count": <the owner's listings in the
+    feed>}`, without a digit of the number, and its author key is the owner's phone author key (`phone:` and the HMAC
+    of WP-42's `AuthorKey` with `AUTHOR_KEY_SECRET`): «Скрыть автора» on a native listing also hides that person's
+    legacy listings with the same number, HOMI's realtor votes and DEC-77's check use the same key, and WP-26 offers
+    «Это риелтор» there unchanged. No `kind` value is added (WP-80, WP-86).
+25. Besides every publication (the first and each one after a released hold), a change of the photos or the
+    description of an `active` listing is announced to the operators with «Снять», at most once per listing per hour
+    (`OwnerListingEdited`; WP-84, WP-89).
+26. A positive automatic realtor check and a vote threshold on a native listing never reject or withdraw for good:
+    they set `held` with `hold_reason` (`check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`; an operator's
+    «Снять» or `owner:hold` is `moderator`) and record the evidence in `owner_check_results`, and the operators decide
+    (`owner:release`, `owner:withdraw`, `owner:deny-phone`). A publish that the checks hold answers the listing with
+    `status: paused`, `held: true` and `hold_reason`; the owner sees «На проверке» and is never told that he was
+    marked (WP-84, WP-89, WP-81, WP-82; `16` SEC-REQ-045, WP-70 row 45).
+27. A published listing's photos are public copies at `owner/<token>/<n>.jpg?v=<version>` and
+    `owner/<token>/<n>.s.jpg?v=<version>`, `<token>` 20 random digits, new for every version, and no listing number in
+    the path; a rewrite (order, delete, edit) writes a new version path, since the CDN ignores query strings; the
+    copies of a `held`, `withdrawn`, `rented` or `removed` listing are deleted at once (WP-84, WP-86, WP-89).
+28. The leak protections — Telescope hiding the phone, `init_data` and the contact fields, a masking cast of the
+    number, an exception reporter that drops the query bindings and messages that carry it — ship with the code that
+    first stores the phone (WP-84; the bot's side WP-88), not with WP-70; the staging switch-on of item 22 requires
+    them and requires that Telescope records none of the cabinet's requests and jobs with their values (`25` §5, gate
+    5). Whether `TELESCOPE_RECORD_ALL` changes on the servers is a question for the production track.
+29. The shown point of item 5 replaces the first plan's stable offset of at most 250 m keyed by the listing and its
+    exact point: keyed by the owner and the grid cell, a move inside the cell, a second listing of the same flat or
+    another account's draft reveals nothing more (WP-84, WP-86, `16` SEC-REQ-052).
+30. `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft or publish — the staging run
+    with staff accounts; blank on production (WP-80, WP-84).
+31. `OWNER_LISTINGS_PUBLIC` (`config('owner.public')`, default `true`): `false` takes every native listing out of the
+    feed, the map and the radars at once, without touching the owners' cabinet (WP-80, WP-86).
+32. `reject_reason` is `denied` (the operators' deny list; a neutral word in place of legacy's `fraud`) or `limit`;
+    there is no `agent` reject reason (item 26), so the form offers no realtor waitlist and LB-APP-071 has nothing to
+    fix in the Mini App; `PUT /owner/waitlist` stays in the contract (WP-80, WP-81, WP-82).
 
 ## Order of work after the third release
 

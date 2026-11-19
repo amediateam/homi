@@ -32,7 +32,7 @@ approved deviations DEV-056 (the card's half) and DEV-059.
   listing's contact bar, with its skeleton and its fallback bar (fix of LB-APP-070).
 - The extension of WP-81's owner store to the lists and the requests, and the pending count from `GET /me`.
 - The red dot, «Пришёл первый отклик!» (DEV-059) and the card tip with the synced key `homi-req-tip`.
-- The nested sub-page rule of `useSwipeBack`.
+- The nested sub-page rule of `useSwipeBack` and its 300 ms reset of the inline styles after a closing swipe.
 - The events `owner_attention`, `owner_limit_sheet`, `owner_hint_opened`; the screen names `owner/mine` and
   `owner/listing`.
 
@@ -49,28 +49,39 @@ approved deviations DEV-056 (the card's half) and DEV-059.
 ## Decisions that bind this package
 
 - DEC-69: functional parity (DEC-46) for SCR-049 and SCR-057 … SCR-060; the checklist below is the proof.
-- DEC-73: post-moderation. A `held` listing (the operators' «Снять») and a `withdrawn` one (report votes) show their
-  status and note and offer no resume; their footer is «Поддержка». `active` is never offered for them.
+- DEC-73: post-moderation. A `held` listing (the operators' «Снять», or the checks and report votes waiting for the
+  operators, WP-84) and a `withdrawn` one (taken down for good by the operators) show their status and note and
+  offer no resume; their footer is «Поддержка». `active` is never offered for them. Nothing on these screens says
+  that a listing or a number was marked as a realtor's (WP-70 row 45).
 - DEC-74: DEV-056 (the reason, the support row and «Удалить» on a rejected card) and DEV-059 (the tip opens the
   requests) are on without a flag.
 - DEC-76: «Отклики» shows the seeker's Telegram first name as the server stores it with the request, or «Без имени»;
   nothing else of the seeker.
 - DEC-78: the market delta of a card (`stats.price_delta`, `stats.price_tone`) shows only where the server has a
   harvested median; its absence is not an error.
-- DEC-81: while `GET /reference` says `owner_enabled: false`, the group «Сдаю квартиру» is not rendered (the
-  developer's words: «в настройках нет группы «Сдаю квартиру»»); no owner list is requested. While the switch is off
-  no server holds an owner listing, so status changes and answers, which always work, are the API's and the bot's.
+- DEC-81: while `GET /reference` says `owner_enabled: false`, the group «Сдаю квартиру» is not rendered and no owner
+  list is requested for a user without listings (the developer's words: «в настройках нет группы «Сдаю квартиру»»).
+  A user whose `GET /me` says `owner.has_listings` sees the group with the «Мои объявления» row only (no «Сдать
+  квартиру») and reaches «Мои объявления» (also by the address `/settings/owner`, which the switch does not close),
+  «Отклики» and the owner panel of his own listing, so pausing, «Сдано», «Снять» and the answers work as DEC-81
+  says («Снять, поставить на паузу, отметить «Сдано» и ответить на отклик можно всегда»). What opens the form or
+  puts a listing back into the feed — «Продолжить», «Изменить», «Вернуть», «Сдать ещё одну», the fill hints — is
+  not offered while the switch is off, since the server refuses it (WP-80). *The plan's reading of DEC-81, listed for
+  the reviewer: if the developer wants the group hidden for everyone, the owner can only act through the bot's
+  answers.*
 - DEC-56: «Поддержка» and the support row open HOMI's support bot (`supportUrl`) and are hidden while
   `reference.bot.support_username` is `null`.
 - DEC-72: no list, card or panel shows the owner's number; only the form of WP-81 does.
 - *Integrator defaults, listed for the reviewer:* default 9 (two listings per account and per phone; `max` and
   `can_add` from `GET /owner/listings`), default 13 (the request lifecycle: the undo window of ten minutes, «Оказался
-  риелтором» for seven days after `given`, `agent` shown to the seeker as `declined`), default 20 (no relisting from
-  «История»), default 22 (the checks inside Telegram on staging run when WP-89 switches the cabinet on there). New in
-  this specification: (a) `GET /owner/listings` is read only for a user whose `GET /me` says `owner.has_listings`,
-  and the pending count is re-read on a return to the app only for such a user; (b) «Пришёл первый отклик!» opens
-  «Мои объявления» scrolled to the first listing with pending requests, which carries the card tip (the reading of
-  DEV-059's «on the listing with pending requests»); (c) the request tip's key is HOMI's `homi-req-tip`.
+  риелтором» for seven days after `given`; as in legacy, `agent` reaches the seeker as `declined`, BR-APP-098),
+  default 20 (no relisting from «История»), default 22 (the checks inside Telegram on staging run when WP-89 switches
+  the cabinet on there). New in this specification: (a) `GET /owner/listings` is read only for a user whose `GET /me`
+  says `owner.has_listings`, and the pending count is re-read on a return to the app only for such a user; (b)
+  «Пришёл первый отклик!» opens «Мои объявления» scrolled to the first listing with pending requests, which carries
+  the card tip (the reading of DEV-059's «on the listing with pending requests»); (c) the request tip's key is
+  HOMI's `homi-req-tip`; (d) «Мои объявления» of the limit sheet goes back, then pushes the list (section "Limit
+  sheet").
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` and `intercepting-routes.md` (the
 sheet `/owner/limit`), `02-guides/preserving-ui-state.md` (the sub-page kept mounted under its child) in
@@ -123,24 +134,26 @@ Reads: `serverApi().ownerListingRequests(id, query?)` → `GET /owner/listings/{
 ### The settings group (SCR-032)
 
 `SettingsScreen` of WP-31 renders the slot `ownerGroup` before «Оформление» (WP-31 "Settings screen", the note
-above the groups table). `settings/layout.tsx` passes `OwnerGroup` into it; `OwnerGroup` renders nothing while
-`useOwnerEnabled()` of WP-81 is `false`.
+above the groups table). `settings/layout.tsx` passes `OwnerGroup` into it. While `useOwnerEnabled()` of WP-81 is
+`false`, `OwnerGroup` renders nothing for a user without `owner.has_listings`, and only the «Мои объявления» row for
+one with listings (DEC-81, the reading above).
 
 | Row | Value | Tap |
 | --- | ----- | --- |
-| «Сдать квартиру» (`own.title`, house icon) | «Бесплатно» (`own.free`), or «{n} из {max}» (`own.limitValue`, both numbers `max`) when `can_add` is `false` | light haptic; `routes.ownerLimit({ where: "settings" })` when `can_add` is `false`, else `routes.ownerNew()` |
-| «Мои объявления» (`own.mine`, list-checks icon), only when `owner.has_listings` | the first that applies: «ждут ответа: N» (`own.pendingShort`) when `owner.pending > 0`; the number of `active` and `paused` listings that are neither `withdrawn` nor `held`; «Черновик» (`own.draftShort`) when a draft exists; else empty. The row's red counter shows `owner.pending` (a `count` prop that this package adds to WP-31's row if it has none) | light haptic; `routes.ownerListings()` |
+| «Сдать квартиру» (`own.title`, house icon), only while the cabinet is on | «Бесплатно» (`own.free`), or «{n} из {max}» (`own.limitValue`, both numbers `max`) when `can_add` is `false` | light haptic; `routes.ownerLimit({ where: "settings" })` when `can_add` is `false`, else `routes.ownerNew()` |
+| «Мои объявления» (`own.mine`, list-checks icon, `ListChecks` of `@homi/ui`), only when `owner.has_listings` | the first that applies: «ждут ответа: N» (`own.pendingShort`) when `owner.pending > 0`; the number of `active` and `paused` listings that are neither `withdrawn` nor `held`; «Черновик» (`own.draftShort`) when a draft exists; else empty. The row's red counter shows `owner.pending` (a `count` prop that this package adds to WP-31's row if it has none) | light haptic; `routes.ownerListings()` |
 
 - `GET /owner/listings` is read only when `owner.has_listings` (default (a)); while it loads, and after it failed,
-  the group shows only «Сдать квартиру» with «Бесплатно» and the limit is not checked; errors are silent.
+  the group shows only «Сдать квартиру» with «Бесплатно» (with the cabinet off: only «Мои объявления») and the limit
+  is not checked; errors are silent.
 - The list is read again after every cabinet mutation (`invalidateOwner()`), so closing «Мои объявления» finds the
   group current without a read of its own.
 
 ### Pending count and the store (BR-APP-091, LB-APP-059, LB-APP-066)
 
-- The count is `owner.pending` of `GET /me`, which the session holds (`SessionState.me`, `lib/session/bootstrap.ts`).
-  If WP-80's contract change left `Me` and `ME_KEYS` of `lib/session/types.ts` without `owner`, this package adds it.
-  `GET /owner/pending` has no v1 method (WP-80).
+- The count is `owner.pending` of `GET /me`, which the session holds (`SessionState.me`, `lib/session/bootstrap.ts`;
+  `Me.owner` and `ME_KEYS` of `lib/session/types.ts` come with WP-80). `GET /owner/pending` has no v1 method
+  (WP-80).
 - It is re-read by `refresh()` of the session after every cabinet mutation (status, delete, answer, publish — through
   `invalidateOwner()`, also on the panel, fix of LB-APP-059) and on `tg.onVisible` for a user with
   `owner.has_listings` (default (a); legacy reads it for everyone, LB-APP-066). Concurrent re-reads share one request.
@@ -180,9 +193,9 @@ Changed:
   tip), `features/listing/{ListingScreen,ListingTitleRow}.tsx`, `features/listing/cta/ListingCtaBar.tsx` (the footer
   swap), `features/listing/sections/AuthorSection.tsx` (no response time for the user's own listing).
 - `lib/navigation/routes.ts`, `features/shell/shellVariant.ts`, `lib/api/{server,bffAllowList}.ts`,
-  `lib/actions/owner.ts`, `lib/analytics/events.ts`, `lib/storage.ts` (`homi-req-tip`, synced),
-  `lib/session/types.ts` (only if WP-80 did not add `owner`).
-- `frontend/packages/ui/src/hooks/useSwipeBack.ts` (the nested rule) and its test.
+  `lib/actions/owner.ts`, `lib/analytics/events.ts`, `lib/storage.ts` (`homi-req-tip`, synced).
+- `frontend/packages/ui/src/hooks/useSwipeBack.ts` (the nested rule and the 300 ms reset of the inline styles after a
+  closing swipe) and its test; `frontend/packages/ui/src/icons/index.ts` (`ListChecks`).
 - `frontend/packages/i18n`: `src/labels.ts` (the tables `ownerStatus`, `requestStatus`, `requestWho`, `ownerAnswer`),
   `messages/homi/{ru,uz,en}.json` (the overrides and texts of "Behaviour to reproduce"), the catalogue tests.
 
@@ -198,7 +211,7 @@ Changed:
    (DEV-056), «Сдать ещё одну квартиру», the foot line, the empty texts.
 7. «Отклики» in both frames: cards, answers, reasons, undo, `request_answer_closed`, paging, the foot line.
 8. The panel, its footer and `MineBar`; the screen changes of `owner.mine`; the fill hints with `owner_hint_opened`.
-9. The nested sub-page rule of `useSwipeBack`.
+9. The nested sub-page rule of `useSwipeBack` and the 300 ms reset of its inline styles after a closing swipe.
 10. The signals: the dot, the tab tip, the card tip, `homi-req-tip`, `owner_attention`.
 11. The label tables, the `homi` texts, the screen names.
 12. Component tests; Playwright specs in both session modes; the checklist in three locales and two themes on a
@@ -211,7 +224,10 @@ Changed:
 - A compact bottom sheet: the title `own.limitSheetTitle` with `n` and `max` both `max` («Сдаются 2 из 2 квартир»),
   the text `own.limitSheetText`, one button: «Мои объявления» (primary) with `where=settings`, «Понятно»
   (`owner.info.ok`) with `where=mine`. The button gives a light haptic; the backdrop, a drag on the handle and Back
-  also close it. «Мои объявления» closes the sheet and pushes `routes.ownerListings()` (`closeThen`).
+  also close it. «Мои объявления» closes the sheet, then pushes `routes.ownerListings()` (`backBy(1)` of
+  `lib/navigation/history.ts`, then `nav.push`; `nav.replace` when no step was taken, a direct load), so Back from the
+  list returns to Settings (*integrator default,
+  listed for the reviewer*: legacy's history here is not known, `03` SCR-049; `closeThen` would replace Settings).
 - `owner_limit_sheet {where}` on every mount.
 
 ### «Мои объявления» (SCR-057, BR-APP-088, BR-APP-094, BR-APP-095)
@@ -224,8 +240,11 @@ Changed:
 - A card: the cover photo with a glass status chip; a red chip «{n} новых откликов» (`own.v.newRequests`) when requests
   wait; the price with «/мес» and the delta badge (DEC-78); «rooms · district», falling back to the landmark, then the
   city; for a non-draft the stats line «N получили по радару · N открыли · N в избранном» (the last only above 0);
-  the note `own.withdrawnNote` or `own.held`; the actions.
-- The status chip (BR-APP-094): `withdrawn` → «Снято по жалобам»; another status than `active` → its label from the
+  the note `own.withdrawnNote`, or for a held listing `own.review.text` of WP-81 in place of legacy's `own.held`; the
+  actions.
+- The status chip (BR-APP-094): `withdrawn` → «Снято по жалобам»; `held` → «На проверке» (`own.review.title` of
+  WP-81) whatever its `hold_reason`, which the client never shows (default 26, WP-70 row 45; legacy showed
+  «На паузе» with its `own.held` note); another status than `active` → its label from the
   table `ownerStatus` («Черновик», «На паузе», «Сдано», «Снято», «Не принято»), an unknown one → `fallback.other`
   (fix of LB-APP-064); `active` → «Сдаётся · с сегодня» within the first full day after publication, else «Сдаётся ·
   N дней», counted in Asia/Tashkent from the server's publication time, not by the device clock (fix of LB-APP-062).
@@ -239,6 +258,10 @@ Changed:
   | `rejected` | the reason line, «Поддержка», «Удалить» | the reason line, «Поддержка», «Удалить» |
   | `rented`, `removed`, an unknown status | «Отклики» (only with requests) | «Отклики» (only with requests), «Сдать ещё одну» |
 
+  While the cabinet is switched off (DEC-81) `actionsOf` drops «Продолжить», «Изменить», «Вернуть» and «Сдать ещё
+  одну», and a tap on a draft's card does nothing: the server refuses them (WP-80). «Удалить» of a draft or a rejected
+  listing, «Пауза», «Сдано», «Снять», «Отклики» and «Поддержка» stay.
+
 - «Сдано», «Снять» and «Удалить» confirm through `confirmText` of `lib/ui/confirm.ts`: «Отметить «Сдано»? Объявление
   уйдёт из ленты, а тем, кто ждёт ответа, скажем, что квартиру сдали.», «Снять объявление?», «Удалить черновик?»
   («Удалить объявление?» for a rejected one, a new `homi` text). One change at a time: `setOwnerStatus` with
@@ -249,9 +272,9 @@ Changed:
   `409 owner_listing_locked` reads the list again. Nothing leads out of `rented` or `removed` (default 20).
 - A tap on a card (light haptic; taps on its buttons do not count): a draft → `routes.ownerForm(id)` (WP-81); a
   published listing → `routes.listing(number)`, the public listing in its own variant; anything else → nothing.
-- Below the list, in «Актуальные» only: «+ Сдать ещё одну квартиру» (`routes.ownerLimit({ where: "mine" })` when
-  `can_add` is `false`, else `routes.ownerNew()`) and the foot line «Можно сдавать до {n} квартир сразу.» with `n` =
-  `max` (LB-APP-057).
+- Below the list, in «Актуальные» only and while the cabinet is on: «+ Сдать ещё одну квартиру»
+  (`routes.ownerLimit({ where: "mine" })` when `can_add` is `false`, else `routes.ownerNew()`) and the foot line
+  «Можно сдавать до {n} квартир сразу.» with `n` = `max` (LB-APP-057).
 - States: a spinner; a failed first load → `ErrorState` with «Повторить»; a later failed read keeps the list shown.
 - `?focus=<id>` (the tab tip, DEV-059): the page opens on the tab that holds that listing, scrolls its card into view
   and shows the card tip on it; the parameter leaves the address by `nav.replace`.
@@ -260,7 +283,9 @@ Changed:
 
 - One card per request, newest first, 20 per page by the cursor: the first name, or «Без имени»; the line
   «{who} · N чел. · въезд: {when}» (`who` through the table `requestWho`, an unknown one → `fallback.other`, fix of
-  LB-APP-064; «N чел.» only above 1); the message in «…».
+  LB-APP-064; «N чел.» only above 1); the message in «…». The name, the move-in text and the message carry the
+  `.ph-mask` class of WP-32's replay masking, never enter an analytics property, and a failed answer reaches the
+  error facade of WP-32 as its `UiError` code only (`16` SEC-REQ-036).
 - A `pending` request: «Дать номер» (primary) and «Не подходит». Any other: the status line from the table
   `requestStatus` — «Номер дали», «Номер дали · оказался риелтором» (`given` with `agent_marked`), «Не подошло»,
   «Отмечен как риелтор», «Без ответа», «Квартира сдана» — then by the server's flags: `can_reason` and no reason chosen
@@ -283,17 +308,18 @@ Changed:
 - The heading «Ваше объявление» with the status chip, and «Этот блок видите только вы.»
 - With pending requests: «{n} человек ждут ответа» (plural) with «Ответить» → `routes.listingRequests(number)`.
 - Stats tiles «Получили по радару», «Открыли», «В избранном», «Откликов» (with «номер дали N» above 0).
-- «Открывали за 7 дней»: the total and seven bars from the last seven values of `stats.daily`, today on the right; the
-  labels are `Intl` short weekday names («Пн», «Вт»…) of the points' dates as WP-80 gives them, else counted back
-  from today in Asia/Tashkent — never the device's zone and never the legacy initials «П,В,С,Ч,П,С,В» (LB-APP-062).
+- «Открывали за 7 дней»: the total and seven bars from `stats.daily`, today on the right; the labels are `Intl`
+  short weekday names with a capital first letter («Пн», «Вт»…; `Intl` itself gives «пн») of the seven days counted
+  back from today in Asia/Tashkent (WP-80 gives seven integers, the last today, no dates) — never the device's zone
+  and never the legacy initials «П,В,С,Ч,П,С,В» (LB-APP-062).
 - «В HOMI {N дней}» (`own.listedDays`, `homi` override) from `stats.days_listed`, hidden at 0; the note of `withdrawn`
-  or `held`.
+  or of a held listing (as on the card).
 - The footer by status (table above). «Изменить» → `routes.ownerForm(id)`: the form takes the overlay slot and Back
   returns to the listing (WP-81). «Сдать ещё одну» → `routes.ownerNew()` without a check, as legacy (BR-APP-089); the
   form's limit state answers it. «Сдано» and «Снять» confirm; success shows the toast, calls `invalidateOwner()` and
   re-reads the card in the background without clearing the screen (fix of LB-APP-059).
-- Fill hints, for a manageable listing only (BR-APP-093): «Чтобы объявление было полнее», «n из 5» and a 5-segment
-  bar; the open items first — photos below 5 «Добавьте фото — сейчас n из 10», else «Фото — n из 10»; «Укажите
+- Fill hints, for a manageable listing only and while the cabinet is on (BR-APP-093): «Чтобы объявление было
+  полнее», «n из 5» and a 5-segment bar; the open items first — photos below 5 «Добавьте фото — сейчас n из 10», else «Фото — n из 10»; «Укажите
   площадь», «Укажите этаж», «Укажите ремонт», «Напишите пару слов о квартире»; all filled: «Объявление заполнено
   полностью». A tap opens `routes.ownerForm(id, { focus })` with `photos`, `area_m2`, `floor`, `renovation` or
   `description` and sends `owner_hint_opened {field}`.
@@ -321,14 +347,17 @@ Changed:
 ### Swipe in nested sub-pages
 
 `useSwipeBack` of `@homi/ui` ignores a touch whose target's closest `[data-slot="subpage"]` is not the layer itself,
-so a swipe on «Отклики» closes «Отклики» and never also «Мои объявления» below it. The inline styles are removed
-300 ms after a close (legacy since `index-CBlEKxdL.js`, WP-23 "`useSwipeBack`").
+so a swipe on «Отклики» closes «Отклики» and never also «Мои объявления» below it. After a closing swipe the hook
+removes its inline styles 300 ms later (legacy since `index-CBlEKxdL.js`, WP-23 "`useSwipeBack`"); today it settles
+in 180 ms (`SWIPE_BACK_SETTLE_MS`) and resets the styles only on cleanup, so this package adds the reset.
 
 ### New and overridden texts
 
 `homi` layer, ru/uz/en: the overrides of `own.mineEmpty`, `own.listedDays` and any other list or panel text the
 brand test flags; new: «Удалить объявление?» (`own.confirmDeleteRejected`), the reason lines of a rejected card
-(`own.rejectedReason.agent`, `.fraud`, `.limit`, short forms of SCR-054's texts), and `own.support` of WP-81 reused
+(`own.rejectedReason.denied` and `.limit`, short forms of SCR-054's texts — `denied` from legacy's `fraud` text; an
+unknown value reads `.denied`, and no text names realtors — default 32, WP-81 "Rejection"), and
+`own.support` of WP-81 reused
 for «Поддержка». All new texts are for the product owner to approve.
 
 ## Tests
@@ -337,18 +366,21 @@ for «Поддержка». All new texts are for the product owner to approve.
 
 - `status.test.ts` (fake clock, the device in another time zone): every status label, `withdrawn` first, «с
   сегодня» until the first full Tashkent day, an unknown status neutral; the «История» split; the action matrix per
-  status for `card` and `panel`; no «Вернуть» for `held`.
+  status for `card` and `panel`; no «Вернуть» for `held`; «На проверке» for every `hold_reason`.
 - `mineRow.test.ts`: the row value in its four cases; the counter from `pending`.
 - `requestTip.test.ts`: the visibility rule (count, key, tab, covering layers); `done` from «×» and from a requests
   page; the restore from DeviceStorage.
 - `ownerAttention.test.ts`: each pair once per launch; the collapsed-chrome tap sends nothing; «×» sends nothing.
-- `weekChart.test.ts`: seven bars, today on the right, `Intl` labels in ru, uz and en, the Tashkent day at 22:30 UTC.
+- `weekChart.test.ts`: seven bars, today on the right, `Intl` labels with a capital first letter in ru, uz and en,
+  the Tashkent day at 22:30 UTC.
 - `answer.test.ts`: one answer at a time; the kept name; the session reason; the `undo` toast on `given`;
   `request_answer_closed` with and without `undo`.
 - `tests/actions/ownerStatus.test.ts`: the three new actions in both session modes; an invalid id sends nothing.
-- The `useSwipeBack` suite of `@homi/ui`: a touch inside a nested sub-page moves only that page.
+- The `useSwipeBack` suite of `@homi/ui`: a touch inside a nested sub-page moves only that page; the inline styles
+  are gone 300 ms after a closing swipe (fake clock).
 
-**Component (Vitest + Testing Library).** `OwnerGroup`: hidden with `owner_enabled` off; «Бесплатно» and «2 из 2»;
+**Component (Vitest + Testing Library).** `OwnerGroup`: with `owner_enabled` off hidden for a user without listings
+and only «Мои объявления» for one with listings; «Бесплатно» and «2 из 2»;
 «Мои объявления» only with `has_listings`; no `GET /owner/listings` without it. `OwnerLimitSheet`: both buttons by
 `where`, the event. `OwnerListingsPage` and `OwnerListingCard`: tabs and dots, every status row of the action table,
 the confirms, the toasts, the rejected card with and without a support bot, `focus`. `OwnerRequestsPage`: every
@@ -361,8 +393,9 @@ known listing.
 - `owner-lists.spec.ts`: Settings shows the group first; «Мои объявления» with the fixture list (a draft without a
   point, a complete draft without a phone, an active listing with two pending requests, a paused, a held, a
   withdrawn, a let and a rejected listing): the two tabs, the chips, «Пауза» → «На паузе: …», «Сдано» with its
-  confirm, «Удалить черновик?»; the scenario `owner_limit` → «2 из 2» and the sheet; `owner_empty` → the empty
-  texts; `owner_returning` → «С возвращением!»; `listing_locked` → the list read again.
+  confirm, «Удалить черновик?»; the default list (`can_add: false`) → «2 из 2» and the sheet; `owner_empty` →
+  «Бесплатно», the form and, on `/settings/owner`, the empty texts; `owner_returning` → «С возвращением!»;
+  `listing_locked` → the list read again.
 - `owner-requests.spec.ts`: «Отклики» of the active fixture listing: «Дать номер», «Не подходит» with a reason,
   «Отменить», «Оказался риелтором»; the scenario `request_answer_closed` → «Отменить уже нельзя…».
 - `owner-panel.spec.ts`: the stub listing 10000008 (`owner.mine`, `owner.listing_id`): only «Поделиться» in the title
@@ -370,6 +403,10 @@ known listing.
   Back to the listing, a fill hint → the form on that field, «Изменить» → the form and Back to the listing.
 - `owner-signals.spec.ts`: the dot on the Settings tab and its label; the tab tip on the search tab; a tap → «Мои
   объявления» on the listing with the card tip; after opening «Отклики» no tip anywhere, also after a reload.
+- WP-81's `owner-off.spec.ts` (`@owner-off`, the API with the key unset; the default `GET /me` has
+  `owner.has_listings`) gains: Settings shows the group with «Мои объявления» only; the list offers «Пауза», «Сдано»
+  and «Удалить» but no «Продолжить», «Вернуть» or «+ Сдать ещё одну квартиру»; the panel of 10000008 has no
+  «Изменить» and no fill hints; «Отклики» answers; with `owner_empty` Settings has no group.
 
 ## Acceptance checklist
 
@@ -378,7 +415,9 @@ production keep the cabinet off until WP-89 (DEC-81); these lines run on a local
 `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and inside Telegram on staging when WP-89 switches the
 cabinet on there (default 22).
 
-- [ ] With the cabinet off, Settings has no group «Сдаю квартиру» and no owner request is sent. Seen on staging.
+- [ ] With the cabinet off, Settings has no group «Сдаю квартиру» and no owner request is sent for a user without
+      listings; an owner with listings sees only «Мои объявления», and pausing, «Сдано», «Снять», «Удалить» of a
+      draft and the answers work, while nothing opens the form. Seen on staging.
 - [ ] The group is the first of Settings; «Сдать квартиру» reads «Бесплатно», or «2 из 2» and opens the limit sheet.
 - [ ] «Мои объявления» shows only for an owner with listings; its value and red counter follow the pending count.
 - [ ] The limit sheet: its title with the numbers, «Мои объявления» from Settings, «Понятно» from the list.

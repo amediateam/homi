@@ -76,11 +76,13 @@ passed through untouched. Reading a card asks no quota and is not a disclosure.
 - `LegacyListingSource::contact(int, SourceContext)` implements the variant B request and, for variant A, returns
   the phone of the card.
 - The owner cabinet adds one rule (WP-85; *added by the owner-cabinet plan*): a listing whose `contact.mode` is
-  `request` gives its number only to a seeker whose request is `given`, else `404 contact_unavailable`, and a
-  `hidden` one never; for a native number step 1 reads the owner listing's number (DEC-72, WP-84) and variant A
-  issues HOMI's call link; `ContactDisclosed` names the origin (`legacy` or `native`); a disclosure on a `given`
-  request is counted against the quota and never refused by it (DEC-19 open). `POST …/translation` of a native number
-  answers `404 not_found` (no original text).
+  `request` gives its number only to a seeker whose request is `given`, else `404 contact_unavailable`, and a `hidden`
+  one never; for a native number step 1 is WP-85's `NativeContact::read()`, the one reader of the owner listing's number
+  (DEC-72, WP-84) and the only implementation of a native disclosure (WP-86's merged source answers `ContactUnavailable`
+  for a native number), and variant A issues HOMI's call link; `ContactDisclosed` names the origin (`legacy` or
+  `native`); a disclosure on a `given` request is counted against the quota and never refused by it (DEC-19 open;
+  integrator default 23 of the owner-cabinet plan). `POST …/translation` of a native number answers `404 not_found` (no
+  original text).
 
 The card cache of WP-42 holds no number (WP-12). For variant A the details translator keeps the phone of the legacy
 card in a second cache entry of the same lifetime, encrypted with `Crypt`; `contact()` reads that entry and reads

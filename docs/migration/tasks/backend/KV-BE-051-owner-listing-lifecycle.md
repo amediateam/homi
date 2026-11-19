@@ -12,7 +12,8 @@
 
 A HOMI owner listing moves through its statuses by the rules of `02` BR-API-174 … BR-API-177 with HOMI's
 post-moderation: publish runs the automatic checks, the listing is active at once, votes and operators can hold or
-withdraw it.
+withdraw it. A positive realtor check or a vote threshold holds the listing for the operators with its evidence
+recorded and never rejects or withdraws it by itself (default 26 of the owner-cabinet plan).
 
 ## Legacy reference
 
@@ -24,8 +25,9 @@ SCR-056, SCR-057, SCR-059. The legacy server was never seen: whether anything is
 
 Built by the Wave 1 packages WP-84 (service, commands) and WP-89 (the operators' notice); this file is the register
 entry. The steps are those of WP-84: publish with the automatic checks (required fields, a number, the limits, the
-realtor and fraud checks of DEC-77, `PhoneMasker` on the description, the point check); the statuses and their
-effects; `held` and `withdrawn` by votes and by the operators' console commands; the switch of DEC-81.
+realtor check of DEC-77, which holds, and the operators' deny list, which rejects as `denied`; `PhoneMasker` on the
+description, the point check); the statuses and their effects; `held` by the checks, the votes and the operators,
+`withdrawn` only by an operator's console command; the switch of DEC-81.
 
 ## Files
 
@@ -45,11 +47,13 @@ DEV-056 (a way forward after a rejection), both `APPROVED` (DEC-74), and DEV-062
 
 The acceptance of WP-84: a published listing is active at once; `held` and `withdrawn` cannot be resumed by the
 owner; nothing leaves `rented` or `removed`; publishing, creating a draft and asking for the phone answer
-`403 owner_disabled` while `OWNER_CABINET_ENABLED` is off, and every status action still works.
+`403 owner_disabled` while `OWNER_CABINET_ENABLED` is off, as do resuming and every content edit, while pausing,
+«Сдано», removing and deleting a draft still work (the plan's reading of DEC-81, WP-80).
 
 ## Tests
 
-Feature tests of WP-84: each rejection, the limits per account and per phone, every status transition, the IDOR rows
+Feature tests of WP-84: each rejection (`denied`, `limit`) and each hold (`hold_reason`), the limits per account
+and per phone, every status transition, the IDOR rows
 of the owner methods (KV-QA-015).
 
 ## Edge cases

@@ -592,7 +592,14 @@ the requirement that fixes it and the constraint from the still-running legacy M
   to the owner and hands it to seekers («Дать номер», `open` mode), while `/owner` and the legacy bot's privacy text say
   that only a hash is stored (`02` BR-API-172, LB-API-056; Q-API-072). HOMI keeps the number in plain text by decision
   (DEC-72), so this is carried over on purpose, and the database dumps are not encrypted, by the developer's decision
-  of 2026-11-13 (`docs/infrastructure/backup-recovery.md:19`).
+  of 2026-11-13 (`docs/infrastructure/backup-recovery.md:19`). WP-70's backup line still says "encrypted" (WP-70,
+  "Requests to the production track"); that contradicts the decision, and the security review of WP-70 resolves it
+  with the production track (SEC-REQ-038). Two earlier decisions predate DEC-72 as well: the link between the
+  application and the database is not encrypted and crosses a public network (`docs/ai/reports/production-notes.md`,
+  the decision of 2026-11-09, `DB_SSLMODE=disable`), and the media buckets are on a MinIO host shared with other
+  projects (`docs/infrastructure/cdn.md`). Before the switch-on the production track confirms whether that link is
+  private (a firewall to the application host only) or `DB_SSLMODE` changes, and the breach runbook (SEC-REQ-048)
+  names both; these are needs, not decisions of this review.
   - *Where:* `02` BR-API-172, LB-API-056; `08` API-039.
   - *Linked:* DEC-72, DEV-011, RK-38, Q-SEC-021.
   - *Verified:* audit rows re-read; the legacy storage is `UNVERIFIED` (Q-API-072).
@@ -711,12 +718,14 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
 ### 4.3 Authorisation and ownership
 
 - **SEC-REQ-014** — Owner-scoped resolution on every per-user route of the legacy surface, v1 and the bot: radars and
-  their relax/patch/delete, hide rules, favourites, history, hidden listings, blocked-author entries, votes and
-  reports, survey answers, settings, owner verification, delivered cards, prepared share messages, call links. The
-  record is loaded through the owner relation (`$user->subscriptions()->findOrFail($id)`), never loaded and checked
-  afterwards (reviewer rule 6). A foreign id answers exactly like an unknown id (legacy `404 {"detail":"Not Found"}`).
-  ARM resources use policies. *Acceptance:* the IDOR matrix in §5.2 passes for every row; response bodies and timing
-  classes for "foreign" and "unknown" are identical.
+  their relax/patch/delete, hide rules, favourites, history, hidden listings, blocked-author entries, votes and reports,
+  survey answers, settings, owner verification, delivered cards, prepared share messages, call links, and since the
+  owner cabinet the owner listings with their photos, contact mode, status and requests, the owner's answers and the
+  bot's `rq` callbacks (WP-84, WP-85, WP-89). The record is loaded through the owner relation
+  (`$user->subscriptions()->findOrFail($id)`), never loaded and checked afterwards (reviewer rule 6). A foreign id
+  answers exactly like an unknown id (legacy `404 {"detail":"Not Found"}`). ARM resources use policies. *Acceptance:*
+  the IDOR matrix in §5.2 passes for every row; response bodies and timing classes for "foreign" and "unknown" are
+  identical.
 - **SEC-REQ-015** — Idempotent, race-safe per-user writes: upsert per (user, listing), (user, author), (user,
   listing, reason); the legacy favourite toggle is serialised per (user, listing); radar creation de-duplicated by a
   normalised-filter hash per user and the `max_subscriptions` cap checked under a lock (LB-API-013, LB-API-037,
@@ -815,6 +824,11 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   | `POST /api/v1/auth/telegram` | IP; user | 10/min; 5/min |
   | v1 `api`, `uploads`, `intake` | actor | 120/min, 30/min, 600/min (exist) |
   | Webhook | bot + IP | 3 000/min (exists, key to change) |
+  | Owner writes (`PATCH`, `DELETE`, photo order and delete, contact mode, status, phone request, publish, answers, waitlist) | user | 60/min; publish 10/h; phone request 10/h |
+  | `GET /api/v1/owner/place` | user | 60/min |
+  | `GET /api/v1/owner/demand` | user | 30/min; answers cached 5 min per (city, district, rooms, room, price band of 50 USD) |
+  | `POST /api/v1/listings/{number}/contact-request` | user | the request limits of WP-85 (10/day, 30/week, a pause after 3 in 10 min) |
+  | `POST /api/internal/legacy/relay` (WP-87) | IP | 60/min |
   | ARM API | admin | 300/min; exports 10/h |
 
   *Acceptance:* one test per limiter (N allowed, N+1 → `429` in the right dialect); two users never share a bucket;
@@ -883,13 +897,14 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   | Data | Rule |
   | ---- | ---- |
   | Telegram user id | Stored (needed for delivery); logs and analytics use the internal user id instead |
-  | First/last name, username, photo URL from `initData` or updates | Never stored; only the three booleans and the account-age estimate (BR-API-007) |
+  | First/last name, username, photo URL from `initData` or updates | Never stored; only the three booleans and the account-age estimate (BR-API-007) — except the Telegram first name of a seeker, kept with his contact request and erased with it, its text 90 days after the request closed (DEC-76, SEC-REQ-053) |
   | Language code | Only the mapped locale |
   | Owner-verification phone | HMAC-SHA-256 over E.164 with a per-environment pepper, plus the date |
-  | Listing author phone | Encrypted at rest (dedicated key) for the call page, plus an HMAC for matching and opt-outs; never returned raw by v1; erased 90 days after withdrawal |
+  | Listing author phone | Legacy listings (not stored in Wave 1, DEC-52): encrypted at rest (dedicated key) for the call page, plus an HMAC for matching and opt-outs; never returned raw by v1; erased 90 days after withdrawal |
+  | HOMI owner's number | Plain text in `owner_listings.phone` by decision (DEC-72), plus `phone_author_key`; read by two code paths; erased 90 days after the listing left the feed and on erasure (SEC-REQ-051) |
   | PostHog distinct id | Random, migrated byte for byte (ENT-006); session replay default-deny (mask all text, unmask by allowlist) or off |
   | Free-text queries, voice | Never stored (BR-BOT-055) |
-  | Geolocation | Never sent to the server (BR-API-131) |
+  | Geolocation | Never sent to the server (BR-API-131) — except the flat's point that an owner sets in the place picker, «Найти меня» included, stored as the true point and never shown to others (SEC-REQ-052) |
   | IP addresses | Access and application logs only (SEC-REQ-038) |
 
   *Acceptance:* schema test (no name or username columns on users); an update fixture with names produces no stored
@@ -903,13 +918,24 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   text, photos, translations and the matching raw `intake_events` fields erased after 90 days; taken-down listings
   removed from public surfaces at once; `telegram_updates` 14 days (prune scheduled); delivered-card log until the
   listing's purge; tokens pruned daily; application logs 30 days; Telescope entries 48 h where enabled; backups at most
-  14 days, encrypted, on controlled hosts in the approved jurisdiction, never on personal devices (SEC-019); support
-  data 90 days / 1 year if the support bot is ported (BR-BOT-091). *Acceptance:* one Pest test per rule (advance the
+  14 days (and 7 more days of noncurrent versions), on controlled hosts in the approved jurisdiction, never on personal
+  devices (SEC-019), and not encrypted by the developer's decision of 2026-11-13
+  (`docs/infrastructure/backup-recovery.md:19`). With DEC-72 the dumps hold owners' numbers in plain text, so the
+  decision's consequence is that the private, append-only bucket, the restore credential held by the production
+  track, restores only on production-track hosts and the replay of erasures after a restore (SEC-REQ-039) are the
+  protections that remain; WP-70's line "encrypted" contradicts the decision, and WP-70's security review resolves it
+  with the production track. Owner cabinet: an owner listing's number, texts and photos 90 days after it left the
+  feed; request texts and the seeker's first name 90 days after the request closed; a draft not changed for 180 days;
+  a deny-list entry three years after its last hit (WP-84, WP-85). Support data 90 days / 1 year if the support bot is
+  ported (BR-BOT-091). *Acceptance:* one Pest test per rule (advance the
   clock, run `schedule:run`, assert deletion); a backup runbook entry is reviewed by the prod track.
 - **SEC-REQ-039** — Deletion request («Удалить мои данные», BTN-076): a confirmation step, then one procedure that
   deletes or anonymises every row linked to the user — user, settings, radars, hide rules, favourites, history, hidden
   listings, blocked authors, votes (Q-SEC-016), survey answers, owner hash, attribution, action log, delivered cards,
-  the user's `telegram_updates`, tokens — and requests a PostHog person deletion (retried, recorded); an erasure
+  the user's `telegram_updates`, tokens, and since the owner cabinet the owner listings with both photo disks and
+  the public copies, the waitlist, contact requests as seeker and as owner, the request blocks, `bot_notices` (whose
+  sent messages are edited first, WP-89) and the relay's erasure notice to the operator (WP-84, WP-85, WP-87, WP-89)
+  — and requests a PostHog person deletion (retried, recorded); an erasure
   ledger keyed by an HMAC of the Telegram id lets the migration replay erasures done on legacy after the dump and
   prevents re-import (ENT-007). *Acceptance:* a factory user with every relation → deletion → a DB-wide query finds
   no row and no jsonb payload with that user's id or Telegram id; the PostHog fake received one deletion; a re-import
@@ -928,21 +954,34 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   handling record exists before the cut-over review.
 - **SEC-REQ-051** — The owner's number (DEC-72): stored in plain text only in the owner listing row; read by two code
   paths, the owner's own view and `ContactService::disclose()`; never in a log, an exception context, a job payload,
-  the update ledger (only its HMAC), analytics or the operators' notices; masked in every listing text
-  (`PhoneMasker`); erased by «Удалить мои данные» and 90 days after the listing left the feed for good; access to the
-  database and its dumps is the production track's. *Acceptance:* a leak scan over logs, Horizon payloads, the ledger
-  and PostHog after a publish and a `given` request finds no digit sequence of the number; erasure and the 90-day
-  purge are tested with time travel.
+  the update ledger (only its HMAC), analytics, Telescope and Pulse entries, an outgoing-request record, a command-line
+  argument or the operators' notices; masked in every listing text (`PhoneMasker`); erased by «Удалить мои данные»
+  and 90 days after the listing left the feed for good; access to the database and its dumps is the production
+  track's. *Acceptance:* a leak scan over logs, `failed_jobs`, Horizon payloads, `telescope_entries`, the ledger and
+  PostHog after a publish and a `given` request finds no digit sequence of the number; erasure and the 90-day purge
+  are tested with time travel; after the first switch-on run on staging, the production track's SQL scan of
+  `telescope_entries`, the Laravel log and `failed_jobs` finds no test number.
 - **SEC-REQ-052** — Owner listing location and photos: the true point is returned only to its owner; every public use
-  (preview, map points, centre distance, metro distance, polygon filter) reads the shown point, a stable offset of at
-  most 250 m keyed with `SHOWN_POINT_SECRET`; uploads are decoded and re-encoded without metadata (`HashedUploader`),
-  private until publish, public copies deleted after the listing left the feed for good. *Acceptance:* shrinking
-  polygons around a native listing never isolate its true point; a stored photo has no EXIF block.
+  (preview, map points, centre distance, metro distance, polygon filter) reads the shown point, derived only from the
+  owner and the 100 m grid cell of the true point with `SHOWN_POINT_SECRET` (never from the exact point or the
+  listing), 50 … 420 m from the cell's centre, at most 491 m from the true point and so always inside the 500 m circle
+  (WP-84); uploads are decoded and re-encoded without metadata (`HashedUploader`), the declared size checked before
+  decoding and GIF refused, private until publish; public copies live under `owner/<token>/<n>.jpg` with a random
+  token new for every version and no listing number, and are deleted at once when the listing is held, withdrawn,
+  let or removed (a deleted key can stay in the edge cache for up to an hour). Residuals, recorded: a pin moved across
+  a cell boundary shows two neighbouring cells; an owner who erases his data and returns gets new shown points; the
+  district comes from the true point, so a circle on a district boundary may be halved. *Acceptance:* shrinking
+  polygons around a native listing never isolate its true point; 1 000 random points give 50 … 491 m; two owners at
+  one point get different shown points; a stored photo has no EXIF block; no public key holds a listing number; a
+  held listing's former photo addresses answer `404` once the edge cache has expired.
 - **SEC-REQ-053** — Requests between seekers and owners: the seeker's first name only from verified launch data
-  (DEC-76), stored with the request and erased with it; request limits and blocks per seeker; a relayed request passes
-  only the first name and the form's answers to the operator (DEC-71), named in the privacy text; no request text in
-  logs. *Acceptance:* the erasure of a seeker removes his requests and names; the relay payload holds exactly the listed
-  fields.
+  (DEC-76), stored with the request and erased with it, the texts 90 days after the request closed; request limits
+  and blocks per seeker; a relayed request passes only the first name and the form's answers to the operator (DEC-71),
+  named in the privacy text; no request text or first name in logs, Telescope and Pulse entries, an outgoing-request
+  record or a command-line argument; the owner's sent bot messages lose the name and the message when the seeker is
+  erased (WP-89). *Acceptance:* the erasure of a seeker removes his requests and names and edits the sent messages;
+  the relay payload holds exactly the listed fields; the production track's SQL scan of `telescope_entries`, the
+  Laravel log and `failed_jobs` after the first switch-on run on staging finds no test first name.
 
 ### 4.10 LLM
 
@@ -969,8 +1008,14 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   rule 10: a weighted threshold of distinct voters for global effects (one tap never relabels a number), per-user vote
   limits, undo for the voter (LB-BOT-008), a dispute path for verified owners, an audit trail of inputs and outputs, a
   kill switch per detector, neutral wording (legacy «Проверьте цену» stays); «Хозяин ✓» requires SEC-REQ-011's
-  contact check and the ≤ 2-flat rule (BR-BOT-082). *Acceptance:* one `agent` vote leaves the phone unmarked; the
-  configured number of distinct, weighted voters marks it; the kill switch removes all marks from responses.
+  contact check and the ≤ 2-flat rule (BR-BOT-082). HOMI's own owner checks (DEC-77) and votes on native listings: a
+  signal never refuses or withdraws without an operator — the automatic realtor check and every vote threshold hold
+  the listing with the reason and the evidence (`owner_check_results`: signal and counts, never a key or a number),
+  the operators decide, the owner sees «На проверке» and is never told that he was marked; only the operators' deny
+  list refuses a number; `owner.checks.agent` is the kill switch of the realtor check (WP-84). *Acceptance:* one
+  `agent` vote leaves the phone unmarked; the configured number of distinct, weighted voters marks it; the kill switch
+  removes all marks from responses; a native listing that crosses a threshold is held, not withdrawn, with its
+  `owner_check_results` row.
 
 ### 4.12 Admin (ARM) and operator access
 
@@ -980,17 +1025,34 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   rejecting `UPDATE`/`DELETE`); broadcasts need a second confirmation and go through SEC-REQ-029; bulk exports
   rate-limited and audited; Horizon, Telescope and Pulse reachable only by admins (Q-SEC-019), Telescope off or
   reduced to exceptions in production. Legacy owner and team lists are not imported as admins without review
-  (Q-SEC-018). *Acceptance:* a moderator cannot reach admin routes; a token without TOTP confirmation is refused;
-  the audit table rejects `UPDATE`; a broadcast without the second confirmation does not send.
+  (Q-SEC-018). The operators' «Снять» in HOMI's bot (WP-89) is an admin action outside ARM and without TOTP: accepted
+  because it only holds (reversible; release, withdraw and deny only from the console), it is confirmed twice, the
+  presser is checked against `OWNER_MODERATOR_IDS` at the press, each id is confirmed by a test notice before the
+  switch-on, and every press writes a row of the append-only `owner_moderation_actions` (WP-84); `owner:deny-phone`
+  never takes a number as an argument. *Acceptance:* a moderator cannot reach admin routes; a token without TOTP
+  confirmation is refused; the audit table rejects `UPDATE`; a broadcast without the second confirmation does not
+  send; a «Снять» press by an id outside the list holds nothing.
 
 ### 4.13 Logging and monitoring
 
 - **SEC-REQ-047** — Logging without PII: never log `Authorization`, `initData`, the bot token, the webhook secret,
   phones (masked `+998***`), message texts or event bodies; logs reference the internal user id; nginx log format
-  without the `Authorization` header and without query strings on `/media` and the token segment on `/call`;
-  Telescope hides `authorization`, `x-telegram-bot-api-secret-token` and payload fields, and filters job payloads.
-  *Acceptance:* a feature test captures logs across an auth failure, a webhook failure, a Bot API failure and an
-  `app_error` event and finds none of the patterns; a sampled-log check runs monthly (ЗРУ-547 security measures).
+  without the `Authorization` header and without query strings on `/media`, on `/api/v1/owner/place` and the token
+  segment on `/call`; Telescope hides `authorization`, `x-telegram-bot-api-secret-token` and payload fields, and
+  filters job payloads. Since the owner cabinet, outside `local`: Telescope records none of the cabinet's requests,
+  jobs, queries or models with values — the filter of WP-84 rejects the request entries under `api/v1/owner` and
+  `api/v1/listings/*/contact*`, the cabinet's job entries, the query entries that name its tables and the model
+  entries of `OwnerListing` and `ContactRequest`, whatever `telescope.record_all` says; `hideRequestParameters` adds
+  `init_data`, `initData`, `phone`, `lat`, `lon`, `message`, `move_in`; the webhook path and the Bot API host are
+  not recorded (WP-88); the relay callback and the relay's legacy calls are not recorded with bodies (WP-87); a
+  `QueryException` on the cabinet's tables is reported with its placeholders and SQLSTATE only. These ship with the
+  code that first stores a number (WP-84, WP-88), before any switch-on; whether `TELESCOPE_RECORD_ALL` changes on the
+  servers is a need put to the production track, not a decision here. *Acceptance:* a feature test captures logs
+  across an auth failure, a webhook failure, a Bot API failure and an `app_error` event and finds none of the
+  patterns; with Telescope on and the database storage, a webhook contact inside a phone window, a publish, a show, a
+  contact request with `init_data`, a `given` answer and a `ct` press leave no digit run of the number, no first name,
+  no message and no `init_data` in `telescope_entries`; a sampled-log check runs monthly (ЗРУ-547 security
+  measures).
 - **SEC-REQ-048** — Monitoring and incident readiness: alerts on `401` spikes, phone-quota trips, vote bursts against
   one phone, webhook `403`s, CSP report bursts, LLM cost, outbound `429`s; a breach runbook (who decides, who informs
   users and the regulator, timelines per Q-SEC-008) rehearsed once before the cut-over (reviewer rule 13).
@@ -1013,7 +1075,9 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   as the law requires (Q-SEC-005); a processor register with agreements (hosting, LLM provider, PostHog, Telegram,
   edge if kept, Q-SEC-006); a privacy policy in uz, ru and en that matches actual processing, versioned, with the
   version and time of consent recorded per user (`consented_at`, policy version) and a notice to migrated users
-  (Q-SEC-009); working access, correction and deletion paths and a contact channel. *Acceptance:* the cut-over
+  (Q-SEC-009), and for the owner cabinet the time and policy version of an owner's consent to keep his number
+  (`phone_consented_at`, `phone_consent_version`, WP-84) and the version a request was sent under (WP-85); working
+  access, correction and deletion paths and a contact channel. *Acceptance:* the cut-over
   checklist (`18`) contains each item with evidence; `/privacy` texts match SEC-REQ-036…040 line by line.
 
 ## 5. Security test plan (input to `15-testing-strategy.md`)
@@ -1060,6 +1124,10 @@ with the reason; N → `401`.
 | Owner verification | — | `/owner`, «Убрать номер» | forwarded contact refused |
 | Media | `GET`/`DELETE /api/v1/media/{id}` | — | B cannot read a private temporary URL of A |
 | ARM resources (when built) | `/api/v1/arm/*` | admin commands | moderator vs admin vs app token |
+| Owner listing (`/api/v1/owner/listings/{id}` and its sub-routes) | — | `o_<id>` launch | B's id → `404`, A unchanged; A's photo id under A's other listing → `404` |
+| Owner answer (`/api/v1/owner/requests/{id}/answer`) | — | `k1:rq:…` | the seeker of the request → `404`; another owner → the stale alert in the bot |
+| Contact request (`/api/v1/listings/{number}/contact-request`) | — | `c_<number>` | the state is the caller's only |
+| Operators' «Снять» | — | `k1:mo:…` | an id outside `OWNER_MODERATOR_IDS` → the stale alert, nothing held |
 
 ### 5.3 Webhook forgery and bot input
 
@@ -1107,6 +1175,9 @@ with the reason; N → `401`.
 - Collector photo URLs: `http://`, `127.0.0.1`, `169.254.169.254`, redirect to a private address, DNS name resolving to
   a private range, 30 s slow response, 100 MB body → refused within the limits.
 - Cross-user media `show`/`destroy` → `404` (§5.2).
+- Owner photo: an animated GIF and a 50 000 × 50 000 PNG of a few KB refused before decoding; a GPS-tagged JPEG stored
+  without EXIF; A's draft photo URL not readable by B after its 10 minutes; two owners of the same bytes delete
+  independently (SEC-REQ-016).
 
 ### 5.7 Rate limits
 
@@ -1133,7 +1204,12 @@ with the reason; N → `401`.
 
 Queries and alerts from SEC-REQ-048: distinct phones disclosed per user per day (top 20), `agent` votes per phone per
 day, `401 auth_expired` rate after releases, webhook `403` rate, CSP reports per directive, LLM spend per day, outbound
-`429` per hour, ARM audit anomalies (actions outside working hours, bulk exports).
+`429` per hour, ARM audit anomalies (actions outside working hours, bulk exports). Since the owner cabinet: distinct
+native numbers disclosed per user per day (top 20); `request_new` notices per owner per hour and requests per listing
+per day; `agent` vote weight per native listing per day and holds by the check or by votes per day;
+`owner_check_results` by result and the share of held listings the operators release (the precision input of the
+realtor check); operators' holds and denials outside 07:00 – 23:00 Tashkent; a daily production-track count of
+`telescope_entries` matching the Uzbek phone pattern (expected 0).
 
 ## 6. Open questions and summary
 
@@ -1154,13 +1230,14 @@ day, `401 auth_expired` rate after releases, webhook `403` rate, CSP reports per
 | Q-SEC-011 | Which legacy backups exist (server, the team computer named in `/privacy`), are they encrypted, and when are they destroyed after the migration? How will the dump be transferred? | SEC-019, SEC-REQ-041 | Inventory from the legacy operator; destruction record | product owner; prod track |
 | Q-SEC-012 | Does Telegram Web embed the Mini App in a frame (so `frame-ancestors` must allow it), and what is the legacy CSP header? | SEC-033, SEC-REQ-030, Q-APP-016 | `curl -sI` of the Mini App origin from an allowed machine; open the dev Mini App in Telegram Web with `frame-ancestors 'none'` and observe | dev track |
 | Q-SEC-013 | Does Next 16.4 `experimental.sri` remove the need for `'unsafe-inline'` for Next's own inline scripts on statically rendered landing pages? | SEC-REQ-031, CF-011 | Spike: build the landing with SRI and a strict CSP, count violations | dev track |
-| Q-SEC-014 | NFR-03 says phones are stored only hashed, but the call page needs listing authors' numbers: amend NFR-03 to "user phones hashed; listing phones encrypted, erased after 90 days"? | SEC-REQ-036, GAP-015 | Amendment approved in `docs/architecture/requirements.md` | first developer; product owner |
+| Q-SEC-014 | NFR-03 says phones are stored only hashed, but the call page needs listing authors' numbers, and DEC-72 keeps HOMI owners' numbers in plain text: amend NFR-03 to "user phones hashed; legacy listing phones not stored in Wave 1 (encrypted, erased after 90 days if ever stored); HOMI owners' phones in plain text by DEC-72, erased 90 days after the listing left the feed"? | SEC-REQ-036, SEC-REQ-051, GAP-015, DEC-72 | Amendment approved in `docs/architecture/requirements.md` (a shared file, the first developer's follow-up PR) | first developer; product owner |
 | Q-SEC-015 | During the transition, serve the original production Mini App artefacts (hash manifest) or a rebuild from the decompiled sources? | SEC-REQ-049, RES-008 | Decision in the compatibility ADR (CF-001, CF-011) | dev track; prod track |
 | Q-SEC-016 | Votes of a deleted user: delete (marks may flip) or anonymise (keep counts, drop the link)? | SEC-REQ-039, SEC-REQ-045, Q-API-048 | Product decision | product owner |
 | Q-SEC-017 | At the webhook switch, drop pending updates or process them on HOMI? | SEC-REQ-009, TB-10 | Decision in `18` with the legacy operator | product owner; prod track |
 | Q-SEC-018 | Which Telegram accounts become ARM admins and moderators, and is TOTP acceptable to them? Is the legacy owner list (`private` mode) imported? | SEC-REQ-046, Q-SYS-004 | Named list approved by the product owner | product owner |
 | Q-SEC-019 | How do admins reach Horizon, Telescope and Pulse in staging and production, given that gates check e-mail and users sign in with Telegram only? | SEC-REQ-046, SEC-034 | Prod-track decision (gate by role, or SSH tunnel only) | prod track |
 | Q-SEC-020 | Is `@KvadroSupportBot` migrated (GAP-026)? If yes, it needs its own review (texts with names, LLM translation, 90-day mapping). | SEC-018, BR-BOT-091 | Product decision; then a review | product owner |
+| Q-SEC-021 (defined in `24` §8.2) | The legal basis, policy text and hosting statement HOMI needs before real users, now that it also stores owners' numbers in plain text, photos, true locations and requests with a seeker's first name, and passes requests to the operator | SEC-036, SEC-039, SEC-REQ-050 … SEC-REQ-053, DEC-13 | Lawyer's note; the privacy page of the landing | product owner |
 
 ### 6.2 Existing questions this review depends on
 
@@ -1207,8 +1284,9 @@ Requirements by area:
 | ЗРУ-547 | SEC-REQ-050 | 1 |
 | **Total** | | **53** |
 
-Open questions: 20 (`Q-SEC-001`…`Q-SEC-020`) — product owner 13, lawyer 5, prod track (incl. first developer) 5,
-dev track 3, test accounts 1, security reviewer 1 (a question can have several owners).
+Open questions: 21 (`Q-SEC-001`…`Q-SEC-021`; Q-SEC-021 is defined in `24` §8.2 and listed in §6.1) — product owner
+14, lawyer 5, prod track (incl. first developer) 5, dev track 3, test accounts 1, security reviewer 1 (a question can
+have several owners).
 
 Work that lands in existing tasks: T1 (SEC-REQ-008…010, 013, 037), T3 (`viewApiDocs` gate), T4 / ADR-0014
 (SEC-REQ-016, 023…025), T6 (SEC-REQ-001…005, 007), the compatibility ADR for CF-001/CF-002 (SEC-REQ-004…006, 017,

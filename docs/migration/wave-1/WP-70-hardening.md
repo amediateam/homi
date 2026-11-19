@@ -101,20 +101,20 @@ N = not applicable to the new product.
 | 35 | Secret scanning | SEC-REQ-035 | A | this package | `scripts/security/scan-secrets.sh` in CI and as a documented pre-commit hook |
 | 36 | Minimisation per field | SEC-REQ-036 | C — the user fields as written; the listing author's number is not stored by HOMI in Wave 1, never travels with a card, is masked in listing texts, and is returned only by the counted contact method after a tap (DEC-52). Since the owner cabinet one exception by decision: a HOMI owner's number is stored in plain text with his listing (DEC-72, SEC-REQ-051) and a seeker's first name with his request (DEC-76, SEC-REQ-053) (*added by the owner-cabinet plan*) | WP-40, WP-50, WP-56; WP-12, WP-42, WP-43 | schema test: no name, username, phone or e-mail column in any user table; the card tests of WP-12, WP-42 and WP-48 find no raw number in a card answer of any driver; Playwright: no number in the page before a tap (WP-26) |
 | 37 | Raw updates encrypted and redacted | SEC-REQ-037 | A | WP-50 | existing tests; a staging row decrypted by the production track holds no text |
-| 38 | Retention, scheduled and tested | SEC-REQ-038 | C — action log 180 days, updates 14 days, LLM call log 180 days, vote details 180 days, backups 14 days; the rule for withdrawn listings applies to HOMI's owner listings only: number, texts and photos erased 90 days after the listing left the feed (WP-84) (*added by the owner-cabinet plan*) | WP-47, WP-50, WP-55, WP-84, WP-85 | `RetentionRegistryTest`; time-travel test per rule |
+| 38 | Retention, scheduled and tested | SEC-REQ-038 | C — action log 180 days, updates 14 days, LLM call log 180 days, vote details 180 days, backups 14 days; the rule for withdrawn listings applies to HOMI's owner listings only: number, texts and photos erased 90 days after the listing left the feed (WP-84); request texts and first names 90 days after the request closed (WP-85); untouched drafts after 180 days (WP-84) (*added by the owner-cabinet plan*) | WP-47, WP-50, WP-55, WP-84, WP-85 | `RetentionRegistryTest`; time-travel test per rule |
 | 39 | Deletion on request | SEC-REQ-039 | A | WP-47, WP-56 | the database-wide scan after erasure |
 | 40 | Rights of listing authors | SEC-REQ-040 | C — takedown by the operator command; the request is also passed to the service the listing comes from | WP-57, WP-44, WP-60 | staging drill: one listing withdrawn → cards edited, absent from feed, map, landing within an hour |
 | 41 | Handling of the legacy dump | SEC-REQ-041 | N in Wave 1 — no data is migrated; the dump for Wave 2 is handled under this requirement then | Wave 2 | the repository and the developers' machines hold no dump (statement in the PR) |
 | 42 | Masking before any LLM call | SEC-REQ-042 | A | WP-55 | existing tests |
 | 43 | Prompt-injection containment | SEC-REQ-043 | A | WP-55 | existing tests |
 | 44 | LLM quotas and audit | SEC-REQ-044 | A | WP-55 | existing tests; cap value set on servers |
-| 45 | No public suspicion labels | SEC-REQ-045 | A | WP-44, WP-53, WP-60, WP-84, WP-89 | review of every label a user can see about another person; the realtor check of DEC-77 (`agent`, `fraud`, `limit`) and the owner's «Похоже на риелтора» on a seeker are reviewed with it: the person is told only that the number was not accepted, never that he was marked (*added by the owner-cabinet plan*) |
+| 45 | No public suspicion labels | SEC-REQ-045 | A | WP-44, WP-53, WP-60, WP-84, WP-89 | review of every label a user can see about another person; HOMI's realtor check of DEC-77 and the vote thresholds on native listings are reviewed with it: neither refuses nor withdraws on its own — each holds the listing with the reason and the evidence (`owner_check_results`), the operators decide (`owner:release`, `owner:withdraw`, `owner:deny-phone`), the owner sees «На проверке» and is never told that he was marked, `owner.checks.agent` is the kill switch; a number is refused only by the operators' deny list (`denied`) or the per-phone limit; the owner's «Похоже на риелтора» on a seeker shows the seeker a decline only (BR-APP-098) (*added by the owner-cabinet plan*) |
 | 46 | Operator access | SEC-REQ-046 | C — no admin panel; operator actions are server commands; a broadcast needs a token and the env switch; dashboards are gated | WP-57, this package | dashboards answer `403` to an ordinary user on staging and production |
 | 47 | Logging without personal data | SEC-REQ-047 | A | all | redaction processor; leak scans |
 | 48 | Monitoring and incident readiness | SEC-REQ-048 | A | production track, this package | each alert fired once on staging |
 | 49 | Dependency audit in CI | SEC-REQ-049 | A | this package | CI steps |
 | 50 | Legal readiness before real users | SEC-REQ-050 | A — earlier than planned (Q-SEC-021) | product owner, this package | legal texts section |
-| 51 | The owner's number (DEC-72) | SEC-REQ-051 | A | WP-84, WP-85, WP-88, WP-89 | the leak scan of `PhoneLeakTest` (WP-84) and of this package's `LogLeakTest` after a publish and a `given` request: no digit run of the number in logs, Horizon payloads, the update ledger, PostHog or the operators' notices; erasure and the 90-day purge by time travel (*added by the owner-cabinet plan*) |
+| 51 | The owner's number (DEC-72) | SEC-REQ-051 | A | WP-84, WP-85, WP-88, WP-89 | the leak scan of `PhoneLeakTest` (WP-84) and of this package's `LogLeakTest` after a publish and a `given` request: no digit run of the number in logs, Horizon payloads, `failed_jobs`, `telescope_entries`, the update ledger, PostHog or the operators' notices; erasure and the 90-day purge by time travel; the protections themselves ship earlier, with WP-84 ("Leak protections") and WP-88 ("Observability"), and this row checks them (*added by the owner-cabinet plan*) |
 | 52 | Owner listing location and photos | SEC-REQ-052 | A | WP-84, WP-86 | shrinking polygons never isolate the true point (`ShownPointLeakTest`, WP-86); a stored photo has no EXIF block (WP-84) (*added by the owner-cabinet plan*) |
 | 53 | Requests between seekers and owners | SEC-REQ-053 | A | WP-85, WP-87, WP-89 | the erasure of a seeker removes his requests and first names; the relay payload holds exactly the listed fields (WP-87); no request text in logs (`NoticeLeakTest`, WP-89) (*added by the owner-cabinet plan*) |
 
@@ -144,7 +144,7 @@ Where a value could leak, and the check for each channel:
 | ------- | ---- | ----- |
 | Laravel log | exception messages with addresses or payloads | `LogLeakTest`: drive sign-in, a webhook with a contact, a legacy call that fails, an LLM failure, an erasure, and — since the owner cabinet — a contact inside a phone window, a publish, a request and its `given` answer (*added by the owner-cabinet plan*); grep the log for the seeded token, `initData`, phone and phrase |
 | Failed jobs | serialised job payloads | `FailedJobLeakTest`: fail each queued job class once; scan `failed_jobs.payload` and `exception` |
-| Telescope | request and job recordings | off on production (`TELESCOPE_ENABLED=false`); on staging the watchers hide `Authorization`, cookies and the update body; test of the hidden-parameter list |
+| Telescope | request and job recordings | off on production (`TELESCOPE_ENABLED=false`); on staging the watchers hide `Authorization`, cookies and the update body; test of the hidden-parameter list. The owner cabinet's filter (WP-84, "Leak protections") and the bot's (WP-88, "Observability") ship before this package, because the staging switch-on needs them (`25` §5 gate 5); this package re-checks them with a daily production-track query of `telescope_entries` for the phone pattern (expected 0); whether `TELESCOPE_RECORD_ALL` changes on the servers is the production track's question (*added by the owner-cabinet plan*) |
 | Pulse, Horizon | job names and tags | tags are ids only; a test asserts no tag contains a digit run of phone length or a token shape |
 | nginx access log | query strings | request: no query strings logged on `api.*`, `app.*`, `hook.*`; the app puts no secret in a query (test over route definitions and the BFF) |
 | PostHog | autocapture, addresses, replay | Playwright against a capturing stub: no event contains `initData`, a token, a phone; replay masks everything (WP-32) |
@@ -190,6 +190,9 @@ refused with the documented answer, another key is unaffected. The rows it must 
 | Outbound to Telegram | bot and chat | 25 per second, 1 per second per chat | WP-57 |
 | Contact requests | user, native and relayed together | 10 a day, 30 a week, a pause after three in ten minutes | WP-85, WP-87 (*added by the owner-cabinet plan*) |
 | Owner photo uploads | user | `throttle:uploads` | WP-80, WP-84 (*added by the owner-cabinet plan*) |
+| Owner writes (`PATCH`, `DELETE`, photo order and delete, contact mode, status, phone request, publish, answers, waitlist) | user | 60 a minute; publish 10 an hour; phone request 10 an hour (`16` SEC-REQ-027, proposed) | WP-80, WP-84, WP-85 (*added by the owner-cabinet plan*) |
+| `GET /owner/place`, `GET /owner/demand` | user | 60 and 30 a minute (`16` SEC-REQ-027, proposed) | WP-84 (*added by the owner-cabinet plan*) |
+| Relay callback `POST /api/internal/legacy/relay` | source address | 60 a minute | WP-87 (*added by the owner-cabinet plan*) |
 
 A limiter keyed by IP must see the client address, not nginx's. The servers call PHP-FPM from nginx through
 FastCGI, so `REMOTE_ADDR` already is the client; `backend/bootstrap/app.php` configures no trusted proxies today,
@@ -216,7 +219,7 @@ when a route with a bound `{id}` or `{number}` under the user group is missing f
 | Media | `GET`, `DELETE /media/{id}` | B cannot read A's private temporary address (WP-00) |
 | Bot callbacks | every action that carries a radar, a rule or a conversation id | `BotForgeryTest` of WP-58, referenced, not repeated |
 | Bot `/owner` | contact message | a forwarded contact is refused (WP-56) |
-| Owner listings | `GET`, `PATCH`, `DELETE /owner/listings/{id}`; its photos, order, contact mode, phone request, publish, status and requests | B's id → `404`, A's listing unchanged; only `GET /owner/listings/{id}` holds the true point and the number, for A (*added by the owner-cabinet plan*) |
+| Owner listings | `GET`, `PATCH`, `DELETE /owner/listings/{id}`; its photos, order, contact mode, phone request, publish, status and requests | B's id → `404`, A's listing unchanged; A's photo id under A's other listing → `404`; only A's own view of the listing holds the true point and the number (WP-80) (*added by the owner-cabinet plan*) |
 | Owner answers | `POST /owner/requests/{id}/answer` | B cannot answer a request on A's listing; a seeker cannot answer his own request (*added by the owner-cabinet plan*) |
 | Contact request | `POST /listings/{number}/contact-request` | the request, its limits and its first name are the caller's; a request on one's own listing → `409 own_listing` (*added by the owner-cabinet plan*) |
 | Bot cabinet callbacks | `k1:rq:…`, `k1:mo:…` | another owner's request id → the stale alert; «Снять» only for an id of `OWNER_MODERATOR_IDS` (WP-89, `BotForgeryTest` of WP-58) (*added by the owner-cabinet plan*) |
@@ -239,13 +242,18 @@ when a route with a bound `{id}` or `{number}` under the user group is missing f
 | PostHog keys | `POSTHOG_PERSONAL_API_KEY`, project keys | backend, apps (the project key is public by design) | PostHog console |
 | Metrics token | `METRICS_TOKEN` | backend, scraper | production track |
 | Shown point key | `SHOWN_POINT_SECRET` | backend (WP-84) | never without a plan: every shown point of an owner listing moves (*added by the owner-cabinet plan*) |
-| Relay identity key, relay callback secret | `LEGACY_RELAY_ID_KEY`, `LEGACY_RELAY_CALLBACK_SECRET` | backend (WP-87) | the identity key never without a plan (every user gets a new identity at the operator); the callback secret with the operator (*added by the owner-cabinet plan*) |
+| Author key | `AUTHOR_KEY_SECRET` | backend (WP-42; the realtor check and the native author key of WP-84, WP-86) | never without a plan: realtor checks, marks, deny-list entries and native blocks stop matching (*added by the owner-cabinet plan*) |
+| Relay identity key, relay callback secret | `LEGACY_RELAY_ID_KEY`, `LEGACY_RELAY_CALLBACK_SECRET` (and `LEGACY_RELAY_CALLBACK_SECRET_PREVIOUS` for 24 hours during a rotation) | backend (WP-87) | the identity key never without a plan (every user gets a new identity at the operator); the callback secret with the operator (*added by the owner-cabinet plan*) |
 
 - `php artisan security:check` (names only): every required name is present and long enough for the environment;
   the bot token has the token shape; the webhook secret uses the allowed alphabet; `TELESCOPE_ENABLED` is off on
-  production; `SOURCES_ALLOW_STUB` is false on servers; `SHOWN_POINT_SECRET` is set and long enough wherever
-  `OWNER_CABINET_ENABLED` is true (there is no phone encryption key: DEC-72; *added by the owner-cabinet plan*).
-  Exit 1 on a failure.
+  production; `SOURCES_ALLOW_STUB` is false on servers. Since the owner cabinet (*added by the owner-cabinet plan*;
+  there is no phone encryption key: DEC-72), wherever `OWNER_CABINET_ENABLED` is true outside `local` and `testing`:
+  `SHOWN_POINT_SECRET` at least 32 bytes, `OWNER_MODERATOR_IDS` not empty, `AUTHOR_KEY_SECRET` set, Telescope off
+  or its cabinet filter registered (WP-84; the check does not decide `TELESCOPE_RECORD_ALL`), `CONTACT_SOFT_LIMIT` and
+  `CONTACT_HARD_LIMIT` set on production (`25` §5 gate 7), `OWNER_CABINET_ALLOWED_IDS` blank on production and set
+  on staging; wherever `LEGACY_RELAY_CALLBACK_SECRET` is set, at least 32 bytes. Until this command covers them,
+  WP-89's switch-on step 2 checks the same list by hand. Exit 1 on a failure.
 - `scripts/security/scan-secrets.sh`: patterns for Telegram bot tokens, Google and other provider keys, private key
   headers, `.env` files, and the names above followed by a value; over the working tree and, in CI, over the
   commits of the PR. A dedicated scanner is a proposal for the first developer, not part of this package.
@@ -295,7 +303,7 @@ no new gate; it extends `DashboardAccessTest` with the `/pulse` case and checks 
 | Scheduler | heartbeat older than 5 minutes | metrics |
 | Send failures | `429` more than 20 a minute; other non-`403` failures above 1 % over 10 minutes; breaker open | `telegram_send_total` |
 | Delivery lag | due outbox rows above 500 for 10 minutes | `radar:status` numbers in metrics |
-| Owner cabinet | publish answering `5xx` or `503` above 5 % of its calls over 10 minutes; the request method's `5xx` above 1 %; `legacy_relay_blocked_total` 5 or more in an hour; any `notice_unknown_total` | metrics of WP-84, WP-85, WP-87, WP-89 (*added by the owner-cabinet plan*) |
+| Owner cabinet | publish answering `5xx` or `503` above 5 % of its calls over 10 minutes; the request method's `5xx` above 1 %; `legacy_relay_blocked_total` 5 or more in an hour; any `notice_unknown_total`; distinct native numbers disclosed to one user in a day above DEC-19's hard threshold (top 20 daily); `request_new` notices to one owner above 20 an hour; holds by the check or by votes above 5 a day; operators' holds or denials outside 07:00 – 23:00 Tashkent or above 10 by one operator a day | metrics of WP-84, WP-85, WP-87, WP-89; `owner_check_results`, `owner_moderation_actions` (*added by the owner-cabinet plan*) |
 | Listing source | `source_unavailable` above 5 % of requests over 10 minutes; legacy breaker open longer than 5 minutes; "legacy refused the service key" once | metrics, the `critical` log line of WP-41 |
 | A stub in use | any feature resolving to `stub` on production after WP-48 | `sources:check` in the deploy smoke |
 | API errors | `5xx` above 1 % over 5 minutes; `401` at five times the hourly norm | nginx or metrics |
@@ -310,7 +318,9 @@ no new gate; it extends `DashboardAccessTest` with the `/pulse` case and checks 
   text promises "about two weeks"); encrypted; a restore into an isolated database, timed, before WP-71 and monthly.
   Not backed up, by design: Redis (conversations, pacer state, caches — all rebuildable), the nginx photo caches.
 - An incident note `docs/security/incident.md`: who is told, how to stop sending (`delivery:pause`), how to move a
-  method back (`sources:reset`), how to revoke the bot token and the service key.
+  method back (`sources:reset`), how to revoke the bot token and the service key; since the owner cabinet, how to
+  take every native listing out of the public answers at once (`OWNER_LISTINGS_PUBLIC=false`, WP-86) and how to
+  stop new owner content (`OWNER_CABINET_ENABLED` unset, WP-89) (*added by the owner-cabinet plan*).
 
 ### Legal texts
 
@@ -323,7 +333,7 @@ of WP-51, WP-56) and the landing page (WP-61) are written from it in ru, uz and 
 | The legal basis for processing and for showing phones and photos taken from another service | lawyer's note (Q-SEC-021) |
 | Data stored per user: Telegram id, three profile flags, language and settings, radars, favourites, marks, opened listings, received cards, arrival source, the action log; the phone hash when an owner verifies | WP-40, WP-44, WP-45, WP-47, WP-52, WP-53, WP-56 |
 | Not stored: name, username, phone number, message texts, voice, location — except what the next row lists | WP-40, WP-50, WP-55 |
-| The owner cabinet: an owner's number in plain text with his listing and why (DEC-72), the listing's photos while it is shown or paused and its true location, the form until the owner deletes it, number, texts and photos erased 90 days after the listing left the feed; «Отклики» with the seeker's answers and his Telegram first name (DEC-76); a request on another service's listing passed to that service with the first name and the answers only (DEC-71) | WP-84, WP-85, WP-87 (*added by the owner-cabinet plan*) |
+| The owner cabinet: an owner's number in plain text with his listing and why (DEC-72), the listing's photos while it is shown or paused and its true location, the form until the owner deletes it or 180 days after a draft was last changed, number, texts and photos erased 90 days after the listing left the feed; «Отклики» with the seeker's answers and his Telegram first name (DEC-76), those texts erased 90 days after the request closed; a request on another service's listing passed to that service with the first name and the answers only (DEC-71); erased cabinet data leaves the backups after up to 21 days, deleted photos the media storage after up to 30 days and the edge cache after up to an hour; sent bot messages are edited, not deleted | WP-84, WP-85, WP-87, WP-89 (*added by the owner-cabinet plan*) |
 | Processors: HOMI's PostHog project and its region; the language-model provider configured at the time, with masking — the team may change it (DEC-55), and the text is changed in the same step (`BRAND_LLM_VENDOR`, WP-56); the listing service that supplies listings, phones and photos | DEC-47, WP-55, DEC-42 |
 | Retention: action log 180 days, raw updates 14 days, backups 14 days; owner listings 90 days after they left the feed (*added by the owner-cabinet plan*) | WP-47, WP-50, WP-84, production track |
 | Deletion: «Удалить мои данные» in the bot, immediate in the database; what an author of a listing can ask for | WP-56, WP-57 |

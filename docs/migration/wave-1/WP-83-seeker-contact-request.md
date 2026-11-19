@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-80, WP-26, WP-30, WP-36 |
+| Depends on | WP-80, WP-82, WP-26, WP-30, WP-36 |
 | Size | about 2 000 changed lines with tests, M |
 | Behaviour reference | `03` SCR-018 (owner variants), SCR-059 (seeker part), SCR-061, SCR-062, §3.3 (`owner_info_opened`, `chat_access_*`), BR-APP-026, BR-APP-098 … BR-APP-103, LB-APP-057, LB-APP-072 … LB-APP-078; `05` TMA-033, TMA-037 (`kv-owner-tip`); `02` BR-API-183 … BR-API-189; `09` DEV-060 |
 | Needs from the production track | the regular deploy; then the manual checks inside Telegram on staging |
@@ -66,14 +66,16 @@ exposes them.
 - *Integrator defaults, listed for the reviewer:* default 1 (the request is `POST /listings/{number}/contact-request`
   and `POST …/contact` alone returns a number), default 2 (`429 rate_limited` with `reason` `requests_fast`,
   `requests_day` or `requests_week` and `Retry-After`), default 3 (`contact.mode: hidden`), default 7 (the first name
-  from the launch data the request carries), default 13 (`agent` reaches the seeker as `declined`; a `given` number
-  counts against the disclosure quota and is never refused by it), default 21 (a HOMI realtor mark wins: `is_owner:
-  false` hides the chip), default 22 (the checks inside Telegram on staging run when WP-89 switches the cabinet on
+  from the launch data the request carries), default 23 (a `given` number counts against the disclosure quota of
+  DEC-19 and is never refused by it), default 21 (a HOMI realtor mark wins: `is_owner: false` hides the chip), default
+  24 (a native listing's author is `{kind: "phone", label: «Хозяин»}`, so WP-26's «Это риелтор» is offered there
+  unchanged), default 22 (the checks inside Telegram on staging run when WP-89 switches the cabinet on
   there). New in this specification: (a) `given` is always «Позвонить», and the contact method decides whether a
   number exists; (b) `expired` offers «Связаться с хозяином» again with «Хозяин пока не ответил» as the bar's note;
   (c) `response_minutes` shown in hours and days is a formatting fix, not a `DEV` row; (d) the info sheet of a HOMI
   owner listing ends with the report path of the listing's «⋯» (`owner.info.foot`), since no «Ответил риелтор»
-  button of HOMI's bot is specified (WP-89); (e) `c_<number>` opens the listing, then its request sheet.
+  button of HOMI's bot is specified (WP-89); (e) `c_<number>` opens the listing, then its request sheet. As in legacy
+  (BR-APP-098), the server's `agent` reaches the seeker as `declined`.
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md`, `intercepting-routes.md` and
 `02-guides/preserving-ui-state.md` in `frontend/app/node_modules/next/dist/docs/01-app/` (the sheets as children of
@@ -118,7 +120,7 @@ and `requestWriteAccess` are verified against the Bot API documentation.
 - Request mode is one predicate, `isRequestMode(details)` in the new `features/listing/cta/owner.ts`: `contact.mode`
   is `request`. The info sheet's gate point and foot read the same predicate (fix of LB-APP-078).
 - `given` does not wait for `has_phone`: the tap asks `POST /listings/{number}/contact`, which gives the number to a
-  seeker whose request is `given` (WP-80) and counts it (default 13). `404 contact_unavailable` there plays the error
+  seeker whose request is `given` (WP-80) and counts it (default 23). `404 contact_unavailable` there plays the error
   haptic and re-reads the card in the background.
 - A re-read never clears the screen: `useListing` (WP-26) keeps the shown details until the new ones arrive, and the
   scroll stays (fix of LB-APP-074).
@@ -139,7 +141,10 @@ move_in, message, init_data }` → `POST /listings/{number}/contact-request` →
 check (a bad number, a `who` outside the five, `people` outside 1 … 20, `move_in` above 32 or `message` above 500
 characters) makes no request. `lib/api/server.ts` gains `contactRequest(number, body)`. `init_data` is
 `tg.initData()` of the current launch; it is passed through and never stored, cached or logged by the client
-(`16` SEC-REQ-007), and never echoed by the server (WP-80).
+(`16` SEC-REQ-007), and never echoed by the server (WP-80). The Next server never logs the action's input: the
+action passes `init_data` to `contactRequest()` and drops it; a failure reaches the error facade of WP-32 as its
+`UiError` code only, never with its input; `init_data`, the move-in text and the message are no analytics property,
+and the sheet's fields carry the `.ph-mask` class of WP-32's replay masking.
 
 ### Owner chip and info sheet (`features/listing/owner/`)
 
@@ -186,6 +191,8 @@ New `homi` texts, ru/uz/en, for the product owner to approve:
 | `contact.leadTime` | «Хозяин получит ваш отклик и ответит в бот — обычно в течение {time}.» |
 | `contact.usuallyTime` | «Обычно отвечает за {time}» |
 | `contact.noteLimit` | «Хозяин увидит ваше имя из Telegram и эти ответы, но не ваш номер. Можно отправить до {day} откликов в день.» |
+| `contact.noteRelay` | «Отклик передаётся сервису, где размещена квартира.» — appended to the note for a listing read from legacy in request mode (`origin: legacy`, DEC-71) |
+| `contact.err.noChatRestart` | «Бот не может писать вам — похоже, он остановлен. Открыть чат с ботом? Нажмите там «Перезапустить» и отправьте отклик снова.» (the request's form of legacy's `chat.restart`, which names the radar) |
 | `contact.err.requestsFast` | «Несколько откликов подряд — следующий можно будет отправить через {minutes} мин.» |
 | `contact.err.requestsDay` | «Сегодня вы уже отправили {day} откликов. Завтра можно снова.» |
 | `contact.err.requestsWeek` | «За неделю — {week} откликов, это предел. Новые можно будет отправить через несколько дней.» |
@@ -216,6 +223,7 @@ Changed:
   DescriptionSection,AuthorSection,SourcesSection}.tsx`.
 - `lib/actions/listing.ts`, `lib/api/server.ts`, `lib/navigation/routes.ts`, `lib/deeplinks/parse.ts`,
   `features/shell/LaunchRedirector.tsx`, `lib/storage.ts`, `lib/analytics/events.ts`.
+- `frontend/packages/ui/src/icons/index.ts` (`ShieldCheck` for the chip).
 - `frontend/packages/i18n`: `src/format/` (`formatResponseTime` and its test), `messages/homi/{ru,uz,en}.json`,
   `tests/catalogue.test.ts`.
 - `tests/listing/{ListingCtaBar,useContact,HistorySection,AuthorSection}.test.tsx` gain the owner cases.
@@ -250,7 +258,10 @@ Changed:
   not been touched (fix of LB-APP-077).
 - «Въезд»: free text of at most 32 characters, placeholder «Например, с 1 декабря».
 - «Сообщение»: 3 rows, at most 500 characters, prefilled «Здравствуйте! Можно посмотреть?».
-- The note `contact.noteLimit` with the day's limit (DEC-76, LB-APP-057).
+- The note `contact.noteLimit` with the day's limit (DEC-76, LB-APP-057); for a listing read from legacy
+  (`origin: legacy`, the relay of DEC-71) `contact.noteRelay` follows it, so the seeker knows at sending that the
+  request leaves HOMI (*integrator default, listed for the reviewer*; the text for the product owner and the lawyer
+  to approve).
 - The footer: a disabled «Выберите, кто будет жить» until a chip is picked, then «Отправить хозяину»; disabled
   while sending.
 - Send: ignored without a chip or while a send runs; a medium haptic; the body `{who, people, move_in, message,
@@ -262,7 +273,7 @@ Changed:
 
   | Answer | Line | Effect |
   | ------ | ---- | ------ |
-  | `409 no_chat` after the write-access attempt | «Ответ хозяина придёт в бот — разрешите боту писать вам и отправьте ещё раз.» (`contact.err.noChat`) | none |
+  | `409 no_chat` after the write-access attempt | «Ответ хозяина придёт в бот — разрешите боту писать вам и отправьте ещё раз.» (`contact.err.noChat`) | when Telegram could not ask or `no_chat` stays, `withChatAccess` offers to open the bot with `tg.confirm(contact.err.noChatRestart)` (its `restartText`) |
   | `429 rate_limited`, `reason: requests_fast` | `contact.err.requestsFast` with `pause_minutes` | none |
   | `429 rate_limited`, `reason: requests_day` | `contact.err.requestsDay` with `day` | none |
   | `429 rate_limited`, `reason: requests_week` | `contact.err.requestsWeek` with `week` | none |
@@ -281,8 +292,8 @@ Changed:
   `POST …/contact` on the tap, never before (DEC-52).
 - `expired`: «Связаться с хозяином» again; the note «Хозяин пока не ответил»; a new request that the server refuses
   shows the closed bar after the re-read (DEV-060: once after `expired`, never after `declined`).
-- `declined` (also the server's `agent`, which the seeker never sees as such, default 13) and `cancelled`: the
-  closed bars, no action.
+- `declined` (also the server's `agent`, which the seeker never sees as such, BR-APP-098, legacy) and `cancelled`:
+  the closed bars, no action.
 - `hidden`: the neutral line, no action (DEC-75; also the answer if the operator refuses the relay).
 
 ### Owner chip and its tip (BR-APP-100, BR-APP-101, LB-APP-072)
@@ -355,7 +366,8 @@ legacy printed every value in minutes («за 600 мин»).
 
 **Component (Vitest + Testing Library).** `ListingCtaBar`: each state renders its label, icon, note or bar, with its
 `data-cta-action`. `ContactRequestSheet`: the disabled button until a chip, the lock while sending, the lines of the
-error table, the note with the reference's limit. `OwnerChip`: inert before the card, the pulse and the tip timing
+error table, the note with the reference's limit and, for `origin: legacy`, `contact.noteRelay`; the restart
+question of a persisting `no_chat`. `OwnerChip`: inert before the card, the pulse and the tip timing
 (fake clock), the event once. `OwnerInfoSheet`: the points and the foot per case. `ClaimedOwnerSection` and the
 self-placed sections.
 
