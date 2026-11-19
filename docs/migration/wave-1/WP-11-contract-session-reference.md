@@ -94,7 +94,9 @@ here without WP-40's internal reason.
 `locale` is `ru`, `uz` or `en`; `theme` is `auto`, `light` or `dark`; `city` is a city code or `null`;
 `analytics` is `null` when analytics is off in the environment. Changed against legacy: directories, rate, bot name
 and limits moved to `GET /reference`; the PostHog key and host are frontend configuration, only the per-user part
-stays here; `uz_Latn` became `uz`; the gate reason moved from the body `detail` to `reason`.
+stays here; `uz_Latn` became `uz`; the gate reason moved from the body `detail` to `reason`. The shape gains
+`owner: {pending, has_listings, waitlisted}`, built on stubs by WP-80, with its values from WP-84 and WP-85; it
+replaces legacy's separate pending call (*added by the owner-cabinet plan*).
 
 Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: false`), `no_city`
 (`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
@@ -198,6 +200,11 @@ is new (legacy has no such switch). Scenarios:
 - The answer may be cached: `Cache-Control: public, max-age=300` and `Vary: Accept-Language`. The radar switch
   therefore reaches clients within five minutes.
 
+The owner cabinet adds `owner_enabled` (beside `radars_enabled`), `limits.owner_listings`, `limits.owner_photos`,
+`limits.requests` (`{day, week, pause_minutes}`) and `renovations.owner`, all from `backend/config/owner.php` and
+filled by the resource for every driver, like `radars_enabled`; WP-80 builds them on stubs (*added by the
+owner-cabinet plan*).
+
 ### `GET /cities` — public; legacy: API-002
 
 ```json
@@ -235,6 +242,17 @@ products; `listing_id` carries the listing number. Catalogue:
 | `listing_shared`, `original_copied`, `contact_write` | `listing_id` |
 | `original_opened` | `listing_id`, `src` (`button`, `video`, `sources`, `price_history`, `offers`) |
 | `contact_call` | `listing_id`, `via` (`tel`, `browser`), `src` (`text`, `author`) |
+| `owner_info_opened` | `listing_id` (since legacy release `index-CBlEKxdL.js`) |
+| `owner_attention` | `what` (`dot`, `coach`, `banner`), `action` (`shown`, `clicked`) |
+| `owner_mascot_tap` | none |
+| `owner_limit_sheet` | `where` (`settings`, `mine`) |
+| `owner_place_set` | `source` (`map`, `locate`, `manual`) |
+| `owner_place_autofill` | `result` (`applied`, `reverted`) |
+| `owner_hint_opened` | `field` (`photos`, `area_m2`, `floor`, `renovation`, `description`) |
+
+The seven `owner_*` rows are the owner cabinet's events, with the names and properties of `03` §3.3; the first since
+`index-CBlEKxdL.js`, the other six since `index-CIa0Ldj2.js`. The catalogue already accepts unknown names with `204`;
+the rows document them for WP-81 … WP-83 (*added by the owner-cabinet plan*).
 
 `custom` says whether the filters of the nudge differ from the defaults of their deal and city (BR-APP-013). The
 five `return_prompt_*` and `feed_radar_*` names belong to the return banner and the radar card in the feed, added by

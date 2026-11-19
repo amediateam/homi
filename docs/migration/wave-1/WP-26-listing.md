@@ -36,6 +36,10 @@ the per-m² fix of `100008` and `100009`, as a backend commit of this package (D
   allow-list, deep-link builders, Back wiring: WP-21. The system sheets SCR-044 are only triggered here.
 - The «Скрытое» list that reads what is hidden here: WP-31. Event transport and screen names: WP-32. The focus rules
   of the full-screen layers beyond the listing's minimal handling: WP-33 (KI-41).
+- The owner states of the listing, built on the seams of this package and nothing rebuilt: the CTA actions of
+  `features/listing/cta/ListingCtaBar.tsx` (`ctaActionOf`), the sections, the title row and the child routes
+  `contact`, `owner` (WP-83) and `requests` (WP-82); `owner.mine` swaps the CTA bar for the panel's footer (SCR-059,
+  WP-82) (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 
@@ -182,7 +186,7 @@ action names `getContact`, `translate` and `prepareShare` are the ones WP-22 res
 | `sections/{LocationSection,NearbySection,SpotMapSlot}.tsx` | location rows with «Рядом» inside (`nearbyRows` exported for the location's own visibility), the 2:1 placeholder that links to `routes.listingLocation(number)` |
 | `sections/{AuthorSection,DescriptionSection,SourcesSection,OriginalText}.tsx` | author, description, channel chips with the disclosure, whose child is the original text with translation |
 | `translation/{useTranslation,translationCache}.ts` | state per number and locale: `{ text, shown, pending, failed }` (`EMPTY_TRANSLATION` is the server snapshot) |
-| `cta/{ListingCtaBar.tsx,useContact.ts}` | price, delta or note, primary action (`ctaActionOf`); `useContact` (the contact fetched on a tap and its lifetime) and `useListingContact` (every contact control: its lock, haptics, call flow and events) |
+| `cta/{ListingCtaBar.tsx,useContact.ts}` | price, delta or note, primary action (`ctaActionOf`); `useContact` (the contact fetched on a tap and its lifetime) and `useListingContact` (every contact control: its lock, haptics, call flow and events). WP-83 extends `ctaActionOf` with the request states of an owner listing; WP-82 swaps the bar for the panel's footer when `owner.mine` (*added by the owner-cabinet plan*) |
 | `share/useShareListing.ts` | prepared message, fallback link and its text (`shareText`), lock (`SHARE_LOCK_MS`) |
 | `openOriginal.ts` | `openOriginal(number, url, src)`: `tg.openLink`, then `original_opened` only if it opened; no haptic |
 | `viewer/{PhotoViewerRoute,PhotoViewer,ZoomableImage}.tsx`, `viewer/gestures.ts` | viewer route, viewer, zoomable slide, pure gesture maths |

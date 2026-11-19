@@ -34,7 +34,8 @@ Out:
 - SEO pages, their path parser, sitemap entries, interlinking, `hreflang` to SEO pages, CSV exports, the footer
   link blocks into SEO pages (LND-018) — Wave 3 (KV-FE-101, KV-FE-114 … KV-FE-129).
 - The landing data itself — WP-60. The `/start` payload handling in the bot — WP-52.
-- The final legal wording of the privacy text — WP-70.
+- The final legal wording of the privacy text, the owner cabinet's paragraphs included — WP-70
+  (*added by the owner-cabinet plan*).
 - The debug and benchmark overlays of the legacy script (`?bench=1`, `?debug=vh`): development tools, not rebuilt.
 
 ## Decisions that bind this package
@@ -286,6 +287,15 @@ kvadro² [brand → HOMI] в Telegram», «Как удалить свои дан
   production track changes together with `BRAND_LLM_VENDOR` of the bot text, WP-56) and prints the sentence that
   no language model is used while it is empty. The text is marked "pending legal review"; WP-70 delivers the final
   wording as the answer to Q-SEC-021. The page and the bot text are changed together.
+- Since the owner cabinet (DEC-69) the text has the owner paragraphs, the same facts as the bot text of WP-56: the
+  owner's number is kept in plain text with his listing, to be shown to him and given to a seeker he answers or, in
+  «Показывать номер» mode, to a seeker who taps (DEC-72); the photos are kept while the listing is shown or paused;
+  the form until the owner deletes it; number, texts and photos are erased 90 days after the listing left the feed
+  for good (WP-84). «Отклики»: a request keeps the seeker's answers and his Telegram first name, which the owner sees,
+  and is erased with the listing or with either user (DEC-76, WP-85). One sentence names the relay: a request on a
+  listing of another service is passed to that service with the first name and the answers only (DEC-71, WP-87).
+  The paragraphs are final before the cabinet or the relay is switched on for real users (gate 1 of `25` §5, DEC-81);
+  until then they are marked "pending legal review" with the rest (*added by the owner-cabinet plan*).
 
 ## Files
 

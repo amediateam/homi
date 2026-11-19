@@ -43,6 +43,7 @@ and on the PMTiles file as soon as the production track hosts it.
 - Filters, sort and city sheets opened from the map: WP-25. Listing opened from the card: WP-26.
 - Screen tracking `search/map`: WP-32. Bundle-size gate and the pass inside Telegram: WP-33.
 - Hosting the PMTiles file and the CSP header itself: production track and WP-21.
+- The owner's place picker reuses both engines (WP-81) (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 

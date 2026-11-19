@@ -43,7 +43,8 @@ Out:
 - The launch link `?radar=<id>`: WP-57 with WP-52 (DEC-61).
 - The other readers of the launch that legacy leaves unmarked — the gate's start link, the launch's analytics entry
   (LB-APP-080): reproduced, no fix here.
-- The owner form's close cross: the owner-cabinet packages.
+- The owner form's close cross: WP-81, which renders this package's `FallbackClose` in every state of the form
+  (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 

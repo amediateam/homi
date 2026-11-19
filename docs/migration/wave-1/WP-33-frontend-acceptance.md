@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-24 … WP-32, WP-34 … WP-38 |
+| Depends on | WP-24 … WP-32, WP-34 … WP-38, WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
 | Needs from the production track | (1) Deploy of the merged stage B to staging and to production. (2) The Mini App address attached to the staging bot and the production bot, so the app opens inside Telegram on both. (3) The app vhosts without `X-Frame-Options`, so Telegram Web can frame the app (Q-SEC-012, requested by WP-21). (4) `NEXT_PUBLIC_APP_ENV=staging` on staging (the stub scenario cookie and the gallery work there, not on production). (5) The PostHog keys of WP-32 on staging. (6) One test account per client for the pass |
@@ -334,8 +334,11 @@ audit to those owners; each identifier appears once. "Proved by" names the lowes
 screen table under "Acceptance checklist" is the user-visible proof.
 
 Since the intake of `index-CBlEKxdL.js` the audit also holds SCR-049 … SCR-062, BR-APP-075 … BR-APP-103,
-LB-APP-054 … LB-APP-078 and TMA-046, and TMA-034 is no longer an absence in legacy; they join this checklist with
-the owner-cabinet plan.
+LB-APP-054 … LB-APP-078 and TMA-046, and TMA-034 is no longer an absence in legacy; they join this checklist: the
+trace rows are WP-81's (SCR-050 … SCR-056), WP-82's (SCR-049, SCR-057 … SCR-060) and WP-83's (SCR-061, SCR-062), and
+TMA-034 is used since WP-81. They stand in the section "The owner cabinet" below and in "Screens of the owner
+cabinet (14)" under the acceptance checklist, so the counts of the other headings stay as they are (*added by the
+owner-cabinet plan*).
 
 Since the intake of `index-CIa0Ldj2.js` the audit also holds SCR-063, BR-APP-104 … BR-APP-111, LB-APP-079 …
 LB-APP-083 and TMA-047; their lines are in the specifications of WP-34 … WP-38 (for BR-APP-107 and LB-APP-079: WP-57) and join this
@@ -454,8 +457,55 @@ flag gain DEV-053 (DEC-67):
 
 Six of the 45 are confirmed absences — nothing is built, and the check is that the adapter exposes no such call:
 viewport height, main button, other popups, other hand-offs, contact request, cloud and sensor interfaces (`05`
-§5). The `no_chat` flow that uses the write-access call is WP-30's code; the report endpoint of the boot watchdog
+§5). Since WP-81 the contact request is no longer one of them: `tg.requestContact()` serves the phone step of the
+owner form (*added by the owner-cabinet plan*). The `no_chat` flow that uses the write-access call is WP-30's code; the report endpoint of the boot watchdog
 is WP-32's.
+
+### The owner cabinet
+
+The trace of the cabinet's audit items to WP-81 … WP-83 (*added by the owner-cabinet plan*). "DEV" means an
+approved deviation that is on without a flag (DEC-74, DEC-80) and is checked as the build's behaviour.
+
+| # | Rules | Package | Proved by |
+| - | ----- | ------- | --------- |
+| 1 | BR-APP-075 … BR-APP-087, BR-APP-096, BR-APP-097, the form's half of BR-APP-093 | WP-81 | `owner-form.spec.ts`, `owner-picker.spec.ts`, `owner-phone.spec.ts`; the unit tests of `features/owner/form`, `photos`, `place`, `steps` |
+| 2 | BR-APP-088 … BR-APP-092, BR-APP-094, BR-APP-095, BR-APP-103, the panel's half of BR-APP-093 | WP-82 | `owner-lists.spec.ts`, `owner-requests.spec.ts`, `owner-panel.spec.ts`, `owner-signals.spec.ts`; `status.test.ts` |
+| 3 | BR-APP-098 … BR-APP-102 | WP-83 | `contact-request.spec.ts`, `listing-owner.spec.ts`; `ctaOwner.test.ts` |
+
+| # | Defect | Short name | Package | State |
+| - | ------ | ---------- | ------- | ----- |
+| 1 | LB-APP-054 | a new draft on every entry | WP-81 (server: WP-84) | DEV-054 |
+| 2 | LB-APP-055 | «Сохранить изменения» after live saves | WP-81 | DEV-062 |
+| 3 | LB-APP-056 | publish without a mode | WP-81 | DEV-055 |
+| 4 | LB-APP-057 | limits in the texts | WP-81, WP-82, WP-83 | fixed |
+| 5 | LB-APP-058 | no owner funnel events | WP-81, WP-82 | fixed |
+| 6 | LB-APP-059 | stale counters after a panel action | WP-82 | fixed |
+| 7 | LB-APP-060 | old client cannot return to the draft | WP-81 (the bot's button: WP-88) | fixed |
+| 8 | LB-APP-061 | original photo uploaded | WP-81 (re-encoding: WP-84) | fixed |
+| 9 | LB-APP-062 | weekday initials, device-clock days | WP-82 | fixed |
+| 10 | LB-APP-063 | "inside Uzbekistan" is a rectangle | WP-81 (the check: WP-84) | fixed |
+| 11 | LB-APP-064 | unknown value crashes owner screens | WP-81, WP-82 | fixed |
+| 12 | LB-APP-065 | no way forward after a rejection | WP-81, WP-82 | DEV-056 |
+| 13 | LB-APP-066 | pending count read for everyone | WP-82 | fixed |
+| 14 | LB-APP-067 | photo delete without undo | WP-81 | DEV-057 |
+| 15 | LB-APP-068 | silent loss of place data | WP-81 | DEV-058 |
+| 16 | LB-APP-069 | request tip leads to Settings | WP-82 | DEV-059 |
+| 17 | LB-APP-070 | empty own-listing footer | WP-82 | fixed |
+| 18 | LB-APP-071 | waitlist not remembered | WP-81 | fixed |
+| 19 | LB-APP-072 | chip tap before the card | WP-83 | fixed |
+| 20 | LB-APP-073 | stale card after `open`, `closed`, `own` | WP-83 | fixed |
+| 21 | LB-APP-074 | `given` without a phone | WP-83 | fixed |
+| 22 | LB-APP-075 | label hidden by string matching | WP-83 | fixed |
+| 23 | LB-APP-076 | expired closes contact for good | WP-83 | DEV-060 (and the response time in hours and days, fixed) |
+| 24 | LB-APP-077 | `who` overwrites the count | WP-83 | fixed |
+| 25 | LB-APP-078 | gate point after the number was given | WP-83 | fixed |
+
+Totals of the cabinet: 17 fixed and 8 approved deviations on without a flag; none flagged, none kept as legacy.
+
+| # | Points | Group | Package | Automated by | By hand in Telegram |
+| - | ------ | ----- | ------- | ------------ | ------------------- |
+| 1 | TMA-034 | contact request of the phone step | WP-81 | `contact.test.ts` per version; `owner-phone.spec.ts` at 6.8 and 6.9 | «Поделиться номером» on iOS and Android; the bot path on a client below 6.9 |
+| 2 | TMA-046 | the launch `owner_new` | WP-81 | `owner.test.ts` (deep links); `owner-phone.spec.ts` | open the app with `startapp=owner_new` from a chat |
 
 ## Tests
 
@@ -531,6 +581,28 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 46 | SCR-046 | Return banner | WP-30 | card on `/` after a visit ≥ 6 h ago | «С вашего прошлого захода — N новых» only for N > 0; «Включить» or «Настроить» by the filters; 15 s; ×; once per filters in 2 days; never with another nudge; absent while radars are off |
 | 47 | SCR-047 | Radar card in the search list | WP-30 | inside the list on `/` | after the 8th card or after a short complete list without the note; rent and sale titles; «Включить радар» or «Настроить радар»; × for 7 days; absent with a radar for the search and while radars are off |
 | 48 | SCR-048 | Card style «Вид карточек» | WP-31 | `/settings/cards` | both mocks, the current one checked; a pick saves and the settings row follows; «Прислать пример в чат»: spinner, the sent line with the minimise hint, or the failure line (`card_sample_unsent`); no «Новое» pill (DEC-57) |
+
+### Screens of the owner cabinet (14)
+
+Ticked once WP-81 … WP-83 are merged, on a local stack with the cabinet on and inside Telegram on staging when WP-89
+switches it on there (DEC-81; *added by the owner-cabinet plan*).
+
+| # | Screen | Name | Package | Address or trigger | States to tick |
+| - | ------ | ---- | ------- | ------------------ | -------------- |
+| 1 | SCR-049 | Limit sheet | WP-82 | `/owner/limit` from Settings or the list | the numbers from `max`; «Мои объявления» or «Понятно» by the entry |
+| 2 | SCR-050 | Owner form | WP-81 | `/owner/new`, `/owner/<id>` | loading, error with retry, the limit state, the cross without the SDK; the same draft on a second opening (DEV-054) |
+| 3 | SCR-051 | Place picker | WP-81 | `/owner/<id>/place` | GL and Leaflet; the label; «Найти меня»; the fill and its «Вернуть»; edge swipe |
+| 4 | SCR-052 | Questionnaire | WP-81 | `/owner/<id>` | every section; autosave; the gate; photos with undo (DEV-057); «Вернуть» after a city change (DEV-058) |
+| 5 | SCR-053 | Phone confirmation | WP-81 | `/owner/<id>/phone` | yes, no, old client, late hint, `not_uz`, `not_own` |
+| 6 | SCR-054 | Rejection and waitlist | WP-81 | the phone step of a rejected listing | three reasons, the support button (DEV-056), the remembered waitlist |
+| 7 | SCR-055 | Contact mode and preview | WP-81 | `/owner/<id>/mode` | «Через HOMI» preselected (DEV-055); the preview; «Опубликовать» or «Готово» (DEV-062) |
+| 8 | SCR-056 | Done | WP-81 | `/owner/<id>/done` | confetti and haptics, the mascot, the edit form, no radar sentence while radars are off |
+| 9 | SCR-057 | «Мои объявления» | WP-82 | `/settings/owner` | two tabs with dots; every status; the actions with their confirms; the rejected card |
+| 10 | SCR-058 | «Отклики» | WP-82 | `/settings/owner/<id>/requests`, `/listing/<n>/requests` | every status line; the answers, reasons, undo, «Оказался риелтором» |
+| 11 | SCR-059 | The owner's own listing | WP-82 | stub 10000008 | the title row, «Цена», no «Источник», the panel and its footer, never an empty footer |
+| 12 | SCR-060 | Request signals | WP-82 | the pending count | the dot on every tab, the tab tip to the listing (DEV-059), the card tip, `homi-req-tip` |
+| 13 | SCR-061 | Request sheet | WP-83 | `/listing/<n>/contact` | the form, the note, every error line, the card effects |
+| 14 | SCR-062 | Owner info sheet | WP-83 | `/listing/<n>/owner` | the points by tier and origin; the reworded check (DEC-77); no gate point after `given` |
 
 ### Scenarios of legacy release `index-CIa0Ldj2.js` (32)
 

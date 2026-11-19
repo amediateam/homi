@@ -43,6 +43,8 @@ built once here and reused by favourites, history, the map card and the listing 
 - The follow nudge, the return banner (SCR-046) and the radar card inside the list (SCR-047) — WP-30; the
   home-screen nudge — WP-31. Screen tracking and the PostHog loader — WP-32.
 - Filter model, summaries, distance and money formatters, error mapping, session maps — WP-22 (used here).
+- A native owner listing is a card like any other; the card does not read `origin` (WP-83's end-to-end run covers
+  one) (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 
@@ -965,12 +967,12 @@ States
     starts (`WP-29-saved.md:63`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
     not `seen[number]` (`:78`); `ListingFeed` already has every prop WP-29 needs (`:66`).
   - WP-27: `MapScreen`, `MapBar` and `ViewToggle` should read `useScreenSearchState('map')`, not `useSearchState()`
-    (`WP-27-map-gl.md:83`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
+    (`WP-27-map-gl.md:84`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
     `data.spec.ts` and the header-mode expired case of `gates.spec.ts` run on, which its PR moves (`:234`).
   - WP-30: `useRadarsEnabled()` reads `useReference().radarsEnabled`, not `radars_enabled`, and tests pass
     `{ ready: true }` (`WP-30-radars.md:173`).
   - WP-26: the contract has no `short_title`; the market block uses `marketVerdict({ market }, locale, t)`; the
-    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:289`).
+    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:293`).
   - WP-32: `whenFirstContent(timeoutMs)` races the existing `firstContentShown()`; the mark comes from the first
     `Photo` that loads anywhere, not only a feed card (`WP-32-analytics-errors.md:78`).
 - **Merged** on 2026-11-17 on the developer's «сливай #71» (merge commit `780aea9`), after `frontend` (run

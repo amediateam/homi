@@ -226,6 +226,8 @@ Switching off single functions without a deploy:
 | The language model | change `AI_DEFAULT_PROVIDER`, the model and the key in the server env, then a Horizon restart (WP-55, DEC-55); empty the provider to stop all calls | the next phrase goes to the other provider; with none configured every phrase gets the not-understood reply |
 | Free text and voice | `php artisan llm:feature query-parsing off` (WP-55) | every phrase gets the not-understood reply |
 | Broadcasts | `TELEGRAM_BROADCAST_ENABLED=false` (the default) | `confirm` refuses on production |
+| The owner cabinet | `OWNER_CABINET_ENABLED=false` the same way (WP-89, "Switching the cabinet on") | creating a draft, asking for the phone and publishing are refused (`403 owner_disabled`); existing listings can still be removed, paused and marked let, and requests can still be answered and are still delivered (DEC-81) (*added by the owner-cabinet plan*) |
+| The relay of requests to legacy | `LEGACY_RELAY_ENABLED=false` the same way (WP-87) | legacy `gate` listings show the neutral bar again and no new request is relayed (DEC-75) (*added by the owner-cabinet plan*) |
 | The whole bot | the production track removes the webhook; Telegram keeps updates for a limited time | last resort; note the time, re-register with the script of WP-50 |
 | Access for everyone | the access gate mode (WP-40) | the Mini App shows the no-access screen; the bot answers by the gate |
 

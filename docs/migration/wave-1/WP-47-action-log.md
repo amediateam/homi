@@ -20,7 +20,9 @@ table that grows forever, without saying how it is erased and when it is purged.
 
 In: the partitioned action log and its partition manager; `ActionLogger` and the catalogue; the real `POST /events`;
 the PostHog client, server-side capture and person deletion; `ErasureService` with its registry, ledger and registry
-test; the retention registry, its purge command and policy test; scheduler entries.
+test; the retention registry, its purge command and policy test; scheduler entries. The registry gains, later, the
+owner listings with their number and photos, the waitlist and the requests as seeker and as owner; WP-84 and WP-85
+register them (*added by the owner-cabinet plan*).
 
 Out: the PostHog SDK in the Mini App (stage B); the bot's «Удалить мои данные» dialogue and the bot's own events
 (WP-56 and WP-58 call the services built here); the legal texts (WP-70).

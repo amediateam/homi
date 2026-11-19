@@ -205,8 +205,8 @@ personal data (SEC-REQ-047).
   with `props = { listing_id }` on listing addresses. There is exactly one tracker; route components do not track.
   On a listing address the pageview is sent when the listing's record or its failure is known, not at the change
   of address, so a card closed before that sends none (legacy since `index-CIa0Ldj2.js`; `setScreen` still runs at
-  once, for error reports). Legacy's second name for that address, `owner/listing`, comes with the owner-cabinet
-  plan (*added by the intake of `index-CIa0Ldj2.js`*).
+  once, for error reports). Legacy's second name for that address, `owner/listing`, comes with the owner cabinet (*added
+  by the intake of `index-CIa0Ldj2.js`*): WP-82 builds it (*added by the owner-cabinet plan*).
 - `useScreenLayer(name)` pushes a name while a component is mounted and visible, for the one layer that has no
   address of its own with flags off: the map selection card (`map/card`). The top layer name wins over the
   address name. `MapSelectionCard` of WP-27 gets this one call in this package's PR.
@@ -304,6 +304,11 @@ Rows 17 … 21 come with legacy release `index-DY_DH7h-.js` (API-034, BR-API-123
 differ from the defaults of their deal and city (BR-APP-013). While radars are switched off (DEC-51) the return
 banner and the radar card are never shown, so these five are not sent.
 
+The owner cabinet adds the seven owner events of WP-11's catalogue: `owner_place_set`, `owner_place_autofill` and
+`owner_mascot_tap` (WP-81), `owner_attention`, `owner_limit_sheet` and `owner_hint_opened` (WP-82), and
+`owner_info_opened` (WP-83), with the names and properties of `03` §3.3; each package adds its rows to
+`lib/analytics/events.ts` (*added by the owner-cabinet plan*).
+
 Rules: fire-and-forget; survives the app closing (`keepalive`); never read, never retried; nothing is sent
 without a session (legacy sent an empty credential that the server rejected); the UI never waits for it.
 
@@ -378,6 +383,12 @@ filters/<kind> > sort > city > map/draw > tab`) follows from the address: the to
 
 The reserved parameters `from`, `focus`, `pick`, `pin` and `i` never change a name. The session-expired screen is
 rendered in place and keeps the name of its address.
+
+The owner cabinet adds `owner/form` (WP-81), `owner/mine` and `owner/listing` (WP-82), with legacy's precedence
+`listing` > `owner/form` > `owner/mine` (`03` §1.1); in HOMI the top layer's address decides, so a form opened from
+the owner panel reports `owner/form` (fix of LB-APP-058). `owner/listing` replaces `listing` in the listing's
+pageview when the record has `owner.mine`. The cabinet's layers get new names of their own: `owner/limit`,
+`owner/requests` (WP-82), `listing/contact` and `listing/owner` (WP-83) (*added by the owner-cabinet plan*).
 
 ## Tests
 

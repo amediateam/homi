@@ -124,7 +124,10 @@ nothing in this package needs it.
    author key over distinct users. Thresholds `votes.thresholds.rented` and `votes.thresholds.agent`, both 3.0
    (proposal): a single user can never reach them.
 5. Crossing a threshold, once: write `listing_marks.rented_at` or `author_marks.realtor_marked_at`, and a
-   `vote_decisions` row with the inputs. `wrong_data` and `fraud` have no global effect.
+   `vote_decisions` row with the inputs. `wrong_data` and `fraud` have no global effect. Report votes apply to native
+   listings too: on a native number the thresholds set `withdrawn` on the owner listing instead of only hiding it —
+   WP-84 adds the event `App\Events\Personal\VoteThresholdCrossed` to this step and the listener (*added by the
+   owner-cabinet plan*).
 6. `ReportOutcome` carries `agentMarked` for the `agent_marked` of WP-13: `true` for the reason `agent` when this
    vote crossed `votes.thresholds.agent`, and also when `author_marks.realtor_marked_at` was already set; `false`
    otherwise (a default of the integrator, not a decision of the developer).

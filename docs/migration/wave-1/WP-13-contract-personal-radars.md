@@ -248,7 +248,9 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
   numbers the source does not know (one per list, so a page may hold fewer than `limit`). `ListingSummary::withFlags()`
   sets `favorite` and `viewed` (the overlay of `25` §4.5). The fixtures are therefore
   `favorites/{default,empty}.json` and `history/{default,empty}.json` with `numbers` (26 each, one of them unknown,
-  so 25 items), and `hidden/*.json` with `listings` numbers and `authors` entries.
+  so 25 items), and `hidden/*.json` with `listings` numbers and `authors` entries. `StubListingRefs` resolves the
+  native stub numbers of WP-80 (`10000001` … `10000008`) through the card source too; WP-80 adds the test (*added by
+  the owner-cabinet plan*).
 - **Cursors.** `StubCursor` is the one cursor of the stub lists. A cursor it did not give ends the list quietly on
   every list, the feed of WP-12 included; there it was `422` and is corrected.
 - **Lookups.** `PUT /favorites/{number}`, `PUT /hidden/listings/{number}`, blocking and reports look the listing up
@@ -277,9 +279,9 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
   - The fixtures name districts by `district_code`; `StubLandingSource` adds the name in the request locale from the
     reference data.
   - Both methods answer `Cache-Control: public, max-age=300` and `Vary: Accept-Language`, like `GET /reference`.
-- **Route table.** The route list of `/api/v1`, without the media routes of Phase 3, equals the 41 pairs of `25` §4.2
-  (39 when this package merged; 40 since the intake of `index-BnFvC-Ft.js`, 41 since the intake of
-  `index-CIa0Ldj2.js`).
+- **Route table.** The route list of `/api/v1`, without the media routes of Phase 3, equals the 41 pairs of the first
+  table of `25` §4.2 (39 when this package merged; 40 since the intake of `index-BnFvC-Ft.js`, 41 since the intake of
+  `index-CIa0Ldj2.js`; WP-80 adds the 18 of the owner cabinet: 59, *added by the owner-cabinet plan*).
 
 ## Files
 
@@ -362,7 +364,8 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
 - Landing: both methods without a token; `deal=sale` → `bargains_week: null`, `medians: []`; `deal=x` → `422`; no key
   named `phone`, `text` or `author` anywhere in the answers.
 - Contract: every method of `25` §4.2 is a path in `docs/api/openapi.json` (a test compares the route list with a
-  hard-coded table of the method–path pairs, 39 as built and 41 since the intake of `index-CIa0Ldj2.js`); `pnpm types:check` is clean.
+  hard-coded table of the method–path pairs, 39 as built and 41 since the intake of `index-CIa0Ldj2.js`; WP-80 adds
+  the 18 of the owner cabinet, 59, *added by the owner-cabinet plan*); `pnpm types:check` is clean.
 
 ## Acceptance checklist
 

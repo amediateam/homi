@@ -53,6 +53,10 @@ Bot API accepted the message.
 - Action-log events of card buttons, the coverage test — WP-58.
 - Call links and sharing are not part of the bot's card. The author's number is not in the card either: its text
   arrives masked, and one button gives the number through the contact service of WP-43 (DEC-52).
+- Cards of HOMI owner listings — WP-89: photos from `owner/<number>/…` (WP-84's public copies, read like any card's
+  photos), «✉️ Связаться с хозяином» on a `request`-mode listing (a `startapp=c_<number>` link to the request sheet),
+  «Это риелтор» hidden on native listings; `ListingCardData` gains `origin`, `contactMode` and `requestStatus` there
+  (WP-89, "Cards of native listings and «Связаться с хозяином»"; *added by the owner-cabinet plan*).
 
 The queue lists WP-52, WP-42, WP-44 and WP-45 under "Depends on": this package calls the radar hide-rule service
 of WP-45, so do not start before WP-45 is `DONE`. It also calls `ContactService` of WP-43, which the strict order

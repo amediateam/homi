@@ -210,6 +210,7 @@ Turning a radar on, creating, replacing and widening go through it; turning off,
 | Return banner | never checked: no wait, no `GET /listings/new`, nothing rendered. Visits are still recorded in `homi-visits`, so the banner has its history when radars come on |
 | Radar card in the feed | not passed into the inline slot of the list; nothing rendered, no event |
 | Radar list on the search tab | not requested: `useRadars` ANDs the caller's `enabled` with `useRadarsEnabled()` and a ready session |
+| Owner form (WP-81) | the owner form reads `radars_enabled` too, through `useRadarsEnabled()`: its demand line and the done screen's radar sentence are hidden while it is `false` (*added by the owner-cabinet plan*) |
 
 The tab itself stays in the tab bar. Pull-to-refresh on the "soon" state does nothing. A radar action that is
 answered `radars_disabled` although the hook said "on" — the reference data is cached for about ten minutes —

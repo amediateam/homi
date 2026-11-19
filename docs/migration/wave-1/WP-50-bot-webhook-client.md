@@ -169,7 +169,11 @@ because the stub refuses every request.
     `is_forwarded: true`;
   - `message.contact` becomes `{"user_id": <id or null>, "phone_hmac": "<hex>"}`: the number is normalised (digits
     only, leading `+`) and passed through `PhoneHmac::of()` (HMAC-SHA-256 with `PHONE_HMAC_PEPPER`); `first_name`,
-    `last_name`, `vcard` and the raw number are dropped.
+    `last_name`, `vcard` and the raw number are dropped. WP-88 adds one seam before the hash: inside an open phone
+    window of the owner cabinet an own `+998` contact is passed to the owner listing (DEC-72), from within the
+    insert of a new row of `UpdateLedger::accept()`, and the result is stored as a marker without digits
+    (`contact.cabinet`); the ledger still stores only the HMAC, and tests 1 and 2 of `UpdateLedgerPrivacyTest` hold
+    (WP-88, "The seam in the ledger"; *added by the owner-cabinet plan*).
 - `afterProcessing(array $update): array` removes from every message object `text`, `caption`, `entities`,
   `caption_entities`, `voice`, `audio`, `contact`, `location`, `venue`, `reply_to_message`, `photo`, `document`,
   `sticker`, `video`, `video_note`, `animation`, and `callback_query.data`. Ids, type and dates stay.

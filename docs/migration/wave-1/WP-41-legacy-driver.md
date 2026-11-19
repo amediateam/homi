@@ -23,7 +23,7 @@ server for local and CI; golden fixtures for the two methods; `LegacyReferenceSo
 caches; `legacy:ping`.
 
 Out: listing methods (WP-42), contact and translation (WP-43), landing files (WP-60); switching any flag on
-production (WP-48). No person, test or CI job calls legacy in this package or any other (DEC-33).
+production (WP-48); the relay's write route (WP-87; *added by the owner-cabinet plan*). No person, test or CI job calls legacy in this package or any other (DEC-33).
 
 ## Decisions that bind this package
 
@@ -138,7 +138,7 @@ Translation rules for the meta answer:
 | `locales` | `locales` | codes mapped back (`uz_Latn → uz`); unknown codes dropped |
 | `cities[]` | `cities[]` | `code`, `name`; `center` `[lat, lon]` → object; `zoom` default 12; `is_region` = `zoom < 11`; `has_metro` = `metro === true`; `has_median` = `median !== false`; `districts`, `zones` default `[]` |
 | `cities` when legacy sends none | top-level `districts`, `zones` | one city `tashkent` built from them (legacy client rule, API-001) |
-| `renovations`, `appliances`, `price_presets` | same names | per-deal maps keep the three deal keys, missing ones become `[]`; a key that is not a deal is dropped (legacy sends `owner` in `renovations` since `index-CBlEKxdL.js`, `08` API-001; *added by the intake of `index-CBlEKxdL.js`*) |
+| `renovations`, `appliances`, `price_presets` | same names | per-deal maps keep the three deal keys, missing ones become `[]`; a key that is not a deal is dropped (legacy sends `owner` in `renovations` since `index-CBlEKxdL.js`, `08` API-001; *added by the intake of `index-CBlEKxdL.js`*). The owner cabinet's renovation list is HOMI's configuration (`config/owner.php`), served as `renovations.owner`; legacy's `owner` key stays dropped (WP-80; *added by the owner-cabinet plan*) |
 
 Ignored on purpose: the user part of meta (`locale`, `currency`, `theme`, `city`, `analytics`, `*_chosen`),
 `bot_username` and `max_subscriptions` — HOMI has its own (WP-11). Required keys whose absence is a contract error:

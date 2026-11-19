@@ -219,6 +219,9 @@ integers; its first caller is WP-57). All three return `null` when the address i
 then sends its text without the `web_app` row and logs an error once per hour. Every `web_app` button of the bot is
 built through this class. `InlineKeyboard::webApp()` of WP-51 accepts only the configured address; if its check is
 an exact match, relax it here to "same scheme, host and path", so the queries of `listing()` and `radar()` pass.
+WP-88 adds `ownerNew()` (the page query `owner=new`, TMA-046) and `startApp(string $param)`, a
+`https://t.me/<bot username>?startapp=<param>` link sent as a `url` button for the start parameters `o_<id>` and
+`c_<number>` of the owner cabinet (WP-88, "Mini App addresses"; *added by the owner-cabinet plan*).
 
 ### Callback actions registered here
 
@@ -360,6 +363,8 @@ accompany any `s_…` kind.
 | 7 | `s_<source>--l<number>` (BOT-031) | kind by prefix, plus `listingNumber` | welcome, then section 3 |
 | 8 | `l_<number>` (BOT-033) | `AppListing`, `listingNumber` | welcome; section 3 only while `bot.dev037` is on |
 | 9 | anything else, `l_abc`, a tag with a wrong character (BOT-034) | `Unknown` | welcome |
+| 10 | `owner_new`, `owner-new` (TMA-046) | `OwnerNew`, built by WP-88 | welcome, then a Mini App button to the owner form (`MiniAppUrl::ownerNew()`, the page query `owner=new`); while `OWNER_CABINET_ENABLED` is off the welcome only (DEC-81) (*added by the owner-cabinet plan*) |
+| 11 | `owner_phone` | `OwnerPhone`, built by WP-88 | welcome, then the share prompt of the owner cabinet for a client below 6.9 (WP-88, "Clients below 6.9") (*added by the owner-cabinet plan*) |
 
 Storage (BR-BOT-096, BR-BOT-098):
 

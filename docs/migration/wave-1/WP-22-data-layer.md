@@ -22,6 +22,9 @@ wiring only.
 **In.** `lib/api/*`; `app/bff/[...path]/route.ts` with its allow-list; `lib/actions/run.ts` and `useAction`;
 `lib/data/{useResource,sessionMaps}.ts` and the wiring of `lib/data/sources.ts`; `lib/reference/*`;
 `lib/search/useSearchState.ts`; `lib/money/useMoney.ts`; `@homi/i18n/format`; the package `@homi/search`.
+WP-81 … WP-83 add the owner reads to the `/bff` allow-list (`owner/listings`, `owner/listings/:id`,
+`owner/listings/:id/requests`, `owner/place`, `owner/demand`, with a ULID template in `readTemplate`) and the owner
+Server Actions in `lib/actions/owner.ts` (*added by the owner-cabinet plan*).
 
 **Out.** The concrete Server Actions — each is written by the package that first needs it, in the file this
 specification names (WP-23 settings, WP-24 favourites, WP-26 hidden / reports / listing, WP-29 history, WP-30
@@ -420,7 +423,8 @@ package formats only what the client formats in legacy. Both must agree with the
 6. `@homi/i18n/format`: numbers and money with the fixture table; then dates, distance, flow.
 7. `lib/api/errors.ts` and `server.ts`; unit tests against a fake API.
 8. `bffAllowList.ts`, the pass-through route, `browser.ts`; tests for the allow-list, both auth sources and the
-   re-authentication retry.
+   re-authentication retry. The list is complete for the packages before the owner cabinet; WP-81 … WP-83 add the
+   owner reads (*added by the owner-cabinet plan*).
 9. `lib/actions/run.ts`, `useAction`; a test action proves cookie mode, header mode and refusal.
 10. `useResource`, `sessionMaps`, the source reporting; component tests.
 11. `lib/reference/*` and the provider in the root layout; check that the reference call is cached and that no

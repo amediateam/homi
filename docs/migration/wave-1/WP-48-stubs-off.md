@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | C |
 | Status | TODO |
-| Depends on | WP-41 … WP-47 |
+| Depends on | WP-41 … WP-47, WP-84 … WP-86 (*added by the owner-cabinet plan*) |
 | Size | about 1 500 changed lines (mostly tests), M; the switching itself is operations, not code |
 | Behaviour reference | `25` §4.3, §4.4, §4.5 (contract tests), §9 (contract layer, checks inside Telegram), §14 item 2; `24` §3 (rollback by flag), §5 (order of methods), §8.3 (RK-25 … RK-28); WP-10 (rules, commands, audit table), WP-11 … WP-13 (the shapes), WP-41 and WP-42 (golden fixtures) |
 | Needs from the production track | This package is done together with that track. 1. Before anything: the service key is installed and `php artisan legacy:ping` succeeds (WP-41); the media location serves a legacy photo (WP-42). 2. Run the `sources:*` commands of "Design, part B" on staging and then on production, at the steps this specification names, or agree in writing on how the development track may run them. 3. After the defaults PR is deployed: server env `SOURCES_ALLOW_STUB=false` on staging, then on production; `RADAR_MATCHING_ENABLED` stays `false` and `RADAR_CREATION_ENABLED` stays unset (WP-57 switches both on, DEC-51). 4. Watch Horizon and Pulse during each soak and say stop if the legacy host or the API host suffers |
@@ -21,7 +21,10 @@ can no longer appear for a real user.
 In: contract tests across drivers and against the OpenAPI file; a source-honesty test; the switching procedure for
 the ten features of reference and listing data, on staging and then production; the change of configured defaults;
 forbidding stubs on the servers; the checks inside Telegram; the records. Radar matching is not switched on here,
-and neither is radar creation (WP-57 does both, when a sender exists; DEC-51).
+and neither is radar creation (WP-57 does both, when a sender exists; DEC-51). The contract tests cover mixed pages
+of legacy and native listings; the source-honesty test accepts `origin: native` items under `meta.source: legacy`;
+the switching procedure checks the native part after each listing feature moves (*added by the owner-cabinet
+plan*).
 
 Out: the two landing features (`source.landing.live`, `source.landing.pins`) — WP-60 binds their legacy driver and
 switches them; until then they answer `503 source_unavailable` on servers where stubs are forbidden, and nothing

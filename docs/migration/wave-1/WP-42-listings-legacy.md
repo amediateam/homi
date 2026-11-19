@@ -31,7 +31,8 @@ polling (WP-46); switching flags on production (WP-48).
 
 - Legacy answers for the service key, not for the user; HOMI overlays the per-user part (`25` §4.5, DEC-42).
 - A feed page that shrinks below half its size after filtering is topped up from the next legacy page (`25` §4.5).
-- Caching: a card for one minute, nothing for the feed (`25` §4.5).
+- Caching: a card for one minute, nothing for the feed (`25` §4.5). The per-user owner fields (`owner.mine`,
+  `owner.listing_id`, `contact.request`) are never cached with the card (*added by the owner-cabinet plan*).
 - Every table that points at a listing stores the number and, when known, the source channel and post (`25` §5,
   Q-API-063).
 - Reports and votes are applied in HOMI only (DEC-48): legacy never learns about them, so HOMI filters its own view.
@@ -58,7 +59,7 @@ polling (WP-46); switching flags on production (WP-48).
 | `newSince(SearchFilters, int $since)` | `GET /api/feed/new` with the filter query and `since` | none: `since` differs per user and visit |
 | `flow(SearchFilters)` | `GET /api/feed/flow` | 60 s per filters and locale (`legacy.cache.flow`) |
 | `map(SearchFilters)` | `GET /api/map` | 30 s per filters and locale (`legacy.cache.map`) |
-| `details(int)` | `GET /api/listings/{id}` | 60 s per number, locale and currency (`legacy.cache.card`) |
+| `details(int)` | `GET /api/listings/{id}` | 60 s per number, locale and currency (`legacy.cache.card`), without the per-user owner fields (*added by the owner-cabinet plan*) |
 | `preview(int)` | `GET /api/listings/{id}?preview=1` | 60 s, same key space |
 | `previews(list<int>)` | parallel `preview` reads, at most 5 at a time (`legacy.previews.concurrency`), each through the limiter and the card cache | per item |
 
@@ -107,6 +108,14 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   `count` (BR-API-157, LB-API-055).
 - `FlowTranslator`: `days` below 1 becomes 1; `options` default `[]`; each option's `filters` through
   `FiltersTranslator::fromLegacy()`; `count` numeric or `null`.
+- Owner fields (*added by the owner-cabinet plan*): every item carries `origin: legacy`. The details translator
+  maps legacy's self fields (`owner_self`, `contact_mode`, `response_minutes`, `owner_description`, `owner_mine`,
+  `my_request`; `02` BR-API-188) to `owner {}` and `contact.mode`: `owner.tier` is `self` with `owner_self`,
+  `verified` with `owner_verified`, `claimed` with `is_owner` alone, else `null`; `open` → `phone`; a `gate` listing
+  → `hidden` until WP-87 switches the relay on (DEC-75), then `request`. `owner_mine` and `my_request` belong to
+  nobody under a service key and are ignored, like `favorite`. An owner label that the tier already says («Проверенный
+  хозяин…», «Хозяин — со слов объявления», BR-API-189) is dropped from `owner_label`. A legacy id at or above the
+  native floor (`ListingNumber::isNative()`, WP-80) raises `LegacyContractError`, so a collision is never served.
 - Required keys per answer (their absence is a `LegacyContractError`): feed `items` (array) and the key
   `next_cursor`; item `id`, `photos_preview`; count `count`; new-since `count` (an integer ≥ 0); flow `week`, `days`;
   map `points`; card `id`, `photos`, `facts`, `sources`.
@@ -147,6 +156,12 @@ The card method answers the legacy `429 too many today` as it arrives from the c
 
 Without a user (system context) only step 1's vote part and step 4 run.
 
+The owner cabinet adds two per-user parts (*added by the owner-cabinet plan*): the overlay writes `owner.mine` and
+`owner.listing_id` (from WP-84's owner listings of the user) and `contact.request` (from WP-85's request states, and
+for a `request`-mode listing `contact.has_phone` only with a `given` request), on legacy and native items alike; the
+card cache never holds them. A realtor mark of step 4 also sets `owner.tier` to `null`, so HOMI's mark wins over a
+legacy «Проверенный хозяин» (an integrator default of that plan; reports are still not passed to legacy, DEC-48).
+
 The controllers apply the overlay and the view recorder to the answer of every driver, `stub` included: the stub's
 own `favorite` and `viewed` values are overwritten like legacy's, so a favourite saved by real code shows on a stub
 feed. One exception: while `sources.native_stubs` is on (WP-40), both are skipped, so the end-to-end suite keeps the
@@ -182,6 +197,10 @@ Table `listing_refs`: `listing_number` (`unsignedBigInteger`, primary key), `sou
 (a cache miss, so at most once a minute per listing); `pointer(int $number): ListingPointer` (number, channel, post —
 used by every personal table of WP-44); `numbersOfAuthors(list<string>): list<int>`; `markGone(int)` on a `404`;
 `markMerged(int $asked, int $answered)` when legacy answers with another number.
+
+The card read is also the source of WP-84's medians harvester (DEC-78): WP-84 adds the event
+`App\Events\Listings\LegacyCardFetched` beside the call of `ListingRefs::remember()`, so the `comparison` block of
+every card fetched from legacy reaches it once per cache miss (*added by the owner-cabinet plan*).
 
 ### View history
 

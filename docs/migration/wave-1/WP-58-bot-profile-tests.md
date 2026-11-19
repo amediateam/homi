@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | D |
 | Status | TODO |
-| Depends on | WP-52 … WP-57 |
+| Depends on | WP-52 … WP-57, WP-88, WP-89 (*added by the owner-cabinet plan*) |
 | Size | about 2 200 changed lines, M; half of it is transcripts and fixtures |
 | Behaviour reference | `04` §1 (identity table), §2 (rows BOT-001 … BOT-008), §4.2 (TXT-BOT-001 … TXT-BOT-005), §8 (BR-BOT-085, BR-BOT-086, BR-BOT-090); `11b` §2.1 (exit criteria of the bot milestone), §6.3; `25` §9 (rows "Bot" and "In Telegram"); task files KV-TG-056, KV-TG-061, KV-QA-009, KV-QA-003, KV-QA-022; the catalogue rule of WP-47 |
 | Needs from the production track | (1) After the deploy, on staging and then on production, with `TELEGRAM_PROFILE_SYNC_ALLOWED=true` set for the run: `php artisan telegram:profile diff`, then `php artisan telegram:profile sync --approved`, then `diff` again (must exit 0). (2) In @BotFather, for the staging bot and the production bot — the Bot API cannot set these: the avatar, the description picture, the Main Mini App address (`https://app.staging.homi.uz/`, `https://app.homi.uz/`), the privacy policy address (the landing privacy page of WP-61), inline mode off, "Allow groups" off. The two image files come from the product owner through the development track. (3) No migration, no new queue, no cron entry. (4) The developer who runs the pass needs the staging bot and the production bot to be reachable from four Telegram clients with their own accounts; nothing else |
@@ -27,6 +27,11 @@ In:
 - The coverage fixture and `BotCoverageTest`; transcripts that earlier packages left out; the injection and forgery
   corpus; the three-locale check; the assertion that no interim reply is left.
 - The pass inside Telegram: its checklist document, the first full run, the evidence.
+- The owner cabinet's bot side (WP-88, WP-89): the coverage fixture gains the six handler ids BOT-086 … BOT-091,
+  whose transcripts cover BOT-086 … BOT-090; BOT-091 is named as an exception (a later broadcast). Its events (the
+  callback actions `rq` and `mo`, the payloads `owner_new` and `owner_phone`) join the catalogue, and its signed lines
+  join the pass document. These handlers have no observed legacy text, so their lines check behaviour, not parity
+  (*added by the owner-cabinet plan*).
 
 Out:
 
