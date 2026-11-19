@@ -177,6 +177,7 @@ driver of each source method.
 | `POST /auth/telegram` | `api.v1.auth.telegram` | public | native |
 | `GET /me` | `api.v1.me.show` | `app:read` | native |
 | `GET /settings`, `PATCH /settings` | `api.v1.settings.show`, `.update` | `app:read`, `app:write` | native |
+| `POST /settings/card-sample` | `api.v1.settings.card-sample` | `app:write` | native |
 | `GET /reference` | `api.v1.reference.show` | public | legacy, cached (`source.reference`) |
 | `GET /cities` | `api.v1.cities.index` | public | legacy, cached (`source.cities`) |
 | `GET /listings` | `api.v1.listings.index` | `app:read` | legacy + overlay (`source.listings.feed`) |
@@ -203,7 +204,8 @@ driver of each source method.
 `{number}` is a listing number (a positive integer); `{id}` is a ULID. A foreign id answers like an unknown one,
 `404 not_found`. Stub scenarios of the personal and radar methods: `empty` (favourites, history, hidden, radars);
 `no_chat`, `radar_limit`, `radar_duplicate` (radar writes); `existing`, `starter`, `few` (radar create); `ask_found`
-(radar pause and delete).
+(radar pause and delete). Settings: `card_rich` (`GET` and `PATCH /settings` with `card_style: "rich"`) and
+`card_sample_unsent` (`POST /settings/card-sample` answers `sent: false`).
 
 ## Keeping the contract current
 

@@ -22,6 +22,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/settings/card-sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.settings.card-sample"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cities": {
         parameters: {
             query?: never;
@@ -625,6 +641,16 @@ export interface components {
             count: number;
             listing_numbers: number[];
         };
+        /** CardSampleResource */
+        CardSampleResource: {
+            sent: boolean;
+        };
+        /**
+         * CardStyle
+         * @description How the bot sends a listing card into the user's chat (`03` SCR-048, DEC-57): `classic` is a photo with a caption, `rich` is the newer card with swipeable photos and the data as a table.
+         * @enum {string}
+         */
+        CardStyle: "classic" | "rich";
         /** CityResource */
         CityResource: {
             code: string;
@@ -1248,6 +1274,7 @@ export interface components {
                 to: number;
             } | null;
             digest_hours: number[];
+            card_style: components["schemas"]["CardStyle"];
             options: {
                 locales: components["schemas"]["NamedCodeResource"][];
                 currencies: components["schemas"]["NamedCodeResource"][];
@@ -1356,7 +1383,7 @@ export interface components {
         };
         /**
          * UpdateSettingsRequest
-         * @description `PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of
+         * @description `PATCH /settings` (WP-11): any subset of the seven writable keys; unknown keys are ignored. A city must be one of
          *     `GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of
          *     `config/settings.php`.
          */
@@ -1371,6 +1398,7 @@ export interface components {
                 to?: number;
             } | null;
             digest_hours?: number[];
+            card_style?: components["schemas"]["CardStyle"];
         };
     };
     responses: {
@@ -1465,6 +1493,43 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.settings.card-sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["CardSampleResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
             };
             401: components["responses"]["AuthenticationException"];
             /** @description Too many requests */

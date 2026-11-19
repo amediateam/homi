@@ -115,6 +115,64 @@
                 }
             }
         },
+        "/settings/card-sample": {
+            "post": {
+                "operationId": "v1.settings.card-sample",
+                "tags": [
+                    "CardSample"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/CardSampleResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/cities": {
             "get": {
                 "operationId": "v1.cities.index",
@@ -4688,6 +4746,27 @@
                 ],
                 "title": "BlockedAuthorResultResource"
             },
+            "CardSampleResource": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "sent"
+                ],
+                "title": "CardSampleResource"
+            },
+            "CardStyle": {
+                "type": "string",
+                "description": "How the bot sends a listing card into the user's chat (`03` SCR-048, DEC-57): `classic` is a photo with a caption, `rich` is the newer card with swipeable photos and the data as a table.\n",
+                "enum": [
+                    "classic",
+                    "rich"
+                ],
+                "title": "CardStyle"
+            },
             "CityResource": {
                 "type": "object",
                 "properties": {
@@ -7351,6 +7430,9 @@
                             "type": "integer"
                         }
                     },
+                    "card_style": {
+                        "$ref": "#/components/schemas/CardStyle"
+                    },
                     "options": {
                         "type": "object",
                         "properties": {
@@ -7412,6 +7494,7 @@
                     "city",
                     "quiet_hours",
                     "digest_hours",
+                    "card_style",
                     "options"
                 ],
                 "title": "SettingsResource"
@@ -7633,7 +7716,7 @@
             },
             "UpdateSettingsRequest": {
                 "type": "object",
-                "description": "`PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of\n`GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of\n`config/settings.php`.",
+                "description": "`PATCH /settings` (WP-11): any subset of the seven writable keys; unknown keys are ignored. A city must be one of\n`GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of\n`config/settings.php`.",
                 "properties": {
                     "locale": {
                         "$ref": "#/components/schemas/Locale"
@@ -7677,6 +7760,9 @@
                             "minimum": 0,
                             "maximum": 23
                         }
+                    },
+                    "card_style": {
+                        "$ref": "#/components/schemas/CardStyle"
                     }
                 },
                 "title": "UpdateSettingsRequest"

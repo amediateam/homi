@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\CardStyle;
 use App\Enums\Currency;
 use App\Enums\Locale;
 use App\Enums\Theme;
@@ -14,7 +15,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * `PATCH /settings` (WP-11): any subset of the six writable keys; unknown keys are ignored. A city must be one of
+ * `PATCH /settings` (WP-11): any subset of the seven writable keys; unknown keys are ignored. A city must be one of
  * `GET /reference` (same driver, same scenario); quiet and digest hours must equal one of the presets of
  * `config/settings.php`.
  */
@@ -50,6 +51,7 @@ class UpdateSettingsRequest extends FormRequest
                 }
             }],
             'digest_hours.*' => ['integer', 'between:0,23'],
+            'card_style' => ['sometimes', Rule::enum(CardStyle::class)],
         ];
     }
 

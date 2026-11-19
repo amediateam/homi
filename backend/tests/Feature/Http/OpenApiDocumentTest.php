@@ -89,6 +89,7 @@ it('documents the seven methods of the session and reference contract (WP-11)', 
     expect($paths['/auth/telegram'])->toHaveKey('post')
         ->and($paths['/me'])->toHaveKey('get')
         ->and($paths['/settings'])->toHaveKeys(['get', 'patch'])
+        ->and($paths['/settings/card-sample'])->toHaveKey('post')
         ->and($paths['/reference'])->toHaveKey('get')
         ->and($paths['/cities'])->toHaveKey('get')
         ->and($paths['/events'])->toHaveKey('post');
@@ -125,8 +126,8 @@ it('types the new-since count as an integer (WP-12, fix of LB-API-055)', functio
 
 it('has every method of the Wave 1 table (25 §4.2) as a route and an OpenAPI path, and no other (WP-13)', function (): void {
     $table = [
-        'POST /auth/telegram', 'GET /me', 'GET /settings', 'PATCH /settings', 'GET /reference', 'GET /cities',
-        'GET /listings', 'GET /listings/count', 'GET /listings/flow', 'GET /listings/new', 'GET /listings/map',
+        'POST /auth/telegram', 'GET /me', 'GET /settings', 'PATCH /settings', 'POST /settings/card-sample',
+        'GET /reference', 'GET /cities', 'GET /listings', 'GET /listings/count', 'GET /listings/flow', 'GET /listings/new', 'GET /listings/map',
         'GET /listings/{number}', 'POST /listings/{number}/contact', 'POST /listings/{number}/translation',
         'POST /listings/{number}/share', 'GET /favorites', 'PUT /favorites/{number}', 'DELETE /favorites/{number}',
         'GET /history', 'DELETE /history', 'PUT /hidden/listings/{number}', 'DELETE /hidden/listings/{number}',
@@ -154,7 +155,7 @@ it('has every method of the Wave 1 table (25 §4.2) as a route and an OpenAPI pa
     sort($expected);
     $paths = exportedOpenApi()['paths'];
 
-    expect($table)->toHaveCount(39)
+    expect($table)->toHaveCount(40)
         ->and($routes)->toBe($expected);
 
     foreach ($table as $pair) {

@@ -20,6 +20,7 @@ final class ContractShapes
         'locale' => 'string', 'currency' => 'string', 'theme' => 'string', 'city' => 'string',
         'quiet_hours' => ['from' => 'int', 'to' => 'int'],
         'digest_hours' => ['*' => 'int'],
+        'card_style' => 'string',
         'options' => [
             'locales' => ['*' => ['code' => 'string', 'name' => 'string']],
             'currencies' => ['*' => ['code' => 'string', 'name' => 'string']],
