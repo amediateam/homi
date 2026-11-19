@@ -62,7 +62,8 @@ keys, phone pepper, LLM and analytics keys).
 5. **The personal-data lifecycle is a set of public promises nobody has tested** (SEC-018, SEC-019, SEC-030 →
    SEC-REQ-036…041, SEC-REQ-050): immediate deletion, 180/90-day retention, no stored names or messages, backups that
    the legacy privacy text places "на нашем компьютере", and HOMI's raw `telegram_updates` payloads that would break
-   the "no names, no messages" promise on day one. The ЗРУ-547 questions in §6 decide hosting and processors.
+   the "no names, no messages" promise on day one. The ЗРУ-547 questions in §6 decide hosting and processors. The
+   owner cabinet adds owners' numbers kept in plain text by decision (SEC-036 → SEC-REQ-051).
 
 ## 1. Assets, actors and trust boundaries
 
@@ -585,6 +586,37 @@ the requirement that fixes it and the constraint from the still-running legacy M
   - *Verified:* workflows grepped.
   - *Fix:* SEC-REQ-035, SEC-REQ-049. *Owner:* dev track; first developer (CI is shared).
 
+### 3.3 The owner cabinet (release `index-CBlEKxdL.js`) and HOMI's decisions on it
+
+- **SEC-036** · High · `UNVERIFIED` — The cabinet keeps the owner's phone number readable with the listing, shows it
+  to the owner and hands it to seekers («Дать номер», `open` mode), while `/owner` and the legacy bot's privacy text say
+  that only a hash is stored (`02` BR-API-172, LB-API-056; Q-API-072). HOMI keeps the number in plain text by decision
+  (DEC-72), so this is carried over on purpose, and the database dumps are not encrypted, by the developer's decision
+  of 2026-11-13 (`docs/infrastructure/backup-recovery.md:19`).
+  - *Where:* `02` BR-API-172, LB-API-056; `08` API-039.
+  - *Linked:* DEC-72, DEV-011, RK-38, Q-SEC-021.
+  - *Verified:* audit rows re-read; the legacy storage is `UNVERIFIED` (Q-API-072).
+  - *Fix:* SEC-REQ-051. *Old client:* n/a. *Owner:* dev track; prod track (database and dump access).
+- **SEC-037** · Medium · `CONFIRMED` — A failed client-side conversion uploads the original photo with its EXIF data,
+  including the GPS position of the flat (`03` LB-APP-061); whether the legacy server re-encodes an upload is unknown
+  (Q-API-073).
+  - *Where:* `03` LB-APP-061; `08` API-041.
+  - *Verified:* audit row re-read; HOMI's `backend/app/Services/Media/HashedUploader.php:19-24` re-encodes and drops
+    metadata.
+  - *Fix:* SEC-REQ-052. *Owner:* dev track.
+- **SEC-038** · Low · `DOCUMENTED_ONLY` — `GET /api/owner/map-start` derives the caller's position from the request's
+  address, «примерно по IP» (`08` API-052, BR-API-168; Q-API-074).
+  - *Fix:* DEV-061 (the method is not built). *Owner:* dev track.
+- **SEC-039** · Medium · `UNVERIFIED` — The owner sees the seeker's Telegram name; whether legacy stores it is unknown
+  (BR-API-180, Q-API-077). HOMI stores the first name with the request (DEC-76) and passes it to the operator with a
+  relayed request (DEC-71).
+  - *Fix:* SEC-REQ-053. *Owner:* dev track; product owner (the privacy text).
+- **SEC-040** · Medium · `DOCUMENTED_ONLY` — Seekers must never learn the exact point of a cabinet flat: legacy serves
+  a circle of about 500 m (`shown_point`, BR-API-167), but how it is derived and whether the exact point appears in any
+  public answer is unknown (Q-API-074). A filter evaluated on the exact point (a drawn polygon, a distance, the centre
+  distance) would let anyone narrow it down.
+  - *Fix:* SEC-REQ-052. *Owner:* dev track.
+
 ## 4. Requirements for HOMI (`SEC-REQ-NNN`)
 
 Every requirement has an acceptance test. "Legacy surface" = the compatibility route group of CF-001 option A;
@@ -612,7 +644,10 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   surface (never from query strings or bodies) and only in the JSON body of the v1 exchange; HTTPS only (HSTS,
   SEC-REQ-033); a different bot token per environment (SEC-REQ-034) makes cross-environment replay fail; logs carry a
   fingerprint (first 12 hex of SHA-256 of `hash`), never the value. Residual risk, recorded: a stolen `initData` works
-  until its window ends. *Acceptance:* a captured `initData` replayed after the window → `401`; replayed inside the
+  until its window ends. Since the owner-cabinet plan, the v1 contact request (`POST /listings/{number}/contact-request`)
+  is a second JSON body that carries `initData`, only to read the seeker's first name of DEC-76; that `initData` issues
+  no token and is never stored, logged or echoed, and the security review of WP-70 confirms or replaces this
+  integrator default (WP-85). *Acceptance:* a captured `initData` replayed after the window → `401`; replayed inside the
   window from another IP → accepted and logged with the same fingerprint; `?tgWebAppData=` in a URL is ignored.
 - **SEC-REQ-004** — Mapping to Sanctum (ADR-0003) and the legacy surface. The `tma` guard is attached only to the
   legacy route group; v1 and ARM routes answer `401` to `Authorization: tma …`; the legacy group accepts only `tma`.
@@ -891,6 +926,23 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   unmatched verifications are dropped and the users asked to re-verify, and legacy hashes are never brute-forced.
   *Acceptance:* the import command refuses to run with `APP_ENV=local` unless the input is marked sanitised; the
   handling record exists before the cut-over review.
+- **SEC-REQ-051** — The owner's number (DEC-72): stored in plain text only in the owner listing row; read by two code
+  paths, the owner's own view and `ContactService::disclose()`; never in a log, an exception context, a job payload,
+  the update ledger (only its HMAC), analytics or the operators' notices; masked in every listing text
+  (`PhoneMasker`); erased by «Удалить мои данные» and 90 days after the listing left the feed for good; access to the
+  database and its dumps is the production track's. *Acceptance:* a leak scan over logs, Horizon payloads, the ledger
+  and PostHog after a publish and a `given` request finds no digit sequence of the number; erasure and the 90-day
+  purge are tested with time travel.
+- **SEC-REQ-052** — Owner listing location and photos: the true point is returned only to its owner; every public use
+  (preview, map points, centre distance, metro distance, polygon filter) reads the shown point, a stable offset of at
+  most 250 m keyed with `SHOWN_POINT_SECRET`; uploads are decoded and re-encoded without metadata (`HashedUploader`),
+  private until publish, public copies deleted after the listing left the feed for good. *Acceptance:* shrinking
+  polygons around a native listing never isolate its true point; a stored photo has no EXIF block.
+- **SEC-REQ-053** — Requests between seekers and owners: the seeker's first name only from verified launch data
+  (DEC-76), stored with the request and erased with it; request limits and blocks per seeker; a relayed request passes
+  only the first name and the form's answers to the operator (DEC-71), named in the privacy text; no request text in
+  logs. *Acceptance:* the erasure of a seeker removes his requests and names; the relay payload holds exactly the listed
+  fields.
 
 ### 4.10 LLM
 
@@ -1127,11 +1179,12 @@ Findings by severity and evidence:
 | ----- | ---: | -----: | --: | ----: | ----------: | ----------------: | -----------: |
 | Legacy behaviour (§3.1, SEC-001…SEC-025) | 7 | 15 | 3 | 25 | 8 | 8 | 9 |
 | HOMI baseline (§3.2, SEC-026…SEC-035) | 0 | 5 | 5 | 10 | 10 | 0 | 0 |
-| **All findings** | **7** | **20** | **8** | **35** | **18** | **8** | **9** |
+| Owner cabinet (§3.3, SEC-036…SEC-040) | 1 | 3 | 1 | 5 | 1 | 2 | 2 |
+| **All findings** | **8** | **23** | **9** | **40** | **19** | **10** | **11** |
 
 High findings: SEC-001 (HTML sink in map pins), SEC-002 (raw phones), SEC-004 (`initData` window and replay),
 SEC-011 (ownership unverifiable, incl. `callback_data`), SEC-018 (deletion and retention reach), SEC-019 (backups on a
-team computer), SEC-022 (bot token custody).
+team computer), SEC-022 (bot token custody), SEC-036 (owners' numbers in plain text, DEC-72).
 
 Requirements by area:
 
@@ -1145,14 +1198,14 @@ Requirements by area:
 | Rate limits and quotas | SEC-REQ-027…SEC-REQ-029 | 3 |
 | Headers, CSP, CORS | SEC-REQ-030…SEC-REQ-033 | 4 |
 | Secrets | SEC-REQ-034, SEC-REQ-035 | 2 |
-| Personal data | SEC-REQ-036…SEC-REQ-041 | 6 |
+| Personal data | SEC-REQ-036…SEC-REQ-041, SEC-REQ-051…SEC-REQ-053 | 9 |
 | LLM | SEC-REQ-042…SEC-REQ-044 | 3 |
 | Detectors | SEC-REQ-045 | 1 |
 | ARM and operators | SEC-REQ-046 | 1 |
 | Logging and monitoring | SEC-REQ-047, SEC-REQ-048 | 2 |
 | Supply chain | SEC-REQ-049 | 1 |
 | ЗРУ-547 | SEC-REQ-050 | 1 |
-| **Total** | | **50** |
+| **Total** | | **53** |
 
 Open questions: 20 (`Q-SEC-001`…`Q-SEC-020`) — product owner 13, lawyer 5, prod track (incl. first developer) 5,
 dev track 3, test accounts 1, security reviewer 1 (a question can have several owners).

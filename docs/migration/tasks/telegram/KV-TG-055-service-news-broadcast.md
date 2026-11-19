@@ -5,7 +5,7 @@
 | Status | TODO |
 | Owner | Backend — Telegram bot (track: development); every staging run by the production track, every production run needs first developer approval and the product owner's text |
 | Complexity | M |
-| Feature IDs | F-DELIVERY-008 |
+| Feature IDs | F-DELIVERY-008, F-OWNER-004 |
 | Dependencies | KV-TG-050 (pacer), KV-TG-045 (`service_news` opt-in), KV-TG-021 (reachability); ARM broadcast screen of F-ADMIN-001 / GAP-023 later (roles DEC-22); `broadcasts`, `broadcast_recipients` (ENT-013 — no KV-DB task covers them, so the migration is here); Q-BOT-004 |
 
 ## Goal
@@ -13,7 +13,8 @@
 The team can send a service-news message in ru / uz / en to every reachable user who did not opt out, safely: a dry run
 with the recipient count, a second confirmation, paced and resumable sending, per-recipient status, and an opt-out that
 takes effect immediately. The same mechanism serves the cut-over notices (`18` §9) and the owner re-verification
-campaign (KV-DB-030, `14` §8).
+campaign (KV-DB-030, `14` §8). Since the owner-cabinet plan the later broadcast to the realtor waitlist (BOT-091) also
+uses this tool.
 
 ## Legacy reference
 

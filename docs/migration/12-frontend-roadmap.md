@@ -493,7 +493,7 @@ KV-FE-024. After DEC-06: KV-FE-003 → KV-FE-032 → KV-FE-033, then FE-2 in tab
 | 31 | TMA-031 share fallbacks | KV-FE-030 | |
 | 32 | TMA-032 unused share APIs (absence) | KV-FE-029 | kept as an absence |
 | 33 | TMA-033 `requestWriteAccess` | KV-FE-030, KV-FE-074 | |
-| 34 | TMA-034 `requestContact` (absence) | — | justified: phone verification is a bot feature (`/owner`, telegram track) |
+| 34 | TMA-034 `requestContact` | WP-81 | used by the owner form since legacy release `index-CBlEKxdL.js`; the bot's `/owner` keeps its own contact share |
 | 35 | TMA-035 location | KV-FE-031 | LB-APP-009 fixed |
 | 36 | TMA-036 home-screen shortcut | KV-FE-086 | |
 | 37 | TMA-037 DeviceStorage | KV-FE-028 | |
@@ -721,7 +721,7 @@ KV-FE-024. After DEC-06: KV-FE-003 → KV-FE-032 → KV-FE-033, then FE-2 in tab
 | - | ---- | --- |
 | 1 | F-MEDIA-003, RES-005, URL-044 (call page) | a Laravel no-JS page on the Mini App origin (CF-013), KV-BE-037; the Mini App only opens it (KV-FE-068) |
 | 2 | F-LANDING-011, RES-016 (`/api/landing/*`) | obsolete endpoints, `DEPRECATED_CANDIDATE` (Q-API-049) |
-| 3 | TMA-034 (`requestContact`) | absence in the Mini App; phone verification is the bot's `/owner` (F-OWNER-001) |
+| 3 | TMA-034 (`requestContact`) | no longer an absence: the owner form uses it (WP-81); the bot's `/owner` (F-OWNER-001) keeps its own contact share |
 | 4 | F-SUPPORT-001 (support bot) | outside the parity scope until DEC-21; the frontend only emits URL-050 / URL-051 |
 | 5 | Bot-only features (F-BOT-…, F-ONBOARD-004, F-ONBOARD-005, F-FAV-002, F-REPORT-002, F-HIDE-004, F-OWNER-001, F-SETTINGS-006, F-LOCALE-004, F-PRIVACY-002, F-DELIVERY-001…F-DELIVERY-006) | telegram track (`11b`) |
 | 6 | Server-only features (F-ACCESS-003, F-PRIVACY-003, F-PIPELINE-002…F-PIPELINE-007, F-ANALYTICS-003, F-BOT-012) | no UI |

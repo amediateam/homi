@@ -6,7 +6,7 @@
 | Owner | Frontend (track: development) |
 | Complexity | M |
 | Milestone | FE-2 (M9, stage S4) |
-| Feature IDs | F-CONTACT-001, F-CONTACT-002 |
+| Feature IDs | F-CONTACT-001, F-CONTACT-002, F-CONTACT-003 |
 | Dependencies | KV-FE-063, KV-FE-029, KV-FE-034; backend KV-BE-035 (phone quota), KV-BE-037 (API-009, RES-005); decisions: DEV-007 `PROPOSED`, FD-2, DEC-19, Q-APP-017 |
 
 ## Goal
@@ -14,7 +14,8 @@
 The fixed CTA bar shows the price with its period, the market delta or the price note, and one primary action in the
 legacy priority — «Позвонить», «Написать» / «Номер платный», or «Открыть пост» — and the contact flow keeps the
 short-lived call link fresh, tries `tel:` on Android and falls back to the call page. The dead-end call and the
-over-counted `contact_call` of LB-APP-028 are fixed.
+over-counted `contact_call` of LB-APP-028 are fixed. Since the owner-cabinet plan the bar also has the request states
+and the request sheet, built by WP-83.
 
 ## Legacy reference
 

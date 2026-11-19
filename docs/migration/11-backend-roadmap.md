@@ -11,7 +11,7 @@ format is [`tasks/README.md`](tasks/README.md).
 - **Scope of this document:** the backend milestones M0–M8. M0–M3 and the database track are detailed down to task
   files; M4, M6 and M7 list the features their tasks must cover (task numbers KV-BE-1NN (100–199), written by another
   session); M5 belongs to the telegram track (`KV-TG-…`), M8 to the database and QA tracks.
-- **Numbering:** `KV-BE-001…099` = backend tasks of M0–M3 (50 used); KV-BE-1NN (100–199) = M4, M6, M7 (to be written);
+- **Numbering:** `KV-BE-001…099` = backend tasks of M0–M3 (51 used); KV-BE-1NN (100–199) = M4, M6, M7 (to be written);
   `KV-DB-001…099` = database track (37 used; KV-DB-001…031 keep the numbers and titles of the candidates in
   [`14-data-migration-plan.md`](14-data-migration-plan.md) §8, KV-DB-032…037 are new). QA tasks `KV-QA-…` are defined
   in [`15-testing-strategy.md`](15-testing-strategy.md) §6. Other tracks are referenced by the feature, API, decision or
@@ -257,6 +257,7 @@ part), F-LOCALE-001, F-SHARE-001, F-LISTING-005, F-PRIVACY-004, F-PRIVACY-002.
 | KV-BE-048 | [Translation: API-010](tasks/backend/KV-BE-048-translation.md) | M | F-LISTING-005 | KV-BE-047, KV-DB-033, KV-BE-018, KV-BE-045 | BLOCKED (DEC-03) | `TranslationService`: profile locale target, cache per (listing, locale) in `listing_translations`, `{"text": "…"}` within the 15 s budget, 30/h limiter with cache hits free, URLs/phones/handles stripped from output, `ru` target refused, purged text → `404` (DEV-008 `PROPOSED` for the v1 GET) |
 | KV-BE-049 | [ADR: data retention and deletion](tasks/backend/KV-BE-049-retention-deletion-adr.md) | S | F-PRIVACY-002, F-PRIVACY-003 | CF-019; DEC-12 | TODO | One ADR answering OPQ-5 with the legacy promises as baseline (`10` §3.19): redaction before storage, every purge scheduled, one deletion procedure, backups ≈ 2 weeks **[PT]**, PostHog erase, erasure ledger keyed by HMAC |
 | KV-BE-050 | [`ErasureService`: one deletion procedure](tasks/backend/KV-BE-050-erasure-service.md) | L | F-PRIVACY-002 | KV-BE-049, KV-DB-007, KV-DB-009, KV-DB-010, KV-DB-033, KV-BE-047 | TODO | Confirmation-free service (the bot asks, M5): deletes or anonymises every user-linked row in one transaction, revokes tokens, records `erasure_requests` by HMAC subject, queues the PostHog person deletion (fake in tests), raises `UserErased`; a registry of erasable tables that later modules must extend and a test that fails on an unregistered `user_id` column (SEC-REQ-039) |
+| KV-BE-051 | [Owner listing lifecycle: publish, statuses, limits and moderation](tasks/backend/KV-BE-051-owner-listing-lifecycle.md) | L | F-OWNER-005, F-OWNER-006 | KV-BE-018, KV-BE-025, KV-BE-050 | TODO | Register entry of the owner cabinet (DEC-69, DEC-70): publish with the automatic checks and post-moderation (DEC-73, DEC-77), statuses and their effects, limits, `held` and `withdrawn` by votes and the operators' commands, the switch `OWNER_CABINET_ENABLED` (DEC-81); built by the Wave 1 packages WP-84 and WP-89 |
 
 **Exit criteria.**
 
@@ -532,10 +533,10 @@ No P0 or P1 feature with backend work in M0–M3 is left without a task.
 | M0 | 13 (5 / 8 / 0) | 3 (0 / 3 / 0) | 16 |
 | M1 | 6 (1 / 4 / 1) | 9 (2 / 4 / 3) | 15 |
 | M2 | 18 (4 / 10 / 4) | — | 18 |
-| M3 | 13 (4 / 7 / 2) | — | 13 |
+| M3 | 14 (4 / 7 / 3) | — | 14 |
 | M7 | — | 1 (0 / 1 / 0) | 1 |
 | M8 (incl. KV-DB-029, M6/M8) | — | 24 (4 / 15 / 5) | 24 |
-| **Total** | **50 (14 / 29 / 7)** | **37 (6 / 23 / 8)** | **87** |
+| **Total** | **51 (14 / 29 / 8)** | **37 (6 / 23 / 8)** | **88** |
 
 No task is `XL`. Blocked at writing time: KV-BE-046 (HANDOFF T1), KV-BE-048 (DEC-03) and the M8 tasks waiting for the
 legacy dump or a decision (see the status column of §13).

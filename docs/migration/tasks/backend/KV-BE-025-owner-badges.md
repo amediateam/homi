@@ -5,14 +5,15 @@
 | Status | TODO |
 | Owner | Backend (track: development) |
 | Complexity | S |
-| Feature IDs | F-OWNER-002 |
+| Feature IDs | F-OWNER-002, F-OWNER-008 |
 | Dependencies | KV-DB-008, KV-DB-010; decisions DEV-011 (keyed hash, `PROPOSED`), DEC-29; questions Q-API-041, Q-DATA-019 |
 
 ## Goal
 
 Previews and details carry the owner signals the legacy client turns into badges — `is_owner` and `owner_verified` —
 computed by one batched resolver from the listing's owner status, its author's phone HMAC, the owner verifications and
-the realtor rules, with a kill switch, so feed pages, map cards and (M5) bot cards agree.
+the realtor rules, with a kill switch, so feed pages, map cards and (M5) bot cards agree. Since the owner-cabinet plan
+it also gives `owner.tier` of owner listings (DEC-77), built by WP-86.
 
 ## Legacy reference
 

@@ -5,7 +5,7 @@
 | Status | TODO |
 | Owner | Backend — Telegram bot (track: development) |
 | Complexity | M |
-| Feature IDs | F-OWNER-001, F-OWNER-002 |
+| Feature IDs | F-OWNER-001, F-OWNER-002, F-OWNER-004 |
 | Dependencies | KV-TG-003 (contact phone replaced by keyed hashes before storage), KV-TG-006, KV-TG-012 (state kind `owner`), KV-TG-010; owner-verification service and badge matching of F-OWNER-002 (`owner_verifications` in KV-DB-010, listing author HMAC in KV-DB-008); DEV-011 (`PROPOSED`), DEC-29; Q-BOT-008, Q-BOT-037, Q-BOT-042 |
 
 ## Goal
@@ -13,7 +13,8 @@
 An unverified user sends `/owner`, reads what the verification does, shares **their own** number with the reply
 keyboard button, and gets the outcome: verified (with or without matching listings) or refused. Only a keyed HMAC of the
 E.164 number and the date are stored (DEV-011); a foreign or forwarded contact is refused; an old `/owner` reply keyboard
-left in a chat still works safely.
+left in a chat still works safely. Since the owner-cabinet plan the bot also takes the contact of the cabinet's phone
+window and stores it with the draft (DEC-72), built by WP-88.
 
 ## Legacy reference
 

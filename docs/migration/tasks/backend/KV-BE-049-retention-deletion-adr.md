@@ -23,7 +23,7 @@ updates) and the production backups implement one rule set.
 - Rules: `02-legacy-backend-audit.md:1031-1042` (§16: BR-API-129…132, Q-API-048), BR-API-065, BR-API-125, BR-API-128,
   BR-DATA-004, BR-DATA-006, BR-DATA-021, BR-DATA-031, BR-DATA-039; bot `/privacy` and BTN-076 (`04` §3.16).
 - Decisions: CF-019 option A (`10-target-architecture.md` §2.1, §3.19), DEC-12, OPQ-5 (`10` §1.14), GAP-019, GAP-022.
-- Security: SEC-030, SEC-REQ-036…039, SEC-REQ-041 (`16-security-review.md:844-893`); `14` §7.9 (erasure during the
+- Security: SEC-030, SEC-REQ-036…039, SEC-REQ-041 (`16-security-review.md:879-928`); `14` §7.9 (erasure during the
   migration window).
 - HOMI baseline: `backend/config/telegram.php:48` (14-day updates retention), ADR-0009 (raw intake payloads kept),
   `docs/architecture/requirements.md:47` (OPQ-5).

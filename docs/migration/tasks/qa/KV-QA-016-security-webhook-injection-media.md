@@ -5,13 +5,14 @@
 | Status | TODO |
 | Owner | QA (track: development); review by the `security-reviewer` agent and the other developer |
 | Complexity | L |
-| Feature IDs | F-BOT-012, F-BOT-013, F-OWNER-001, F-MAP-001, F-MEDIA-001, F-MEDIA-003, F-ANALYTICS-001, F-LANDING-007, F-SEO-006, F-PIPELINE-002, F-LISTING-005, F-DELIVERY-002 |
+| Feature IDs | F-BOT-012, F-BOT-013, F-OWNER-001, F-MAP-001, F-MEDIA-001, F-MEDIA-003, F-ANALYTICS-001, F-LANDING-007, F-SEO-006, F-PIPELINE-002, F-LISTING-005, F-DELIVERY-002, F-OWNER-003 |
 | Dependencies | KV-QA-003, KV-QA-008, KV-QA-009; T1 (webhook pipeline); media and call routes (CF-012); AI module for the LLM cases |
 
 ## Goal
 
 Forged webhook calls, duplicate updates, forged callbacks and contacts, injection payloads in every output sink,
-malicious files and tampered capability URLs are all covered by tests that expect the behaviour of `16` §4.
+malicious files and tampered capability URLs are all covered by tests that expect the behaviour of `16` §4. Since the
+owner-cabinet plan it also covers the owner photo uploads (re-encoding, metadata, size and count caps), built by WP-84.
 
 ## Legacy reference
 

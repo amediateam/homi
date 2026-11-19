@@ -5,14 +5,15 @@
 | Status | TODO |
 | Owner | QA (track: development) |
 | Complexity | L |
-| Feature IDs | F-BOT-001 … F-BOT-015, F-ONBOARD-004, F-ONBOARD-005, F-FAV-002, F-REPORT-002, F-OWNER-001, F-SETTINGS-006, F-PRIVACY-002, F-DELIVERY-002 … F-DELIVERY-007, F-LOCALE-004 |
+| Feature IDs | F-BOT-001 … F-BOT-015, F-ONBOARD-004, F-ONBOARD-005, F-FAV-002, F-REPORT-002, F-OWNER-001, F-SETTINGS-006, F-PRIVACY-002, F-DELIVERY-002 … F-DELIVERY-007, F-LOCALE-004, F-OWNER-007, F-CONTACT-003 |
 | Dependencies | KV-QA-003; T1 (webhook pipeline) for real runs; Q-BOT-017 for the legacy `callback_data` cases |
 
 ## Goal
 
 Bot behaviour is tested as conversations: synthetic updates go in through the webhook, and the exact Bot API calls
 that come out are compared with golden transcripts built from the bot audit. Callback data is taken from the captured
-keyboards, so the tests do not hard-code the new grammar.
+keyboards, so the tests do not hard-code the new grammar. Since the owner-cabinet plan it also holds the transcripts of
+the request, the answers and the notices (BOT-087 … BOT-090), built by WP-89.
 
 ## Legacy reference
 
