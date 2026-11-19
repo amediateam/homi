@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#84, stacked on #83) |
+| Status | WAITING (merged in #84 on 2026-11-19; production track: WP-27's `CSP_TILE_HOSTS` before the deploy, then the regular deploy; then the manual checks inside Telegram on staging, one of them on a low-end Android device in lite mode) |
 | Depends on | WP-27 |
 | Size | ≈ 2 800 changed lines, L |
 | Behaviour reference | `03` §1.2 (Back while drawing), §1.7, §1.8, §2 (SCR-011 "Differences between engines", SCR-012, SCR-021, the location part of SCR-018), §3.2, §3.4 ("Lasso", "Map", "Geolocation"), §4 (BR-APP-061, BR-APP-008), §5 (LB-APP-001, LB-APP-013, LB-APP-020); `05` (TMA-015, TMA-022, TMA-028, TMA-035); task files KV-FE-059, KV-FE-060, KV-FE-067 (spot map parts). From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |

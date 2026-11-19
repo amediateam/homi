@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#85) |
+| Status | WAITING (merged in #85 on 2026-11-19; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-26 |
 | Size | about 700 changed lines, S |
 | Behaviour reference | `03` §2 (SCR-024, SCR-025; shared states SCR-008, SCR-009; confirm SCR-043), §1.11 (session maps), §4 (BR-APP-067; used: BR-APP-039, BR-APP-040, BR-APP-058), §5 (LB-APP-022; used: LB-APP-027, LB-APP-045); `05` (TMA-025, TMA-026); task files `tasks/frontend/KV-FE-072-favourites.md`, `KV-FE-073-history.md`. Their file layout, navigation stack, API paths and transport are not taken |
@@ -84,7 +84,7 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
   KV-FE-073). The eye is never shown. Checked against the legacy source: `ListingFeed.jsx:86-91` filters only the
   favourites and the search, history gets every item. The check read the reconstructed `demo/app/src` at SVN r29,
   synced to release `index-BnFvC-Ft`, one release newer than the pinned `index-DY_DH7h-`; that release's delta
-  report changes nothing in the saved views. Read it again when WP-02 pins the baseline.
+  report changes nothing in the saved views. The release intake that moves the pin past it (`README.md` rule 7) reads it again.
 - List key (`features/saved/listKey.ts`, `useSavedList.ts`): `savedListKey(source, renderId, version)`; the server
   builds the key of its page one with `FIRST_VERSION`, so the hydration render adopts it.
   - **Entering the page:** every server render of the page brings a new `renderId` and re-creates the list from that
@@ -284,7 +284,7 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - **The legacy history rule** (acceptance line): legacy does not filter history by the hidden map
   (`ListingFeed.jsx:86-91`). The read was of the reconstructed source at SVN r29 (release `index-BnFvC-Ft`, one
   newer than the pinned `index-DY_DH7h-`, with no change to the saved views in its delta), not of the pinned
-  release. Read it again when WP-02 pins the baseline.
+  release. The release intake that moves the pin past it (`README.md` rule 7) reads it again.
 - **Departures recorded under rule 6:**
   - AM-94: a list entered again re-creates from that server render.
   - AM-95: history's `seen` rule is checked on the return to the list.

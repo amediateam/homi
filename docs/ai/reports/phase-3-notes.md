@@ -1301,6 +1301,10 @@ Verified (from `frontend/`):
   tests made to wait for what they assert in `192f285` after failing under machine load, then `map.spec.ts` 17 of 17
   alone).
 
+Merged on 2026-11-19 as #83 (`4e35154`), on «сливай #83», after green `frontend` (run 44196889825) and `frontend-e2e`
+(run 44196889879, 198 passed) on `94a414d`. WAITING for `CSP_TILE_HOSTS` and the regular deploy of the production track
+and the checks inside Telegram on staging.
+
 ## Z. Development track, 2026-11-18 — WP-28, map: Leaflet engine, lasso, spot map
 
 Developer's word (2026-11-18): «Следующий пакет — WP-28», given while #83 (WP-27) was in review. The branch
@@ -1411,6 +1415,12 @@ Verified (from `frontend/`):
   files (KI-32): 237 passed (map 17, map-leaflet 17, map-lasso 9, spot-map 13 and the 18 earlier files as in §Y plus
   their changes); the same on the `f4a7c5b` build.
 
+Merged on 2026-11-19 as #84 (`0ab4417`), on the developer's «сделай все что нужно погнали» (read as «сливай» for #84,
+#85 and #86, each after its own green CI), retargeted to `main` after #83 (the merge tree equals the tree its CI had
+checked), after green `frontend` (run 44254527108) and `frontend-e2e` (run 44254527223, 237 passed) on `9e9587e`;
+`frontend` green on `main` after the merge (run 44410445948). WAITING for the regular deploy of the production track
+(with WP-27's `CSP_TILE_HOSTS`) and the checks inside Telegram on staging.
+
 ## AA. Development track, 2026-11-18 — WP-29, favourites and history
 
 Branch `wp-29-saved`, on `main` = `d4c0d88` (after #82). WP-29 depends only on WP-26, so it does not stack on #83 or
@@ -1466,6 +1476,10 @@ Verified (from the repository root unless marked):
 - End to end: each of the 19 files alone against a local `next start` of the `fcba4ca` build, 190 passed, none skipped: back 11, boot-failure 6, city 6, crash 4, csp 2, data 5, feed 19, filters 20, foundation 19, gates 8, launch 5, listing-actions 14, listing-contact 14, listing-open 16, photo-viewer 6, saved 10, session 7, shell 16, smoke 2. Before the review fixes the end-to-end writer ran `saved.spec.ts` 10/10 three times and the neighbouring specs green (listing-open once 15/16, then 16/16 twice; not reproduced).
 
 Known issues: none new. LB-APP-027 (a silent failed clear with DEV-016 off) stays as the flag decides.
+
+Merged on 2026-11-19 as #85 (`ee5f7cd`), on the same word, after `main` was merged in as `e3b24f3` (conflicts in the
+docs only) and green `frontend` (run 44410780522) and `frontend-e2e` (run 44410780607, 247 passed) on it. WAITING for
+the regular deploy of the production track and the checks inside Telegram on staging.
 
 ## AB. Development track, 2026-11-18/19 — WP-30, radars
 
@@ -1569,3 +1583,14 @@ Verified:
 
 Known issues: KI-64 (info: the stub radar writes are not stored), KI-65 (low: radars switched off in this machine's
 backend env), KI-66 (low: a directly loaded `/filters?pick=city` closed at depth 0 stacks two filter sheets, WP-25).
+
+Merged on 2026-11-19 as #86 (`a818440`), on the same word, after `main` was merged in as `f47019b` and green `frontend`
+(run 44459187188) and `frontend-e2e` (run 44459187243, 350 passed, then the `@radars-off` run 14 passed) on `4abd8d0`.
+The merge kept both sides of the docs and the code (`AppShell`, the gallery, the icon test, the homi catalogues and
+their test) and fixed one semantic conflict: WP-29's `FavoritesScreen` and `HistoryScreen` tests render `FeedEmpty`,
+whose `FewResultsNote` now reaches the radar Server Actions, so they mock `@/features/radars/subscribe` and
+`@/features/radars/match` as `FeedEmpty.test.tsx` does; `make ci-frontend` on the merge → exit 0, app 215 files / 3461 +
+1 todo. In CI on `f47019b` one end-to-end case failed (`feed-radar.spec.ts`, header mode: after a reload the browser
+restored the scroll and the list asked for its second page, 33 cards, not 20); the case now scrolls to the top before
+the reload. WAITING for the regular deploy of the production track, with `RADAR_CREATION_ENABLED` unset (DEC-51), and
+the check of the "soon" state inside Telegram on staging.
