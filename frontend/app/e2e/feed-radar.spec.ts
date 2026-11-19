@@ -270,7 +270,9 @@ for (const mode of ["cookie", "header"] as const) {
       await page.waitForTimeout(500);
       await expect(page.locator('[data-slot="feed-radar"]')).toHaveCount(0);
 
-      // A relaunch: still away.
+      // A relaunch: still away. Back to the top first: the browser restores the scroll on a reload, and from the 8th
+      // card the restored list can ask for its second page at once (CI on the merge of `main`, 33 cards, not 20).
+      await page.evaluate(() => window.scrollTo(0, 0));
       const listed = page.waitForResponse((response) => isRadarList(new URL(response.url())));
       await page.reload();
       await expect(html(page)).toHaveAttribute("data-session", "ready", { timeout: API_MS });
