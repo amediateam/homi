@@ -7,7 +7,7 @@
 | Depends on | WP-48, WP-58, WP-61 |
 | Size | about 2 000 changed lines, M: tests, scans, three small commands, one endpoint, documents |
 | Behaviour reference | `16` §3 (findings), §4 (SEC-REQ-001 … SEC-REQ-050; SEC-036 … SEC-040 and SEC-REQ-051 … SEC-REQ-053 of the owner cabinet, *added by the owner-cabinet plan*), §5 (test plan), §6.1; `25` §2 rule 7, §3.9, §3.10, §9, §14 item 7; `24` §8.2 (Q-SEC-021), §8.3 (RK-25, RK-27); `17` §12 (signals); task files KV-QA-015, KV-QA-016, KV-QA-017, KV-QA-020, KV-QA-022, KV-INF-004, KV-INF-011, KV-INF-012, KV-INF-013, KV-INF-025, KV-INF-026 |
-| Needs from the production track | Every item of "Requests to the production track" in "Design": (1) scrape `GET /api/internal/metrics` and arm the alert rules of the table; (2) the scheduler heartbeat check; (3) PostgreSQL backups with point-in-time recovery, nothing older than 14 days, a timed restore drill; (4) nginx: the header set per host, no second CSP header, access logs without query strings on `api.*`, `app.*`, `hook.*`; framing of `app.*` by Telegram Web allowed; (5) `TELESCOPE_ENABLED=false` on production, a review of the basic-auth users of the dashboard locations (the gate exists: nginx basic auth plus `App\Http\DashboardAccess`), `METRICS_TOKEN` and `METRICS_ALLOWED_IPS` in the server env; (6) run `php artisan security:check` after every change of a server env file and send the output (names only); (7) confirm the log retention of each log on the servers. No migration |
+| Needs from the production track | Every item of "Requests to the production track" in "Design": (1) scrape `GET /api/internal/metrics` and arm the alert rules of the table; (2) the scheduler heartbeat check; (3) PostgreSQL backups with point-in-time recovery, nothing older than 14 days, a timed restore drill; since the owner cabinet, a restore procedure that replays WP-47's erasure ledger for every erasure after the dump's time before the restored database serves traffic, and a place outside the database's backups for the ledger's copy (*added by the owner-cabinet plan*); (4) nginx: the header set per host, no second CSP header, access logs without query strings on `api.*`, `app.*`, `hook.*`; framing of `app.*` by Telegram Web allowed; (5) `TELESCOPE_ENABLED=false` on production, a review of the basic-auth users of the dashboard locations (the gate exists: nginx basic auth plus `App\Http\DashboardAccess`), `METRICS_TOKEN` and `METRICS_ALLOWED_IPS` in the server env; (6) run `php artisan security:check` after every change of a server env file and send the output (names only); (7) confirm the log retention of each log on the servers. No migration |
 
 ## Goal
 
@@ -101,8 +101,8 @@ N = not applicable to the new product.
 | 35 | Secret scanning | SEC-REQ-035 | A | this package | `scripts/security/scan-secrets.sh` in CI and as a documented pre-commit hook |
 | 36 | Minimisation per field | SEC-REQ-036 | C — the user fields as written; the listing author's number is not stored by HOMI in Wave 1, never travels with a card, is masked in listing texts, and is returned only by the counted contact method after a tap (DEC-52). Since the owner cabinet one exception by decision: a HOMI owner's number is stored in plain text with his listing (DEC-72, SEC-REQ-051) and a seeker's first name with his request (DEC-76, SEC-REQ-053) (*added by the owner-cabinet plan*) | WP-40, WP-50, WP-56; WP-12, WP-42, WP-43 | schema test: no name, username, phone or e-mail column in any user table; the card tests of WP-12, WP-42 and WP-48 find no raw number in a card answer of any driver; Playwright: no number in the page before a tap (WP-26) |
 | 37 | Raw updates encrypted and redacted | SEC-REQ-037 | A | WP-50 | existing tests; a staging row decrypted by the production track holds no text |
-| 38 | Retention, scheduled and tested | SEC-REQ-038 | C — action log 180 days, updates 14 days, LLM call log 180 days, vote details 180 days, backups 14 days; the rule for withdrawn listings applies to HOMI's owner listings only: number, texts and photos erased 90 days after the listing left the feed (WP-84); request texts and first names 90 days after the request closed (WP-85); untouched drafts after 180 days (WP-84) (*added by the owner-cabinet plan*) | WP-47, WP-50, WP-55, WP-84, WP-85 | `RetentionRegistryTest`; time-travel test per rule |
-| 39 | Deletion on request | SEC-REQ-039 | A | WP-47, WP-56 | the database-wide scan after erasure |
+| 38 | Retention, scheduled and tested | SEC-REQ-038 | C — action log 180 days, updates 14 days, LLM call log 180 days, vote details 180 days, backups 14 days; the rule for withdrawn listings applies to HOMI's owner listings only: number, texts and photos erased 90 days after the listing left the feed (WP-84); request texts and first names 90 days after the request closed (WP-85); drafts not changed for 180 days (WP-84) (*added by the owner-cabinet plan*) | WP-47, WP-50, WP-55, WP-84, WP-85 | `RetentionRegistryTest`; time-travel test per rule |
+| 39 | Deletion on request | SEC-REQ-039 | A | WP-47, WP-56, WP-84 | the database-wide scan after erasure; the restore drill replays one erasure made after the dump (*added by the owner-cabinet plan*) |
 | 40 | Rights of listing authors | SEC-REQ-040 | C — takedown by the operator command; the request is also passed to the service the listing comes from | WP-57, WP-44, WP-60 | staging drill: one listing withdrawn → cards edited, absent from feed, map, landing within an hour |
 | 41 | Handling of the legacy dump | SEC-REQ-041 | N in Wave 1 — no data is migrated; the dump for Wave 2 is handled under this requirement then | Wave 2 | the repository and the developers' machines hold no dump (statement in the PR) |
 | 42 | Masking before any LLM call | SEC-REQ-042 | A | WP-55 | existing tests |
@@ -317,6 +317,8 @@ no new gate; it extends `DashboardAccessTest` with the `/pulse` case and checks 
 - Backups: PostgreSQL with point-in-time recovery; **no backup or log segment older than 14 days** (the privacy
   text promises "about two weeks"); encrypted; a restore into an isolated database, timed, before WP-71 and monthly.
   Not backed up, by design: Redis (conversations, pacer state, caches — all rebuildable), the nginx photo caches.
+  The drill replays the erasures made after the dump (`php artisan privacy:replay-erasures`, WP-47) and checks that
+  one erasure made after the dump is gone again in the restored database (*added by the owner-cabinet plan*).
 - An incident note `docs/security/incident.md`: who is told, how to stop sending (`delivery:pause`), how to move a
   method back (`sources:reset`), how to revoke the bot token and the service key; since the owner cabinet, how to
   take every native listing out of the public answers at once (`OWNER_LISTINGS_PUBLIC=false`, WP-86) and how to
@@ -443,7 +445,8 @@ users:
 - [ ] Every budget of the table has a measured number in `docs/testing/performance.md`; none is missed without a
       signed acceptance.
 - [ ] Every alert of the table was fired once on staging and is armed on production.
-- [ ] A restore drill succeeded and its duration is recorded; the backup retention is 14 days or less.
+- [ ] A restore drill succeeded and its duration is recorded; the backup retention is 14 days or less; the drill
+      replayed the erasures made after the dump (*added by the owner-cabinet plan*).
 - [ ] `composer audit` and `pnpm audit` are CI steps and pass; the registry check passes.
 - [ ] The privacy facts file is signed; the bot text and the landing page are final in ru, uz and en and say the
       same; `PrivacyPromisesTest` has no `todo`. If this line cannot be ticked, the reason is in "Handoff".

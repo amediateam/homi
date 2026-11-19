@@ -70,8 +70,9 @@ Out:
   button. The notices are WP-89's; this package raises the events: `OwnerListingPublished` at every publish (`first`,
   and `released` when a listing returns to the feed after an operator released its hold), `OwnerListingHeld` when the
   checks or the votes hold a listing, and `OwnerListingEdited` when the photos or the description of an `active`
-  listing change. That WP-89 sends them to the operators' private chats from HOMI's main bot, and announces an edit
-  at most once per listing per hour, are integrator defaults (below).
+  listing change; a resume (`resumed`) carries the groups changed while the owner had the listing paused. That WP-89
+  sends them to the operators' private chats from HOMI's main bot, and announces an edit at most once per listing per
+  hour, are integrator defaults (below).
 - DEC-74, DEC-80: DEV-054 (one open draft), DEV-055 (the contact mode is always chosen), DEV-056 (a way forward
   after a rejection), DEV-061 (no IP lookup) and DEV-062 (every save is live) are on without flags.
 - DEC-77: «Проверенный хозяин» on a native listing means that the owner confirmed his own number with Telegram;
@@ -108,7 +109,8 @@ Out:
   - limits: two listings per account and two per phone; drafts do not count; ten photos;
   - the operators' notices go from HOMI's main bot to `OWNER_MODERATOR_IDS` (empty: no notice): every publish (the
     first and every return after a released hold), every hold by the checks or the votes, and a change of the photos
-    or the description of an `active` listing, at most once per listing per hour (default 25); «Снять» sets `held`
+    or the description of an `active` listing, at most once per listing per hour, or of a paused one when it is
+    resumed (default 25); «Снять» sets `held`
     with reason
     `moderator`; console commands `owner:hold`, `owner:release`, `owner:withdraw`, `owner:deny-phone` with `--reason`
     and `--by`, logged with who and the system user, the audit table append-only; `owner:deny-phone` takes a listing
@@ -160,7 +162,7 @@ caller whose `telegram_user_id` is not in a non-empty `owner.allowed_ids` answer
 
 | Table | Columns | Notes |
 | ----- | ------- | ----- |
-| `owner_listings` | `id` (ULID, primary key); `user_id` (foreign key, cascade); `number` (`unsignedBigInteger`, unique, nullable); `status` (string 16); `withdrawn_at`, `held_at` (`timestampTz`, nullable); `hold_reason` (string 16, nullable: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`, `moderator`), `withdraw_reason` (string 32, nullable); `photo_token` (char 20, nullable: the current version of the public copies); `published_at`, `left_feed_at`, `purged_at` (nullable); `city`, `district_code` (string 64, nullable); `landmark` (string 120, nullable); `location`, `shown_location` (`geography(Point,4326)`, nullable); `room` (boolean, default false); `rooms`, `floor`, `floors_total` (smallint, nullable); `area_m2` (`decimal(7,1)`, nullable); `price` (bigint, nullable); `currency` (char 3, default `USD`); `price_usd` (integer, nullable); `renovation` (string 32, nullable); `furniture`, `pets` (boolean, nullable); `tenants` (json); `description` (text, nullable); `contact_mode` (string 8, default `request`); part B: `phone` (string 16, nullable, E.164, plain, cast by `OwnerPhoneCast`), `phone_author_key` (string 96, nullable, indexed), `phone_error`, `reject_reason` (string 8, nullable: `denied`, `limit`), `phone_window_until`, `phone_consented_at` (`timestampTz`, nullable), `phone_consent_version` (string 16, nullable); timestamps | index (`user_id`, `created_at`); partial index (`city`, `status`) for the listed rows; GiST on `shown_location` |
+| `owner_listings` | `id` (ULID, primary key); `user_id` (foreign key, cascade); `number` (`unsignedBigInteger`, unique, nullable); `status` (string 16); `withdrawn_at`, `held_at` (`timestampTz`, nullable); `hold_reason` (string 16, nullable: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`, `moderator`), `withdraw_reason` (string 32, nullable); `photo_token` (char 20, nullable: the current version of the public copies); `paused_edits` (json, nullable: the groups `photos`, `description` changed while the owner had the listing paused); `published_at`, `left_feed_at`, `purged_at` (nullable); `city`, `district_code` (string 64, nullable); `landmark` (string 120, nullable); `location`, `shown_location` (`geography(Point,4326)`, nullable); `room` (boolean, default false); `rooms`, `floor`, `floors_total` (smallint, nullable); `area_m2` (`decimal(7,1)`, nullable); `price` (bigint, nullable); `currency` (char 3, default `USD`); `price_usd` (integer, nullable); `renovation` (string 32, nullable); `furniture`, `pets` (boolean, nullable); `tenants` (json); `description` (text, nullable); `contact_mode` (string 8, default `request`); part B: `phone` (string 16, nullable, E.164, plain, cast by `OwnerPhoneCast`), `phone_author_key` (string 96, nullable, indexed), `phone_error`, `reject_reason` (string 8, nullable: `denied`, `limit`), `phone_window_until`, `phone_consented_at` (`timestampTz`, nullable), `phone_consent_version` (string 16, nullable); timestamps | index (`user_id`, `created_at`); partial index (`city`, `status`) for the listed rows; GiST on `shown_location` |
 | `owner_listing_photos` | `id` (ULID); `owner_listing_id` (foreign key, cascade); `position` (smallint); `original_path` (string; the key of `HashedUploader` on the private disk, shared by identical uploads); `version` (char 8: the first 8 hex of the stored bytes' SHA-256); timestamps | unique (`owner_listing_id`, `position`); index (`original_path`): a row is a reference, not the object |
 | `owner_listing_opens` | `owner_listing_id` (foreign key, cascade); `day` (date, Asia/Tashkent); `opens` (integer) | primary key (`owner_listing_id`, `day`); the source of `stats.daily` |
 | `geo_boundaries` | `id`; `kind` (`country`, `city`, `district`); `code` (string 64); `city_code` (string 64, nullable); `geom` (`geometry(MultiPolygon,4326)`); `source`, `licence`, `attribution` (string); `loaded_at` | unique (`kind`, `code`); GiST on `geom` |
@@ -199,7 +201,9 @@ array), `OwnerListingPhoto`, `OwnerListingOpen`, `GeoBoundary`, `OwnerWaitlistEn
 - A change of a published listing is live at once (DEC-80, DEV-062): there is no revision and no second save. A save
   that changes the description of an `active` listing, and every photo change of one ("Photos"), dispatches
   `OwnerListingEdited` (listing id, the changed groups `photos` and `description`) after commit; WP-89 folds the
-  edits of an hour into one notice to the operators (DEC-73).
+  edits of an hour into one notice to the operators (DEC-73). The same change of a listing the owner paused adds the
+  group to `paused_edits` instead; the resume raises `OwnerListingPublished` (`resumed`) with `fields` = those groups
+  and clears them, so WP-89 announces them at the resume (default 25).
 - `destroy(OwnerListing)` — a draft or a `rejected` listing: its photo rows and the listing row are deleted in one
   transaction, and each original that no other reference names with them (DEV-056; "Photos"); else
   `OwnerListingLocked`.
@@ -371,8 +375,8 @@ WP-86 files a native listing under its owner's phone key, and an owner's own two
 card yields a `phone:` key only when the operator sends no author key of its own (WP-42, "`listing_refs` and author
 keys"); with such a key the count sees none of that person's cards, which WP-70's review records. `rule_version` of
 `owner_check_results` names the version of these rules. `owner.checks.agent` (default `true`) turns the signal off in
-configuration, the kill switch of SEC-REQ-045. The rejection screen, the «На проверке» state and the waitlist are
-WP-81's; the support button is DEV-056's.
+configuration, the kill switch of SEC-REQ-045. The rejection screen and the «На проверке» state
+are WP-81's (it offers no waitlist, default 32); the support button is DEV-056's.
 
 ### Statuses and their effects (part B)
 
@@ -381,7 +385,7 @@ WP-81's; the support button is DEV-056's.
 | `draft` | `active` | publish | number, public copies, `OwnerListingPublished` (`first`) |
 | `draft` | held (`paused`) | publish with the `agent` signal | number, `hold_reason: check_agent`, an `owner_check_results` row, `OwnerListingHeld`; no public copies, no `published_at` |
 | `active` | `paused` | status | out of the feed and the radars; `OwnerListingWithdrawn` (`paused`) |
-| `paused` | `active` | status | back in the feed; `OwnerListingPublished` (`resumed`) |
+| `paused` | `active` | status | back in the feed; `OwnerListingPublished` (`resumed`, `fields` = `paused_edits`, then cleared) |
 | `active`, `paused` | `rented` | status | `left_feed_at`; public copies deleted; `OwnerListingRented` — WP-85 cancels the pending requests and WP-89 tells the waiting seekers (BR-API-176) |
 | `active`, `paused` | `removed` | status | `left_feed_at`; public copies deleted; `OwnerListingWithdrawn` (`removed`) |
 | any listed | held (`paused`) | `owner:hold`, «Снять» (WP-89): `moderator`; a vote threshold (WP-44): `votes_agent`, `votes_fraud`, `votes_rented` | `held_at`, `hold_reason`; out of the feed; public copies deleted; `OwnerListingWithdrawn` (`held`); for votes also an `owner_check_results` row and `OwnerListingHeld`; the owner cannot resume it (BR-API-177) |
@@ -390,9 +394,9 @@ WP-81's; the support button is DEV-056's.
 | `rejected` | `draft` | `owner:release` | `reject_reason` cleared; the owner may publish again |
 
 Nothing leaves `rented` or `removed`, and `withdrawn` is final; there is no relisting from «История». The events carry
-the listing id, the number and the reason (`OwnerListingPublished`: `first`, `released` or `resumed`), never the
-number of the phone; WP-57 turns `OwnerListingWithdrawn` into «Объявление снято» on sent cards for every reason
-except `paused` (WP-89, "Sent cards of a native listing that left the feed").
+the listing id, the number and the reason (`OwnerListingPublished`: `first`, `released` or `resumed`, the last with
+its `fields`), never the number of the phone; WP-57 turns `OwnerListingWithdrawn` into «Объявление снято» on sent
+cards for every reason except `paused` (WP-89, "Sent cards of a native listing that left the feed").
 
 ### Moderation (part B; `OwnerModeration`)
 
@@ -408,7 +412,8 @@ except `paused` (WP-89, "Sent cards of a native listing that left the feed").
   The deny list stores only the author key; every listed owner listing with that key is withdrawn, and a draft with
   it is rejected `denied` at its next check.
 - `config('owner.moderator_ids')` ← `OWNER_MODERATOR_IDS` (comma-separated Telegram ids; empty: no notice). WP-89
-  sends the notices on `OwnerListingPublished` (`first` and `released`), `OwnerListingHeld` and `OwnerListingEdited`.
+  sends the notices on `OwnerListingPublished` (`first` and `released`, and `resumed` with `fields`),
+  `OwnerListingHeld` and `OwnerListingEdited`.
 - Votes: WP-84 adds to `VoteService` (WP-44, "Reports and votes") the event
   `App\Events\Personal\VoteThresholdCrossed` (listing number, kind `rented`, `agent` or `fraud`), dispatched once when
   step 5 crosses a threshold. The listener `HoldOwnerListingByVotes` acts on native numbers only: it holds the
@@ -466,6 +471,12 @@ except `paused` (WP-89, "Sent cards of a native listing that left the feed").
 - Every listing that has a number and is erased or purged raises `OwnerListingErased` (listing id, number, reason
   `erased` or `purged`) after commit, so WP-89 edits the operators' sent notices of it (WP-89, "Configuration,
   erasure, retention"); a withdrawal raises `OwnerListingWithdrawn` as above.
+- Every deletion of a draft or a `rejected` listing (`destroy`, or the 180-day rule below) records an `owner_listing`
+  entry with mode `delete`, and every purge one with mode `purge`, in WP-47's erasure ledger
+  (`ErasureLedger::record()`: the HMAC of the listing's ULID with `ERASURE_SUBJECT_KEY`, no number), so `php artisan
+  privacy:replay-erasures` repeats them after a restore of an older dump (WP-47, "Erasure — the service the bot
+  calls"; `16` SEC-REQ-039; default 12). An owner's erasure needs no entry of its own: WP-47's `user` entry removes
+  his listings again through `OwnerListingEraser`.
 - `config/erasure.php` (WP-47, "Erasure — the service the bot calls"): `owner_listings` — strategy `custom`,
   `App\Services\Owner\OwnerListingEraser`, placed before `users`: deletes the user's owner listings with their photo
   references (and each private original no other reference names, "Photos"), their public copies at once, their
@@ -488,7 +499,8 @@ except `paused` (WP-89, "Sent cards of a native listing that left the feed").
 `backend/config/owner.php` (WP-80) gains: `phone_window_minutes` (10), `shown_point.secret`
 (`env('SHOWN_POINT_SECRET')`), `shown_point.grid_m` (100), `shown_point.min_offset_m` (50), `shown_point.max_offset_m`
 (420), `geo_radius_m` (500), `moderator_ids` (`OWNER_MODERATOR_IDS`, a list of integers), `checks.agent` (`true`),
-`checks.rule_version`, `consent_version`, `retention_days` (90), `drafts.max_age_days` (180),
+`checks.rule_version`, `consent_version` (a string; raised in the same PR as any change of `own.phoneKept`,
+`contact.noteLimit`, `contact.noteRelay` or the privacy page), `retention_days` (90), `drafts.max_age_days` (180),
 `denials.max_age_days` (1 095), `medians.max_age_days` (60), `demand.cache_minutes` (5), `price_usd.min` (50) and
 `price_usd.max` (20 000). `limits.listings` is read for the account and the phone alike; `allowed_ids` (WP-80) is
 read by the middleware. `backend/config/media.php` gains `max_pixels` (40 000 000).
@@ -592,7 +604,7 @@ Part B:
 - `withdrawn` and `held` are set by the service, not by the owner (BR-API-177).
 - `stats` with `daily`, the last value today (BR-API-178); dated in Asia/Tashkent (fix of LB-APP-062 on the server's
   side).
-- The waitlist records a refused realtor (BR-API-182).
+- `PUT /owner/waitlist` records the caller (BR-API-182); no screen of WP-81 calls it (default 32).
 
 ## Tests
 
@@ -604,7 +616,9 @@ Part B:
 - Drafts: two `store` calls give one draft; a draft with one key set is not reused; the account limit with two
   `active` listings → `409 owner_limit` (`account`), and an untouched draft is still answered `200` at the limit; a
   third draft is allowed while one listing is `rented`. A save of the description of an `active` listing dispatches
-  `OwnerListingEdited` once (`description`); a save of a draft dispatches nothing.
+  `OwnerListingEdited` once (`description`); a save of a draft dispatches nothing; a photo upload and a description
+  save of a listing the owner paused dispatch nothing, and its resume raises `OwnerListingPublished` (`resumed`) with
+  `fields` `photos` and `description`; a resume without a change has empty `fields`.
 - Form: each range of WP-80 at its edges; a district of another city → `422`; a point outside the city → `422
   errors.point`; a `UZS` price gets `price_usd` from the reference rate, and `owner:reprice` with a new rate changes
   it; a moved point changes the shown point, an unmoved save keeps it; `PATCH` of an `active` listing is visible in
@@ -668,7 +682,9 @@ Part B:
   the new tables; `OwnerListingErased` (`erased`) once per numbered listing. Purge (time travel): at 90 days − 1 s
   nothing changes, at + 1 s the number, texts, points and photos are gone and price, district and rooms stay; a draft
   unchanged for 180 days is deleted, one changed on day 179 stays; a deny-list entry is gone three years after its last
-  hit.
+  hit. Ledger (fake ledger disk): a `destroy` and a purge each write one `owner_listing` object that holds no ULID
+  and no number; replayed on a copy of the database taken before them, the draft is deleted and the listing purged
+  again.
 - IDOR (`OwnerIdorMatrixTest`): every owner method with another user's `{id}` or `{photo}` → `404`, and nothing
   changes.
 

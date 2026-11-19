@@ -41,7 +41,8 @@ Out:
 - The phone window itself, the checks behind `denied` and `limit` (and the realtor check at publish), the storage of
   the number and its two read paths — WP-84 ("The phone window and the number", "Publish and checks").
 - The Mini App's phone step: `tg.requestContact()`, `POST /owner/listings/{id}/phone-request`, the poll of `GET
-  /owner/listings/{id}`, the rejection screen and the waitlist, the «Открыть бот» link of an old client — WP-81.
+  /owner/listings/{id}`, the rejection screen and the «Открыть бот» link of an old client — WP-81 (it offers
+  no waitlist, default 32).
 - `/owner` itself (BOT-075 … BOT-079) — WP-56, unchanged outside an open window (DEV-011).
 - Requests, answers and the operators' notice — WP-89. The realtor waitlist message (BOT-091) — a later broadcast
   of WP-57's tool.

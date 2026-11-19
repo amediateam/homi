@@ -251,8 +251,8 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
   so 25 items), and `hidden/*.json` with `listings` numbers and `authors` entries. `StubListingRefs` resolves the
   native stub numbers of WP-80 (`10000001` … `10000008`) through the card source too; WP-80 adds the test. A native
   listing's author is a `phone` author labelled «Хозяин» (WP-80, "Listing items and the card"), so blocking works on
-  native numbers with `kind: phone` and no new `kind`; for such an author `listing_numbers` holds native numbers only
-  (*added by the owner-cabinet plan*).
+  native numbers with `kind: phone` and no new `kind`; its key is the owner's phone author key, so `listing_numbers`
+  holds every number HOMI knows with that key, native and legacy alike (*added by the owner-cabinet plan*).
 - **Cursors.** `StubCursor` is the one cursor of the stub lists. A cursor it did not give ends the list quietly on
   every list, the feed of WP-12 included; there it was `422` and is corrected.
 - **Lookups.** `PUT /favorites/{number}`, `PUT /hidden/listings/{number}`, blocking and reports look the listing up

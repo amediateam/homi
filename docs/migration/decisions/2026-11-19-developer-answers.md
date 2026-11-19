@@ -125,7 +125,10 @@ and listed in the PR for the reviewer; none is a decision of the developer:
     price is the median ± 10 % (WP-84, WP-86).
 12. An owner listing's number, texts and photos are erased 90 days after it left the feed for good; requests with the
     listing or with either user (WP-84, WP-85). Since the security review: a request's texts 90 days after the request
-    closed, and an untouched draft after 180 days (WP-84, WP-85).
+    closed, and a draft not changed for 180 days (WP-84, WP-85). HOMI's own erasures go into an erasure ledger (keyed
+    hashes of the erased users and listings, no personal data) kept outside the database's backup cycle and replayed
+    after any restore of HOMI's database before it serves traffic (WP-47, WP-84; the restore procedure is the
+    production track's).
 13. Requests expire after 48 h; the soft refusal follows the 10-minute undo window; «Оказался риелтором» stays open
     for 7 days after `given` (WP-85).
 14. The relay has its own server switch `LEGACY_RELAY_ENABLED`, off by default (WP-87).
@@ -152,10 +155,13 @@ defaults as well, listed for the reviewer:
     feed>}`, without a digit of the number, and its author key is the owner's phone author key (`phone:` and the HMAC
     of WP-42's `AuthorKey` with `AUTHOR_KEY_SECRET`): «Скрыть автора» on a native listing also hides that person's
     legacy listings with the same number, HOMI's realtor votes and DEC-77's check use the same key, and WP-26 offers
-    «Это риелтор» there unchanged. No `kind` value is added (WP-80, WP-86).
+    «Это риелтор» there unchanged; the block answer's `listing_numbers` holds that key's native and legacy numbers
+    alike. No `kind` value is added (WP-80, WP-86, WP-13).
 25. Besides every publication (the first and each one after a released hold), a change of the photos or the
     description of an `active` listing is announced to the operators with «Снять», at most once per listing per hour
-    (`OwnerListingEdited`; WP-84, WP-89).
+    (`OwnerListingEdited`; WP-84, WP-89); a change of either while the owner had the listing paused is announced when
+    he resumes it, naming the fields changed since the last notice (`OwnerListingPublished` `resumed`; WP-84,
+    WP-89).
 26. A positive automatic realtor check and a vote threshold on a native listing never reject or withdraw for good:
     they set `held` with `hold_reason` (`check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`; an operator's
     «Снять» or `owner:hold` is `moderator`) and record the evidence in `owner_check_results`, and the operators decide
@@ -174,10 +180,12 @@ defaults as well, listed for the reviewer:
 29. The shown point of item 5 replaces the first plan's stable offset of at most 250 m keyed by the listing and its
     exact point: keyed by the owner and the grid cell, a move inside the cell, a second listing of the same flat or
     another account's draft reveals nothing more (WP-84, WP-86, `16` SEC-REQ-052).
-30. `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft or publish — the staging run
-    with staff accounts; blank on production (WP-80, WP-84).
+30. `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft, ask for the phone and publish
+    — the staging run with staff accounts; blank on production (WP-80, WP-84).
 31. `OWNER_LISTINGS_PUBLIC` (`config('owner.public')`, default `true`): `false` takes every native listing out of the
-    feed, the map and the radars at once, without touching the owners' cabinet (WP-80, WP-86).
+    feed, the map and the radars at once and closes the seeker's side of a native number — the request method answers
+    `409 request_closed`, the disclosure `404 contact_unavailable` — without touching the owners' cabinet or his
+    answers to requests already open (WP-80, WP-85, WP-86).
 32. `reject_reason` is `denied` (the operators' deny list; a neutral word in place of legacy's `fraud`) or `limit`;
     there is no `agent` reject reason (item 26), so the form offers no realtor waitlist and LB-APP-071 has nothing to
     fix in the Mini App; `PUT /owner/waitlist` stays in the contract (WP-80, WP-81, WP-82).

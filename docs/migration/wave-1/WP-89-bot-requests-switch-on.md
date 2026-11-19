@@ -79,7 +79,8 @@ Out:
   for 7 days after `given`), item 22 (the switch goes on on staging, with test accounts, for the checks inside Telegram
   before the legal gate closes; on production only after the gates of `25` §5), item 24 (a native card's author is the
   owner's phone author, so «Это риелтор» stays), item 25 (every publication and, at most once per listing per hour,
-  changed photos or description are announced), item 26 (the realtor check and the vote thresholds hold for the
+  changed photos or description are announced; a change made while the owner had the listing paused is announced at
+  its resume), item 26 (the realtor check and the vote thresholds hold for the
   operators), item 28 (the leak protections ship before any switch-on) and item 30 (the staging allow-list
   `OWNER_CABINET_ALLOWED_IDS`). That the seeker sees an `agent` answer as `declined` is legacy's behaviour (BR-APP-098),
   not a default. Defaults of this specification, in the same list: the messages leave as paced jobs with a ledger of
@@ -104,7 +105,7 @@ second service.
 | Request events | WP-85, "Events" | `ContactRequested`, `RequestAnswered` (action), `RequestDeclined` (reason), `RequestsCancelledByRent` (request ids), `RequestExpired`; ids only |
 | The owner's answers | WP-85, "The owner's answers" | the answer service: `answer(User $owner, string $requestId, action)` with `give`, `decline`, `reason_found`, `reason_agent`, `undo`, `late`; `RequestAnswerClosed`; the flags `can_undo`, `can_reason`, `can_late` |
 | A request | WP-85, "Tables" | the request model: seeker, owner (empty for a relayed request, WP-87), listing number, `who`, `people`, `move_in`, `message`, the first name, status, reason |
-| Owner listing events, moderation | WP-84, "Statuses and their effects", "Moderation" | `OwnerListingPublished` (`first`, `released` or `resumed`), `OwnerListingHeld {listing, reason}` (the checks or the votes: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`), `OwnerListingEdited {listing, fields}`, `OwnerListingWithdrawn` (reason `paused`, `held`, `removed`, `withdrawn`), `OwnerListingRented`; the evidence of a hold in `owner_check_results`; the hold of the moderation service with reason `moderator` and `by`, which writes its audit row; `config('owner.moderator_ids')` |
+| Owner listing events, moderation | WP-84, "Statuses and their effects", "Moderation" | `OwnerListingPublished` (`first`, `released`, or `resumed` with `fields`: the groups changed while the owner had it paused), `OwnerListingHeld {listing, reason}` (the checks or the votes: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`), `OwnerListingEdited {listing, fields}`, `OwnerListingWithdrawn` (reason `paused`, `held`, `removed`, `withdrawn`), `OwnerListingRented`, `OwnerListingErased {listing, number, reason erased \| purged}`; the evidence of a hold in `owner_check_results`; the hold of the moderation service with reason `moderator` and `by`, which writes its audit row; `config('owner.moderator_ids')` |
 | Pacing, incident pause, withdrawn edits | WP-57 | `TelegramPacer`, `App\Jobs\Middleware\PaceTelegramSends`, `DeliveryPause`, queue `notifications`, `App\Events\Listings\ListingWithdrawn(int $number, string $cause)` |
 | Cards | WP-53 | `ListingCardData`, `ListingCardRenderer`, `ListingCardKeyboard`, `OpenListingByNumber`, the `ct` handler of «📞 Показать номер» |
 | Mini App links | WP-52, WP-88 | `MiniAppUrl::home()`, `MiniAppUrl::listing()`, `MiniAppUrl::startApp()` |
@@ -172,7 +173,7 @@ example «2-комн. квартира · Юнусабад · $600»), every val
 | `request_flat_let` | `RequestsCancelledByRent` | each seeker of the ids | `requests.seeker.flat_let`: «Квартиру <title> уже сдали. Другие — в приложении.» | `[📱 Открыть приложение]` |
 | `request_expired` | `RequestExpired` | the seeker | `requests.seeker.expired`: «Хозяин квартиры <title> не ответил вовремя. Можно откликнуться ещё раз.» (one new request after `expired`, DEV-060) | `[✉️ Откликнуться ещё раз]` (`url`, `MiniAppUrl::startApp('c_<n>')`) |
 | `owner_published` | `OwnerListingPublished` `first` or `released`: the first publication and the return of a held listing to the feed | each id of `owner.moderator_ids` | `moderation.published`: «🆕 Объявление хозяина №<n>: <title>» / the masked description / «Фото: N»; as a photo message with the cover when there is one | `[📱 Открыть]` (`web_app`, `MiniAppUrl::listing(n)`) / `[Снять]` (`k1:mo:<ulid>:hd`) |
-| `owner_edited` | `OwnerListingEdited` of an `active` listing with `photos` or `description`, at most one per listing per `notices.edit_interval_minutes` (60); later changes of that hour fold into it | each id of `owner.moderator_ids` | `moderation.edited`: «✏️ Объявление №<n> изменено: фото / описание» / the masked description; as a photo message with the cover | as `owner_published` |
+| `owner_edited` | `OwnerListingEdited` of an `active` listing with `photos` or `description`, or `OwnerListingPublished` `resumed` with non-empty `fields`, at most one per listing per `notices.edit_interval_minutes` (60); later changes of that hour fold into it | each id of `owner.moderator_ids` | `moderation.edited`: «✏️ Объявление №<n> изменено: фото / описание» / the masked description; as a photo message with the cover | as `owner_published` |
 | `owner_held` | `OwnerListingHeld` with `check_agent`, `votes_agent`, `votes_fraud` or `votes_rented` | each id of `owner.moderator_ids` | `moderation.held_review`: «⏸ Объявление №<n> на проверке: <причина>» / the counts of `owner_check_results` (for example «номер в объявлениях о 3 разных квартирах», «жалобы «Это риелтор»: вес 3,5 от 3 человек») / the masked description / «Решение: owner:release, owner:withdraw или owner:deny-phone»; as a photo message with the cover sent from the private original (the public copies are deleted at the hold, WP-84) | none: the decision is a console command |
 
 - The soft refusal is the same whatever reason the owner chose (BR-API-181; SCR-058's text says «человеку ответим
@@ -259,16 +260,19 @@ WP-57 then edits every sent copy to «🚫 Объявление снято» and
 - On `OwnerListingPublished` with `first` or `released` — the first publication and the return of a held listing to the
   feed after `owner:release`: one `owner_published` notice per id of `owner.moderator_ids` (read at dispatch; empty:
   none), occasion the hour of the event, so a `first` and a `released` of one listing within one clock hour give one
-  notice. A resume from `paused` (`resumed`) is not a publication.
+  notice. A resume from `paused` (`resumed`) is not a publication and sends no `owner_published`; when its `fields`
+  are not empty — the owner changed the photos or the description while the listing was paused (WP-84) — it sends
+  `owner_edited` for those fields under the hourly rule below (integrator default 25).
 - Edits of a published listing are live (DEC-80). A change of its photos or description (`OwnerListingEdited` with
   `photos` or `description`) sends `owner_edited` at most once per listing per hour (`notices.edit_interval_minutes`,
   60): the first change of an hour sends at once (occasion that hour); a change that finds the hour's notice already
   claimed dispatches the next hour's notice, delayed to the start of that hour, so every change is shown to the
   operators by a notice rendered after it. Other fields (price, contact mode, status) are not announced.
-- On `OwnerListingHeld` with a reason other than `moderator`: one `owner_held` notice per id (occasion the hour of the
-  event), with the reason and the counts WP-84 wrote into `owner_check_results` (signals and counts only — never a key,
-  a number or a voter). The operators decide with `owner:release`, `owner:withdraw` or `owner:deny-phone` (WP-84); the
-  owner sees «На проверке» and is never told that he was marked (WP-81).
+- On `OwnerListingHeld` (the checks or the votes; an operator's hold raises none, WP-84): one `owner_held` notice
+  per id (occasion the hour of the event), with the reason and the counts WP-84 wrote into `owner_check_results`
+  (signals and counts only — never a key, a number or a voter). The operators decide with `owner:release`,
+  `owner:withdraw` or `owner:deny-phone` (WP-84); the owner sees «На проверке» and is never told that he was marked
+  (WP-81).
 - Every notice holds the number, the title line, the masked description (`PhoneMasker`), the photo count and the
   cover. It never holds the owner's number, Telegram id or name, nor the true point (SEC-REQ-051, SEC-REQ-052).
 - «Снять» holds the listing (WP-84); releasing it stays a command, `owner:release` with `--by` and `--reason`.
@@ -328,8 +332,8 @@ pausing, «Сдано» and answering requests keep working (an owner with listi
   `contact_requests`, a `custom` entry `App\Services\Notices\SeekerNoticeEraser`: while the seeker's requests still
   exist, it queues `EraseBotNotice` for every sent `request_new` about them, which becomes `requests.owner.erased`
   «Отклик удалён по просьбе пользователя» without the name, the message or buttons, and deletes those rows. The notices
-  to an operator have no `user_id`: when WP-84 withdraws, purges or erases an owner listing (its events; WP-84 is
-  authoritative for their names), `SendModerationNotice` edits every sent `owner_*` notice of it ("The operators'
+  to an operator have no `user_id`: when WP-84 withdraws, purges or erases an owner listing (`OwnerListingWithdrawn`
+  `withdrawn`, `OwnerListingErased`), `SendModerationNotice` edits every sent `owner_*` notice of it ("The operators'
   notice"); the rows then go by retention.
 - `config/retention.php`: `bot_notices` — `notices.retention_days` after `sent_at`, pruned by `model:prune` (the
   model is `Prunable`); `RetentionRegistryTest` of WP-47 fails without it.
@@ -452,7 +456,7 @@ payloads and the log records finds no digit run of the owner's synthetic number 
 | 5 | `SoftRefusalTest`, `SimilarListingsTest` | three similar listings from the merged feed, without the declined number and the seeker's hidden ones; none → the `…_none` text; the source down → the `…_none` text at once; an `agent` answer sends the same refusal |
 | 6 | `NativeCardKeyboardTest` | a native card: «Это риелтор» as WP-53 gives it; «Связаться с хозяином» with `startapp=c_<n>` for no request and for `expired`; absent for `pending`, `declined`, `cancelled`; `📞 Показать номер` instead for `given`; a legacy `hidden` listing → no row; an `ag` press on a native card → WP-44's vote on the owner's phone author key |
 | 7 | `WithdrawNativeCardsTest` | `paused` → no `ListingWithdrawn`; `held` (by «Снять» and by votes), `removed`, rented → cause `source`; `withdrawn` → `takedown`; WP-57 then edits the sent copies |
-| 8 | `ModerationNoticeTest`, `ModerationCallbackTest` | a first publication → one notice per moderator id, as a photo with the cover; a release of a held listing → one `owner_published` again; a resume from `paused` → none; empty ids → none; a photo change of an active listing → one `owner_edited`, a second change in the same hour → one more notice at the start of the next hour, a third in that hour → no third; a price change → none; `OwnerListingHeld` with `check_agent` and with `votes_agent` → one `owner_held` per id with the reason and the counts, no key, number or voter; `moderator` → no `owner_held`; a withdrawn, purged or erased listing → every sent notice edited to «Объявление удалено» with the placeholder; `notices:test-moderators` → one message per id; no notice holds a number, a Telegram id of the owner or the true point; `hd` → the confirm keyboard; `hdy` → WP-84's hold with reason `moderator` and the presser's id; a presser outside the list → the stale alert, nothing held; two presses → one hold |
+| 8 | `ModerationNoticeTest`, `ModerationCallbackTest` | a first publication → one notice per moderator id, as a photo with the cover; a release of a held listing → one `owner_published` again; a resume from `paused` → no `owner_published`, and with `fields` `photos` → one `owner_edited` under the hourly rule, without a change → none; empty ids → none; a photo change of an active listing → one `owner_edited`, a second change in the same hour → one more notice at the start of the next hour, a third in that hour → no third; a price change → none; `OwnerListingHeld` with `check_agent` and with `votes_agent` → one `owner_held` per id with the reason and the counts, no key, number or voter; `moderator` → no `owner_held`; a withdrawn, purged or erased listing → every sent notice edited to «Объявление удалено» with the placeholder; `notices:test-moderators` → one message per id; no notice holds a number, a Telegram id of the owner or the true point; `hd` → the confirm keyboard; `hdy` → WP-84's hold with reason `moderator` and the presser's id; a presser outside the list → the stale alert, nothing held; two presses → one hold |
 | 9 | `OwnerCabinetSwitchTest` | switch off: `POST /owner/listings` → `403 owner_disabled`, `GET /reference` `owner_enabled: false`, `/start owner_new` → welcome only, a request on an existing listing is still delivered and answerable, `PUT …/status` with `paused`, `rented` and `removed` still works (WP-80's list); switch on: the reverse |
 | 9a | `NoticeErasureTest` | the erasure of a seeker with two sent `request_new` → both edited to «Отклик удалён…» without name, message or buttons before his requests go, and his own `bot_notices` rows deleted |
 | 10 | `NoticeLeakTest` | after every scenario of tests 2 – 9a: no first name, message text or number in the logs, `failed_jobs`, the Horizon payloads, `bot_notices` or `telescope_entries` (Telescope on with the configuration of WP-84 and WP-88) |

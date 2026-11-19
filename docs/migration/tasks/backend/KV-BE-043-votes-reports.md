@@ -25,7 +25,7 @@ switch. The same `VoteService` serves the bot's «Уже сдано» / «Это
 - Rules: `02-legacy-backend-audit.md:665-710` (§11: BR-API-101…106, Q-API-038, Q-API-039, Q-API-040, LB-API-015).
 - Bot side (M5 reuses the service): `04-telegram-bot-audit.md` card buttons (BR-BOT-061, BR-BOT-062), `09` C-05, C-06.
 - Data: ENT-018, ENT-030 (`06` §2.3–§2.4; `listing_votes`, `listing_authors`), LB-DATA-012, LB-DATA-013.
-- Security: SEC-REQ-045 (`16-security-review.md:1005-1011`), reviewer rule 10 (`.ai/agents/security-reviewer.md`).
+- Security: SEC-REQ-045 (`16-security-review.md:1010-1016`), reviewer rule 10 (`.ai/agents/security-reviewer.md`).
 
 ## Implementation
 

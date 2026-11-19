@@ -99,7 +99,10 @@ Out:
     `fraud`; default 32) or `limit` (the phone limit at the confirmation), and legacy's `agent` is not produced;
   - `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft, ask for the phone and publish
     (the staging run with staff accounts; WP-84 enforces it; default 30); `OWNER_LISTINGS_PUBLIC` (on unless set to
-    `false`): off takes every native listing out of every public answer at once (WP-86 enforces it; default 31);
+    `false`): off takes every native listing out of every public answer at once and closes the seeker's side of a
+    native number — the request method answers `409 request_closed`, the contact method `404 contact_unavailable` —
+    while the owner's cabinet and his answers to requests already open keep working (WP-86 and WP-85 enforce it;
+    default 31);
   - the consent of an owner and of a seeker is recorded on the server with the version of the privacy text in force
     (`config('owner.consent_version')`, WP-84 and WP-85), so no method takes a consent field;
   - defaults of this specification: the shapes of the owner listing and owner request objects below (the legacy
@@ -107,8 +110,8 @@ Out:
     request and `200` for an existing one; an untouched draft is answered whatever the limit; `422
     validation_failed` naming `init_data` when the launch data does not verify; `422` (not `409`) for a status
     change that the listing's status does not offer; the place lookup reads its point at 3 decimals; the block answer
-    of a native author lists native numbers only; the rate limits of the owner routes ("Methods of the owner
-    cabinet").
+    of a native author lists every number HOMI knows with the owner's phone key, native and legacy (WP-13, WP-44); the
+    rate limits of the owner routes ("Methods of the owner cabinet").
 
 ## Design
 
@@ -133,7 +136,7 @@ of the owner-cabinet plan).
 | --- | ----- | ------- |
 | `enabled` | `(bool) env('OWNER_CABINET_ENABLED', false)` | the middleware below; `owner_enabled` of `GET /reference` |
 | `allowed_ids` | `OWNER_CABINET_ALLOWED_IDS`: comma-separated Telegram ids, a list of integers; empty = no allow-list | WP-84's middleware check (create, phone request, publish) |
-| `public` | `env('OWNER_LISTINGS_PUBLIC') !== false`: blank or unset = on, only `false` turns it off (a blank value reads as `''`, which a `(bool)` cast would turn off) | WP-86's merge: off takes every native listing out of every list, count, map, card and radar |
+| `public` | `env('OWNER_LISTINGS_PUBLIC') !== false`: blank or unset = on, only `false` turns it off (a blank value reads as `''`, which a `(bool)` cast would turn off) | WP-86's merge: off takes every native listing out of every list, count, map, card and radar; WP-85: off closes the request (`409 request_closed`) and the disclosure (`404 contact_unavailable`) of a native number |
 | `limits.listings` | `2` — the listings that count, per account and per phone alike | `max` of the list; `limits.owner_listings` |
 | `limits.photos` | `10` | `limits.owner_photos`; the photo method |
 | `limits.requests` | `['day' => 10, 'week' => 30, 'pause_minutes' => 10]` | `limits.requests`; WP-85 reads them from env |
@@ -258,12 +261,12 @@ answers the owner may still give (BR-API-180).
 | `DELETE /owner/listings/{id}/photos/{photo}` | `api.v1.owner.listings.photos.destroy` | `app:write`, switch, `throttle:owner-writes` | API-042 | `{photo}` a ULID |
 | `PUT /owner/listings/{id}/photos/order` | `api.v1.owner.listings.photos.order` | `app:write`, switch, `throttle:owner-writes` | API-043 | `{ids}`: the full order, the cover first; another set → `422` |
 | `PUT /owner/listings/{id}/contact-mode` | `api.v1.owner.listings.contact-mode` | `app:write`, switch, `throttle:owner-writes` | API-044 | `{mode: "request" \| "phone"}` (legacy `gate` \| `open`); a new listing starts with `request` (DEV-055) |
-| `POST /owner/listings/{id}/phone-request` | `api.v1.owner.listings.phone-request` | `app:write`, switch, `throttle:owner-publish` | none | opens the ten-minute phone window; answers the listing |
-| `POST /owner/listings/{id}/publish` | `api.v1.owner.listings.publish` | `app:write`, switch, `throttle:owner-publish` | API-045 | `422` naming `city`, `place`, `rooms`, `price`, `photos`; `409 owner_phone_required`; `409 owner_limit`; `409 owner_rejected`; a listing the checks hold answers `200` with `held: true` |
+| `POST /owner/listings/{id}/phone-request` | `api.v1.owner.listings.phone-request` | `app:write`, switch, `throttle:owner-writes`, `throttle:owner-publish` | none | opens the ten-minute phone window; answers the listing |
+| `POST /owner/listings/{id}/publish` | `api.v1.owner.listings.publish` | `app:write`, switch, `throttle:owner-writes`, `throttle:owner-publish` | API-045 | `422` naming `city`, `place`, `rooms`, `price`, `photos`; `409 owner_phone_required`; `409 owner_limit`; `409 owner_rejected`; a listing the checks hold answers `200` with `held: true` |
 | `PUT /owner/listings/{id}/status` | `api.v1.owner.listings.status` | `app:write`, switch for `active`, `throttle:owner-writes` | API-046 | `{status: "active" \| "paused" \| "rented" \| "removed"}`; `active` refused for `held`; nothing leaves `withdrawn`, `rented` or `removed` |
 | `GET /owner/listings/{id}/requests` | `api.v1.owner.listings.requests.index` | `app:read` | API-048 | cursor list, newest first, 20 a page; the "all requests" form is not built |
 | `POST /owner/requests/{id}/answer` | `api.v1.owner.requests.answer` | `app:write`, `throttle:owner-writes` | API-049 | `{action}`; `409 request_answer_closed` |
-| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (fix of LB-APP-071) |
+| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (LB-APP-071 has no Mini App entry, default 32) |
 | `GET /owner/place` | `api.v1.owner.place` | `app:read`, `throttle:owner-place` | API-051 | `?lat=&lon=` (3 decimals) → `{city, district_code}`, either `null` (DEC-79) |
 | `GET /owner/demand` | `api.v1.owner.demand` | `app:read`, `throttle:owner-demand` | API-053 | `?city=&district=&rooms=&room=&price=&currency=` → `{count, usual_low_usd, usual_high_usd}` |
 
@@ -273,9 +276,9 @@ Not built: `GET /owner/pending` (API-047: its number is `owner.pending` of `GET 
 The owner routes form one group `Route::prefix('owner')->name('owner.')` inside the `auth:sanctum` group of
 `backend/routes/api.php`, each route with its own ability, as the personal routes of WP-13 are written. The rate
 limits of SEC-REQ-027 (`16`) for the cabinet are named limiters in `AppServiceProvider`, beside `uploads`, keyed like
-it per actor: `owner-writes` (60 a minute: every owner write), `owner-publish` (10 an hour: publish and the phone
-request, on top of `owner-writes`), `owner-place` (60 a minute) and `owner-demand` (30 a minute); they answer `429
-rate_limited` without a `reason`, like every limit but the daily one (WP-10).
+it per actor: `owner-writes` (60 a minute: every owner write), `owner-publish` (10 an hour for each of publish and the
+phone request, keyed per route and actor, on top of `owner-writes`), `owner-place` (60 a minute) and `owner-demand`
+(30 a minute); they answer `429 rate_limited` without a `reason`, like every limit but the daily one (WP-10).
 
 #### Drafts, form and status
 
@@ -390,7 +393,7 @@ Errors, checked before anything is created:
 | `409 no_chat` | HOMI's bot cannot write to the seeker yet; nothing was created (BR-API-184); the client asks for write access and repeats once |
 | `429 rate_limited` | `reason` `requests_fast` (the pause after several requests in a row), `requests_day` or `requests_week`; `Retry-After` in seconds |
 | `403 requests_blocked` | requests of this user are closed (legacy `blocked` and `harvest` alike) |
-| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, the owner marked this seeker as a realtor, or the listing already took its requests of the day (`owner.limits.requests.per_listing_day`, WP-85) |
+| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, the owner marked this seeker as a realtor, the listing already took its requests of the day (`owner.limits.requests.per_listing_day`, WP-85), or a native listing while `OWNER_LISTINGS_PUBLIC` is off (default 31) |
 | `409 own_listing` | the caller's own listing |
 | `409 contact_open` | the listing shows its number now (`phone` mode); the client reads the card again |
 
@@ -455,8 +458,9 @@ The author key behind a native `author` is the owner's phone author key (WP-84, 
 its own: `PUT /listings/{number}/blocked-author` on a native number blocks that key, so the person's legacy listings
 with the same number are hidden too, and HOMI's realtor votes (WP-44) and the realtor check of DEC-77 (WP-84) count
 on the same key. WP-26's rule offers «Это риелтор» on a `phone` author, so native cards offer it without a change.
-The block answer of a native author (WP-13) and its entry in `GET /hidden` carry `kind: phone`, the label above and
-`listing_numbers` with native numbers only, so no answer links a native owner to his legacy listings by number.
+The block answer of a native author (WP-13) and its entry in `GET /hidden` carry `kind: phone` and the label above;
+`listing_numbers` holds every number HOMI knows with that key, native and legacy alike, as WP-44's
+`BlockedAuthorService::block()` answers for any phone author (default 24).
 
 The new keys are required in the resources (always present, nullable where stated). The Mini App's typed test
 objects and the dev emulator's fixtures that build a card, a preview or `GET /me` gain them in this PR, so `pnpm
@@ -466,7 +470,8 @@ objects and the dev emulator's fixtures that build a card, a preview or `GET /me
 #### Contact and translation of the card
 
 - `POST /listings/{number}/contact`: a `request`-mode listing answers `404 contact_unavailable` unless the caller's
-  request is `given`; a `hidden` one always. It stays the only method that returns a number.
+  request is `given`; a `hidden` one always; a native one while `OWNER_LISTINGS_PUBLIC` is off (default 31). It stays
+  the only method that returns a number.
 - `POST /listings/{number}/translation`: a native number answers `404 not_found` (no original text).
 
 ### Error codes
@@ -702,7 +707,7 @@ items placed by HOMI's own owners carry `origin: native`.»
   not from the card (BR-API-187, DEC-52).
 - Self-placed listings carry the owner fields and no channel source (BR-API-188); the tier is a field, not a label
   (BR-API-189 `UNVERIFIED` in legacy; fix of LB-APP-075).
-- The waitlist is recorded and `GET /me` says so (BR-API-182; fix of LB-APP-071).
+- The waitlist is recorded and `GET /me` says so (BR-API-182; LB-APP-071 has no Mini App entry, default 32).
 
 ## Tests
 

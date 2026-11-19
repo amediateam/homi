@@ -242,12 +242,13 @@ Changed:
   city; for a non-draft the stats line «N получили по радару · N открыли · N в избранном» (the last only above 0);
   the note `own.withdrawnNote`, or for a held listing `own.review.text` of WP-81 in place of legacy's `own.held`; the
   actions.
-- The status chip (BR-APP-094): `withdrawn` → «Снято по жалобам»; `held` → «На проверке» (`own.review.title` of
-  WP-81) whatever its `hold_reason`, which the client never shows (default 26, WP-70 row 45; legacy showed
-  «На паузе» with its `own.held` note); another status than `active` → its label from the
-  table `ownerStatus` («Черновик», «На паузе», «Сдано», «Снято», «Не принято»), an unknown one → `fallback.other`
-  (fix of LB-APP-064); `active` → «Сдаётся · с сегодня» within the first full day after publication, else «Сдаётся ·
-  N дней», counted in Asia/Tashkent from the server's publication time, not by the device clock (fix of LB-APP-062).
+- The status chip (BR-APP-094): `withdrawn` → «Снято с публикации» (a `homi` text; legacy's «Снято по жалобам»
+  named the votes, which no longer withdraw, default 26); `held` → «На проверке» (`own.review.title` of WP-81)
+  whatever its `hold_reason`, which the client never shows (default 26, WP-70 row 45; legacy showed «На паузе» with
+  its `own.held` note); another status than `active` → its label from the table `ownerStatus` («Черновик»,
+  «На паузе», «Сдано», «Снято», «Не принято»), an unknown one → `fallback.other` (fix of LB-APP-064); `active` →
+  «Сдаётся · с сегодня» within the first full day after publication, else «Сдаётся · N дней», counted in
+  Asia/Tashkent from the server's publication time, not by the device clock (fix of LB-APP-062).
 - Actions by status (BR-APP-088, DEC-73, DEV-056):
 
   | Listing | Card | Panel footer (SCR-059) |

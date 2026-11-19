@@ -922,13 +922,13 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   devices (SEC-019), and not encrypted by the developer's decision of 2026-11-13
   (`docs/infrastructure/backup-recovery.md:19`). With DEC-72 the dumps hold owners' numbers in plain text, so the
   decision's consequence is that the private, append-only bucket, the restore credential held by the production
-  track, restores only on production-track hosts and the replay of erasures after a restore (SEC-REQ-039) are the
-  protections that remain; WP-70's line "encrypted" contradicts the decision, and WP-70's security review resolves it
-  with the production track. Owner cabinet: an owner listing's number, texts and photos 90 days after it left the
-  feed; request texts and the seeker's first name 90 days after the request closed; a draft not changed for 180 days;
-  a deny-list entry three years after its last hit (WP-84, WP-85). Support data 90 days / 1 year if the support bot is
-  ported (BR-BOT-091). *Acceptance:* one Pest test per rule (advance the
-  clock, run `schedule:run`, assert deletion); a backup runbook entry is reviewed by the prod track.
+  track, restores only on production-track hosts and the replay of HOMI's erasure ledger after a restore
+  (SEC-REQ-039) are the protections that remain; WP-70's line "encrypted" contradicts the decision, and WP-70's
+  security review resolves it with the production track. Owner cabinet: an owner listing's number, texts and photos
+  90 days after it left the feed; request texts and the seeker's first name 90 days after the request closed; a
+  draft not changed for 180 days; a deny-list entry three years after its last hit (WP-84, WP-85). Support data 90
+  days / 1 year if the support bot is ported (BR-BOT-091). *Acceptance:* one Pest test per rule (advance the clock,
+  run `schedule:run`, assert deletion); a backup runbook entry is reviewed by the prod track.
 - **SEC-REQ-039** — Deletion request («Удалить мои данные», BTN-076): a confirmation step, then one procedure that
   deletes or anonymises every row linked to the user — user, settings, radars, hide rules, favourites, history, hidden
   listings, blocked authors, votes (Q-SEC-016), survey answers, owner hash, attribution, action log, delivered cards,
@@ -937,9 +937,13 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   sent messages are edited first, WP-89) and the relay's erasure notice to the operator (WP-84, WP-85, WP-87, WP-89)
   — and requests a PostHog person deletion (retried, recorded); an erasure
   ledger keyed by an HMAC of the Telegram id lets the migration replay erasures done on legacy after the dump and
-  prevents re-import (ENT-007). *Acceptance:* a factory user with every relation → deletion → a DB-wide query finds
-  no row and no jsonb payload with that user's id or Telegram id; the PostHog fake received one deletion; a re-import
-  of the same legacy user is skipped.
+  prevents re-import (ENT-007); HOMI's own erasures (users by that HMAC, owner listings by a keyed hash of their id;
+  no personal data) are also copied, as they happen, to a store outside the database's backups, and after any
+  restore of HOMI's own database, before it serves traffic, the ledger is replayed for every erasure after the dump's
+  time (WP-47, WP-84; the production track's restore procedure in `docs/infrastructure/backup-recovery.md`, a need,
+  not a decision here). *Acceptance:* a factory user with every relation → deletion → a DB-wide query finds no row
+  and no jsonb payload with that user's id or Telegram id; the PostHog fake received one deletion; a re-import of the
+  same legacy user is skipped; a restore drill on staging replays one erasure made after the dump.
 - **SEC-REQ-040** — Rights of listing authors: takedown by post link or phone through the support channel and ARM;
   it removes the listing from feed, map, SEO pages, landing data, alerts, photos and snapshots within an SLA
   (Q-SEC-007) and edits delivered cards to «Объявление снято»; a phone opt-out list (HMAC) and the channel opt-out
@@ -971,9 +975,10 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   let or removed (a deleted key can stay in the edge cache for up to an hour). Residuals, recorded: a pin moved across
   a cell boundary shows two neighbouring cells; an owner who erases his data and returns gets new shown points; the
   district comes from the true point, so a circle on a district boundary may be halved. *Acceptance:* shrinking
-  polygons around a native listing never isolate its true point; 1 000 random points give 50 … 491 m; two owners at
-  one point get different shown points; a stored photo has no EXIF block; no public key holds a listing number; a
-  held listing's former photo addresses answer `404` once the edge cache has expired.
+  polygons around a native listing never isolate its true point; 1 000 random points give at most 491 m from the
+  true point and 50 … 420 m from the cell's centre; two owners at one point get different shown points; a stored
+  photo has no EXIF block; no public key holds a listing number; a held listing's former photo addresses answer `404`
+  once the edge cache has expired.
 - **SEC-REQ-053** — Requests between seekers and owners: the seeker's first name only from verified launch data
   (DEC-76), stored with the request and erased with it, the texts 90 days after the request closed; request limits
   and blocks per seeker; a relayed request passes only the first name and the form's answers to the operator (DEC-71),

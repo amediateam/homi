@@ -77,6 +77,10 @@ Out:
     23);
   - the request texts (`seeker_first_name`, `message`, `move_in`) are erased 90 days after the request closed; the
     row keeps its status and times for the owner's stats;
+  - while `config('owner.public')` is false (`OWNER_LISTINGS_PUBLIC`, WP-86) the seeker's side of every native number
+    is closed: the request method answers `409 request_closed` and the disclosure `404 contact_unavailable`; the
+    owner's cabinet and his answers to requests already open keep working, and a number given meanwhile is disclosed
+    once the switch is on again (integrator default 31);
   - defaults of this specification: `undo` returns the previous answer; the pause (`requests_fast`) follows three
     requests within ten minutes (`owner.limits.requests.burst`), because legacy's texts say only «несколько
     подряд»; a day is the Tashkent calendar day and a week the last seven times 24 hours; the counts come from
@@ -118,7 +122,8 @@ or model entry of them and hides `init_data`, `message` and `move_in`; a `QueryE
 controller of WP-80 for a native number (`ListingNumber::isNative()`); a legacy number goes to WP-87's relay, which
 answers `409 request_closed` until it exists. In this order, before anything is written:
 
-1. The owner listing by number; none → `404 not_found`.
+1. The owner listing by number; none → `404 not_found`. While `config('owner.public')` is false (WP-86) a native
+   number answers `RequestClosed` (`409 request_closed`) here, before steps 2 and 3 (integrator default 31).
 2. The caller's own listing → `OwnListing` (`409 own_listing`).
 3. `contact_mode: phone` → `ContactOpen` (`409 contact_open`).
 4. The listing is not `active`, or it is `held` or `withdrawn`, or its owner blocked this seeker
@@ -251,10 +256,11 @@ request_answer_closed`). The flags of the owner request object: `can_undo` = now
   `origin` (`legacy` or `native`). A `phone`-mode native listing is disclosed like any listing, under the quota.
 - A native number's disclosure has one implementation: `App\Services\Requests\NativeContact::read(int $number):
   ListingContact` — WP-84's `OwnerListing::phoneForDisclosure()` of an `active` listing that is not `held` or
-  `withdrawn`, in the shape of variant A (HOMI's call link, WP-43), else `ContactUnavailable`. It is the only caller
-  of `phoneForDisclosure()`. `ContactService::disclose()` takes step 1 from it for `ListingNumber::isNative()`
-  numbers instead of `ListingSource::contact()`; WP-86's merged source answers `ContactUnavailable` for a native
-  number and reads the number nowhere.
+  `withdrawn`, while `config('owner.public')` is true (WP-86; integrator default 31), in the shape of variant A
+  (HOMI's call link, WP-43), else `ContactUnavailable`. It is the only caller of `phoneForDisclosure()`.
+  `ContactService::disclose()` takes step 1 from it for `ListingNumber::isNative()` numbers instead of
+  `ListingSource::contact()`; WP-86's merged source answers `ContactUnavailable` for a native number and reads the
+  number nowhere.
 
 ### Events
 
@@ -415,6 +421,10 @@ configuration change.
   through variant A, counted by the quota and answered above the soft limit; a `hidden` listing → `404`; a held or
   withdrawn native listing → `404 contact_unavailable`; `ContactDisclosed` carries `origin`; `NativeContact` is the
   only caller of `phoneForDisclosure()` (`PhoneLeakTest` of WP-84).
+- Public switch: with `owner.public` false a request on an `active` native listing → `409 request_closed` and no row
+  (a `phone`-mode one too, never `contact_open`); the disclosure of a `phone`-mode native listing and of a `given`
+  request → `404 contact_unavailable`; the owner's answer to a pending request works; back to true, the given number
+  is disclosed.
 - `GET /me`: `owner.pending` counts pending requests of the caller's listings only. `ResponseTime`: two answers →
   `null`; five answers → their median in minutes.
 - IDOR (`RequestIdorTest`): the list and the answer with another owner's listing or request id → `404`, nothing

@@ -493,7 +493,8 @@ Changed:
   `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, which `brand.botUsername` reads). «Поделиться номером» is always enabled; a
   new tap starts a new attempt. Above it one line, `own.phoneKept` «Номер хранится в HOMI и виден только тем, кому вы
   его дадите.» with «Политика конфиденциальности» linked to `brand.links.privacy` of the locale (the link hidden while
-  it is `null`; default (g)).
+  it is `null`; default (g)). A change of this line raises `owner.consent_version` in the same PR (WP-84,
+  "Configuration").
 - A tap: medium haptic, `requestOwnerPhone({ id })` (opens the window of default 6), then `tg.requestContact()`.
   `null` (below 6.9) → the old-client text, and polling starts anyway; `false` → the denied text; `true` → polling.
 - Polling (`usePhonePoll`): `GET /owner/listings/{id}` at once, then every 1.5 s without overlap, for up to 90 s, and

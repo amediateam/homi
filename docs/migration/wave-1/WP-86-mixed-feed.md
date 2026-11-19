@@ -122,8 +122,10 @@ the personal-list previews — gets the merged answers with no change of its own
 A native number is never sent to legacy, and a legacy number is never looked up in HOMI's tables: the routing reads only
 `ListingNumber::isNative()`. While `config('owner.public')` (`OWNER_LISTINGS_PUBLIC`, default `true`; WP-80) is `false`,
 the native part is empty in every list, count, new-since count, flow and map, and every native number answers
-`SourceNotFound` (`404 not_found`), so radars and the bot stop seeing native listings too; the owners' cabinet is not
-touched. It is the lever for an incident with photos, points or texts (WP-70, WP-71), apart from DEC-81's switch, which
+`SourceNotFound` (`404 not_found`), so radars and the bot stop seeing native listings too; WP-85 closes the seeker's
+side of a native number in the same state (the request method `409 request_closed`, the disclosure `404
+contact_unavailable`; default 31); the owners' cabinet and their answers to requests already open are not touched.
+It is the lever for an incident with photos, points or texts (WP-70, WP-71), apart from DEC-81's switch, which
 leaves published listings in the feed. The overlay of WP-42 ("Overlay") runs after the merge, in the controllers, on
 both kinds alike (hidden listings, blocked authors, favourites, viewed flags, realtor marks). A page from which the
 overlay removes native items may be shorter than `limit`; the client continues with the cursor as it does today.
@@ -312,8 +314,9 @@ true`, `usd`, `origin: native`.
   `phone_author_key`, `author_kind` `phone`, `district_code`. So the overlay's blocked-author step (WP-42, "Overlay"
   step 1) and WP-44's `BlockedAuthorService::block()` work for native numbers without a change: «Скрыть автора» on a
   native listing writes a `blocked_authors` row of kind `phone` with the card's label «Хозяин», and it also hides
-  that person's legacy listings with the same number. HOMI's realtor votes (WP-44) and the realtor check of DEC-77
-  (WP-84) read the same key.
+  that person's legacy listings with the same number; the answer's `listing_numbers` (and its `GET /hidden` entry)
+  holds the numbers of both kinds with that key (WP-80, WP-13). HOMI's realtor votes (WP-44) and the realtor check
+  of DEC-77 (WP-84) read the same key.
 - `ListingRefs::pointer()` answers a native number with no channel and no post, so favourites, history and radar
   deliveries of a native listing need no Wave 2 mapping (`24` §5).
 
@@ -413,10 +416,10 @@ server; native rows come from WP-84's factories with the cabinet switch on (`php
 | 9 | `MixedMapTest` | native points at the shown point with `origin: native`; `total` and `with_point` grow by the native count; a cut legacy answer keeps its `with_point` plus the native count |
 | 10 | `NativeCardTest` | the card of an `active` row in ru, uz, en and USD, UZS; the masked synthetic number in `owner.description` and in `landmark`; `author` = `{kind: phone, label: «Хозяин», count}` with no digit; the photo addresses `…/owner/<token>/<n>.jpg?v=…` without the listing number, and `smallPhotoUrl`'s rule gives their `.s.jpg`; `comparison` with a district median, a city median, none; a `paused`, a `held` and a `withdrawn` row → the same unlisted shape: `status_text`, `title`, `price`, `deal`, `district`, no description, landmark, location, centre distance, facts or photos, `has_phone: false`; a purged row → `404 not_found`; no key of the card holds the true point or a digit run of the owner's number |
 | 11 | `NativeRoutingTest` | `details`, `preview`, `previews`, `contact`, `translation` of a native number never reach the legacy fake; of a legacy number never query `owner_listings`; `OwnerListingMerge::contact()` of a native number → `ContactUnavailable`, while `POST /listings/{number}/contact` of an `active` native listing answers through WP-85's branch; translation of a native number → `404 not_found`; the per-number controllers answer `meta.source: native`; share keeps its own driver |
-| 12 | `ShownPointLeakTest` | shrinking polygons around a native listing (SEC-REQ-052 acceptance): the listing appears only while the polygon contains the shown point, never the true point; the true point lies 50 … 491 m from the shown point, inside the card's 500 m circle; feed, map, card and preview answers never contain the true coordinates |
+| 12 | `ShownPointLeakTest` | shrinking polygons around a native listing (SEC-REQ-052 acceptance): the listing appears only while the polygon contains the shown point, never the true point; the true point lies at most 491 m from the shown point, inside the card's 500 m circle; feed, map, card and preview answers never contain the true coordinates |
 | 13 | `StubNeverMixesTest` | features on `stub` and a real native row in the database: the feed holds the stub's native entries only; features on `legacy`: no stub native number appears |
-| 14 | `NativeAuthorBlockTest` | publishing writes the `listing_refs` row with the listing's `phone_author_key` and `author_kind: phone`; `PUT /listings/{number}/blocked-author` on a native number answers `kind: phone`, label «Хозяин»; the user's feed then omits every listing of that owner and the legacy fixture listings with the same number; another user still sees them |
-| 14a | `NativePublicSwitchTest` | `owner.public` false: no native item in feed, count, new-since, flow, map or a radar poll; a native card → `404 not_found`; the owner's `GET /owner/listings` unchanged; back to true: everything returns |
+| 14 | `NativeAuthorBlockTest` | publishing writes the `listing_refs` row with the listing's `phone_author_key` and `author_kind: phone`; `PUT /listings/{number}/blocked-author` on a native number answers `kind: phone`, label «Хозяин»; the answer's `listing_numbers` holds the native number and the legacy fixture numbers of that key; the user's feed then omits every listing of that owner and the legacy fixture listings with the same number; another user still sees them |
+| 14a | `NativePublicSwitchTest` | `owner.public` false: no native item in feed, count, new-since, flow, map or a radar poll; a native card → `404 not_found`; `POST /listings/{number}/contact-request` on an `active` native listing → `409 request_closed`, `POST /listings/{number}/contact` of a `phone`-mode native listing → `404 contact_unavailable`; the owner's `GET /owner/listings` and his answer to a pending request unchanged; back to true: everything returns |
 | 15 | `LegacyFloorGuardTest` | a legacy fixture whose item id is `10000000` or above → a contract error, counted, never served |
 | 16 | `RadarPollNativeTest` | with `radar.matching_enabled` on and the feed on the fixture-backed legacy driver: a native listing published between two polls is planned by the next poll (WP-46's planner); a paused one is not |
 | 17 | `NativeCandidatesTest` (`tests/Pgsql`, `make test-pgsql`) | the candidate query on PostgreSQL with geography columns; the cap and its metric |
@@ -437,7 +440,8 @@ server; native rows come from WP-84's factories with the cabinet switch on (`php
 - [ ] A native listing published between two polls is planned by the next poll of WP-46.
 - [ ] Blocking the author of a native listing hides that owner's listings, and the legacy listings with his number,
       for the user only.
-- [ ] With `OWNER_LISTINGS_PUBLIC=false` no public answer holds a native listing, and the cabinet still works.
+- [ ] With `OWNER_LISTINGS_PUBLIC=false` no public answer holds a native listing, no request or disclosure is served
+      on a native number, and the cabinet still works.
 - [ ] A native card out of the feed (paused, held, withdrawn, let, removed) holds no description, landmark, point,
       facts or photo.
 - [ ] On staging (cabinet switch off, no native rows) every listing method answers as before this package.

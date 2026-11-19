@@ -7,7 +7,7 @@
 | Depends on | WP-44 (and, by queue order, WP-45 and WP-46: their tables are registered here) |
 | Size | about 2 600 changed lines, L |
 | Behaviour reference | WP-11 (`POST /events`: body, catalogue, codes — unchanged here); `25` §3.9, §5 (action log, erasure); `24` §8.1 (DEC-47), §8.2 (Q-SEC-021); `08` row of API-034; `03` §3.3; `16` SEC-REQ-022, SEC-REQ-036, SEC-REQ-038, SEC-REQ-039, SEC-REQ-047; tasks `tasks/backend/KV-BE-150-action-log.md`, `KV-BE-151-api-events.md`, `KV-BE-152-posthog-server.md`, `KV-BE-165-retention-m4-m6-m7.md`, `KV-BE-050-erasure-service.md` (rules, edge cases, tests — not their legacy route or migration tables), and `KV-BE-049-retention-deletion-adr.md` for the proposed retention periods |
-| Needs from the production track | 1. Server env on staging and production: `ERASURE_SUBJECT_KEY` (random, at least 32 bytes, per environment, never rotated without a plan); `POSTHOG_HOST`, `POSTHOG_PROJECT_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` of that environment's own PostHog project (DEC-47; separate projects for staging and production); `ANALYTICS_FORWARD_TO_POSTHOG=true` once the keys are set. 2. Approve the migrations on production: the partitioned `user_action_log` with its first partitions, and `erasure_requests`. 3. Confirm the scheduler runs, that application logs are kept at most 30 days and database backups at most 14 days (the privacy promises of the bot text and the landing rely on it). 4. Nothing for Horizon: `trim.failed` and `trim.recent_failed` are already 10 080 minutes (7 days) in `backend/config/horizon.php`; do not raise them without changing the retention registry |
+| Needs from the production track | 1. Server env on staging and production: `ERASURE_SUBJECT_KEY` (random, at least 32 bytes, per environment, never rotated without a plan); `POSTHOG_HOST`, `POSTHOG_PROJECT_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` of that environment's own PostHog project (DEC-47; separate projects for staging and production); `ANALYTICS_FORWARD_TO_POSTHOG=true` once the keys are set. 2. Approve the migrations on production: the partitioned `user_action_log` with its first partitions, and `erasure_requests`. 3. Confirm the scheduler runs, that application logs are kept at most 30 days and database backups at most 14 days (the privacy promises of the bot text and the landing rely on it). 4. Nothing for Horizon: `trim.failed` and `trim.recent_failed` are already 10 080 minutes (7 days) in `backend/config/horizon.php`; do not raise them without changing the retention registry. 5. A private disk for the erasure ledger's copy that a restore of the database does not roll back (`config('erasure.ledger_disk')`), and a step of the restore procedure (`docs/infrastructure/backup-recovery.md`) that runs `php artisan privacy:replay-erasures --since=<the dump's time>` before the restored database serves traffic (*added by the owner-cabinet plan*) |
 
 ## Goal
 
@@ -21,8 +21,9 @@ table that grows forever, without saying how it is erased and when it is purged.
 In: the partitioned action log and its partition manager; `ActionLogger` and the catalogue; the real `POST /events`;
 the PostHog client, server-side capture and person deletion; `ErasureService` with its registry, ledger and registry
 test; the retention registry, its purge command and policy test; scheduler entries. The registry gains, later, the
-owner listings with their number and photos, the waitlist and the requests as seeker and as owner; WP-84 and WP-85
-register them (*added by the owner-cabinet plan*).
+owner listings with their number and photos, the waitlist and the requests as seeker and as owner; WP-84, WP-85,
+WP-87 and WP-89 (`bot_notices`, `SeekerNoticeEraser`) register them. The ledger also gets a copy outside the database
+and a replay after a restore ("Erasure — the service the bot calls") (*added by the owner-cabinet plan*).
 
 Out: the PostHog SDK in the Mini App (stage B); the bot's «Удалить мои данные» dialogue and the bot's own events
 (WP-56 and WP-58 call the services built here); the legal texts (WP-70).
@@ -166,10 +167,25 @@ final class ErasureService {
 
 `App\Services\Privacy\Contracts\PersonEraser` has two implementations: `PostHogPersonEraser`, and
 `NotConfiguredPersonEraser` (status `skipped_not_configured`) when the keys are missing. Commands:
-`privacy:erase {user} --by= --reason=` for support requests, `privacy:retry-posthog` for failed deletions.
+`privacy:erase {user} --by= --reason=` for support requests, `privacy:retry-posthog` for failed deletions;
+`privacy:replay-erasures --since=` after a restore (below) (*added by the owner-cabinet plan*).
 
 Queued jobs that carry a user id (matching, delivery, capture) load the user and stop when it is gone, so nothing
 is recreated after an erasure (`15` §3.6 row 9).
+
+After a restore: with DEC-72 a dump holds owners' numbers in plain text and the dumps are not encrypted (`16`
+SEC-REQ-038), so an erasure made after a dump's time must not come back with that dump.
+`App\Services\Privacy\ErasureLedger::record(string $kind, string $hash, string $mode)` writes, after commit, one
+object per erasure (kind, hash, mode, time; no id, no number, no text) to `config('erasure.ledger_disk')`, a private
+disk that a restore of the database does not roll back:
+`erase()` records kind `user` with the `subject_hash` beside its `erasure_requests` row, and WP-84 records kind
+`owner_listing` (the HMAC-SHA-256 of the listing's ULID with `ERASURE_SUBJECT_KEY`, mode `delete` or `purge`).
+`php artisan privacy:replay-erasures --since=<the dump's time>` reads the objects from that time on and repeats each
+on the restored database: the user whose Telegram id hashes to a `user` entry is erased with source `replay` (a
+fourth value of `$source`), the owner listing whose ULID hashes to an `owner_listing` entry is deleted or purged
+through WP-84; a second run changes nothing, and the replay writes no new object. The production track's restore
+procedure runs it before the restored database serves traffic (default 12 of the owner-cabinet plan, *integrator
+default, listed for the reviewer*) (*added by the owner-cabinet plan*).
 
 ### Retention
 
@@ -207,7 +223,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - `backend/app/Models/{ActionLogEntry,ErasureRequest}.php` with factories; `backend/app/Enums/Analytics/ActionChannel.php`
 - `backend/app/Services/Analytics/{PartitionManager,ActionLogger,EventIngest,PostHogClient,ServerEvents,DeletionResult}.php`
 - `backend/app/Services/Privacy/{ErasureService,ErasureReceipt,PostHogPersonEraser,NotConfiguredPersonEraser}.php`,
-  `backend/app/Services/Privacy/Contracts/PersonEraser.php`
+  `backend/app/Services/Privacy/Contracts/PersonEraser.php`; `backend/app/Services/Privacy/ErasureLedger.php` and
+  `backend/app/Console/Commands/Privacy/ReplayErasures.php` (*added by the owner-cabinet plan*)
 - `backend/app/Jobs/Analytics/CapturePostHogEvents.php`, `backend/app/Jobs/Privacy/{RequestPostHogPersonDeletion,PurgeLateActionRows}.php`,
   `backend/app/Events/Privacy/UserErased.php`, `backend/app/Listeners/Analytics/RecordContactDisclosure.php`
 - `backend/app/Console/Commands/{Partitions/EnsurePartitions,Partitions/DropExpiredPartitions,Privacy/EraseUser,Privacy/RetryPostHog,Privacy/PurgeOperationalData}.php`
@@ -229,8 +246,9 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
    the listener for `ContactDisclosed`.
 4. `EventIngest` and the real `EventController`.
 5. `PostHogClient`, `ServerEvents`, the capture job, the boot check.
-6. `config/erasure.php`, `ErasureService`, the ledger, `PersonEraser` and its two implementations, the jobs, the two
-   commands; `ErasureRegistryTest` and the database-wide scan.
+6. `config/erasure.php`, `ErasureService`, the ledger, `PersonEraser` and its two implementations, the jobs, the
+   commands; `ErasureRegistryTest` and the database-wide scan; `ErasureLedger`, `privacy:replay-erasures` and
+   `ErasureReplayTest` (*added by the owner-cabinet plan*).
 7. `config/retention.php`, `privacy:purge-operational`, `RetentionRegistryTest`; the schedule.
 8. Pint, PHPStan, `make ci-backend`; the security-reviewer agent reads the diff; the env PR; deploy.
 
@@ -271,6 +289,10 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
   by the second pass.
 - Registry tests: a temporary table with `user_id` that is not registered fails `ErasureRegistryTest`; a table
   without a retention entry fails `RetentionRegistryTest`.
+- Replay (`ErasureReplayTest`, fake ledger disk): copy the test database, erase a user, put the copy back, run
+  `privacy:replay-erasures --since=` the copy's time → the database-wide scan finds nothing; a second run changes
+  nothing and writes no object; the objects hold no Telegram id, user id or number (*added by the owner-cabinet
+  plan*).
 - Retention (time travel): each rule leaves data at age − 1 s and removes or redacts it at age + 1 s.
 - `pgsql` group: partitions exist after migrate for the current month and three ahead; rows at 23:59:59 and
   00:00:00 UTC of a month boundary land in two partitions; a partition is dropped only when wholly older than 180
@@ -283,6 +305,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - [ ] `ActionLogger::record()` accepts the `Bot` channel; `ErasureService::erase($user, 'bot')` is callable by the bot.
 - [ ] Each disclosed phone number has one `contact_disclosed` row with the listing number and no phone.
 - [ ] Erasure leaves no row with the user's id anywhere, writes the ledger, and queues one PostHog deletion.
+- [ ] An erasure made after a dump is repeated by `privacy:replay-erasures` on the restored copy (*added by the
+      owner-cabinet plan*).
 - [ ] Both registry tests fail on an unregistered table and pass on the current schema.
 - [ ] Partitions are created ahead and dropped after 180 days; the purge command and both partition commands are
       scheduled.
