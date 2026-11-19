@@ -61,7 +61,7 @@ builds on. Every route under `(main)` still shows its WP-20 placeholder inside t
 | Brand | DEC-40, 25 §2 rule 5 | The bot name and links come from `lib/brand`; no brand word is written in a component |
 | Access | DEC-43 | The gate is built for all five reasons although the mode is "open" |
 | Acceptance | DEC-46, 25 §9 | The acceptance checklist below is ticked in ru / uz / en and light / dark |
-| Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change |
+| Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change. Since `index-CBlEKxdL.js`: the `private` no-access text names the team; the toast can be dragged down and its offset depends on what is below it; swipe-back gained an edge-only zone and a nested-sub-page rule for the owner cabinet (*added by the intake of `index-CBlEKxdL.js`*) |
 
 ## Design
 
@@ -223,7 +223,7 @@ sheet and the sub-page are `position: fixed` inside them.
 | `useSheetDrag` | Pointer events, so a mouse may drag a sheet header; on the handle area only: start 6 px, close at 25 % of the sheet height or 0.5 px/ms, settle 200 ms, backdrop dims with the drag. Exported constants |
 | `useBodyClass` | `useBodyClass(className, active)`, ref-counted per class name: the sheets hold `body.sheet-open` and `body.locked`, WP-26's listing `listing-open` |
 | `SubPageFrame` | Fixed layer (`--z-subpage`), 24 % slide-in (`--animate-subpage-in`), header with a shadow when scrolled, optional `back` and `hint`, `bare` mode; `onBack`, `swipeBack`, `onSwipeStart`, `onSwipeCommit` |
-| `useSwipeBack` | Touch events only, as legacy (a mouse drag over a page selects its text): rightward swipe, start 10 px, sideways travel at least 1.5 × the vertical, close at 33 % of the width or 0.5 px/ms, settle 180 ms; option `enabled`; never starts inside `[data-no-swipe]`, `[data-scroll-x]`, `input`, `textarea`, `select`, `[contenteditable]` or a map container. Exported constants |
+| `useSwipeBack` | Touch events only, as legacy (a mouse drag over a page selects its text): rightward swipe, start 10 px, sideways travel at least 1.5 × the vertical, close at 33 % of the width or 0.5 px/ms, settle 180 ms; option `enabled`; never starts inside `[data-no-swipe]`, `[data-scroll-x]`, `input`, `textarea`, `select`, `[contenteditable]` or a map container. Exported constants. Legacy since `index-CBlEKxdL.js` has three more rules (*added by the intake of `index-CBlEKxdL.js`*): a layer marked `data-edge-swipe` takes the swipe only from the left 24 px and ignores the exclusion list; a touch inside a nested sub-page of the layer is not the layer's; the inline styles are removed 300 ms after the close. Only the owner cabinet uses the first two; they are not built here, and the owner-cabinet plan decides |
 | `HeaderChip`, `FilterChip` | `HeaderChip`: highlighted state, optional count badge, `aria-label`. `FilterChip`: `aria-pressed`. Long labels ellipsise; a plain-text label is also the `title` |
 | `SegmentedControl` | Two or three options, always one selected; compact size for the map top bar. In the dark theme the selected segment is `--sep` over `--fill`, not the legacy `color-mix`, which old WebViews lack |
 | `ChoiceList` | Radio list (`RadioGroup`, `data-slot="choice-list"`) with a ✓ on the selected row, in the legacy settings-row look (52 px rows, inset separators) |
@@ -452,7 +452,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 
   | Reason | Title (`noAccess.title.*`) | Text (`noAccess.text.*`) |
   | ------ | -------------------------- | ------------------------ |
-  | `private` | «Бот приватный» | «Приложение сейчас доступно только владельцу.» |
+  | `private` | «Бот приватный» | «Приложение сейчас доступно только команде HOMI.» |
   | `invite` | «Вход по приглашению» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
   | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
@@ -461,6 +461,11 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   The two texts reworded by `index-Dbpp463V.js` in uz and en: `invite` «Taklif orqali kirish» / «Invite only»;
   `full` «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
   No text of this screen mentions a beta in any locale.
+
+  The `private` text is the legacy one since `index-CBlEKxdL.js` with the brand word replaced by the `homi` layer of
+  the catalogue: legacy «Приложение сейчас доступно только команде kvadro².» (before it «…только владельцу.»); uz
+  «Ilova hozir faqat HOMI jamoasi uchun ochiq.», en «The app is available only to the HOMI team for now.»
+  (*added by the intake of `index-CBlEKxdL.js`*).
 
 - Checking line `noAccess.checking` «Только что нажали «Старт»? Подождите пару секунд — проверяем доступ…» while
   an automatic re-check is scheduled or running (`useBootRetryState().checking`); never for `blocked`; buttons stay
@@ -607,7 +612,10 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 - Collapsing chrome: on the search list with no layer open, scrolling down more than 24 px past the anchor adds
   `html.chrome-mini`; scrolling up 24 px removes it; within 60 px of the top it is always expanded. While
   collapsed, the first tap on a tab, the toggle or the mini title only expands (light haptic). Leaving the list
-  removes the class.
+  removes the class. Since `index-CBlEKxdL.js` a listing opened over the list is not such a layer: the chrome
+  keeps its state under the open listing and after it closes (`03` §1.2; the effect is `inferred` from the code;
+  *added by the intake of `index-CBlEKxdL.js`*; a parity item of `AppShell` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 6)).
 - Mini title: `«<base deal> · <filtersSummary>»` (rule BR-APP-064 and the whole-city label of LB-APP-026, both
   WP-22's): the deal is the title tabs' base deal, so daily rent reads «Аренда · … · Посуточно» (legacy printed
   «Посуточно» twice: `t('deal.'+deal)` plus the summary). Before the reference data it is the deal alone.
@@ -659,13 +667,20 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 
 ### Toast (SCR-042) and confirm (SCR-043)
 
-- A plain toast closes on tap or after 4 s; a toast with an action shows a button, runs it once and closes, or
-  closes after 6 s. A new toast replaces the visible one. It sits at tab bar + bottom inset + 78 px, the offset of
-  legacy `.toast` (`feedback.css:28`), and inside the filters sheet (scope `sheet`) at `--fsheet-foot` + 10 px, as
-  legacy `.fsheet-tip .toast` (D-T-2; no new token: legacy wrote the offset as a literal, and `tokens.css` mirrors
-  the `03` §3.6 table). It rises in and does not animate under reduced motion. If `run` throws (`kind: 'error'`) or
-  its promise rejects (`kind: 'rejection'`), the toast still closes at once and the error goes to `reportError` with
-  source `toast`. Very long text wraps to three lines at most; the action button is never clamped.
+- A plain toast closes on tap or after 4 s; a toast with an action shows a button, runs it once and closes, or closes
+  after 6 s. A new toast replaces the visible one. A toast follows a downward drag and fades (`max(0.2, 1 − dy/120)`);
+  released past 36 px it closes, otherwise it returns; the host has `touch-action: none`. Its offset depends on what
+  is below it (legacy `feedback.css:23-29,77-88` at r31): 20 px above the tab bar and the bottom inset; 78 px above
+  them while the view toggle is shown; 16 px above the bottom inset over a sub-page; 88 px above the bottom inset over
+  the listing's CTA bar; and inside the filters sheet (scope `sheet`) at `--fsheet-foot` + 10 px, as legacy
+  `.fsheet-tip .toast` (D-T-2, amended by the intake of `index-CBlEKxdL.js`; no new token: legacy wrote the offsets as
+  literals, and `tokens.css` mirrors the `03` §3.6 table). The drag and the offsets by context are legacy since
+  `index-CBlEKxdL.js` (`03` SCR-042; *added by the intake of `index-CBlEKxdL.js`*; a parity item of `ToastHost` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 4)); before it the toast sat 78 px above the tab
+  bar and the bottom inset everywhere outside the filters sheet. It rises in and does not animate under reduced
+  motion. If `run` throws (`kind: 'error'`) or its promise rejects (`kind: 'rejection'`), the toast still closes at
+  once and the error goes to `reportError` with source `toast`. Very long text wraps to three lines at most; the
+  action button is never clamped.
 - Look: the 14 px corners and the 10 px action button of legacy `.toast` / `.toast-action`; the shadow is the
   `--shadow-float` token, which lite graphics flattens, not the legacy one-off `0 8px 24px` at 20 % black (accepted
   difference).
@@ -861,6 +876,11 @@ Feedback and errors
 
 - [ ] A plain toast leaves after 4 s or on tap; a toast with an action after 6 s; the action runs once; a new
       toast replaces the old one.
+- [ ] A toast dragged down past 36 px closes, a shorter drag returns. Its offset follows what is below it: 20 px above
+      the tab bar and the bottom inset; 78 px above them while the view toggle is shown; 16 px above the bottom inset
+      over a sub-page; 88 px above the bottom inset over the listing's CTA bar
+      (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ToastHost` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 4)).
 - [ ] The confirm helper opens Telegram's native dialog (the browser's outside Telegram).
 - [ ] A forced render error shows «Что-то пошло не так» with «Обновить», which reloads; one error report is queued.
 - [ ] An unknown address inside the app shows «Такой страницы нет» with the way back to search.

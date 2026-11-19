@@ -49,7 +49,7 @@ the per-m² fix of `100008` and `100009`, as a backend commit of this package (D
 | API conventions | 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
 | Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The API records the view on the read; the client sends nothing for it |
 | The author's number | DEC-52, WP-12 | The card answer has no number and no call link, and the numbers in its texts are masked. «Позвонить», «Показать номер» and a masked number in the text call `POST …/contact` on the tap and only then show the digits or open the call link. Nothing asks for a contact without a tap, so no number is in the server-rendered page. On by decision, no flag |
-| Baseline | 25 §8, Q-APP-024, `wave-1/baseline.md` | The behaviour is that of the pinned release `index-DY_DH7h-.js`. Two parts came after the release first audited: the report-detail step (`index-BNLZFfL0.js`; SCR-023, BR-APP-036, API-016) and the `business` price kind, which on this screen shows only in the share text (`index-Dbpp463V.js`; SCR-018, BR-APP-038). Both are specified below from the audit. The details the audit left open were settled by a read-only look at the legacy source (D-30); a value marked HOMI below is a deliberate departure |
+| Baseline | 25 §8, Q-APP-024, `wave-1/baseline.md` | The behaviour is that of the pinned release `index-DY_DH7h-.js`. Two parts came after the release first audited: the report-detail step (`index-BNLZFfL0.js`; SCR-023, BR-APP-036, API-016) and the `business` price kind, which on this screen shows only in the share text (`index-Dbpp463V.js`; SCR-018, BR-APP-038). Both are specified below from the audit. The details the audit left open were settled by a read-only look at the legacy source (D-30); a value marked HOMI below is a deliberate departure. Since `index-CBlEKxdL.js` the layer has an entrance and a leave animation (*added by the intake of `index-CBlEKxdL.js`*) |
 | Brand | DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
 | Developer answers of 2026-11-17 | D-1, D-2 | The stub variants and the per-m² fix are in this PR («В PR WP-26»). `splitMaskedPhones` lives in the app, `frontend/app/lib/phone/masked.ts` («lib приложения»): no package or lockfile change |
 | Acceptance | DEC-46, 25 §9 | The functional checklist below, in three locales and two themes |
@@ -254,6 +254,12 @@ changed here (D-8).
   route open) and the app pushed a page below (`useDepth() > 0`: an overlay copy over a directly loaded listing has
   only that copy under it, review X2); never on Android. Its close is `back()`. Rows that scroll sideways (the hero
   strip, the source chips, the viewer strip) and the `SpotMapSlot` carry `data-no-swipe` (D-28).
+- The layer slides in from 24 % and opacity 0 over 250 ms and leaves the same way over 200 ms ease-in (legacy since
+  `index-CBlEKxdL.js`; `listing.css:1-35`, `layers.js:10-15` at r31; `03` SCR-018). A close by swipe-back ends at
+  once, because the finger has already moved the layer out. Under lite graphics or reduced motion there is neither
+  animation. A new opening during the leave cancels it. How the leave is sequenced with the route change is decided by
+  the package that builds it (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`,
+  `ListingLayer` and `closeListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)).
 - A soft navigation from a directly loaded listing address is intercepted into `@overlay` (see "Routes"). Once an
   overlay copy of a listing has shown, the standalone copy renders its child routes no more, for the rest of its life
   (a latch, not a toggle; review X1): after a depth-0 close of a directly loaded child (the replace with the listing)
@@ -913,6 +919,15 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Back order: detail → report → menu → listing → page below; the Settings button closes everything.
 - [ ] Swipe right closes the listing on iOS and desktop, never on Android, not while a layer is open and not on a
       directly loaded listing.
+- [ ] An opening listing slides in from 24 % and fades in over 250 ms (this line and the five after it:
+      *added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`, `ListingLayer` and `closeListing`
+      for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)).
+- [ ] Telegram Back closes the listing with the leave: it slides out to 24 % and fades over 200 ms.
+- [ ] A close by `closeListing` (hide, block, a `rented` report, a `fraud` report that hid the listing) plays the same
+      leave.
+- [ ] A swipe right closes the listing at once, with no leave after the finger lifts.
+- [ ] Under lite graphics and under reduced motion the listing opens and closes with no animation.
+- [ ] A listing opened while another is leaving cancels the leave and shows the new one.
 - [ ] Viewer and sheets are above the CTA bar and the tab bar; the toast is above the sheets.
 - [ ] With `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with `dev010RealtorVoteWording` on
       the realtor hint and toast use the review wording. Both are off in the merged build.

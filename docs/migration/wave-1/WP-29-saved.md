@@ -18,8 +18,9 @@ the «Очистить» tool for history, and lists that load 20 at a time on s
 ## Scope
 
 In: the two route pages with their server part; `FavoritesScreen` and `HistoryScreen`; the paged loading of both
-lists with the feed's cursor; filtering by the session maps; the history refetch after a listing was
-opened; «Очистить» with its confirm and Server Action; pull-to-refresh wiring; tests.
+lists with the feed's cursor; filtering by the session maps; the rule for when «Смотрели» is re-created (as
+built: a refetch after a listing was opened; since `index-CBlEKxdL.js` only on entering the tab or on a pull,
+see "History refetch"); «Очистить» with its confirm and Server Action; pull-to-refresh wiring; tests.
 
 Out: `ListingCard`, `FavButton`, `ListingFeed`, `useCursorFeed`, the skeleton, error and empty states (WP-24); the
 top bar with the title tabs «Избранное» / «Смотрели», the tab bar, `PullToRefresh`, `tg.confirm` use and `failed()`
@@ -93,12 +94,10 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
     `<Activity>` (`preserving-ui-state.md`), so without it a list entered again would keep its old items (AM-94);
     legacy re-mounted the list on every tab and title-tab entry (`App.jsx:618`). Closing a listing over the list does
     not render the page again, so the list stays.
-  - **History refetch:** history bumps the version once when its own address is shown again after the `seen` session
-    map grew (the size is latched with each version and each render). Opening a listing in this launch and
-    returning to «Смотрели» therefore re-creates the list once; the re-created list fetches through `bffFetch` and
-    ignores the stale `initial`. The check runs on the return, not when the card's tap marks the listing seen while
-    the list is still shown. Legacy keys the list by `seen`'s size and so re-creates it under the listing's layer
-    at the tap, racing the server's write of the view (AM-95).
+  - **History refetch:** the list is re-created by pull-to-refresh and by a tab or title tab entering the page, never
+    by a listing opened in this launch (legacy since `index-CBlEKxdL.js`: the key is `<feedVersion>:<sub-tab>`; before
+    it the key held the size of `seen`; `App.jsx:673` at r31; *added by the intake of `index-CBlEKxdL.js`*; a parity
+    item of `useSavedList` for a later package (`wave-1/baseline.md`, built code behind the pin, row 7)).
   - A new key scrolls to the top before it is painted while the list's own address is shown, never on the first
     render (as `FeedScreen`).
 - Pull-to-refresh: each screen registers a reload with WP-23's `PullToRefresh` (`registerRefresh`); the reload
@@ -111,7 +110,7 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
   - lucide `Trash` at 15 px with a 5 px gap.
 
   After a successful clear `HistoryScreen` shows the history empty state in place of the list, with no refetch (legacy
-  `setItems([])`). The next new key (a pull, the history refetch, a new render) shows the list again. On the static
+  `setItems([])`). The next new key (a pull or a new render) shows the list again. On the static
   stubs a pull after a clear therefore brings the 25 entries back.
 
 ### Server Action
@@ -150,7 +149,7 @@ allowed, and WP-24 had shipped the props and the guard.
 3. `clearHistory` Server Action with its test.
 4. `features/saved/server.tsx` and the two route pages; both render the skeleton as Suspense fallback.
 5. `FavoritesScreen`: session-map filter, heart and eye state, version key, pull-to-refresh registration.
-6. `HistoryScreen`: no eye, `seen`-based version key, `ClearHistoryButton` with confirm, success and failure paths.
+6. `HistoryScreen`: no eye, `ClearHistoryButton` with confirm, success and failure paths.
 7. Component tests, then `e2e/saved.spec.ts` in both session modes.
 8. Acceptance checklist on staging in ru, uz, en and light, dark.
 
@@ -185,7 +184,10 @@ allowed, and WP-24 had shipped the props and the guard.
   with the trash icon `feed.clear` «Очистить».
 - Empty: shrug mascot, `feed.histEmpty` «Вы ещё ничего не открывали», `feed.histEmptyHint` «Здесь будут объявления,
   которые вы смотрели»; no tool row.
-- A listing opened in this launch is in the list after returning to the tab (one refetch per new listing opened).
+- A listing opened in this launch is in the list when the tab or the title tab is entered again or the list is pulled;
+  closing a listing over «Смотрели» does not re-create the list (legacy since `index-CBlEKxdL.js`;
+  *added by the intake of `index-CBlEKxdL.js`*; a parity item of `useSavedList` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 7)).
 - «Очистить» (BR-APP-067): `tg.confirm` with `feed.clearConfirm` «Очистить историю просмотров?» (TMA-026).
   Cancel → nothing is sent. OK → the button is disabled, `clearHistory` runs; success → the list is emptied, the
   empty state shows, success haptic (TMA-025); there is no undo. Failure → the list stays, `failed()`: error haptic,
@@ -219,12 +221,13 @@ Component (Vitest + Testing Library):
   used without a request; `initial = null` fetches through `bffFetch`; a second page is appended when the sentinel
   is reached, and a card of the second page un-favourited in this launch disappears and returns on failure; empty,
   offline, server and inline-retry states; 403 with `dev001AnyForbiddenShowsAccess` off and on.
-- `HistoryScreen.test.tsx`: no eye; hidden items still shown; growth of the `seen` map triggers exactly one refetch,
-  on the return to the list and not while it is shown; a new `renderId` adopts its page one; clear — cancel sends
-  nothing, OK empties the list and disables the button meanwhile, failure keeps the list with
+- `HistoryScreen.test.tsx`: no eye; hidden items still shown; growth of the `seen` map triggers no refetch
+  (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `useSavedList` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 7)); a new `renderId` adopts its page one; clear — cancel
+  sends nothing, OK empties the list and disables the button meanwhile, failure keeps the list with
   `dev016ErrorToastOnFailure` off (no toast) and on (toast); a pull during the request still ends in the empty state;
-  the focus moves to the empty state after a success, stays on the button after a failure and goes to the list when
-  a return re-creates it; no tool row when empty.
+  the focus moves to the empty state after a success, stays on the button after a failure and goes to the list when a
+  return re-creates it; no tool row when empty.
 - `server.test.ts`: `readSaved` for both lists — no cookie, the cookie's token and no query, `unauthorized`, other
   failures passed down, a new `renderId` per render drawn after `io()`, the small-photo rule.
 

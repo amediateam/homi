@@ -333,6 +333,10 @@ Nothing new is built: the behaviour is that of the owning specifications. The ta
 audit to those owners; each identifier appears once. "Proved by" names the lowest layer that proves it; the
 screen table under "Acceptance checklist" is the user-visible proof.
 
+Since the intake of `index-CBlEKxdL.js` the audit also holds SCR-049 … SCR-062, BR-APP-075 … BR-APP-103,
+LB-APP-054 … LB-APP-078 and TMA-046, and TMA-034 is no longer an absence in legacy; they join this checklist with
+the owner-cabinet plan.
+
 ### Rules (74)
 
 | # | Rules | Package | Proved by |
@@ -342,7 +346,7 @@ screen table under "Acceptance checklist" is the user-visible proof.
 | 3 | BR-APP-064 … BR-APP-066 | WP-22 | summary and title snapshots in three locales |
 | 4 | BR-APP-050 | WP-21 | `launch.spec.ts`, journey 1 |
 | 5 | BR-APP-054 … BR-APP-056, BR-APP-058 | WP-23 | `gates.spec.ts`, `shell.spec.ts`, nearest-city unit test |
-| 6 | BR-APP-024 … BR-APP-027, BR-APP-030, BR-APP-039, BR-APP-040, BR-APP-059 | WP-24 | `feed.spec.ts`; badge, verdict and photo unit tests |
+| 6 | BR-APP-024 … BR-APP-027, BR-APP-030, BR-APP-039, BR-APP-040, BR-APP-059 | WP-24 | `feed.spec.ts`; badge, verdict and photo unit tests; the badge kinds of BR-APP-026 in the badge and card tests (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 1)) |
 | 7 | BR-APP-057 | WP-25 | journey 2 |
 | 8 | BR-APP-028, BR-APP-032 … BR-APP-038, BR-APP-068, BR-APP-069 | WP-26 | the four listing specs, journey 4 |
 | 9 | BR-APP-062 | WP-27 | `map.spec.ts` |
@@ -482,19 +486,19 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 10 | SCR-010 | Pull-to-refresh | WP-23 | gesture on lists and the radar tab | arms at 72 px with a haptic; spinner at least 0.7 s; off on map, settings and under layers |
 | 11 | SCR-011 | Search map | WP-27 | `/map` | clusters, stacks, pins with tones; camera; the "N of M" note; locate ok, denied, failed; loading, empty and error states; both engines |
 | 12 | SCR-012 | Area drawing | WP-28 | `/map` with `draw=1` | hints; draw; too small; applied area and its pill; cancel, Back; hand-off from filters |
-| 13 | SCR-013 | Map selection card | WP-27 | pin tap on `/map` | single; stack with its counter; failed slot with retry; × and background close |
+| 13 | SCR-013 | Map selection card | WP-27 | pin tap on `/map` | single; stack with its counter; failed slot with retry; × and background close; the shield after the price for a verified owner (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)) |
 | 14 | SCR-014 | Filters | WP-25 | `/filters` | every section with its visibility rule; live count and flow; relax chips; reset; «Показать N» and «Ничего нет»; radar button states; pets tip |
 | 15 | SCR-015 | Quick filter | WP-25 | `/filters/rooms`, `/price`, `/owner` | three bodies; own reset; live count |
 | 16 | SCR-016 | Sort | WP-25 | `/sort` | six options with their availability; a pick closes and scrolls up |
 | 17 | SCR-017 | City picker | WP-25 | `/city`; `pick=city` in filters | rows with counts and ✓; location row; header variant saves at once; nested variant changes the draft only |
-| 18 | SCR-018 | Listing | WP-26 | `/listing/<number>`, over a list and direct | hero; title row; key facts; market block; facts; stats; history; location rows; author with «Показать номер»; description; source, original with masked numbers, translation; no phone number before a tap, the digits after it; each CTA variant; share |
+| 18 | SCR-018 | Listing | WP-26 | `/listing/<number>`, over a list and direct | hero; title row; key facts; market block; facts; stats; history; location rows; author with «Показать номер»; description; source, original with masked numbers, translation; no phone number before a tap, the digits after it; each CTA variant; share; the entrance and the leave animation of the layer, none after a swipe, in lite graphics or under reduced motion (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`, `ListingLayer` and `closeListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)) |
 | 19 | SCR-019 | Listing loading and errors | WP-26 | same | skeleton; section skeletons over a preview; «Объявление не загрузилось»; error with retry |
 | 20 | SCR-020 | Photo viewer | WP-26 | `/listing/<number>/photos` | counter; zoom; swipe down; ×; Back |
 | 21 | SCR-021 | Spot map | WP-28 | `/listing/<number>/location` | circle; locate with the distance line or an error; Yandex and Google buttons; ×; Back; both engines |
 | 22 | SCR-022 | Market sheet | WP-26 | `/listing/<number>/market` | the three paragraphs per scope and tone; "updated" steps; «Подробнее» only when the brand has a link |
 | 23 | SCR-023 | Actions and report | WP-26 | `/listing/<number>/actions`, `step` | menu rows; report rows; detail step; every toast and undo; support row only with an account |
 | 24 | SCR-024 | Favourites | WP-29 | `/saved` | list, 20 at a time with the next page on scroll; removing a favourite removes the card; empty; error; pull |
-| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye, 20 at a time; «Очистить» with its confirm; empty; failure |
+| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye, 20 at a time; «Очистить» with its confirm; empty; failure; not re-created by a listing opened in this launch (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `useSavedList` for a later package (`wave-1/baseline.md`, built code behind the pin, row 7)) |
 | 26 | SCR-026 | Radar tab | WP-30 | `/radars` | the "soon" state while radars are switched off; spinner; error; tiles with status; switch on and off; resumed toast; «+» |
 | 27 | SCR-027 | Radar empty | WP-30 | `/radars` with none | sweep, still in lite; texts; button opens the new-radar sheet |
 | 28 | SCR-028 | Radar sheet | WP-30 | `/radars/<id>` | header; finds strip in its three states; delivery switch and mode; hidden row; delete with confirm; «Смотреть найденное» and Back returns here |
@@ -511,7 +515,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 39 | SCR-039 | «Скрытое» | WP-31 | `/settings/hidden` | authors; listings; return one; return all with confirm; empty |
 | 40 | SCR-040 | Follow nudge | WP-30 | card on `/` | appears 1.8 s after custom filters; flow line or none; 10 s; ×; «Включить» |
 | 41 | SCR-041 | Home-screen nudge | WP-31 | card on `/` | after three visit days; 10 s; ×; «Добавить»; added toast |
-| 42 | SCR-042 | Toast | WP-23 | any result | 4 s plain, 6 s with an action; one at a time; tap closes |
+| 42 | SCR-042 | Toast | WP-23 | any result | 4 s plain, 6 s with an action; one at a time; tap closes; a drag down past 36 px closes, a shorter one returns; the offset by what is below it (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ToastHost` for a later package (`wave-1/baseline.md`, built code behind the pin, row 4)) |
 | 43 | SCR-043 | Confirm | WP-23 | clear history, delete radar, return all, restart bot | native on current clients, browser dialog on old ones; cancel changes nothing |
 | 44 | SCR-044 | Telegram system sheets | WP-21 | write access, share, home screen, location, links | each result handled; real clients only |
 | 45 | SCR-045 | Crash screen | WP-23 | `error.tsx`, `global-error.tsx` | three texts per locale; «Обновить» reloads; one report |

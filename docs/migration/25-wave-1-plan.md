@@ -22,18 +22,24 @@ The legacy product is the description of the behaviour, not a source of code (DE
 
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
-| Mini App screens, sheets, overlays, states | 48 (SCR-001 … SCR-048) | `03` §2, `data/screens.json` |
-| Client business rules | 74 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 53 (`LB-APP`) | `03` §5, §5b |
-| Telegram integration points | 45, of which 39 in use (TMA-001 … TMA-045) | `05` |
-| API methods the client uses | 36 (API-001 … API-036) | `08` §2 |
-| Bot handlers, buttons, texts | 85, 76, 88 | `04`, `data/bot-handlers.json` |
+| Mini App screens, sheets, overlays, states | 62 (SCR-001 … SCR-062) | `03` §2, `data/screens.json` |
+| Client business rules | 103 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 78 (`LB-APP`) | `03` §5, §5b |
+| Telegram integration points | 46, of which 41 in use (TMA-001 … TMA-046) | `05` |
+| API methods the client uses | 54 (API-001 … API-054) | `08` §2 |
+| Bot handlers, buttons, texts | 91, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 510 keys per locale at the baseline `index-BnFvC-Ft.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 569 keys per locale at the baseline `index-CBlEKxdL.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-BnFvC-Ft.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
-(the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024). Each later release is read into the audit as described
-in section 8.
+The audit describes legacy release `index-CBlEKxdL.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
+(before it `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024). Each later release is
+read into the audit as described in section 8.
+
+The owner cabinet «Сдать квартиру» and the contact request to an owner arrived with `index-CBlEKxdL.js`: SCR-049 …
+SCR-062, BR-APP-075 … BR-APP-103, LB-APP-054 … LB-APP-078, TMA-046, API-037 … API-054 and BOT-086 … BOT-091. They
+are in the inventory above and in the audit, but no package of this plan builds them yet: the owner-cabinet plan, a
+later item of the queue, adds its packages and says what the wave ships of them. Until then the stages, the
+packages and section 14 count the inventory without them (48 screens).
 
 ## 2. Scope and rules
 
@@ -414,7 +420,9 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
 2. **Intake.** Each later legacy release is read from its sync report (`$KVADRO_ROOT/demo/app/docs/releases/`) and
    becomes one queue item: update the audit, the affected specification, the stub fixtures, the legacy translator.
    The intake moves the pin to the release. First: `index-BnFvC-Ft.js` on 2026-11-19 (the card style of the bot's
-   listing cards, `POST /settings/card-sample`; `wave-1/baseline.md`, intake log).
+   listing cards, `POST /settings/card-sample`; `wave-1/baseline.md`, intake log); then `index-CBlEKxdL.js` on the
+   same day (the owner cabinet «Сдать квартиру», the contact request and the changes outside them;
+   `wave-1/baseline.md`).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
