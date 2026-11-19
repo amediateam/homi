@@ -2,17 +2,20 @@
 
 Conventions: [`README.md`](README.md). Strategy and decisions (`DEC-31` … `DEC-49`):
 [`24-three-wave-strategy.md`](24-three-wave-strategy.md). Verbatim answers:
-[`decisions/2026-11-14-developer-answers.md`](decisions/2026-11-14-developer-answers.md). Work queue and the
-specification of every work package: [`wave-1/README.md`](wave-1/README.md). Status: decided by the developer on
-2026-11-14; no code written.
+[`decisions/2026-11-14-developer-answers.md`](decisions/2026-11-14-developer-answers.md); the answers of 2026-11-19
+and 2026-11-20 in [`decisions/2026-11-19-developer-answers.md`](decisions/2026-11-19-developer-answers.md). Work
+queue and the specification of every work package: [`wave-1/README.md`](wave-1/README.md). Status: decided by the
+developer on 2026-11-14; no code written.
 
 **Goal.** A complete new product under the HOMI brand — bot, Mini App, landing, API — that does everything the
 legacy product does, function by function. Personal data, radars and the bot are HOMI's own code. Listings, map
-points, cards, contacts and photos are read from legacy through a service key until Wave 2.
+points, cards, contacts and photos are read from legacy through a service key until Wave 2. Listings that HOMI's own
+owners place through the cabinet are HOMI's own from the start and are shown beside them (DEC-69, DEC-70).
 
-**Not in this wave.** HOMI's own listing ingestion (Wave 2), SEO pages (Wave 3), the admin panel, any transfer of
-legacy users' data, any `DEV` behaviour change except those the developer decided (DEC-52 … DEC-54, DEC-67) and
-the five that legacy itself adopted (DEC-58).
+**Not in this wave.** HOMI's own listing ingestion (Wave 2; the owner listings of the cabinet are not ingestion), SEO
+pages (Wave 3), the admin panel, any transfer of legacy users' data, any `DEV` behaviour change except those the
+developer decided (DEC-52 … DEC-54, DEC-67, and the cabinet's DEV-054 … DEV-062 by DEC-74 and DEC-80) and the five
+that legacy itself adopted (DEC-58).
 
 **Reading order for whoever does the work.** This document once, then the queue, then the specification of the
 package you take. The audit documents are opened only at the sections a specification cites.
@@ -37,15 +40,14 @@ The audit describes legacy release `index-CIa0Ldj2.js`, pinned in `wave-1/baseli
 Each later release is read into the audit as described in section 8.
 
 The owner cabinet «Сдать квартиру» and the contact request to an owner arrived with `index-CBlEKxdL.js`: SCR-049 …
-SCR-062, BR-APP-075 … BR-APP-103, LB-APP-054 … LB-APP-078, TMA-046, API-037 … API-054 and BOT-086 … BOT-091. They
-are in the inventory above and in the audit, but no package of this plan builds them yet: the owner-cabinet plan, a
-later item of the queue, adds its packages and says what the wave ships of them. Until then the stages, the
-packages and section 14 count the inventory without them (48 screens).
+SCR-062, BR-APP-075 … BR-APP-103, LB-APP-054 … LB-APP-078, TMA-046, API-037 … API-054 and BOT-086 … BOT-091. The
+developer put the cabinet into Wave 1 (DEC-69); the packages WP-80 … WP-89 build it, and section 14 counts all 63
+screens.
 
 ## 2. Scope and rules
 
 **In.** Every row of section 1 except the SEO pages; the `/api/v1` surface of section 4; the native modules of
-section 5; the bot of section 6; the landing of section 7.
+section 5; the bot of section 6; the landing of section 7; the owner cabinet of section 5 (DEC-69).
 
 **Rules.**
 
@@ -59,8 +61,9 @@ section 5; the bot of section 6; the landing of section 7.
    release are fixes; three flags are split in two by WP-34 and WP-35); each specification names its own. Four
    behaviour changes are **on by the developer's decision** and are not flags: the author's phone number is given
    only after a tap (DEC-52), favourites and history are paged (DEC-53), the whole-city label is «{city} целиком»
-   (DEC-54), and «Смотрели» is re-created after a listing was opened (DEC-67, DEV-053). The acceptance checklists
-   list them as approved differences from legacy.
+   (DEC-54), and «Смотрели» is re-created after a listing was opened (DEC-67, DEV-053). The cabinet's nine
+   deviations are on by decision as well: DEV-054 … DEV-061 (DEC-74) and DEV-062 (DEC-80). The acceptance
+   checklists list them as approved differences from legacy.
 3. **The legacy tree is read-only** and is a reference: no edits, no `npm`, no builds, no dev server there, and no
    copy-paste of its code or CSS into this repository.
 4. **Nobody but HOMI's servers calls legacy** (DEC-33). Development, tests, CI and agents work on stubs and recorded
@@ -106,12 +109,17 @@ parameters, so a feed, its map and its filter sheet share one state and survive 
 | `/saved`, `/saved/history` | favourites, history (SCR-024, SCR-025) | page |
 | `/radars`, `/radars/new`, `/radars/[id]`, `/radars/[id]/edit`, `/radars/found` | radar tab and empty state, new radar, radar sheet, editor, survey (SCR-026 … SCR-031) | page and sheets |
 | `/settings` and `/settings/{theme,graphics,language,currency,quiet-hours,digest,cards,hidden}` | settings and sub-pages (SCR-032 … SCR-039, SCR-048) | page |
+| `/owner/new`, `/owner/[id]`, `/owner/[id]/place`, `/owner/[id]/phone`, `/owner/[id]/mode`, `/owner/[id]/done` | the owner form and its steps: place picker, questionnaire, phone with the rejection, mode and preview, done (SCR-050 … SCR-056) | overlay over the current tab; `/owner/new` creates or resumes the draft and replaces its own address with `/owner/[id]` |
+| `/owner/limit` | limit sheet (SCR-049) | sheet |
+| `/settings/owner`, `/settings/owner/[id]/requests` | «Мои объявления», «Отклики» (SCR-057, SCR-058) | sub-pages |
+| `/listing/[number]/contact`, `/listing/[number]/owner`, `/listing/[number]/requests` | request sheet (SCR-061), owner info sheet (SCR-062), the requests of the owner's own listing opened from its panel (SCR-058) | sheet, sheet, overlay |
 | `/welcome/language`, `/welcome/city` | first-launch pickers (SCR-004, SCR-005) | page |
 | `/no-access`, `/outside` | no access, outside Telegram (SCR-003, SCR-002) | page |
 
 Not routes: the boot-failure screen (SCR-001, inline boot guard), nudges (SCR-040, SCR-041, SCR-046), the in-feed
 radar card (SCR-047, a state of the feed), toast (SCR-042), confirms (SCR-043), Telegram system sheets (SCR-044), the
-crash screen (SCR-045, `error.tsx`).
+crash screen (SCR-045, `error.tsx`), the group «Сдаю квартиру» of the settings screen (SCR-032), the panel of the
+owner's own listing (SCR-059, a state of SCR-018), the request signals (SCR-060).
 
 - **Sheets and overlays** are intercepting routes rendered into a parallel slot, so the screen below stays mounted
   and a direct load of the address still works (`…/03-file-conventions/parallel-routes.md`,
@@ -124,7 +132,9 @@ crash screen (SCR-045, `error.tsx`).
   (TMA-023). The helper that knows each address's parent is defined once (WP-20) and used everywhere.
 - **Launch.** The bot opens `/`; `proxy.ts` redirects to the locale. A `start_param` of the form `l_<number>` or a
   `?listing=` query redirects to the listing; `?news=pets` opens the filters on the pets section
-  (TMA-010 … TMA-012).
+  (TMA-010 … TMA-012). `owner_new`, `owner-new` and `?owner=new` open `/owner/new` (TMA-046); HOMI's own `o_<id>`
+  opens a draft on its phone step (fix of LB-APP-060) and `c_<number>` the request sheet of a listing (the bot's
+  request button).
 
 ### 3.3 Boot and the Telegram layer
 
@@ -137,7 +147,9 @@ One adapter module owns every call to `window.Telegram.WebApp`; components never
    theme, safe areas, fullscreen and vertical-swipe settings (TMA-014 … TMA-021), and starts the session.
 
 The adapter also covers haptics, confirms, links, calls, sharing, write access, location, home screen and
-DeviceStorage (TMA-025 … TMA-037), with the version gates of TMA-042. A development-only emulator stands in for
+DeviceStorage (TMA-025 … TMA-037), with the version gates of TMA-042; for the owner cabinet also `requestContact`
+(6.9 and later, TMA-034: the answer is only a yes or no, the number reaches the bot) and the location of the place
+picker (TMA-035). A development-only emulator stands in for
 Telegram in a desktop browser; it is never part of a production bundle.
 
 ### 3.4 Session
@@ -202,6 +214,7 @@ Tiles: the address comes from the reference data; until HOMI hosts its own PMTil
 track) the value is `null` and both engines use the raster fallback the legacy client already has. That fallback is
 the public OpenStreetMap tile server, which is not meant to carry a product's traffic: hosting the tile file is a
 condition of the launch package (WP-70), not an option. The vector path cannot be tested before the file exists.
+The owner's place picker uses the same two engines (WP-81).
 
 ### 3.9 Analytics and errors
 
@@ -259,36 +272,40 @@ frontend/
 ### 4.1 Conventions
 
 - Envelope, errors and pagination of ADR-0007; bearer tokens of ADR-0003 issued by the sign-in method.
-- Listings are addressed by their public **number** (in Wave 1 the legacy listing number). Radars and blocked-author
-  entries have HOMI's own identifiers.
+- Listings are addressed by their public **number**: the legacy listing number, or a HOMI number from the native
+  range for an owner listing (DEC-70). Radars, blocked-author entries and owner listings in the cabinet have HOMI's
+  own identifiers (ULID).
 - The locale comes from `Accept-Language`, the currency from the user's settings.
 - Every answer carries `meta.source` with the driver that produced it: `stub`, `legacy` or `native`.
 - Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list. Favourites and history are paged the same
   way, 20 per page (DEC-53) — legacy returns history whole (favourites are paged there too since
   `index-CIa0Ldj2.js`), which under the legacy rate limit would cost one read per row. No cap on the length of the
   history is introduced.
-- No answer except `POST /listings/{number}/contact` carries a phone number (DEC-52): the card has no number,
-  numbers inside texts are masked, and the contact method is counted per user.
+- No answer except `POST /listings/{number}/contact` carries another user's phone number (DEC-52): the card has no
+  number, numbers inside texts are masked, and the contact method is counted per user. The owner methods show an
+  owner his own number and nothing else (DEC-72).
 - When the listing source cannot answer, the method returns `503` with code `source_unavailable`; the client shows
   the legacy "could not load" state.
 - `429` with code `rate_limited` may carry `reason: "daily"`: HOMI's per-user cap on opening listings (DEC-59). The
-  client then shows «Лимит на сегодня»; every other limit has no `reason`.
+  client then shows «Лимит на сегодня»; every other limit has no `reason`, except the request limits of the cabinet
+  (`requests_fast`, `requests_day`, `requests_week`, with `Retry-After`; WP-80, *integrator default, listed for the
+  reviewer*).
 
 ### 4.2 Methods
 
 | v1 method | Legacy equivalent | Wave 1 driver |
 | --------- | ----------------- | ------------- |
 | `POST /auth/telegram` | none (legacy authenticates every request) | native |
-| `GET /me` | user part of meta (API-001) | native |
+| `GET /me` | user part of meta (API-001) | native; carries the owner's pending count (fix of LB-APP-066) |
 | `GET /settings`, `PATCH /settings` | API-024, API-025 | native |
 | `POST /settings/card-sample` | API-036 (since legacy release `index-BnFvC-Ft.js`) | native (HOMI's bot sends the sample card; stub until WP-53 and WP-57) |
-| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name, limits and `radars_enabled` always from HOMI's configuration |
+| `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name, limits and `radars_enabled` always from HOMI's configuration; `owner_enabled` and the cabinet's limits from HOMI's configuration |
 | `GET /cities` | API-002 | legacy, cached |
-| `GET /listings` | feed (API-004) | legacy + overlay |
-| `GET /listings/count`, `GET /listings/flow` | API-005, API-006 | legacy |
-| `GET /listings/new` | API-035 | legacy |
-| `GET /listings/map` | API-007 | legacy + overlay |
-| `GET /listings/{number}` | API-008 | legacy + overlay; records the view natively |
+| `GET /listings` | feed (API-004) | legacy + overlay + owner listings (DEC-70) |
+| `GET /listings/count`, `GET /listings/flow` | API-005, API-006 | legacy + owner listings |
+| `GET /listings/new` | API-035 | legacy + owner listings |
+| `GET /listings/map` | API-007 | legacy + overlay + owner listings (DEC-70) |
+| `GET /listings/{number}` | API-008 | legacy + overlay + owner listings (DEC-70); records the view natively |
 | `POST /listings/{number}/contact` | call link (API-009) | legacy (form depends on Q-API-062); the only method that returns a phone number (DEC-52) |
 | `POST /listings/{number}/translation` | API-010 | legacy |
 | `POST /listings/{number}/share` | API-017 | native (a prepared message of HOMI's bot) |
@@ -324,6 +341,36 @@ Notes on the table:
   flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
 exported as OpenAPI.
 
+**The owner cabinet (DEC-69).** Eighteen more pairs, built on stubs by WP-80 and natively by WP-84 and WP-85; the
+route test pins the 41 pairs of the table above until WP-80 adds these (59).
+
+| v1 method | Legacy equivalent | Wave 1 driver |
+| --------- | ----------------- | ------------- |
+| `GET /owner/listings` | API-037 | native |
+| `POST /owner/listings` | API-038 | native |
+| `GET /owner/listings/{id}` | API-039 | native |
+| `PATCH /owner/listings/{id}` | API-040 | native |
+| `DELETE /owner/listings/{id}` | part of API-046 | native |
+| `POST /owner/listings/{id}/photos` | API-041 | native |
+| `DELETE /owner/listings/{id}/photos/{photo}` | API-042 | native |
+| `PUT /owner/listings/{id}/photos/order` | API-043 | native |
+| `PUT /owner/listings/{id}/contact-mode` | API-044 | native |
+| `POST /owner/listings/{id}/phone-request` | none | native |
+| `POST /owner/listings/{id}/publish` | API-045 | native |
+| `PUT /owner/listings/{id}/status` | API-046 | native |
+| `GET /owner/listings/{id}/requests` | API-048 | native |
+| `POST /owner/requests/{id}/answer` | API-049 | native |
+| `PUT /owner/waitlist` | API-050 | native |
+| `GET /owner/place` | API-051 | native |
+| `GET /owner/demand` | API-053 | native |
+| `POST /listings/{number}/contact-request` | API-054 | native; on a legacy `gate` listing relayed through legacy (DEC-71, WP-87) |
+
+While `OWNER_CABINET_ENABLED` is off (DEC-81) creating a draft, asking for the phone and publishing answer
+`403 owner_disabled`, `GET /reference` says `owner_enabled: false`, and the Mini App shows no group «Сдаю квартиру».
+Removing, pausing, «Сдано» and answering a request always work. A request is its own method,
+`POST /listings/{number}/contact-request`; `POST /listings/{number}/contact` stays the only method that returns a
+number (*integrator default, listed for the reviewer*).
+
 ### 4.3 Source drivers and flags
 
 - One interface per capability (`ReferenceSource`, `ListingSource`, `LandingSource`), each with a `stub`, a `legacy`
@@ -331,14 +378,19 @@ exported as OpenAPI.
 - One Pennant feature per method, for example `source.listings.feed`, whose value is the driver name. The default
   per environment is configuration; an override can be set for everyone, for a share of users, or for named users.
 - Console commands list and set the drivers. A change is logged with who made it.
-- Native-only methods have no flag; they move from stub to real code by deploy and keep `meta.source` honest.
+- Native-only methods have no flag; they move from stub to real code by deploy and keep `meta.source` honest. The
+  cabinet methods and the request method are native-only and have no flag. Owner listings are merged into the
+  listing methods by one step after the driver (`App\Services\Listings\OwnerListingMerge`, WP-86), like the overlay;
+  it is not a driver and has no feature.
 
 ### 4.4 Stubs and the demo marker
 
 Stubs return fixtures written from the examples of 08 and the legacy parity mocks, sanitised (no real phones, names
 or addresses). They are deterministic, so tests can rely on them. Because every merge reaches production and access
 is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any screen whose answer has
-`meta.source = stub` (RK-27; confirmed by the developer, DEC-50).
+`meta.source = stub` (RK-27; confirmed by the developer, DEC-50). The stub catalogue holds owner listings in the
+native range (`10000001` …), so a stub feed shows both kinds and routing by number is tested on stubs; stub and real
+native rows never mix.
 
 ### 4.5 The legacy driver
 
@@ -349,7 +401,12 @@ is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any scr
   the v1 resource. Legacy errors (`{"detail": …}`) become v1 errors. `uz` becomes `uz_Latn` at this boundary only.
 - **Per-user overlay.** Legacy answers for the service key, not for the user. HOMI adds `favorite` and `viewed`,
   removes hidden listings and listings of blocked authors, and applies its own report thresholds. A feed page that
-  shrinks below half its size after filtering is topped up from the next legacy page.
+  shrinks below half its size after filtering is topped up from the next legacy page. The overlay also writes the
+  per-user parts of an owner listing — `owner.mine` and `contact.request` — and they are never part of a cached card.
+- **Owner listings placed in legacy.** Legacy marks the listings its own owners placed in its cabinet (`owner_self`,
+  `contact_mode`, `response_minutes`, `owner_description`; `02` BR-API-188). The translator maps them to `owner` and
+  `contact.mode`; a request on such a listing is relayed (DEC-71) or, while the relay is off, the card shows a neutral
+  bar instead of a contact action (DEC-75).
 - **Locale and currency.** Legacy formats strings on the server per user. How a service-key request selects them is
   open (Q-API-062); the contract keeps raw values next to display strings so HOMI can format where legacy cannot.
 - **Caching.** Reference data and cities for ten minutes; a listing card for one minute; nothing for the feed.
@@ -389,9 +446,22 @@ built, so only their rules, limits and edge cases are taken.
 | Share | prepared inline messages of HOMI's bot | KV-BE-046 |
 | Action log and analytics | partitioned action log, server-side PostHog, person deletion | KV-BE-150 … KV-BE-152 |
 | Erasure | one deletion procedure used by the bot's «Удалить мои данные» | KV-BE-050 |
+| Owner listings | drafts, the form and its checks, photos on the media module, the true and the shown point, city and district from HOMI's boundaries (DEC-79), demand and the usual price from harvested medians (DEC-78), the owner's number in plain text (DEC-72), publish with post-moderation (DEC-73), statuses, limits; one switch keeps it off (DEC-81) | `02` §12a, `08` API-037 … API-053 |
+| Contact requests | the seeker's request with the first name (DEC-76), limits and blocks, the owner's answers and undo, expiry, the response time; the relay to legacy (DEC-71) | `02` BR-API-180 … BR-API-187, `08` API-048, API-049, API-054 |
 
 Every table that points at a listing stores the listing number **and** the source channel and post when the listing
-source provides them, so the reference can be re-pointed in Wave 2 (Q-API-063).
+source provides them, so the reference can be re-pointed in Wave 2 (Q-API-063). An owner listing stores no channel;
+its number is HOMI's.
+
+**The owner cabinet before real owners.** The cabinet's packages are merged and deployed with
+`OWNER_CABINET_ENABLED` off (DEC-81). Four gates stand between them and real owners:
+
+| # | Gate | Blocks | Buildable before it |
+| - | ---- | ------ | ------------------- |
+| 1 | **The legal basis** (Q-SEC-021) and the privacy text for the owner's number in plain text, the photos and the true location, the form, the requests with the seeker's first name, and the relay to the operator | The switch-on of DEC-81 on production (on staging only the checks of WP-89 with test accounts: *integrator default, listed for the reviewer*); the final texts of WP-56, WP-61 and WP-70; the relay's switch (WP-87) | WP-80 … WP-83 on stubs; WP-84 … WP-86, WP-88, WP-89 merged with the switch off; the texts marked "pending legal review" as WP-56 does |
+| 2 | **The operator's answers** (points 14 – 21 of `decisions/2026-11-14-operator-request.md`) | WP-87 only | The request sheet for a legacy `gate` listing on stubs (`100024`, scenario `relay_on`); the neutral bar of DEC-75 |
+| 3 | **The bot can confirm a phone and deliver requests** (WP-88, WP-89) | The switch-on | Everything; it is why the switch exists |
+| 4 | **Infrastructure**: PostGIS in `homi_db` (`docs/infrastructure/deployment.md:140`); the boundary file loaded (Q-DATA-051); the `owner/` path of the public disk served by the CDN host; `SHOWN_POINT_SECRET`, `OWNER_MODERATOR_IDS` set | The deploy of WP-84 to production (PostGIS); the switch-on (the rest) | Everything else |
 
 ## 6. The bot
 
@@ -414,13 +484,21 @@ back. It stores who talks to whom and when, not the text of the messages. The su
 bot and the landing lead to it; they stay hidden while no support bot is configured. Legacy's support bot was not
 audited (GAP-026), so this is HOMI's own design, not a parity item; its package is WP-59.
 
+**The cabinet in the bot.** A contact the user shares with the bot while the phone window of his draft is open is the
+owner's number for that draft and is stored with it in plain text (DEC-72); any other contact goes to `/owner`, which
+keeps a keyed hash only (DEV-011). The update ledger keeps only the hash in both cases. The bot delivers each request
+to the owner with «Дать номер» and «Не подходит», sends the seeker a soft refusal ten minutes after a decline, tells
+waiting seekers when the flat is let, expires unanswered requests, and announces each publication in the operators'
+private chats with «Снять» (DEC-73). A given number reaches the seeker only through «📞 Показать номер» (DEC-52).
+
 ## 7. The landing (`frontend/landing`)
 
 The full legacy landing on `homi.uz` in three languages: frame, hero with the phone demo, the live map in the phone,
 live pushes, the owner and agent switch, the savings block, the FAQ and the privacy pages (KV-FE-100,
 KV-FE-102 … KV-FE-113). Its live data comes from `GET /landing/*`; the legacy driver reads the public data files of
 the legacy landing (RES-010 … RES-013), which need no key. SEO pages, sitemap entries for them and interlinking are
-Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
+Wave 3. The privacy page is where the answer to Q-SEC-021 lands. It also covers the cabinet: the owner's number, the
+photos and the requests with the seeker's first name, and the relay to the operator.
 
 ## 8. Legacy baseline and release intake
 
@@ -435,7 +513,8 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
    same day (the owner cabinet «Сдать квартиру», the contact request and the changes outside them;
    `wave-1/baseline.md`); then `index-CIa0Ldj2.js` (the release of 18 Nov 2026: built screens change, seven contract
    points on stubs, eleven decisions DEC-58 … DEC-68, and the catch-up packages WP-34 … WP-38;
-   `wave-1/baseline.md`).
+   `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-81;
+   WP-80 … WP-89).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
@@ -479,6 +558,12 @@ WP-57.
   author fields (section 4.5).
 - Until the bot's sending package is live radars are switched off on the servers: the radar tab and the bot say
   "soon" (DEC-51, RK-32).
+- HOMI owner listings have a market verdict only where HOMI has harvested a median from legacy cards (DEC-78):
+  sparse at first.
+- A HOMI owner listing reaches radars within one poll interval, not at once.
+- Until the operator answers and the relay is switched on, a legacy owner listing that hides its number shows a
+  neutral bar and no contact (DEC-75).
+- The place picker names no street address (DEC-79).
 
 **Definition of done of a work package.** Specification steps complete; tests of the package green in CI; checklist
 ticked and signed; OpenAPI, generated types, the package registry and the audit rows current; the queue and the
@@ -511,16 +596,16 @@ needs from that track, and a migration reaches production only with that track's
 
 ## 12. The queue in outline
 
-Forty-five work packages in six stages, worked strictly in order by whoever holds the relay (DEC-45). The table of
+Sixty work packages in six stages, worked strictly in order by whoever holds the relay (DEC-45). The table of
 record with statuses is `wave-1/README.md`.
 
 | Stage | Packages | Content |
 | ----- | -------- | ------- |
 | 0 Start | WP-00 … WP-03 | Media ownership fix; ADRs and shared files; operator request and baseline pin; dependencies and test tooling |
 | A Contract | WP-10 … WP-13 | Source drivers, flags, stubs, OpenAPI, generated types; the stub contract of every method |
-| B Mini App on stubs | WP-20 … WP-38 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-38 that bring merged screens up to the pin |
-| C API | WP-40 … WP-48 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off |
-| D Bot | WP-50 … WP-59 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot |
+| B Mini App on stubs | WP-20 … WP-38, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-38 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
+| C API | WP-40 … WP-48, WP-84 … WP-87 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off; owner listings, contact requests, the mixed feed, the relay |
+| D Bot | WP-50 … WP-59, WP-88, WP-89 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot; the owner's phone, requests and answers, the cabinet's switch-on |
 | E Landing | WP-60, WP-61 | Landing data, landing pages |
 | F Launch | WP-70, WP-71 | Hardening, launch and watch |
 
@@ -532,7 +617,7 @@ landing data package; nothing calls them in between.
 
 ## 13. Risks of this wave
 
-RK-24 … RK-32 in 24 §8.3. The three that decide the order of work: the service key may be late (RK-28), so nothing
+RK-24 … RK-39 in 24 §8.3. The three that decide the order of work: the service key may be late (RK-28), so nothing
 before stage C depends on it; stub data is visible in production (RK-27), so the marker is part of the first frontend
 package; and the size of the wave (RK-29), which is why the queue is strict and every package ends in a deployable
 state.
@@ -541,10 +626,12 @@ state.
 
 1. Every work package is done by its definition (section 9).
 2. No method answers from a stub on production; `meta.source` is `legacy` or `native` everywhere.
-3. All 48 screens and all bot scenarios have a signed checklist.
+3. All 63 screens and all bot scenarios have a signed checklist.
 4. The Mini App works in iOS, Android, Desktop and Web clients of Telegram, in cookie mode and header mode.
 5. Radars deliver: an instant card, a digest and a quiet-hours release were each observed on production.
    `RADAR_CREATION_ENABLED` is on.
 6. The landing is live on `homi.uz` with the privacy page that answers Q-SEC-021.
 7. The security checks of the hardening package pass; no `initData`, token or phone appears in logs or analytics.
 8. `make ci-backend` and `make ci-frontend` are green on `main`; the audit describes the pinned legacy release.
+9. The owner cabinet works on production with `OWNER_CABINET_ENABLED` on: a listing published by a real owner was
+   seen in the feed, and a request was answered through the bot.

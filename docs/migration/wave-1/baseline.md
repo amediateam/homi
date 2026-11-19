@@ -130,7 +130,8 @@ about 630. Row 36, the launch link `?radar=<id>`, is about 150 more lines in the
 Not in the table:
 
 - The edge-only swipe, the nested-sub-page rule and the retry of a lazily loaded page (`index-CBlEKxdL.js`). In
-  legacy only the owner cabinet uses them, so they are work of the cabinet packages.
+  legacy only the owner cabinet uses them, so they are work of the cabinet packages: the edge-only swipe and the lazy
+  page's retry in WP-81 (the owner form), the nested sub-page rule in WP-82 («Отклики» inside «Мои объявления»).
 - What the built code already does at `index-CIa0Ldj2.js`: the late binding of Back and Settings and the restart
   on a late SDK; the Settings button that closes every layer; the favourite sent as a wanted state and favourites
   read page by page; the 1.5 s guard of «Позвонить»; a missing text that does not crash; the global toast; the city
@@ -140,4 +141,4 @@ Not in the table:
   zones printed together (HOMI's filters cannot hold both); «1.000.000» in сум (HOMI reads it as a million, its own
   fix of `03` LB-APP-011).
 - What is not built yet and is only specified: the hidden list's feed reload and rollback (WP-31), the timing of
-  the listing pageview (WP-32), the six owner events (the owner-cabinet plan).
+  the listing pageview (WP-32), the six owner events and the owner screen names (WP-81, WP-82).
