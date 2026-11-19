@@ -10,7 +10,7 @@
     "text": "Let us know with one tap — it tells us whether HOMI helps you search.",
     "kvadro": "Yes, through HOMI",
     "congratsText": "Thanks for telling us. If HOMI helped, tell your friends — they’ll find it useful too.",
-    "shareText": "Found my new place through HOMI 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. realtors and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free."
+    "shareText": "Found my new place through HOMI 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. agents and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free."
   },
   "demo": {
     "label": "Demo data",
@@ -58,5 +58,19 @@
   "map": {
     "empty": "Nothing found in this area",
     "loading": "Loading listings…"
+  },
+  "noAccess": {
+    "text": {
+      "private": "The app is available only to the HOMI team for now."
+    }
+  },
+  "owner": {
+    "info": {
+      "self": "Listed the flat themselves.",
+      "verified": "The owner confirmed the number from this listing themselves."
+    }
+  },
+  "details": {
+    "historySelf": "The owner listed it on {date}. No price changes yet."
   }
 }

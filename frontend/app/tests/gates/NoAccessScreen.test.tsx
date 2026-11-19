@@ -30,24 +30,27 @@ import { resetReference, setReference } from "@/lib/reference/useReference";
 import { ACCESS_REASONS } from "@/lib/session/types";
 import { tg } from "@/lib/telegram";
 
-/** The texts of the pinned release `index-DY_DH7h-.js` (SCR-003; `invite` and `full` without the beta since `index-Dbpp463V.js`). */
+/**
+ * The texts of the pinned release (SCR-003; `invite` and `full` without the beta since `index-Dbpp463V.js`; `private`
+ * names the team since `index-CBlEKxdL.js`, with HOMI's name from the `homi` layer).
+ */
 const TEXTS: Record<Locale, Record<AccessReason, [title: string, text: string]>> = {
   ru: {
-    private: ["Бот приватный", "Приложение сейчас доступно только владельцу."],
+    private: ["Бот приватный", "Приложение сейчас доступно только команде HOMI."],
     invite: ["Вход по приглашению", "Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте."],
     full: ["Мест пока нет", "Сейчас все места заняты. Попробуйте позже."],
     blocked: ["Нет доступа", "Доступ к приложению закрыт."],
     join: ["Сначала — бот", "Нажмите «Старт» в боте — после этого приложение откроется."],
   },
   uz: {
-    private: ["Maxfiy bot", "Ilova hozir faqat egasi uchun ochiq."],
+    private: ["Maxfiy bot", "Ilova hozir faqat HOMI jamoasi uchun ochiq."],
     invite: ["Taklif orqali kirish", "Kirish taklif havolasi orqali: uni oching va botda «Start»ni bosing."],
     full: ["Joy qolmadi", "Hozir joy qolmadi. Keyinroq urinib koʻring."],
     blocked: ["Ruxsat yoʻq", "Ilovaga kirish cheklangan."],
     join: ["Avval — bot", "Botda «Start»ni bosing — keyin ilova ochiladi."],
   },
   en: {
-    private: ["This bot is private", "The app is available only to its owner for now."],
+    private: ["This bot is private", "The app is available only to the HOMI team for now."],
     invite: ["Invite only", "You can join with an invite link: open it and tap “Start” in the bot."],
     full: ["No spots yet", "All spots are taken right now. Please try again later."],
     blocked: ["No access", "Access to the app is closed."],

@@ -58,5 +58,19 @@
   "map": {
     "empty": "Bu hududda hech narsa topilmadi",
     "loading": "Eʼlonlar yuklanmoqda…"
+  },
+  "noAccess": {
+    "text": {
+      "private": "Ilova hozir faqat HOMI jamoasi uchun ochiq."
+    }
+  },
+  "owner": {
+    "info": {
+      "self": "Kvartirani oʻzi joylagan.",
+      "verified": "Uy egasi bu eʼlondagi raqamni oʻzi tasdiqlagan."
+    }
+  },
+  "details": {
+    "historySelf": "Uy egasi {date} joyladi. Narx hali oʻzgarmagan."
   }
 }

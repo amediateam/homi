@@ -51,7 +51,7 @@
       "join": "Start with the bot"
     },
     "text": {
-      "private": "The app is available only to its owner for now.",
+      "private": "The app is available only to the kvadro² team for now.",
       "invite": "You can join with an invite link: open it and tap “Start” in the bot.",
       "full": "All spots are taken right now. Please try again later.",
       "blocked": "Access to the app is closed.",
@@ -210,11 +210,31 @@
     "suspiciousCheap": "Suspiciously cheap",
     "checkPrice": "Check the price",
     "owner": "Owner",
-    "ownerVerified": "Owner ✓",
+    "ownerVerified": "Verified owner",
     "negotiable": "Price on request",
     "downPayment": "down payment",
     "businessPrice": "business price, premises rented",
     "viewedTitle": "You have opened this listing"
+  },
+  "owner": {
+    "verified": "Verified owner",
+    "claimed": "Owner — per the listing",
+    "claimedHint": "We haven’t checked — ask about any agent fee when you call.",
+    "any": "Anyone",
+    "no_agents": "No agents",
+    "owners": "Owners only",
+    "tip": "Tap to see what this means",
+    "tipClose": "Close the tip",
+    "info": {
+      "self": "Listed the flat on kvadro² themselves.",
+      "verified": "The owner confirmed the number from this listing on kvadro² themselves.",
+      "phone": "The number is confirmed with the Telegram button: it is their own number.",
+      "notAgent": "We checked: this number does not appear in agents' listings.",
+      "gate": "They share the number themselves, after your request. We keep agents away.",
+      "footGate": "If an agent answered after all, tap «An agent answered» in the bot and we will check.",
+      "foot": "Turned out to be an agent? Tap «More» → «Report» and we will check.",
+      "ok": "Got it"
+    }
   },
   "viewer": {
     "title": "Photos"
@@ -424,6 +444,7 @@
     "channels": "{n, plural, one {channel} other {channels}}",
     "views": "{n, plural, one {view} other {views}}",
     "history": "History",
+    "historySelf": "The owner listed it on kvadro² on {date}. No price changes yet.",
     "historySingle": "Published {date} in @{channel}. No reposts or price changes yet.",
     "priceHistory": "Price history"
   },
@@ -552,11 +573,6 @@
     "commercial": "Commercial",
     "land": "Land"
   },
-  "owner": {
-    "any": "Anyone",
-    "no_agents": "No agents",
-    "owners": "Owners only"
-  },
   "tenant": {
     "family": "Family",
     "men": "Men",
@@ -590,7 +606,7 @@
       "telegram": "Another Telegram channel",
       "olx": "OLX",
       "site": "Another website (Uybor, Uysot…)",
-      "agent": "Through a realtor",
+      "agent": "Through an agent",
       "friends": "Friends told me",
       "street": "A sign on a building or in the street",
       "other": "Other"
@@ -598,7 +614,7 @@
     "congrats": "Congrats on the new place!",
     "congratsText": "Thanks for telling us. If kvadro² helped, tell your friends — they’ll find it useful too.",
     "share": "Tell friends",
-    "shareText": "Found my new place through kvadro² 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. realtors and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free.",
+    "shareText": "Found my new place through kvadro² 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. agents and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free.",
     "done": "Done"
   },
   "notify": {
@@ -620,5 +636,60 @@
     "mln": "{value}M UZS",
     "bln": "{value}B UZS",
     "unitMln": "M UZS"
+  },
+  "own": {
+    "group": "Renting out",
+    "title": "Rent out a flat",
+    "free": "Free",
+    "limitValue": "{n} of {max}",
+    "limitSheetTitle": "{n} of {max} flats listed",
+    "limitSheetText": "That’s the most for one number. Mark one flat “Rented” or remove it — then you can add a new one.",
+    "mine": "My listings",
+    "pendingShort": "waiting: {n}",
+    "reqTip": {
+      "tab": "Your first request is in! Settings → My listings"
+    },
+    "draftShort": "Draft"
+  },
+  "contact": {
+    "cta": "Contact the owner",
+    "sent": "Request sent",
+    "title": "Request to the owner",
+    "lead": "The owner will get your request and reply in the bot — usually within {n} min.",
+    "leadNoTime": "The owner will get your request and reply in the bot.",
+    "who": {
+      "_": "Who will live there",
+      "one": "Just me",
+      "couple": "Couple",
+      "family": "Family",
+      "students": "Students",
+      "friends": "Friends"
+    },
+    "people": "How many people",
+    "moveIn": "Move-in",
+    "moveInPh": "E.g. from December 1",
+    "message": "Message",
+    "messageDefault": "Hello! Can I come and see it?",
+    "note": "The owner will see your Telegram first name and these answers — not your phone number. Up to 10 requests a day.",
+    "send": "Send to the owner",
+    "pickWho": "Choose who will live there",
+    "err": {
+      "noChat": "The owner’s reply comes to the bot — allow the bot to message you and send again.",
+      "limit_day": "You’ve sent 10 requests today. You can send more tomorrow.",
+      "limit_fast": "Several requests in a row — you can send the next one in 10 minutes.",
+      "limit_week": "30 requests a week is the limit. You can send new ones in a few days.",
+      "blocked": "Requests are closed for your account right now. If this is a mistake, contact support.",
+      "closed": "The owner no longer takes requests — it’s probably rented.",
+      "own": "This is your flat.",
+      "open": "The owner has shown the number — refresh the card and call."
+    },
+    "usually": "Usually replies within {n} min",
+    "pendingNote": "Request sent — the reply will come to the bot.",
+    "mineBar": "This is your listing",
+    "mineBarHint": "Requests are in My listings",
+    "closedBar": "The owner can’t share the number",
+    "cancelledBar": "The flat is no longer available",
+    "expiredBar": "The owner has not replied yet",
+    "similarHint": "See similar ones in the feed"
   }
 }

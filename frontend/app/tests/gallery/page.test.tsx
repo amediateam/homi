@@ -271,7 +271,7 @@ describe("the card entry of the gallery (WP-24)", () => {
 
     expect(entry("badge-suspicious").querySelector("[data-badge]")?.textContent).toBe("Подозрительно дёшево");
     expect(entry("badge-check").querySelector("[data-badge]")?.textContent).toBe("Проверьте цену");
-    expect(entry("badge-owner-verified").querySelector("[data-badge]")?.textContent).toBe("Хозяин ✓");
+    expect(entry("badge-owner-verified").querySelector("[data-badge]")?.textContent).toBe("Проверенный хозяин");
     expect(entry("badge-owner").querySelector("[data-badge]")?.textContent).toBe("Хозяин");
     expect(entry("badge-below-market").querySelector("[data-badge]")?.textContent).toBe("Ниже рынка");
   });
