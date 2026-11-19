@@ -167,7 +167,7 @@ on an old segment. The first-launch choice itself is WP-23.
 | `homi-nudge` | JSON `{ asked: string[≤40], closed, quietUntil, lastShown, back, feedOff }`; since legacy release `index-DY_DH7h-.js` `back` is `{ <filters hash>: ms }` with at most 40 entries (the last return banner per filter set) and `feedOff` the end of the radar card's snooze in ms | mirrored and restored |
 | `homi-visits` | JSON `{ <filters hash>: ms }`, the last search visit per filter set, the 40 newest kept (BR-APP-070); since legacy release `index-DY_DH7h-.js` | mirrored and restored (TMA-037) |
 | `homi-home` | JSON `{ days: ['YYYY-MM-DD' ×≤10], offered }` | mirrored and restored |
-| `homi-new-<feature>` | `'1'` (only `pets` in use) | mirrored and restored |
+| `homi-new-<feature>` | `'1'` (only `pets` in use; legacy release `index-BnFvC-Ft.js` adds `cards`, which HOMI does not announce, DEC-57) | mirrored and restored |
 | `homi-theme` | `auto` / `light` / `dark` | local |
 | `homi-graphics` | `full` / `lite`, absent = auto | local |
 | `homi-graphics-measured` | `lite` | local |

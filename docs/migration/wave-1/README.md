@@ -93,7 +93,8 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | REVIEW (#84, stacked on #83) |
 | [WP-29](WP-29-saved.md) | Favourites and history | WP-26 | REVIEW (#85) |
 | [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | REVIEW (#86) |
-| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23 | TODO |
+| [Intake `index-BnFvC-Ft`](baseline.md#intake-log) | Legacy release intake (rule 7): the card style of the bot's listing cards — audit, specifications, the contract on stubs (`card_style`, `POST /settings/card-sample`), fixtures, the `legacy` catalogue | — | REVIEW (this PR) |
+| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft` | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
 | [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32 | TODO |
 

@@ -760,9 +760,12 @@
       "GET /api/subscriptions",
       "GET /api/hidden",
       "GET /api/bot",
-      "PUT /api/settings"
+      "PUT /api/settings",
+      "POST /api/settings/card-sample"
     ],
-    "storage_keys": [],
+    "storage_keys": [
+      "kv-new-cards"
+    ],
     "analytics_events": [
       "$pageview"
     ],
@@ -1110,6 +1113,28 @@
       "chat_access_declined",
       "chat_access_allowed"
     ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-048",
+    "name": "Settings › Card style «Вид карточек»",
+    "kind": "screen",
+    "entry_points": [
+      "Вид карточек row of the group «Чат с ботом» in settings (since index-BnFvC-Ft.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/CardStylePicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/card-style.css"
+    ],
+    "apis": [
+      "PUT /api/settings",
+      "POST /api/settings/card-sample"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
     "status": "CONFIRMED"
   }
 ]

@@ -8,12 +8,17 @@ The server-side system behind these endpoints — business rules `BR-API-NNN`, c
 decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open questions `Q-API-NNN` — is in
 `02-legacy-backend-audit.md`. The machine-readable twin of this file is `data/api-inventory.json`. API-035
 (`GET /api/feed/new`, added in release `index-DY_DH7h-.js`) stands at its registry position, after API-006; ids stay
-stable, so it takes the next free number while the legacy registry renumbered the methods after it.
+stable, so it takes the next free number while the legacy registry renumbered the methods after it. API-036
+(`POST /api/settings/card-sample`, added in release `index-BnFvC-Ft.js`) stands the same way at its registry position
+#27, after API-025.
 
-- **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to the
-  pinned release `index-DY_DH7h-.js` (current `$KVADRO_ROOT/docs/api.md:5`, `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`;
-  `wave-1/baseline.md`). Text changed for a later release names it; "Doc:" line numbers are those of the audited
-  tree, "current Doc:" and "at the pin" those of SVN r27.
+- **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to
+  `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intake of 2026-11-19, to the pinned release
+  `index-BnFvC-Ft.js` (SVN r29; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`; `wave-1/baseline.md`). Text changed for
+  a later release names it; "Doc:" line numbers are those of the audited tree, "current Doc:" and "at the pin" those
+  of SVN r27. `$KVADRO_ROOT/docs/api.md` of r29 cannot be read: text of the intake cites it at r31 ("Doc r31:"), whose
+  additions for the next release (the owner methods #37–#54) it does not take over, and client files at r29 when they
+  have not changed since.
 - **Evidence base:** the legacy backend source and database are not available. The Mini App source is decompiled from
   the production bundle; the landing is a 1:1 production mirror. Nothing was run: `RUNTIME_VERIFIED` is not used.
 - **Status per endpoint** carries two labels: **Contract** (method, path, request construction, the response fields
@@ -263,7 +268,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `currency: string` (`USD|UZS`), `usd_uzs: number`, `theme: "auto"|"light"|"dark"`, `city: string|null`,
   `city_chosen?: boolean`, `analytics: null|{key: string, host: string, id: string, env?: string, team?: boolean,
   autocapture?: boolean, replay?: boolean, replay_rate?: number}`, `max_subscriptions?: number`,
-  `bot_username: string|null`, `tiles: string|null`, `new_features?: string[]`, `cities?: CityMeta[]`,
+  `bot_username: string|null`, `tiles: string|null`, `new_features?: string[]` (codes `pets`, the filter, and since
+  release `index-BnFvC-Ft.js` `cards`, the card-style row of `03` SCR-032; seen = `kv-new-<code>`; Doc r31:488),
+  `cities?: CityMeta[]`,
   `districts: {code, name}[]`, `zones: {code, name}[]`, `renovations: Record<deal, {code, name}[]>`,
   `appliances: {code, name}[]`, `price_presets: Record<deal, number[]>` (USD), `locales: {code, name}[]`.
   `CityMeta` (Doc:454-463): `code`, `name`, `center: [lat, lon]`, `zoom?: number` (default 12; `< 11` = region),
@@ -1013,7 +1020,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** none.
 - **Response:** `200 {quiet: string ("off" | "HH-HH"), digest: string ("HH" or "HH,HH"), locale: string,
   currency: string, locales: {code, name}[], currencies: {code, name}[], quiet_presets: string[],
-  digest_presets: string[]}` (Doc:844-855). `digest.split(',')` is called in the radar sheet
+  digest_presets: string[]}` (Doc:844-855); since release `index-BnFvC-Ft.js` also `card_style?: "classic" | "rich"`, a
+  missing or `null` value meaning `classic`, any other value crashing the settings screen (`03` LB-APP-051; Doc
+  r31:982,986-989). `digest.split(',')` is called in the radar sheet
   (`src/features/radar/RadarSheet.jsx:52-61`) — `digest` must be a string. Unread: `theme`, `city`. Preset values:
   api.md examples `off`, `23-08`, `22-09` / `09`, `09,21`, `21` (mock `tools/parity/mocks.mjs:124`) vs bot presets
   `off`, `22-08`, `23-08`, `00-09`, `23-07` / `09`, `09,19`, `12,20`, `19`
@@ -1023,7 +1032,7 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `src/features/settings/SettingsScreen.jsx:59`, `src/features/radar/RadarSheet.jsx:52`.
 - **Migration Target:** legacy `GET /api/settings` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — all eight keys; `quiet ∈ quiet_presets`, `digest ∈ digest_presets`; values match the bot's
-  `/settings`; auth.
+  `/settings`; `card_style` is `classic`, `rich` or absent; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-050; Q-API-029.
 
 ### API-025 — `PUT /api/settings`
@@ -1037,14 +1046,17 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   first language picker `{locale}` (`src/features/onboarding/LanguagePicker.jsx:32`); city changes `{city}`
   (`src/lib/city.js:20-26`, triggered from `src/app/App.jsx:301`, `:387`, `:395`); settings screen `{theme}`
   (`SettingsScreen.jsx:105`), `{locale}`/`{currency}` + page reload (`SettingsScreen.jsx:119`), `{quiet}`/`{digest}`
-  (`SettingsScreen.jsx:91`).
+  (`SettingsScreen.jsx:91`); since release `index-BnFvC-Ft.js` `{card_style: "classic" | "rich"}` from the card-style
+  sub-page, not sent for the current style or while a sample is sending (`SettingsScreen.jsx:153-160` at r31; Doc
+  r31:1003,1022,1029).
 - **Validation:** known keys and values (preset membership assumed). — UNVERIFIED
 - **Business Logic:** merges the patch into the profile; the same profile drives the bot language (🔶) and
   `GET /api/meta` (`locale_chosen`/`city_chosen` become `true`). — DOCUMENTED_ONLY
 - **DB Changes:** update user settings. — UNVERIFIED
 - **Side Effects:** bot command menu language follows the locale (`setMyCommands` per user 🔶, `about.md:318`).
 - **Response:** `200` full `SettingsResponse` (as API-024). Read only for `quiet`/`digest` (replaces local state,
-  `SettingsScreen.jsx:83-95`); ignored for the others (Doc:886-888).
+  `SettingsScreen.jsx:83-95`) and, since release `index-BnFvC-Ft.js`, `card_style` (Doc r31:1025-1027); ignored for
+  the others (Doc:886-888).
 - **Errors:** quiet/digest/theme → rollback + haptic; locale/currency → no reload, haptic; city → ignored
   (`city.js:23-25`); language picker → haptic, can retry.
 - **Legacy Source:** Doc:128, Doc:857-897; client `src/lib/api/settings.js:11-15` and the call sites above.
@@ -1056,6 +1068,32 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   legacy); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-018, LB-API-049, LB-API-050;
   Q-API-057.
+
+### API-036 — `POST /api/settings/card-sample`
+
+- **Since:** release `index-BnFvC-Ft.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:54,69`).
+- **Method:** POST
+- **URL:** `/api/settings/card-sample`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** none (no body).
+- **Validation:** auth only. — UNVERIFIED
+- **Business Logic:** the bot sends the user one sample listing card in the **saved** `card_style` (written before
+  through API-025). Which listing it shows is not documented. — DOCUMENTED_ONLY
+- **DB Changes:** none known.
+- **Side Effects:** a Telegram message in the user's chat with the bot (`04` BOT-085).
+- **Response:** `200 {sent: boolean}`; `false` means the bot could not send it (Doc r31:1040-1049).
+- **Errors:** the client treats any error like `sent: false` («Пример не отправился — вид всё равно сохранён»). The
+  answer must be JSON: a `204` hangs the button (`03` LB-APP-052; Doc r31:1053-1055).
+- **Legacy Source:** Doc r31:132 (registry #27), Doc r31:1040-1055, Doc r31:1271, Doc r31:1318-1320 (open question
+  16); client `src/lib/api/settings.js:7-14` (at r29), `src/features/settings/SettingsScreen.jsx:162-171` (at r31);
+  parity scenarios `settings-cards-sample`, `settings-cards-sample-unsent`, `settings-cards-sample-error`,
+  `settings-cards-sample-pick` (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:51-56`).
+- **Migration Target:** native v1 `POST /settings/card-sample` (`25` §4.2): HOMI's bot sends the sample (WP-53,
+  WP-57).
+- **Tests:** positive — `200 {sent: true}` and one card in the bot chat in the saved style; `sent: false` when the
+  chat cannot be written; the answer is always JSON with a boolean `sent`; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (Q-API-067).
 
 ### API-026 — `GET /api/hidden`
 
@@ -1237,7 +1275,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Input:** body `{"name": string, …props}` with properties at the top level. React: `fetch` with `keepalive: true`,
   errors swallowed (`src/lib/api/events.js:9-35`). Boot script: `XMLHttpRequest`, no keepalive, only with `initData`
   (`index.html:69-90`). Event names and properties (Doc:1015-1042; code call sites):
-  `app_launch {entry: link|news|menu, ms, v, sdk?, js, platform?}` (`useAppBootstrap.js:54-61`);
+  `app_launch {entry: link|news|menu, ms, v, sdk?, js, platform?}` (`useAppBootstrap.js:54-61`), since release
+  `index-BnFvC-Ft.js` also `tg?` = `Telegram.WebApp.version`, not truncated by the sender (`useAppBootstrap.js:54-62`
+  at r29; Doc r31:1177,1201-1202);
   `app_opened {entry, listing_id? (only for link), ms}` after meta success, not on `403` (`useAppBootstrap.js:101-113`);
   `app_error {v (≤ 40), error: {kind: boot|error|rejection|render, name? (≤ 40), message (≤ 300), source? (≤ 300,
   no query/hash), stage: boot|app, screen? (≤ 40, React only), tg? (≤ 10), platform? (≤ 20)}}` — boot script always
@@ -1554,9 +1594,10 @@ resources.
 
 ### 4.1 Registry → client code
 
-All 35 registry methods (current `$KVADRO_ROOT/docs/api.md:102-138`; 34 at the audit, `:102-137`) are called by the
-client at the pin. None is documented-but-unused. "Doc #" is the current registry number: since release
-`index-DY_DH7h-.js` `/api/feed/new` is #7 and every later method moved down by one.
+All 36 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:106-141` at r31; 35 at `index-DY_DH7h-.js`,
+`:102-138` at r27; 34 at the audit, `:102-137`) are called by the client. None is documented-but-unused. "Doc #" is
+the registry number of the pinned release: since release `index-DY_DH7h-.js` `/api/feed/new` is #7, since
+`index-BnFvC-Ft.js` `/api/settings/card-sample` is #27, and every later method moved down by one each time.
 
 | Doc # | Method | Path | ID | In client | Wrapper | Call sites |
 | ----: | ------ | ---- | -- | --------- | ------- | ---------- |
@@ -1585,16 +1626,17 @@ client at the pin. None is documented-but-unused. "Doc #" is the current registr
 | 23 | DELETE | `/api/subscriptions/:id` | API-022 | yes | `subscriptions.js:66` | `RadarScreen.jsx:172` |
 | 24 | POST | `/api/subscriptions/:id/relax` | API-023 | yes | `subscriptions.js:43` | `subscriptionActions.js:72` |
 | 25 | GET | `/api/settings` | API-024 | yes | `settings.js:5` | `SettingsScreen.jsx:59`, `RadarSheet.jsx:52` |
-| 26 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
-| 27 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
-| 28 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
-| 29 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
-| 30 | GET | `/api/favorites` | API-029 | yes | `user.js:23` | `useInfiniteFeed.js:33` |
-| 31 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
-| 32 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
-| 33 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
-| 34 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
-| 35 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin (§2 API-034) |
+| 26 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` (`:20-24` at r29) | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
+| 27 | POST | `/api/settings/card-sample` | API-036 | yes | `settings.js:11-14` (at r29) | `SettingsScreen.jsx:165` (at r31) |
+| 28 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
+| 29 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
+| 30 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
+| 31 | GET | `/api/favorites` | API-029 | yes | `user.js:23` | `useInfiniteFeed.js:33` |
+| 32 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
+| 33 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
+| 34 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
+| 35 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
+| 36 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin (§2 API-034) |
 
 ### 4.2 Client requests → documentation
 
@@ -1604,7 +1646,7 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 
 | Client request | Where | Documented in | Result |
 | -------------- | ----- | ------------- | ------ |
-| 35 `apiFetch` methods (34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-035) |
+| 36 `apiFetch` methods at the pin (35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-036) |
 | Prefetch of meta, first feed page, deep-link listing | `src/main.jsx:24-39` | Doc:87-98 | documented |
 | `XMLHttpRequest POST /api/events` (boot errors) | `index.html:76-88` | Doc:974-975, Doc:1007 | documented |
 | `XMLHttpRequest GET /api/bot` (boot fallback) | `index.html:94-102` | Doc:38-39, Doc:500-501 | documented |
@@ -1661,6 +1703,7 @@ Nothing here is a deletion recommendation. Proposed fixes and old-client impact 
 | `GET /api/listings/:id` | risky: raw phone numbers | — | Doc:316, `links.js:28` | LB-API-030 |
 | `POST /api/events` | risky: unauthenticated traffic, unbounded payload | — | Doc:1012-1013, Doc:1044 | LB-API-001, LB-API-047 |
 | `POST /api/listings/:id/share` | risky: outbound Bot API call per tap | — | `ListingTitleRow.jsx:35` | LB-API-046 |
+| `POST /api/settings/card-sample` (since `index-BnFvC-Ft.js`) | risky: a chat message per tap, no documented rate limit; fragile: a `204` hangs the old client's button | — | `SettingsScreen.jsx:162-171` (at r31); Doc r31:1053-1055 | LB-APP-052, Q-API-067 |
 | `POST /api/listings/:id/translate` | risky: LLM cost per call | — | `useListingTranslation.js:32` | LB-API-032 |
 | `GET /api/feed/count`, `/api/feed/flow` | risky: load (live per change + 3 requests per radar) | — | `useLiveFeedStats.js`, `useRadarPreviews.js` | LB-API-038, LB-API-052 |
 | `GET /api/feed/new` | fragile: a body without numeric `count` crashes the old client; `since` from the device clock, unbounded | — | `src/app/useReturnNudge.js:112-136` (at the pin) | LB-API-055, Q-API-066 |

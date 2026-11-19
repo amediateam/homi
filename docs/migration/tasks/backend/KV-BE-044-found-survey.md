@@ -16,7 +16,7 @@ answer. The decision *when* to ask (`ask_found` on radar pause/delete) and the b
 
 ## Legacy reference
 
-- API-032 and API-033 (`08-api-inventory.md:1188-1228`); client `$KVADRO_ROOT/demo/app/src/lib/api/found.js:9-16`,
+- API-032 and API-033 (`08-api-inventory.md:1226-1266`); client `$KVADRO_ROOT/demo/app/src/lib/api/found.js:9-16`,
   `:22-28`; `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:28-46`, `:47-76`, `:95`, `:112` (errors hidden);
   `$KVADRO_ROOT/docs/api.md:949-968`; `$KVADRO_ROOT/docs/about.md:210-211`; mock
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:154`.

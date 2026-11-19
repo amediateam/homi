@@ -4,9 +4,9 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-23 |
-| Size | ≈ 2 300 changed lines, M |
-| Behaviour reference | `03` §2 (SCR-032 … SCR-039, SCR-041), §1.7 (lite mode), §3.2 (storage), §3.3 (events), §3.4 (constants), §3.5 (time zone), §4, §5, §5b; `05` TMA-019 … TMA-021, TMA-036; task files KV-FE-081, KV-FE-082, KV-FE-083, KV-FE-084, KV-FE-085, KV-FE-086, KV-FE-026, KV-FE-027 |
+| Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract) |
+| Size | ≈ 2 300 changed lines, M; ≈ 2 800 with the card style of the intake of `index-BnFvC-Ft.js` |
+| Behaviour reference | `03` §2 (SCR-032 … SCR-039, SCR-041, SCR-048), §1.7 (lite mode), §3.2 (storage), §3.3 (events), §3.4 (constants), §3.5 (time zone), §4, §5, §5b; `05` TMA-019 … TMA-021, TMA-036; task files KV-FE-081, KV-FE-082, KV-FE-083, KV-FE-084, KV-FE-085, KV-FE-086, KV-FE-026, KV-FE-027 |
 | Needs from the production track | nothing |
 
 The task files above were written for another architecture. Their states, texts, constants, edge cases and test
@@ -14,19 +14,22 @@ ideas are taken; their file layout, navigation stack, API paths and transport ar
 
 ## Goal
 
-The «Настройки» tab and its seven sub-pages work on stubs: theme, graphics, language, currency, quiet hours, digest
-time and «Скрытое», plus the «О приложении» block. A language change replaces the locale segment of the address and
+The «Настройки» tab and its eight sub-pages work on stubs: theme, graphics, language, currency, quiet hours, digest
+time, the card style «Вид карточек» (since legacy release `index-BnFvC-Ft.js`, in Wave 1 by DEC-57) and «Скрытое»,
+plus the «О приложении» block. A language change replaces the locale segment of the address and
 a currency change refreshes the data, both without reloading the app. The home-screen nudge is offered once, on the
 right day count, and only when it was really shown.
 
 ## Scope
 
-**In.** Owned audit items: screens SCR-032, SCR-033, SCR-034, SCR-035, SCR-036, SCR-037, SCR-038, SCR-039 and
-SCR-041; rules BR-APP-045, BR-APP-051, BR-APP-052 and BR-APP-053; defects LB-APP-010, LB-APP-040 and LB-APP-041,
-and the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
+**In.** Owned audit items: screens SCR-032, SCR-033, SCR-034, SCR-035, SCR-036, SCR-037, SCR-038, SCR-039,
+SCR-041 and SCR-048; rules BR-APP-045, BR-APP-051, BR-APP-052, BR-APP-053 and BR-APP-074; defects LB-APP-010,
+LB-APP-040, LB-APP-041, LB-APP-051 and LB-APP-052, the decision LB-APP-053 (kept as legacy until it is decided), and
+the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
 
 - The settings screen with its groups, values, loading and error states.
-- The seven sub-pages and their save rules; the hidden list with its three "return" actions.
+- The eight sub-pages and their save rules; the hidden list with its three "return" actions; the card-style
+  picker with the mocks of both bot messages and «Прислать пример в чат».
 - The about block: home-screen row, support, Instagram, about text.
 - The home-screen nudge inside `NudgeHost`, the visit-day counter and the "added" toast.
 
@@ -48,7 +51,8 @@ and the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
 | Brand (DEC-40, 25 §2 rule 5) | Name, Instagram, support and legal links come from `lib/brand`; a link that is `null` hides its row. Brand words in texts are overridden in the `homi` catalogue layer |
 | Localisation (DEC-44, 25 §3.7) | The locale is the first address segment. Changing the language changes the address, not a stored key |
 | Session modes (25 §3.4) | `GET /settings` and `GET /hidden` run on the server when the cookie exists and through `/bff` in header mode; every save is the `updateSettings` Server Action (token argument in header mode) |
-| API methods (25 §4.2) | Methods: `GET /settings`, `PATCH /settings`, `GET /hidden`, `DELETE /hidden/authors/{id}`, `DELETE /hidden/listings/{number}`, `DELETE /hidden`; `GET /radars` (digest hint only) |
+| Card styles (DEC-57) | Both styles, «Классический» (`classic`) and «Новый» (`rich`), with the legacy mocks; no «Новое» pill: `features` of `GET /reference` stays `["pets"]`, and the row does not call `useNewFeature('cards')` |
+| API methods (25 §4.2) | Methods: `GET /settings`, `PATCH /settings`, `POST /settings/card-sample`, `GET /hidden`, `DELETE /hidden/authors/{id}`, `DELETE /hidden/listings/{number}`, `DELETE /hidden`; `GET /radars` (digest hint only) |
 | API conventions (25 §4.1) | The currency of every display string comes from the user's settings, the locale from `Accept-Language`: after either changes, server-formatted values must be fetched again |
 
 Read before coding: `02-guides/internationalization.md` (locale segment, `next/root-params`),
@@ -71,6 +75,7 @@ next-intl documentation.
 | `/settings/currency` | `currency/page.tsx` | `CurrencyPage` (SCR-036) |
 | `/settings/quiet-hours` | `quiet-hours/page.tsx` | `QuietHoursPage` (SCR-037) |
 | `/settings/digest` | `digest/page.tsx` | `DigestPage` (SCR-038) |
+| `/settings/cards` | `cards/page.tsx` | `CardStylePage` (SCR-048); WP-20 has no placeholder for it, and `routes.ts` gains the page name `cards` |
 | `/settings/hidden` | `hidden/page.tsx` | `HiddenPage` (SCR-039) |
 
 - The settings screen is the **layout** of the segment (vocabulary rule for layers): it stays mounted and visible
@@ -90,13 +95,14 @@ next-intl documentation.
 | -------------------------- | ------- |
 | `features/settings/SettingsScreen.tsx`, `AboutGroup.tsx` | Groups and rows |
 | `features/settings/{ThemePage,GraphicsPage,LanguagePage,CurrencyPage,QuietHoursPage,DigestPage,HiddenPage}.tsx` | Sub-pages |
+| `features/settings/{CardStylePage,CardStylePicker,CardPreview}.tsx`, `useCardSample.ts` | SCR-048: the radio group with the two mocks, the hint, the bottom panel; the sample state `idle \| sending \| sent \| failed`, held by the settings layout so that it outlives the sub-page as in legacy (LB-APP-053) |
 | `features/settings/useSettings.ts` (from WP-30, extended) | `{ settings, status, error, refetch, patch(optimistic), replace(server) }` |
 | `features/settings/useHidden.ts` | `useResource('hidden', …)` with optimistic removal |
 | `features/settings/format.ts` (from WP-30, extended) | `quietLabel`, `formatDigestHours`, `graphicsLabel`, `themeLabel` |
 | `features/settings/applyProfileChange.ts` | `changeLanguage(locale)`, `changeCurrency(code)` |
 | `features/settings/useHomeScreenStatus.ts` | `'unsupported' | 'unknown' | 'missed' | 'added'` for the about row |
 | `features/nudges/{homeScreen.ts,useHomeScreenOffer.ts,HomeScreenNudge.tsx}` | Visit days, offer rules, card |
-| `lib/actions/settings.ts` (from WP-23, extended) | `updateSettings(patch, auth?)` accepts `locale`, `city`, `theme`, `currency`, quiet hours, digest hours |
+| `lib/actions/settings.ts` (from WP-23, extended) | `updateSettings(patch, auth?)` accepts `locale`, `city`, `theme`, `currency`, quiet hours, digest hours, `card_style`; `sendCardSample(auth?)` (`POST /settings/card-sample`) answers `{ sent }`, `sent: false` for any failure or an answer without a boolean `sent` (LB-APP-052) |
 | `lib/actions/hidden.ts` (from WP-26, extended) | adds `unblockAuthorById(id)` (`DELETE /hidden/authors/{id}`, `id` a ULID) and `unhideAll()` (`DELETE /hidden`) next to `unhideListing(number)` — the names WP-22 reserved. `unblockAuthor(number)` of WP-26 is a different method (`DELETE /listings/{number}/blocked-author`) and keeps its name |
 
 ### Data
@@ -123,6 +129,7 @@ next-intl documentation.
 | Language | rows disabled → `updateSettings({ locale })` → `changeLanguage` | nothing changes, `failed()` |
 | Currency | rows disabled → `updateSettings({ currency })` → `changeCurrency` | nothing changes, `failed()` |
 | Quiet hours, digest | optimistic `patch` → `updateSettings` → `replace` with the answer | restore the previous settings, `failed()` |
+| Card style (BR-APP-074) | nothing when the pick is the current style or a sample is sending; else the sample state back to `idle`, optimistic `patch({ card_style })` with a light haptic → `updateSettings({ card_style })` → `replace` | restore the previous settings, `failed()` |
 
 `changeLanguage(locale)` — the fix of LB-APP-041, no `location.reload()`:
 
@@ -168,7 +175,7 @@ the next load; it never rolls the setting back.
 New, under `frontend/app/`:
 
 - `app/[locale]/(main)/settings/layout.tsx`; `settings/page.tsx` and the seven `settings/<name>/page.tsx` replace
-  the WP-20 placeholders.
+  the WP-20 placeholders; `settings/cards/page.tsx` is new.
 - The modules of the table in "Design" that are not marked "from WP-…".
 - `tests/settings/{format,applyProfileChange}.test.ts`, `tests/settings/{SettingsScreen,ThemePage,GraphicsPage,
   LanguageCurrencyPages,QuietDigestPages,HiddenPage,AboutGroup}.test.tsx`, `tests/nudges/{homeScreen.test.ts,
@@ -177,7 +184,9 @@ New, under `frontend/app/`:
 
 Changed:
 
-- `lib/actions/settings.ts`, `lib/actions/hidden.ts`, `lib/api/bffAllowList.ts` (`GET settings`, `GET hidden`).
+- `lib/actions/settings.ts`, `lib/actions/hidden.ts`, `lib/api/bffAllowList.ts` (`GET settings`, `GET hidden`);
+  `lib/navigation/routes.ts` (the page name `cards`); `frontend/packages/ui/src/icons/index.ts` (`GalleryHorizontal`,
+  `Image`, `Check` if missing).
 - `features/settings/useSettings.ts`, `features/settings/format.ts`.
 - `features/nudges/NudgeHost.tsx` (mounts the home offer in its slot).
 - The locale guard of WP-21 if step 4 of `changeLanguage` needs it.
@@ -197,6 +206,7 @@ Changed:
 7. `applyProfileChange.ts`, `LanguagePage`, `CurrencyPage`; verify the locale guard on Back.
 8. `useHidden`, `HiddenPage` with the three actions and the session-map reset.
 9. `homeScreen.ts`, `useHomeScreenStatus`, the about row, `useHomeScreenOffer`, `HomeScreenNudge`, the toast.
+9a. The group «Чат с ботом», `sendCardSample`, `useCardSample`, `CardStylePage` with the two mocks (SCR-048).
 10. Catalogue overrides and the new key; component tests; Playwright specs in both session modes.
 11. Run the checklist in three locales and two themes; update the queue and the handoff.
 
@@ -213,6 +223,7 @@ failed, nothing loaded): tall `ErrorState` — offline «Нет связи» (`e
 | `settings.group.look` «Оформление» | `settings.theme._` «Тема» (the leaf-and-prefix name of WP-20's importer; options stay `settings.theme.auto` …): «Как в Telegram» / «Светлая» / «Тёмная». `settings.graphics._` «Графика»: «Авто · полная», «Авто · облегчённая», «Полная», «Облегчённая» |
 | `settings.group.region` «Язык и валюта» | `notify.language` «Язык»: name of the current language from the list, else its code. `notify.currency` «Валюта»: the same from the currency list |
 | `settings.group.notify` «Когда присылать» | `notify.quiet` «Тихие часы»: «23–08» or `notify.quietOff` «Выкл». `notify.digest` «Время подборок»: «9 и 21» (no leading zeros, joined with `notify.and`). Group footer `notify.tz` «Время — ташкентское.» |
+| `settings.group.chat` «Чат с ботом» | `settings.cards._` «Вид карточек» (leaf-and-prefix after the import of `index-BnFvC-Ft.js`), icon `GalleryHorizontal` (`@homi/ui` gains it): `settings.cards.classic` «Классический» or `settings.cards.rich` «Новый»; an unknown value shows «Классический» (LB-APP-051). No «Новое» pill (DEC-57) |
 | `settings.group.feed` «Лента» | `settings.hidden` «Скрытое» with the count of hidden listings plus blocked authors |
 | `settings.group.about` «О приложении» | see "About block" |
 
@@ -235,6 +246,28 @@ failed, nothing loaded): tall `ErrorState` — offline «Нет связи» (`e
 Legacy has no privacy row in the Mini App. Whether HOMI shows one is a brand-layer decision that waits for the
 legal texts of Q-SEC-021; with the link `null` (the default) the screen has exactly the legacy rows. The legacy
 Instagram account is not HOMI's: the row stays hidden until the brand layer has HOMI's own.
+
+### Card style «Вид карточек» (SCR-048, BR-APP-074)
+
+*Added by the intake of legacy release `index-BnFvC-Ft.js`.* A `bare` sub-page with the title `settings.cards._`:
+
+- two options side by side in a `role="radiogroup"`, each a `role="radio"` button with `aria-checked`, holding a
+  mock of the bot's message (`aria-hidden`), the name `settings.cards.classic` / `settings.cards.rich` and the hint
+  `settings.cards.classicHint` / `settings.cards.richHint`;
+- «Классический»: a photo placeholder (icon `Image`), caption lines 🏠 `settings.cards.demo.title` (bold),
+  💰 `.price` (bold), 📊 `.median`, 📍 `.place`, 🏢 `.area`, 🏠 `.owner`, the quote `.quote`; button rows
+  [📱 📍] [🔗 📷 +5] [⭐ …];
+- «Новый»: a photo placeholder with four dots, `.price` as a heading, `.title` in bold, 📊 `.median`, a table
+  `.rowDistrict` / `.district`, `.rowMetro` / `.metro`, `.rowArea` / `.areaShort`, `.rowOwner` / `.ownerShort`, the
+  line `.details` with «›»; button rows [📱 📍] [🔗 ⭐] [… ];
+- the hint `settings.cards.hint`; a bottom panel with the full-width primary button `settings.cards.send`
+  «Прислать пример в чат», disabled with a spinner and `settings.cards.sending` while sending; `sent` shows a check,
+  `settings.cards.sent` and the second line `settings.cards.minimize`; `failed` shows `settings.cards.failed`.
+
+The button plays a light haptic and calls `sendCardSample`; `sent: true` → the success haptic, `sent: false` or a
+failure → the warning haptic. The result stays until the next pick or until the Settings tab unmounts (LB-APP-053,
+legacy behaviour until decided). The styles of the mocks follow the legacy `card-style.css` as tokens (DEC-46: small
+visual differences are accepted).
 
 ### Theme (SCR-033) and graphics (SCR-034)
 
@@ -341,6 +374,10 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
 - `QuietDigestPages`: optimistic check, rollback, answer replaces state, both digest hints, value outside presets.
 - `HiddenPage`: authors only, listings only, both, empty, unknown kind; plural forms 1, 3, 5; rollback of one row;
   confirm cancel.
+- `CardStylePage`: a pick saves optimistically and the answer replaces it; the failure restores; the current style
+  sends nothing; a pick while sending sends nothing; a pick resets the result; `sent: true`, `sent: false`, a
+  failure and an answer without `sent` (a mocked action) give the right line and haptic; the result survives
+  closing and reopening the sub-page; an unknown `card_style` shows «Классический»; no «Новое» pill.
 - `HomeScreenNudge`: 10 s timeout without event; × event; «Добавить» calls the adapter; refused while a follow
   nudge or a return check is pending; displaced by a return banner or a follow nudge → hidden, no event,
   `offered: false`, offered again at the next calm moment.
@@ -357,6 +394,9 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
   that half is ticked on real sources in WP-48.
 - `settings-hidden.spec.ts`: return an author, return a listing, return all with confirm; open a hidden listing and
   Back.
+- `settings-cards.spec.ts`: the row shows «Классический»; the scenario `card_rich` shows «Новый»; a pick sends
+  `PATCH /settings {card_style}`; «Прислать пример в чат» shows the sent line, the scenario `card_sample_unsent`
+  the failure line.
 - `home-nudge.spec.ts`: three stored days and status `missed` → card after 4 s and `offered: true` in
   `homi-home` (the `home_screen_offered` event is asserted in `homeScreen.test.ts` — the `track` facade sends
   nothing before WP-32); status `unknown` → no card and `offered` false; the "added" event → toast and no
@@ -366,7 +406,8 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
 
 Run in ru, uz, en and in light and dark; cookie mode and header mode where a request is involved.
 
-- [ ] «Настройки» shows the five groups with the legacy rows, values and order; spinner first; a failed load shows
+- [ ] «Настройки» shows the six groups with the legacy rows, values and order (five before legacy release
+      `index-BnFvC-Ft.js`); spinner first; a failed load shows
       the error state and «Повторить» recovers.
 - [ ] The Telegram Settings button opens the tab from any screen with no sheet left over it.
 - [ ] The graphics row appears on Android or after the mode was changed, not otherwise.
@@ -381,6 +422,8 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
 - [ ] Currency: prices in the feed, on the map and in an open listing change without a reload. On stubs only the
       amounts the client formats change (presets, market scale); server-formatted prices are ticked in WP-48.
 - [ ] A failed language or currency save changes nothing.
+- [ ] «Чат с ботом» › «Вид карточек»: both mocks, the current one checked; a pick saves and the row shows it; the
+      sample button gives the sent line with the minimise hint, or the failure line; no «Новое» pill (DEC-57).
 - [ ] Quiet hours: «Выкл» and each preset check at once; the settings row shows the new value.
 - [ ] Digest time: presets check at once; the hint text depends on an active digest radar; «Время — ташкентское.»
       follows it; the radar sheet shows the new hours.

@@ -273,7 +273,7 @@ Names and property names are unchanged. `listing_id` is the listing number.
 
 | # | Event | Properties | Trigger | Called from |
 | - | ----- | ---------- | ------- | ----------- |
-| 1 | `app_launch` | `entry` (`link` / `news` / `menu`), `ms`, `v`, `sdk?`, `js`, `platform` | once per launch when `initData` exists; queued until the session is ready | WP-21 |
+| 1 | `app_launch` | `entry` (`link` / `news` / `menu`), `ms`, `v`, `sdk?`, `js`, `platform`, `tg` (the Telegram WebApp version, `tg.version()`; legacy since release `index-BnFvC-Ft.js`, `03` §3.3) | once per launch when `initData` exists; queued until the session is ready | WP-21 |
 | 2 | `app_opened` | `entry: 'link', listing_id, ms` or `entry: 'news' / 'menu', ms` | session and `GET /me` succeeded; never after a refusal | WP-21 |
 | 3 | `app_error` | `v`, `error {kind, name, message, source, stage, screen, tg, platform}` | boot guard (`boot`), global handlers (`error`, `rejection`), error files (`render`), missing catalogue keys (sent as `error`) | WP-21 guard through `/bff/boot-error`; this package; WP-23; WP-20 |
 | 4 | `follow_prompt_shown` | — | follow nudge shown, on its first render (fix of LB-APP-050; legacy sends it when the nudge is scheduled) | WP-30 |

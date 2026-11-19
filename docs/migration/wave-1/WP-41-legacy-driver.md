@@ -132,7 +132,7 @@ Translation rules for the meta answer:
 | ---------------- | ------------ | ---- |
 | `rates.usd_uzs` | `usd_uzs` | number; missing or ≤ 0 → contract error |
 | `map.tiles_url` | `tiles` | ignored: stays `null` until HOMI hosts tiles (`25` §3.8) |
-| `features` | `new_features` | array, default `[]` |
+| `features` | `new_features` | array, default `[]`; only the codes HOMI announces are kept, today `pets`. Legacy announces `cards` since release `index-BnFvC-Ft.js` (`08` API-001): it is dropped, because HOMI ships the card style without a «Новое» pill (DEC-57) |
 | `locales` | `locales` | codes mapped back (`uz_Latn → uz`); unknown codes dropped |
 | `cities[]` | `cities[]` | `code`, `name`; `center` `[lat, lon]` → object; `zoom` default 12; `is_region` = `zoom < 11`; `has_metro` = `metro === true`; `has_median` = `median !== false`; `districts`, `zones` default `[]` |
 | `cities` when legacy sends none | top-level `districts`, `zones` | one city `tashkent` built from them (legacy client rule, API-001) |

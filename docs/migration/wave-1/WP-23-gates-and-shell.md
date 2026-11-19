@@ -631,10 +631,13 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   (`[data-scroll-x]`) and the sheet body do.
 - Two stacked sheets keep `body.sheet-open` until both are closed. Unmounting during a drag removes listeners and
   decrements the class once.
-- A sub-page slides in, shows a header shadow when scrolled, closes by Back and by swipe back (a light impact on
-  the release that closes it). Swipe back is touch only, as legacy (DEC-44): on iOS and on the touch screens of the
-  desktop clients, never by a mouse or trackpad; it is off on Android (`tg.isAndroid()`, the platform check of
-  WP-21, TMA-041). The sheet drag takes pointer events, so a mouse may drag a sheet by its header.
+- A sub-page slides in, shows a header shadow when scrolled, closes by Back and by swipe back (a light impact on the
+  release that closes it). While it is open the page under it does not scroll: legacy sets `body.subpage-open`
+  (`overflow: hidden`) since release `index-BnFvC-Ft.js`, beside the `overscroll-behavior: contain` of the sub-page
+  (`03` SCR-033; *added by the intake of that release*, a parity item of `SubPageFrame` for a later package). Swipe back
+  is touch only, as legacy (DEC-44): on iOS and on the touch screens of the desktop clients, never by a mouse or
+  trackpad; it is off on Android (`tg.isAndroid()`, the platform check of WP-21, TMA-041). The sheet drag takes pointer
+  events, so a mouse may drag a sheet by its header.
 - Haptics: light on chips, switches and buttons, as passed in by the wrappers (TMA-025).
 
 ### Pull-to-refresh (SCR-010, BR-APP-058)

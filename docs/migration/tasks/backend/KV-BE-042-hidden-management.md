@@ -16,7 +16,7 @@ entry `number`, and clears both lists at once — owner-scoped, byte-compatible 
 ## Legacy reference
 
 - API-026 `GET /api/hidden`, API-027 `DELETE /api/hidden/:id`, API-028 `DELETE /api/hidden`
-  (`08-api-inventory.md:1060-1121`); client `$KVADRO_ROOT/demo/app/src/lib/api/user.js:5`, `:11-14`, `:17-20`;
+  (`08-api-inventory.md:1098-1159`); client `$KVADRO_ROOT/demo/app/src/lib/api/user.js:5`, `:11-14`, `:17-20`;
   `$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:26-37` (optimistic removal), `:45`, `:53`, `:62`, `:66`
   (both `.length` summed); `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:64`, `:135`; confirmation
   text «Снова показывать все скрытые объявления и заблокированных авторов?» (`ru.js:216`); mock

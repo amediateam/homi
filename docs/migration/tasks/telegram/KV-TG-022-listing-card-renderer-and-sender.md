@@ -5,7 +5,7 @@
 | Status | TODO |
 | Owner | Backend — Telegram bot (track: development) |
 | Complexity | L |
-| Feature IDs | F-BOT-011, F-OWNER-002 |
+| Feature IDs | F-BOT-011, F-OWNER-002, F-SETTINGS-007 |
 | Dependencies | KV-TG-010 (reply conventions, keyboards), KV-TG-011 (callback codec); listing details and display strings — F-LISTING-001 (API-008 domain service), formatter F-LOCALE-003 (CF-017); market comparison F-LISTING-004; signed listing photos F-MEDIA-001 (RES-001); public listing numbers CF-003; KV-DB-009 (`14` §8, `bot_listing_messages`); Q-BOT-002 |
 
 ## Goal
@@ -17,6 +17,8 @@ radar pushes, digests, takedown edits) uses these two classes.
 
 ## Legacy reference
 
+- Since Mini App release `index-BnFvC-Ft.js` the user picks the card style `classic` or `rich`, and the Mini App
+  asks for a sample card (`04` §3.10, BOT-085; built in WP-53 and WP-57, DEC-57).
 - Card: BOT-059, TXT-BOT-044 (`tb:619–644`), state machine `04` §3.10, element table `04` §3.10 "Rows" and "Keyboard".
 - Buttons: BTN-035 (`📱 Открыть в приложении`, web_app, primary), BTN-036 (`📍 На карте`, only with coordinates),
   BTN-037 (`🔗 Открыть оригинал`, url), BTN-038 (`📷 Ещё N фото`, only if the post has photos), BTN-039/BTN-040

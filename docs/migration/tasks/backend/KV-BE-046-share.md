@@ -16,7 +16,7 @@ until it expires, and any Bot API failure yields a non-2xx so the legacy client 
 
 ## Legacy reference
 
-- API-017 (`08-api-inventory.md:787-811`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:97-100`,
+- API-017 (`08-api-inventory.md:794-818`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:97-100`,
   `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-49` (fallback
   `https://t.me/<bot_username>?startapp=l_<id>` with «title · price · kind · district»), `:35`;
   `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:12-15` (only with `shareMessage`, Telegram ≥ 8.0);

@@ -26,6 +26,10 @@ In:
 - Use of the deferral that WP-46 built into its outbox job for pacing (listed in "Design").
 - Finding out that a delivered listing was withdrawn, and the edit of every delivered copy.
 - Service-news broadcasts with dry run, confirmation, pacing, resume and opt-out.
+- *Added by the intake of legacy release `index-BnFvC-Ft.js`:* the native body of `POST /settings/card-sample`
+  (API-036, BOT-085), which replaces its stub: the sample card of WP-53 in the user's saved `card_style`, sent through
+  `CardSender` and the pacer like any card; `sent: false` when the chat cannot be written or the pacer refuses. A
+  per-user limit follows Q-API-067. Pushes and digests use the recipient's `card_style` too.
 
 Out:
 

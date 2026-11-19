@@ -16,7 +16,7 @@ undo returns it — including listings hidden by a `rented` or `fraud` report.
 
 ## Legacy reference
 
-- API-012 and API-013 (`08-api-inventory.md:635-683`): bodiless `POST`/`DELETE`, response not read, recommended `204`;
+- API-012 and API-013 (`08-api-inventory.md:642-690`): bodiless `POST`/`DELETE`, response not read, recommended `204`;
   client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:47-50`, `:56-59`;
   `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:35-51` (local hide + «Отменить»), `:61-62` (undo after a
   `fraud` report); `$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:53` (return from «Скрытое»);

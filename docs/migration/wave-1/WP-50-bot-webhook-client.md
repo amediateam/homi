@@ -50,7 +50,7 @@ and `FakeBotApi`. The package sends nothing to users: processing ends in a no-op
 | Decision | Consequence here |
 | -------- | ---------------- |
 | A new permanent bot per environment (DEC-40) | The ledger holds rows of HOMI's own three bots only, keyed by `bot_id`. Nothing in this package mentions a second receiver, a token hand-over or a backlog of another bot |
-| Full parity, open access (DEC-43) | The client covers every Bot API method the 84 handlers need (table in "Design"). The webhook takes real traffic from the first day, so the limiter, the fast acknowledgement and the health check are not optional |
+| Full parity, open access (DEC-43) | The client covers every Bot API method the 85 handlers need (table in "Design"; BOT-085 since the intake of legacy release `index-BnFvC-Ft.js`, its `rich` card per Q-BOT-046). The webhook takes real traffic from the first day, so the limiter, the fast acknowledgement and the health check are not optional |
 | One PR per package, every merge on staging and production, checks inside Telegram there, no tunnel tool (DEC-45) | Locally and in CI the bot is tested against `FakeBotApi` only. `telegram:webhook` exists for a developer's optional own dev bot and refuses the server environments. The pass inside Telegram is run with the production track |
 | Defects are fixed, behaviour changes stay off (DEC-36) | SEC-030 and SEC-031 are defects of the existing HOMI stubs and are fixed here. The package has no `DEV` item and no flag in `config/bot.php` |
 | Dependencies (DEC-49, `25` §10: "nothing new is known to be needed") | No Telegram SDK. The client is built on Laravel's HTTP client. A library would need approval and is not proposed |

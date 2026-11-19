@@ -117,12 +117,14 @@ the API, set `SOURCES_NATIVE_STUBS=true` in its environment in this PR.
 
 Table `user_settings`: `user_id` (primary key, foreign key, cascade), `locale` (string 2), `locale_chosen_at`,
 `currency` (string 3), `theme` (string 8), `city` (string 64, nullable), `city_chosen_at`, `quiet_start`,
-`quiet_end` (`time`, both null = off), `digest_hours` (`json`, sorted unique integers), timestamps.
+`quiet_end` (`time`, both null = off), `digest_hours` (`json`, sorted unique integers), `card_style` (string 8, not
+null, default `classic`; `classic` or `rich`, since the intake of legacy release `index-BnFvC-Ft.js`), timestamps.
 
 - Defaults on creation (`config/settings.php`, `defaults`): locale `uz` when `language_code` starts with `uz`, `en` when it
   starts with `en`, else `ru` — one resolver for the Mini App and the bot (BR-APP-050 names only the `uz` and `ru`
   branches for the client; the bot of `04` also answers English users in English), not marked chosen; currency `USD`; theme `auto`; city `null`; quiet hours 23–8; digest hours
-  `[9]`. The last two are a specification choice: the legacy default is unknown.
+  `[9]`; card style `classic`. The last three are a specification choice: the legacy default is unknown (for the card
+  style Q-API-067).
 - `App\Services\Identity\SettingsService`: `get(User): UserSettingsData`; `patch(User, array $changes):
   UserSettingsData` updates only the sent keys in one `UPDATE` per key set, sets `locale_chosen_at` or
   `city_chosen_at` when `locale` or `city` is stored, and dispatches `App\Events\Identity\SettingsChanged` (user id,
@@ -131,6 +133,8 @@ Table `user_settings`: `user_id` (primary key, foreign key, cascade), `locale` (
   `DigestSchedule` (`fromHours(array)`, `nextSlotAtOrAfter()`), both in Asia/Tashkent wall-clock through the zone
   name, never a fixed offset.
 - `SourceContext::fromRequest()` now takes the currency from the user's settings.
+- `PATCH /settings` stores `card_style`; `POST /settings/card-sample` (intake of `index-BnFvC-Ft.js`) is not moved
+  here: it stays on its stub until the bot can send the card (WP-53 builds it, WP-57 sends it and replaces the body).
 
 ### Access gate
 
@@ -175,7 +179,7 @@ routes; it never contains a Telegram id.
 | `v1-share` | 20 per hour | `POST …/share` |
 | `v1-lists` | 60 per minute | favourites, hidden, blocked authors, `DELETE /history`, surveys |
 | `v1-reports` | 30 per day | `POST …/reports` |
-| `v1-radars` | 30 per minute | radar writes and `PATCH /settings` |
+| `v1-radars` | 30 per minute | radar writes, `PATCH /settings` and `POST /settings/card-sample` (a tighter per-user limit of the sample waits for Q-API-067) |
 | `v1-events` | 60 per minute; the excess is answered `204` and dropped | `POST /events` |
 
 Notes: `RateLimiter::for('api')` exists today, but `bootstrap/app.php` never calls `throttleApi()`, so check with

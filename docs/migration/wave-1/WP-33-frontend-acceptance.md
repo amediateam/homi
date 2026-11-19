@@ -12,7 +12,7 @@
 ## Goal
 
 The whole Mini App, still answering from stubs, is proven before the API work starts: one Playwright suite runs
-every scenario in cookie mode and in header mode; the consolidated checklist of all 47 screens is ticked and
+every scenario in cookie mode and in header mode; the consolidated checklist of all 48 screens is ticked and
 signed; the app has been used inside Telegram on iOS, Android, Desktop and Web on staging and on production; a
 performance budget and a bundle check guard every later merge. Every screen, rule, defect and Telegram point of
 the audit is traced to the package that owns it.
@@ -44,8 +44,8 @@ the audit is traced to the package that owns it.
 | Proof of parity | DEC-46, `25` §9, RK-31 | Acceptance is the written checklist per screen, ticked in the PR with staging screenshots and signed by the reviewer. A difference is accepted only as a defect fix or a visual detail |
 | Process | DEC-45 | Checks inside Telegram happen on staging and then on production after the deploy; there is no tunnel to a developer machine |
 | Session modes | DEC-44, `25` §3.4, RK-30 | Every end-to-end scenario runs in cookie mode and in header mode; the pass on Telegram Web records which mode each browser ended in |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 37 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54, and LB-APP-048 … LB-APP-050 of the pinned release; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main` |
-| Decided behaviour changes | DEC-51 … DEC-54 | Four differences from legacy are behaviour of the build, not flags, and are checked as such: radars are switched off on staging and production until WP-57 and the app says "soon" and offers no radar anywhere — no follow nudge, no return banner (SCR-046), no radar card in the search list (SCR-047); the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 37 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54, and LB-APP-048 … LB-APP-050 of the pinned release; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main`. LB-APP-051 and LB-APP-052 of legacy release `index-BnFvC-Ft.js` are fixed too; LB-APP-053 is kept as legacy until it is decided |
+| Decided behaviour changes | DEC-51 … DEC-54, DEC-57 | Five differences from legacy are behaviour of the build, not flags, and are checked as such: the card-style row has no «Новое» pill (DEC-57); radars are switched off on staging and production until WP-57 and the app says "soon" and offers no radar anywhere — no follow nudge, no return banner (SCR-046), no radar card in the search list (SCR-047); the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
 | No legacy access | DEC-33 | The suite, CI and the pass never reach legacy; `@homi/testing` blocks external hosts |
 | Stubs and the marker | `25` §4.4, RK-27 | Stub answers are deterministic and mutations do not persist: assertions target what the interface does, never stored state. The demo-data marker is asserted on every stub-backed screen |
 | Scope of the wave | DEC-43 | The access gate is open, so the no-access screen is accepted on stubs only |
@@ -333,7 +333,7 @@ Nothing new is built: the behaviour is that of the owning specifications. The ta
 audit to those owners; each identifier appears once. "Proved by" names the lowest layer that proves it; the
 screen table under "Acceptance checklist" is the user-visible proof.
 
-### Rules (73)
+### Rules (74)
 
 | # | Rules | Package | Proved by |
 | - | ----- | ------- | --------- |
@@ -349,9 +349,9 @@ screen table under "Acceptance checklist" is the user-visible proof.
 | 10 | BR-APP-061 | WP-28 | `map-lasso.spec.ts`; polygon unit tests |
 | 11 | BR-APP-067 | WP-29 | `saved.spec.ts` |
 | 12 | BR-APP-041 … BR-APP-043, BR-APP-046 … BR-APP-049, BR-APP-063, BR-APP-070 … BR-APP-073 | WP-30 | the six radar and nudge specs, journey 3 |
-| 13 | BR-APP-045, BR-APP-051 … BR-APP-053 | WP-31 | `settings.spec.ts`, `home-nudge.spec.ts`, journey 5 |
+| 13 | BR-APP-045, BR-APP-051 … BR-APP-053, BR-APP-074 | WP-31 | `settings.spec.ts`, `settings-cards.spec.ts`, `home-nudge.spec.ts`, journey 5 |
 
-### Defects (50)
+### Defects (53)
 
 "Fixed" means fixed without a switch and checked as such. "Flagged" means both branches exist, the flag is off,
 the legacy branch is what the checklist sees and the other branch is proven by a unit or component test.
@@ -408,9 +408,13 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 48 | LB-APP-048 | return banner crashes on an answer without `count` | WP-30 | fixed (and never sent by the contract, WP-12) |
 | 49 | LB-APP-049 | return banner and home offer on screen together | WP-30 | fixed (one slot with a priority; the home half is WP-31's) |
 | 50 | LB-APP-050 | nudges counted as shown before they render | WP-30 | fixed |
+| 51 | LB-APP-051 | unknown card style crashes the settings | WP-31 | fixed (and refused by the contract, WP-11) |
+| 52 | LB-APP-052 | sample button hangs on an answer without JSON | WP-31 | fixed (and never sent by the contract, WP-11) |
+| 53 | LB-APP-053 | sample result outlives the sub-page | WP-31 | legacy behaviour kept, `decision` open |
 
-Totals: 37 fixed, 13 flagged. Four more flags exist without a client defect behind them, all off (paged saved
-lists, the paging part of DEV-003, are not among them: DEC-53 made them plain behaviour):
+Totals: 39 fixed, 13 flagged, 1 kept as legacy (LB-APP-053). Four more flags exist without a client defect behind
+them, all off (paged saved lists, the paging part of DEV-003, are not among them: DEC-53 made them plain
+behaviour):
 
 | # | Flag | Deviation | Package |
 | - | ---- | --------- | ------- |
@@ -462,7 +466,7 @@ Run rows 1–47 on staging in ru, uz and en and in light and dark; tick each in 
 named here are the minimum; the full list for a screen is the checklist of its owning specification, which is
 ticked there and re-read here. Texts must be the legacy ones with HOMI in place of the legacy brand.
 
-### Screens (47)
+### Screens (48)
 
 | # | Screen | Name | Package | Address or trigger | States to tick |
 | - | ------ | ---- | ------- | ------------------ | -------------- |
@@ -497,7 +501,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 29 | SCR-029 | Radar editor | WP-30 | `/radars/<id>/edit` | title; no «Опубликовано»; «Сейчас подходит: N»; each save toast; «Расширить» |
 | 30 | SCR-030 | New radar | WP-30 | `/radars/new` | starts from the current search; each toast including duplicate, re-enabled and limit |
 | 31 | SCR-031 | «Нашли жильё?» | WP-30 | `/radars/found` | ask; where; congratulations with share; the closing toasts |
-| 32 | SCR-032 | Settings | WP-31 | `/settings` | spinner; error; the five groups and when each row shows; about block |
+| 32 | SCR-032 | Settings | WP-31 | `/settings` | spinner; error; the six groups and when each row shows; about block |
 | 33 | SCR-033 | Theme | WP-31 | `/settings/theme` | three options; applied at once; rollback on failure |
 | 34 | SCR-034 | Graphics | WP-31 | `/settings/graphics` | three options with the auto label; hint; kept on the device |
 | 35 | SCR-035 | Language | WP-31 | `/settings/language` | options and hint; the address segment changes without a reload |
@@ -513,10 +517,11 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 45 | SCR-045 | Crash screen | WP-23 | `error.tsx`, `global-error.tsx` | three texts per locale; «Обновить» reloads; one report |
 | 46 | SCR-046 | Return banner | WP-30 | card on `/` after a visit ≥ 6 h ago | «С вашего прошлого захода — N новых» only for N > 0; «Включить» or «Настроить» by the filters; 15 s; ×; once per filters in 2 days; never with another nudge; absent while radars are off |
 | 47 | SCR-047 | Radar card in the search list | WP-30 | inside the list on `/` | after the 8th card or after a short complete list without the note; rent and sale titles; «Включить радар» or «Настроить радар»; × for 7 days; absent with a radar for the search and while radars are off |
+| 48 | SCR-048 | Card style «Вид карточек» | WP-31 | `/settings/cards` | both mocks, the current one checked; a pick saves and the settings row follows; «Прислать пример в чат»: spinner, the sent line with the minimise hint, or the failure line (`card_sample_unsent`); no «Новое» pill (DEC-57) |
 
 ### Statements
 
-- [ ] Rows 1–47 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
+- [ ] Rows 1–48 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
       Rows 26 … 31 carry the staging screenshot of the "soon" state and local screenshots of the radar screens;
       rows 40, 46 and 47 a staging screenshot of the feed without them and local screenshots of each; all of them
       are ticked inside Telegram in WP-57 (DEC-51).
