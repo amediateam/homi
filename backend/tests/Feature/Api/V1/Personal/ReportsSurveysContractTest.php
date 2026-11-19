@@ -7,10 +7,15 @@ beforeEach(function (): void {
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 
-it('answers every reason with hidden, never 204', function (string $reason, bool $hidden): void {
+it('answers every reason with hidden and agent_marked, never 204', function (string $reason, bool $hidden): void {
     $this->postJson('/api/v1/listings/100012/reports', ['reason' => $reason])->assertOk()
-        ->assertExactJson(['success' => true, 'data' => ['hidden' => $hidden], 'meta' => ['source' => 'stub']]);
+        ->assertExactJson(['success' => true, 'data' => ['hidden' => $hidden, 'agent_marked' => false], 'meta' => ['source' => 'stub']]);
 })->with([['rented', true], ['agent', false], ['wrong_data', false], ['fraud', true]]);
+
+it('marks the author in the agent_marked scenario, and only for an agent report', function (string $reason, bool $marked): void {
+    $this->postJson('/api/v1/listings/100012/reports', ['reason' => $reason], ['X-Stub-Scenario' => 'agent_marked'])->assertOk()
+        ->assertJsonPath('data.agent_marked', $marked);
+})->with([['agent', true], ['rented', false], ['wrong_data', false], ['fraud', false]]);
 
 it('accepts wrong_data with each detail, without one, and with a null detail', function (?string $detail): void {
     $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'wrong_data', 'detail' => $detail])->assertOk()->assertJsonPath('data.hidden', false);
@@ -30,6 +35,35 @@ it('refuses a report it cannot read, naming the field', function (array $body, s
 it('reports only listings that exist', function (): void {
     $this->postJson('/api/v1/listings/999404/reports', ['reason' => 'rented'])->assertStatus(404)->assertJsonPath('code', 'not_found');
     $this->postJson('/api/v1/listings/0/reports', ['reason' => 'rented'])->assertStatus(404);
+});
+
+it('withdraws the rented report with 204 and no body, also when there is none left', function (): void {
+    $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'rented'])->assertOk();
+
+    $this->deleteJson('/api/v1/listings/100012/reports')->assertNoContent();
+    $this->deleteJson('/api/v1/listings/100012/reports')->assertNoContent();
+});
+
+it('withdraws a report only from a listing that exists', function (string $number, int $status, string $code): void {
+    $this->deleteJson("/api/v1/listings/{$number}/reports")->assertStatus($status)->assertJsonPath('code', $code);
+})->with([
+    'unknown listing' => ['999404', 404, 'not_found'],
+    'number 0' => ['0', 404, 'not_found'],
+    'malformed number' => ['abc', 404, 'not_found'],
+    'unavailable source' => ['999503', 503, 'source_unavailable'],
+]);
+
+it('answers 401 unauthenticated to a withdrawal without a token', function (): void {
+    $this->app['auth']->forgetGuards();
+
+    $this->withHeader('Authorization', '')->deleteJson('/api/v1/listings/100012/reports')
+        ->assertUnauthorized()->assertJsonPath('code', 'unauthenticated');
+});
+
+it('answers 403 forbidden to a withdrawal with a token that lacks app:write', function (): void {
+    Sanctum::actingAs(User::factory()->create(), ['app:read']);
+
+    $this->deleteJson('/api/v1/listings/100012/reports')->assertForbidden()->assertJsonPath('code', 'forbidden');
 });
 
 it('records a found-survey answer with its trigger', function (string $answer, string $trigger): void {

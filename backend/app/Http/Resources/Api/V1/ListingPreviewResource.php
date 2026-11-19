@@ -51,6 +51,7 @@ class ListingPreviewResource extends JsonResource
             ],
             'rooms' => $listing->rooms,
             'area_total' => $listing->areaTotal,
+            /** `0` is the ground-level (semi-basement) floor and a negative number a basement; only `null` means unknown. */
             'floor' => $listing->floor,
             'floors_total' => $listing->floorsTotal,
             'district' => $listing->districtName === null ? null : ['code' => $listing->districtCode, 'name' => (string) $listing->districtName],

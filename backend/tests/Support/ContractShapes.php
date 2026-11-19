@@ -127,10 +127,11 @@ final class ContractShapes
         'options' => ['*' => ['code' => 'string', 'label' => 'string', 'rate' => 'string', 'count' => 'int', 'filters' => self::FILTERS]],
     ];
 
-    /** `data` of `GET /listings/map` (WP-12). */
+    /** `data` of `GET /listings/map` (WP-12); `with_point` since legacy release `index-CIa0Ldj2.js`. */
     public const array MAP = [
         'points' => ['*' => ['number' => 'int', 'lat' => 'float|int', 'lon' => 'float|int', 'label' => 'string', 'tone' => 'string', 'priced' => 'bool', 'usd' => 'int']],
         'total' => 'int',
+        'with_point' => 'int',
     ];
 
     /** `data` of `POST /listings/{number}/contact` (WP-12), the only answer with the author's number. */

@@ -12,11 +12,11 @@ const { reportListing } = await import("@/lib/actions/reports");
 type Sent = { url: string; method: string; headers: Record<string, string>; body: unknown };
 let sent: Sent[] = [];
 /** The `data` of the next answer; `undefined` answers an empty 200. */
-let answer: unknown = { hidden: false };
+let answer: unknown = { hidden: false, agent_marked: false };
 
 beforeEach(() => {
   sent = [];
-  answer = { hidden: false };
+  answer = { hidden: false, agent_marked: false };
   jar.clear();
   jar.set("homi_session", "cookie-token");
   vi.stubEnv("API_URL", "https://api.test/api/v1");
@@ -38,7 +38,7 @@ describe("reportListing (WP-26, BR-API-101)", () => {
   it("POST /listings/{number}/reports with { reason }", async () => {
     await expect(reportListing({ number: 100001, reason: "rented" }, undefined, "uz")).resolves.toEqual({
       ok: true,
-      data: { hidden: false },
+      data: { hidden: false, agent_marked: false },
       meta: { source: "stub" },
     });
 
@@ -65,12 +65,21 @@ describe("reportListing (WP-26, BR-API-101)", () => {
     await expect(reportListing({ number: 100001, reason: "fraud" })).resolves.toMatchObject({ ok: true, data: { hidden: true } });
   });
 
-  it("an empty success counts as not hidden", async () => {
-    for (const empty of [undefined, null, {}, { hidden: "yes" }]) {
+  it("passes on the agent_marked flag of an agent report", async () => {
+    answer = { hidden: false, agent_marked: true };
+
+    await expect(reportListing({ number: 100001, reason: "agent" })).resolves.toMatchObject({
+      ok: true,
+      data: { hidden: false, agent_marked: true },
+    });
+  });
+
+  it("an empty success counts as not hidden and not marked", async () => {
+    for (const empty of [undefined, null, {}, { hidden: "yes", agent_marked: 1 }]) {
       answer = empty;
       await expect(reportListing({ number: 100001, reason: "rented" }), JSON.stringify(empty)).resolves.toMatchObject({
         ok: true,
-        data: { hidden: false },
+        data: { hidden: false, agent_marked: false },
       });
     }
   });

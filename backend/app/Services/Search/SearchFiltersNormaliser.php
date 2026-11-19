@@ -24,8 +24,9 @@ use Illuminate\Support\Facades\Config;
  *    data (`source.reference`); numbers, lists and the polygon are bounded by `config('filters.limits')`;
  * 2. combinations that cannot exist are normalised (DEV-004 off): types and renovations of another deal and zones of
  *    a city without zones are dropped (no type left → `apartment`); keys of another deal are stripped (`tenant`,
- *    `pets`, `pets_only` exist only for long rent, `area_*` and `market` only for sale, `appliances` only for rent,
- *    BR-API-029); one geography mode is kept (polygon, else zones, else districts); `pets_only` wins over `pets`;
+ *    `pets`, `pets_only` exist only for long rent, `market` only for sale, `appliances` only for rent, BR-API-029;
+ *    `area_*` applies to every deal since legacy release `index-CIa0Ldj2.js`); one geography mode is kept (polygon,
+ *    else zones, else districts); `pets_only` wins over `pets`;
  * 3. `min > max` is swapped (DEV-025 off).
  *
  * Accepts query strings (`'true'`, `'3'`, `lat,lon;…`) as well as JSON values (`true`, `3`, `[[lat, lon], …]`).
@@ -100,8 +101,8 @@ final class SearchFiltersNormaliser
             'renovation' => $renovation,
             'floor_not_first' => $this->flag($raw, 'floor_not_first'),
             'floor_not_last' => $this->flag($raw, 'floor_not_last'),
-            'area_min' => $this->onlyFor($sale, 'area_min', $areaMin),
-            'area_max' => $this->onlyFor($sale, 'area_max', $areaMax),
+            'area_min' => $areaMin,
+            'area_max' => $areaMax,
             'market' => $this->onlyFor($sale, 'market', $market)?->value,
             'appliances' => $this->onlyFor(! $sale, 'appliances', $appliances === [] ? null : $appliances) ?? [],
             'posted_days' => $forRadar && Config::boolean('filters.radar_without_posted_days') ? null : $postedDays,

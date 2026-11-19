@@ -271,7 +271,9 @@ export interface paths {
         };
         /**
          * `GET /listings/{number}`: the full card, or the preview with `preview=1`. A merged duplicate answers with the
-         *     surviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number
+         *     surviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number.
+         *     The full card may answer `429 rate_limited` with `reason: "daily"` and `Retry-After` when the caller reached
+         *     the daily limit of opened listings. Scenario `daily_limit`
          */
         get: operations["v1.listings.show"];
         put?: never;
@@ -569,8 +571,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * `POST /listings/{number}/reports`: `hidden` says whether the listing is now hidden for the reporter;
+         *     `agent_marked` is `true` only for an `agent` report whose author is marked as a realtor, by this report or
+         *     already. Scenario `agent_marked`
+         */
         post: operations["v1.listings.reports.store"];
-        delete?: never;
+        /**
+         * `DELETE /listings/{number}/reports`: withdraws the caller's `rented` report on the listing and nothing else.
+         *     Idempotent: `204` also when there is nothing to withdraw; the listing must exist (`404`)
+         */
+        delete: operations["v1.listings.reports.destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -842,6 +853,7 @@ export interface components {
             } | null;
             rooms: number | null;
             area_total: number | null;
+            /** @description `0` is the ground-level (semi-basement) floor and a negative number a basement; only `null` means unknown. */
             floor: number | null;
             floors_total: number | null;
             district: {
@@ -968,6 +980,7 @@ export interface components {
             } | null;
             rooms: number | null;
             area_total: number | null;
+            /** @description `0` is the ground-level (semi-basement) floor and a negative number a basement; only `null` means unknown. */
             floor: number | null;
             floors_total: number | null;
             district: {
@@ -1043,6 +1056,7 @@ export interface components {
         MapPointsResource: {
             points: components["schemas"]["MapPointResource"][];
             total: number;
+            with_point: number;
         };
         /**
          * Market
@@ -1254,6 +1268,7 @@ export interface components {
         /** ReportResultResource */
         ReportResultResource: {
             hidden: boolean;
+            agent_marked: boolean;
         };
         /** SessionResource */
         SessionResource: {
@@ -3170,6 +3185,36 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.listings.reports.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
             /** @description Too many requests */
             429: {
                 headers: {

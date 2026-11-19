@@ -39,4 +39,10 @@ class StoreReportRequest extends FormRequest
     {
         return in_array($this->string('reason')->toString(), self::HIDING, true);
     }
+
+    /** Whether the report says that the author is a realtor. */
+    public function namesAgent(): bool
+    {
+        return $this->string('reason')->toString() === 'agent';
+    }
 }

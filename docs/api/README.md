@@ -33,7 +33,7 @@ only on `422` and maps each field to its messages.
 | 401 | `unauthenticated` | No valid bearer token (ADR-0003) |
 | 401 | `invalid_init_data` | Sign-in: the Telegram launch data is malformed or its signature is wrong |
 | 401 | `auth_expired` | Sign-in: the launch data is too old; the client asks to reopen the app |
-| 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked` or `join` (show an unknown or missing reason as `private`) |
+| 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked`, `join` or `paused` (show an unknown or missing reason as `private`) |
 | 403 | `forbidden` | Not allowed, or the token lacks the ability |
 | 403 | `radars_disabled` | Radars are switched off (`radars_enabled: false` of `GET /reference`): every radar create or change; `GET /radars` answers `[]` and `DELETE` works |
 | 404 | `not_found` | Unknown route, or a resource or listing that does not exist |
@@ -43,7 +43,7 @@ only on `422` and maps each field to its messages.
 | 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
 | 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
-| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds |
+| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is the request limiter |
 | 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
 | 503 | `source_unavailable` | The data source of the method cannot answer; show the "could not load" state |
 | 503 | `translation_unavailable` | `POST /listings/{number}/translation`: the translation service cannot answer |
@@ -98,9 +98,10 @@ Each method lists its scenarios in its specification. Every stub method knows th
 | `unauthenticated` | `401 unauthenticated` |
 | `forbidden` | `403 forbidden` |
 
-Every method that needs a session also knows `access_private`, `access_invite`, `access_full`, `access_blocked` and
-`access_join`, which answer `403 access_denied` with that `reason`. Sign-in knows `auth_expired` and
-`invalid_init_data` as well.
+Every method that needs a session also knows `access_private`, `access_invite`, `access_full`, `access_blocked`,
+`access_join` and `access_paused`, which answer `403 access_denied` with that `reason`. `paused` says that the whole
+service is on pause (legacy release `index-CIa0Ldj2.js`); only the scenario answers it until the server switch
+exists. Sign-in knows `auth_expired` and `invalid_init_data` as well.
 
 Outside production the Mini App forwards the cookie `homi_stub_scenario` as this header (WP-22). The fixtures live in
 `backend/resources/fixtures/v1/<area>/<name>.json`, in the shape of the data objects and sanitised: no real phones,
@@ -134,7 +135,7 @@ The feed, count, new-since, flow and map take the same filter parameters (WP-12)
 | `zones[]` | `center`, `near_center`; dropped for a city without zones |
 | `rooms_min`, `rooms_max` | 0 … 10; `4` or more as the maximum means "4 or more" |
 | `price_min`, `price_max` | whole USD, ≥ 1 |
-| `area_min`, `area_max` | 1 … 10 000; sale only |
+| `area_min`, `area_max` | 1 … 10 000; every deal (sale only before legacy release `index-CIa0Ldj2.js`) |
 | `posted_days` | `1`, `3`, `7` |
 | `furnished` | absent, `true` or `false` |
 | `renovation[]` | renovation codes of `GET /reference`; codes of another deal are dropped |
@@ -156,21 +157,36 @@ No card answer, full or `preview=1`, carries the author's number: numbers in lis
 `phone`, `phone_display` and `call_url` (DEC-52). A merged duplicate answers with another `number`; the client
 follows the answer.
 
+`floor` of a listing is a whole number or `null`: `0` is the ground-level (semi-basement) floor, a negative number
+is a basement, and only `null` means that the floor is unknown. A client must not read `0` as "no floor".
+
+`GET /listings/map` answers `points`, `total` and `with_point`. `total` counts the listings of the filters, with or
+without coordinates, and `with_point` those with coordinates; both are always present, and
+`count(points) ≤ with_point ≤ total`. When the answer holds fewer points than `with_point`, the source cut it by a
+limit.
+
+The full card of `GET /listings/{number}` may answer `429 rate_limited` with `reason: "daily"` and `Retry-After`
+when the caller reached the daily limit of opened listings. The per-user limiter is not built yet, so today only the
+stub scenario `daily_limit` answers it; the `preview=1` form answers as usual in that scenario.
+
 Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `new_none`, `new_one` (new-since);
-`contact_unavailable`; `translation_unavailable`; `share_failed`. Reserved numbers: `999404` answers `404`, `999503`
+`map_cut` (map: the first half of the points, with `with_point` and `total` unchanged); `daily_limit` (the full
+card: `429 rate_limited`, `reason: "daily"`, `Retry-After: 3600`); `contact_unavailable`; `translation_unavailable`;
+`share_failed`. The stub applies the area filter to every deal. Reserved numbers: `999404` answers `404`, `999503`
 answers `503`, `100016` answers with `100001`, and `100015` is withdrawn. `100018` … `100021` carry the
 listing-screen variants of WP-26, in the Tashkent region outside the default feed: `100018` a chat link without a
 number (one price event, listed today in one channel, no views, an offer link), `100019` a paid number (three price events, the `near`
 comparison), `100020` no contact with the post kept (the `city` comparison), `100021` a video of a deleted post whose
-text holds the author's number and a second one (an author of 24 listings). Photo addresses resolve after
-`php artisan sources:publish-stub-media`.
+text holds the author's number and a second one (an author of 24 listings). `100022` and `100023`, in the same
+set, carry the floor variants: `100022` is on the ground-level floor (`floor: 0`) and `100023` in a basement
+(`floor: -1`). Photo addresses resolve after `php artisan sources:publish-stub-media`.
 
 ## Methods (Wave 1)
 
-The whole `/api/v1` surface of Wave 1 (`25` §4.2). "Public" methods need no token; the others need a bearer token
-with `app:read` for reads and `app:write` for writes. The driver is the Wave 1 target; until the legacy and native
-packages land every method answers from stubs (`meta.source = stub`), and `php artisan sources:list` shows the current
-driver of each source method.
+The whole `/api/v1` surface of Wave 1 (`25` §4.2): 41 pairs of a method and a path. "Public" methods need no token;
+the others need a bearer token with `app:read` for reads and `app:write` for writes. The driver is the Wave 1 target;
+until the legacy and native packages land every method answers from stubs (`meta.source = stub`), and
+`php artisan sources:list` shows the current driver of each source method.
 
 | Method | Route name | Access | Wave 1 driver |
 | ------ | ---------- | ------ | ------------- |
@@ -193,7 +209,7 @@ driver of each source method.
 | `PUT /hidden/listings/{number}`, `DELETE /hidden/listings/{number}` | `api.v1.hidden.listings.update`, `.destroy` | `app:write` | native |
 | `PUT /listings/{number}/blocked-author`, `DELETE /listings/{number}/blocked-author` | `api.v1.listings.blocked-author.update`, `.destroy` | `app:write` | native |
 | `GET /hidden`, `DELETE /hidden/authors/{id}`, `DELETE /hidden` | `api.v1.hidden.index`, `.authors.destroy`, `.destroy` | `app:read`, `app:write` | native |
-| `POST /listings/{number}/reports` | `api.v1.listings.reports.store` | `app:write` | native |
+| `POST /listings/{number}/reports`, `DELETE /listings/{number}/reports` | `api.v1.listings.reports.store`, `.destroy` | `app:write` | native |
 | `POST /surveys/found`, `POST /surveys/found/where` | `api.v1.surveys.found.store`, `.where` | `app:write` | native |
 | `GET /radars` | `api.v1.radars.index` | `app:read` | native |
 | `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `POST /radars/{id}/relax` | `api.v1.radars.store`, `.update`, `.patch`, `.relax` | `app:write`, behind the radar switch | native |
@@ -204,8 +220,14 @@ driver of each source method.
 `{number}` is a listing number (a positive integer); `{id}` is a ULID. A foreign id answers like an unknown one,
 `404 not_found`. Stub scenarios of the personal and radar methods: `empty` (favourites, history, hidden, radars);
 `no_chat`, `radar_limit`, `radar_duplicate` (radar writes); `existing`, `starter`, `few` (radar create); `ask_found`
-(radar pause and delete). Settings: `card_rich` (`GET` and `PATCH /settings` with `card_style: "rich"`) and
-`card_sample_unsent` (`POST /settings/card-sample` answers `sent: false`).
+(radar pause and delete); `agent_marked` (report). Settings: `card_rich` (`GET` and `PATCH /settings` with
+`card_style: "rich"`) and `card_sample_unsent` (`POST /settings/card-sample` answers `sent: false`).
+
+`POST /listings/{number}/reports` answers `hidden` and `agent_marked`, both always present. `hidden` is `true` for
+the reasons `rented` and `fraud`. `agent_marked` is `true` only when the reason is `agent` and the author is marked
+as a realtor, by this report or already; the stub answers `false`, and `true` for an `agent` report in the scenario
+`agent_marked`. `DELETE /listings/{number}/reports` withdraws the caller's `rented` report on the listing and
+nothing else. It answers `204`, also when there is nothing to withdraw, and `404 not_found` for an unknown listing.
 
 ## Keeping the contract current
 

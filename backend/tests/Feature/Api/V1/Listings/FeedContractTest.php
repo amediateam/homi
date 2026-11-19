@@ -50,6 +50,7 @@ it('follows the filters', function (string $query, Closure $check): void {
 })->with([
     'sale' => ['deal=sale&types[]=apartment&types[]=commercial', fn (array $item): bool => $item['deal'] === 'sale' && in_array($item['type'], ['apartment', 'commercial'], true)],
     'price' => ['deal=rent_long&price_max=400', fn (array $item): bool => $item['price']['usd'] <= 400],
+    'area of a rent' => ['deal=rent_long&area_min=50&area_max=60', fn (array $item): bool => $item['area_total'] >= 50 && $item['area_total'] <= 60],
     'district' => ['deal=rent_long&districts[]=chilonzor', fn (array $item): bool => $item['district']['code'] === 'chilonzor'],
     'owners' => ['deal=rent_long&owner=owners', fn (array $item): bool => $item['is_owner'] === true],
     'rooms 3 or more' => ['deal=rent_long&rooms_min=3&rooms_max=4', fn (array $item): bool => $item['rooms'] >= 3],

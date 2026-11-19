@@ -45,6 +45,25 @@ it('puts every pin of the filters on the map, all of them listings of the feed',
         ->and(count($map->json('data.points')))->toBeLessThan($map->json('data.total'));
 });
 
+it('counts the listings with coordinates in with_point, which an uncut answer reaches', function (): void {
+    $map = $this->getJson('/api/v1/listings/map?city=tashkent&deal=rent_daily&types[]=apartment&types[]=room')->assertOk()->json('data');
+
+    expect($map['with_point'])->toBe(1)
+        ->and($map['points'])->toHaveCount(1)
+        ->and($map['total'])->toBe(2);
+});
+
+it('answers fewer points than with_point in the map_cut scenario, with the same counts', function (): void {
+    $whole = $this->getJson('/api/v1/listings/map?city=tashkent&deal=rent_long')->assertOk()->json('data');
+    $cut = $this->getJson('/api/v1/listings/map?city=tashkent&deal=rent_long', ['X-Stub-Scenario' => 'map_cut'])->assertOk()->json('data');
+
+    expect($cut['with_point'])->toBe($whole['with_point'])
+        ->and($cut['total'])->toBe($whole['total'])
+        ->and($cut['points'])->not->toBeEmpty()
+        ->and(count($cut['points']))->toBeLessThan($cut['with_point'])
+        ->and(array_diff(array_column($cut['points'], 'number'), array_column($whole['points'], 'number')))->toBe([]);
+});
+
 it('answers 503 in the source_unavailable scenario', function (string $path): void {
     $this->getJson("/api/v1/listings/{$path}?city=tashkent&deal=rent_long", ['X-Stub-Scenario' => 'source_unavailable'])
         ->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
