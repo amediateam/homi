@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-17 (WP-26 merged as #81, WAITING; development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); KI-29 fixed by #70 (`main` = `d2a4722`); WP-24 merged (#71; `main` = `780aea9`), WAITING for the production track's photo check and deploy and the checks inside Telegram on staging, its follow-up docs PR #76 merged (`main` = `157790d`); Grok's fixes merged: #72 (KI-38), #73 (KI-28 narrowed), #74 (KI-39), #75 (KI-40) (`main` = `11c75b2`), their docs PR #77 merged (`main` = `a4c388c`); session memory #78 merged (`main` = `4f91f8a`); WP-25 merged (#79; `main` = `f2f58cc`), WAITING for the deploy and the checks inside Telegram on staging; the Infrastructure section was last updated by the production track on 2026-11-09)
+updated: 2026-11-19 (the intake of legacy release `index-BnFvC-Ft`, #88; WP-27 … WP-30 merged as #83 … #86, WAITING; development track: WP-00, WP-01, WP-02 merged into main, all three WAITING; WP-03 merged (#39, #41), WAITING for the deploy; WP-10 merged (#42, #43, #44), WAITING for the production track; WP-11 merged (#45, #46, #47), WAITING for the production track; WP-12 merged (#48, #49), WAITING for the production track; WP-13 merged (#50; `main` = `6c48ce6`), WAITING for the production track; WP-20 merged (#52, #53), WAITING for the deploy; WP-21 merged (#55, shared files #54; `main` = `31b53f4`), WAITING for the production track; WP-22 merged (#61; `main` = `e8c8f9e`), WAITING for the deploy; local tooling: dev-check fix #63 and nginx fix #64 merged (`main` = `59a34ad`); `composer update` #67 merged (`main` = `7792c67`); WP-23 merged (#68; `main` = `901eaad`), WAITING for the deploy and the checks inside Telegram on staging, its follow-up docs PR #69 merged (`main` = `d76a0c0`); KI-29 fixed by #70 (`main` = `d2a4722`); WP-24 merged (#71; `main` = `780aea9`), WAITING for the production track's photo check and deploy and the checks inside Telegram on staging, its follow-up docs PR #76 merged (`main` = `157790d`); Grok's fixes merged: #72 (KI-38), #73 (KI-28 narrowed), #74 (KI-39), #75 (KI-40) (`main` = `11c75b2`), their docs PR #77 merged (`main` = `a4c388c`); session memory #78 merged (`main` = `4f91f8a`); WP-25 merged (#79; `main` = `f2f58cc`), WAITING for the deploy and the checks inside Telegram on staging; WP-26 merged (#81; `main` = `95315fd`), WAITING for the deploy and the checks inside Telegram on staging; the Infrastructure section was last updated by the production track on 2026-11-09)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -57,7 +57,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - **Since WP-13 (#50, merged 2026-11-15 as `6c48ce6`; staging and production do not run it yet):**
   - **Methods on stubs:** favourites, history, hidden listings, blocked authors, the hidden list, reports, the two
     found-survey methods, the six radar methods, and the public `GET /landing/live` and `/landing/pins`. With them
-    the `/api/v1` route list equals the 39 pairs of `25` §4.2 (a test pins it).
+    the `/api/v1` route list equals the 39 pairs of `25` §4.2 (a test pins it; 40 since the intake of
+    `index-BnFvC-Ft`, #88, added `POST /settings/card-sample`).
   - **Radar switch (DEC-51):** `EnsureRadarsEnabled` on the four radar writes answers `403 radars_disabled` while
     `radar.creation_enabled` is false; `GET /radars` answers `[]`; `DELETE` works.
   - **Stubs:** personal fixtures hold listing numbers resolved through the card source (`StubListingRefs`);
@@ -68,7 +69,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).
 - `packages/`: `@homi/config`, `@homi/types`, `@homi/utils`, `@homi/api-client`, `@homi/ui`, `@homi/i18n` (WP-20; `./format` since WP-22), `@homi/search` (WP-22) — each with lint/typecheck/test scripts (since #70 the `lint` scripts run the app's ESLint binary with `packages/eslint.config.mjs`; KI-29 resolved); `app` uses `@homi/config`, `@homi/i18n` and `@homi/ui` since WP-20, `@homi/search`, `@homi/api-client` and `@homi/types` since WP-22.
 - Since WP-03 (#39, merged 2026-11-15):
-  - **Packages:** the 31 Wave 1 npm packages are installed (lockfile 665 entries). The install scripts of `@parcel/watcher`, `@swc/core` and `core-js` are denied in `allowBuilds`. No product code imports them.
+  - **Packages:** the 31 Wave 1 npm packages are installed (lockfile 665 entries). The install scripts of `@parcel/watcher`, `@swc/core` and `core-js` are denied in `allowBuilds`. The map packages are used since WP-27 and WP-28; `posthog-js` is not imported yet.
   - **Unit tests:** Vitest 5 runs through `frontend/vitest.config.mts`, with one project per package. `pnpm test` → `@homi/testing` 89 passed, `@homi/utils` 2 passed.
   - **`@homi/testing`** is a dev-only package. `@homi/testing/playwright` provides the fake Telegram and the external-request guard.
   - **End to end:** Playwright 1.65.1 runs `frontend/playwright.config.ts`, with the `app/e2e/smoke.spec.ts` test. `pnpm test:e2e` → 2 passed.
@@ -85,7 +86,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     `next/root-params` (pages stay static). `lib/navigation/routes.ts`, `lib/brand`, `lib/flags.ts` (17 flags off),
     the `track` and `reportError` facades, the sources store and `DemoDataMarker`. Starter files removed.
   - **`@homi/i18n`:** the `legacy` layer generated by `scripts/import-legacy.mjs` from the release pinned by WP-02
-    (476 keys per locale, 15 plurals, 4 keys at `<key>._`), the `homi` layer, `getMessages`, `createIntlHandlers`,
+    (476 keys per locale, 15 plurals, 4 keys at `<key>._`; since the intake of `index-BnFvC-Ft`, #88, from that
+    release: 504 keys, 5 at `<key>._`), the `homi` layer, `getMessages`, `createIntlHandlers`,
     `labelFor`.
   - **`@homi/ui`:** tokens, themes, lite and motion CSS (`@homi/ui/styles.css`; Tailwind's default palette removed),
     the restyled shadcn/ui base components, `cn` = clsx + tailwind-merge.
@@ -115,7 +117,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   (`resolveGate`, `GateRedirector`, the boot retry, `/outside`, `/no-access`, `/welcome/language`, `/welcome/city`,
   the expired and crash screens); `features/city/*`; `lib/actions/settings.ts` (`updateSettings`, the first Server
   Action); `error.tsx`, `not-found.tsx` (the catch-all throws under `<Suspense>`, AM-59), `global-error.tsx`; WP-21's
-  parser keeps the whole campaign code (AM-63). The screens behind the tabs are still placeholders. On `fb4a2b2`:
+  parser keeps the whole campaign code (AM-63). The screens behind the tabs were still placeholders (only settings is left, WP-31). On `fb4a2b2`:
   app 977, `@homi/ui` 111, `@homi/i18n` 109 tests passed, `pnpm -r lint` and `pnpm -r typecheck` exit 0,
   `make ci-frontend` exit 0; Playwright
   `miniapp` (85 tests, one worker, local API) → 82 passed, 3 failed on the stub user's 120/min API limit (AM-61),
@@ -130,14 +132,14 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   `onForbidden()` for DEV-001, AM-68), `ListingCard`,
   `PhotoStrip` / `Photo` (the small variant, the server's `serverSmallOnly`), `FavButton`, `FeedHeader` (the chips
   in the top bar), `FewResultsNote`, `FeedEmpty`; `features/radars/{capability,subscribe}.ts` (`radarsReady = false`,
-  stubs); `lib/actions/favorites.ts` (`setFavorite`), `lib/data/previewCache.ts`, `lib/analytics/firstContent.ts`,
+  stubs, until WP-30 wired them); `lib/actions/favorites.ts` (`setFavorite`), `lib/data/previewCache.ts`, `lib/analytics/firstContent.ts`,
   `lib/device.ts`, `lib/search/useScreenSearchState.ts` (KI-43 for the feed). Changed WP-21/WP-22 code:
   `SessionState.renewed` and the router refresh only after a sign-in of the launch (AM-66), the saved city through
   `useSyncExternalStore` and `profileCity` (AM-67);
   `@homi/ui`'s lite card size 360 px (AM-69); `GET /listings` documents a nullable `meta.next_cursor`
   (`ListingController`, `openapi.json`, `@homi/types`; AM-65); `@homi/testing/playwright` gains `stubMedia`;
   `frontend-e2e.yml` sets `NEXT_PUBLIC_CDN_URL`; one `homi` key, `feed.loading`. `RefreshProof` is deleted;
-  `data.spec.ts` runs on `/ru/map` (the WP-22 proof stays there until WP-27). On `1d1c964`: app 102 files / 1402,
+  `data.spec.ts` ran on `/ru/map` until WP-27 deleted the proof and re-hosted it on the map's read and the feed (AM-86). On `1d1c964`: app 102 files / 1402,
   `@homi/i18n` 110, `@homi/ui` 112 tests passed, `pnpm -r lint`, `pnpm -r typecheck`, `pnpm types:check` and the
   app build exit 0; backend on `9163d26` 720 passed, 4 skipped.
   On `f58cf88`: `make ci-frontend` exit 0 (app 1402, search 238, testing 95, ui 112, i18n 110, api-client 14, utils 2
@@ -166,7 +168,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     and feed 19 passed; on `c41d07c` every related spec passed as well (KI-32 reruns). Known issue KI-54.
 - **Since WP-26 (#81 merged 2026-11-17 as `95315fd`; staging and production do not run it yet):** `/listing/[number]`
   and its `photos`, `market` and `actions` children render the real listing screen in both route trees (`location`
-  stays the WP-20 placeholder until WP-28).
+  since WP-28: the spot map).
   - `features/listing/*`: `ListingLayer`, `ListingServer`, `ListingScreen`, `useListing` (string key `listing:<n>`,
     the merge redirect, the seen map), the hero, title row, key facts, the sections, the CTA bar with `useContact`
     (only on a tap) and `useTranslation`, the viewer (`gestures.ts`, `ZoomableImage`), the market block and sheet
@@ -179,6 +181,106 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - Tests: `e2e/{listing-open,listing-contact,listing-actions,photo-viewer}.spec.ts`. On `fed314d`,
     `make ci-frontend` → exit 0 with the app at 153 files / 2304 tests, `composer ci:check` clean; in CI on
     `43d558a` the 18 e2e files passed in one run (180). Known issues KI-56, KI-57, KI-58.
+- **Since WP-27 (#83 merged 2026-11-19 as `4e35154`; staging and production do not run it yet):** `/map` renders the
+  search map on MapLibre GL; a device the engine rule sent to Leaflet saw «Карта на этом устройстве пока недоступна»
+  until WP-28 replaced that state.
+  - `features/map/*`: `MapScreen` (the session's engine, the lazy GL view, the pills, the note, locate,
+    `MapAttribution`, the loading, empty and error states), `engine.ts` (`pickEngine`: WebGL2 for a saved `gl`,
+    AM-80; with `failIfMajorPerformanceCaveat` and lite off when nothing is saved; `markGlFailed`, `warmMap`),
+    `useMapPoints` and `pins` (pins, stacks, `supercluster` clusters, the spread), `camera`, `mask`, `tiles`,
+    `palette`, `tilePrefetch`, `MapSelectionCard` with `useCardLayer` (DEV-013), `MapWarmup`; `gl/`: `library.ts`
+    (`maplibre-gl` 6.11.2 and `pmtiles`, the worker URL, `prewarm()`), `useMapInstance`, `style.ts` (one pure
+    builder, `setStyle(…, { diff: true })`), `fonts.ts`, the text-only DOM markers.
+  - Basemap: the OSM raster, its tile requests with `strict-origin-when-cross-origin` (`osmTransformRequest`,
+    AM-82), until a PMTiles file is hosted; the twelve Noto Sans woff2 label subsets with `OFL.txt` in
+    `public/map-fonts/` (cut with fonttools in a throwaway virtual environment, AM-83).
+  - Worker: `scripts/copy-maplibre-worker.mjs` (`predev`, `prebuild`) copies the worker and its shared module into
+    the git-ignored `public/maplibre/<version>/`; `proxy.ts` answers `/maplibre/` with the worker's own policy from
+    `lib/security/csp.ts` (`connect-src 'self' <CSP_TILE_HOSTS>`), cached as Next.js's revalidated `max-age=0`
+    (AM-81).
+  - Shared changes: `lib/deeplinks/{parse,launch}.ts` (`mapDebug`, `launchMapOptions()`, AM-85);
+    `lib/telegram/links.ts` (the two attribution hosts); `ViewToggle`'s `onIntent`; `TopBar`'s `MapBar` on
+    `useScreenSearchState("map")` (KI-43's map part done); `SearchProof` deleted and `data.spec.ts` re-hosted on the
+    map's read and the feed (AM-86); the ESLint HTML-injection rule (also `setHTML`); `CSP_TILE_HOSTS` in
+    `.env.example`, `frontend/playwright.config.ts` and `frontend-e2e.yml`; the guard of `@homi/testing/playwright`
+    answers OSM tiles with a blank PNG (AM-84); the `homi` keys `map.empty`, `map.loading`, `map.unavailable`.
+  - Backend: no change.
+  - Tests: `e2e/map.spec.ts`. On `782216a`, `make ci-frontend` → exit 0 with the app at 168 files / 2608 tests;
+    each of the 19 e2e files alone against a local `next start`, 198 passed; in CI on `94a414d` `frontend` (run
+    44196889825) and `frontend-e2e` (run 44196889879, 198 passed) green. Known issues KI-59, KI-60.
+- **Since WP-28 (#84 merged 2026-11-19 as `0ab4417`; staging and production do not run it yet):** every device gets
+  a map — where GL cannot run, Leaflet shows the same pins, stacks, clusters, card, note, states and locate; the
+  search area is drawn on either engine; `/listing/[number]/location` and the listing's location section show the
+  spot map (the WP-20 placeholder and WP-26's `SpotMapSlot` are gone).
+  - `features/map/leaflet/*`: `MapViewLeaflet`, `library.ts` (`loadLeaflet()`: `leaflet` 1.9.4,
+    `leaflet.markercluster`, `protomaps-leaflet` 5.1.0 in order, for the global `L`, AM-90), `useLeafletMap` with
+    `useLeafletCamera`, `listingLayer` and `useSpiderfy` (LB-APP-013), `icons.ts`, `basemap.ts`, `basemapRules.ts`
+    (written layer by layer from GL's style, AM-89), `useDeferredBasemap`, `useLeafletMask`, `useMyLocation`,
+    `lassoHandlers.ts`. `features/map/useBasemap.ts` holds the basemap rule and the session's vector failure for both
+    engines; `markerElements.ts` moved up from `gl/`; `MapUnavailable` and `map.unavailable` removed; no attribution
+    control on either engine, `MapAttribution` serves both (AM-88).
+  - Drawing: the `draw=1` layer of `MapScreen` (`requestDraw()` / `consumeDrawRequest()` in `lib/ui/shellState.ts`,
+    a request younger than 3 s), `lasso/polygon.ts` (the pure stroke → polygon rules) and `LassoOverlay` over
+    `gl/GlLasso` and `leaflet/lassoHandlers.ts` (the deferred marker re-sync, AM-93); the finished stroke through
+    `applyFilters`.
+  - `features/listing/spot/*`: `SpotMap` (the mini map in `LocationSection`), `SpotMapRoute` and
+    `SpotMapFullscreen` in both listing trees, `useSpotMap` (the one owner of the container, LB-APP-001),
+    `spotGeometry`, the lazy `spotGL` / `spotLeaflet`; `SpotMapRoute` reads `useListingRecord()` and the listing
+    layer's reported state (AM-92).
+  - Shared changes: `prefetchTileUrls` in `tilePrefetch.ts` (one session cap for the list's and Leaflet's
+    prefetch); `@homi/ui`'s `Maximize2`; `eslint.config.mjs` ignores the copied worker. Nothing new for the
+    production track beyond WP-27's `CSP_TILE_HOSTS` (AM-91).
+  - Backend: no change.
+  - Tests: `e2e/{map-leaflet,map-lasso,spot-map}.spec.ts`. On `f7ba4b2`, `make ci-frontend` passed (its test step
+    after one `ENOENT` on the Vitest cache, then `pnpm test` again) with the app at 183 files / 2831 tests; each of
+    the 22 e2e files alone, 237 passed; in CI on `9e9587e` `frontend` (run 44254527108) and `frontend-e2e` (run
+    44254527223, 237 passed) green, and `frontend` green on `main` after the merge (run 44410445948). Known issues
+    KI-61, KI-62, KI-63 (two CI-only e2e flakes outside the package).
+- **Since WP-29 (#85 merged 2026-11-19 as `ee5f7cd`; staging and production do not run it yet):** the saved tab's
+  two lists render: `/saved` (SCR-024) and `/saved/history` (SCR-025).
+  - `features/saved/*`: `server.tsx` (`readSaved`: page one with the cookie and a `renderId` drawn after `io()`;
+    `FavoritesServer`, `HistoryServer`), `useSavedList` with `listKey.ts` (a new server render re-creates the list,
+    AM-94; history's `seen` rule checked on the return to the list, AM-95; pulls, the top, a lost focus),
+    `FavoritesScreen` and `HistoryScreen` over WP-24's `ListingFeed` (20 at a time, DEC-53; favourites drop the
+    listings un-favourited or hidden in this launch, history shows every entry), `ClearHistoryButton` («Очистить»:
+    a confirm, `DELETE /history`, the empty state with the success haptic and the focus).
+  - `lib/actions/history.ts` (`clearHistory`); `FeedServer` exports `smallPhotosOnly`; `@homi/ui` re-exports
+    `Trash`. `ListingFeed`, `useCursorFeed` and the `/bff` allow-list are unchanged.
+  - Backend: no change.
+  - Tests: `e2e/saved.spec.ts`. On `fcba4ca`, `make ci-frontend` → exit 0 with the app at 157 files / 2405 tests;
+    each of the 19 e2e files alone against a local `next start` (the branch did not have the map specs yet), 190
+    passed; in CI on `e3b24f3` (`main` with WP-27 and WP-28 merged in) `frontend` (run 44410780522) and
+    `frontend-e2e` (run 44410780607, 247 passed) green. No new known issue; LB-APP-027 stays as DEV-016 decides.
+- **Since WP-30 (#86 merged 2026-11-19 as `a818440`; staging and production do not run it yet):** the radar part
+  of the Mini App works on stubs; where `RADAR_CREATION_ENABLED` is unset (staging and production, DEC-51) the
+  radar tab shows its "soon" state and nothing sends a radar request or offers a radar.
+  - `features/radars/*`: `capability.ts` (`radarsReady = true`, `useRadarsEnabled`), `useRadarsOffRedirect`;
+    `normalize.ts`, `useRadars` (both lists through `/bff`), `match.ts`, `useRadarPreviews`, `radarStatus`;
+    `subscribe.ts` (`runSubscribe` / `runSaveEdit` / `runRelax`, `useSubscribe()`) with `toasts.ts`; `server.tsx`
+    (`readRadarTab` at request time, the cookie first, with a `renderId`, AM-96); the tab (`RadarScreen`,
+    `RadarTiles`, `RadarEmptyState`, `RadarSoonState`, `RadarSweep`); the sheet (`RadarSheetRoute`, `RadarSheet`,
+    `RadarStrip`, `radarReturn`); `RadarCreateSheet` and `RadarEditSheet` over `FiltersForm`; `FoundSheet`.
+  - `features/nudges/*`: `NudgeHost` (mounted by `AppShell`; one slot, return banner > follow nudge > home offer;
+    a polite live line), the follow nudge, the search visits (`homi-visits`), the return banner, the radar card in
+    the feed (`FeedRadarCard` in `ListingFeed`'s inline slot), "shown" on the first render (LB-APP-050);
+    `features/settings/{useSettings,format}` for the digest hint.
+  - Shared changes: `lib/actions/{radars,surveys}.ts` with `invokeAction`; `lib/telegram/chatAccess.ts`
+    (`withChatAccess` after a `409 no_chat`); `lib/api/server.ts` (`radars(query?)`, `relaxRadar(id, { code })`);
+    `lib/data/useResource.ts` (`readResource`; `seedResource` aborts a read in flight; `invalidate` keeps an entry
+    with data and no user as stale); `currentAddress()` (`lib/navigation/address.ts`); `routes.radarNew(q?, entry?)`
+    and `routes.radarFound({ trigger })`; `write` drops `from=radar` and `rememberHref` skips it; `TabBar`, `TopBar`
+    («+» only while radars are on), `RouteSheet` / `BottomSheet` `instant`; the restyled `Switch` of `@homi/ui`;
+    `filtersHash` of `@homi/search`; the radar buttons of WP-24 and WP-25 wired (`FewResultsNote`, `FiltersFooter`,
+    `FiltersSheetRoute`).
+  - CI: `frontend-e2e.yml` gains a second run after a green first one — an API on stubs on `127.0.0.1:8081` with
+    `RADAR_CREATION_ENABLED: 'false'`, checked through `GET /reference`, then the `@radars-off` tests with
+    `E2E_RADARS_OFF=1` (AM-97).
+  - Backend: no change.
+  - Tests: `e2e/{radars,radar-subscribe,radar-forms,follow-nudge,return-nudge,feed-radar,radars-soon}.spec.ts`. On
+    `0eafcf8`, `make ci-frontend` → exit 0 with the app at 181 files / 2833 tests. Locally (a second stub API with
+    radars on, KI-65): every default file green before the review fixes; after them `radars.spec.ts` 31, back 11,
+    boot-failure 6 and city 6 passed before the local database host went down, so the whole suite is CI's:
+    `frontend` (run 44459187188) and `frontend-e2e` (run 44459187243, 350 passed, then the `@radars-off` run 14 passed) on `4abd8d0`. Known issues KI-64, KI-65, KI-66.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure
@@ -200,8 +302,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - `telegram.uz`: Laravel 13 + MadelineProto, PostgreSQL, stores listings/phones(HMAC)/photos, public API `/api/public/v1/listings` (tokens `tk_live_*`); rules + an Anthropic LLM; no push into HOMI, production use not confirmed. `geo.uz`: not a housing source (elmarket). `datahub.uz`: dedup/canon platform, intake not built, no consumer API. None of them mentions kvadro. ADR-0009's push model is not backed by any collector yet (AM-44; reported by `reference-reader` 2026-11-09, not re-run).
 
 ## kvadro² (the legacy product being migrated)
-- Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. The guard hook protects it by key and by folder name since PR #29 (merged 2026-11-14, KI-26). Since PR #37 (WP-02, merged 2026-11-15) the audit describes legacy release `index-DY_DH7h-.js` (`demo/app` SVN r27, `docs/migration/wave-1/baseline.md`). It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
+- Legacy sources: SVN checkout `kvadro.uz` (`KVADRO_ROOT` in `.ai/local.env`), read-only. The guard hook protects it by key and by folder name since PR #29 (merged 2026-11-14, KI-26). Since PR #37 (WP-02, merged 2026-11-15) the audit describes legacy release `index-DY_DH7h-.js` (`demo/app` SVN r27, `docs/migration/wave-1/baseline.md`); since its intake (#88, 2026-11-19) `index-BnFvC-Ft.js` (SVN r29: the card style, `card_style` and `POST /settings/card-sample` on stubs). It holds the Mini App rebuilt from the production bundle, the landing and SEO pages, and docs. The legacy backend (Python/FastAPI) and its PostgreSQL/PostGIS database are not available.
 - The audit and plan are in `docs/migration/` on `main` (start: `22-agent-handoff.md`). No migration code exists yet.
 - The audit describes the Mini App release `index-plF_TOcT.js`. The legacy tree holds two later synced releases, `index-Dbpp463V.js` and `index-BNLZFfL0.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, read 2026-11-14); 03 and 08 do not cover them (Q-APP-024).
 - Course decided by the developer on 2026-11-14 (PR #25, merged 2026-11-14): HOMI ships a new product under its own bot and brand instead of taking over the legacy bot, hosts and users; the frontend talks only to `/api/v1`; each method answers from a stub, from legacy through a service key, or from HOMI's own code. Strategy `docs/migration/24-three-wave-strategy.md`, plan `25-wave-1-plan.md`, queue `docs/migration/wave-1/README.md` (45 work packages including the support bot WP-59; WP-00, WP-01 and WP-02 merged and `WAITING` (deploy; ADR acceptance; the operator request is not sent); WP-03 merged (#39, 2026-11-15) and `WAITING` for the deploy: the confirmed packages, the test tooling and the backend `pgsql` test group (`backend/tests/Pgsql`, `make test-pgsql`) are on `main`; the rest not started; 45 specifications `wave-1/WP-NN-*.md`, decisions DEC-31 … DEC-56, drafted by subagents, then read in full against the code and each other in a verification pass), answers `docs/migration/decisions/2026-11-14-developer-answers.md`.
-- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the Mini App screens, the bot handlers, the landing. `frontend/app` serves placeholders behind the Telegram layer and the session (WP-20, WP-21).
+- Not existing yet: the service key and its contract, the dump and schema, any `/api/v1` product method, the bot handlers, the landing. `frontend/app` renders the Wave 1 screens on stubs except settings, which is still a WP-20 placeholder until WP-31.

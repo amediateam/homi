@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#86) |
+| Status | WAITING (merged in #86 on 2026-11-19; production track: the regular deploy, `RADAR_CREATION_ENABLED` left unset (DEC-51); then the "soon" state checked inside Telegram on staging; the other checklist lines run there in WP-57) |
 | Depends on | WP-25, WP-26 |
 | Size | ≈ 3 700 changed lines, L — above the 3 000 of the PR rule since the return banner and the radar card in the feed of `index-DY_DH7h-.js` joined; steps 14 – 16 hold them, so they can go into a second PR on the same branch if the reviewer asks |
 | Behaviour reference | `03` §2 (SCR-026 … SCR-031, SCR-040, SCR-046, SCR-047), §3.2 (nudge and visit storage), §3.3 (events), §3.4 (constants), §4, §5, §5b; `05` TMA-033, TMA-040 and §2; `08` API-019, API-035; `09` F-RADAR-009, F-RADAR-010; task files KV-FE-074, KV-FE-075, KV-FE-076, KV-FE-077, KV-FE-078, KV-FE-079, KV-FE-080, KV-FE-030 |
@@ -998,7 +998,7 @@ had radars switched off on 2026-11-18 (AM-99, KI-65): there the local runs used 
     `history.back()` before its `popstate`.
   - The legacy read was the reconstructed source, not the pinned bundle: the radar files at SVN r6, the nudge files at
     r27 (= the pinned `index-DY_DH7h-`), `App.jsx` at r29 (`index-BnFvC-Ft`, one past the pin; r28 and r29 only add
-    «Вид карточек» in the settings). Read it again when WP-02 pins the baseline.
+    «Вид карточек» in the settings). The intake of `index-BnFvC-Ft` (2026-11-19) moved the pin to SVN r29, so this read is of the pinned release.
   - The WP-25 sibling bug found by the create-sheet fix: a directly loaded `/filters?pick=city` closed at depth 0
     stacks two filter sheets (KI-66).
 - **Not automated:** the checklist lines stay unticked. The checklist asks for ru / uz / en and light / dark with
