@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-24 … WP-32 |
+| Depends on | WP-24 … WP-32, WP-34 … WP-38 |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
 | Needs from the production track | (1) Deploy of the merged stage B to staging and to production. (2) The Mini App address attached to the staging bot and the production bot, so the app opens inside Telegram on both. (3) The app vhosts without `X-Frame-Options`, so Telegram Web can frame the app (Q-SEC-012, requested by WP-21). (4) `NEXT_PUBLIC_APP_ENV=staging` on staging (the stub scenario cookie and the gallery work there, not on production). (5) The PostHog keys of WP-32 on staging. (6) One test account per client for the pass |
@@ -44,8 +44,8 @@ the audit is traced to the package that owns it.
 | Proof of parity | DEC-46, `25` §9, RK-31 | Acceptance is the written checklist per screen, ticked in the PR with staging screenshots and signed by the reviewer. A difference is accepted only as a defect fix or a visual detail |
 | Process | DEC-45 | Checks inside Telegram happen on staging and then on production after the deploy; there is no tunnel to a developer machine |
 | Session modes | DEC-44, `25` §3.4, RK-30 | Every end-to-end scenario runs in cookie mode and in header mode; the pass on Telegram Web records which mode each browser ended in |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 37 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54, and LB-APP-048 … LB-APP-050 of the pinned release; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. All 17 flags are off on `main`. LB-APP-051 and LB-APP-052 of legacy release `index-BnFvC-Ft.js` are fixed too; LB-APP-053 is kept as legacy until it is decided |
-| Decided behaviour changes | DEC-51 … DEC-54, DEC-57 | Five differences from legacy are behaviour of the build, not flags, and are checked as such: the card-style row has no «Новое» pill (DEC-57); radars are switched off on staging and production until WP-57 and the app says "soon" and offers no radar anywhere — no follow nudge, no return banner (SCR-046), no radar card in the search list (SCR-047); the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The 37 defects without a flag are checked as fixed — LB-APP-026 among them, settled by DEC-54, and LB-APP-048 … LB-APP-050 of the pinned release; the 13 with a flag are checked in their legacy form, with the flagged branch proven below the end-to-end layer. The flags are off on `main`, except the five that legacy adopted in `index-CIa0Ldj2.js`, which are on by default and whose "legacy form" is therefore the flag on (DEC-58 amends DEC-36; WP-34 and WP-35 split three flags in two, so `lib/flags.ts` holds 20 after them; *added by the intake of `index-CIa0Ldj2.js`*). LB-APP-051 and LB-APP-052 of legacy release `index-BnFvC-Ft.js` are fixed too; LB-APP-053 is kept as legacy until it is decided |
+| Decided behaviour changes | DEC-51 … DEC-54, DEC-57, DEC-67 | Six differences from legacy are behaviour of the build, not flags, and are checked as such: «Смотрели» is re-created once on the return after a listing was opened (DEC-67, DEV-053; legacy stopped doing so in `index-CBlEKxdL.js`); the card-style row has no «Новое» pill (DEC-57); radars are switched off on staging and production until WP-57 and the app says "soon" and offers no radar anywhere — no follow nudge, no return banner (SCR-046), no radar card in the search list (SCR-047); the author's number appears only after a tap; favourites and history load 20 at a time; the whole city reads «{city} целиком» |
 | No legacy access | DEC-33 | The suite, CI and the pass never reach legacy; `@homi/testing` blocks external hosts |
 | Stubs and the marker | `25` §4.4, RK-27 | Stub answers are deterministic and mutations do not persist: assertions target what the interface does, never stored state. The demo-data marker is asserted on every stub-backed screen |
 | Scope of the wave | DEC-43 | The access gate is open, so the no-access screen is accepted on stubs only |
@@ -124,7 +124,7 @@ header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves th
 
 | # | State | Reached by | Layer |
 | - | ----- | ---------- | ----- |
-| 1 | Access refused, each of the five reasons | `access_private`, `access_invite`, `access_full`, `access_blocked`, `access_join` (WP-11) | end to end; not inside Telegram while the gate is open |
+| 1 | Access refused, each of the six reasons | `access_private`, `access_invite`, `access_full`, `access_blocked`, `access_join`, `access_paused` (WP-11; `paused` since `index-CIa0Ldj2.js`, DEC-60) | end to end; not inside Telegram while the gate is open |
 | 2 | First launch; city not chosen; Uzbek profile with UZS | `first_launch`, `no_city`, `uz` | end to end |
 | 3 | Launch data too old | `auth_expired` on sign-in | end to end |
 | 4 | Token rejected in the middle of use | reserved `unauthenticated`, set after launch and cleared after the first rejection | end to end |
@@ -337,6 +337,11 @@ Since the intake of `index-CBlEKxdL.js` the audit also holds SCR-049 … SCR-062
 LB-APP-054 … LB-APP-078 and TMA-046, and TMA-034 is no longer an absence in legacy; they join this checklist with
 the owner-cabinet plan.
 
+Since the intake of `index-CIa0Ldj2.js` the audit also holds SCR-063, BR-APP-104 … BR-APP-111, LB-APP-079 …
+LB-APP-083 and TMA-047; their lines are in the specifications of WP-34 … WP-38 (for BR-APP-107 and LB-APP-079: WP-57) and join this
+checklist with them.
+The numbers in the headings below are unchanged (*added by the intake of `index-CIa0Ldj2.js`*).
+
 ### Rules (74)
 
 | # | Rules | Package | Proved by |
@@ -386,11 +391,11 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 22 | LB-APP-022 | saved lists re-request a cursor | WP-29 | fixed (the cursor guard of the list hook; the lists are paged by decision, DEC-53) |
 | 23 | LB-APP-023 | sort options before reference data | WP-22 | fixed |
 | 24 | LB-APP-024 | map card ignores Back | WP-27 | flagged `dev013BackClosesMapCard` (DEV-013) |
-| 25 | LB-APP-025 | history dates in the device zone | WP-22 | flagged `dev014TashkentDates` (DEV-014) |
+| 25 | LB-APP-025 | history dates in the device zone | WP-22 | flagged `dev014TashkentDates` (DEV-014), on by default since the intake of `index-CIa0Ldj2.js` (DEC-58) |
 | 26 | LB-APP-026 | «Весь Ташкент» for every city; dead keys | WP-22 | fixed by decision (DEC-54): «{city} целиком» with the city's own name, no flag; the dead keys are dropped by WP-20's importer |
-| 27 | LB-APP-027 | failures that only vibrate | WP-23 | flagged `dev016ErrorToastOnFailure` (DEV-016) |
+| 27 | LB-APP-027 | failures that only vibrate | WP-23 | flagged `dev016ErrorToastOnFailure` (DEV-016), on by default since the intake of `index-CIa0Ldj2.js` (DEC-58) |
 | 28 | LB-APP-028 | call button dead end, calls over-counted | WP-26 | fixed |
-| 29 | LB-APP-029 | tenant and pets on daily rent | WP-22 | flagged `dev017TenantPetsDailyRule` (DEV-017) |
+| 29 | LB-APP-029 | tenant and pets on daily rent | WP-22 | flagged (DEV-017): pets by `dev017PetsLongRentOnly`, on by default since the intake of `index-CIa0Ldj2.js` (DEC-58); tenant by `dev017TenantPetsDailyRule`, off |
 | 30 | LB-APP-030 | reset leaves daily rent | WP-22 | flagged `dev018ResetKeepsDaily` (DEV-018) |
 | 31 | LB-APP-031 | two distance wordings | WP-22 | flagged `dev019OneDistanceFormatter` (DEV-019) |
 | 32 | LB-APP-032 | three language detectors | WP-21 | flagged `dev020OneLanguageDetector` (DEV-020) |
@@ -417,15 +422,19 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 53 | LB-APP-053 | sample result outlives the sub-page | WP-31 | legacy behaviour kept, `decision` open |
 
 Totals: 39 fixed, 13 flagged, 1 kept as legacy (LB-APP-053). Four more flags exist without a client defect behind
-them, all off (paged saved lists, the paging part of DEV-003, are not among them: DEC-53 made them plain
-behaviour):
+them — off, except the five that legacy adopted (DEC-58): of these four `dev051RentedUndo`, of the 13 above
+rows 25, 27 and the pets half of 29, and the new `dev010AgentMarkedToast` of WP-34 — (paged saved lists, the paging part of DEV-003, are not among them: DEC-53
+made them plain behaviour). WP-34 adds rows 5 and 6 when it splits two flags. The approved differences without a
+flag gain DEV-053 (DEC-67):
 
 | # | Flag | Deviation | Package |
 | - | ---- | --------- | ------- |
 | 1 | `dev005RadarDropsPostedDays` | DEV-005 | WP-22 (used by WP-30) |
-| 2 | `dev010RealtorVoteWording` | DEV-010 | WP-26 |
-| 3 | `dev051RentedUndo` | DEV-051 | WP-26 |
+| 2 | `dev010RealtorVoteWording` | DEV-010, the hint half since WP-34; off | WP-26 |
+| 3 | `dev051RentedUndo` | DEV-051; on by default since the intake of `index-CIa0Ldj2.js` (DEC-58) | WP-26 |
 | 4 | `dev052UnifiedBelowMedianRule` | DEV-052 | WP-22 |
+| 5 | `dev010AgentMarkedToast` | DEV-010, the toast half; on by default (DEC-58) | WP-34 |
+| 6 | `dev016SuccessToastOnDestructive` | DEV-016, the success half; off | WP-34 |
 
 ### Telegram points (45)
 
@@ -476,7 +485,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | - | ------ | ---- | ------- | ------------------ | -------------- |
 | 1 | SCR-001 | «Обновите Telegram» | WP-21 | inline boot guard | three languages; light and dark; «Вернуться в бота» closes; «Попробовать ещё раз» reloads; not shown when only the SDK fails |
 | 2 | SCR-002 | Outside Telegram | WP-23 | `/outside` | the one sentence in three locales; no request to `/bff/*` |
-| 3 | SCR-003 | No access | WP-23 | `/no-access` | five reasons, unknown as private; checking line, never for blocked; post, bot or close, support buttons; leaves by itself on success. Stubs only |
+| 3 | SCR-003 | No access | WP-23 | `/no-access` | six reasons (`paused` since `index-CIa0Ldj2.js`), unknown as private; checking line, never for blocked; post, bot or close, support buttons; leaves by itself on success. Stubs only |
 | 4 | SCR-004 | Language picker | WP-23 | `/welcome/language` | headings in Telegram's language; that language first; buttons disabled while saving; failure re-enables; success moves to the chosen locale |
 | 5 | SCR-005 | First-launch city | WP-23 | `/welcome/city` | no close, no Back; counts; location row with its three errors; a pick enters the feed; a linked listing comes first |
 | 6 | SCR-006 | Shell | WP-23 | layout of the main group | top bar per tab; four tabs with the lens; list / map toggle; collapse after 24 px, first tap only expands; safe areas |
@@ -498,7 +507,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 22 | SCR-022 | Market sheet | WP-26 | `/listing/<number>/market` | the three paragraphs per scope and tone; "updated" steps; «Подробнее» only when the brand has a link |
 | 23 | SCR-023 | Actions and report | WP-26 | `/listing/<number>/actions`, `step` | menu rows; report rows; detail step; every toast and undo; support row only with an account |
 | 24 | SCR-024 | Favourites | WP-29 | `/saved` | list, 20 at a time with the next page on scroll; removing a favourite removes the card; empty; error; pull |
-| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye, 20 at a time; «Очистить» with its confirm; empty; failure; not re-created by a listing opened in this launch (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `useSavedList` for a later package (`wave-1/baseline.md`, built code behind the pin, row 7)) |
+| 25 | SCR-025 | History | WP-29 | `/saved/history` | list without the eye, 20 at a time; «Очистить» with its confirm; empty; failure; re-created once on the return after a listing was opened (DEV-053, approved difference) |
 | 26 | SCR-026 | Radar tab | WP-30 | `/radars` | the "soon" state while radars are switched off; spinner; error; tiles with status; switch on and off; resumed toast; «+» |
 | 27 | SCR-027 | Radar empty | WP-30 | `/radars` with none | sweep, still in lite; texts; button opens the new-radar sheet |
 | 28 | SCR-028 | Radar sheet | WP-30 | `/radars/<id>` | header; finds strip in its three states; delivery switch and mode; hidden row; delete with confirm; «Смотреть найденное» and Back returns here |
@@ -523,6 +532,47 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 47 | SCR-047 | Radar card in the search list | WP-30 | inside the list on `/` | after the 8th card or after a short complete list without the note; rent and sale titles; «Включить радар» or «Настроить радар»; × for 7 days; absent with a radar for the search and while radars are off |
 | 48 | SCR-048 | Card style «Вид карточек» | WP-31 | `/settings/cards` | both mocks, the current one checked; a pick saves and the settings row follows; «Прислать пример в чат»: spinner, the sent line with the minimise hint, or the failure line (`card_sample_unsent`); no «Новое» pill (DEC-57) |
 
+### Scenarios of legacy release `index-CIa0Ldj2.js` (32)
+
+That release added 28 scenarios to legacy's base parity suite and 4 to its MapLibre GL suite. One line per scenario,
+next to the screen row it belongs to. Most are built by the catch-up packages WP-34 … WP-38 and are ticked here once
+those are merged; "built" means the merged code already does it (*added by the intake of `index-CIa0Ldj2.js`*).
+
+| # | Screen row | Legacy scenario | Package | What to tick |
+| - | ---------- | --------------- | ------- | ------------ |
+| 1 | 3 | `no-access-paused` | WP-36 | `paused` (scenario `access_paused`): «Бот на паузе» with its text; no source in the bot link |
+| 2 | 6 | `fresh-pill` | WP-38 | 7 h in the background with a listing open: after the close «Показать 3 новых» in the top bar |
+| 3 | 6 | `fresh-pill-show` | WP-38 | a tap on the pill reloads the list from page one, at the top |
+| 4 | 7 | `fresh-reload` | WP-38 | 7 h in the background at the top of the list with nothing open: a silent reload, no pill |
+| 5 | 7 | `feed-age` | WP-35 | the ages from `posted.at` with a frozen clock: 20 s, 5 min, 3 h, 50 h |
+| 6 | 7 | `feed-floor` | WP-35 | floor `0` and `-1` on the cards (the stub listings `100022` and `100023`) |
+| 7 | 7 | `fav-fail` | WP-34 | a failed favourite: the heart rolls back and «Не получилось сохранить» shows |
+| 8 | 7 | `radar-link` | WP-57 | a launch with `?radar=<id>` opens the feed with the radar's filters (DEC-61; ticked with the bot) |
+| 9 | 11 | `map-cut-leaflet` | WP-37 | scenario `map_cut` on Leaflet: «На карте — N самых свежих. Остальные — в списке» |
+| 10 | 11 | `map-fail-leaflet` | built (WP-27, WP-28) | a failed points request: the pill «Не загрузилось» |
+| 11 | 11 | `map-fail-leaflet-retry` | built (WP-27, WP-28) | «Повторить» repeats the request |
+| 12 | 11 | `map-leaflet-return` | WP-37 | map → list → map: the camera is restored and there is no second fit |
+| 13 | 11 | `gl-cut` | WP-37 | the cut note on GL |
+| 14 | 11 | `gl-fail` | built (WP-27) | the error pill on GL |
+| 15 | 11 | `gl-fail-retry` | built (WP-27) | the retry on GL |
+| 16 | 11 | `gl-return` | WP-37 | the camera restored on GL |
+| 17 | 18 | `deep-link-listing-done` | WP-36 | the mark of the launch is already set: the listing of the link does not open |
+| 18 | 18 | `deep-link-listing-again` | WP-36 | the first open writes the mark; after a reload the listing does not open again |
+| 19 | 18 | `listing-floor-ground` | WP-35 | the tile «Цокольный этаж» (`100022`) |
+| 20 | 18 | `listing-floor-basement` | WP-35 | the tile «Подвал» (`100023`) |
+| 21 | 18 | `no-sdk-listing` | WP-36 | without the SDK (`launchApp(page, { sdk: false })`): the close cross on the listing |
+| 22 | 18 | `no-sdk-listing-close` | WP-36 | the cross closes the listing |
+| 23 | 19 | `listing-gone` | WP-36 | `404` (number `999404`): «Этого объявления уже нет», in place of «Объявление не загрузилось» of row 19 |
+| 24 | 19 | `listing-gone-fresh` | WP-36 | «Смотреть свежие» closes the listing |
+| 25 | 19 | `listing-day-limit` | WP-36 | scenario `daily_limit`: «Лимит на сегодня» with «Повторить» |
+| 26 | 23 | `listing-report-rented-undo` | WP-34 | «Уже сдано» → «Вернуть» → `DELETE /listings/{number}/reports`; the listing returns |
+| 27 | 23 | `listing-report-agent` | WP-34 | `agent_marked: false` → «Спасибо, учёл вашу отметку» |
+| 28 | 23 | `listing-report-agent-marked` | WP-34 | scenario `agent_marked` → «Отметили номер как риелторский» |
+| 29 | 24 | `favorites-pages` | built (WP-29, DEC-53) | the second page of favourites by the cursor: the paging of row 24 |
+| 30 | 28 | `radar-sheet-listing` | WP-38 | a find opened from the sheet loses «новое»; legacy parks the sheet, HOMI re-opens it (DEC-64) |
+| 31 | 28 | `radar-sheet-listing-back` | WP-38 | Back from that listing returns to the sheet, with the strip and the sheet's scroll where they were |
+| 32 | 28 | `radar-sheet-age` | WP-35 | the age of a find from `posted.at`, as on the card |
+
 ### Statements
 
 - [ ] Rows 1–48 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
@@ -536,10 +586,16 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 - [ ] `e2e-coverage.mjs` reports no screen without a test; the tables of this file name every rule, defect and
       Telegram point once (the check of step 10 and a count: 47, 73, 50, 45).
 - [ ] The 37 fixed defects each have a passing test that would fail on the legacy behaviour; the 13 flagged ones
-      and the 4 other flags each have tests for both branches; `lib/flags.ts` on `main` has 17 flags, all `false`.
-- [ ] The four decided differences from legacy hold on the merged build: the "soon" state with radars off — and with
+      and the 4 other flags each have tests for both branches; before WP-34 `lib/flags.ts` had 17 flags, all `false`.
+      After WP-34 and WP-35: 20 flags, each with tests for both branches; five are `true` — the behaviours legacy
+      adopted in `index-CIa0Ldj2.js` (DEC-58): `dev014TashkentDates`, `dev016ErrorToastOnFailure`,
+      `dev051RentedUndo`, `dev010AgentMarkedToast` and `dev017PetsLongRentOnly` — and the rest `false`.
+- [ ] The 31 scenarios of legacy release `index-CIa0Ldj2.js` that WP-34 … WP-38 build are ticked, each with its
+      package; scenario 8 (`radar-link`) is ticked with WP-57 (DEC-61).
+- [ ] The six decided differences from legacy hold on the merged build: the "soon" state with radars off — and with
       it no follow nudge, no return banner and no radar card in the search list —, no phone number before a tap,
-      saved lists paged by 20, «{city} целиком».
+      saved lists paged by 20, «{city} целиком», the card-style row without the «Новое» pill (DEC-57), and «Смотрели»
+      re-created once on the return after a listing was opened (DEV-053, DEC-67).
 - [ ] The eight journeys pass in both modes; the state table has a scenario or a named lower-layer test per row.
 - [ ] No test reaches an external host; no test contains real launch data, a real phone or a real name.
 - [ ] `render.spec.ts` finds no raw key, no missing-message report and no legacy brand word in three locales.

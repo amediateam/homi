@@ -7,9 +7,9 @@ behaviour is in `04-telegram-bot-audit.md` (`BOT-NNN`). Endpoints are named by `
 Evidence comes from the recovered code `$KVADRO_ROOT/demo/app/…`. Nothing was run. "Not used" items are `CONFIRMED`
 absences: they were checked by grep over `$KVADRO_ROOT/demo/app/src` and `index.html` for the API name. Server-side
 claims (signature checks, prepared messages) are `DOCUMENTED_ONLY`, because the legacy backend source is not
-available. Text added for a later release names it. The audit is brought up to the pinned release
-`index-CBlEKxdL.js` (SVN r31; `wave-1/baseline.md`); text of that intake cites files "at r31", the state the release
-was read in.
+available. Text added for a later release names it. The audit is brought up to `index-CBlEKxdL.js` (SVN r31), whose
+intake cites files "at r31", and to the pinned release `index-CIa0Ldj2.js` (source at SVN r33; `wave-1/baseline.md`);
+text of that intake cites the source "at r33", the state the release was read in, and the changelog at r36.
 
 Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defects are tracked as `LB-APP-NNN` in
 `03-legacy-frontend-audit.md` §5 and §5b.
@@ -54,9 +54,14 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   or `__kvBoot.sdk === 'error'`; otherwise on load, error or timeout (`$KVADRO_ROOT/demo/app/src/lib/telegram/webApp.js:75-108`;
   `main.jsx:19,40`).
 - **Late SDK:** if it loads after the timeout and has `initData`, the live `webApp` binding is replaced and
-  `initTelegramApp` runs again (`webApp.js:93-104`).
-- **Edge case:** parts of the app captured `webApp` at module load, e.g. `pushBackHandler` stores the instance per push
-  (`$KVADRO_ROOT/demo/app/src/lib/telegram/buttons.js:16`).
+  `initTelegramApp` runs again (`webApp.js:93-104`). Since release `index-CIa0Ldj2.js`, when the first render had no
+  initData (the state of SCR-002), the App is rendered again with a new key, which remounts it and restarts the launch
+  (`main.jsx:41-64` at r33).
+- **Edge case:** up to `index-CBlEKxdL.js` parts of the app captured `webApp` at module load, e.g. `pushBackHandler`
+  stored the instance per push (`$KVADRO_ROOT/demo/app/src/lib/telegram/buttons.js:16`), and a Back handler
+  registered without the SDK was dropped. Fixed in legacy since release `index-CIa0Ldj2.js`: handlers registered
+  before the SDK work once it arrives (TMA-022, TMA-023; `buttons.js:17-27,36-46,58-69,76-85`, `webApp.js:203-205` at
+  r33).
 
 #### TMA-005 — Native bridge used directly when the SDK never loads (CONFIRMED)
 
@@ -113,6 +118,12 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   query `?listing=<id>` is used; the id must be a positive integer (`$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:6-25`).
 - **Effect:** the listing is prefetched before mount and opened as the initial `listingId` (`main.jsx:36-39`;
   `App.jsx:61`). `app_launch` and `app_opened` record `entry: 'link'`.
+- **Since release `index-CIa0Ldj2.js`:** the id must be a positive safe integer (`Number.isSafeInteger`; before,
+  `Number.isInteger`; `startParam.js:21` at r33). The listing is prefetched and opened only once per launch: the mark
+  `sessionStorage['kv-start-done']` = `<initData hash>:<id>` keeps a reload of the WebView from opening the card again
+  (`startParam.js:28,31,38-62`, `main.jsx:36-39`, `App.jsx:82-89` at r33; `03` BR-APP-106). `app_launch` and
+  `app_opened` still read the unmarked id, so such a reload is logged as a second link entry (`03` LB-APP-080). A sale
+  listing from the link switches the feed under it to sale (`03` BR-APP-108).
 
 #### TMA-011 — Source formats inside `start_param` (CONFIRMED)
 
@@ -135,15 +146,20 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - `?map=gl|leaflet|auto`: map engine override (`$KVADRO_ROOT/demo/app/src/features/map/engine.js:74-87`);
   - `?mapdebug`: exposes `window.kvGL` (`$KVADRO_ROOT/demo/app/src/features/map/gl/useMapInstance.js:118-120`);
   - `?owner=new`: since release `index-CBlEKxdL.js` it opens the owner form on a new draft, like the `start_param`
-    `owner_new` (TMA-046; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71` at r31).
-- **Open question:** whether bot buttons actually use `?listing=` / `?news=` is Q-APP-019.
+    `owner_new` (TMA-046; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71` at r31);
+  - `?radar=<id>`: since release `index-CIa0Ldj2.js` it replaces the search by the filters of the radar with that id.
+    The id must be a positive safe integer, and the parameter is skipped when the launch names a listing (`03`
+    BR-APP-107; `$KVADRO_ROOT/demo/app/src/features/radar/radarLink.js:7-13`,
+    `$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:135-149` at r33). There is no `start_param` form of it.
+- **Open question:** whether bot buttons actually use `?listing=` / `?news=` is Q-APP-019; whether the bot opens the
+  Mini App with `?radar=<id>` is `04` Q-BOT-050.
 
 #### TMA-013 — Deep links the Mini App creates (CONFIRMED)
 
 | Link | Where | Evidence |
 | ---- | ----- | -------- |
 | `https://t.me/<bot>?startapp=l_<id>` | share fallback text | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:49` |
-| `https://t.me/<bot>?start=s_<source>[--l<id>]` | no-access «Перейти в бота» | `$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:66` |
+| `https://t.me/<bot>?start=s_<source>[--l<id>]` | no-access «Перейти в бота»; since release `index-CIa0Ldj2.js` the source `seo` is `seo_en` / `seo_uz` by the interface language (`ru` keeps `seo`), and the link is not built for `blocked` and `paused` | `$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:66`; `NoAccessScreen.jsx:41-47,72-75`, `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:69-79` at r33 |
 | `https://t.me/<bot>?start=s_friend` | survey «Рассказать друзьям» | `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:119` |
 | `https://t.me/<support>?start=l_<id>` | actions «Написать в поддержку» | `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:161` |
 | `https://t.me/<support>` | settings and no-access support rows | `$KVADRO_ROOT/demo/app/src/features/settings/AboutGroup.jsx:35`; `NoAccessScreen.jsx:79` |
@@ -229,7 +245,13 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - The first push calls `BackButton.onClick(onBackPressed)` and `show()`.
   - The press runs the **last** handler, wrapped in `safeCallback`.
   - Removing the last handler calls `offClick` and `hide()`.
-  - Each unsubscribe uses the WebApp instance captured at push time.
+  - Up to `index-CBlEKxdL.js` each unsubscribe used the WebApp instance captured at push time, and a handler pushed
+    while the SDK was absent was dropped.
+  - Since release `index-CIa0Ldj2.js` handlers always go on the stack. `syncBackButton()` binds and shows the button
+    when the stack is not empty and the SDK exists, unbinds and hides it when the stack empties, and runs again from
+    `initTelegramApp()`, so handlers pushed before a late SDK start working (`buttons.js:17-27,36-46,58-69` at r33).
+- **Without the SDK** (since release `index-CIa0Ldj2.js`): the listing layer, the settings sub-pages and the owner
+  form show a close cross of their own (TMA-047).
 - **Layers using it:** `03-legacy-frontend-audit.md` §1.2. There is no Back on the root tabs; Telegram then shows its
   Close.
 - **Owner layers** (since release `index-CBlEKxdL.js`): they push onto the same stack, in this order. The lazy frame
@@ -248,12 +270,41 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 - **Behaviour:** `SettingsButton.onClick` + `show()` when `isVersionAtLeast('7.0')` (`buttons.js:42-54`). The handler
   closes the listing, filters and radar editor, switches to settings and scrolls to the top
   (`$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:10-23`).
-- **Gap:** other sheets stay open (LB-APP-046).
+- **Since release `index-CIa0Ldj2.js`:** `setSettingsHandler` replaces `showSettingsButton`, and
+  `syncSettingsButton()` binds the item lazily, like Back (TMA-022), still only from Bot API 7.0
+  (`buttons.js:17-27,36-46,58-69,76-85` at r33). The handler gives a light haptic; closes the listing, the filters
+  sheet, the radar editor, the radar-create sheet, the quick filter, the city picker and the sort sheet; remembers the
+  feed scroll (`03` BR-APP-105); opens the settings tab; and scrolls to the top (`useTelegramButtons.js:12-40` at
+  r33).
+- **Gap:** up to `index-CBlEKxdL.js` other sheets stayed open. Since release `index-CIa0Ldj2.js` the handler closes
+  them, but not the owner form or «Мои объявления» (`03` LB-APP-046, partly fixed).
 
 #### TMA-024 — MainButton, SecondaryButton, BottomButton (CONFIRMED absence)
 
 - **Not used.** Every primary action is an in-page HTML button: the CTA bar, sheet footers and the radar sheet footer.
 - **Port note:** porting to `MainButton` would be a product change, not parity.
+
+#### TMA-047 — A close control of the app's own while the SDK is absent (CONFIRMED)
+
+- **Since:** release `index-CIa0Ldj2.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:16` at r36).
+- **Rule:** the cross `FallbackClose` renders if and only if the module's `webApp` binding is empty, read through
+  `useSyncExternalStore` (`$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx:12-21` at r33). Subscribers are told
+  at the end of every `initTelegramApp()` (`$KVADRO_ROOT/demo/app/src/lib/telegram/webApp.js:204-206,210-220` at
+  r33).
+- **Late SDK:** an SDK that loads after the 3 s wait and has `initData` is adopted (TMA-004): the system Back button
+  binds (TMA-022) and the cross disappears. A late SDK without `initData` is not adopted, so the cross stays
+  (`webApp.js:94-105` at r33).
+- **Where:** the listing layer in its three states: error, skeleton and content
+  (`$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:178,205,252`); every `SubPage`
+  (`$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx:33`); the owner form layer
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1491`), all at r33. The screens are `03` SCR-018, SCR-019,
+  SCR-033, SCR-050 and SCR-057.
+- **Look:** a round glass button with the icon `X` 20 px and the aria-label «Закрыть», fixed at the top right below
+  the top inset, 44 × 44 px (`$KVADRO_ROOT/demo/app/src/styles/settings.css:157` at r33).
+- **Beside:** TMA-004 (the late SDK), TMA-005 (the bridge without the SDK), TMA-022 (the BackButton it replaces) and
+  TMA-043 (outside Telegram, where Back was a no-op).
+- **Parity scenarios:** `no-sdk-listing` (without the SDK, with initData in `#tgWebAppData=`, the cross shows on the
+  listing) and `no-sdk-listing-close` (the cross closes the listing).
 
 ### 1.6 Feedback and dialogs
 
@@ -397,7 +448,8 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md:22`). Since release `index-CBlEKxdL.js`
   also `kv-owner-tip` (the tip of the owner chip, `03` BR-APP-101) and `kv-req-tip` (the request tip, `03`
   BR-APP-092): both joined `DEVICE_SYNCED_KEYS` (`storage.js:6` at r31;
-  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:33` at r31).
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:33` at r31). The mark `kv-start-done` of release `index-CIa0Ldj2.js`
+  (TMA-010) is a sessionStorage key and is not mirrored.
 - **Gaps:** LB-APP-012, LB-APP-021.
 
 #### TMA-038 — CloudStorage, SecureStorage, BiometricManager, Accelerometer, Gyroscope, DeviceOrientation (CONFIRMED absence)
@@ -420,7 +472,11 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   release `index-CBlEKxdL.js` a return to the app also refetches the owner's pending counter
   (`$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:45-50` at r31; `03` BR-APP-091). While the owner form waits for the
   phone, the return polls the listing at once and restarts the poll after its 90 s timeout
-  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1573-1599` at r31; `03` BR-APP-084).
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1573-1599` at r31; `03` BR-APP-084). Since release
+  `index-CIa0Ldj2.js` a return after ≥ 6 h also runs the long-return check, which reloads the search feed or asks
+  `GET /api/feed/new` for the fresh pill (`useReturnNudge.js:52-74`, `$KVADRO_ROOT/demo/app/src/app/App.jsx:438-468`
+  at r33; `03` BR-APP-104), and the minute clock of the age labels is checked again on `visibilitychange`
+  (`$KVADRO_ROOT/demo/app/src/features/listing/minuteClock.js:4-43` at r33; `03` BR-APP-109).
 
 ### 1.9 Platform checks, version gates and life outside Telegram
 
@@ -461,7 +517,8 @@ This matches `$KVADRO_ROOT/docs/about.md` §9.1.
   - share → `navigator.share`;
   - confirm → `window.confirm`;
   - location → browser geolocation;
-  - Back, Settings and haptics → no-ops.
+  - Back, Settings and haptics → no-ops. Since release `index-CIa0Ldj2.js` Back is no longer nothing for the listing
+    layer, the sub-pages and the owner form: without the SDK they show a close cross of their own (TMA-047).
 - **Boot screen:** reaches the bot through `GET /api/bot` and `https://t.me/<username>`.
 
 #### TMA-044 — Isolating exceptions in Telegram event handlers (CONFIRMED)
@@ -495,8 +552,8 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | Listing details: photos, market comparison, history, nearby, original text, translation | **yes** (SCR-018 to SCR-022) | listing cards in chat with a short version (§5.4) |
 | Contact the author (call page, «Написать», open post) | **yes** | the card has «оригинал» and venue buttons |
 | Favourites, history, hidden list | **yes** (SCR-024, SCR-025, SCR-039) | a favourite button on cards (§5.4) |
-| Hide, block author, report (`rented`, `agent`, `wrong_data`, `fraud`) | **yes** (SCR-023) | «Это риелтор», «Уже сдано», «Скрыть похожие» on cards; undo «↩️ Не сдано» exists only in the bot (§5.5) |
-| Create, edit, pause, delete radars; flow estimate; widen | **yes** (SCR-026 to SCR-031) | a step-by-step wizard and free-text (Gemini) creation (§5.3) |
+| Hide, block author, report (`rented`, `agent`, `wrong_data`, `fraud`) | **yes** (SCR-023); since release `index-CIa0Ldj2.js` an undo of «Уже сдано» (`DELETE /api/listings/:id/report`) | «Это риелтор», «Уже сдано», «Скрыть похожие» on cards; undo «↩️ Не сдано» existed only in the bot up to `index-CBlEKxdL.js` (§5.5) |
+| Create, edit, pause, delete radars; flow estimate; widen | **yes** (SCR-026 to SCR-031); since release `index-CIa0Ldj2.js` a link `?radar=<id>` opens a radar's search | a step-by-step wizard and free-text (Gemini) creation (§5.3); whether its messages carry that link is unknown (`04` Q-BOT-050) |
 | **Deliver** radar results (instant / digest, quiet hours) | no; only settings and status | **yes**: messages in the chat (§5.3) |
 | Settings: language, currency, theme, quiet hours, digest time | **yes** (SCR-032 to SCR-038); language and currency also apply to the bot (`notify.languageHint`, `notify.currencyHint`); since release `index-BnFvC-Ft.js` also the style of the bot's listing cards (`classic` / `rich`) and «Прислать пример в чат» (SCR-048) | `setMyCommands` localisation follows the language (§6.3); sends the listing cards in the chosen style and the sample card (`POST /api/settings/card-sample`, `04` BOT-085, §3.10) |
 | Owner phone verification (`owner_verified`) | no for `/owner`; since release `index-CBlEKxdL.js` the owner cabinet confirms a phone with `requestContact` (TMA-034), and the listing screen shows «Проверенный хозяин» with an info sheet (SCR-062) | **yes**: `/owner` with `request_contact` (§5.6) |
@@ -505,9 +562,9 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | Privacy policy, «Удалить мои данные» | no (SCR-032) | **yes**: `/privacy` (§5.11) |
 | Support conversation | only a link to the support account | a separate support account; the main bot handles the conversation per §5.11 🔶 |
 | Share a listing | `shareMessage` / `startapp` link (TMA-030, TMA-031) | 🔶 `savePreparedInlineMessage` on the server prepares the message |
-| Entry deep links | receives `startapp=l_<id>[-src]` (TMA-010, TMA-011) and, since release `index-CBlEKxdL.js`, `startapp=owner_new` (TMA-046) | receives `start=s_<src>[--l<id>]`, `s_friend`, `s_web…` (§5.10) |
+| Entry deep links | receives `startapp=l_<id>[-src]` (TMA-010, TMA-011) and, since release `index-CBlEKxdL.js`, `startapp=owner_new` (TMA-046); since release `index-CIa0Ldj2.js` the page query `?radar=<id>` (TMA-012) | receives `start=s_<src>[--l<id>]`, `s_friend`, `s_web…` (§5.10); since release `index-CIa0Ldj2.js` also `s_seo_en` and `s_seo_uz` from the gate (TMA-013) |
 | Write access | asks for it (`requestWriteAccess`, TMA-033), since release `index-CBlEKxdL.js` also before a contact request | needs it to deliver radars and, since that release, the answers to contact requests |
-| Access gate (closed beta) | shows reasons from `403` (SCR-003) | «Старт» in the bot unlocks `join` (text `noAccess.text.join`) |
+| Access gate (closed beta) | shows reasons from `403` (SCR-003); since release `index-CIa0Ldj2.js` also `paused`, «Бот на паузе» | «Старт» in the bot unlocks `join` (text `noAccess.text.join`); what the bot does while it is `paused` is unknown (`04` Q-BOT-051) |
 
 Rule for the port: every Mini App action that results in a chat message (radar create, enable, edit, widen; since
 release `index-BnFvC-Ft.js` the sample card) depends on the bot's write access. The `409 no_chat` contract (TMA-033)
@@ -606,6 +663,7 @@ How it works:
 - **Version gates.** Keep each gate per §1.9; old clients must degrade, not crash.
 - **Storage keys.** Keep the `kv-*` names and the DeviceStorage behaviour, or migrate them explicitly
   (`03-legacy-frontend-audit.md` §3.2).
+- **Close without the SDK.** Keep a close control of the app's own wherever a layer relies on BackButton (TMA-047).
 
 ## 5. Summary
 
@@ -615,9 +673,9 @@ How it works:
 | Identity, auth, language, privacy | TMA-006 to TMA-009 | CONFIRMED (server signature check DOCUMENTED_ONLY) |
 | Launch parameters and deep links | TMA-010 to TMA-013, TMA-046 | CONFIRMED |
 | Window, viewport, safe areas, theme | TMA-014 to TMA-021 | CONFIRMED (TMA-018 is an absence) |
-| Buttons | TMA-022 to TMA-024 | CONFIRMED (TMA-024 is an absence) |
+| Buttons | TMA-022 to TMA-024, TMA-047 | CONFIRMED (TMA-024 is an absence) |
 | Feedback and dialogs | TMA-025 to TMA-027 | CONFIRMED (TMA-027 is an absence) |
 | Links, calls, sharing | TMA-028 to TMA-032 | CONFIRMED (TMA-030 server side DOCUMENTED_ONLY; TMA-032 is an absence) |
 | Permissions, device, storage | TMA-033 to TMA-040 | CONFIRMED (TMA-038 is an absence; TMA-034 was one up to `index-BnFvC-Ft.js`, its bot side is DOCUMENTED_ONLY) |
 | Platform, gates, outside Telegram, dev tooling | TMA-041 to TMA-045 | CONFIRMED |
-| **Total** | **46** (41 used integration points, 5 confirmed absences) | — |
+| **Total** | **47** (42 used integration points, 5 confirmed absences) | — |

@@ -42,14 +42,14 @@ the per-m² fix of `100008` and `100009`, as a backend commit of this package (D
 | Topic | Source | Consequence here |
 | ----- | ------ | ---------------- |
 | Rebuild | DEC-32, 25 §2 rule 3 | Built from the audit; no legacy code or CSS is copied |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and stay off; the actions route is the one reader of both. `dev014TashkentDates` (read by `ListingScreen` for `HistoryDate`), `dev001AnyForbiddenShowsAccess` (`useListing` calls `onForbidden()` once the session is ready) and `dev016ErrorToastOnFailure` (through `failed()`, for the contact failures only: the actions sheet shows its failure toast always, D-6) are consumed through the helpers of WP-22 and WP-23. `dev019OneDistanceFormatter` is not read on this screen: it switches the card's metro label (`formatMetroLabel`), and «Рядом» always uses `formatDistance` |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and were off as built; the actions route is the one reader of both. `dev014TashkentDates` (read by `ListingScreen` for `HistoryDate`), `dev001AnyForbiddenShowsAccess` (`useListing` calls `onForbidden()` once the session is ready) and `dev016ErrorToastOnFailure` (through `failed()`, for the contact failures only: the actions sheet shows its failure toast always, D-6) are consumed through the helpers of WP-22 and WP-23. `dev019OneDistanceFormatter` is not read on this screen: it switches the card's metro label (`formatMetroLabel`), and «Рядом» always uses `formatDistance`. Since the intake of `index-CIa0Ldj2.js` (DEC-58, which amends DEC-36 for what legacy adopted): `dev051RentedUndo`, `dev014TashkentDates` and `dev016ErrorToastOnFailure` are on by default; the realtor toast has a flag of its own, `dev010AgentMarkedToast`, on by default; `dev010RealtorVoteWording` stays off and keeps only the hint; the contact failures ask `failed()` for the haptic alone. Both branches of each flag stay written and tested (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts`, `useListingActions` and `useContact` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21, row 22, row 24 and row 27)) |
 | Rendering | DEC-44, 25 §3.1 | The server part fetches with the session cookie and passes `initial` to one Client Component keyed by the number, which fetches for itself when the server had no session |
 | Routes | 25 §3.2 | `/listing/[number]` is a layout rendered over the page below; `photos`, `market`, `actions` are its own addresses; Back closes viewer or sheet first, then the listing |
 | Session modes | 25 §3.4 | Cookie mode and header mode use the same screen code; mutations are Server Actions that take one input object and, in header mode, the token as an argument (D-7) |
 | API conventions | 25 §4.1 | Listings are addressed by their public number; `503 source_unavailable` shows the "could not load" state with retry |
-| Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports`. The API records the view on the read; the client sends nothing for it |
+| Methods | 25 §4.2, DEC-48 | `GET /listings/{number}`, `POST …/contact`, `POST …/translation`, `POST …/share`, `PUT`/`DELETE /hidden/listings/{number}`, `PUT`/`DELETE /listings/{number}/blocked-author`, `POST /listings/{number}/reports` and, since the intake of `index-CIa0Ldj2.js`, `DELETE /listings/{number}/reports`, the undo of «Уже сдано» (DEC-68; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/actions/reports.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 22)). The API records the view on the read; the client sends nothing for it |
 | The author's number | DEC-52, WP-12 | The card answer has no number and no call link, and the numbers in its texts are masked. «Позвонить», «Показать номер» and a masked number in the text call `POST …/contact` on the tap and only then show the digits or open the call link. Nothing asks for a contact without a tap, so no number is in the server-rendered page. On by decision, no flag |
-| Baseline | 25 §8, Q-APP-024, `wave-1/baseline.md` | The behaviour is that of the pinned release `index-DY_DH7h-.js`. Two parts came after the release first audited: the report-detail step (`index-BNLZFfL0.js`; SCR-023, BR-APP-036, API-016) and the `business` price kind, which on this screen shows only in the share text (`index-Dbpp463V.js`; SCR-018, BR-APP-038). Both are specified below from the audit. The details the audit left open were settled by a read-only look at the legacy source (D-30); a value marked HOMI below is a deliberate departure. Since `index-CBlEKxdL.js` the layer has an entrance and a leave animation (*added by the intake of `index-CBlEKxdL.js`*) |
+| Baseline | 25 §8, Q-APP-024, `wave-1/baseline.md` | The behaviour is that of the pinned release `index-DY_DH7h-.js`. Two parts came after the release first audited: the report-detail step (`index-BNLZFfL0.js`; SCR-023, BR-APP-036, API-016) and the `business` price kind, which on this screen shows only in the share text (`index-Dbpp463V.js`; SCR-018, BR-APP-038). Both are specified below from the audit. The details the audit left open were settled by a read-only look at the legacy source (D-30); a value marked HOMI below is a deliberate departure. Since `index-CBlEKxdL.js` the layer has an entrance and a leave animation (*added by the intake of `index-CBlEKxdL.js`*). Since `index-CIa0Ldj2.js`: the "gone" screen, the day limit, the report toasts, the floor tile, Tashkent dates, the close control without the SDK, the sale switch (*added by the intake of `index-CIa0Ldj2.js`*) |
 | Brand | DEC-40, 25 §2 rule 5 | Bot name, support account and the methodology link come from the brand layer and the reference data, never inline |
 | Developer answers of 2026-11-17 | D-1, D-2 | The stub variants and the per-m² fix are in this PR («В PR WP-26»). `splitMaskedPhones` lives in the app, `frontend/app/lib/phone/masked.ts` («lib приложения»): no package or lockfile change |
 | Acceptance | DEC-46, 25 §9 | The functional checklist below, in three locales and two themes |
@@ -260,6 +260,16 @@ changed here (D-8).
   animation. A new opening during the leave cancels it. How the leave is sequenced with the route change is decided by
   the package that builds it (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`,
   `ListingLayer` and `closeListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)).
+- While the SDK is absent the layer shows the fallback close, the app's own cross labelled `common.close`, in every
+  state — skeleton, preview, details, "gone", day limit and the error states. It closes like Back and goes when the
+  SDK arrives (legacy since `index-CIa0Ldj2.js`, `05` TMA-047; *added by the intake of `index-CIa0Ldj2.js`*; a parity
+  item of `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+- The listing of a launch link that is a sale over a feed that is not: when it closes — by Back, swipe, the fallback
+  close or `closeListing` — the feed's address is replaced by the sale defaults of the feed's own city instead of a
+  plain Back (DEC-65). Legacy switches the feed while the listing is open (`03` BR-APP-108); here the page under an
+  intercepted layer cannot change its address while the layer shows. Another listing opened meanwhile drops the switch
+  (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and the close path of the listing for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 16)).
 - A soft navigation from a directly loaded listing address is intercepted into `@overlay` (see "Routes"). Once an
   overlay copy of a listing has shown, the standalone copy renders its child routes no more, for the rest of its life
   (a latch, not a toggle; review X1): after a depth-0 close of a directly loaded child (the replace with the listing)
@@ -280,10 +290,11 @@ changed here (D-8).
 
 ### Flags and new texts
 
-| Flag (default off) | Off — legacy | On |
-| ------------------ | ------------ | -- |
-| `dev051RentedUndo` | «Отметили: уже сдано» without an action | the toast gets «Вернуть», which unhides. Withdrawing the vote needs a v1 method that 25 §4.2 does not list: a `todo` test marks it |
-| `dev010RealtorVoteWording` | `report.agentHint`, `toast.reportedAgent` | `report.agentHintReview`, `toast.reportedAgentReview` |
+| Flag | Off | On |
+| ---- | --- | -- |
+| `dev051RentedUndo` — on by default since the intake of `index-CIa0Ldj2.js` (DEC-58) | «Отметили: уже сдано» without an action (legacy up to `index-CBlEKxdL.js`) | the toast gets «Вернуть», which calls `unreportListing` (`DELETE /listings/{number}/reports`: only the `rented` report is withdrawn, DEC-68) and un-hides the listing (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` and `lib/actions/reports.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 22); as built the flag is off and its undo only un-hides) |
+| `dev010AgentMarkedToast` — new, on by default (DEC-58) | always `toast.reportedAgent` (legacy up to `index-CBlEKxdL.js`) | `toast.reportedAgent` «Отметили номер как риелторский» when the answer has `agent_marked`, else `toast.reportedAgentNoted` «Спасибо, учёл вашу отметку» (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 24)) |
+| `dev010RealtorVoteWording` — off | `report.agentHint` | `report.agentHintReview`: the hint only. `toast.reportedAgentReview` is no longer used once the toast follows `agent_marked`; as built this flag also switched the toast to it |
 
 New keys, `homi` layer of `@homi/i18n` (uz values as written here; the «makler» / «ham» question is in "Open for the
 reviewer", D-13):
@@ -377,9 +388,10 @@ market sheet shows a section skeleton, the menu a generic block hint.
 | Skeleton | no preview and no answer yet | shimmer hero and three bars; swipe-back off |
 | Preview | card data in the cache, answer pending | hero, title, key facts (no building tile) from the preview; `SectionSkeleton` of 3 lines and of 4 lines; no market block; the CTA bar with the card's price and market chip and a shimmer in place of the action |
 | Loaded | answer arrived | all sections; photos from the full set |
-| Not found | `not_found` | only the text `listing.loadFailed` «Объявление не загрузилось» (uz «Eʼlon yuklanmadi», en «Couldn’t load the listing»); no button; Back closes |
+| Not found | `not_found` | a block with `role="alert"`: the `SearchX` icon, the text `listing.gone` «Этого объявления уже нет — квартиру, похоже, сдали или продали» (uz «Bu eʼlon endi yoʻq — uy, shekilli, ijaraga berilgan yoki sotilgan», en «This listing is gone — the flat has probably been rented out or sold») and the button `listing.goneFresh` «Смотреть свежие» (uz «Yangilarini koʻrish», en «See the latest»): a light haptic, then the layer closes; a directly loaded listing goes to the feed. No retry; Back closes. Legacy since `index-CIa0Ldj2.js` (`03` SCR-019); as built: only the text `listing.loadFailed` «Объявление не загрузилось», no button (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17)) |
+| Day limit | `rate_limited` with `reason: "daily"` | tall `ErrorState`: `error.dayLimit` «Лимит на сегодня», `error.dayLimitText` «За сутки открыто очень много объявлений. Попробуйте позже — Радар продолжит присылать новые в чат.», «Повторить» (DEC-59; legacy since `index-CIa0Ldj2.js`, `03` SCR-008; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)) |
 | Offline | `offline`, `timeout` | tall `ErrorState`: `error.offline` «Нет связи», `error.offlineText` «Проверьте интернет и попробуйте ещё раз.», `error.retry` «Повторить» |
-| Server | `server`, `source_unavailable`, `rate_limited` | tall `ErrorState`: `common.loadFailed` «Не загрузилось», `error.serverText` «Сервер не ответил. Попробуйте ещё раз через минуту.», «Повторить» |
+| Server | `server`, `source_unavailable`, `rate_limited` without the reason | tall `ErrorState`: `common.loadFailed` «Не загрузилось», `error.serverText` «Сервер не ответил. Попробуйте ещё раз через минуту.», «Повторить» |
 | Forbidden | `forbidden` | the server state above; with `dev001AnyForbiddenShowsAccess` `onForbidden()` sends the user to the access screen once the session is ready |
 | Unauthorized | `unauthorized` | `bffFetch` re-authenticates once (WP-21); if that fails the session-expired screen of WP-23 shows. A server `unauthorized` is read again in the browser |
 
@@ -417,7 +429,11 @@ success or error on an action result; error on every contact failure; none for t
    `listing.floor`), building (`listing.building`): `listing.newBuilding` when `market.code` is `new`, else
    `listing.secondary`. The building tile needs `market.code`, which only the details carry: none in the preview,
    none for `null`. A tile is left out when its value is unknown or zero (rooms, area, floor; a studio's `rooms: 0`
-   has no tile). Nothing when no tile is left.
+   has no tile). Nothing when no tile is left. Since legacy release `index-CIa0Ldj2.js` the floor is the exception
+   (`03` BR-APP-110): `floor: 0` gives the tile `listing.floorGround` «Цокольный этаж» and a negative floor
+   `listing.floorBasement` «Подвал», both with an empty caption; only `null` leaves the tile out (*added by the intake
+   of `index-CIa0Ldj2.js`*; a parity item of `KeyFacts` for a later package (`wave-1/baseline.md`, built code behind
+   the pin, row 26)).
 5. **Market block** (BR-APP-028, D-4): shown only in the loaded state, when `verdict.ts` returns a verdict **and**
    `comparison !== null` **and** `market.median_delta !== null`. Title `market.title` «Сравнение с районом»,
    `market.titleNear` «Сравнение с похожими рядом» (scope `near`) or `market.titleCity` «Сравнение с городом» (scope
@@ -456,7 +472,10 @@ success or error on an action result; error on every contact failure; none for t
    `dev014TashkentDates` (LB-APP-025). Because the device zone is unknown on the server, `HistoryDate` renders a
    fixed-width empty cell on the server and at hydration and fills it after hydration (the fallback of
    `preventing-flash-before-hydration.md`; a client-only mount fills it at once); with the flag on the server renders
-   the Tashkent value (D-29).
+   the Tashkent value (D-29). The flag is on by default since the intake of `index-CIa0Ldj2.js`: legacy formats these
+   dates in Asia/Tashkent itself since that release (DEC-58); the device-zone branch stays, tested, behind the flag
+   off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` for a later package
+   (`wave-1/baseline.md`, built code behind the pin, row 27)).
 9. **Location** `listing.location` «Расположение»: with coordinates — `SpotMapSlot` (2:1 box, aria
    `listing.mapOpen`, light haptic, tap → `router.push(routes.listingLocation(number))`) and the hint
    `listing.mapApprox` «Место примерное: по кварталу, ориентиру или метро из объявления»; without coordinates neither.
@@ -536,6 +555,10 @@ listing hold no number.
   When the answer carries no number, the `tel:` attempt is skipped and every call uses the call link.
 - «Написать» / «Номер платный»: `tg.openLink(contactUrl)`; `contact_write { listing_id }` (the number on screen) only
   when it opened. A `contact_url` that `tg.openLink` refuses → `failed()`, no `contact_write` (D-23).
+- These contact failures keep the haptic alone (a default of the integrator: the developer's answer on the flags did not name them): `failed()` is called without the toast, whatever
+  `dev016ErrorToastOnFailure` says, because legacy shows no toast there, also since `index-CIa0Ldj2.js` (*added by the
+  intake of `index-CIa0Ldj2.js`*; a parity item of `useContact` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 21)).
 - Different from legacy by decision (DEC-52): legacy has the number in the card — it shows it in the author
   section at once, prints the numbers of the post in the original text and refreshes the call link on a timer.
   HOMI shows no digit before the tap and fetches nothing without one.
@@ -657,7 +680,10 @@ Report step, title `report.title` «Что не так?», back chevron aria `ac
 
 - `report.rented` «Уже сдано» — `report.rentedHint` «Объявление больше не актуально».
 - `report.agent` «Это риелтор, а не хозяин» — `report.agentHint` «Отметим номер как риелторский»; hidden when the
-  listing says it is not from an owner (`is_owner === false`).
+  listing says it is not from an owner (`is_owner === false`) and, since legacy release `index-CIa0Ldj2.js`, when the
+  author is not a phone (`author.kind !== "phone"`, a missing author included) (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `ListingActionsSheet` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 25)).
 - `report.wrong_data` «Неверные данные» — `report.wrong_dataHint` «Цена, район или комнаты не совпадают»; with a
   › arrow. A tap opens the detail step and sends nothing.
 - `report.fraud` «Мошенничество или спам» — `report.fraudHint` «Просят предоплату, чужие фото, реклама».
@@ -687,9 +713,9 @@ Results (`useListingActions`):
 | ------ | ------ | ----- |
 | Hide | number into the `hidden` map; `closeListing()` | `toast.hidden` «Объявление скрыто» + `toast.undo` «Вернуть» → `unhideListing` |
 | Block | the number and every number of the answer (de-duplicated) into `hidden`; `closeListing()` | `toast.blocked` «Автор {label} заблокирован» (the answer's label as it is, else the author's, D-26) + «Вернуть» → `unblockAuthor` |
-| Report `fraud`, answer says hidden | as hide | `toast.reportedFraud` «Спасибо, посмотрим. Это объявление у вас скрыли» + «Вернуть» → `unhideListing` |
-| Report `rented` | number into `hidden`; `closeListing()` | `toast.reportedRented` «Отметили: уже сдано», no action (see `dev051RentedUndo`) |
-| Report `agent` | `closeActions()` | `toast.reportedAgent` «Отметили номер как риелторский» |
+| Report `fraud`, answer says hidden | as hide | `toast.reportedFraud` «Спасибо, посмотрим. Это объявление у вас скрыли» + the button `toast.showForMe` «Показывать у меня» → `unhideListing` (the label is legacy since `index-CIa0Ldj2.js`; as built «Вернуть»; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 23)) |
+| Report `rented` | number into `hidden`; `closeListing()` | `toast.reportedRented` «Отметили: уже сдано» + «Вернуть» → `unreportListing` and the number out of `hidden` at once; a failed undo hides it again with `common.saveFailed`. With `dev051RentedUndo` off: no action ("Flags and new texts"; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 22)) |
+| Report `agent` | `closeActions()` | per `dev010AgentMarkedToast`: `toast.reportedAgent` «Отметили номер как риелторский» when the answer has `agent_marked`, else `toast.reportedAgentNoted` «Спасибо, учёл вашу отметку»; with the flag off always the first (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 24)) |
 | Other reports, `wrong_data` with any detail included | `closeActions()` | `toast.reported` «Спасибо! Посмотрим» |
 | Any failure | nothing changes, sheet stays, error haptic | `common.saveFailed` «Не получилось сохранить» in the sheet's own toast host, always, whatever `dev016ErrorToastOnFailure` says (D-6, legacy `03` SCR-023) |
 | Undo | removes the numbers from `hidden` at once; on failure puts them back | on failure the error haptic and `common.saveFailed` |
@@ -758,7 +784,15 @@ count. The digit check of the stub number (`100001`, raw `+998 00 000 00 67`) lo
   rent, a sale with `down_payment`, a commercial listing with `business`, an unknown kind (no label part), no price.
 - `listing/useListingActions.test.tsx`: each row of the results table; failures in the sheet's host whatever
   `dev016…` says; undo failure; the busy guard; a result after the sheet was left; both branches of both flags
-  (`withDevFlags`); `todo` for the vote withdrawal.
+  (`withDevFlags`); `todo` for the vote withdrawal. Since the intake of `index-CIa0Ldj2.js` the `todo` becomes tests:
+  the undo of `rented` calls `unreportListing`, and a failed undo hides the listing again (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `useListingActions` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 22)); the `fraud` label (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 23)); both `agent`
+  toasts in both states of `dev010AgentMarkedToast` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `useListingActions` for a later package (`wave-1/baseline.md`, built code behind the pin, row 24)); no `agent` row
+  for a `source` author and without an author (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `ListingActionsSheet` for a later package (`wave-1/baseline.md`, built code behind the pin, row 25)).
 - `listing/closeListing.test.ts`: `stepLayersOf`; `closeActions` and `closeListing` with the real `backBy` over jsdom
   history, and their replace fallbacks.
 - `listing/useTranslation.test.tsx`: not offered in ru; fetch then toggle; failure then retry; keyed by number
@@ -773,7 +807,11 @@ count. The digit check of the stub number (`100001`, raw `+998 00 000 00 67`) lo
 
 **Component (Vitest + Testing Library), in `frontend/app/tests/listing/`.**
 
-- `ListingScreen.test.tsx`: skeleton, preview, loaded, not found, offline, server (with the top inset); video tap
+- `ListingScreen.test.tsx`: skeleton, preview, loaded, not found — the "gone" block and its button (*added by the
+  intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built
+  code behind the pin, row 17)) —, the day limit (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)),
+  offline, server (with the top inset); video tap
   with and without a deleted post and while pending; no `h1` without a title; the counter rule (a one-photo preview
   with a count of 5 shows none); none of the digit forms in the document, the masked form shown.
 - `ListingScreen.wiring.test.tsx` (the real layer, the resolved screen and one child route, the real `next/dynamic`):
@@ -864,7 +902,19 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] A direct load of the listing address shows the skeleton, then the listing; Back goes to the feed.
 - [ ] A direct load of the listing's photos, market or actions address shows the child over the listing; closing it
       shows the listing, and the next Back goes to the feed.
-- [ ] Not found shows only «Объявление не загрузилось»; Back closes it.
+- [ ] Not found shows «Этого объявления уже нет — квартиру, похоже, сдали или продали» with «Смотреть свежие», which
+      returns to the feed; Back closes it too (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+      `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17); as built: only
+      «Объявление не загрузилось»).
+- [ ] The day limit (`429` with `reason: "daily"`, scenario `daily_limit`) shows «Лимит на сегодня» with its text and
+      «Повторить» (DEC-59; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListing` and
+      `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)).
+- [ ] Without the SDK (`launchApp(page, { sdk: false })`) the listing has a close cross in its skeleton, content and
+      error states, and it goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+      `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+- [ ] A reload inside one launch does not reopen the listing of the launch link (*added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and `LaunchRedirector` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 15)).
 - [ ] Offline shows «Нет связи» with «Повторить»; a server or source failure shows «Не загрузилось»; retry loads.
 - [ ] Opened again after a failure, the listing shows its preview or skeleton, not the old error.
 - [ ] A redirected number shows the surviving listing with one request and no leftover state.
@@ -873,7 +923,9 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Hero: counter «N / M», photo swipe, video label; a video tap opens the post, or the viewer if it is deleted.
 - [ ] Status banner shows the server text when present.
 - [ ] Title row: title, «district · landmark», share (only with a bot name), favourite toggles, «⋯» opens the sheet.
-- [ ] Key facts show rooms, m², floor, building; nothing when all are absent.
+- [ ] Key facts show rooms, m², floor, building; nothing when all are absent. `floor: 0` shows «Цокольный этаж» and a
+      negative floor «Подвал» (the stub listings `100022` and `100023`; *added by the intake of `index-CIa0Ldj2.js`*;
+      a parity item of `KeyFacts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 26)).
 - [ ] Market block: three titles by scope; verdict, scale, «обычно …», context line, warnings; hidden without a
       comparison; no «$NaN» anywhere.
 - [ ] Facts grid in server order; a long value spans the row; an unknown key has the house icon.
@@ -929,8 +981,19 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Under lite graphics and under reduced motion the listing opens and closes with no animation.
 - [ ] A listing opened while another is leaving cancels the leave and shows the new one.
 - [ ] Viewer and sheets are above the CTA bar and the tab bar; the toast is above the sheets.
-- [ ] With `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with `dev010RealtorVoteWording` on
-      the realtor hint and toast use the review wording. Both are off in the merged build.
+- [ ] As built by this package: with `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with
+      `dev010RealtorVoteWording` on the realtor hint and toast use the review wording; both were off in the merged
+      build. The next line replaces this one for the defaults since the intake of `index-CIa0Ldj2.js`.
+- [ ] Since the intake of `index-CIa0Ldj2.js` (DEC-58) the defaults are: `dev051RentedUndo` on — «Отметили: уже сдано»
+      has «Вернуть», it sends `DELETE /listings/{number}/reports` and the listing is back, and a failed undo hides it
+      again; `dev010AgentMarkedToast` on — a realtor vote says «Отметили номер как риелторский» only with
+      `agent_marked`, else «Спасибо, учёл вашу отметку»; `dev010RealtorVoteWording` off — the review hint only;
+      `dev014TashkentDates` on. Each flag still has both branches tested (*added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` and `useListingActions` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 22, row 24 and row 27)).
+- [ ] The `fraud` toast's button reads «Показывать у меня»; the realtor reason is absent for a channel author (*added
+      by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListingActions` and `ListingActionsSheet` for a
+      later package (`wave-1/baseline.md`, built code behind the pin, row 23 and row 25)).
 - [ ] Every scenario above passes in cookie mode and in header mode.
 - [ ] No phone number, original text or contact link appears in analytics events or error reports.
 - [ ] Unit, component and end-to-end tests of this package are green in CI.

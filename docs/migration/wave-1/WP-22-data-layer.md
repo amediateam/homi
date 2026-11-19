@@ -39,11 +39,15 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
 - DEC-41, `25` §4.1, §4.6: the frontend sees `/api/v1` only; types come from `@homi/types`; every answer carries
   `meta.source`; `503 source_unavailable` shows the legacy "could not load" state.
 - `25` §3.7, `03` §3.5: numbers in Uzbek are formatted with `ru-RU`; prices are stored and sent in USD.
-- DEC-36. Fixed here: LB-APP-007, LB-APP-011, LB-APP-023. Written behind flags that are off: LB-APP-025
-  (`dev014TashkentDates`), LB-APP-029 (`dev017TenantPetsDailyRule`),
+- DEC-36. Fixed here: LB-APP-007, LB-APP-011, LB-APP-023. Written behind flags that were off as built: LB-APP-025
+  (`dev014TashkentDates`, on by default since DEC-58), LB-APP-029 (`dev017TenantPetsDailyRule`),
   LB-APP-030 (`dev018ResetKeepsDaily`), LB-APP-031 (`dev019OneDistanceFormatter`), LB-APP-033
   (`dev021OneFlowVocabulary`), LB-APP-043 (`dev025ValidateRanges`), LB-APP-045
   (`dev001AnyForbiddenShowsAccess`). Also wired: `dev052UnifiedBelowMedianRule`, `dev005RadarDropsPostedDays`.
+- DEC-58 amends DEC-36 for the behaviours that legacy adopted in `index-CIa0Ldj2.js`: their flags stay, with both
+  branches tested, and are on by default. Here: `dev014TashkentDates`, and the pets half of LB-APP-029 under its own
+  rule key `dev017PetsLongRentOnly` ("Flagged branches" and "Formatters" below; *added by the intake of
+  `index-CIa0Ldj2.js`*).
 - DEC-54: the whole-city label is «{city} целиком», built from the city's name in the reference data. It is on by
   decision and has no flag; it settles LB-APP-026.
 - DEC-51: `GET /reference` says whether radars are switched on (`radars_enabled`, WP-11); the reference hook
@@ -118,10 +122,10 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
 | 4 | `503` with code `source_unavailable` | `source_unavailable` | the same "could not load" state as row 3 (`25` §4.1) |
 | 5 | `401` | `unauthorized` | never shown: `reauthenticate()` of WP-21; if that fails the session-expired state replaces the screen |
 | 6 | `403` | `forbidden` | flag off: lists show the inline «Нет доступа — повторить» (`feed.retry` with `common.noAccess`), other screens row 3; with `dev001AnyForbiddenShowsAccess` on: `onForbidden()` sets the session to `denied` and the access screen opens (LB-APP-045) |
-| 7 | `404` | `not_found` | the screen's own text (listing: `listing.loadFailed`) |
+| 7 | `404` | `not_found` | the screen's own text (listing: the "gone" block `listing.gone` of WP-26 since the intake of `index-CIa0Ldj2.js`, before it `listing.loadFailed`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17)) |
 | 8 | `409` | `conflict` + `code` | radar limit and `no_chat` (WP-30) |
 | 9 | `422` | `validation` | a mutation: `failed()` of WP-23 |
-| 10 | `429` | `rate_limited` | reads: row 3; mutations: `failed()` |
+| 10 | `429` | `rate_limited` | reads: row 3; mutations: `failed()`. `UiError` keeps the code and gains `reason?: "daily"`, read from the body of the `429` (DEC-59): the listing shows its day-limit state for it (WP-26); every other screen ignores the reason (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/api/errors.ts` and `useListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)) |
 | 11 | `403` with code `radars_disabled` | `radars_disabled` | read before row 6: a radar write while radars are switched off (DEC-51, WP-13) — the toast `radar.soon.title` (WP-30); never the "no access" handling of row 6 |
 
 A read that fails while older data is on screen keeps the data and shows the inline retry (`03` §1.6). An empty
@@ -256,7 +260,7 @@ row 10 (`me.city`, else `homi-city`, else `tashkent`); the wiring is in `lib/sea
 | 4 | BR-APP-004 | `sectionsFor(f, city, mode, rules, stats).rentTerm` | rent only, and daily already selected or the city's daily count > 0 (`stats` = the city's entry of `GET /cities`) |
 | 5 | BR-APP-005 | `toggleType(f, type)`, `TYPES_BY_DEAL` | rent `apartment, house, room, commercial`; daily `apartment, house, room`; sale `apartment, house, commercial, land`; the last type cannot be removed; `below_median` survives only for `['apartment']` |
 | 6 | BR-APP-006 | `sectionsFor(…).rooms` | hidden when every type is `room`, `commercial` or `land` |
-| 7 | BR-APP-007 | `pickRooms(f, value)` | one value; a second different value makes a range; `4` is "4 or more"; `null` clears |
+| 7 | BR-APP-007 | `pickRooms(f, value)` | one value; a second different value makes a range; `4` is "4 or more"; `null` clears. With only `rooms_max` set the values 1 … max count as picked, and "any" is true only when both bounds are `null` (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `rooms.ts` and `RoomsPicker` for a later package (`wave-1/baseline.md`, built code behind the pin, row 40)) |
 | 8 | BR-APP-008 | `setGeography(f, { polygon \| zones \| districts })` | the three modes exclude each other; zones in the order `center, near_center`; `near_metro` independent |
 | 9 | BR-APP-009 | `pickCity(f, city)` | clears `districts`, `polygon`; keeps `zones` only if the city has zones, `near_metro` only with metro, `below_median` only with medians — each coerced to a boolean (fix of LB-APP-007) |
 | 10 | BR-APP-010 | `readSearchState` / `useSearchState` | the profile city wins over the saved one; an address with a city is not changed |
@@ -268,8 +272,8 @@ row 10 (`me.city`, else `homi-city`, else `tashkent`); the wiring is in `lib/sea
 | 16 | BR-APP-016 | `sectionsFor(…).typicalPrice` | apartment-only searches (daily included) in a city with a name and a typical price; the USD amount to show or `null` |
 | 17 | BR-APP-017 | `belowMedianAvailable(f, city, rules)` | non-daily, apartment-only, a city whose `has_median` is `true` (a missing mark counts as none, as the server's `SearchFiltersNormaliser` reads it) |
 | 18 | BR-APP-018 | `sectionsFor(…).unitPriceHint` | sale searches that include land or houses |
-| 19 | BR-APP-019 | `sectionsFor(…).tenant`, `.pets` | base deal rent, daily included (flag row below) |
-| 20 | BR-APP-020 | `sectionsFor(…).area`, `.market`, `.appliances` | area and market for sale only; appliances for rent only |
+| 19 | BR-APP-019 | `sectionsFor(…).tenant`, `.pets` | `tenant`: base deal rent, daily included (`dev017TenantPetsDailyRule`, off; flag rows below). `pets`: long-term rent only, behind the rule key `dev017PetsLongRentOnly`, on by default since the intake of `index-CIa0Ldj2.js` (DEC-58; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39)) |
+| 20 | BR-APP-020 | `sectionsFor(…).area`, `.market`, `.appliances` | area for every deal (DEC-62; legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 38)); market for sale only; appliances for rent only |
 | 21 | BR-APP-021 | `sectionsFor(…).posted` | `mode === 'search'` only |
 | 22 | BR-APP-022 | `resetAll(f, cityCode = f.city, rules)`, `resetQuick(f, kind)` | full reset → defaults of the base deal and city; quick reset → its own filter, price also clears `below_median` |
 | 23 | BR-APP-023 | `sortOptions(f, city)`, `normalizeSort(sort, options)` | `new`, `cheap`, `expensive` always; `deal` for non-daily apartment-only with medians; `center` with zones; `ppm` for sale; unavailable → `new` |
@@ -293,15 +297,17 @@ KV-FE-020 next to `filtersSummary` and `filtersTitle` — its composition is rea
 and fixed by a snapshot test in three locales. Server-stored types in a radar title go through `labelFor`
 (WP-20).
 
-**Flagged branches** (argument `rules`, every member `false` by default):
+**Flagged branches** (argument `rules`; every member is `false` by default, except `dev017PetsLongRentOnly` of row 6,
+which follows the pinned release and is `true`, DEC-58):
 
 | # | Flag | Defect | Off (legacy) | On |
 | - | ---- | ------ | ------------ | -- |
-| 1 | `dev017TenantPetsDailyRule` | LB-APP-029 | tenant and pets sections visible for daily rent although the switch clears them | sections hidden for daily rent |
+| 1 | `dev017TenantPetsDailyRule` | LB-APP-029 | tenant and pets sections visible for daily rent although the switch clears them. Since the intake of `index-CIa0Ldj2.js` this key governs the tenant section only (row 6 has the pets half) | sections hidden for daily rent (after the split: the tenant section) |
 | 2 | `dev018ResetKeepsDaily` | LB-APP-030 | «Сбросить» returns to `rent_long` | reset keeps `rent_daily` |
 | 3 | `dev025ValidateRanges` | LB-APP-043 | `fixRanges` returns its input: inverted price or area ranges are sent as typed | `fixRanges` swaps the bounds |
 | 4 | `dev052UnifiedBelowMedianRule` | — | row 17 above | the single rule of DEV-052 as approved; until then a `todo` test and no effect |
 | 5 | `dev005RadarDropsPostedDays` | — | `toRadarFilters` keeps `posted_days` | sets it to `null` |
+| 6 | `dev017PetsLongRentOnly` (on by default since the intake of `index-CIa0Ldj2.js`, DEC-58) | LB-APP-029, the pets half, fixed in legacy by that release | the pets section for both rents (legacy up to `index-CBlEKxdL.js`) | `pets` only when `deal === "rent_long"` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts`, `lib/search/rules.ts` and `lib/flags.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39)) |
 
 **Whole-city label (DEC-54, no flag).** The audited `summary.js` prints `sum.wholeCity` where the city's name is
 unknown (`city.name || «Весь Ташкент»`). HOMI: `filtersSummary` starts with the city's name and the area (the
@@ -338,15 +344,31 @@ prints: `formatNumber(value, locale)`, `formatDecimal(value, locale)`, `formatKm
   parse by stripping spaces of every kind, treating one `,` or `.` followed by one or two digits as the decimal
   mark and repeated separators as thousands (`1.000.000` → 1 000 000); `0`, empty and non-numbers → `null`; UZS
   input converts with `max(1, round(value · 10⁶ / rate))`. A negative or non-finite amount formats to an empty
-  string and reports once (`report` of `createMoney`). `presets(deal, { city, reference })`: in USD the city
+  string and reports once (`report` of `createMoney`). Since legacy release `index-CIa0Ldj2.js` (`03` §3.5): the
+  dollar field accepts one leading or trailing `$` with the amount — in `parseInput`, which knows the currency;
+  `parseAmount` does not, and «$1200» stays `null` in сум (*added by the intake of `index-CIa0Ldj2.js`*; a parity
+  item of `money.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 41)) —, and
+  `toInput()` prints the сум field's millions without a thousands separator (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `money.ts` for a later package (`wave-1/baseline.md`, built code behind
+  the pin, row 42)). `presets(deal, { city, reference })`: in USD the city
   presets, else the reference presets; in UZS the city presets converted and rounded per deal, at least one step,
   duplicates dropped in first-seen order, else the fixed lists (reference presets are not used in UZS, as legacy).
 - **Dates** (`date.ts`): `formatShortDate(iso, locale, { timeZone })` — «5 мар» (dot removed), «5 Mar», «5-mar»
   with the Uzbek short months `yan … dek` as a constant; `formatTime`; `formatAgo(iso, now, t)` — under 2 min
   «только что», then minutes, hours under 48 h, then days (`market.info.ago*`), a future time is «только что»;
   `tashkentDayKey(date)`. LB-APP-025: with `dev014TashkentDates` off the zone argument is the device zone, as
-  legacy; on, `Asia/Tashkent`. A device-zone value must not be produced during server rendering — the caller
-  renders it on the client (`preventing-flash-before-hydration.md`); an invalid date gives `null`.
+  legacy up to `index-CBlEKxdL.js`; on, `Asia/Tashkent`. The flag is on by default since the intake of
+  `index-CIa0Ldj2.js`, because legacy formats the listing's history in Asia/Tashkent since that release (DEC-58);
+  both branches stay tested (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 27)). A device-zone value must not be
+  produced during server rendering — the caller renders it on the client
+  (`preventing-flash-before-hydration.md`); an invalid date gives `null`.
+- **Age** (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-109): a formatter of the listing's age over `posted.at`
+  and the clock, in four steps of whole units, rounded down — under 1 minute `card.ageNow`, 1 … 59 minutes
+  `card.ageMin`, 60 … 1 439 minutes `card.ageHours`, from 1 440 minutes `card.ageDays`; a missing or unparsable
+  `at` gives `null`, and the caller prints the server's `posted.when` (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 20)).
 - **Distance** (`distance.ts`): `formatMetroLabel(name, km)` (BR-APP-029) — shown only within 1.5 km, name only
   under 50 m, else «{metro} · {m} м» with metres rounded to 100; `formatDistance(km, { approx })` (BR-APP-031) —
   under 0.1 km «рядом», under 0.95 km metres rounded to 100, else kilometres with one decimal, `~` prefix when
@@ -435,12 +457,17 @@ package formats only what the client formats in legacy. Both must agree with the
 - `defaults`: the 25 keys and their values. `normalize`: missing keys, `undefined`, numeric strings, unknown
   keys, zones order, a 2-point polygon.
 - `compare`: `filtersKey` equality cases; active count per group; `isCustomFilters` for daily rent.
-- `rooms`: 1 → 3 gives 1–3; 4 → 2 gives 2–4+; 2 → 2 stays 2; `null` clears.
+- `rooms`: 1 → 3 gives 1–3; 4 → 2 gives 2–4+; 2 → 2 stays 2; `null` clears; with only `rooms_max` = 2 the values 1 and
+  2 are picked and "any" is false (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `rooms.ts` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 40)).
 - `transitions`: deal switch keeps geography; daily switch clears tenant and pets; the last type cannot be
   removed; `below_median` dropped when a second type is added; city matrix (metro × medians × zones); reset with
   `dev018ResetKeepsDaily` off and on; quick reset of price clears `below_median`.
 - `availability`: section matrix deal × types × mode, tenant and pets with `dev017TenantPetsDailyRule` off and on;
-  `belowMedianAvailable` matrix; `fixRanges` off and on for price and area.
+  `belowMedianAvailable` matrix; `fixRanges` off and on for price and area. Since the intake of `index-CIa0Ldj2.js`:
+  area for rent, daily rent and sale; the pets matrix for both values of `dev017PetsLongRentOnly` and the tenant
+  matrix for both values of `dev017TenantPetsDailyRule` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item
+  of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 38 and row 39)).
 - `sort`: matrix sale / rent / daily × apartment-only × medians × zones × city `null`.
 - `summary`: snapshots in ru, uz, en; the whole-city label for Tashkent and Fergana in three locales («Фергана
   целиком», «Butun Fargʻona», «All of Fergana») and without a city name (the part is absent); an unknown type
@@ -455,7 +482,10 @@ package formats only what the client formats in legacy. Both must agree with the
 - `money`: the table of "Behaviour"; `parseInput('1.000.000')` = 1 000 000 in USD mode; `parseInput('1,2')` at
   rate 12 650 in UZS mode = 95; `'0,001'` = 1 in USD mode (three digits after one separator are a thousands group;
   the UZS floor `max(1, …)` is shown by `'0,01'` at a rate of 30 000); `'0'`, `''`, `'abc'` → `null`; presets rounded to the step without
-  duplicates; fixed lists without city presets; negative and `NaN` → empty string.
+  duplicates; fixed lists without city presets; negative and `NaN` → empty string. Since the intake of
+  `index-CIa0Ldj2.js`: «$1200» and «1 200 $» → 1200 in dollars and still `null` in сум; the сум field of 1 500 млн
+  prints without a thousands separator and parses back (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `money.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 41 and row 42)).
 - `date`: «5 мар» / «5 Mar» / «5-mar»; `tashkentDayKey('2026-11-08T19:30:00Z')` = `2026-11-09`; ago steps at 1
   min, 5 min, 30 h, 3 days, a future time; device zone vs `Asia/Tashkent` under two `TZ` values.
 - `distance`: metro 0.04 km → name only; 0.83 km → «· 800 м»; 1.6 km → nothing; nearby 0.08 → «рядом», 1.26

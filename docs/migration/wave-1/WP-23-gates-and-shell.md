@@ -57,11 +57,11 @@ builds on. Every route under `(main)` still shows its WP-20 placeholder inside t
 | Routes | DEC-44, 25 §3.2 | The four gates are routes; boot failure, toast, confirms and the crash screen are not. Sheets and overlays are intercepting routes in the `@sheet` and `@overlay` slots; the shell only renders the slots |
 | Session | DEC-44, 25 §3.4 | A launch starts without a session: the shell renders skeletons while `useSession().status` is `booting`; one screen implementation serves cookie mode and header mode |
 | Interface | DEC-44, 25 §3.6 | Primitives are shadcn/ui and Radix components from WP-20, restyled; the sheet drag with velocity, swipe back and the collapsing header are written on top of them, not replaced by other behaviour |
-| Defects and flags | DEC-36 | LB-APP-027 and LB-APP-035 are `DEV` rows (DEV-016, DEV-023): both branches are written and tested, the flags `dev016ErrorToastOnFailure` and `dev023CityCountsIncludeDaily` stay off |
+| Defects and flags | DEC-36, DEC-58 | LB-APP-027 and LB-APP-035 are `DEV` rows (DEV-016, DEV-023): both branches are written and tested. `dev023CityCountsIncludeDaily` stays off. `dev016ErrorToastOnFailure` is on by default since the intake of `index-CIa0Ldj2.js` (DEC-58: legacy shows the failure toast itself since that release) and gates the failure toast only; the success confirmation of destructive actions moves to `dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` and `failed()` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)) |
 | Brand | DEC-40, 25 §2 rule 5 | The bot name and links come from `lib/brand`; no brand word is written in a component |
-| Access | DEC-43 | The gate is built for all five reasons although the mode is "open" |
+| Access | DEC-43, DEC-60 | The gate is built for all five reasons although the mode is "open", and for a sixth, `paused`, since the intake of `index-CIa0Ldj2.js` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a later package (`wave-1/baseline.md`, built code behind the pin, row 28)) |
 | Acceptance | DEC-46, 25 §9 | The acceptance checklist below is ticked in ru / uz / en and light / dark |
-| Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change. Since `index-CBlEKxdL.js`: the `private` no-access text names the team; the toast can be dragged down and its offset depends on what is below it; swipe-back gained an edge-only zone and a nested-sub-page rule for the owner cabinet (*added by the intake of `index-CBlEKxdL.js`*) |
+| Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change. Since `index-CBlEKxdL.js`: the `private` no-access text names the team; the toast can be dragged down and its offset depends on what is below it; swipe-back gained an edge-only zone and a nested-sub-page rule for the owner cabinet (*added by the intake of `index-CBlEKxdL.js`*). Since `index-CIa0Ldj2.js`: the fresh pill and the feed's scroll memory; `paused`; the SEO source with the language; the inline save error of the language picker; a close control without the SDK; the collapsed title of daily rent; failure toasts (*added by the intake of `index-CIa0Ldj2.js`*) |
 
 ## Design
 
@@ -194,7 +194,8 @@ sheet and the sub-page are `position: fixed` inside them.
 - `TopBar` holds no data: it reads `useSearchState()` (WP-22) for the deal, polygon and active-filter count and
   calls `switchDeal`, `normalizeSort`, `countActiveFilters` of `@homi/search`. The deal switch writes filters and
   sort in one replace through `write(filters, sort)`, which this PR adds to `useSearchState()` (D-SH-2). The mini
-  title's summary function is chosen in one place, `miniTitleSummary` in `MiniTitle.tsx` (`filtersSummary`, D-SH-3).
+  title's summary function is chosen in one place, `miniTitleSummary` in `MiniTitle.tsx` (`filtersSummary`, D-SH-3;
+  DEC-66 amends D-SH-3 for daily rent: the summary alone, "Shell (SCR-006)" below).
 - The search-list variant has a `chips` region that renders nothing here; WP-24 mounts `FeedHeader` in it.
 - `RouteSheet`, `RouteOverlay` and `SubPage` are wrappers that later route files use around their content; they
   connect the `@homi/ui` primitives to `useBack()`, `tg.haptic` and the platform check of WP-21.
@@ -222,7 +223,7 @@ sheet and the sub-page are `position: fixed` inside them.
 | `BottomSheet` | Props `open`, `onClose`, `dismissible` (default `true`), `variant: 'full' \| 'compact'`, `title`, `header`, `footer`, `closeLabel`, `stacked` (z 60 = `--z-toast` over 50: the city sheet over the filters), `closeOnEscape` (default `dismissible`), `portal` (default `true`; `false` renders the sheet in place, so the server HTML holds it), `onDragStart`, `onDragCommit` (a drag closes it; the owner plays the light impact), `className`. Composes the Radix Dialog parts of WP-20 itself (Portal, Overlay, Content; the WP-20 `Sheet*` parts have no variant, header, footer or drag hooks). Focus moves to the title on open and back to the element that had it on close (Radix has no Trigger here). Sticky header and footer; `useSheetChrome()` writes their heights to `--fsheet-head` / `--fsheet-foot` |
 | `useSheetDrag` | Pointer events, so a mouse may drag a sheet header; on the handle area only: start 6 px, close at 25 % of the sheet height or 0.5 px/ms, settle 200 ms, backdrop dims with the drag. Exported constants |
 | `useBodyClass` | `useBodyClass(className, active)`, ref-counted per class name: the sheets hold `body.sheet-open` and `body.locked`, WP-26's listing `listing-open` |
-| `SubPageFrame` | Fixed layer (`--z-subpage`), 24 % slide-in (`--animate-subpage-in`), header with a shadow when scrolled, optional `back` and `hint`, `bare` mode; `onBack`, `swipeBack`, `onSwipeStart`, `onSwipeCommit` |
+| `SubPageFrame` | Fixed layer (`--z-subpage`), 24 % slide-in (`--animate-subpage-in`), header with a shadow when scrolled, optional `back` and `hint`, `bare` mode; `onBack`, `swipeBack`, `onSwipeStart`, `onSwipeCommit`. Its `back` slot carries the fallback close of the audit's TMA-047: the app's own close control while the SDK is absent (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)) |
 | `useSwipeBack` | Touch events only, as legacy (a mouse drag over a page selects its text): rightward swipe, start 10 px, sideways travel at least 1.5 × the vertical, close at 33 % of the width or 0.5 px/ms, settle 180 ms; option `enabled`; never starts inside `[data-no-swipe]`, `[data-scroll-x]`, `input`, `textarea`, `select`, `[contenteditable]` or a map container. Exported constants. Legacy since `index-CBlEKxdL.js` has three more rules (*added by the intake of `index-CBlEKxdL.js`*): a layer marked `data-edge-swipe` takes the swipe only from the left 24 px and ignores the exclusion list; a touch inside a nested sub-page of the layer is not the layer's; the inline styles are removed 300 ms after the close. Only the owner cabinet uses the first two; they are not built here, and the owner-cabinet plan decides |
 | `HeaderChip`, `FilterChip` | `HeaderChip`: highlighted state, optional count badge, `aria-label`. `FilterChip`: `aria-pressed`. Long labels ellipsise; a plain-text label is also the `title` |
 | `SegmentedControl` | Two or three options, always one selected; compact size for the map top bar. In the dark theme the selected segment is `--sep` over `--fill`, not the legacy `color-mix`, which old WebViews lack |
@@ -255,7 +256,11 @@ are props.
   the host's offset. A toast closes when its host is hidden or unmounted.
 - `lib/ui/feedback.ts`: `failed(options?: { flags?: DevFlags })` plays `tg.haptic.error()` and, when
   `dev016ErrorToastOnFailure` is on, shows `{ key: 'common.saveFailed' }`; the flags are an options object, so
-  `promise.catch(failed)` reads the app's flags. `saved()` plays `tg.haptic.success()`.
+  `promise.catch(failed)` reads the app's flags. `saved()` plays `tg.haptic.success()`. Since the intake of
+  `index-CIa0Ldj2.js` the flag is on by default (DEC-58), and a caller may ask for the haptic alone — the contact
+  failures of the listing, where legacy shows no toast, and the language picker, which shows its own line (*added by
+  the intake of `index-CIa0Ldj2.js`*; a parity item of `failed()` and its callers for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 21)).
 - `lib/ui/confirm.ts`: `confirmText(text): Promise<boolean>` delegates to `tg.confirm` (native from Telegram 6.2,
   `window.confirm` otherwise — the gate is WP-21's).
 
@@ -441,7 +446,9 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 
 - Reason from the sign-in answer per the WP-11 contract; whitelist `private | invite | full | blocked | join`;
   anything else, a missing or non-string value renders as `private`. The `reason` in the address is informative;
-  the screen trusts the session state only.
+  the screen trusts the session state only. Since the intake of `index-CIa0Ldj2.js` the whitelist also holds `paused`
+  (DEC-60; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 28)).
 - Layout: Lock icon, title, text, optional checking line, list of large buttons; the first button of the list is
   `primary`, the others `secondary` (legacy `.lang-btn:first-child`), so with a post row the post is accented and
   «Перейти в бота» is not. The title (`tabIndex=-1`) takes the focus when the refusal first shows.
@@ -457,6 +464,13 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
   | `join` | «Сначала — бот» | «Нажмите «Старт» в боте — после этого приложение откроется.» |
+  | `paused` | «Бот на паузе» | «Скоро вернёмся. Ваши Радары и избранное на месте.» |
+
+  `paused` is the sixth reason, legacy since `index-CIa0Ldj2.js` (DEC-60): uz «Bot pauzada» / «Tez orada qaytamiz.
+  Radarlaringiz va saralanganlaringiz joyida.», en «The bot is paused» / «We’ll be back soon. Your Radars and
+  favorites are safe.» It builds no start link, like `blocked`, and is re-checked like the other reasons (*added by
+  the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 28)).
 
   The two texts reworded by `index-Dbpp463V.js` in uz and en: `invite` «Taklif orqali kirish» / «Invite only»;
   `full` «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
@@ -476,8 +490,12 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
     built (`channelPostUrl()` is not called). It also shows for `blocked`, as legacy.
   - Main button: «Перейти в бота» (`noAccess.toBot`) opens `noAccessStartUrl(source, number)` of WP-21 (payload
     `s_<source>[--l<id>]`) when `brand.botUsername` is set, the start parameter is an `l_…` link and the reason is
-    not `blocked`; `<source>` is `web`, the whole campaign code (`fb12`), `seo` or `share` (parser of WP-21, fixed
-    here, see Files). The launch is read with `parseLaunch(tg.initData(), location.search)`; on `/no-access` the
+    neither `blocked` nor `paused`; `<source>` is `web`, the whole campaign code (`fb12`), `seo` or `share` (parser of
+    WP-21, fixed here, see Files). Since legacy release `index-CIa0Ldj2.js` the source `seo` is written `seo_en` or
+    `seo_uz` when the locale of the address is en or uz, and `seo` in ru; HOMI's bot reads all three (WP-52) (*added
+    by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `lib/deeplinks/build.ts` for a later
+    package (`wave-1/baseline.md`, built code behind the pin, row 29)). The launch is read with
+    `parseLaunch(tg.initData(), location.search)`; on `/no-access` the
     query is `?reason=`, so only the start parameter (never `?listing=`) makes this button. Otherwise «Вернуться в
     бот» (`noAccess.back`) calls `tg.close()`.
   - «Написать в поддержку» (`settings.support`) opens `supportUrl(username)` — without the launch's listing number,
@@ -512,9 +530,11 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   It does not navigate (D-S-6): `GateRedirector` replaces the address once, by the next gate when one is due (on a
   first launch with no chosen city, `/<locale>/welcome/city`, row 6) or by the return address, in the chosen
   locale. No page reload: the launch counter of analytics does not restart.
-- Failure: buttons enabled again and `failed()` — error haptic only, as legacy (LB-APP-027); with
-  `dev016ErrorToastOnFailure` also the toast `common.saveFailed` «Не получилось сохранить». The tapped button still
-  has the focus.
+- Failure: buttons enabled again, the error haptic, and the line `common.saveFailed` «Не получилось сохранить» under
+  the list (`role="alert"`), cleared by the next pick. No toast here, whatever the flag: `failed()` is asked for the
+  haptic alone (legacy since `index-CIa0Ldj2.js`; before it the haptic only, LB-APP-027, and as built a toast with
+  `dev016ErrorToastOnFailure`) (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `LanguagePicker` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 30)). The tapped button still has the focus.
 - No Back. A second tap while saving is ignored. A save result arriving after the page was left (unmounted, or
   hidden by `cacheComponents`) is dropped and the buttons are enabled again. A `flags?: DevFlags` prop is the test
   seam of DEV-016.
@@ -605,6 +625,16 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   the old tab at its top until the new one arrived (legacy switched synchronously, then scrolled). Pressing the
   active tab is a light haptic and a scroll to top, no navigation. A tab change no press asked for (SettingsButton,
   the launch) does not scroll. A press therefore ends the radar-return mode of WP-30, as legacy.
+- Scroll memory of the search list (DEC-63; legacy since `index-CIa0Ldj2.js`, `03` BR-APP-105): the search tab is not
+  scrolled to the top when a scroll memory matches its list key — the list returns to where it was left (the memory
+  itself is WP-24's). A press of the active tab forgets the memory; SettingsButton keeps it. The other tabs still
+  arrive at the top (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `TabBar` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 14)).
+- Fresh pill (`03` SCR-063): in the top bar of the search list, «Показать N новых» (plural `app.freshShow`) with an up
+  arrow, shown while its count is above 0 and nudges may show; a tap is a light haptic, a scroll to the top and a
+  reload of the list from page one. The count and the long-return rule are WP-24's (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `TopBar` for a later package (`wave-1/baseline.md`, built code behind the
+  pin, row 13)).
 - View toggle: floating button showing the target — «Карта» (`app.view.map`) on the list, «Список»
   (`app.view.list`) on the map; keeps the search parameters; hidden while drawing; search tab only. The tab bar
   stays on the map, so the toggle sits above it on both views (legacy hides the tab bar on the map:
@@ -617,8 +647,11 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   *added by the intake of `index-CBlEKxdL.js`*; a parity item of `AppShell` for a later package
   (`wave-1/baseline.md`, built code behind the pin, row 6)).
 - Mini title: `«<base deal> · <filtersSummary>»` (rule BR-APP-064 and the whole-city label of LB-APP-026, both
-  WP-22's): the deal is the title tabs' base deal, so daily rent reads «Аренда · … · Посуточно» (legacy printed
-  «Посуточно» twice: `t('deal.'+deal)` plus the summary). Before the reference data it is the deal alone.
+  WP-22's); the deal is the title tabs' base deal. For daily rent the title is the summary alone, with no deal word in
+  front: «… · Посуточно» (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-064). DEC-66 amends D-SH-3 for it: as built,
+  daily rent reads «Аренда · … · Посуточно», chosen when legacy printed «Посуточно» twice (`t('deal.'+deal)` plus the
+  summary) (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 32)). Before the reference data it is the deal alone.
 - Before reference data arrives: deal tabs render, nothing city-dependent does, no `undefined` text.
 - Layout: one phone column, content limited to 608 px, no width breakpoints; paddings from `--top-inset`,
   `--bottom-inset`, `--tabbar-h`; `html.fullscreen` puts the mini title into Telegram's header row; `html.lite`
@@ -646,6 +679,10 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   is touch only, as legacy (DEC-44): on iOS and on the touch screens of the desktop clients, never by a mouse or
   trackpad; it is off on Android (`tg.isAndroid()`, the platform check of WP-21, TMA-041). The sheet drag takes pointer
   events, so a mouse may drag a sheet by its header.
+- While the SDK is absent a sub-page shows the fallback close in its header: the app's own control, labelled
+  `common.close`, which goes back like BackButton and disappears when the SDK arrives (legacy since
+  `index-CIa0Ldj2.js`, `05` TMA-047; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
 - Haptics: light on chips, switches and buttons, as passed in by the wrappers (TMA-025).
 
 ### Pull-to-refresh (SCR-010, BR-APP-058)
@@ -688,7 +725,12 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   (WP-29), `subs.deleteConfirm` «Удалить радар «{name}»?» (WP-30), `hidden.confirmAll` «Снова показывать все
   скрытые объявления и заблокированных авторов?» (WP-31), `chat.restart` (WP-30).
 - Failures that only vibrate in legacy (LB-APP-027) call `failed()`: the language picker here; settings saves
-  and the hidden list (WP-31); radar mode, unhide, delete and toggle (WP-30); clearing history (WP-29).
+  and the hidden list (WP-31); radar mode, unhide, delete and toggle (WP-30); clearing history (WP-29). Since
+  `index-CIa0Ldj2.js` legacy shows «Не получилось сохранить» for them itself (LB-APP-027 is fixed there), so
+  `failed()` is the error haptic and, with `dev016ErrorToastOnFailure` — on by default (DEC-58) —, the toast. The
+  heart of a card joins the callers (WP-24); the contact failures of the listing and the language picker ask for the
+  haptic alone (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `failed()` and its callers for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 21)).
 
 ### Crash, not found, session expired (SCR-045, 03 §1.6)
 
@@ -739,6 +781,11 @@ Unit (Vitest):
 - `accessReason`: five reasons, unknown string, `null`, number, array → `private`; main-button choice for
   `l_123`, `l_123-web`, `l_123-fb12` (→ `s_fb12--l123`), `l_123-seo-chan-45`, no start parameter, no bot name,
   `blocked`. `parse.test.ts` (WP-21) pins `fb12` / `tg7` / `ig1234` and `l_123-seoul_flats-45` → `share`.
+  Since the intake of `index-CIa0Ldj2.js`: `paused` is the sixth reason and builds no start link (*added by the intake
+  of `index-CIa0Ldj2.js`*; a parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 28)); a `seo` source gives `s_seo_en--l123` in en, `s_seo_uz--l123` in uz and `s_seo--l123` in
+  ru (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `build.ts` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 29)).
 - `nearestCity`: inside 16 km; region within 110 km preferred over a farther town; town within 110 km; none;
   missing region flag → town; empty list → `null`; the 16 and 110 km lines pinned with literal points (15.9 /
   16.1 km, 109.9 / 110.1 km).
@@ -747,7 +794,9 @@ Unit (Vitest):
   malformed input.
 - `shellVariantOf` for every route of 25 §3.2, and `isLayerAddress` pinned to the `(.)` folders of the file tree;
   toast store: 3 999 ms visible, 4 000 ms gone, 6 000 ms with an action, replacement restarts the timer, scopes are
-  isolated; `failed()` with the flag off and on.
+  isolated; `failed()` with the flag off and on, and asked for the haptic alone (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `failed()` for a later package (`wave-1/baseline.md`, built code behind the
+  pin, row 21)).
 
 Component (Vitest + Testing Library):
 
@@ -757,16 +806,30 @@ Component (Vitest + Testing Library):
 - `ErrorState` kinds; `HeaderChip` badge and highlight; `FilterChip` `aria-pressed`.
 - `TopBar`: one render per variant in three locales; the deal callback is not fired for the active deal; badge
   count. `TabBar`: the `long` rule with crafted messages (no catalogue label is longer than 13 characters); a press
-  while collapsed only expands; the scroll once the new tab lands, none for a tab change no press asked for.
+  while collapsed only expands; the scroll once the new tab lands, none for a tab change no press asked for; no scroll
+  to the top for the search tab while a scroll memory matches, and a press of the active tab forgets it (*added by the
+  intake of `index-CIa0Ldj2.js`*; a parity item of `TabBar` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 14)). `TopBar`: the pill with a count of 1, 3 and 5 in three locales and none at 0 (*added by
+  the intake of `index-CIa0Ldj2.js`*; a parity item of `TopBar` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 13)). `MiniTitle`: daily rent prints the summary alone (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package (`wave-1/baseline.md`, built code behind the
+  pin, row 32)).
 - `useMiniChrome`: 24 px hysteresis, 60 px top zone, `expandChrome()` result, cleanup removes the class.
 - `PullToRefresh`: no start at `scrollY > 0`; no start with each body class; one haptic at 72 px; 700 ms minimum
   with a resolved promise; no handler → no listeners; off on `/map`, `/settings` and with a layer parameter.
 - `RouteSheet`, `RouteOverlay`, `SubPage`, `ToastHost`, `AppShell` (`ErrorState` after the sixth failure),
-  `TelegramButtons` (SettingsButton hidden again on a gate and while not ready), the gallery page.
+  `TelegramButtons` (SettingsButton hidden again on a gate and while not ready), the gallery page. `SubPage` without
+  the SDK shows the fallback close, and it goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a
+  parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
 - `LanguagePicker`: order and headings for Telegram `ru`, `uz-UZ`, `en-US`, `de`; `aria-disabled` while saving with
-  the focus kept; failure with the flag off (haptic only) and on (toast); the heading's focus.
-- `NoAccessScreen`: each reason in each locale, with the texts of the pinned release (no value contains «бета» or,
-  ignoring case, «beta»); support row absent without an account; post row only for channel
+  the focus kept; failure: the line under the list and no toast with the flag on and off, cleared by the next pick
+  (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `LanguagePicker` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 30); as built: the haptic only with the flag off, the toast
+  with it on); the heading's focus.
+- `NoAccessScreen`: each reason in each locale — `paused` among them (*added by the intake of `index-CIa0Ldj2.js`*; a
+  parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code behind the pin, row 28)) —, with
+  the texts of the pinned release (no value contains «бета» or, ignoring case, «beta»); support row absent without an
+  account; post row only for channel
   links; checking line never for `blocked`; `GateWait` and `ErrorState` of both kinds before `denied`.
 - `OutsideScreen`: the sentence in three locales, no button, no link, no `fetch`; `GateWait` after a late SDK.
 - `CityList`: each location outcome with a mocked adapter, the 12 s bound, the status line and `aria-disabled`;
@@ -835,15 +898,23 @@ Gates
 - [ ] Each of the five refusal reasons shows its title and text; an unknown reason shows the `private` pair;
       `invite` reads «Вход по приглашению», `full` «Сейчас все места заняты. Попробуйте позже.», and no text mentions
       a beta (SCR-003).
+- [ ] `paused` shows «Бот на паузе» with its text and «Вернуться в бот»: no start link, whatever the start parameter
+      (DEC-60; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 28)).
 - [ ] The checking line shows during the three automatic re-checks and never for `blocked`.
 - [ ] After access is granted the app opens by itself, without a reload.
 - [ ] «Перейти в бота» carries `s_web--l123` for `l_123-web` and `s_share--l123` for `l_123`; without a start
       parameter the button is «Вернуться в бот» and closes the app.
+- [ ] A `seo` start parameter builds `s_seo_en--l123` with the interface in en and `s_seo_uz--l123` in uz (*added by
+      the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `build.ts` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 29)).
 - [ ] «📢 Открыть пост в канале» appears only for a channel-and-post start parameter and opens that post.
 - [ ] «Написать в поддержку» appears only when a support account is known.
 - [ ] First launch: the language page shows the heading in the Telegram language, the other two in the subtitle,
       the Telegram language as the first, accent button.
-- [ ] Picking a language switches the address and all texts without a reload; a failed save re-enables the buttons.
+- [ ] Picking a language switches the address and all texts without a reload; a failed save re-enables the buttons and
+      shows «Не получилось сохранить» under the list, with no toast (*added by the intake of `index-CIa0Ldj2.js`*; a
+      parity item of `LanguagePicker` for a later package (`wave-1/baseline.md`, built code behind the pin, row 30)).
 - [ ] With several cities and no chosen city the city page blocks the app: no ×, no Back; only a pick leaves it.
 - [ ] Location: denied, failed and "too far" each show their text; success picks the nearest city at once.
 - [ ] City rows show «N аренда · M продажа» when counts are known and no line when they are not.
@@ -859,6 +930,15 @@ Shell
 - [ ] Rent ↔ sale keeps districts, zones and a drawn area and resets the rest; tapping the active deal does nothing.
 - [ ] The four tabs switch with a light haptic and scroll to top; BackButton stays hidden on every tab.
 - [ ] Leaving the search tab and coming back restores the same filters, sort and list/map view.
+- [ ] The search list keeps its scroll across the other tabs, the map and SettingsButton; a second tap on the search
+      tab scrolls to the top (DEC-63; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `TabBar` for a
+      later package (`wave-1/baseline.md`, built code behind the pin, row 14)).
+- [ ] After a long return «Показать N новых» shows in the top bar of the search list in three locales; a tap reloads
+      the list at the top (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `TopBar` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 13)).
+- [ ] The collapsed title of daily rent has no «Аренда» in front (DEC-66; *added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package (`wave-1/baseline.md`, built code behind
+      the pin, row 32)).
 - [ ] «Карта» / «Список» switch the view and keep the filters; the button is hidden while drawing.
 - [ ] Scrolling the list down collapses the chrome to the one-line title; scrolling up or reaching the top
       expands it; the first tap on a collapsed tab bar, toggle or title only expands.
@@ -870,6 +950,9 @@ Shell
       the parent address with the search parameters kept.
 - [ ] A sub-page closes by BackButton and by swipe back on iOS and on the touch screens of the desktop clients (the
       swipe is touch only); no swipe back on Android.
+- [ ] Without the SDK (`launchApp(page, { sdk: false })`) a sub-page shows the fallback close; it closes the sub-page
+      and goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a
+      later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
 - [ ] Lite graphics: the chrome collapses without the morph and without the mini title.
 
 Feedback and errors
@@ -884,8 +967,11 @@ Feedback and errors
 - [ ] The confirm helper opens Telegram's native dialog (the browser's outside Telegram).
 - [ ] A forced render error shows «Что-то пошло не так» with «Обновить», which reloads; one error report is queued.
 - [ ] An unknown address inside the app shows «Такой страницы нет» with the way back to search.
-- [ ] `dev016ErrorToastOnFailure` and `dev023CityCountsIncludeDaily` are off in `lib/flags.ts`; both branches are
-      covered by tests.
+- [ ] `dev023CityCountsIncludeDaily` is off in `lib/flags.ts`; `dev016ErrorToastOnFailure` is on by default since the
+      intake of `index-CIa0Ldj2.js` (DEC-58) and `dev016SuccessToastOnDestructive` is off; both branches of each are
+      covered by tests (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` and `failed()`
+      for a later package (`wave-1/baseline.md`, built code behind the pin, row 21); as built both flags of this
+      package are off).
 
 ## Handoff
 

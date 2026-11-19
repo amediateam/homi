@@ -15,8 +15,8 @@ use Throwable;
  * controller body (WP-40 keeps these bodies in its `NativeStubs` map).
  *
  * The scenario header picks another fixture of the method or one of its errors. Besides the four reserved scenarios
- * of WP-10, every method knows `access_private`, `access_invite`, `access_full`, `access_blocked` and `access_join`,
- * the refusals of the access gate. A scenario that is neither is ignored.
+ * of WP-10, every method knows `access_private`, `access_invite`, `access_full`, `access_blocked`, `access_join` and
+ * `access_paused`, the refusals of the access gate (one per `AccessReason`). A scenario that is neither is ignored.
  */
 final class StubResponder
 {

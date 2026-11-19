@@ -125,9 +125,17 @@ nothing in this package needs it.
    (proposal): a single user can never reach them.
 5. Crossing a threshold, once: write `listing_marks.rented_at` or `author_marks.realtor_marked_at`, and a
    `vote_decisions` row with the inputs. `wrong_data` and `fraud` have no global effect.
+6. `ReportOutcome` carries `agentMarked` for the `agent_marked` of WP-13: `true` for the reason `agent` when this
+   vote crossed `votes.thresholds.agent`, and also when `author_marks.realtor_marked_at` was already set; `false`
+   otherwise (a default of the integrator, not a decision of the developer).
 
 `withdraw(User, ListingPointer, ReportReason)` sets `withdrawn_at` and recomputes (the bot's undo buttons, WP-53);
 a recount that falls below the threshold removes the mark and writes an `unmarked` decision.
+
+`DELETE /listings/{number}/reports` (WP-13; DEC-68) withdraws «Уже сдано» only: its controller calls
+`withdraw($user, $pointer, ReportReason::Rented)` and deletes the caller's `ReportRented` hidden row. Votes with
+another reason are not touched. With nothing to withdraw it still answers `204`. `withdraw` itself stays general,
+for the bot's undo buttons (WP-53).
 
 Kill switches: Pennant features `votes.rented-detector` and `votes.realtor-detector`, stored in the global scope
 like the source rules of WP-10, default on. `php artisan votes:detector {rented|realtor} {on|off} --by= --reason=`
@@ -216,6 +224,9 @@ affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_
 - Unblocking by listing and by entry act on the same entry (fix of LB-API-040).
 - `rented` hides for the voter at once and for everybody only after more confirmations; `fraud` hides for the
   reporter and can be undone through unhide, while the vote stays; every reason answers JSON (fix of LB-API-015).
+- «Уже сдано» can be withdrawn by its reporter: the vote is withdrawn, the hidden row goes and the listing is back
+  in the caller's feed; a repeat changes nothing (DEC-68; legacy since `index-CIa0Ldj2.js`, `08` API-055).
+- A realtor vote answers `agent_marked`: `false` below the threshold, `true` at it and after it.
 - `DELETE /hidden` clears hidden listings and blocked authors of the caller only; radar hide rules are untouched.
 
 Edge cases: a favourite of a listing that is later merged shows under the survivor; an author with no listing left
@@ -248,6 +259,11 @@ without an author accepts `agent` and has no author effect.
   every case; a second `wrong_data` with another detail keeps the first; a detail with `fraud` → `422` and no row;
   below threshold no mark; at threshold one mark, one decision row; a withdrawn vote lowers the sum and removes the
   mark; a single maximum-weight user never marks; detector off → no mark and marks ignored by the overlay.
+  `agent_marked`: `false` below the threshold, `true` for the vote that crosses it and for a vote on an author
+  already marked, always `false` for the other reasons. `DELETE …/reports`: after a `rented` report → `204`, the
+  vote has `withdrawn_at`, the `report_rented` hidden row is gone and the listing is back in the caller's feed; a
+  repeat and a call without a report → `204`; an `agent` or `fraud` report of the same user is untouched; an unknown
+  listing → `404`.
 - Survey: 4 × 2 answers stored; `where` attaches to the caller's latest `elsewhere`, never to another user's;
   without one → a separate row.
 - IDOR matrix: every row; the coverage case fails on a deliberately unlisted test route.
@@ -264,6 +280,8 @@ without an author accepts `agent` and has no author effect.
 - [ ] Feed, map and card of WP-42 reflect favourites, views, hidden listings, blocked authors and vote marks.
 - [ ] Every personal table stores number, channel and post; unknown channel and post are back-filled by the job.
 - [ ] Vote marks need the threshold, write an audit row, and both detectors can be switched off without a deploy.
+- [ ] `DELETE /listings/{number}/reports` withdraws only the caller's `rented` report and its hidden row, and is
+      idempotent (DEC-68); `agent_marked` is right below, at and after the threshold.
 - [ ] The IDOR matrix covers every bearer route that exists at this point; foreign equals unknown.
 - [ ] No phone is stored; labels are masked; `detail` holds only one of the five codes, and only for `wrong_data`.
 - [ ] The PR lists the eight migrations and the tables to register for erasure.

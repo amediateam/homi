@@ -4,7 +4,7 @@
     "method": "GET",
     "path": "/api/meta",
     "auth": "tma <initData> required",
-    "access": "any user; closed-beta gate: 403 detail private|invite|full|blocked|join",
+    "access": "any user; closed-beta gate: 403 detail private|invite|full|blocked|join, and paused since index-CIa0Ldj2.js",
     "doc_ref": "$KVADRO_ROOT/docs/api.md:104, :64-72, :416-466",
     "client_call_sites": [
       "$KVADRO_ROOT/demo/app/src/lib/api/meta.js:5",
@@ -14,7 +14,7 @@
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:257"
     ],
     "status": "CONFIRMED",
-    "notes": "Prefetched before render; retries 1,3,7,15,30 s on non-403; 403 re-check 3x2.5 s except blocked. server logic DOCUMENTED_ONLY. LB-API-002, -018, -019, -021, -048, -051, -053; Q-API-002..006, -026, -047, -054. new_features codes: pets, and cards since index-BnFvC-Ft.js. Since index-CBlEKxdL.js renovations may hold a key owner besides the deals (the owner form reads renovations.owner ?? renovations.rent_long), and cities[].zoom + 1 is the start zoom of the owner's place picker."
+    "notes": "Prefetched before render; retries 1,3,7,15,30 s on non-403; 403 re-check 3x2.5 s except blocked. server logic DOCUMENTED_ONLY. LB-API-002, -018, -019, -021, -048, -051, -053; Q-API-002..006, -026, -047, -054. new_features codes: pets, and cards since index-BnFvC-Ft.js. Since index-CBlEKxdL.js renovations may hold a key owner besides the deals (the owner form reads renovations.owner ?? renovations.rent_long), and cities[].zoom + 1 is the start zoom of the owner's place picker. Since index-CIa0Ldj2.js: a sixth reason, 403 detail paused («Бот на паузе»), re-checked like the others; no source is passed to /start for it, as for blocked (BR-API-194; Q-API-081; SCR-003)."
   },
   {
     "id": "API-002",
@@ -62,7 +62,7 @@
       "$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:42"
     ],
     "status": "CONFIRMED",
-    "notes": "FilterQuery + limit=20, sort (cheap|expensive|deal|center|ppm), opaque cursor; repeated types/districts/renovation/appliances/zones. FeedPage with next_cursor strictly null at end. server logic DOCUMENTED_ONLY. LB-API-004, -005, -006, -009, -029; Q-API-007, -008, -010..014, -022, -036."
+    "notes": "FilterQuery + limit=20, sort (cheap|expensive|deal|center|ppm), opaque cursor; repeated types/districts/renovation/appliances/zones. FeedPage with next_cursor strictly null at end. server logic DOCUMENTED_ONLY. LB-API-004, -005, -006, -009, -029; Q-API-007, -008, -010..014, -022, -036. Since index-CIa0Ldj2.js: items carry floor with 0 = ground floor and < 0 = basement (an unknown floor is null or absent, never 0) and posted_at, an ISO time for the age label, with age as the fallback (BR-API-195, BR-API-196)."
   },
   {
     "id": "API-005",
@@ -108,7 +108,7 @@
       "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:179-195"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-DY_DH7h-.js. Common filter query plus since = previous visit with these filters, integer unix seconds of the device clock (no lower bound on the client); response {count}, count mandatory and numeric (a body without count crashes the banner). Sent 1.8 s after an eligible search visit (return banner SCR-046), aborted on filter/radar/overlay change, again after a return from background >= 6 h; errors ignored. Lines at the pin (SVN r27). server logic DOCUMENTED_ONLY. LB-API-055; Q-API-066."
+    "notes": "Since index-DY_DH7h-.js. Common filter query plus since = previous visit with these filters, integer unix seconds of the device clock (no lower bound on the client); response {count}, count mandatory and numeric (a body without count crashes the banner). Sent 1.8 s after an eligible search visit (return banner SCR-046), aborted on filter/radar/overlay change, again after a return from background >= 6 h; errors ignored. Lines at the pin (SVN r27). server logic DOCUMENTED_ONLY. LB-API-055; Q-API-066. Since index-CIa0Ldj2.js: a second caller, the fresh pill (SCR-063): after a return from >= 6 h in the background with the list covered or scrolled, since = the moment the current feed was created, no AbortSignal, the answer used only while the feed key is unchanged (BR-APP-104, LB-APP-082)."
   },
   {
     "id": "API-007",
@@ -123,7 +123,7 @@
       "$KVADRO_ROOT/demo/app/src/features/map/leaflet/MapView.jsx:154"
     ],
     "status": "CONFIRMED",
-    "notes": "{points[{id,lat,lon,label,tone?,priced?,usd?}], total?}; label inserted as HTML (XSS risk). Errors never shown. server logic DOCUMENTED_ONLY. LB-API-008; Q-API-015."
+    "notes": "{points[{id,lat,lon,label,tone?,priced?,usd?}], total?}; label inserted as HTML (XSS risk). Errors never shown up to index-CBlEKxdL.js. server logic DOCUMENTED_ONLY. LB-API-008; Q-API-015. Since index-CIa0Ldj2.js: the answer may carry with_point; with_point > points.length means the answer was cut to the newest listings (note «На карте — N самых свежих»), and total − with_point listings are known only by district; a failure shows «Не загрузилось» with a retry on both engines (BR-API-192; Q-API-015 narrowed; SCR-011, BR-APP-062)."
   },
   {
     "id": "API-008",
@@ -139,7 +139,7 @@
       "$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx:29"
     ],
     "status": "CONFIRMED",
-    "notes": "Optional ?preview=1 (map card). ListingDetails; id must be a JSON number; may return another (merged) listing id. 404 -> 'Объявление не загрузилось'. server logic DOCUMENTED_ONLY. LB-API-009..012, -029..031; Q-API-019, -021..024, -035. Since index-CBlEKxdL.js the card also carries owner_self, owner_mine, owner_listing_id, contact_mode, my_request, response_minutes, owner_description (owner_mine and my_request per caller); phone on the card of a gate listing only after the caller's request is given. BR-API-186, BR-API-187, BR-API-188, BR-API-189; Q-API-076, Q-API-078."
+    "notes": "Optional ?preview=1 (map card). ListingDetails; id must be a JSON number; may return another (merged) listing id. 404 -> 'Объявление не загрузилось' up to index-CBlEKxdL.js. server logic DOCUMENTED_ONLY. LB-API-009..012, -029..031; Q-API-019, -021..024, -035. Since index-CBlEKxdL.js the card also carries owner_self, owner_mine, owner_listing_id, contact_mode, my_request, response_minutes, owner_description (owner_mine and my_request per caller); phone on the card of a gate listing only after the caller's request is given. BR-API-186, BR-API-187, BR-API-188, BR-API-189; Q-API-076, Q-API-078. Since index-CIa0Ldj2.js: 404 shows «Этого объявления уже нет» with «Смотреть свежие» (SCR-019); 429 detail too many today shows «Лимит на сегодня» (BR-API-193; Q-API-080); the client reads deal_type (sale on the launch listing switches the feed, BR-APP-108) and author.kind (the reason agent only for a phone, API-016); floor and posted_at as in API-004 (BR-API-195, BR-API-196); a failed ?preview=1 shows a retry; the listing of a launch link is requested once per launch (BR-APP-106)."
   },
   {
     "id": "API-009",
@@ -181,7 +181,7 @@
       "$KVADRO_ROOT/demo/app/src/components/FavButton.jsx:27"
     ],
     "status": "CONFIRMED",
-    "notes": "Server toggle, returns {favorite} used as truth; 204/error rolls back. Shared with bot. server logic DOCUMENTED_ONLY. LB-API-039; Q-API-038."
+    "notes": "Server toggle, returns {favorite} used as truth; 204/error rolls back. Shared with bot. server logic DOCUMENTED_ONLY. LB-API-039; Q-API-038. Since index-CIa0Ldj2.js: body {favorite: boolean}, the wanted state; a request without a body (bundles cached before the release) must still toggle; a failure rolls back with the error haptic and «Не получилось сохранить» (BR-API-197; Q-API-038 narrowed)."
   },
   {
     "id": "API-012",
@@ -254,7 +254,22 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200"
     ],
     "status": "CONFIRMED",
-    "notes": "Body {reason: rented|agent|wrong_data|fraud}; since index-BNLZFfL0.js wrong_data carries detail: price|rooms|place|photos|other (key present only when detail is set, never with another reason); older bundles still send wrong_data without detail, both accepted. Must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY (detail handling UNVERIFIED). LB-API-015, -042, -043; Q-API-038..040, -064."
+    "notes": "Body {reason: rented|agent|wrong_data|fraud}; since index-BNLZFfL0.js wrong_data carries detail: price|rooms|place|photos|other (key present only when detail is set, never with another reason); older bundles still send wrong_data without detail, both accepted. Must return JSON {hidden} for every reason (204 shows an error). server logic DOCUMENTED_ONLY (detail handling UNVERIFIED). LB-API-015, -042, -043; Q-API-038..040, -064. Since index-CIa0Ldj2.js: the answer to agent may carry agent_marked (true → «Отметили номер как риелторский», false or absent → «Спасибо, учёл вашу отметку»); the rented toast has the action «Вернуть», which calls API-055; the fraud undo reads «Показывать у меня»; agent is also not offered unless author.kind is phone (BR-API-105, BR-API-190, BR-API-191; Q-API-083; BR-APP-036)."
+  },
+  {
+    "id": "API-055",
+    "method": "DELETE",
+    "path": "/api/listings/:id/report",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the caller's own report",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r35, release index-CIa0Ldj2.js) :126, :860-864, :1365",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/listings.js:87-90",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js:36-50",
+      "$KVADRO_ROOT/demo/app/src/app/useListingActions.js:69-71"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CIa0Ldj2.js. No body; the answer is not read (204 recommended; the parity mock tools/parity/mocks.mjs:190-195 answers 204). Withdraws the caller's report on the listing; called only by the action «Вернуть» of the toast after a rented report (API-016; BR-APP-036), after the listing is unhidden locally; any error hides it again and shows «Не получилось сохранить». Which reasons it withdraws, what it does with a report that already acted for other users and what a repeat answers are not documented (UNVERIFIED). The hide undo is API-013; the bot's undo «↩️ Не сдано» is BTN-043 (Q-API-040). Client files at r33. server logic DOCUMENTED_ONLY. BR-API-190; Q-API-079."
   },
   {
     "id": "API-017",
@@ -286,7 +301,7 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:60"
     ],
     "status": "CONFIRMED",
-    "notes": "Bare array of Subscription; since index-DY_DH7h-.js also re-read on a return from background after >= 6 h; filters must have all 25 keys; types valid per deal. server logic DOCUMENTED_ONLY. LB-API-005, -006, -038; Q-API-013, -032."
+    "notes": "Bare array of Subscription; since index-DY_DH7h-.js also re-read on a return from background after >= 6 h; filters must have all 25 keys; types valid per deal. server logic DOCUMENTED_ONLY. LB-API-005, -006, -038; Q-API-013, -032. Since index-CIa0Ldj2.js: also called once at launch for ?radar=<id>; the radar is found by a strict comparison of id with a number, although the contract types id as number|string (BR-APP-107, LB-APP-079; Q-API-083)."
   },
   {
     "id": "API-019",
@@ -335,7 +350,7 @@
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:151"
     ],
     "status": "CONFIRMED",
-    "notes": "One of {active:true|false}, {mode:instant|digest}, {unhide:true}; returns {subscription, starter?, ask_found?}. server logic DOCUMENTED_ONLY. LB-API-013, -033, -034; Q-API-030, -032, -033."
+    "notes": "One of {active:true|false}, {mode:instant|digest}, {unhide:true}; returns {subscription, starter?, ask_found?}. server logic DOCUMENTED_ONLY. LB-API-013, -033, -034; Q-API-030, -032, -033. Since index-CIa0Ldj2.js: every failure on the radar tab shows «Не получилось сохранить», a 409 limit on the switch included (LB-APP-081); the contract (r35 :81-84) still says the switch rolls it back silently."
   },
   {
     "id": "API-022",
@@ -469,7 +484,7 @@
       "$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:33"
     ],
     "status": "CONFIRMED",
-    "notes": "{items, next_cursor: null} whole list in one page; client never sends cursor. server logic DOCUMENTED_ONLY. LB-API-004, -024; Q-API-009."
+    "notes": "Up to index-CBlEKxdL.js {items, next_cursor: null}, the whole list in one page, and the client never sent a cursor. server logic DOCUMENTED_ONLY. LB-API-004, -024; Q-API-009. Since index-CIa0Ldj2.js: paged — optional cursor, next_cursor followed until null, duplicate ids dropped; page size and cursor format unknown (Q-API-084); bundles cached before the release never send a cursor and loop on a non-null next_cursor (inferred; LB-API-057; BR-API-023)."
   },
   {
     "id": "API-030",
@@ -561,7 +576,7 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:54-62"
     ],
     "status": "CONFIRMED",
-    "notes": "{name, ...props} at top level; since index-DY_DH7h-.js also return_prompt_shown {n, custom}, return_prompt_expired|closed {custom}, feed_radar_shown|closed {custom} (last five call sites at the pin); React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046. Since index-BnFvC-Ft.js app_launch also carries tg = Telegram.WebApp.version. Since index-CBlEKxdL.js also owner_info_opened {listing_id} from the owner chip of the listing screen (the last call site, at r31)."
+    "notes": "{name, ...props} at top level; since index-DY_DH7h-.js also return_prompt_shown {n, custom}, return_prompt_expired|closed {custom}, feed_radar_shown|closed {custom} (last five call sites at the pin); React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046. Since index-BnFvC-Ft.js app_launch also carries tg = Telegram.WebApp.version. Since index-CBlEKxdL.js also owner_info_opened {listing_id} from the owner chip of the listing screen (the last call site, at r31). Since index-CIa0Ldj2.js: six owner events (owner_attention, owner_mascot_tap, owner_limit_sheet, owner_place_set, owner_place_autofill, owner_hint_opened) and app_error with source i18n for a missing dictionary key (BR-API-123)."
   },
   {
     "id": "API-037",

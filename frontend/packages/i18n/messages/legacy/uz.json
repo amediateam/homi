@@ -23,14 +23,16 @@
     "offline": "Aloqa yoʻq",
     "offlineText": "Internetni tekshirib, qayta urinib koʻring.",
     "serverText": "Server javob bermadi. Bir daqiqadan keyin qayta urinib koʻring.",
-    "retry": "Qayta urinish"
+    "retry": "Qayta urinish",
+    "dayLimit": "Bugungi limit tugadi",
+    "dayLimitText": "Bir kunda juda koʻp eʼlon ochildi. Keyinroq urinib koʻring — Radar yangilarini chatga yuborishda davom etadi."
   },
   "crash": {
     "title": "Nimadir xato ketdi",
     "text": "Xato yozib olindi. Ilovani yangilang — odatda shu yordam beradi.",
     "reload": "Yangilash"
   },
-  "listings": "{n, plural, one {eʼlonlar} other {eʼlonlar}}",
+  "listings": "{n, plural, one {ta eʼlon} other {ta eʼlon}}",
   "app": {
     "openViaBot": "Ilovani Telegram boti orqali oching.",
     "saved": {
@@ -40,7 +42,8 @@
     "view": {
       "map": "Xarita",
       "list": "Roʻyxat"
-    }
+    },
+    "freshShow": "{n, plural, one {{n} ta yangisini koʻrsatish} other {{n} ta yangisini koʻrsatish}}"
   },
   "noAccess": {
     "title": {
@@ -48,14 +51,16 @@
       "invite": "Taklif orqali kirish",
       "full": "Joy qolmadi",
       "blocked": "Ruxsat yoʻq",
-      "join": "Avval — bot"
+      "join": "Avval — bot",
+      "paused": "Bot pauzada"
     },
     "text": {
       "private": "Ilova hozir faqat kvadro² jamoasi uchun ochiq.",
       "invite": "Kirish taklif havolasi orqali: uni oching va botda «Start»ni bosing.",
       "full": "Hozir joy qolmadi. Keyinroq urinib koʻring.",
       "blocked": "Ilovaga kirish cheklangan.",
-      "join": "Botda «Start»ni bosing — keyin ilova ochiladi."
+      "join": "Botda «Start»ni bosing — keyin ilova ochiladi.",
+      "paused": "Tez orada qaytamiz. Radarlaringiz va saralanganlaringiz joyida."
     },
     "back": "Botga qaytish",
     "toBot": "Botga oʻtish",
@@ -87,10 +92,12 @@
     "hidden": "Eʼlon yashirildi",
     "blocked": "{label} bloklandi",
     "undo": "Qaytarish",
+    "showForMe": "Menga koʻrsatish",
     "reported": "Rahmat! Koʻrib chiqamiz",
     "reportedFraud": "Rahmat, koʻrib chiqamiz. Bu eʼlonni sizdan yashirdik",
     "reportedRented": "Belgilandi: allaqachon band",
     "reportedAgent": "Raqam makler raqami deb belgilandi",
+    "reportedAgentNoted": "Rahmat, belgingizni hisobga oldim",
     "alreadyOn": "Bu qidiruvga radar allaqachon yoqilgan",
     "noChat": "Radar yoqilmadi — bot sizga chatda yozishi uchun ruxsat kerak",
     "alertOn": "Radar qayta yoqildi"
@@ -190,6 +197,8 @@
     "area": "{area} m²",
     "floorOf": "{floor}/{total} qavat",
     "floor": "{floor}-qavat",
+    "floorGround": "tsokol qavat",
+    "floorBasement": "yertoʻla",
     "pets": "🐾 hayvon bilan mumkin",
     "metroDist": "{metro} · {m} m",
     "centerKm": "Markazgacha {km} km",
@@ -212,6 +221,10 @@
     "owner": "Uy egasi",
     "ownerVerified": "Tasdiqlangan uy egasi",
     "negotiable": "Narxi kelishiladi",
+    "ageNow": "hozirgina",
+    "ageMin": "{n} daqiqa oldin",
+    "ageHours": "{n} soat oldin",
+    "ageDays": "{n} kun oldin",
     "downPayment": "boshlangʻich toʻlov",
     "businessPrice": "biznes narxi, joy ijarada",
     "viewedTitle": "Bu eʼlonni koʻrgansiz"
@@ -285,13 +298,18 @@
     "areaOn": "Oʻz hududingiz",
     "areaRemove": "Hududni olib tashlash",
     "note": "Xaritada {shown} / {total} · {missing} faqat tumani maʼlum",
-    "missing": "{n, plural, one {{n} ta eʼlonda} other {{n} ta eʼlonda}}"
+    "missing": "{n, plural, one {{n} ta eʼlonda} other {{n} ta eʼlonda}}",
+    "cut": "Xaritada — eng yangi {n} tasi. Qolganlari — roʻyxatda"
   },
   "listing": {
     "loadFailed": "Eʼlon yuklanmadi",
+    "gone": "Bu eʼlon endi yoʻq — uy, shekilli, ijaraga berilgan yoki sotilgan",
+    "goneFresh": "Yangilarini koʻrish",
     "rooms": "{n, plural, one {xonalar} other {xonalar}}",
     "m2": "m²",
     "floor": "qavat",
+    "floorGround": "Tsokol qavat",
+    "floorBasement": "Yertoʻla",
     "building": "uy",
     "newBuilding": "Yangi",
     "secondary": "Ikkilamchi",

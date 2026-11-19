@@ -9,8 +9,11 @@ beforeEach(function (): void {
     Sanctum::actingAs(User::factory()->create(), ['app:read']);
 });
 
-/** Base numbers of the stub catalogue (WP-12; 100018 … 100021 are the listing-screen variants of WP-26). */
-dataset('catalogue numbers', [100001, 100002, 100003, 100004, 100005, 100006, 100007, 100008, 100009, 100010, 100011, 100012, 100013, 100014, 100015, 100017, 100018, 100019, 100020, 100021]);
+/**
+ * Base numbers of the stub catalogue (WP-12; 100018 … 100021 are the listing-screen variants of WP-26, 100022 and
+ * 100023 the floor variants of legacy release `index-CIa0Ldj2.js`).
+ */
+dataset('catalogue numbers', [100001, 100002, 100003, 100004, 100005, 100006, 100007, 100008, 100009, 100010, 100011, 100012, 100013, 100014, 100015, 100017, 100018, 100019, 100020, 100021, 100022, 100023]);
 
 /**
  * Every key at any depth of a decoded answer.
@@ -118,6 +121,12 @@ it('carries the WP-26 history, stats, market and author variants', function (): 
         ->and($video['author'])->toBe(['kind' => 'phone', 'label' => '+998 ** *** ** 21', 'count' => 24]);
 });
 
+it('answers the ground-level floor as 0 and a basement as a negative number, never as null', function (int $number, int $floor): void {
+    foreach (['', '?preview=1'] as $query) {
+        expect($this->getJson("/api/v1/listings/{$number}{$query}")->assertOk()->json('data.floor'))->toBe($floor);
+    }
+})->with(['ground-level floor' => [100022, 0], 'basement' => [100023, -1]]);
+
 it('compares the per-m² listings in per-m² values', function (int $number, float $value, float $own): void {
     $comparison = $this->getJson("/api/v1/listings/{$number}")->assertOk()->json('data.comparison');
 
@@ -142,6 +151,17 @@ it('marks the withdrawn listing', function (): void {
 it('keeps the price kinds of the catalogue', function (int $number, string $kind): void {
     $this->getJson("/api/v1/listings/{$number}")->assertOk()->assertJsonPath('data.price.kind', $kind);
 })->with([[100008, 'down_payment'], [100004, 'business']]);
+
+it('answers 429 rate_limited with the reason daily and Retry-After in the daily_limit scenario', function (): void {
+    $this->getJson('/api/v1/listings/100012', ['X-Stub-Scenario' => 'daily_limit'])
+        ->assertStatus(429)
+        ->assertHeader('Retry-After', '3600')
+        ->assertExactJson(['success' => false, 'message' => 'The daily limit of opened listings is reached.', 'code' => 'rate_limited', 'reason' => 'daily']);
+});
+
+it('still answers the preview form in the daily_limit scenario', function (): void {
+    $this->getJson('/api/v1/listings/100012?preview=1', ['X-Stub-Scenario' => 'daily_limit'])->assertOk()->assertJsonPath('data.number', 100012);
+});
 
 it('answers the reserved numbers and malformed numbers', function (string $number, int $status, string $code): void {
     $this->getJson("/api/v1/listings/{$number}")->assertStatus($status)->assertJsonPath('code', $code);

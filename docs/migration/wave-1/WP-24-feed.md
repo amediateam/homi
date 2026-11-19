@@ -54,7 +54,7 @@ built once here and reused by favourites, history, the map card and the listing 
 | Server strings | 25 §4.5, Q-API-062 | The card renders the display strings of the contract; where the contract gives one combined string the legacy split of `03` §1.12 applies; nothing is re-formatted that the server already formatted |
 | Demo data | 25 §4.4, RK-27 | Every list answer reports `meta.source` (the browser's pages through `bffFetch`, the server's page one through `SourceReporter`); the marker of WP-20 shows on the feed while an answer of the screen, the listings included, comes from a stub |
 | Defects and flags | DEC-36 | LB-APP-039 and LB-APP-042 are fixed unconditionally; LB-APP-038 is a `DEV` row and stays behind its flag |
-| Baseline | 25 §8, `wave-1/baseline.md` | The rules below are those of the pinned release `index-DY_DH7h-.js`. Since `index-Dbpp463V.js` «Хозяин» ranks above «Ниже рынка» (BR-APP-026, BR-API-111) and `price.kind: business` has the label `card.businessPrice` (BR-API-156); since `index-DY_DH7h-.js` the search list carries the radar card after its 8th card (SCR-047, built by WP-30 in the slot of this package); since `index-CBlEKxdL.js` the badges have kinds, the verified badge reads «Проверенный хозяин», and the compact card shows a shield (*added by the intake of `index-CBlEKxdL.js`*) |
+| Baseline | 25 §8, `wave-1/baseline.md` | The rules below are those of the pinned release `index-DY_DH7h-.js`. Since `index-Dbpp463V.js` «Хозяин» ranks above «Ниже рынка» (BR-APP-026, BR-API-111) and `price.kind: business` has the label `card.businessPrice` (BR-API-156); since `index-DY_DH7h-.js` the search list carries the radar card after its 8th card (SCR-047, built by WP-30 in the slot of this package); since `index-CBlEKxdL.js` the badges have kinds, the verified badge reads «Проверенный хозяин», and the compact card shows a shield (*added by the intake of `index-CBlEKxdL.js`*); since `index-CIa0Ldj2.js`: the age from `posted_at`, the floor words, the failure toast of the heart, the scroll memory, the fresh pill, the silent reload after a long return (*added by the intake of `index-CIa0Ldj2.js`*) |
 | Photos | 25 §4.5 | Photo addresses arrive ready from the API; the client only derives the small variant |
 | Acceptance | DEC-46, 25 §9 | The checklist below is ticked in ru / uz / en and light / dark |
 
@@ -74,7 +74,9 @@ In `frontend/app/node_modules/next/dist/docs/01-app/`:
 - `<Link>` prefetches routes as they enter the viewport (`use-router.md`, `link.md`); card links set
   `prefetch={false}`, because a feed would otherwise request one listing route per card.
 - With `cacheComponents` the feed route stays mounted but hidden under other routes, and its effects are cleaned
-  up while hidden (`preserving-ui-state.md`): the scroll observer and timers live in effects.
+  up while hidden (`preserving-ui-state.md`): the scroll observer and timers live in effects. Next keeps up to
+  three such routes; the route cache stays, and the scroll memory of "Page and data flow" covers the scroll, which
+  it does not keep (DEC-63; *added by the intake of `index-CIa0Ldj2.js`*).
 
 ### Page and data flow
 
@@ -113,6 +115,31 @@ app/[locale]/(main)/page.tsx
 - **List key** = canonical query of `toSearchParams(filters, sort)` + `|` + refresh version, built only by
   `feedListKey()` of `feedQuery.ts`, the one function `FeedServer` and `FeedScreen` both call (D2). `filtersKey()` is
   not used for it, because it ignores `posted_days` (BR-APP-012) and the list must be re-created when that changes.
+- **Feed epoch.** The list key gains a feed epoch beside the pull version: a counter of the launch that re-creates the
+  list without a pull. `FeedServer` builds its key with epoch 0, so after a bump the client's key differs from the
+  server's page one and the list reads page one itself, as after a pull. The long return bumps it, and later the
+  hidden list of WP-31 (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `feedQuery.ts` and `FeedScreen`
+  for a later package (`wave-1/baseline.md`, built code behind the pin, row 13)).
+- **Scroll memory** (DEC-63; legacy since `index-CIa0Ldj2.js`, `03` BR-APP-105). Legacy keeps the search feed mounted
+  under the map and the other tabs and remembers its scroll. HOMI keeps Next's route cache and adds a memory
+  `{listKey, y}`, in memory only: written when the feed's route hides (the map, another tab, the Settings button),
+  restored in the layout effect when the feed is its own address again with the same list key. "A new list key scrolls
+  to the top" above stays for a new key. A press of the active search tab, «Смотреть найденное» of a radar and a
+  changed search forget the memory. How often the route cache loses the loaded pages is measured on staging
+  (Q-APP-030) (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `FeedScreen` and `TabBar` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 14)).
+- **Long return** (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-104). When the app becomes visible after at least 6 h
+  in the background — the visit session of WP-30 — one of three things happens. The feed is not on screen (another
+  tab): the epoch is bumped and the scroll memory forgotten, so the list is new when the user comes back. The feed or
+  the map is its own address, nothing covers the list, and the list's scroll (the remembered one on the map) is under
+  60 px: the epoch is bumped, a silent reload at the
+  top, no request for a count. Otherwise — the list is scrolled or covered — the feed asks `/bff/listings/new` with
+  `since` = the moment the list on screen was created and offers the fresh pill «Показать N новых» while the count is
+  above 0 (`03` SCR-063; the pill itself is in WP-23's top bar). A tap on the pill scrolls to the top and bumps the
+  epoch; a new list key resets the count and aborts the request. The pill is not a radar offer: it shows with radars
+  off too, and the return banner of WP-30 keeps working after the reload (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `FeedScreen`, `visits.ts` and `TopBar` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 13)).
 - `useCursorFeed({ key, path, query, initial, enabled, renewed, flags })` → `{ items, status, error, done,
   loadingMore, loadMore, retry, source }` (`status` is `loading` until page one has answered, then `success` or
   `error`; `source` is `meta.source` of the latest answer, the server's included):
@@ -204,7 +231,11 @@ cache.
 `validation`). `FavButton` calls it through `useAction()`, which passes the locale as for every action of WP-22.
 Because the methods are explicit, success keeps the requested state and the answer's flag is not read; only a
 failure changes it back, and the rollback writes the state before the tap into `favs` again. `FavButton` reads
-`favs` itself, so a parent may pass the server's flag or the merged state.
+`favs` itself, so a parent may pass the server's flag or the merged state. Since legacy release `index-CIa0Ldj2.js` a
+failed save also tells the user: the rollback comes with the error haptic and the toast «Не получилось сохранить»,
+through `failed()` of WP-23 (`dev016ErrorToastOnFailure`, on by default, DEC-58) (*added by the intake of
+`index-CIa0Ldj2.js`*; a parity item of `FavButton` for a later package (`wave-1/baseline.md`, built code behind the
+pin, row 21)).
 
 ### Radar seam
 
@@ -356,7 +387,10 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   assistive technology: the card's link opens the listing, and «Смотреть видео в Telegram» is the listing screen's
   button);
   no photos → placeholder; a photo that fails to load → placeholder, no retry (a new address for the slide, e.g. a
-  re-signed one after a refresh, is a new photo).
+  re-signed one after a refresh, is a new photo). `Photo` itself clears its "loaded" and "failed" state when its `src`
+  changes, so a reused element never keeps the state of the address before (legacy since `index-CIa0Ldj2.js`, `03`
+  BR-APP-059; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `Photo` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 31)).
 - Photos (BR-APP-059): the small variant `.s.jpg` (480 px) is derived only for addresses of the form
   `…/<digits>/<digits>.jpg?…`; other addresses are used as they are. With Save-Data, a connection of 3g or
   slower, or lite graphics only the small variant is requested; otherwise `srcset` offers 480w and 800w with
@@ -420,6 +454,19 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   market string of the listing, «🐾 можно с животными» (`fmt.pets`); a zero or missing area or floor is left out;
   then the age: `posted.when`, the part legacy shows after « · » (BR-API-072), or `posted.label` when `when` is
   empty — never both.
+- Floor words (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-110): `floor: 0` is the ground-level floor and reads
+  `fmt.floorGround` «цокольный этаж»; a negative floor reads `fmt.floorBasement` «подвал»; both without the total.
+  Only `null` shows nothing: "a zero … floor is left out" above holds for the area alone (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code behind
+  the pin, row 26)).
+- Age (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-109): the label is computed from `posted.at` by the four steps of
+  WP-22's formatter — «только что», «{n} мин назад», «{n} ч назад», «{n} дн. назад» (`card.ageNow`, `card.ageMin`,
+  `card.ageHours`, `card.ageDays`). The server's `posted.when` is the fallback when `at` is missing or unparsable, and
+  it is what the server render and the first client render print; the computed label replaces it after hydration. A
+  minute clock, checked every 15 s and on `visibilitychange` and running only while a card is mounted, re-renders only
+  the label, not the card. The compact card still shows no age (*added by the intake of `index-CIa0Ldj2.js`*; a parity
+  item of `cardText.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row
+  20)).
 - Location line (BR-APP-030): `district · landmark · (metro label or «{km} км до центра»)`. The metro label and
   its 1.5 km limit are `formatMetroLabel()` of WP-22 (rule BR-APP-029 and the flag of LB-APP-031 are owned there);
   the centre distance is `fmt.centerKm` with one decimal. A missing part is left out; a long landmark ellipsises.
@@ -453,7 +500,7 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
 - "No items" counts the loaded items, as legacy (`items.length === 0`): when every loaded item is hidden, a failed
   later page still shows the inline retry.
 - «Повторить» repeats the failed page only. Nothing retries by itself.
-- With `dev001AnyForbiddenShowsAccess` on (off, like every `DEV` flag), a `forbidden` answer does not stay in the
+- With `dev001AnyForbiddenShowsAccess` on (off; not one of the five flags DEC-58 turned on), a `forbidden` answer does not stay in the
   list: `useCursorFeed` calls `onForbidden()` of `lib/session/bootstrap`, as `useResource` of WP-22 does, and the
   session turns `denied` (LB-APP-045 is owned by WP-22; AM-68). The error mapper `lib/api/errors.ts` and `bffFetch`
   do not do it.
@@ -535,7 +582,11 @@ Unit (Vitest, `frontend/app/tests/feed/`):
 - `cardText`: price from `display` and `period`; `kind: 'down_payment'` and `kind: 'business'` with their labels in
   three locales; `kind: null` and an unknown string → no label; `price: null` → negotiable; facts with
   and without floor total; age from `posted.when`, `posted.label` only without it; location with metro, with centre
-  distance, with neither.
+  distance, with neither. Since the intake of `index-CIa0Ldj2.js`: the age steps with a frozen clock at 20 s, 5 min,
+  3 h and 50 h, a time in the future and a missing `at` (the fallback) (*added by the intake of `index-CIa0Ldj2.js`*; a
+  parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20)); floor
+  `0`, `-1` and `null` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 26)).
 - `inlineSlot`: 20 visible → after the 8th; 9 with the note → after the 8th; 9 still loading → after the 8th; 8,
   fully loaded, no note → after the 8th; 8 still loading → none; 5 fully loaded, no note → after the 5th; 5 with the
   note → none; 5 still loading → none; 1 fully loaded → after the 1st; 0 → none (the empty state shows instead).
@@ -561,9 +612,13 @@ Component (Vitest + Testing Library):
   without the overlays' labels; the focus ring on the article; a server-rendered card takes the server's hint.
 - `PhotoStrip`, `Photo`: lazy mounting and the dots; the sideways swipe kept in the strip; the hidden ▶; a failed
   photo and a re-signed address; the network rule, a connection that drops to 3g; eager photos not faded; the
-  server render and hydration with and without the server's hint, with no mismatch.
+  server render and hydration with and without the server's hint, with no mismatch; a `Photo` whose `src` changes
+  after a failure loads again (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `Photo` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 31)).
 - `FavButton`: optimistic fill, rollback on failure, taps ignored while busy across every heart of the listing,
-  haptic style per direction, `PUT` versus `DELETE`.
+  haptic style per direction, `PUT` versus `DELETE`; a failed save gives the error haptic and the toast (*added by the
+  intake of `index-CIa0Ldj2.js`*; a parity item of `FavButton` for a later package (`wave-1/baseline.md`, built code
+  behind the pin, row 21)).
 - `FeedHeader`: chip set with and without polygon, with room-less types, with one city, before reference data, a
   city the reference data does not know; owner chip for `any`, `no_agents`, `owners`; badge count; labels in three
   locales; taps push with the search state; under a listing and under a sheet the chips keep the feed's search
@@ -575,7 +630,12 @@ Component (Vitest + Testing Library):
 - `FeedScreen`: the list key of the server's page one equals the browser's in the server render and at hydration
   for any address, profile city and saved city (D2); the server HTML hydrates without a mismatch and keeps its
   cards; the server's small-photo hint reaches the cards; a return to a search pulled before adopts the server's
-  page one; the note replaces the empty state when the city's stats arrive.
+  page one; the note replaces the empty state when the city's stats arrive. Since the intake of `index-CIa0Ldj2.js`:
+  the key with the epoch, and the scroll written on hide and restored for the same key only (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `FeedScreen` for a later package (`wave-1/baseline.md`, built code behind the
+  pin, row 14)); the rule matrix of the long return — tab × covered × scroll × count (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `FeedScreen` and `visits.ts` for a later package (`wave-1/baseline.md`, built
+  code behind the pin, row 13)).
 - `FewResultsNote`, `FeedEmpty`: every text; button visibility; radar button absent while `radarsReady` is false,
   and — with the constant forced on — absent for `radars_enabled` `false` or missing, present for `true`; the radar
   button disabled while `subscribe` runs; the deal switch (geography kept, the sort narrowed, a light haptic, the
@@ -614,8 +674,8 @@ stub user's 120 requests a minute (AM-61). Every test answers the stub photos wi
   position is kept.
 - `/bff/listings` fulfilled with `500` for page two → inline «Не загрузилось — повторить», the cards stay;
   aborted (offline) for page one in header mode → «Нет связи»; `403` → «Нет доступа — повторить» inline, on page two
-  and on page one without cards, and the session stays `ready`: with DEV-001 off (every `DEV` flag is a constant
-  `false`) no end-to-end test reaches the `denied` branch, which the unit tests cover.
+  and on page one without cards, and the session stays `ready`: with DEV-001 off (its flag is a constant
+  `false`; DEC-58 turned five other flags on) no end-to-end test reaches the `denied` branch, which the unit tests cover.
 - Header mode on `/ru`: `/bff/listings` answers `401` for page two and the new sign-in is refused as too old → the
   session-expired screen of WP-23 (the case `gates.spec.ts` runs on `/ru/map` since WP-24).
 - The filters, sort, rooms, price, owner and city chips each push their sheet route with the address's search and
@@ -642,6 +702,13 @@ List
 - [ ] No listing appears twice.
 - [ ] Changing filters, sort or deal, and pull-to-refresh, start the list again from the top.
 - [ ] (T) Opening a card and returning keeps the scroll position and shows the «viewed» eye on that card.
+- [ ] List → map → list, a round trip over the other tabs and SettingsButton → Back keep the list's scroll; a changed
+      search starts at the top (DEC-63; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `FeedScreen`
+      and `TabBar` for a later package (`wave-1/baseline.md`, built code behind the pin, row 14)).
+- [ ] After 6 h in the background: at the top of the list a silent reload and no pill; scrolled or under a listing
+      «Показать 3 новых», and a tap loads page one; on another tab the list is new on return (*added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `FeedScreen`, `visits.ts` and `TopBar` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 13)).
 - [ ] The demo-data marker shows while the answers come from stubs.
 
 Chips
@@ -668,13 +735,21 @@ Card
 - [ ] The market chip shows «−N% к рынку» / «+N% к рынку», «≈ обычная», «≈ спорно» with the tone colour; an
       unknown tone shows the real sign in the neutral colour.
 - [ ] The facts line shows title, area, floor, market and the pets mark when present, then the age.
+- [ ] The age reads «только что», «5 мин назад», «3 ч назад», «2 дн. назад» from `posted.at` and changes when the
+      minute changes; without `at` it is the server's text (*added by the intake of `index-CIa0Ldj2.js`*; a parity
+      item of `cardText.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin,
+      row 20)).
+- [ ] `floor: 0` reads «цокольный этаж» and `floor: -1` «подвал» (the stub listings `100022` and `100023`) (*added by
+      the intake of `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later package (`wave-1/baseline.md`,
+      built code behind the pin, row 26)).
 - [ ] The location line shows district, landmark and the metro within 1.5 km, else the distance to the centre.
 - [ ] Photos swipe inside the card with dots; a video listing shows ▶; a listing without photos, and a broken
       photo, show the placeholder.
 - [ ] On Save-Data or lite graphics only small photos are requested; in cookie mode the first page's photos
       follow the server's hint (Save-Data header, Telegram-Android class) until hydration (limit above).
 - [ ] (T) The heart fills at once with a haptic; a failed save empties it again; the state survives scrolling
-      away and back.
+      away and back. A failed save also shows «Не получилось сохранить» (*added by the intake of `index-CIa0Ldj2.js`*;
+      a parity item of `FavButton` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).
 
 States
 
@@ -887,15 +962,15 @@ States
 - **Later specifications that WP-24 makes wrong** (a read-only audit of WP-25 … WP-33 against `1d1c964`; each is
   corrected in that package's own PR when it is taken):
   - WP-29: `initial` is `{ key, result }`, adopted only when `key` equals the list key and only when a key's list
-    starts (`WP-29-saved.md:57`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
+    starts (`WP-29-saved.md:63`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
     not `seen[number]` (`:78`); `ListingFeed` already has every prop WP-29 needs (`:66`).
   - WP-27: `MapScreen`, `MapBar` and `ViewToggle` should read `useScreenSearchState('map')`, not `useSearchState()`
     (`WP-27-map-gl.md:83`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
     `data.spec.ts` and the header-mode expired case of `gates.spec.ts` run on, which its PR moves (`:234`).
   - WP-30: `useRadarsEnabled()` reads `useReference().radarsEnabled`, not `radars_enabled`, and tests pass
-    `{ ready: true }` (`WP-30-radars.md:169`).
+    `{ ready: true }` (`WP-30-radars.md:173`).
   - WP-26: the contract has no `short_title`; the market block uses `marketVerdict({ market }, locale, t)`; the
-    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:279`).
+    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:289`).
   - WP-32: `whenFirstContent(timeoutMs)` races the existing `firstContentShown()`; the mark comes from the first
     `Photo` that loads anywhere, not only a feed card (`WP-32-analytics-errors.md:78`).
 - **Merged** on 2026-11-17 on the developer's «сливай #71» (merge commit `780aea9`), after `frontend` (run

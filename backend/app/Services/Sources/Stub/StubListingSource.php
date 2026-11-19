@@ -26,24 +26,26 @@ use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 
 /**
- * The stub driver of the listing capability (WP-12) over `listings/catalog.json`: 20 invented listings covering
+ * The stub driver of the listing capability (WP-12) over `listings/catalog.json`: 22 invented listings covering
  * every deal × type and the special cases (video, no photos, no coordinates, suspicious price, verified owner, the two
  * price kinds, raw synthetic numbers in texts). `100018` … `100021` are Tashkent-region long-rent apartments, outside
  * the default set, with the listing-screen variants of WP-26: a chat link or a paid number without a phone, no
  * contact at all, a video of a deleted post, an author of 24 listings, one and three price events, the `near` and
- * `city` comparisons, the stats edge cases, an offer link and a second number that is not the author's. The Tashkent
- * long-rent apartments are repeated with shifted numbers (`101001` …) until the default filters find 45, so the feed
- * has three pages.
+ * `city` comparisons, the stats edge cases, an offer link and a second number that is not the author's. `100022` and
+ * `100023`, in the same set, are the floor variants of legacy release `index-CIa0Ldj2.js`: the ground-level floor
+ * (`floor: 0`) and a basement (`floor: -1`). The Tashkent long-rent apartments are repeated with shifted numbers
+ * (`101001` …) until the default filters find 45, so the feed has three pages.
  *
- * Filters applied in memory: city, deal, types, rooms (a maximum of 4 or more is open), price, districts,
- * `near_metro` (metro within 1 km), `below_median` (a negative median delta) and owner; the others are accepted and
- * ignored. Count, map and new-since follow the same filter, so the same filters give the same set.
+ * Filters applied in memory: city, deal, types, rooms (a maximum of 4 or more is open), price, area (for every
+ * deal), districts, `near_metro` (metro within 1 km), `below_median` (a negative median delta) and owner; the others
+ * are accepted and ignored. Count, map and new-since follow the same filter, so the same filters give the same set.
  *
  * Reserved numbers: `999404` → 404, `999503` → 503, `100016` answers with `100001` (a merged duplicate). Scenarios:
- * `empty`, `few` and `page2_error` (feed), `new_none` and `new_one` (new-since), `contact_unavailable`,
- * `translation_unavailable`. A cursor the feed did not give ends the list quietly (`StubCursor`). `{media}` and
- * `{api}` in the fixture become `config('media.public_url')` and `config('app.url')`. The `stub` object of an
- * entry (city, synthetic phone) is stub data, never answered.
+ * `empty`, `few` and `page2_error` (feed), `new_none` and `new_one` (new-since), `map_cut` (the map answers the first
+ * half of its points, as a source that cut the answer by a limit), `contact_unavailable`, `translation_unavailable`.
+ * A cursor the feed did not give ends the list quietly (`StubCursor`). `{media}` and `{api}` in the fixture become
+ * `config('media.public_url')` and `config('app.url')`. The `stub` object of an entry (city, synthetic phone) is stub
+ * data, never answered.
  */
 final class StubListingSource implements ListingSource
 {
@@ -149,7 +151,13 @@ final class StubListingSource implements ListingSource
             ]);
         }
 
-        return new MapPoints($points, count($matches));
+        $withPoint = count($points);
+
+        if ($context->scenario === 'map_cut') {
+            $points = array_slice($points, 0, intdiv($withPoint, 2));
+        }
+
+        return new MapPoints($points, count($matches), $withPoint);
     }
 
     public function details(int $number, SourceContext $context): ListingDetails
@@ -275,6 +283,7 @@ final class StubListingSource implements ListingSource
         $city = is_array($entry['stub'] ?? null) ? ($entry['stub']['city'] ?? null) : null;
         $usd = $summary->price?->usd;
         $rooms = $summary->rooms;
+        $area = $summary->areaTotal;
 
         return $city === $filters->city
             && $summary->deal === $filters->deal
@@ -283,6 +292,8 @@ final class StubListingSource implements ListingSource
             && ($filters->roomsMax === null || $filters->roomsMax >= 4 || ($rooms !== null && $rooms <= $filters->roomsMax))
             && ($filters->priceMin === null || ($usd !== null && $usd >= $filters->priceMin))
             && ($filters->priceMax === null || ($usd !== null && $usd <= $filters->priceMax))
+            && ($filters->areaMin === null || ($area !== null && $area >= $filters->areaMin))
+            && ($filters->areaMax === null || ($area !== null && $area <= $filters->areaMax))
             && ($filters->districts === [] || in_array($summary->districtCode, $filters->districts, true))
             && (! $filters->nearMetro || ($summary->metroKm !== null && $summary->metroKm <= 1.0))
             && (! $filters->belowMedian || ($summary->medianDelta !== null && $summary->medianDelta < 0))

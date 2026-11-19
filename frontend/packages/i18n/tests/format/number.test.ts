@@ -37,7 +37,7 @@ describe("formatCount", () => {
     expect(formatCount(1, "listings", "ru", translator("ru"))).toBe("1 объявление");
     expect(formatCount(5, "listings", "ru", translator("ru"))).toBe("5 объявлений");
     expect(formatCount(1234, "listings", "ru", translator("ru"))).toBe(ru("1_234 объявления"));
-    expect(formatCount(1234, "listings", "uz", translator("uz"))).toBe(ru("1_234 eʼlonlar"));
+    expect(formatCount(1234, "listings", "uz", translator("uz"))).toBe(ru("1_234 ta eʼlon"));
     expect(formatCount(1, "listings", "en", translator("en"))).toBe("1 listing");
     expect(formatCount(1234, "listings", "en", translator("en"))).toBe("1,234 listings");
   });

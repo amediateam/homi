@@ -23,7 +23,9 @@
     "offline": "No connection",
     "offlineText": "Check your internet connection and try again.",
     "serverText": "The server didn’t respond. Try again in a minute.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "dayLimit": "Daily limit reached",
+    "dayLimitText": "You’ve opened a lot of listings in the past 24 hours. Try again later — Radar will keep sending new ones to the chat."
   },
   "crash": {
     "title": "Something went wrong",
@@ -40,7 +42,8 @@
     "view": {
       "map": "Map",
       "list": "List"
-    }
+    },
+    "freshShow": "{n, plural, one {Show {n} new} other {Show {n} new}}"
   },
   "noAccess": {
     "title": {
@@ -48,14 +51,16 @@
       "invite": "Invite only",
       "full": "No spots yet",
       "blocked": "No access",
-      "join": "Start with the bot"
+      "join": "Start with the bot",
+      "paused": "The bot is paused"
     },
     "text": {
       "private": "The app is available only to the kvadro² team for now.",
       "invite": "You can join with an invite link: open it and tap “Start” in the bot.",
       "full": "All spots are taken right now. Please try again later.",
       "blocked": "Access to the app is closed.",
-      "join": "Tap “Start” in the bot — then the app will open."
+      "join": "Tap “Start” in the bot — then the app will open.",
+      "paused": "We’ll be back soon. Your Radars and favorites are safe."
     },
     "back": "Back to the bot",
     "toBot": "Go to the bot",
@@ -75,9 +80,9 @@
     "ppmHint": "By price per square metre"
   },
   "toast": {
-    "subSaved": "Radar is on. {count} are already in your chat with the bot",
+    "subSaved": "Radar is on. Already in your chat with the bot: {count}",
     "subSavedEmpty": "Radar is on — new listings will come to the chat as soon as they appear{hint}",
-    "subUpdated": "Radar updated. {count} match the new conditions — see your chat with the bot",
+    "subUpdated": "Radar updated. Matching the new conditions: {count} — see your chat with the bot",
     "subUpdatedEmpty": "Radar updated. Nothing yet{hint}",
     "subSavedFew": "Radar is on, but such listings are rare. {what}: {rate}",
     "subUpdatedFew": "Radar updated, but such listings are rare. {what}: {rate}",
@@ -87,10 +92,12 @@
     "hidden": "Listing hidden",
     "blocked": "Author {label} blocked",
     "undo": "Undo",
+    "showForMe": "Show it to me",
     "reported": "Thanks! We'll take a look",
     "reportedFraud": "Thanks, we'll take a look. We've hidden this listing for you",
     "reportedRented": "Marked as rented",
     "reportedAgent": "Number marked as an agent's",
+    "reportedAgentNoted": "Thanks, I've noted your mark",
     "alreadyOn": "Radar for this search is already on",
     "noChat": "Radar is off — the bot needs permission to message you",
     "alertOn": "Radar is on again"
@@ -190,6 +197,8 @@
     "area": "{area} m²",
     "floorOf": "floor {floor}/{total}",
     "floor": "floor {floor}",
+    "floorGround": "semi-basement floor",
+    "floorBasement": "basement",
     "pets": "🐾 pets OK",
     "metroDist": "{metro} · {m} m",
     "centerKm": "{km} km to the centre",
@@ -212,6 +221,10 @@
     "owner": "Owner",
     "ownerVerified": "Verified owner",
     "negotiable": "Price on request",
+    "ageNow": "just now",
+    "ageMin": "{n} min ago",
+    "ageHours": "{n} h ago",
+    "ageDays": "{n} d ago",
     "downPayment": "down payment",
     "businessPrice": "business price, premises rented",
     "viewedTitle": "You have opened this listing"
@@ -285,13 +298,18 @@
     "areaOn": "Your area",
     "areaRemove": "Remove area",
     "note": "{shown} of {total} on the map · {missing} only the district is known",
-    "missing": "{n, plural, one {for {n} listing} other {for {n} listings}}"
+    "missing": "{n, plural, one {for {n} listing} other {for {n} listings}}",
+    "cut": "The map shows the {n} newest. The rest are in the list"
   },
   "listing": {
     "loadFailed": "Couldn’t load the listing",
+    "gone": "This listing is gone — the flat has probably been rented out or sold",
+    "goneFresh": "See the latest",
     "rooms": "{n, plural, one {room} other {rooms}}",
     "m2": "m²",
     "floor": "floor",
+    "floorGround": "Semi-basement floor",
+    "floorBasement": "Basement",
     "building": "building",
     "newBuilding": "New",
     "secondary": "Resale",
@@ -402,7 +420,7 @@
         "title": "2-room apartment",
         "price": "$650/mo",
         "median": "about the usual price",
-        "place": "Yunusobod · Minor metro",
+        "place": "Yunusabad · Minor metro",
         "area": "54 m² · floor 4/9",
         "owner": "Owner",
         "quote": "2-room flat for rent…",
@@ -410,7 +428,7 @@
         "rowMetro": "Metro",
         "rowArea": "Area",
         "rowOwner": "Listed by",
-        "district": "Yunusobod",
+        "district": "Yunusabad",
         "metro": "Minor",
         "areaShort": "54 m²",
         "ownerShort": "🏠 Owner",
@@ -581,7 +599,7 @@
   "subs": {
     "empty": "Radar watches the channels for you",
     "emptyHint": "Tell it what you’re looking for: radar checks dozens of Telegram channels around the clock and sends new matching listings to the chat right away. Turn it off any time.",
-    "resumed": "Radar is on again. {count} you haven’t seen are in your chat with the bot",
+    "resumed": "Radar is on again. In your chat with the bot: {count} you haven’t seen yet",
     "deleteConfirm": "Delete radar “{name}”?",
     "paused": "Paused",
     "hidden": "Hidden: {n}",

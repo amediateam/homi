@@ -9,10 +9,12 @@ mocks, the landing mirror (`$KVADRO_ROOT/demo/landing`), and the product, bot an
 contract is in `08-api-inventory.md` (`API-NNN`, `RES-NNN`).
 
 - **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`, brought up to `index-DY_DH7h-.js` (the pin
-  of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` and to the pinned release `index-CBlEKxdL.js`
-  (SVN r31; `wave-1/baseline.md`). Items changed for a later release name it. "current Doc:" and "at the pin" cite
-  SVN r27; "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, and the client files of §12a are cited at r31 too.
-  Nothing was run (`RUNTIME_VERIFIED` is not used).
+  of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js`, to `index-CBlEKxdL.js` (SVN r31) and to the
+  pinned release `index-CIa0Ldj2.js` (source at SVN r33; `wave-1/baseline.md`). Items changed for a later release
+  name it. "current Doc:" and "at the pin" cite SVN r27; "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, and the
+  client files of §12a are cited at r31 too. "Doc r35:" cites `$KVADRO_ROOT/docs/api.md` at r35, the pinned release's
+  own state; the client files in text of the intake of `index-CIa0Ldj2.js` are cited at r33. Nothing was run
+  (`RUNTIME_VERIFIED` is not used).
 - **Labels:** `CONFIRMED` — visible in client code or in a contract the code agrees with (for a server rule this means
   the client depends on it or produces it); `DOCUMENTED_ONLY` — stated as fact (✅) in legacy docs, no implementation
   visible; `UNVERIFIED` — 🔶 in legacy docs or our inference, always with a `Q-API` item.
@@ -47,9 +49,24 @@ contract is in `08-api-inventory.md` (`API-NNN`, `RES-NNN`).
 - **BR-API-003** · `CONFIRMED` — Mutations are never auto-retried by the client (except one repeat after `no_chat`
   consent), so server-side idempotency is the only protection against double taps and bot/app races. *Evidence:*
   Doc:97-98; `src/lib/chatAccess.js:27-54`.
+- **BR-API-193** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `GET /api/listings/:id` may answer
+  `429 {"detail": "too many today"}` when the caller has opened very many listings within a day. The client matches
+  that text exactly and shows «Лимит на сегодня»; any other `429` reads as a server error. The threshold, the window,
+  the counted identity and whether the preview form counts are not documented; the client's text promises that radar
+  alerts continue. *Evidence:* Doc r35:712-714, :1366-1367, :1425; `src/lib/api/client.js:29-30`,
+  `src/components/ErrorState.jsx:14-25` (at r33). (Q-API-001, Q-API-080)
 - **Q-API-001** — Are there rate limits or `429` responses on any `/api/*` route, and per what key (user id, IP)?
+  **Narrowed by release `index-CIa0Ldj2.js`:** a `429` exists on `GET /api/listings/:id` (`too many today`,
+  BR-API-193). Still open: every other route, the key and the numbers (Q-API-080).
   *Check:* fire 50 rapid `GET /api/feed/count` requests from a dedicated test account and record statuses/headers; ask
   the legacy owner for the limiter configuration.
+- **Q-API-080** — The daily cap behind `429 too many today`: the number of listings, the window ("сутки": a calendar
+  day in Asia/Tashkent or 24 hours), the counted identity — the user, the IP address or, for a caller with a service
+  key, the key —, whether `?preview=1` and repeated opens of one listing count, whether `Retry-After` is sent, and
+  whether radar alerts really continue. Legacy asks about the thresholds itself (Doc r35:1422-1426, open question
+  18). *Check:* open distinct listings from one account until the `429` comes, and record the count, the headers and
+  the time at which it lifts: the operator's answer; a test account on the legacy product, with the product owner's
+  approval.
 
 ## 3. Authentication
 
@@ -95,18 +112,23 @@ present, photo present) and an account-age estimate from the user id are stored 
 
 Known: `GET /api/meta` is the gate. A denied user gets `403 {"detail": <reason>}` with `private` (only the owner may
 use the app), `invite` (entry by invitation link + «Старт» in the bot), `full` (beta seats taken), `blocked`, `join`
-(press «Старт» in the bot first). Whether restrictions are active for new users today is not visible (About:248-252).
+(press «Старт» in the bot first) and, since release `index-CIa0Ldj2.js`, `paused` (the bot is paused), with its texts
+«Бот на паузе», «Скоро вернёмся. Ваши Радары и избранное на месте.» (`src/features/onboarding/NoAccessScreen.jsx:13`,
+`:22` at r33; Doc r35:69-75). Whether restrictions are active for new users today is not visible (About:248-252).
 The mode and owner list are server configuration (About:453). UI texts: «Приложение сейчас доступно только
 владельцу.», «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.», «Все места в бете заняты.
 Попробуйте позже.», «Доступ к приложению закрыт.», «Нажмите «Старт» в боте — после этого приложение откроется.»
 (`src/i18n/locales/ru.js:33-37`).
 
 - **BR-API-011** · `CONFIRMED` — Access denial is signalled only as `403` on `GET /api/meta` with `detail` ∈
-  {`private`, `invite`, `full`, `blocked`, `join`}; any other value is displayed as `private`. *Evidence:*
-  `NoAccessScreen.jsx:13`, `:22`; `useAppBootstrap.js:130-139`.
+  {`private`, `invite`, `full`, `blocked`, `join`} and, since release `index-CIa0Ldj2.js`, `paused`; any other value
+  is displayed as `private`. *Evidence:* `NoAccessScreen.jsx:13`, `:22`; `useAppBootstrap.js:130-139`; for `paused`
+  `NoAccessScreen.jsx:13`, `:22` at r33; Doc r35:69-75.
 - **BR-API-012** · `DOCUMENTED_ONLY` — `private` = only owner accounts may use the app; `invite` = an invitation link
   plus bot «Старт» grants access; `full` = seat limit reached; `blocked` = user blocked by the operator; `join` = the user
-  has not started the bot. *Evidence:* About:248-252; `ru.js:33-37`.
+  has not started the bot. Since release `index-CIa0Ldj2.js`: `paused` = the bot is paused; the meaning is known only
+  from the Mini App's text. *Evidence:* About:248-252; `ru.js:33-37`; for `paused` `NoAccessScreen.jsx:13`, `:22` at
+  r33.
 - **BR-API-013** · `CONFIRMED` — After the user presses «Старт» the gate must open within seconds: the client
   re-checks `/api/meta` 3 × 2.5 s for every reason except `blocked`, and again on each return to the app. *Evidence:*
   `useAppBootstrap.js:26`, `:134-137`, `:150-157`; `ru.js:40` «Только что нажали «Старт»? Подождите пару секунд —
@@ -114,16 +136,28 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **BR-API-014** · `CONFIRMED` — `GET /api/feed`, `/api/favorites`, `/api/history` may return `403` for a gated
   user; the client shows «Нет доступа». *Evidence:* `ListingFeed.jsx:88`; Doc:73.
 - **BR-API-015** · `CONFIRMED` — A gated user arriving from a listing link is sent to the bot with
-  `start=s_<source>--l<id>` (not for `blocked`), and the bot answers with the listing («Квартира, по которой вы
-  пришли: …»). *Evidence:* `NoAccessScreen.jsx:26`, `:66`; Bot:1007-1017.
+  `start=s_<source>--l<id>` (not for `blocked`, and since release `index-CIa0Ldj2.js` not for `paused`), and the bot
+  answers with the listing («Квартира, по которой вы пришли: …»). Since that release the source `seo` carries the
+  interface language: `s_seo_en`, `s_seo_uz`. *Evidence:* `NoAccessScreen.jsx:26`, `:66`; Bot:1007-1017;
+  `NoAccessScreen.jsx:26`, `:40-47`, `:72-81` at r33.
 - **BR-API-016** · `DOCUMENTED_ONLY` — The beta mode (`private`/`invite`/`full`) and the owner list are deployment
   configuration. *Evidence:* About:453.
+- **BR-API-194** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `GET /api/meta` may answer
+  `403 {"detail": "paused"}` while the bot is paused. `GET /api/bot` must still answer without authorisation, and the
+  client passes no source to `/start` for this reason, as for `blocked`. What a user can still reach during a pause,
+  and what happens to radar alerts, is not documented. *Evidence:* Doc r35:69-75, :1370, :1393;
+  `src/features/onboarding/NoAccessScreen.jsx:13`, `:22`, `:26` (at r33). (Q-API-081; `04` Q-BOT-051)
 - **Q-API-005** — Which endpoints besides `/api/meta`, `/feed`, `/favorites`, `/history` enforce the gate (e.g. can a
-  gated user still `POST /api/subscriptions`)? *Check:* with a test account in a gated state call every endpoint of the
-  registry and record statuses.
+  gated user still `POST /api/subscriptions`)? Is `paused` enforced on the other routes too (Q-API-081)? *Check:* with
+  a test account in a gated state call every endpoint of the registry and record statuses.
 - **Q-API-006** — What are the exact conditions of each reason: how is the seat count configured, where are invite
   tokens stored and consumed, is `join` "never sent /start" or "blocked the bot"? *Check:* legacy configuration and
   admin tooling (owner interview); data migration needs the invite/seat tables (`14-data-migration-plan.md`).
+- **Q-API-081** — `paused`: is the pause global or per user; which routes besides `/api/meta` refuse during it; what
+  a paused user can still reach (the text promises that radars and favourites are safe); is it announced beforehand.
+  Legacy asks what a paused user reaches itself (Doc r35:1422-1426, open question 18). *Check:* during a pause call
+  every route of the registry from one account and record the statuses: the operator's answer; a test account on the
+  legacy product, with the product owner's approval.
 - **LB-API-002** · `quirk` · `CONFIRMED` — The reason is read only on `/api/meta`; a `403` on any other endpoint either
   shows «Нет доступа» (feed, favorites, history) or a generic error, and an unknown reason falls back to `private`.
   *Evidence:* `NoAccessScreen.jsx:13`; `ListingFeed.jsx:88`; `ErrorState.jsx:14`.
@@ -162,8 +196,11 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **BR-API-022** · `CONFIRMED` — `GET /api/feed` is cursor-paginated: the client always sends `limit=20`, passes the
   opaque `next_cursor` back as `cursor`, and stops only when `next_cursor === null`; items are de-duplicated by `id`
   across pages. *Evidence:* `feed.js:75-85`; `useInfiniteFeed.js:37-42`; Doc:355-366, :511-522.
-- **BR-API-023** · `CONFIRMED` — `GET /api/favorites` and `GET /api/history` return the whole list in one page with
-  `next_cursor: null`; the client never sends a cursor. *Evidence:* `useInfiniteFeed.js:31-36`; Doc:926-941.
+- **BR-API-023** · `CONFIRMED` — `GET /api/favorites` and `GET /api/history` returned the whole list in one page
+  with `next_cursor: null` up to release `index-CBlEKxdL.js`, and the client never sent a cursor. Since release
+  `index-CIa0Ldj2.js` `/api/favorites` accepts `cursor` and answers `next_cursor` (`null` on the last page), which the
+  client follows; `/api/history` is still read whole. *Evidence:* `useInfiniteFeed.js:31-36`; Doc:926-941; Doc
+  r35:1157-1162; `src/lib/api/user.js:26-27` at r33.
 - **BR-API-024** · `CONFIRMED` — `sort` values are `cheap`, `expensive`, `deal`, `center`, `ppm`; omitted = newest
   first (`new`); `deal` is offered only for a single `apartment` type, non-daily, city with `median !== false`;
   `center` only for cities with zones; `ppm` only for sale. *Evidence:* `feed.js:78-80`;
@@ -171,11 +208,19 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **Q-API-008** — What is inside the cursor (offset, keyset), is it stable while new listings arrive, does it expire,
   and what is the maximum `limit`? *Check:* page through a busy feed with a test account while listings are ingested
   and look for duplicates/gaps; request `limit=100`; ask the owner for the implementation.
-- **Q-API-009** — Are favourites and history capped (count or age), and in which order are they returned? *Check:*
-  inspect a heavy test account; owner interview.
+- **Q-API-009** — Are favourites and history capped (count or age), and in which order are they returned? Since
+  release `index-CIa0Ldj2.js` favourites are paged: the page size is Q-API-084. *Check:* inspect a heavy test
+  account; owner interview.
+- **Q-API-084** — Favourites paging: the page size, the cursor format, the order, and what a request without `cursor`
+  from a bundle cached before the release gets when the list is longer than one page (LB-API-057). Legacy asks about
+  size and format itself (Doc r35:1400-1401, open question 7). *Check:* put more favourites on one account than a page
+  holds and read `GET /api/favorites` without `cursor` and with each `next_cursor`: the operator's answer; a test
+  account on the legacy product, with the product owner's approval.
 - **LB-API-004** · `bug` · `CONFIRMED` — If `next_cursor` is missing (or non-null on favourites/history), the client
   requests page 1 again in a loop: duplicates are dropped, the list never grows, the request repeats forever and the
-  empty state never appears. *Evidence:* `useInfiniteFeed.js:41-42`, `:57-61`; Doc:364-366, :939-941.
+  empty state never appears. Since release `index-CIa0Ldj2.js` `/api/favorites` may carry a non-null cursor by design:
+  the new client follows it, and only bundles cached before the release still loop on it (`inferred`; LB-API-057). *Evidence:*
+  `useInfiniteFeed.js:41-42`, `:57-61`; Doc:364-366, :939-941.
   - **Proposed fix:** every list response always includes `next_cursor` (JSON `null` at the end); the new client
     treats a missing key or a cursor equal to the previous one as the end.
   - **Old-client impact:** compatible — a server guarantee only.
@@ -197,8 +242,11 @@ The mode and owner list are server configuration (About:453). UI texts: «При
   `rent_daily` → `apartment, house, room`; `sale` → `apartment, house, commercial, land`. *Evidence:* Doc:177-179.
 - **BR-API-029** · `CONFIRMED` — `tenant` (`family|men|women`), `pets`, `pets_only` exist only for `rent_long`;
   `area_min`/`area_max` and `market` (`new|secondary`) only for `sale`; `appliances` only for rentals; `pets` and
-  `pets_only` never together; `polygon`, `zones`, `districts` are mutually exclusive (UI-enforced). *Evidence:*
-  Doc:180-182.
+  `pets_only` never together; `polygon`, `zones`, `districts` are mutually exclusive (UI-enforced). Since release
+  `index-CIa0Ldj2.js` the Mini App shows the area range and sends `area_min` / `area_max` for every deal, while Doc
+  r35:206 still limits them to `sale`; what the server does with them for rent is unknown (Q-API-082). *Evidence:*
+  Doc:180-182; `src/features/filters/FiltersSheet.jsx:221`, `src/features/filters/sheet/ExtraSections.jsx:9-42` at
+  r33.
 - **BR-API-030** · `CONFIRMED` — `rooms_min`/`rooms_max`: UI values 1–4 / 1–3; `rooms_max: null` with `rooms_min` set
   means "rooms_min or more"; `4` means "4+". *Evidence:* Doc:151-152; `src/features/filters/model.js:145-166`.
 - **BR-API-031** · `CONFIRMED` — `price_min`/`price_max` are integer USD; UZS input is converted client-side as
@@ -228,6 +276,11 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **BR-API-041** · `CONFIRMED` — `GET /api/map` returns all matching points in one response (no viewport/zoom
   parameters); `label` is plain text, `tone` ∈ {`good`, `high`, `check`, `suspicious`, null}, `priced: false` =
   negotiable, `usd` orders stacks. *Evidence:* Doc:562-585; `feed.js:119`.
+- **BR-API-192** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `GET /api/map` may answer `with_point`, the
+  number of listings of `total` that have coordinates. Absent, the client takes the number of points. When it is
+  larger than the number of points, the answer was cut to the newest listings; `total − with_point` listings are
+  known only by district. The size of the cut and the order behind "newest" are not documented. *Evidence:* Doc
+  r35:671, :681-685, :1369; `src/lib/api/feed.js:142-149` (at r33); mock `tools/parity/mocks.mjs:320`. (Q-API-015)
 - **BR-API-157** · `CONFIRMED` — `GET /api/feed/new` (since release `index-DY_DH7h-.js`) takes the common filter query
   plus `since`, the previous visit with these filters as integer unix seconds of the device clock, and returns
   `{"count": number}` with `count` required. The client calls it only for an eligible return banner, shows the banner
@@ -251,14 +304,22 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **Q-API-014** — Does radar matching apply `posted_days` stored in a radar's filters? *Check:* create a radar with
   `posted_days=1` from the Mini App (test account) and observe deliveries of older-but-newly-seen listings; owner
   interview.
-- **Q-API-015** — Is `/api/map` capped (`total` > `points.length`) and in what order are points returned? *Check:*
-  call it for Tashkent rent with default filters and compare `total` with `/api/feed/count`.
+- **Q-API-015** — Is `/api/map` capped (`total` > `points.length`) and in what order are points returned?
+  **Narrowed by release `index-CIa0Ldj2.js`:** the answer can be cut — `with_point` larger than the number of points —
+  to "the newest" (BR-API-192). Still open: from how many points, and what "newest" orders by (legacy asks the same,
+  Doc r35:1422-1426). *Check:* call it for Tashkent rent with default filters and compare `total` with
+  `/api/feed/count`.
 - **Q-API-066** — What counts as "new" in `GET /api/feed/new`: the publication time or the first appearance in the
   database? Are hidden listings and blocked authors excluded? Is `since` bounded from below (the last visit can be
   weeks old), and what does the server answer to a `since` in the future or a malformed one? The legacy contract asks
   the same (§14 question 15, current Doc:1200-1202). *Check:* owner interview; with a test account compare
   `GET /api/feed/new?…&since=<t>` with the `/api/feed` items of the same filters first seen after `t`, for `t` an
   hour, a week and a month ago and in the future.
+- **Q-API-082** — Does the server apply `area_min` / `area_max` to rent searches and rent radars? The Mini App sends
+  them for every deal since release `index-CIa0Ldj2.js`; Doc r35:206 still says "only for `sale`". *Check:* compare
+  `GET /api/feed/count` of a rent search with and without `area_min`, and create a rent radar with an area range and
+  record what it delivers: the operator's answer; a test account on the legacy product, with the product owner's
+  approval.
 - **Q-API-016** — Does `GET /api/cities` return one entry per `meta.cities` item, and is `typical` the median price
   of the city per deal? *Check:* compare `GET /api/cities` with `meta.cities` and with SEO city medians.
 - **LB-API-005** · `bug` · `CONFIRMED` — A filter object from the server with a missing key breaks the client: a
@@ -270,6 +331,11 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **LB-API-006** · `bug` · `CONFIRMED` — Any code that the client turns into an i18n key (radar `types`, sort, deal)
   crashes the screen if unknown, because `t()` throws on missing keys. *Evidence:* Doc:177-179;
   `demo/app/docs/RECOVERY.md:155`.
+  - **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** `t()` and `plural()` no longer throw: for a missing
+    key they return the `ru` entry, or the key itself, and report `app_error` with `source: "i18n"` once per key
+    (`src/i18n/index.js:110-125`, `:180-193` at r33; Doc r35:1287-1289). Still open: an unknown code shows a raw key
+    instead of a label, and the owner dictionary has no such fallback, so an owner key still throws
+    (`src/features/owner/owner.js:701-707` at r31; `inferred`; BR-API-159).
   - **Proposed fix:** the server validates enum values on write and filters them on output to the known set per
     `deal`; the new client falls back to a generic label.
   - **Old-client impact:** compatible if the server never emits a code the old dictionary lacks; new enum values
@@ -401,8 +467,10 @@ follow the processing order.
 - **BR-API-069** · `CONFIRMED` — `status_text` is a server-provided state label shown on cards (mock: «Сдана»).
   *Evidence:* Doc:259; `tools/parity/mocks.mjs:81`.
 - **Q-API-023** — What does `GET /api/listings/:id` return for a withdrawn listing within 90 days and after the PII
-  purge (`200` with `status_text`, `404`)? Do favourites/history keep such items? *Check:* open an old listing id from
-  the bot history of a test account; inspect favourites after the listing is withdrawn.
+  purge (`200` with `status_text`, `404`)? Do favourites/history keep such items? **Narrowed by release
+  `index-CIa0Ldj2.js`:** the client treats every `404` of the card as "the listing is gone" (`03` SCR-019). Still
+  open: which of the two answers the server gives in each case. *Check:* open an old listing id from the bot history
+  of a test account; inspect favourites after the listing is withdrawn.
 
 ### 8.8 Translation
 
@@ -418,7 +486,18 @@ follow the processing order.
   by ` · `; `(…)` inside part 1 is an explanation; text from the first `/` is the period (`/мес`). *Evidence:*
   Doc:268-272; About:156, :343.
 - **BR-API-072** · `CONFIRMED` — `title` is shown up to the first ` · `; `age` is `<prefix> · <when>` and the UI shows
-  the part after the first ` · `. *Evidence:* Doc:270, :273.
+  the part after the first ` · `. Since release `index-CIa0Ldj2.js` `age` is only the fallback of the age label
+  (BR-API-196). *Evidence:* Doc:270, :273.
+- **BR-API-195** · `CONFIRMED` — Since release `index-CIa0Ldj2.js` `floor` has three meanings: `0` is the ground
+  (semi-basement) floor, a negative value a basement, and an unknown floor must be `null` or absent, never `0`. Before
+  the release the client showed nothing for `0` and a number for a negative floor. *Evidence:* Doc r35:274, :305-307,
+  :1368; `src/features/listing/format.js:55-71`, `src/features/listing/sections/KeyFacts.jsx:28-35` (at r33).
+  (Q-API-083)
+- **BR-API-196** · `CONFIRMED` — Since release `index-CIa0Ldj2.js` a preview may carry `posted_at`, an ISO time that
+  the client parses with `Date.parse` and turns into the age label itself (`03` BR-APP-109); without a parsable value
+  it falls back to `age` (BR-API-072), so `age` must keep coming. The time zone of the value is not stated.
+  *Evidence:* Doc r35:286, :302-304, :1368; `src/features/listing/format.js:141-166` (at r33); mock
+  `tools/parity/mocks.mjs:345`. (Q-API-083)
 - **BR-API-073** · `CONFIRMED` — `market` is a display label; `market_code` (`new` = new build, other non-empty =
   secondary) drives the «Дом» tile. *Evidence:* Doc:260, :282.
 - **BR-API-074** · `CONFIRMED` — Display strings (`facts[].label/value`, `district_name`, `landmark`, `metro`,
@@ -429,6 +508,14 @@ follow the processing order.
   `USD`, `UZS` and store the eight responses as golden fixtures.
 - **Q-API-026** — Is `CityMeta.zoom < 11` really the "region, not a city" marker (`TODO: inferred from build`), and
   what are the six cities/regions and their zooms? *Check:* `GET /api/meta` with a test account; inspect `cities[]`.
+- **Q-API-083** — What the server really sends for the new fields of release `index-CIa0Ldj2.js`, known so far from
+  the client and its mocks only: `posted_at` — its time zone and whether every preview carries it; `floor` — whether
+  older listings with an unknown floor are stored as `0`; `agent_marked` — always present for `agent`, and `true` also
+  when the number was marked before this vote; `Subscription.id` — a number or a string (Doc r35:428 allows both; the
+  radar link needs a number, `03` LB-APP-079). Legacy asks about the time zone itself (Doc r35:1422-1426, open
+  question 18). *Check:* read `GET /api/feed`, a listing card, `GET /api/subscriptions` and the answer to an `agent`
+  report from one account and record the types and values of the four fields: the operator's answer; a test account
+  on the legacy product, with the product owner's approval.
 - **LB-API-009** · `quirk` · `CONFIRMED` — The listing UI crashes or shows `$NaN` when a strictly-read key is missing:
   `center_km`, `metro_km`, `median_delta` (cards), `history[].price_usd`, `history[].change_pct` (≥ 2 entries),
   `median_value` (when `median`), `photos_preview` (`.slice`), `sources` (`.length`), one of
@@ -451,6 +538,9 @@ follow the processing order.
 - **LB-API-012** · `quirk` · `CONFIRMED` — `?preview=1` cannot be lighter than the preview minimum (`photos_preview`,
   `title`/`short_title`, `favorite`, `center_km`, `metro_km`, `median_delta`); on error the map card spins forever.
   *Evidence:* Doc:601-604; `MapSelectionCard.jsx:29-36`.
+  - **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** a failed preview request shows «Не загрузилось»
+    with «Повторить» in the card slot (`src/features/map/MapSelectionCard.jsx:22-54`, `:111-121` at r33; Doc
+    r35:690-691). Still open: the preview minimum is unchanged.
   - **Proposed fix:** `preview=1` returns exactly `ListingPreview`; the new client shows an error state with retry.
   - **Old-client impact:** compatible.
 
@@ -495,7 +585,8 @@ follow the processing order.
   риелторами»); a too-wide query gets a warning before saving. *Evidence:* About:197-199; Bot:983; mocks
   `tools/parity/mocks.mjs:162-168`.
 - **BR-API-089** · `CONFIRMED` — Resume (`PATCH {active:true}`) returns `starter` = matches the user has not seen
-  («Радар снова включён. {count}, которые вы не видели, — в чате с ботом», `ru.js:476`). *Evidence:*
+  («Радар снова включён. {count}, которые вы не видели, — в чате с ботом», `ru.js:476`; since release
+  `index-CIa0Ldj2.js` «Радар снова включён. В чате с ботом — непросмотренные: {count}»). *Evidence:*
   `RadarScreen.jsx:102-110`.
 - **BR-API-090** · `CONFIRMED` — `ask_found: true` on `PATCH {active}` (any value) or `DELETE` asks the client to show
   «Нашли жильё?» with `trigger` `pause`/`delete`; it is not shown every time (🔶). *Evidence:* Doc:805-806, :816-820;
@@ -542,8 +633,13 @@ follow the processing order.
 
 ## 10. Favourites, history, hidden listings, blocked authors
 
-- **BR-API-094** · `CONFIRMED` — Favourite is a server-side toggle that returns the resulting state, shared with the
-  bot's ⭐ button. *Evidence:* Doc:636-647; Bot:986.
+- **BR-API-094** · `CONFIRMED` — Up to release `index-CBlEKxdL.js` favourite is a server-side toggle that returns the
+  resulting state, shared with the bot's ⭐ button; since `index-CIa0Ldj2.js` the Mini App sends the wanted state, and
+  only a request without a body toggles (BR-API-197). *Evidence:* Doc:636-647; Bot:986.
+- **BR-API-197** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `POST /api/listings/:id/favorite` takes
+  `{"favorite": boolean}`, the wanted state, and answers `{"favorite": boolean}`, which the client takes as the truth.
+  A request without a body must still toggle, because bundles cached before the release send none. *Evidence:* Doc
+  r35:746-766, :1363-1364; `src/lib/api/listings.js:39-45`, `src/components/FavButton.jsx:20-37` (at r33). (Q-API-038)
 - **BR-API-095** · `UNVERIFIED` — Opening a listing records it in the view history and makes it `viewed: true` in
   later previews (radar previews then do not count it as new). *Evidence:* Doc:240. (Q-API-035)
 - **BR-API-096** · `DOCUMENTED_ONLY` — Hiding a listing affects only this user and can be undone. *Evidence:*
@@ -571,33 +667,59 @@ follow the processing order.
 - **BR-API-101** · `CONFIRMED` — Report reasons are `rented`, `agent`, `wrong_data`, `fraud`; every report returns
   JSON `{hidden: boolean}`. Since release `index-BNLZFfL0.js` the client sends `wrong_data` only with
   `detail` ∈ `price`, `rooms`, `place`, `photos`, `other` and never sends `detail` with another reason; older cached
-  bundles still send `wrong_data` without it, so the server must accept both bodies. *Evidence:* Doc:675-705;
+  bundles still send `wrong_data` without it, so the server must accept both bodies. Since release
+  `index-CIa0Ldj2.js` the answer to `agent` may also carry `agent_marked` (BR-API-191). *Evidence:* Doc:675-705;
   `src/lib/api/listings.js:86-90`; `src/features/listing/ListingActionsSheet.jsx:176-200`; current
   `$KVADRO_ROOT/docs/api.md:724-744`.
 - **BR-API-102** · `DOCUMENTED_ONLY` — `rented` hides the listing for the voter at once and for others after more
-  confirmations (threshold 🔶); the bot offers «↩️ Не сдано». *Evidence:* About:223.
+  confirmations (threshold 🔶); the bot offers «↩️ Не сдано». Since release `index-CIa0Ldj2.js` the Mini App has its
+  undo too: `DELETE /api/listings/:id/report` (BR-API-190). *Evidence:* About:223.
 - **BR-API-103** · `DOCUMENTED_ONLY` — `agent` marks the phone as a realtor's in all its listings (🔶 possibly after a
   vote threshold); the bot has no undo. *Evidence:* About:158, :224; Bot:988, :1035.
 - **BR-API-104** · `DOCUMENTED_ONLY` — `fraud` may hide the listing for the reporter immediately (`hidden: true`),
   undone with `DELETE /api/listings/:id/hide`. *Evidence:* About:225.
-- **BR-API-105** · `CONFIRMED` — `agent` is not offered when the card has `is_owner: false`. *Evidence:*
-  `ListingActionsSheet.jsx:12`; `demo/app/docs/CHANGELOG.md:20`.
+- **BR-API-105** · `CONFIRMED` — `agent` is not offered when the card has `is_owner: false`. Since release
+  `index-CIa0Ldj2.js` also not when the author is not a phone (`author.kind !== "phone"`, or no author). *Evidence:*
+  `ListingActionsSheet.jsx:12`; `demo/app/docs/CHANGELOG.md:20`; `ListingScreen.jsx:389-390`,
+  `ListingActionsSheet.jsx:177` at r33; Doc r35:337-341.
 - **BR-API-106** · `DOCUMENTED_ONLY` — Votes are weighted by Premium, `@username`, profile photo and approximate
   account age from the Telegram id (formula 🔶). *Evidence:* About:155, :228.
+- **BR-API-190** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `DELETE /api/listings/:id/report` withdraws
+  the caller's report on the listing. It has no body, the client does not read the answer (`204` is recommended) and
+  calls it only to undo «Уже сдано». Which reasons it withdraws, what it does with a report that already changed the
+  listing for other users, and what a repeat answers are not documented. *Evidence:* Doc r35:126, :860-864, :1365,
+  :1422-1426; `src/lib/api/listings.js:87-90`, `src/app/useListingActions.js:36-50` (at r33). (Q-API-079)
+- **BR-API-191** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` the answer to a report with
+  `reason: "agent"` may carry `agent_marked`: `true` when the number is now marked as a realtor's, `false` or absent
+  when the vote was only counted. The server decides by the sum of marks; the threshold is not documented.
+  *Evidence:* Doc r35:840-852, :1372-1373; `src/features/listing/ListingActionsSheet.jsx:93-103`,
+  `src/app/useListingActions.js:72-74` (at r33); mock `tools/parity/mocks.mjs:190-195`. (Q-API-039, Q-API-083)
 - **Q-API-038** — Semantics of repeated `favorite` (toggle race), `hide`, `block-author`, `report` (same user, same
-  reason): duplicate rows, ignored, re-counted? *Check:* call each twice in parallel and sequentially with a test
-  account; inspect resulting state.
-- **Q-API-039** — Thresholds for `rented` and `agent`, and the anti-abuse weighting formula. *Check:* owner interview;
-  legacy configuration.
+  reason): duplicate rows, ignored, re-counted? **Narrowed by release `index-CIa0Ldj2.js`:** `favorite` sets the state
+  given in the body, so a repeat is idempotent for the new client; a request without a body still toggles
+  (BR-API-197). Still open: `hide`, `block-author`, `report`. *Check:* call each twice in parallel and sequentially
+  with a test account; inspect resulting state.
+- **Q-API-039** — Thresholds for `rented` and `agent`, and the anti-abuse weighting formula. `agent_marked`
+  (BR-API-191) shows that a mark is not immediate; the numbers stay unknown. *Check:* owner interview; legacy
+  configuration.
 - **Q-API-040** — Does `DELETE /api/listings/:id/hide` also withdraw a `rented` vote or a `fraud` report (the bot's
-  «↩️ Не сдано» is assumed to map to it 🔶)? *Check:* vote `rented` in the bot, press «↩️ Не сдано», compare with the
-  Mini App undo.
+  «↩️ Не сдано» is assumed to map to it 🔶)? **Narrowed by release `index-CIa0Ldj2.js`:** the Mini App withdraws «Уже
+  сдано» with a method of its own (`08` API-055), and unhides locally. Still open: what `DELETE …/hide` does with a
+  vote, and what the bot's «↩️ Не сдано» calls (Q-API-079). *Check:* vote `rented` in the bot, press «↩️ Не сдано»,
+  compare with the Mini App undo.
 - **Q-API-064** — What does the server do with the `detail` of a `wrong_data` report: keep it for moderation only, or
   also let it change `hidden` or the listing? How does it answer a `detail` with another reason, or an unknown code
   (the current client sends neither)? The legacy contract leaves this open (current
   `$KVADRO_ROOT/docs/api.md:1198-1199`). *Check:* with a test account send `wrong_data` with each of the five codes,
   without `detail` and with an unknown code, and `fraud` with a `detail`; compare status, `hidden` and what moderation
   sees.
+- **Q-API-079** — `DELETE /api/listings/:id/report`: which of the caller's reports it withdraws (only `rented`, or any
+  reason); what happens when the report already changed the listing for other users; the answer and the status of a
+  repeat and of a call without a report; whether it also removes the hidden row; whether the bot's «↩️ Не сдано» is
+  the same operation (Q-API-040). Legacy asks the first two itself (Doc r35:1422-1426, open question 18). *Check:*
+  report a listing as `rented` from one account, send the DELETE twice, and once for a listing never reported; read
+  the feed and `GET /api/hidden` after each call, and compare with «↩️ Не сдано» in the bot: the operator's answer; a
+  test account on the legacy product, with the product owner's approval.
 - **LB-API-015** · `bug` · `CONFIRMED` — A `204` from `POST …/report` makes the client read `undefined.hidden`, so the
   user sees «Не получилось сохранить» although the report was stored. *Evidence:* Doc:704-705;
   `ListingActionsSheet.jsx:89-95`; mock `tools/parity/mocks.mjs:175-177`.
@@ -881,7 +1003,11 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   `chat_access_declined|allowed`, `listing_shared`, `original_opened`, `original_copied`, `contact_call`,
   `contact_write`; since release `index-DY_DH7h-.js` also `return_prompt_shown|expired|closed` and
   `feed_radar_shown|closed`, each with `custom` and `return_prompt_shown` with `n` (properties in `08` API-034).
-  *Evidence:* Doc:1015-1042; 15 `trackEvent` call sites; at the pin current Doc:1076-1107 and 20 call sites.
+  Since release `index-CIa0Ldj2.js` also six events of the owner cabinet (`owner_attention`, `owner_mascot_tap`,
+  `owner_limit_sheet`, `owner_place_set`, `owner_place_autofill`, `owner_hint_opened`) and a form of `app_error` with
+  `source: "i18n"` for a missing dictionary key.
+  *Evidence:* Doc:1015-1042; 15 `trackEvent` call sites; at the pin current Doc:1076-1107 and 20 call sites; Doc
+  r35:1256-1261, :1278-1289.
 - **BR-API-124** · `CONFIRMED` — `app_error` volume is bounded client-side: ≤ 5 distinct errors per session, each
   `kind|name|message` once; `message` ≤ 300, `source` ≤ 300 without query/hash, `name`/`screen`/`v` ≤ 40, `tg` ≤ 10,
   `platform` ≤ 20. *Evidence:* `src/lib/errors.js:10`, :41-94; `index.html:60-88`.
@@ -1142,6 +1268,10 @@ the transition (About:437-440).
 - **LB-API-024** · `decision` · `CONFIRMED` — Favourites and history are returned unpaginated in a single response
   while their shape pretends to support cursors (`next_cursor` must be `null`). *Evidence:* Doc:926-941;
   `useInfiniteFeed.js:31-36`.
+  - **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** `GET /api/favorites` is paged: it accepts `cursor`,
+    and the client follows `next_cursor` to the last page (Doc r35:1157-1162; `src/lib/api/user.js:26-27`,
+    `src/features/feed/useInfiniteFeed.js:31-42` at r33; BR-API-023). Still open: `GET /api/history` is read whole,
+    and bundles cached before the release cannot page favourites (LB-API-057).
   - **Proposed fix:** real cursor pagination in the new API (and a retention cap for history, e.g. last 200 items —
     product decision).
   - **Old-client impact:** the old client never sends a cursor and loops on a non-null one, so legacy routes must keep
@@ -1253,6 +1383,10 @@ the transition (About:437-440).
 
 - **LB-API-039** · `decision` · `CONFIRMED` — `POST …/favorite` is a toggle: a retried or duplicated request flips the
   state, and stale bot buttons invert it. *Evidence:* Doc:636-647; Bot:986.
+  - **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** the Mini App sends the wanted state,
+    `{"favorite": boolean}`, so a repeated request no longer flips it (BR-API-197; Doc r35:746-766). Still open: a
+    request without a body, from a bundle cached before the release, still toggles, and nothing shows that the bot's
+    buttons changed.
   - **Proposed fix:** idempotent `PUT`/`DELETE …/favorite` in the new API; bot buttons carry the target state.
   - **Old-client impact:** the toggle route must stay for the old client (it already trusts the returned value).
 - **LB-API-040** · `decision` · `CONFIRMED` — Two ways to unblock an author (by listing: `DELETE
@@ -1268,15 +1402,25 @@ the transition (About:437-440).
 - **LB-API-042** · `decision` · `DOCUMENTED_ONLY` — A realtor vote (`agent`) relabels a phone across all its listings,
   cannot be undone in the bot, and its threshold is unknown — a few hostile votes can mark a private owner as a
   realtor, hiding them from `owner=no_agents|owners` and blocking `/owner` verification. *Evidence:* About:224,
-  :234-235; Bot:1035.
+  :234-235; Bot:1035; since release `index-CIa0Ldj2.js` the answer tells the voter whether the number is now marked
+  (`agent_marked`, Doc r35:840-852; BR-API-191), and the threshold stays unknown.
   - **Proposed fix:** weighted threshold, audit trail, undo for the voter, and a dispute path for verified owners.
   - **Old-client impact:** none — response shape unchanged.
 - **LB-API-043** · `decision` · `CONFIRMED` — `hide`, `block-author` and `report` have no stated idempotency; the
-  client never retries, but double taps and bot/app races can repeat them. *Evidence:* Doc:1117; `ListingActionsSheet.jsx:53-67`.
-  (Q-API-038)
+  client never retries, but double taps and bot/app races can repeat them. Since release `index-CIa0Ldj2.js`
+  `favorite` is idempotent by its body (BR-API-197); these three are not. *Evidence:* Doc:1117;
+  `ListingActionsSheet.jsx:53-67`. (Q-API-038)
   - **Proposed fix:** upsert per (user, listing) / (user, author) / (user, listing, reason); repeated calls return the
     same result.
   - **Old-client impact:** compatible.
+- **LB-API-057** · `decision` · `UNVERIFIED` — Since release `index-CIa0Ldj2.js` `GET /api/favorites` is paged for
+  every caller, although bundles cached before the release never send a cursor and loop on a non-null `next_cursor`
+  (LB-API-004): such a client works only while the list fits one page. The loop is `inferred` from the old bundle's
+  code, not observed. *Evidence:* Doc r35:1157-1162, :1339-1340, :1401; `src/lib/api/user.js:26-27`,
+  `src/features/feed/useInfiniteFeed.js:31-42` (at r33). (Q-API-084)
+  - **Proposed fix:** page only for a request that asks for it (a `limit` or a `cursor`), or keep the first page
+    whole until the old bundles have expired.
+  - **Old-client impact:** none: no legacy client talks to HOMI (`24`).
 
 ### Owner verification, calls, sharing, analytics
 
@@ -1361,7 +1505,7 @@ the transition (About:437-440).
 3. **Security debts sit in the contract itself** — raw phone numbers in listing details (LB-API-030), HTML-injected map
    labels (LB-API-008), PII-bearing `initData` in every request header (LB-API-020), unsigned photo snapshots
    (LB-API-054). Two of them cannot be removed while the old client runs; mitigations must be server-side.
-4. **Most server behaviour is undocumented outside prose** — 91 business rules are `DOCUMENTED_ONLY` and 72 questions
+4. **Most server behaviour is undocumented outside prose** — 97 business rules are `DOCUMENTED_ONLY` and 78 questions
    are open; radar matching triggers, delivered-card tracking, vote thresholds, `auth_date` window, photo-signing and
    owner-hash algorithms (Q-API-002, -024, -027, -031, -039, -041) block both parity and data migration and need the
    legacy owner.
@@ -1373,20 +1517,20 @@ the transition (About:437-440).
 
 | Prefix | Count | Defined in |
 | ------ | ----: | ---------- |
-| `API-` | 54 | `08-api-inventory.md` §2 |
+| `API-` | 55 | `08-api-inventory.md` §2 |
 | `RES-` | 22 | `08-api-inventory.md` §3 |
-| `BR-API-` | 189 | this document |
-| `LB-API-` | 56 (19 `bug`/`quirk` in §3–§21, 37 `decision` in §24) | this document |
-| `Q-API-` | 73 | this document |
+| `BR-API-` | 197 | this document |
+| `LB-API-` | 57 (19 `bug`/`quirk` in §3–§21, 38 `decision` in §24) | this document |
+| `Q-API-` | 79 | this document |
 
 ### Status distribution
 
 | Prefix | CONFIRMED | DOCUMENTED_ONLY | UNVERIFIED | DEPRECATED_CANDIDATE |
 | ------ | --------: | --------------: | ---------: | -------------------: |
-| `API-` (contract) | 54 | 0 | 0 | 0 |
-| `API-` (server logic) | 0 | 53 | 1 (API-017) | 0 |
+| `API-` (contract) | 55 | 0 | 0 | 0 |
+| `API-` (server logic) | 0 | 54 | 1 (API-017) | 0 |
 | `RES-` (primary label) | 13 | 7 | 2 | 0 (RES-016 is flagged as a candidate in `08` §5) |
-| `BR-API-` | 84 | 91 | 14 | 0 |
-| `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 4 (decision) | 0 |
+| `BR-API-` | 86 | 97 | 14 | 0 |
+| `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 5 (decision) | 0 |
 
 `Q-API-` items carry no status: each is an open check.

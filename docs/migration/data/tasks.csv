@@ -173,7 +173,7 @@ KV-FE-033,frontend,Mini App CSP and security headers,BLOCKED,M,11,F-TMA-001,KV-B
 KV-FE-034,frontend,Event journal and global error reporting,TODO,S,9,F-ANALYTICS-001 F-TMA-009,KV-BE-151 KV-FE-021,,tasks/frontend/KV-FE-034-event-journal-errors.md
 KV-FE-035,frontend,PostHog analytics and screen tracking,BLOCKED,M,10,F-ANALYTICS-002,KV-BE-152 KV-FE-005 KV-FE-025 KV-FE-027 KV-FE-034,DEC-26,tasks/frontend/KV-FE-035-posthog-screen-tracking.md
 KV-FE-036,frontend,"Error boundary, crash screen and session-expired state",TODO,S,10,F-ACCESS-001 F-TMA-009,KV-FE-012 KV-FE-016 KV-FE-021 KV-FE-025 KV-FE-029 KV-FE-034,,tasks/frontend/KV-FE-036-error-boundary-session.md
-KV-FE-037,frontend,"Deep-link router: `start_param`, `?listing=`, `?news=`",TODO,S,3,F-SHARE-002 F-TMA-001,KV-FE-024,Q-APP-019,tasks/frontend/KV-FE-037-deep-link-router.md
+KV-FE-037,frontend,"Deep-link router: `start_param`, `?listing=`, `?news=`",TODO,S,3,F-RADAR-011 F-SHARE-002 F-TMA-001,KV-FE-024,Q-APP-019,tasks/frontend/KV-FE-037-deep-link-router.md
 KV-FE-038,frontend,Dev-only Telegram emulator,TODO,S,6,F-TMA-010,KV-FE-024 KV-INF-001 KV-INF-002,,tasks/frontend/KV-FE-038-dev-telegram-emulator.md
 KV-FE-040,frontend,Bootstrap provider and render gating,TODO,M,11,F-ACCESS-002 F-LOCALE-001 F-ONBOARD-001,KV-BE-029 KV-BE-030 KV-FE-015 KV-FE-017 KV-FE-021 KV-FE-023 KV-FE-024 KV-FE-026 KV-FE-028 KV-FE-034 KV-FE-035 KV-FE-037,,tasks/frontend/KV-FE-040-bootstrap-render-gating.md
 KV-FE-041,frontend,Outside-Telegram state,TODO,S,12,F-TMA-002,KV-BE-022 KV-FE-015 KV-FE-016 KV-FE-024 KV-FE-038 KV-FE-040,,tasks/frontend/KV-FE-041-outside-telegram.md
@@ -183,7 +183,7 @@ KV-FE-044,frontend,City picker sheet and the first-launch variant,TODO,M,12,F-FI
 KV-FE-045,frontend,"App shell: top bar, tab bar, view toggle, collapsing chrome",TODO,M,10,F-TMA-004,KV-FE-012 KV-FE-016 KV-FE-020 KV-FE-025 KV-FE-026,,tasks/frontend/KV-FE-045-app-shell.md
 KV-FE-046,frontend,Pull-to-refresh,TODO,S,11,F-FEED-003,KV-FE-013 KV-FE-029 KV-FE-045,,tasks/frontend/KV-FE-046-pull-to-refresh.md
 KV-FE-047,frontend,Listing card and photo strip,TODO,M,10,F-FAV-001 F-FEED-001 F-MEDIA-001 F-OWNER-002,KV-BE-027 KV-BE-028 KV-FE-012 KV-FE-016 KV-FE-017 KV-FE-018,Q-API-024 Q-APP-011,tasks/frontend/KV-FE-047-listing-card.md
-KV-FE-048,frontend,Search feed list with header chips and paging,TODO,M,13,F-FEED-001,KV-BE-031 KV-FE-019 KV-FE-023 KV-FE-042 KV-FE-045 KV-FE-047,Q-API-008,tasks/frontend/KV-FE-048-search-feed.md
+KV-FE-048,frontend,Search feed list with header chips and paging,TODO,M,13,F-FEED-001 F-FEED-004,KV-BE-031 KV-FE-019 KV-FE-023 KV-FE-042 KV-FE-045 KV-FE-047,Q-API-008,tasks/frontend/KV-FE-048-search-feed.md
 KV-FE-049,frontend,Feed empty and few-results states,TODO,S,14,F-FEED-002,KV-FE-020 KV-FE-040 KV-FE-048 KV-FE-074,,tasks/frontend/KV-FE-049-feed-empty-few.md
 KV-FE-050,frontend,"Filters sheet: shell, footer, live count and flow",TODO,M,10,F-FILTER-001 F-FILTER-005,KV-BE-032 KV-FE-013 KV-FE-014 KV-FE-018 KV-FE-020,Q-APP-005,tasks/frontend/KV-FE-050-filters-sheet-shell.md
 KV-FE-051,frontend,"Filters: deal, city, housing, rent term, rooms",TODO,M,13,F-FILTER-001,KV-FE-020 KV-FE-044 KV-FE-050,,tasks/frontend/KV-FE-051-filters-deal-city-rooms.md

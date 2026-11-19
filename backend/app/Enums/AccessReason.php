@@ -4,7 +4,8 @@ namespace App\Enums;
 
 /**
  * Why the access gate refuses a user (`403 access_denied`, `reason`). The client shows an unknown or missing reason
- * as `private` (BR-APP-054).
+ * as `private` (BR-APP-054). `paused` says that the whole service is on pause and will be back (legacy release
+ * `index-CIa0Ldj2.js`); the stub scenario `access_paused` answers it, and no server switch sets it yet.
  */
 enum AccessReason: string
 {
@@ -13,4 +14,5 @@ enum AccessReason: string
     case Full = 'full';
     case Blocked = 'blocked';
     case Join = 'join';
+    case Paused = 'paused';
 }

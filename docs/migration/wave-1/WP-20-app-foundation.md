@@ -35,7 +35,7 @@ Real screens (WP-23 … WP-31). Event transport and PostHog (WP-32).
 - DEC-44 and `25` §3.7: next-intl; catalogues in `@homi/i18n`, one file per locale, legacy key names; `uz` is the
   address and file name for legacy `uz_Latn` (CF-006). `uz_Latn` exists only inside Laravel's legacy driver.
 - DEC-36: LB-APP-002 is fixed here — a missing key or an unknown server value never throws. The typed flag module
-  for `DEV` behaviour is created here with every flag off.
+  for `DEV` behaviour is created here with every flag off (DEC-58 later turned five on by default).
 - DEC-40 and `25` §2 rule 5: the interface is the legacy one, brand words are HOMI's and live in one layer.
 - DEC-32 and `25` §2 rule 3: tokens are re-typed from the audit table; no legacy CSS file or asset is copied.
 - DEC-49: nothing outside the approved batch is added here. WP-03 installs the Radix primitives this package uses
@@ -320,7 +320,7 @@ catalogues or under `frontend/app` outside `lib/brand`.
 
 ### Flags and facades
 
-- `frontend/app/lib/flags.ts`: `devFlags` (`as const`, all `false`) and `DevFlags`: `dev001AnyForbiddenShowsAccess`,
+- `frontend/app/lib/flags.ts`: `devFlags` (`as const`, all `false` as built; DEC-58 later turned five on) and `DevFlags`: `dev001AnyForbiddenShowsAccess`,
   `dev005RadarDropsPostedDays`, `dev010RealtorVoteWording`, `dev013BackClosesMapCard`,
   `dev014TashkentDates`, `dev016ErrorToastOnFailure`, `dev017TenantPetsDailyRule`, `dev018ResetKeepsDaily`,
   `dev019OneDistanceFormatter`, `dev020OneLanguageDetector`, `dev021OneFlowVocabulary`, `dev022RadarCountLabel`,

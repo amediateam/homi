@@ -3,6 +3,7 @@
 use App\Enums\AccessReason;
 use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
+use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -78,6 +79,15 @@ it('renders throttling as a 429 envelope and keeps Retry-After', function (): vo
         ->assertStatus(429)
         ->assertHeader('Retry-After', '7')
         ->assertExactJson(['success' => false, 'message' => 'Too Many Attempts.', 'code' => 'rate_limited']);
+});
+
+it('renders the daily limit as 429 rate_limited with the reason daily and Retry-After', function (): void {
+    Route::get('api/v1/_test/daily', fn () => throw new DailyLimitReached(5400));
+
+    $this->getJson('/api/v1/_test/daily')
+        ->assertStatus(429)
+        ->assertHeader('Retry-After', '5400')
+        ->assertExactJson(['success' => false, 'message' => 'The daily limit of opened listings is reached.', 'code' => 'rate_limited', 'reason' => 'daily']);
 });
 
 it('renders a body over the size cap as a 413 envelope', function (): void {
@@ -160,7 +170,7 @@ it('renders an access refusal with its reason', function (AccessReason $reason):
         ->assertExactJson(['success' => false, 'message' => 'Access denied.', 'code' => 'access_denied', 'reason' => $reason->value]);
 })->with(AccessReason::cases());
 
-it('knows the five refusal reasons of the no-access screen', function (): void {
+it('knows the six refusal reasons of the no-access screen', function (): void {
     expect(array_map(fn (AccessReason $reason): string => $reason->value, AccessReason::cases()))
-        ->toBe(['private', 'invite', 'full', 'blocked', 'join']);
+        ->toBe(['private', 'invite', 'full', 'blocked', 'join', 'paused']);
 });

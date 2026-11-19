@@ -76,7 +76,8 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   keys without brackets, booleans only when true, `furnished` as `true` or `false` when set, numbers when not null,
   `polygon` as `lat,lon;…`, `sort` omitted for `new`. `fromLegacy(array): SearchFilters` for flow options: fills
   missing keys with defaults, maps the old `zone` string into `zones` (LB-API-028), drops type codes that are not
-  valid for the deal (LB-API-006).
+  valid for the deal (LB-API-006). `area_min` and `area_max` are passed to legacy for every deal (DEC-62); whether
+  legacy applies them to rent is `02` Q-API-082.
 - `PriceParser::parse(?string $price, ?string $kind, mixed $usd): ?PriceInfo` — the client rule of `03` §1.12 done
   once on the server: split on « · »; in the first part the bracket text becomes `alt`, the text from the first `/`
   becomes `period`, the rest `display`; the other parts become `notes`. `usd` is the legacy `usd` or `price_usd`
@@ -84,7 +85,9 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   `business` (BR-API-156); anything else becomes `null` (Q-API-065).
 - `ListingSummaryTranslator` and `ListingDetailsTranslator`: the field table of WP-12. Rules worth stating:
   `title` = `short_title`, else the part of `title` before « · »; `posted` = the two « · » parts of `age`
-  (`label`, `when`), `at` only if legacy sends a timestamp; `district.code` through `DistrictMatcher` (the city's
+  (`label`, `when`), `at` ← legacy `posted_at` when present (since `index-CIa0Ldj2.js`), else `null`; `floor`:
+  `0` and negative values pass through unchanged, and only a missing key or `null` is `null` (never turn `0` into
+  `null`); the card's `deal` ← `deal_type`; `district.code` through `DistrictMatcher` (the city's
   directory of `ReferenceSource`, compared by name in the request locale; no match → `null` and a counter);
   `has_video` = truthiness of `video`; `metro.km` and `center_km` numeric or `null`; `source_ref` through
   `SourceRefParser` from `original_url`, else the first `sources[].url`, with the pattern
@@ -96,7 +99,8 @@ interface of WP-10 also has `contact()` and `translation()`: here both throw `So
   and `contact_paid`, and `has_phone: false` until WP-43 sets it. The card cache stores the data object, so it
   holds no raw number.
 - `MapPointsTranslator`: `id → number`; points without numeric `lat` and `lon` are dropped; `<` and `&` are removed
-  from `label` (fix of LB-API-008 on HOMI's side); `total` defaults to the number of points.
+  from `label` (fix of LB-API-008 on HOMI's side); `total` defaults to the number of points; `with_point` ← legacy
+  `with_point` (since `index-CIa0Ldj2.js`), default the number of points legacy sent.
 - `NewCountTranslator`: `FiltersTranslator::toQuery()` of the filters (no `sort`, no cursor) plus `since` as an
   integer; the answer's `count` must be a JSON integer ≥ 0 (a number with a zero fraction, such as `12.0`, counts
   as an integer). Missing, `null`, a string, a negative number or a fraction raise `LegacyContractError` naming
@@ -134,7 +138,12 @@ real implementation. `App\Services\Listings\ListingOverlay` applies it:
 4. Realtor marks from HOMI's votes: an item whose author key is marked gets `is_owner: false`, and is removed when
    the request filters by `owner` `owners` or `no_agents`.
 5. Count, the new-since count and flow are **not** overlaid (the plan lists them as plain legacy); a count may
-   therefore exceed what the user can scroll. Map `total` is reduced by the number of removed points.
+   therefore exceed what the user can scroll. Map `total` is reduced by the number of removed points, and
+   `with_point` with it. HOMI's own cap and order of a map answer are open (Q-API-086): this driver passes on what
+   legacy cut.
+
+The card method answers the legacy `429 too many today` as it arrives from the client of WP-41 (`DailyLimitReached`:
+`429 rate_limited` with `reason: "daily"`, DEC-59), not as `source_unavailable`.
 
 Without a user (system context) only step 1's vote part and step 4 run.
 
@@ -265,7 +274,9 @@ including the `?cursor=` of the second page.
 
 Gaps against legacy that this driver cannot close, to list in the PR and in `docs/api/README.md`: raw `price.usd`,
 `posted.at`, `deal` and `type` on previews are `null` unless the operator adds them; `district.code` is a name match;
-count, the new-since count and flow ignore the user's hidden items.
+count, the new-since count and flow ignore the user's hidden items. `posted.at` leaves this list if legacy sends
+`posted_at` on previews (`02` Q-API-083). `GET /listings/new` has two callers in the Mini App since the intake of
+`index-CIa0Ldj2.js`, the return banner and the fresh pill: one more read per long return in the legacy budget.
 
 ## Tests
 
@@ -284,8 +295,8 @@ count, the new-since count and flow ignore the user's hidden items.
 - Source: card cached for a minute per locale; feed never cached; count cached 30 s; `previews` of 7 numbers sends
   at most 5 in parallel and omits a `404`; a system context marks calls as background.
 - Overlay (with a fake `OverlayData`): flags set; hidden and blocked removed from feed and map; card of a hidden
-  listing still returned; realtor mark flips `is_owner` and removes under `owner=owners`; map `total` reduced; two
-  users see different results from one cached legacy answer.
+  listing still returned; realtor mark flips `is_owner` and removes under `owner=owners`; map `total` and
+  `with_point` reduced; two users see different results from one cached legacy answer.
 - Top-up: a page of 20 with 12 excluded triggers one extra legacy page; three excluded do not; the cap of two extra
   pages; a HOMI page never exceeds `limit`; the cursor resumes inside a partly used legacy page, and a full walk
   delivers every non-excluded item exactly once; a foreign or broken cursor → empty page and `null`.
@@ -294,7 +305,10 @@ count, the new-since count and flow ignore the user's hidden items.
 - Photos: relative and absolute legacy addresses rewritten with the query intact; a foreign address dropped; empty
   configuration → empty arrays.
 - Routes with the features on `legacy`: `meta.source = legacy`; legacy `404` → `404 not_found`; legacy down →
-  `503 source_unavailable`.
+  `503 source_unavailable`; legacy `429 too many today` on the card → `429 rate_limited` with `reason: "daily"`.
+- Fields of `index-CIa0Ldj2.js`: `posted_at` → `posted.at`, absent → `null`; `floor: 0` and `floor: -1` stay `0`
+  and `-1`; a map answer with `with_point` keeps it, without it gets the number of points; a rent query carries
+  `area_min` and `area_max`.
 
 ## Acceptance checklist
 

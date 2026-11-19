@@ -1482,7 +1482,7 @@
         "/listings/{number}": {
             "get": {
                 "operationId": "v1.listings.show",
-                "summary": "`GET /listings/{number}`: the full card, or the preview with `preview=1`. A merged duplicate answers with the\nsurviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number",
+                "summary": "`GET /listings/{number}`: the full card, or the preview with `preview=1`. A merged duplicate answers with the\nsurviving number; an unknown or removed number is `404 not_found`. No answer carries the author's number.\nThe full card may answer `429 rate_limited` with `reason: \"daily\"` and `Retry-After` when the caller reached\nthe daily limit of opened listings. Scenario `daily_limit`",
                 "tags": [
                     "Listing"
                 ],
@@ -4380,6 +4380,7 @@
         "/listings/{number}/reports": {
             "post": {
                 "operationId": "v1.listings.reports.store",
+                "summary": "`POST /listings/{number}/reports`: `hidden` says whether the listing is now hidden for the reporter;\n`agent_marked` is `true` only for an `agent` report whose author is marked as a realtor, by this report or\nalready. Scenario `agent_marked`",
                 "tags": [
                     "Report"
                 ],
@@ -4454,6 +4455,41 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.listings.reports.destroy",
+                "summary": "`DELETE /listings/{number}/reports`: withdraws the caller's `rented` report on the listing and nothing else.\nIdempotent: `204` also when there is nothing to withdraw; the listing must exist (`404`)",
+                "tags": [
+                    "Report"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -5611,7 +5647,8 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "`0` is the ground-level (semi-basement) floor and a negative number a basement; only `null` means unknown."
                     },
                     "floors_total": {
                         "type": [
@@ -6291,7 +6328,8 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "`0` is the ground-level (semi-basement) floor and a negative number a basement; only `null` means unknown."
                     },
                     "floors_total": {
                         "type": [
@@ -6620,11 +6658,15 @@
                     },
                     "total": {
                         "type": "integer"
+                    },
+                    "with_point": {
+                        "type": "integer"
                     }
                 },
                 "required": [
                     "points",
-                    "total"
+                    "total",
+                    "with_point"
                 ],
                 "title": "MapPointsResource"
             },
@@ -7356,10 +7398,14 @@
                 "properties": {
                     "hidden": {
                         "type": "boolean"
+                    },
+                    "agent_marked": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
-                    "hidden"
+                    "hidden",
+                    "agent_marked"
                 ],
                 "title": "ReportResultResource"
             },

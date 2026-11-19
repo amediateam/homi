@@ -70,6 +70,11 @@ Two `ApiException` classes ship here: `App\Exceptions\Sources\SourceUnavailable`
 its `reason` — in its own `render()` method, which the framework calls before any render callback, so the renderer
 never sees this exception.
 
+A limit that is counted per day carries `reason: "daily"` beside the code `rate_limited`, as `access_denied` carries
+its `reason` (DEC-59): the `ApiException` `App\Exceptions\Listings\DailyLimitReached` (429, `rate_limited`, the extra
+key `reason`, `Retry-After`). Every other limit, the `ThrottleRequestsException` row above among them, has no
+`reason` (*added by the intake of `index-CIa0Ldj2.js`*).
+
 `ApiController` gains two helpers; the existing ones stay, except that `error()` gains a fourth parameter
 `string $code = 'error'` and always writes it (it is the one place that still builds an error body without `code`;
 the exact-body case in `tests/Feature/Http/ApiControllerTest.php` changes with it):
@@ -240,9 +245,10 @@ listener is found by Laravel's event discovery (`app/Listeners`), not registered
   the scenarios it knows and the fixture of each; a scenario it does not name is ignored, so one header value can
   stay set across several requests. The header is read only when the resolved driver is `stub`. Reserved for every
   stub method: `source_unavailable` (503), `rate_limited` (429), `unauthenticated` (401), `forbidden` (403). The
-  contract packages list their own scenarios and fixture files. The Mini App forwards a cookie as this header outside
-  production (cookie `homi_stub_scenario`, forwarded by WP-22); the header is harmless on production because it can only pick
-  another fixture.
+  contract packages list their own scenarios and fixture files (the intake of `index-CIa0Ldj2.js` added four such
+  package-owned scenarios: `map_cut`, `daily_limit`, `agent_marked` and `access_paused`). The Mini App forwards a
+  cookie as this header outside production (cookie `homi_stub_scenario`, forwarded by WP-22); the header is harmless
+  on production because it can only pick another fixture.
 - Test support: `Tests\Support\JsonShape::of(mixed $data): mixed` returns the structure of a decoded answer — for an
   object its keys, each with the shape of its value; for a list `['*' => <union of the element shapes>]`; for a leaf
   the type name (`string`, `int`, `float`, `bool`, `null`). `JsonShape::assertSame($expected, $actual)` fails with

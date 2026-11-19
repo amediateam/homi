@@ -138,7 +138,9 @@ script, no external asset, inline CSS only. Texts in `backend/lang/{ru,uz,en}/ca
 1. Locale `ru` → `422 translation_not_needed` (the client never asks, BR-APP-034).
 2. Cache `legacy:translation:<number>:<locale>` for `legacy.cache.translation` (86 400 s). A hit is free.
 3. A miss first passes the per-user limiter `v1-translation` (30 per hour, `RateLimiter::attempt` inside the
-   service, so hits never consume it); over the limit → `429 rate_limited` with `Retry-After`.
+   service, so hits never consume it); over the limit → `429 rate_limited` with `Retry-After`, without a `reason`:
+   `reason: "daily"` belongs to the listing-open cap of WP-40 only (DEC-59), and the disclosure quota above keeps
+   its own answer too.
 4. `LegacyListingSource::translation()` → `POST /api/listings/{id}/translate`, no retry, 15 s timeout. How legacy
    picks the target language under the service key is open (WP-02 point 8). `legacy.translation.via`
    (`LEGACY_TRANSLATION_VIA`): `locale` (default — the same header or query as every other call, with `uz_Latn`),

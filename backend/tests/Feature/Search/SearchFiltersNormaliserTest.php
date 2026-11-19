@@ -38,8 +38,6 @@ it('strips the keys that do not apply to the deal (BR-API-029)', function (strin
     'tenant on sale' => ['sale', 'tenant', 'men', null],
     'pets on daily rent' => ['rent_daily', 'pets', 'true', false],
     'pets_only on sale' => ['sale', 'pets_only', 'true', false],
-    'area on long rent' => ['rent_long', 'area_min', '40', null],
-    'area on daily rent' => ['rent_daily', 'area_max', '90', null],
     'market on long rent' => ['rent_long', 'market', 'new', null],
     'appliances on sale' => ['sale', 'appliances', ['washer'], []],
 ]);
@@ -50,6 +48,8 @@ it('keeps the keys that apply to the deal', function (string $deal, string $key,
     'tenant on long rent' => ['rent_long', 'tenant', 'family', 'family'],
     'pets on long rent' => ['rent_long', 'pets', 'true', true],
     'area on sale' => ['sale', 'area_min', '40', 40],
+    'area on long rent' => ['rent_long', 'area_min', '40', 40],
+    'area on daily rent' => ['rent_daily', 'area_max', '90', 90],
     'market on sale' => ['sale', 'market', 'secondary', 'secondary'],
     'appliances on daily rent' => ['rent_daily', 'appliances', ['fridge', 'washer'], ['washer', 'fridge']],
     'furnished false' => ['rent_long', 'furnished', 'false', false],
@@ -185,9 +185,17 @@ describe('switches', function (): void {
     })->with([
         'type of another deal' => [['deal' => 'sale', 'types' => ['room']], 'types'],
         'tenant on sale' => [['deal' => 'sale', 'tenant' => 'family'], 'tenant'],
+        'market on long rent' => [['deal' => 'rent_long', 'market' => 'new'], 'market'],
         'two geography modes' => [['deal' => 'rent_long', 'zones' => ['center'], 'districts' => ['mirobod']], 'districts'],
         'both pet filters' => [['deal' => 'rent_long', 'pets' => 'true', 'pets_only' => 'true'], 'pets'],
     ]);
+
+    it('accepts an area on a rent deal with strict_combinations', function (string $deal): void {
+        config(['filters.strict_combinations' => true]);
+
+        expect(normaliser()->normalise(['city' => 'tashkent', 'deal' => $deal, 'area_min' => '40', 'area_max' => '90'])->toArray())
+            ->toMatchArray(['area_min' => 40, 'area_max' => 90]);
+    })->with(['rent_long', 'rent_daily']);
 
     it('rejects inverted ranges with inverted_range (DEV-025)', function (): void {
         config(['filters.inverted_range' => true]);

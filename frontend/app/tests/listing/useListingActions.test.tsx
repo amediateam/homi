@@ -46,7 +46,7 @@ const BLOCKED: ActionResult<BlockedAuthorResult> = {
   data: { id: "01JD0000000000000000000013", kind: "phone", label: "+998 ** *** ** 67", count: 3, listing_numbers: [100001, 101001, 101005] },
   meta: { source: "stub" },
 };
-const reported = (hidden: boolean): ActionResult<ReportResult> => ({ ok: true, data: { hidden }, meta: { source: "stub" } });
+const reported = (hidden: boolean): ActionResult<ReportResult> => ({ ok: true, data: { hidden, agent_marked: false }, meta: { source: "stub" } });
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

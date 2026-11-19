@@ -96,7 +96,14 @@ versions; the list is in step 1.
 - Stacks spread on tap with `spreadStackLabels` of WP-27 and collapse when a zoom starts. A cluster tap first
   collapses any spread stack, then zooms or selects (fix of LB-APP-013).
 - Camera: the fit rules of WP-27 (`robustBounds`, padding 90 / 24, maximum zoom 14, first fit not animated), the
-  city jump, the default view, and `homi-map-fit:<lat>,<lon>` saved after the first fit.
+  city jump, the default view, and `homi-map-fit:<lat>,<lon>` saved after the first fit. The camera memory per map
+  query of WP-27 applies to this view too: written when a view that has fitted is left, used as the first camera of
+  the next view with the same query (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-111; *added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `useLeafletMap` and `camera.ts` for a later package (`wave-1/baseline.md`,
+  built code behind the pin, row 35)).
+- A render error of this view is caught by the boundary of `MapScreen`, as for GL: the pill «Не загрузилось» with
+  «Повторить», not the app's crash screen (WP-27, "States"; *added by the intake of `index-CIa0Ldj2.js`*; a parity
+  item of `MapScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 34)).
 - Mask: `maskGeometry()` of WP-27 as a polygon with a hole. Locate: a circle marker of radius 7 and an accuracy
   circle under 2 km (`useMyLocation.ts`).
 - In-map tile prefetch on `moveend`, only for a `{z}/{x}/{y}` template: tiles around the stopped view within the
@@ -223,7 +230,9 @@ in `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (and its row in `packa
 3. `lasso/polygon.ts` with `lassoPolygon.test.ts`.
 4. Leaflet view base: map, raster basemap, deferred basemap, attribution, disposal in the effect cleanup.
 5. Listings layer: clusters, shared icon builder, stacks, the collapse-before-cluster rule, tap rules, haptics.
-6. Camera, fit memory, city jump, mask, locate.
+6. Camera, fit memory, city jump, mask, locate. (The camera memory per map query and the render boundary, legacy since
+   `index-CIa0Ldj2.js`, are not part of this step as built: *added by the intake of `index-CIa0Ldj2.js`*; a parity
+   item of the Leaflet view for a later package (`wave-1/baseline.md`, built code behind the pin, row 34 and row 35).)
 7. Vector basemap with protomaps-leaflet, fallback to raster, in-map tile prefetch.
 8. `MapScreen`: mount Leaflet by rule and on GL failure; delete `MapUnavailable` and its key; update tests.
 9. `LassoOverlay`, `GlLasso`, `lassoHandlers`; `startDrawing`, the draw-request consumer, the finish and cancel
@@ -237,7 +246,10 @@ in `frontend/packages/i18n/messages/homi/{ru,uz,en}.json` (and its row in `packa
 
 ### Leaflet view
 
-Same states, texts, tap rules, note, pills, card and locate behaviour as the table of WP-27 (SCR-011, SCR-013).
+Same states, texts, tap rules, note, pills, card and locate behaviour as the table of WP-27 (SCR-011, SCR-013), with
+its rows of the intake of `index-CIa0Ldj2.js`: the cut note `map.cut`, the render error and the camera memory (*added
+by the intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` and the Leaflet view for a later package
+(`wave-1/baseline.md`, built code behind the pin, row 33, row 34 and row 35)).
 Differences a user may notice between the engines, all kept from legacy:
 
 | Aspect | GL | Leaflet |
@@ -355,6 +367,10 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] Non-GL profile: the map opens on Leaflet; the "map unavailable" state no longer exists anywhere.
 - [ ] Leaflet shows the same pins, tones, stacks, clusters, card, «На карте {shown} из {total} · …» note, loading,
       empty and error pills as GL for the same search.
+- [ ] On Leaflet too: a cut answer says «На карте — N самых свежих. Остальные — в списке» (scenario `map_cut`), a
+      render error shows «Не загрузилось» with «Повторить», and map → list → map keeps the camera (*added by the
+      intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` and the Leaflet view for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 33, row 34 and row 35)).
 - [ ] Leaflet basemap appears after the first fit or within 1.2 s; «© OpenStreetMap» is in the control and opens
       outside the app.
 - [ ] Tapping a max-zoom cluster while a stack is spread collapses the stack and opens the cluster's card.

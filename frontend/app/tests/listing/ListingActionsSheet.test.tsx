@@ -73,7 +73,7 @@ const PHONE: ListingAuthor = { kind: "phone", label: "+998 ** *** ** 67", count:
 /** The catalogue binds the label to its preposition with a no-break space. */
 const NBSP = String.fromCharCode(0xa0);
 const PHONE_HINT = `Не показывать объявления с номера${NBSP}+998 ** *** ** 67`;
-const reported = (hidden: boolean): ActionResult<ReportResult> => ({ ok: true, data: { hidden }, meta: { source: "stub" } });
+const reported = (hidden: boolean): ActionResult<ReportResult> => ({ ok: true, data: { hidden, agent_marked: false }, meta: { source: "stub" } });
 const FAILED: ActionResult<never> = { ok: false, error: "source_unavailable", status: 503, code: "source_unavailable", method: "PUT", path: "hidden/listings/:number" };
 
 function withIntl(children: ReactNode) {

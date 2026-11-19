@@ -150,7 +150,7 @@ Both migrations are additive and are created with `php artisan make:migration �
 | `App\Telegram\Handlers\ListingHandoff` | Third message for a payload with a listing number |
 | `App\Telegram\Rendering\CityNames` | `name(string $cityCode, string $referenceName, string $locale): string` — the catalogue value `bot.city_names.<code>` when the key exists, otherwise the reference name (fix of LB-BOT-013) |
 | `App\Telegram\Rendering\ListingTitleLine` | `<title> · <district> · <price>` from a `ListingSummary` of WP-12 (`title`, `district.name`, `price.display`), in the viewer's locale and currency; reused by WP-53 (venue, `/fav`) and WP-54 (starter list) |
-| `App\Telegram\DeepLinks\MiniAppUrl` | `home(): ?string`, `listing(int $number): ?string`; see "Mini App addresses" |
+| `App\Telegram\DeepLinks\MiniAppUrl` | `home(): ?string`, `listing(int $number): ?string`, `radar(string $id): ?string` (DEC-61); see "Mini App addresses" |
 | `App\Services\Telegram\LanguageSwitcher` | `switch(User, string $locale): void` → `SettingsService::patch($user, ['locale' => …])` of WP-40 (`locale` ∈ `ru`, `uz`, `en`; it marks the locale as chosen) → `BotCommandList::syncChat` |
 | `App\Services\Telegram\BotCommandList` | `for(string $locale): list<array{command, description}>`; `version(): string`; `applyToChat(User, string $locale)`; `resetChat(User)`; `syncChat(User)` |
 | `App\Telegram\Handlers\LanguageCallback`, `App\Telegram\Handlers\Contracts\LanguageSwitchView`, `App\Telegram\Handlers\WelcomeLanguageView` | Callback action `lg`; see "Callback actions" |
@@ -213,11 +213,12 @@ listener drops the user's pending deliveries); `MarkChatBlocked` listens to it.
 ### Mini App addresses
 
 `MiniAppUrl` reads `Brand::miniAppUrl()` only (SEC-REQ-019). `home()` returns it; `listing($n)` appends
-`listing=<n>` with `?` or, when the address already has a query, `&`. Both return `null` when the address is empty
-or not `https`; a handler then sends its text without the `web_app` row and logs an error once per hour. Every
-`web_app` button of the bot is built through this class. `InlineKeyboard::webApp()` of WP-51 accepts only the
-configured address; if its check is an exact match, relax it here to "same scheme, host and path", so the query of
-`listing()` passes.
+`listing=<n>` with `?` or, when the address already has a query, `&`; `radar($id)` appends `radar=<id>` the same
+way (DEC-61: the launch link of a radar, legacy since `index-CIa0Ldj2.js`; HOMI's radar ids are ULIDs, legacy's are
+integers; its first caller is WP-57). All three return `null` when the address is empty or not `https`; a handler
+then sends its text without the `web_app` row and logs an error once per hour. Every `web_app` button of the bot is
+built through this class. `InlineKeyboard::webApp()` of WP-51 accepts only the configured address; if its check is
+an exact match, relax it here to "same scheme, host and path", so the queries of `listing()` and `radar()` pass.
 
 ### Callback actions registered here
 
@@ -339,7 +340,9 @@ Rules and edge cases:
 
 Formats and lengths: `04` §6.1. Builders in HOMI: the landing buttons (`s_web`, `s_web_<tag>`, the `--v<visit>`
 suffix; WP-61), the no-access screen of the Mini App (`s_<source>--l<number>`; WP-23), the survey share (`s_friend`;
-WP-30). `s_seo…` has no builder until Wave 3.
+WP-30). The no-access screen writes `s_seo_en` / `s_seo_uz` when the source is `seo` and the interface is en / uz
+(legacy since `index-CIa0Ldj2.js`; built by WP-36); row 4 of the table below reads both. The SEO pages' own
+payloads have no builder until Wave 3.
 
 Parser order: (1) longer than 64 bytes or a character outside `[A-Za-z0-9_-]` → `Unknown`, not storable; (2) strip
 one trailing `--v[a-z0-9]{10}` → `visitId`; (3) strip one trailing `--l<digits>` (positive integer) →
@@ -517,7 +520,7 @@ and store their transcripts as JSON.
 | # | Test | Cases |
 | - | ---- | ----- |
 | 1 | `StartPayloadParserTest` | `s_web` → Web; `s_web_insta_1` → tag `insta_1`; `s_web_Insta--vabc123def4` → tag `insta`, visit `abc123def4`; `s_seo` → `ru`, no slice; `s_seo_tashkent_yunusobod_2k` → `ru`, slice; `s_seo_uz_kv_yunusobod-minor--v0123456789` → `uz`, slice, visit; `s_friend`; `s_web--l51358` → Web + listing 51358; `s_fb12--l51358` → Source `fb12` + listing; `s_share` → Source, no listing; `l_51358` → AppListing; `l_abc`, `l_0` → Unknown; 70 characters → Unknown, not storable; `s_web_qr` → tag `qr`; `--v` twice → only the trailing one counts; a tag with `!` → Unknown |
-| 2 | `MiniAppUrlTest` | plain address; address with a query (appends with `&`); empty and `http` → `null` |
+| 2 | `MiniAppUrlTest` | plain address; address with a query (appends with `&`); empty and `http` → `null`; `radar()` appends `radar=<id>` with `?` or `&` (DEC-61) |
 | 3 | `BotCommandListTest` | ten commands in order per locale; nine without `ping` when `dev036` is on (`todo`); `version()` changes when a description changes |
 | 4 | `WelcomeRendererTest` | bold spans; number format per locale; rows and styles of the keyboard; third row per current locale; demo notice on and off; no counters without a value; `en` text contains none of `Toshkent`, `Andijon`, `Qoʻqon`, `Fargʻona` even when the reference data returns them |
 | 5 | `ListingTitleLineTest` | title · district · price; missing district; escaping of `<`, `&` |

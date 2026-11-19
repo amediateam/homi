@@ -292,7 +292,7 @@ describe("the radar tab's states and actions (SCR-026)", () => {
     expect(root().querySelectorAll("[data-radar-tile]")).toHaveLength(1);
   });
 
-  it("switching on with starter > 0: «Радар снова включён. {count}, которые вы не видели, — в чате с ботом»", async () => {
+  it("switching on with starter > 0: «Радар снова включён. В чате с ботом — непросмотренные: {count}»", async () => {
     render(tab({ initial: [normalizeRadar(raw(A, { active: false }))!] }));
     const answer = raw(A, { active: true });
     delete answer.preview;

@@ -46,8 +46,13 @@ All paths are under `/api/v1`. "Bearer" means `auth:sanctum` with the named abil
 
 **Access refusal.** One shape, used by sign-in and by every bearer route:
 `403 {"success": false, "message": "Access denied.", "code": "access_denied", "reason": "blocked"}` with `reason` one
-of `private`, `invite`, `full`, `blocked`, `join`. The client shows an unknown or missing reason as `private`
-(BR-APP-054). A missing token ability is the different code `forbidden`.
+of `private`, `invite`, `full`, `blocked`, `join`, `paused`. The client shows an unknown or missing reason as
+`private` (BR-APP-054). A missing token ability is the different code `forbidden`.
+
+`paused` is the sixth reason: the whole service is on pause (legacy since `index-CIa0Ldj2.js`, the audit's BR-API-194).
+Its scenario is `access_paused`, one of the six `access_*` that this specification names. Natively it is
+answered by the switch of WP-40, which is off by default (DEC-60); until then only the scenario answers it
+(*added by the intake of `index-CIa0Ldj2.js`*).
 
 **Locale.** Middleware `App\Http\Middleware\SetRequestLocale` on the whole `v1` group: the first supported tag of
 `Accept-Language` (`ru`, `uz`, `en`; `uz-Latn` and `uz_Latn` are read as `uz`), else `ru`; sets the application
@@ -92,7 +97,7 @@ and limits moved to `GET /reference`; the PostHog key and host are frontend conf
 stays here; `uz_Latn` became `uz`; the gate reason moved from the body `detail` to `reason`.
 
 Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: false`), `no_city`
-(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), and the five `access_*`.
+(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
 
 ### `GET /settings`, `PATCH /settings` — bearer `app:read` / `app:write`; legacy: API-024, API-025
 
@@ -146,7 +151,7 @@ the user one sample listing card in the saved `card_style`. Answer:
 not send the card. Native in Wave 1: HOMI's bot sends the sample (WP-53 builds the card, WP-57 sends it). Which
 listing the sample shows, when `sent` is `false` and the per-user rate limit are open (Q-API-067); the bot side of
 `rich` is Q-BOT-046. Stub: nothing is sent; `sent: true`, and scenario `card_sample_unsent` answers `sent: false`;
-the four reserved scenarios and the five `access_*` apply. Route name `api.v1.settings.card-sample`;
+the four reserved scenarios and the six `access_*` apply. Route name `api.v1.settings.card-sample`;
 `App\Http\Controllers\Api\V1\CardSampleController` with `CardSampleResource`.
 
 ### `GET /reference` — public, cacheable per locale; legacy: the shared part of the meta method and the bot names (API-001, API-003)
@@ -256,7 +261,7 @@ renderer of WP-10 answers as `413 payload_too_large`.
   or method-specific error scenario (`$errors`: scenario name → a closure that returns the exception). A scenario that
   is neither in the map nor an error of the method is ignored (WP-10). The stub controllers of native-only methods use
   it and answer with `SourceDriver::Stub`. *Corrected while executing:*
-  - the five `access_*` refusals are known by every method of `StubResponder`, as "common errors on every bearer
+  - the six `access_*` refusals are known by every method of `StubResponder`, as "common errors on every bearer
     route" asks;
   - `check(Request $request, array $errors = []): SourceContext` throws the same errors for a method without a
     fixture (`POST /events`);

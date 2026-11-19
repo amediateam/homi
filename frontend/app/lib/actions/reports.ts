@@ -42,8 +42,9 @@ function inputOf(input: unknown): ReportInput | null {
 
 /**
  * `POST /listings/{number}/reports` (WP-26, BR-API-101): the body is `{ reason }` or `{ reason, detail }`, never a
- * `detail: null`. The answer says whether the report hid the listing; an empty success counts as not hidden. An
- * input that fails its check makes no request.
+ * `detail: null`. The answer says whether the report hid the listing and, for an `agent` report, whether the author
+ * is marked as a realtor (`agent_marked`, in the contract since the intake of `index-CIa0Ldj2.js`); an empty success
+ * counts as neither. An input that fails its check makes no request.
  */
 export async function reportListing(input: ReportInput, auth?: ActionAuth, locale?: string): Promise<ActionResult<ReportResult>> {
   const checked = inputOf(input);
@@ -57,5 +58,5 @@ export async function reportListing(input: ReportInput, auth?: ActionAuth, local
   }
   // A 204 or an empty 200 reaches here with `data: null` (`@homi/api-client`), whatever the generated type says.
   const data = result.data as ReportResult | null;
-  return { ...result, data: { hidden: data?.hidden === true } };
+  return { ...result, data: { hidden: data?.hidden === true, agent_marked: data?.agent_marked === true } };
 }

@@ -7,6 +7,7 @@ use App\Services\Sources\Data\ListingDetails;
 use App\Services\Sources\Data\ListingSummary;
 use App\Services\Sources\Data\ListingTranslation;
 use App\Services\Sources\Data\MapPoint;
+use App\Services\Sources\Data\MapPoints;
 use App\Services\Sources\Data\PriceInfo;
 use Tests\Support\ListingArrays;
 
@@ -30,6 +31,10 @@ it('reads the nullable parts of a preview as null', function (): void {
     expect([$summary->deal, $summary->type, $summary->price, $summary->districtName, $summary->metroName, $summary->location, $summary->sourceRef])
         ->each->toBeNull();
 });
+
+it('keeps the ground-level floor 0 and a basement floor, and reads only null as unknown', function (?int $floor): void {
+    expect(ListingSummary::fromArray(ListingArrays::preview(['floor' => $floor]))->floor)->toBe($floor);
+})->with([[0], [-1], [null]]);
 
 it('masks the phone numbers of every author-written field', function (): void {
     $raw = 'звоните +998 00 000 00 67';
@@ -67,6 +72,15 @@ it('writes a map label as plain text', function (): void {
     expect(MapPoint::fromArray(['number' => 1, 'lat' => 41.3, 'lon' => 69.2, 'label' => '<b>$600</b> & up', 'tone' => 'good', 'priced' => true, 'usd' => 600])->label)
         ->toBe('b>$600/b> up');
 });
+
+it('refuses map counts out of order: points ≤ with_point ≤ total', function (int $points, int $total, int $withPoint): void {
+    $point = MapPoint::fromArray(['number' => 1, 'lat' => 41.3, 'lon' => 69.2, 'label' => '$600', 'tone' => null, 'priced' => true, 'usd' => 600]);
+
+    expect(fn () => new MapPoints(array_fill(0, $points, $point), $total, $withPoint))->toThrow(InvalidArgumentException::class);
+})->with([
+    'more points than listings with a point' => [2, 5, 1],
+    'more listings with a point than listings' => [1, 2, 3],
+]);
 
 it('refuses a preview that misses or mistypes a field', function (array $data, string $field): void {
     expect(fn () => ListingSummary::fromArray($data))->toThrow(InvalidArgumentException::class, $field);

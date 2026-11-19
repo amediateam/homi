@@ -68,7 +68,7 @@ All in `backend/tests/Feature/Contract/`, run by `make ci-backend`; every file p
    samples one more assertion per driver (DEC-52): the serialised answer holds none of the synthetic phone numbers
    of the stub catalogue and of the golden cards, only their masked form; the contact samples are the one place
    where a number appears.
-2. **`OpenApiConformanceTest`.** For each of the 40 methods of `25` §4.2 (`POST /settings/card-sample` as in the note of
+2. **`OpenApiConformanceTest`.** For each of the 41 methods of `25` §4.2 (`POST /settings/card-sample` as in the note of
    item 3): call it (native methods against real code with factories; flagged methods once per bound driver) and
    validate the answer against its schema in `docs/api/openapi.json` with `Tests\Support\OpenApiSchema` — a small
    validator written here (types, `required`, `enum`, `nullable`, `$ref`, arrays, nested objects; no formats). No new

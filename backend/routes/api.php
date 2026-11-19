@@ -84,7 +84,8 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
         Route::get('hidden', [HiddenController::class, 'index'])->middleware('ability:app:read')->name('hidden.index');
         Route::delete('hidden/authors/{id}', [HiddenController::class, 'destroyAuthor'])->whereUlid('id')->middleware('ability:app:write')->name('hidden.authors.destroy');
         Route::delete('hidden', [HiddenController::class, 'destroy'])->middleware('ability:app:write')->name('hidden.destroy');
-        Route::post('listings/{number}/reports', ReportController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
+        Route::post('listings/{number}/reports', [ReportController::class, 'store'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
+        Route::delete('listings/{number}/reports', [ReportController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.destroy');
         Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware('ability:app:write')->name('surveys.found.store');
         Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware('ability:app:write')->name('surveys.found.where');
 

@@ -6,7 +6,7 @@
 | Owner | Frontend (track: development) |
 | Complexity | M |
 | Milestone | FE-2 (M9, stage S4) |
-| Feature IDs | F-FEED-001 |
+| Feature IDs | F-FEED-001, F-FEED-004 |
 | Dependencies | KV-FE-019 (query builder), KV-FE-023 (request cache, first-page prefetch, session maps), KV-FE-045 (shell slots), KV-FE-047 (card, skeleton); backend KV-BE-031 (API-004); decisions: DEV-001 `PROPOSED` (403 handling, flag owned by KV-FE-042), Q-API-008 |
 
 ## Goal
