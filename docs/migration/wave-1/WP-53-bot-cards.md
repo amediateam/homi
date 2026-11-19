@@ -17,6 +17,16 @@ copy with `chat_id` and `message_id`. Every card button works: map, photos, favo
 «Это риелтор», the «Скрыть похожие» submenu; `/fav` lists the favourites and opens their cards. The packages that
 follow (starter lists, radar pushes, digests, withdrawn edits) send cards only through these classes.
 
+*Added by the intake of legacy release `index-BnFvC-Ft.js` (DEC-57):* the renderer has two styles, the user's
+`card_style` of WP-40. `classic` is the card described here (BOT-059). `rich` is built from the legacy Mini App's
+mock (`03` SCR-048, `04` §3.10): photos that swipe inside the card, the price as a heading, the title in bold, the
+market line, a table Район / Метро / Площадь / Сдаёт, «📝 Описание ›», button rows [📱 📍] [🔗 ⭐] [… ]. How it is
+built on the Bot API, its Telegram version floor and what an older client receives are Q-BOT-046 (verify against the
+Bot API documentation); until the operator answers, `rich` follows the mock and RK-33 holds. A sample-card builder
+answers `POST /settings/card-sample` (BOT-085, API-036): one card in the saved style, built from a listing chosen as
+Q-API-067 says (until then this package picks one and records the choice in its Handoff); `sent` is whether the
+Bot API accepted the message.
+
 ## Scope
 
 **In.**

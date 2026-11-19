@@ -21,6 +21,7 @@ it('answers the settings and their options in the shape of the contract, from th
     $response->assertJsonPath('meta.source', 'stub')
         ->assertJsonPath('data.quiet_hours', ['from' => 23, 'to' => 8])
         ->assertJsonPath('data.digest_hours', [9, 19])
+        ->assertJsonPath('data.card_style', 'classic')
         ->assertJsonPath('data.options.locales', [['code' => 'ru', 'name' => 'Русский'], ['code' => 'uz', 'name' => 'Oʻzbekcha'], ['code' => 'en', 'name' => 'English']])
         ->assertJsonPath('data.options.currencies.0', ['code' => 'USD', 'name' => 'Доллары'])
         ->assertJsonPath('data.options.quiet_hours', [null, ['from' => 22, 'to' => 8], ['from' => 23, 'to' => 8], ['from' => 0, 'to' => 9], ['from' => 23, 'to' => 7]])
@@ -47,6 +48,7 @@ it('changes one key and returns the full object', function (string $key, mixed $
     'quiet hours' => ['quiet_hours', ['from' => 0, 'to' => 9]],
     'quiet hours off' => ['quiet_hours', null],
     'digest hours' => ['digest_hours', [12, 20]],
+    'card style' => ['card_style', 'rich'],
 ]);
 
 it('treats an empty body as a no-op and ignores unknown keys', function (): void {
@@ -70,7 +72,17 @@ it('refuses a value outside the options with the field name', function (string $
     'quiet hours as a legacy string' => ['quiet_hours', '23-08'],
     'a repeated digest hour' => ['digest_hours', [9, 9]],
     'digest hours outside the options' => ['digest_hours', [8]],
+    'an unknown card style (fix of LB-APP-051)' => ['card_style', 'compact'],
+    'a card style of null' => ['card_style', null],
 ]);
+
+it('answers the rich card style for the scenario card_rich, and keeps it under a patch of another key', function (): void {
+    $this->getJson('/api/v1/settings', ['X-Stub-Scenario' => 'card_rich'])->assertOk()->assertJsonPath('data.card_style', 'rich');
+    $this->patchJson('/api/v1/settings', ['theme' => 'dark'], ['X-Stub-Scenario' => 'card_rich'])
+        ->assertOk()
+        ->assertJsonPath('data.card_style', 'rich')
+        ->assertJsonPath('data.theme', 'dark');
+});
 
 it('reads app:read and writes with app:write', function (): void {
     actAsSettingsUser(['app:read']);

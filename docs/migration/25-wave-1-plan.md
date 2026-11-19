@@ -22,17 +22,18 @@ The legacy product is the description of the behaviour, not a source of code (DE
 
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
-| Mini App screens, sheets, overlays, states | 47 (SCR-001 … SCR-047) | `03` §2, `data/screens.json` |
-| Client business rules | 73 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 50 (`LB-APP`) | `03` §5, §5b |
+| Mini App screens, sheets, overlays, states | 48 (SCR-001 … SCR-048) | `03` §2, `data/screens.json` |
+| Client business rules | 74 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 53 (`LB-APP`) | `03` §5, §5b |
 | Telegram integration points | 45, of which 39 in use (TMA-001 … TMA-045) | `05` |
-| API methods the client uses | 35 (API-001 … API-035) | `08` §2 |
-| Bot handlers, buttons, texts | 84, 76, 88 | `04`, `data/bot-handlers.json` |
+| API methods the client uses | 36 (API-001 … API-036) | `08` §2 |
+| Bot handlers, buttons, texts | 85, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 482 keys per locale at the baseline `index-DY_DH7h-.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 510 keys per locale at the baseline `index-BnFvC-Ft.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-DY_DH7h-.js`, pinned by WP-02 in `wave-1/baseline.md` (Q-APP-024). Each
-later release is read into the audit as described in section 8.
+The audit describes legacy release `index-BnFvC-Ft.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
+(the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024). Each later release is read into the audit as described
+in section 8.
 
 ## 2. Scope and rules
 
@@ -95,7 +96,7 @@ parameters, so a feed, its map and its filter sheet share one state and survive 
 | `/listing/[number]/photos`, `/location`, `/market`, `/actions` | photo viewer, spot map, market sheet, actions and report (SCR-020 … SCR-023) | overlay or sheet |
 | `/saved`, `/saved/history` | favourites, history (SCR-024, SCR-025) | page |
 | `/radars`, `/radars/new`, `/radars/[id]`, `/radars/[id]/edit`, `/radars/found` | radar tab and empty state, new radar, radar sheet, editor, survey (SCR-026 … SCR-031) | page and sheets |
-| `/settings` and `/settings/{theme,graphics,language,currency,quiet-hours,digest,hidden}` | settings and sub-pages (SCR-032 … SCR-039) | page |
+| `/settings` and `/settings/{theme,graphics,language,currency,quiet-hours,digest,cards,hidden}` | settings and sub-pages (SCR-032 … SCR-039, SCR-048) | page |
 | `/welcome/language`, `/welcome/city` | first-launch pickers (SCR-004, SCR-005) | page |
 | `/no-access`, `/outside` | no access, outside Telegram (SCR-003, SCR-002) | page |
 
@@ -268,6 +269,7 @@ frontend/
 | `POST /auth/telegram` | none (legacy authenticates every request) | native |
 | `GET /me` | user part of meta (API-001) | native |
 | `GET /settings`, `PATCH /settings` | API-024, API-025 | native |
+| `POST /settings/card-sample` | API-036 (since legacy release `index-BnFvC-Ft.js`) | native (HOMI's bot sends the sample card; stub until WP-53 and WP-57) |
 | `GET /reference` | shared part of meta and the bot names (API-001, API-003) | legacy, cached; bot name, support name, limits and `radars_enabled` always from HOMI's configuration |
 | `GET /cities` | API-002 | legacy, cached |
 | `GET /listings` | feed (API-004) | legacy + overlay |
@@ -411,6 +413,8 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
    visit" banner with the radar card in the feed (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-61`).
 2. **Intake.** Each later legacy release is read from its sync report (`$KVADRO_ROOT/demo/app/docs/releases/`) and
    becomes one queue item: update the audit, the affected specification, the stub fixtures, the legacy translator.
+   The intake moves the pin to the release. First: `index-BnFvC-Ft.js` on 2026-11-19 (the card style of the bot's
+   listing cards, `POST /settings/card-sample`; `wave-1/baseline.md`, intake log).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
@@ -516,7 +520,7 @@ state.
 
 1. Every work package is done by its definition (section 9).
 2. No method answers from a stub on production; `meta.source` is `legacy` or `native` everywhere.
-3. All 47 screens and all bot scenarios have a signed checklist.
+3. All 48 screens and all bot scenarios have a signed checklist.
 4. The Mini App works in iOS, Android, Desktop and Web clients of Telegram, in cookie mode and header mode.
 5. Radars deliver: an instant card, a digest and a quiet-hours release were each observed on production.
    `RADAR_CREATION_ENABLED` is on.

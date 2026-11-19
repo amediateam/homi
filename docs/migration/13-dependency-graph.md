@@ -75,7 +75,7 @@ KV-BE-001, KV-BE-002, KV-BE-003, KV-BE-008, KV-BE-047, KV-BE-049, KV-BE-120, KV-
 
 **Feature ↔ task coverage**
 
-- Features in 09: 146; covered by at least one task: 145; without a task: 1 (by priority: P3 1).
+- Features in 09: 147; covered by at least one task: 146; without a task: 1 (by priority: P3 1).
 - Features without a task: F-LANDING-011 (P3, DROP_CANDIDATE (decides: development track (Q-API-049))).
 - Tasks citing a feature id that 09 does not define: 0.
 - Tasks with neither a feature nor the `Technical migration task` marker: 0.

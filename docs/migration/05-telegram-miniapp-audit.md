@@ -361,7 +361,11 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - `Telegram-Android/… (…; LOW|AVERAGE|HIGH)` selects lite graphics;
   - `/Android/` disables swipe-back and enables the graphics setting and scroll measurement
     (`$KVADRO_ROOT/demo/app/src/lib/graphics.js:22,47-59`).
-- **Client version:** `WebApp.version` goes into error reports.
+- **Client version:** `WebApp.version` goes into error reports and, since release `index-BnFvC-Ft.js`, into
+  `app_launch` as `tg`, as it is, without the 10-character cut of `app_error.tg`
+  (`$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:61` at r29; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:63`).
+  Legacy asks whether the bot uses it to choose between card styles (`$KVADRO_ROOT/docs/api.md:1318-1320`, r31,
+  open question 16; Q-API-067).
 
 #### TMA-042 — Version gates (CONFIRMED)
 
@@ -423,7 +427,7 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | Hide, block author, report (`rented`, `agent`, `wrong_data`, `fraud`) | **yes** (SCR-023) | «Это риелтор», «Уже сдано», «Скрыть похожие» on cards; undo «↩️ Не сдано» exists only in the bot (§5.5) |
 | Create, edit, pause, delete radars; flow estimate; widen | **yes** (SCR-026 to SCR-031) | a step-by-step wizard and free-text (Gemini) creation (§5.3) |
 | **Deliver** radar results (instant / digest, quiet hours) | no; only settings and status | **yes**: messages in the chat (§5.3) |
-| Settings: language, currency, theme, quiet hours, digest time | **yes** (SCR-032 to SCR-038); language and currency also apply to the bot (`notify.languageHint`, `notify.currencyHint`) | `setMyCommands` localisation follows the language (§6.3) |
+| Settings: language, currency, theme, quiet hours, digest time | **yes** (SCR-032 to SCR-038); language and currency also apply to the bot (`notify.languageHint`, `notify.currencyHint`); since release `index-BnFvC-Ft.js` also the style of the bot's listing cards (`classic` / `rich`) and «Прислать пример в чат» (SCR-048) | `setMyCommands` localisation follows the language (§6.3); sends the listing cards in the chosen style and the sample card (`POST /api/settings/card-sample`, `04` BOT-085, §3.10) |
 | Owner phone verification (`owner_verified`) | no (TMA-034) | **yes**: `/owner` with `request_contact` (§5.6) |
 | Privacy policy, «Удалить мои данные» | no (SCR-032) | **yes**: `/privacy` (§5.11) |
 | Support conversation | only a link to the support account | a separate support account; the main bot handles the conversation per §5.11 🔶 |
@@ -432,8 +436,10 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | Write access | asks for it (`requestWriteAccess`, TMA-033) | needs it to deliver radars |
 | Access gate (closed beta) | shows reasons from `403` (SCR-003) | «Старт» in the bot unlocks `join` (text `noAccess.text.join`) |
 
-Rule for the port: every Mini App action that results in a chat message (radar create, enable, edit, widen) depends on
-the bot's write access. The `409 no_chat` contract (TMA-033) is the seam between the two interfaces.
+Rule for the port: every Mini App action that results in a chat message (radar create, enable, edit, widen; since
+release `index-BnFvC-Ft.js` the sample card) depends on the bot's write access. The `409 no_chat` contract (TMA-033)
+is the seam between the two interfaces. The sample card is the exception: it reports a failure as `sent: false`, not
+as `409 no_chat`, and the Mini App does not ask for write access first (`03` BR-APP-074; Q-API-067).
 
 ## 3. Diagrams
 

@@ -155,7 +155,7 @@ the old bot and its backend is the operator's act.
 
 All answered by the developer on 2026-11-14 unless the row says otherwise (DEC-50 … DEC-56 in a second round the
 same day, after the verification of the specifications). Verbatim answers:
-`decisions/2026-11-14-developer-answers.md`.
+`decisions/2026-11-14-developer-answers.md`; DEC-57 on 2026-11-19, `decisions/2026-11-19-developer-answers.md`.
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -185,6 +185,7 @@ same day, after the verification of the specifications). Verbatim answers:
 | DEC-54 | The whole-city label | «{city} целиком», built from the city dictionary, in the Mini App and the bot (DEV-015, this wording) | Proofreading of the uz and en wording (Q-BOT-014) | WP-22, WP-51, WP-54 |
 | DEC-55 | Language model for the bot's free-text and voice queries | No fixed vendor: provider and model come from configuration and the team switches them; without a configured provider the bot answers the wizard hint. Answers DEC-03 | Accounts and keys of the providers the team wants to use | 25 §6, WP-55 |
 | DEC-56 | Support | HOMI's own support bot; it relays between a user and the private chats of the operators. Answers DEC-21 | Production track: a support bot per environment in BotFather, its token and webhook; the operators' Telegram ids | 25 §6, WP-59 |
+| DEC-57 | Card styles of the bot's listing cards (2026-11-19) | Both styles ship in Wave 1: `classic` and `rich`, with `rich` built from the legacy mock-ups (`03` SCR-048). No «Новое» pill: HOMI does not announce `cards`, so `GET /reference` keeps `features: ["pets"]` and the legacy driver does not pass the code on | The operator's answers to Q-API-067 and Q-BOT-046, asked in parallel | `25` §4.2; WP-11, WP-31, WP-40, WP-41, WP-53, WP-57 |
 
 ### 8.2 Questions
 
@@ -197,7 +198,7 @@ same day, after the verification of the specifications). Verbatim answers:
 | `Q-API-062` | Legacy formats many strings on the server per user locale and currency (CF-017). How does a service-key request choose locale and currency, and which per-user fields (`favorite`, `viewed`) does it still return? `UNVERIFIED` | The operator's specification; if raw values are not available, HOMI formats from what it gets and the gap is listed per field | Operator |
 | `Q-API-063` | How does a legacy listing number map to a listing from `telegram.uz`? Candidate key: source channel and post (the legacy deep link carries both, TMA-011). `UNVERIFIED` | A join on the dump once it arrives | Developer (Wave 2 plan) |
 | `Q-APP-023` | Effect of the CSS pipeline on copied legacy CSS. `DEPRECATED_CANDIDATE`: the legacy CSS is not copied (DEC-44) | — | — |
-| `Q-APP-024` | Which legacy release is the behaviour baseline? The audit of 2026-11-09 described `index-plF_TOcT.js` (`08-api-inventory.md:13-16`); three releases followed: `index-Dbpp463V.js`, `index-BNLZFfL0.js` and `index-DY_DH7h-.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-61`). **Answered by WP-02 on 2026-11-14:** the baseline is `index-DY_DH7h-.js` (`demo/app` at SVN r27), pinned in `wave-1/baseline.md`, and the audit describes it. `CONFIRMED` | The pin in `wave-1/baseline.md`; each later release is a row of its intake log | Developer |
+| `Q-APP-024` | Which legacy release is the behaviour baseline? The audit of 2026-11-09 described `index-plF_TOcT.js` (`08-api-inventory.md:15-21`); three releases followed: `index-Dbpp463V.js`, `index-BNLZFfL0.js` and `index-DY_DH7h-.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-61`). **Answered by WP-02 on 2026-11-14:** the baseline is `index-DY_DH7h-.js` (`demo/app` at SVN r27), pinned in `wave-1/baseline.md`, and the audit describes it. The intake of 2026-11-19 moved the pin to `index-BnFvC-Ft.js` (SVN r29). `CONFIRMED` | The pin in `wave-1/baseline.md`; each later release is a row of its intake log | Developer |
 | `Q-APP-025` | Who supplies HOMI's own artwork — logo, favicon, mascots, the celebration image, the bot's stickers and welcome picture, the static map image the landing draws its pins on — and when? Legacy artwork is not copied (DEC-32, DEC-40); the work packages use neutral placeholders until it arrives. `UNVERIFIED` | Files handed to the developers; the brand layer and the bot's asset registry updated | Product owner |
 | `Q-SEC-021` | HOMI collects personal data of its own users (Telegram identity, search history, phone when an owner verifies) from the first production deploy, and shows phones and photos taken from legacy. Which legal basis, policy text and hosting statement are needed before real users arrive (DEC-13, Q-SYS-008)? `UNVERIFIED` | Lawyer's note; the privacy page of the landing | Product owner |
 
@@ -215,6 +216,7 @@ same day, after the verification of the specifications). Verbatim answers:
 | RK-31 | **"Functional parity" is judged differently by different people** | M | M | acceptance | A written checklist per screen and per bot scenario, taken from the audit, signed in the PR | developer | DEC-46, 25 §9 |
 
 | RK-32 | **Radars exist before anything delivers them.** The radar package is in stage C and the bot's sending package in stage D, while every merge reaches production and access is open: a user can create a radar that sends nothing | H | M | product | Decided (DEC-51): creating and changing radars is switched off on the servers until the sending package is deployed; the radar tab and the bot say "soon"; one switch turns it on together with matching | developer | DEC-43, DEC-45, DEC-51 |
+| RK-33 | **A setting whose second value cannot be reproduced.** The only description of the `rich` card is the legacy Mini App's mock and one sentence of the legacy API docs: a HOMI `rich` card built from them may differ from legacy, or may not show on older Telegram clients | M | M | bot | Accepted by DEC-57: `classic` stays the default; the sample button lets the user check the style before keeping it; Q-BOT-046 and Q-API-067 go to the operator, and WP-53 adjusts `rich` to the answer | developer | DEC-57, Q-BOT-046, Q-API-067 |
 
 Risks of 19 that change: RK-02 (data migration), RK-03, RK-04, RK-06 and RK-19 no longer apply; RK-07 (old WebViews)
 is accepted by DEC-44; RK-11 (personal data) grows, because HOMI now has users of its own from the first deploy.

@@ -998,7 +998,7 @@ had radars switched off on 2026-11-18 (AM-99, KI-65): there the local runs used 
     `history.back()` before its `popstate`.
   - The legacy read was the reconstructed source, not the pinned bundle: the radar files at SVN r6, the nudge files at
     r27 (= the pinned `index-DY_DH7h-`), `App.jsx` at r29 (`index-BnFvC-Ft`, one past the pin; r28 and r29 only add
-    «Вид карточек» in the settings). The release intake that moves the pin past it (`README.md` rule 7) reads it again.
+    «Вид карточек» in the settings). The intake of `index-BnFvC-Ft` (2026-11-19) moved the pin to SVN r29, so this read is of the pinned release.
   - The WP-25 sibling bug found by the create-sheet fix: a directly loaded `/filters?pick=city` closed at depth 0
     stacks two filter sheets (KI-66).
 - **Not automated:** the checklist lines stay unticked. The checklist asks for ru / uz / en and light / dark with

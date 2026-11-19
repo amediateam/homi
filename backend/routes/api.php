@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
+use App\Http\Controllers\Api\V1\CardSampleController;
 use App\Http\Controllers\Api\V1\CityController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\Landing\LandingLiveController;
@@ -54,6 +55,7 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
         Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
         Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
         Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
+        Route::post('settings/card-sample', CardSampleController::class)->middleware('ability:app:write')->name('settings.card-sample');
         Route::post('events', EventController::class)->middleware('ability:app:write')->name('events.store');
 
         // Listings (WP-12): the static paths come before `listings/{number}`.

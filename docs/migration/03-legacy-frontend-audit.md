@@ -2,19 +2,25 @@
 
 Scope: the Telegram Mini App `app.kvadro.app` (React 19 + Vite 8), as recovered by decompiling the production bundle.
 The recovered tree is `$KVADRO_ROOT/demo/app/`. The audit of 2026-11-09 described release `index-plF_TOcT.js` (prod
-`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT). It is brought up to the pinned release `index-DY_DH7h-.js` (prod
-`Last-Modified` Fri, 13 Nov 2026 22:05:41 GMT, SVN r27; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5`;
-[`wave-1/baseline.md`](wave-1/baseline.md)). Text added for a later release names that release and cites the code at
-the pin ("at the pin"); other line numbers are those of the audited tree. The Telegram WebApp integration is in
-[`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are named by `METHOD path`; their
-`API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
+`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT). It was brought up to `index-DY_DH7h-.js` (prod `Last-Modified` Fri,
+13 Nov 2026 22:05:41 GMT, SVN r27), the pin of WP-02, and by the intake of 2026-11-19 to the pinned release
+`index-BnFvC-Ft.js` (prod `Last-Modified` Sat, 14 Nov 2026 21:05:33 GMT, SVN r29;
+`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`; [`wave-1/baseline.md`](wave-1/baseline.md)). Text added for a later
+release names that release. "At the pin" in text written before that intake cites the code at r27; text of the intake
+cites a file at r29 when it has not changed since ("at r29"; `svn info` Last Changed Rev), else the release's delta
+units (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/delta/units/`) or the file at r31 ("at r31"),
+whose lines may already hold a later release. Other line numbers are those of the audited tree. The Telegram
+WebApp integration is in [`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are
+named by `METHOD path`; their `API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
 [`data/screens.json`](data/screens.json).
 
 How this audit was made: by reading the code only. Nothing was built or run, so no item is `RUNTIME_VERIFIED`. The
-recovery itself was checked against the production bundle by 79 differential parity scenarios at the audit and by 109
-at the pin (57 screens and sheets, ten of them for SCR-046 and SCR-047; 36 filter; 16 GL;
-`$KVADRO_ROOT/CLAUDE.md:26-28`). Those ran on mocks that the recovery authors inferred from the code, not on the real
-API (`$KVADRO_ROOT/demo/app/tools/parity/README.md`, `$KVADRO_ROOT/CLAUDE.md` "Commands"). Code that the recovery
+recovery itself was checked against the production bundle by 79 differential parity scenarios at the audit, by 109
+at `index-DY_DH7h-.js` (57 screens and sheets, ten of them for SCR-046 and SCR-047; 36 filter; 16 GL;
+`$KVADRO_ROOT/CLAUDE.md:26-28`) and by 119 at `index-BnFvC-Ft.js` (67 screens and sheets, ten more for SCR-048; 36
+filter; 16 GL; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:54-56,86`). Those ran on
+mocks that the recovery authors inferred from the code, not on the real API
+(`$KVADRO_ROOT/demo/app/tools/parity/README.md`, `$KVADRO_ROOT/CLAUDE.md` "Commands"). Code that the recovery
 reconstructed by guesswork carries `// TODO: inferred from build` and is `UNVERIFIED` here; §6 has the list.
 
 Policy (HOMI, 2026-11-09): HOMI **fixes** legacy bugs and logically wrong decisions instead of reproducing them. Every
@@ -1179,6 +1185,11 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
     changed: «Авто · полная», «Авто · облегчённая», «Полная», «Облегчённая»);
   - «Язык и валюта»: Язык, Валюта;
   - «Когда присылать»: Тихие часы («23–08» / «Выкл»), Время подборок («9 и 21»), footer «Время — ташкентское.»;
+  - «Чат с ботом» (since release `index-BnFvC-Ft.js`): Вид карточек (icon `GalleryHorizontal`, value «Классический» /
+    «Новый» from `settings.cards.<card_style ?? 'classic'>`, LB-APP-051), with the «Новое» pill (`sheet.new`) while
+    `meta.new_features` contains `cards` and `kv-new-cards` is unset; a tap writes `kv-new-cards` and opens SCR-048
+    (`SettingsScreen.jsx:150-151,321-331` at r31, the same code as the release's unit `008-added-NEW$pj.jsx:165-176`;
+    `$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:11-18`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:51`);
   - «Лента»: Скрытое (count), only when something is hidden;
   - «О приложении»:
     - «Значок на экране телефона — Добавить» when the home-screen status is `missed` or `unknown`;
@@ -1190,7 +1201,8 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   privacy policy, data deletion, account. These are bot functions (`$KVADRO_ROOT/docs/about.md` §5.11; see
   `05-telegram-miniapp-audit.md` §3).
 - **APIs:** `GET /api/settings`, `GET /api/subscriptions` (digest hint), `GET /api/hidden`, `GET /api/bot`,
-  `PUT /api/settings`.
+  `PUT /api/settings`; since `index-BnFvC-Ft.js` also `POST /api/settings/card-sample` (from SCR-048).
+- **Storage:** since `index-BnFvC-Ft.js` the «Вид карточек» row writes `kv-new-cards` (§3.2).
 - **Analytics:** `$pageview settings`. Sub-pages are not tracked.
 - **Status:** CONFIRMED.
 
@@ -1199,8 +1211,13 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Options:** `auto` «Как в Telegram», `light` «Светлая», `dark` «Тёмная».
 - **Effect:** applied at once (`kv-theme`, `data-theme` / `data-scheme`, the Telegram header and background colour),
   then `PUT /api/settings {theme}`. On error it rolls back with the error haptic (`SettingsScreen.jsx:98-114`).
-- **Sub-page chrome** (shared by SCR-033 to SCR-039): a fixed layer (z 40) with a 24% slide-in, swipe-back, Telegram
-  Back, and a header shadow when scrolled (`$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx`).
+- **Sub-page chrome** (shared by SCR-033 to SCR-039 and SCR-048): a fixed layer (z 40) with a 24% slide-in,
+  swipe-back, Telegram Back, and a header shadow when scrolled
+  (`$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx`).
+  Since release `index-BnFvC-Ft.js` an open sub-page sets `body.subpage-open` (`overflow: hidden`), so the settings
+  list under it does not scroll, and `.subpage` has `overscroll-behavior: contain` (the release's unit
+  `011-modified-SubPage.jsx.diff`; `SubPage.jsx:21-25` and `$KVADRO_ROOT/demo/app/src/styles/settings.css:153,164` at
+  r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:61`).
 - **Status:** CONFIRMED.
 
 ### SCR-034 — Settings › Graphics (`screen`, sub-page)
@@ -1412,6 +1429,58 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
   (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:305-313`).
 - **Status:** CONFIRMED.
 
+### SCR-048 — Settings › Card style «Вид карточек» (`screen`, sub-page)
+
+- **Since:** release `index-BnFvC-Ft.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:51-54`). `CardStylePicker.jsx`,
+  `SettingsPages.jsx` and `card-style.css` are at r29; `SettingsScreen.jsx` is at r31, where its card-style code equals
+  the release's unit `008-added-NEW$pj.jsx`.
+- **Opens:** the «Вид карточек» row of the group «Чат с ботом» (SCR-032).
+- **Layout:** a `bare` sub-page (no `.set-card` around the content) with the chrome of SCR-033 and the title «Вид
+  карточек» (`$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx:144-159` at r29). Inside
+  (`$KVADRO_ROOT/demo/app/src/features/settings/CardStylePicker.jsx` at r29):
+  - a `role="radiogroup"` of two `role="radio"` buttons side by side, the current one `aria-checked` and `.on`; each
+    holds a mock of the bot's message (`aria-hidden`), the name and a hint (`:17-39`);
+  - «Классический» (`classic`): a photo placeholder, then caption lines 🏠 title, 💰 price, 📊 market, 📍 place, 🏢 area
+    and floor, 🏠 owner and a quote; inline-button rows [📱 📍] [🔗 📷 +5] [⭐ …] (`:97-126`);
+  - «Новый» (`rich`): a photo placeholder with four dots, the price as a heading, the bold title, 📊 market, a table
+    Район / Метро / Площадь / Сдаёт, «📝 Описание ›»; button rows [📱 📍] [🔗 ⭐] [… ] (`:128-165`);
+  - the hint `settings.cards.hint`, and a bottom panel with the result line and the full-width primary button
+    (`:40-56`).
+  The mock texts are the 16 keys `settings.cards.demo.*`. Styles: 35 `.cs-*` rules and their
+  `@supports not (color: color-mix(…))` fallback in the new `src/styles/card-style.css`, the last `@import`
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:34`).
+- **Texts** (`ru.js:572-600`, `uz_Latn.js:543-571`, `en.js:543-571` at r29):
+
+  | Key | Used for | ru | uz_Latn | en |
+  | --- | -------- | -- | ------- | -- |
+  | `settings.group.chat` | group title (SCR-032) | «Чат с ботом» | «Bot bilan chat» | «Chat with the bot» |
+  | `settings.cards` | row and sub-page title | «Вид карточек» | «Kartochkalar koʻrinishi» | «Card style» |
+  | `settings.cards.classic`, `.rich` | option names, row value | «Классический», «Новый» | «Klassik», «Yangi» | «Classic», «New» |
+  | `settings.cards.classicHint` | under «Классический» | «Фото и подпись. Видно в любой версии Telegram» | «Rasm va matn. Telegramning istalgan versiyasida koʻrinadi» | «Photo and caption. Shows in any Telegram version» |
+  | `settings.cards.richHint` | under «Новый» | «Фото листаются в карточке, данные — таблицей» | «Rasmlar kartochkada varaqlanadi, maʼlumotlar jadvalda» | «Photos swipe in the card, details in a table» |
+  | `settings.cards.hint` | under the options | «Так карточки объявлений приходят в чат с ботом. Новый вид показывают только свежие версии Telegram — пришлите пример и проверьте: если карточку не видно, обновите Telegram или верните классический.» | same meaning | same meaning |
+  | `settings.cards.send` | button | «Прислать пример в чат» | «Namunani chatga yuborish» | «Send a sample to the chat» |
+  | `settings.cards.sending` | button while sending | «Отправляем пример в чат…» | «Namuna chatga yuborilmoqda…» | «Sending a sample to the chat…» |
+  | `settings.cards.sent` | result, with a check icon | «Пример — в чате с ботом» | «Namuna bot bilan chatda» | «Sample sent to the bot chat» |
+  | `settings.cards.minimize` | second line of `sent` | «Чтобы посмотреть, сверните приложение — смахните его вниз» | «Koʻrish uchun ilovani yigʻing — uni pastga suring» | «To see it, minimize the app — swipe it down» |
+  | `settings.cards.failed` | result | «Пример не отправился — вид всё равно сохранён» | «Namuna yuborilmadi — koʻrinish baribir saqlandi» | «The sample didn't send — the style is saved anyway» |
+
+- **States of the sample:** `idle`; `sending` (button disabled with a spinner); `sent`; `failed`. The state belongs to
+  the settings screen, not to the sub-page, so it outlives a close of the sub-page (LB-APP-053) and is lost when the
+  Settings tab unmounts (`SettingsScreen.jsx:95-96` at r31).
+- **Actions:** BR-APP-074.
+- **APIs:** `PUT /api/settings {card_style}` (API-025), `POST /api/settings/card-sample` (API-036).
+- **Storage:** none here; the row of SCR-032 writes `kv-new-cards`.
+- **Analytics:** none (sub-pages are not tracked).
+- **Edge cases:** an unknown `card_style` (LB-APP-051); a `card-sample` answer without a JSON body (LB-APP-052).
+- **Sources:** `CardStylePicker.jsx`; `SettingsPages.jsx:144-159`; `SettingsScreen.jsx:94-96,150-171,321-331` at r31;
+  parity scenarios `settings-cards`, `settings-cards-rich-saved`, `settings-cards-pick`, `settings-cards-pick-fail`,
+  `settings-cards-sample`, `settings-cards-sample-unsent`, `settings-cards-sample-error`, `settings-cards-sample-pick`,
+  `settings-cards-badge`, `settings-cards-badge-seen`
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:51-56`).
+- **Status:** CONFIRMED for the client. What the bot sends for each style is UNVERIFIED (Q-API-067, Q-BOT-046;
+  `04` §3.10).
+
 ### 2.1 Shared components (not screens on their own)
 
 `src/components/`:
@@ -1427,7 +1496,9 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
 - filters: `PriceSection`, `RoomsPicker`, `sheet/*`;
 - listing: `ListingHero`, `ListingTitleRow`, `ListingCtaBar`, `sections/*`, `ZoomableImage`, `spot/SpotMap` (preview);
 - radar: `RadarTiles`, `RadarStrip`;
-- settings: `SettingsGroup`, `SettingsRow`, `ChoiceList`, `SubPage`;
+- settings: `SettingsGroup`, `SettingsRow` (since release `index-BnFvC-Ft.js` an optional `badge`, drawn as a
+  `new-pill` after the label; the release's unit `009-modified-SettingsRow.jsx.diff`), `ChoiceList`, `SubPage`,
+  `CardStylePicker` (SCR-048, since the same release);
 - map: `gl/*` and `leaflet/*` internals, `pins.js`, `palette.js`, `attribution.js`, `tilePrefetch.js`.
 
 `src/app/`: `TopBar`, `TabBar`, `ViewToggle`, `FewResultsNote`.
@@ -1445,7 +1516,7 @@ Every directory under `src/features` maps to SCR items:
 | `map` | SCR-011, SCR-012, SCR-013 |
 | `onboarding` | SCR-003, SCR-004 |
 | `radar` | SCR-026, SCR-027, SCR-028, SCR-031 |
-| `settings` | SCR-032 to SCR-039 |
+| `settings` | SCR-032 to SCR-039, SCR-048 |
 | `sort` | SCR-016 |
 
 There is **no "similar listings" section** anywhere in the client: `NearbySection` lists nearby places (metro, parks,
@@ -1459,15 +1530,24 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
 
 - **Locales:** `ru`, `uz_Latn`, `en`. Intl locales are `ru-RU`, `uz-Latn-UZ`, `en-GB`. Numbers in `uz_Latn` are
   formatted with `ru-RU` (space thousands separator, decimal comma) (`$KVADRO_ROOT/demo/app/src/i18n/index.js:16-74`).
-- **Keys:** **482 top-level keys in each locale** at the pinned release, 482 in the union. No key is missing in any
-  locale (CONFIRMED). A plural object counts as one key.
+- **Keys:** **510 top-level keys in each locale** at the pinned release `index-BnFvC-Ft.js`, 510 in the union. No key
+  is missing in any locale (CONFIRMED). A plural object counts as one key.
   - Per release: 461 at `index-plF_TOcT.js` (the audit), 462 after `index-Dbpp463V.js` (`card.businessPrice`), 473
     after `index-BNLZFfL0.js` (`report.detailTitle` and ten `report.d_*` keys), 482 after `index-DY_DH7h-.js` (nine
     keys: `back.title`, `back.new`, `back.what`, `feedRadar.titleRent`, `feedRadar.titleSale`, `feedRadar.what`,
-    `feedRadar.enable`, `feedRadar.setup`, `nudge.setup`; texts in SCR-046 and SCR-047).
+    `feedRadar.enable`, `feedRadar.setup`, `nudge.setup`; texts in SCR-046 and SCR-047), 510 after
+    `index-BnFvC-Ft.js` (28 keys: `settings.group.chat`, `settings.cards`, `settings.cards.{classic, rich,
+    classicHint, richHint, hint, sent, send, sending, failed, minimize}` and the 16 mock keys `settings.cards.demo.*`;
+    SCR-048; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:56`).
   - Method: the object literal of each locale file is parsed and its depth-1 keys counted, per SVN revision of the
     locale files (r9, r24, r25, r27). Counting quoted key lines (`^  '`) gives one less, because the plural key
-    `listings` is unquoted; the 472 of `25` §1 matches that line count at `index-BNLZFfL0.js`.
+    `listings` is unquoted; the 472 of `25` §1 matches that line count at `index-BNLZFfL0.js`. The locale files of
+    r29 cannot be read without `svn cat`: their count is that of a copy rebuilt by reverse-applying the next
+    release's diffs
+    (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/delta/units/063-modified-en.jsx.diff`,
+    `064-modified-ru.jsx.diff`, `065-modified-uz_Latn.jsx.diff`) to the r31 files; reverse-applying the release's own
+    diffs (`012`–`014` of `2026-11-17_index-BnFvC-Ft`) to that copy gives back the r27 files, key for key and value for
+    value (`wave-1/baseline.md`, the pin).
   - 14 keys are plural objects up to `index-BNLZFfL0.js`: `listings`, `listing.rooms`, `details.daysOnMarket`,
     `details.publications`, `details.channels`, `details.views`, `actions.blockCount`, `map.missing`,
     `market.info.agoMin`, `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`,
@@ -1487,7 +1567,8 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `report` | 20 | `card` | 9 | `city` | 7 |
   | `app` | 5 | `type` | 5 | others | ≤ 4 each |
 
-  Release `index-DY_DH7h-.js` adds the prefixes `back` (3 keys) and `feedRadar` (5) and one `nudge` key.
+  Release `index-DY_DH7h-.js` adds the prefixes `back` (3 keys) and `feedRadar` (5) and one `nudge` key. Release
+  `index-BnFvC-Ft.js` adds 28 keys under `settings` (`settings.group.chat`, `settings.cards*`).
 
 - **Keys built at runtime** (every value must exist, or `t()` throws):
 
@@ -1503,6 +1584,8 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `found.*`, `found.where.*` | local | local |
   | `noAccess.title.*`, `noAccess.text.*` | guarded by a whitelist | none |
   | `settings.theme.*`, `settings.graphics.*`, `sheet.market.*`, `sheet.posted.*`, `app.saved.*` | local | local |
+  | `settings.cards.${style}`, `settings.cards.${style}Hint` (options of SCR-048) | local (`CARD_STYLES`, since `index-BnFvC-Ft.js`) | local |
+  | `settings.cards.${card_style}` (value of the SCR-032 row) | **server** (`GET /api/settings`), `card_style ?? 'classic'`, since `index-BnFvC-Ft.js` | server-driven: a value other than `classic` / `rich` throws (LB-APP-051) |
   | `market.v3.rooms${median_rooms}` | **server**; only 1–3 exist, ≥ 4 maps to `rooms4` | server-driven |
 
 - **Quirks:**
@@ -1524,7 +1607,8 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   (SCR-003). 2026-11-12 (`index-BNLZFfL0.js`) added `report.detailTitle` and the pairs `report.d_<code>` /
   `report.d_<code>Hint` for `price`, `rooms`, `place`, `photos`, `other` (SCR-023). 2026-11-14 (`index-DY_DH7h-.js`)
   added the nine `back.*`, `feedRadar.*` and `nudge.setup` keys (SCR-046, SCR-047)
-  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:17,38,54,59,84,99,107`).
+  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:17,38,54,59,84,99,107`, line numbers of r27). 2026-11-17
+  (`index-BnFvC-Ft.js`) added the 28 card-style keys (SCR-048; `CHANGELOG.md:56`).
 
 ### 3.2 Client storage: localStorage `kv-*` and Telegram DeviceStorage
 
@@ -1540,7 +1624,7 @@ with a 1.5 s timeout per key (`storage.js:59-87`).
 | `kv-nudge` | JSON `{asked: string[≤40], closed, quietUntil, lastShown}`; since `index-DY_DH7h-.js` also `back: {<filters hash>: ms}` (the return banner per filter set, ≤ 40) and `feedOff: ms` (end of the in-feed card's snooze) | `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:30-92`; at the pin also `:198-216`, `:239-244` | `followNudge.js:16-28`; at the pin also `:179-195`, `:232-237` | yes | yes |
 | `kv-visits` | JSON `{<filters hash>: ms}`: the last search-tab visit per filter set, 40 newest kept; since `index-DY_DH7h-.js` (BR-APP-070) | `recordVisit` (`followNudge.js:125-143` at the pin) | `recordVisit` into the session map, then `returnSince` (`followNudge.js:108-123,179-195` at the pin) | yes | yes, since `index-DY_DH7h-.js` (`storage.js:6` at the pin; LB-APP-021) |
 | `kv-home` | JSON `{days: ['YYYY-MM-DD' ×≤10], offered}` | `$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js:71-98` | `homeScreen.js:17-28` | yes | yes |
-| `kv-new-<feature>` | `'1'` (only `pets` is used) | `markFeatureSeen` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`) | `isNewFeature` (`:11-12`) | yes | no |
+| `kv-new-<feature>` | `'1'` (`pets`; since `index-BnFvC-Ft.js` also `cards`, the «Вид карточек» row of SCR-032) | `markFeatureSeen` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`) | `isNewFeature` (`:11-12`) | yes | no |
 | `kv-graphics` | `full` / `lite` (absent = auto) | `setGraphicsMode` (`$KVADRO_ROOT/demo/app/src/lib/graphics.js:97-103`) | `getGraphicsMode` | no | — |
 | `kv-graphics-measured` | `lite` | `measureScrollPerformance` (`graphics.js:134`) | `prefersLite` (`:62`) | no | — |
 | `kv-map-v2` | `gl` / `leaflet` | `?map=` (`$KVADRO_ROOT/demo/app/src/features/map/engine.js:74-87`) | same | no | — |
@@ -1560,7 +1644,7 @@ to `name` (`$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35`).
 
 | Event | Properties | Trigger | Evidence |
 | ----- | ---------- | ------- | -------- |
-| `app_launch` | `entry` (`link` / `news` / `menu`), `ms`, `v`, `sdk?`, `js`, `platform` | first effect, when initData exists | `$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:53-61` |
+| `app_launch` | `entry` (`link` / `news` / `menu`), `ms`, `v`, `sdk?`, `js`, `platform`; since `index-BnFvC-Ft.js` also `tg` (`Telegram.WebApp.version`, not truncated by the sender) | first effect, when initData exists | `$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:53-61`; `:53-62` at r29 |
 | `app_opened` | `entry: 'link', listing_id, ms` or `entry: 'news' / 'menu', ms` | meta success; not after a 403 | `useAppBootstrap.js:98-113` |
 | `app_error` | `v`, `error {kind, name, message, source, stage, screen, tg, platform}` | boot script (XHR, kind `boot`); global handlers (`error`, `rejection`); ErrorBoundary (`render`) | `index.html:69-90`; `$KVADRO_ROOT/demo/app/src/lib/errors.js:68-94` |
 | `follow_prompt_shown` | — | follow nudge shown | `$KVADRO_ROOT/demo/app/src/app/useFollowNudge.js:66` |
@@ -1732,7 +1816,10 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
   inset: 0`.
 - **Fonts:** the UI uses system fonts only, with no `@font-face`. The 12 Noto Sans woff2 files (latin, latin-ext,
   cyrillic, cyrillic-ext × 400, 500, 600) are **map label glyphs** for MapLibre (`$KVADRO_ROOT/demo/app/src/features/map/gl/fonts.js:16-65`).
-- **Icons:** `lucide-react` in 45 files, plus the custom `RadarIcon` and `InstagramIcon` SVG components.
+- **Icons:** `lucide-react` in 45 files, plus the custom `RadarIcon` and `InstagramIcon` SVG components. Release
+  `index-BnFvC-Ft.js` adds `GalleryHorizontal` (the SCR-032 row) and, in the new `CardStylePicker.jsx`, `Check` and
+  `Image` (imported as `ImageIcon`), all from `lucide-react@1.69.0`
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:21-22,33`).
 - **Images:**
   - mascots `empty-magnifier.svg` (search empty) and `empty-shrug.svg` (favourites and history empty, crash), at 120 px;
   - `hooray.webp` (found survey), 132 px;
@@ -1745,7 +1832,9 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
 - **Responsive design:** none. There are no width or orientation media queries; the layout is single-column for phones.
 - **CSS cascade constraints:**
   - The order of the 24 `@import`s in `$KVADRO_ROOT/demo/app/src/styles/index.css:2-25` **is** the cascade of the
-    original bundle; the CSS must be imported after `App` in `main.jsx` (`main.jsx:2,17`).
+    original bundle; the CSS must be imported after `App` in `main.jsx` (`main.jsx:2,17`). Release
+    `index-BnFvC-Ft.js` adds a 25th, `card-style.css`, last (`index.css:26`; in the production CSS these rules are the
+    last bytes, `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:34`).
   - `MapScreen.css` arrives through App, and lazy chunks bring `mapgl.css` and `leaflet.css`.
   - `lite.css` and `fallbacks.css` rely on coming late.
   - The only feature fallback is `@supports not (color: color-mix(…))`; `:has()` is used without a fallback.
@@ -1835,6 +1924,7 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-071 | **Return banner** (since release `index-DY_DH7h-.js`). 1.8 s after a visit, with the radars loaded and nothing over the list, it is checked for that filter set. It needs: no radar with the same filters (for default filters, also none for the same base deal in the same city); radars < `max_subscriptions` (else 10); a previous visit ≥ 6 h ago; no snooze (14 days after 3 closes in a row, shared with the follow nudge); ≥ 8 h since the last nudge; no banner for this set in the last 2 days. Then `GET /api/feed/new` is sent, and the banner shows only for `count > 0` and hides after 15 s. Showing it stores the time for the set (`kv-nudge.back`, 40 kept), sets the last-nudge time, marks the set as offered and drops a follow nudge or its candidate; × counts towards the close streak. | `useReturnNudge.js:90-143`; `followNudge.js:150-216`; `Nudges.jsx:63-79`; `App.jsx:737-748` (at the pin) |
 | BR-APP-072 | **In-feed radar card** (since release `index-DY_DH7h-.js`) on the search list when meta and the radars are loaded, no radar exists for the search (the test of BR-APP-071), radars < max and the card is not snoozed. It follows the 8th card, or the last card when the list has 8 or fewer, is fully loaded and has no few-results note. The title depends on the base deal (rent, including daily, or sale), the button on custom or default filters. × hides it for 7 days on every search and does not count towards the nudge close streak. | `followNudge.js:219-244`; `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:98-106,128-139`; `App.jsx:297-303,629-645` (at the pin) |
 | BR-APP-073 | **«Включить радар» from the return banner or the in-feed card** resets the close streak. Custom filters go straight to the radar flow of BR-APP-041 with `entry` `return` / `feed`; default filters open the create-radar sheet (SCR-030), which sends the same `entry` (and `relaxed` when an option was picked). «+» and the empty radar screen open that sheet with `entry` `empty`, which it always sent before this release. | `App.jsx:399-415,629-635,712-721,749-753` (at the pin) |
+| BR-APP-074 | **Card style of the bot's listing cards** (since release `index-BnFvC-Ft.js`). The value is `card_style ?? 'classic'`. A pick in SCR-048 does nothing when it equals the current style or while a sample is sending; otherwise it resets the sample result to `idle` and saves `PUT /api/settings {card_style}` optimistically with a light haptic, takes the full answer as the new settings, and on failure restores the previous settings with the error haptic. «Прислать пример в чат» plays a light haptic, shows `sending` and sends `POST /api/settings/card-sample` without a body: `sent: true` → «Пример — в чате с ботом» with the minimise hint and the success haptic; `sent: false` or a failed request → «Пример не отправился — вид всё равно сохранён» and the warning haptic. The result stays until the next pick or until the Settings tab unmounts. The sample is sent in the saved style (`$KVADRO_ROOT/docs/api.md:1040-1043`, r31). | `SettingsScreen.jsx:94-96,133-171` (at r31, the same code as the release's unit `008-added-NEW$pj.jsx`); `CardStylePicker.jsx:17-56` (at r29); `$KVADRO_ROOT/demo/app/src/lib/api/settings.js:7-14` (at r29); `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:53-54` |
 
 ## 5. Known legacy bugs (LB-APP, tag `bug`)
 
@@ -1943,7 +2033,9 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
 
 - **Symptom:** `kv-locale` and `kv-new-*` are mirrored but never restored.
 - **Since release `index-DY_DH7h-.js`:** four keys are restored, `kv-visits` joined `DEVICE_SYNCED_KEYS` (`storage.js:6`
-  at the pin); the title keeps the audited count. `kv-locale` and `kv-new-*` are still not restored.
+  at the pin); the title keeps the audited count. `kv-locale` and `kv-new-*` are still not restored. Release
+  `index-BnFvC-Ft.js` adds `kv-new-cards`, written by the same `markFeatureSeen`: mirrored and not restored, like
+  `kv-new-pets` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`, unchanged since r6).
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/lib/storage.js:6,34-52`; `RECOVERY.md:171`.
 - **Proposed fix:** declare per key whether it is local-only, mirrored or restored; mirror only the keys that are
   restored.
@@ -2061,6 +2153,29 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
   pin).
 - **Proposed fix:** one nudge slot with a fixed priority (return banner, follow nudge, home offer): a higher nudge hides
   a lower one, and a hidden home offer stays available for later.
+
+#### LB-APP-051 — An unknown `card_style` crashes the Settings tab (`bug`, CONFIRMED)
+
+- **Since:** release `index-BnFvC-Ft.js`.
+- **Symptom:** the value of the «Вид карточек» row is `t('settings.cards.' + card_style)`, and `t()` throws on a
+  missing key (§3.1), so any `card_style` other than `classic`, `rich` or a missing value replaces the app with the
+  crash screen of the root error boundary (SCR-045). Legacy records it as a contract rule, not as a guard.
+- **Evidence:** `SettingsScreen.jsx:151,325` (at r31); `$KVADRO_ROOT/docs/api.md:982,986-989,1269-1270` (r31);
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:69`.
+- **Proposed fix:** the client shows and treats an unknown value as `classic`; the v1 contract allows only the two
+  values and answers `422 validation_failed` to anything else.
+
+#### LB-APP-052 — A `card-sample` answer without a JSON body hangs the sample button (`bug`, CONFIRMED)
+
+- **Since:** release `index-BnFvC-Ft.js`.
+- **Symptom:** the client reads `response.sent` inside the success handler of `sendCardSample()`. On a `204`
+  `apiFetch` resolves `undefined`, the read throws, and the error handler of the same `.then` does not catch it. The
+  state stays `sending`: the button stays disabled at «Отправляем пример в чат…», and every style pick is ignored,
+  until the Settings tab unmounts.
+- **Evidence:** `SettingsScreen.jsx:162-171` (at r31); `$KVADRO_ROOT/demo/app/src/lib/api/client.js:51,108` (at r31);
+  `$KVADRO_ROOT/docs/api.md:1053-1055` (r31); `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:69`.
+- **Proposed fix:** any answer without a boolean `sent`, and any error, counts as `failed`; the v1 method always
+  answers JSON with a boolean `sent`.
 
 ## 5b. Questionable UX and logic decisions (LB-APP, tag `decision`)
 
@@ -2239,6 +2354,18 @@ are proposals.
   the pin).
 - **Proposed fix:** record the nudge as shown, and send `*_shown`, from its first render, not when it is scheduled.
 
+#### LB-APP-053 — The card-style sample result outlives the sub-page (`decision`, CONFIRMED; intent UNVERIFIED)
+
+- **Since:** release `index-BnFvC-Ft.js`.
+- **Symptom:** the sample state lives in the settings screen, and closing «Вид карточек» does not reset it. Reopening
+  the sub-page still shows «Пример — в чате с ботом» or the failure line until the next pick or until the Settings tab
+  unmounts. The sync report places the state "after `closePage`, as in the bundle", so this is the shipped behaviour;
+  whether it is intended is not recorded.
+- **Evidence:** `SettingsScreen.jsx:94-96,153-160` (at r31);
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:29`.
+- **Proposed fix:** reset the result when the sub-page closes. Undecided; WP-31 keeps the legacy behaviour until it is
+  decided.
+
 ## 6. Reconstruction guesses and open questions
 
 ### 6.1 `// TODO: inferred from build` spots (4)
@@ -2257,7 +2384,7 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 
 | ID | Question | Check that closes it |
 | -- | -------- | -------------------- |
-| Q-APP-001 | What is the real minimum WebView the Mini App must support? | Pull the `platform` / `tg` distribution from `app_launch` and `app_error` in the legacy journal or PostHog; run a syntax checker over the prod bundle in `tools/parity/original/assets/` (read-only). |
+| Q-APP-001 | What is the real minimum WebView the Mini App must support? | Pull the `platform` / `tg` distribution from `app_launch` (with `tg` since release `index-BnFvC-Ft.js`) and `app_error` in the legacy journal or PostHog; run a syntax checker over the prod bundle in `tools/parity/original/assets/` (read-only). |
 | Q-APP-002 | Did the engine badge ever ship to users? | Inspect the prod chunks `MapView-*.js` / `MapViewGL-*.js` in `tools/parity/original/assets/` for the badge render. Product decision: drop it. |
 | Q-APP-003 | Is the GL label halo correct? | Confirm with the existing `gl-parity` style comparison (16/16 identical per RECOVERY.md:71-74); visual check against a prod screenshot. |
 | Q-APP-004 | Does `zoom < 11` really mean "region"? | Read `cities[].zoom` from a real `GET /api/meta` and confirm with the backend owner. `$KVADRO_ROOT/docs/api.md` §4 repeats the rule, but it was derived from code. |
@@ -2285,13 +2412,13 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 
 | Kind | Count | Status |
 | ---- | ----- | ------ |
-| Screens and states (SCR) | 47: 17 `screen`, 11 `sheet`, 8 `overlay`, 2 `modal`, 9 `state` (SCR-046 and SCR-047 since `index-DY_DH7h-.js`) | 47 CONFIRMED (SCR-011 contains 2 inferred style details) |
-| i18n keys | 482 per locale (ru, uz_Latn, en) at the pinned release, 461 at the audit (§3.1); 0 missing; 15 plural at the pin (14 up to `index-BNLZFfL0.js`); 6 unused | CONFIRMED |
+| Screens and states (SCR) | 48: 18 `screen`, 11 `sheet`, 8 `overlay`, 2 `modal`, 9 `state` (SCR-046 and SCR-047 since `index-DY_DH7h-.js`, SCR-048 since `index-BnFvC-Ft.js`) | 48 CONFIRMED (SCR-011 contains 2 inferred style details; for SCR-048 the bot side is UNVERIFIED) |
+| i18n keys | 510 per locale (ru, uz_Latn, en) at the pinned release `index-BnFvC-Ft.js`, 482 at `index-DY_DH7h-.js`, 461 at the audit (§3.1); 0 missing; 15 plural at the pin (14 up to `index-BNLZFfL0.js`); 6 unused | CONFIRMED |
 | Client storage keys | 11 `kv-*` at the pin (6 mirrored to DeviceStorage, 4 restored; 10, 5 and 3 at the audit) + 1 dev-only | CONFIRMED |
 | Analytics | 21 journal events (`POST /api/events`) at the pin, 16 at the audit, + PostHog `$pageview` with 16 screen names, autocapture, web vitals, exceptions, replay | CONFIRMED |
-| Business rules (BR-APP) | 73 (BR-APP-070 to 073 since `index-DY_DH7h-.js`) | CONFIRMED |
-| Legacy bugs (LB-APP, `bug`) | 26 (LB-APP-001 to 023, 046, 048, 049; 14 from RECOVERY.md §7, 12 found here) | 19 CONFIRMED; 7 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048) |
-| Questionable decisions (LB-APP, `decision`) | 24 (LB-APP-024 to 045, 047, 050) | CONFIRMED |
+| Business rules (BR-APP) | 74 (BR-APP-070 to 073 since `index-DY_DH7h-.js`, BR-APP-074 since `index-BnFvC-Ft.js`) | CONFIRMED |
+| Legacy bugs (LB-APP, `bug`) | 28 (LB-APP-001 to 023, 046, 048, 049, 051, 052; 14 from RECOVERY.md §7, 14 found here) | 21 CONFIRMED; 7 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048) |
+| Questionable decisions (LB-APP, `decision`) | 25 (LB-APP-024 to 045, 047, 050, 053) | CONFIRMED (the intent of 053 UNVERIFIED) |
 | `TODO: inferred from build` | 4 (3 in `src`, 1 in `vite.config.js`) | UNVERIFIED |
 | Open questions (Q-APP) | 23 (Q-APP-001 to 022 and 026 here; Q-APP-023 to 025 are in `24`) | open |
 | Telegram integration points (TMA) | 45 in `05-telegram-miniapp-audit.md` (39 used, 6 confirmed absences) | CONFIRMED (2 server-side parts DOCUMENTED_ONLY) |

@@ -6,7 +6,7 @@
 | Status | WAITING (merged in #45 on 2026-11-15; production track: `TELEGRAM_SUPPORT_USERNAME`, deploy, staging check of `GET /reference` without a token and of sign-in → `GET /me`) |
 | Depends on | WP-10 |
 | Size | about 2 000 changed lines without generated files and fixtures, M |
-| Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034; `02` BR-API-123; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
+| Behaviour reference | `25` §3.4, §4.1, §4.2; `08` §1.5 and the rows of API-001, API-002, API-003, API-024, API-025, API-034 (API-036 since the intake of `index-BnFvC-Ft.js`); `02` BR-API-123; `03` §3.3 (events), §4 (BR-APP-050, BR-APP-054, BR-APP-055); `16` §4.1 (SEC-REQ-002, SEC-REQ-004, SEC-REQ-005), SEC-REQ-022; task `tasks/backend/KV-BE-045-settings.md` (preset sets, partial update) |
 | Needs from the production track | Two new env key names, announced in the PR. `TELEGRAM_SUPPORT_USERNAME`, blank by default (public name of the support account; staging and production values set by that track). `RADAR_CREATION_ENABLED`: leave it **unset** on staging and production — radars stay switched off there until the bot's sending package sets it (WP-57, DEC-51). After the deploy, check on staging that `GET /api/v1/reference` answers without a token and reports `radars_enabled: false` |
 
 ## Goal
@@ -98,7 +98,7 @@ Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: f
 
 ```json
 {"data": {"locale": "ru", "currency": "USD", "theme": "auto", "city": "tashkent",
-          "quiet_hours": {"from": 23, "to": 8}, "digest_hours": [9, 19],
+          "quiet_hours": {"from": 23, "to": 8}, "digest_hours": [9, 19], "card_style": "classic",
           "options": {
             "locales": [{"code": "ru", "name": "Русский"}, {"code": "uz", "name": "Oʻzbekcha"}, {"code": "en", "name": "English"}],
             "currencies": [{"code": "USD", "name": "Доллары"}, {"code": "UZS", "name": "Сумы"}],
@@ -107,7 +107,7 @@ Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: f
 ```
 
 Hours are whole hours of Asia/Tashkent wall-clock, 0 … 23; `quiet_hours: null` means off; a window may cross
-midnight. `PATCH` takes any subset of the six writable keys and returns the full object:
+midnight. `PATCH` takes any subset of the seven writable keys and returns the full object:
 
 | Body field | Rule |
 | ---------- | ---- |
@@ -117,6 +117,7 @@ midnight. `PATCH` takes any subset of the six writable keys and returns the full
 | `city` | a city code of `GET /reference` |
 | `quiet_hours` | `null` or `{from, to}` equal to one of `options.quiet_hours` |
 | `digest_hours` | an array equal to one of `options.digest_hours` |
+| `card_style` | `classic`, `rich`; anything else, `null` included, is `422` (fix of LB-APP-051) |
 
 Unknown keys are ignored; an empty body is a `200` no-op; a bad value is `422 validation_failed` with `errors.<key>`.
 Setting `locale` or `city` makes `locale_chosen` or `city_chosen` true in `GET /me`. Changed against legacy: `PUT`
@@ -124,6 +125,29 @@ with partial semantics became `PATCH`; `quiet` (`off` or `HH-HH`) and `digest` (
 `locales`, `currencies` and the two preset lists moved under `options`; `theme` and `city` are returned. The preset
 sets are the ones the legacy bot offers (task `KV-BE-045`). Stub: `PATCH` validates and returns the fixture with the
 sent keys overlaid; nothing is stored.
+
+*Added by the intake of legacy release `index-BnFvC-Ft.js` (2026-11-19; `03` SCR-048, BR-APP-074, DEC-57):*
+`card_style` is the style in which the bot sends listing cards, `classic` (photo and caption) or `rich` (swipeable
+photos, data as a table). It is always present in the answer, `classic` by default until Q-API-067 says otherwise;
+legacy may omit it or send `null`, and any other value crashed the legacy settings screen (LB-APP-051). It is the
+seventh writable key. Scenario `card_rich` answers `GET` and `PATCH` with `card_style: "rich"`
+(`settings/card_rich.json`; legacy parity scenario `settings-cards-rich-saved`). Enum `App\Enums\CardStyle`.
+
+### `POST /settings/card-sample` — bearer `app:write`; legacy: API-036
+
+*Added by the intake of legacy release `index-BnFvC-Ft.js` (2026-11-19).* No body; a body is ignored. The bot sends
+the user one sample listing card in the saved `card_style`. Answer:
+
+```json
+{"data": {"sent": true}}
+```
+
+`sent` is always a boolean and the answer is always JSON, never `204` (fix of LB-APP-052); `false` means the bot could
+not send the card. Native in Wave 1: HOMI's bot sends the sample (WP-53 builds the card, WP-57 sends it). Which
+listing the sample shows, when `sent` is `false` and the per-user rate limit are open (Q-API-067); the bot side of
+`rich` is Q-BOT-046. Stub: nothing is sent; `sent: true`, and scenario `card_sample_unsent` answers `sent: false`;
+the four reserved scenarios and the five `access_*` apply. Route name `api.v1.settings.card-sample`;
+`App\Http\Controllers\Api\V1\CardSampleController` with `CardSampleResource`.
 
 ### `GET /reference` — public, cacheable per locale; legacy: the shared part of the meta method and the bot names (API-001, API-003)
 
@@ -159,7 +183,8 @@ the key unset until WP-57. `bot.username` and `support_username` may be
 localised by `Accept-Language`. `is_region` replaces the legacy rule "zoom below 11". Changed against legacy: one
 public method instead of an authenticated one plus `/api/bot`; `metro` and `median` became `has_metro` and
 `has_median`; `center` became an object; `max_subscriptions` became `limits.radars`; `new_features` became
-`features`; the top-level `districts` and `zones` fallback is gone (every city carries its own); `radars_enabled`
+`features` (HOMI announces only `pets`: legacy `cards`, since release `index-BnFvC-Ft.js`, is not announced,
+DEC-57); the top-level `districts` and `zones` fallback is gone (every city carries its own); `radars_enabled`
 is new (legacy has no such switch). Scenarios:
 `single_city` (only `tashkent`), `no_bot` (`bot.username: null`). *Corrected while executing:*
 - `single_city` filters the default fixture of the locale, so it needs no fixture of its own and stays localised.
@@ -193,7 +218,7 @@ products; `listing_id` carries the listing number. Catalogue:
 
 | Name | Properties |
 | ---- | ---------- |
-| `app_launch` | `entry` (`link`, `news`, `menu`), `ms`, `v`, `sdk`, `js`, `platform` |
+| `app_launch` | `entry` (`link`, `news`, `menu`), `ms`, `v`, `sdk`, `js`, `platform`, `tg` (the Telegram WebApp version, a string; legacy since release `index-BnFvC-Ft.js`) |
 | `app_opened` | `entry`, `listing_id` (only for `link`), `ms` |
 | `app_error` | `v`, `error` = `{kind (boot, error, rejection, render), name, message, source, stage (boot, app), screen, tg, platform}` |
 | `follow_prompt_shown`, `follow_prompt_expired`, `follow_prompt_closed` | none |
@@ -237,7 +262,8 @@ renderer of WP-10 answers as `413 payload_too_large`.
     fixture (`POST /events`);
   - it rests on `FixtureStore::pick()` and `failForReserved()` of WP-10.
 - Routes (`backend/routes/api.php`, names `api.v1.*`): `auth.telegram`, `me.show`, `settings.show`,
-  `settings.update`, `reference.show`, `cities.index`, `events.store`. Today the file has one `v1` group that
+  `settings.update`, `reference.show`, `cities.index`, `events.store`; since the intake of `index-BnFvC-Ft.js` also
+  `settings.card-sample`. Today the file has one `v1` group that
   carries `auth:sanctum` and holds the media routes: split it into an outer group (prefix, name, `SetRequestLocale`,
   `throttle:api`) and an inner `auth:sanctum` group that keeps the media routes unchanged. The public routes sit in
   the outer group; `throttle:api` stays until WP-40 attaches the named limiters.
@@ -320,7 +346,10 @@ renderer of WP-10 answers as `413 payload_too_large`.
 - Sign-in: missing `init_data`, 4 097 bytes, non-string → `422`; a `200` returns a token that authenticates `GET /me`;
   two sign-ins create two tokens for one stub user; the token lacks `media:write` (`403 forbidden` on a media write).
 - Settings: one case per writable key; `quiet_hours` outside the options, `digest_hours: [9, 9]`, unknown city →
-  `422` with the field name; `{}` → `200`.
+  `422` with the field name; `{}` → `200`. Since the intake of `index-BnFvC-Ft.js`: `card_style` `rich` round-trips,
+  `compact` and `null` → `422`, scenario `card_rich`; `POST /settings/card-sample` answers `sent: true`,
+  `card_sample_unsent` answers `sent: false`, `app:read` alone is `403 forbidden`, no token is `401`
+  (`CardSampleContractTest`).
 - Reference and cities: answer without `Authorization`; `Accept-Language: uz` gives Uzbek names and
   `Content-Language: uz`; `uz-Latn` is read as `uz`; an unsupported language falls back to `ru`; flag set to an
   unbound driver → `503 source_unavailable`; `radars_enabled` is `true` with `radar.creation_enabled` on and

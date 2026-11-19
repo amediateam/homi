@@ -1186,6 +1186,18 @@
     "source": "telegram-bot.md §6.9 l.783; §12 l.1048"
   },
   {
+    "id": "BOT-085",
+    "kind": "scheduled-message",
+    "trigger": "Sample card on request of the Mini App (POST /api/settings/card-sample, since Mini App release index-BnFvC-Ft.js; not scheduled)",
+    "summary": "The bot sends one listing card into the user's chat in the saved card style (classic or rich); {sent} answers the Mini App. Not described in telegram-bot.md; which listing, buttons, failure cases and rate limit are unknown (Q-API-067, Q-BOT-046).",
+    "buttons": [],
+    "backend_effects": [
+      "Writes the chat"
+    ],
+    "status": "UNVERIFIED",
+    "source": "api.md:1040-1055 (r31); demo/app/src/features/settings/SettingsScreen.jsx:162-171 (r31)"
+  },
+  {
     "id": "BTN-001",
     "kind": "callback",
     "trigger": "web_app, primary button: `📱 Открыть kvadro²` · EN `📱 Open kvadro²`",

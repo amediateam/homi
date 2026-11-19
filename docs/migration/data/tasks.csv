@@ -43,7 +43,7 @@ KV-BE-041,backend,Blocked authors: API-014 and API-015,TODO,M,8,F-HIDE-002,KV-BE
 KV-BE-042,backend,"«Скрытое»: API-026, API-027, API-028",TODO,M,10,F-HIDE-003,KV-BE-028 KV-BE-040 KV-BE-041,,tasks/backend/KV-BE-042-hidden-management.md
 KV-BE-043,backend,Votes and reports: API-016,TODO,L,9,F-REPORT-001 F-REPORT-003,KV-BE-040 KV-DB-007 KV-DB-008 KV-DB-010 KV-DB-032,DEC-10 Q-API-039,tasks/backend/KV-BE-043-votes-reports.md
 KV-BE-044,backend,Found survey: API-032 and API-033,TODO,S,6,F-DELIVERY-007,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-DB-010,,tasks/backend/KV-BE-044-found-survey.md
-KV-BE-045,backend,Settings: API-024 and API-025,TODO,M,9,F-LOCALE-001 F-ONBOARD-002 F-ONBOARD-003 F-SETTINGS-001 F-SETTINGS-004 F-SETTINGS-005,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-BE-014 KV-BE-015 KV-BE-029 KV-DB-007,,tasks/backend/KV-BE-045-settings.md
+KV-BE-045,backend,Settings: API-024 and API-025,TODO,M,9,F-LOCALE-001 F-ONBOARD-002 F-ONBOARD-003 F-SETTINGS-001 F-SETTINGS-004 F-SETTINGS-005 F-SETTINGS-007,KV-BE-005 KV-BE-007 KV-BE-009 KV-BE-010 KV-BE-014 KV-BE-015 KV-BE-029 KV-DB-007,,tasks/backend/KV-BE-045-settings.md
 KV-BE-046,backend,Share: API-017 prepared inline messages,BLOCKED,M,12,F-SHARE-001,KV-BE-020 KV-BE-021 KV-BE-036 KV-QA-003,,tasks/backend/KV-BE-046-share.md
 KV-BE-047,backend,LLM gateway with PII masking and spend controls,TODO,M,1,F-LISTING-005 F-PRIVACY-004,,DEC-03 Q-SEC-006,tasks/backend/KV-BE-047-llm-gateway-pii-masking.md
 KV-BE-048,backend,Translation: API-010,BLOCKED,M,10,F-LISTING-005,KV-BE-018 KV-BE-045 KV-BE-047 KV-DB-033,,tasks/backend/KV-BE-048-translation.md
@@ -216,7 +216,7 @@ KV-FE-077,frontend,Radar subscription sheet,TODO,M,15,F-RADAR-004 F-RADAR-005,KV
 KV-FE-078,frontend,New radar and radar editor sheets,TODO,M,14,F-RADAR-002 F-RADAR-003,KV-BE-032 KV-BE-103 KV-BE-105 KV-FE-050 KV-FE-054 KV-FE-074,Q-API-031 Q-APP-006,tasks/frontend/KV-FE-078-radar-create-edit.md
 KV-FE-079,frontend,«Нашли жильё?» survey,TODO,S,11,F-DELIVERY-007,KV-BE-044 KV-FE-013 KV-FE-030,Q-API-030,tasks/frontend/KV-FE-079-found-survey.md
 KV-FE-080,frontend,Radar follow nudge,TODO,S,14,F-RADAR-007 F-RADAR-009 F-RADAR-010,KV-FE-028 KV-FE-034 KV-FE-048 KV-FE-074,Q-APP-005,tasks/frontend/KV-FE-080-follow-nudge.md
-KV-FE-081,frontend,Settings screen and «О приложении»,TODO,M,11,F-SETTINGS-001,KV-BE-022 KV-BE-042 KV-BE-045 KV-BE-101 KV-FE-012 KV-FE-013 KV-FE-045 KV-FE-086,Q-API-029,tasks/frontend/KV-FE-081-settings-screen.md
+KV-FE-081,frontend,Settings screen and «О приложении»,TODO,M,11,F-SETTINGS-001 F-SETTINGS-007,KV-BE-022 KV-BE-042 KV-BE-045 KV-BE-101 KV-FE-012 KV-FE-013 KV-FE-045 KV-FE-086,Q-API-029,tasks/frontend/KV-FE-081-settings-screen.md
 KV-FE-082,frontend,Settings › Theme and Graphics,TODO,S,12,F-SETTINGS-002 F-SETTINGS-003,KV-BE-045 KV-FE-026 KV-FE-027 KV-FE-081,,tasks/frontend/KV-FE-082-settings-theme-graphics.md
 KV-FE-083,frontend,"Settings › Language and Currency, without a reload",TODO,S,12,F-LOCALE-001 F-SETTINGS-004,KV-BE-020 KV-BE-045 KV-FE-015 KV-FE-017 KV-FE-023 KV-FE-081,Q-APP-011,tasks/frontend/KV-FE-083-settings-language-currency.md
 KV-FE-084,frontend,Settings › Quiet hours and Digest time,TODO,S,12,F-SETTINGS-005,KV-BE-045 KV-FE-081,Q-API-029,tasks/frontend/KV-FE-084-settings-quiet-digest.md
@@ -342,7 +342,7 @@ KV-TG-018,telegram,`/app` and `/help`,TODO,S,7,F-BOT-002 F-SUPPORT-001,KV-TG-008
 KV-TG-019,telegram,"`/ping`: `pong` for everyone, details for admins only",TODO,S,9,F-BOT-002,KV-TG-006 KV-TG-056,DEC-22,tasks/telegram/KV-TG-019-ping-admin-only.md
 KV-TG-020,telegram,"Unknown commands, non-text messages and group chats",TODO,S,7,F-BOT-002 F-BOT-014,KV-TG-006 KV-TG-008,Q-BOT-013,tasks/telegram/KV-TG-020-unknown-commands-non-text-groups.md
 KV-TG-021,telegram,"Chat reachability: `my_chat_member`, blocked bot, `409 no_chat` source",TODO,S,5,F-DELIVERY-002 F-RADAR-008,KV-DB-007 KV-TG-006,Q-BOT-012,tasks/telegram/KV-TG-021-chat-reachability.md
-KV-TG-022,telegram,Listing card renderer and `CardSender` with the delivered-card log,TODO,L,6,F-BOT-011 F-OWNER-002,KV-DB-009 KV-TG-010 KV-TG-011,CF-003 CF-017 Q-BOT-002,tasks/telegram/KV-TG-022-listing-card-renderer-and-sender.md
+KV-TG-022,telegram,Listing card renderer and `CardSender` with the delivered-card log,TODO,L,6,F-BOT-011 F-OWNER-002 F-SETTINGS-007,KV-DB-009 KV-TG-010 KV-TG-011,CF-003 CF-017 Q-BOT-002,tasks/telegram/KV-TG-022-listing-card-renderer-and-sender.md
 KV-TG-023,telegram,Card buttons «На карте» and «Ещё N фото»,TODO,S,7,F-BOT-011,KV-TG-022,,tasks/telegram/KV-TG-023-card-map-and-photos.md
 KV-TG-024,telegram,Card buttons: favourite set/unset and «Уже сдано» with undo,TODO,M,7,F-FAV-002 F-REPORT-002,KV-DB-010 KV-TG-022,,tasks/telegram/KV-TG-024-card-favourite-and-rented.md
 KV-TG-025,telegram,Card button «Это риелтор» with undo and weighted vote,TODO,S,7,F-REPORT-002 F-REPORT-003,KV-TG-022,Q-BOT-029,tasks/telegram/KV-TG-025-card-realtor-vote.md

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Enums\CardStyle;
 use App\Enums\Currency;
 use App\Enums\Locale;
 use App\Enums\Theme;
@@ -11,8 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The object of `GET /settings` and `PATCH /settings` (WP-11): the six writable values and, under `options`, what may
- * be chosen. Hours are Asia/Tashkent wall-clock; `quiet_hours: null` means off.
+ * The object of `GET /settings` and `PATCH /settings` (WP-11): the seven writable values and, under `options`, what may
+ * be chosen. Hours are Asia/Tashkent wall-clock; `quiet_hours: null` means off. `card_style` is always present (legacy
+ * may omit it; intake of `index-BnFvC-Ft.js`).
  *
  * @property-read array<array-key, mixed> $resource
  */
@@ -36,6 +38,7 @@ class SettingsResource extends JsonResource
             'city' => Fields::nullableString($this->settings, 'city'),
             'quiet_hours' => $this->quietHours(),
             'digest_hours' => Fields::ints($this->settings, 'digest_hours'),
+            'card_style' => CardStyle::fromField($this->settings, 'card_style'),
             'options' => [
                 'locales' => NamedCodeResource::collection($options->locales()),
                 'currencies' => NamedCodeResource::collection($options->currencies(app()->getLocale())),

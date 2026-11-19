@@ -6,7 +6,7 @@
 | Owner | Frontend (track: development) |
 | Complexity | M |
 | Milestone | FE-2 (M9, stage S4) |
-| Feature IDs | F-SETTINGS-001 |
+| Feature IDs | F-SETTINGS-001, F-SETTINGS-007 |
 | Dependencies | KV-FE-012 (settings group, row, choice list primitives), KV-FE-013 (sub-page primitive), KV-FE-045 (app shell, tab), KV-FE-086 (home-screen row); backend KV-BE-045 (API-024, API-025), KV-BE-042 (API-026), KV-BE-022 (API-003), KV-BE-101 (API-018, digest radars for the hint); decisions: FD-8 (brand strings), Q-API-029 |
 
 ## Goal
@@ -18,6 +18,8 @@ news toggle, privacy or account rows: those are bot functions).
 
 ## Legacy reference
 
+- Since legacy release `index-BnFvC-Ft.js`: the group «Чат с ботом» with the row «Вид карточек» and its sub-page
+  (SCR-048, BR-APP-074; built in WP-31).
 - SCR-032 (`03` §2): `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:38-222` (parallel loads `:57-69`,
   error and spinner `:71-80`, groups `:141-197`, sub-pages `:198-219`), `AboutGroup.jsx:17-52`, `format.js:9-37`
   (`formatQuietHours`, `formatDays`, `INSTAGRAM_URL`, `graphicsAutoLabel`), `SettingsGroup.jsx`, `SettingsRow.jsx`,

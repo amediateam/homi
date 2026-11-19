@@ -113,7 +113,8 @@ Migration notes:
 One row per command, scenario step, free-text handler, deep link, outbound message and system behaviour. Order:
 identity (001–011), commands (012–022), global mechanics and language (023–026), deep links (027–035), radar wizard
 (036–053), free text (054–058), listing card (059–062), `/subs` and the poll (063–071), `/fav` (072–073), `/settings`
-(074), `/owner` (075–079), `/privacy` (080), outbound (081–084). The same records are in
+(074), `/owner` (075–079), `/privacy` (080), outbound (081–085; 085 seen only from the Mini App, since its release
+`index-BnFvC-Ft.js`). The same records are in
 [`data/bot-handlers.json`](data/bot-handlers.json).
 
 | ID | Kind | Trigger | Behaviour | Buttons | Backend effects | Status | Source |
@@ -202,6 +203,7 @@ identity (001–011), commands (012–022), global mechanics and language (023�
 | BOT-082 | scheduled-message | Digest time of the user (09:00 / 19:00 / 12:00 / 20:00) for radars in digest mode | A list of new listings at the chosen times (Asia/Tashkent). Format not observed (Q-BOT-003). | — | Digest queue drained; delivered log written (inferred) | `UNVERIFIED` | tb §6.9 l.777; §12 l.1047 |
 | BOT-083 | scheduled-message | End of the user's quiet hours | No cards during quiet hours; everything that appeared overnight comes as one morning digest. Not observed (Q-BOT-003). | — | Deferred cards flushed as a digest (inferred) | `UNVERIFIED` | tb §6.9 l.775; §12 l.1047 |
 | BOT-084 | scheduled-message | Service-news broadcast | Users with `📰 Новости сервиса: Присылать` receive service news. None observed; sender tool unknown (Q-BOT-004). | — | — | `UNVERIFIED` | tb §6.9 l.783; §12 l.1048 |
+| BOT-085 | scheduled-message | Sample card on request of the Mini App (`POST /api/settings/card-sample`, since Mini App release `index-BnFvC-Ft.js`; not scheduled) | The bot sends one listing card into the user's chat in the saved card style (`classic` or `rich`, §3.10); the answer `{sent}` says whether it was sent. Not described in `tb`; which listing it shows, which buttons work, when it fails and any rate limit are unknown (Q-API-067, Q-BOT-046). | unknown | Writes the chat | `UNVERIFIED` | `api.md:1040-1055` (r31); `app/features/settings/SettingsScreen.jsx:162-171` (r31) |
 
 ## 3. Scenario state machines
 
@@ -580,6 +582,18 @@ stateDiagram-v2
 | Stale copies | Old copies keep working; the action applies to the server state and only the pressed copy changes (BOT-024, LB-BOT-007) | `tb:670–672` |
 | Backend      | Favourite toggle; realtor vote per phone; rented vote with undo; hide rule stored in the radar | §4.1 |
 
+**Card style** (seen from the Mini App only; release `index-BnFvC-Ft.js` of 2026-11-14; `tb` is at r20 of 2026-11-09
+and does not describe it). The user picks how the bot sends listing cards: `classic` or `rich` (`03` SCR-048,
+BR-APP-074; `GET` / `PUT /api/settings` field `card_style`, a missing value meaning `classic`). `classic` is the card
+described above; the Mini App's mock of it is a short form: some of its rows (🏠 💰 📊 📍 🏢, the owner line, the
+quote) and the keyboard abbreviated as [📱 📍] [🔗 📷 +5] [⭐ …] (`app/features/settings/CardStylePicker.jsx:97-126`). `rich` is known only from the Mini App's mock and one sentence
+of the API docs: photos that swipe inside the card, the price as a heading, the title in bold, the market line, a
+table Район / Метро / Площадь / Сдаёт, «📝 Описание ›», button rows [📱 📍] [🔗 ⭐] [… ], and "only recent Telegram
+versions" show it (`CardStylePicker.jsx:128-165`; `api.md:986-987`, r31; the Mini App hint
+`settings.cards.hint`). How it is built on the Bot API, which Telegram version it needs and what a `rich` user on
+an older client receives are unknown (Q-BOT-046). The Mini App can ask the bot for a sample card (BOT-085).
+`UNVERIFIED`.
+
 ### 3.11 `/subs` — radar list, radar card, edit, delete (`tb` §6.7)
 
 ```mermaid
@@ -954,6 +968,7 @@ specified (Q-BOT-002, Q-BOT-003, Q-BOT-033), or captured on a test account befor
 | BOT-082 | Digest                          | User digest times 09 / 09+19 / 12+20 / 19, Asia/Tashkent | Only radars in digest mode (`tb:777`) | Format, size cap, empty digest, one digest for all radars or one per radar | `UNVERIFIED` |
 | BOT-083 | Morning digest after quiet hours | End of the quiet window                             | No cards in the window; overnight items in one morning digest (`tb:775`) | Exact send time; whether it also applies to instant radars only; edge cases | `UNVERIFIED` |
 | BOT-084 | Service news                    | Broadcast by the team                                | Opt-out in `/settings` (`tb:783`, BTN-072) | Content, frequency, admin tool (`ab:585`) | `UNVERIFIED` |
+| BOT-085 | Sample card                     | `POST /api/settings/card-sample` from the Mini App    | One card in the saved card style; `{sent}` answers the Mini App (`api.md:1040-1055`, r31) | Which listing, buttons, failure cases, rate limit (Q-API-067, Q-BOT-046) | `UNVERIFIED` |
 | BOT-069 | Poll «Нашли жильё?»             | Radar paused (seen); radar deleted (expected)        | New message after a pause; suppressed shortly after an answer (inferred) | Suppression window; exact rule (`ask_found`) | `DOCUMENTED_ONLY` |
 | BOT-062 | Card edited to «Объявление снято» | Listing taken down                                  | Promised in `/privacy` (`tb:862`) | Text, buttons, trigger list | `UNVERIFIED` |
 | —       | Favourite notifications (price drop, removal) | —                                       | Not seen in the bot or the app (`ab:575`) | Whether they exist (Q-BOT-033) | — |
@@ -1385,6 +1400,7 @@ data is involved.
 | Q-BOT-043 | Does a language change in the Mini App switch the bot's language and command menu? | BOT-025 | Change language in the Mini App on a test account, then `/start` and open the command menu | test account |
 | Q-BOT-044 | Are the bot's cities, districts, zones, median availability and presets the same data as `GET /api/meta` / `GET /api/cities`, and what are the codes behind the labels? | BR-BOT-026, BR-BOT-031, BR-BOT-032 | Compare the Mini App's `/api/meta` response (devtools on a test account) with `tb:351–358` and §3.6 | test account |
 | Q-BOT-045 | Text of the `▶️ Включить` toast when new matches exist | BTN-051, TXT-BOT-063 | Resume a radar on a test account after a few hours paused | test account |
+| Q-BOT-046 | What is the `rich` listing card at the Bot API level (one message with swipeable photos and a caption? a media group? another construct that "only recent Telegram versions" show), which Telegram version is its floor, and what does a `rich` user on an older client receive (`classic` instead?)? Did the legacy bot's own `/settings` gain a card-style row? | BOT-085, BOT-059, §3.10 | The operator's answer (WP-02 request); or switch a test account to `rich` in the legacy Mini App, press «Прислать пример в чат» and record the message on a recent and an older Telegram client | operator / test account |
 
 ## 10. Boundary: what the bot does and what the Mini App does
 
@@ -1419,8 +1435,8 @@ handlers vs `/api/v1` controllers) over shared domain services, and must not mer
 | BOT · scenario-step | 40 | DOCUMENTED_ONLY 38, UNVERIFIED 2 |
 | BOT · deep-link | 9 | DOCUMENTED_ONLY 2, UNVERIFIED 7 |
 | BOT · free-text | 3 | DOCUMENTED_ONLY 2, UNVERIFIED 1 |
-| BOT · scheduled-message | 5 | UNVERIFIED 5 |
-| **BOT total** | **84** | DOCUMENTED_ONLY 65, UNVERIFIED 19 |
+| BOT · scheduled-message | 6 | UNVERIFIED 6 (BOT-085 since Mini App release `index-BnFvC-Ft.js`) |
+| **BOT total** | **85** | DOCUMENTED_ONLY 65, UNVERIFIED 20 |
 | BTN · web_app | 4 | DOCUMENTED_ONLY 3, UNVERIFIED 1 |
 | BTN · callback | 68 | DOCUMENTED_ONLY 60, UNVERIFIED 8 |
 | BTN · url | 2 | DOCUMENTED_ONLY 2 |
@@ -1430,7 +1446,7 @@ handlers vs `/api/v1` controllers) over shared domain services, and must not mer
 | TXT-BOT (texts, toasts, alerts) | 88 | DOCUMENTED_ONLY 80, UNVERIFIED 8 |
 | BR-BOT (business rules) | 104 | CONFIRMED 10, DOCUMENTED_ONLY 89, UNVERIFIED 5 |
 | LB-BOT (bugs 14 + decisions 17) | 31 | DOCUMENTED_ONLY 25, UNVERIFIED 6 |
-| Q-BOT (open questions) | 45 | — |
+| Q-BOT (open questions) | 46 | — |
 
 ### Findings that matter most for the migration
 

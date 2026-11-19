@@ -84,7 +84,7 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
   KV-FE-073). The eye is never shown. Checked against the legacy source: `ListingFeed.jsx:86-91` filters only the
   favourites and the search, history gets every item. The check read the reconstructed `demo/app/src` at SVN r29,
   synced to release `index-BnFvC-Ft`, one release newer than the pinned `index-DY_DH7h-`; that release's delta
-  report changes nothing in the saved views. The release intake that moves the pin past it (`README.md` rule 7) reads it again.
+  report changes nothing in the saved views. The intake of `index-BnFvC-Ft` (2026-11-19) moved the pin to SVN r29, so this read is of the pinned release.
 - List key (`features/saved/listKey.ts`, `useSavedList.ts`): `savedListKey(source, renderId, version)`; the server
   builds the key of its page one with `FIRST_VERSION`, so the hydration render adopts it.
   - **Entering the page:** every server render of the page brings a new `renderId` and re-creates the list from that
@@ -284,7 +284,7 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - **The legacy history rule** (acceptance line): legacy does not filter history by the hidden map
   (`ListingFeed.jsx:86-91`). The read was of the reconstructed source at SVN r29 (release `index-BnFvC-Ft`, one
   newer than the pinned `index-DY_DH7h-`, with no change to the saved views in its delta), not of the pinned
-  release. The release intake that moves the pin past it (`README.md` rule 7) reads it again.
+  release. The intake of `index-BnFvC-Ft` (2026-11-19) moved the pin to SVN r29, so this read is of the pinned release.
 - **Departures recorded under rule 6:**
   - AM-94: a list entered again re-creates from that server render.
   - AM-95: history's `seen` rule is checked on the return to the list.

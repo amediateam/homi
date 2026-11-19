@@ -276,7 +276,7 @@ done of `25` §14:
 | - | ---------------- | ----- |
 | 1 | Every work package is done | the queue; each PR with its signed checklist |
 | 2 | No method answers from a stub on production | `launch:check` rows 1 … 3; the driver table with observed `meta.source` |
-| 3 | All 47 screens and all bot scenarios have a signed checklist | WP-33 and the packages of stage B; `docs/testing/bot-pass.md` of WP-58 |
+| 3 | All 48 screens and all bot scenarios have a signed checklist | WP-33 and the packages of stage B; `docs/testing/bot-pass.md` of WP-58 |
 | 4 | The Mini App works on iOS, Android, Desktop and Web, in cookie mode and header mode | the device pass of WP-33, repeated on production data after WP-48 |
 | 5 | An instant card, a digest and a quiet-hours release were each observed on production | the checklist line of WP-57 with date and radar |
 | 6 | The landing is live with the privacy page | WP-61; the page answers on `homi.uz` in three languages |
@@ -303,7 +303,7 @@ done of `25` §14:
 - [ ] The production bot's profile is synced (`telegram:profile diff` exits 0) and the manual BotFather items are
       done: avatar, description picture, Main Mini App, privacy link, inline off, groups off.
 - [ ] The welcome text was read on production in ru, uz and en; it names HOMI and nothing of the old product.
-- [ ] All 47 screens and every bot scenario have a signed checklist; the links are in `docs/launch/checklist.md`.
+- [ ] All 48 screens and every bot scenario have a signed checklist; the links are in `docs/launch/checklist.md`.
 - [ ] The Mini App was opened from the production bot on iOS, Android, Desktop and Web, in cookie mode and in
       header mode, on legacy data.
 - [ ] Radars are switched on on production (`radar.creation_enabled` in `launch:check` row 4): the Mini App

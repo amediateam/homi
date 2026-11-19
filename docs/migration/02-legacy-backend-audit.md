@@ -841,6 +841,14 @@ None of these jobs is visible; the table lists what the observable behaviour req
   `src/lib/telegram/webApp.js:133-150`; `index.html:44-59`.
 - **Q-API-057** — Is the language one field for bot and Mini App, and does a Mini App locale change re-localise the
   bot commands? *Check:* change language in the Mini App with a test account and open the bot menu.
+- **Q-API-067** — The card style of the bot's listing cards (since release `index-BnFvC-Ft.js`; `card_style` of
+  `GET` / `PUT /api/settings` and `POST /api/settings/card-sample`, `08` API-024, API-025, API-036): what is the
+  default `card_style` of a new user; does the bot read the Telegram version (`app_launch.tg`) and what does a `rich`
+  user on an older client receive; when does `card-sample` answer `sent: false` (chat closed, blocked bot, limits),
+  and is it rate-limited; which listing does the sample show (a fixed demo, the user's last match, a listing of the
+  user's city)? The legacy contract asks the first three itself (§14 question 16, Doc r31:1318-1320). *Check:* the
+  operator's answer (WP-02 request); with a test account, `GET /api/settings` before any change, then «Прислать
+  пример в чат» several times in a row, with the bot blocked and on an older Telegram client.
 - **LB-API-018** · `quirk` · `CONFIRMED` — If `PUT /api/settings {locale}` is not reflected as `locale_chosen: true` in
   `/api/meta`, the language picker reappears after every reload — an endless loop; the same for `city_chosen` and the
   first city picker. *Evidence:* Doc:890-897; `App.jsx:234`, :257.
@@ -1147,18 +1155,18 @@ the transition (About:437-440).
 
 | Prefix | Count | Defined in |
 | ------ | ----: | ---------- |
-| `API-` | 35 | `08-api-inventory.md` §2 |
+| `API-` | 36 | `08-api-inventory.md` §2 |
 | `RES-` | 22 | `08-api-inventory.md` §3 |
 | `BR-API-` | 158 | this document |
 | `LB-API-` | 55 (19 `bug`/`quirk` in §3–§21, 36 `decision` in §24) | this document |
-| `Q-API-` | 61 | this document |
+| `Q-API-` | 62 | this document |
 
 ### Status distribution
 
 | Prefix | CONFIRMED | DOCUMENTED_ONLY | UNVERIFIED | DEPRECATED_CANDIDATE |
 | ------ | --------: | --------------: | ---------: | -------------------: |
-| `API-` (contract) | 35 | 0 | 0 | 0 |
-| `API-` (server logic) | 0 | 34 | 1 (API-017) | 0 |
+| `API-` (contract) | 36 | 0 | 0 | 0 |
+| `API-` (server logic) | 0 | 35 | 1 (API-017) | 0 |
 | `RES-` (primary label) | 13 | 7 | 2 | 0 (RES-016 is flagged as a candidate in `08` §5) |
 | `BR-API-` | 80 | 71 | 7 | 0 |
 | `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 3 (decision) | 0 |

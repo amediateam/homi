@@ -13,8 +13,9 @@
 
 The bot looks like a finished product in every chat list — name, description, command menu, menu button — and that
 profile is defined in the repository and applied by one command. Every interaction leaves an action-log entry
-without texts. A coverage test proves that each of the 84 handlers, 76 buttons and 88 texts of the legacy bot is
-exercised by a conversation test or named as an exception, and the whole bot is walked through by hand inside
+without texts. A coverage test proves that each of the 85 handlers (BOT-085, the sample card, since the intake of
+legacy release `index-BnFvC-Ft.js`), 76 buttons and 88 texts of the legacy bot is exercised by a conversation test or
+named as an exception, and the whole bot is walked through by hand inside
 Telegram on staging and production.
 
 ## Scope
@@ -124,9 +125,9 @@ before a reply. The names are added to `config/analytics.php` → `events` of WP
 - `backend/tests/Fixtures/Bot/coverage.json`: for every handler, button and text id — the owner package and either
   the transcript files whose `covers` list names it, or `spec` with the test that covers it, or `exception` with a
   reason. The tables in "Behaviour to reproduce" are the source of the owner column.
-- `backend/tests/Feature/Bot/BotCoverageTest.php`: fails unless the fixture has exactly 84 handler ids, 76 button
+- `backend/tests/Feature/Bot/BotCoverageTest.php`: fails unless the fixture has exactly 85 handler ids, 76 button
   ids and 88 text ids, every transcript named exists and names the id in `covers`, every `spec` test exists, and the
-  number of exceptions equals the list below. It prints `84/84 handlers, 76/76 buttons, 88/88 texts` and the
+  number of exceptions equals the list below. It prints `85/85 handlers, 76/76 buttons, 88/88 texts` and the
   exceptions.
 - Expected exceptions (each with its reason in the fixture): BOT-035 (payload of a support bot HOMI does not run);
   TXT-BOT-002 (an image, checked by hand in the pass); TXT-BOT-088 (content written by the team per broadcast);
@@ -545,7 +546,7 @@ from.
       made in the bot.
 - [ ] The profile opens the Mini App and the privacy page; inline mode shows nothing; the bot cannot be added to a
       group.
-- [ ] `BotCoverageTest` prints `84/84 handlers, 76/76 buttons, 88/88 texts` and names four exceptions.
+- [ ] `BotCoverageTest` prints `85/85 handlers, 76/76 buttons, 88/88 texts` and names four exceptions.
 - [ ] The injection, forgery, locale-sweep, interim-list and radar-switch tests are green.
 - [ ] A sample of the action log on staging after the pass shows the eleven event groups (and `contact_disclosed`
       for the numbers shown) and no text, phone, name or Telegram id in any property.
