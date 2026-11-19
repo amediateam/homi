@@ -39,6 +39,7 @@ const PLURALS = [
   "market.v3.district",
   "market.v3.city",
   "back.new",
+  "app.freshShow",
 ];
 
 describe("the merged catalogues", () => {
@@ -50,7 +51,7 @@ describe("the merged catalogues", () => {
     expect(Object.keys(merged.en).sort()).toEqual(ru);
   });
 
-  it("hold the 15 plural keys as ICU plurals on n with the forms of each locale", () => {
+  it("hold the 16 plural keys as ICU plurals on n with the forms of each locale", () => {
     for (const locale of locales) {
       const plurals = Object.entries(merged[locale])
         .filter(([, value]) => value.startsWith("{n, plural,"))
@@ -177,8 +178,8 @@ describe("the legacy layer", () => {
   const layers = { ru: legacyRu, uz: legacyUz, en: legacyEn } as Record<string, Tree>;
 
   it("matches the key list of the pinned release, which keeps the legacy names", () => {
-    expect(keyList.release).toBe("index-CBlEKxdL.js");
-    expect(keyList.keys).toHaveLength(563);
+    expect(keyList.release).toBe("index-CIa0Ldj2.js");
+    expect(keyList.keys).toHaveLength(581);
     for (const layer of Object.values(layers)) {
       expect(Object.keys(flatten(layer)).map(legacyName).sort()).toEqual([...keyList.keys].sort());
     }

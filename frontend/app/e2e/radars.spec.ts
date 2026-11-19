@@ -342,7 +342,7 @@ for (const mode of ["cookie", "header"] as const) {
       await tileSwitch(page, ACTIVE).click();
       await expect(tileSwitch(page, ACTIVE)).toHaveAttribute("aria-checked", "true");
       // The stub's resume answers `starter: 2` (`radars/patched.json`).
-      await expect(appToast(page)).toHaveText("Радар снова включён. 2 объявления, которые вы не видели, — в чате с ботом");
+      await expect(appToast(page)).toHaveText("Радар снова включён. В чате с ботом — непросмотренные: 2 объявления");
       expect(actions).toHaveLength(2);
       expect(actions[1].postData() ?? "").toContain(`{"id":"${ACTIVE}","active":true}`);
       await expect(tile(page, ACTIVE).locator("[data-radar-status]")).toHaveText("≈3 в день · сразу");

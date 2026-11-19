@@ -111,7 +111,7 @@ export function resetRadarSwitches(): void {
  * The switch of a radar, on its tile and in its sheet (SCR-026, SCR-028; legacy `RadarScreen.toggle`): a light
  * impact and the new state at once, in both cached lists (`putRadar`). Switching on goes through `withChatAccess`
  * (`patchRadar({ id, active: true })`), pausing is a plain patch (BR-APP-048). The answer replaces the radar; switching
- * on with `starter > 0` → «Радар снова включён. {count}, которые вы не видели, — в чате с ботом» (`subs.resumed`); an
+ * on with `starter > 0` → «Радар снова включён. В чате с ботом — непросмотренные: {count}» (`subs.resumed`); an
  * answer with `ask_found` opens the survey with the trigger `pause` — pushed from a tile, replacing the sheet from the
  * sheet, so Back lands on the tab. A failure restores the radar as it was and goes to `radarActionFailed`. Presses
  * while the radar's switch is in flight are ignored.
