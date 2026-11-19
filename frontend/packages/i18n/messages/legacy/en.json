@@ -345,7 +345,8 @@
       "look": "Appearance",
       "region": "Language and currency",
       "notify": "When to send",
-      "about": "About"
+      "about": "About",
+      "chat": "Chat with the bot"
     },
     "hidden": "Hidden",
     "home": "Home screen icon",
@@ -364,6 +365,37 @@
       "full": "Full",
       "lite": "Lite",
       "hint": "Lite turns off the blur under panels and on photos, so the feed scrolls smoother on slower phones. Auto turns it on by itself if the phone is slow or the feed stutters."
+    },
+    "cards": {
+      "_": "Card style",
+      "classic": "Classic",
+      "rich": "New",
+      "classicHint": "Photo and caption. Shows in any Telegram version",
+      "richHint": "Photos swipe in the card, details in a table",
+      "hint": "This is how listing cards arrive in the chat with the bot. Only recent Telegram versions show the new style — send a sample to check: if you can't see the card, update Telegram or switch back to classic.",
+      "sent": "Sample sent to the bot chat",
+      "send": "Send a sample to the chat",
+      "sending": "Sending a sample to the chat…",
+      "failed": "The sample didn't send — the style is saved anyway",
+      "minimize": "To see it, minimize the app — swipe it down",
+      "demo": {
+        "title": "2-room apartment",
+        "price": "$650/mo",
+        "median": "about the usual price",
+        "place": "Yunusobod · Minor metro",
+        "area": "54 m² · floor 4/9",
+        "owner": "Owner",
+        "quote": "2-room flat for rent…",
+        "rowDistrict": "District",
+        "rowMetro": "Metro",
+        "rowArea": "Area",
+        "rowOwner": "Listed by",
+        "district": "Yunusobod",
+        "metro": "Minor",
+        "areaShort": "54 m²",
+        "ownerShort": "🏠 Owner",
+        "details": "📝 Description"
+      }
     }
   },
   "hidden": {

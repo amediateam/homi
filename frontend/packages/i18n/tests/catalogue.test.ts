@@ -150,15 +150,15 @@ describe("the legacy layer", () => {
   const layers = { ru: legacyRu, uz: legacyUz, en: legacyEn } as Record<string, Tree>;
 
   it("matches the key list of the pinned release, which keeps the legacy names", () => {
-    expect(keyList.release).toBe("index-DY_DH7h-.js");
-    expect(keyList.keys).toHaveLength(476);
+    expect(keyList.release).toBe("index-BnFvC-Ft.js");
+    expect(keyList.keys).toHaveLength(504);
     for (const layer of Object.values(layers)) {
       expect(Object.keys(flatten(layer)).map(legacyName).sort()).toEqual([...keyList.keys].sort());
     }
   });
 
   it("moves exactly the listed leaf-and-prefix keys to <key>._ and renames nothing else", () => {
-    expect(leafAndPrefix).toEqual(["settings.graphics", "settings.theme", "sheet.market", "sheet.posted"]);
+    expect(leafAndPrefix).toEqual(["settings.cards", "settings.graphics", "settings.theme", "sheet.market", "sheet.posted"]);
     const moved = Object.keys(flatten(layers.ru))
       .filter((path) => path.endsWith("._"))
       .map(legacyName)

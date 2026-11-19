@@ -345,7 +345,8 @@
       "look": "Koʻrinish",
       "region": "Til va valyuta",
       "notify": "Qachon yuborish kerak",
-      "about": "Ilova haqida"
+      "about": "Ilova haqida",
+      "chat": "Bot bilan chat"
     },
     "hidden": "Yashirilganlar",
     "home": "Telefon ekranidagi belgi",
@@ -364,6 +365,37 @@
       "full": "Toʻliq",
       "lite": "Yengil",
       "hint": "Yengil — panellar ostida va suratlarda xiralashtirishsiz: kuchsiz telefonlarda lenta silliqroq varaqlanadi. Telefon kuchsiz boʻlsa yoki lenta qotsa, «Avto» uni oʻzi yoqadi."
+    },
+    "cards": {
+      "_": "Kartochkalar koʻrinishi",
+      "classic": "Klassik",
+      "rich": "Yangi",
+      "classicHint": "Rasm va matn. Telegramning istalgan versiyasida koʻrinadi",
+      "richHint": "Rasmlar kartochkada varaqlanadi, maʼlumotlar jadvalda",
+      "hint": "Eʼlon kartochkalari bot bilan chatga shunday keladi. Yangi koʻrinishni faqat Telegramning yangi versiyalari koʻrsatadi — namuna yuborib tekshiring: kartochka koʻrinmasa, Telegramni yangilang yoki klassikni qaytaring.",
+      "sent": "Namuna bot bilan chatda",
+      "send": "Namunani chatga yuborish",
+      "sending": "Namuna chatga yuborilmoqda…",
+      "failed": "Namuna yuborilmadi — koʻrinish baribir saqlandi",
+      "minimize": "Koʻrish uchun ilovani yigʻing — uni pastga suring",
+      "demo": {
+        "title": "2-xonali xonadon",
+        "price": "$650/oyiga",
+        "median": "odatdagi narxda",
+        "place": "Yunusobod · Minor metrosi",
+        "area": "54 m² · 4/9-qavat",
+        "owner": "Uy egasi",
+        "quote": "2 xonali xonadon ijaraga…",
+        "rowDistrict": "Tuman",
+        "rowMetro": "Metro",
+        "rowArea": "Maydon",
+        "rowOwner": "Beradi",
+        "district": "Yunusobod",
+        "metro": "Minor",
+        "areaShort": "54 m²",
+        "ownerShort": "🏠 Uy egasi",
+        "details": "📝 Tavsif"
+      }
     }
   },
   "hidden": {
