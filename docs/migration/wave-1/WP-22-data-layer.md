@@ -39,8 +39,8 @@ radars and surveys). `useCursorFeed` (WP-24). Card and listing text helpers (WP-
 - DEC-41, `25` §4.1, §4.6: the frontend sees `/api/v1` only; types come from `@homi/types`; every answer carries
   `meta.source`; `503 source_unavailable` shows the legacy "could not load" state.
 - `25` §3.7, `03` §3.5: numbers in Uzbek are formatted with `ru-RU`; prices are stored and sent in USD.
-- DEC-36. Fixed here: LB-APP-007, LB-APP-011, LB-APP-023. Written behind flags that are off: LB-APP-025
-  (`dev014TashkentDates`), LB-APP-029 (`dev017TenantPetsDailyRule`),
+- DEC-36. Fixed here: LB-APP-007, LB-APP-011, LB-APP-023. Written behind flags that were off as built: LB-APP-025
+  (`dev014TashkentDates`, on by default since DEC-58), LB-APP-029 (`dev017TenantPetsDailyRule`),
   LB-APP-030 (`dev018ResetKeepsDaily`), LB-APP-031 (`dev019OneDistanceFormatter`), LB-APP-033
   (`dev021OneFlowVocabulary`), LB-APP-043 (`dev025ValidateRanges`), LB-APP-045
   (`dev001AnyForbiddenShowsAccess`). Also wired: `dev052UnifiedBelowMedianRule`, `dev005RadarDropsPostedDays`.

@@ -124,7 +124,7 @@ header `X-Stub-Scenario: <name>`, read only by the stub driver, and it leaves th
 
 | # | State | Reached by | Layer |
 | - | ----- | ---------- | ----- |
-| 1 | Access refused, each of the five reasons | `access_private`, `access_invite`, `access_full`, `access_blocked`, `access_join` (WP-11) | end to end; not inside Telegram while the gate is open |
+| 1 | Access refused, each of the six reasons | `access_private`, `access_invite`, `access_full`, `access_blocked`, `access_join`, `access_paused` (WP-11; `paused` since `index-CIa0Ldj2.js`, DEC-60) | end to end; not inside Telegram while the gate is open |
 | 2 | First launch; city not chosen; Uzbek profile with UZS | `first_launch`, `no_city`, `uz` | end to end |
 | 3 | Launch data too old | `auth_expired` on sign-in | end to end |
 | 4 | Token rejected in the middle of use | reserved `unauthenticated`, set after launch and cleared after the first rejection | end to end |
@@ -338,7 +338,8 @@ LB-APP-054 … LB-APP-078 and TMA-046, and TMA-034 is no longer an absence in le
 the owner-cabinet plan.
 
 Since the intake of `index-CIa0Ldj2.js` the audit also holds SCR-063, BR-APP-104 … BR-APP-111, LB-APP-079 …
-LB-APP-083 and TMA-047; their lines are in the specifications of WP-34 … WP-38 and join this checklist with them.
+LB-APP-083 and TMA-047; their lines are in the specifications of WP-34 … WP-38 (for BR-APP-107 and LB-APP-079: WP-57) and join this
+checklist with them.
 The numbers in the headings below are unchanged (*added by the intake of `index-CIa0Ldj2.js`*).
 
 ### Rules (74)
@@ -421,8 +422,8 @@ the legacy branch is what the checklist sees and the other branch is proven by a
 | 53 | LB-APP-053 | sample result outlives the sub-page | WP-31 | legacy behaviour kept, `decision` open |
 
 Totals: 39 fixed, 13 flagged, 1 kept as legacy (LB-APP-053). Four more flags exist without a client defect behind
-them — off, except the five that legacy adopted (DEC-58): of these four `dev051RentedUndo`, and of the 13 above
-rows 25, 27 and the pets half of 29 — (paged saved lists, the paging part of DEV-003, are not among them: DEC-53
+them — off, except the five that legacy adopted (DEC-58): of these four `dev051RentedUndo`, of the 13 above
+rows 25, 27 and the pets half of 29, and the new `dev010AgentMarkedToast` of WP-34 — (paged saved lists, the paging part of DEV-003, are not among them: DEC-53
 made them plain behaviour). WP-34 adds rows 5 and 6 when it splits two flags. The approved differences without a
 flag gain DEV-053 (DEC-67):
 
@@ -484,7 +485,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | - | ------ | ---- | ------- | ------------------ | -------------- |
 | 1 | SCR-001 | «Обновите Telegram» | WP-21 | inline boot guard | three languages; light and dark; «Вернуться в бота» closes; «Попробовать ещё раз» reloads; not shown when only the SDK fails |
 | 2 | SCR-002 | Outside Telegram | WP-23 | `/outside` | the one sentence in three locales; no request to `/bff/*` |
-| 3 | SCR-003 | No access | WP-23 | `/no-access` | five reasons, unknown as private; checking line, never for blocked; post, bot or close, support buttons; leaves by itself on success. Stubs only |
+| 3 | SCR-003 | No access | WP-23 | `/no-access` | six reasons (`paused` since `index-CIa0Ldj2.js`), unknown as private; checking line, never for blocked; post, bot or close, support buttons; leaves by itself on success. Stubs only |
 | 4 | SCR-004 | Language picker | WP-23 | `/welcome/language` | headings in Telegram's language; that language first; buttons disabled while saving; failure re-enables; success moves to the chosen locale |
 | 5 | SCR-005 | First-launch city | WP-23 | `/welcome/city` | no close, no Back; counts; location row with its three errors; a pick enters the feed; a linked listing comes first |
 | 6 | SCR-006 | Shell | WP-23 | layout of the main group | top bar per tab; four tabs with the lens; list / map toggle; collapse after 24 px, first tap only expands; safe areas |
@@ -585,15 +586,16 @@ those are merged; "built" means the merged code already does it (*added by the i
 - [ ] `e2e-coverage.mjs` reports no screen without a test; the tables of this file name every rule, defect and
       Telegram point once (the check of step 10 and a count: 47, 73, 50, 45).
 - [ ] The 37 fixed defects each have a passing test that would fail on the legacy behaviour; the 13 flagged ones
-      and the 4 other flags each have tests for both branches; `lib/flags.ts` on `main` has 17 flags, all `false`.
+      and the 4 other flags each have tests for both branches; before WP-34 `lib/flags.ts` had 17 flags, all `false`.
       After WP-34 and WP-35: 20 flags, each with tests for both branches; five are `true` — the behaviours legacy
       adopted in `index-CIa0Ldj2.js` (DEC-58): `dev014TashkentDates`, `dev016ErrorToastOnFailure`,
       `dev051RentedUndo`, `dev010AgentMarkedToast` and `dev017PetsLongRentOnly` — and the rest `false`.
-- [ ] The 32 scenarios of legacy release `index-CIa0Ldj2.js` are ticked, each with its package.
-- [ ] The five decided differences from legacy hold on the merged build: the "soon" state with radars off — and with
+- [ ] The 31 scenarios of legacy release `index-CIa0Ldj2.js` that WP-34 … WP-38 build are ticked, each with its
+      package; scenario 8 (`radar-link`) is ticked with WP-57 (DEC-61).
+- [ ] The six decided differences from legacy hold on the merged build: the "soon" state with radars off — and with
       it no follow nudge, no return banner and no radar card in the search list —, no phone number before a tap,
-      saved lists paged by 20, «{city} целиком», and «Смотрели» re-created once on the return after a listing was
-      opened (DEV-053, DEC-67).
+      saved lists paged by 20, «{city} целиком», the card-style row without the «Новое» pill (DEC-57), and «Смотрели»
+      re-created once on the return after a listing was opened (DEV-053, DEC-67).
 - [ ] The eight journeys pass in both modes; the state table has a scenario or a named lower-layer test per row.
 - [ ] No test reaches an external host; no test contains real launch data, a real phone or a real name.
 - [ ] `render.spec.ts` finds no raw key, no missing-message report and no legacy brand word in three locales.

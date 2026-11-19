@@ -209,7 +209,7 @@ installing the key.
 - Breaker: five failures open it; while open no request is sent; after `open_for` exactly one probe is sent by
   concurrent callers; success closes; a `429` with `Retry-After: 120` opens for 120 s; `Retry-After: 9999` is capped;
   a `429` with `detail: "too many today"` raises `DailyLimitReached`, leaves the breaker closed and writes one
-  warning.
+  warning; a `403` with `detail: "paused"` raises `AccessDenied` with the reason `paused` and counts no failure.
 - Translators: every row of the rule table; the no-cities variant; a missing required key → contract error naming
   the key; unknown extra keys ignored.
 - Source: second call within ten minutes sends no request; cache key differs per locale; failure with a last good
@@ -222,8 +222,8 @@ installing the key.
 
 - [ ] `LegacyClient` sends the key in the configured header, never logs it, and never calls without a key.
 - [ ] Timeouts, one read retry, the limiter and the breaker behave as specified and are covered by tests.
-- [ ] Every legacy outcome maps to `not_found`, `source_unavailable` or, for legacy's daily limit, `rate_limited`
-      with `reason: "daily"` (DEC-59); no legacy error body reaches a v1 answer.
+- [ ] Every legacy outcome maps to `not_found`, `source_unavailable`, `access_denied` with `reason: "paused"` for a
+      paused legacy (DEC-60), or, for legacy's daily limit, `rate_limited` with `reason: "daily"` (DEC-59); no legacy error body reaches a v1 answer.
 - [ ] `GET /reference` and `GET /cities` with the `legacy` driver equal the stub in shape, in `ru`, `uz` and `en`.
 - [ ] The golden fixtures are sanitised and documented; a shape change fails `ReferenceGoldenContractTest`.
 - [ ] No test or CI job opens a network connection (`Http::preventStrayRequests()` in every feature test file).

@@ -53,7 +53,7 @@ Out:
   error half of DEV-016 and all of DEV-051.
 - DEC-68 (`25` §4.2): `DELETE /listings/{number}/reports` withdraws only the caller's `rented` vote and the hidden
   row it made; a repeat answers `204`. So only «Уже сдано» calls it; the `fraud` undo keeps `unhideListing`
-  (`DELETE /listings/{number}/hide`).
+  (`DELETE /hidden/listings/{number}`).
 - WP-13 "Reports" (the contract on stubs): `agent_marked` is always present, `true` when the author is marked as a
   realtor by this vote or already. The client reads the boolean as given.
 - DEC-51: radars are off in production, so the radar failure toasts are reached only with radars on — in the unit
@@ -261,6 +261,9 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
   «Отметили номер как риелторский».
 - `e2e/radars.spec.ts:413-415` keeps asserting no toast after a successful delete; its comment names
   `dev016SuccessToastOnDestructive`.
+- `tests/radars/RadarTiles.test.tsx`: a `409` limit answer to the switch shows «Не получилось сохранить» and returns
+  the switch to its state; `no_chat` keeps its chat text.
+- `tests/ui/toast-host.test.tsx`: under reduced motion the toast does not rise and still follows a drag.
 
 ## Acceptance checklist
 
@@ -286,6 +289,8 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - [ ] Every new or changed case of `e2e/feed.spec.ts` and `e2e/listing-actions.spec.ts` passes in cookie mode and in
       header mode.
 - [ ] `pnpm -r lint`, `pnpm -r typecheck`, `pnpm -r build`, unit, component and end-to-end suites are green.
+- [ ] A `409` limit answer to the radar switch (radars on) reads «Не получилось сохранить» and the switch returns.
+- [ ] With reduced motion on, a toast appears without the rise and can still be dragged away.
 - [ ] Rows 4, 21 – 25, 27 and 30 of `baseline.md` (built code behind the pin) are marked closed.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web.
 

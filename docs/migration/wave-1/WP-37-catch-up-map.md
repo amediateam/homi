@@ -144,6 +144,8 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
   points shown; the existing "N из M" cases still pass.
 - Both specs: pan and zoom the map, go to the list and back: the camera is where it was and no fit follows; change a
   filter and return: the map fits again.
+- `tests/map/camera.test.ts`: a new module instance (a document reload) recalls no camera; the fit memory per city
+  still gives the first view.
 
 ## Acceptance checklist
 

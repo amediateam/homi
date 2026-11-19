@@ -37,7 +37,7 @@ top bar with the title tabs «Избранное» / «Смотрели», the t
   returns each list whole in one request; since `index-CIa0Ldj2.js` legacy pages favourites too, and history is
   still whole there, so DEC-53 stays a difference for history (*added by the intake of `index-CIa0Ldj2.js`*).
 - Defects (DEC-36): LB-APP-022 is fixed here. The silent failure of «Очистить» (LB-APP-027) and the 403 text
-  (LB-APP-045) follow the flags `dev016ErrorToastOnFailure` and `dev001AnyForbiddenShowsAccess`, both off. Since the
+  (LB-APP-045) follow the flags `dev016ErrorToastOnFailure` and `dev001AnyForbiddenShowsAccess`, both off as built. Since the
   intake of `index-CIa0Ldj2.js` `dev016ErrorToastOnFailure` is on by default: legacy shows the failure toast of
   «Очистить» itself since that release (DEC-58; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of
   `failed()` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).

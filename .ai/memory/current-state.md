@@ -58,7 +58,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Methods on stubs:** favourites, history, hidden listings, blocked authors, the hidden list, reports, the two
     found-survey methods, the six radar methods, and the public `GET /landing/live` and `/landing/pins`. With them
     the `/api/v1` route list equals the 39 pairs of `25` §4.2 (a test pins it; 40 since the intake of
-    `index-BnFvC-Ft`, #88, added `POST /settings/card-sample`).
+    `index-BnFvC-Ft`, #88, added `POST /settings/card-sample`; 41 since the intake of `index-CIa0Ldj2`, which added
+    `DELETE /listings/{number}/reports`).
   - **Radar switch (DEC-51):** `EnsureRadarsEnabled` on the four radar writes answers `403 radars_disabled` while
     `radar.creation_enabled` is false; `GET /radars` answers `[]`; `DELETE` works.
   - **Stubs:** personal fixtures hold listing numbers resolved through the card source (`StubListingRefs`);

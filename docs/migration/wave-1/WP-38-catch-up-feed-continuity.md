@@ -32,7 +32,7 @@ Out:
 - The hidden list's feed reload and its forgetting of the scroll: WP-31, through the exports of this package.
 - The launch link `?radar=<id>`: WP-57 with WP-52 (DEC-61).
 - One request and one count for the pill and the return banner, `since` from the first page (LB-APP-082): not
-  adopted, except that the pill's request is aborted on a new list key.
+  adopted, except that the pill's request is aborted on a new list key (a default of the integrator).
 - The return banner itself (SCR-046): unchanged; it must keep working after the silent reload.
 
 ## Decisions that bind this package
@@ -132,7 +132,7 @@ Changed, under `frontend/app/`:
   `features/radars/RadarSheetRoute.tsx`, `features/gallery/UiGallery.tsx` (`ArrowUp`)
 - tests: `tests/nudges/visits.test.ts`, `tests/feed/{FeedScreen.test.tsx,FeedServer.test.ts}`,
   `tests/shell/{TopBar,TabBar}.test.tsx`, `tests/radars/{RadarSheetRoute,RadarSheet}.test.tsx`,
-  `tests/deeplinks/launch.test.tsx`, `tests/listing/closeListing.test.ts`
+  `tests/deeplinks/launch.test.tsx`, `tests/listing/closeListing.test.ts`, `tests/nudges/ReturnNudge.test.tsx`
 
 Changed in `frontend/packages/ui/`: `src/icons/index.ts`, `src/components/BottomSheet.tsx`,
 `tests/{controls,BottomSheet}.test.tsx`.

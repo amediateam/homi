@@ -23,7 +23,7 @@ recommended to the developer was the first one; answers 1, 2, 4 and 10 are not t
 
 | # | Question | Answer | Recorded as | Note |
 | - | -------- | ------ | ----------- | ---- |
-| 1 | Five behaviours that HOMI holds behind `DEV` flags, off, are legacy behaviour since `index-CIa0Ldj2.js`: the failure toast (DEV-016), history dates in Asia/Tashkent (DEV-014), the undo of «Уже сдано» (DEV-051), «С животными» only for long-term rent (DEV-017), the realtor-vote answer by `agent_marked` (DEV-010). What happens to the flags? | «Включить, флаги оставить» | DEC-58 | The defaults go on; the flags and both tested branches stay. The halves legacy did not adopt keep a flag of their own, off. Amends DEC-36 |
+| 1 | Five behaviours that HOMI holds behind `DEV` flags, off, are legacy behaviour since `index-CIa0Ldj2.js`: the failure toast (DEV-016), history dates in Asia/Tashkent (DEV-014), the undo of «Уже сдано» (DEV-051), «С животными» only for long-term rent (DEV-017), the realtor-vote answer by `agent_marked` (DEV-010). What happens to the flags? | «Включить, флаги оставить» | DEC-58 | The defaults go on; the flags and both tested branches stay. The halves legacy did not adopt keep a flag of their own, off — this split of three flags and the three new names are the integrator's reading of the answer, not part of it. Amends DEC-36 |
 | 2 | Legacy answers `429 too many today` on a listing and shows «Лимит на сегодня». HOMI has no daily cap on opening listings. | «Экран и свой лимит HOMI» | DEC-59 | The screen, the contract mark `reason: "daily"`, and HOMI's own per-user cap; its threshold is set in WP-40 (Q-API-085). The operator is asked whether legacy counts per service key (Q-API-080) |
 | 3 | Legacy answers `403 paused` and shows «Бот на паузе». | «Экран сейчас, переключатель в WP-40» | DEC-60 | The reason and the screen now; the switch in WP-40, off by default |
 | 4 | Legacy reads a launch link `?radar=<id>`. | «Всё вместе с ботом» | DEC-61 | Specified now; the Mini App's reading and the bot's link and button are built with the bot packages (WP-52, WP-57) |
@@ -35,7 +35,7 @@ recommended to the developer was the first one; answers 1, 2, 4 and 10 are not t
 | 10 | «Смотрели»: re-created after a listing was opened (HOMI as built) or only on entering the tab or a pull (legacy since `index-CBlEKxdL.js`)? | «Оставить наше» | DEC-67 | A recorded deviation, DEV-053, on without a flag; WP-29's specification goes back to the as-built rule |
 | 11 | What does `DELETE /listings/{number}/reports` withdraw? | «Только „Уже сдано“» | DEC-68 | The caller's `rented` vote and its hidden row; a repeat answers `204` |
 
-Five technical points were not asked. They are defaults of the integrator, written into the specifications and
+Six technical points were not asked. They are defaults of the integrator, written into the specifications and
 listed in the PR for the reviewer; none is a decision of the developer:
 
 - the mark "the launch listing was already opened" keeps a digest of the launch hash and the number, never the raw
@@ -46,11 +46,13 @@ listed in the PR for the reviewer; none is a decision of the developer:
   scenario `map_cut` produces a cut answer;
 - the `homi` text `toast.reportedAgentReview` loses its last reader when the toast follows `agent_marked`, and WP-34
   removes it;
-- the contact failures of the listing keep the haptic alone when the failure toast goes on (WP-34).
+- the contact failures of the listing keep the haptic alone when the failure toast goes on (WP-34);
+- a legacy `403 paused` under the service key reaches the user as `403 access_denied` with the reason `paused` and is
+  not counted as a failure of the legacy breaker (WP-41).
 
 One wording differs from the option as it was shown. The option of answer 8 said that the feed opens on sale "in
 the listing's city". Legacy keeps the feed's own city, and the question was whether to do what legacy does, so
-DEC-65 records the feed's city.
+DEC-65 records the feed's city. This reading waits for the developer's confirmation.
 
 ## Order of work after the third release
 

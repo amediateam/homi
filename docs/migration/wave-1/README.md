@@ -136,7 +136,7 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-54](WP-54-bot-radar-wizard.md) | Radar wizard | WP-53, WP-45 | TODO |
 | [WP-55](WP-55-bot-radar-screens.md) | Free text and voice, poll, radar list and card, edit | WP-54 | TODO |
 | [WP-56](WP-56-bot-settings-owner-privacy.md) | Settings, owner verification, privacy, erasure | WP-52, WP-47 | TODO |
-| [WP-57](WP-57-bot-sending.md) | Sending: pacing, outbox, quiet hours, digest, withdrawn cards, broadcasts | WP-53, WP-46 | TODO |
+| [WP-57](WP-57-bot-sending.md) | Sending: pacing, outbox, quiet hours, digest, withdrawn cards, broadcasts; the radar launch link `?radar=<id>` (DEC-61) | WP-53, WP-46 | TODO |
 | [WP-58](WP-58-bot-profile-tests.md) | Bot profile as code, action log, conversation tests, pass inside Telegram | WP-52 … WP-57 | TODO |
 | [WP-59](WP-59-support-bot.md) | Support bot: a second bot that relays between a person and the operators' private chats | WP-58 | TODO |
 

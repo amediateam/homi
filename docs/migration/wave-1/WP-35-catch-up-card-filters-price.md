@@ -139,7 +139,7 @@ The doc comment drops the D-SH-3 sentence and cites DEC-66.
 ## Files
 
 New, under `frontend/app/`: `features/feed/minuteClock.ts`, `features/feed/CardAge.tsx`,
-`tests/feed/minuteClock.test.ts`, `tests/feed/Photo.test.tsx`.
+`tests/feed/minuteClock.test.ts`, `tests/feed/Photo.test.tsx`; `tests/listing/AuthorSection.test.tsx` (existing).
 
 Changed, under `frontend/app/`:
 
@@ -253,6 +253,8 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 - `e2e/filters.spec.ts`: long-term rent shows «Площадь, м²» and «Животные»; daily rent shows «Площадь, м²» and no
   «Животные»; sale shows «Площадь, м²»; the radar create sheet (radars on) shows «Площадь, м²» for rent.
 - `e2e/map.spec.ts`: the selection card of a stub listing with `owner_verified` shows the shield after the price.
+- `search/tests/transitions.test.ts`: a rent ↔ sale switch clears the area range; a long ↔ daily switch keeps it; a
+  switch to daily rent clears `tenant`, `pets` and `pets_only`.
 
 ## Acceptance checklist
 
@@ -274,6 +276,9 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - [ ] Every new or changed case of `e2e/feed.spec.ts`, `e2e/listing-open.spec.ts`, `e2e/filters.spec.ts` and
       `e2e/map.spec.ts` passes in cookie mode and in header mode.
 - [ ] `pnpm -r lint`, `pnpm -r typecheck`, `pnpm -r build`, unit, component and end-to-end suites are green.
+- [ ] An area set on rent survives a switch to daily rent and is cleared by a switch to sale; daily rent clears the
+      tenant and pets filters.
+- [ ] The listing's author section shows the server's own string, unchanged.
 - [ ] Rows 1, 2, 11, 12, 20, 26, 31, 32 and 38 – 42 of `baseline.md` (built code behind the pin) are marked closed.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web.
 

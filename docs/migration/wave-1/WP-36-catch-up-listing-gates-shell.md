@@ -244,6 +244,9 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 - `e2e/shell.spec.ts` with `launchApp(page, { sdk: false })`: the cross on the listing in its skeleton, content and
   error states (`999503`) and on `/settings/theme`; each closes; the page below a sub-page does not scroll.
 - `e2e/spot-map.spec.ts`: on the Leaflet engine the mini map's expand chip opens the fullscreen map.
+- `tests/listing/ListingLayer.test.tsx`: a new opening during the leave cancels the leave and shows the new listing.
+- `tests/gates/useBootRetry.test.tsx`: `paused` is checked again three times and on the return to the app; `blocked`
+  is not.
 
 ## Acceptance checklist
 
@@ -265,6 +268,8 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - [ ] Every new or changed case of `e2e/listing-open.spec.ts`, `e2e/gates.spec.ts`, `e2e/launch.spec.ts`,
       `e2e/shell.spec.ts` and `e2e/spot-map.spec.ts` passes in cookie mode and in header mode.
 - [ ] `pnpm -r lint`, `pnpm -r typecheck`, `pnpm -r build`, unit, component and end-to-end suites are green.
+- [ ] A listing opened while another is leaving shows the new one at once.
+- [ ] With `access_paused` the screen «Бот на паузе» re-checks by itself and leaves when the access is back.
 - [ ] Rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28 and 29 of `baseline.md` (built code behind the pin) are marked closed.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web, including a
       reload inside one launch.

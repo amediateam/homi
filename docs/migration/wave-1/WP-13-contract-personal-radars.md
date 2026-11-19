@@ -362,7 +362,7 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
 - Landing: both methods without a token; `deal=sale` → `bargains_week: null`, `medians: []`; `deal=x` → `422`; no key
   named `phone`, `text` or `author` anywhere in the answers.
 - Contract: every method of `25` §4.2 is a path in `docs/api/openapi.json` (a test compares the route list with a
-  hard-coded table of the 39 method–path pairs); `pnpm types:check` is clean.
+  hard-coded table of the method–path pairs, 39 as built and 41 since the intake of `index-CIa0Ldj2.js`); `pnpm types:check` is clean.
 
 ## Acceptance checklist
 

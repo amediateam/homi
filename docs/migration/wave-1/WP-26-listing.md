@@ -42,7 +42,7 @@ the per-m² fix of `100008` and `100009`, as a backend commit of this package (D
 | Topic | Source | Consequence here |
 | ----- | ------ | ---------------- |
 | Rebuild | DEC-32, 25 §2 rule 3 | Built from the audit; no legacy code or CSS is copied |
-| Defects and flags | DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and stay off; the actions route is the one reader of both. `dev014TashkentDates` (read by `ListingScreen` for `HistoryDate`), `dev001AnyForbiddenShowsAccess` (`useListing` calls `onForbidden()` once the session is ready) and `dev016ErrorToastOnFailure` (through `failed()`, for the contact failures only: the actions sheet shows its failure toast always, D-6) are consumed through the helpers of WP-22 and WP-23. `dev019OneDistanceFormatter` is not read on this screen: it switches the card's metro label (`formatMetroLabel`), and «Рядом» always uses `formatDistance`. Since the intake of `index-CIa0Ldj2.js` (DEC-58, which amends DEC-36 for what legacy adopted): `dev051RentedUndo`, `dev014TashkentDates` and `dev016ErrorToastOnFailure` are on by default; the realtor toast has a flag of its own, `dev010AgentMarkedToast`, on by default; `dev010RealtorVoteWording` stays off and keeps only the hint; the contact failures ask `failed()` for the haptic alone. Both branches of each flag stay written and tested (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts`, `useListingActions` and `useContact` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21, row 22, row 24 and row 27)) |
+| Defects and flags | DEC-36, `09` §4.2–§4.3 | The five defects above are fixed without a flag. `dev051RentedUndo` and `dev010RealtorVoteWording` are written with both branches and were off as built; the actions route is the one reader of both. `dev014TashkentDates` (read by `ListingScreen` for `HistoryDate`), `dev001AnyForbiddenShowsAccess` (`useListing` calls `onForbidden()` once the session is ready) and `dev016ErrorToastOnFailure` (through `failed()`, for the contact failures only: the actions sheet shows its failure toast always, D-6) are consumed through the helpers of WP-22 and WP-23. `dev019OneDistanceFormatter` is not read on this screen: it switches the card's metro label (`formatMetroLabel`), and «Рядом» always uses `formatDistance`. Since the intake of `index-CIa0Ldj2.js` (DEC-58, which amends DEC-36 for what legacy adopted): `dev051RentedUndo`, `dev014TashkentDates` and `dev016ErrorToastOnFailure` are on by default; the realtor toast has a flag of its own, `dev010AgentMarkedToast`, on by default; `dev010RealtorVoteWording` stays off and keeps only the hint; the contact failures ask `failed()` for the haptic alone. Both branches of each flag stay written and tested (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts`, `useListingActions` and `useContact` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21, row 22, row 24 and row 27)) |
 | Rendering | DEC-44, 25 §3.1 | The server part fetches with the session cookie and passes `initial` to one Client Component keyed by the number, which fetches for itself when the server had no session |
 | Routes | 25 §3.2 | `/listing/[number]` is a layout rendered over the page below; `photos`, `market`, `actions` are its own addresses; Back closes viewer or sheet first, then the listing |
 | Session modes | 25 §3.4 | Cookie mode and header mode use the same screen code; mutations are Server Actions that take one input object and, in header mode, the token as an argument (D-7) |
@@ -555,7 +555,7 @@ listing hold no number.
   When the answer carries no number, the `tel:` attempt is skipped and every call uses the call link.
 - «Написать» / «Номер платный»: `tg.openLink(contactUrl)`; `contact_write { listing_id }` (the number on screen) only
   when it opened. A `contact_url` that `tg.openLink` refuses → `failed()`, no `contact_write` (D-23).
-- These contact failures keep the haptic alone: `failed()` is called without the toast, whatever
+- These contact failures keep the haptic alone (a default of the integrator: the developer's answer on the flags did not name them): `failed()` is called without the toast, whatever
   `dev016ErrorToastOnFailure` says, because legacy shows no toast there, also since `index-CIa0Ldj2.js` (*added by the
   intake of `index-CIa0Ldj2.js`*; a parity item of `useContact` for a later package (`wave-1/baseline.md`, built code
   behind the pin, row 21)).
@@ -981,8 +981,9 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Under lite graphics and under reduced motion the listing opens and closes with no animation.
 - [ ] A listing opened while another is leaving cancels the leave and shows the new one.
 - [ ] Viewer and sheets are above the CTA bar and the tab bar; the toast is above the sheets.
-- [ ] With `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with `dev010RealtorVoteWording` on
-      the realtor hint and toast use the review wording. Both are off in the merged build.
+- [ ] As built by this package: with `dev051RentedUndo` on (test build) the `rented` toast has «Вернуть»; with
+      `dev010RealtorVoteWording` on the realtor hint and toast use the review wording; both were off in the merged
+      build. The next line replaces this one for the defaults since the intake of `index-CIa0Ldj2.js`.
 - [ ] Since the intake of `index-CIa0Ldj2.js` (DEC-58) the defaults are: `dev051RentedUndo` on — «Отметили: уже сдано»
       has «Вернуть», it sends `DELETE /listings/{number}/reports` and the listing is back, and a failed undo hides it
       again; `dev010AgentMarkedToast` on — a realtor vote says «Отметили номер как риелторский» only with

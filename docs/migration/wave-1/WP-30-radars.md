@@ -480,7 +480,7 @@ ghosts.
 - Delete: `tg.confirm(subs.deleteConfirm)` «Удалить радар «{name}»?» with the radar title. Cancel sends nothing.
   OK → `deleteRadar(id)`; success → success haptic, the radar leaves both lists, then — only while
   `currentAddress()` is still the one at the request — `ask_found` → `nav.replace(routes.radarFound({ trigger:
-  'delete' }))`, else `back()`; failure → `failed()`. With `dev016ErrorToastOnFailure` on, a success also shows
+  'delete' }))`, else `back()`; failure → `failed()`. As built, with `dev016ErrorToastOnFailure` on, a success also showed
   `toast.subDeleted` (new key). Since the intake of `index-CIa0Ldj2.js` the two halves have a flag each (DEC-58): the
   failures of the mode, unhide and delete rows show «Не получилось сохранить» by default (`dev016ErrorToastOnFailure`,
   on), and the success toast «Радар удалён» moves to `dev016SuccessToastOnDestructive`, off, because legacy still
@@ -690,7 +690,7 @@ without the few-results note. It is not a nudge: it scrolls with the list and ne
 
 ### New and overridden texts
 
-New key (`homi` layer), used only with `dev016ErrorToastOnFailure`: `toast.subDeleted` — ru «Радар удалён», uz
+New key (`homi` layer), used as built only with `dev016ErrorToastOnFailure`: `toast.subDeleted` — ru «Радар удалён», uz
 «Radar oʻchirildi», en «Radar deleted». Since the intake of `index-CIa0Ldj2.js` its flag is
 `dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarSheet`
 for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).

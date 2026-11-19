@@ -348,7 +348,7 @@ Where section (BR-APP-008 — exactly one geography mode; rule owned by WP-22's 
 - Reference not loaded (city unknown): only the area row — in a radar mode without a polygon, a heading over
   nothing.
 
-Tenant and pets on daily rent (LB-APP-029): with `dev017TenantPetsDailyRule` off both sections stay visible for
+Tenant and pets on daily rent (LB-APP-029): as built, with `dev017TenantPetsDailyRule` off both sections stay visible for
 daily rent although the term switch has cleared them. With the flag on, `sectionsFor` and `switchRentTerm` follow the
 single rule of DEV-017.
 
@@ -576,7 +576,8 @@ Component (Vitest + Testing Library):
   сум, about 79 billion USD).
 - `WhereSection.test.tsx`: exclusivity table (polygon, zones, districts × each action); canonical zone order; caption
   per city kind; area row per mode; draw callback payload has no districts and no zones.
-- `PreferenceSections.test.tsx`: visibility per deal × mode with `dev017TenantPetsDailyRule` off and on; tenant
+- `PreferenceSections.test.tsx`: visibility per deal × mode with `dev017TenantPetsDailyRule` off and on, and since WP-35
+  with `dev017PetsLongRentOnly` off and on; tenant
   toggle-off; pets mapping, tip logic and pill with mocked storage; furniture tri-state; posted toggle and hint.
 - `QuickFilterForm.test.tsx`: title per kind and deal; reset per kind; footer label per count; apply payload; also
   `QuickFilterSheetRoute` (medium haptic, sort fallback, the `bfcacheId` key, rooms hidden → `closeThen` once, the

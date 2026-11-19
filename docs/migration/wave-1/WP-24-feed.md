@@ -130,8 +130,9 @@ app/[locale]/(main)/page.tsx
   package (`wave-1/baseline.md`, built code behind the pin, row 14)).
 - **Long return** (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-104). When the app becomes visible after at least 6 h
   in the background — the visit session of WP-30 — one of three things happens. The feed is not on screen (another
-  tab): the epoch is bumped and the scroll memory forgotten, so the list is new when the user comes back. The feed is
-  its own address, nothing covers it and it is scrolled less than 60 px: the epoch is bumped, a silent reload at the
+  tab): the epoch is bumped and the scroll memory forgotten, so the list is new when the user comes back. The feed or
+  the map is its own address, nothing covers the list, and the list's scroll (the remembered one on the map) is under
+  60 px: the epoch is bumped, a silent reload at the
   top, no request for a count. Otherwise — the list is scrolled or covered — the feed asks `/bff/listings/new` with
   `since` = the moment the list on screen was created and offers the fresh pill «Показать N новых» while the count is
   above 0 (`03` SCR-063; the pill itself is in WP-23's top bar). A tap on the pill scrolls to the top and bumps the
@@ -499,7 +500,7 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
 - "No items" counts the loaded items, as legacy (`items.length === 0`): when every loaded item is hidden, a failed
   later page still shows the inline retry.
 - «Повторить» repeats the failed page only. Nothing retries by itself.
-- With `dev001AnyForbiddenShowsAccess` on (off, like every `DEV` flag), a `forbidden` answer does not stay in the
+- With `dev001AnyForbiddenShowsAccess` on (off; not one of the five flags DEC-58 turned on), a `forbidden` answer does not stay in the
   list: `useCursorFeed` calls `onForbidden()` of `lib/session/bootstrap`, as `useResource` of WP-22 does, and the
   session turns `denied` (LB-APP-045 is owned by WP-22; AM-68). The error mapper `lib/api/errors.ts` and `bffFetch`
   do not do it.
@@ -673,8 +674,8 @@ stub user's 120 requests a minute (AM-61). Every test answers the stub photos wi
   position is kept.
 - `/bff/listings` fulfilled with `500` for page two → inline «Не загрузилось — повторить», the cards stay;
   aborted (offline) for page one in header mode → «Нет связи»; `403` → «Нет доступа — повторить» inline, on page two
-  and on page one without cards, and the session stays `ready`: with DEV-001 off (every `DEV` flag is a constant
-  `false`) no end-to-end test reaches the `denied` branch, which the unit tests cover.
+  and on page one without cards, and the session stays `ready`: with DEV-001 off (its flag is a constant
+  `false`; DEC-58 turned five other flags on) no end-to-end test reaches the `denied` branch, which the unit tests cover.
 - Header mode on `/ru`: `/bff/listings` answers `401` for page two and the new sign-in is refused as too old → the
   session-expired screen of WP-23 (the case `gates.spec.ts` runs on `/ru/map` since WP-24).
 - The filters, sort, rooms, price, owner and city chips each push their sheet route with the address's search and
