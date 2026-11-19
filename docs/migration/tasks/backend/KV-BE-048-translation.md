@@ -16,11 +16,11 @@ budget, and bounded by a per-user quota and the gateway's spend cap.
 
 ## Legacy reference
 
-- API-010 (`08-api-inventory.md:594-616`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:29-32` (bodiless
+- API-010 (`08-api-inventory.md:684-706`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:29-32` (bodiless
   `POST`), `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22` (offered only when the UI
   locale is not `ru`), `:32`, `:34-35` (inline failed state, retry); `$KVADRO_ROOT/docs/api.md:626-634`;
   `$KVADRO_ROOT/docs/about.md:111`, `:179`.
-- Rules: `02-legacy-backend-audit.md:405-411` (§8.8: BR-API-070, Q-API-025), BR-API-045, BR-DATA-040, ENT-035.
+- Rules: `02-legacy-backend-audit.md:407-413` (§8.8: BR-API-070, Q-API-025), BR-API-045, BR-DATA-040, ENT-035.
 - DEV-008 `PROPOSED` (`09` §4.2: cached `GET …/translation?lang=` with a per-user daily quota in v1; legacy `POST` kept
   as an alias); LB-API-032; LB-APP-003 (new client only).
 - Security: SEC-REQ-027 (30/h), SEC-REQ-042…044.

@@ -54,7 +54,7 @@ built once here and reused by favourites, history, the map card and the listing 
 | Server strings | 25 §4.5, Q-API-062 | The card renders the display strings of the contract; where the contract gives one combined string the legacy split of `03` §1.12 applies; nothing is re-formatted that the server already formatted |
 | Demo data | 25 §4.4, RK-27 | Every list answer reports `meta.source` (the browser's pages through `bffFetch`, the server's page one through `SourceReporter`); the marker of WP-20 shows on the feed while an answer of the screen, the listings included, comes from a stub |
 | Defects and flags | DEC-36 | LB-APP-039 and LB-APP-042 are fixed unconditionally; LB-APP-038 is a `DEV` row and stays behind its flag |
-| Baseline | 25 §8, `wave-1/baseline.md` | The rules below are those of the pinned release `index-DY_DH7h-.js`. Since `index-Dbpp463V.js` «Хозяин» ranks above «Ниже рынка» (BR-APP-026, BR-API-111) and `price.kind: business` has the label `card.businessPrice` (BR-API-156); since `index-DY_DH7h-.js` the search list carries the radar card after its 8th card (SCR-047, built by WP-30 in the slot of this package) |
+| Baseline | 25 §8, `wave-1/baseline.md` | The rules below are those of the pinned release `index-DY_DH7h-.js`. Since `index-Dbpp463V.js` «Хозяин» ranks above «Ниже рынка» (BR-APP-026, BR-API-111) and `price.kind: business` has the label `card.businessPrice` (BR-API-156); since `index-DY_DH7h-.js` the search list carries the radar card after its 8th card (SCR-047, built by WP-30 in the slot of this package); since `index-CBlEKxdL.js` the badges have kinds, the verified badge reads «Проверенный хозяин», and the compact card shows a shield (*added by the intake of `index-CBlEKxdL.js`*) |
 | Photos | 25 §4.5 | Photo addresses arrive ready from the API; the client only derives the small variant |
 | Acceptance | DEC-46, 25 §9 | The checklist below is ticked in ru / uz / en and light / dark |
 
@@ -168,7 +168,7 @@ cache.
 
 | File | Content |
 | ---- | ------- |
-| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite` (`favorite` and `viewed` default to the card's flags; `onFavorite` is `FavButton`'s `onChange`). Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay |
+| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite` (`favorite` and `viewed` default to the card's flags; `onFavorite` is `FavButton`'s `onChange`). Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay. For `owner_verified` the compact card shows a `ShieldCheck` (16 px, `--good`, `role="img"` labelled `card.ownerVerified`) after the price and the short verdict (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)) |
 | `ListingCardSkeleton.tsx` | Shimmer photo and three bars (62 %, 80 %, 35 %); `FeedSkeleton`, three of them in the list column (`FEED_FRAME`), the page's Suspense fallback |
 | `PhotoStrip.tsx`, `Photo.tsx` | Scroll-snap strip with lazy slides, dots, video badge, placeholder; `Photo.tsx` also exports `PhotoPlaceholder` and `PhotoBackdrop` (the blurred copy behind a video photo), so every `<img>` of the card is in that file |
 | `FavButton.tsx` | Heart with optimistic state; the `overlay` variant (`full`, `compact`) over a photo and the `plain` one of the listing's title row (WP-26) |
@@ -375,13 +375,23 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
 - Over the photo: the badge (not in compact), the heart, the «viewed» eye (aria `card.viewedTitle` «Вы открывали
   это объявление»), and the status text of the listing as a warning tag at the bottom.
 - Badge priority (BR-APP-026, BR-API-111), first match wins: «Подозрительно дёшево» (`card.suspiciousCheap`, warn) >
-  «Проверьте цену» (`card.checkPrice`, warn) > «Хозяин ✓» (`card.ownerVerified`) > «Хозяин» (`card.owner`) >
-  «Ниже рынка» (`card.belowMarket`, good). Before legacy release `index-Dbpp463V.js` «Ниже рынка» ranked above
-  «Хозяин»; the pinned order is the one above. The market badges come from the verdict, so they need a delta as
-  well (`verdictToneOf`): «Ниже рынка» is the tone `good` with a non-null `median_delta`, not any negative delta,
-  and «Подозрительно дёшево» and «Проверьте цену» need one too (legacy `format.js` `cardBadge`, BR-APP-026). The
-  badge tone `good` is drawn as the plain frosted tag, as in the pinned release, which has no green tag; the warn
-  tags are orange.
+  «Проверьте цену» (`card.checkPrice`, warn) > «Проверенный хозяин» (`card.ownerVerified`; «Хозяин ✓» up to legacy
+  release `index-BnFvC-Ft.js`) > «Хозяин» (`card.owner`) > «Ниже рынка» (`card.belowMarket`, good). Before legacy
+  release `index-Dbpp463V.js` «Ниже рынка» ranked above «Хозяин»; the pinned order is the one above. The market
+  badges come from the verdict, so they need a delta as well (`verdictToneOf`): «Ниже рынка» is the tone `good` with
+  a non-null `median_delta`, not any negative delta, and «Подозрительно дёшево» and «Проверьте цену» need one too
+  (legacy `format.js` `cardBadge`, BR-APP-026). The badge tone `good` is drawn as the plain frosted tag: the pinned
+  release has no green tag for «Ниже рынка»; the warn tags are orange.
+- Badge kinds (legacy since `index-CBlEKxdL.js`; `format.js:269-301`, `ListingCard.jsx:60-61`,
+  `listing-card.css:168-181` at r31): `warn` for the two price warnings; `verified` for «Проверенный хозяин», drawn
+  with a green `ShieldCheck` (15 px, stroke 2.4; padding-left 8 px, gap 5 px); `quiet` for «Хозяин» (`#4b4f57`, weight
+  500); «Ниже рынка» has no kind and stays the plain tag. The priority order did not change
+  (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 1)).
+- Compact card (legacy since `index-CBlEKxdL.js`; `ListingCard.jsx:92-97`, `listing-card.css:182-188` at r31): still
+  no badge, but for `owner_verified` a `ShieldCheck` (16 px, `--good`) follows the price and the short verdict, with
+  `role="img"` and `card.ownerVerified` as its label and title (*added by the intake of `index-CBlEKxdL.js`*; a parity
+  item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)).
 - Price line: amount, period, and the price-kind label `priceKindLabel(kind)` of `cardText.ts`: «· первый взнос»
   (`card.downPayment`) for `down_payment`, «· цена за бизнес, помещение в аренде» (`card.businessPrice`; uz
   «biznes narxi, joy ijarada», en «business price, premises rented», `03` SCR-007) for `business` (BR-API-156),
@@ -515,8 +525,11 @@ Unit (Vitest, `frontend/app/tests/feed/`):
   negative delta → "cheaper", neutral tone, short «−12%»; unknown tone with a positive delta; no verdict data →
   `null`; the chip's text.
 - `badges`: the priority table (every pair of adjacent ranks), in particular `is_owner` with a `good` verdict →
-  «Хозяин» and `owner_verified` with a `good` verdict → «Хозяин ✓»; «Ниже рынка» from the tone `good` with a
-  delta, not from a negative delta; nothing matching → `null`.
+  «Хозяин» and `owner_verified` with a `good` verdict → «Проверенный хозяин»; «Ниже рынка» from the tone `good` with a
+  delta, not from a negative delta; nothing matching → `null`; the kind of each badge (`warn`, `verified`, `quiet`,
+  none for «Ниже рынка») and, on the compact card, the shield for `owner_verified` and no tag (the kinds and the
+  shield: *added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2)).
 - `images`: derivation for a media address with a query; no derivation for a foreign address; Save-Data, `2g`,
   `3g`, lite → small only; otherwise `srcset` with 480w and 800w.
 - `cardText`: price from `display` and `period`; `kind: 'down_payment'` and `kind: 'business'` with their labels in
@@ -646,8 +659,12 @@ Card
 
 - [ ] Price shows amount and period; a down-payment price adds «· первый взнос», a business price «· цена за
       бизнес, помещение в аренде»; no price shows «Цена договорная».
-- [ ] The badge follows the priority: «Подозрительно дёшево», «Проверьте цену», «Хозяин ✓», «Хозяин», «Ниже
-      рынка» — a listing from an owner that is below the market shows «Хозяин».
+- [ ] The badge follows the priority: «Подозрительно дёшево», «Проверьте цену», «Проверенный хозяин», «Хозяин»,
+      «Ниже рынка» — a listing from an owner that is below the market shows «Хозяин».
+- [ ] The badges have kinds: the two warnings are orange, «Проверенный хозяин» carries a green shield, «Хозяин» is the
+      quiet grey tag, «Ниже рынка» the plain one; the compact card shows no tag, and a shield after the price for a
+      verified owner (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for
+      a later package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2)).
 - [ ] The market chip shows «−N% к рынку» / «+N% к рынку», «≈ обычная», «≈ спорно» with the tone colour; an
       unknown tone shows the real sign in the neutral colour.
 - [ ] The facts line shows title, area, floor, market and the pets mark when present, then the age.
@@ -870,7 +887,7 @@ States
 - **Later specifications that WP-24 makes wrong** (a read-only audit of WP-25 … WP-33 against `1d1c964`; each is
   corrected in that package's own PR when it is taken):
   - WP-29: `initial` is `{ key, result }`, adopted only when `key` equals the list key and only when a key's list
-    starts (`WP-29-saved.md:56`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
+    starts (`WP-29-saved.md:57`); heart and eye are `ListingFeed`'s, `favs.get(number)` and `seen.has(number)`,
     not `seen[number]` (`:78`); `ListingFeed` already has every prop WP-29 needs (`:66`).
   - WP-27: `MapScreen`, `MapBar` and `ViewToggle` should read `useScreenSearchState('map')`, not `useSearchState()`
     (`WP-27-map-gl.md:83`); `map/page.tsx` is no longer a bare placeholder but the home of the WP-22 data proof that
@@ -878,7 +895,7 @@ States
   - WP-30: `useRadarsEnabled()` reads `useReference().radarsEnabled`, not `radars_enabled`, and tests pass
     `{ ready: true }` (`WP-30-radars.md:169`).
   - WP-26: the contract has no `short_title`; the market block uses `marketVerdict({ market }, locale, t)`; the
-    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:273`).
+    listing's heart is `FavButton` with `variant="plain"` (`WP-26-listing.md:279`).
   - WP-32: `whenFirstContent(timeoutMs)` races the existing `firstContentShown()`; the mark comes from the first
     `Photo` that loads anywhere, not only a feed card (`WP-32-analytics-errors.md:78`).
 - **Merged** on 2026-11-17 on the developer's «сливай #71» (merge commit `780aea9`), after `frontend` (run

@@ -64,6 +64,7 @@ The source items were counted while auditing. Every one of them has an ID here.
 | Unchecked items (`tb` §12)                          | 18 rows                            | Q-BOT-001…Q-BOT-016 |
 | Lines marked 🔶 in `tb` (legend excluded)           | 39                                 | UNVERIFIED items + Q-BOT, or the "inferred" note on backend effects |
 | Bot texts (messages, prompts, captions, toasts, alerts) | —                              | TXT-BOT-001…TXT-BOT-088 |
+| Behaviour seen only from the Mini App (not in `tb`) | 7 items                            | BOT-085 (Mini App release `index-BnFvC-Ft.js`), BOT-086…BOT-091 (Mini App release `index-CBlEKxdL.js`, §3.18) |
 
 ## 1. Bot identity and settings to migrate explicitly
 
@@ -114,7 +115,8 @@ One row per command, scenario step, free-text handler, deep link, outbound messa
 identity (001–011), commands (012–022), global mechanics and language (023–026), deep links (027–035), radar wizard
 (036–053), free text (054–058), listing card (059–062), `/subs` and the poll (063–071), `/fav` (072–073), `/settings`
 (074), `/owner` (075–079), `/privacy` (080), outbound (081–085; 085 seen only from the Mini App, since its release
-`index-BnFvC-Ft.js`). The same records are in
+`index-BnFvC-Ft.js`); the owner cabinet and the contact requests, seen only from the Mini App since its release
+`index-CBlEKxdL.js` (086–091). The same records are in
 [`data/bot-handlers.json`](data/bot-handlers.json).
 
 | ID | Kind | Trigger | Behaviour | Buttons | Backend effects | Status | Source |
@@ -204,6 +206,12 @@ identity (001–011), commands (012–022), global mechanics and language (023�
 | BOT-083 | scheduled-message | End of the user's quiet hours | No cards during quiet hours; everything that appeared overnight comes as one morning digest. Not observed (Q-BOT-003). | — | Deferred cards flushed as a digest (inferred) | `UNVERIFIED` | tb §6.9 l.775; §12 l.1047 |
 | BOT-084 | scheduled-message | Service-news broadcast | Users with `📰 Новости сервиса: Присылать` receive service news. None observed; sender tool unknown (Q-BOT-004). | — | — | `UNVERIFIED` | tb §6.9 l.783; §12 l.1048 |
 | BOT-085 | scheduled-message | Sample card on request of the Mini App (`POST /api/settings/card-sample`, since Mini App release `index-BnFvC-Ft.js`; not scheduled) | The bot sends one listing card into the user's chat in the saved card style (`classic` or `rich`, §3.10); the answer `{sent}` says whether it was sent. Not described in `tb`; which listing it shows, which buttons work, when it fails and any rate limit are unknown (Q-API-067, Q-BOT-046). | unknown | Writes the chat | `UNVERIFIED` | `api.md:1040-1055` (r31); `app/features/settings/SettingsScreen.jsx:162-171` (r31) |
+| BOT-086 | scenario-step | Owner cabinet: the contact arrives from the Mini App (`WebApp.requestContact`, since Mini App release `index-CBlEKxdL.js`) | «Поделиться номером» in the Mini App makes Telegram send the user's contact into the bot chat. It is tied to the user's draft and checked: own contact, `+998`, the realtor and fraud checks, the limit per phone; the result shows in `GET /api/owner/listings/:id` within seconds. The Mini App adds «Загляните в чат с ботом — там может быть ответ» and sends users of clients below 6.9 to the bot to share the number there. Not described in `tb`; the chat reply, the old-client path and the relation to `/owner` (BOT-075 … BOT-077) are unknown (Q-BOT-047, Q-API-072). | unknown | Phone stored with the owner listing; `phone_set`, `phone_display`, `reject_reason` set | `UNVERIFIED` | `api.md:1346-1348`, `:1366-1369`, `:1436-1438` (r31); `app/features/owner/owner.js:89-107`; `app/features/owner/OwnerForm.jsx:1484-1620`, `:1684-1693` (r31) |
+| BOT-087 | scheduled-message | A seeker sent a request (`POST /api/listings/:id/contact`; not scheduled) | The owner receives the request in the bot chat and can answer there or in «Мои объявления»: «Отклики придут в бот. Ответить можно там или в «Мои объявления»». Text and answer buttons not observed (Q-BOT-048). | unknown | Reads the request; an answer given in the chat changes its status (inferred) | `UNVERIFIED` | `api.md:820-822` (r31); `app/features/owner/owner.js:134` |
+| BOT-088 | scheduled-message | The owner pressed «Дать номер» (action `give`; not scheduled) | The seeker receives the owner's number in the bot chat («Номер отправили — человек позвонит вам сам»). The Mini App tells the seeker to press «Ответил риелтор» in the bot if the answerer turns out to be a realtor, so the message probably carries that button (inferred). Form of the number and the buttons not observed (Q-BOT-048, Q-API-076). | «Ответил риелтор» (label from the Mini App text `owner.info.footGate`; no `BTN` id until it is observed) | Request `given`; writes the seeker's chat | `UNVERIFIED` | `app/features/owner/owner.js:219`; `app/i18n/locales/ru.js:654` |
+| BOT-089 | scheduled-message | 10 minutes after the owner pressed «Не подходит» (action `decline`), unless it was undone | A soft refusal to the seeker with similar listings: «Через 10 минут мягко ответим, что номер вы дать не готовы, и покажем похожие». The owner is told the seeker gets the same soft answer whatever reason is chosen. Not observed (Q-BOT-048, Q-API-075). | unknown | Request `declined` or `agent`; writes the seeker's chat | `UNVERIFIED` | `app/features/owner/owner.js:220`, `:226-227` |
+| BOT-090 | scheduled-message | The owner marked the flat «Сдано» (status `rented`; not scheduled) | The seekers whose requests still wait are told that the flat is let («тем, кто ждёт ответа, скажем, что квартиру сдали»); their requests become `cancelled`. Not observed (Q-BOT-048). | unknown | Requests `cancelled`; writes the seekers' chats | `UNVERIFIED` | `app/features/owner/owner.js:203`, `:240` |
+| BOT-091 | scheduled-message | The cabinet opens for realtors (a later broadcast to the waiting list of `POST /api/owner/waitlist`) | Promised by the Mini App only: «Хорошо, напишем в бот, когда откроем.». Never observed; text and sender unknown (Q-BOT-049). | unknown | Reads the waiting list | `UNVERIFIED` | `app/features/owner/owner.js:110`; `api.md:1469-1470` (r31) |
 
 ## 3. Scenario state machines
 
@@ -759,6 +767,36 @@ stateDiagram-v2
 What makes a wizard "earlier" (a newer wizard exists, or a TTL ran out) is not recorded (Q-BOT-018). After a cut-over,
 every legacy callback is "old" to the new backend (§6.3).
 
+### 3.18 Owner cabinet and contact requests (seen from the Mini App only)
+
+Mini App release `index-CBlEKxdL.js` added the owner cabinet «Сдать квартиру» and the seeker's request to an owner
+(`03` SCR-049 … SCR-062; `08` API-037 … API-054). The bot takes part in both. `tb` is of 2026-11-09 and predates
+the cabinet, and no bot code or chat was seen. Everything below comes from the Mini App's texts and the contract
+(`api.md` §16, r31), so every row is `UNVERIFIED`; the questions are Q-BOT-047 … Q-BOT-049 (§9.3) and Q-API-068 …
+Q-API-078 (`02` §12a). There is no diagram: no step of the bot was observed. Two rows rest on the landing privacy
+page of the release, which was an uncommitted working copy at the read and is not cited as a release.
+
+| # | Touchpoint | What the bot or the backend does, by the Mini App's texts and the contract | Items | Evidence |
+| - | ---------- | -------------------------------------------------------------------------- | ----- | -------- |
+| 1 | Phone intake | The contact that the user shares through `requestContact` arrives in the bot chat. It is matched to the user and the draft and checked: the sender's own contact (else `not_own`), a `+998` number (else `not_uz`), the realtor check («номер встречается в объявлениях о разных квартирах» → `agent`), the fraud list (`fraud`) and the limit of 2 flats per phone (`limit`). Then `phone_set`, `phone_display` and `reject_reason` are set on the listing. The bot may answer in the chat («Загляните в чат с ботом — там может быть ответ»). That the number itself is stored is stated only by the uncommitted privacy page. | BOT-086; `02` BR-API-170 … BR-API-172; `05` TMA-034; Q-BOT-047; `02` Q-API-072 | `app/features/owner/owner.js:89-107`; `api.md:1346-1348`, `:1366-1369` (r31) |
+| 2 | Old clients | A client below 6.9 cannot share the number from the Mini App and is sent to the bot. The bot then has to offer a share button in the chat, most likely the reply keyboard of `/owner` (BTN-073; inferred), and to lead back to the draft. | BOT-086; `03` LB-APP-060; Q-BOT-047 | `app/features/owner/owner.js:94`; `tb:827` |
+| 3 | Requests to the owner | Each request of a seeker is delivered to the owner in the bot. The owner can answer there or in the app («Отклики придут в бот. Ответить можно там или в «Мои объявления»»), so the message needs answer buttons for at least "give" and "decline" (inferred). | BOT-087; `02` BR-API-180; Q-BOT-048 | `app/features/owner/owner.js:134`; `api.md:820-822` (r31) |
+| 4 | «Дать номер» | The owner's number goes to the seeker («человек позвонит вам сам»). | BOT-088; `02` BR-API-181 | `app/features/owner/owner.js:219` |
+| 5 | «Не подходит» | After 10 minutes, the window of the undo, a soft refusal goes to the seeker with similar listings. | BOT-089; `02` BR-API-181 | `app/features/owner/owner.js:220`, `:226-227` |
+| 6 | Reasons and «Оказался риелтором» | The seeker is marked as a realtor: «на ваши квартиры он больше не напишет», so the seeker can no longer write to this owner's flats. | `02` BR-API-181; `02` Q-API-077 | `app/features/owner/owner.js:221-222`, `:234` |
+| 7 | «Сдано» | The seekers who still wait are told that the flat is let; their requests become `cancelled`. | BOT-090; `02` BR-API-176 | `app/features/owner/owner.js:203`, `:240` |
+| 8 | Expiry | A request without an answer expires (`expired`, «Без ответа»). The timing is unknown, and so is whether the seeker is told. | `02` BR-API-186; `02` Q-API-075; Q-BOT-048 | `app/features/owner/owner.js:239`; `api.md:1420` (r31) |
+| 9 | «Обычно отвечает за N мин» | `response_minutes` is computed from the owner's answer times and shown to seekers. | `02` BR-API-188; `02` Q-API-076 | `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:19` (r31); `api.md:349` (r31) |
+| 10 | Publish | The listing goes into the feed and to the matching radars («уже уходит тем, у кого включён радар»). The server counts `sent`, `opened`, `favorites` and `daily`. | `02` BR-API-174, BR-API-175; the push is BOT-081 | `app/features/owner/owner.js:131`; `api.md:1393-1404` (r31) |
+| 11 | Complaints and support | Complaints lead to `withdrawn`: the listing moves to «История» and gets a support button. Support can set `held`: the listing is paused, and the owner cannot resume it. The support account is `GET /api/bot` → `support`. | `02` BR-API-177; `08` API-003 | `api.md:1358-1359`, `:549-551` (r31) |
+| 12 | Waiting list | Realtors on the waiting list are to get a message later («напишем в бот, когда откроем»). | BOT-091; `02` BR-API-182 | `app/features/owner/owner.js:110` |
+| 13 | Description | Phone numbers in the owner's description are hidden on the server. | `02` BR-API-165 | `api.md:1390` (r31); `app/features/owner/owner.js:73` |
+| 14 | Retention and privacy | By the uncommitted privacy page only: photos are kept while the listing is in the feed or paused; the number and the form answers until the user deletes their data; requests until data deletion. The seeker's Telegram name is "not stored", yet `OwnerRequest.name` is served. | `02` Q-API-072; `02` Q-API-077 | the landing privacy page, an uncommitted working copy at the read |
+| 15 | Bot entry | By the uncommitted privacy page only, «Сдаю квартиру» exists "in the bot or the app". That suggests an entry of the bot's own, likely a link with `startapp=owner_new` (inferred). | Q-BOT-049; `05` TMA-046 | the landing privacy page, an uncommitted working copy at the read; `api.md:1349-1350` (r31) |
+
+Nothing read from a committed source changes `/owner` (§3.15, BOT-075…BOT-079); whether its texts changed is part of
+Q-BOT-049.
+
 ## 4. Buttons, callbacks and texts
 
 ### 4.1 Buttons and callback actions (BTN-NNN)
@@ -958,9 +996,9 @@ Short texts are quoted verbatim. Long texts point to their lines in `tb`, which 
 
 ## 5. Scheduled and outbound messages
 
-The bot writes nothing outside a user action except the items below (`tb:186–187`). **None of them was observed**
-(`tb` §12). HOMI therefore has no reference behaviour for its most important outbound function. It has to be
-specified (Q-BOT-002, Q-BOT-003, Q-BOT-033), or captured on a test account before the cut-over.
+The bot writes nothing outside a user action except the items below (`tb:186–187`; BOT-087 … BOT-091 are known from
+the Mini App only, §3.18). **None of them was observed** (`tb` §12). HOMI therefore has no reference behaviour for
+its most important outbound function. It has to be specified (Q-BOT-002, Q-BOT-003, Q-BOT-033, Q-BOT-048, Q-BOT-049), or captured on a test account before the cut-over.
 
 | ID      | Message                         | Trigger                                              | What is known | What is not known | Status |
 | ------- | ------------------------------- | ---------------------------------------------------- | ------------- | ----------------- | ------ |
@@ -969,6 +1007,11 @@ specified (Q-BOT-002, Q-BOT-003, Q-BOT-033), or captured on a test account befor
 | BOT-083 | Morning digest after quiet hours | End of the quiet window                             | No cards in the window; overnight items in one morning digest (`tb:775`) | Exact send time; whether it also applies to instant radars only; edge cases | `UNVERIFIED` |
 | BOT-084 | Service news                    | Broadcast by the team                                | Opt-out in `/settings` (`tb:783`, BTN-072) | Content, frequency, admin tool (`ab:585`) | `UNVERIFIED` |
 | BOT-085 | Sample card                     | `POST /api/settings/card-sample` from the Mini App    | One card in the saved card style; `{sent}` answers the Mini App (`api.md:1040-1055`, r31) | Which listing, buttons, failure cases, rate limit (Q-API-067, Q-BOT-046) | `UNVERIFIED` |
+| BOT-087 | Request to the owner            | A seeker sent `POST /api/listings/:id/contact`        | The owner gets the request in the chat and can answer there or in «Мои объявления» (`app/features/owner/owner.js:134`; `api.md:820-822`, r31) | Text, answer buttons, what an answer in the chat does (Q-BOT-048) | `UNVERIFIED` |
+| BOT-088 | The owner's number to the seeker | The owner pressed «Дать номер» (`give`)              | The seeker gets the number in the chat; the Mini App tells the seeker to press «Ответил риелтор» in the bot (`app/features/owner/owner.js:219`; `app/i18n/locales/ru.js:654`) | Form of the number (text or contact), buttons (Q-BOT-048, Q-API-076) | `UNVERIFIED` |
+| BOT-089 | Soft refusal                    | 10 minutes after «Не подходит» (`decline`), unless it was undone | A soft answer with similar listings, the same whatever reason the owner chose (`app/features/owner/owner.js:220`, `:226-227`) | Text, which listings are "similar", the real delay (Q-BOT-048, Q-API-075) | `UNVERIFIED` |
+| BOT-090 | «Квартиру сдали»                | The owner marked the flat «Сдано» (`rented`)          | The seekers whose requests still wait are told; their requests become `cancelled` (`app/features/owner/owner.js:203`, `:240`) | Text, buttons (Q-BOT-048) | `UNVERIFIED` |
+| BOT-091 | Waiting-list notice             | The cabinet opens for realtors                        | Promised by the Mini App: «Хорошо, напишем в бот, когда откроем.» (`app/features/owner/owner.js:110`) | Whether it was ever sent, its text and sender (Q-BOT-049) | `UNVERIFIED` |
 | BOT-069 | Poll «Нашли жильё?»             | Radar paused (seen); radar deleted (expected)        | New message after a pause; suppressed shortly after an answer (inferred) | Suppression window; exact rule (`ask_found`) | `DOCUMENTED_ONLY` |
 | BOT-062 | Card edited to «Объявление снято» | Listing taken down                                  | Promised in `/privacy` (`tb:862`) | Text, buttons, trigger list | `UNVERIFIED` |
 | —       | Favourite notifications (price drop, removal) | —                                       | Not seen in the bot or the app (`ab:575`) | Whether they exist (Q-BOT-033) | — |
@@ -1401,6 +1444,9 @@ data is involved.
 | Q-BOT-044 | Are the bot's cities, districts, zones, median availability and presets the same data as `GET /api/meta` / `GET /api/cities`, and what are the codes behind the labels? | BR-BOT-026, BR-BOT-031, BR-BOT-032 | Compare the Mini App's `/api/meta` response (devtools on a test account) with `tb:351–358` and §3.6 | test account |
 | Q-BOT-045 | Text of the `▶️ Включить` toast when new matches exist | BTN-051, TXT-BOT-063 | Resume a radar on a test account after a few hours paused | test account |
 | Q-BOT-046 | What is the `rich` listing card at the Bot API level (one message with swipeable photos and a caption? a media group? another construct that "only recent Telegram versions" show), which Telegram version is its floor, and what does a `rich` user on an older client receive (`classic` instead?)? Did the legacy bot's own `/settings` gain a card-style row? | BOT-085, BOT-059, §3.10 | The operator's answer (WP-02 request); or switch a test account to `rich` in the legacy Mini App, press «Прислать пример в чат» and record the message on a recent and an older Telegram client | operator / test account |
+| Q-BOT-047 | How does the bot take the owner's phone: does the contact from the Mini App's `requestContact` arrive as an ordinary contact message; how is it tied to the draft; what does the bot answer in the chat; does it share the handler and keyboard of `/owner`, and does a cabinet confirmation also set the `/owner` verification; what does a client below 6.9 get in the chat, and how does it return to the draft? | BOT-086, BOT-075 … BOT-077, `05` TMA-034, `03` LB-APP-060 | The operator's answer; a test owner account on legacy on a recent and an older client | operator / test account |
+| Q-BOT-048 | The request messages: text and buttons of the request the owner receives; what the seeker receives on `given` (the number as text or as a contact; the button «Ответил риелтор»), in the soft refusal (which "similar" listings) and when the flat is let; whether `expired` is announced; whether an answer in the chat and one in the app act on one state. | BOT-087 … BOT-090 | The operator's answer; a test owner and a test seeker on legacy | operator / test account |
+| Q-BOT-049 | The bot's own side of the cabinet: does it have an entry («Сдаю квартиру» "in the bot or the app" by the uncommitted privacy page: a command, a menu button, a `startapp=owner_new` link); who produces `owner_new` links; was the waitlist message ever sent, and what does it say; did the `/owner` badge text become «Проверенный хозяин · номер подтверждён», and did `/privacy` or `/help` change? | BOT-091, BOT-075 … BOT-079, `05` TMA-046 | The operator's answer; open the legacy bot with a test account | operator / test account |
 
 ## 10. Boundary: what the bot does and what the Mini App does
 
@@ -1419,11 +1465,13 @@ handlers vs `/api/v1` controllers) over shared domain services, and must not mer
 | Hiding | «Скрыть похожие» → channel / district rules **per radar** | Hide listing, block author **globally**, «Скрытое» list | `POST /api/listings/:id/hide`, `…/block-author`, `GET /api/hidden` | Scope differs (LB-BOT-025) |
 | Poll «Нашли жильё?» | After pause (and delete), in chat | After pause/delete if `ask_found`, as a sheet, plus a «share» button | `POST /api/found`, `POST /api/found/where` | Bot has no share step |
 | Settings | Quiet, digest, language, currency, **service news** | Quiet, digest, language, currency, theme, city, graphics | `GET/PUT /api/settings` | Service news is bot-only (Q-BOT-040) |
-| Owner verification | **Bot only** (`/owner`, contact sharing) | Shows the badge «Хозяин ✓» | Phone hash, `owner_verified` | — |
+| Owner verification | **Bot only** (`/owner`, contact sharing) | Shows the badge «Проверенный хозяин» («Хозяин ✓» up to Mini App release `index-BnFvC-Ft.js`), the owner chip and an info sheet | Phone hash, `owner_verified` | — |
+| Listing a flat (since Mini App release `index-CBlEKxdL.js`) | Takes the owner's contact, delivers the requests and the answers (BOT-086…BOT-091, §3.18) | The whole cabinet «Сдать квартиру»: form, photos, place, contact mode, publish, «Мои объявления», requests | `/api/owner/*` (`08` API-037 … API-053) | Whether the bot has an entry of its own (Q-BOT-049) |
+| Contact request to an owner (since Mini App release `index-CBlEKxdL.js`) | Delivers the request to the owner and the answer to the seeker (BOT-087…BOT-090) | The request sheet on the listing screen; the owner answers in «Отклики» | `POST /api/listings/:id/contact`, `GET /api/owner/requests` | Answers in the chat and in the app over one state (Q-BOT-048) |
 | Privacy, deletion | **Bot only** (`/privacy`, delete button) | Geolocation stays local | — | Deletion untested (Q-BOT-001) |
 | Support | Links to `@KvadroSupportBot` | Links to the support bot, also with `?start=l_<id>` | `GET /api/bot` → `support` | Support bot not audited (Q-BOT-016) |
 | Sharing | — | `shareMessage` / `startapp=l_<id>` links | `POST /api/listings/:id/share` | — |
-| Contact / call | — (phone only in the original post) | Call page `/call/<token>` | — | — |
+| Contact / call | — (phone only in the original post) | Call page `/call/<token>`; since Mini App release `index-CBlEKxdL.js` a listing whose owner hides the number has a request instead of a call | — | — |
 | Health | `/ping` (public) | — | — | LB-BOT-027 |
 
 ## 11. Summary
@@ -1432,11 +1480,11 @@ handlers vs `/api/v1` controllers) over shared domain services, and must not mer
 | ---- | ----: | --------- |
 | BOT · system | 17 | DOCUMENTED_ONLY 13, UNVERIFIED 4 |
 | BOT · command | 10 | DOCUMENTED_ONLY 10 |
-| BOT · scenario-step | 40 | DOCUMENTED_ONLY 38, UNVERIFIED 2 |
+| BOT · scenario-step | 41 | DOCUMENTED_ONLY 38, UNVERIFIED 3 |
 | BOT · deep-link | 9 | DOCUMENTED_ONLY 2, UNVERIFIED 7 |
 | BOT · free-text | 3 | DOCUMENTED_ONLY 2, UNVERIFIED 1 |
-| BOT · scheduled-message | 6 | UNVERIFIED 6 (BOT-085 since Mini App release `index-BnFvC-Ft.js`) |
-| **BOT total** | **85** | DOCUMENTED_ONLY 65, UNVERIFIED 20 |
+| BOT · scheduled-message | 11 | UNVERIFIED 11 (BOT-085 since Mini App release `index-BnFvC-Ft.js`, BOT-087 to BOT-091 since `index-CBlEKxdL.js`) |
+| **BOT total** | **91** | DOCUMENTED_ONLY 65, UNVERIFIED 26 |
 | BTN · web_app | 4 | DOCUMENTED_ONLY 3, UNVERIFIED 1 |
 | BTN · callback | 68 | DOCUMENTED_ONLY 60, UNVERIFIED 8 |
 | BTN · url | 2 | DOCUMENTED_ONLY 2 |
@@ -1446,7 +1494,7 @@ handlers vs `/api/v1` controllers) over shared domain services, and must not mer
 | TXT-BOT (texts, toasts, alerts) | 88 | DOCUMENTED_ONLY 80, UNVERIFIED 8 |
 | BR-BOT (business rules) | 104 | CONFIRMED 10, DOCUMENTED_ONLY 89, UNVERIFIED 5 |
 | LB-BOT (bugs 14 + decisions 17) | 31 | DOCUMENTED_ONLY 25, UNVERIFIED 6 |
-| Q-BOT (open questions) | 46 | — |
+| Q-BOT (open questions) | 49 | — |
 
 ### Findings that matter most for the migration
 

@@ -136,7 +136,7 @@ Translation rules for the meta answer:
 | `locales` | `locales` | codes mapped back (`uz_Latn → uz`); unknown codes dropped |
 | `cities[]` | `cities[]` | `code`, `name`; `center` `[lat, lon]` → object; `zoom` default 12; `is_region` = `zoom < 11`; `has_metro` = `metro === true`; `has_median` = `median !== false`; `districts`, `zones` default `[]` |
 | `cities` when legacy sends none | top-level `districts`, `zones` | one city `tashkent` built from them (legacy client rule, API-001) |
-| `renovations`, `appliances`, `price_presets` | same names | per-deal maps keep the three deal keys, missing ones become `[]` |
+| `renovations`, `appliances`, `price_presets` | same names | per-deal maps keep the three deal keys, missing ones become `[]`; a key that is not a deal is dropped (legacy sends `owner` in `renovations` since `index-CBlEKxdL.js`, `08` API-001; *added by the intake of `index-CBlEKxdL.js`*) |
 
 Ignored on purpose: the user part of meta (`locale`, `currency`, `theme`, `city`, `analytics`, `*_chosen`),
 `bot_username` and `max_subscriptions` — HOMI has its own (WP-11). Required keys whose absence is a contract error:

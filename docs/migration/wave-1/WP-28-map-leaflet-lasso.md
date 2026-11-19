@@ -157,7 +157,8 @@ versions; the list is in step 1.
   Returns `{ status, showUser(point), fitSpotAndUser() }`.
 - `SpotMap.tsx` (mini map) replaces `sections/SpotMapSlot.tsx` of WP-26, which is deleted: a button (aria
   `listing.mapOpen`) around a 2:1 box with an expand icon; the map mounts when the box comes within 300 px of the
-  viewport (`IntersectionObserver`, `rootMargin: '300px'`) and reference data is loaded; it ignores pan and zoom.
+  viewport (`IntersectionObserver`, `rootMargin: '300px'`) and reference data is loaded; it ignores pan and zoom. Its
+  expand icon stays above the map's panes (the rule under `SpotMapFullscreen.tsx` below).
 - `SpotMapRoute.tsx` is what `location/page.tsx` renders in `(main)/listing/[number]/` and in
   `(main)/@overlay/(.)listing/[number]/` (both route files replace the WP-20 placeholder and hold no logic). It
   reads the listing with `useListingRecord()` of WP-26 from the resource cache — no request of its own — and the
@@ -165,7 +166,11 @@ versions; the list is in step 1.
   z-index 100. No coordinates, or a listing error (in the cache, or a cookie-mode server failure that stays in the
   screen's first answer): `back()` (AM-92).
 - `SpotMapFullscreen.tsx`: interactive map, close button, locate button, bottom card. The user's position lives in
-  component state, is dropped on close and is never sent (TMA-035).
+  component state, is dropped on close and is never sent (TMA-035). The mini-map and fullscreen controls stay above
+  Leaflet's panes (legacy `z-index: 1000` since `index-CBlEKxdL.js`, `spot-map.css:31-35` at r31;
+  *added by the intake of `index-CBlEKxdL.js`*; a parity item of `SpotMap` and `SpotMapFullscreen` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 10)). Whether the built controls already do is not verified
+  yet; that row says what was read.
 
 ## Files
 

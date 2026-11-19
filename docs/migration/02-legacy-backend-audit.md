@@ -8,9 +8,11 @@ Mini App contract (`$KVADRO_ROOT/docs/api.md`), the decompiled Mini App (`$KVADR
 mocks, the landing mirror (`$KVADRO_ROOT/demo/landing`), and the product, bot and SEO documents. The endpoint-level
 contract is in `08-api-inventory.md` (`API-NNN`, `RES-NNN`).
 
-- **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`, brought up to the pinned release
-  `index-DY_DH7h-.js` (`wave-1/baseline.md`); items changed for a later release name it, and "current Doc:" and "at
-  the pin" cite SVN r27. Nothing was run (`RUNTIME_VERIFIED` is not used).
+- **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`, brought up to `index-DY_DH7h-.js` (the pin
+  of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` and to the pinned release `index-CBlEKxdL.js`
+  (SVN r31; `wave-1/baseline.md`). Items changed for a later release name it. "current Doc:" and "at the pin" cite
+  SVN r27; "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, and the client files of §12a are cited at r31 too.
+  Nothing was run (`RUNTIME_VERIFIED` is not used).
 - **Labels:** `CONFIRMED` — visible in client code or in a contract the code agrees with (for a server rule this means
   the client depends on it or produces it); `DOCUMENTED_ONLY` — stated as fact (✅) in legacy docs, no implementation
   visible; `UNVERIFIED` — 🔶 in legacy docs or our inference, always with a `Q-API` item.
@@ -607,16 +609,222 @@ follow the processing order.
 - **BR-API-107** · `DOCUMENTED_ONLY` — In the bot the user shares their own number (`request_contact`); the server
   stores a hash of the number and the date. *Evidence:* About:133, :232.
 - **BR-API-108** · `DOCUMENTED_ONLY` — Listings whose phone matches the hash get `owner_verified`
-  («Хозяин · номер подтверждён», card badge «Хозяин ✓»). *Evidence:* About:233-234; `ru.js:100`.
+  («Хозяин · номер подтверждён», card badge «Хозяин ✓»; since release `index-CBlEKxdL.js` the badge and the chip of
+  the listing screen read «Проверенный хозяин»). *Evidence:* About:233-234; `ru.js:100`, also at r31 for the new
+  text; Doc r31:274-276.
 - **BR-API-109** · `DOCUMENTED_ONLY` — The mark is not applied if the number appears in listings of ≥ 3 different
   flats or is marked as a realtor's. *Evidence:* About:234-235.
 - **BR-API-110** · `DOCUMENTED_ONLY` — The user can remove the number. *Evidence:* About:235.
 - **BR-API-111** · `CONFIRMED` — Card badge priority: «Подозрительно дёшево» > «Проверьте цену» > «Хозяин ✓»
   (`owner_verified`) > «Хозяин» (`is_owner`) > «Ниже рынка», since release `index-Dbpp463V.js`; before it the
-  changelog listed «Проверьте цену» > «Хозяин ✓» > «Ниже рынка» > «Хозяин». *Evidence:* `demo/app/docs/CHANGELOG.md:58`
-  (the audit cited the old order at `CHANGELOG.md:33` of the audited tree); current `$KVADRO_ROOT/docs/api.md:253-254`.
+  changelog listed «Проверьте цену» > «Хозяин ✓» > «Ниже рынка» > «Хозяин». Release `index-CBlEKxdL.js` renames
+  «Хозяин ✓» to «Проверенный хозяин» and gives the badges kinds (`03` BR-APP-026); the order is unchanged.
+  *Evidence:* `demo/app/docs/CHANGELOG.md:58` (the audit cited the old order at `CHANGELOG.md:33` of the audited
+  tree); current `$KVADRO_ROOT/docs/api.md:253-254`; `demo/app/docs/CHANGELOG.md:24` at r31.
 - **Q-API-041** — Hash algorithm (salted? keyed?) and normalisation of the number — required to migrate verifications.
   *Check:* owner interview / legacy code.
+
+## 12a. Owner cabinet «Сдать квартиру» and contact requests (release `index-CBlEKxdL.js`)
+
+Everything in this section comes from the contract of the release (`$KVADRO_ROOT/docs/api.md` §16 and `:818-839` at
+r31, "Doc r31:"), from the Mini App code at r31 and from its texts. No server or bot code was seen, and the
+recovery's parity runs checked the client on mocks that its authors inferred, not on the real API. The methods are
+`08` API-037 … API-054, the screens `03` SCR-049 … SCR-062, and the bot's side is `04` §3.18.
+
+- **BR-API-159** · `CONFIRMED` — Owner-side enums and shapes are a strict contract: `OwnerListing.status` is `draft`,
+  `active`, `paused`, `rented`, `removed` or `rejected` (with the flags `withdrawn` and `held`), `OwnerRequest.status`
+  is `pending`, `given`, `declined`, `agent`, `expired` or `cancelled`, `who` is `one`, `couple`, `family`, `students`
+  or `friends`; `form` is always an object and `photos` always an array. Any other value crashes the owner screens
+  (`03` LB-APP-064). *Evidence:* Doc r31:1283-1285, :1355-1371, :1413-1427; `src/features/owner/OwnerListings.jsx:50`,
+  :542, :571, :606.
+- **BR-API-160** · `CONFIRMED` — Owner methods report refusals as `detail` strings that the client parses:
+  `invalid:<fields>` (`422`), `missing:<fields>`, `status:…` (`409`), `rejected:<reason>` and `photo:too_many`,
+  `photo:not_image`, `photo:too_big`. *Evidence:* Doc r31:1286-1288, :1439-1442, :1450-1454;
+  `src/features/owner/OwnerForm.jsx:668-741`, :1437-1447.
+- **BR-API-161** · `UNVERIFIED` — The client sends no role and no owner id: the server alone ties a listing `:id` or a
+  request id to the caller. Its answer for another user's id is not documented. *Evidence:* Doc r31:31-44;
+  `src/lib/api/owner.js`. (Q-API-069)
+- **BR-API-162** · `DOCUMENTED_ONLY` — An owner may list `max` flats at once (2 today). `GET /api/owner/listings`
+  answers `{items, max, can_add, past?}` with every listing of the user, `can_add: false` at the limit and `past` the
+  number of flats listed before; `POST /api/owner/listings` answers `409` at the limit. Whether the limit counts per
+  account or per phone, and whether drafts count, is not documented. *Evidence:* Doc r31:1406-1411, :1430-1435.
+  (Q-API-068)
+- **BR-API-163** · `DOCUMENTED_ONLY` — `POST /api/owner/listings` has no body and returns a new draft on every call;
+  nothing says that an untouched draft is reused. *Evidence:* Doc r31:1434-1435; `src/lib/api/owner.js:30-34`.
+  (Q-API-068; `03` LB-APP-054)
+- **BR-API-164** · `DOCUMENTED_ONLY` — `PATCH /api/owner/listings/:id` takes only the changed form fields, and `null`
+  clears one. `409` or `missing:status` means the listing can no longer be edited; `422 invalid:<fields>` names the
+  rejected fields. The accepted ranges are not documented. *Evidence:* Doc r31:1373-1391, :1439-1442. (Q-API-069)
+- **BR-API-165** · `DOCUMENTED_ONLY` — The server must hide phone numbers written into the owner's description.
+  *Evidence:* Doc r31:1390; `src/features/owner/owner.js:73`.
+- **BR-API-166** · `DOCUMENTED_ONLY` — Photos are uploaded one per call as the multipart field `file`, at most 10 per
+  listing. The first is the cover, `photos/order` takes the full list of ids, and every photo URL has a `.s.jpg`
+  thumbnail. *Evidence:* Doc r31:1230-1231, :1443-1447; `src/lib/api/owner.js:57-85`.
+- **BR-API-167** · `DOCUMENTED_ONLY` — Seekers never see the exact point of a cabinet listing: the server serves
+  `shown_point {lat, lon, radius_m}`, a circle of about 500 m. *Evidence:* Doc r31:1355-1371;
+  `src/features/owner/OwnerForm.jsx:980-989`, :1010-1016. (Q-API-074)
+- **BR-API-168** · `DOCUMENTED_ONLY` — `POST /api/owner/place {lat, lon}` answers `{address?, city?, district_code?,
+  landmark?}` for a point, and `GET /api/owner/map-start` answers `{lat, lon, zoom}` for the caller, «примерно по IP»
+  in the client's words. The data sources are not documented. *Evidence:* Doc r31:1471-1475;
+  `src/lib/api/owner.js:157`. (Q-API-074)
+- **BR-API-169** · `DOCUMENTED_ONLY` — `GET /api/owner/demand` answers `{count, usual_low_usd, usual_high_usd}`: the
+  number of active radars that match the flat, and the usual price range for its rooms and place, in USD whatever the
+  form's currency. *Evidence:* Doc r31:1476-1479; `src/lib/api/owner.js:165-184`.
+- **BR-API-170** · `DOCUMENTED_ONLY` — The owner's phone is confirmed through the bot: the contact shared with
+  `WebApp.requestContact` arrives in the bot chat, the server then sets `phone_set` and `phone_display` on the
+  listing, and the Mini App learns it only from `GET /api/owner/listings/:id`, which it polls every 1.5 s for up to
+  90 s. *Evidence:* Doc r31:1346-1348, :1436-1438; `src/features/owner/OwnerForm.jsx:1484-1620`.
+- **BR-API-171** · `UNVERIFIED` — The server decides whether the shared number is accepted. On a draft,
+  `reject_reason: not_own` means the contact of another account and `not_uz` a number that is not `+998`. `status:
+  rejected` comes with `reject_reason` `agent` (the number appears in listings of different flats), `fraud` (the
+  number is refused) or `limit` (two flats are already listed with it). The rules behind `agent` and `fraud` are known
+  only from the Mini App's texts. *Evidence:* Doc r31:1366-1369; `src/features/owner/owner.js:89-107`. (Q-API-072)
+- **BR-API-172** · `UNVERIFIED` — The cabinet keeps the owner's number itself, not a hash as `/owner` does
+  (BR-API-107): `phone_display` shows it to the owner, «Дать номер» hands it to a seeker, and `open` mode shows it on
+  the card. Where and how long it is stored is known only from a landing privacy text that was an uncommitted working
+  copy at the read. *Evidence:* Doc r31:1366-1367; `src/features/owner/OwnerForm.jsx:947-949`;
+  `src/features/owner/owner.js:219`. (Q-API-072; LB-API-056)
+- **BR-API-173** · `DOCUMENTED_ONLY` — `contact_mode` is `gate`, `open` or `null`. `gate` hides the number, and
+  seekers send a request (`08` API-054); `open` shows the number on the card to everyone. The value is `null` until
+  the owner chooses, and publishing does not require a choice. *Evidence:* Doc r31:386-391, :1365, :1448-1449;
+  `src/features/owner/OwnerForm.jsx:906-929`. (Q-API-078; `03` LB-APP-056)
+- **BR-API-174** · `DOCUMENTED_ONLY` — `POST …/publish` has no body. It refuses with `missing:<fields>` (from `city`,
+  `place`, `rooms`, `price`, `photos`, `phone`, `limit`, `status`), `409 status:…` or `rejected:<reason>` (`agent`,
+  `fraud`, `limit`). The same call saves the edits of a listing that is already published. The contract names no check
+  of photos or text before a listing goes live. *Evidence:* Doc r31:1450-1454. (Q-API-070, Q-API-071)
+- **BR-API-175** · `UNVERIFIED` — A published listing appears in the feed and is sent to the matching radars at once:
+  the done screen says «уже уходит тем, у кого включён радар», and the stats count `sent` as «получили по радару».
+  *Evidence:* Doc r31:1393-1404; `src/features/owner/owner.js:131`. (Q-API-071)
+- **BR-API-176** · `UNVERIFIED` — `POST …/status` takes `active`, `paused`, `rented` or `removed`. By the Mini App's
+  texts `paused` takes the listing out of the feed and the radars, `active` puts it back, `rented` takes it out and
+  tells the seekers who still wait that the flat is let (their requests become `cancelled`), and `removed` withdraws a
+  listing or deletes a draft. The client offers no way out of `rented` or `removed`. *Evidence:* Doc r31:1455-1457;
+  `src/features/owner/owner.js:203-211`, :240. (Q-API-070)
+- **BR-API-177** · `DOCUMENTED_ONLY` — Two states are set by the service, not by the owner: `withdrawn` (taken down
+  after complaints; the listing moves to «История») and `held` (paused by support; the owner cannot resume it).
+  *Evidence:* Doc r31:1358-1359; `src/features/owner/OwnerListings.jsx:86-87`, :282-284. (Q-API-071)
+- **BR-API-178** · `DOCUMENTED_ONLY` — `OwnerListing.stats` is `null` or `{pending, requests, given, sent, opened,
+  favorites?, days_listed?, daily[], price_delta?, price_tone?}`; the last value of `daily` is today. *Evidence:* Doc
+  r31:1393-1404. (Q-API-078)
+- **BR-API-179** · `CONFIRMED` — `GET /api/owner/pending` answers `{pending: number}`, always a number. The client
+  calls it for every user at start and on every return to the app, also for users who never listed a flat. *Evidence:*
+  Doc r31:1289, :1460-1462; `src/lib/ownerPending.js:40-55`; `src/app/App.jsx:141`. (`03` LB-APP-066)
+- **BR-API-180** · `DOCUMENTED_ONLY` — `GET /api/owner/requests?owner_listing_id=<id>` answers `OwnerRequest[]`: `id`,
+  `name` (the seeker's Telegram name), `who`, `people`, `move_in`, `message`, `status`, `agent_marked?` and the flags
+  `can_reason`, `can_undo` and `can_late`, by which the server decides which answers the owner may still give.
+  *Evidence:* Doc r31:1413-1427, :1463; `src/lib/api/owner.js:122-127`. (Q-API-077)
+- **BR-API-181** · `UNVERIFIED` — `POST /api/owner/requests/:id {action}` takes `give`, `decline`, `reason_found`,
+  `reason_agent`, `undo` or `late` and returns the request; `409` means the action is no longer possible. By the Mini
+  App's texts `give` sends the owner's number to the seeker at once, `decline` sends a soft refusal with similar
+  listings after 10 minutes, which is also the window of `undo`, and `reason_agent` or `late` marks the seeker as a
+  realtor who can no longer write to this owner's flats. *Evidence:* Doc r31:1464-1466;
+  `src/features/owner/owner.js:219-234`. (Q-API-075, Q-API-077)
+- **BR-API-182** · `DOCUMENTED_ONLY` — `POST /api/owner/waitlist` has no body, and its answer is not read. It records
+  a user whose number was refused as a realtor's; the Mini App promises a bot message «когда откроем». *Evidence:* Doc
+  r31:1469-1470; `src/features/owner/owner.js:110`. (`04` Q-BOT-049)
+- **BR-API-183** · `DOCUMENTED_ONLY` — `POST /api/listings/:id/contact {who, people, move_in, message}` creates a
+  seeker's request to an owner who hides the number: `who` is required, `people` is 1…20, `move_in` holds at most 32
+  characters and `message` at most 500, both nullable. The answer `{status}` becomes `my_request` of the card.
+  *Evidence:* Doc r31:818-839; `src/features/listing/ContactRequestSheet.jsx:50-85`; `src/lib/api/owner.js:191-192`.
+  (Q-API-075)
+- **BR-API-184** · `CONFIRMED` — `409 no_chat` on that method is answered before a request is created; the client asks
+  for write access and repeats the call once. *Evidence:* Doc r31:837-838, :1290;
+  `src/features/listing/ContactRequestSheet.jsx:59-68`; `src/lib/chatAccess.js:27-55`.
+- **BR-API-185** · `DOCUMENTED_ONLY` — The method refuses with the `detail` codes `limit_fast`, `limit_day`,
+  `limit_week`, `blocked`, `harvest`, `closed`, `own` and `open`. The limits are the server's; the Mini App's texts
+  name 10 requests a day, 30 a week and a 10-minute pause after several in a row. The HTTP statuses are not
+  documented. *Evidence:* Doc r31:838-839; `src/i18n/locales/ru.js:632-644`;
+  `src/features/listing/ContactRequestSheet.jsx:25-26`, :71-80. (Q-API-076)
+- **BR-API-186** · `DOCUMENTED_ONLY` — A request is `pending`, `given`, `declined`, `agent`, `expired` or `cancelled`.
+  The seeker reads the status only as `my_request` on `GET /api/listings/:id` of its own card, and the owner's answer
+  reaches the seeker through the bot. *Evidence:* Doc r31:348, :1413-1425; `src/i18n/locales/ru.js:619-620`, :646.
+  (Q-API-075)
+- **BR-API-187** · `DOCUMENTED_ONLY` — After `given` the seeker's card is expected to carry `phone`; until then a gate
+  listing has none. *Evidence:* Doc r31:386-391; `src/features/listing/ListingScreen.jsx:206`, :334-340. (Q-API-076;
+  `03` LB-APP-074)
+- **BR-API-188** · `DOCUMENTED_ONLY` — The card of a listing placed through the cabinet has `owner_self: true`,
+  `contact_mode`, `response_minutes` and `owner_description`, no channel source and one history entry without a
+  channel; for its author it also has `owner_mine` and `owner_listing_id`. `owner_mine` and `my_request` depend on the
+  caller. *Evidence:* Doc r31:343-350, :396-397; `src/features/listing/ListingScreen.jsx:205-211`, :285-303.
+  (Q-API-076, Q-API-078)
+- **BR-API-189** · `UNVERIFIED` — The server writes the owner tier into the `owner` label: «Проверенный хозяин…» for a
+  verified or self-placed listing, «Хозяин — со слов объявления» for a claimed one; the client hides such a label by
+  comparing it with its own texts. This is inferred from the parity mock. *Evidence:* Doc r31:392-395;
+  `src/features/listing/sections/AuthorSection.jsx:7-23`; `tools/parity/mocks.mjs:300`. (Q-API-078; `03` LB-APP-075)
+- **Q-API-068** — The apartment limit and drafts: is `max` / `can_add` counted per account or per confirmed phone (the
+  sheet says «на один номер», the phone check answers `limit`); do drafts count; is `max` configuration; does
+  `POST /api/owner/listings` return an existing untouched draft or always a new row? *Check:* open a new form twice
+  and compare the draft ids; list flats up to `max` on one account, then confirm the same phone on a second account
+  and read `can_add` and the phone check: the operator's answer; a test owner listing and a test seeker account on
+  the legacy product, with the product owner's approval.
+- **Q-API-069** — Validation of the owner form: the accepted ranges for area, floor, number of floors, price per
+  currency and tenants; the full `detail` vocabulary of the owner methods with the HTTP status of each; the answer for a
+  listing or request id of another user; who may join the waiting list and what it stores. Legacy asks the first two
+  itself (Doc r31:1321-1325, open question 17). *Check:* send out-of-range values in `PATCH` and record status and
+  `detail`; call the owner methods with a listing id and a request id of the second account: the operator's answer; a
+  test owner listing and a test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-070** — Edits and states of a published listing: what a first `publish` sets (the status, the time, the id of
+  the public listing); does a `PATCH` or a photo change reach the public listing at once or only after `publish`; what
+  happens when the last photo of a live listing is deleted; does `publish` resume a `paused` listing; can a `rejected`
+  listing be published again; are the transitions out of `rented` and `removed` refused, and `active` on a `held` listing?
+  *Check:* on a published test listing change the price and a photo and read the public card before and after `publish`;
+  delete its last photo; publish it while `paused`; send each status after `rented` and after `removed`: the operator's
+  answer; a test owner listing and a test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-071** — Checks around publishing: is there any automatic or manual check of photos, description or price
+  before a listing goes live; who sets `withdrawn` (which complaints, how many) and `held`, and how is the owner told;
+  is the listing sent to matching radars at once, and what does `sent` count? *Check:* publish a test listing that a
+  radar of the test seeker matches, and record when it appears in the feed and in the bot chat and what `sent` shows:
+  the operator's answer; a test owner listing and a test seeker account on the legacy product, with the product
+  owner's approval.
+- **Q-API-072** — The phone checks and the stored number: the rule behind `agent` (in how many listings of different
+  flats the number must appear; `/owner` refuses the badge at 3 or more, BR-API-109, the cabinet's limit is 2), the
+  source of the `fraud` list and the appeal path; whether the checks run when the contact arrives, at publish, or
+  both; where the number itself is stored, for how long, and whether deleting the user's data erases it. The landing
+  privacy text of the release was an uncommitted working copy at the read. *Check:* confirm a phone on a test
+  account and read `phone_display` and `reject_reason`; confirm a number that already stands in listings of other
+  flats; ask where the number is kept and what «Удалить мои данные» erases: the operator's answer; a test owner
+  listing and a test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-073** — Owner photos: does the server re-encode an upload and strip EXIF and GPS data; which formats and
+  sizes does it accept (`photo:not_image`, `photo:too_big`); is the `.s.jpg` thumbnail made at upload; how long are
+  photos kept after `rented` or `removed`? *Check:* upload a photo with EXIF and GPS data, a PNG and a HEIC named
+  `photo.jpg` and an oversize file; download what the listing serves and inspect it; request the photo URLs again
+  after `removed`: the operator's answer; a test owner listing and a test seeker account on the legacy product, with
+  the product owner's approval.
+- **Q-API-074** — Place and position: the source of the address lookup of `POST /api/owner/place`; whether
+  `GET /api/owner/map-start` uses IP geolocation and whether either call stores the position; how `shown_point` is
+  derived (a fixed offset per listing?) and whether the exact point appears in any public answer; whether the server
+  checks the point against the country (the client checks only a rectangle, `03` LB-APP-063). *Check:* read
+  `shown_point` of one test listing several times and compare it with the saved point and with the public card; call
+  `map-start` from two networks; save a point outside the country: the operator's answer; a test owner listing and a
+  test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-075** — The life of a request: when it becomes `expired`; the delay of the soft refusal and the window of
+  `undo` (the texts say 10 minutes) and how long `can_late` lasts; what `undo` does for each status; whether a seeker
+  may send a new request after `expired`, `declined` or `cancelled`; what a second request to the same listing answers
+  while one is `pending`; whether creation can answer anything other than `pending`; the order of
+  `GET /api/owner/requests`. *Check:* send a request and leave it unanswered; decline, undo and mark requests at
+  different times and read the flags of `GET /api/owner/requests`; send a second request while one is `pending` and
+  after each closed status: the operator's answer; a test owner listing and a test seeker account on the legacy
+  product, with the product owner's approval.
+- **Q-API-076** — The seeker's side: the values and windows behind `limit_fast`, `limit_day`, `limit_week` and whether they
+  count per user; what triggers `blocked` and `harvest`; the HTTP status of each `detail` code; how the request body is
+  checked (a `who` outside the list, too long texts); what `given` delivers (the number in the bot, `phone` on the card, or
+  both: `03` LB-APP-074); how `response_minutes` is computed. *Check:* send requests in a row from the test seeker until
+  each limit answers, and record status and `detail`; after «Дать номер» read the seeker's card and bot chat: the operator's
+  answer; a test owner listing and a test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-077** — The seeker shown to the owner: is `OwnerRequest.name` stored with the request or read from Telegram
+  when the list is shown (the uncommitted privacy text says the name is not stored); what a seeker marked `agent` can
+  still do (barred from this owner's flats only, or more), and whether the seeker is told. *Check:* change the test
+  seeker's Telegram name after a request and read `name` again; mark the seeker with `reason_agent` and send a new
+  request to the same owner and to another one: the operator's answer; a test owner listing and a test seeker account
+  on the legacy product, with the product owner's approval.
+- **Q-API-078** — Owner fields on listing cards: is `owner_verified` always true when `owner_self` is (the feed badge
+  reads only `owner_verified`); does the server prefix the `owner` label with «Проверенный хозяин» or set «Хозяин — со
+  слов объявления» (inferred from the parity mock, `03` LB-APP-075); the `contact_mode` of a listing published without
+  a choice (`03` LB-APP-056); the unit of `stats.price_delta` (Doc r31:1325) and whether the market verdict applies to
+  cabinet listings; `sources` and `original_url` of a self-placed listing. *Check:* publish a test listing without
+  choosing a mode, then read its feed item, its card and its `stats` as the owner and as the test seeker: the
+  operator's answer; a test owner listing and a test seeker account on the legacy product, with the product owner's
+  approval.
 
 ## 13. Call page and contact
 
@@ -1092,6 +1300,16 @@ the transition (About:437-440).
     user, drop unauthenticated events at the edge.
   - **Old-client impact:** compatible if the cap is ≥ 2 KB and unknown names are answered `204` (dropped, not
     rejected); old payloads are small (message ≤ 300, source ≤ 300).
+- **LB-API-056** · `decision` · `UNVERIFIED` — The cabinet keeps the owner's phone number itself, while `/owner` and
+  the bot's privacy text say that only a hash is stored; one user can be under both regimes. The cabinet came with
+  release `index-CBlEKxdL.js` (§12a). *Evidence:* Bot:819-822, :852; About:232;
+  `src/features/owner/OwnerForm.jsx:947-949` («Ваш номер: …») and `src/features/owner/owner.js:219` («Дать номер»),
+  both at r31. The only text that states the storage of the number itself is the landing privacy page, an uncommitted
+  working copy at the read, not cited as a release. (Q-API-072; BR-API-172)
+  - **Proposed fix:** one rule for both flows. If the number itself is kept for cabinet owners: encrypt it at rest,
+    keep it apart from the `/owner` hash, bring the bot's `/owner` and `/privacy` texts in line with it, and erase it
+    when the user deletes their data.
+  - **Old-client impact:** none: no legacy client talks to HOMI (`24`).
 
 ### Localization, settings, directories
 
@@ -1143,7 +1361,7 @@ the transition (About:437-440).
 3. **Security debts sit in the contract itself** — raw phone numbers in listing details (LB-API-030), HTML-injected map
    labels (LB-API-008), PII-bearing `initData` in every request header (LB-API-020), unsigned photo snapshots
    (LB-API-054). Two of them cannot be removed while the old client runs; mitigations must be server-side.
-4. **Most server behaviour is undocumented outside prose** — 71 business rules are `DOCUMENTED_ONLY` and 61 questions
+4. **Most server behaviour is undocumented outside prose** — 91 business rules are `DOCUMENTED_ONLY` and 72 questions
    are open; radar matching triggers, delivered-card tracking, vote thresholds, `auth_date` window, photo-signing and
    owner-hash algorithms (Q-API-002, -024, -027, -031, -039, -041) block both parity and data migration and need the
    legacy owner.
@@ -1155,20 +1373,20 @@ the transition (About:437-440).
 
 | Prefix | Count | Defined in |
 | ------ | ----: | ---------- |
-| `API-` | 36 | `08-api-inventory.md` §2 |
+| `API-` | 54 | `08-api-inventory.md` §2 |
 | `RES-` | 22 | `08-api-inventory.md` §3 |
-| `BR-API-` | 158 | this document |
-| `LB-API-` | 55 (19 `bug`/`quirk` in §3–§21, 36 `decision` in §24) | this document |
-| `Q-API-` | 62 | this document |
+| `BR-API-` | 189 | this document |
+| `LB-API-` | 56 (19 `bug`/`quirk` in §3–§21, 37 `decision` in §24) | this document |
+| `Q-API-` | 73 | this document |
 
 ### Status distribution
 
 | Prefix | CONFIRMED | DOCUMENTED_ONLY | UNVERIFIED | DEPRECATED_CANDIDATE |
 | ------ | --------: | --------------: | ---------: | -------------------: |
-| `API-` (contract) | 36 | 0 | 0 | 0 |
-| `API-` (server logic) | 0 | 35 | 1 (API-017) | 0 |
+| `API-` (contract) | 54 | 0 | 0 | 0 |
+| `API-` (server logic) | 0 | 53 | 1 (API-017) | 0 |
 | `RES-` (primary label) | 13 | 7 | 2 | 0 (RES-016 is flagged as a candidate in `08` §5) |
-| `BR-API-` | 80 | 71 | 7 | 0 |
-| `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 3 (decision) | 0 |
+| `BR-API-` | 84 | 91 | 14 | 0 |
+| `LB-API-` | 47 (8 bug, 11 quirk, 28 decision) | 5 (decision) | 4 (decision) | 0 |
 
 `Q-API-` items carry no status: each is an open check.

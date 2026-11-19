@@ -1594,3 +1594,58 @@ whose `FewResultsNote` now reaches the radar Server Actions, so they mock `@/fea
 restored the scroll and the list asked for its second page, 33 cards, not 20); the case now scrolls to the top before
 the reload. WAITING for the regular deploy of the production track, with `RADAR_CREATION_ENABLED` unset (DEC-51), and
 the check of the "soon" state inside Telegram on staging.
+
+## AC. Development track, 2026-11-19 — legacy release intakes: `index-BnFvC-Ft`, a third release, `index-CBlEKxdL`
+
+**The intake of `index-BnFvC-Ft.js`** (branch `feat/intake-index-BnFvC-Ft`, #88) was merged on 2026-11-19 as `eb36036`,
+on «сливай #88», after `main` was merged in as `f318405` (the after-merge docs PR #87 had been merged as `83fef19` on
+«сливай #87») and green `backend` (run 44487499748), `frontend` (run 44487499658) and `frontend-e2e` (run 44487499785,
+350 passed, then the `@radars-off` run 14 passed) on it. On `0b722d5` the end-to-end job had failed twice on tests
+outside the PR's code and passed on the third attempt (run 44475570251; KI-63). `main` after the merge: `backend` (run
+44491608203) and `frontend` (run 44491607150) green. WAITING for the regular deploy of the production track: stubs only,
+no new environment key, no migration.
+
+**A third release.** On 2026-11-19 the developer asked again whether the plan needs correcting. The legacy checkout by
+then held `index-CIa0Ldj2.js` (production 18 Nov 2026; source at SVN r33, the changelog at r36), one release past
+`index-CBlEKxdL.js`, whose intake had not started. Three subagents read it and compared it with `main` (`eb36036`)
+without changing anything: 62 items in legacy, 97 verdicts against HOMI — 35 already the same, 37 differences in built
+code (about 2 000 lines, the largest about 220), 6 contract changes on stubs with one new route (41 pairs), 8 for
+specifications only, 3 not applicable, 4 for the developer. Five `DEV` flags that are off (DEV-010 wording, DEV-014,
+DEV-016 error half, DEV-017, DEV-051) are legacy behaviour in that release. The drafts are kept outside the repository
+until the intake of that release.
+
+**The developer's decision** (2026-11-19, `docs/migration/decisions/2026-11-19-developer-answers.md`): «По релизам, код
+до WP-31» — the intake of `index-CBlEKxdL.js`, the intake of `index-CIa0Ldj2.js`, the owner-cabinet plan, the catch-up
+packages for the built code, then WP-31; each its own branch and PR, merged on its own «сливай».
+
+**The intake of `index-CBlEKxdL.js`**: branch `feat/intake-index-CBlEKxdL` on `main` = `eb36036`, PR #89, in review.
+Commits: `371c553` (the `legacy` catalogue re-imported: 563 names, four `homi` overrides for texts with the legacy
+brand), `f725147` (the audit: 141 new ids, the registers, 988 moved line references), `edf01cc` (the pin, the
+specifications of the changes outside the cabinet, the queue rows, the table of built code behind the pin), `60e5fff`
+(review fixes) and the memory commit. It records what legacy does; what HOMI builds for the cabinet is left to the
+owner-cabinet plan, so `09` has no cabinet rows yet. It ran as plain subagents: one integrator wrote an id map over the
+three drafts of the night (their proposed ids collided and five items were described twice), three writers then worked
+on disjoint files, and two reviewers read every cross-reference to a new id against the title of its target (1 214
+mentions; none wrong) and every entry against its source (no fact lost; ten small findings fixed).
+
+Verification, run in the main session: `make ci-frontend` on `371c553` → exit 0 (app 215 files / 3461 + 1 todo, i18n
+114, search 241 + 1 todo, ui 138, testing 95, api-client 14, utils 2); the later commits change only `docs/` and
+`.ai/memory/`. On `60e5fff`: `python3 -I scripts/migration/collect_ids.py --check` → exit 0, 2 405 ids;
+`build_open_questions.py` → 267 questions; `task_graph.py --check` → exit 0; the three JSON registers parse;
+`features.csv` 148 rows of 19 columns; all 497 rule rows of `07` and all 312 id-carrying references of `09` and
+`features.csv` point at the line that defines their id (437 and 312 on `main`). Today's legacy locale files with the
+next release's diffs reverse-applied are byte-identical to the copy the catalogue was imported from. The backend is
+untouched; the end-to-end suite was not run locally.
+
+ASSUMPTION_MISMATCH AM-100 (2026-11-19):
+- **Assumption.** The intake procedure (WP-02 Part B, `25` §8) reads a release from the legacy checkout: the tree is
+  taken to hold the release until its intake is written, and the audit cites its lines.
+- **What was found.** The checkout moved twice within one working day. At the read for #88 it was already one release
+  past the release taken in, and the release of this intake (r31) was overwritten by the next sync (source r33, 71 of
+  the source files changed) before the intake was written. `svn cat` and `svn up` are not used, so an older state cannot
+  be read back.
+- **Resolution.** A release is read when it appears, with `svn info` and the time of the read, and kept as a draft; the
+  locale files are copied outside the tree at the read. An older state of a file is rebuilt from today's file by
+  reverse-applying the next release's `delta/units` diffs and compared byte for byte with the copy. `baseline.md` names
+  the revision the line references belong to and says that they are not those of today's checkout; the next intake reads
+  the changed files again.

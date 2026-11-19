@@ -87,7 +87,7 @@ value (BR-API-126), `403` with the same reason for a gated user (BR-API-011); AP
 
 `backend/tests/Feature/Migration/Identity/` (`pgsql` group, synthetic stage, KV-QA-001):
 - `UserLoaderTest` — names in stage are never copied; flags copied; unknown `bot_chat_state` → `active` + re-probe flag.
-- `SettingsLoaderTest` dataset: `off` → nulls; `23-08` → 23:00/08:00 (crosses midnight); `25-08`, `abc` → `off` + change;
+- `SettingsLoaderTest` dataset: `off` → nulls; `23-08` → 23:00/08:0 (crosses midnight); `25-08`, `abc` → `off` + change;
   `09,19` and `19,09` → `{9,19}`; `uz_Latn` → `uz`; `kk` → `ru` + change; `locale_chosen` true without timestamp → run start.
 - `AccessLoaderTest` — admitted, blocked with reason, open invite hashed (raw token absent from every column).
 - `AttributionLoaderTest` dataset: `s_web`, `s_web_tg--vab12cd34ef`, `s_seo_uz_…`, `s_friend`, `s_web--l123`, 64 bytes of

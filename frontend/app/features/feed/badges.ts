@@ -16,7 +16,7 @@ export interface CardBadge {
 
 /**
  * The one badge over a card's photo (BR-APP-026, BR-API-111), first match wins: «Подозрительно дёшево» >
- * «Проверьте цену» > «Хозяин ✓» > «Хозяин» > «Ниже рынка». The pinned order is that of `index-Dbpp463V.js` and
+ * «Проверьте цену» > «Проверенный хозяин» > «Хозяин» > «Ниже рынка». The pinned order is that of `index-Dbpp463V.js` and
  * later, where «Хозяин» ranks above «Ниже рынка». The tones come from the verdict, so they need a delta as well
  * (`verdictToneOf`): «Ниже рынка» is the tone `good`, not any negative delta.
  */

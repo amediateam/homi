@@ -17,12 +17,12 @@ switch. The same `VoteService` serves the bot's «Уже сдано» / «Это
 
 ## Legacy reference
 
-- API-016 (`08-api-inventory.md:742-776`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90`,
+- API-016 (`08-api-inventory.md:832-866`); client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:84-90`,
   `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:12` (`agent` hidden when `is_owner: false`),
   `:89-95`, `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:61-77` (toasts, undo for `fraud`), toasts in
   `$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js:217-220`; mock `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:175-177`;
   `$KVADRO_ROOT/docs/api.md:675-705`; `$KVADRO_ROOT/docs/about.md:219-228`.
-- Rules: `02-legacy-backend-audit.md:567-593` (§11: BR-API-101…106, Q-API-038, Q-API-039, Q-API-040, LB-API-015).
+- Rules: `02-legacy-backend-audit.md:569-595` (§11: BR-API-101…106, Q-API-038, Q-API-039, Q-API-040, LB-API-015).
 - Bot side (M5 reuses the service): `04-telegram-bot-audit.md` card buttons (BR-BOT-061, BR-BOT-062), `09` C-05, C-06.
 - Data: ENT-018, ENT-030 (`06` §2.3–§2.4; `listing_votes`, `listing_authors`), LB-DATA-012, LB-DATA-013.
 - Security: SEC-REQ-045 (`16-security-review.md:914-921`), reviewer rule 10 (`.ai/agents/security-reviewer.md`).

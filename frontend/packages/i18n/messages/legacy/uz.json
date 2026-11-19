@@ -51,7 +51,7 @@
       "join": "Avval — bot"
     },
     "text": {
-      "private": "Ilova hozir faqat egasi uchun ochiq.",
+      "private": "Ilova hozir faqat kvadro² jamoasi uchun ochiq.",
       "invite": "Kirish taklif havolasi orqali: uni oching va botda «Start»ni bosing.",
       "full": "Hozir joy qolmadi. Keyinroq urinib koʻring.",
       "blocked": "Ilovaga kirish cheklangan.",
@@ -210,11 +210,31 @@
     "suspiciousCheap": "Shubhali arzon",
     "checkPrice": "Narxni tekshiring",
     "owner": "Uy egasi",
-    "ownerVerified": "Uy egasi ✓",
+    "ownerVerified": "Tasdiqlangan uy egasi",
     "negotiable": "Narxi kelishiladi",
     "downPayment": "boshlangʻich toʻlov",
     "businessPrice": "biznes narxi, joy ijarada",
     "viewedTitle": "Bu eʼlonni koʻrgansiz"
+  },
+  "owner": {
+    "verified": "Tasdiqlangan uy egasi",
+    "claimed": "Uy egasi — eʼlonga koʻra",
+    "claimedHint": "Biz tekshirmadik — qoʻngʻiroq qilganda komissiya bor-yoʻqligini soʻrang.",
+    "any": "Barchasi",
+    "no_agents": "Maklersiz",
+    "owners": "Faqat uy egalari",
+    "tip": "Bosing — bu nimani anglatishini aytamiz",
+    "tipClose": "Maslahatni yopish",
+    "info": {
+      "self": "Kvartirani kvadro²ga oʻzi joylagan.",
+      "verified": "Uy egasi bu eʼlondagi raqamni kvadro²da oʻzi tasdiqlagan.",
+      "phone": "Raqam Telegram tugmasi bilan tasdiqlangan: bu uning oʻz raqami.",
+      "notAgent": "Tekshirdik: bu raqam makler eʼlonlarida uchramaydi.",
+      "gate": "Raqamni soʻrovingizdan keyin oʻzi beradi. Maklerlarni unga yoʻlatmaymiz.",
+      "footGate": "Baribir makler javob bersa, botda «Makler javob berdi» tugmasini bosing — tekshiramiz.",
+      "foot": "Makler boʻlib chiqdimi? «Yana» → «Shikoyat qilish»ni bosing — tekshiramiz.",
+      "ok": "Tushunarli"
+    }
   },
   "viewer": {
     "title": "Surat"
@@ -424,6 +444,7 @@
     "channels": "{n, plural, one {kanal} other {kanal}}",
     "views": "{n, plural, one {marta koʻrilgan} other {marta koʻrilgan}}",
     "history": "Tarix",
+    "historySelf": "Uy egasi kvadro²ga {date} joyladi. Narx hali oʻzgarmagan.",
     "historySingle": "{date} da @{channel} da joylangan. Takrorlar va narx oʻzgarishi hozircha yoʻq.",
     "priceHistory": "Narx tarixi"
   },
@@ -552,11 +573,6 @@
     "commercial": "Bino",
     "land": "Hudud"
   },
-  "owner": {
-    "any": "Barchasi",
-    "no_agents": "Maklersiz",
-    "owners": "Faqat uy egalari"
-  },
   "tenant": {
     "family": "Oila",
     "men": "Yigitlar",
@@ -620,5 +636,60 @@
     "mln": "{value} mln soʻm",
     "bln": "{value} mlrd soʻm",
     "unitMln": "mln soʻm"
+  },
+  "own": {
+    "group": "Kvartira ijaraga beraman",
+    "title": "Kvartirani ijaraga berish",
+    "free": "Bepul",
+    "limitValue": "{n} / {max}",
+    "limitSheetTitle": "{n} / {max} kvartira ijarada",
+    "limitSheetText": "Bu bitta raqam uchun eng koʻpi. Bitta kvartirani «Band» deb belgilang yoki olib tashlang — keyin yangisini qoʻsha olasiz.",
+    "mine": "Mening eʼlonlarim",
+    "pendingShort": "javob kutmoqda: {n}",
+    "reqTip": {
+      "tab": "Birinchi soʻrov keldi! «Sozlamalar» → «Mening eʼlonlarim»"
+    },
+    "draftShort": "Qoralama"
+  },
+  "contact": {
+    "cta": "Uy egasi bilan bogʻlanish",
+    "sent": "Soʻrov yuborildi",
+    "title": "Uy egasiga soʻrov",
+    "lead": "Uy egasi soʻrovingizni oladi va botga javob beradi — odatda {n} daqiqa ichida.",
+    "leadNoTime": "Uy egasi soʻrovingizni oladi va botga javob beradi.",
+    "who": {
+      "_": "Kim yashaydi",
+      "one": "Bir kishi",
+      "couple": "Er-xotin",
+      "family": "Oila",
+      "students": "Talabalar",
+      "friends": "Doʻstlar"
+    },
+    "people": "Necha kishi",
+    "moveIn": "Koʻchib kelish",
+    "moveInPh": "Masalan, 1-dekabrdan",
+    "message": "Xabar",
+    "messageDefault": "Assalomu alaykum! Koʻrsa boʻladimi?",
+    "note": "Uy egasi Telegramdagi ismingizni va shu javoblarni koʻradi, raqamingizni emas. Kuniga 10 tagacha soʻrov yuborish mumkin.",
+    "send": "Uy egasiga yuborish",
+    "pickWho": "Kim yashashini tanlang",
+    "err": {
+      "noChat": "Uy egasining javobi botga keladi — botga sizga yozishga ruxsat bering va yana yuboring.",
+      "limit_day": "Bugun 10 ta soʻrov yubordingiz. Ertaga yana mumkin.",
+      "limit_fast": "Ketma-ket bir nechta soʻrov — keyingisini 10 daqiqadan keyin yuborish mumkin.",
+      "limit_week": "Haftasiga 30 ta soʻrov — bu chegara. Yangilarini bir necha kundan keyin yuborish mumkin.",
+      "blocked": "Akkauntingiz uchun soʻrovlar hozir yopiq. Xato boʻlsa, qoʻllab-quvvatlashga yozing.",
+      "closed": "Uy egasi endi soʻrov qabul qilmaydi — kvartira berilgan boʻlsa kerak.",
+      "own": "Bu sizning kvartirangiz.",
+      "open": "Uy egasi raqamni ochdi — kartochkani yangilang va qoʻngʻiroq qiling."
+    },
+    "usually": "Odatda {n} daqiqada javob beradi",
+    "pendingNote": "Soʻrov yuborildi — javob botga keladi.",
+    "mineBar": "Bu sizning eʼloningiz",
+    "mineBarHint": "Soʻrovlar — «Mening eʼlonlarim»da",
+    "closedBar": "Uy egasi raqamini bera olmaydi",
+    "cancelledBar": "Kvartira endi ijaraga berilmaydi",
+    "expiredBar": "Uy egasi hali javob bermadi",
+    "similarHint": "Lentadan oʻxshashlarini koʻring"
   }
 }

@@ -6,7 +6,7 @@ this repository (Laravel 13 / PostgreSQL / Next.js 16). The legacy system is the
 is new product design until a document says so explicitly and links the decision.
 
 Status (2026-11-14): **audit and plan complete; no migration code yet.** The audit describes legacy release
-`index-BnFvC-Ft.js`, brought up to it on 2026-11-19 (baseline and intake log:
+`index-CBlEKxdL.js`, brought up to it on 2026-11-19 (baseline and intake log:
 [`wave-1/baseline.md`](wave-1/baseline.md)). Start with
 [`21-development-master-plan.md`](21-development-master-plan.md); to continue the work, read
 [`22-agent-handoff.md`](22-agent-handoff.md).

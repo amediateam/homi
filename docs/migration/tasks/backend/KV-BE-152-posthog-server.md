@@ -17,7 +17,7 @@ deletion that «Удалить мои данные» promises — retried until 
 ## Legacy reference
 
 - `$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431` (PostHog EU, random id, erase on deletion);
-  bot `/privacy` text (`04-telegram-bot-audit.md:1172`, BR-BOT-090).
+  bot `/privacy` text (`04-telegram-bot-audit.md:1215`, BR-BOT-090).
 - RES-006 (PostHog ingestion from the client); `meta.analytics` (API-001, KV-BE-029); ENT-006 (distinct id, migrated
   byte-for-byte by KV-DB-014).
 - Rules: BR-API-126 (random per-user id via `meta.analytics.id`), BR-API-127 (no `initData` to PostHog), BR-API-128

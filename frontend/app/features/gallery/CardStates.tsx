@@ -152,7 +152,7 @@ const STATES: { id: string; title: string; props: ListingCardProps }[] = [
   },
   {
     id: "badge-owner-verified",
-    title: "Бейдж «Хозяин ✓», обычная цена, можно с животными",
+    title: "Бейдж «Проверенный хозяин», обычная цена, можно с животными",
     props: {
       item: card(100014, {
         is_owner: true,

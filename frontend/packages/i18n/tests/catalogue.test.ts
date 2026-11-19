@@ -144,21 +144,55 @@ describe("the merged catalogues", () => {
     expect(merged.ru["radar.delete"]).toBe(legacyRu.radar.delete);
     expect(merged.ru["toast.subLimit"]).toBe(legacyRu.toast.subLimit);
   });
+
+  it("override the four texts of `index-CBlEKxdL.js` that carry the legacy brand, and follow its en wording", () => {
+    const values = (key: string) => locales.map((locale) => merged[locale][key]);
+    expect(values("noAccess.text.private")).toEqual([
+      "Приложение сейчас доступно только команде HOMI.",
+      "Ilova hozir faqat HOMI jamoasi uchun ochiq.",
+      "The app is available only to the HOMI team for now.",
+    ]);
+    // The three owner texts name no product: the same sentence is true of a legacy listing and of a HOMI one.
+    expect(values("owner.info.self")).toEqual(["Разместил квартиру сам.", "Kvartirani oʻzi joylagan.", "Listed the flat themselves."]);
+    expect(values("owner.info.verified")).toEqual([
+      "Хозяин сам подтвердил номер из этого объявления.",
+      "Uy egasi bu eʼlondagi raqamni oʻzi tasdiqlagan.",
+      "The owner confirmed the number from this listing themselves.",
+    ]);
+    expect(values("details.historySelf")).toEqual([
+      "Хозяин разместил квартиру {date}. Изменений цены пока не было.",
+      "Uy egasi {date} joyladi. Narx hali oʻzgarmagan.",
+      "The owner listed it on {date}. No price changes yet.",
+    ]);
+    expect(merged.en["found.shareText"]).toContain("owners vs. agents");
+    expect(merged.en["found.where.agent"]).toBe("Through an agent");
+    // The other keys of the three namespaces stay legacy's.
+    expect(merged.ru["noAccess.title.private"]).toBe(legacyRu.noAccess.title.private);
+    expect(merged.ru["owner.info.phone"]).toBe(legacyRu.owner.info.phone);
+    expect(merged.ru["card.ownerVerified"]).toBe("Проверенный хозяин");
+  });
 });
 
 describe("the legacy layer", () => {
   const layers = { ru: legacyRu, uz: legacyUz, en: legacyEn } as Record<string, Tree>;
 
   it("matches the key list of the pinned release, which keeps the legacy names", () => {
-    expect(keyList.release).toBe("index-BnFvC-Ft.js");
-    expect(keyList.keys).toHaveLength(504);
+    expect(keyList.release).toBe("index-CBlEKxdL.js");
+    expect(keyList.keys).toHaveLength(563);
     for (const layer of Object.values(layers)) {
       expect(Object.keys(flatten(layer)).map(legacyName).sort()).toEqual([...keyList.keys].sort());
     }
   });
 
   it("moves exactly the listed leaf-and-prefix keys to <key>._ and renames nothing else", () => {
-    expect(leafAndPrefix).toEqual(["settings.cards", "settings.graphics", "settings.theme", "sheet.market", "sheet.posted"]);
+    expect(leafAndPrefix).toEqual([
+      "contact.who",
+      "settings.cards",
+      "settings.graphics",
+      "settings.theme",
+      "sheet.market",
+      "sheet.posted",
+    ]);
     const moved = Object.keys(flatten(layers.ru))
       .filter((path) => path.endsWith("._"))
       .map(legacyName)
