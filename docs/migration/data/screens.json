@@ -1275,7 +1275,8 @@
       "phone step of the owner form when the owner listing is rejected (since index-CBlEKxdL.js)"
     ],
     "source_files": [
-      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.js"
     ],
     "apis": [
       "POST /api/owner/waitlist"
@@ -1292,7 +1293,8 @@
       "after the phone is confirmed, or Дальше in the questionnaire when it already is (since index-CBlEKxdL.js)"
     ],
     "source_files": [
-      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.js"
     ],
     "apis": [
       "POST /api/owner/listings/:id/contact_mode",
@@ -1387,7 +1389,9 @@
       "GET /api/listings/:id",
       "GET /api/owner/listings/:id",
       "GET /api/bot",
-      "POST /api/owner/listings/:id/status"
+      "POST /api/owner/listings/:id/status",
+      "GET /api/owner/requests",
+      "POST /api/owner/requests/:id"
     ],
     "storage_keys": [
       "kv-own-focus"

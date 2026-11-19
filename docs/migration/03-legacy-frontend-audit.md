@@ -578,7 +578,7 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - no width breakpoints; a phone layout only, with the feed limited to a 608 px column (`$KVADRO_ROOT/demo/app/src/lib/images.js:34`).
 - **Animation:** the chrome collapses with a `clip-path` morph (translate in lite) over 0.35–0.45 s; the tab lens moves
   with a spring easing (`chrome.css:100-319`). Since release `index-CBlEKxdL.js` the collapsed chrome stays collapsed
-  under an open listing (§1.2).
+  under an open listing (the effect is `inferred` from the code, §1.2).
 - **Sources:** `App.jsx:440-545`; `TopBar.jsx`; `TabBar.jsx`; `ViewToggle.jsx`;
   `$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js`; since `index-CBlEKxdL.js` also
   `$KVADRO_ROOT/demo/app/src/styles/red-dot.css` and `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js`.
@@ -1961,12 +1961,12 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
 
 - **APIs:** `GET /api/owner/listings/:id` as the poll (API-039). The contact itself is asked for with
   `WebApp.requestContact` (TMA-034).
-- **Edge cases:** on a Telegram client below 6.9 the owner is sent to the bot and cannot come back to the draft
-  (LB-APP-060).
+- **Edge cases:** on a Telegram client below 6.9 the owner is sent to the bot and may not be able to come back to
+  the draft (LB-APP-060, Q-APP-027).
 - **Sources:** `OwnerForm.jsx`; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js`;
   `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js`.
-- **Status:** CONFIRMED for the client. The bot side is DOCUMENTED_ONLY: how the bot takes the contact and what it
-  answers in the chat is known only from these texts (TMA-034, `04` BOT-086, Q-BOT-047).
+- **Status:** CONFIRMED for the client. That the contact goes through the bot is DOCUMENTED_ONLY (`02` BR-API-170,
+  TMA-034); what the bot does with it and answers was not observed (`04` BOT-086 is UNVERIFIED, Q-BOT-047).
 
 ### SCR-054 — Owner form › Rejection «Не получилось» and the realtor waitlist (`state`)
 
@@ -2292,7 +2292,7 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
   the count the user set (LB-APP-077).
 - **Sources:** `ContactRequestSheet.jsx`; `ListingScreen.jsx`; `ListingCtaBar.jsx`; `chatAccess.js`;
   `$KVADRO_ROOT/demo/app/src/lib/api/owner.js:191-192`.
-- **Status:** CONFIRMED for the client. The server rules are DOCUMENTED_ONLY (`02` BR-API-183 to BR-API-187).
+- **Status:** CONFIRMED for the client. Server rules in `02`: BR-API-184 is CONFIRMED; BR-API-183 and BR-API-185 to BR-API-187 are DOCUMENTED_ONLY.
 
 ### SCR-062 — Owner info sheet «Проверенный хозяин» (`sheet`)
 

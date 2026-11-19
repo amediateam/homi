@@ -996,9 +996,9 @@ Short texts are quoted verbatim. Long texts point to their lines in `tb`, which 
 
 ## 5. Scheduled and outbound messages
 
-The bot writes nothing outside a user action except the items below (`tb:186–187`). **None of them was observed**
-(`tb` §12). HOMI therefore has no reference behaviour for its most important outbound function. It has to be
-specified (Q-BOT-002, Q-BOT-003, Q-BOT-033), or captured on a test account before the cut-over.
+The bot writes nothing outside a user action except the items below (`tb:186–187`; BOT-087 … BOT-091 are known from
+the Mini App only, §3.18). **None of them was observed** (`tb` §12). HOMI therefore has no reference behaviour for
+its most important outbound function. It has to be specified (Q-BOT-002, Q-BOT-003, Q-BOT-033, Q-BOT-048, Q-BOT-049), or captured on a test account before the cut-over.
 
 | ID      | Message                         | Trigger                                              | What is known | What is not known | Status |
 | ------- | ------------------------------- | ---------------------------------------------------- | ------------- | ----------------- | ------ |

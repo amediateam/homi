@@ -652,7 +652,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:511-524"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. Deletes one photo at once, with no confirmation on the client (LB-APP-067); returns OwnerListing. What happens to the last photo of a live listing is not documented. server logic DOCUMENTED_ONLY. BR-API-166; Q-API-070."
+    "notes": "Since index-CBlEKxdL.js. Deletes one photo at once, with no confirmation on the client (LB-APP-067); returns OwnerListing. What happens to the last photo of a live listing is not documented. server logic DOCUMENTED_ONLY. BR-API-166; Q-API-069, Q-API-070."
   },
   {
     "id": "API-043",
@@ -666,7 +666,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:492-510"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. Body {ids: [cover, ...rest]}, always the full order; the first id is the cover; returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-166."
+    "notes": "Since index-CBlEKxdL.js. Body {ids: [cover, ...rest]}, always the full order; the first id is the cover; returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-166; Q-API-069."
   },
   {
     "id": "API-044",
@@ -680,7 +680,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:644-667"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. Body {mode: gate|open}; gate hides the number and seekers send a request (API-054), open shows it on the card; null until the owner chooses, and publishing does not require a choice (LB-APP-056). Returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-173; Q-API-078."
+    "notes": "Since index-CBlEKxdL.js. Body {mode: gate|open}; gate hides the number and seekers send a request (API-054), open shows it on the card; null until the owner chooses, and publishing does not require a choice (LB-APP-056). Returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-173; Q-API-069, Q-API-078."
   },
   {
     "id": "API-045",
@@ -739,7 +739,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:271"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. Query owner_listing_id=<id> (the only form the client uses); returns OwnerRequest[] with the seeker's Telegram name and the flags can_reason, can_undo, can_late. server logic DOCUMENTED_ONLY. BR-API-180; Q-API-075, Q-API-077."
+    "notes": "Since index-CBlEKxdL.js. Query owner_listing_id=<id> (the only form the client uses); returns OwnerRequest[] with the seeker's Telegram name and the flags can_reason, can_undo, can_late. server logic DOCUMENTED_ONLY. BR-API-180; Q-API-069, Q-API-075, Q-API-077."
   },
   {
     "id": "API-049",
@@ -767,7 +767,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1639-1655"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. No body; the answer is not read. Records a user whose number was refused as a realtor's; the Mini App promises a bot message later (BOT-091). The client does not remember the sign-up (LB-APP-071). server logic DOCUMENTED_ONLY. BR-API-182; Q-BOT-049."
+    "notes": "Since index-CBlEKxdL.js. No body; the answer is not read. Records a user whose number was refused as a realtor's; the Mini App promises a bot message later (BOT-091). The client does not remember the sign-up (LB-APP-071). server logic DOCUMENTED_ONLY. BR-API-182; Q-API-069; Q-BOT-049."
   },
   {
     "id": "API-051",
@@ -810,7 +810,7 @@
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:347-369"
     ],
     "status": "CONFIRMED",
-    "notes": "Since index-CBlEKxdL.js. Query city, district, room|rooms, price, currency; returns {count, usual_low_usd, usual_high_usd}: the active radars that match the flat and the usual price range in USD. Sent 500 ms after a change, previous request aborted; errors silent. server logic DOCUMENTED_ONLY. BR-API-169."
+    "notes": "Since index-CBlEKxdL.js. Query city, district, room|rooms, price, currency; returns {count, usual_low_usd, usual_high_usd}: the active radars that match the flat and the usual price range in USD. Sent 500 ms after a change, previous request aborted; errors silent. server logic DOCUMENTED_ONLY. BR-API-169; Q-API-069."
   },
   {
     "id": "API-054",

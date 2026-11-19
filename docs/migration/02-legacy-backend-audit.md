@@ -758,18 +758,18 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   and read `can_add` and the phone check: the operator's answer; a test owner listing and a test seeker account on
   the legacy product, with the product owner's approval.
 - **Q-API-069** — Validation of the owner form: the accepted ranges for area, floor, number of floors, price per
-  currency and tenants; the full `detail` vocabulary of the owner methods with the HTTP status of each; the answer for
-  a listing or request id of another user. Legacy asks the first two itself (Doc r31:1321-1325, open question 17).
-  *Check:* send out-of-range values in `PATCH` and record status and `detail`; call the owner methods with a listing
-  id and a request id of the second account: the operator's answer; a test owner listing and a test seeker account on
-  the legacy product, with the product owner's approval.
-- **Q-API-070** — Edits and states of a published listing: does a `PATCH` or a photo change reach the public listing
-  at once or only after `publish`; what happens when the last photo of a live listing is deleted; does `publish`
-  resume a `paused` listing; can a `rejected` listing be published again; are the transitions out of `rented` and
-  `removed` refused, and `active` on a `held` listing? *Check:* on a published test listing change the price and a
-  photo and read the public card before and after `publish`; delete its last photo; publish it while `paused`; send
-  each status after `rented` and after `removed`: the operator's answer; a test owner listing and a test seeker
-  account on the legacy product, with the product owner's approval.
+  currency and tenants; the full `detail` vocabulary of the owner methods with the HTTP status of each; the answer for a
+  listing or request id of another user; who may join the waiting list and what it stores. Legacy asks the first two
+  itself (Doc r31:1321-1325, open question 17). *Check:* send out-of-range values in `PATCH` and record status and
+  `detail`; call the owner methods with a listing id and a request id of the second account: the operator's answer; a
+  test owner listing and a test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-070** — Edits and states of a published listing: what a first `publish` sets (the status, the time, the id of
+  the public listing); does a `PATCH` or a photo change reach the public listing at once or only after `publish`; what
+  happens when the last photo of a live listing is deleted; does `publish` resume a `paused` listing; can a `rejected`
+  listing be published again; are the transitions out of `rented` and `removed` refused, and `active` on a `held` listing?
+  *Check:* on a published test listing change the price and a photo and read the public card before and after `publish`;
+  delete its last photo; publish it while `paused`; send each status after `rented` and after `removed`: the operator's
+  answer; a test owner listing and a test seeker account on the legacy product, with the product owner's approval.
 - **Q-API-071** — Checks around publishing: is there any automatic or manual check of photos, description or price
   before a listing goes live; who sets `withdrawn` (which complaints, how many) and `held`, and how is the owner told;
   is the listing sent to matching radars at once, and what does `sent` count? *Check:* publish a test listing that a
@@ -805,12 +805,12 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   different times and read the flags of `GET /api/owner/requests`; send a second request while one is `pending` and
   after each closed status: the operator's answer; a test owner listing and a test seeker account on the legacy
   product, with the product owner's approval.
-- **Q-API-076** — The seeker's side: the values and windows behind `limit_fast`, `limit_day`, `limit_week` and
-  whether they count per user; what triggers `blocked` and `harvest`; the HTTP status of each `detail` code; what
-  `given` delivers (the number in the bot, `phone` on the card, or both: `03` LB-APP-074); how `response_minutes` is
-  computed. *Check:* send requests in a row from the test seeker until each limit answers, and record status and
-  `detail`; after «Дать номер» read the seeker's card and bot chat: the operator's answer; a test owner listing and a
-  test seeker account on the legacy product, with the product owner's approval.
+- **Q-API-076** — The seeker's side: the values and windows behind `limit_fast`, `limit_day`, `limit_week` and whether they
+  count per user; what triggers `blocked` and `harvest`; the HTTP status of each `detail` code; how the request body is
+  checked (a `who` outside the list, too long texts); what `given` delivers (the number in the bot, `phone` on the card, or
+  both: `03` LB-APP-074); how `response_minutes` is computed. *Check:* send requests in a row from the test seeker until
+  each limit answers, and record status and `detail`; after «Дать номер» read the seeker's card and bot chat: the operator's
+  answer; a test owner listing and a test seeker account on the legacy product, with the product owner's approval.
 - **Q-API-077** — The seeker shown to the owner: is `OwnerRequest.name` stored with the request or read from Telegram
   when the list is shown (the uncommitted privacy text says the name is not stored); what a seeker marked `agent` can
   still do (barred from this owner's flats only, or more), and whether the seeker is told. *Check:* change the test

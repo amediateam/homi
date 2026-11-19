@@ -248,8 +248,8 @@ instead of a call, API-054; `open` → the phone is on the card as usual),
 `response_minutes: number|null` («Обычно отвечает за N мин»: the author section of a self-placed listing that is not
 the caller's, the lead of the request sheet `03` SCR-061, the info sheet `03` SCR-062),
 `owner_description: string|null` (the cabinet description, the second paragraph of «Описание»; the server must hide
-phone numbers in it, Doc r31:1390). `owner_mine` and `my_request` depend on the caller. On the card of a gate listing
-`phone` is `null` until the caller's request is `given` (Doc r31:386-391; `02` BR-API-187, BR-API-188). A
+phone numbers in it, Doc r31:1390). `owner_mine` and `my_request` depend on the caller. The card of a gate listing
+has no `phone` until the caller's request is `given` (Doc r31:386-391; `02` BR-API-187, BR-API-188). A
 self-placed listing has no channel source, so its `original_url` is expected to be `null` (`inferred`; Q-API-078 in
 `02`).
 
@@ -1602,7 +1602,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Tests:** deleting the cover makes the next photo the cover; deleting the last photo of an active listing → per
   Q-API-070 (a published listing without a photo breaks the rule of «Дальше»); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082,
-  LB-APP-067; Q-API-070.
+  LB-APP-067; Q-API-069, Q-API-070.
 
 ### API-043 — `POST /api/owner/listings/:id/photos/order`
 
@@ -1626,7 +1626,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   (`wave-1/README.md`), decides the v1 methods.
 - **Tests:** ids that do not match the listing's photos → refused (`422` expected; record legacy); the order is kept
   as sent; auth.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082; Q-API-069.
 
 ### API-044 — `POST /api/owner/listings/:id/contact_mode`
 
@@ -1653,7 +1653,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Tests:** both values are accepted; any other value → `422` (record legacy); a mode change on an active listing
   changes `contact_mode` of the public card (API-008); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-173; `03` SCR-055,
-  BR-APP-086, LB-APP-056; Q-API-078.
+  BR-APP-086, LB-APP-056; Q-API-069, Q-API-078.
 
 ### API-045 — `POST /api/owner/listings/:id/publish`
 
@@ -1780,7 +1780,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Tests:** only requests to the caller's own listings; `who` only from the list of §1.8; the order (newest first?)
   → record legacy (Q-API-075); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-159, BR-API-180; `03`
-  SCR-058, BR-APP-090, LB-APP-064; Q-API-075, Q-API-077.
+  SCR-058, BR-APP-090, LB-APP-064; Q-API-069, Q-API-075, Q-API-077.
 
 ### API-049 — `POST /api/owner/requests/:id`
 
@@ -1838,7 +1838,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   (Q-API-069)
 - **Business Logic:** records the user in a waiting list of realtors (`02` BR-API-182). The Mini App then promises a
   bot message: «Хорошо, напишем в бот, когда откроем.» — DOCUMENTED_ONLY
-- **DB Changes:** a waiting-list entry (`inferred`). — UNVERIFIED (Q-BOT-049 in `04`)
+- **DB Changes:** a waiting-list entry (`inferred`). — UNVERIFIED (Q-API-069)
 - **Side Effects:** a later bot message to the list (`04` BOT-091), promised only and never observed. — UNVERIFIED
   (Q-BOT-049 in `04`)
 - **Response:** not read by the client (Doc r31:1469-1470).
@@ -1849,7 +1849,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   (`wave-1/README.md`), decides the v1 methods.
 - **Tests:** a second call does not add a second entry; a user without an `agent` rejection → record legacy; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-182; `03` SCR-054,
-  LB-APP-071; Q-BOT-049 in `04`.
+  LB-APP-071; Q-API-069; Q-BOT-049 in `04`.
 
 ### API-051 — `POST /api/owner/place`
 
@@ -1933,7 +1933,7 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Tests:** no matching radar → `count: 0`; with too little data both bounds are `null`, and the hint hides;
   `currency=UZS` does not change the USD bounds; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-169; `03` SCR-052,
-  SCR-056, BR-APP-083.
+  SCR-056, BR-APP-083; Q-API-069.
 
 ### API-054 — `POST /api/listings/:id/contact`
 
