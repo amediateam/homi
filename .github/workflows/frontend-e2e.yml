@@ -3,7 +3,8 @@ name: frontend-e2e
 # End-to-end tests of the frontend (WP-03): Playwright against a production build of `app` on :3001, with the fake
 # Telegram of `@homi/testing`. Its guard fails a test that sends a request to an external host. The app signs in
 # through the API on stubs, started here on SQLite with PHP's built-in server (WP-21; CI only — developer machines
-# use the API behind nginx). The nightly run, WebKit and stub media come with WP-33.
+# use the API behind nginx). A second run takes only the `@radars-off` tests, against a second API with radars switched
+# off (WP-30). The nightly run, WebKit and stub media come with WP-33.
 on:
   pull_request:
     paths:
@@ -101,6 +102,47 @@ jobs:
           # The map's raster fallback (WP-27): the CSP lets the tile requests out of the page, and the guard of
           # `@homi/testing/playwright` (or a spec's own route) answers them; nothing reaches the tile server.
           CSP_TILE_HOSTS: https://tile.openstreetmap.org
+
+      # Radars switched off (WP-30, DEC-51): `radars_enabled` of `GET /reference` is the API's configuration, not a stub
+      # scenario, so a second API on stubs runs with `RADAR_CREATION_ENABLED=false`; the step variable overrides the
+      # `true` of `.env`. It answers on another port from the same `.env` and database, and its log goes into the same
+      # file. The readiness loop also checks that the switch took.
+      - name: Start the API on stubs with radars switched off
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/backend/database/e2e.sqlite
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          TELESCOPE_ENABLED: 'false'
+          PULSE_ENABLED: 'false'
+          SOURCES_ALLOW_STUB: 'true'
+          RADAR_CREATION_ENABLED: 'false'
+        run: |
+          (cd public && nohup php -S 127.0.0.1:8081 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php >> "$RUNNER_TEMP/api.log" 2>&1 &)
+          for attempt in $(seq 1 30); do
+            if reference="$(curl -sf http://127.0.0.1:8081/api/v1/reference)"; then
+              if grep -q '"radars_enabled":false' <<< "$reference"; then exit 0; fi
+              echo "The second API answers with radars switched on: $reference"
+              exit 1
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/api.log"
+          exit 1
+
+      # Only the tests tagged `@radars-off` (`E2E_RADARS_OFF`, `frontend/playwright.config.ts`). Playwright's web server
+      # builds and starts the app again against the second API, so its cached reference data starts empty. It runs after
+      # a green first run only: a new run empties `test-results/` and replaces the report.
+      - name: End-to-end tests with radars switched off
+        run: pnpm test:e2e
+        env:
+          E2E_RADARS_OFF: '1'
+          API_URL: http://127.0.0.1:8081/api/v1
+          NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
+          NEXT_PUBLIC_APP_ENV: ci
+          NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
 
       - name: Upload traces and report
         if: failure()

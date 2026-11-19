@@ -6,7 +6,8 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { useRadarsEnabled } from "@/features/radars/capability";
-import { subscribe, useHasActiveRadar } from "@/features/radars/subscribe";
+import { useHasActiveRadar } from "@/features/radars/match";
+import { useSubscribe } from "@/features/radars/subscribe";
 import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
 import { useCityStats, useReference } from "@/lib/reference/useReference";
@@ -34,9 +35,11 @@ export function useFewResultsContext(filters: SearchFilters): FewResultsContext 
 /**
  * The note's buttons (SCR-009), also the DEV-024 empty state's: «Смотреть продажу / аренду · N» when the other deal
  * has more listings in the city than `count`; «Включить радар по этому поиску» only when radars are on
- * (`useRadarsEnabled()`, DEC-51) and no radar has these filters, disabled while its request runs; «Другой город»
- * with more than one city. The deal switch is the title tabs' (`TopBar`): `switchDeal()` (geography kept,
- * BR-APP-002) and the sort it still offers (BR-APP-023) in one replace, a light haptic, the list at the top.
+ * (`useRadarsEnabled()`, DEC-51) and no active radar has these filters (`useHasActiveRadar`); a tap plays a light
+ * haptic and runs `useSubscribe().subscribe(filters, "few")` (WP-30), whose toast shows over the feed, and the button
+ * is disabled while it runs; «Другой город» with more than one city. The deal switch is the title tabs' (`TopBar`):
+ * `switchDeal()` (geography kept, BR-APP-002) and the sort it still offers (BR-APP-023) in one replace, a light
+ * haptic, the list at the top.
  * «Другой город» pushes the full filters sheet with the search state, as legacy opened it; it gives no haptic.
  */
 export function FewActions({ search, count, className }: { search: FeedSearch; count: number; className?: string }) {
@@ -47,6 +50,7 @@ export function FewActions({ search, count, className }: { search: FeedSearch; c
   const offer = otherDealOffer(filters.deal, stats, count);
   const radarsEnabled = useRadarsEnabled();
   const hasRadar = useHasActiveRadar(filters);
+  const { subscribe } = useSubscribe();
   const [subscribing, setSubscribing] = useState(false);
 
   const seeOther = (deal: BaseDeal) => {

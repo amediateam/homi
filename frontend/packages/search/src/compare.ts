@@ -30,6 +30,20 @@ export function filtersKey(filters: unknown): string {
   );
 }
 
+/**
+ * A short hash of `filtersKey` for the nudge and visit records of the Mini App (WP-30, `homi-nudge` and
+ * `homi-visits`): legacy `djb2` — seed 5381, `((h << 5) + h + code) | 0` per UTF-16 code unit (an int32 wrap at
+ * every step), then unsigned, in base 36. Equal searches (`posted_days` ignored) give one hash.
+ */
+export function filtersHash(filters: unknown): string {
+  const key = filtersKey(filters);
+  let hash = 5381;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = ((hash << 5) + hash + key.charCodeAt(index)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
 /** Two filter sets describe the same search (radar matching). */
 export function sameFilters(a: unknown, b: unknown): boolean {
   return filtersKey(a) === filtersKey(b);

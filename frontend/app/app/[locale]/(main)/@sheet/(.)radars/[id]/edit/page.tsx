@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Radar editor (SCR-029); WP-30 replaces the placeholder. */
-export default function Page() {
-  return <RoutePlaceholder name="radar/edit" />;
+import { RadarEditSheet } from "@/features/radars/RadarEditSheet";
+
+/** Radar editor (SCR-029), intercepted into the sheet slot over the radar sheet, which its layout keeps mounted. */
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={null}>
+      <RadarEditSheet params={params} presentation="layer" />
+    </Suspense>
+  );
 }

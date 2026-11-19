@@ -40,6 +40,23 @@ describe("last addresses of the search and saved tabs", () => {
     expect(store.lastSearchHref()).toBe("/");
   });
 
+  it("skip a radar's feed: a search root with from=radar leaves the last search as it was (WP-30)", () => {
+    store.rememberHref("/", "city=tashkent&rooms_min=2");
+    store.rememberHref("/", "city=samarkand&deal=sale&from=radar");
+    store.rememberHref("/map", "?from=radar&city=samarkand");
+    expect(store.lastSearchHref()).toBe("/?city=tashkent&rooms_min=2");
+    expect(store.lastSearchQuery().toString()).toBe("city=tashkent&rooms_min=2");
+
+    // A change on that feed drops the mark: the radar's filters are the search now.
+    store.rememberHref("/", "city=samarkand&deal=sale&sort=cheap");
+    expect(store.lastSearchHref()).toBe("/?city=samarkand&deal=sale&sort=cheap");
+  });
+
+  it("keep a search root with another from: only the radar's feed is skipped", () => {
+    store.rememberHref("/", new URLSearchParams("city=x&from=map"));
+    expect(store.lastSearchHref()).toBe("/?city=x");
+  });
+
   it("keep the favourites or the history, whichever was shown last", () => {
     store.rememberHref("/saved/history", "");
     expect(store.lastSavedHref()).toBe("/saved/history");

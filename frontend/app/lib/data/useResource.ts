@@ -100,8 +100,13 @@ function load(key: string, fetcher: Fetcher<unknown>, flags: DevFlags): Promise<
   entry.controller = controller;
   write(entry, { inflight: true });
 
-  const settle = (change: Partial<Snapshot>) => {
+  // An aborted read (a seed, an invalidate, the last user leaving) writes nothing, not even its time: an answer that
+  // was already on its way when the abort came would otherwise make a stale entry look fresh.
+  const settle = (change: Partial<Snapshot>, fresh = false) => {
     if (!controller.signal.aborted && entries.get(key) === entry) {
+      if (fresh) {
+        entry.fetchedAt = Date.now();
+      }
       write(entry, { ...change, inflight: false });
     }
   };
@@ -109,8 +114,7 @@ function load(key: string, fetcher: Fetcher<unknown>, flags: DevFlags): Promise<
     .then(
       (result) => {
         if (result.ok) {
-          entry.fetchedAt = Date.now();
-          settle({ data: result.data, error: null });
+          settle({ data: result.data, error: null }, true);
           return;
         }
         settle({ error: result });
@@ -166,16 +170,23 @@ function release(key: string): void {
   emit();
 }
 
-/** Drops every entry whose key starts with `prefix`; a key that is on screen is read again. */
+/**
+ * Makes every entry whose key starts with `prefix` stale, its read in flight dropped: a key that is on screen is read
+ * again now; one with data but no user — a screen hidden under `<Activity>`, which ran its effect cleanups — keeps
+ * its data as stale, so the next user shows it while it reads again (a later `initial` is not seeded over it); one
+ * without data is forgotten (WP-30).
+ */
 export function invalidate(prefix: string): void {
   for (const [key, entry] of [...entries]) {
     if (!key.startsWith(prefix)) {
       continue;
     }
     abort(entry);
+    entry.fetchedAt = 0;
     if (entry.users > 0 && entry.fetcher !== null) {
-      entry.fetchedAt = 0;
       void load(key, entry.fetcher, entry.flags);
+    } else if (entry.snapshot.data !== undefined) {
+      entry.snapshot = { ...entry.snapshot, inflight: false };
     } else {
       entries.delete(key);
     }
@@ -185,13 +196,24 @@ export function invalidate(prefix: string): void {
 
 /**
  * Writes `data` into the entry of `key` as a fresh read and tells every user at once (WP-26: the listing seeds the
- * number a merged listing answered with before it replaces the address). Called from an effect or a handler, never
- * during render.
+ * number a merged listing answered with before it replaces the address; WP-30: a radar mutation's answer, a new
+ * server render of the radar tab). A read in flight started before the seed, so its answer is older: it is aborted and
+ * never lands over the seed (a `refetch()` waiting on it settles with the aborted request, so a pull's indicator
+ * stops). Called from an effect or a handler, never during render.
  */
 export function seedResource<T>(key: string, data: T): void {
   const entry = ensure(key);
+  abort(entry);
   entry.fetchedAt = Date.now();
   write(entry, { data, error: null, inflight: false });
+}
+
+/**
+ * The data the entry of `key` holds now, `undefined` without one — the read of code outside a component (WP-30: the
+ * radar lists, which a mutation rewrites through `seedResource`). It does not subscribe and never reads.
+ */
+export function readResource<T>(key: string): T | undefined {
+  return entries.get(key)?.snapshot.data as T | undefined;
 }
 
 /** Forgets every entry; tests only. */

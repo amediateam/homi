@@ -161,7 +161,40 @@ describe("useResource (WP-22)", () => {
     expect(second.result.current.data).toEqual({ n: 11 });
   });
 
-  it("invalidate(prefix) drops the matching entries and mounted users read again", async () => {
+  it("invalidate keeps an entry with data and no user as stale: the next user shows it while it reads again (WP-30)", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const hidden = renderHook(() => useResource("radars?include=previews", fetcher));
+    await act(async () => pending[0].resolve(ok(1)));
+    // A screen hidden under <Activity> ran its effect cleanups: no user, the data kept.
+    hidden.unmount();
+
+    act(() => invalidate("radars"));
+    const shown = renderHook(() => useResource("radars?include=previews", fetcher, { initial: { n: 0 } }));
+
+    // The old data while it reads again — never the old server `initial`, never the empty loading state.
+    expect(shown.result.current).toMatchObject({ data: { n: 1 }, status: "success", refreshing: true });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    await act(async () => pending[1].resolve(ok(2)));
+    expect(shown.result.current).toMatchObject({ data: { n: 2 }, refreshing: false });
+  });
+
+  it("an aborted read that still answers writes nothing, not even its time: the stale entry is read again", async () => {
+    const { fetcher, pending } = controlledFetcher();
+    const first = renderHook(() => useResource("radars", fetcher));
+    await act(async () => pending[0].resolve(ok(1)));
+    act(() => void first.result.current.refetch());
+    first.unmount();
+    act(() => invalidate("radars"));
+
+    // The answer was already on its way when the abort came (the fetcher here ignores the signal).
+    await act(async () => pending[1].resolve(ok(2)));
+    const next = renderHook(() => useResource("radars", fetcher));
+
+    expect(next.result.current).toMatchObject({ data: { n: 1 }, refreshing: true });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("invalidate(prefix) makes the matching entries stale and mounted users read again", async () => {
     const { fetcher, pending } = controlledFetcher();
     const other = controlledFetcher();
     const { result } = renderHook(() => useResource("favorites:all", fetcher, { initial: { n: 1 } }));
@@ -216,6 +249,21 @@ describe("useResource (WP-22)", () => {
 
       expect(result.current).toMatchObject({ data: { n: 8 }, status: "success", refreshing: false });
       expect(fetcher).not.toHaveBeenCalled();
+    });
+
+    it("drops a read in flight: its older answer never lands over the seed, and a waiting refetch settles (WP-30)", async () => {
+      const { fetcher, pending } = controlledFetcher();
+      const { result } = renderHook(() => useResource("radars", fetcher));
+      let pulled = false;
+      act(() => void result.current.refetch().then(() => (pulled = true)));
+
+      act(() => seedResource("radars", { n: 8 }));
+      expect(pending[0].signal.aborted).toBe(true);
+      await act(async () => pending[0].resolve(ok(1)));
+
+      expect(result.current).toMatchObject({ data: { n: 8 }, error: null, status: "success", refreshing: false });
+      expect(pulled).toBe(true);
+      expect(fetcher).toHaveBeenCalledTimes(1);
     });
 
     it("replaces an error of the entry", async () => {

@@ -7,6 +7,7 @@ import { type ReactNode, Suspense, useEffect, useState } from "react";
 
 import { useBootRetryState } from "@/features/gates/bootRetryStore";
 import { warmMap } from "@/features/map/engine";
+import { NudgeHost } from "@/features/nudges/NudgeHost";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
 import { rememberHref } from "@/lib/ui/shellState";
@@ -33,7 +34,9 @@ import { ViewToggle } from "./ViewToggle";
 function useDrawnVariant(pathname: string, searchParams: URLSearchParams): ShellVariant {
   const own = shellVariantOf(pathname, searchParams);
   const [drawn, setDrawn] = useState(own);
-  const variant = isLayerAddress(pathname) ? drawn : own;
+  // A radar sheet lies only over the radar tab: a tile opens it, a direct load renders the tab under it, and Back from
+  // the radar's feed («Смотреть найденное», WP-30) restores the tab under it although the feed was drawn last.
+  const variant = isLayerAddress(pathname) && matchRoute(pathname).route !== "radar" ? drawn : own;
   if (variant !== drawn) {
     setDrawn(variant);
   }
@@ -64,9 +67,10 @@ function ShellTop() {
 
 /**
  * The chrome below the page and the shell's memory. The list/map toggle shows on the search tab and not while
- * drawing; the tab bar wherever the variant has a tab. The collapsing chrome follows the feed itself — not a sheet over
- * it, nor a layer parameter on it (`parentOf` of the feed is not `null` only then). The search and saved roots are
- * remembered for the tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
+ * drawing; the nudges (WP-30, `NudgeHost`, z 35 above the tab bar) everywhere, since each decides where it shows; the
+ * tab bar wherever the variant has a tab. The collapsing chrome follows the feed itself — not a sheet over it, nor a
+ * layer parameter on it (`parentOf` of the feed is not `null` only then). The search and saved roots are remembered
+ * for the tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
  */
 function ShellBottom() {
   const { pathname, query, searchParams, variant } = useShellAddress();
@@ -84,6 +88,7 @@ function ShellBottom() {
         <ViewToggle variant={variant} onIntent={() => void warmMap().catch(() => undefined)} />
       ) : null}
       <PullToRefresh />
+      <NudgeHost searchTab={tab === "search"} />
       {tab ? <TabBar active={tab} /> : null}
       <div aria-hidden className={tab ? "h-(--bottom-chrome)" : "h-(--bottom-inset)"} />
     </>
@@ -120,7 +125,7 @@ function ShellContent({ children }: { children: ReactNode }) {
  *
  * Nothing that wraps the page or the slots carries a transform, a filter or a z-index of its own: the in-place
  * standalone sheet and the sub-page are `position: fixed` inside them and must stay fixed to the viewport, above the
- * chrome. The z-order is the chrome's own: top bar 10, toggle 29, tab bar 30, mini title 31.
+ * chrome. The z-order is the chrome's own: top bar 10, toggle 29, tab bar 30, mini title 31, nudge 35.
  */
 export function AppShell({ children, overlay, sheet }: { children: ReactNode; overlay: ReactNode; sheet: ReactNode }) {
   return (

@@ -12,7 +12,10 @@ import { tg } from "@/lib/telegram";
 export type RoutePresentation = "layer" | "standalone";
 
 export interface RouteSheetProps
-  extends Pick<BottomSheetProps, "title" | "variant" | "header" | "leading" | "footer" | "closeLabel" | "dismissible"> {
+  extends Pick<
+    BottomSheetProps,
+    "title" | "variant" | "header" | "leading" | "footer" | "closeLabel" | "dismissible" | "instant"
+  > {
   /** `layer` (default): the copy in the `@sheet` slot; `standalone`: the page of a sheet address loaded directly. */
   presentation?: RoutePresentation;
   /**
@@ -59,8 +62,18 @@ function useRiseAfterDrag(): { generation: number; slidOut: () => void } {
  *   gesture that needs a page below; a non-dismissible sheet ignores it, as in the layer. The sheet renders in place,
  *   not in a portal, so the server HTML of the direct load already holds it; the content area around it must not
  *   carry a transform.
+ *
+ * `instant` opens the sheet without its rise and backdrop fade (`BottomSheet`; the radar sheet on the return from a
+ * radar's feed, WP-30), read on that mount only. A copy mounted anew after a drag slid it out rises again.
  */
-export function RouteSheet({ presentation = "layer", dismissible = true, onClose, children, ...sheet }: RouteSheetProps) {
+export function RouteSheet({
+  presentation = "layer",
+  dismissible = true,
+  instant = false,
+  onClose,
+  children,
+  ...sheet
+}: RouteSheetProps) {
   const { back } = useBack();
   const close = useCloseOnce(onClose ?? back);
   const { generation, slidOut } = useRiseAfterDrag();
@@ -70,6 +83,7 @@ export function RouteSheet({ presentation = "layer", dismissible = true, onClose
     <BottomSheet
       key={generation}
       {...sheet}
+      instant={instant && generation === 0}
       open
       onClose={close}
       dismissible={layer && dismissible}

@@ -401,3 +401,71 @@ describe("BottomSheet", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("BottomSheet, an instant opening (WP-30)", () => {
+  const RISE = /(?:^|\s)data-\[state=open\]:animate-rise(?:\s|$)/;
+  const FADE = /(?:^|\s)data-\[state=open\]:animate-fade(?:\s|$)/;
+  const dialog = () => screen.getByRole("dialog", { name: "Filters" });
+
+  it("opens in place: no rise on the sheet, no fade on the backdrop, data-instant on the sheet", () => {
+    render(<Sheet instant />);
+    expect(dialog().className).not.toMatch(RISE);
+    expect(dialog().className).not.toMatch(/animate-/);
+    expect(dialog().hasAttribute("data-instant")).toBe(true);
+    expect(overlay().className).not.toMatch(FADE);
+    expect(overlay().className).not.toMatch(/animate-/);
+    // Everything else of the sheet is as usual.
+    expect(dialog().getAttribute("aria-modal")).toBe("true");
+    expect(document.activeElement).toBe(part(dialog(), "title"));
+  });
+
+  it("without it the sheet rises and carries no data-instant", () => {
+    render(<Sheet />);
+    expect(dialog().className).toMatch(RISE);
+    expect(dialog().hasAttribute("data-instant")).toBe(false);
+    expect(overlay().className).toMatch(FADE);
+  });
+
+  it("is read when the sheet opens: dropping it on a sheet that is up never starts the rise late", () => {
+    const { rerender } = render(<Sheet instant />);
+    rerender(<Sheet instant={false} />);
+    expect(dialog().className).not.toMatch(RISE);
+    expect(overlay().className).not.toMatch(FADE);
+    expect(dialog().hasAttribute("data-instant")).toBe(true);
+  });
+
+  it("asking for it on a sheet that is up already does not change its entrance either", () => {
+    const { rerender } = render(<Sheet />);
+    rerender(<Sheet instant />);
+    expect(dialog().className).toMatch(RISE);
+    expect(dialog().hasAttribute("data-instant")).toBe(false);
+  });
+
+  it("the next opening reads it again: closed and opened without it, the sheet rises", () => {
+    const { rerender } = render(<Sheet instant />);
+    rerender(<Sheet instant={false} open={false} />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    rerender(<Sheet instant={false} open />);
+    expect(dialog().className).toMatch(RISE);
+    expect(overlay().className).toMatch(FADE);
+
+    rerender(<Sheet instant open={false} />);
+    rerender(<Sheet instant open />);
+    expect(dialog().className).not.toMatch(RISE);
+  });
+
+  it("a sheet mounted closed takes the flag of the props it opens with", () => {
+    const { rerender } = render(<Sheet instant open={false} />);
+    rerender(<Sheet open />);
+    expect(dialog().className).toMatch(RISE);
+  });
+
+  it("holds in the server HTML of a sheet rendered in place", () => {
+    const html = renderToString(<Sheet instant portal={false} />);
+    expect(html).toContain("data-instant");
+    expect(html).not.toContain("animate-rise");
+    expect(html).not.toContain("animate-fade");
+    expect(renderToString(<Sheet portal={false} />)).toContain("animate-rise");
+  });
+});

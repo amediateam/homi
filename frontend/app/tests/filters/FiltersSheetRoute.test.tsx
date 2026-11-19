@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SubscribeResult } from "@/features/radars/subscribe";
+import type { SubscribeOptions, SubscribeResult } from "@/features/radars/subscribe";
 import type { ActionResult } from "@/lib/actions/run";
 import type { DevFlags } from "@/lib/flags";
 
@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
   patchMe: vi.fn(),
   updateSettings: vi.fn<(input: unknown) => Promise<ActionResult<unknown>>>(),
   fetched: [] as string[],
-  subscribe: vi.fn<(filters: SearchFilters, entry: string, relaxed?: string | null) => Promise<SubscribeResult>>(),
+  subscribe: vi.fn<(filters: SearchFilters, entry: string, relaxed?: string | null, options?: SubscribeOptions) => Promise<SubscribeResult>>(),
 }));
 
 /** The `pick` layer as a tiny store: `open` and `close` re-render the form as the address change would. */
@@ -84,10 +84,11 @@ vi.mock("@/features/radars/capability", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/features/radars/capability")>();
   return { ...real, useRadarsEnabled: () => real.useRadarsEnabled({ ready: true }) };
 });
+/** The flow is `useSubscribe()`'s (tested in `tests/radars/subscribe.test.ts`); the route only calls it. */
 vi.mock("@/features/radars/subscribe", () => ({
-  subscribe: (filters: SearchFilters, entry: string, relaxed?: string | null) => state.subscribe(filters, entry, relaxed),
-  useHasActiveRadar: () => false,
+  useSubscribe: () => ({ subscribe: state.subscribe, saveEdit: vi.fn(), relax: vi.fn() }),
 }));
+vi.mock("@/features/radars/match", () => ({ useHasActiveRadar: () => false }));
 
 import { FiltersSheetRoute } from "@/features/filters/FiltersSheetRoute";
 import { resetReference } from "@/lib/reference/useReference";
@@ -115,6 +116,14 @@ const button = (name: string) => sheet().querySelector<HTMLButtonElement>(`[data
 /** Lets the promise chains of an apply, a subscribe or a save settle. */
 const settle = () => act(async () => undefined);
 const navigated = () => state.closeThen.mock.calls.map(([href]) => href);
+/** The toast scope a subscribe call passed, read as `useSubscribe` reads it when the answer arrives. */
+const scopeOf = (call: number) => {
+  const scope = state.subscribe.mock.calls[call][3]?.scope;
+  if (typeof scope !== "function") {
+    throw new Error(`the subscribe call passed the scope ${String(scope)}, not a function`);
+  }
+  return scope;
+};
 
 async function apply(): Promise<string> {
   state.closeThen.mockClear();
@@ -147,10 +156,13 @@ beforeEach(() => {
   consumeDrawRequest();
   fake = fakeTelegram({ version: "8.0" });
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+  // The sheet's address in the browser (`currentAddress()`); jsdom shares `window.location` across tests.
+  window.history.replaceState(null, "", "/ru/filters?city=tashkent");
 });
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, "", "/");
   resetReference();
   fake?.uninstall();
   fake = null;
@@ -223,21 +235,39 @@ describe("FiltersSheetRoute: «Показать …»", () => {
 });
 
 describe("FiltersSheetRoute: «Включить радар»", () => {
-  it("subscribes the draft from the filters entry; on success the sheet closes without applying", async () => {
+  it("subscribes the draft from the filters entry, failures toasted in the sheet; on success it closes without applying", async () => {
     let resolve: (result: SubscribeResult) => void = () => undefined;
     state.subscribe.mockReturnValue(new Promise((done) => (resolve = done)));
     state.search = "city=tashkent&rooms_min=2";
     route();
 
     fireEvent.click(button("subscribe"));
-    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null);
+    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: expect.any(Function) });
     expect(button("subscribe").disabled).toBe(true);
     fireEvent.click(button("subscribe"));
     expect(state.subscribe).toHaveBeenCalledTimes(1);
+    // Still on the sheet: a failure would show inside it.
+    expect(scopeOf(0)()).toBe("sheet");
 
     await act(async () => resolve({ ok: true }));
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(state.closeThen).not.toHaveBeenCalled();
+  });
+
+  it("an answer that finds the user elsewhere (×, Back, «Показать») neither steps back nor toasts in the closed sheet", async () => {
+    let resolve: (result: SubscribeResult) => void = () => undefined;
+    state.subscribe.mockReturnValue(new Promise((done) => (resolve = done)));
+    route();
+
+    fireEvent.click(button("subscribe"));
+    // «Показать» while the request runs: `applyFilters` went back to the feed and replaced it.
+    window.history.pushState(null, "", "/ru?city=tashkent&rooms_min=2");
+    expect(scopeOf(0)()).toBe("app");
+
+    await act(async () => resolve({ ok: true }));
+    expect(state.back).not.toHaveBeenCalled();
+    // The route outlives the sheet under <Activity>: the button is not left disabled for the next showing.
+    expect(button("subscribe").disabled).toBe(false);
   });
 
   it("on failure the sheet stays open and the button comes back", async () => {

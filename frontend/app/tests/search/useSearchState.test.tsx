@@ -1,4 +1,4 @@
-import { switchDeal } from "@homi/search";
+import { defaultFilters, switchDeal } from "@homi/search";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { hydrateRoot } from "react-dom/client";
@@ -113,6 +113,50 @@ describe("useSearchState (WP-22)", () => {
 
     expect(replace).toHaveBeenCalledTimes(1);
     expect(replace).toHaveBeenLastCalledWith("/map?city=tashkent&deal=sale&sort=ppm&pin=5");
+  });
+
+  it("setFilters drops from=radar, the mark of a radar's feed, and keeps every other parameter (WP-30)", () => {
+    address.search = "city=tashkent&rooms_min=2&from=radar&focus=pets";
+    const { result } = renderHook(() => useSearchState());
+
+    act(() => result.current.setFilters({ ...result.current.filters, rooms_min: 3 }));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&rooms_min=3&focus=pets");
+  });
+
+  it("setSort drops from=radar on the feed and on the map (WP-30)", () => {
+    address.search = "city=tashkent&from=radar";
+    const feed = renderHook(() => useSearchState()).result.current;
+    act(() => feed.setSort("cheap"));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&sort=cheap");
+
+    address.pathname = "/map";
+    address.search = "from=radar&city=tashkent&sort=cheap&pin=5";
+    const map = renderHook(() => useSearchState()).result.current;
+    act(() => map.setSort("new"));
+    expect(replace).toHaveBeenLastCalledWith("/map?city=tashkent&pin=5");
+  });
+
+  it("write drops from=radar too, also when the state does not change (the deal switch, the few-results actions)", () => {
+    address.search = "city=tashkent&deal=sale&from=radar";
+    const { result } = renderHook(() => useSearchState());
+
+    act(() => result.current.write(switchDeal(result.current.filters, "rent_long"), "new"));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent");
+
+    act(() => result.current.write(result.current.filters, result.current.sort));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&deal=sale");
+  });
+
+  it("only the value radar of from is dropped: from=map and every other from stay", () => {
+    address.search = "city=tashkent&from=map";
+    const fromMap = renderHook(() => useSearchState()).result.current;
+    act(() => fromMap.setFilters(defaultFilters("sale", "tashkent")));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&deal=sale&from=map");
+
+    address.search = "city=tashkent&from=radars";
+    const fromOther = renderHook(() => useSearchState()).result.current;
+    act(() => fromOther.setSort("cheap"));
+    expect(replace).toHaveBeenLastCalledWith("/?city=tashkent&sort=cheap&from=radars");
   });
 
   it("equal states give equal addresses, whatever the order of the current one", () => {

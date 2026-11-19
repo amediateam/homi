@@ -16,6 +16,8 @@ const state = vi.hoisted(() => ({
   tooSmall: false,
   setTooSmall: vi.fn(),
   loaded: true,
+  /** `radarsEnabled` of the reference data: the switch `useRadarsEnabled()` reads (DEC-51). */
+  radarsEnabled: true,
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.search) }));
 /** The counted `Link` needs the App Router; a plain anchor keeps its address. */
@@ -54,7 +56,13 @@ const TASHKENT = {
 vi.mock("@/lib/reference/useReference", () => ({
   useReference: () => {
     const cities = state.loaded ? [TASHKENT] : [];
-    return { loaded: state.loaded, cities, findCity: (code: string) => cities.find((city) => city.code === code) ?? null, usdUzs: 0 };
+    return {
+      loaded: state.loaded,
+      cities,
+      findCity: (code: string) => cities.find((city) => city.code === code) ?? null,
+      usdUzs: 0,
+      radarsEnabled: state.radarsEnabled,
+    };
   },
 }));
 
@@ -106,6 +114,7 @@ beforeEach(() => {
   rememberHref("/", "");
   state.tooSmall = false;
   state.loaded = true;
+  state.radarsEnabled = true;
   fake = fakeTelegram({ version: "8.0" });
   vi.stubGlobal("scrollTo", scrollTo);
   window.localStorage.clear();
@@ -488,5 +497,26 @@ describe("the saved and radar bars", () => {
     bar("radars");
 
     expect(screen.getByRole("link", { name: "Новый радар" }).getAttribute("href")).toBe("/radars/new");
+  });
+
+  it("«+» plays a light impact", () => {
+    at("/radars");
+    bar("radars");
+
+    const link = screen.getByRole("link", { name: "Новый радар" });
+    // The plain anchor of the mocked `Link` would ask jsdom for a document navigation.
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+    expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+  });
+
+  it.each(LOCALES)("radars switched off (%s): the heading stays, «+» is not rendered (DEC-51)", (locale) => {
+    state.radarsEnabled = false;
+    at("/radars");
+    bar("radars", locale);
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(text(locale, "tab.subs"));
+    expect(screen.queryByRole("link", { name: text(locale, "sheet.createTitle") })).toBeNull();
+    expect(document.querySelector('[data-topbar="radars"] a, [data-topbar="radars"] button')).toBeNull();
   });
 });

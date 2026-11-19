@@ -5,7 +5,7 @@
  */
 export { type ApiQueryOptions, API_LIMIT_RANGE, toApiQuery } from "./api";
 export { belowMedianAvailable, fixRanges, type Sections, sectionsFor } from "./availability";
-export { countActiveFilters, filtersKey, isCustomFilters, sameFilters } from "./compare";
+export { countActiveFilters, filtersHash, filtersKey, isCustomFilters, sameFilters } from "./compare";
 export {
   baseDeal,
   DEFAULT_CITY,

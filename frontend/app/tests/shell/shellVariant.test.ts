@@ -41,7 +41,7 @@ const ROUTES: [pathname: string, query: string, variant: ShellVariant][] = [
   [routes.radarNew(), "city=x", "radars"],
   [routes.radar(RADAR), "", "radars"],
   [routes.radarEdit(RADAR), "", "radars"],
-  [routes.radarFound({ radar: RADAR }).split("?")[0], `radar=${RADAR}`, "radars"],
+  [routes.radarFound({ trigger: "pause" }).split("?")[0], "trigger=pause", "radars"],
   [routes.settings(), "", "settings"],
   ...SETTINGS_PAGES.map((page): [string, string, ShellVariant] => [routes.settingsPage(page), "", "settings"]),
   [routes.welcomeLanguage(), "", "none"],
@@ -103,7 +103,7 @@ describe("isLayerAddress", () => {
       routes.listingMarket(42),
       routes.listingActions(42),
       routes.radarNew(),
-      routes.radarFound({ radar: RADAR }).split("?")[0],
+      routes.radarFound({ trigger: "delete" }).split("?")[0],
       routes.radar(RADAR),
       routes.radarEdit(RADAR),
     ]) {

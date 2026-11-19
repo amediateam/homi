@@ -87,6 +87,24 @@ describe("serverApi (WP-22)", () => {
     }
   });
 
+  it("radars: the plain list sends no query, the radar tab's list asks for the previews (WP-30)", async () => {
+    await (await serverApi()).radars();
+    await (await serverApi()).radars(new URLSearchParams({ include: "previews" }));
+
+    expect(sent.map((call) => [call.method, call.url.pathname, call.url.search])).toEqual([
+      ["GET", "/api/v1/radars", ""],
+      ["GET", "/api/v1/radars", "?include=previews"],
+    ]);
+  });
+
+  it("relaxRadar posts the option's code as the body (WP-30, RelaxRadarRequest)", async () => {
+    await (await serverApi()).relaxRadar("01JD0000000000000000000001", { code: "price_more" });
+
+    expect(sent[0].method).toBe("POST");
+    expect(sent[0].url.pathname).toBe("/api/v1/radars/01JD0000000000000000000001/relax");
+    expect(JSON.parse(String(sent[0].body))).toEqual({ code: "price_more" });
+  });
+
   it("a 204 is ok with null data", async () => {
     answer = () => new Response(null, { status: 204 });
 

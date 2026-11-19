@@ -27,6 +27,7 @@ html.lite [data-card] {
   contain-intrinsic-size: auto 360px;
 }
 
+/* The radar art (WP-30): the wedge and every blip carry the mark and stand still, as under reduced motion. */
 html.lite [data-radar-animation] {
   animation: none;
 }

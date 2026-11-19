@@ -46,7 +46,14 @@
     "agentHintReview": "Raqamni tekshiramiz — rieltor boʻlsa, belgilaymiz"
   },
   "toast": {
-    "reportedAgentReview": "Rahmat, tekshiramiz"
+    "reportedAgentReview": "Rahmat, tekshiramiz",
+    "subDeleted": "Radar oʻchirildi"
+  },
+  "radar": {
+    "soon": {
+      "title": "Radar tez orada ishga tushadi",
+      "body": "Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz."
+    }
   },
   "map": {
     "empty": "Bu hududda hech narsa topilmadi",

@@ -8,10 +8,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   push: vi.fn(),
-  /** `null`: the real `radarsReady`; a boolean forces the constant (WP-30 flips it). */
+  /** `null`: the real `radarsReady` (on since WP-30); a boolean forces the constant. */
   ready: null as boolean | null,
 }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: (href: string) => state.push(href) } }));
+/** The radar button's flow and matching (WP-30) are tested on their own; here no radar has the search. */
+vi.mock("@/features/radars/subscribe", () => ({ useSubscribe: () => ({ subscribe: vi.fn(), saveEdit: vi.fn(), relax: vi.fn() }) }));
+vi.mock("@/features/radars/match", () => ({ useHasActiveRadar: () => false }));
 vi.mock("@/features/radars/capability", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/radars/capability")>();
   return {
@@ -166,7 +169,19 @@ describe("LB-APP-038 behind dev024ResetOnlyWithActiveFilters (DEV-024)", () => {
     expect(actions()).toEqual([]);
   });
 
-  it("flag on: the radar button follows useRadarsEnabled() — absent while radarsReady is false", () => {
+  it("flag on: the radar button follows useRadarsEnabled() — the server's switch with the real constant", () => {
+    feedReference({ cities: [cityOf()], stats: null, reference: { radars_enabled: false } });
+    searchEmpty(defaultFilters(), DEV024_ON);
+    expect(actions()).toEqual([]);
+    cleanup();
+
+    feedReference({ cities: [cityOf()], stats: null, reference: { radars_enabled: true } });
+    searchEmpty(defaultFilters(), DEV024_ON);
+    expect(actions()).toEqual(["radar"]);
+  });
+
+  it("flag on: absent without the radar screens (the constant forced off), even with radars_enabled true", () => {
+    state.ready = false;
     feedReference({ cities: [cityOf()], stats: null, reference: { radars_enabled: true } });
     searchEmpty(defaultFilters(), DEV024_ON);
     expect(actions()).toEqual([]);

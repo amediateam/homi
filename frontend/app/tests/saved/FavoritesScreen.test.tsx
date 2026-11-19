@@ -38,6 +38,9 @@ vi.mock("@/lib/api/browser", () => ({
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: () => state.onForbidden(), reauthenticate: vi.fn() }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: state.status, renewed: false }) }));
 vi.mock("@/lib/actions/favorites", () => ({ setFavorite: state.setFavorite }));
+/** The empty state's radar button (WP-30) is tested on its own; here no radar has the search. */
+vi.mock("@/features/radars/subscribe", () => ({ useSubscribe: () => ({ subscribe: vi.fn(), saveEdit: vi.fn(), relax: vi.fn() }) }));
+vi.mock("@/features/radars/match", () => ({ useHasActiveRadar: () => false }));
 vi.mock("next/navigation", () => ({ usePathname: () => `/ru${state.pathname}` }));
 /** The counted `Link` needs the App Router: a plain anchor that never navigates. */
 vi.mock("@/i18n/navigation", () => ({

@@ -8,6 +8,7 @@ describe("@homi/search public exports", () => {
       "defaultFilters",
       "normalizeFilters",
       "filtersKey",
+      "filtersHash",
       "sameFilters",
       "isCustomFilters",
       "countActiveFilters",
