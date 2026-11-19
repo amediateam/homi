@@ -313,14 +313,22 @@ test.describe("shell", () => {
     const mapBar = visible(page, '[data-topbar="map"]');
     await expect(mapBar.getByRole("button", { name: "Фильтры, 1", exact: true })).toContainText("1");
 
-    // Drawing: the lasso pushes the `draw` layer, which hides the toggle; «Отмена» closes it.
+    // The lasso pushes the `draw` layer (WP-28): the drawing bar takes the map bar's place, the toggle hides and the
+    // BackButton shows; «Отмена» returns to the plain map with the search. The drawing itself: `map-lasso.spec.ts`.
     await mapBar.getByRole("button", { name: "Обвести на карте" }).click();
     await expect(page).toHaveURL(/[?&]draw=1(&|$)/);
-    await expect(visible(page, '[data-topbar="map-drawing"]')).toContainText("Обведите пальцем, где искать");
+    const drawBar = visible(page, '[data-topbar="map-drawing"] [data-slot="draw-bar"]');
+    await expect(drawBar.getByRole("status")).toContainText("Обведите пальцем, где искать");
+    await expect(mapBar).toHaveCount(0);
     await expect(toggle(page)).toHaveCount(0);
     await expect.poll(() => backVisible(page)).toBe(true);
-    await visible(page, '[data-topbar="map-drawing"]').getByRole("button", { name: "Отмена" }).click();
-    await expect(page).not.toHaveURL(/draw=1/);
+    expect(searchOf(page).get("rooms_min")).toBe("2");
+
+    await drawBar.getByRole("button", { name: "Отмена" }).click();
+    await expect(page).not.toHaveURL(/[?&]draw=/);
+    expect(searchOf(page).get("rooms_min")).toBe("2");
+    await expect(visible(page, '[data-topbar="map-drawing"]')).toHaveCount(0);
+    await expect(mapBar).toBeVisible();
     await expect(toggle(page)).toHaveText("Список");
     await expect.poll(() => backVisible(page)).toBe(false);
 

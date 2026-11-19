@@ -412,3 +412,95 @@ describe("useCursorFeed (WP-24, BR-APP-024)", () => {
     expect(sent).toHaveLength(0);
   });
 });
+
+/**
+ * The saved lists of WP-29 page with the feed's cursor (DEC-53) and send no `limit`: the guard of LB-APP-022 for their
+ * paths. "works for the other cursor lists" above checks only the first two requests of favourites.
+ */
+describe.each(["favorites", "history"] as const)("useCursorFeed with the path %s (WP-29, LB-APP-022)", (path) => {
+  const saved = (overrides: Partial<Options> = {}) => feed({ key: `${path}:r1:0`, path, query: new URLSearchParams(), ...overrides });
+
+  it("a page one whose cursor is null is the whole list: one request", async () => {
+    const { result } = saved();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ path, query: "", cursor: null });
+
+    await answer(0, page([1, 2], { next_cursor: null }));
+    expect(result.current).toMatchObject({ status: "success", done: true });
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(1);
+  });
+
+  it("a page one with a cursor is followed by one request per loadMore, until a null cursor", async () => {
+    const { result } = saved();
+    await answer(0, page([1, 2], { next_cursor: "c1" }));
+
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toMatchObject({ path, query: "cursor=c1", cursor: "c1" });
+    await answer(1, page([3], { next_cursor: "c2" }));
+
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(3);
+    expect(sent[2]).toMatchObject({ path, query: "cursor=c2", cursor: "c2" });
+    await answer(2, page([4], { next_cursor: null }));
+
+    expect(numbers(result.current)).toEqual([1, 2, 3, 4]);
+    expect(result.current.done).toBe(true);
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(3);
+  });
+
+  it("a missing next_cursor key ends the list", async () => {
+    const { result } = saved();
+    await answer(0, page([1, 2], { next_cursor: "c1" }));
+    act(() => result.current.loadMore());
+    await answer(1, { ok: true, data: [{ number: 3 }], meta: { source: "stub" } });
+
+    expect(numbers(result.current)).toEqual([1, 2, 3]);
+    expect(result.current.done).toBe(true);
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(2);
+  });
+
+  it("a cursor equal to the previous one ends the list after one extra request", async () => {
+    const { result } = saved();
+    await answer(0, page([1], { next_cursor: "c1" }));
+    act(() => result.current.loadMore());
+    await answer(1, page([2], { next_cursor: "c1" }));
+
+    expect(numbers(result.current)).toEqual([1, 2]);
+    expect(result.current.done).toBe(true);
+    act(() => result.current.loadMore());
+    expect(sent.map((request) => request.cursor)).toEqual([null, "c1"]);
+  });
+
+  it("two pages are merged without duplicates", async () => {
+    const { result } = saved();
+    await answer(0, page([1, 2, 3], { next_cursor: "c1" }));
+    act(() => result.current.loadMore());
+    await answer(1, page([3, 4, 1, 5], { next_cursor: null }));
+
+    expect(numbers(result.current)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("a failed second page keeps the first; retry() asks for that page again", async () => {
+    const { result } = saved();
+    await answer(0, page([1, 2], { next_cursor: "c1" }));
+    act(() => result.current.loadMore());
+    await answer(1, failed("server", 500));
+
+    expect(numbers(result.current)).toEqual([1, 2]);
+    expect(result.current).toMatchObject({ status: "error", error: { error: "server" }, done: false });
+    act(() => result.current.loadMore());
+    expect(sent).toHaveLength(2);
+
+    act(() => result.current.retry());
+    expect(sent).toHaveLength(3);
+    expect(sent[2]).toMatchObject({ path, query: "cursor=c1", cursor: "c1" });
+    await answer(2, page([3], { next_cursor: null }));
+
+    expect(numbers(result.current)).toEqual([1, 2, 3]);
+    expect(result.current).toMatchObject({ status: "success", done: true, error: null });
+  });
+});

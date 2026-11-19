@@ -54,5 +54,9 @@
       "title": "Radar tez orada ishga tushadi",
       "body": "Yangi eʼlonlar haqidagi bildirishnomalarni yaqin orada yoqamiz."
     }
+  },
+  "map": {
+    "empty": "Bu hududda hech narsa topilmadi",
+    "loading": "Eʼlonlar yuklanmoqda…"
   }
 }

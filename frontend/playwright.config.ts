@@ -23,7 +23,12 @@ const radarsOff = process.env.E2E_RADARS_OFF === "1";
  * machine it is the local stack, whose mkcert certificate Node trusts through `NODE_EXTRA_CA_CERTS`.
  */
 function serverEnv(): Record<string, string> {
-  const env: Record<string, string> = { API_URL: process.env.API_URL ?? "https://api.homi.loc/api/v1" };
+  const env: Record<string, string> = {
+    API_URL: process.env.API_URL ?? "https://api.homi.loc/api/v1",
+    // The map's raster fallback (WP-27): without it the CSP stops tile fetches before the guard of
+    // `@homi/testing/playwright` or a spec's own route can answer them.
+    CSP_TILE_HOSTS: process.env.CSP_TILE_HOSTS ?? "https://tile.openstreetmap.org",
+  };
   if (!ci && process.env.NODE_EXTRA_CA_CERTS === undefined) {
     try {
       env.NODE_EXTRA_CA_CERTS = `${execFileSync("mkcert", ["-CAROOT"], { encoding: "utf8" }).trim()}/rootCA.pem`;

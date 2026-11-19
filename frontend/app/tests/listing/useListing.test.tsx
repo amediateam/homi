@@ -72,7 +72,7 @@ const initialOk = (details: ListingDetails = detailsOf()): ListingInitial => ({
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: () => {} }}>{children}</ListingLayerContext>
+    <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: () => {}, view: null }}>{children}</ListingLayerContext>
   );
 }
 

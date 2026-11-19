@@ -42,10 +42,15 @@ export interface ListingLayerValue {
   scrollToTop: () => void;
   /** The state each screen instance shows; the layer turns its swipe back on for data only. */
   reportView: (state: ListingView["state"]) => void;
+  /**
+   * The state the screen last reported; `null` before its first report and after the layer hid. A child route reads
+   * it for a failure the resource never holds: the server's read (cookie mode) stays in the screen's `initial`.
+   */
+  view: ListingView["state"] | null;
 }
 
 /** Provided by `ListingLayer` only. */
-export const ListingLayerContext = createContext<ListingLayerValue>({ number: null, scrollToTop: () => {}, reportView: () => {} });
+export const ListingLayerContext = createContext<ListingLayerValue>({ number: null, scrollToTop: () => {}, reportView: () => {}, view: null });
 
 export function useListingNumber(): number | null {
   return useContext(ListingLayerContext).number;

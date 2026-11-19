@@ -47,7 +47,8 @@ function overlayCopyShown(): boolean {
  * The listing layer (WP-26, D-20): the one owner of `RouteOverlay` for a listing address, in both route trees. The
  * browser keeps a layout instance per number, so the number comes from the layout's own `params`, never from the
  * app-wide `useParams()`. The fallback screen shows while `ListingServer` streams; the child routes render inside the
- * layer, so the listing stays mounted under them, and everything inside reads the layer's context, portals included.
+ * layer, so the listing stays mounted under them, and everything inside reads the layer's context, portals included:
+ * its number and the state the screen reports, which tells a child route of a server read that failed (cookie mode).
  *
  * Each opening starts fresh: when the route is hidden (bfcache) or unmounted, the opening count moves on, which
  * remounts the overlay — top of the scroll, photo 1, swipe-back slide reset — and the hero index is forgotten
@@ -115,7 +116,7 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
     root.current?.closest<HTMLElement>('[data-slot="route-overlay"]')?.scrollTo({ top: 0 });
   }, []);
   const reportView = useCallback((state: ListingView["state"]) => setView(state), []);
-  const value = useMemo<ListingLayerValue>(() => ({ number, scrollToTop, reportView }), [number, scrollToTop, reportView]);
+  const value = useMemo<ListingLayerValue>(() => ({ number, scrollToTop, reportView, view }), [number, scrollToTop, reportView, view]);
 
   return (
     <ListingLayerContext value={value}>

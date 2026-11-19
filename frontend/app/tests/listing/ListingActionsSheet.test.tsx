@@ -326,7 +326,7 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
     feedReference({ reference: { bot: { username: "homi_bot", support_username: "homi_help" } } });
     return render(
       withIntl(
-        <ListingLayerContext value={{ number: 100001, scrollToTop: () => {}, reportView: () => {} }}>
+        <ListingLayerContext value={{ number: 100001, scrollToTop: () => {}, reportView: () => {}, view: null }}>
           <Suspense fallback={null}>
             <ListingActionsRoute />
           </Suspense>
@@ -470,7 +470,7 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
   it("renders nothing for a layer without a valid number", () => {
     render(
       withIntl(
-        <ListingLayerContext value={{ number: null, scrollToTop: () => {}, reportView: () => {} }}>
+        <ListingLayerContext value={{ number: null, scrollToTop: () => {}, reportView: () => {}, view: null }}>
           <ListingActionsRoute />
         </ListingLayerContext>,
       ),

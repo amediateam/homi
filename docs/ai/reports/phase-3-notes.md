@@ -1186,6 +1186,287 @@ Merged on 2026-11-17 as #81 (`95315fd`), on «сливай #81», after green `f
 44146798129) and `frontend-e2e` (run 44146798203, 180 passed). WAITING for the regular deploy of the production track
 and the checks inside Telegram on staging.
 
+## Y. Development track, 2026-11-17/18 — WP-27, map: MapLibre GL engine
+
+Branch `wp-27-map-gl`, on `main` = `d4c0d88` (after #82). It ran as plain subagents, at most three at a time, each
+owning its own files, after a vertical slice the orchestrator built and checked on `next start` first (the worker,
+the CSP, WebGL in headless Chromium):
+- **Slice (`bca55ab`):** the worker copy script, `gl/library.ts`, the view contract `types.ts`, the twelve label
+  fonts.
+- **Wave 1 (`bcd58f8`):** the pure modules with their unit tests — the engine rule and launch options; the basemap,
+  palette, fonts and style builder; grouping, spread, camera, mask and prefetch; `useMapPoints`, the marker DOM and
+  its CSS, the ESLint rule, the link hosts, the three keys.
+- **Wave 2 (`aa60ff3`, `c8ec053`):** the screen; the selection card, the card layer and the warm-up; the GL view.
+- **Wave 3:** the end-to-end specs (`d4e077c`) and, in parallel, one review in three lenses (behaviour, security,
+  conformance) with one refuting agent per finding; the fixes follow.
+
+The search map now renders: the engine of the session, the points of the map's own search as pins, stacks and
+clusters, the spread and the selection card with lazy previews, the camera rules, the area mask, locate, the
+attribution, the loading, empty and error states, and the warm-up from the list. A device the rule sends to Leaflet
+sees «Карта на этом устройстве пока недоступна» until WP-28 (DEC-45).
+
+Developer decision (2026-11-18): **label fonts** («Поставить fonttools») — upstream Noto publishes no woff2 subsets,
+so fonttools 4.68 (with brotli) was installed in a throwaway virtual environment on the development machine only, and
+the twelve subsets were cut from the unhinted Noto Sans 2.015 TTFs; nothing is added to the repository's toolchain.
+
+ASSUMPTION_MISMATCH AM-80 (2026-11-18):
+- **Assumption.** WP-27's engine table chose GL for a saved `gl` "when any WebGL context can be created".
+- **What was found.** MapLibre 6 needs WebGL2: `new Map` throws `GPUInitializationError` without it (CHANGELOG
+  6.0.0, `src/ui/map.ts`). A WebGL1-only device with a saved `gl` would fail on every open.
+- **Resolution.** Row 4 probes WebGL2 without the caveat flag; the specification says so.
+
+ASSUMPTION_MISMATCH AM-81 (2026-11-18):
+- **Assumption.** WP-27 left open how MapLibre's worker loads under the bundler and the nonce CSP, and whether its
+  CSP build is needed.
+- **What was found.** MapLibre 6 has no CSP build; its worker is an ES module that imports a shared module, and
+  Turbopack emits the worker without that sibling (maplibre-gl 6.11.2 `docs/index.md`). A same-origin worker also
+  takes the policy of its own response, and the proxy skipped every path with a dot, so vector template tiles fetched
+  inside the worker were outside `connect-src` (review SEC-1).
+- **Resolution.** `scripts/copy-maplibre-worker.mjs` copies both files into `public/maplibre/<version>/` before
+  `dev` and `build`; `loadMapLibre()` sets the worker URL; the proxy answers `/maplibre/` with a worker policy
+  (`default-src 'none'; script-src 'self'; connect-src 'self' <CSP_TILE_HOSTS>`); its cache stays Next.js's
+  revalidated `max-age=0`, because the proxy cannot tell a file from a missing version and a one-year cache would keep
+  a 404 that a rollback brings back.
+
+ASSUMPTION_MISMATCH AM-82 (2026-11-18):
+- **Assumption.** WP-27 fetched OSM raster tiles through a custom `homiosm://` protocol so the requests carry a
+  referrer whatever the page policy is.
+- **What was found.** MapLibre fetches raster tiles with `fetch` and honours a `referrerPolicy` returned by
+  `transformRequest`; the slice showed the tile requests with the origin-only referrer.
+- **Resolution.** `osmTransformRequest` sets `strict-origin-when-cross-origin` for `https://tile.openstreetmap.org/`;
+  no protocol.
+
+ASSUMPTION_MISMATCH AM-83 (2026-11-18):
+- **Assumption.** WP-27 took the twelve Noto Sans woff2 subsets "from the upstream Noto release" and left open how
+  MapLibre 6 consumes them.
+- **What was found.** Upstream publishes TTF/OTF only, no woff2 and no subsets; this machine had no subsetting tool.
+  MapLibre 6 reads woff2 through the style's `font-faces` (one `unicode-range` element per range, keys equal to the
+  `text-font` names, the weight from the file), with no `glyphs` URL.
+- **Resolution.** The developer chose fonttools (above); `gl/fonts.ts` holds the ranges, the specification the
+  command.
+
+ASSUMPTION_MISMATCH AM-84 (2026-11-18):
+- **Assumption.** WP-27 expected headless Chromium to fail the caveat probe (so GL specs would launch with
+  `?map=gl`), and an OSM tile route registered after `launchApp` to answer the tiles.
+- **What was found.** Under Playwright's SwiftShader the WebGL2 probe with `failIfMajorPerformanceCaveat` succeeds, so
+  GL is the default pick; and the page's CSP refuses a tile request before any route sees it.
+- **Resolution.** The end-to-end server (`playwright.config.ts`, the CI workflow) gets `CSP_TILE_HOSTS`, the guard
+  of `@homi/testing/playwright` answers OSM tiles with a blank PNG, and the unavailable state is launched with
+  `?map=leaflet`.
+
+ASSUMPTION_MISMATCH AM-85 (2026-11-18):
+- **Assumption.** WP-27 read `?map=` and `?mapdebug` from the launch when the map shows.
+- **What was found.** The launch query was private to `lib/deeplinks/launch.ts`, and the view toggle keeps only the
+  search keys, so the map's address has neither parameter.
+- **Resolution.** `launchMapOptions()` reads the query captured when the module loads; `Launch.mapDebug` is parsed.
+
+ASSUMPTION_MISMATCH AM-86 (2026-11-18):
+- **Assumption.** WP-27's file list named no existing end-to-end spec.
+- **What was found.** `data.spec.ts` (the whole WP-22 proof), one test of `gates.spec.ts` and the lasso step of
+  `shell.spec.ts` depended on the map placeholder or on a drawing mode that WP-27 closes at once.
+- **Resolution.** `data.spec.ts` keeps every check, re-hosted on the map's read and the feed; the gates test refuses
+  the map's read; the lasso step lands on the plain map until WP-28.
+
+Review findings and fixes (each finding checked by a refuting agent; each fix came with a test that its builder
+showed failing against the broken version — reported by the builders, not re-run by the orchestrator):
+- **Round 1** (on `d4e077c`; behaviour, security, conformance — 11 findings, 5 refuted), fixed in `c11aefd` and
+  `f7100dc`: the `draw=1` layer closed once per address instead of once per opening; no spinner during the library
+  load; fit memory and a city jump on the Tashkent stand-in (`cityKnown`); DEV-013's pin entry left behind by a replace
+  (KI-59); the worker without a policy of its own (AM-81); the shell spec's lasso step. The worker's one-year cache
+  went again in `f7100dc` (a 404 of a missing version would have been kept).
+- **Round 2** (on `f7100dc`; the fixes, cross-module flows — 3 findings), fixed in `782216a`: the map bar read the
+  default search under a listing opened from the card (KI-43's map part); the demo marker did not come back with the
+  map (`SourceReporter`, as the feed); DEV-013's lasso over an open card left a Back that did nothing.
+
+Own choices (no ADR):
+- **Worker files** generated before `dev` and `build`, git-ignored, under a versioned path; `prewarm()` keeps the
+  worker alive across the route's Activity hide and show.
+- **Style rebuilds** always through `setStyle(…, { diff: true })` from one pure builder that carries the mask and
+  "me" data; the map is created once per mount.
+- **Markers** as DOM elements (text only), taps from the map's own `click`, the spread taken out of the cluster index.
+- **The test hooks** (`data-map-*`, `data-marker`) named in the build notes and used by `e2e/map.spec.ts`.
+- **The e2e guard** answers OSM tiles itself, so no spec can reach the public tile server.
+
+Known issues: KI-59 (low: `history.ts` matches a `popstate` by address), KI-60 (low: a spread-pin tap during the
+card's snap); KI-43's map part done.
+
+Verified (from `frontend/`):
+- **The slice (`bca55ab`):** a production build and a probe against `next start`: the worker and its shared module
+  load under the nonce CSP, `load` and `idle` fire, OSM tiles carry the origin-only referrer, headless Chromium passes
+  the caveat probe.
+- **On `c11aefd`:** `make ci-frontend` clean, app 168 files / 2600 + 1 todo.
+- **On `782216a`:** `make ci-frontend` clean — app 168 files / 2608 + 1 todo, `@homi/search` 238 + 1 todo,
+  `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112, `@homi/api-client` 14, `@homi/utils` 2.
+- **End to end:** each of the 19 files alone against a local `next start` of the `782216a` build, 198 passed (two map
+  tests made to wait for what they assert in `192f285` after failing under machine load, then `map.spec.ts` 17 of 17
+  alone).
+
+## Z. Development track, 2026-11-18 — WP-28, map: Leaflet engine, lasso, spot map
+
+Developer's word (2026-11-18): «Следующий пакет — WP-28», given while #83 (WP-27) was in review. The branch
+`wp-28-map-leaflet-lasso` therefore starts from `wp-27-map-gl` at `94a414d` and its PR is stacked on #83: its base is
+`wp-27-map-gl` until #83 merges, then `main`. It ran as in §Y — a vertical slice the orchestrator built and checked on
+`next start` first, then plain subagents, at most three at a time, each owning its own files:
+- **Slice (`7d57dc7`):** `leaflet/library.ts`, the map and its camera, the raster tiles, the clusters; `MapUnavailable`
+  and `map.unavailable` removed; the marker elements moved to `features/map/` for both engines. **Skeleton
+  (`0db8dea`):** the stub hooks the builders filled in, so that no two of them edited one file.
+- **Wave 1 (`949696b`, `c6dea7f`, `6b14977`):** the Leaflet view; the lasso and drawing on both engines; the spot map.
+  **Follow-ups (`6a6d124`, `297ca2c`):** the changes the builders could not make in their own files (one prefetch cap,
+  the GL markers' deferred re-sync, the spot route's leave rule, `Maximize2`).
+- **Wave 2 (`f4a7c5b`):** the end-to-end specs, which found two bugs fixed in the same commit (a Leaflet cluster and the
+  spread dot shrank in the empty icon box; the spot map's container was 0 px high on GL, the cause of `c8ec053`).
+- **Reviews (`31aa139`, `f7ba4b2`):** below.
+
+ASSUMPTION_MISMATCH AM-87 (2026-11-18):
+- **Assumption.** WP-28's end-to-end section expected headless Chromium to fall to Leaflet by rule, with GL cases
+  launched with `?map=gl`.
+- **What was found.** As in AM-84, SwiftShader passes the WebGL2 probe, so GL is the default pick.
+- **Resolution.** The Leaflet cases launch with `?map=leaflet`; `map-lasso.spec.ts` and `spot-map.spec.ts` run on both.
+
+ASSUMPTION_MISMATCH AM-88 (2026-11-18):
+- **Assumption.** WP-28 drew the Leaflet attribution with Leaflet's control without its prefix.
+- **What was found.** The control writes its attribution as an HTML string, and `MapScreen` already draws the same
+  attribution for GL with `MapAttribution`, whose links go through `tg.openLink`.
+- **Resolution.** No attribution control on either engine: `MapAttribution` serves both maps and the spot map;
+  protomaps-leaflet's own attribution (an HTML string by default) is emptied.
+
+ASSUMPTION_MISMATCH AM-89 (2026-11-18):
+- **Assumption.** WP-28 named protomaps-leaflet's layer with "the palettes of WP-27 and label rules", leaving open how a
+  vector failure is seen.
+- **What was found.** At 5.1.0, `paintRules(flavor)` / `labelRules(flavor, lang)` paint every road class in one colour,
+  ignore lite mode and need a full `@protomaps/basemaps` flavor; and the library reports no tile failure:
+  `renderTile` logs a rejected tile, paints it without the source and tells Leaflet it loaded.
+- **Resolution.** `basemapRules.ts` writes the rules layer by layer from GL's style with the palette's colours (zooms on
+  the Leaflet scale); `watchVectorErrors` wraps the layer's sources and switches to the raster; the failure state and
+  its one report per session are shared with GL in `features/map/useBasemap.ts`. A template's 404 counts as a failure
+  on Leaflet (KI-62).
+
+ASSUMPTION_MISMATCH AM-90 (2026-11-18):
+- **Assumption.** WP-28 imported Leaflet, its plugins and their CSS inside the view's chunk, as one import.
+- **What was found.** Leaflet 1.9.4 ships only a UMD build, which sets `window.L` when it runs; markercluster reads
+  that global when it runs and protomaps-leaflet when a layer is made.
+- **Resolution.** `leaflet/library.ts` `loadLeaflet()` loads the three in order once per session (GL's
+  `loadMapLibre()` pattern); the other modules import Leaflet's types only.
+
+ASSUMPTION_MISMATCH AM-91 (2026-11-18):
+- **Assumption.** WP-28 asked the production track to extend `img-src` with the tile hosts and to keep the origin in
+  tile requests.
+- **What was found.** `lib/security/csp.ts` already lists `CSP_TILE_HOSTS` in `img-src`, and `proxy.ts` sets
+  `Referrer-Policy: strict-origin-when-cross-origin`; the slice showed Leaflet's tile images requested with
+  `referer: http://localhost:3001/` and no CSP report. `TileLayer`'s `referrerPolicy` also sets it per image.
+- **Resolution.** Nothing new is asked of the production track beyond WP-27's `CSP_TILE_HOSTS`.
+
+ASSUMPTION_MISMATCH AM-92 (2026-11-18):
+- **Assumption.** WP-28's `SpotMapRoute` read the listing with `useListing()` from the resource cache and left on a
+  listing error.
+- **What was found.** `useListing()` makes the read and needs the server's first answer; the cache-only reader is
+  `useListingRecord()`, as the photo viewer, market and actions children use. In cookie mode a server failure stays in
+  the screen's first answer and never reaches the resource.
+- **Resolution.** `SpotMapRoute` reads `useListingRecord(useListingNumber())`; the listing layer's context carries the
+  screen's reported state, so the route also leaves on a cookie-mode `not_found`, `offline` or `server`.
+
+ASSUMPTION_MISMATCH AM-93 (2026-11-18):
+- **Assumption.** WP-28's lasso table deferred the marker re-sync by 150 ms during a two-finger move, without saying how
+  on each engine.
+- **What was found.** MapLibre's `panBy` / `zoomTo` without animation fire `moveend` at once, and GL's marker layer
+  syncs on every `moveend`; Leaflet's public `panBy` fires `moveend` on every call.
+- **Resolution.** GL: the lasso's camera moves carry `LASSO_MOVE`, and the marker layer re-syncs once,
+  `LASSO_RESYNC_MS` after the last of them. Leaflet: the host moves the pane as Leaflet's own drag does
+  (`_rawPanBy`, KI-61) and fires one `moveend` 150 ms after the last move; a pinch steps whole zooms.
+
+Review findings and fixes (each finding checked by a refuting agent; each fix came with a test shown failing against
+the broken version by the orchestrator):
+- **Round 1** (on `f4a7c5b`; the Leaflet view, drawing, the spot map, security and regressions — 4 findings, 1 refuted),
+  fixed in `31aa139`: a Leaflet pin was reused for another listing at the same address with the same label, so its
+  tap opened a listing no longer in the search (the signature now names the listings); a Leaflet map removed within
+  250 ms of a zoom animation (or mid-pinch) threw from Leaflet's timer (`removeLeafletMap`); under StrictMode in
+  `next dev` a GL chunk failure while drawing was reported twice and Back ran twice (a once-guard in
+  `ViewChunkFailed`). Refuted: a lint guard for Leaflet's HTML-string options (no such sink is used).
+- **Round 2** (on `31aa139`; the fixes and cross-module flows — 1 finding), fixed in `f7ba4b2`: the wheel's debounce
+  timer also outlived the removal. The flows lens (the filters hand-off, the finished stroke, the spot map's Back
+  order, the session's engine across both maps, the shared prefetch cap) found nothing.
+
+Own choices (no ADR):
+- **Skeleton first:** stub hooks with fixed signatures, so three builders could fill one view without sharing a file.
+- **One prefetch cap:** `prefetchTileUrls` in `tilePrefetch.ts` serves the list's warm-up and Leaflet's in-map
+  prefetch.
+- **Gestures paused while drawing** on both engines, and marker taps ignored, so the strips the overlay leaves under the
+  bars neither pan the map nor open a card.
+- **The spot map** is re-created rather than restyled on a theme, lite or locale change; the fullscreen map is a
+  dialog (focus, Escape) like the photo viewer; `SpotMapRoute` is imported statically, only the engines are lazy.
+- **Leaflet's selected marker** raised with `setZIndexOffset`, not CSS; a dark raster filter approximates GL's paint.
+
+Known issues: KI-61 (low: Leaflet and protomaps-leaflet internals at the pinned versions), KI-62 (low: a template's 404
+tile switches Leaflet to the raster).
+
+Verified (from `frontend/`):
+- **The slice (`7d57dc7`):** a production build and a probe against `next start` with `?map=leaflet&mapdebug`: four
+  stacks, one cluster of 44 zoomed out, the card, icon roots without a size, OSM tile images with the origin-only
+  referrer, no console error or CSP report.
+- **On `f7ba4b2`:** `make ci-frontend` — types, lint, typecheck and the build passed; the test step failed once with
+  `ENOENT` on `node_modules/.vitest-cache` in `@homi/search` (no assertion failed), and `pnpm test` again passed: app 183
+  files / 2831 + 1 todo, `@homi/search` 238 + 1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 112,
+  `@homi/api-client` 14, `@homi/utils` 2.
+- **End to end:** each of the 22 files alone against a local `next start` of the `f7ba4b2` build, with a pause between
+  files (KI-32): 237 passed (map 17, map-leaflet 17, map-lasso 9, spot-map 13 and the 18 earlier files as in §Y plus
+  their changes); the same on the `f4a7c5b` build.
+
+## AA. Development track, 2026-11-18 — WP-29, favourites and history
+
+Branch `wp-29-saved`, on `main` = `d4c0d88` (after #82). WP-29 depends only on WP-26, so it does not stack on #83 or
+#84; its docs touch the same files as theirs (the queue, these notes, the session handoff) and are merged by hand
+when those land. Developer's word: «Следующий пакет — WP-29».
+
+The Heart tab's two lists now render: `/saved` (SCR-024) and `/saved/history` (SCR-025).
+- **Rendering:** page one is read on the server with the session cookie, else in the browser through `/bff`, both in
+  WP-24's `ListingFeed`, 20 at a time with the feed's cursor (DEC-53).
+- **Session maps:** favourites drop listings un-favourited or hidden in this launch. History shows every entry and
+  never the eye.
+- **«Очистить»:** it asks first, then sends `DELETE /history` and shows the empty state with the success haptic.
+- **Refresh:** pull-to-refresh reloads either list from page one.
+
+WP-24 had shipped every prop and the cursor guard, so `ListingFeed` and `useCursorFeed` are unchanged. The build ran
+in two workflows:
+1. Two builders on disjoint files against the orchestrator's decisions and a read-only look at the legacy source,
+   then a gate.
+2. One end-to-end writer, and two review lenses with a refuting verifier per finding (5 of 5 confirmed, 4 distinct,
+   fixed before `fcba4ca`).
+
+Assumption mismatches (rule 6, in the specification):
+- **AM-94.** The specification took a tab entering a saved page to re-create its list, as legacy's re-mount did
+  (`App.jsx:618`). Next keeps up to three routes alive under `<Activity>` (`preserving-ui-state.md`), so the old list
+  would stay. Every server render of the page now brings a new `renderId` in the list key:
+  - cookie mode adopts the fresh server page one with no browser request;
+  - header mode asks `/bff`.
+- **AM-95.** The specification put the size of the `seen` map into history's key, as legacy did. That re-creates the
+  list at the card's tap, under the listing's layer, racing the server's write of the view. The size is now latched
+  per version and compared on the return to the list's address.
+
+The legacy history rule (no filtering by the hidden map, `ListingFeed.jsx:86-91`) was read in the reconstructed
+source at SVN r29. That source is synced to release `index-BnFvC-Ft`, one newer than the pinned `index-DY_DH7h-`, and
+its delta report does not touch the saved views. Read it again when WP-02 pins the baseline.
+
+Review fixes:
+- the `renderId` drawn after `io()` (the runtime shell stage of `partialPrefetching`);
+- the list shown when `DELETE /history` answers is the one cleared;
+- `aria-disabled` keeps the focus on «Очистить»;
+- after a clear, the empty state takes the focus and a status line reads it;
+- a new key gives the list a lost focus (the card the listing's layer returns it to is gone after history's
+  re-creation).
+
+Own choices (no ADR):
+- **One hook** (`useSavedList`) for both lists' keys, pulls, the top and the focus.
+- **The cleared state** replaces the list until the next key, as legacy emptied its items with no refetch.
+- **The `Trash` icon** is re-exported from `@homi/ui`, as legacy's `Trash` 15 px.
+
+Verified (from the repository root unless marked):
+- `make ci-frontend` on `fcba4ca` passed: types, lint, typecheck and the build. Unit tests: app 157 files / 2405 +
+  1 todo, `@homi/search` 238 + 1 todo, `@homi/testing` 95, `@homi/ui` 121, `@homi/i18n` 111, `@homi/api-client`
+  14, `@homi/utils` 2.
+- End to end: each of the 19 files alone against a local `next start` of the `fcba4ca` build, 190 passed, none skipped: back 11, boot-failure 6, city 6, crash 4, csp 2, data 5, feed 19, filters 20, foundation 19, gates 8, launch 5, listing-actions 14, listing-contact 14, listing-open 16, photo-viewer 6, saved 10, session 7, shell 16, smoke 2. Before the review fixes the end-to-end writer ran `saved.spec.ts` 10/10 three times and the neighbouring specs green (listing-open once 15/16, then 16/16 twice; not reproduced).
+
+Known issues: none new. LB-APP-027 (a silent failed clear with DEV-016 off) stays as the flag decides.
+
 ## AB. Development track, 2026-11-18/19 — WP-30, radars
 
 Branch `wp-30-radars`, on `main` = `d4c0d88` (after #82). WP-30 depends on WP-25 and WP-26 only, so it does not stack

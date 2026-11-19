@@ -43,3 +43,5 @@ next-env.d.ts
 
 # development Telegram emulator, built by dev/build.mjs before next dev (WP-21)
 /public/__dev/
+# MapLibre's worker, copied by scripts/copy-maplibre-worker.mjs (WP-27)
+/public/maplibre/

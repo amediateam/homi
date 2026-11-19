@@ -1,6 +1,18 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Favourites (SCR-024); WP-29 replaces the placeholder. */
-export default function Page() {
-  return <RoutePlaceholder name="saved" />;
+import { FeedSkeleton } from "@/features/feed/ListingCardSkeleton";
+import { FavoritesServer } from "@/features/saved/server";
+
+/**
+ * Favourites (SCR-024, WP-29): a static shell, and under `<Suspense>` the part that reads the cookie (DEC-44,
+ * `authentication-with-cache-components.md`). Nothing per-user is cached.
+ */
+export default function FavoritesPage() {
+  return (
+    <div data-route="saved">
+      <Suspense fallback={<FeedSkeleton />}>
+        <FavoritesServer />
+      </Suspense>
+    </div>
+  );
 }

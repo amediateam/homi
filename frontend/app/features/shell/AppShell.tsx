@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
 
 import { useBootRetryState } from "@/features/gates/bootRetryStore";
+import { warmMap } from "@/features/map/engine";
 import { NudgeHost } from "@/features/nudges/NudgeHost";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
@@ -24,8 +25,9 @@ import { ViewToggle } from "./ViewToggle";
  * was opened from, which stays mounted below (`isLayerAddress`): the chrome keeps the variant it drew there, so the
  * page keeps its top bar, tab bar and spacers — its height and scroll position — and the swipe back of the listing
  * (WP-26) uncovers it whole. The first address the shell draws has nothing below it, so a direct load draws the
- * address's own variant (`none` for a listing). Only the variant is kept: the bars still read the live address for
- * their contents (the deal, the badge), as the page below does — out of sight under the opaque listing. State adjusted
+ * address's own variant (`none` for a listing). Only the variant is kept: the list and map bars and the view toggle
+ * read their own screen's search (`useScreenSearchState`, KI-43), so the swipe back uncovers the right deal, badge
+ * and area. State adjusted
  * while rendering, as `RouteSheet` does: each of the two chrome parts keeps its own copy and sees the same addresses,
  * and a render that never commits leaves no trace.
  */
@@ -82,7 +84,9 @@ function ShellBottom() {
 
   return (
     <>
-      {variant === "search-list" || variant === "map" ? <ViewToggle variant={variant} /> : null}
+      {variant === "search-list" || variant === "map" ? (
+        <ViewToggle variant={variant} onIntent={() => void warmMap().catch(() => undefined)} />
+      ) : null}
       <PullToRefresh />
       <NudgeHost searchTab={tab === "search"} />
       {tab ? <TabBar active={tab} /> : null}
