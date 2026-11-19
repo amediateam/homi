@@ -1649,3 +1649,46 @@ ASSUMPTION_MISMATCH AM-100 (2026-11-19):
   reverse-applying the next release's `delta/units` diffs and compared byte for byte with the copy. `baseline.md` names
   the revision the line references belong to and says that they are not those of today's checkout; the next intake reads
   the changed files again.
+
+## AD. Development track, 2026-11-19 — intake of `index-CIa0Ldj2`, the third release
+
+**The intake of `index-CBlEKxdL.js`** (#89) was merged on 2026-11-19 as `eb82663`, on «сливай #89», after green
+`frontend` (run 44527296867) and `frontend-e2e` (run 44527296911: attempt 1 failed on `listing-actions.spec.ts:265`, the
+flaky test of KI-63, 349 passed; attempt 2 passed 350 and the `@radars-off` run 14) on `a339099`. WAITING for the
+regular deploy: texts only.
+
+**The developer's answers** (2026-11-19, asked one at a time with options): eleven answers on `index-CIa0Ldj2.js`,
+recorded as DEC-58 … DEC-68 (`docs/migration/decisions/2026-11-19-developer-answers.md`, `24` §8.1). Four are not the
+recommended option: the five `DEV` flags stay and only their defaults go on (DEC-58); HOMI gets its own daily cap on
+opening listings (DEC-59); the `?radar=` link is built with the bot packages (DEC-61); «Смотрели» keeps HOMI's rule as
+DEV-053 (DEC-67), which restores the WP-29 text #89 had replaced. Then «да, начинай приём index-CIa0Ldj2».
+
+**The intake** (branch `feat/intake-index-CIa0Ldj2` on `main` = `eb82663`, PR #90): `69f4354` (the catalogue: 581 names,
+18 new, 16 plurals), `fdb2082` (the contract on stubs: `with_point`, `agent_marked`, `DELETE /listings/{number}/reports`
+— 41 pairs —, `AccessReason::Paused`, area for every deal, `floor`, `429` with `reason: "daily"`; stub listings 100022
+and 100023; the report action of the Mini App passes `agent_marked` on, the only app change), `0156909` (the audit: 51
+new ids, most rows edited in place, eleven defects fixed or partly fixed in legacy), `4fab9ca` (the decisions, about 30
+specifications, the five catch-up specifications WP-34 … WP-38, the pin, the queue, the table of built code behind the
+pin grown to 43 rows, about 2 290 lines to close), `0c0dcef` and `97e8155` (review fixes) and the memory commit. It ran
+as plain subagents: a backend agent for the contract; an integrator for one map over the drafts and the answers; four
+writers on disjoint files; two reviewers, one checking about 35 audit claims against the legacy source (all agree;
+LB-APP-027 had been marked fixed though only partly fixed) and one reading every decision against every specification
+(27 findings: sentences the decisions made false, a missing intake-log row, an unlabelled default, a wrong route).
+
+Verification, run in the main session: `composer ci:check` on the staged contract → exit 0 (Pest 794 tests, 790 passed,
+4 skipped; PHPStan 0 errors; the OpenAPI document current); `make ci-frontend` on the same state → exit 0 (app 215 files
+/ 3462 + 1 todo, i18n 114, search 241 + 1 todo, ui 138, testing 95, api-client 14, utils 2). The later commits change
+only `docs/`, `CLAUDE.md` and `.ai/memory/`. On `97e8155`: `python3 -I scripts/migration/collect_ids.py --check` → exit
+0, 2 456 ids; `build_open_questions.py` → 279 questions; `task_graph.py --check` → exit 0 (149 features, 148 covered);
+the three registers parse (63, 77, 167); `features.csv` 150 rows of 19 columns; all 1 139 id-carrying line references of
+`07`, `09` and `features.csv` point at the line that defines their id. The end-to-end suite was not run locally.
+
+ASSUMPTION_MISMATCH AM-101 (2026-11-19):
+- **Assumption.** A release intake records what legacy does and leaves HOMI's code alone; the specifications of merged
+  packages keep describing the code.
+- **What was found.** `index-CIa0Ldj2.js` changes 37 places of screens that are already merged, and its contract changes
+  break the build of the Mini App (the generated type of the report answer now requires `agent_marked`).
+- **Resolution.** The specifications describe the pinned release and mark each place the merged code is behind it
+  ("built code behind the pin, row N"); `baseline.md` lists the rows with the package that closes each; catch-up
+  packages before WP-31 close them. A contract change is made on stubs in the intake itself, with the smallest app
+  change that keeps the build green.
