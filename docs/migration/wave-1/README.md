@@ -89,10 +89,10 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-24](WP-24-feed.md) | Feed and listing card | WP-23 | WAITING (merged in #71 on 2026-11-17; production track: the photo check of the header, then the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-25](WP-25-filters.md) | Filters, quick filter, sort, city | WP-24 | WAITING (merged in #79 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-26](WP-26-listing.md) | Listing screen | WP-24 | WAITING (merged in #81 on 2026-11-17; production track: the regular deploy; then the manual checks inside Telegram on staging) |
-| [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | REVIEW (#83) |
-| [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | REVIEW (#84, stacked on #83) |
-| [WP-29](WP-29-saved.md) | Favourites and history | WP-26 | REVIEW (#85) |
-| [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | REVIEW (#86) |
+| [WP-27](WP-27-map-gl.md) | Map: MapLibre GL engine | WP-25 | WAITING (merged in #83 on 2026-11-19; production track: `CSP_TILE_HOSTS` in the app's environment of staging and production before the deploy, then the regular deploy; then the manual checks inside Telegram on staging) |
+| [WP-28](WP-28-map-leaflet-lasso.md) | Map: Leaflet engine, lasso, spot map | WP-27 | WAITING (merged in #84 on 2026-11-19; production track: WP-27's `CSP_TILE_HOSTS` before the deploy, then the regular deploy; then the manual checks inside Telegram on staging, one of them on a low-end Android device in lite mode) |
+| [WP-29](WP-29-saved.md) | Favourites and history | WP-26 | WAITING (merged in #85 on 2026-11-19; production track: the regular deploy; then the manual checks inside Telegram on staging) |
+| [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | WAITING (merged in #86 on 2026-11-19; production track: the regular deploy, `RADAR_CREATION_ENABLED` left unset (DEC-51); then the "soon" state checked inside Telegram on staging; the other checklist lines run there in WP-57) |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23 | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
 | [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32 | TODO |

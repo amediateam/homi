@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#83) |
+| Status | WAITING (merged in #83 on 2026-11-19; production track: `CSP_TILE_HOSTS` in the app's environment of staging and production before the deploy, then the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-25 |
 | Size | ≈ 3 000 changed lines without the glyph font files, L |
 | Behaviour reference | `03` §1.7–§1.9, §2 (SCR-011, SCR-013), §3.2, §3.4 ("Map", "Tile prefetch budget"), §3.6 (z-index ladder), §4 (BR-APP-062), §5 and §5b (LB-APP-008, LB-APP-017 … LB-APP-020, LB-APP-024, LB-APP-044); `05` (TMA-012, TMA-035); task files KV-FE-057, KV-FE-058, KV-FE-061, KV-FE-062, KV-FE-031. From the task files only behaviour, texts, constants, edge cases and test ideas are taken; their file layout, navigation stack, API paths and transport are not |
@@ -462,7 +462,7 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] After 2.5 s on the list the map opens without a chunk request; with Save-Data nothing was preloaded.
 - [ ] A label containing markup is shown as text; the ESLint rule fails on `innerHTML` in the map folders.
 - [ ] With `dev013BackClosesMapCard` on (test build), Back closes the card; off, Back is unchanged.
-- [ ] Inside Telegram on staging: iOS, Android, Desktop and Web each show the map or the unavailable state.
+- [ ] Inside Telegram on staging: iOS, Android, Desktop and Web each show the map (on GL or, since WP-28, on Leaflet).
 
 ## Handoff
 
@@ -542,4 +542,4 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
   `/map-fonts/`; `/maplibre/<version>/` keeps going to the app (served as `application/javascript` by Next.js, checked
   locally); the build through `pnpm -r build` as `homi-deploy` does (its `prebuild` writes `public/maplibre/<version>/`,
   checked in the local `make ci-frontend` log), never a bare `next build`. Then the regular deploy and the checks inside
-  Telegram on staging (iOS, Android, Desktop, Web: the map or the unavailable state).
+  Telegram on staging (iOS, Android, Desktop, Web: the map, on GL or, since WP-28, on Leaflet).
