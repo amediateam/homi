@@ -7,7 +7,7 @@
 | Depends on | WP-33 (the Mini App runs on the stub contract of WP-11) |
 | Size | about 2 600 changed lines without generated files, L |
 | Behaviour reference | `25` §3.4, §5 (identity, settings); WP-11 (the contract — shapes do not change here); `16` §4.1 (SEC-REQ-001 … SEC-REQ-007), §4.6 (SEC-REQ-027), SEC-REQ-047; `15` §3.1, §3.2; tasks `tasks/backend/KV-BE-006-initdata-verifier.md`, `KV-BE-009-access-gate.md`, `KV-BE-010-legacy-rate-limits.md`, `KV-BE-045-settings.md` (rules, limits, edge cases — not their routes or serializers); ADR-0003, ADR-0018 |
-| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable; new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open`; set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses of the nginx that fronts the API; leave `TELEGRAM_INITDATA_MAX_AGE` and `ACCESS_MAX_SEATS` blank (defaults). 3. Confirm nginx passes `X-Forwarded-For` and that the Laravel scheduler runs (for `sanctum:prune-expired`) |
+| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable; new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open`; set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses of the nginx that fronts the API; leave `TELEGRAM_INITDATA_MAX_AGE` and `ACCESS_MAX_SEATS` blank (defaults); leave `ACCESS_PAUSED` unset (the pause switch stays off, DEC-60). 3. Confirm nginx passes `X-Forwarded-For` and that the Laravel scheduler runs (for `sanctum:prune-expired`) |
 
 ## Goal
 
@@ -32,6 +32,10 @@ Out: the Login Widget (not used by the Mini App); invite admission and `bot_chat
 - Tokens are Sanctum personal access tokens with abilities and an expiry (ADR-0003); the Mini App keeps them in an
   `HttpOnly` cookie or in memory, never in storage (ADR-0018, SEC-REQ-007).
 - Access is open to everyone, and the gate is built with all its modes (DEC-43).
+- Beside the modes the gate has a pause switch, off by default: the sixth reason `paused` of WP-11 (DEC-60; legacy
+  since `index-CIa0Ldj2.js`).
+- Opening listings has a per-user daily cap of HOMI's own, answered as `429 rate_limited` with `reason: "daily"`
+  (DEC-59). Its threshold is open (Q-API-085).
 - No user data comes from legacy (DEC-40): a user starts empty.
 - The contract of WP-11 is binding: same routes, bodies, codes. Only `meta.source` changes, to `native`.
 
@@ -142,7 +146,14 @@ null, default `classic`; `classic` or `rich`, since the intake of legacy release
 closed), `max_seats` (`ACCESS_MAX_SEATS`, null = unlimited), `owner_telegram_ids` (list, from the comma-separated
 `ACCESS_OWNER_TELEGRAM_IDS`, for `private`),
 `require_chat` (default false: in open mode a user who has not started the bot is still let in; radar writes have
-their own `no_chat` check).
+their own `no_chat` check), `paused` (`ACCESS_PAUSED`, boolean, default `false`).
+
+**Pause (DEC-60).** When `paused` is on, sign-in and every bearer route answer `403 access_denied` with
+`reason: "paused"` (`AccessReason::Paused`, in the contract since the intake of `index-CIa0Ldj2.js`; `AccessState`
+gains `Paused`); it is checked before the other reasons. The public methods (`GET /reference`, `GET /cities`, the
+landing methods) keep answering, because the no-access screen needs the bot names. The switch is a server setting
+of the production track and is off unless a pause is needed. Open point of this package: whether team accounts
+(`is_team`) pass a pause.
 
 Table `access_grants`: `user_id` (primary key, foreign key, cascade), `state` (`admitted`, `blocked`),
 `admitted_via` (`open`, `invite`, `owner`, `operator`), `flagged_at`, `flag_reason`, timestamps.
@@ -174,6 +185,7 @@ routes; it never contains a Telegram id.
 | `v1-me` | 30 per minute | `GET /me` |
 | `v1-reads` | 300 per minute | feed, count, `GET /listings/new`, flow, map, `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden` |
 | `v1-listing` | 120 per minute | `GET /listings/{number}` |
+| `v1-listing-opens` | a number per user per day, from configuration; the threshold is open (Q-API-085) | `GET /listings/{number}`; over it → `429 rate_limited` with `reason: "daily"` and `Retry-After` (`DailyLimitReached` of the contract). Counted per user, never per address. Whether the `preview=1` form counts is part of Q-API-085 (DEC-59) |
 | `v1-contact` | 30 per hour | `POST …/contact` |
 | `v1-translation` | 30 per hour, counted on cache misses inside the service (WP-43) | `POST …/translation` |
 | `v1-share` | 20 per hour | `POST …/share` |
@@ -216,8 +228,9 @@ and asserts that the three names are in Telescope's hidden lists.
 - `backend/tests/Unit/Identity/{TelegramInitDataVerifierTest,QuietWindowTest,DigestScheduleTest}.php`,
   `backend/tests/Feature/Api/V1/Auth/*`, `backend/tests/Feature/Access/*`, `backend/tests/Feature/Api/V1/{MeTest,SettingsTest,RateLimitTest}.php`,
   `backend/tests/Support/InitDataSigner.php` (signs synthetic values with the test token of `phpunit.xml`)
-- `backend/.env.example` (`ACCESS_MODE`, `ACCESS_MAX_SEATS`, `ACCESS_OWNER_TELEGRAM_IDS`, `SANCTUM_TOKEN_PREFIX`,
-  `TRUSTED_PROXIES`, `TELEGRAM_INITDATA_MAX_AGE`, `SOURCES_NATIVE_STUBS`) and `docs/infrastructure/environments.md`
+- `backend/.env.example` (`ACCESS_MODE`, `ACCESS_MAX_SEATS`, `ACCESS_OWNER_TELEGRAM_IDS`, `ACCESS_PAUSED`,
+  `SANCTUM_TOKEN_PREFIX`, `TRUSTED_PROXIES`, `TELEGRAM_INITDATA_MAX_AGE`, `SOURCES_NATIVE_STUBS`) and
+  `docs/infrastructure/environments.md`
   (their names) — separate shared-file PR; `docs/api/openapi.json` and generated types (regenerated; expected diff: none in shapes)
 
 ## Steps
@@ -261,12 +274,16 @@ and asserts that the three names are in Telescope's hidden lists.
 - Gate (dataset over mode, grant, owner, seats, chat state): each expected state; `blocked` beats everything; with
   `max_seats = 2`, 20 concurrent first requests admit exactly 2 (`pgsql`); every bearer route answers `403
   access_denied` with `reason: "blocked"` for a blocked user (generated from the route list); `POST /events` lets a
-  non-blocked gated user through; `GET /reference` stays `200`.
+  non-blocked gated user through; `GET /reference` stays `200`. Pause on: sign-in and every bearer route answer
+  `403 access_denied` with `reason: "paused"`, also for a blocked user, and `GET /reference` and `GET /cities` stay
+  `200`; pause off (the default): nothing answers `paused`.
 - Settings: each key; meta round-trip; `uz` stored and returned as `uz`; invalid values → `422`; `{}` → `200`;
   `SettingsChanged` carries only the changed keys; user B never sees or changes user A's settings (`15` §3.1 row 7).
 - Limits: one case per limiter with small test values; `Retry-After` present; two users have two buckets; one user on
   two addresses shares one; the burst fixtures pass; behind a configured proxy two client addresses get two buckets
-  and a forged `X-Forwarded-For` from elsewhere is ignored.
+  and a forged `X-Forwarded-For` from elsewhere is ignored. The daily cap on opening listings, with a small test
+  value: the next full card → `429 rate_limited` with `reason: "daily"` and `Retry-After`; another user is not
+  affected; a `429` of `v1-listing` has no `reason`.
 - Redaction: no log line contains the signed value or a token after any of the cases above.
 
 ## Acceptance checklist
@@ -275,6 +292,10 @@ and asserts that the three names are in Telescope's hidden lists.
 - [ ] `GET /me`, `GET /settings`, `PATCH /settings` and sign-in answer with `meta.source = native`; shapes equal WP-11.
 - [ ] Tokens carry only `app:read` and `app:write`, expire, are capped at 5 per user and are pruned.
 - [ ] The gate runs on every bearer route; `access:block` takes effect within 2 seconds; mode `open` lets everyone in.
+- [ ] With `ACCESS_PAUSED` on every bearer route and sign-in answer `reason: "paused"` and the public methods still
+      answer; the switch is off by default (DEC-60).
+- [ ] Opening listings is capped per user per day with `reason: "daily"`; the threshold comes from configuration
+      and Q-API-085 records how it was chosen (DEC-59).
 - [ ] Every v1 route has a named limiter (`route:list -v` attached to the PR); no route uses `throttle:api`.
 - [ ] `initData` and tokens never appear in logs, Telescope or Pulse.
 - [ ] The stub user and its tokens are removed from the databases of staging and production; stub answers of these

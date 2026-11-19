@@ -125,7 +125,8 @@ personal data (SEC-REQ-047).
   produced only by the boot guard). It builds `{ v, error: { kind, name, message, source, stage, screen, tg,
   platform } }` and calls `track('app_error', …)`. The catalogue of WP-11 knows four kinds (`boot`, `error`,
   `rejection`, `render`), so an `i18n` report is sent as `kind: 'error'` with `name: 'MissingMessage'` and the key
-  path as the message — no contract change.
+  path as the message — no contract change. The missing-key report also sets `source: "i18n"`, as legacy does
+  since `index-CIa0Ldj2.js` (*added by the intake of `index-CIa0Ldj2.js`*).
 - Field rules (`lib/errors/sanitize.ts`): `name` = `error.name` or the `typeof` of the thrown value, characters
   outside `[\w.$/-]` removed, at most 40; `message` at most 300; `source` = the given one or the first
   `http(s)://…:line:col` of the stack with `?…` and `#…` removed and `:line:col` kept, at most 300; `screen` =
@@ -202,6 +203,10 @@ personal data (SEC-REQ-047).
 - `ScreenTracker` sits in `app/[locale]/layout.tsx` inside a `<Suspense>` boundary (it uses `useSearchParams`). On
   every change of address it computes the name, calls `setScreen(name, props)` and `trackScreen(name, props)`,
   with `props = { listing_id }` on listing addresses. There is exactly one tracker; route components do not track.
+  On a listing address the pageview is sent when the listing's record or its failure is known, not at the change
+  of address, so a card closed before that sends none (legacy since `index-CIa0Ldj2.js`; `setScreen` still runs at
+  once, for error reports). Legacy's second name for that address, `owner/listing`, comes with the owner-cabinet
+  plan (*added by the intake of `index-CIa0Ldj2.js`*).
 - `useScreenLayer(name)` pushes a name while a component is mounted and visible, for the one layer that has no
   address of its own with flags off: the map selection card (`map/card`). The top layer name wins over the
   address name. `MapSelectionCard` of WP-27 gets this one call in this package's PR.
@@ -349,7 +354,7 @@ filters/<kind> > sort > city > map/draw > tab`) follows from the address: the to
 | 6 | `/filters/rooms`, `/filters/price`, `/filters/owner` | `filters/rooms`, `filters/price`, `filters/owner` | legacy |
 | 7 | `/sort` | `sort` | legacy |
 | 8 | `/city` | `city` | legacy |
-| 9 | `/listing/<number>` | `listing` with `listing_id` | legacy |
+| 9 | `/listing/<number>` | `listing` with `listing_id`, sent when the listing's record or its failure is known (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*) | legacy |
 | 10 | `/listing/<number>/photos` | `listing/photos` with `listing_id` | new |
 | 11 | `/listing/<number>/location` | `listing/location` with `listing_id` | new |
 | 12 | `/listing/<number>/market` | `listing/market` with `listing_id` | new |

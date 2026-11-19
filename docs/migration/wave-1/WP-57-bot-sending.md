@@ -5,7 +5,7 @@
 | Stage | D |
 | Status | TODO |
 | Depends on | WP-53, WP-46 |
-| Size | about 3 000 changed lines, L. If it grows: two PRs. Part A = steps 1–7 (pacer, the sender for cards and digests, the changes in the outbox job). Part B = steps 8–12 (withdrawn edits, recheck, broadcasts). Production works after either part |
+| Size | about 3 000 changed lines, L, plus about 150 for the launch link `?radar=<id>` in the Mini App (DEC-61, added by the intake of `index-CIa0Ldj2.js`). If it grows: two PRs. Part A = steps 1–7 (pacer, the sender for cards and digests, the changes in the outbox job). Part B = steps 8–12 (withdrawn edits, recheck, broadcasts). Production works after either part |
 | Behaviour reference | `04` §2 (rows BOT-062, BOT-081 … BOT-084), §5, §4.2 (TXT-BOT-047, TXT-BOT-086 … TXT-BOT-088), §8 (BR-BOT-007, BR-BOT-073 … BR-BOT-080, BR-BOT-092, BR-BOT-100, BR-BOT-101); `11b` §2.3 row 9; `16` (SEC-REQ-029, SEC-REQ-040, SEC-REQ-046, SEC-REQ-047); `25` §5 row "Matching and delivery planning", §14 item 5; task files KV-TG-050 … KV-TG-055; the specification of WP-46 ("Outbox — the seam for the bot") |
 | Needs from the production track | (1) Approval of two additive migrations: tables `broadcasts`, `broadcast_recipients`; column `listing_marks.taken_down_at`. (2) Review of the shared-file PR that gives the queue `notifications` its own `supervisor-delivery` in `backend/config/horizon.php`; a Horizon restart after its deploy. (3) The scheduler must run every minute on staging and production (asked by WP-46 and WP-50); two entries arrive with this package. (4) In the server env: `TELEGRAM_SEND_RATE_GLOBAL` (default 25), `TELEGRAM_SEND_RATE_PER_CHAT` (default 1), `TELEGRAM_BROADCAST_ENABLED` (default `false`); after part A of this package is deployed, switch radars on (DEC-51): set `RADAR_CREATION_ENABLED=true` and `RADAR_MATCHING_ENABLED=true` together and restart Horizon — on staging first, and on production after the staging checks of "Switching radars on" have passed (both keys were left off until a sender exists); confirm that `RADAR_STARTER_ENABLED` and `RADAR_REQUIRE_CHAT` are `true` (WP-54). (5) Before the deploy of part A: run `php artisan radar:status` and note the number of pending outbox rows — rows older than 36 hours are expired by the first run, not sent. (6) Alerts on the metrics named in "Metrics" (request detailed in WP-70). (7) For each real broadcast on production: `TELEGRAM_BROADCAST_ENABLED=true` for that run, with the first developer's approval |
 
@@ -30,6 +30,9 @@ In:
   (API-036, BOT-085), which replaces its stub: the sample card of WP-53 in the user's saved `card_style`, sent through
   `CardSender` and the pacer like any card; `sent: false` when the chat cannot be written or the pacer refuses. A
   per-user limit follows Q-API-067. Pushes and digests use the recipient's `card_style` too.
+- The radar launch link `?radar=<id>`, end to end (DEC-61; legacy since `index-CIa0Ldj2.js`): the bot's button and
+  the Mini App's reading of the link, about 150 changed lines of the Mini App on top of the size above ("Radar
+  launch link" in "Design").
 
 Out:
 
@@ -58,6 +61,7 @@ Out:
 | 8 | DEC-22 (open: operator roles) | Until roles exist a broadcast needs a one-time token and, on production, the env switch set by the production track |
 | 9 | `25` §14 item 5 | The wave is done only when an instant card, a digest and a quiet-hours release were each observed on production; the checklist has a line for each |
 | 10 | DEC-45, DEC-46 | Checked inside Telegram on staging and production |
+| 11 | DEC-61 — the launch link `?radar=<id>` is built with the bot | This package builds both halves: the `web_app` button that carries the link and the Mini App's reading of it. Whether the legacy bot sends such links, and from which message, is open (`04` Q-BOT-050) |
 
 ## Design
 
@@ -131,12 +135,26 @@ A permanent failure releases the ledger claim (WP-46), so nothing counts as deli
 | Groups | when the items belong to several radars, rows under each radar's title (`RadarTitle` of WP-55) |
 | Rows | the row format of the starter list (TXT-BOT-035, WP-54): `<n>. 2-комн. квартира · Юнусабад · $700 · @<канал> · 30.10 17:00`, newest first, price in the user's currency, every value escaped |
 | Buttons | numbers five per row, data `k1:ln:<n>:n` — `OpenListingByNumber` of WP-53 sends the card as a new message with origin `Number` |
-| Cap | `delivery.digest_max_rows` = 30 and never more than fits 4 096 characters; then the line `digest.more` with a `web_app` button to the Mini App. Items beyond the cap were claimed by the outbox and count as delivered, so they do not flood the next digest |
+| Cap | `delivery.digest_max_rows` = 30 and never more than fits 4 096 characters; then the line `digest.more` with a `web_app` button to the Mini App: `MiniAppUrl::radar(<radar id>)` when the digest belongs to one radar, else `MiniAppUrl::home()` (DEC-61). Items beyond the cap were claimed by the outbox and count as delivered, so they do not flood the next digest |
 
 One digest per user and slot across all radars (the grouping of WP-46); a single held item still arrives as a digest
 of one; an empty digest is never sent (Q-BOT-003, closed by specification). Pushes are sent with sound. A heading
 with the radar title is added to a push only when `config('delivery.show_radar_title')` is true (default false;
 Q-BOT-002).
+
+### Radar launch link (DEC-61)
+
+Legacy reads the page query `?radar=<id>` since `index-CIa0Ldj2.js` and opens the search with that radar's filters
+(`03` BR-APP-107; its defects: LB-APP-079, LB-APP-080). HOMI builds the link and its reader together, here.
+
+- **Bot.** The `web_app` button of the digest's `digest.more` line opens `MiniAppUrl::radar(<radar id>)` of WP-52
+  when the digest belongs to one radar, and `MiniAppUrl::home()` otherwise. A radar push gets such a button only if
+  the operator's answer says that legacy has one (`04` Q-BOT-050). HOMI's radar ids are ULIDs.
+- **Mini App.** `lib/deeplinks/parse.ts` reads `radar` (a ULID; anything else is ignored). `lib/deeplinks/launch.ts`
+  and `features/shell/LaunchRedirector.tsx` replace the address by the radar's feed (`radarFeedHref` without
+  `from=radar`, so there is no return state) when the launch names no listing, radars are on and `GET /radars` holds
+  the id. A miss, an error and a launch that names a listing change nothing: the listing link wins.
+- This closes row 36 of `wave-1/baseline.md` ("Built code behind the pin").
 
 ### Pacer
 
@@ -298,6 +316,8 @@ All paths under `backend/`.
 - `tests/Feature/Delivery/{TelegramPacerTest,TelegramRadarSenderTest,InstantDeliveryTest,QuietHoursDeliveryTest,DigestDeliveryTest,OutboxDeferTest,DeliveryReconcileTest,RecheckDeliveredTest,WithdrawnCardEditTest,BroadcastTest,RadarSwitchOnTest}.php`
 - `tests/Fixtures/Bot/transcripts/{push,digest,digest-morning,card-withdrawn}.json`
 - `docs/infrastructure/telegram-webhook.md` (section "Outbound sending": limits, switches, commands)
+- Mini App, for the radar launch link (paths under `frontend/app/`): `lib/deeplinks/{parse,launch}.ts`,
+  `features/shell/LaunchRedirector.tsx`, `tests/deeplinks/*`, one case in `e2e/launch.spec.ts`
 
 ## Steps
 
@@ -386,7 +406,7 @@ the planner of WP-46 and delivered through its real job; the listing source on t
 | 3 | `TelegramRadarSenderTest` | each row of the guard table and of the outcome table: the exception class, `reason`, `permanent`, and for `403` one `ChatUnreachable`; an item matched 37 hours ago → `expired`, no Bot API call; inside a quiet window switched on after planning → deferred to its end |
 | 4 | `InstantDeliveryTest` | one due item → one `sendPhoto`, the outbox row sent, the ledger row with chat and message id, a log row with origin `Instant`; `DeliveryDue` twice → one send; one listing, two radars → one send; `403` → the ledger claim released, `ChatUnreachable`; an exception after the fake accepted the send → the retry sends nothing; user erased → nothing; source unavailable → retried by the outbox, permanent at the fifth attempt; stub data → the card carries the demo marker; three due cards for one chat → one per second |
 | 5 | `QuietHoursDeliveryTest` | quiet 23–8, match at 23:30 → nothing at 23:31, 03:00, 07:59; one morning digest at 08:00; three held matches → one digest of three; quiet 0–9, match at 23:59 → sent at once; quiet 22–8, matches at 21:59 and 22:00 → sent and held; a property test with random matches never calls the Bot API inside a window |
-| 6 | `DigestComposerTest` (unit) | header with N; morning header; two radar groups; row format; 5-per-row grid; 30-row cap with the overflow line; stops before 4 096 characters; escaping; `uz` with soʻm |
+| 6 | `DigestComposerTest` (unit) | header with N; morning header; two radar groups; row format; 5-per-row grid; 30-row cap with the overflow line; stops before 4 096 characters; escaping; `uz` with soʻm; the overflow button opens `radar=<id>` for a digest of one radar and the plain address for several (DEC-61) |
 | 7 | `DigestDeliveryTest` | digest hour 19, three items → one message at 19:00, three log rows with one `message_id`; press `2` → card as a new message, digest unchanged; 45 items → 30 rows, 45 outbox rows sent; the job run twice → one message; `429` → sent once after the wait; `403` → claims released; every listing withdrawn before the send → no message |
 | 8 | `DeliveryReconcileTest` | a ledger row older than ten minutes without a message id is counted; nothing is sent |
 | 9 | `RecheckDeliveredTest` | a delivered number the source reports withdrawn → one event; unknown number → one event; active → none; a number checked an hour ago is skipped; at most ten batches per run; breaker open → no call |
@@ -394,6 +414,7 @@ the planner of WP-46 and delivered through its real job; the listing source on t
 | 11 | `BroadcastTest` | five users (three opted in, one opted out, one blocked) → count three, three sends; start without confirm → refused; wrong token → refused; opt-out while queued → `skipped`; one `403` → `blocked`, others continue; a batch killed after 40 of 100 → 60 more, no duplicate; a text with a script tag or an `http` link → draft refused; a `uz` user gets the `uz` text; production without the switch → refused; 10 000 recipients stay under the rate |
 | 12 | `NoSleepInJobsTest` (arch) | no class under `app/Jobs` calls `sleep` or `usleep` |
 | 13 | `RadarSwitchOnTest` | with `radar.creation_enabled` and `radar.matching_enabled` on and the feed on the fixture-backed legacy driver: a radar created through `POST /radars` gets its filter set, a poll that finds a new listing plans one item, and the sender delivers one card; with both off: `POST /radars` → `403 radars_disabled`, `radar:poll` dispatches nothing, nothing is sent; `GET /reference` reports `radars_enabled` accordingly |
+| 14 | Mini App: `tests/deeplinks/*` (Vitest) and one Playwright case | `radar=<ULID>` is parsed and anything else ignored; a launch with the id of the user's radar replaces the address by that radar's feed; an unknown id, a failed `GET /radars`, radars switched off and a launch that also names a listing leave the launch as it was (DEC-61) |
 
 ## Acceptance checklist
 
@@ -415,6 +436,9 @@ the withdrawn card. Attach screenshots to the PR.
 - [ ] A radar in digest mode produces one digest at the next digest hour; a number opens the card; the digest does
       not change.
 - [ ] No digest arrives when there is nothing new.
+- [ ] The button under a digest of one radar that overflowed opens the Mini App on that radar's search; a launch
+      with an unknown radar id opens the default search; a launch that names a listing opens the listing (DEC-61).
+      Row 36 of `wave-1/baseline.md` is marked closed.
 - [ ] A listing shown in a starter list, a push or a digest is not delivered a second time.
 - [ ] The bot keeps answering commands without delay while a large test fan-out is being sent.
 - [ ] A withdrawn listing: its delivered copies show «Объявление снято» without buttons; its digest row shows

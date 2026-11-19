@@ -46,7 +46,9 @@ chat (WP-57); the bot's wizard and radar screens, which call the same service (W
 (string 8, default `instant`), `filters` (`json`, the 25-key object), `filters_hash` (char 64), `city` (string 64),
 `deal` (string 16), `entry` (string 16, nullable), `relax_code` (string 32, nullable), `hidden_count` (integer,
 default 0), `paused_at` (`timestampTz`, nullable), timestamps. Unique (`user_id`, `filters_hash`); index (`active`,
-`filters_hash`) for the matcher; index (`user_id`, `created_at`).
+`filters_hash`) for the matcher; index (`user_id`, `created_at`). A rent radar may carry `area_min` / `area_max`:
+the area range is a filter of every deal (DEC-62). The canonical hash of step 3 below is computed as before, over
+the 25 keys.
 
 `radar_hide_rules`: `id`, `radar_id` (foreign ULID, cascade), `kind` (string 8: `channel`, `district`, `author`),
 `target` (string 96: channel name, district code or author key), `created_at`. Unique (`radar_id`, `kind`, `target`).

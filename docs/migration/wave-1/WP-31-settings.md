@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract) |
+| Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract); WP-34 (the failure toast), WP-36 (the fallback close of sub-pages), WP-38 (the feed epoch and the scroll memory) |
 | Size | ≈ 2 300 changed lines, M; ≈ 2 800 with the card style of the intake of `index-BnFvC-Ft.js` |
 | Behaviour reference | `03` §2 (SCR-032 … SCR-039, SCR-041, SCR-048), §1.7 (lite mode), §3.2 (storage), §3.3 (events), §3.4 (constants), §3.5 (time zone), §4, §5, §5b; `05` TMA-019 … TMA-021, TMA-036; task files KV-FE-081, KV-FE-082, KV-FE-083, KV-FE-084, KV-FE-085, KV-FE-086, KV-FE-026, KV-FE-027 |
 | Needs from the production track | nothing |
@@ -47,7 +47,7 @@ the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
 | Decision | Consequence here |
 | -------- | ---------------- |
 | Rebuild and parity (DEC-32, DEC-46) | Rebuilt from the audit; the checklist below is the proof of parity |
-| Defects and flags (DEC-36) | LB-APP-010, LB-APP-040 and LB-APP-041 are fixed without a flag. Failures that only vibrated in legacy go through `failed()`, which adds the toast only with `dev016ErrorToastOnFailure` (LB-APP-027, owned by WP-23) |
+| Defects and flags (DEC-36) | LB-APP-010, LB-APP-040 and LB-APP-041 are fixed without a flag. Failures that only vibrated in legacy go through `failed()`, which adds the toast only with `dev016ErrorToastOnFailure` (LB-APP-027, owned by WP-23). The flag is on by default since the intake of `index-CIa0Ldj2.js`, because legacy shows «Не получилось сохранить» itself since that release (DEC-58); both branches stay tested (*added by the intake of `index-CIa0Ldj2.js`*) |
 | Brand (DEC-40, 25 §2 rule 5) | Name, Instagram, support and legal links come from `lib/brand`; a link that is `null` hides its row. Brand words in texts are overridden in the `homi` catalogue layer |
 | Localisation (DEC-44, 25 §3.7) | The locale is the first address segment. Changing the language changes the address, not a stored key |
 | Session modes (25 §3.4) | `GET /settings` and `GET /hidden` run on the server when the cookie exists and through `/bff` in header mode; every save is the `updateSettings` Server Action (token argument in header mode) |
@@ -83,7 +83,8 @@ next-intl documentation.
   `settings/layout.tsx` already exists as a placeholder in the tree of WP-20 and is replaced here.
 - Every sub-page is wrapped in `SubPage` (WP-23): fixed layer, 24 % slide-in, swipe-back except on Android, header
   shadow when scrolled, Telegram Back. Closing is `back()` of `useBack()`; a direct load of a sub-page address
-  closes to `/settings`.
+  closes to `/settings`. While the SDK is absent the eight sub-pages show the fallback close through `SubPage`,
+  built by WP-36 (legacy since `index-CIa0Ldj2.js`, `05` TMA-047; *added by the intake of `index-CIa0Ldj2.js`*).
 - A row opens its page with `router.push(routes.settingsPage(name), { scroll: false })` after a light haptic.
 - A hidden listing opens with `router.push(routes.listing(number))`; the `@overlay` slot shows it over the hidden
   page, and Back returns to the list.
@@ -131,6 +132,10 @@ next-intl documentation.
 | Quiet hours, digest | optimistic `patch` → `updateSettings` → `replace` with the answer | restore the previous settings, `failed()` |
 | Card style (BR-APP-074) | nothing when the pick is the current style or a sample is sending; else the sample state back to `idle`, optimistic `patch({ card_style })` with a light haptic → `updateSettings({ card_style })` → `replace` | restore the previous settings, `failed()` |
 
+`failed()` shows «Не получилось сохранить» by default: `dev016ErrorToastOnFailure` is on since the intake of
+`index-CIa0Ldj2.js` (DEC-58), and with the flag off a failed save only vibrates (*added by the intake of
+`index-CIa0Ldj2.js`*).
+
 `changeLanguage(locale)` — the fix of LB-APP-041, no `location.reload()`:
 
 1. `patchMe({ locale })` of WP-21's session store, so the locale guard (session step 5) agrees with the address —
@@ -146,6 +151,10 @@ next-intl documentation.
 `changeCurrency(code)`: `patchMe({ currency })`, `router.refresh()` (documented: re-fetches and re-renders Server
 Components and keeps client state), `invalidate('')`. `useMoney()` then formats with the new currency, and UZS is
 used only when the rate is above 0 (rule of WP-22).
+
+For both: `invalidate('')` does not reach the search feed's list, which `useCursorFeed` holds by its list key. The
+feed epoch of WP-38 does: bump it, and forget the feed's scroll memory, where the list must be read again
+(*added by the intake of `index-CIa0Ldj2.js`*).
 
 A failed follow-up fetch after a successful save keeps the new language or currency and shows stale strings until
 the next load; it never rolls the setting back.
@@ -260,6 +269,9 @@ Instagram account is not HOMI's: the row stays hidden until the brand layer has 
 - «Новый»: a photo placeholder with four dots, `.price` as a heading, `.title` in bold, 📊 `.median`, a table
   `.rowDistrict` / `.district`, `.rowMetro` / `.metro`, `.rowArea` / `.areaShort`, `.rowOwner` / `.ownerShort`, the
   line `.details` with «›»; button rows [📱 📍] [🔗 ⭐] [… ];
+- the mock texts are those of the catalogue; since legacy release `index-CIa0Ldj2.js` the en mocks read
+  «Yunusabad» (`settings.cards.demo.place` «Yunusabad · Minor metro», `.district` «Yunusabad»; before it
+  «Yunusobod») (*added by the intake of `index-CIa0Ldj2.js`*);
 - the hint `settings.cards.hint`; a bottom panel with the full-width primary button `settings.cards.send`
   «Прислать пример в чат», disabled with a spinner and `settings.cards.sending` while sending; `sent` shows a check,
   `settings.cards.sent` and the second line `settings.cards.minimize`; `failed` shows `settings.cards.failed`.
@@ -317,8 +329,12 @@ visual differences are accepted).
 - Return all: `tg.confirm(hidden.confirmAll)` «Снова показывать все скрытые объявления и заблокированных
   авторов?»; Cancel sends nothing; OK → `unhideAll()` (`DELETE /hidden`).
 - Each action: light haptic, the row leaves at once, then the request. Success: success haptic,
-  `resetHidden()` of WP-22's session maps, `invalidate` of feed, map, count and radar previews, so returned items show
-  again without a manual refresh. Failure: only that row comes back, `failed()`.
+  `resetHidden()` of WP-22's session maps, a bump of the feed epoch and the feed's scroll memory forgotten (the two
+  functions WP-38 exports; legacy reloads the search feed on a change of the hidden list since
+  `index-CIa0Ldj2.js`), and `invalidate` of the map points, the count and the radar previews, so returned items
+  show again without a manual refresh. Failure: only that row comes back, `failed()`. A failed «Показать всё
+  снова» restores only the rows that action removed; rows returned by other actions meanwhile stay returned
+  (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*).
 - An unknown author kind renders a generic icon and the server label. When the list empties, the page shows
   «Ничего не скрыто» and stays open.
 
@@ -373,7 +389,8 @@ overrides replace the brand word only. The Instagram handle is not a catalogue t
 - `LanguageCurrencyPages`: rows disabled while saving; check moves only on success.
 - `QuietDigestPages`: optimistic check, rollback, answer replaces state, both digest hints, value outside presets.
 - `HiddenPage`: authors only, listings only, both, empty, unknown kind; plural forms 1, 3, 5; rollback of one row;
-  confirm cancel.
+  confirm cancel; a failed «Показать всё снова» restores what it removed and leaves a row returned meanwhile returned;
+  a success bumps the feed epoch and forgets the feed's scroll memory (*added by the intake of `index-CIa0Ldj2.js`*).
 - `CardStylePage`: a pick saves optimistically and the answer replaces it; the failure restores; the current style
   sends nothing; a pick while sending sends nothing; a pick resets the result; `sent: true`, `sent: false`, a
   failure and an answer without `sent` (a mocked action) give the right line and haptic; the result survives
@@ -440,7 +457,10 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
 - [ ] After adding the icon the toast «Значок HOMI добавлен на экран телефона» shows once.
 - [ ] A launch at 02:00 Tashkent time counts for that Tashkent day.
 - [ ] No text shows the legacy brand name; the demo marker is visible while settings come from stubs.
-- [ ] With `dev016ErrorToastOnFailure` off a failed save only vibrates; the flagged branch passes its tests.
+- [ ] A failed save shows «Не получилось сохранить»: `dev016ErrorToastOnFailure` is on by default (DEC-58). With
+      the flag off it only vibrates; both branches pass their tests.
+- [ ] Without the SDK (`launchApp(page, { sdk: false })`) each of the eight sub-pages shows the fallback close, and
+      it closes the sub-page (*added by the intake of `index-CIa0Ldj2.js`*).
 
 ## Handoff
 

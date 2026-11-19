@@ -135,7 +135,12 @@ type MapViewProps = {
   already has `listings/map` and `listings/:number`. Points are read only while the session is ready and the engine
   is GL (WP-28 drops the engine condition).
 - Answer, per the contract of WP-12: points `{ number, lat, lon, label, tone, priced, usd }` (`tone` may be `null`,
-  `usd` orders a stack) and `total`. A missing `total` counts as the number of points. `bffFetch` already reports
+  `usd` orders a stack) and `total`. A missing `total` counts as the number of points. Since the intake of
+  `index-CIa0Ldj2.js` the answer is `{ points, total, with_point }`: `with_point` is the number of listings of the
+  filters that have a point, and fewer points than that mean a cut answer (WP-12; legacy `02` BR-API-192). The counts
+  become `{ shown, cut, missing }` with `cut = with_point − points` and `missing = total − with_point`, never negative
+  (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useMapPoints` and `pins.ts` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 33)). `bffFetch` already reports
   each answer's `meta.source` (`reportSource`), so the hook does not; it keeps the last answer's source, and
   `MapScreen` renders `<SourceReporter>` with it while the map is its own address, so the demo marker comes back when
   the map is shown again (Back from a listing, a closed sheet, a tab round trip). The filters are those of the map's
@@ -172,6 +177,11 @@ type MapViewProps = {
 - After the first fit for a city the view is saved as `homi-map-fit:<lat>,<lon>` → `[lat, lon, zoom]` (4 decimals,
   Leaflet scale); corrupt JSON is ignored. Nothing is saved, and no city jump is made, while the city view is still
   the Tashkent stand-in (`cityKnown: false`).
+- Camera memory (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-111): a memory of the camera per map query, for the
+  launch and in memory only. It is written when a view that has fitted is left, and it is the first camera of the next
+  view with the same query; then the first answer does not fit again. A changed search fits as before. The fit memory
+  per city above stays (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `camera.ts` and the two views
+  for a later package (`wave-1/baseline.md`, built code behind the pin, row 35)).
 - Area mask: with a polygon, a dimmed world rectangle with the polygon cut out and an outline
   (`maskGeometry(polygon)`).
 - Map options: maximum zoom 17 (GL scale), rotation, pitch and keyboard off, no world copies, pixel ratio
@@ -239,7 +249,8 @@ type MapViewProps = {
 - Preview per slot: `GET /listings/{number}?preview=1` — the preview form of WP-12, which returns the preview
   object only and records no view — through `bffFetch('listings/' + number, { query: { preview: 1 } })` and
   `useResource('listing-preview:' + number, …)`, for the current and adjacent slots, once each.
-- A failed slot shows an inline retry for that slot (LB-APP-017).
+- A failed slot shows an inline retry for that slot (LB-APP-017). Legacy shows this error itself since
+  `index-CIa0Ldj2.js` (`03` LB-APP-017; *added by the intake of `index-CIa0Ldj2.js`*).
 - With `dev013BackClosesMapCard` on, the selection is mirrored into `useLayerState('pin')` (`useCardLayer`): opening
   pushes `pin=<number>`, Back closes the card and collapses the stack, a card closed another way pops the entry, and
   an address replaced under the card (the deal switch, a filters apply) steps back over the entry first, so the root
@@ -335,9 +346,10 @@ Changed:
 | Map unavailable (until WP-28) | the rule picks Leaflet, or GL failed | new key `map.unavailable` «Карта на этом устройстве пока недоступна» and a button with the list label of the view toggle that goes to `routes.feed(q)` |
 | Points loading | request pending, nothing drawn yet | small spinner pill over the map, accessible name from new key `map.loading` «Загружаем объявления…» (fix of LB-APP-044) |
 | Ready | points arrived | pins, stacks, clusters; camera fitted |
-| Note | `total > shown` after a new answer | `map.note` «На карте {shown} из {total} · {missing} известен только район» with plural `map.missing` («у {n} объявления» / «у {n} объявлений»), 6 s |
+| Note | `cut > 0` or `missing > 0` after a new answer | `cut > 0` → `map.cut` «На карте — {n} самых свежих. Остальные — в списке» with `n = shown` (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-062; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` and `pins.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 33)); else `missing > 0` → `map.note` «На карте {shown} из {total} · {missing} известен только район» with plural `map.missing` («у {n} объявления» / «у {n} объявлений»); never both; 6 s |
 | Empty | no points and `total = 0` | pill with new key `map.empty` «Ничего не найдено в этой области» |
-| Error, server | request failed, `source_unavailable`, timeout | pill `common.loadFailed` «Не загрузилось» + button `error.retry` «Повторить» (fix of LB-APP-008) |
+| Error, server | request failed, `source_unavailable`, timeout | pill `common.loadFailed` «Не загрузилось» + button `error.retry` «Повторить» (fix of LB-APP-008; legacy shows this error itself since `index-CIa0Ldj2.js`, `03` LB-APP-008, LB-APP-044; *added by the intake of `index-CIa0Ldj2.js`*) |
+| Render error | the engine view throws while rendering | a boundary around the engine view shows the same pill «Не загрузилось» + «Повторить», which mounts the view again, and reports the error as `render`; the app's crash screen is not reached (legacy since `index-CIa0Ldj2.js`, `03` SCR-011; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 34)) |
 | Error, offline | `UiError` `offline` | pill `error.offline` «Нет связи» + `error.retry` |
 | Basemap pending | `tiles` absent | background colour, pins still shown |
 | Raster basemap | `tiles` empty, or a vector failure | OSM tiles, «© OpenStreetMap» |
@@ -402,14 +414,22 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `tilePrefetch.test.ts`: budget table; tile set for a known centre and zoom; once per region; session byte cap.
 - `markerElements.test.ts`: a label `<b>x</b>` renders literally in pins and stacks; tone classes; cluster sizes.
 - `useMapPoints.test.ts`: abort on change; stale answer dropped; each status; the answer's source kept, no second
-  `reportSource`.
+  `reportSource`. Since the intake of `index-CIa0Ldj2.js`: `with_point` kept, and `pins.test.ts` for `cut` and
+  `missing` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useMapPoints` and `pins.ts` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 33)); `camera.test.ts` for the memory per query
+  (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `camera.ts` for a later package
+  (`wave-1/baseline.md`, built code behind the pin, row 35)).
 
 **Component (Testing Library, map library mocked).**
 
 - `MapScreen.test.tsx`: engine → view; `onFail` switches to the fallback, the second mount goes straight to it and
   one error is reported; pills for loading, empty, error and retry; note timing with fake timers; card closes on
   new filters; selection cleared when the view effect re-runs; an opened `draw` layer is closed at once and a
-  pending draw request is discarded (replaced by WP-28).
+  pending draw request is discarded (replaced by WP-28). Since the intake of `index-CIa0Ldj2.js`: which note shows for
+  a cut answer and for one with listings without a point (*added by the intake of `index-CIa0Ldj2.js`*; a parity item
+  of `MapScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 33)); a view that throws
+  shows the pill, and «Повторить» mounts it again (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `MapScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 34)).
 - `MapSelectionCard.test.tsx`: single and stack layouts; a 7-listing stack requests indexes 0 and 1, then 2, 3, 4
   after a swipe to 3, and nothing twice; failed slot retry; external index scroll; both branches of
   `dev013BackClosesMapCard` with `withDevFlags`.
@@ -430,6 +450,11 @@ four stacks of eleven on the fitted camera (45 points; repeats keep their base's
 - Preview answered 500 → slot retry → card.
 - Locate with a fake LocationManager: denied text; success moves the camera; no request carries coordinates.
 - Launch with `?map=leaflet` → `map.unavailable` and the button returns to the list (changed by WP-28).
+- Since the intake of `index-CIa0Ldj2.js`: the cut note with the scenario `map_cut` (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `MapScreen` for a later package (`wave-1/baseline.md`, built code behind the
+  pin, row 33)); map → list → map shows the same camera and does not fit again (*added by the intake of
+  `index-CIa0Ldj2.js`*; a parity item of `camera.ts` and the GL view for a later package (`wave-1/baseline.md`, built
+  code behind the pin, row 35)).
 
 **Not automated:** real GPU rendering and performance, pinch on devices, the native permission sheet, the vector
 basemap until a file is hosted (checked on staging when `tiles` is first set), palette likeness.
@@ -452,6 +477,15 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] A failed preview shows «Не загрузилось — повторить» and recovers.
 - [ ] «На карте {shown} из {total} · …» appears for 6 s when some listings have no coordinates, with the right
       plural in each language.
+- [ ] A cut answer says «На карте — N самых свежих. Остальные — в списке» instead; never both notes (*added by the
+      intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` and `pins.ts` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 33)).
+- [ ] A render error of the map shows «Не загрузилось» with «Повторить» on the map and does not reach the app's crash
+      screen (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `MapScreen` for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 34)).
+- [ ] Leaving the map and returning with the same search keeps the camera; a changed search fits again (*added by the
+      intake of `index-CIa0Ldj2.js`*; a parity item of `camera.ts` and the two views for a later package
+      (`wave-1/baseline.md`, built code behind the pin, row 35)).
 - [ ] Hiding a listing (from the listing's actions) removes its pin without moving the camera.
 - [ ] Loading pill, `map.empty`, server error with «Повторить» and offline error each appear in their case.
 - [ ] A new search fits the camera (polygon first, else the robust box); changing the city jumps there.

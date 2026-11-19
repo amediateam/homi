@@ -87,7 +87,9 @@ public function post(string $path, array $body = [], ?LegacyCall $call = null): 
 | `2xx` that is empty or not JSON | `LegacyContractError` |
 | `404` | `SourceNotFound` (v1 `404 not_found`) |
 | `422` | `LegacyContractError` — HOMI validated the request first, so legacy disagreeing is drift |
+| `403` with `detail` exactly `paused` | Legacy is paused, not refusing the key (since `index-CIa0Ldj2.js`, `02` BR-API-194): `AccessDenied` with the reason `paused` (v1 `403 access_denied`, DEC-60). It does **not** count as a breaker failure. One `warning` log line. *Added by the intake of `index-CIa0Ldj2.js`* as a default of the integrator: no question asked how a pause of legacy reaches HOMI's users |
 | `401`, `403` | `SourceUnavailable`; one `critical` log line "legacy refused the service key" (alert input); counts as a breaker failure |
+| `429` with `detail` exactly `too many today` | `DailyLimitReached` (v1 `429 rate_limited` with `reason: "daily"`, DEC-59; the exception exists since the intake of `index-CIa0Ldj2.js`, `backend/app/Exceptions/Listings/DailyLimitReached.php`, and takes the seconds of `Retry-After`). It does **not** open the breaker. One `warning` log line with a counter, because a cap counted per service key would hit every user at once (RK-25, `02` Q-API-080) |
 | `429` | `SourceUnavailable`; the breaker opens for `Retry-After` (at most `open_max`) |
 | `5xx`, timeout, connection error (after the retry) | `SourceUnavailable`; breaker failure |
 
@@ -159,7 +161,8 @@ installing the key.
 - `backend/config/legacy.php`, `backend/config/sources.php`
 - `backend/app/Services/Sources/Legacy/{LegacyClient,LegacyCall,LegacyLocale,LegacyLimiter,LegacyBreaker,LegacyFakeServer,LegacyReferenceSource}.php`
 - `backend/app/Services/Sources/Legacy/Translators/{ReferenceTranslator,CityStatsTranslator}.php`
-- `backend/app/Exceptions/Sources/LegacyContractError.php`; `backend/app/Console/Commands/Sources/PingLegacy.php`;
+- `backend/app/Exceptions/Sources/LegacyContractError.php` (`DailyLimitReached` already exists);
+  `backend/app/Console/Commands/Sources/PingLegacy.php`;
   `backend/app/Providers/SourceServiceProvider.php`
 - `backend/resources/fixtures/legacy/{meta.ru,meta.uz_Latn,meta.en,meta.no_cities.ru,cities}.json`,
   `errors/*.json`, `README.md`
@@ -204,7 +207,9 @@ installing the key.
 - Limiter (frozen clock): `per_second` calls pass, the next waits into the next second, a call that would wait longer
   than `max_wait_ms` fails; background calls stop at their share and never wait.
 - Breaker: five failures open it; while open no request is sent; after `open_for` exactly one probe is sent by
-  concurrent callers; success closes; a `429` with `Retry-After: 120` opens for 120 s; `Retry-After: 9999` is capped.
+  concurrent callers; success closes; a `429` with `Retry-After: 120` opens for 120 s; `Retry-After: 9999` is capped;
+  a `429` with `detail: "too many today"` raises `DailyLimitReached`, leaves the breaker closed and writes one
+  warning.
 - Translators: every row of the rule table; the no-cities variant; a missing required key → contract error naming
   the key; unknown extra keys ignored.
 - Source: second call within ten minutes sends no request; cache key differs per locale; failure with a last good
@@ -217,7 +222,8 @@ installing the key.
 
 - [ ] `LegacyClient` sends the key in the configured header, never logs it, and never calls without a key.
 - [ ] Timeouts, one read retry, the limiter and the breaker behave as specified and are covered by tests.
-- [ ] Every legacy outcome maps to `not_found` or `source_unavailable`; no legacy error body reaches a v1 answer.
+- [ ] Every legacy outcome maps to `not_found`, `source_unavailable` or, for legacy's daily limit, `rate_limited`
+      with `reason: "daily"` (DEC-59); no legacy error body reaches a v1 answer.
 - [ ] `GET /reference` and `GET /cities` with the `legacy` driver equal the stub in shape, in `ru`, `uz` and `en`.
 - [ ] The golden fixtures are sanitised and documented; a shape change fails `ReferenceGoldenContractTest`.
 - [ ] No test or CI job opens a network connection (`Http::preventStrayRequests()` in every feature test file).

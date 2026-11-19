@@ -144,6 +144,11 @@ member is a no-op or returns `null` / `false` and never throws.
 | 32 | TMA-043 | whole facade | — | the outside-Telegram fallbacks named in each row |
 | 33 | TMA-044 | `safeCallback(fn)` | — | wraps every SDK event handler: catch, then rethrow on a zero timeout so the dispatcher survives and the global handler reports once |
 | 34 | TMA-045 | `frontend/app/dev/` | — | emulator (below) |
+| 35 | TMA-047 | none of its own: `webApp()` and `subscribeSdk` of `sdk.ts` | — | the app's own close control while the SDK is absent (legacy since `index-CIa0Ldj2.js`): built in `features/shell/` over these two members, shown while `webApp()` is `null` and gone when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RouteOverlay` and `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)) |
+
+Legacy binds the Back and Settings handlers only when the SDK arrives, and restarts the launch when a late SDK
+brings launch data, since `index-CIa0Ldj2.js` (`05` TMA-004, TMA-022). That is already how this package works: rows
+3, 15 and 16 above (*added by the intake of `index-CIa0Ldj2.js`*).
 
 Safe areas and the absence of viewport units (TMA-017, TMA-018) are CSS and belong to WP-20.
 
@@ -287,6 +292,7 @@ listing, then nothing (root tab: BackButton hidden, Telegram shows Close).
 | `postUrl` | `l_<n>-[seo-]<channel 4–32>-<post 1–12 digits>` → `https://t.me/<channel>/<post>` |
 | `news` | `?news=` matching `^[a-z_]{1,32}$` |
 | `mapOverride` | `?map=gl\|leaflet\|auto` (consumed by WP-27) |
+| `radar` | `?radar=<id>` of the page query, never of `start_param`: a radar id, a ULID in HOMI (legacy's are integers). A launch parameter that is built with the bot packages, reader and link together (DEC-61, WP-57; legacy: `03` BR-APP-107; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `parse.ts`, `launch.ts` and `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row 36)) |
 | `entry` | `link` with a listing, else `news`, else `menu` |
 
 `LaunchRedirector`, once per launch after the session is ready and while `launchGate()` allows it (WP-23
@@ -299,6 +305,22 @@ address (a native `replaceState` followed by a push in the same tick collapsed i
 ignores the address under a state it wrote and put the fragment back on the next Back (measured).
 `features/shell/FragmentGuard.tsx` removes the launch fragment again after every navigation, because the App Router
 brought it back on the locale switch after sign-in (measured, TMA-009). Whether the bot's buttons use `?listing=` or `startapp` is open (Q-APP-019); both work.
+Whether the legacy bot sends `?radar=` links, and from which message, is open too (`04` Q-BOT-050).
+
+**Once per launch.** A listing link opens once per launch: a session mark, checked by `launchTarget()` and
+`consumeLaunch()` and written when the address shows the target, so a reload of the document inside one launch does
+not open the listing again. The mark keeps a digest of the launch `hash` and the number, never the raw hash
+(SEC-REQ-007; a default of the integrator, not a decision of the developer); a storage failure means "not opened yet".
+Legacy: `sessionStorage` key `kv-start-done`, `03` BR-APP-106 (*added by the intake of `index-CIa0Ldj2.js`*; a parity
+item of `launch.ts` and `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row
+15)).
+
+**A sale listing from the launch link.** When the listing of the launch link is a sale and the feed below is not, the
+feed becomes the sale defaults of the feed's own city when that listing closes (DEC-65). Legacy switches the feed
+while the listing is still open (`03` BR-APP-108); HOMI's page under an intercepted layer cannot change its address
+while the layer shows, so the switch waits for the close. A daily-rent listing switches nothing (*added by the intake
+of `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and the close path of the listing for a later package
+(`wave-1/baseline.md`, built code behind the pin, row 16)).
 
 `build.ts` — the only place a Telegram link is built: `botUrl()`, `botStartUrl(payload?)`,
 `botStartAppUrl(number)`, `noAccessStartUrl(source, number?)` (`s_<source>[--l<number>]`),
@@ -565,6 +587,17 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
 - [ ] (T) SettingsButton opens settings and leaves no sheet or overlay (fix of LB-APP-046); absent below 7.0.
 - [ ] `l_<number>` and `?listing=` open the listing over the feed; Back returns to the feed.
 - [ ] `?news=pets` opens the filters address with `focus=pets`; a listing link wins over it.
+- [ ] A reload inside one launch does not reopen the listing of the launch link; a new launch does; the mark holds no
+      launch data in the clear (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and
+      `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row 15)).
+- [ ] A sale listing opened by a launch link over a rent feed leaves the sale defaults of the feed's city behind it
+      when it closes; a daily-rent listing changes nothing (DEC-65; *added by the intake of `index-CIa0Ldj2.js`*; a
+      parity item of `launch.ts` and the close path of the listing for a later package (`wave-1/baseline.md`, built
+      code behind the pin, row 16)).
+- [ ] `?radar=<id>` with the id of the user's radar opens that radar's search; an unknown id changes nothing; a
+      listing link wins (DEC-61, built with WP-57; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+      `parse.ts`, `launch.ts` and `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the
+      pin, row 36)).
 - [ ] Every row of the adapter table has a passing unit test, including its outside-Telegram fallback.
 - [ ] A location request never hangs longer than 12 s (fix of LB-APP-009).
 - [ ] Only restored keys are mirrored to DeviceStorage, and restore finishes before the first data request (fixes

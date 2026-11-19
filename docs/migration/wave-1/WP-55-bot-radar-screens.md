@@ -290,7 +290,9 @@ has no such state. Everything below describes the bot with radars on.
   `🙈 скрыто: <@канал · район>` when the radar has hide rules.
 - Card keyboard: `⏸ Пауза` (BTN-050) or `▶️ Включить` (BTN-051) · `✏️ Изменить` (BTN-055) / `📬 Присылать
   подборкой` (BTN-052) or `📡 Присылать сразу` (BTN-053) / `🙉 Показать скрытое` (BTN-054, only with hide rules) /
-  `🗑 Удалить` (BTN-057) · `◀️ К списку` (BTN-060).
+  `🗑 Удалить` (BTN-057) · `◀️ К списку` (BTN-060). The radar card gets no Mini App button of its own unless the
+  operator confirms that legacy has one (`04` Q-BOT-050); if it does, the button uses `MiniAppUrl::radar()` of
+  WP-52 (DEC-61).
 - A radar deleted elsewhere: its button gets the alert of TXT-BOT-039; the next `/subs` shows the current list.
 
 ### Pause, resume, mode, hidden rules

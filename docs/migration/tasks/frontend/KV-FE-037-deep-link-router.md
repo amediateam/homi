@@ -6,7 +6,7 @@
 | Owner | Frontend (track: development) |
 | Complexity | S |
 | Milestone | FE-1 (M9, stage S4) |
-| Feature IDs | F-SHARE-002, F-TMA-001 |
+| Feature IDs | F-SHARE-002, F-TMA-001, F-RADAR-011 |
 | Dependencies | KV-FE-024 (adapter: `initData`, `start_param`); consumers: KV-FE-023 (prefetch of the linked listing), KV-FE-025 (initial listing layer), KV-FE-040 (`entry`, `?news=pets`), KV-FE-042 (source and post link), KV-FE-057 (`?map=`), KV-FE-069 / KV-FE-079 / KV-FE-071 / KV-FE-081 (link builders); bot side KV-TG-015, KV-TG-016; decisions DEV-040 `PROPOSED`, Q-APP-019 |
 
 ## Goal

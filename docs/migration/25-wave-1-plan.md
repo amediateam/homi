@@ -11,7 +11,8 @@ legacy product does, function by function. Personal data, radars and the bot are
 points, cards, contacts and photos are read from legacy through a service key until Wave 2.
 
 **Not in this wave.** HOMI's own listing ingestion (Wave 2), SEO pages (Wave 3), the admin panel, any transfer of
-legacy users' data, any `DEV` behaviour change except the three the developer decided (DEC-52 … DEC-54).
+legacy users' data, any `DEV` behaviour change except those the developer decided (DEC-52 … DEC-54, DEC-67) and
+the five that legacy itself adopted (DEC-58).
 
 **Reading order for whoever does the work.** This document once, then the queue, then the specification of the
 package you take. The audit documents are opened only at the sections a specification cites.
@@ -22,18 +23,18 @@ The legacy product is the description of the behaviour, not a source of code (DE
 
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
-| Mini App screens, sheets, overlays, states | 62 (SCR-001 … SCR-062) | `03` §2, `data/screens.json` |
-| Client business rules | 103 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 78 (`LB-APP`) | `03` §5, §5b |
-| Telegram integration points | 46, of which 41 in use (TMA-001 … TMA-046) | `05` |
-| API methods the client uses | 54 (API-001 … API-054) | `08` §2 |
+| Mini App screens, sheets, overlays, states | 63 (SCR-001 … SCR-063) | `03` §2, `data/screens.json` |
+| Client business rules | 111 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 83 (`LB-APP`) | `03` §5, §5b |
+| Telegram integration points | 47, of which 42 in use (TMA-001 … TMA-047) | `05` |
+| API methods the client uses | 55 (API-001 … API-055) | `08` §2 |
 | Bot handlers, buttons, texts | 91, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 569 keys per locale at the baseline `index-CBlEKxdL.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 587 keys per locale at the baseline `index-CIa0Ldj2.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-CBlEKxdL.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
-(before it `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024). Each later release is
-read into the audit as described in section 8.
+The audit describes legacy release `index-CIa0Ldj2.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
+(before it `index-CBlEKxdL.js` and `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024).
+Each later release is read into the audit as described in section 8.
 
 The owner cabinet «Сдать квартиру» and the contact request to an owner arrived with `index-CBlEKxdL.js`: SCR-049 …
 SCR-062, BR-APP-075 … BR-APP-103, LB-APP-054 … LB-APP-078, TMA-046, API-037 … API-054 and BOT-086 … BOT-091. They
@@ -52,12 +53,14 @@ section 5; the bot of section 6; the landing of section 7.
    legacy. Small visual differences are accepted. Each work package carries its checklist (section 9).
 2. **Defects are fixed, behaviour changes are not made** (DEC-36). An `LB` item that `09` §4.3 lists as a plain fix
    is fixed and tested. An `LB` item that `09` §4.2 turns into a `DEV` row changes what a user sees, so it is written
-   and tested behind a typed flag that is **off**, like every other `DEV` item. For the Mini App that is 37 fixes and
-   13 flagged items (LB-APP-026 became a fix through DEC-54; LB-APP-048 … LB-APP-050 of the pinned release are
-   fixes); each specification names its own. Three behaviour changes are **on by the developer's
-   decision** and are not flags: the author's phone number is given only after a tap (DEC-52), favourites and
-   history are paged (DEC-53), and the whole-city label is «{city} целиком» (DEC-54). The acceptance checklists list
-   them as approved differences from legacy.
+   and tested behind a typed flag whose default is legacy's behaviour, like every other `DEV` item: **off**, except
+   the five behaviours legacy adopted in `index-CIa0Ldj2.js`, whose flags are **on** (DEC-58). For the Mini App that
+   is 37 fixes and 13 flagged items (LB-APP-026 became a fix through DEC-54; LB-APP-048 … LB-APP-050 of the pinned
+   release are fixes; three flags are split in two by WP-34 and WP-35); each specification names its own. Four
+   behaviour changes are **on by the developer's decision** and are not flags: the author's phone number is given
+   only after a tap (DEC-52), favourites and history are paged (DEC-53), the whole-city label is «{city} целиком»
+   (DEC-54), and «Смотрели» is re-created after a listing was opened (DEC-67, DEV-053). The acceptance checklists
+   list them as approved differences from legacy.
 3. **The legacy tree is read-only** and is a reference: no edits, no `npm`, no builds, no dev server there, and no
    copy-paste of its code or CSS into this repository.
 4. **Nobody but HOMI's servers calls legacy** (DEC-33). Development, tests, CI and agents work on stubs and recorded
@@ -261,12 +264,15 @@ frontend/
 - The locale comes from `Accept-Language`, the currency from the user's settings.
 - Every answer carries `meta.source` with the driver that produced it: `stub`, `legacy` or `native`.
 - Feed-like lists use a cursor (`meta.next_cursor`); `null` ends the list. Favourites and history are paged the same
-  way, 20 per page (DEC-53) — legacy returns them whole, which under the legacy rate limit would cost one read per
-  row. No cap on the length of the history is introduced.
+  way, 20 per page (DEC-53) — legacy returns history whole (favourites are paged there too since
+  `index-CIa0Ldj2.js`), which under the legacy rate limit would cost one read per row. No cap on the length of the
+  history is introduced.
 - No answer except `POST /listings/{number}/contact` carries a phone number (DEC-52): the card has no number,
   numbers inside texts are masked, and the contact method is counted per user.
 - When the listing source cannot answer, the method returns `503` with code `source_unavailable`; the client shows
   the legacy "could not load" state.
+- `429` with code `rate_limited` may carry `reason: "daily"`: HOMI's per-user cap on opening listings (DEC-59). The
+  client then shows «Лимит на сегодня»; every other limit has no `reason`.
 
 ### 4.2 Methods
 
@@ -292,6 +298,7 @@ frontend/
 | `PUT /listings/{number}/blocked-author`, `DELETE /listings/{number}/blocked-author` | API-014, API-015 | native |
 | `GET /hidden`, `DELETE /hidden/authors/{id}`, `DELETE /hidden` | API-026 … API-028 | native |
 | `POST /listings/{number}/reports` | API-016 | native |
+| `DELETE /listings/{number}/reports` | API-055 (since legacy release `index-CIa0Ldj2.js`) | native |
 | `POST /surveys/found`, `POST /surveys/found/where` | API-032, API-033 | native |
 | `GET /radars`, `POST /radars`, `PUT /radars/{id}`, `PATCH /radars/{id}`, `DELETE /radars/{id}`, `POST /radars/{id}/relax` | API-018 … API-023 | native |
 | `POST /events` | API-034 | native |
@@ -302,14 +309,17 @@ Notes on the table:
 - `POST /auth/telegram`, `GET /reference`, `GET /cities` and the two `GET /landing/*` methods are public;
   `GET /reference` also carries the bot and support names, which the no-access and outside-Telegram screens need
   before any session exists. Everything else needs the session. A refused user gets `403` with code `access_denied`
-  and a `reason`.
+  and a `reason` (six reasons since the intake of `index-CIa0Ldj2.js`: `paused`, DEC-60).
 - `GET /radars` can include the preview listings of each radar; `GET /listings/{number}` has a short preview form
   for cards on the map.
+- `GET /listings/map` may be cut: `with_point` says how many listings of the filters have a point, and fewer points
+  than that mean a cut answer. HOMI's own cap and order are open (Q-API-086).
 - While `RADAR_CREATION_ENABLED` is off (DEC-51) the radar methods that create or change answer `403` with code
   `radars_disabled`, `GET /radars` answers an empty list, and `GET /reference` says `radars_enabled: false`; the
   radar tab and the bot then show "soon", and the Mini App offers no radar anywhere: no follow nudge, no return
   banner, no radar card in the feed. The switch goes on with the bot's sending package.
-- There is no method to withdraw a report: the "undo" of a report belongs to a `DEV` item that is off.
+- `DELETE /listings/{number}/reports` withdraws only the caller's «Уже сдано» (DEC-68); the undo of a realtor vote
+  stays a `DEV` item that is off (DEV-010).
 - Legacy toggles a favourite with one `POST`; v1 uses an explicit `PUT` and `DELETE`, so a repeated request cannot
   flip the state back. The exact request and response shapes are fixed by the contract packages of the queue and
 exported as OpenAPI.
@@ -344,7 +354,8 @@ is open (DEC-43, DEC-45), the client shows a small "demo data" marker on any scr
   open (Q-API-062); the contract keeps raw values next to display strings so HOMI can format where legacy cannot.
 - **Caching.** Reference data and cities for ten minutes; a listing card for one minute; nothing for the feed.
 - **Limits.** One outbound limiter for all legacy calls, a timeout of 15 s, one retry for reads, a circuit breaker
-  that answers `source_unavailable` instead of queueing.
+  that answers `source_unavailable` instead of queueing. Legacy's `429 too many today` is passed on as
+  `rate_limited` with `reason: "daily"` and does not open the breaker (DEC-59).
 - **Photos.** Legacy photo addresses are signed and need no key (RES-001, RES-002). The API rewrites them to a HOMI
   media address that nginx proxies and caches; the client keeps deriving the small variant. Which host carries that
   location is the production track's choice, given to the API as configuration.
@@ -422,6 +433,8 @@ Wave 3. The privacy page is where the answer to Q-SEC-021 lands.
    The intake moves the pin to the release. First: `index-BnFvC-Ft.js` on 2026-11-19 (the card style of the bot's
    listing cards, `POST /settings/card-sample`; `wave-1/baseline.md`, intake log); then `index-CBlEKxdL.js` on the
    same day (the owner cabinet «Сдать квартиру», the contact request and the changes outside them;
+   `wave-1/baseline.md`); then `index-CIa0Ldj2.js` (the release of 18 Nov 2026: built screens change, seven contract
+   points on stubs, eleven decisions DEC-58 … DEC-68, and the catch-up packages WP-34 … WP-38;
    `wave-1/baseline.md`).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
@@ -505,7 +518,7 @@ record with statuses is `wave-1/README.md`.
 | ----- | -------- | ------- |
 | 0 Start | WP-00 … WP-03 | Media ownership fix; ADRs and shared files; operator request and baseline pin; dependencies and test tooling |
 | A Contract | WP-10 … WP-13 | Source drivers, flags, stubs, OpenAPI, generated types; the stub contract of every method |
-| B Mini App on stubs | WP-20 … WP-33 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs |
+| B Mini App on stubs | WP-20 … WP-38 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-38 that bring merged screens up to the pin |
 | C API | WP-40 … WP-48 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off |
 | D Bot | WP-50 … WP-59 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot |
 | E Landing | WP-60, WP-61 | Landing data, landing pages |

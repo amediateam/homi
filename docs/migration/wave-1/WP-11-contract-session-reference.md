@@ -46,8 +46,13 @@ All paths are under `/api/v1`. "Bearer" means `auth:sanctum` with the named abil
 
 **Access refusal.** One shape, used by sign-in and by every bearer route:
 `403 {"success": false, "message": "Access denied.", "code": "access_denied", "reason": "blocked"}` with `reason` one
-of `private`, `invite`, `full`, `blocked`, `join`. The client shows an unknown or missing reason as `private`
-(BR-APP-054). A missing token ability is the different code `forbidden`.
+of `private`, `invite`, `full`, `blocked`, `join`, `paused`. The client shows an unknown or missing reason as
+`private` (BR-APP-054). A missing token ability is the different code `forbidden`.
+
+`paused` is the sixth reason: the whole service is on pause (legacy since `index-CIa0Ldj2.js`, the audit's BR-API-194).
+Its scenario is `access_paused`, known wherever this specification names "the five `access_*`". Natively it is
+answered by the switch of WP-40, which is off by default (DEC-60); until then only the scenario answers it
+(*added by the intake of `index-CIa0Ldj2.js`*).
 
 **Locale.** Middleware `App\Http\Middleware\SetRequestLocale` on the whole `v1` group: the first supported tag of
 `Accept-Language` (`ru`, `uz`, `en`; `uz-Latn` and `uz_Latn` are read as `uz`), else `ru`; sets the application

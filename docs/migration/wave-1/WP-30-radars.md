@@ -52,7 +52,7 @@ LB-APP-050; features F-RADAR-009 and F-RADAR-010.
 | Decision | Consequence here |
 | -------- | ---------------- |
 | Rebuild and parity (DEC-32, DEC-46) | Rebuilt from the audit; the checklist below is the proof of parity |
-| Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-036 and, from the pinned release, LB-APP-048, LB-APP-049 and LB-APP-050 are fixed (plain fixes in `09` §4.3; LB-APP-050 also changes when the follow nudge counts as shown). LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned |
+| Defects and flags (DEC-36) | LB-APP-005, LB-APP-006, LB-APP-014, LB-APP-036 and, from the pinned release, LB-APP-048, LB-APP-049 and LB-APP-050 are fixed (plain fixes in `09` §4.3; LB-APP-050 also changes when the follow nudge counts as shown). LB-APP-034 is DEV-022: written, tested, behind `dev022RadarCountLabel`, which is off. `dev005RadarDropsPostedDays`, `dev016ErrorToastOnFailure` and `dev021OneFlowVocabulary` are consumed, not owned. Since the intake of `index-CIa0Ldj2.js` `dev016ErrorToastOnFailure` is on by default and gates the failure toast only (DEC-58); the success toast «Радар удалён» has its own flag, `dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `failed()` and `RadarSheet` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)) |
 | Brand (DEC-40, 25 §2 rule 5) | The bot is HOMI's own. Every bot link and every text with the brand name goes through `lib/brand` and the `homi` catalogue layer |
 | Scope of Wave 1 (DEC-43) | Radars are HOMI's own data with HOMI's own identifiers (25 §4.1); nothing here knows a legacy radar id |
 | Radars before delivery (DEC-51) | The server switches radars off until its bot can deliver them and says so in `GET /reference` (`radars_enabled`, WP-11). `radarsReady` stays what it was — a build-time constant that orders the frontend packages. Every radar entry point asks `useRadarsEnabled()` of WP-24, which needs both. The return banner and the radar card in the feed are radar entry points too: while radars are switched off neither is shown, no `GET /listings/new` is sent, and only the local visit record runs — an approved consequence of DEC-51, listed as such in the checklist |
@@ -92,7 +92,11 @@ modal"), `intercepting-routes.md`, `02-guides/preserving-ui-state.md` (state of 
 - A listing opened from the strip is intercepted into `@overlay`, and Next leaves `@sheet` as it was, so the slot does
   not hide the sheet. Both copies of `RadarSheetRoute` render only while the address is the radar's own
   (`/radars/<id>` or its editor); Back from the listing brings the sheet back — the legacy "hidden while a listing is
-  open" (SCR-028).
+  open" (SCR-028). The sheet is re-opened instantly on Back, and the strip's sideways scroll and the sheet's own
+  scroll are restored with it (DEC-64). Legacy keeps the sheet mounted and hidden under the listing (`parked`) since
+  `index-CIa0Ldj2.js`; HOMI does not, by the route-layer rules of WP-23, and gives the user the same result by its own
+  means (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarSheetRoute` and `radarReturn` for a
+  later package (`wave-1/baseline.md`, built code behind the pin, row 37)).
 - Next intercepts every soft navigation under the locale, also from a directly loaded sheet, while the `children`
   slot keeps the standalone copy. So the standalone radar sheet yields while a `@sheet` copy shows (the copies count
   themselves, as `ListingLayer`'s do; not a latch), and a copy that takes over from the other opens without the rise.
@@ -217,7 +221,9 @@ reference refresh. Nothing here reads the stub scenario cookie: the state follow
 The WP-13 contract carries the previews: `GET /radars?include=previews` adds `preview` to every radar —
 `preview.items` (at most 5 listing previews, newest first), `preview.count` (listings that match now, may be
 `null`) and `preview.flow` (`week`, `days`, may be `null`); `preview` itself is `null` when it could not be
-computed. `useRadarPreviews` only maps it, so the tab sends one request. The list read for the search tab (footer
+computed. `useRadarPreviews` only maps it, so the tab sends one request. Legacy reads the previews again after every
+list load, at most once per 10 s, since `index-CIa0Ldj2.js` (`03` BR-APP-063); HOMI has no separate preview request,
+so it has no pacing rule (*added by the intake of `index-CIa0Ldj2.js`*). The list read for the search tab (footer
 state, note, nudge rules) is sent without `include`, through `/bff` in both session modes (it never has a server
 `initial`), only while `useRadarsEnabled()`; the footers of the two radar forms send none (`useHasActiveRadar(draft,
 mode === "search")`). There is no per-radar fallback to the listing methods.
@@ -242,6 +248,13 @@ positive `days` becomes `null`.
 Back returns to `/radars/[id]`: the sheet opens without the rise animation (`instant` of `RouteSheet` and
 `BottomSheet`, read on that mount only) and, once the list is loaded, the tab scrolls to the stored position. A radar
 sheet address always draws the radar tab's chrome (`AppShell`), although the feed was drawn last.
+
+Since the intake of `index-CIa0Ldj2.js`: «Смотреть найденное» and its Back forget the feed's scroll memory of WP-24,
+so a radar's feed starts at its top and does not leave its place to the user's own search (*added by the intake of
+`index-CIa0Ldj2.js`*; a parity item of `RadarSheet` for a later package (`wave-1/baseline.md`, built code behind the
+pin, row 14)). `radarReturn` also stores the strip's `scrollLeft` and the sheet's own scroll, and both are restored on
+the instant opening (DEC-64; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `radarReturn`,
+`RadarStrip` and `BottomSheet` for a later package (`wave-1/baseline.md`, built code behind the pin, row 37)).
 
 Three rules make this work. The remembered last search is `lastSearchHref` of `lib/ui/shellState.ts`:
 `rememberHref` (called by `AppShell`, unchanged) does not record a search root with `from=radar`, so after Back the
@@ -424,11 +437,16 @@ Actions:
   an `--accent-text` thumb.
 - Switch: light haptic, optimistic flip. On → `withChatAccess(patchRadar(id, { active: true }))`; off → plain
   `patchRadar`. Success replaces the radar with the answer. Turning on with `starter > 0` → toast `subs.resumed`
-  «Радар снова включён. {count}, которые вы не видели, — в чате с ботом». Turning off with `ask_found` → the
+  «Радар снова включён. В чате с ботом — непросмотренные: {count}» (the ru text of the pinned release; up to
+  `index-CBlEKxdL.js` «Радар снова включён. {count}, которые вы не видели, — в чате с ботом»; *added by the intake of
+  `index-CIa0Ldj2.js`*). Turning off with `ask_found` → the
   survey with trigger `pause`: from a tile `router.push(routes.radarFound({ trigger: 'pause' }))`, from the radar
   sheet `router.replace(…)`, so the sheet gives way to the survey and Back lands on the tab. Failure reverts:
   `no_chat` → `toast.noChat`; otherwise `failed()` (haptic only; with `dev016ErrorToastOnFailure` also «Не
-  получилось сохранить»).
+  получилось сохранить»). The flag is on by default since the intake of `index-CIa0Ldj2.js`, so these failures show
+  the toast (DEC-58). A `409` limit on the switch takes the same failure path, as in legacy; the limit text that `03`
+  LB-APP-081 proposes is not adopted here (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `failed()`
+  for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).
 - «+» in the top bar (aria `sheet.createTitle` «Новый радар») and «Включить радар» of the empty state:
   `router.push(routes.radarNew(q))`, `q` = the last search filters.
 - Pull-to-refresh reloads the list (BR-APP-058, WP-23); the previews follow the new list.
@@ -443,7 +461,7 @@ ghosts.
 | Part | Rule and text |
 | ---- | ------------- |
 | Strip, loading | 3 ghost mini-cards |
-| Strip, finds | title `radar.latest` «Последние находки»; mini-card: cover, badge `radar.new` «новое» only when the radar is active and the find is not viewed (the server's `viewed`, or opened in this launch: the `seen` map, as the card's eye), price (`—` when absent), district · age; then `radar.all` «Все {n} ›» |
+| Strip, finds | title `radar.latest` «Последние находки»; mini-card: cover, badge `radar.new` «новое» only when the radar is active and the find is not viewed (the server's `viewed`, or opened in this launch: the `seen` map, as the card's eye), price (`—` when absent), district · age; then `radar.all` «Все {n} ›». The age is the card's formatter of WP-24 over `posted.at`, computed at render and without the minute clock, since legacy release `index-CIa0Ldj2.js` (`03` BR-APP-109; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarStrip` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20)) |
 | Strip, none | `radar.none` «Пока ничего — радар пришлёт, как появится» |
 | Send switch | `radar.send` «Присылать в чат»; same action as the tile switch |
 | Mode rows | only while active: `subs.mode.instant` «Сразу» + `radar.instantHint` «Каждое новое — как только появится»; `subs.mode.digest` «Подборкой» + `radar.digestHint` «Списком в {time}» (e.g. «Списком в 9 и 21», hours joined with `notify.and`) or `radar.digestHintAny` «Списком в заданное время» when settings are not loaded |
@@ -463,7 +481,11 @@ ghosts.
   OK → `deleteRadar(id)`; success → success haptic, the radar leaves both lists, then — only while
   `currentAddress()` is still the one at the request — `ask_found` → `nav.replace(routes.radarFound({ trigger:
   'delete' }))`, else `back()`; failure → `failed()`. With `dev016ErrorToastOnFailure` on, a success also shows
-  `toast.subDeleted` (new key).
+  `toast.subDeleted` (new key). Since the intake of `index-CIa0Ldj2.js` the two halves have a flag each (DEC-58): the
+  failures of the mode, unhide and delete rows show «Не получилось сохранить» by default (`dev016ErrorToastOnFailure`,
+  on), and the success toast «Радар удалён» moves to `dev016SuccessToastOnDestructive`, off, because legacy still
+  shows none (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `failed()` and `RadarSheet` for a later
+  package (`wave-1/baseline.md`, built code behind the pin, row 21)).
 - A mini-card opens the listing over the tab (`router.push(routes.listing(number))`).
 - Closing: ×, backdrop, drag down, Telegram Back, opening the feed, delete.
 - Count label, LB-APP-034 behind `dev022RadarCountLabel`: off — the legacy labels above, `{n}` is the number of
@@ -473,9 +495,20 @@ ghosts.
   `router.replace(routes.radars())`. An action that answers `not_found` reloads the list and does the same; on a
   tile it only reloads the list.
 
+### Launch link `?radar=` (DEC-61)
+
+A launch with `?radar=<id>` in the page query opens the search with that radar's filters: the address is replaced by
+the radar's feed without `from=radar`, so there is no return state to the sheet (legacy since `index-CIa0Ldj2.js`,
+`03` BR-APP-107). HOMI's radar ids are ULIDs; legacy's are integers. It is built with the bot packages, reader and
+link together, in WP-57 (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `parse.ts`, `launch.ts` and
+`LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row 36)).
+
 ### Editor and new radar (SCR-029, SCR-030)
 
-Both mount `FiltersForm` (WP-25). Differences from the search mode (BR-APP-021 is WP-22's rule):
+Both mount `FiltersForm` (WP-25). Since legacy release `index-CIa0Ldj2.js` «Площадь» is offered for rent radars too,
+as in the search sheet (DEC-62; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a
+later package (`wave-1/baseline.md`, built code behind the pin, row 38)). Differences from the search mode (BR-APP-021
+is WP-22's rule):
 
 | Mode | Title | Start filters | Footer |
 | ---- | ----- | ------------- | ------ |
@@ -658,7 +691,9 @@ without the few-results note. It is not a nudge: it scrolls with the list and ne
 ### New and overridden texts
 
 New key (`homi` layer), used only with `dev016ErrorToastOnFailure`: `toast.subDeleted` — ru «Радар удалён», uz
-«Radar oʻchirildi», en «Radar deleted».
+«Radar oʻchirildi», en «Radar deleted». Since the intake of `index-CIa0Ldj2.js` its flag is
+`dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarSheet`
+for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).
 
 New keys of the switched-off state (`homi` layer; uz and en are proposals for the reviewer):
 
@@ -835,6 +870,19 @@ had radars switched off on 2026-11-18 (AM-99, KI-65): there the local runs used 
 - [ ] «Смотреть найденное · N» opens the feed with the radar's filters; Back returns to the same sheet and scroll
       position; the search tab still has the user's own filters afterwards.
 - [ ] A find opens the listing; Back returns to the radar sheet.
+- [ ] A find opened from a strip scrolled sideways and closed leaves the strip and the sheet's own scroll where they
+      were (DEC-64; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarSheetRoute` and `radarReturn`
+      for a later package (`wave-1/baseline.md`, built code behind the pin, row 37)).
+- [ ] The age of a find reads like the card's («5 мин назад», «3 ч назад») and does not tick (*added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `RadarStrip` for a later package (`wave-1/baseline.md`, built code behind
+      the pin, row 20)).
+- [ ] A failed switch, mode change, unhide and delete each show «Не получилось сохранить»; a deleted radar shows no
+      «Радар удалён» (`dev016SuccessToastOnDestructive` off; *added by the intake of `index-CIa0Ldj2.js`*; a parity
+      item of `failed()` and `RadarSheet` for a later package (`wave-1/baseline.md`, built code behind the pin, row
+      21)).
+- [ ] «Площадь» is offered in «Новый радар» and in the editor for a rent radar (DEC-62; *added by the intake of
+      `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code
+      behind the pin, row 38)).
 - [ ] Back order: editor → radar sheet → tab; ×, backdrop and drag close each sheet.
 - [ ] «+» opens «Новый радар» with the current search filters, without «Опубликовано», with «Сейчас подходит: N»
       and «Включить радар»; success closes it with the right toast.

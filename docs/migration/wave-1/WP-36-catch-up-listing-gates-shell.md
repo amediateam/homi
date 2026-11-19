@@ -1,0 +1,274 @@
+# WP-36 — Catch-up: listing states, gates and the Telegram shell
+
+| Field | Value |
+| ----- | ----- |
+| Stage | B |
+| Status | TODO |
+| Depends on | WP-35 (and through it WP-34: `failed()` and `lib/flags.ts`) |
+| Size | about 565 changed lines with tests, M – L |
+| Behaviour reference | `03` §1.2, §2 (SCR-003, SCR-006, SCR-008, SCR-018, SCR-019, SCR-033), §3.3 (`app_launch`), §4 (BR-APP-054, BR-APP-106), §5 (LB-APP-080); `05` (TMA-010, TMA-022, TMA-047); `02` (BR-API-193, BR-API-194); `16` SEC-REQ-007; `wave-1/baseline.md`, built code behind the pin, rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 |
+| Needs from the production track | the regular deploy; then the manual checks inside Telegram on staging that the acceptance checklist names |
+
+## Goal
+
+A missing listing shows «Этого объявления уже нет» with «Смотреть свежие», and the daily limit «Лимит на сегодня».
+Without the Telegram SDK the listing layer and every sub-page carry a close cross of the app's own. The access gate
+knows the reason `paused`, and the bot link of the gate carries the interface language for the SEO source. A listing
+link opens once per launch, also across a reload, with a mark that holds no launch data in the clear. The listing
+layer enters and leaves with its animation, the chrome stays collapsed under it, `app_launch` carries `tg`, the page
+under a sub-page does not scroll, and the spot map's controls stay above Leaflet's panes.
+
+## Scope
+
+In (sizes are the estimates of `baseline.md`; paths under `frontend/app/` unless they start with `frontend/packages/`):
+
+- Row 17, about 70 lines: the "gone" state of the listing.
+- Row 18, about 40: the day-limit state.
+- Row 19, about 110: `FallbackClose` on the listing layer and on sub-pages.
+- Row 28, about 35: the access reason `paused`.
+- Row 29, about 25: `s_seo_en` and `s_seo_uz`.
+- Row 15, about 45: the once-per-launch mark of a listing link.
+- Row 5, about 180: the listing layer's entrance and leave, with one close path.
+- Row 6, about 30: the collapsed chrome under an open listing.
+- Row 8, about 10: `tg` in `app_launch`.
+- Row 9, about 15: `body.subpage-open`.
+- Row 10, about 5 after the check: the spot map's controls above Leaflet's panes.
+
+Out:
+
+- HOMI's own per-user daily cap on opening listings and the server switch that pauses the product: WP-40 (DEC-59,
+  DEC-60). On stubs the scenarios `daily_limit` and `access_paused` answer them.
+- The sale switch of a launch listing (DEC-65) and the feed's scroll memory: WP-38, which builds on the close path
+  and the launch module of this package.
+- The launch link `?radar=<id>`: WP-57 with WP-52 (DEC-61).
+- The other readers of the launch that legacy leaves unmarked — the gate's start link, the launch's analytics entry
+  (LB-APP-080): reproduced, no fix here.
+- The owner form's close cross: the owner-cabinet packages.
+
+## Decisions that bind this package
+
+- DEC-59 (`25` §4.1, §4.5): the contract marks the daily limit as `429 rate_limited` with `reason: "daily"`; the Mini
+  App shows «Лимит на сегодня» for that answer and the generic error for any other `429`. The cap itself is WP-40's.
+- DEC-60: the sixth access reason `paused` and its screen exist now; the switch is WP-40's and is off by default.
+- SEC-REQ-007 (`16`): launch data and tokens never go into a store; `lib/storage.ts` refuses them.
+- Default of the intake of `index-CIa0Ldj2.js`, not a decision of the developer (listed in that PR for the reviewer):
+  the "launch listing already opened" mark keeps a digest of the launch `hash` and the number, never the raw `hash`.
+  Legacy stores `<hash>:<id>` in the clear (`kv-start-done`).
+- WP-26 "Layers, Back and z-order": the listing is an intercepted overlay over the page below, and the page below
+  cannot change its address while the overlay shows. The leave is designed together with Back and the new cross, so
+  one function closes the layer whatever asked for it; WP-38 relies on that function.
+
+## Design
+
+### Listing states
+
+- Error reason: `ApiError` of `@homi/api-client` keeps the body's `reason` when it is a string;
+  `lib/api/server.ts:98` and `lib/api/browser.ts:116` pass it on; `ApiFailure` (`lib/api/errors.ts:25-32`) gains
+  `reason?: "daily"`, set only for a `429` whose body says `reason: "daily"`. `UiError` keeps its members:
+  screens still decide by `error`, and the day limit is `rate_limited` with that reason.
+- `features/listing/useListing.ts` `errorView` (`:80-91`): `rate_limited` with `reason === "daily"` → the state
+  `day_limit` with `retry`; any other `rate_limited` stays `server`.
+- `features/listing/ListingScreen.tsx:85-104`:
+  - `not_found` → a tall block with `role="alert"`: the `SearchX` icon (28 px, exported by
+    `frontend/packages/ui/src/icons/index.ts`), `listing.gone` and the button `listing.goneFresh`. `EmptyState`
+    takes an image address, so the block is local to the listing (or `EmptyState` gains an icon prop; decide in the
+    PR). The button gives a light haptic and closes the listing through the close path below; it does not reload
+    the feed.
+  - `day_limit` → the tall `ErrorState` with `error.dayLimit`, `error.dayLimitText`, its icon and «Повторить».
+- The map card's preview (`?preview=1`) is unchanged: no special text for `404` or `429` there.
+
+### Close path and the layer's motion
+
+- `features/listing/closeListing.ts` gets the one function that closes the listing layer: it plays the leave, then
+  changes the route — `back()` of `useBack()` (`lib/navigation/useBack.ts:21-27`) when a page is below, else the
+  replace to the parent. Telegram's Back on the layer, the "gone" button, `FallbackClose` and `closeListing(step)`
+  (the nested sheets' step-back first) all end there; the swipe back has already slid the layer out and changes the
+  route at once. WP-38 adds the sale switch to this function.
+- Entrance and leave as WP-26 "Layers, Back and z-order" specifies since the intake of `index-CBlEKxdL.js`:
+  `features/shell/RouteOverlay.tsx:46-55` gets the entrance class; `features/listing/ListingLayer.tsx:123` and
+  `closeListing.ts:34-39` play the leave before `backBy`. None in lite graphics or under reduced motion; a new
+  opening during the leave cancels it.
+- `features/shell/AppShell.tsx:79`: `useMiniChrome` stays on while the listing layer lies over the feed, so the
+  collapsed chrome stays collapsed under it (`03` SCR-006).
+
+### Fallback close
+
+- New `features/shell/FallbackClose.tsx`: renders while `webApp() === null`, read with `useSyncExternalStore` over
+  `subscribeSdk` (`lib/telegram/sdk.ts:50-52,102-105`); the server snapshot renders nothing, so the cross appears
+  after hydration only when the SDK is absent. It goes when the SDK arrives. A round glass button, 44 × 44 px, fixed
+  at `--top-inset` + 10 px from the top and 12 px from the right, opacity 0.88, icon `X` 20 px, accessible name
+  `common.close` «Закрыть».
+- `features/shell/RouteOverlay.tsx` renders it in every state of the listing layer (skeleton, preview, content,
+  "gone", day limit, error); it calls the close path above.
+- `features/shell/SubPage.tsx:20` passes it as the `back` slot of `SubPageFrame`
+  (`frontend/packages/ui/src/components/SubPageFrame.tsx:11-12`); it calls `back()` of `useBack()`.
+
+### Gates
+
+- `lib/session/types.ts:21-28`: `AccessReason` gains `paused`.
+- `features/gates/accessReason.ts:41-44` `mainRow`: no start link for `blocked` and `paused`, so the main button is
+  «Вернуться в бот» and closes the Mini App; the post and support rows keep their own rules. The doc comments ("the
+  five reasons") follow.
+- `lib/deeplinks/build.ts:40-46` `noAccessStartUrl(source, number?, locale?)`: the source `seo` becomes `seo_en` in
+  `en` and `seo_uz` in `uz`, `seo` in `ru`; other sources are unchanged. The locale is the address segment.
+- `features/gates/useBootRetry.ts:67,127`: unchanged; only `blocked` stops the automatic re-check, so `paused` is
+  checked again three times and on the return to the app.
+
+### Launch mark
+
+- `lib/storage.ts`: a third policy, `session`, for one key `homi-launch-done` in `sessionStorage` (never mirrored);
+  the secret check (`:42-47`) applies to it as to every write.
+- `lib/deeplinks/launch.ts`: the mark is `<digest>:<number>`, where the digest is a synchronous, non-reversible hash
+  (for example cyrb53) of the `hash` field of `tg.initData()` (empty when absent). `launchTarget()` (`:53-58`)
+  returns no target for a listing whose mark matches, so `consumeLaunch()` (`:115-129`) and `launchPending()`
+  (`:141-153`) see none; `?news=pets` is not marked. The mark is written when the address has shown the target
+  (`launchPending()` at `:148-150`). A storage failure reads as "not opened yet".
+- A new launch brings a new `hash` (`inferred` in legacy, `03` Q-APP-029), so it opens the listing again.
+
+### Small rules
+
+- `lib/session/bootstrap.ts:263` sends `tg: tg.version()` in `app_launch`; `lib/analytics/events.ts:11` types it
+  (WP-11's catalogue and WP-32's table already name it).
+- `frontend/packages/ui/src/components/SubPageFrame.tsx:86`: while mounted it sets `body.subpage-open`;
+  `frontend/packages/ui/src/styles/layout.css:50-56` locks the body for it as for `sheet-open` and `locked`.
+- Spot map: on the Leaflet engine, check that the mini map's expand chip (`features/listing/spot/SpotMap.tsx:88`) and
+  the fullscreen controls (`SpotMapFullscreen.tsx:110-125`) receive taps above Leaflet's panes. Where one does not,
+  give it a z-index above the panes (legacy: 1000). Record the result in the PR.
+
+## Files
+
+New, under `frontend/app/`: `features/shell/FallbackClose.tsx`, `tests/shell/FallbackClose.test.tsx`.
+
+Changed, under `frontend/app/`:
+
+- `lib/api/{errors,server,browser}.ts`, `lib/session/{types,bootstrap}.ts`, `lib/analytics/events.ts`,
+  `lib/deeplinks/{launch,build}.ts`, `lib/storage.ts`
+- `features/listing/{useListing.ts,ListingScreen.tsx,ListingLayer.tsx,closeListing.ts}`,
+  `features/shell/{RouteOverlay,SubPage,AppShell}.tsx`, `features/gates/accessReason.ts`, and the spot map's two
+  files if the check needs it
+- tests: `tests/listing/{ListingScreen,useListing,ListingLayer}.test.tsx`, `tests/listing/closeListing.test.ts`,
+  `tests/api/errors.test.ts`, `tests/gates/{accessReason.test.ts,NoAccessScreen.test.tsx}`,
+  `tests/deeplinks/{launch.test.tsx,build.test.ts}`, `tests/shell/{route-overlay,sub-page,AppShell}.test.tsx`,
+  `tests/session/bootstrap.test.ts`
+- end to end: `e2e/listing-open.spec.ts`, `e2e/gates.spec.ts`, `e2e/launch.spec.ts`, `e2e/shell.spec.ts`,
+  `e2e/spot-map.spec.ts`
+
+Changed in `frontend/packages/`: `api-client/src/{index,index.test}.ts`, `ui/src/icons/index.ts` (`SearchX`),
+`ui/src/components/SubPageFrame.tsx`, `ui/src/styles/layout.css`, `ui/tests/{controls,SubPageFrame}.test.tsx`.
+
+In `docs/migration/wave-1/baseline.md`, built code behind the pin: rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28 and 29
+are marked closed.
+
+## Steps
+
+1. The error reason through the client and the mapping; the `day_limit` and "gone" states; `SearchX`.
+2. Write the design note of the close path (who calls it, where the leave plays, the swipe case) in the PR; then
+   the one close function, the entrance and leave, and the chrome under the listing.
+3. `FallbackClose` in the listing layer and in `SubPage`.
+4. `paused`, the start-link rule and the SEO source with the language.
+5. The session policy of `lib/storage.ts` and the launch mark.
+6. `tg` in `app_launch`; `body.subpage-open`; the spot-map check.
+7. Unit, component and end-to-end tests; the acceptance checklist on staging; tick the rows in `baseline.md`.
+
+## Behaviour to reproduce
+
+### Listing (SCR-019, SCR-008; BR-API-193; rows 17, 18)
+
+- A `404` of the full card: «Этого объявления уже нет — квартиру, похоже, сдали или продали» with «Смотреть свежие»;
+  the button closes the listing (to the feed below, or to the parent address on a direct load). No retry.
+- `429` with `reason: "daily"`: «Лимит на сегодня» and «За сутки открыто очень много объявлений. Попробуйте позже —
+  Радар продолжит присылать новые в чат.» with «Повторить». Any other `429` shows «Не загрузилось».
+
+### Shell (TMA-047, TMA-022; SCR-006, SCR-018, SCR-033; `03` §1.2; rows 5, 6, 9, 10, 19)
+
+- Without the SDK a cross «Закрыть» sits on the listing in every state and on every sub-page; it closes as Back
+  does; it disappears when the SDK arrives.
+- The listing slides in and out as WP-26 specifies; after a swipe it closes without the leave; none in lite or
+  under reduced motion.
+- The collapsed chrome stays collapsed while a listing is open over the feed.
+- While a sub-page is open the page under it does not scroll.
+- On Leaflet the spot map's expand chip, close, locate and attribution receive taps.
+
+### Gates (SCR-003; BR-APP-054; BR-API-194; rows 28, 29)
+
+- `paused`: «Бот на паузе», «Скоро вернёмся. Ваши Радары и избранное на месте.», the main button «Вернуться в бот»
+  with no source passed to the bot; the checking line and the automatic re-checks as for the other reasons.
+- A listing link with the SEO source opened in en offers `?start=s_seo_en--l<number>`, in uz `s_seo_uz--l<number>`,
+  in ru `s_seo--l<number>`.
+
+### Launch (BR-APP-106; TMA-010; row 15)
+
+- A listing link opens its listing once per launch: a reload of the page inside the same launch does not open it
+  again; a new launch does. The mark holds a digest, never the `hash`.
+
+### Analytics (`03` §3.3; row 8)
+
+- `app_launch` carries `tg`, Telegram's WebApp version, not truncated.
+
+## Tests
+
+Unit (Vitest):
+
+- `tests/api/errors.test.ts`: a `429` with `reason: "daily"` keeps the reason; a `429` without it and another
+  status with it have none; the `@homi/api-client` test reads `reason` from an error body.
+- `tests/gates/accessReason.test.ts` (`:46,75`): `paused` is known, has no start link and keeps the checking line;
+  `blocked` unchanged.
+- `tests/deeplinks/build.test.ts`: `seo` in the three locales; other sources unchanged.
+- `tests/deeplinks/launch.test.tsx`: the mark is written once the address showed the target; a matching mark means
+  no target; another `hash` or number opens again; the stored value contains neither the `hash` nor launch data and
+  passes `looksSecret`; a throwing `sessionStorage` means "not opened yet".
+- `tests/session/bootstrap.test.ts`: `app_launch` carries `tg`.
+
+Component (Vitest + Testing Library):
+
+- `tests/listing/ListingScreen.test.tsx` (`:276-286`): the "gone" block with `role="alert"`, its text and button;
+  the button's light haptic and one close; the day-limit state with «Повторить», which reads again.
+- `tests/shell/FallbackClose.test.tsx`: absent on the server render; present after hydration without the SDK;
+  gone when `subscribeSdk` reports the SDK; a tap calls the close.
+- `tests/shell/route-overlay.test.tsx` and `tests/shell/sub-page.test.tsx`: the cross in each listing state and on
+  a sub-page without the SDK, none with it; the entrance class; no motion in lite and reduced motion.
+- `tests/listing/closeListing.test.ts` and `tests/listing/ListingLayer.test.tsx`: Back, the cross, the "gone"
+  button and `closeListing` each play the leave once and change the route once; the swipe changes it at once.
+- `tests/shell/AppShell.test.tsx`: the mini chrome stays on with a listing over the feed.
+- `frontend/packages/ui/tests/SubPageFrame.test.tsx`: `body.subpage-open` while mounted, removed on unmount.
+
+End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
+
+- `e2e/listing-open.spec.ts` (`:242-251`): the number `999404` shows «Этого объявления уже нет»; «Смотреть свежие»
+  closes to the feed. The stub scenario `daily_limit` (cookie `homi_stub_scenario`) shows «Лимит на сегодня» on a
+  listing; «Повторить» without the scenario loads it.
+- `e2e/gates.spec.ts`: the scenario `access_paused` shows «Бот на паузе» and «Вернуться в бот», and no link with
+  `start=`; a listing link with the SEO source in en under `access_private` offers `s_seo_en--l<number>`.
+- `e2e/launch.spec.ts`: a listing link opens the listing; `page.reload()` in the same launch shows the feed, not the
+  listing; a launch with another `initData` opens it again.
+- `e2e/shell.spec.ts` with `launchApp(page, { sdk: false })`: the cross on the listing in its skeleton, content and
+  error states (`999503`) and on `/settings/theme`; each closes; the page below a sub-page does not scroll.
+- `e2e/spot-map.spec.ts`: on the Leaflet engine the mini map's expand chip opens the fullscreen map.
+
+## Acceptance checklist
+
+Run in ru, uz and en, light and dark, in Telegram on staging.
+
+- [ ] A missing listing shows «Этого объявления уже нет»; «Смотреть свежие» returns to the feed.
+- [ ] The day limit shows «Лимит на сегодня» with its text and «Повторить»; another `429` shows «Не загрузилось».
+- [ ] `paused` shows «Бот на паузе» and «Вернуться в бот», with no source in the bot link.
+- [ ] A `seo` launch in en builds `s_seo_en--l<number>`, in uz `s_seo_uz--l<number>`.
+- [ ] A reload inside one launch does not reopen the listing; a new launch does.
+- [ ] The launch mark holds no launch data in the clear (read in the browser's storage).
+- [ ] Without the SDK the listing in its skeleton, content and error states and every sub-page have a close cross,
+      and it goes when the SDK arrives.
+- [ ] The listing layer enters and leaves; no motion in lite graphics or with reduced motion.
+- [ ] The chrome stays collapsed under an open listing.
+- [ ] `app_launch` carries `tg`.
+- [ ] The page under a sub-page does not scroll.
+- [ ] The spot map's controls work on the Leaflet engine (the check is recorded in the PR).
+- [ ] Every new or changed case of `e2e/listing-open.spec.ts`, `e2e/gates.spec.ts`, `e2e/launch.spec.ts`,
+      `e2e/shell.spec.ts` and `e2e/spot-map.spec.ts` passes in cookie mode and in header mode.
+- [ ] `pnpm -r lint`, `pnpm -r typecheck`, `pnpm -r build`, unit, component and end-to-end suites are green.
+- [ ] Rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28 and 29 of `baseline.md` (built code behind the pin) are marked closed.
+- [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web, including a
+      reload inside one launch.
+
+## Handoff
+
+Empty.

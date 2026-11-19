@@ -63,7 +63,7 @@ Arrays are sent as repeated bracket keys (`types[]=apartment&types[]=house`). Bo
 | `zones[]` | string | `center`, `near_center`; dropped for a city without zones |
 | `rooms_min`, `rooms_max` | integer | 0 … 10; `4` as maximum means "4 or more" |
 | `price_min`, `price_max` | integer | whole USD, ≥ 1 |
-| `area_min`, `area_max` | integer | 1 … 10 000; sale only |
+| `area_min`, `area_max` | integer | 1 … 10 000; every deal (DEC-62; legacy since `index-CIa0Ldj2.js`, sale only before it; *added by the intake of `index-CIa0Ldj2.js`*) |
 | `posted_days` | integer | `1`, `3`, `7` |
 | `furnished` | boolean | three states: absent, `true`, `false` |
 | `renovation[]` | string | renovation codes of the reference data; codes of another deal are dropped |
@@ -114,14 +114,14 @@ The same 25 keys form the **filters object** in flow options and radars: every k
 | `deal`, `type` | yes | `deal_type` on cards only | `null` on previews when legacy does not send them |
 | `title` | no | `short_title`, else the part of `title` before « · » | |
 | `price` | yes | `price`, `price_kind`, `usd` | `display` = first part without the bracket text and the period; `period` = text from the first `/`; `alt` = bracket text; `notes` = the remaining « · » parts; `usd` raw or `null`; `kind` is `null`, `down_payment` or `business` (BR-API-156); any other legacy value becomes `null`, so the client shows no label for it (Q-API-065) |
-| `rooms`, `area_total`, `floor`, `floors_total`, `landmark`, `place`, `center_km` | yes | same names | |
+| `rooms`, `area_total`, `floor`, `floors_total`, `landmark`, `place`, `center_km` | yes | same names | `floor`: `0` is the ground-level floor, a negative value a basement, an unknown floor only `null` (legacy since `index-CIa0Ldj2.js`); the stub listings `100022` and `100023` carry the two cases (*added by the intake of `index-CIa0Ldj2.js`*) |
 | `district` | yes | `district_name` | `code` is `null` when the name cannot be matched to the city's directory |
 | `metro` | yes | `metro`, `metro_km` | `km` may be `null` |
 | `location` | yes | `lat`, `lon` | |
 | `photos` | no | `photos_preview`, `photos_count`, `cover` | absolute addresses of HOMI's media host, form `…/<digits>/<digits>.jpg?…`; the small variant is the same address with `.s.jpg` (RES-001, RES-002) |
 | `has_video` | no | `video` | boolean |
 | `is_owner` | yes | `is_owner` | |
-| `posted` | no | `age` | `label` and `when` are the two parts of the legacy string; `at` is raw or `null` |
+| `posted` | no | `age` | `label` and `when` are the two parts of the legacy string; `at` is raw or `null`. Since the intake of `index-CIa0Ldj2.js` the client computes the age from `at` and uses `when` as the fallback and until hydration, so `when` must keep being sent (*added by the intake of `index-CIa0Ldj2.js`*) |
 | `status_text` | yes | `status_text` | |
 | `market` | no | `market`, `median_delta`, `median_tone` | `tone`: `good`, `check`, `suspicious`, `same`, `mixed`, `no_repair`, another string, or `null` |
 | `favorite`, `viewed` | no | per-user flags | from HOMI's own data |
@@ -149,6 +149,8 @@ does not offer for the filters are accepted and fall back to `new`. Scenarios: `
 
 The filter parameters above plus `since` (required): the user's previous visit with these filters, in Unix seconds.
 The return banner of the Mini App asks it (SCR-046, BR-APP-070, BR-APP-071, WP-30). No `sort`, `cursor` or `limit`.
+A second caller is the fresh pill of the Mini App (`03` SCR-063, BR-APP-104; WP-38), with `since` = the moment the
+list on screen was created (*added by the intake of `index-CIa0Ldj2.js`*).
 
 ```json
 {"data": {"count": 12}}
@@ -174,11 +176,15 @@ The return banner of the Mini App asks it (SCR-046, BR-APP-070, BR-APP-071, WP-3
 
 ```json
 {"data": {"points": [{"number": 100012, "lat": 41.35012, "lon": 69.28431, "label": "$600", "tone": "good",
-                      "priced": true, "usd": 600}], "total": 61}}
+                      "priced": true, "usd": 600}], "total": 61, "with_point": 61}}
 ```
 
-All points of the filters in one answer, no paging. `label` is plain text: the server removes `<` and `&`, and the
-client renders it as text (fix of LB-APP-020). `tone` is `good`, `high`, `check`, `suspicious` or `null`; `usd` may
+All points of the filters in one answer, no paging, unless the answer is cut: then `with_point`, the number of
+listings of the filters that have a point, is larger than the number of points, and the client says «На карте — N
+самых свежих»; `points ≤ with_point ≤ total`, and `with_point` is always present. HOMI's own cap and order are open
+(Q-API-086, WP-42); on stubs the scenario `map_cut` produces a cut answer (*added by the intake of
+`index-CIa0Ldj2.js`*). `label` is plain text: the server removes `<` and `&`, and the client renders it as text
+(fix of LB-APP-020). `tone` is `good`, `high`, `check`, `suspicious` or `null`; `usd` may
 be `null`; `total` ≥ the number of points. Changed: `id` became `number`.
 
 ### `GET /listings/{number}` — legacy: API-008
@@ -215,7 +221,10 @@ preview object only and records no view. Without it `data` is the preview plus:
   and `contact_paid` are passed through. The keys `phone`, `phone_display`, `call_url` and `call_url_expires_at`
   do not exist on the card, in the full form or in the preview form (DEC-52).
 - Texts are masked: see "Phone numbers in listing texts" below.
-- Errors: `404 not_found` for an unknown or removed number. Scenarios and reserved numbers of the stub: number
+- Errors: `404 not_found` for an unknown or removed number; the client shows «Этого объявления уже нет».
+  `429 rate_limited` with `reason: "daily"` and `Retry-After` when the caller reached the daily limit of opened
+  listings (scenario `daily_limit`, on the full card only): the client shows «Лимит на сегодня» (DEC-59; *added by
+  the intake of `index-CIa0Ldj2.js`*). Scenarios and reserved numbers of the stub: number
   `999404` → `404`; `999503` → `503`; `100016` answers with the object of `100001` (merged duplicate); `100015` is
   withdrawn (`status_text` set, `contact.has_phone: false`, `contact_url: null`, `original.deleted: true`).
 - Changed against legacy: the phone, its display form and the call link left the card — `contact.has_phone` says

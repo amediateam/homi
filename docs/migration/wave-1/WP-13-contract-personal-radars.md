@@ -12,7 +12,8 @@
 ## Goal
 
 The remaining methods of `25` §4.2 exist as stub routes with final shapes: favourites, history, hidden listings,
-blocked authors, the hidden list, reports, the two survey methods, the six radar methods and the two landing methods.
+blocked authors, the hidden list, reports with the withdrawal of a «Уже сдано» report (*added by the intake of
+`index-CIa0Ldj2.js`*), the two survey methods, the six radar methods and the two landing methods.
 With WP-11 and WP-12 the whole `/api/v1` surface of Wave 1 is fixed, exported and typed.
 
 ## Scope
@@ -57,7 +58,8 @@ unknown number is `404 not_found`. "Preview" is the listing preview object of WP
 | `DELETE /history` | `204` | clears the whole history; idempotent |
 
 Changed against legacy: the toggle `POST …/favorite` became `PUT` and `DELETE`; and both lists are paged by 20
-with a cursor, like the feed (DEC-53) — legacy returns each list whole in one answer with `next_cursor: null`. The
+with a cursor, like the feed (DEC-53) — legacy returns history whole in one answer with `next_cursor: null`;
+favourites are paged in legacy too since `index-CIa0Ldj2.js` (*added by the intake of `index-CIa0Ldj2.js`*). The
 length of the history is not capped (that part of DEV-003 is undecided). The stub cuts its pages from the fixture
 with the cursor form of the stub feed (`s1.<offset>`); a cursor that does not decode ends the list quietly (empty
 `data`, `null` cursor), as on the feed (WP-42). Withdrawn listings stay in the lists with `status_text`, listings
@@ -103,11 +105,22 @@ only with a `detail`, and the other reasons without one (BR-API-101). The server
 `detail` in `errors`. Q-API-064 asks what legacy does with the detail; HOMI's reports are its own (DEC-48), so here
 the detail is stored for review and changes nothing: `wrong_data` answers `hidden: false` with or without it.
 
-Answer `200 {"data": {"hidden": true}}` for every reason, never `204` (fix of LB-API-015). `hidden` is `true` for
-`rented` and `fraud` (the listing is hidden for the reporter; `fraud` can be undone through
+Answer `200 {"data": {"hidden": true, "agent_marked": false}}` for every reason, never `204` (fix of LB-API-015).
+`hidden` is `true` for `rented` and `fraud` (the listing is hidden for the reporter; `fraud` can be undone through
 `DELETE /hidden/listings/{number}`), `false` for the other two. A repeat with the same reason is counted once and
 answers the same, whatever its `detail`. Changed against legacy: `POST …/report` became `POST …/reports`; the body
 and the codes are the legacy ones. Stub: `hidden` follows the reason.
+
+`agent_marked` (boolean, always present; *added by the intake of `index-CIa0Ldj2.js`*) says whether the author's
+number is marked as a realtor's. It is `true` only for the reason `agent`: when this vote crossed the threshold, and
+also when the author was already marked (the meaning is a default of the integrator, not a decision of the developer;
+legacy: the audit's API-016 and BR-API-191). Stub: `false`; the scenario `agent_marked` answers `true` for an `agent`
+report.
+
+`DELETE /listings/{number}/reports` — bearer `app:write`; legacy: `DELETE /api/listings/:id/report` (the audit's
+API-055; *added by the intake of `index-CIa0Ldj2.js`*). Answers `204` without a body. It withdraws only the caller's
+`rented` report and the hidden row that report made; reports with another reason stay. A repeat, and a call without
+such a report, answer `204` too. `404 not_found` for an unknown listing (DEC-68).
 
 ### Surveys — legacy: API-032, API-033
 
@@ -226,7 +239,8 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
 - `EnsureRadarsEnabled` and `RadarsDisabled` (the switch above); the middleware is attached by class to the four
   radar write routes and stays there when WP-45 gives the controllers their real bodies.
 - Routes named `api.v1.favorites.*`, `history.*`, `hidden.*`, `listings.blocked-author.*`, `listings.reports.store`,
-  `surveys.found.*`, `radars.*`, `landing.*`; `{id}` is constrained with `whereUlid`.
+  `listings.reports.destroy` (*added by the intake of `index-CIa0Ldj2.js`*), `surveys.found.*`, `radars.*`,
+  `landing.*`; `{id}` is constrained with `whereUlid`.
 
 *Corrected and added while executing (rule 6).*
 - **Listing references.** The personal and radar fixtures hold listing numbers of the WP-12 catalogue, as HOMI's
@@ -263,7 +277,9 @@ ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `are
   - The fixtures name districts by `district_code`; `StubLandingSource` adds the name in the request locale from the
     reference data.
   - Both methods answer `Cache-Control: public, max-age=300` and `Vary: Accept-Language`, like `GET /reference`.
-- **Route table.** The route list of `/api/v1`, without the media routes of Phase 3, equals the 39 pairs of `25` §4.2.
+- **Route table.** The route list of `/api/v1`, without the media routes of Phase 3, equals the 41 pairs of `25` §4.2
+  (39 when this package merged; 40 since the intake of `index-BnFvC-Ft.js`, 41 since the intake of
+  `index-CIa0Ldj2.js`).
 
 ## Files
 
