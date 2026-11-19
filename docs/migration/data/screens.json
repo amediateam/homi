@@ -1365,7 +1365,9 @@
     ],
     "storage_keys": [],
     "analytics_events": [
-      "$pageview"
+      "$pageview",
+      "owner_attention",
+      "owner_limit_sheet"
     ],
     "status": "CONFIRMED"
   },

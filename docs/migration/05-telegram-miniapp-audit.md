@@ -9,7 +9,7 @@ absences: they were checked by grep over `$KVADRO_ROOT/demo/app/src` and `index.
 claims (signature checks, prepared messages) are `DOCUMENTED_ONLY`, because the legacy backend source is not
 available. Text added for a later release names it. The audit is brought up to `index-CBlEKxdL.js` (SVN r31), whose
 intake cites files "at r31", and to the pinned release `index-CIa0Ldj2.js` (source at SVN r33; `wave-1/baseline.md`);
-text of that intake cites files "at r33", the state the release was read in.
+text of that intake cites the source "at r33", the state the release was read in, and the changelog at r36.
 
 Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defects are tracked as `LB-APP-NNN` in
 `03-legacy-frontend-audit.md` §5 and §5b.

@@ -1058,7 +1058,7 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Legacy Source:** Doc r35:126 (registry #18), Doc r35:860-864, :1365, :1422-1426; client
   `src/lib/api/listings.js:87-90`, `src/app/useListingActions.js:36-50`, `:69-71` (at r33); mock
   `tools/parity/mocks.mjs:190-195`; parity scenario `listing-report-rented-undo`.
-- **Migration Target:** v1 `DELETE /listings/{number}/reports`, native (`25` §4.2).
+- **Migration Target:** legacy `DELETE /api/listings/:id/report` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** a record of the legacy contract — after a `rented` report the DELETE answers `2xx` and the listing is
   back in the caller's feed; a repeat of the DELETE and a DELETE without a report (both per Q-API-079, record legacy
   first); a DELETE after a report with another reason (per Q-API-079); auth.

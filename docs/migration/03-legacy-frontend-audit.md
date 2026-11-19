@@ -79,8 +79,8 @@ behaviour in §1–§4 stays exact.
    changes for every owner's listing as well: an owner chip with an info sheet, a section «Хозяин — со слов объявления»,
    and a request instead of a call for an owner who hides the number (SCR-061, SCR-062, BR-APP-098 to BR-APP-103).
 7. **Release `index-CIa0Ldj2.js` repairs part of what this audit recorded, and changes the contract.** It fixes or
-   half-fixes eleven defects recorded here: LB-APP-017, LB-APP-025 and LB-APP-027 are fixed, and LB-APP-002, LB-APP-008,
-   LB-APP-011, LB-APP-022, LB-APP-029, LB-APP-044, LB-APP-046 and LB-APP-058 in part (§5, §5b). It adds the states the
+   half-fixes eleven defects recorded here: LB-APP-017 and LB-APP-025 are fixed, and LB-APP-002, LB-APP-008,
+   LB-APP-011, LB-APP-022, LB-APP-027, LB-APP-029, LB-APP-044, LB-APP-046 and LB-APP-058 in part (§5, §5b). It adds the states the
    audit had called missing: a listing that is gone, the day limit and the map errors (SCR-019, SCR-008, SCR-011). It
    keeps the search feed and its scroll position across the tabs and the map, and offers «Показать N новых» after a long
    absence (SCR-063, BR-APP-104, BR-APP-105). And it changes four contract points that older cached bundles do not know
@@ -1466,10 +1466,10 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 
 - **Purpose:** manage one radar.
 - **Opens:** tap a tile, or return from its feed. **Closes:** ×, backdrop, drag, Telegram Back, opening the feed, or
-  deleting it. It is hidden (not unmounted state) while a listing is open over it (`RadarScreen.jsx:216`). Since release
-  `index-CIa0Ldj2.js` the sheet stays mounted while a listing is open over the radar tab and is parked: the class
-  `sheet-backdrop parked` (`visibility: hidden; pointer-events: none`) and `aria-hidden`. Before, it was unmounted while
-  the listing was open and mounted again after (`RadarScreen.jsx:232-240`,
+  deleting it. Up to release `index-CBlEKxdL.js` it was unmounted while a listing was open over it and mounted again
+  after (`RadarScreen.jsx:216` at the audit). Since release `index-CIa0Ldj2.js` the sheet stays mounted while a
+  listing is open over the radar tab and is parked: the class `sheet-backdrop parked` (`visibility: hidden;
+  pointer-events: none`) and `aria-hidden` (`RadarScreen.jsx:232-240`,
   `$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx:70-71`, `$KVADRO_ROOT/demo/app/src/styles/radar.css:264` at
   r33; the release's unit `057-removed-RadarScreen.js:136-137`).
 - **Layout** (`$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx:64-155`):
@@ -3279,8 +3279,8 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-016 | **«Половина квартир — до X»** (typical price) is shown only for apartment-only searches (including daily) in a city with a name, using `cityStats.typical[deal]`. | `PriceSection.jsx:40-42,93-100` |
 | BR-APP-017 | **The «Не дороже рынка» chip** is available only for non-daily apartment-only searches in a city where `median !== false`. Its hint explains a +10 % tolerance and that listings without a median are excluded. | `PriceSection.jsx:101-121`; `sheet.belowMedianHint*` |
 | BR-APP-018 | **For sale searches including land or houses**, the hint «Цена за сотку или м² — умножаем на площадь из объявления» is shown. | `PriceSection.jsx:90-92` |
-| BR-APP-019 | **Tenant and pets sections** appear whenever the base deal is rent, which includes daily rent. Since release `index-CIa0Ldj2.js` the pets section shows only for long-term rent; the tenant section still shows for both rents. | `FiltersSheet.jsx:213-216`; `FiltersSheet.jsx:214-217` (at r33) |
-| BR-APP-020 | **Area and market** filters exist only for sale; **appliances** only for rent. Since release `index-CIa0Ldj2.js` the area range («Площадь, м²») shows for every deal, in the search sheet and in both radar sheets; market stays sale-only. The legacy contract still calls `area_*` sale-only (`$KVADRO_ROOT/docs/api.md:206`, r35). | `FiltersSheet.jsx:220-227`; `FiltersSheet.jsx:221`; `sheet/ExtraSections.jsx:9-42` (at r33) |
+| BR-APP-019 | **Tenant and pets sections** appeared whenever the base deal is rent, which includes daily rent, up to release `index-CBlEKxdL.js`. Since release `index-CIa0Ldj2.js` the pets section shows only for long-term rent; the tenant section still shows for both rents. | `FiltersSheet.jsx:213-216`; `FiltersSheet.jsx:214-217` (at r33) |
+| BR-APP-020 | **Market** filters exist only for sale and **appliances** only for rent; up to release `index-CBlEKxdL.js` the **area** range was sale-only too. Since release `index-CIa0Ldj2.js` the area range («Площадь, м²») shows for every deal, in the search sheet and in both radar sheets; market stays sale-only. The legacy contract still calls `area_*` sale-only (`$KVADRO_ROOT/docs/api.md:206`, r35). | `FiltersSheet.jsx:220-227`; `FiltersSheet.jsx:221`; `sheet/ExtraSections.jsx:9-42` (at r33) |
 | BR-APP-021 | **«Опубликовано за 1 / 3 / 7 дней»** exists only in search mode, never in radar create or edit. It is ignored when matching radars. | `FiltersSheet.jsx:228`; `model.js:49` |
 | BR-APP-022 | **Resetting the full sheet** gives the defaults for the base deal and current city. Resetting a quick sheet resets only its own filter; price reset also clears `below_median`. | `FiltersSheet.jsx:189`; `$KVADRO_ROOT/demo/app/src/features/filters/QuickFilterSheet.jsx:35-51` |
 | BR-APP-023 | **Sort options:** `new`, `cheap` and `expensive` always. `deal` for non-daily apartment-only searches where `city.median !== false`. `center` when the city has zones. `ppm` for sale. An unavailable sort falls back to `new`. `new` is never sent to the API. | `$KVADRO_ROOT/demo/app/src/features/sort/SortSheet.jsx:17-34`; `App.jsx:259-263`; `$KVADRO_ROOT/demo/app/src/lib/api/feed.js:78` |
@@ -3603,7 +3603,8 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
   filter, city picker or create-radar. Those keep rendering over the settings tab.
 - **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** the handler now also closes the radar-create sheet, the
   quick filter, the city picker and the sort sheet (`$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:12-40` at r33).
-  Still open: it does not close the owner form of `index-CBlEKxdL.js` (SCR-050) or «Мои объявления» (SCR-057).
+  The four sheets of the symptom are closed now; since `index-CBlEKxdL.js` two more layers stay open: the owner form
+  (SCR-050) and «Мои объявления» (SCR-057), so the defect is still open for them.
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:10-23`; overlay rendering `App.jsx:546-669`.
 - **Proposed fix:** one navigation reset (route change) that dismisses every overlay.
 
@@ -3861,7 +3862,7 @@ are proposals.
 - **Evidence:** `summary.js:95,125`; §3.1.
 - **Proposed fix:** use «Весь город» or the city name; delete the dead keys.
 
-#### LB-APP-027 — Failures with haptic feedback only (`decision`, CONFIRMED; fixed in legacy since `index-CIa0Ldj2.js`)
+#### LB-APP-027 — Failures with haptic feedback only (`decision`, CONFIRMED; partly fixed in legacy since `index-CIa0Ldj2.js`)
 
 - **Symptom:** these failures (and some successes) give haptic feedback only, with no text:
   - language picker (`$KVADRO_ROOT/demo/app/src/features/onboarding/LanguagePicker.jsx:37-40`);
@@ -3870,10 +3871,10 @@ are proposals.
   - radar mode, unhide, delete and toggle (`$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx:115-121,139-142,158-160,179-181`);
   - clear history (`$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:99-101`).
   - Haptics do nothing outside Telegram and on many devices.
-- **Fixed in legacy since release `index-CIa0Ldj2.js`:** every place of the list now shows «Не получилось сохранить», as
-  a toast and in the language picker as a line under the list; so does the favourite heart, which the list did not name
-  (SCR-042, with the evidence per place; SCR-004). The "some successes" of the symptom are unchanged. The symptom above
-  is the behaviour of the releases before it.
+- **Partly fixed in legacy since release `index-CIa0Ldj2.js`:** every failure of the list now shows «Не получилось
+  сохранить», as a toast and in the language picker as a line under the list; so does the favourite heart, which the
+  list did not name (SCR-042, with the evidence per place; SCR-004). Still open: the successes that give haptic
+  feedback only, which the symptom names too. The symptom above is the behaviour of the releases before it.
 - **Proposed fix:** a consistent error toast (`common.saveFailed`) and success confirmation for destructive actions.
 
 #### LB-APP-028 — Call button dead end, and calls over-counted (`decision`, CONFIRMED)
@@ -4099,7 +4100,9 @@ are proposals.
   `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:554-557,616-620,631-636,805-809`,
   `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:78-83,247-251,270-275`,
   `$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx:18-26` at r33). Still open: the funnel steps
-  themselves still send none (`inferred`).
+  themselves still send none (`inferred`); the other three parts of the symptom are unchanged — one screen name
+  `owner/form` for all steps, the form opened from the panel counted under the open listing, and the launch through
+  `owner_new` without a source (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:30-46` at r33).
 - **Evidence:** §3.3; `$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:30-51`;
   `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-35` (at r31). A search for `trackEvent` in
   `src/features/owner`, `src/lib/ownerPending.js`, `src/components/ReqTip.jsx` and
@@ -4301,7 +4304,7 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 | Analytics | 28 journal events (`POST /api/events`) at the pin (six owner events since `index-CIa0Ldj2.js`; 22 at `index-CBlEKxdL.js`, with `owner_info_opened`), 16 at the audit, + PostHog `$pageview` with 19 screen names (`owner/form` and `owner/mine` since `index-CBlEKxdL.js`, `owner/listing` since `index-CIa0Ldj2.js`), autocapture, web vitals, exceptions, replay | CONFIRMED |
 | Business rules (BR-APP) | 111 (BR-APP-070 to 073 since `index-DY_DH7h-.js`, BR-APP-074 since `index-BnFvC-Ft.js`, BR-APP-075 to 103 since `index-CBlEKxdL.js`, BR-APP-104 to 111 since `index-CIa0Ldj2.js`) | CONFIRMED |
 | Legacy bugs (LB-APP, `bug`) | 42 (LB-APP-001 to 023, 046, 048, 049, 051, 052, 059 to 064, 068, 070, 071, 072, 074, 078, 079, 080; 14 from RECOVERY.md §7, 28 found here); of them fixed in legacy since `index-CIa0Ldj2.js`: 017; partly: 002, 008, 011, 022, 046 | 32 CONFIRMED; 10 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048, 060, 074, 079) |
-| Questionable decisions (LB-APP, `decision`) | 41 (LB-APP-024 to 045, 047, 050, 053, 054 to 058, 065 to 067, 069, 073, 075 to 077, 081, 082, 083); of them fixed in legacy since `index-CIa0Ldj2.js`: 025, 027; partly: 029, 044, 058 | CONFIRMED (the intent of 053, the server side of 076 and the time zone behind 083 UNVERIFIED) |
+| Questionable decisions (LB-APP, `decision`) | 41 (LB-APP-024 to 045, 047, 050, 053, 054 to 058, 065 to 067, 069, 073, 075 to 077, 081, 082, 083); of them fixed in legacy since `index-CIa0Ldj2.js`: 025; partly: 027, 029, 044, 058 | CONFIRMED (the intent of 053, the server side of 076 and the time zone behind 083 UNVERIFIED) |
 | `TODO: inferred from build` | 4 (3 in `src`, 1 in `vite.config.js`); the owner files of `index-CBlEKxdL.js` have none | UNVERIFIED |
 | Open questions (Q-APP) | 26 (Q-APP-001 to 022 and 026 to 029 here; Q-APP-023 to 025 and 030 are in `24`) | open |
 | Telegram integration points (TMA) | 47 in `05-telegram-miniapp-audit.md` (42 used, 5 confirmed absences) | CONFIRMED (2 server-side parts DOCUMENTED_ONLY, and the bot side of TMA-034) |

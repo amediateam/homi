@@ -219,7 +219,7 @@ The mode and owner list are server configuration (About:453). UI texts: «При
 - **LB-API-004** · `bug` · `CONFIRMED` — If `next_cursor` is missing (or non-null on favourites/history), the client
   requests page 1 again in a loop: duplicates are dropped, the list never grows, the request repeats forever and the
   empty state never appears. Since release `index-CIa0Ldj2.js` `/api/favorites` may carry a non-null cursor by design:
-  the new client follows it, and only bundles cached before the release still loop on it (LB-API-057). *Evidence:*
+  the new client follows it, and only bundles cached before the release still loop on it (`inferred`; LB-API-057). *Evidence:*
   `useInfiniteFeed.js:41-42`, `:57-61`; Doc:364-366, :939-941.
   - **Proposed fix:** every list response always includes `next_cursor` (JSON `null` at the end); the new client
     treats a missing key or a cursor equal to the previous one as the end.
@@ -633,9 +633,9 @@ follow the processing order.
 
 ## 10. Favourites, history, hidden listings, blocked authors
 
-- **BR-API-094** · `CONFIRMED` — Favourite is a server-side toggle that returns the resulting state, shared with the
-  bot's ⭐ button; up to release `index-CBlEKxdL.js` the Mini App sends no body, and since `index-CIa0Ldj2.js` it
-  sends the wanted state (BR-API-197). *Evidence:* Doc:636-647; Bot:986.
+- **BR-API-094** · `CONFIRMED` — Up to release `index-CBlEKxdL.js` favourite is a server-side toggle that returns the
+  resulting state, shared with the bot's ⭐ button; since `index-CIa0Ldj2.js` the Mini App sends the wanted state, and
+  only a request without a body toggles (BR-API-197). *Evidence:* Doc:636-647; Bot:986.
 - **BR-API-197** · `DOCUMENTED_ONLY` — Since release `index-CIa0Ldj2.js` `POST /api/listings/:id/favorite` takes
   `{"favorite": boolean}`, the wanted state, and answers `{"favorite": boolean}`, which the client takes as the truth.
   A request without a body must still toggle, because bundles cached before the release send none. *Evidence:* Doc
