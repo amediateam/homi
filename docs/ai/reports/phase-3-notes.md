@@ -1692,3 +1692,41 @@ ASSUMPTION_MISMATCH AM-101 (2026-11-19):
   ("built code behind the pin, row N"); `baseline.md` lists the rows with the package that closes each; catch-up
   packages before WP-31 close them. A contract change is made on stubs in the intake itself, with the smallest app
   change that keeps the build green.
+
+## AE. Development track, 2026-11-19/20 — the owner-cabinet plan
+
+**The intake of `index-CIa0Ldj2.js`** (#90) was merged on 2026-11-19 as `13ebc52`, on «сливай #90», after green
+`backend` (run 44585261422), `frontend` (44585261646) and `frontend-e2e` (44585261664: 350 and the `@radars-off` run 14)
+on `181d09b`, first attempt; the post-merge runs on `main` passed (`backend` 44591114076, `frontend` 44591114107).
+WAITING for the regular deploy: stubs and texts only.
+
+**The developer's answers.** The owner-cabinet rounds of the night of 2026-11-19 (scope: «Wave 1», «Свои таблицы»,
+«Пересылать отклик в kvadro»; design: nine questions) and two questions of 2026-11-20 (DEC-65's city: «Город ленты, как
+в legacy (Recommended)»; the server switch: «Да, выключатель (Recommended)») are recorded verbatim in
+`docs/migration/decisions/2026-11-19-developer-answers.md` as DEC-69 … DEC-81 and the confirmation of DEC-65. Four are
+not the recommended option: the cabinet in Wave 1 (DEC-69), the relay to kvadro (DEC-71), the owner's phone in plain
+text (DEC-72), harvested medians (DEC-78). Then «Продолжим по плану».
+
+**The plan** (branch `feat/owner-cabinet-plan` on `main` = `13ebc52`, PR #91, docs only): `a6723e5` (`24`, `25`, the
+decisions file, the queue with WP-80 … WP-89, the operator addendum, points 14 … 28), `7e839e9` (`09` and `features.csv`
+with F-OWNER-003 … F-OWNER-009, F-CONTACT-003 and DEV-054 … DEV-062; `06`, `07`, `08`, `16`, `12`, `23`; task KV-BE-051),
+`0cad0b3` (the ten specifications, 5 289 lines after the fixes, and edits of about forty merged ones), `688162f` and
+`9cf5c94` (fixes). It ran as plain subagents: an integrator wrote one map over the draft and the answers (the draft
+assumed the recommended answers and pre-#89 ids, so it was translated token by token); five writers on disjoint
+files; three reviews (consistency 36, references and code facts 24, security and personal data 33 findings, 8
+blockers); three fixers on disjoint files, working from cross-file decisions of the main session (the switch read as a
+freeze that keeps every way down open; a native listing's author as a phone author «Хозяин»; holds instead of
+automatic rejections; leak protections with the first code that stores the phone; an unguessable photo path; the
+shown point from the owner and a 100 m cell); a verification pass (every blocker fixed; 15 small leftovers, fixed).
+Thirty-two technical points the developer did not decide are integrator defaults, listed in the decisions file and in
+the PR.
+
+Verification, run in the main session on `9cf5c94`: `python3 -I scripts/migration/collect_ids.py --check` → exit 0,
+2 510 ids; `build_open_questions.py` → 284 questions; `task_graph.py --check` → exit 0 (157 features, 156 covered,
+`F-LANDING-011` P3 as before); `features.csv` 157 rows of 19 columns; the registers unchanged (63, 77, 167); all 1 195
+id-carrying line references of `07`, `09` and `features.csv` point at the line that defines their id; all 60
+specifications have the field table and the ten sections in order. No file under `backend/` or `frontend/` changed;
+`composer ci:check` and `make ci-frontend` were not run.
+
+Applied: none on the servers. Not applied: everything of the cabinet's code (WP-80 … WP-89); the operator texts are
+handed over by the developer.
