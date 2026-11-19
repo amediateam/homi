@@ -11,17 +11,22 @@ decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open qu
 stable, so it takes the next free number while the legacy registry renumbered the methods after it. API-036
 (`POST /api/settings/card-sample`, added in release `index-BnFvC-Ft.js`) stands the same way at its registry position
 #27, after API-025. API-037 … API-054 (the owner cabinet and the contact request, added in release
-`index-CBlEKxdL.js`) stand at their registry positions #37 – #54.
+`index-CBlEKxdL.js`) stand at their registry positions #37 – #54. API-055 (`DELETE /api/listings/:id/report`, added in
+release `index-CIa0Ldj2.js`) stands at its registry position #18, after API-016; the legacy registry moved every later
+method down by one, so the positions named above are #28 and #38 – #55 since that release.
 
 - **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to
-  `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` (SVN r29,
-  the previous pin; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`) and to the pinned release `index-CBlEKxdL.js` (SVN
-  r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31; `wave-1/baseline.md`). Text changed for a later release
+  `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` (SVN r29;
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`), to `index-CBlEKxdL.js` (SVN r31, the previous pin;
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31) and to the pinned release `index-CIa0Ldj2.js` (source at SVN
+  r33; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r36; `wave-1/baseline.md`). Text changed for a later release
   names it; "Doc:" line numbers are those of the audited tree, "current Doc:" and "at the pin" those of SVN r27.
-  "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, the pinned release's own state. The intake of
+  "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, the state of release `index-CBlEKxdL.js`. The intake of
   `index-BnFvC-Ft.js` cites the same state, because `api.md` of r29 cannot be read, and client files at r29 when they
   have not changed since. Text of the intake of `index-CBlEKxdL.js` cites client files "at r31", the state the release
-  was read in; the checkout has moved since (`wave-1/baseline.md`).
+  was read in; the checkout has moved since (`wave-1/baseline.md`). "Doc r35:" cites `$KVADRO_ROOT/docs/api.md` at
+  r35, the pinned release's own state. Text of the intake of `index-CIa0Ldj2.js` cites client files "at r33", the
+  state that release was read in.
 - **Evidence base:** the legacy backend source and database are not available. The Mini App source is decompiled from
   the production bundle; the landing is a 1:1 production mirror. Nothing was run: `RUNTIME_VERIFIED` is not used.
 - **Status per endpoint** carries two labels: **Contract** (method, path, request construction, the response fields
@@ -99,11 +104,20 @@ stable, so it takes the next free number while the legacy registry renumbered th
   `DOCUMENTED_ONLY`
 - Statuses with dedicated UI handling (`$KVADRO_ROOT/docs/api.md:64-85`), all `CONFIRMED` in code:
   - `403` on `GET /api/meta` → no-access screen with the reason from `detail` (`src/app/useAppBootstrap.js:130-139`,
-    `src/features/onboarding/NoAccessScreen.jsx:13-22`);
+    `src/features/onboarding/NoAccessScreen.jsx:13-22`); since release `index-CIa0Ldj2.js` also the reason `paused`,
+    «Бот на паузе» (API-001; `NoAccessScreen.jsx:13`, `:22` at r33; Doc r35:69-75; `02` BR-API-194);
   - `403` on `GET /api/feed|favorites|history` → «Нет доступа» instead of the error state
     (`src/features/feed/ListingFeed.jsx:88`);
-  - `404` on `GET /api/listings/:id` → «Объявление не загрузилось» (`src/features/listing/ListingScreen.jsx:115-116`,
-    string `listing.loadFailed` in `src/i18n/locales/ru.js:156`);
+  - `404` on `GET /api/listings/:id` → up to `index-CBlEKxdL.js` «Объявление не загрузилось»
+    (`src/features/listing/ListingScreen.jsx:115-116`, string `listing.loadFailed` in `src/i18n/locales/ru.js:156`);
+    since release `index-CIa0Ldj2.js` the screen «Этого объявления уже нет» with the button «Смотреть свежие»
+    (API-008; `ListingScreen.jsx:175-201` at r33; `03` SCR-019);
+  - `429` with `detail: "too many today"` on `GET /api/listings/:id`, since release `index-CIa0Ldj2.js` → «Лимит на
+    сегодня» with a text of its own instead of the server-error text. The client compares `detail` with that string
+    exactly, so any other `429` reads as a server error. The check lives in the shared error state, so the text shows
+    wherever that component does; the contract names the limit for this method only (API-008;
+    `src/lib/api/client.js:29-30`, `src/components/ErrorState.jsx:14-25` at r33; Doc r35:712-714, :1366-1367; `02`
+    BR-API-193, Q-API-080);
   - `409` with `detail: "no_chat"` → write-access flow (`src/lib/chatAccess.js:15-54`); since release
     `index-CBlEKxdL.js` also on `POST /api/listings/:id/contact` (API-054), where it is answered before a request is
     created (Doc r31:837-838, :1290);
@@ -147,6 +161,16 @@ stable, so it takes the next free number while the legacy registry renumbered th
   once on every return to the app (API-039; `src/features/owner/OwnerForm.jsx:80-86`, `:1484-1620` at r31).
   `GET /api/owner/pending` is sent at app start and on every return to the app, for every user (API-047;
   `src/lib/ownerPending.js:40-55`, `src/app/App.jsx:141` at r31; `03` LB-APP-066). — `CONFIRMED`
+- Since release `index-CIa0Ldj2.js` four more points, all on existing methods. The listing of a launch link is
+  prefetched only while `sessionStorage['kv-start-done']` does not hold it, that is once per launch
+  (`src/main.jsx:36-39`, `src/lib/telegram/startParam.js:38-52` at r33; `03` BR-APP-106). `GET /api/feed/new` has a
+  second caller, the fresh pill, which passes no `AbortSignal` (API-035; `src/app/App.jsx:438-468`,
+  `src/lib/api/feed.js:111-117` at r33). `GET /api/subscriptions` is sent once at launch when the page address
+  carries `?radar=<id>` and no listing link (API-018; `src/app/useAppBootstrap.js:135-149` at r33). The three preview
+  requests per radar (`/api/feed`, `/api/feed/count`, `/api/feed/flow`) repeat after every successful load of the
+  radar list, at most once per 10 s; before, only a change of the radars or of their filters repeated them
+  (`src/features/radar/RadarScreen.jsx:48-50`, `:61-74`, `src/features/radar/useRadarPreviews.js:23-74` at r33; `03`
+  BR-APP-063). — `CONFIRMED`
 
 ### 1.7 Common filter query (`FilterQuery`)
 
@@ -189,6 +213,12 @@ Feed-only additions: `limit=20` (always), `sort` (`cheap \| expensive \| deal \|
 `posted_days: 1|3|7|null`, `polygon: [lat, lon][]|null`. Default object: `types: ['apartment']`, everything else
 empty/`null`/`false`, `owner: 'any'`.
 
+Since release `index-CIa0Ldj2.js` the filters sheet shows the area range for every deal, in the search sheet and in
+both radar sheets, so `area_min` / `area_max` are sent for rent too; before, the section showed for `sale` only. The
+serialisation did not change (`src/features/filters/FiltersSheet.jsx:221`,
+`src/features/filters/sheet/ExtraSections.jsx:9-42` at r33). Doc r35:206 still says that the two keys exist only for
+`sale` (§4.3); what the server does with them for rent is unknown (Q-API-082 in `02`).
+
 Contract change history: on 2026-11-06 the filter `zone` (string | null, query `zone=`) became `zones` (array, repeated
 `zones=`); subscription bodies carry `zones: []` instead of `zone: null`
 (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46-54`). Radars stored before that date may still hold `zone` (Q-API-013).
@@ -207,13 +237,20 @@ parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the p
 — `src/features/listing/format.js:35-43`, current `$KVADRO_ROOT/docs/api.md:239`; BR-API-156, Q-API-065),
 `favorite: boolean`!, `viewed?: boolean`, `district_name: string|null`, `place?: string`, `landmark: string|null`,
 `metro: string|null`, `metro_km: number|null`!, `center_km: number|null`!, `area_total: number|null`,
-`floor: number|null`, `floors_total: number|null`, `rooms: number|null`, `pets_ok: boolean`, `is_owner?: boolean`,
+`floor: number|null` (since release `index-CIa0Ldj2.js` `0` is the ground (semi-basement) floor and a negative value
+a basement; an unknown floor must be `null` or absent, never `0`; before, the client showed nothing for `0` and a
+number for a negative floor; Doc r35:274, :305-307; `02` BR-API-195, `03` BR-APP-110), `floors_total: number|null`,
+`rooms: number|null`, `pets_ok: boolean`, `is_owner?: boolean`,
 `owner_verified?: boolean` (since release `index-CBlEKxdL.js` `owner_verified` draws the badge «Проверенный хозяин»
 with a shield, a shield after the price on the compact map card, and the owner chip with `03` SCR-062 on the listing
 screen; `is_owner` draws the quiet «Хозяин»; Doc r31:274-276), `photos_preview: string[]`!, `photos_count?: number`,
 `cover?: string`,
 `video: unknown|null` (truthy flag only; tap opens the Telegram post — `src/features/listing/ListingScreen.jsx:150`),
-`age: string|null` (`<prefix> · <when>`), `status_text: string|null`, `market: string|null` (display label),
+`age: string|null` (`<prefix> · <when>`; since release `index-CIa0Ldj2.js` only the fallback of the age label),
+`posted_at?: string|null` (since release `index-CIa0Ldj2.js`: an ISO time that the client parses with `Date.parse` and
+turns into the age label itself, «5 мин назад»; without a parsable value the label comes from `age`, so `age` must
+keep coming; the time zone of the value is not stated; Doc r35:286, :302-304; `02` BR-API-196, Q-API-083, `03`
+BR-APP-109), `status_text: string|null`, `market: string|null` (display label),
 `median_delta: number|null`! (fraction, `-0.12` = 12% cheaper), `median_tone: string|null`
 (`good|check|suspicious|same|mixed|no_repair`, others = "dearer"), `lat: number|null`, `lon: number|null`.
 
@@ -253,11 +290,20 @@ has no `phone` until the caller's request is `given` (Doc r31:386-391; `02` BR-A
 self-placed listing has no channel source, so its `original_url` is expected to be `null` (`inferred`; Q-API-078 in
 `02`).
 
+Since release `index-CIa0Ldj2.js` the client reads two keys of `ListingDetails` that it ignored before. `deal_type`:
+`"sale"` on the listing of the launch link switches the feed under it to the sale defaults (`03` BR-APP-108; Doc
+r35:315-316). `author.kind`: unless it is `"phone"`, the report reason `agent` is not offered, and `author: null`
+counts as not a phone (API-016; Doc r35:337-341). The answer of `GET /api/map` gains `with_point?: number` (API-007;
+Doc r35:671; `02` BR-API-192).
+
 **`FeedPage`** (`$KVADRO_ROOT/docs/api.md:355-366`): `{items: ListingPreview[], next_cursor: string|null!}` —
 `next_cursor === null` is the only end-of-list signal (`src/features/feed/useInfiniteFeed.js:41-42`).
 
 **`Subscription`** (`$KVADRO_ROOT/docs/api.md:368-378`): `{id: number|string, active: boolean, mode:
-"instant"|"digest", filters: SearchFilters (all 25 keys)!, hidden?: number}`.
+"instant"|"digest", filters: SearchFilters (all 25 keys)!, hidden?: number}`. The contract still types `id` as
+`number|string` (Doc r35:428), while since release `index-CIa0Ldj2.js` the radar link `?radar=<id>` compares it
+strictly with a number, so an `id` that arrives as a string never matches (API-018; `03` LB-APP-079; Q-API-083 in
+`02`).
 
 **`SubscriptionMutationResult`** (`$KVADRO_ROOT/docs/api.md:382-400`): `{subscription: Subscription, starter: number,
 options?: {code, label, rate, count: number}[], relaxed: {text: string, …}[]!}`.
@@ -327,7 +373,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   reason (`02 §4`).
 - **Input:** none (no query, no body). Identity, language and `start_param` reach the server only inside `initData`.
 - **Validation:** `initData` signature and `auth_date` (`02 §3`). — DOCUMENTED_ONLY
-- **Business Logic:** evaluates access mode (private / invite / full / blocked / join); returns the user's profile
+- **Business Logic:** evaluates access mode (private / invite / full / blocked / join; since release
+  `index-CIa0Ldj2.js` also the pause of the bot, `paused`); returns the user's profile
   settings (`locale`, `locale_chosen`, `currency`, `theme`, `city`, `city_chosen`), the USD→UZS rate, analytics
   configuration with the user's random PostHog id, the radar limit, bot username, tiles URL, feature flags and all
   directories (cities with districts/zones/metro/median flags, renovations per deal, appliances, USD price presets per
@@ -365,23 +412,32 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   (`useAppBootstrap.js:24`, `:141-143`). A failed prefetch adds one immediate repeat (`client.js:56-60`). Telegram
   user-facing texts: «Бот приватный», «Вход по приглашению», «Мест пока нет», «Нет доступа», «Сначала — бот»
   (`src/i18n/locales/ru.js:28-32`); release `index-Dbpp463V.js` renamed «Закрытая бета» and dropped the beta from
-  the `full` text (`03` SCR-003). The `detail` codes did not change.
+  the `full` text (`03` SCR-003). The `detail` codes did not change. Since release `index-CIa0Ldj2.js` there is a
+  sixth reason: `403 {"detail": "paused"}` → «Бот на паузе», «Скоро вернёмся. Ваши Радары и избранное на месте.» It
+  is re-checked like every reason except `blocked`. As for `blocked`, the client passes no source to `/start`, so the
+  main button reads «Вернуться в бот» and only closes the Mini App (`NoAccessScreen.jsx:13`, `:22`, `:26`, `:40`,
+  `:72-81`, `useAppBootstrap.js:155-165`, `:175-182` at r33; Doc r35:69-75, :1370; `02` BR-API-194; `03` SCR-003). A
+  bundle cached before the release shows `paused` as `private`, with the source passed. What a user can still reach
+  during a pause is not documented (Q-API-081).
 - **Legacy Source:** Doc:104 (registry), Doc:64-72 (403 handling), Doc:416-466 (§4);
   `$KVADRO_ROOT/docs/about.md:248-252`; client `src/lib/api/meta.js:5`, `src/main.jsx:24` (prefetch),
   `src/app/useAppBootstrap.js:70`, `src/app/App.jsx:234`, `:252`, `:257`; parity mock
-  `tools/parity/mocks.mjs:65-73`, `:264` (403 scenario).
+  `tools/parity/mocks.mjs:65-73`, `:264` (403 scenario). Release `index-CIa0Ldj2.js`: Doc r35:69-75, :1370, :1393;
+  client `src/features/onboarding/NoAccessScreen.jsx:13`, `:22`, `:26` (at r33); parity scenario `no-access-paused`.
 - **Migration Target:** legacy `GET /api/meta` must stay byte-compatible during the transition. Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — valid `initData` → `200` with every key present (snapshot of names and types), arrays never
   `null`; settings round-trip — after `PUT /api/settings {locale}` → `locale_chosen: true`, after `{city}` →
   `city_chosen: true` and `city` updated, after `{theme}` → `theme` updated; access — one case per reason
   (`private`, `invite`, `full`, `blocked`, `join`) with `detail` as a string; `join` turns into `200` right after the
-  bot `/start`; auth — no header, `tma ` with empty value, tampered hash, stale `auth_date`, `initData` signed by
-  another bot → status per Q-API-003, never `200`; edge — `cities: []` keeps top-level `districts`/`zones`,
-  `analytics: null`, `tiles: null`.
+  bot `/start`; since release `index-CIa0Ldj2.js` also `paused`, during which `GET /api/bot` still answers without
+  authorisation (the other routes per Q-API-081); auth — no header, `tma ` with empty value, tampered hash, stale
+  `auth_date`, `initData` signed by another bot → status per Q-API-003, never `200`; edge — `cities: []` keeps
+  top-level `districts`/`zones`, `analytics: null`, `tiles: null`.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (gate reasons `CONFIRMED` in client, their
   conditions `DOCUMENTED_ONLY`). Related: LB-API-002, LB-API-018, LB-API-019, LB-API-021, LB-API-048,
-  LB-API-051, LB-API-053; Q-API-002 … Q-API-006, Q-API-026, Q-API-047, Q-API-054.
+  LB-API-051, LB-API-053; Q-API-002 … Q-API-006, Q-API-026, Q-API-047, Q-API-054; since release
+  `index-CIa0Ldj2.js` `02` BR-API-194, Q-API-081; `03` SCR-003.
 
 ### API-002 — `GET /api/cities`
 
@@ -460,7 +516,12 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** none known.
 - **Response:** `200 FeedPage` `{items: ListingPreview[], next_cursor: string|null}` (§1.8). `next_cursor` strictly
   `null` on the last page; client de-duplicates items by `id` across pages (`useInfiniteFeed.js:37-42`). The prefetch
-  path reads `items[0..1].photos_preview[0]` (`src/main.jsx:26-33`). Unread: `total`.
+  path reads `items[0..1].photos_preview[0]` (`src/main.jsx:26-33`). Unread: `total`. Since release
+  `index-CIa0Ldj2.js` the items carry the two changes of `ListingPreview` (§1.8). `floor`: `0` is the ground floor
+  and a negative value a basement, each shown as a word on the card; an unknown floor is `null` or absent. `posted_at`:
+  an ISO time from which the card builds its age label, with `age` as the fallback. The same holds for the items of
+  `/api/favorites` and `/api/history` and for the listing card (Doc r35:274, :286, :302-307, :1368;
+  `src/features/listing/format.js:55-71`, `:141-166` at r33; `02` BR-API-195, BR-API-196).
 - **Errors:** `403` → «Нет доступа» button; other errors → error state with «Повторить»; error on a later page stops
   loading until retry (`tools/parity/mocks-filters.mjs:81-82` covers `500` and `403` on page 2). `422` for invalid
   enums (body ignored by the client).
@@ -479,7 +540,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `polygon`, unknown `cursor` → defined error; auth — missing/invalid `initData`; access — gated user → `403`;
   consistency — same filters give the same set in `/api/feed`, `/api/feed/count`, `/api/map`.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-004, LB-API-005, LB-API-006,
-  LB-API-009, LB-API-029; Q-API-007, Q-API-008, Q-API-010 … Q-API-014, Q-API-022, Q-API-036.
+  LB-API-009, LB-API-029; Q-API-007, Q-API-008, Q-API-010 … Q-API-014, Q-API-022, Q-API-036; since release
+  `index-CIa0Ldj2.js` `02` BR-API-195, BR-API-196.
 
 ### API-005 — `GET /api/feed/count`
 
@@ -549,7 +611,13 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   1.8 s after a search-tab visit with meta and radars loaded, nothing over the list and the `03` BR-APP-071
   conditions met (`src/app/useReturnNudge.js:90-143`). Aborted through `AbortSignal` when the filters, the radars or
   the overlay state change during the wait or the request (`useReturnNudge.js:110,138-141`). Sent again when the app
-  returns from the background after ≥ 6 h, which starts a new visit session (`useReturnNudge.js:50-71`).
+  returns from the background after ≥ 6 h, which starts a new visit session (`useReturnNudge.js:50-71`). Since
+  release `index-CIa0Ldj2.js` the method has a second caller, the fresh pill «Показать N новых» (`03` SCR-063). After
+  a return from ≥ 6 h in the background, on the search tab with the list covered or scrolled 60 px or more, the client
+  sends the same filter query with `since` = the moment the current feed was created, not the previous visit (`03`
+  BR-APP-104). This call passes no `AbortSignal`, and its answer is used only while the feed key is unchanged
+  (`src/app/App.jsx:430-435`, `:438-468`, `src/lib/api/feed.js:111-117` at r33). After one long return both callers
+  can send a request, each with its own `since` (`03` LB-APP-082).
 - **Validation:** as API-004; validation and bounds of `since` unknown (Q-API-066). — DOCUMENTED_ONLY
 - **Business Logic:** number of listings matching the filters that appeared after `since`, with the filter
   interpretation of `/api/feed`, `/count`, `/flow` and `/map` (current Doc:563-570, :1161). What "appeared" means
@@ -559,19 +627,24 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** none; aborted requests show up as dropped connections.
 - **Response:** `200 {"count": number}` (current Doc:566-570). `count` is mandatory and numeric: the client shows the
   banner for `count > 0`, nothing for `0`, and crashes on a body without `count` (current Doc:572-573; LB-API-055,
-  `03` LB-APP-048). `return_prompt_shown.n` carries this `count`.
+  `03` LB-APP-048). `return_prompt_shown.n` carries this `count`. Since release `index-CIa0Ldj2.js` the fresh pill
+  reads the same `count` and shows while it is above `0`; the pill sends no event.
 - **Errors:** any status, network failure or timeout → no banner, silently (`useReturnNudge.js:117`; current
-  Doc:574).
+  Doc:574); since release `index-CIa0Ldj2.js` likewise no pill (`App.jsx:438-468` at r33).
 - **Legacy Source:** `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:16,29`; current Doc:110 (registry #7), Doc:559-588,
   Doc:1161-1162, Doc:1200-1202; client `src/lib/api/feed.js:105-117`,
   `src/app/useReturnNudge.js:112-137`, `src/features/feed/followNudge.js:179-195`; mock
-  `tools/parity/mocks.mjs:207-211`; scenarios `return-nudge*` (`tools/parity/mocks.mjs:314-323`).
+  `tools/parity/mocks.mjs:207-211`; scenarios `return-nudge*` (`tools/parity/mocks.mjs:314-323`). Release
+  `index-CIa0Ldj2.js`: `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:10` at r36; Doc r35:648-653; client
+  `src/app/App.jsx:430-473`, `src/lib/api/feed.js:111-117` (at r33); mock `tools/parity/mocks.mjs:331`; parity
+  scenarios `fresh-pill`, `fresh-pill-show`, `fresh-reload`.
 - **Migration Target:** legacy `GET /api/feed/new` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — `count` equals the number of `/api/feed` items for the same filters that appeared after
   `since` (meaning per Q-API-066); edge — nothing new → `{"count": 0}`; `since` in the future → `{"count": 0}`; `since`
   weeks old → per the bound decided in Q-API-066; every `200` carries an integer `count` (never an empty body or
   `null`); an aborted request leaves no server work running; negative/auth as API-004.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-055; Q-API-066.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-055; Q-API-066; since release
+  `index-CIa0Ldj2.js` `03` SCR-063, BR-APP-104, LB-APP-082.
 
 ### API-007 — `GET /api/map`
 
@@ -589,17 +662,37 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   priced?: boolean, usd?: number|null}[], total?: number}` (Doc:562-574). `lat`/`lon` mandatory numbers; `label` is
   inserted as **HTML** (Leaflet pins `src/features/map/leaflet/icons.js:13`; GL stacks
   `src/features/map/gl/markerElements.js:40`) — must be plain text without `<` and `&`; `priced: false` = negotiable
-  price; `usd` orders stacked points (missing/null = Infinity); `total` drives «показано N из M».
-- **Errors:** never shown. The GL hook has no rejection handler (`src/features/map/gl/useMapPoints.js:15-22`); the
-  `ApiError` rejection is filtered out of `app_error` (`src/lib/errors.js:118`), so a failure leaves an empty map.
+  price; `usd` orders stacked points (missing/null = Infinity); `total` drives «показано N из M». Since release
+  `index-CIa0Ldj2.js` the answer may also carry `with_point?: number`, the number of listings of `total` that have
+  coordinates (Doc r35:671, :681-685; `02` BR-API-192). The client computes `withPoint = with_point ?? points.length`,
+  `cut = max(0, withPoint − points.length)` and `noPoint = max(0, total − withPoint)`
+  (`src/lib/api/feed.js:142-149` at r33) and shows one of two notes for 6 s after new points, on both engines. With
+  `cut > 0`: «На карте — {n} самых свежих. Остальные — в списке», where `n` is the number of points on the map without
+  the locally hidden ones. Otherwise with `noPoint > 0`: «На карте {shown} из {total} · {missing} известен только
+  район», where `total` is the points shown plus `noPoint`. Without `total` neither note shows
+  (`src/features/map/gl/MapViewGL.jsx:192-204`, `src/features/map/leaflet/MapView.jsx:242-254` at r33; `03`
+  BR-APP-062). Locally hidden listings are no longer subtracted from `total` (Doc r35:684-685). From how many points
+  the answer is cut, and what "newest" orders by, is not documented (Q-API-015).
+- **Errors:** up to `index-CBlEKxdL.js` never shown: the GL hook had no rejection handler
+  (`src/features/map/gl/useMapPoints.js:15-22`), and a failure left the map without a message. The `ApiError`
+  rejection is filtered out of `app_error` (`src/lib/errors.js:118`). Since release `index-CIa0Ldj2.js` a failure
+  removes the markers, clusters, selection and counts of the previous filters and shows the banner «Не загрузилось»
+  with «Повторить» on both engines; the retry repeats the same request, and a change of filters also clears the
+  error (`src/features/map/gl/useMapPoints.js:16-45`, `src/features/map/gl/MapViewGL.jsx:125-140`, `:186-190`,
+  `src/features/map/leaflet/MapView.jsx:152-188`, `:236-240` at r33; Doc r35:686-687; `03` SCR-011).
 - **Legacy Source:** Doc:110, Doc:558-585; client `src/lib/api/feed.js:119`, `src/features/map/gl/useMapPoints.js:15`,
-  `src/features/map/leaflet/MapView.jsx:154`; mock `tools/parity/mocks.mjs:86`, `:130`.
+  `src/features/map/leaflet/MapView.jsx:154`; mock `tools/parity/mocks.mjs:86`, `:130`. Release `index-CIa0Ldj2.js`:
+  Doc r35:655-689, :1369; client `src/lib/api/feed.js:142-149`, `src/features/map/gl/useMapPoints.js:16-45`,
+  `src/features/map/leaflet/MapView.jsx:152-188` (at r33); mock `tools/parity/mocks.mjs:320`; parity scenarios
+  `map-cut-leaflet`, `gl-cut`, `map-fail-leaflet`, `map-fail-leaflet-retry`, `gl-fail`, `gl-fail-retry`.
 - **Migration Target:** legacy `GET /api/map` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — every point has numeric `lat`/`lon`, ids match `/api/feed` ids for the same filters, `total ≥
   points.length`; security — a listing whose source text contains `<script>`/`&` never yields a `label` with `<` or
   `&`; edge — listings without coordinates are absent, polygon filter respected; load — large city returns within the
-  15 s client timeout; negative/auth as API-004.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-008; Q-API-015.
+  15 s client timeout; negative/auth as API-004; since release `index-CIa0Ldj2.js` — a cut answer has `with_point`
+  larger than the number of points and `total ≥ with_point`; an answer that is not cut may omit `with_point`.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-008; Q-API-015 (narrowed by
+  release `index-CIa0Ldj2.js`); since that release `02` BR-API-192; `03` SCR-011, BR-APP-062.
 
 ### API-008 — `GET /api/listings/:id`
 
@@ -609,7 +702,10 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Roles/access mode:** authenticated.
 - **Input:** path `id` — positive integer in practice (from API ids, `start_param` `l_<id>…` or `?listing=<id>`,
   `src/lib/telegram/startParam.js:17-25`); Doc:591 allows string or number. Query `preview=1` only from the map
-  selection card (`src/features/map/MapSelectionCard.jsx:29`); it loads the current card and both neighbours.
+  selection card (`src/features/map/MapSelectionCard.jsx:29`); it loads the current card and both neighbours. Since
+  release `index-CIa0Ldj2.js` an id from a link must be a positive safe integer (`Number.isSafeInteger`; before,
+  `Number.isInteger`), and the listing of a launch link is requested only once per launch (`startParam.js:21`,
+  `:38-52` at r33; `03` BR-APP-106).
 - **Validation:** unknown/removed id → `404`. — CONFIRMED (client handling), server conditions DOCUMENTED_ONLY
 - **Business Logic:** full listing card with per-user flags, market comparison, price history, publications,
   author, contact links (`call_url` signed, ~10 min) and nearby places; the server may answer with a **different
@@ -629,13 +725,34 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   requested number (Doc:606-608). With `phone` non-null, `call_url` must be non-null (Doc:351-353). Unread:
   `contacts`, `source_url`, `price_per_m`. Since release `index-CBlEKxdL.js` `ListingDetails` includes the seven
   owner keys (§1.8). After the caller's request becomes `given` the client reads the card again and expects `phone`
-  on it (`src/features/listing/ListingScreen.jsx:334-340` at r31; `03` LB-APP-074).
-- **Errors:** `404` → «Объявление не загрузилось» (no retry button) (`ListingScreen.jsx:115-116`); other errors → error
-  state with «Повторить»; `preview=1` errors are not shown (spinner stays, neighbour can be re-requested,
-  `MapSelectionCard.jsx:29-36`).
+  on it (`src/features/listing/ListingScreen.jsx:334-340` at r31; `03` LB-APP-074). Since release `index-CIa0Ldj2.js`
+  the client also reads two keys it ignored before. `deal_type`: `"sale"` on the listing of the launch link, on its
+  first full load, switches the feed under it to the sale defaults; daily rent switches nothing
+  (`src/features/listing/ListingScreen.jsx:142-146`, `src/app/App.jsx:244-264` at r33; Doc r35:315-316; `03`
+  BR-APP-108). `author.kind`: unless it is `"phone"`, the report reason `agent` is not offered (API-016; Doc
+  r35:337-341). `floor` and `posted_at` follow §1.8 (`02` BR-API-195, BR-API-196).
+- **Errors:** `404` → up to `index-CBlEKxdL.js` «Объявление не загрузилось» (no retry button)
+  (`ListingScreen.jsx:115-116`). Since release `index-CIa0Ldj2.js` the screen «Этого объявления уже нет — квартиру,
+  похоже, сдали или продали» with the button «Смотреть свежие», which closes the screen and does not reload the feed.
+  It shows for every `404` of the full card, whatever its `detail`, and not for `preview=1`
+  (`src/features/listing/ListingScreen.jsx:175-201` at r33; Doc r35:712-714; `03` SCR-019). Since the same release
+  `429 {"detail": "too many today"}` → «Лимит на сегодня» with the text «За сутки открыто очень много объявлений.
+  Попробуйте позже — Радар продолжит присылать новые в чат.» and «Повторить»; `detail` is matched exactly, and any
+  other `429` reads as a server error (`src/lib/api/client.js:29-30`, `src/components/ErrorState.jsx:14-25` at r33;
+  Doc r35:712-714, :1366-1367; `02` BR-API-193). The threshold, the window and the counted identity are not
+  documented (Q-API-080). Other errors → error state with «Повторить». `preview=1`: up to `index-CBlEKxdL.js` errors
+  were not shown (spinner stays, neighbour can be re-requested, `MapSelectionCard.jsx:29-36`). Since release
+  `index-CIa0Ldj2.js`, with no change of the contract, the card slot shows «Не загрузилось» with «Повторить», which
+  reloads the current card and its neighbours; `404` and `429` get no special text there
+  (`src/features/map/MapSelectionCard.jsx:22-54`, `:111-121` at r33; Doc r35:690-691).
 - **Legacy Source:** Doc:111, Doc:227-353, Doc:589-608; `$KVADRO_ROOT/docs/about.md:156-158`; client
   `src/lib/api/listings.js:10-17`, `src/main.jsx:38` (prefetch for deep links), `src/features/listing/hooks/useListingLoader.js:47`,
-  `src/features/map/MapSelectionCard.jsx:29`; mocks `tools/parity/mocks.mjs:76-104`, `:145-147`, `:193-196`.
+  `src/features/map/MapSelectionCard.jsx:29`; mocks `tools/parity/mocks.mjs:76-104`, `:145-147`, `:193-196`. Release
+  `index-CIa0Ldj2.js`: Doc r35:274, :286, :302-307, :315-316, :337-341, :690-691, :712-714, :1366-1368; client
+  `src/features/listing/ListingScreen.jsx:142-146`, `:175-201`, `src/lib/api/client.js:29-30`,
+  `src/components/ErrorState.jsx:14-25`, `src/features/map/MapSelectionCard.jsx:22-54` (at r33); mocks
+  `tools/parity/mocks.mjs:345`, `:348`; parity scenarios `listing-gone`, `listing-gone-fresh`, `listing-day-limit`,
+  `feed-floor`, `listing-floor-ground`, `listing-floor-basement`.
 - **Migration Target:** legacy `GET /api/listings/:id` and `GET /api/listings/:id?preview=1` byte-compatible
   (numeric ids). Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — rent, daily, sale × apartment/house/room/commercial/land fixtures each return every strict key
@@ -647,10 +764,14 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   side effect — history/`viewed` recorded per Q-API-035; owner cabinet (since release `index-CBlEKxdL.js`) — a gate
   listing without a request has `contact_mode: "gate"`, `my_request: null` and no `phone`; one card per `my_request`
   value (`pending`, `given`, `declined`, `agent`, `expired`, `cancelled`); `given` ⇒ `phone` (per Q-API-076); the
-  author's own listing has `owner_mine` and `owner_listing_id`, and the same listing read by another user has neither.
+  author's own listing has `owner_mine` and `owner_listing_id`, and the same listing read by another user has neither;
+  since release `index-CIa0Ldj2.js` — a listing that is gone → `404`; the daily cap → `429 {"detail": "too many
+  today"}` (threshold per Q-API-080); `floor: 0`, `floor: -1` and an unknown floor as `null`, never `0`; `posted_at`
+  as an ISO time, with `age` still present.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-009, LB-API-010, LB-API-011,
   LB-API-012, LB-API-029, LB-API-030, LB-API-031; Q-API-019, Q-API-021 … Q-API-024, Q-API-035; since release
-  `index-CBlEKxdL.js` `02` BR-API-186 … BR-API-189, Q-API-076, Q-API-078.
+  `index-CBlEKxdL.js` `02` BR-API-186 … BR-API-189, Q-API-076, Q-API-078; since release `index-CIa0Ldj2.js`
+  API-016, `02` BR-API-193, BR-API-195, BR-API-196, Q-API-080; `03` SCR-019, BR-APP-106, BR-APP-108.
 
 ### API-009 — `GET /api/listings/:id/call`
 
@@ -711,23 +832,33 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **URL:** `/api/listings/:id/favorite`
 - **Auth:** `tma` required.
 - **Roles/access mode:** authenticated.
-- **Input:** path `id`; no body.
+- **Input:** path `id`. Up to `index-CBlEKxdL.js` no body. Since release `index-CIa0Ldj2.js` the body
+  `{"favorite": boolean}`, the wanted state (`Content-Type: application/json`). Bundles cached before the release
+  still send no body, and such a request must still toggle (Doc r35:746-766, :1363-1364;
+  `src/lib/api/listings.js:39-45` at r33; `02` BR-API-197).
 - **Validation:** listing exists. — UNVERIFIED
 - **Business Logic:** **toggles** the favourite flag on the server and returns the resulting state; the bot's
-  «⭐ В избранное» / «★ В избранном» buttons use the same toggle (`$KVADRO_ROOT/docs/telegram-bot.md:986`). —
-  DOCUMENTED_ONLY
+  «⭐ В избранное» / «★ В избранном» buttons use the same toggle (`$KVADRO_ROOT/docs/telegram-bot.md:986`). Since
+  release `index-CIa0Ldj2.js` the server sets the state that the body names and toggles only for a request without a
+  body (Doc r35:746-766). — DOCUMENTED_ONLY
 - **DB Changes:** insert or delete a favourite row (user, listing). — UNVERIFIED
 - **Side Effects:** none known.
 - **Response:** `200 {"favorite": boolean}`; the client uses it as the source of truth
   (`src/components/FavButton.jsx:27`). `204` or an error rolls the heart back.
-- **Errors:** any error → optimistic state reverted silently.
+- **Errors:** up to `index-CBlEKxdL.js` any error → optimistic state reverted silently. Since release
+  `index-CIa0Ldj2.js` an error or a `204` returns the heart to its previous state with the error haptic and the toast
+  «Не получилось сохранить» (`src/components/FavButton.jsx:20-37` at r33).
 - **Legacy Source:** Doc:114, Doc:636-647; client `src/lib/api/listings.js:38-41`, `src/components/FavButton.jsx:27`.
+  Release `index-CIa0Ldj2.js`: Doc r35:746-766, :1363-1364; client `src/lib/api/listings.js:39-45`,
+  `src/components/FavButton.jsx:20-37` (at r33); parity scenario `fav-fail`.
 - **Migration Target:** legacy `POST /api/listings/:id/favorite` (toggle) byte-compatible. Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — two calls return `true` then `false`; `GET /api/favorites` reflects the state; concurrency —
   two parallel calls end in a defined state (record legacy behaviour, Q-API-038); bot ↔ app consistency; negative —
-  unknown id → `404`; auth.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-039; Q-API-038.
+  unknown id → `404`; auth; since release `index-CIa0Ldj2.js` — `{"favorite": true}` twice → `true` both times;
+  `{"favorite": false}` on a listing that is not a favourite → `false`; a request without a body → toggles.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-039; Q-API-038 (narrowed by
+  release `index-CIa0Ldj2.js`); since that release `02` BR-API-197.
 
 ### API-012 — `POST /api/listings/:id/hide`
 
@@ -837,7 +968,11 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Roles/access mode:** authenticated; anti-abuse weighting applies (`02 §11`).
 - **Input:** path `id`; body `{"reason": "rented"|"agent"|"wrong_data"|"fraud"}` (`Content-Type: application/json`).
   `agent` is not offered when the card says `is_owner: false`
-  (`src/features/listing/ListingActionsSheet.jsx:12`, `:176`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:77`).
+  (`src/features/listing/ListingActionsSheet.jsx:12`, `:176`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:77`). Since
+  release `index-CIa0Ldj2.js` it is also not offered when the author is not a phone (`author.kind !== "phone"`), which
+  covers a card without an author and the time while the details load
+  (`src/features/listing/ListingScreen.jsx:389-390`, `src/features/listing/ListingActionsSheet.jsx:177` at r33; Doc
+  r35:337-341; `02` BR-API-105).
   Since release `index-BNLZFfL0.js` a `wrong_data` report carries
   `"detail": "price"|"rooms"|"place"|"photos"|"other"`, picked on the detail view of the actions sheet (`03` SCR-023):
   `{"reason": "wrong_data", "detail": "price"}`. The client adds the key only when `detail` is truthy and only the
@@ -861,14 +996,24 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   Client toasts: `rented` → «Отметили: уже сдано» (listing hidden locally, card closed, no undo); `agent` →
   «Отметили номер как риелторский»; `fraud` with `hidden: true` → «Спасибо, посмотрим. Это объявление у вас скрыли»
   with undo via API-013; others, including `wrong_data` with any `detail` → «Спасибо! Посмотрим»
-  (`useListingActions.js:61-77`, `ru.js:229-232`; audited tree `ru.js:217-220`).
+  (`useListingActions.js:61-77`, `ru.js:229-232`; audited tree `ru.js:217-220`). Since release `index-CIa0Ldj2.js`
+  the answer to `agent` may also carry `agent_marked?: boolean` (Doc r35:840-852; `02` BR-API-191), and three toasts
+  change. `rented` → «Отметили: уже сдано» now has the action «Вернуть» for 6 s: it unhides the listing locally and
+  withdraws the report through API-055. `fraud` with `hidden: true` keeps its undo through API-013, and the action
+  reads «Показывать у меня». `agent` with `agent_marked: true` → «Отметили номер как риелторский»; with `false` or
+  without the key → «Спасибо, учёл вашу отметку» (`src/app/useListingActions.js:36-50`, `:62-74`,
+  `src/features/listing/ListingActionsSheet.jsx:93-103` at r33; `03` BR-APP-036).
 - **Errors:** any error → «Не получилось сохранить».
 - **Legacy Source:** Doc:119, Doc:675-705; `$KVADRO_ROOT/docs/about.md:219-228`; client
   `src/lib/api/listings.js:84-90`, `src/features/listing/ListingActionsSheet.jsx:89-95`,
   `src/app/useListingActions.js:61-77` (audited tree). Release `index-BNLZFfL0.js`: `src/lib/api/listings.js:79-90`,
   `src/features/listing/ListingActionsSheet.jsx:13-14`, `:93-102`, `:175-200`; current
   `$KVADRO_ROOT/docs/api.md:707-758`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:22-24`;
-  parity scenarios `tools/parity/mocks.mjs:281-293`.
+  parity scenarios `tools/parity/mocks.mjs:281-293`. Release `index-CIa0Ldj2.js`: Doc r35:337-341, :840-864,
+  :1372-1373; client `src/app/useListingActions.js:36-50`, `:62-74`,
+  `src/features/listing/ListingActionsSheet.jsx:93-103`, `:177`, `src/features/listing/ListingScreen.jsx:389-390` (at
+  r33); mock `tools/parity/mocks.mjs:190-195`; parity scenarios `listing-report-rented-undo`, `listing-report-agent`,
+  `listing-report-agent-marked`.
 - **Migration Target:** legacy `POST /api/listings/:id/report` byte-compatible. Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — each reason returns JSON `{hidden}` (never `204`); `fraud` returns `hidden: true` when the
@@ -877,9 +1022,49 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   report; compatibility — `{"reason": "wrong_data"}` without `detail` (older bundle) → `200 {hidden}`; the other
   reasons without the key → `200`; negative — `reason: "spam"` → `422`, missing body → `422`; an unknown `detail` code
   and a `detail` with another reason → per Q-API-064 (record legacy first); repeat — same user, same reason twice is
-  counted once (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth.
+  counted once (record legacy, Q-API-038); anti-abuse — low-trust accounts do not flip global state alone; auth;
+  since release `index-CIa0Ldj2.js` — `agent` answers `agent_marked: true` once the number is marked as a realtor's,
+  and `false` or no key while the vote is only counted (threshold per Q-API-039; what the server really sends per
+  Q-API-083).
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (`detail` handling `UNVERIFIED`). Related:
-  LB-API-015, LB-API-042, LB-API-043; Q-API-038 … Q-API-040, Q-API-064.
+  LB-API-015, LB-API-042, LB-API-043; Q-API-038 … Q-API-040, Q-API-064; since release `index-CIa0Ldj2.js` API-055,
+  `02` BR-API-105, BR-API-190, BR-API-191, Q-API-083; `03` BR-APP-036.
+
+### API-055 — `DELETE /api/listings/:id/report`
+
+- **Since:** release `index-CIa0Ldj2.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:21` at r36).
+- **Method:** DELETE
+- **URL:** `/api/listings/:id/report`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the caller withdraws a report of their own.
+- **Input:** path `id`; no body, no `Content-Type`. The client calls it from one place only: the action «Вернуть» of
+  the toast «Отметили: уже сдано», shown for 6 s after a `rented` report (API-016). The contract and the changelog
+  call that action «Отменить»; the dictionaries say `toast.undo` = «Вернуть» / «Undo» / «Qaytarish» (§4.3).
+- **Validation:** not documented: the answer for a listing the caller never reported and for a repeat is unknown. —
+  UNVERIFIED (Q-API-079 in `02`)
+- **Business Logic:** withdraws the caller's report on the listing (`02` BR-API-190). The client first unhides the
+  listing locally, then sends the request. Which reasons the method withdraws — the client sends it only after
+  `rented` — and what happens to a report that already changed the listing for other users are not documented; the
+  legacy contract asks the second itself (Doc r35:1422-1426, open question 18). — DOCUMENTED_ONLY; the two open
+  points UNVERIFIED (Q-API-079)
+- **DB Changes:** not documented. Presumably the caller's report row is deleted or voided (`inferred`); whether the
+  hidden row that the report created goes with it is unknown. — UNVERIFIED (Q-API-079)
+- **Side Effects:** the listing may return to other users' results if the report had hidden it for them. —
+  UNVERIFIED (Q-API-079)
+- **Response:** not read by the client; `204` is recommended by the contract (Doc r35:860-864). The parity mock
+  answers `204` (`tools/parity/mocks.mjs:190-195`).
+- **Errors:** any error → the listing is hidden again locally and «Не получилось сохранить» shows
+  (`src/app/useListingActions.js:44-47` at r33).
+- **Legacy Source:** Doc r35:126 (registry #18), Doc r35:860-864, :1365, :1422-1426; client
+  `src/lib/api/listings.js:87-90`, `src/app/useListingActions.js:36-50`, `:69-71` (at r33); mock
+  `tools/parity/mocks.mjs:190-195`; parity scenario `listing-report-rented-undo`.
+- **Migration Target:** v1 `DELETE /listings/{number}/reports`, native (`25` §4.2).
+- **Tests:** a record of the legacy contract — after a `rented` report the DELETE answers `2xx` and the listing is
+  back in the caller's feed; a repeat of the DELETE and a DELETE without a report (both per Q-API-079, record legacy
+  first); a DELETE after a report with another reason (per Q-API-079); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the parts marked UNVERIFIED above: Q-API-079).
+  Related: API-013, API-016; `02` BR-API-190, Q-API-040, Q-API-079; `03` BR-APP-036; `04` BTN-043 (the bot's undo
+  «↩️ Не сдано»).
 
 ### API-017 — `POST /api/listings/:id/share`
 
@@ -924,19 +1109,27 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `/api/feed`, `/count`, `/flow` per radar and compares them with `sameFilters`
   (`src/features/filters/model.js:45-63`). `types` must be valid for the `deal`: the radar title is built through
   `t('type.<code>')`, which throws on unknown keys (Doc:177-179). `hidden > 0` shows «Скрыто: N» and enables
-  `PATCH {unhide: true}`. Unread: `title`, `new_count`, `finds`, `created_at`, `hidden_count`.
+  `PATCH {unhide: true}`. Unread: `title`, `new_count`, `finds`, `created_at`, `hidden_count`. Since release
+  `index-CIa0Ldj2.js` the client also calls this method once at launch when the page address carries `?radar=<id>`
+  and the launch names no listing. It looks for the radar with `item.id === radarId`, a strict comparison with a
+  number, and takes that radar's `filters` as the search (`src/features/radar/radarLink.js:7-13`,
+  `src/app/useAppBootstrap.js:135-149` at r33; Doc r35:1314-1317; `03` BR-APP-107). The contract types `id` as
+  `number|string` (Doc r35:428), and an `id` that arrives as a string never matches (`03` LB-APP-079; Q-API-083).
 - **Errors:** radar tab → error state with «Повторить» (`src/features/radar/RadarScreen.jsx:58`, `:193-195`);
-  elsewhere ignored.
+  elsewhere ignored; the launch call for `?radar=<id>` shows nothing on a miss or an error.
 - **Legacy Source:** Doc:121, Doc:368-378, Doc:721-729; client `src/lib/api/subscriptions.js:5`,
   `src/app/App.jsx:175` (search tab; since release `index-DY_DH7h-.js` also re-read when the app returns from the
   background after ≥ 6 h, `src/app/useReturnNudge.js:62-66` at the pin), `src/app/subscriptionActions.js:95` (re-read
   before every create), `src/features/radar/RadarScreen.jsx:58`, `src/features/settings/SettingsScreen.jsx:60`; mock
-  `tools/parity/mocks.mjs:105-107`, `:121`.
+  `tools/parity/mocks.mjs:105-107`, `:121`. Release `index-CIa0Ldj2.js`: Doc r35:428, :1314-1317; client
+  `src/app/useAppBootstrap.js:135-149`, `src/features/radar/radarLink.js:7-13` (at r33); parity scenario `radar-link`
+  (`tools/parity/mocks.mjs:530`).
 - **Migration Target:** legacy `GET /api/subscriptions` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — radars created in the app and in the bot both appear; every `filters` has 25 keys; ids stable;
-  migrated legacy radars (pre-`zones`) come back normalised; edge — empty list → `[]`; auth.
+  migrated legacy radars (pre-`zones`) come back normalised; edge — empty list → `[]`; auth; since release
+  `index-CIa0Ldj2.js` — every `id` is a JSON number, because the radar link compares strictly (per Q-API-083).
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-005, LB-API-006, LB-API-038;
-  Q-API-013, Q-API-032.
+  Q-API-013, Q-API-032; since release `index-CIa0Ldj2.js` `02` Q-API-083; `03` BR-APP-107, LB-APP-079.
 
 ### API-019 — `POST /api/subscriptions`
 
@@ -1035,9 +1228,14 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   always (Doc:795-808). Read by the radar toggle (`subscription`, `starter`, `ask_found`), by mode/unhide
   (`subscription` only, toast «Скрытое снова показывается», `ru.js:376`); not read when used instead of `POST`
   (`RadarScreen.jsx:92-161`; `subscriptionActions.js:104-128`).
-- **Errors:** toggle: any error reverts the switch silently, `no_chat` additionally shows the no-chat toast; `409`
-  limit on toggle is reverted silently; on the create path `409` without `no_chat` → limit toast; mode/unhide errors
-  revert silently.
+- **Errors:** up to `index-CBlEKxdL.js` — toggle: any error reverts the switch silently, `no_chat` additionally shows
+  the no-chat toast; `409` limit on toggle is reverted silently; on the create path `409` without `no_chat` → limit
+  toast; mode/unhide errors revert silently. Since release `index-CIa0Ldj2.js` every failure on the radar tab also
+  shows the toast «Не получилось сохранить»: the switch (except `no_chat`, which keeps its own toast), the mode
+  change and the unhide, each with its rollback (`src/features/radar/RadarScreen.jsx:130-134`, `:152-156`, `:172-175`
+  at r33). A `409` limit answer to the switch therefore reads «Не получилось сохранить», while the create path still
+  names the limit (`03` LB-APP-081). Doc r35:81-84 still says that the switch rolls such a `409` back silently
+  (§4.3).
 - **Legacy Source:** Doc:124, Doc:769-808; `$KVADRO_ROOT/docs/telegram-bot.md:978-980`; client
   `src/lib/api/subscriptions.js:56-60`, `src/app/subscriptionActions.js:108`, `src/features/radar/RadarScreen.jsx:99`,
   `:134`, `:151`; mock `tools/parity/mocks.mjs:148-156`.
@@ -1048,7 +1246,7 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   inactive; limit — resuming when the user already has the maximum active (record legacy: is the limit on total or
   active radars?); negative — empty body, two keys, unknown key, `mode: "weekly"` → `422`; ownership; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-013, LB-API-033, LB-API-034;
-  Q-API-030, Q-API-032, Q-API-033.
+  Q-API-030, Q-API-032, Q-API-033; since release `index-CIa0Ldj2.js` `03` LB-APP-081.
 
 ### API-022 — `DELETE /api/subscriptions/:id`
 
@@ -1063,7 +1261,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** none known.
 - **Response:** `200 {"ask_found"?: boolean}` or `204` (Doc:812-820); `ask_found: true` opens the survey with
   `trigger: "delete"` (`RadarScreen.jsx:172-178`).
-- **Errors:** any error → haptic only.
+- **Errors:** any error → haptic only; since release `index-CIa0Ldj2.js` also the toast «Не получилось сохранить»
+  (`src/features/radar/RadarScreen.jsx:194-197` at r33).
 - **Legacy Source:** Doc:125, Doc:810-820; client `src/lib/api/subscriptions.js:66-69`,
   `src/features/radar/RadarScreen.jsx:172`; mock `tools/parity/mocks.mjs:152`.
 - **Migration Target:** legacy `DELETE /api/subscriptions/:id` byte-compatible. Handler: TBD
@@ -1148,7 +1347,10 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `SettingsScreen.jsx:83-95`) and, since release `index-BnFvC-Ft.js`, `card_style` (Doc r31:1025-1027); ignored for
   the others (Doc:886-888).
 - **Errors:** quiet/digest/theme → rollback + haptic; locale/currency → no reload, haptic; city → ignored
-  (`city.js:23-25`); language picker → haptic, can retry.
+  (`city.js:23-25`); language picker → haptic, can retry. Since release `index-CIa0Ldj2.js` every failure except the
+  city's also shows «Не получилось сохранить»: as a toast in the settings, and as a line under the list of the
+  first-launch language picker (`src/features/settings/SettingsScreen.jsx:145-149`, `:185-190`, `:202-205`,
+  `src/features/onboarding/LanguagePicker.jsx:29-46`, `:66-70` at r33).
 - **Legacy Source:** Doc:128, Doc:857-897; client `src/lib/api/settings.js:11-15` and the call sites above.
 - **Migration Target:** legacy `PUT /api/settings` (partial semantics) byte-compatible. Handler: TBD
   (`10-target-architecture.md`).
@@ -1221,7 +1423,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **DB Changes:** delete blocked-author row. — UNVERIFIED
 - **Side Effects:** the author's listings return.
 - **Response:** not read; recommended `204`.
-- **Errors:** optimistic removal rolled back with haptic (`src/features/settings/HiddenScreen.jsx:26-37`).
+- **Errors:** optimistic removal rolled back with haptic (`src/features/settings/HiddenScreen.jsx:26-37`). Since
+  release `index-CIa0Ldj2.js` also the toast «Не получилось сохранить», and the rollback restores only what the
+  failed action had removed (`HiddenScreen.jsx:28-54` at r33).
 - **Legacy Source:** Doc:130, Doc:917-920; client `src/lib/api/user.js:11-14`, `src/features/settings/HiddenScreen.jsx:45`.
 - **Migration Target:** legacy `DELETE /api/hidden/:id` byte-compatible (author entry ids preserved by the data
   migration). Handler: TBD (`10-target-architecture.md`).
@@ -1241,7 +1445,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **DB Changes:** delete the user's hidden-listing and blocked-author rows. — UNVERIFIED
 - **Side Effects:** none known.
 - **Response:** not read; recommended `204`.
-- **Errors:** rollback + haptic.
+- **Errors:** rollback + haptic; since release `index-CIa0Ldj2.js` also the toast «Не получилось сохранить»
+  (`HiddenScreen.jsx:51-52` at r33).
 - **Legacy Source:** Doc:131, Doc:922-924; client `src/lib/api/user.js:17-20`, `src/features/settings/HiddenScreen.jsx:62`.
 - **Migration Target:** legacy `DELETE /api/hidden` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — both lists empty afterwards; radar hide rules untouched (record legacy, Q-API-037);
@@ -1254,23 +1459,37 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **URL:** `/api/favorites`
 - **Auth:** `tma` required.
 - **Roles/access mode:** authenticated; `403` → «Нет доступа».
-- **Input:** none — the client never sends `cursor` (`useInfiniteFeed.js:31-33`).
+- **Input:** up to `index-CBlEKxdL.js` none — the client never sent `cursor` (`useInfiniteFeed.js:31-33`). Since
+  release `index-CIa0Ldj2.js` an optional query `cursor`: page one is requested without it, every next page with
+  `cursor=<encodeURIComponent(next_cursor)>` (`src/lib/api/user.js:26-27`,
+  `src/features/feed/useInfiniteFeed.js:31-42` at r33; Doc r35:1157-1162).
 - **Validation:** auth only.
 - **Business Logic:** the user's favourites (shared with the bot's `/fav`). — DOCUMENTED_ONLY
 - **DB Changes:** none.
 - **Side Effects:** none.
-- **Response:** `200 {items: ListingPreview[], next_cursor: null}` — the whole list in one page; any non-null
-  `next_cursor` (or a missing key) loops the same request (Doc:930-941). The client additionally filters out items
-  unfavourited or hidden in this session (`ListingFeed.jsx:81-83`).
+- **Response:** up to `index-CBlEKxdL.js` `200 {items: ListingPreview[], next_cursor: null}` — the whole list in one
+  page; any non-null `next_cursor` (or a missing key) loops the same request (Doc:930-941). Since release
+  `index-CIa0Ldj2.js` `200 {items: ListingPreview[], next_cursor: string|null}`: the list is paged, the client
+  follows `next_cursor` until it is `null` and drops duplicate ids (`02` BR-API-023). The page size and the cursor
+  format are not documented (Q-API-084; the legacy contract asks the same, Doc r35:1400-1401). A bundle cached before
+  the release never sends a cursor, so on a non-null `next_cursor` it repeats the first request in a loop
+  (`inferred` from the old bundle's code, not observed; `02` LB-API-057, LB-API-004). The client additionally filters
+  out items unfavourited or hidden in this session (`ListingFeed.jsx:81-83`).
 - **Errors:** `403` → «Нет доступа»; other → error state.
 - **Legacy Source:** Doc:132, Doc:926-941; client `src/lib/api/user.js:23`, `src/features/feed/useInfiniteFeed.js:33`;
-  mocks `tools/parity/mocks.mjs:122`, `mocks-filters.mjs:83`.
+  mocks `tools/parity/mocks.mjs:122`, `mocks-filters.mjs:83`. Release `index-CIa0Ldj2.js`: Doc r35:1157-1162,
+  :1339-1340, :1400-1401; client `src/lib/api/user.js:26-27`, `src/features/feed/useInfiniteFeed.js:31-42` (at r33);
+  mock `tools/parity/mocks.mjs:323-326`; parity scenario `favorites-pages`.
 - **Migration Target:** legacy `GET /api/favorites` byte-compatible (`next_cursor: null`). Handler: TBD
   (`10-target-architecture.md`).
 - **Tests:** positive — favourites from app and bot, `next_cursor` is JSON `null`, every item has the preview strict
   keys, withdrawn listings handling (status_text) per Q-API-023; edge — empty list; large list (e.g. 500) still one
-  page; auth.
-- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-004, LB-API-024; Q-API-009.
+  page; auth. Since release `index-CIa0Ldj2.js` the large list is paged instead: the first answer carries a
+  `next_cursor`, the request with it returns the next page, the last page has `next_cursor: null`, and there are no
+  duplicates and no gaps (page size per Q-API-084); a request without `cursor` from an older bundle on a list longer
+  than one page (LB-API-057).
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-004, LB-API-024; Q-API-009;
+  since release `index-CIa0Ldj2.js` `02` BR-API-023, LB-API-057, Q-API-084.
 
 ### API-030 — `GET /api/history`
 
@@ -1278,13 +1497,15 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **URL:** `/api/history`
 - **Auth:** `tma` required.
 - **Roles/access mode:** authenticated; `403` → «Нет доступа».
-- **Input:** none (never a cursor) — `useInfiniteFeed.js:34-35`.
+- **Input:** none (never a cursor) — `useInfiniteFeed.js:34-35`. Still so at release `index-CIa0Ldj2.js`, which
+  paged `/api/favorites` (API-029): `/api/history` is read whole, without a cursor.
 - **Validation:** auth only.
 - **Business Logic:** listings the user viewed (which action records a view: Q-API-035), most recent first
   (assumed). — DOCUMENTED_ONLY
 - **DB Changes:** none.
 - **Side Effects:** none.
-- **Response:** `200 {items: ListingPreview[], next_cursor: null}` (same rules as API-029).
+- **Response:** `200 {items: ListingPreview[], next_cursor: null}` (the rules API-029 had up to `index-CBlEKxdL.js`:
+  the whole list in one page; a non-null or missing `next_cursor` loops the request).
 - **Errors:** as API-029.
 - **Legacy Source:** Doc:133, Doc:926-941; client `src/lib/api/user.js:26`, `src/features/feed/useInfiniteFeed.js:35`;
   mocks `tools/parity/mocks.mjs:123`, `mocks-filters.mjs:85`.
@@ -1307,7 +1528,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **DB Changes:** delete the user's history rows. — UNVERIFIED
 - **Side Effects:** none known.
 - **Response:** not read; recommended `204`.
-- **Errors:** haptic only (`src/features/feed/ListingFeed.jsx:93-103`).
+- **Errors:** haptic only (`src/features/feed/ListingFeed.jsx:93-103`); since release `index-CIa0Ldj2.js` also the
+  toast «Не получилось сохранить» (`ListingFeed.jsx:114-117` at r33).
 - **Legacy Source:** Doc:134, Doc:943-945; client `src/lib/api/user.js:29-32`, `src/features/feed/ListingFeed.jsx:96`.
 - **Migration Target:** legacy `DELETE /api/history` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — `GET /api/history` empty afterwards; favourites untouched; idempotent; auth.
@@ -1385,7 +1607,18 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `contact_call {listing_id, via: tel|browser, src?: "text"}` (`useListingContact.js:75`);
   `contact_write {listing_id}` (`useListingContact.js:84`); since release `index-CBlEKxdL.js`
   `owner_info_opened {listing_id}`, sent by a tap on the owner chip of the listing screen or on its tip
-  (`src/features/listing/OwnerChip.jsx:54-62` at r31; Doc r31:1192; `03` BR-APP-101).
+  (`src/features/listing/OwnerChip.jsx:54-62` at r31; Doc r31:1192; `03` BR-APP-101); since release
+  `index-CIa0Ldj2.js` six events of the owner cabinet, analytics only:
+  `owner_attention {what: dot|coach|banner, action: shown|clicked}`, each `what:action` pair at most once per session
+  (`src/lib/ownerAttention.js:5-22`); `owner_mascot_tap` without properties, at most once per 30 s
+  (`ownerAttention.js:25-39`); `owner_limit_sheet {where: settings|mine}`, on every mount of the limit sheet
+  (`src/features/settings/OwnerLimitSheet.jsx:18-26`); `owner_place_set {source: map|locate|manual}`
+  (`src/features/owner/OwnerForm.jsx:554-557`, `:805-809`); `owner_place_autofill {result: applied|reverted}`
+  (`OwnerForm.jsx:616-620`, `:631-636`); `owner_hint_opened {field: photos|area_m2|floor|renovation|description}`
+  (`src/features/owner/OwnerPanel.jsx:247-251`) — all at r33; Doc r35:1256-1261, :1278-1286. Since the same release
+  `app_error` has one more form: `kind: "error"`, `source: "i18n"`, `message: "i18n: no key <key> (<locale>)"`, sent
+  once per missing dictionary key and counted within the 5 distinct errors per session
+  (`src/i18n/index.js:110-125`, `:180-193` at r33; Doc r35:1287-1289).
 - **Validation:** must accept unknown extra fields without hard failure (Doc:1044). Size limits unknown (Q-API-045).
 - **Business Logic:** writes the action log (180 days, no texts) and forwards product events to PostHog under the
   user's random id (`$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431`). — DOCUMENTED_ONLY
@@ -1403,7 +1636,7 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   negative — non-JSON body, 1 MB body → bounded rejection (target limit per Q-API-045); privacy — `source` with
   `#tgWebAppData=` never stored (client strips it, server re-checks).
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-001, LB-API-047; Q-API-045,
-  Q-API-046.
+  Q-API-046; since release `index-CIa0Ldj2.js` `02` BR-API-123.
 
 ### API-037 — `GET /api/owner/listings`
 
@@ -2274,16 +2507,18 @@ resources.
 
 ### 4.1 Registry → client code
 
-All 54 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:106-159` at r31; 36 at `index-BnFvC-Ft.js`,
-`:106-141` at r31; 35 at `index-DY_DH7h-.js`, `:102-138` at r27; 34 at the audit, `:102-137`) are called by the
-client. None is documented-but-unused. "Doc #" is the registry number of the pinned release: since release
-`index-DY_DH7h-.js` `/api/feed/new` is #7, since `index-BnFvC-Ft.js` `/api/settings/card-sample` is #27, and every
-later method moved down by one each time. Release `index-CBlEKxdL.js` added #37 – #54 at the end: the 17 owner
-methods (`:142-158`) and the contact request (`:159`). The intake recorded the range of the owner methods, not the
-row of each: the numbers 37 – 53 below follow the order of the owner section of the contract (Doc r31 §16) and are
-`inferred`. Rows 37 – 54 cite client files at r31; `OwnerForm.jsx`, `OwnerListings.jsx`, `OwnerPanel.jsx` and
-`PlacePicker.jsx` are under `src/features/owner/`, and the wrapper file is written in full because a second
-`owner.js`, the cabinet's dictionary, lies in that folder.
+All 55 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:109-163` at r35; 54 at `index-CBlEKxdL.js`,
+`:106-159` at r31; 36 at `index-BnFvC-Ft.js`, `:106-141` at r31; 35 at `index-DY_DH7h-.js`, `:102-138` at r27; 34 at
+the audit, `:102-137`) are called by the client. None is documented-but-unused. "Doc #" is the registry number of the
+pinned release: since release `index-DY_DH7h-.js` `/api/feed/new` is #7, since `index-BnFvC-Ft.js`
+`/api/settings/card-sample` stands after `PUT /api/settings` (#27 then, #28 now), since `index-CIa0Ldj2.js`
+`DELETE /api/listings/:id/report` is #18, and every later method moved down by one each time. Release
+`index-CBlEKxdL.js` added the 17 owner methods and the contact request at the end, #37 – #54 then (`:142-159` at
+r31) and #38 – #55 now. The registry at r35 lists the owner methods in the order of the rows below (`:146-162`), and
+the contact request after them (`:163`). Rows 38 – 55 cite client files at r31; `OwnerForm.jsx`, `OwnerListings.jsx`,
+`OwnerPanel.jsx` and `PlacePicker.jsx` are under `src/features/owner/`, and the wrapper file is written in full
+because a second `owner.js`, the cabinet's dictionary, lies in that folder. Row 18 and the additions of release
+`index-CIa0Ldj2.js` to other rows cite client files at r33.
 
 | Doc # | Method | Path | ID | In client | Wrapper | Call sites |
 | ----: | ------ | ---- | -- | --------- | ------- | ---------- |
@@ -2293,54 +2528,55 @@ row of each: the numbers 37 – 53 below follow the order of the owner section o
 | 4 | GET | `/api/feed` | API-004 | yes | `feed.js:75-93` | `main.jsx:25`, `useInfiniteFeed.js:36`, `useRadarPreviews.js:42` |
 | 5 | GET | `/api/feed/count` | API-005 | yes | `feed.js:100` | `useLiveFeedStats.js:16`, `useRadarPreviews.js:52` |
 | 6 | GET | `/api/feed/flow` | API-006 | yes | `feed.js:110` | `useLiveFeedStats.js:38`, `useRadarPreviews.js:59`, `useFollowNudge.js:63` |
-| 7 | GET | `/api/feed/new` | API-035 | yes | `feed.js:111-117` | `useReturnNudge.js:117` (at the pin) |
+| 7 | GET | `/api/feed/new` | API-035 | yes | `feed.js:111-117` | `useReturnNudge.js:117` (at the pin); since release `index-CIa0Ldj2.js` also the fresh pill, `App.jsx:438-468` (at r33) |
 | 8 | GET | `/api/map` | API-007 | yes | `feed.js:119` | `gl/useMapPoints.js:15`, `leaflet/MapView.jsx:154` |
 | 9 | GET | `/api/listings/:id` | API-008 | yes | `listings.js:10-17` | `main.jsx:38`, `useListingLoader.js:47`, `MapSelectionCard.jsx:29` |
 | 10 | GET | `/api/listings/:id/call` | API-009 | yes | `listings.js:23` | `useListingContact.js:26` |
 | 11 | POST | `/api/listings/:id/translate` | API-010 | yes | `listings.js:29` | `useListingTranslation.js:32` |
-| 12 | POST | `/api/listings/:id/favorite` | API-011 | yes | `listings.js:38` | `FavButton.jsx:27` |
+| 12 | POST | `/api/listings/:id/favorite` | API-011 | yes | `listings.js:38` (`:39-45` at r33) | `FavButton.jsx:27` (`:20-37` at r33) |
 | 13 | POST | `/api/listings/:id/hide` | API-012 | yes | `listings.js:47` | `ListingActionsSheet.jsx:71` |
 | 14 | DELETE | `/api/listings/:id/hide` | API-013 | yes | `listings.js:56` | `useListingActions.js:51`, `:62`, `HiddenScreen.jsx:53` |
 | 15 | POST | `/api/listings/:id/block-author` | API-014 | yes | `listings.js:65` | `ListingActionsSheet.jsx:79` |
 | 16 | DELETE | `/api/listings/:id/block-author` | API-015 | yes | `listings.js:74` | `useListingActions.js:59` |
 | 17 | POST | `/api/listings/:id/report` | API-016 | yes | `listings.js:84` | `ListingActionsSheet.jsx:89` |
-| 18 | POST | `/api/listings/:id/share` | API-017 | yes | `listings.js:97` | `ListingTitleRow.jsx:35` |
-| 19 | GET | `/api/subscriptions` | API-018 | yes | `subscriptions.js:5` | `App.jsx:175`, `subscriptionActions.js:95`, `RadarScreen.jsx:58`, `SettingsScreen.jsx:60` |
-| 20 | POST | `/api/subscriptions` | API-019 | yes | `subscriptions.js:13` | `subscriptionActions.js:131` |
-| 21 | PUT | `/api/subscriptions/:id` | API-020 | yes | `subscriptions.js:29` | `subscriptionActions.js:163` |
-| 22 | PATCH | `/api/subscriptions/:id` | API-021 | yes | `subscriptions.js:56` | `subscriptionActions.js:108`, `RadarScreen.jsx:99`, `:134`, `:151` |
-| 23 | DELETE | `/api/subscriptions/:id` | API-022 | yes | `subscriptions.js:66` | `RadarScreen.jsx:172` |
-| 24 | POST | `/api/subscriptions/:id/relax` | API-023 | yes | `subscriptions.js:43` | `subscriptionActions.js:72` |
-| 25 | GET | `/api/settings` | API-024 | yes | `settings.js:5` | `SettingsScreen.jsx:59`, `RadarSheet.jsx:52` |
-| 26 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` (`:20-24` at r29) | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
-| 27 | POST | `/api/settings/card-sample` | API-036 | yes | `settings.js:11-14` (at r29) | `SettingsScreen.jsx:165` (at r31) |
-| 28 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
-| 29 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
-| 30 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
-| 31 | GET | `/api/favorites` | API-029 | yes | `user.js:23` | `useInfiniteFeed.js:33` |
-| 32 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
-| 33 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
-| 34 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
-| 35 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
-| 36 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin, one more since release `index-CBlEKxdL.js` (the owner chip, `OwnerChip.jsx:54-62` at r31) (§2 API-034) |
-| 37 | GET | `/api/owner/listings` | API-037 | yes | `src/lib/api/owner.js` | `SettingsScreen.jsx:101-107`, `OwnerListings.jsx:307-320`, `:352`, `OwnerForm.jsx:214-219` |
-| 38 | POST | `/api/owner/listings` | API-038 | yes | `src/lib/api/owner.js:30-34` | `OwnerForm.jsx:183-238` |
-| 39 | GET | `/api/owner/listings/:id` | API-039 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:183-238`, `:708-721`, `:1484-1620`, `OwnerPanel.jsx` |
-| 40 | PATCH | `/api/owner/listings/:id` | API-040 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:245-337` |
-| 41 | POST | `/api/owner/listings/:id/photos` | API-041 | yes | `src/lib/api/owner.js:57-70` | `OwnerForm.jsx:435-524` |
-| 42 | DELETE | `/api/owner/listings/:id/photos/:photoId` | API-042 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:511-524` |
-| 43 | POST | `/api/owner/listings/:id/photos/order` | API-043 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:492-510` |
-| 44 | POST | `/api/owner/listings/:id/contact_mode` | API-044 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:644-667` |
-| 45 | POST | `/api/owner/listings/:id/publish` | API-045 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:668-741` |
-| 46 | POST | `/api/owner/listings/:id/status` | API-046 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:322-361`, `OwnerPanel.jsx:87-113` |
-| 47 | GET | `/api/owner/pending` | API-047 | yes | `src/lib/api/owner.js` | `ownerPending.js:6-57`, `App.jsx:141-147` |
-| 48 | GET | `/api/owner/requests` | API-048 | yes | `src/lib/api/owner.js:122-127` | `OwnerListings.jsx:477-479`, `OwnerPanel.jsx:271` |
-| 49 | POST | `/api/owner/requests/:id` | API-049 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:493-560` |
-| 50 | POST | `/api/owner/waitlist` | API-050 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:1639-1655` |
-| 51 | POST | `/api/owner/place` | API-051 | yes | `src/lib/api/owner.js` | `PlacePicker.jsx:63-83`, `OwnerForm.jsx:565-571` |
-| 52 | GET | `/api/owner/map-start` | API-052 | yes | `src/lib/api/owner.js:157` | `OwnerForm.jsx:197-209` |
-| 53 | GET | `/api/owner/demand` | API-053 | yes | `src/lib/api/owner.js:165-184` | `OwnerForm.jsx:347-369` |
-| 54 | POST | `/api/listings/:id/contact` | API-054 | yes | `src/lib/api/owner.js:191-192` | `ContactRequestSheet.jsx:50-85` |
+| 18 | DELETE | `/api/listings/:id/report` | API-055 | yes | `listings.js:87-90` | `useListingActions.js:36-50` |
+| 19 | POST | `/api/listings/:id/share` | API-017 | yes | `listings.js:97` | `ListingTitleRow.jsx:35` |
+| 20 | GET | `/api/subscriptions` | API-018 | yes | `subscriptions.js:5` | `App.jsx:175`, `subscriptionActions.js:95`, `RadarScreen.jsx:58`, `SettingsScreen.jsx:60`; since release `index-CIa0Ldj2.js` also `useAppBootstrap.js:135-149` (at r33) |
+| 21 | POST | `/api/subscriptions` | API-019 | yes | `subscriptions.js:13` | `subscriptionActions.js:131` |
+| 22 | PUT | `/api/subscriptions/:id` | API-020 | yes | `subscriptions.js:29` | `subscriptionActions.js:163` |
+| 23 | PATCH | `/api/subscriptions/:id` | API-021 | yes | `subscriptions.js:56` | `subscriptionActions.js:108`, `RadarScreen.jsx:99`, `:134`, `:151` |
+| 24 | DELETE | `/api/subscriptions/:id` | API-022 | yes | `subscriptions.js:66` | `RadarScreen.jsx:172` |
+| 25 | POST | `/api/subscriptions/:id/relax` | API-023 | yes | `subscriptions.js:43` | `subscriptionActions.js:72` |
+| 26 | GET | `/api/settings` | API-024 | yes | `settings.js:5` | `SettingsScreen.jsx:59`, `RadarSheet.jsx:52` |
+| 27 | PUT | `/api/settings` | API-025 | yes | `settings.js:11` (`:20-24` at r29) | `LanguagePicker.jsx:32`, `city.js:23`, `SettingsScreen.jsx:91`, `:105`, `:119` |
+| 28 | POST | `/api/settings/card-sample` | API-036 | yes | `settings.js:11-14` (at r29) | `SettingsScreen.jsx:165` (at r31) |
+| 29 | GET | `/api/hidden` | API-026 | yes | `user.js:5` | `SettingsScreen.jsx:64` |
+| 30 | DELETE | `/api/hidden/:id` | API-027 | yes | `user.js:11` | `HiddenScreen.jsx:45` |
+| 31 | DELETE | `/api/hidden` | API-028 | yes | `user.js:17` | `HiddenScreen.jsx:62` |
+| 32 | GET | `/api/favorites` | API-029 | yes | `user.js:23` (`:26-27` at r33) | `useInfiniteFeed.js:33` (`:31-42` at r33) |
+| 33 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
+| 34 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
+| 35 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
+| 36 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
+| 37 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin, one more since release `index-CBlEKxdL.js` (the owner chip, `OwnerChip.jsx:54-62` at r31), and the sites of the six owner events since release `index-CIa0Ldj2.js` (§2 API-034) |
+| 38 | GET | `/api/owner/listings` | API-037 | yes | `src/lib/api/owner.js` | `SettingsScreen.jsx:101-107`, `OwnerListings.jsx:307-320`, `:352`, `OwnerForm.jsx:214-219` |
+| 39 | POST | `/api/owner/listings` | API-038 | yes | `src/lib/api/owner.js:30-34` | `OwnerForm.jsx:183-238` |
+| 40 | GET | `/api/owner/listings/:id` | API-039 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:183-238`, `:708-721`, `:1484-1620`, `OwnerPanel.jsx` |
+| 41 | PATCH | `/api/owner/listings/:id` | API-040 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:245-337` |
+| 42 | POST | `/api/owner/listings/:id/photos` | API-041 | yes | `src/lib/api/owner.js:57-70` | `OwnerForm.jsx:435-524` |
+| 43 | DELETE | `/api/owner/listings/:id/photos/:photoId` | API-042 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:511-524` |
+| 44 | POST | `/api/owner/listings/:id/photos/order` | API-043 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:492-510` |
+| 45 | POST | `/api/owner/listings/:id/contact_mode` | API-044 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:644-667` |
+| 46 | POST | `/api/owner/listings/:id/publish` | API-045 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:668-741` |
+| 47 | POST | `/api/owner/listings/:id/status` | API-046 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:322-361`, `OwnerPanel.jsx:87-113` |
+| 48 | GET | `/api/owner/pending` | API-047 | yes | `src/lib/api/owner.js` | `ownerPending.js:6-57`, `App.jsx:141-147` |
+| 49 | GET | `/api/owner/requests` | API-048 | yes | `src/lib/api/owner.js:122-127` | `OwnerListings.jsx:477-479`, `OwnerPanel.jsx:271` |
+| 50 | POST | `/api/owner/requests/:id` | API-049 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:493-560` |
+| 51 | POST | `/api/owner/waitlist` | API-050 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:1639-1655` |
+| 52 | POST | `/api/owner/place` | API-051 | yes | `src/lib/api/owner.js` | `PlacePicker.jsx:63-83`, `OwnerForm.jsx:565-571` |
+| 53 | GET | `/api/owner/map-start` | API-052 | yes | `src/lib/api/owner.js:157` | `OwnerForm.jsx:197-209` |
+| 54 | GET | `/api/owner/demand` | API-053 | yes | `src/lib/api/owner.js:165-184` | `OwnerForm.jsx:347-369` |
+| 55 | POST | `/api/listings/:id/contact` | API-054 | yes | `src/lib/api/owner.js:191-192` | `ContactRequestSheet.jsx:50-85` |
 
 ### 4.2 Client requests → documentation
 
@@ -2350,7 +2586,7 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 
 | Client request | Where | Documented in | Result |
 | -------------- | ----- | ------------- | ------ |
-| 54 `apiFetch` methods at the pinned release (36 at `index-BnFvC-Ft.js`, 35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-054) |
+| 55 `apiFetch` methods at the pinned release (54 at `index-CBlEKxdL.js`, 36 at `index-BnFvC-Ft.js`, 35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-055) |
 | Prefetch of meta, first feed page, deep-link listing | `src/main.jsx:24-39` | Doc:87-98 | documented |
 | `XMLHttpRequest POST /api/events` (boot errors) | `index.html:76-88` | Doc:974-975, Doc:1007 | documented |
 | `XMLHttpRequest GET /api/bot` (boot fallback) | `index.html:94-102` | Doc:38-39, Doc:500-501 | documented |
@@ -2378,7 +2614,7 @@ legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`
 
 | # | Topic | Documentation says | Code says | Supported by code |
 | - | ----- | ------------------ | --------- | ----------------- |
-| 1 | `404` on `GET /api/listings/:id` | screen «объявление недоступно» (Doc:74) | `listing.loadFailed` = «Объявление не загрузилось» (`ListingScreen.jsx:115-116`, `ru.js:156`) | code text |
+| 1 | `404` on `GET /api/listings/:id` | screen «объявление недоступно» (Doc:74) | up to `index-CBlEKxdL.js` `listing.loadFailed` = «Объявление не загрузилось» (`ListingScreen.jsx:115-116`, `ru.js:156`); since release `index-CIa0Ldj2.js` `listing.gone` = «Этого объявления уже нет — квартиру, похоже, сдали или продали» with «Смотреть свежие», and nothing uses `listing.loadFailed` any more (`ListingScreen.jsx:175-201` at r33; Doc r35:712-714 states the new screen) | code text |
 | 2 | Error body | always `{"detail": "…"}` string (Doc:56-62) | client reads only string `detail` (`client.js:88-96`); legacy `422` has an array `detail` (`about.md:108`) | both shapes exist; client tolerant |
 | 3 | Phone exposure | «номера телефонов открываются только через временные ссылки звонка» (`about.md:349`) | `ListingDetails.phone` is plain `+998…` (Doc:316) and dialled as `tel:${phone}` on Android (`src/lib/telegram/links.js:28`) | the raw number reaches every client (LB-API-030) |
 | 4 | Quiet/digest presets | examples `off, 23-08, 22-09` / `09, 09,21, 21` (Doc:846-847, mock) | bot presets `off, 22-08, 23-08, 00-09, 23-07` / `09, 09,19, 12,20, 19` (`telegram-bot.md:990`) | unknown — Q-API-029 |
@@ -2386,6 +2622,16 @@ legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`
 | 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:60-62`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:68-70`) | data is live (LB-API-017) |
 | 7 | `useMapTilePrefetch` JSDoc | `tiles` "object" (`src/app/useMapTilePrefetch.js:12`) | `meta.tiles` is a string (Doc:443) | string |
 | 8 | `entry` JSDoc (release `index-DY_DH7h-.js`) | `'filters' \| 'few' \| 'prompt' \| 'empty'` (`src/app/subscriptionActions.js:92`, `src/lib/api/subscriptions.js:10`) | the app also sends `feed` and `return` (`App.jsx:635`, `:752` at the pin); current Doc:789 lists all six | six values |
+| 9 | Undo of «Уже сдано» (release `index-CIa0Ldj2.js`) | the toast action reads «Отменить» (Doc r35:854; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:21` at r36) | `toast.undo` = «Вернуть» / «Undo» / «Qaytarish» (`src/app/useListingActions.js:36-50`, `src/i18n/locales/ru.js:241` at r33) | code text: «Вернуть» |
+| 10 | `area_min` / `area_max` per deal (release `index-CIa0Ldj2.js`) | only for `sale` (Doc r35:204-207) | the sheet shows the area range and sends the keys for every deal (`src/features/filters/FiltersSheet.jsx:221`, `src/features/filters/sheet/ExtraSections.jsx:9-42` at r33) | the code decides what is sent; what the server does with the range for rent is Q-API-082 |
+| 11 | Error of `GET /api/listings/:id?preview=1` (release `index-CIa0Ldj2.js`) | not shown, the spinner stays (Doc r35:79-80, :709-710) | «Не загрузилось» with «Повторить» in the card slot (`src/features/map/MapSelectionCard.jsx:22-54`, `:111-121` at r33); the map section of the contract says the same (Doc r35:690-691) | code; the two passages are stale |
+| 12 | `409` limit on the radar switch (release `index-CIa0Ldj2.js`) | the switch rolls it back silently (Doc r35:83) | rollback and the toast «Не получилось сохранить» (`src/features/radar/RadarScreen.jsx:130-134` at r33) | code (`03` LB-APP-081) |
+| 13 | A missing dictionary key (release `index-CIa0Ldj2.js`) | `t()` throws a `TypeError`, so an unknown type breaks the radar screen (Doc r35:204-207) | `t()` and `plural()` return the `ru` entry, or the key itself, and report `app_error` once per key (`src/i18n/index.js:110-125`, `:180-193` at r33); the owner dictionary has no such fallback, so an owner key still throws (`src/features/owner/owner.js:701-707` at r31; `inferred`) | code; the passage holds only for the owner dictionary |
+| 14 | Report reason `agent` (release `index-CIa0Ldj2.js`) | not offered when the card says `is_owner: false` (Doc r35:808-809) | also not offered unless `author.kind` is `"phone"` (`src/features/listing/ListingScreen.jsx:389-390`, `src/features/listing/ListingActionsSheet.jsx:177` at r33); the model section of the contract states the new rule (Doc r35:337-341) | code; the passage is stale |
+
+Source comments of release `index-CIa0Ldj2.js` differ from the text shown in one more place:
+`src/features/map/MapScreen.jsx:3`, `:43` and `src/features/map/MapSelectionCard.jsx:157` (at r33) say «Не удалось
+загрузить», while the string is `common.loadFailed` = «Не загрузилось».
 
 ## 5. Unused, obsolete, duplicate or risky endpoints
 
@@ -2414,11 +2660,14 @@ Nothing here is a deletion recommendation. Proposed fixes and old-client impact 
 | `POST /api/listings/:id/contact` (since `index-CBlEKxdL.js`) | risky: a chat message to a third person per call; the limits exist only on the server | — | Doc r31:820-822, :838-839 | BR-API-185, Q-API-076 |
 | `GET /api/owner/requests` (since `index-CBlEKxdL.js`) | risky: personal data (the seeker's Telegram name shown to the owner) | — | Doc r31:1413-1427 | Q-API-077 |
 | `POST /api/owner/listings` (since `index-CBlEKxdL.js`) | risky: a new draft per call, with no documented reuse | — | `src/lib/api/owner.js:30-34` (at r31); Doc r31:1434-1435 | LB-APP-054, Q-API-068 |
+| `DELETE /api/listings/:id/report` (since `index-CIa0Ldj2.js`) | risky: undoes a vote that may already have acted for other users; the answer to a repeat is not documented | — | Doc r35:860-864, :1422-1426; `src/app/useListingActions.js:36-50` (at r33) | API-055, BR-API-190, Q-API-079 |
+| `GET /api/favorites` (since `index-CIa0Ldj2.js`) | risky: paged for every caller, while bundles cached before the release never send a cursor and loop on a non-null `next_cursor` (`inferred`) | — | Doc r35:1157-1162, :1400-1401; `src/features/feed/useInfiniteFeed.js:31-42` (at r33) | API-029, LB-API-057, Q-API-084 |
+| `GET /api/listings/:id` (since `index-CIa0Ldj2.js`) | risky: a daily cap answered as `429 too many today`, with an unknown threshold, window and counted identity | — | Doc r35:712-714, :1366-1367; `src/lib/api/client.js:29-30` (at r33) | BR-API-193, Q-API-080 |
 | `POST /api/listings/:id/translate` | risky: LLM cost per call | — | `useListingTranslation.js:32` | LB-API-032 |
 | `GET /api/feed/count`, `/api/feed/flow` | risky: load (live per change + 3 requests per radar) | — | `useLiveFeedStats.js`, `useRadarPreviews.js` | LB-API-038, LB-API-052 |
 | `GET /api/feed/new` | fragile: a body without numeric `count` crashes the old client; `since` from the device clock, unbounded | — | `src/app/useReturnNudge.js:112-136` (at the pin) | LB-API-055, Q-API-066 |
-| `GET /api/favorites`, `/api/history` | risky: unbounded single page | — | Doc:930-941 | LB-API-024 |
-| `POST /api/listings/:id/favorite` | risky: toggle, not idempotent | — | Doc:636-647 | LB-API-039 |
+| `GET /api/favorites`, `/api/history` | risky: unbounded single page; since `index-CIa0Ldj2.js` only `/api/history`, favourites are paged | — | Doc:930-941; Doc r35:1157-1162 | LB-API-024 |
+| `POST /api/listings/:id/favorite` | risky: toggle, not idempotent; since `index-CIa0Ldj2.js` only for a request without a body, the body names the wanted state | — | Doc:636-647; Doc r35:746-766 | LB-API-039, BR-API-197 |
 | `/img/snap/<id>.webp` | risky: unsigned copies of third-party photos | — | RES-013 | LB-API-054 |
 | `/call/<token>` | risky: phone disclosure surface | — | RES-005 | LB-API-045, Q-API-042 |
 | `POST /api/csp-report` | risky: public write sink | — | RES-015 | Q-API-050 |

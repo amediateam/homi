@@ -363,7 +363,7 @@
     "id": "BOT-030",
     "kind": "deep-link",
     "trigger": "`/start s_seo[_<lang>][_<slice>]`",
-    "summary": "SEO pages' «Открыть в Telegram» button, slices per seo-pages.md §9 (e.g. `s_seo_tashkent_yunusobod_2k`, `s_seo_uz_kv_yunusobod-minor`). Bot response not recorded; expected as BOT-027.",
+    "summary": "SEO pages' «Открыть в Telegram» button, slices per seo-pages.md §9 (e.g. `s_seo_tashkent_yunusobod_2k`, `s_seo_uz_kv_yunusobod-minor`). Bot response not recorded; expected as BOT-027. Since Mini App release index-CIa0Ldj2.js the no-access screen is a second producer of the language forms: `s_seo_en`, `s_seo_uz`, with `--l<id>` (BOT-031).",
     "buttons": [
       "BTN-001",
       "BTN-002",
@@ -379,7 +379,7 @@
     "id": "BOT-031",
     "kind": "deep-link",
     "trigger": "`/start s_<source>--l<id>`",
-    "summary": "Observed with `s_web--l51358`: sticker + welcome, then a third message TXT-BOT-008 with BTN-004. Built by the Mini App no-access screen; `<source>` is `web`, a campaign code (`fb12`, `tg3`, `ig5`), `seo` or `share`. Format CONFIRMED (`$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:26-27, 66`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-42`).",
+    "summary": "Observed with `s_web--l51358`: sticker + welcome, then a third message TXT-BOT-008 with BTN-004. Built by the Mini App no-access screen; `<source>` is `web`, a campaign code (`fb12`, `tg3`, `ig5`), `seo` or `share`; since Mini App release index-CIa0Ldj2.js `seo` is `seo_en` or `seo_uz` by the interface language (`ru` keeps `seo`). The link is not built for `blocked` and, since that release, `paused`. Format CONFIRMED (`$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:26-27, 66`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-42`; `$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:26,41-47,72-75`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:69-79`, r33).",
     "buttons": [
       "BTN-001",
       "BTN-002",
@@ -1134,7 +1134,7 @@
     "id": "BOT-081",
     "kind": "scheduled-message",
     "trigger": "New listing matches an active radar in instant mode",
-    "summary": "Expected: listing card (BOT-059) pushed to the chat. Not observed in ~13 min; whether the radar name is shown is unknown (Q-BOT-002).",
+    "summary": "Expected: listing card (BOT-059) pushed to the chat. Not observed in ~13 min; whether the radar name is shown is unknown (Q-BOT-002). Since Mini App release index-CIa0Ldj2.js the Mini App accepts `?radar=<id>` (TMA-012); whether this message carries such a button is unknown (Q-BOT-050).",
     "buttons": [
       "BTN-035",
       "BTN-036",

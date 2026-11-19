@@ -43,7 +43,8 @@
     "name": "No-access screen (403 from /api/meta)",
     "kind": "screen",
     "entry_points": [
-      "GET /api/meta answers 403 (private|invite|full|blocked|join)"
+      "GET /api/meta answers 403 (private|invite|full|blocked|join)",
+      "403 detail paused (since index-CIa0Ldj2.js)"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx",
@@ -116,12 +117,14 @@
       "$KVADRO_ROOT/demo/app/src/app/ViewToggle.jsx",
       "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js",
       "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
-      "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js"
+      "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js",
+      "$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js"
     ],
     "apis": [
       "GET /api/subscriptions",
       "GET /api/cities",
-      "GET /api/owner/pending"
+      "GET /api/owner/pending",
+      "GET /api/feed/new"
     ],
     "storage_keys": [],
     "analytics_events": [
@@ -244,7 +247,8 @@
       "$KVADRO_ROOT/demo/app/src/features/map/leaflet/MapView.jsx",
       "$KVADRO_ROOT/demo/app/src/features/map/pins.js",
       "$KVADRO_ROOT/demo/app/src/features/map/tilePrefetch.js",
-      "$KVADRO_ROOT/demo/app/src/app/useMapTilePrefetch.js"
+      "$KVADRO_ROOT/demo/app/src/app/useMapTilePrefetch.js",
+      "$KVADRO_ROOT/demo/app/src/features/map/gl/useMapPoints.js"
     ],
     "apis": [
       "GET /api/map",
@@ -447,7 +451,9 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/minuteClock.js"
     ],
     "apis": [
       "GET /api/listings/:id",
@@ -458,7 +464,8 @@
       "POST /api/listings/:id/contact"
     ],
     "storage_keys": [
-      "kv-owner-tip"
+      "kv-owner-tip",
+      "kv-start-done"
     ],
     "analytics_events": [
       "$pageview",
@@ -482,7 +489,8 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingSkeleton.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
-      "$KVADRO_ROOT/demo/app/src/components/ErrorState.jsx"
+      "$KVADRO_ROOT/demo/app/src/components/ErrorState.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx"
     ],
     "apis": [
       "GET /api/listings/:id"
@@ -559,7 +567,8 @@
       "POST /api/listings/:id/block-author",
       "DELETE /api/listings/:id/block-author",
       "POST /api/listings/:id/report",
-      "GET /api/bot"
+      "GET /api/bot",
+      "DELETE /api/listings/:id/report"
     ],
     "storage_keys": [],
     "analytics_events": [],
@@ -663,7 +672,8 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarStrip.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/radar.css"
     ],
     "apis": [
       "GET /api/settings",
@@ -782,7 +792,9 @@
       "kv-new-cards"
     ],
     "analytics_events": [
-      "$pageview"
+      "$pageview",
+      "owner_attention",
+      "owner_limit_sheet"
     ],
     "status": "CONFIRMED"
   },
@@ -797,7 +809,8 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsPages.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/ChoiceList.jsx",
-      "$KVADRO_ROOT/demo/app/src/lib/telegram/theme.js"
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/theme.js",
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx"
     ],
     "apis": [
       "PUT /api/settings"
@@ -1169,7 +1182,9 @@
     ],
     "apis": [],
     "storage_keys": [],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_limit_sheet"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -1187,7 +1202,8 @@
       "$KVADRO_ROOT/demo/app/src/app/App.jsx",
       "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
       "$KVADRO_ROOT/demo/app/src/features/owner/owner.js",
-      "$KVADRO_ROOT/demo/app/src/styles/owner-shared.css"
+      "$KVADRO_ROOT/demo/app/src/styles/owner-shared.css",
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx"
     ],
     "apis": [
       "POST /api/owner/listings",
@@ -1196,7 +1212,9 @@
     ],
     "storage_keys": [],
     "analytics_events": [
-      "$pageview"
+      "$pageview",
+      "owner_place_set",
+      "owner_place_autofill"
     ],
     "status": "CONFIRMED"
   },
@@ -1218,7 +1236,9 @@
       "POST /api/owner/place"
     ],
     "storage_keys": [],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_place_set"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -1317,7 +1337,9 @@
     ],
     "apis": [],
     "storage_keys": [],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_mascot_tap"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -1333,7 +1355,8 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
       "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx",
-      "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx"
+      "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx"
     ],
     "apis": [
       "GET /api/owner/listings",
@@ -1396,7 +1419,10 @@
     "storage_keys": [
       "kv-own-focus"
     ],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_attention",
+      "owner_hint_opened"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -1413,7 +1439,8 @@
       "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx",
       "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js",
       "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
-      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/ownerAttention.js"
     ],
     "apis": [
       "GET /api/owner/pending"
@@ -1421,7 +1448,9 @@
     "storage_keys": [
       "kv-req-tip"
     ],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_attention"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -1467,6 +1496,29 @@
     "analytics_events": [
       "owner_info_opened"
     ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-063",
+    "name": "Fresh pill «Показать N новых»",
+    "kind": "overlay",
+    "entry_points": [
+      "return from background after >= 6 h on the search tab with the list scrolled >= 60 px or covered, when count > 0 (since index-CIa0Ldj2.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/TopBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js",
+      "$KVADRO_ROOT/demo/app/src/lib/api/feed.js",
+      "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js",
+      "$KVADRO_ROOT/demo/app/src/styles/chrome.css"
+    ],
+    "apis": [
+      "GET /api/feed/new"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
     "status": "CONFIRMED"
   }
 ]
