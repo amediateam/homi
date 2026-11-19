@@ -2,26 +2,34 @@
 
 Scope: the Telegram Mini App `app.kvadro.app` (React 19 + Vite 8), as recovered by decompiling the production bundle.
 The recovered tree is `$KVADRO_ROOT/demo/app/`. The audit of 2026-11-09 described release `index-plF_TOcT.js` (prod
-`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT). It was brought up to `index-DY_DH7h-.js` (prod `Last-Modified` Fri,
-13 Nov 2026 22:05:41 GMT, SVN r27), the pin of WP-02, and by the intake of 2026-11-19 to the pinned release
-`index-BnFvC-Ft.js` (prod `Last-Modified` Sat, 14 Nov 2026 21:05:33 GMT, SVN r29;
-`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`; [`wave-1/baseline.md`](wave-1/baseline.md)). Text added for a later
-release names that release. "At the pin" in text written before that intake cites the code at r27; text of the intake
-cites a file at r29 when it has not changed since ("at r29"; `svn info` Last Changed Rev), else the release's delta
-units (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/delta/units/`) or the file at r31 ("at r31"),
-whose lines may already hold a later release. Other line numbers are those of the audited tree. The Telegram
-WebApp integration is in [`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are
-named by `METHOD path`; their `API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
+`Last-Modified` Sat, 07 Nov 2026 22:05:36 GMT). It was brought up to `index-DY_DH7h-.js` (prod `Last-Modified` Fri, 13
+Nov 2026 22:05:41 GMT, SVN r27), the pin of WP-02, and by the intakes of 2026-11-19 first to `index-BnFvC-Ft.js` (prod
+`Last-Modified` Sat, 14 Nov 2026 21:05:33 GMT, SVN r29; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`), the previous pin,
+and then to the pinned release `index-CBlEKxdL.js` (prod `Last-Modified` Tue, 17 Nov 2026 22:05:45 GMT, SVN r31;
+`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31; [`wave-1/baseline.md`](wave-1/baseline.md)). Text added for a later
+release names that release. "At the pin" in text written before those intakes cites the code at r27. Text of the intake
+of `index-BnFvC-Ft.js` cites a file at r29 when it had not changed since ("at r29"; `svn info` Last Changed Rev), else
+the release's delta units (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/delta/units/`) or the file at
+r31 ("at r31"). Text of the intake of `index-CBlEKxdL.js` cites files at r31, the state that release was read in; the
+checkout has moved to a later release since (`wave-1/baseline.md`), so these are not the line numbers of today's
+checkout. Other line numbers are those of the audited tree. The Telegram WebApp integration is in
+[`05-telegram-miniapp-audit.md`](05-telegram-miniapp-audit.md) (`TMA-NNN`). Endpoints are named by `METHOD path`; their
+`API-NNN` ids are in `08-api-inventory.md`. The machine-readable screen list is
 [`data/screens.json`](data/screens.json).
 
 How this audit was made: by reading the code only. Nothing was built or run, so no item is `RUNTIME_VERIFIED`. The
 recovery itself was checked against the production bundle by 79 differential parity scenarios at the audit, by 109
 at `index-DY_DH7h-.js` (57 screens and sheets, ten of them for SCR-046 and SCR-047; 36 filter; 16 GL;
-`$KVADRO_ROOT/CLAUDE.md:26-28`) and by 119 at `index-BnFvC-Ft.js` (67 screens and sheets, ten more for SCR-048; 36
-filter; 16 GL; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:54-56,86`). Those ran on
-mocks that the recovery authors inferred from the code, not on the real API
-(`$KVADRO_ROOT/demo/app/tools/parity/README.md`, `$KVADRO_ROOT/CLAUDE.md` "Commands"). Code that the recovery
-reconstructed by guesswork carries `// TODO: inferred from build` and is `UNVERIFIED` here; §6 has the list.
+`$KVADRO_ROOT/CLAUDE.md:26-28`), by 119 at `index-BnFvC-Ft.js` (67 screens and sheets, ten more for SCR-048; 36 filter;
+16 GL; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:54-56,86`) and by 137 at
+`index-CBlEKxdL.js` (85 screens and sheets, 18 more for the owner cabinet; 36 filter; 16 GL), plus two
+bundle-against-source stands of 45 scenarios (the list and the panel of the owner cabinet) and 88 (its form and place
+picker) (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/REPORT.md:77-89`). Those ran on mocks that the
+recovery authors inferred from the code, not on the real API (`$KVADRO_ROOT/demo/app/tools/parity/README.md`,
+`$KVADRO_ROOT/CLAUDE.md` "Commands"); the mocks of the owner cabinet and of the contact request are theirs too
+(`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:253-301` at r31). Code that the recovery reconstructed by guesswork
+carries `// TODO: inferred from build` and is `UNVERIFIED` here; §6 has the list. The owner files of `index-CBlEKxdL.js`
+carry no such mark.
 
 Policy (HOMI, 2026-11-09): HOMI **fixes** legacy bugs and logically wrong decisions instead of reproducing them. Every
 `LB-APP` item therefore has a `Proposed fix:` line. Proposals are not approved changes. The inventory of existing
@@ -48,10 +56,18 @@ behaviour in §1–§4 stays exact.
    enum can therefore white-screen the app (LB-APP-002, LB-APP-015, LB-APP-016).
 5. **Session-only state and the map stack need explicit decisions.**
    - Favourites, "seen" and locally hidden maps live only in memory (`App.jsx:65-73`).
-   - Eleven `kv-*` localStorage keys (ten at the audit; `kv-visits` since release `index-DY_DH7h-.js`) and their
-     Telegram DeviceStorage mirror must keep their names, or users lose client settings (§3.2).
+   - Thirteen `kv-*` localStorage keys (ten at the audit; `kv-visits` since release `index-DY_DH7h-.js`; `kv-req-tip`
+     and `kv-owner-tip` since `index-CBlEKxdL.js`) and their Telegram DeviceStorage mirror must keep their names, or
+     users lose client settings (§3.2). Release `index-CBlEKxdL.js` also brings the first sessionStorage key,
+     `kv-own-focus`.
    - The map is two parallel implementations (MapLibre GL and Leaflet) with different behaviour (SCR-011).
    - The radar tab sends 3 requests per subscription (LB-APP-036).
+6. **Since release `index-CBlEKxdL.js` the Mini App is also an owner's tool.** The cabinet «Сдать квартиру» (SCR-049 to
+   SCR-060) has 17 methods of its own under `/api/owner/*`. The owner's phone is confirmed through the bot:
+   `WebApp.requestContact` gives the app only a yes or a no, and the app then polls the server for the result
+   (BR-APP-084, TMA-034). An unknown enum value or dictionary key crashes its screens (LB-APP-064). The listing screen
+   changes for every owner's listing as well: an owner chip with an info sheet, a section «Хозяин — со слов объявления»,
+   and a request instead of a call for an owner who hides the number (SCR-061, SCR-062, BR-APP-098 to BR-APP-103).
 
 ## 1. Architecture
 
@@ -68,10 +84,15 @@ behaviour in §1–§4 stays exact.
   - `toast`, `nudgeCandidate` / `followNudge`, `homeOffer`
   - `radarReturn` / `resume`
   - session maps `favs`, `seen`, `hidden`
+  - since release `index-CBlEKxdL.js`: `ownerFormId` (the owner form is open when it is `null`, for a new draft, or an
+    owner listing id) and `ownerVersion` (the Settings group and the owner panel read their data again when it changes)
+    (`App.jsx:133-148`, `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:101-107` at r31)
 - **Render order.** One base layer is chosen by `tab`/`view` (`App.jsx:484-528`). Overlays are rendered after it in a
   fixed JSX order (`App.jsx:546-670`): sort, listing, radar editor, filters, create radar, home nudge, follow nudge,
   quick filter, city picker, first-launch city picker, toast. Later siblings paint on top at equal z-index; the CSS
-  z-index layers are in §3.6.
+  z-index layers are in §3.6. Since release `index-CBlEKxdL.js` the JSX also holds the tab tip of SCR-060
+  (`App.jsx:719-734` at r31) and the lazy owner form layer of SCR-050, rendered once meta is loaded (`App.jsx:801-822`
+  at r31; z 46).
 - **Portals.** `MarketSheet` and `FoundSheet` render into `document.body` through `createPortal`
   (`$KVADRO_ROOT/demo/app/src/features/listing/MarketSheet.jsx:161-220`,
   `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:124-182`).
@@ -79,7 +100,10 @@ behaviour in §1–§4 stays exact.
   (`App.jsx:49`, `$KVADRO_ROOT/CLAUDE.md` "Hard constraints"). This does not bind the port.
 - **Screen-name precedence for analytics** (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:26-44`):
   `listing > radar/edit > radar/new > filters > filters/<kind> > sort > city > map/draw > tab screen`. Tab screens are
-  `search/list`, `search/map`, `saved/favorites`, `saved/history`, `subs`, `settings`.
+  `search/list`, `search/map`, `saved/favorites`, `saved/history`, `subs`, `settings`. Since release `index-CBlEKxdL.js`
+  there are two more names, `owner/form` (any step of the owner form) and `owner/mine` («Мои объявления»). Of the three,
+  `listing` wins over `owner/form`, which wins over `owner/mine`, so a form opened over a listing is reported as
+  `listing` (`useScreenTracking.js:30-51` at r31). Their place among the other names of the chain is not recorded here.
 - **Tabs.** Defined in `$KVADRO_ROOT/demo/app/src/app/tabs.js:8-29`:
   - order `search` (Search icon), `favorites` (Heart), `subs` (custom RadarIcon), `settings` (Settings);
   - labels `tab.search` «Поиск», `tab.favorites` «Избранное», `tab.subs` «Радар», `tab.settings` «Настройки»;
@@ -107,6 +131,19 @@ behaviour in §1–§4 stays exact.
   - Drawing mode (`$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js:37-44`)
   - Radar-return mode: Back on the search tab after "open radar feed" restores the previous filters, sort, list view
     and radar sheet (`useTelegramButtons.js:54-79`).
+  - Since release `index-CBlEKxdL.js`, the layers of the owner cabinet (line numbers at r31; the table is in SCR-050):
+    - the lazy frame of a page whose chunk is loading or failed to load: Back closes the page
+      (`$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:97-118`);
+    - the owner form: with the photo menu open, Back closes the menu; on the first map step it closes the whole form; on
+      the steps «phone» and «mode» and on the rejection state it returns to the questionnaire and restores its scroll
+      position; otherwise it closes the form. Every Back from the form gives a light haptic
+      (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:370-385`);
+    - the place picker opened from the form (`.../owner/PlacePicker.jsx:51-52`);
+    - the limit sheet (`.../settings/OwnerLimitSheet.jsx:17-32`);
+    - «Мои объявления» and «Отклики», through SubPage (`SubPage.jsx:19-27`); «Отклики» opened from the owner panel is an
+      overlay with its own Back.
+    - They stack in mount order: the lazy frame pushes its close while the chunk loads, then the form pushes its own
+      handler, and an open picker pushes its own close.
 - **No Back handler:** the base tabs, the map selection card (SCR-013, LB-APP-024), the follow, return and home nudges,
   the in-feed radar card, toasts and the first-launch city picker. With an empty stack, Telegram's BackButton is hidden.
 - **SettingsButton** (Telegram 7.0+) closes the listing, filters and radar editor and switches to the settings tab
@@ -115,7 +152,15 @@ behaviour in §1–§4 stays exact.
   - start threshold 10 px; close at 33% of width or 0.5 px/ms; settle 180 ms;
   - disabled on Android (`:27`) and inside `.strip, .scroll, .leaflet-container, input, textarea, select, [data-no-swipe]`;
   - used by ListingScreen, but only when nothing is open over it (`ListingScreen.jsx:89-93`), and by SubPage
-    (`SubPage.jsx:19`).
+    (`SubPage.jsx:19`);
+  - since release `index-CBlEKxdL.js` (`useSwipeBack.js:15-16,65-76,128-138` at r31): a layer marked `data-edge-swipe`
+    (only the owner's place picker, SCR-051) takes the swipe only from the left 24 px, and the exclusion list does not
+    apply to it; a touch inside a nested `.subpage` of the layer belongs to that sub-page (only the owner cabinet nests
+    them: «Отклики» inside «Мои объявления», and the lazy frame); after a closing swipe the inline styles are removed
+    300 ms after `onBack`, if the layer is still in the document;
+  - since the same release the listing closes without its leave animation after a swipe (`onCloseNow`,
+    `ListingScreen.jsx:120-133` at r31), and the layers of the owner cabinet take the swipe as the table of SCR-050
+    says: the form on its loading, error, limit, questionnaire and done views, but not on the steps «phone» and «mode».
 - **Sheet drag-to-close.** `useSheetDrag` (`$KVADRO_ROOT/demo/app/src/hooks/useSheetDrag.js:41-212`) works on the
   sheet's handle area:
   - start threshold 6 px; close at 25% of height or 0.5 px/ms; settle 200 ms;
@@ -125,7 +170,11 @@ behaviour in §1–§4 stays exact.
   - Tapping the backdrop closes every sheet except the first-launch city picker.
 - **Collapsing chrome.** Scrolling the search list down by more than 24 px past the anchor adds `html.chrome-mini`; it
   is always expanded within 60 px of the top (`$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js:4-85`). While
-  collapsed, the first tap on the chrome (tab, view toggle, mini title) only expands it (`App.jsx:346-358`).
+  collapsed, the first tap on the chrome (tab, view toggle, mini title) only expands it (`App.jsx:346-358`). Since
+  release `index-CBlEKxdL.js` the open listing no longer switches it off: the condition is the search tab, not the map,
+  and no filters sheet, radar editor or quick filter (`App.jsx:339-341` at r31; before: also no open listing). The
+  chrome collapsed before a card opened is then still collapsed when the card closes (`inferred` from the condition; not
+  seen running).
 
 ### 1.3 Startup sequence
 
@@ -177,6 +226,12 @@ behaviour in §1–§4 stays exact.
    `useHomeScreenEvents` restores DeviceStorage keys and records the visit day (`$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:23-32`).
    Since release `index-DY_DH7h-.js`, once meta is loaded every search-tab visit is recorded per filter set in
    `kv-visits`, and once the radars are loaded the return banner may send `GET /api/feed/new` (BR-APP-070, BR-APP-071).
+   Since release `index-CBlEKxdL.js` `App` also mounts the pending counter of the owner cabinet, so
+   `GET /api/owner/pending` is sent at start and on every return to the app, for every user (BR-APP-091, LB-APP-066;
+   `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:6-57`, `App.jsx:141-147` at r31). A launch with the `start_param`
+   `owner_new` or `owner-new`, or with the page query `owner=new`, opens the owner form on a new draft; this is read
+   once, when `App` mounts (TMA-046, BR-APP-075; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71`,
+   `App.jsx:133-135` at r31).
 
 ### 1.4 Render gating (`App.jsx:228-236`)
 
@@ -213,6 +268,7 @@ While meta is still loading, the shell renders with `meta = null`. Consequences:
 | Boot script | `error` (capture) before `__kvBoot.ok`: XHR `app_error` (kind `boot`), then the "Update Telegram" screen | `index.html:69-142` |
 | Global handlers | `error` and `unhandledrejection`. Ignored: "Script error.", errors without text, `ApiError` rejections, `AbortError`. Dedup by `kind|name|message`; max 5 per session. `stage` is `boot` until meta succeeds, then `app`. `screen` comes from `useScreenTracking`. | `$KVADRO_ROOT/demo/app/src/lib/errors.js:68-123` |
 | Render errors | `ErrorBoundary` reports `render` (and `posthog.captureException` once analytics is loaded) and shows the crash screen (SCR-045) | `$KVADRO_ROOT/demo/app/src/app/ErrorBoundary.jsx:11-42`, `$KVADRO_ROOT/demo/app/src/lib/analytics.js:192` |
+| Lazy pages | Since release `index-CBlEKxdL.js` `LazyErrorBoundary` reports `render` for an error inside a lazy page or block; a chunk that fails to load shows an `ErrorState` whose retry imports it again (§1.9) | `$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:81-83,146-209` (at r31) |
 | Telegram callbacks | `safeCallback` re-throws asynchronously so a throw inside an SDK event does not break the SDK | `webApp.js:167-177` |
 | API | `ApiError(status, detail)`; `status 0` with `detail` `timeout` or `network`; 15 s timeout; `detail` is taken only when it is a string | `client.js:9-111` |
 | Screens | `ErrorState` distinguishes offline (`error.offline`) from server (`common.loadFailed`); the feed shows an inline retry when items already exist | `$KVADRO_ROOT/demo/app/src/components/ErrorState.jsx:13-26`, `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:126-136` |
@@ -248,16 +304,38 @@ While meta is still loading, the shell renders with `meta = null`. Consequences:
 - **Fallback.** If the GL chunk fails to load, Leaflet is used. A runtime `onFail` switches the current mount to
   Leaflet; it is not persisted (`$KVADRO_ROOT/demo/app/src/features/map/MapScreen.jsx:17-50`).
 - The listing mini-map uses the same engine choice (`$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx:19-58`).
+- Since release `index-CBlEKxdL.js` the place picker of the owner form follows the same engine choice and falls back to
+  Leaflet when GL fails (SCR-051; `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:98-114`,
+  `$KVADRO_ROOT/demo/app/src/features/owner/pickMap.js:30-66,143-157` at r31).
 
 ### 1.9 Lazy chunks
 
 - **Map:** `MapViewGL`, `MapView` (Leaflet), `spotGL`, `spotLeaflet`, MapLibre (vendored ESM), `pmtiles`, the
   `leaflet` / `protomaps-leaflet` basemap, and `MapCard` (lasso, selection card, pins)
-  (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:28-43`).
+  (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:28-43`). Since release `index-CBlEKxdL.js` Leaflet is its own chunk
+  `leaflet-src` (still 1.9.4), and the GL style chunk is `glstyle`, renamed from `mapgl`
+  (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:34` at r31).
 - **Analytics:** `posthog-js` plus the `web-vitals-with-attribution`, `exception-autocapture`, `dead-clicks-autocapture`
   and `lazy-recorder` extensions (`analytics.js:128-134`).
 - **Prefetch.** After 2.5 s on the list view, `preloadMapView()` and a tile prefetch run so that opening the map is fast
   (`$KVADRO_ROOT/demo/app/src/app/useMapTilePrefetch.js`, `$KVADRO_ROOT/demo/app/src/features/map/tilePrefetch.js:225-251`).
+- **Owner cabinet** (since release `index-CBlEKxdL.js`; line numbers at r31):
+  - three lazy chunks: `OwnerForm` (a layer; `$KVADRO_ROOT/demo/app/src/app/layers.js:5-8`), `OwnerListings` (a Settings
+    page; `SettingsScreen.jsx:51-52`) and `OwnerPanel` (a block of the listing screen; `ListingScreen.jsx:41-42`)
+    (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:10-12`);
+  - the owner dictionary `owner.js` (`own.*`, §3.1) and `owner.css` travel in a shared `owner` chunk
+    (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:1-5`; `CHANGELOG.md:13`);
+  - `pickMap` is a second-level lazy import from `PlacePicker` (index → `OwnerForm` → `pickMap`). It in turn loads
+    `leaflet-src` or `glstyle` (`$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:103-114`; `CHANGELOG.md:34`;
+    `$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/REPORT.md:104-106`);
+  - these stay in the main bundle: `ReqTip`, `OwnerLimitSheet`, `ownerPending`,
+    `$KVADRO_ROOT/demo/app/src/lib/api/owner.js` and the 10 `own.*` keys of the main dictionaries (§3.1).
+- **`LazyPage`** (since the same release; `$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:11-67,97-209` at r31), used
+  only for the three owner chunks:
+  - while a chunk loads, a frame with the title and a spinner; a frame that has shown once does not replay its entrance
+    (`.subpage.settled`);
+  - a failed load shows an `ErrorState` whose retry imports the chunk again (through `reset()`);
+  - 600 ms after the first lazy page or block is shown, every registered chunk is preloaded once.
 
 ### 1.10 Dependencies and build target
 
@@ -283,10 +361,15 @@ Losing a WebView reload loses these:
   (`sessionVisits`, module scope of `$KVADRO_ROOT/demo/app/src/features/feed/followNudge.js:119-123`), the hashes for
   which `feed_radar_shown` was sent (`feedRadarShown`, `App.jsx:123-124`) and the pending and shown return banner
   (`App.jsx:115-120`), all at the pin.
+- Since release `index-CBlEKxdL.js`: the pending counter of the owner cabinet (one number in module memory, BR-APP-091;
+  `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:6-13` at r31); the unsent edits of the owner form, which live in
+  component state until the next flush, with no local copy of a draft (BR-APP-079;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:245-337` at r31); and the reason an owner chose for a declined
+  request (BR-APP-090).
 
-All but `sessionVisits` are in `App.jsx` (`:65-90` in the audited tree). The server is the source of truth after a
-reload (`item.favorite`, `item.viewed`, and hidden listings filtered server-side). The settings tab's hidden screen
-resets `hidden` to `{}` after any change (`App.jsx:499`).
+The items up to release `index-DY_DH7h-.js`, except `sessionVisits`, are in `App.jsx` (`:65-90` in the audited tree).
+The server is the source of truth after a reload (`item.favorite`, `item.viewed`, and hidden listings filtered
+server-side). The settings tab's hidden screen resets `hidden` to `{}` after any change (`App.jsx:499`).
 
 ### 1.12 Server-formatted vs client-formatted values
 
@@ -374,7 +457,7 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 
   | Reason | Title (`noAccess.title.*`) | Text (`noAccess.text.*`) |
   | ------ | -------------------------- | ------------------------ |
-  | `private` | «Бот приватный» | «Приложение сейчас доступно только владельцу.» |
+  | `private` | «Бот приватный» | «Приложение сейчас доступно только команде kvadro².» |
   | `invite` | «Вход по приглашению» | «Войти можно по ссылке-приглашению: откройте её и нажмите «Старт» в боте.» |
   | `full` | «Мест пока нет» | «Сейчас все места заняты. Попробуйте позже.» |
   | `blocked` | «Нет доступа» | «Доступ к приложению закрыт.» |
@@ -390,6 +473,10 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - `noAccess.text.full`: «Все места в бете заняты. Попробуйте позже.» / «Betada joy qolmadi. Keyinroq urinib koʻring.»
     / «All beta spots are taken. Please try again later.» became «Сейчас все места заняты. Попробуйте позже.» /
     «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
+- **Reworded in release `index-CBlEKxdL.js`:** `noAccess.text.private`: «Приложение сейчас доступно только владельцу.» /
+  «…faqat egasi uchun ochiq.» / «…only to its owner for now.» became «Приложение сейчас доступно только команде
+  kvadro².» / «Ilova hozir faqat kvadro² jamoasi uchun ochiq.» / «The app is available only to the kvadro² team for
+  now.» (`ru.js:33`, `uz_Latn.js:31`, `en.js:31` at r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:29` at r31).
 - **Checking line:** `noAccess.checking` «Только что нажали «Старт»? Подождите пару секунд — проверяем доступ…».
   Shown while an automatic re-check is pending: 3 tries at 2.5 s, never for `blocked`.
 - **Actions:**
@@ -472,22 +559,29 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
     (`$KVADRO_ROOT/demo/app/src/app/ViewToggle.jsx`, `App.jsx:529`).
   - Pull-to-refresh indicator (SCR-010) and decorative `mini-ring` spans.
   - `nav.tabbar.glass`: 4 tabs with lucide icons at 24 px. Labels longer than 13 characters get class `long`
-    (`TabBar.jsx:12-33`).
+    (`TabBar.jsx:12-33`). Since release `index-CBlEKxdL.js` the Settings tab carries a red dot while requests to the
+    owner wait for an answer (SCR-060), and inactive tabs are tinted with `color-mix(var(--text) 55%)` instead of
+    `opacity .55`, with a `@supports` fallback (`chrome.css:130-150` at r31); that the red dot is the reason for the
+    tint is `inferred`.
 - **Actions:**
   - tab press: light haptic, clears radar-return, `scrollTo(0,0)`;
   - deal switch: keeps geography, resets other filters (BR-APP-002);
   - view toggle;
   - mini-title tap: expands the chrome.
 - **APIs:** `GET /api/subscriptions` on entering the search tab and after radar changes (`App.jsx:173-177`);
-  `GET /api/cities` each time the filters sheet opens (`App.jsx:167-171`).
+  `GET /api/cities` each time the filters sheet opens (`App.jsx:167-171`). Since release `index-CBlEKxdL.js` also
+  `GET /api/owner/pending`, at start and on every return to the app (BR-APP-091).
 - **Analytics:** `$pageview` for `search/list`, `search/map`, `saved/favorites`, `saved/history`, `subs`, `settings`.
 - **Adaptive:**
   - safe-area padding via `--top-inset` / `--bottom-inset` built from Telegram CSS variables;
   - `html.fullscreen` centres the mini title in Telegram's header row (`$KVADRO_ROOT/demo/app/src/styles/chrome.css:223-230`);
   - no width breakpoints; a phone layout only, with the feed limited to a 608 px column (`$KVADRO_ROOT/demo/app/src/lib/images.js:34`).
 - **Animation:** the chrome collapses with a `clip-path` morph (translate in lite) over 0.35–0.45 s; the tab lens moves
-  with a spring easing (`chrome.css:100-319`).
-- **Sources:** `App.jsx:440-545`; `TopBar.jsx`; `TabBar.jsx`; `ViewToggle.jsx`; `$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js`.
+  with a spring easing (`chrome.css:100-319`). Since release `index-CBlEKxdL.js` the collapsed chrome stays collapsed
+  under an open listing (§1.2).
+- **Sources:** `App.jsx:440-545`; `TopBar.jsx`; `TabBar.jsx`; `ViewToggle.jsx`;
+  `$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js`; since `index-CBlEKxdL.js` also
+  `$KVADRO_ROOT/demo/app/src/styles/red-dot.css` and `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js`.
 - **Status:** CONFIRMED.
 
 ### SCR-007 — Search feed: list (`screen`)
@@ -506,7 +600,10 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - city (MapPin + name), only when there is more than one city.
 - **Cards** (`$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx:32-93`):
   - photo strip with scroll-snap and dots; lazy slide mounting; a ▶ badge for video;
-  - badge tag (BR-APP-026), favourite heart, «viewed» eye (aria `card.viewedTitle`), `status_text` warning tag;
+  - badge tag of a kind (BR-APP-026; since release `index-CBlEKxdL.js` `warn` orange, `verified` with a green
+    `ShieldCheck`, `quiet` grey and medium weight, «Ниже рынка» plain; `ListingCard.jsx:60-61`,
+    `$KVADRO_ROOT/demo/app/src/styles/listing-card.css:160-181` at r31), favourite heart, «viewed» eye (aria
+    `card.viewedTitle`), `status_text` warning tag;
   - price `main` + `period` + the price-kind label, or «Цена договорная» (`card.negotiable`). The label
     (`priceKindLabel`, `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43`; `ListingCard.jsx:74`) is
     «· первый взнос» (`card.downPayment`) for `price_kind: "down_payment"` and, since release `index-Dbpp463V.js`,
@@ -675,9 +772,11 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Opens:** tapping a pin, stack or max-zoom cluster.
 - **Closes:** × (aria `common.close`), a background tap, entering drawing mode, or new data. **Telegram Back does not
   close it** (LB-APP-024).
-- **Layout:** `.map-card.glass` holding a compact `ListingCard` (one photo, `verdict.short`, no badges). For stacks:
-  header «{n} из {total}» (`map.stackOf`) and a scroll-snap track that renders only ±1 slots, with a light haptic on
-  slot change (`$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx:24-124`).
+- **Layout:** `.map-card.glass` holding a compact `ListingCard` (one photo, `verdict.short`, no badges; since release
+  `index-CBlEKxdL.js` a green `ShieldCheck` after the price for `owner_verified`, `role="img"` with the label
+  `card.ownerVerified`; `ListingCard.jsx:92-97` at r31). For stacks: header «{n} из {total}» (`map.stackOf`) and a
+  scroll-snap track that renders only ±1 slots, with a light haptic on slot change
+  (`$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx:24-124`).
 - **Data:** `GET /api/listings/:id?preview=1` for the current and adjacent items, once each. On error the id is
   un-marked for a later retry and the spinner remains (LB-APP-017).
 - **Actions:** tap the card to open the listing (SCR-018); favourite toggle.
@@ -830,7 +929,8 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
     (`openListing`);
   - a deep link `start_param l_<id>…` or `?listing=<id>` (initial `listingId`, `App.jsx:61`).
 - **Closes:** Telegram Back; swipe right (not on Android, and only when nothing is open over it); the Settings button;
-  hide / block / report-rented / fraud-hidden actions.
+  hide / block / report-rented / fraud-hidden actions. Since release `index-CBlEKxdL.js` a close plays the leave
+  animation, except after a swipe (**Animation** below).
 - **Layout** (`$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:158-247`): a fixed `listing-layer` (z 45)
   holding a scrollable `main.listing`.
   - **Hero** photo strip: counter «N / M»; a big ▶ «Смотреть видео в Telegram» (`listing.watchVideo`) for videos; tap
@@ -838,38 +938,74 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - **Sheet** body:
     - `status_text` banner;
     - **title row**: h1 title, «district · landmark», share (only when `bot_username` is known), favourite and «⋯»
-      (aria «Ещё») (`$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:64-89`);
+      (aria «Ещё») (`$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:64-89`); since release
+      `index-CBlEKxdL.js` also the owner chip «Проверенный хозяин» with its tip, under the title (BR-APP-100,
+      BR-APP-101; `ListingTitleRow.jsx:86`, `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:10-86` at r31);
     - **key facts** tiles: rooms (plural `listing.rooms`), m², floor `n/total`, «Новый / Вторичка» building
       (`$KVADRO_ROOT/demo/app/src/features/listing/sections/KeyFacts.jsx:19-53`);
     - **market block** «Сравнение с районом» / «… с похожими рядом» / «… с городом»: info button, verdict, a scale with
       a marker animated from the centre on first show this session, «дешевле … обычно {value}{unit} … дороже», a
-      context line, and warnings (`$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx:85-179`);
+      context line, and warnings (`$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx:85-179`); since
+      release `index-CBlEKxdL.js` its class is `.island`, not `.market`, with no visual change (`MarketBlock.jsx:120`,
+      `$KVADRO_ROOT/demo/app/src/styles/listing.css:203` at r31);
     - **facts grid** «Факты», from server `facts[]` with icons; values longer than 18 characters span full width
       (`$KVADRO_ROOT/demo/app/src/features/listing/sections/FactsSection.jsx`);
     - **stats cells**: days on market («Сегодня на рынке» when 0), publications, channels (only when > 1), views
       (`$KVADRO_ROOT/demo/app/src/features/listing/sections/StatsSection.jsx`);
     - **history**: a single sentence «Опубликовано {date} в @{channel}. Повторов и изменений цены пока не было.» with a
       clickable channel, or the «История цены» timeline (date, time, event text, @channel, price, ±% with a
-      good/high colour) (`$KVADRO_ROOT/demo/app/src/features/listing/sections/HistorySection.jsx`);
+      good/high colour) (`$KVADRO_ROOT/demo/app/src/features/listing/sections/HistorySection.jsx`); since release
+      `index-CBlEKxdL.js` a self-placed listing has the sentence «Хозяин разместил квартиру в kvadro² {date}. Изменений
+      цены пока не было.» (`details.historySelf`), with no channel (BR-APP-102);
     - **location** «Расположение»: a non-interactive spot mini-map (2:1, lazy via IntersectionObserver; tap opens the
       fullscreen map), the hint «Место примерное: по кварталу, ориентиру или метро из объявления», place row, centre
       distance, and «Рядом» (metro ≤ 1.5 km plus server `nearby[]` with `~` distances)
       (`$KVADRO_ROOT/demo/app/src/features/listing/sections/LocationSection.jsx`, `NearbySection.jsx`,
-      `$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx:86-126`);
+      `$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx:86-126`); since release `index-CBlEKxdL.js` the
+      spot-map buttons (`.lmap-expand`, `.lmap-attrib`, `.lmap-close`, `.lmap-locate`) have `z-index: 1000`
+      (`$KVADRO_ROOT/demo/app/src/styles/spot-map.css:31-46` at r31);
+    - **claimed owner** (since release `index-CBlEKxdL.js`): the section «Хозяин — со слов объявления» with «Мы не
+      проверяли — спросите при звонке, нет ли комиссии.», for a listing with `is_owner` that is neither `owner_verified`
+      nor self-placed (BR-APP-100; `ListingScreen.jsx:270-281` at r31);
     - **author** «Кто размещает»: owner text, `offers[]` (links open with `original_opened src=offers`), phone (masked
-      for session replay; tap calls) and «Опубликовано {when}» (`sections/AuthorSection.jsx`);
-    - **description** «Из объявления» (`summary`);
+      for session replay; tap calls) and «Опубликовано {when}» (`sections/AuthorSection.jsx`); since release
+      `index-CBlEKxdL.js` the `owner` text is hidden when it repeats the owner chip or the claimed section (BR-APP-100),
+      and a self-placed listing adds «Обычно отвечает за {n} мин» (`contact.usually`) and, while the caller's request
+      waits, «Отклик отправлен — ответ придёт в бот.» (`contact.pendingNote`) (BR-APP-102);
+    - **description** «Из объявления» (`summary`); since release `index-CBlEKxdL.js` the section shows when `summary` or
+      `owner_description` is set, the latter as a second paragraph (BR-APP-102);
     - **source** «Источник»: channel chips, then the disclosure «Текст оригинала». Inside: «Перевести / Перевожу… /
       Показать оригинал» (not in ru), «Не получилось перевести», the original or translated text with the author's
       phone as a call button, and «Перевод сделан ИИ» (`sections/SourcesSection.jsx`, `sections/OriginalText.jsx`).
+      Since release `index-CBlEKxdL.js` a self-placed listing has no «Источник» section (BR-APP-102).
   - **CTA bar** (fixed bottom, z 20): price + period, delta / note, and a primary button «Позвонить» / «Написать» /
-    «Номер платный» / «Открыть пост», or a shimmer placeholder (`ListingCtaBar.jsx:17-83`).
+    «Номер платный» / «Открыть пост», or a shimmer placeholder (`ListingCtaBar.jsx:17-83`). Since release
+    `index-CBlEKxdL.js`, for a listing in gate mode, the button is «Связаться с хозяином» or a quiet, inactive «Отклик
+    отправлен», or a two-line bar replaces it (BR-APP-098; `ListingCtaBar.jsx:34-71,105-121` at r31).
 - **Data flow:**
   - It renders the feed `preview` at once.
   - `GET /api/listings/:id` replaces it (consuming the prefetch for deep links). The screen scrolls to the top on each
     new id.
   - If the response `id` differs, the screen switches to that id without a refetch (redirect; release `plF_TOcT`,
     `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js:19-65`).
+- **Owner and request states** (since release `index-CBlEKxdL.js`; line numbers at r31). The screen derives them from
+  the card:
+
+  | Name | Rule | Evidence |
+  | ---- | ---- | -------- |
+  | self-placed | `owner_self` is true on the full card | `ListingScreen.jsx:205` |
+  | gate | self-placed **and** `contact_mode === "gate"` **and** no `phone` on the card | `ListingScreen.jsx:206`; `$KVADRO_ROOT/docs/api.md:386-387` |
+  | request | `my_request` of the card, else none | `ListingScreen.jsx:207` |
+  | closed request | the request is `declined`, `agent`, `expired` or `cancelled` | `ListingScreen.jsx:45-46` |
+  | no contact | the full card is loaded **and** self-placed **and** (`owner_mine` **or** (gate **and** closed request)) | `ListingScreen.jsx:209-210` |
+  | owner chip | `owner_verified` (preview or card) **or** self-placed | `ListingScreen.jsx:232` |
+  | claimed | the full card is loaded **and** not `owner_verified` **and** not self-placed **and** `is_owner` | `ListingScreen.jsx:272` |
+  | mine | `owner_mine` on the full card | `ListingScreen.jsx:211` |
+
+  `my_request` is `pending`, `given`, `declined`, `agent`, `expired`, `cancelled` or `null`
+  (`$KVADRO_ROOT/docs/api.md:348`). These are the six statuses of the owner's `OwnerRequest.status`, where `agent` means
+  that the owner marked the seeker a realtor (`$KVADRO_ROOT/docs/api.md:1413-1425`). The seeker's UI shows `agent`
+  exactly like `declined` (`ListingCtaBar.jsx:108-116`).
 - **Contact:**
   - `call_url` is kept with a timestamp and refreshed through `GET /api/listings/:id/call` 8 minutes after receipt, or
     on return to the app when stale (TTL 10 min, `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:22-90`).
@@ -885,14 +1021,26 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:15`,
   `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:53`).
 - **Actions menu:** SCR-023.
-- **Overlays:** PhotoViewer (SCR-020), MarketSheet (SCR-022), SpotMapFullscreen (SCR-021).
+- **Overlays:** PhotoViewer (SCR-020), MarketSheet (SCR-022), SpotMapFullscreen (SCR-021). Since release
+  `index-CBlEKxdL.js` also the contact request sheet (SCR-061) and the owner info sheet (SCR-062). The user's own
+  listing is the state SCR-059.
 - **APIs:**
   - `GET /api/listings/:id`, `GET /api/listings/:id/call`;
   - `POST /api/listings/:id/translate`, `POST /api/listings/:id/favorite`, `POST /api/listings/:id/share`;
-  - plus the actions-sheet calls.
+  - plus the actions-sheet calls;
+  - since release `index-CBlEKxdL.js` also `POST /api/listings/:id/contact`, from SCR-061.
+- **Storage:** since release `index-CBlEKxdL.js` `kv-owner-tip`, written by the owner chip (BR-APP-101; §3.2).
 - **Analytics:** `$pageview listing` with `listing_id`; `listing_shared`; `original_opened` (`src` = `button`, `video`,
-  `sources`, `price_history`, `offers`); `original_copied`; `contact_call` (`via`, `src`); `contact_write`.
+  `sources`, `price_history`, `offers`); `original_copied`; `contact_call` (`via`, `src`); `contact_write`. Since
+  release `index-CBlEKxdL.js` also `owner_info_opened {listing_id}`, sent by the owner chip (BR-APP-101).
 - **Gestures:** swipe-back; horizontal photo strip; tap the mini-map.
+- **Animation** (since release `index-CBlEKxdL.js`): the layer enters from 24 % with opacity 0 over 0.25 s
+  (`@starting-style`) and leaves the same way over 0.2 s ease-in (`.leaving`; the listing is unmounted after
+  `LISTING_LEAVE_MS = 200`). Lite graphics and reduced motion close at once, without either animation. A swipe back
+  closes at once. Opening a listing during the leave cancels it (`$KVADRO_ROOT/demo/app/src/app/layers.js:10-15`,
+  `App.jsx:207-235`, `$KVADRO_ROOT/demo/app/src/styles/listing.css:1-35` at r31). That the layer had no entrance or
+  leave animation before is `inferred` from the CSS diff of the release: the old `.listing-layer` rule had no
+  transition, and there was no `@starting-style`.
 - **Localization:** translate is hidden for `ru` (`$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22`).
   Dates in history use the device timezone (LB-APP-025).
 - **Edge cases:**
@@ -900,8 +1048,12 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - Without phone, contact or post there is no CTA, only a placeholder.
   - Translation and «original open» state are not reset when `id` changes (LB-APP-003).
   - The call button can silently do nothing (LB-APP-028).
+  - Since release `index-CBlEKxdL.js`: a chip tap before the card loads (LB-APP-072); the request errors `open`,
+    `closed` and `own` leave the card stale (LB-APP-073); `given` without a phone (LB-APP-074); the test that hides the
+    author label (LB-APP-075); an expired request (LB-APP-076); the info sheet after the number was given (LB-APP-078).
 - **Sources:** `ListingScreen.jsx`; `ListingHero.jsx`; `ListingTitleRow.jsx`; `ListingCtaBar.jsx`; `format.js`;
-  `sections/*`; `hooks/*`; `spot/SpotMap.jsx`.
+  `sections/*`; `hooks/*`; `spot/SpotMap.jsx`; since `index-CBlEKxdL.js` also `$KVADRO_ROOT/demo/app/src/app/layers.js`,
+  `OwnerChip.jsx`, `OwnerInfoSheet.jsx`, `ContactRequestSheet.jsx` and `sections/OwnerPriceSection.jsx`.
 - **Status:** CONFIRMED.
 
 ### SCR-019 — Listing loading and error states (`state`)
@@ -912,6 +1064,11 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   (`listing.loadFailed`), with no button. Only Back closes it (`ListingScreen.jsx:112-122`).
 - **Other errors:** a tall `ErrorState` with «Повторить», which bumps `reloadKey`.
 - **Gestures:** swipe-back is disabled until there is data (`ListingScreen.jsx:89-93`).
+- **Since release `index-CBlEKxdL.js`:** the re-read of the card after a request answered `given` shows the state
+  "preview shown, details pending" again and scrolls to the top (LB-APP-074;
+  `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js:42-44` at r31). The skeleton no longer wraps
+  itself in a layer of its own; it sits inside the animated listing layer (SCR-018; the release's unit
+  `018-modified-ListingSkeleton.jsx.diff`).
 - **Status:** CONFIRMED.
 
 ### SCR-020 — Photo viewer (`overlay`)
@@ -1047,8 +1204,9 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 
 - **Purpose:** the server list of listings the user opened.
 - **Opens:** the «Смотрели» sub-tab.
-- **List:** `GET /api/history`. The list is re-created whenever the session `seen` count changes (`App.jsx:516`). The
-  «viewed» eye is not shown here.
+- **List:** `GET /api/history`. The list is re-created by pull-to-refresh and by entering the tab. Before release
+  `index-CBlEKxdL.js` it was also re-created whenever the session `seen` count changed (`App.jsx:516`); since that
+  release the key is `<feedVersion>:<sub-tab>` (`App.jsx:673` at r31). The «viewed» eye is not shown here.
 - **Tool:** «Очистить» (`feed.clear`, trash icon) when items exist. It asks the confirm «Очистить историю просмотров?»
   (`feed.clearConfirm`), then `DELETE /api/history`, clears the list and plays the success haptic. A failure plays the
   error haptic only (`ListingFeed.jsx:93-112`).
@@ -1173,6 +1331,8 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   `https://t.me/<bot>?start=s_friend` with `found.shareText`, only when the bot is known) and «Готово».
 - **APIs:** `POST /api/found {answer, trigger}`; `POST /api/found/where {where}`. Both are fire-and-forget; errors are
   ignored.
+- **Reworded in en by release `index-CBlEKxdL.js`:** `found.where.agent` «Through a realtor» became «Through an agent»,
+  and `found.shareText` says «owners vs. agents», not «owners vs. realtors» (`en.js:494,502` at r31).
 - **Sources:** `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:85-184`.
 - **Status:** CONFIRMED.
 
@@ -1181,6 +1341,18 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Opens:** the Settings tab, or the Telegram Settings button.
 - **Loading:** spinner. **Error:** a tall ErrorState with retry (`$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:71-80`).
 - **Groups:**
+  - «Сдаю квартиру» (`own.group`; since release `index-CBlEKxdL.js` the first group, the entry point and summary of the
+    owner cabinet; `SettingsScreen.jsx:233-275` at r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:30` at r31):
+    - «Сдать квартиру» (House icon). Its value is «Бесплатно», or at the limit «{n} из {max}» with both numbers set to
+      `max`, so it reads «2 из 2» (`SettingsScreen.jsx:234-253` at r31). A tap gives a light haptic and opens the limit
+      sheet (SCR-049) when `can_add === false`, otherwise the owner form with a new draft (SCR-050, BR-APP-075);
+    - «Мои объявления» (ListChecks icon), shown only when the owner has listings (`SettingsScreen.jsx:264-275` at r31).
+      Its value is the first that applies: «ждут ответа: N» when requests wait for an answer; else the number of
+      `active` and `paused` listings that are not `withdrawn`; else «Черновик» when a draft exists; else empty
+      (`SettingsScreen.jsx:216-229` at r31). The row also carries a red counter with the pending number (the `count` of
+      `SettingsRow`, §2.1). A tap gives a light haptic and opens SCR-057, a lazy sub-page;
+    - while `GET /api/owner/listings` loads, and after it failed (offline included), the group shows only «Сдать
+      квартиру» with «Бесплатно», and the limit is not checked. Errors are silent (`SettingsScreen.jsx:102` at r31);
   - «Оформление»: Тема (value «Как в Telegram / Светлая / Тёмная») and Графика (Android only, or when the mode was
     changed: «Авто · полная», «Авто · облегчённая», «Полная», «Облегчённая»);
   - «Язык и валюта»: Язык, Валюта;
@@ -1197,13 +1369,32 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
     - «Мы в Instagram @kvadro.app» (`https://www.instagram.com/kvadro.app/`);
     - the about text «KvadroApp собирает объявления из открытых Telegram-каналов. В каждой карточке — ссылка на
       оригинал.» (`$KVADRO_ROOT/demo/app/src/features/settings/AboutGroup.jsx:17-52`).
+- **Texts of the group «Сдаю квартиру»** (main dictionaries, so visible before any chunk loads; `ru.js:605-615`,
+  `en.js:576-586`, `uz_Latn.js:576-586` at r31):
+
+  | Key | ru | uz_Latn | en |
+  | --- | -- | ------- | -- |
+  | `own.group` | «Сдаю квартиру» | «Kvartira ijaraga beraman» | «Renting out» |
+  | `own.title` | «Сдать квартиру» | «Kvartirani ijaraga berish» | «Rent out a flat» |
+  | `own.free` | «Бесплатно» | «Bepul» | «Free» |
+  | `own.mine` | «Мои объявления» | «Mening eʼlonlarim» | «My listings» |
+  | `own.pendingShort` | «ждут ответа: {n}» | «javob kutmoqda: {n}» | «waiting: {n}» |
+  | `own.draftShort` | «Черновик» | «Qoralama» | «Draft» |
+  | `own.limitValue` | «{n} из {max}» | «{n} / {max}» | «{n} of {max}» |
+
 - **Not present in the Mini App** (checked in code): city setting (city lives in the feed and filters), news toggle,
   privacy policy, data deletion, account. These are bot functions (`$KVADRO_ROOT/docs/about.md` §5.11; see
   `05-telegram-miniapp-audit.md` §3).
 - **APIs:** `GET /api/settings`, `GET /api/subscriptions` (digest hint), `GET /api/hidden`, `GET /api/bot`,
-  `PUT /api/settings`; since `index-BnFvC-Ft.js` also `POST /api/settings/card-sample` (from SCR-048).
+  `PUT /api/settings`; since `index-BnFvC-Ft.js` also `POST /api/settings/card-sample` (from SCR-048). Since
+  `index-CBlEKxdL.js` also `GET /api/owner/listings` (on mount, when `ownerVersion` changes, and when «Мои объявления»
+  is opened or closed; `SettingsScreen.jsx:101-107` at r31) and `GET /api/owner/pending` through the shared counter
+  (BR-APP-091).
 - **Storage:** since `index-BnFvC-Ft.js` the «Вид карточек» row writes `kv-new-cards` (§3.2).
-- **Analytics:** `$pageview settings`. Sub-pages are not tracked.
+- **Analytics:** `$pageview settings`. Sub-pages are not tracked, except «Мои объявления» since `index-CBlEKxdL.js`
+  (`owner/mine`, SCR-057).
+- **Edge cases:** since release `index-CBlEKxdL.js` every tap on «Сдать квартиру» below the limit creates a new draft
+  (LB-APP-054).
 - **Status:** CONFIRMED.
 
 ### SCR-033 — Settings › Theme (`screen`, sub-page)
@@ -1211,13 +1402,14 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
 - **Options:** `auto` «Как в Telegram», `light` «Светлая», `dark` «Тёмная».
 - **Effect:** applied at once (`kv-theme`, `data-theme` / `data-scheme`, the Telegram header and background colour),
   then `PUT /api/settings {theme}`. On error it rolls back with the error haptic (`SettingsScreen.jsx:98-114`).
-- **Sub-page chrome** (shared by SCR-033 to SCR-039 and SCR-048): a fixed layer (z 40) with a 24% slide-in,
-  swipe-back, Telegram Back, and a header shadow when scrolled
-  (`$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx`).
-  Since release `index-BnFvC-Ft.js` an open sub-page sets `body.subpage-open` (`overflow: hidden`), so the settings
-  list under it does not scroll, and `.subpage` has `overscroll-behavior: contain` (the release's unit
-  `011-modified-SubPage.jsx.diff`; `SubPage.jsx:21-25` and `$KVADRO_ROOT/demo/app/src/styles/settings.css:153,164` at
-  r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:61`).
+- **Sub-page chrome** (shared by SCR-033 to SCR-039 and SCR-048; since release `index-CBlEKxdL.js` also by SCR-057 and
+  SCR-058, through the lazy frame of §1.9): a fixed layer (z 40) with a 24% slide-in, swipe-back, Telegram Back, and a
+  header shadow when scrolled (`$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx`). Since release
+  `index-BnFvC-Ft.js` an open sub-page sets `body.subpage-open` (`overflow: hidden`), so the settings list under it does
+  not scroll, and `.subpage` has `overscroll-behavior: contain` (the release's unit `011-modified-SubPage.jsx.diff`;
+  `SubPage.jsx:21-25` and `$KVADRO_ROOT/demo/app/src/styles/settings.css:153,164` at r31;
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:61`). Since release `index-CBlEKxdL.js` a lazy frame that has shown once does
+  not replay its entrance (`.subpage.settled`; `$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:1-67` at r31).
 - **Status:** CONFIRMED.
 
 ### SCR-034 — Settings › Graphics (`screen`, sub-page)
@@ -1312,6 +1504,12 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - An object `{text, action, run}` shows an action button and closes after 6 s (`$KVADRO_ROOT/demo/app/src/components/Toast.jsx:11-38`).
   - Only one toast exists at a time; a new one replaces the old.
 - **A second instance** lives inside the filters sheet for the pets tips (`FiltersSheet.jsx:244-248`).
+- **Since release `index-CBlEKxdL.js`:** both kinds can be swiped down: the toast follows the finger and fades
+  (`max(0.2, 1 − dy/120)`); past 36 px it closes, otherwise it returns (`Toast.jsx:4-5,15-47` at r31). The offset
+  depends on what is at the bottom (`$KVADRO_ROOT/demo/app/src/styles/feedback.css:23-29,77-88` at r31): tab bar +
+  inset + 20 px by default; + 78 px with the view toggle (search tab); inset + 16 px over a sub-page; inset + 88 px over
+  the listing's CTA bar; inside the filters sheet `--fsheet-foot` + 10 px. Before the release there was a single offset,
+  tab bar + inset + 78 px, and the foot + 10 px inside the filters sheet.
 - **Status:** CONFIRMED.
 
 ### SCR-043 — Confirm dialogs (`modal`)
@@ -1323,7 +1521,10 @@ Strings are quoted ru / uz_Latn / en where they matter; otherwise by key (values
   - return all hidden (`hidden.confirmAll`);
   - restart the bot after `no_chat`: «Бот не может писать вам — похоже, он остановлен. Открыть чат с ботом? Нажмите там
     «Перезапустить» и включите радар снова.» (`chat.restart`), which opens `https://t.me/<bot>` on OK
-    (`$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:50-52`).
+    (`$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:50-52`);
+  - since release `index-CBlEKxdL.js`, in the owner cabinet: «Отметить «Сдано»? Объявление уйдёт из ленты, а тем, кто
+    ждёт ответа, скажем, что квартиру сдали.», «Снять объявление?» and «Удалить черновик?» (BR-APP-088;
+    `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:765-775` at r31).
 - **Status:** CONFIRMED.
 
 ### SCR-044 — Telegram system sheets triggered by the app (`modal`)
@@ -1334,7 +1535,9 @@ These are native Telegram UI with no app-side layout:
 - the `shareMessage` forward picker (TMA-030);
 - the `addToHomeScreen` dialog (TMA-036);
 - the LocationManager or browser geolocation permission (TMA-035);
-- `openLink` / `openTelegramLink` hand-off (TMA-028).
+- `openLink` / `openTelegramLink` hand-off (TMA-028);
+- since release `index-CBlEKxdL.js` the contact-sharing prompt of `requestContact`, on the phone step of the owner form
+  (TMA-034, SCR-053).
 
 The app only reacts to their results. Status: CONFIRMED (calls seen in code; native rendering not observed).
 
@@ -1481,6 +1684,644 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
 - **Status:** CONFIRMED for the client. What the bot sends for each style is UNVERIFIED (Q-API-067, Q-BOT-046;
   `04` §3.10).
 
+### SCR-049 — Limit sheet «Сдаются N из max квартир» (`sheet`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** tells an owner who lists the maximum number of flats why a new one cannot be added.
+- **Opens:** from the Settings row «Сдать квартиру» at the limit (SCR-032), with the button «Мои объявления»; or from
+  «Сдать ещё одну квартиру» in «Мои объявления» (SCR-057), with the button «Понятно»
+  (`$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:254-262`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:386`).
+- **Closes:** the button (light haptic), a tap on the backdrop, a drag on the handle, or Telegram Back
+  (`$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx:17-32`).
+- **Layout:** a bottom sheet (`csheet`) rendered into `document.body` through a portal (`OwnerLimitSheet.jsx:16-61`):
+  - the title `own.limitSheetTitle` with `n = max` and `max = max`: «Сдаются 2 из 2 квартир»;
+  - the text `own.limitSheetText` «Это максимум на один номер. Отметьте одну квартиру «Сдано» или снимите её — и сможете
+    добавить новую.» (`ru.js:609-611`);
+  - one button: «Мои объявления» (primary) or «Понятно» (`owner.info.ok`).
+- **Note:** the text speaks of a limit «на один номер» (per phone), while `can_add` and `max` are per account
+  (`$KVADRO_ROOT/docs/api.md:1406-1411`). Which of the two the server counts is open (Q-API-068).
+- **Sources:** `OwnerLimitSheet.jsx`; `SettingsScreen.jsx:254-262`; `OwnerListings.jsx:386`.
+- **Status:** CONFIRMED.
+
+### SCR-050 — Owner form «Сдать квартиру»: layer, loading, error and limit states (`screen`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** the layer in which an owner lists a flat for long-term rent or edits a listing. Its steps have entries of
+  their own: the place picker (SCR-051), the questionnaire (SCR-052), the phone confirmation (SCR-053) with its
+  rejection state (SCR-054), the contact mode (SCR-055) and the done state (SCR-056).
+- **Opens:** when `ownerFormId` is `null` (a new draft) or an owner listing id (an edit)
+  (`$KVADRO_ROOT/demo/app/src/app/App.jsx:133-148`). It renders only once `meta` is loaded, as a lazy layer keyed by
+  `id ?? 'new'` (`App.jsx:801-822`).
+- **Entry points of the cabinet:**
+
+  | Entry | What happens | Evidence |
+  | ----- | ------------ | -------- |
+  | Settings → group «Сдаю квартиру» (the first group, SCR-032) → row «Сдать квартиру» | A new draft in the form, or the limit sheet (SCR-049) when `can_add` is false | `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:233-262`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:30` |
+  | Settings → row «Мои объявления» (only when the owner has listings) | «Мои объявления» (SCR-057) | `SettingsScreen.jsx:264-275,366-380` |
+  | Launch link `startapp=owner_new` or `owner-new`, or the page query `?owner=new` | The app starts with the form open on a new draft. This is read once, when `App` mounts (TMA-046) | `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71`; `App.jsx:133-135` |
+  | «Сдать ещё одну квартиру» (the list), «Сдать ещё одну» (the panel, past listings) | A new draft | `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:363-371,462-466`; `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:212-215` |
+  | «Продолжить» on a draft card, a tap on a draft, «Изменить», the fill hints of the panel | The form for that listing (`id`) | `OwnerListings.jsx:111-126,422-436`; `OwnerPanel.jsx:164,187,238-244` |
+  | A published card with `listing_id` | The public listing screen in its `owner_mine` variant (SCR-059) | `OwnerListings.jsx:422-436` |
+  | The red dot and the tab tip «Пришёл первый отклик!» | Switches to the Settings tab (SCR-060) | `App.jsx:719-734` |
+
+- **Flow, end to end:**
+  1. An entry point sends `POST /api/owner/listings` (a new draft). `409` shows «Уже две квартиры», the limit state
+     below.
+  2. Step «where», for a draft without a point: the place picker (SCR-051). The map start is awaited for at most 1.5 s,
+     the address lookup runs 400 ms after the map stops, and «Готово» sends `POST /api/owner/place`, which fills the
+     city, the district and the landmark. «Указать вручную» leads to the questionnaire.
+  3. Step «form» (SCR-052): photos, place, rooms, price, renovation, furniture, tenants, pets and description. Autosave
+     by `PATCH` after 600 ms; the demand hint after 500 ms; «Дальше» needs a city, a place, rooms, a price and at least
+     one photo.
+  4. Step «phone» (SCR-053), unless `phone_set`: «Поделиться номером» calls `requestContact`, and the bot gets the
+     contact. The form polls `GET /api/owner/listings/:id` every 1.5 s for at most 90 s, until `phone_set`, a rejection
+     (SCR-054) or `not_uz` / `not_own`.
+  5. Step «mode» (SCR-055): «Через kvadro²» (`gate`) or «Показывать номер» (`open`) and a preview, then «Опубликовать»
+     sends `POST …/publish`, whose errors are `missing:…`, `status:…` and `rejected:…`.
+  6. Step «done» (SCR-056): confetti, then «Мои объявления» or «Готово».
+  7. Later: «Мои объявления» (SCR-057) and its «Отклики» (SCR-058) with «Дать номер», «Не подходит», the reasons, the
+     undo and «Оказался риелтором»; the owner's own listing with the panel «Ваше объявление» (SCR-059: stats, fill
+     hints, footer actions); the pending counter with the red dot, the Settings counter and the tips (SCR-060).
+- **Frame while the chunk loads:** a full-screen layer with the title «Сдать квартиру» and a spinner. Telegram Back and
+  swipe close it. A failed chunk load shows an `ErrorState` with a retry
+  (`$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:97-118,146-182`; §1.9).
+- **Data:**
+  - A new form sends `POST /api/owner/listings`; an existing one sends `GET /api/owner/listings/:id`. A spinner shows
+    meanwhile (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:183-238,768-774`).
+  - `409` on create shows the limit state: «Уже две квартиры», the text `own.limitText` and a «Мои объявления» button
+    (`OwnerForm.jsx:221-235,747-759`).
+  - Any other error shows a tall `ErrorState` with a retry. A retry of a **new** form posts again
+    (`OwnerForm.jsx:760-767`).
+  - A loaded draft without a point starts at step «where» (SCR-051); everything else starts at «form» (SCR-052)
+    (`OwnerForm.jsx:193-196`). A form that opens for a new draft also reads `GET /api/owner/listings` once, for «С
+    возвращением!» (BR-APP-095; `OwnerForm.jsx:214-219`).
+- **Layer:** `OwnerLayer`, a full-screen layer with a scroll area, a header with the title and an optional subtitle, and
+  a shadow once scrolled. It sets `body.listing-open` so the page below does not scroll (`OwnerForm.jsx:1459-1481`). In
+  the CSS the form layer is `z-index: 46` (`$KVADRO_ROOT/demo/app/src/styles/owner-shared.css:9-15`). Its footer bar and
+  the requests page opened from the panel are 47 (`$KVADRO_ROOT/demo/app/src/features/owner/owner.css:193-198,891-892`).
+  The place picker is 60 (`owner.css:1177-1183`), and so is the backdrop of the city sheet
+  (`$KVADRO_ROOT/demo/app/src/styles/city-sheet.css:7-8`).
+- **Back and swipe in the cabinet:**
+
+  | Where | Telegram Back | Swipe back | Evidence |
+  | ----- | ------------- | ---------- | -------- |
+  | The lazy frame of the form (chunk loading or chunk error) | closes the form | yes | `LazyPage.jsx:97-118` |
+  | Form layer: loading, load error, limit, «form», «done» | with the photo menu open it closes the menu; otherwise it closes the form | yes | `OwnerForm.jsx:370-382,749,762,769,844-849,995-996,1459-1461` |
+  | Step «where» (the first map) | closes the **whole form** | the picker's edge swipe closes the form | `OwnerForm.jsx:374-375,778,791`; `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:51-52,156` |
+  | The picker opened from the form | closes the picker | edge swipe (`data-edge-swipe`) | `PlacePicker.jsx:51-52,156` |
+  | Steps «phone» and «mode», and the rejection state | back to «form», with its scroll position restored | no | `OwnerForm.jsx:376-377,383-385,906,1623,1666` |
+  | «Мои объявления», «Отклики» | close the sub-page, as every Settings sub-page | yes | `$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx:19-27` |
+  | Limit sheet | closes it | a drag on the handle; a tap on the backdrop also closes it | `$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx:17-32` |
+
+  Every Back from the form gives a light haptic (`OwnerForm.jsx:371`). The handlers stack: the lazy frame pushes its
+  close while the chunk loads, then the form pushes its own handler, and an open picker pushes its own close. This is
+  the stack of §1.2 (TMA-022).
+- **«Мои объявления» from inside the form** closes the form and any open listing, switches to Settings and opens SCR-057
+  (`App.jsx:815-820`).
+- **APIs:** `POST /api/owner/listings` (API-038), `GET /api/owner/listings/:id` (API-039), `GET /api/owner/listings`
+  (API-037).
+- **Analytics:** the screen name is `owner/form` for all steps
+  (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:30-36`). The form sends no event (LB-APP-058).
+- **Edge cases:**
+  - On a first launch through `owner_new`, a user who has not chosen a city yet gets the blocking first-launch city
+    picker (SCR-005; `App.jsx:388,898-906`). Its root is `.sheet-backdrop.city-backdrop`
+    (`$KVADRO_ROOT/demo/app/src/features/city/CityPicker.jsx:55`), and `.city-backdrop` has `z-index: 60`, above the
+    form layer's 46, so the city most likely has to be picked first (`inferred` from the CSS: the rule order against
+    `.sheet-backdrop` was not checked; Q-APP-028). The language picker gate (SCR-004) comes before both
+    (`App.jsx:365-367`).
+  - Every entry creates a new draft (LB-APP-054).
+- **Sources:** `OwnerForm.jsx`; `LazyPage.jsx`; `$KVADRO_ROOT/demo/app/src/app/layers.js`; `App.jsx`;
+  `$KVADRO_ROOT/demo/app/src/lib/api/owner.js`; `$KVADRO_ROOT/demo/app/src/features/owner/owner.js` (the dictionary);
+  `owner-shared.css`.
+- **Status:** CONFIRMED.
+
+### SCR-051 — Place picker «Где квартира?» (`overlay`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** the owner sets the point of the flat on a map.
+- **Opens:**
+  - as step «where» of the owner form (SCR-050) for a new draft without a point. The secondary button is then «Указать
+    вручную» (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:776-797`);
+  - from the questionnaire (SCR-052), through the «Карта» button of the address field or a tap on the spot preview. The
+    secondary button is then «Отмена» (`OwnerForm.jsx:545-549,1012-1016,1040-1065`).
+  - The start view follows BR-APP-076. While the start point is still being resolved, the step shows a spinner
+    (`OwnerForm.jsx:779-783`).
+- **Closes:** «Готово», «Указать вручную» or «Отмена», Telegram Back, or a swipe from the left edge. On step «where»,
+  Back and the edge swipe close the whole form (SCR-050).
+- **Layout:** a full-screen map rendered into `document.body` through a portal, at `z-index: 60`
+  (`$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:155-216`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/owner.css:1177-1183`). It has:
+  - a fixed pin in the centre with a house glyph, which lifts while the map moves (`moving`), and a centre dot;
+  - the label under the pin: «…» while the lookup runs, else the address, else «landmark · district», else the city
+    name, else `own.pickNoAddr`;
+  - at the bottom, the round «Найти меня» button (only when a location can be requested, BR-APP-097) and a glass panel
+    with the title `own.whereTitle`, a hint line (`own.pickHint` or a status hint), the primary «Готово» (disabled until
+    the map is mounted) and the text button «Указать вручную» / «Отмена»;
+  - the map attribution.
+- **Map engine** (`PlacePicker.jsx:98-114`; `$KVADRO_ROOT/demo/app/src/features/owner/pickMap.js:30-66,143-157`):
+  - GL (MapLibre) when the app's engine is `gl` (§1.8). If GL fails, the picker falls back to Leaflet. PMTiles are
+    registered for a `.pmtiles` URL.
+  - GL is set up without rotation, pitch, keyboard or world copies. Its pixel ratio is 1 in lite graphics, else at
+    most 2. A tap eases the centre to the tapped point (300 ms).
+  - Leaflet uses `zoomSnap: 0.25` and the shared basemap (raster when `tiles` is `null`).
+- **Actions:**
+  - The address lookup follows BR-APP-077.
+  - «Найти меня» follows BR-APP-097.
+  - «Готово» with the centre outside the rectangle gives a warning haptic and the hint `own.pickOutside`. Otherwise it
+    gives a medium haptic, rounds the coordinates to 5 decimals and continues with BR-APP-078
+    (`PlacePicker.jsx:142-154`).
+  - «Указать вручную» (light haptic) leads to the questionnaire. «Отмена» closes the picker.
+- **States:** while waiting for the map start, a spinner. While the map mounts, «Готово» is disabled. If both engines
+  fail, the map stays blank and «Готово» stays disabled with no message (`inferred`: the Leaflet mount rejection is not
+  handled, `PlacePicker.jsx:103-114`; Q-APP-028). Offline: the lookup fails and the label shows `own.pickNoAddr`.
+- **Haptics:** light on opening (from the form) and on «Найти меня»; warning on a denied or failed location and on a
+  centre outside the rectangle; medium on «Готово».
+- **Texts** (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:27-47`): `own.whereTitle` «Где квартира?» (en «Where is
+  the flat?», uz «Kvartira qayerda?»); `own.pickHint` «Хватит ориентира рядом — точный адрес ищущие всё равно не
+  увидят.»; `own.pickDone` «Готово»; `own.whereManual` «Указать вручную»; `own.pickCancel` «Отмена»; `own.pickMe` (aria)
+  «Найти меня»; `own.pickNoAddr`; `own.pickDenied`; `own.pickFailed`; `own.pickRough`; `own.pickFarMe`;
+  `own.pickOutside`.
+- **APIs:** `GET /api/owner/map-start` (API-052), `POST /api/owner/place` (API-051).
+- **Edge cases:** Back from the first step closes the form and leaves the draft behind (LB-APP-054); the "inside
+  Uzbekistan" test is a rectangle (LB-APP-063).
+- **Sources:** `PlacePicker.jsx`; `pickMap.js`; `OwnerForm.jsx`.
+- **Status:** CONFIRMED. The real MapLibre and Leaflet render inside the form was checked only by the parity scenario
+  `owner-form-new` (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/REPORT.md:88-89`).
+
+### SCR-052 — Owner form › Questionnaire (`screen`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. Step «form» of SCR-050.
+- **Purpose:** the owner describes the flat. The form is for long-term rent only: the price is «В месяц», the renovation
+  list falls back to `rent_long`, and it asks who the tenants may be.
+- **Title:** «Сдать квартиру» for a draft; `own.editTitle` «Изменить объявление» when the listing was not a draft at
+  load (`isEdit`). The subtitle is `own.subtitle`, «Бесплатно. Риелторы ваш номер не увидят.»
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:180-181,995-1003`).
+- **Sections, in order** (`OwnerForm.jsx:1004-1391`):
+  1. **Welcome:** `own.welcome` «С возвращением! Вы уже размещали у нас квартир: {n}» (BR-APP-095).
+  2. **Place:**
+     - When `shown_point` exists and the point in the form equals the saved one, a spot preview with the circle that
+       seekers see, plus `own.mapNote` «Точный адрес никому не показываем: ищущие видят только круг около 500 м. Нажмите
+       на карту, чтобы поправить точку.» A tap opens the picker (SCR-051; `OwnerForm.jsx:980-989,1010-1016`).
+     - The field «Адрес или ориентир» (placeholder «Например, ул. Катартал», at most 120 characters). Without a preview
+       it carries the «Карта» button. Erasing the text while a point is set also removes the point
+       (`OwnerForm.jsx:1017-1053`).
+     - The error `own.pointOutside` when the point is rejected or outside the rectangle, and the note `own.placeNote`
+       after a silent fill (`OwnerForm.jsx:990-992,1055-1056`).
+  3. **Photos** «Фото {n} из 10» (`OwnerForm.jsx:1067-1137`; BR-APP-082):
+     - a grid in which the first photo carries «Обложка». A tap opens a mini menu: «Сделать обложкой» (star, only from
+       the second photo on) and «Удалить фото» (trash);
+     - spinner tiles while photos upload, and an add tile (camera when empty, image-plus otherwise). The add tile is
+       hidden during an upload and at 10 photos;
+     - a hidden `<input type="file" accept="image/*" multiple>`, an error line, and `own.photosTip` when there is more
+       than one photo.
+  4. **Where** (`OwnerForm.jsx:1137-1181`):
+     - city chips, only when meta has more than one city. Picking another city clears the district, the landmark and the
+       point;
+     - district chips («Район»), which toggle.
+  5. **Rooms** (`OwnerForm.jsx:1183-1253`; `$KVADRO_ROOT/demo/app/src/features/owner/NumberField.jsx:4-60`):
+     - buttons 1, 2, 3, 4, «5+» and the wide «Комната» (exclusive with the number of rooms);
+     - three number fields: «Площадь» (m², decimal), «Этаж» (integer; «5/9» also fills the number of floors) and
+       «Этажей» (integer). `own.floorBad` shows when the floor is above the number of floors.
+  6. **Price** (`OwnerForm.jsx:1254-1330`; BR-APP-083):
+     - «В месяц»: digits only, at most 12, shown with digit grouping. The placeholder is «600», or «7 000 000» in sum;
+     - the currency segment «$» / «сум» (default USD);
+     - the usual-price hint `own.usual`;
+     - renovation chips from `meta.renovations.owner` (falling back to `rent_long`), which toggle;
+     - furniture chips «С мебелью» / «Без мебели» (three states: yes, no, unset).
+  7. **Tenants** («Кому сдаёте»; `OwnerForm.jsx:1331-1369`):
+     - a multi-choice of «Семьям», «Студентам», «Девушкам», «Парням», «Иностранцам», with the hint «Можно выбрать
+       несколько. Не выбрали — значит, всем.»;
+     - pets chips «Можно с животными» / «Без животных» (three states).
+  8. **Description:** a 4-row text area of at most 600 characters (placeholder «Что рядом, какой двор, что есть в
+     квартире»), with the counter line `own.descriptionHint` «{n} из {max}. Номер здесь не пишите — мы его скроем.»
+     (`OwnerForm.jsx:1370-1391`).
+- **Footer** (a fixed glass bar, `OwnerForm.jsx:1392-1430`):
+  - One note line, the first that applies:
+    1. «Заполните: {what}» after «Дальше» with missing fields;
+    2. `own.floorBad`;
+    3. a save-failed text: `own.fixFields` (fields rejected), `own.notEditable` (locked), `own.editOffline` or
+       `own.saveFailed`;
+    4. the demand line `own.demand` «Сейчас такую ищут {n} человек с радаром».
+  - «Мои объявления» when the listing is locked.
+  - The primary button: «Дальше: подтвердить номер», or «Дальше» when `phone_set`. It is disabled while busy or
+    uploading.
+- **Highlight:** a section or field is marked bad when the server rejected it, when it is missing (after «Дальше») or
+  when the floor is above the number of floors (`OwnerForm.jsx:974-979`).
+- **Rules:** autosave BR-APP-079; defaults and couplings BR-APP-080; the «Дальше» gate BR-APP-081; photos BR-APP-082;
+  demand BR-APP-083; the place fill and its undo toast BR-APP-078 (`OwnerForm.jsx:1431`); focus from the panel
+  BR-APP-093.
+- **Haptics:** light on photo taps and photo actions, and on the address «Карта»; medium on «Дальше»; warning when
+  something is missing; error on a failed save or photo action.
+- **APIs:** `PATCH /api/owner/listings/:id` (API-040), `POST /api/owner/listings/:id/photos` (API-041),
+  `DELETE /api/owner/listings/:id/photos/:photoId` (API-042), `POST /api/owner/listings/:id/photos/order` (API-043),
+  `GET /api/owner/demand` (API-053), `POST /api/owner/place` (API-051).
+- **Storage:** reads and removes the sessionStorage key `kv-own-focus` (BR-APP-093; §3.2).
+- **Edge cases:** an edit of a published listing is saved without «Сохранить изменения» (LB-APP-055); a failed
+  conversion uploads the original photo (LB-APP-061); a photo is deleted without confirmation (LB-APP-067); a city
+  change or an erased address drops data (LB-APP-068).
+- **Sources:** `OwnerForm.jsx`; `NumberField.jsx`; `$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js`.
+- **Status:** CONFIRMED.
+
+### SCR-053 — Owner form › Phone confirmation «Подтвердите номер» (`screen`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. Step «phone» of SCR-050.
+- **Purpose:** the owner proves that the phone number is their own before the listing can be published.
+- **Opens:** from «Дальше» when `phone_set` is false (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:641`);
+  after a publish answered `missing:phone` (`OwnerForm.jsx:722-723`); after a publish answered `rejected:<reason>`, as
+  the rejection state SCR-054 (`OwnerForm.jsx:708-721`).
+- **Layout** (`OwnerForm.jsx:1666-1700`):
+  - a card with a shield icon, `own.phoneText` «Номер увидит только тот, кому вы сами его дадите.» and `own.phoneHow`
+    «Подтверждаем кнопкой Telegram «Поделиться номером» — так мы знаем, что номер ваш. Номер придёт боту kvadro², в чате
+    его не будет видно другим.»;
+  - while waiting, a spinner line «Ждём номер от Telegram…»;
+  - an inline error, `own.phoneNotUz` or `own.phoneNotOwn`; the denied text `own.phoneDenied`;
+  - when late, timed out or on an old client, the block `own.phoneLate` / `own.phoneOldTg` with «Открыть бот» (only when
+    `meta.bot_username` is known).
+  - The footer button «Поделиться номером» is always enabled; a new tap starts a new attempt.
+- **Actions:** BR-APP-084. Medium haptic on the tap; success haptic and step «mode» (SCR-055) once the phone is set;
+  error haptic on a rejection.
+- **Back:** Telegram Back returns to the questionnaire; there is no swipe.
+- **Texts** (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:87-101`):
+
+  | Key | ru |
+  | --- | -- |
+  | `own.phoneTitle` | «Подтвердите номер» (en «Confirm your number», uz «Raqamni tasdiqlang») |
+  | `own.sharePhone` | «Поделиться номером» |
+  | `own.phoneLate` | «Номер ещё не пришёл. Загляните в чат с ботом — там может быть ответ.» |
+  | `own.phoneOldTg` | «Этот Telegram не умеет делиться номером из приложения. Откройте бот и нажмите «Поделиться номером» там — потом вернитесь сюда.» |
+  | `own.phoneDenied` | «Без номера опубликовать нельзя: по нему мы проверяем, что вы хозяин. …» |
+  | `own.phoneNotUz` | «Подойдёт только узбекский номер +998, а у этого аккаунта Telegram номер другой страны. …» |
+  | `own.phoneNotOwn` | «Пришёл чужой контакт. Нужен ваш номер — тот, что у этого аккаунта Telegram: …» |
+
+- **APIs:** `GET /api/owner/listings/:id` as the poll (API-039). The contact itself is asked for with
+  `WebApp.requestContact` (TMA-034).
+- **Edge cases:** on a Telegram client below 6.9 the owner is sent to the bot and cannot come back to the draft
+  (LB-APP-060).
+- **Sources:** `OwnerForm.jsx`; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js`;
+  `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js`.
+- **Status:** CONFIRMED for the client. The bot side is DOCUMENTED_ONLY: how the bot takes the contact and what it
+  answers in the chat is known only from these texts (TMA-034, `04` BOT-086, Q-BOT-047).
+
+### SCR-054 — Owner form › Rejection «Не получилось» and the realtor waitlist (`state`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. A state of the phone step SCR-053.
+- **Shown:** on the phone step when the listing has `status: "rejected"`. The reason is `reject_reason`, `agent` by
+  default (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1514,1622-1664`).
+- **Layout:** the title `own.rejectedTitle` «Не получилось» and one paragraph
+  (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:103-110`):
+  - `agent`: «Этот номер встречается в объявлениях о разных квартирах — так бывает у риелторов. «Сдать квартиру» пока
+    только для хозяев. Если это ошибка, напишите в поддержку.» It is followed by the button «Сообщите, когда откроете
+    вход для риелторов».
+  - `fraud`: «Этот номер не можем принять. Если это ошибка, напишите в поддержку.»
+  - `limit`: «С этим номером уже сдаются 2 квартиры. Отметьте одну «Сдано» или снимите её в «Мои объявления» — и
+    добавьте новую.» It is followed by «Мои объявления».
+  - There is no footer, no publish and no support button.
+- **Waitlist:** shown only here, and only for `agent`. A tap (light haptic) sends `POST /api/owner/waitlist` (API-050).
+  On success the line becomes «Хорошо, напишем в бот, когда откроем.»; a failure gives an error haptic and the button
+  stays (`OwnerForm.jsx:1639-1655`). The state is not persisted: the next visit shows the button again.
+- **Back:** Telegram Back returns to the questionnaire. «Дальше» leads back here.
+- **APIs:** `POST /api/owner/waitlist` (API-050).
+- **Edge cases:** a rejected owner gets no way forward (LB-APP-065); the waitlist sign-up is not remembered
+  (LB-APP-071).
+- **Sources:** `OwnerForm.jsx`; `owner.js`.
+- **Status:** CONFIRMED for the client. The server rules behind the reasons are UNVERIFIED (`02` BR-API-171, Q-API-072).
+
+### SCR-055 — Owner form › Contact mode and preview «Как с вами связываться?» (`screen`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. Step «mode» of SCR-050.
+- **Purpose:** the owner chooses how seekers reach them, sees the card as seekers will, and publishes.
+- **Opens:** after the phone is confirmed (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:742-745`), or from
+  «Дальше» when `phone_set` is already true (`OwnerForm.jsx:641`).
+- **Layout** (`OwnerForm.jsx:906-968`):
+  - A radio group with two options:
+    - «Через kvadro²», tagged «Советуем», with `own.mode.gateText` «Номер скрыт. Люди присылают отклик: кто будет жить и
+      когда въезд. Номер даёте вы сами, одной кнопкой.»;
+    - «Показывать номер», with `own.mode.openText` «Номер видят все в карточке. Звонить будут и риелторы.»
+    - When `contact_mode` is `null`, **neither option is selected** (LB-APP-056).
+  - «Так увидят люди»: the cover as a `.s.jpg` thumbnail (or a placeholder), the price with «/мес», «rooms · district or
+    landmark», the facts (area, «floor of total»), and «Проверенный хозяин · разместил сам в kvadro²» (`own.verified`, a
+    key of the owner dictionary; the chip of the listing screen is `owner.verified`). Below it, «Ваш номер: {phone}»
+    from `phone_display`.
+  - Footer: an error note, «Мои объявления» when the error offers it, and the primary «Опубликовать» (for a draft) or
+    «Сохранить изменения» (for a published listing), with a spinner while busy.
+- **Actions:** the mode change follows BR-APP-086, publishing BR-APP-087. Haptics: light on a mode change; medium on
+  publish; on success a celebration for a new listing (BR-APP-096) or a success haptic for an edit; an error haptic on
+  failure.
+- **Back:** Telegram Back returns to the questionnaire; there is no swipe.
+- **Texts** (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:111-122`): `own.modeTitle` «Как с вами связываться?» (en
+  «How should people contact you?», uz «Siz bilan qanday bogʻlanishsin?»); `own.mode.gate` «Через kvadro²»;
+  `own.mode.open` «Показывать номер»; `own.recommended` «Советуем»; `own.preview` «Так увидят люди»; `own.verified`;
+  `own.phoneIs`; `own.publish` «Опубликовать»; `own.save` «Сохранить изменения».
+- **APIs:** `POST /api/owner/listings/:id/contact_mode` (API-044), `POST /api/owner/listings/:id/publish` (API-045).
+- **Edge cases:** an edit of a published listing is saved before «Сохранить изменения» (LB-APP-055); publishing works
+  with no mode chosen (LB-APP-056).
+- **Sources:** `OwnerForm.jsx`; `owner.js`.
+- **Status:** CONFIRMED.
+
+### SCR-056 — Owner form › Done «Готово» / «Сохранили» (`state`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. Step «done» of SCR-050.
+- **Opens:** after a successful publish (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:684-691`).
+- **Layout:**
+  - **New listing:** a festive block with 12 confetti pieces, staggered by 25 ms (`OwnerForm.jsx:53-68,852-866`), and
+    the mascot button (`$KVADRO_ROOT/demo/app/src/features/owner/DoneMascot.jsx`). A tap on the mascot repeats the
+    celebration, at most once per 800 ms (`OwnerForm.jsx:867-883`; BR-APP-096). Then `own.doneText` «Квартира в ленте
+    kvadro² и уже уходит тем, у кого включён радар.», the demand line `own.demand` when `count > 0`, and `own.doneNext`
+    «Отклики придут в бот. Ответить можно там или в «Мои объявления».» (`OwnerForm.jsx:884-892`).
+  - **Edit:** the title `own.savedTitle` «Сохранили» and the text `own.savedText` «Объявление обновлено.». Confetti
+    shows only after a mascot tap.
+  - Footer: «Мои объявления» and «Готово», which closes the form (`OwnerForm.jsx:893-901`).
+- **Closes:** «Готово», Telegram Back or swipe, each of which closes the form.
+- **Sources:** `OwnerForm.jsx`; `DoneMascot.jsx`.
+- **Status:** CONFIRMED for the client. That the listing is in the feed and goes out to radars at once is known only
+  from these texts (`02` BR-API-175, Q-API-071).
+
+### SCR-057 — Settings › «Мои объявления» (`screen`, sub-page)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** the owner's list of flats, current and past, with their status, their numbers and the actions on them.
+- **Opens:** from the Settings row (SCR-032), the limit sheet (SCR-049), «Мои объявления» inside the form (SCR-050) and
+  the `limit` rejection (SCR-054). It is the lazy chunk `OwnerListings` in a `SubPage` frame, with the sub-page chrome
+  of SCR-033 (`$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:51-52,366-380`; §1.9).
+- **Layout** (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:384-480`):
+  - **Tabs** «Актуальные» / «История» (a segmented control). A tab shows a red dot when one of its listings has pending
+    requests (`OwnerListings.jsx:394-406`). «История» holds `rented`, `removed` and every `withdrawn` listing;
+    «Актуальные» holds the rest, including `draft` and `rejected` (`OwnerListings.jsx:282-284`).
+  - **Empty texts:** in «Актуальные», `own.welcome` when `past > 0`, else `own.mineEmpty` «Здесь появятся квартиры,
+    которые вы сдаёте через kvadro².»; in «История», `own.pastEmpty` «Здесь будут квартиры, которые вы сдали или сняли.»
+    (`OwnerListings.jsx:407-417`).
+  - **A card** (`OwnerListings.jsx:80-214`):
+    - the cover photo (the full URL, no `.s.jpg`) with a glass status chip (BR-APP-094), and a red chip
+      `own.v.newRequests` («{n} новых откликов») when requests are pending;
+    - the price with «/мес» and a market delta badge from `stats.price_delta` / `stats.price_tone`;
+    - «rooms · district», falling back to the landmark and then the city;
+    - for non-drafts, the stats line «N получили по радару · N открыли · N в избранном» (the last only when > 0);
+    - the note `own.withdrawnNote` or `own.held`;
+    - the actions of BR-APP-088.
+    - The card tip «Вот здесь ваши отклики» appears on the first card with pending requests (SCR-060).
+  - **Below the list**, in «Актуальные» only: «+ Сдать ещё одну квартиру» (the limit sheet when `can_add` is false) and
+    the foot line «Можно сдавать до {n} квартир сразу.» (`OwnerListings.jsx:462-470`).
+- **Actions:**
+  - A tap on a card (light haptic): a draft opens the form; a listing with `listing_id` opens the public listing
+    (SCR-059); anything else does nothing. Taps on buttons inside the card do not count (`OwnerListings.jsx:422-436`).
+  - «Отклики» opens SCR-058.
+  - The status buttons follow BR-APP-088.
+- **States:** a spinner while loading. When the first load fails, an `ErrorState` with a retry; a later refetch that
+  fails keeps the old list. The empty states are described above. Offline actions fail with the toast
+  `own.actionOffline`.
+- **Closes:** the sub-page Back or swipe returns to Settings, which then refetches the listings
+  (`SettingsScreen.jsx:104-107`).
+- **APIs:** `GET /api/owner/listings` (API-037) on open, on `version`, on retry, after every status change and after
+  closing «Отклики»; `POST /api/owner/listings/:id/status` (API-046); a refresh of `GET /api/owner/pending` (API-047).
+- **Analytics:** the screen name `owner/mine` (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:35-36`); no event
+  (LB-APP-058).
+- **Texts:** `own.tab.now` «Актуальные», `own.tab.past` «История», `own.status.*`
+  (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:141-152`), `own.tab5.*`, `own.addAnother`, `own.mineFoot`,
+  `own.toast.*` (`owner.js:207-211`).
+- **Edge cases:** a rejected card has no reason and no action (LB-APP-065); the days of the status chip come from the
+  device clock (LB-APP-062); an unknown status crashes the page (LB-APP-064).
+- **Sources:** `OwnerListings.jsx`; `SettingsScreen.jsx`; `$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx`;
+  `$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx`; `$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx`.
+- **Status:** CONFIRMED.
+
+### SCR-058 — Requests «Отклики» (`screen`, sub-page)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** the owner reads the requests of seekers for one flat and answers them.
+- **Opens:** from «Отклики» on a card in SCR-057, or from the panel's «Отклики» tab or «Ответить» (SCR-059). From the
+  panel it opens as a portal overlay (`own-req-over`, `z-index: 47`)
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:268-274`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/owner.css:891-892`). It is always for one owner listing
+  (`owner_listing_id`). No caller uses the "all requests" form of `GET /api/owner/requests`
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:477-479`; `OwnerPanel.jsx:271`).
+- **On mount** it dismisses the request tip for good (`OwnerListings.jsx:495`; BR-APP-092).
+- **Layout** (`OwnerListings.jsx:562-656`), one card per request:
+  - The name, or «Без имени».
+  - A details line: `contact.who.*` · «N чел.» (only when more than 1) · «въезд: {when}».
+  - The message in «…».
+  - A **pending** request offers «Дать номер» (primary) and «Не подходит».
+  - Any other request shows a status line `own.req.*`: «Номер дали», «Номер дали · оказался риелтором», «Не подошло»,
+    «Отмечен как риелтор», «Без ответа», «Квартира сдана». Then, depending on the server flags:
+    - when `can_reason` is set and no reason was chosen in this session: «Почему не подошло? Можно не отвечать —
+      человеку ответим одинаково мягко.» with «Уже договорился» / «Похоже на риелтора». After «Уже договорился» it shows
+      «Причина: уже договорились с другим.»;
+    - when `can_undo` is set: «Передумали — можно отменить в течение 10 минут» and «Отменить»;
+    - else, when `can_late` is set: «Оказался риелтором».
+  - The foot line `own.requestsFoot` «Человек видит только ваш ответ. Номер получает только тот, кому вы нажали «Дать
+    номер».»
+- **Actions:** BR-APP-090. Haptics: medium for «Дать номер», light for the rest; then success or error.
+- **States:** a spinner while loading; an `ErrorState` with a retry; when empty, «Откликов пока нет.»
+- **Closes:** the sub-page Back or swipe returns to the list, which refetches the listings and the pending counter, or
+  to the panel, which refetches its listing and the counter (`OwnerListings.jsx:316-320`; `OwnerPanel.jsx:70-74`).
+- **Texts:** `own.requests` «Отклики» (en «Requests», uz «Soʻrovlar»), `own.give` «Дать номер», `own.decline` «Не
+  подходит», `own.answered.*`, `own.undo*`, `own.why*`, `own.req.*`
+  (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:212-241`); `contact.who.*` from the main dictionary
+  (`ru.js:621-626`).
+- **APIs:** `GET /api/owner/requests` (API-048), `POST /api/owner/requests/:id` (API-049).
+- **Storage:** writes `kv-req-tip` (BR-APP-092; §3.2).
+- **Edge cases:** a `who` value outside the enum crashes the page (`$KVADRO_ROOT/docs/api.md:1283-1285`; LB-APP-064).
+- **Sources:** `OwnerListings.jsx`; `OwnerPanel.jsx`.
+- **Status:** CONFIRMED for the client. What the seeker receives for each answer is the bot's side and is UNVERIFIED
+  (`04` BOT-088, BOT-089; Q-BOT-048).
+
+### SCR-059 — The owner's own listing: panel «Ваше объявление» and the `owner_mine` variant (`state`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31. A state of the listing screen SCR-018.
+- **When:** the full card has `owner_mine` (`$KVADRO_ROOT/docs/api.md:345`). `owner_mine` on its own already changes the
+  listing screen (BR-APP-103):
+  - the title row keeps only «Поделиться»: no favourite and no «⋯»
+    (`$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:94-106`);
+  - the footer becomes an empty slot (`cta-bar own-cta`) that the panel fills through a portal, instead of
+    `ListingCtaBar` (`$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:310-322`);
+  - there is no market block above the facts. After «Факты» comes a «Цена» section (`head.price`: the main price and
+    period, the delta and the note; `$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx:7-26`),
+    and the market block stands below it (`ListingScreen.jsx:250,254-255`);
+  - there is no «Источник» section, because the listing is self-placed (`ListingScreen.jsx:285-303`; BR-APP-102);
+  - the author section shows no «Обычно отвечает за…»
+    (`$KVADRO_ROOT/demo/app/src/features/listing/sections/AuthorSection.jsx:40`);
+  - the owner chip shows (BR-APP-100).
+- **Panel:** `details.owner_mine && details.owner_listing_id` mounts the lazy block `OwnerPanel` under the key facts
+  (`ListingScreen.jsx:237-249`).
+- **Panel layout** (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:246-278`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:217-280`):
+  - The heading `own.panel.title` «Ваше объявление» with a status pill, and the line «Этот блок видите только вы.»
+  - When requests are pending, a button «{n} человек ждут ответа» (plural) with «Ответить».
+  - Stats tiles: «Получили по радару», «Открыли», «В избранном», «Откликов» (with «номер дали N» when > 0).
+  - A week chart «Открывали за 7 дней»: the total, bars from the last 7 values of `daily`, weekday initials, today on
+    the right (LB-APP-062).
+  - «В kvadro² {N дней}»; the note for `withdrawn` / `held`.
+- **Footer by status** (`OwnerPanel.jsx:151-218`):
+
+  | Listing | Footer |
+  | ------- | ------ |
+  | `active` / `paused`, not `withdrawn`, not `held` | five tabs: «Отклики» (badge = pending), «Изменить», «Пауза» or «Вернуть», «Сдано», «Снять» (danger) |
+  | `draft` | «Удалить» / «Продолжить» |
+  | `withdrawn`, or `paused` + `held` | «Поддержка» (only when `GET /api/bot` gave `support`), otherwise nothing |
+  | anything else (`rented`, `removed`, `rejected`) | «Отклики» (only when requests > 0) and «Сдать ещё одну» |
+
+- **Fill hints** (manageable listings only), «Чтобы объявление было полнее» (`OwnerPanel.jsx:220-244,289-329`):
+  - the count «n из 5» and a 5-segment bar;
+  - the open items first: photos (fewer than 5 → «Добавьте фото — сейчас n из 10», 5 or more → «Фото — n из 10»),
+    «Укажите площадь», «Укажите этаж», «Укажите ремонт», «Напишите пару слов о квартире»;
+  - a tap on an item opens the form on that field (BR-APP-093);
+  - when everything is filled, the single line «Объявление заполнено полностью».
+- **APIs:** `GET /api/listings/:id` for the card (API-008); `GET /api/owner/listings/:id` on mount, on `ownerVersion`
+  and on retry (API-039); `GET /api/bot` on every mount, for `support` (API-003; `OwnerPanel.jsx:43-52`);
+  `POST /api/owner/listings/:id/status` (API-046); `GET /api/owner/requests` and `POST /api/owner/requests/:id` through
+  SCR-058 (API-048, API-049).
+- **States:**
+  - Loading renders nothing, and the footer slot stays empty (`OwnerPanel.jsx:83-85`).
+  - A load error shows an island with an `ErrorState` and a retry (`OwnerPanel.jsx:76-82`).
+  - A chunk error shows the `ErrorState` of `LazyBlock` (`$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:188-209`).
+- **Status change:** «Сдано» and «Снять» ask for confirmation (BR-APP-088); success shows a toast and reloads the
+  listing screen (`OwnerPanel.jsx:87-113`; `ListingScreen.jsx:245`). It does **not** refresh the pending counter
+  (LB-APP-059).
+- **Closes:** the listing screen's own Back (SCR-018). The requests overlay has its own Back.
+- **Storage:** a tap on a fill hint writes the sessionStorage key `kv-own-focus` (BR-APP-093; §3.2).
+- **Texts:** `own.panel.*` (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:162-180`), `own.stat.*`, `own.week`,
+  `own.weekdays`, `own.listedDays`, `own.tab5.*`.
+- **Edge cases:** the counters stay stale after a status change on the panel (LB-APP-059); the footer can be empty, and
+  the «Это ваше объявление» bar of `ListingCtaBar` is never rendered (LB-APP-070).
+- **Sources:** `OwnerPanel.jsx`; `OwnerListings.jsx`; `ListingScreen.jsx`; `ListingTitleRow.jsx`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx`; `sections/OwnerPriceSection.jsx`; `LazyPage.jsx`.
+- **Status:** CONFIRMED.
+
+### SCR-060 — Request signals: red dot on the Settings tab, «Пришёл первый отклик!» and the card tip (`overlay`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** tells an owner that requests wait for an answer and where they are.
+- **Red dot:** the Settings tab shows a red dot when pending > 0. Its aria-label is «ждут ответа: N»
+  (`$KVADRO_ROOT/demo/app/src/app/TabBar.jsx:13-40`; `$KVADRO_ROOT/demo/app/src/styles/red-dot.css`).
+- **Tab tip** above the tab bar: `own.reqTip.tab` «Пришёл первый отклик! Он в «Настройки» → «Мои объявления»» (en «Your
+  first request is in! Settings → My listings»). It shows when pending > 0, the tip has not been dismissed, the current
+  tab is not Settings, and no listing, form, «Мои объявления» or filters sheet is open
+  (`$KVADRO_ROOT/demo/app/src/app/App.jsx:719-734`).
+  - A tap gives a light haptic and switches to the Settings tab. It does not open the list.
+  - «×» dismisses the tip for good.
+- **Card tip** «Вот здесь ваши отклики»: on the first card with pending requests in the current tab of «Мои объявления»
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:376-379,448-458`). A tap opens that listing's requests.
+- **Dismissal:** «×» on either tip, or opening any requests page, writes `kv-req-tip = done` and hides the tips
+  everywhere at once (`$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx:7-34`; BR-APP-092). The «×» label is
+  `owner.tipClose` «Закрыть подсказку» (`ru.js:648`).
+- **Source:** the pending counter (BR-APP-091).
+- **APIs:** `GET /api/owner/pending` (API-047).
+- **Storage:** `kv-req-tip` (§3.2).
+- **Edge cases:** the counter is fetched for every user (LB-APP-066); the tab tip leads to Settings, not to the requests
+  (LB-APP-069).
+- **Sources:** `TabBar.jsx`; `App.jsx`; `ReqTip.jsx`; `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js`; `red-dot.css`;
+  `OwnerListings.jsx`.
+- **Status:** CONFIRMED.
+
+### SCR-061 — Contact request sheet «Отклик хозяину» (`sheet`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** a seeker asks an owner who hides the number (gate mode, BR-APP-098) to give it; the owner answers in the
+  bot (`$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:1-2`; `$KVADRO_ROOT/docs/api.md:820-822`).
+- **Opens:** the CTA «Связаться с хозяином» (`contact.cta`) in gate mode without a request, or with the request `given`
+  but no phone yet (`$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:40-52`; LB-APP-074). Only with the
+  full card (`$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:328`).
+- **Closes:** a backdrop tap, the × (`common.close`), a drag down, Telegram Back
+  (`ContactRequestSheet.jsx:44-48,88,101`); success closes it (`ListingScreen.jsx:334-336`). Swipe-back of the listing
+  is off while it is open (`ListingScreen.jsx:123-133`). Typed text is lost on close; there is no confirmation.
+- **Layout** (`ContactRequestSheet.jsx:96-177`):
+  - the title «Отклик хозяину» (`contact.title`);
+  - the lead «Хозяин получит ваш отклик и ответит в бот — обычно в течение {n} мин.» (`contact.lead`, when
+    `response_minutes` is truthy), else «Хозяин получит ваш отклик и ответит в бот.» (`contact.leadNoTime`)
+    (`ru.js:618-620`);
+  - «Кто будет жить» (`contact.who`): five single-choice chips «Один / Пара / Семья / Студенты / Друзья»
+    (`contact.who.one|couple|family|students|friends`), none picked at first
+    (`ContactRequestSheet.jsx:13-14,38,114-131`; `ru.js:621-626`);
+  - «Сколько человек» (`contact.people`): a stepper 1…20, starting at 1; picking a chip sets it to 1 / 2 / 3 / 2 / 2
+    (`ContactRequestSheet.jsx:16-23,39,124,132-151`);
+  - «Въезд» (`contact.moveIn`): free text, at most 32 characters, placeholder «Например, с 1 декабря»
+    (`ContactRequestSheet.jsx:152-160`; `ru.js:628-629`);
+  - «Сообщение» (`contact.message`): a text area of 3 rows, at most 500 characters, prefilled «Здравствуйте! Можно
+    посмотреть?» (`contact.messageDefault`) (`ContactRequestSheet.jsx:41,161-169`; `ru.js:630-631`);
+  - the note `contact.note` «Хозяин увидит ваше имя из Telegram и эти ответы, но не ваш номер. Можно отправить до 10
+    откликов в день.» (`ContactRequestSheet.jsx:170`; `ru.js:632-633`);
+  - the error line (`ContactRequestSheet.jsx:171`);
+  - the footer button: a disabled «Выберите, кто будет жить» (`contact.pickWho`) until a chip is picked, then «Отправить
+    хозяину» (`contact.send`); disabled while sending (`ContactRequestSheet.jsx:173-176`; `ru.js:634-635`).
+- **Send** (`ContactRequestSheet.jsx:50-85`; BR-APP-099):
+  - It is ignored without a chip or while a send runs (a state and a ref lock). It plays a medium haptic.
+  - The body is `{who, people, move_in, message}`, with `move_in` and `message` trimmed and an empty value sent as
+    `null`.
+  - The call runs through the write-access flow (`withChatAccess`, TMA-033;
+    `$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:27-55`).
+  - Success: a success haptic, the sheet closes, and the card's `my_request` becomes the returned `status`; `given`
+    re-reads the card (`ListingScreen.jsx:334-340`).
+  - Failure: an error haptic and one line, by cause: `409 no_chat` after the write-access attempt →
+    `contact.err.noChat`; a known `detail` → `contact.err.<detail>`, with `harvest` shown as `blocked`; else «Не
+    получилось сохранить» (`common.saveFailed`) (`ContactRequestSheet.jsx:25-26,71-80`). The error codes are in `08`
+    API-054.
+- **Error texts** (`ru.js:636-644`; `ContactRequestSheet.jsx:25-26,71-80`):
+
+  | `detail` | Text shown | Client effect |
+  | -------- | ---------- | ------------- |
+  | `no_chat` (409) | the write-access request and one repeat; if it still fails, «Ответ хозяина придёт в бот — разрешите боту писать вам и отправьте ещё раз.» | `chat_access_*` events; may offer to open the bot |
+  | `limit_fast` | «Несколько откликов подряд — следующий можно будет отправить через 10 минут.» | none |
+  | `limit_day` | «Сегодня вы уже отправили 10 откликов. Завтра можно снова.» | none |
+  | `limit_week` | «За неделю — 30 откликов, это предел. Новые можно будет отправить через несколько дней.» | none |
+  | `blocked` | «Отклики для вашего аккаунта сейчас закрыты. Если это ошибка, напишите в поддержку.» | none |
+  | `harvest` | the same text as `blocked`; the user is not told that it is anti-harvesting | none |
+  | `closed` | «Хозяин уже не принимает отклики — квартиру, скорее всего, сдали.» | none (LB-APP-073) |
+  | `own` | «Это ваша квартира.» | none (LB-APP-073) |
+  | `open` | «Хозяин открыл номер — обновите карточку и позвоните.» | none (LB-APP-073) |
+  | other | «Не получилось сохранить» | none |
+
+  The HTTP statuses of the `detail` codes other than `no_chat` are UNVERIFIED (Q-API-076).
+- **APIs:** `POST /api/listings/:id/contact` (API-054).
+- **Analytics:** none of its own; `chat_access_declined` / `chat_access_allowed` from the write-access flow
+  (`$KVADRO_ROOT/docs/api.md:1186`).
+- **Edge cases:** the errors `open`, `closed` and `own` leave the card stale (LB-APP-073); `given` without a phone
+  offers a second request (LB-APP-074); the limits are written into the texts (LB-APP-057); picking a chip overwrites
+  the count the user set (LB-APP-077).
+- **Sources:** `ContactRequestSheet.jsx`; `ListingScreen.jsx`; `ListingCtaBar.jsx`; `chatAccess.js`;
+  `$KVADRO_ROOT/demo/app/src/lib/api/owner.js:191-192`.
+- **Status:** CONFIRMED for the client. The server rules are DOCUMENTED_ONLY (`02` BR-API-183 to BR-API-187).
+
+### SCR-062 — Owner info sheet «Проверенный хозяин» (`sheet`)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31). Line numbers here are
+  at r31.
+- **Purpose:** explains what the owner chip of the listing screen means (BR-APP-100).
+- **Opens:** a tap on the owner chip or on its tip text, only with the full card
+  (`$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:233,327`).
+- **Closes:** backdrop, drag, Telegram Back, «Понятно» (`owner.info.ok`)
+  (`$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx:16-19,41,75-77`).
+- **Layout:** a portal sheet with an animated shield-and-check drawing, the title «Проверенный хозяин»
+  (`owner.verified`) and a list of points (`OwnerInfoSheet.jsx:21-38,51-74`):
+  1. for a self-placed listing «Разместил квартиру сам в kvadro².» (`owner.info.self`), else «Хозяин сам подтвердил в
+     kvadro² номер из этого объявления.» (`owner.info.verified`);
+  2. «Номер подтверждён кнопкой Telegram: это его собственный номер.» (`owner.info.phone`);
+  3. «Мы проверили: этот номер не встречается в объявлениях риелторов.» (`owner.info.notAgent`);
+  4. only for a self-placed listing with `contact_mode === "gate"` (the phone is not tested here, LB-APP-078): «Номер он
+     даёт сам, после вашего отклика. Риелторов к нему не пускаем.» (`owner.info.gate`);
+  5. only for a self-placed listing with `response_minutes`: «Обычно отвечает за {n} мин» (`contact.usually`).
+- **Foot:** for gate «Если всё же ответил риелтор, нажмите в боте «Ответил риелтор» — мы проверим.»
+  (`owner.info.footGate`), else «Оказался риелтором? Нажмите «Ещё» → «Пожаловаться» — мы проверим.» (`owner.info.foot`)
+  (`ru.js:647-656`).
+- **Analytics:** `owner_info_opened {listing_id}`, sent by the chip on the tap, not by the sheet (BR-APP-101).
+- **Storage:** none of its own; the chip writes `kv-owner-tip` (BR-APP-101).
+- **Edge cases:** a chip tap before the card loads sends the event but opens nothing (LB-APP-072); the gate point stays
+  after the number was given (LB-APP-078).
+- **Sources:** `OwnerInfoSheet.jsx`; `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx`; `ListingScreen.jsx`.
+- **Status:** CONFIRMED.
+
 ### 2.1 Shared components (not screens on their own)
 
 `src/components/`:
@@ -1488,20 +2329,28 @@ The app only reacts to their results. Status: CONFIRMED (calls seen in code; nat
 - `ListingCard`, `ListingCardSkeleton`, `Photo`, `PhotoStrip`, `FavButton`, `ErrorState`, `Toast` (SCR-042),
   `Chip` (`HeaderChip`, `FilterChip`), `Switch`, `PullToRefresh` (SCR-010);
 - `inputs/IntInput`, `inputs/PriceInput`;
-- `icons/RadarIcon`, `icons/InstagramIcon`.
+- `icons/RadarIcon`, `icons/InstagramIcon`;
+- since release `index-CBlEKxdL.js`: `ReqTip` (SCR-060) and `LazyPage` (§1.9); `Photo` marks an image that is already
+  complete from the cache as loaded right after render (`Photo.jsx:21-27` at r31).
 
 `src/features/*` parts used inside screens:
 
 - feed: `FeedHeader`, `followNudge.js`;
 - filters: `PriceSection`, `RoomsPicker`, `sheet/*`;
 - listing: `ListingHero`, `ListingTitleRow`, `ListingCtaBar`, `sections/*`, `ZoomableImage`, `spot/SpotMap` (preview);
+  since release `index-CBlEKxdL.js` also `OwnerChip`, `OwnerInfoSheet` (SCR-062), `ContactRequestSheet` (SCR-061) and
+  `sections/OwnerPriceSection` (SCR-059);
 - radar: `RadarTiles`, `RadarStrip`;
 - settings: `SettingsGroup`, `SettingsRow` (since release `index-BnFvC-Ft.js` an optional `badge`, drawn as a
   `new-pill` after the label; the release's unit `009-modified-SettingsRow.jsx.diff`), `ChoiceList`, `SubPage`,
-  `CardStylePicker` (SCR-048, since the same release);
+  `CardStylePicker` (SCR-048, since the same release); since release `index-CBlEKxdL.js` `SettingsRow` also takes a
+  `count`, drawn as a red counter, and the directory holds `OwnerLimitSheet` (SCR-049);
+- owner (since release `index-CBlEKxdL.js`): `OwnerForm`, `OwnerListings`, `OwnerPanel`, `PlacePicker`, `pickMap.js`,
+  `NumberField`, `shrinkPhoto.js`, `DoneMascot`, the dictionary `owner.js` and `owner.css`;
 - map: `gl/*` and `leaflet/*` internals, `pins.js`, `palette.js`, `attribution.js`, `tilePrefetch.js`.
 
-`src/app/`: `TopBar`, `TabBar`, `ViewToggle`, `FewResultsNote`.
+`src/app/`: `TopBar`, `TabBar`, `ViewToggle`, `FewResultsNote`; since release `index-CBlEKxdL.js` also `layers.js` (the
+lazy owner form layer and the leave time of the listing layer).
 
 Hooks: `src/hooks/useSheetDrag`, `useSwipeBack`, `useMiniChrome`, `useScrolled`.
 
@@ -1512,11 +2361,12 @@ Every directory under `src/features` maps to SCR items:
 | `city` | SCR-005, SCR-017 |
 | `feed` | SCR-007, SCR-008, SCR-009, SCR-024, SCR-025, SCR-040, SCR-041, SCR-046, SCR-047 |
 | `filters` | SCR-014, SCR-015, SCR-029, SCR-030 |
-| `listing` | SCR-018 to SCR-023 |
+| `listing` | SCR-018 to SCR-023, SCR-059, SCR-061, SCR-062 |
 | `map` | SCR-011, SCR-012, SCR-013 |
 | `onboarding` | SCR-003, SCR-004 |
+| `owner` | SCR-050 to SCR-059 |
 | `radar` | SCR-026, SCR-027, SCR-028, SCR-031 |
-| `settings` | SCR-032 to SCR-039, SCR-048 |
+| `settings` | SCR-032 to SCR-039, SCR-048, SCR-049, SCR-057 |
 | `sort` | SCR-016 |
 
 There is **no "similar listings" section** anywhere in the client: `NearbySection` lists nearby places (metro, parks,
@@ -1530,15 +2380,25 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
 
 - **Locales:** `ru`, `uz_Latn`, `en`. Intl locales are `ru-RU`, `uz-Latn-UZ`, `en-GB`. Numbers in `uz_Latn` are
   formatted with `ru-RU` (space thousands separator, decimal comma) (`$KVADRO_ROOT/demo/app/src/i18n/index.js:16-74`).
-- **Keys:** **510 top-level keys in each locale** at the pinned release `index-BnFvC-Ft.js`, 510 in the union. No key
-  is missing in any locale (CONFIRMED). A plural object counts as one key.
+- **Keys:** **569 top-level keys in each locale** at the pinned release `index-CBlEKxdL.js`, 569 in the union. No key is
+  missing in any locale (CONFIRMED). A plural object counts as one key.
   - Per release: 461 at `index-plF_TOcT.js` (the audit), 462 after `index-Dbpp463V.js` (`card.businessPrice`), 473
     after `index-BNLZFfL0.js` (`report.detailTitle` and ten `report.d_*` keys), 482 after `index-DY_DH7h-.js` (nine
     keys: `back.title`, `back.new`, `back.what`, `feedRadar.titleRent`, `feedRadar.titleSale`, `feedRadar.what`,
     `feedRadar.enable`, `feedRadar.setup`, `nudge.setup`; texts in SCR-046 and SCR-047), 510 after
     `index-BnFvC-Ft.js` (28 keys: `settings.group.chat`, `settings.cards`, `settings.cards.{classic, rich,
     classicHint, richHint, hint, sent, send, sending, failed, minimize}` and the 16 mock keys `settings.cards.demo.*`;
-    SCR-048; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:56`).
+    SCR-048; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:56`), 569 after `index-CBlEKxdL.js` (59 keys: 10 under `own`, 35
+    under `contact`, 13 under `owner`, and `details.historySelf`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:20` at r31).
+  - The 59 keys of `index-CBlEKxdL.js`: `own.group`, `own.title`, `own.free`, `own.limitValue`, `own.limitSheetTitle`,
+    `own.limitSheetText`, `own.mine`, `own.pendingShort`, `own.reqTip.tab`, `own.draftShort`; `contact.cta`,
+    `contact.sent`, `contact.title`, `contact.lead`, `contact.leadNoTime`, `contact.who` and `contact.who.{one, couple,
+    family, students, friends}`, `contact.people`, `contact.moveIn`, `contact.moveInPh`, `contact.message`,
+    `contact.messageDefault`, `contact.note`, `contact.send`, `contact.pickWho`, `contact.err.{noChat, limit_day,
+    limit_fast, limit_week, blocked, closed, own, open}`, `contact.usually`, `contact.pendingNote`, `contact.mineBar`,
+    `contact.mineBarHint`, `contact.closedBar`, `contact.cancelledBar`, `contact.expiredBar`, `contact.similarHint`;
+    `owner.verified`, `owner.claimed`, `owner.claimedHint`, `owner.tip`, `owner.tipClose`, `owner.info.{self, verified,
+    phone, notAgent, gate, footGate, foot, ok}`; `details.historySelf`. `contact.who` is a key and a prefix at once.
   - Method: the object literal of each locale file is parsed and its depth-1 keys counted, per SVN revision of the
     locale files (r9, r24, r25, r27). Counting quoted key lines (`^  '`) gives one less, because the plural key
     `listings` is unquoted; the 472 of `25` §1 matches that line count at `index-BNLZFfL0.js`. The locale files of
@@ -1547,11 +2407,13 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
     (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/delta/units/063-modified-en.jsx.diff`,
     `064-modified-ru.jsx.diff`, `065-modified-uz_Latn.jsx.diff`) to the r31 files; reverse-applying the release's own
     diffs (`012`–`014` of `2026-11-17_index-BnFvC-Ft`) to that copy gives back the r27 files, key for key and value for
-    value (`wave-1/baseline.md`, the pin).
+    value (`wave-1/baseline.md`, the pin). The 569 of `index-CBlEKxdL.js` are the count of a copy of the r31 locale
+    files (`wave-1/baseline.md`).
   - 14 keys are plural objects up to `index-BNLZFfL0.js`: `listings`, `listing.rooms`, `details.daysOnMarket`,
     `details.publications`, `details.channels`, `details.views`, `actions.blockCount`, `map.missing`,
     `market.info.agoMin`, `market.info.agoHour`, `market.info.agoDay`, `market.v3.found`, `market.v3.district`,
-    `market.v3.city`. Release `index-DY_DH7h-.js` adds a fifteenth, `back.new` (`ru.js:397-402`).
+    `market.v3.city`. Release `index-DY_DH7h-.js` adds a fifteenth, `back.new` (`ru.js:397-402`). Release
+    `index-CBlEKxdL.js` adds none.
   - In ru they have `one / few / many / other`, except `map.missing`, which has `one / other`. In uz_Latn and en they
     have `one / other`.
 - **Key families by prefix** (as of `index-BNLZFfL0.js`):
@@ -1568,7 +2430,9 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `app` | 5 | `type` | 5 | others | ≤ 4 each |
 
   Release `index-DY_DH7h-.js` adds the prefixes `back` (3 keys) and `feedRadar` (5) and one `nudge` key. Release
-  `index-BnFvC-Ft.js` adds 28 keys under `settings` (`settings.group.chat`, `settings.cards*`).
+  `index-BnFvC-Ft.js` adds 28 keys under `settings` (`settings.group.chat`, `settings.cards*`). Release
+  `index-CBlEKxdL.js` adds the prefixes `own` (10 keys) and `contact` (35), 13 keys under `owner` (16 with the three
+  filter labels `owner.any`, `owner.no_agents` and `owner.owners`) and one under `details`.
 
 - **Keys built at runtime** (every value must exist, or `t()` throws):
 
@@ -1586,6 +2450,9 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   | `settings.theme.*`, `settings.graphics.*`, `sheet.market.*`, `sheet.posted.*`, `app.saved.*` | local | local |
   | `settings.cards.${style}`, `settings.cards.${style}Hint` (options of SCR-048) | local (`CARD_STYLES`, since `index-BnFvC-Ft.js`) | local |
   | `settings.cards.${card_style}` (value of the SCR-032 row) | **server** (`GET /api/settings`), `card_style ?? 'classic'`, since `index-BnFvC-Ft.js` | server-driven: a value other than `classic` / `rich` throws (LB-APP-051) |
+  | `contact.who.${who}` (the requests page, SCR-058) | **server** (`OwnerRequest.who`), since `index-CBlEKxdL.js` | server-driven: a value outside the five throws (LB-APP-064) |
+  | `contact.err.${detail}` (the request sheet, SCR-061) | **server** (`detail` of `POST /api/listings/:id/contact`), guarded by a list of known codes, since `index-CBlEKxdL.js` | none |
+  | `own.status.${status}`, `own.req.${status}`, `own.answered.${action}` (the owner dictionary) | **server** statuses of owner listings and requests, since `index-CBlEKxdL.js` | server-driven (LB-APP-064) |
   | `market.v3.rooms${median_rooms}` | **server**; only 1–3 exist, ≥ 4 maps to `rooms4` | server-driven |
 
 - **Quirks:**
@@ -1593,6 +2460,34 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
     `undefined`) with no fallback (`i18n/index.js:118-121`); RECOVERY.md §7 records this.
   - `plural()` falls back to `other` for a missing form (`:131-144`).
   - Unknown `{placeholders}` are left as they are (`:100-110`).
+  - Since release `index-CBlEKxdL.js` `t` and `plural` are built on the shared `formatEntry` / `pluralEntry`, which the
+    owner dictionary also uses; the output did not change (`i18n/index.js:119-121` at r31; the release's units
+    `061-modified-plural.jsx.diff` and `062-modified-t.jsx.diff`).
+- **Owner dictionary** (since release `index-CBlEKxdL.js`; `$KVADRO_ROOT/demo/app/src/features/owner/owner.js` at r31).
+  The owner chunks have a dictionary of their own. It is outside the locale files and outside the counts above:
+  - **207 keys in each of ru, en and uz_Latn** (ru `owner.js:9-243`, en `:245-471`, uz_Latn `:473-696`), with identical
+    key sets; this was checked by extracting the key names of each block and comparing them. Three keys are plural
+    objects: `own.panel.waiting`, `own.v.newRequests` and `own.days`. The largest groups are `own.panel.*` 13,
+    `own.tab5.*` 8, `own.status.*` 8, `own.answered.*` 7, `own.req.*` 6, then `own.toast.*`, `own.tenant.*`,
+    `own.stat.*` and `own.need.*` with 5 each.
+  - The locale comes from `getLocale()`, with ru as the fallback for an unknown language (`owner.js:700-701`). Numbers
+    in uz use the `ru-RU` format (`i18n/index.js:69-74`).
+  - The main dictionaries hold what must show before a chunk loads: 10 `own.*` keys (`ru.js:605-615`), 35 `contact.*`,
+    16 `owner.*` and `details.historySelf`. The release's ru delta adds exactly the 59 new ones
+    (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/delta/units/064-modified-ru.jsx.diff`). The owner
+    side uses the 10 `own.*` keys (SCR-032, SCR-049, SCR-060), `contact.who.*` (the requests page, SCR-058),
+    `owner.info.ok` (the limit sheet) and `owner.tipClose` (the «×» of the tips); `contact.mineBar` and
+    `contact.mineBarHint` are unreachable (LB-APP-070). The rest belongs to the seeker's side (SCR-018, SCR-061,
+    SCR-062).
+  - Two families are easy to confuse. `owner.*` is in the main dictionary: the chip, the info sheet and the filter
+    labels. `own.*` is the cabinet: 10 keys in the main dictionary and 207 in `owner.js`. `own.verified`, the preview
+    line of SCR-055, is not `owner.verified`, the chip.
+  - **An unknown key throws**, as in `t()`: `lookupOwn` returns `undefined` (`owner.js:701`), and `formatEntry` reads
+    `entry.other` of it (`i18n/index.js:119-121`). The file says so itself (`owner.js:4`). The keys
+    `own.status.${status}`, `own.req.${status}`, `own.answered.${action}` and `contact.who.${who}` are built from server
+    data (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:50,542,571,606`), and
+    `$KVADRO_ROOT/docs/api.md:1283-1285` (r31) turns that into an obligation of the server (LB-APP-064).
+  - Numbers are written into the texts: «2» (`owner.js:107,136-137`) and «из 10» (`owner.js:170,175`) (LB-APP-057).
 - **Unused keys** (defined but never referenced, CONFIRMED by grep): `feed.historyHint`, `subs.count`, `subs.inFeed`,
   `subs.edit`, `subs.delete`, `subs.modeAria`.
 - **Strings outside the dictionaries:**
@@ -1608,7 +2503,11 @@ The counts below come from parsing `$KVADRO_ROOT/demo/app/src/i18n/locales/{ru,u
   `report.d_<code>Hint` for `price`, `rooms`, `place`, `photos`, `other` (SCR-023). 2026-11-14 (`index-DY_DH7h-.js`)
   added the nine `back.*`, `feedRadar.*` and `nudge.setup` keys (SCR-046, SCR-047)
   (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:17,38,54,59,84,99,107`, line numbers of r27). 2026-11-17
-  (`index-BnFvC-Ft.js`) added the 28 card-style keys (SCR-048; `CHANGELOG.md:56`).
+  (`index-BnFvC-Ft.js`) added the 28 card-style keys (SCR-048; `CHANGELOG.md:56`). 2026-11-18 (`index-CBlEKxdL.js`)
+  reworded `noAccess.text.private` (SCR-003) and `card.ownerVerified` («Хозяин ✓» / «Uy egasi ✓» / «Owner ✓» became
+  «Проверенный хозяин» / «Tasdiqlangan uy egasi» / «Verified owner»; `ru.js:100`, `uz_Latn.js:98`, `en.js:98` at r31) in
+  the three locales and, in en only, `found.where.agent` and `found.shareText` (SCR-031), and added the 59 keys of the
+  owner cabinet, the contact request and the owner chip (`CHANGELOG.md:20,29` at r31).
 
 ### 3.2 Client storage: localStorage `kv-*` and Telegram DeviceStorage
 
@@ -1625,6 +2524,8 @@ with a 1.5 s timeout per key (`storage.js:59-87`).
 | `kv-visits` | JSON `{<filters hash>: ms}`: the last search-tab visit per filter set, 40 newest kept; since `index-DY_DH7h-.js` (BR-APP-070) | `recordVisit` (`followNudge.js:125-143` at the pin) | `recordVisit` into the session map, then `returnSince` (`followNudge.js:108-123,179-195` at the pin) | yes | yes, since `index-DY_DH7h-.js` (`storage.js:6` at the pin; LB-APP-021) |
 | `kv-home` | JSON `{days: ['YYYY-MM-DD' ×≤10], offered}` | `$KVADRO_ROOT/demo/app/src/lib/telegram/homeScreen.js:71-98` | `homeScreen.js:17-28` | yes | yes |
 | `kv-new-<feature>` | `'1'` (`pets`; since `index-BnFvC-Ft.js` also `cards`, the «Вид карточек» row of SCR-032) | `markFeatureSeen` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`) | `isNewFeature` (`:11-12`) | yes | no |
+| `kv-req-tip` | `done` once the request tip of the owner cabinet is dismissed, by «×» or by opening any requests page; never reset; since `index-CBlEKxdL.js` (BR-APP-092, SCR-060) | `$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx:7-34` (at r31) | same | yes | yes (`storage.js:6` at r31) |
+| `kv-owner-tip` | the number of times the tip of the owner chip was shown, then `done`; since `index-CBlEKxdL.js` (BR-APP-101) | `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:10-62` (at r31) | same | yes | yes (`storage.js:6` at r31) |
 | `kv-graphics` | `full` / `lite` (absent = auto) | `setGraphicsMode` (`$KVADRO_ROOT/demo/app/src/lib/graphics.js:97-103`) | `getGraphicsMode` | no | — |
 | `kv-graphics-measured` | `lite` | `measureScrollPerformance` (`graphics.js:134`) | `prefersLite` (`:62`) | no | — |
 | `kv-map-v2` | `gl` / `leaflet` | `?map=` (`$KVADRO_ROOT/demo/app/src/features/map/engine.js:74-87`) | same | no | — |
@@ -1632,7 +2533,12 @@ with a 1.5 s timeout per key (`storage.js:59-87`).
 
 - **Dev only:** `kvdev-initData`, written by the Vite dev emulator (`$KVADRO_ROOT/demo/app/tools/dev/telegram-client.js:6`).
   It is not in builds.
-- **Not used by the app:** sessionStorage, IndexedDB, Telegram CloudStorage and SecureStorage (grep of `src`).
+- **sessionStorage:** not used up to release `index-BnFvC-Ft.js`. Since `index-CBlEKxdL.js` it holds `kv-own-focus`: a
+  `data-focus` token (`photos`, `area_m2`, `floor`, `renovation`, `description`) written by the fill hints of the owner
+  panel and read once and removed by the owner form (BR-APP-093;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:238-244`,
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:103,386-412` at r31).
+- **Not used by the app:** IndexedDB, Telegram CloudStorage and SecureStorage (grep of `src`).
 - **Migration note:** `$KVADRO_ROOT/docs/about.md` §9.1 says renaming these keys resets every user's client settings.
 
 ### 3.3 Analytics events
@@ -1658,16 +2564,18 @@ to `name` (`$KVADRO_ROOT/demo/app/src/lib/api/events.js:9-35`).
 | `home_screen_offered` | — | home nudge shown (status `missed`) | `$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js:74` |
 | `home_screen_closed` | — | home nudge × (not on timeout) | `App.jsx:609` |
 | `home_screen_added` | — | Telegram `homeScreenAdded` | `useHomeScreenOffer.js:27` |
-| `chat_access_declined` | — | `requestWriteAccess` answered `false` | `$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:36` |
-| `chat_access_allowed` | — | `requestWriteAccess` answered `true` | `chatAccess.js:40` |
+| `chat_access_declined` | — | `requestWriteAccess` answered `false`; since `index-CBlEKxdL.js` also from the contact request (SCR-061) | `$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:36` |
+| `chat_access_allowed` | — | `requestWriteAccess` answered `true`; since `index-CBlEKxdL.js` also from the contact request (SCR-061) | `chatAccess.js:40` |
 | `listing_shared` | `listing_id` | share tap, before trying | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:30` |
 | `original_opened` | `listing_id`, `src` (`button` / `video` / `sources` / `price_history` / `offers`) | an external post link actually opened (not debounced) | `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:139-146` |
 | `original_copied` | `listing_id` | copy event on the original text | `$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:70-74` |
 | `contact_call` | `listing_id`, `via` (`tel` / `browser`), `src?` (`text`) | call attempt resolved | `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:74-80` |
 | `contact_write` | `listing_id` | «Написать» link opened | `useListingContact.js:82-88` |
+| `owner_info_opened` | `listing_id` | a tap on the owner chip of the listing screen or on its tip (since `index-CBlEKxdL.js`, BR-APP-101) | `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:54-62` (at r31); `$KVADRO_ROOT/docs/api.md:1192` (r31) |
 
 Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:1076-1107`). `custom` is
-`isCustomFilters` of the filters concerned (BR-APP-013).
+`isCustomFilters` of the filters concerned (BR-APP-013). The owner chunks of `index-CBlEKxdL.js` send no event
+(LB-APP-058).
 
 **(b) PostHog** (`$KVADRO_ROOT/demo/app/src/lib/analytics.js`). The key and host come from `meta.analytics`.
 
@@ -1683,7 +2591,8 @@ Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:
 - **Super properties:** `screen`, `env`, `team`, `build`.
 - **Screen names:** `search/list`, `search/map`, `saved/favorites`, `saved/history`, `subs`, `settings`, `listing`,
   `radar/edit`, `radar/new`, `filters`, `filters/rooms`, `filters/price`, `filters/owner`, `sort`, `city`, `map/draw`
-  (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:26-44`).
+  (`$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:26-44`) and, since release `index-CBlEKxdL.js`, `owner/form` and
+  `owner/mine` (`useScreenTracking.js:30-51` at r31; §1.1).
 - The map code sends no events of its own.
 
 ### 3.4 Constants, timeouts and limits
@@ -1707,7 +2616,7 @@ Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:
 | Max radars (fallback) | 10 (`meta.max_subscriptions`) | `$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js:16`; `useFollowNudge.js:11`; at the pin also `useReturnNudge.js:19`, `App.jsx:298` |
 | Relax option threshold | first option with `count ≥ 7`, else the last | `subscriptionActions.js:18,51` |
 | Radar preview finds | 5 per radar | `$KVADRO_ROOT/demo/app/src/features/radar/useRadarPreviews.js:7` |
-| Toast lifetime | 4 s (text) / 6 s (with action) | `$KVADRO_ROOT/demo/app/src/components/Toast.jsx:14` |
+| Toast lifetime | 4 s (text) / 6 s (with action); since `index-CBlEKxdL.js` a downward drag closes it past 36 px and fades it to 0.2 over 120 px | `$KVADRO_ROOT/demo/app/src/components/Toast.jsx:14`; `Toast.jsx:5,34-43` (at r31) |
 | Contact link TTL / refresh | 10 min / refresh at 8 min | `useListingContact.js:9-10` |
 | Android `tel:` detection | 1200 ms | `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:5` |
 | Link debounce | same URL ignored for 1.5 s | `links.js:43` |
@@ -1719,7 +2628,8 @@ Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:
 | Low-end Android | ≤ 4 cores or ≤ 3 GB | `graphics.js:58` |
 | Pull-to-refresh | trigger 72 px, max 110 px, spinner ≥ 700 ms | `$KVADRO_ROOT/demo/app/src/components/PullToRefresh.jsx:6-12` |
 | Sheet drag | start 6 px, close at 25 % or 0.5 px/ms, settle 200 ms | `$KVADRO_ROOT/demo/app/src/hooks/useSheetDrag.js:5-13` |
-| Swipe-back | start 10 px, close at 33 % or 0.5 px/ms, settle 180 ms, not on Android | `$KVADRO_ROOT/demo/app/src/hooks/useSwipeBack.js:6-14,27` |
+| Swipe-back | start 10 px, close at 33 % or 0.5 px/ms, settle 180 ms, not on Android; since `index-CBlEKxdL.js` an edge-only zone of 24 px for a layer marked `data-edge-swipe`, and the inline styles are reset 300 ms after the close | `$KVADRO_ROOT/demo/app/src/hooks/useSwipeBack.js:6-14,27`; `useSwipeBack.js:15-16,131-137` (at r31) |
+| Listing layer enter / leave | 0.25 s / 0.2 s; none in lite graphics or reduced motion (since `index-CBlEKxdL.js`) | `$KVADRO_ROOT/demo/app/src/app/layers.js:11`, `$KVADRO_ROOT/demo/app/src/styles/listing.css:1-35` (at r31) |
 | Collapsing chrome | delta 24 px, top zone 60 px | `$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js:4-6` |
 | Photo zoom | max 4×, double tap 2.5×, swipe-close 110 px | `$KVADRO_ROOT/demo/app/src/features/listing/ZoomableImage.jsx:5-7` |
 | Area input | integer, 0 → null, max 10000 | `$KVADRO_ROOT/demo/app/src/components/inputs/IntInput.jsx:18` |
@@ -1733,6 +2643,15 @@ Docs and code agree on this list (`$KVADRO_ROOT/docs/api.md` §11; at the pin `:
 | Wide fact cell | value longer than 18 characters | `$KVADRO_ROOT/demo/app/src/features/listing/sections/FactsSection.jsx:48` |
 | Map | cluster radius 48; GL maxZoom 17; fit maxZoom 14; points note 6 s; locate error 5 s; tile-prefetch delay 2.5 s; Leaflet basemap delay ≤ 1.2 s | map files, see SCR-011 |
 | Tile prefetch budget | none with Save-Data or 2g. Lite: 2/stop, 3 preload, 300 KB, 1.5 MB per session. Full: 4, 6, 600 KB, 4 MB | `tilePrefetch.js:22-41` |
+| Owner cabinet: flats listed at once | 2 (since `index-CBlEKxdL.js`, like the other owner-cabinet rows): `max` comes from the server, and the texts hard-code 2 (per account in `can_add`, «на один номер» in the limit sheet and in the `limit` rejection; LB-APP-057) | `$KVADRO_ROOT/docs/api.md:1406-1411` (r31); `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:107,136-137`, `ru.js:609-611` (at r31) |
+| Owner cabinet: photos | at most 10 (`MAX_PHOTOS`; the panel text says «из 10»); upload with the long side ≤ 2048 px at JPEG quality 0.88; upload timeout 90 s per photo (other calls 15 s) | `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:74`; `owner.js:170,175`; `$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js:3-6`; `client.js:24-27` (at r31) |
+| Owner cabinet: form | autosave after 600 ms; description ≤ 600 characters, landmark ≤ 120; price ≤ 12 digits; demand request after 500 ms; focus highlight 1.6 s; mascot tap at most once per 800 ms | `OwnerForm.jsx:53,76,78,107,109,1022,1264` (at r31) |
+| Owner cabinet: place picker | address lookup 400 ms after the map stops; "inside Uzbekistan" is lat 37–46, lon 55–74; the point is rounded to 5 decimals (about 1 m); the wait for `map-start` is at most 1.5 s | `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:15-16,18-19,24`; `OwnerForm.jsx:105` (at r31) |
+| Owner cabinet: phone | poll every 1.5 s for at most 90 s; a stale rejection is ignored for 8 s; the "late" hint shows after 20 s | `OwnerForm.jsx:80-86` (at r31) |
+| Owner cabinet: requests | 10 min for the undo of an answer and for the delay of the soft refusal (from the texts; the server decides with `can_undo`) | `owner.js:220,226-227` (at r31); `$KVADRO_ROOT/docs/api.md:1321-1325` (r31) |
+| Owner cabinet: fill hint | 5 photos count as enough | `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:29-30` (at r31) |
+| Lazy pages | every registered chunk is preloaded 600 ms after the first lazy page is shown (since `index-CBlEKxdL.js`) | `$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:16-22` (at r31) |
+| Contact request form | `people` 1…20; `move_in` ≤ 32 characters; `message` ≤ 500 characters (since `index-CBlEKxdL.js`; BR-APP-099) | `$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:13-23,50-85` (at r31) |
 
 ### 3.5 Money and date formatting
 
@@ -1809,7 +2728,8 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
   `cubic-bezier(.2,.9,.3,1)` at 0.25–0.35 s.
 - **Z-index ladder:** map note 5 → topbar 10 → CTA 20 → view toggle 29 → tab bar 30 → map card and mini title 31 → nudge
   35 → sub-page 40 → listing layer 45 → sheet backdrop 50 → toast and city sheet 60 → photo viewer and fullscreen map
-  100 → active pin 1000.
+  100 → active pin 1000. Since release `index-CBlEKxdL.js`: owner form layer 46, its footer bar and the requests overlay
+  of the owner panel 47, place picker 60, the buttons of the spot map 1000 (SCR-050, SCR-018).
 - **Safe areas:** `--top-inset = --tg-safe-area-inset-top + --tg-content-safe-area-inset-top`;
   `--bottom-inset = --tg-safe-area-inset-bottom`. There is no `env(safe-area-inset-*)` and no left/right inset
   (`tokens.css:30-31`). `--tg-viewport-*`, `dvh` and `svh` are not used; full-screen layers are `position: fixed;
@@ -1819,7 +2739,10 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
 - **Icons:** `lucide-react` in 45 files, plus the custom `RadarIcon` and `InstagramIcon` SVG components. Release
   `index-BnFvC-Ft.js` adds `GalleryHorizontal` (the SCR-032 row) and, in the new `CardStylePicker.jsx`, `Check` and
   `Image` (imported as `ImageIcon`), all from `lucide-react@1.69.0`
-  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:21-22,33`).
+  (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:21-22,33`). Release `index-CBlEKxdL.js` adds
+  `ShieldCheck` (the card badge, the shield of the compact card and the owner chip) and, in the owner cabinet, `Minus`
+  and `ListChecks` (`$KVADRO_ROOT/demo/app/docs/releases/2026-11-18_index-CBlEKxdL/REPORT.md:51-52`); `lucide-react` is
+  imported in 54 files at r31.
 - **Images:**
   - mascots `empty-magnifier.svg` (search empty) and `empty-shrug.svg` (favourites and history empty, crash), at 120 px;
   - `hooray.webp` (found survey), 132 px;
@@ -1827,6 +2750,8 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
 - **Animations:**
   - `spin`, `shimmer`, `fade`, `rise` (sheets), `rise-in` (toast, nudge), `viewer-in`, `subpage-in`, `minfo-go`,
     `minfo-fade`, `radar-turn`, `radar-blip`;
+  - since release `index-CBlEKxdL.js` the listing layer's `@starting-style` entrance and `.leaving` transition
+    (SCR-018), switched off under reduced motion (`.listing-layer { transition: none }`), and a `.spin` helper class;
   - `prefers-reduced-motion` stops the shimmer and spinner and sets `* { transition: none !important }`
     (`$KVADRO_ROOT/demo/app/src/styles/states.css:70-77`); JS gestures settle instantly.
 - **Responsive design:** none. There are no width or orientation media queries; the layout is single-column for phones.
@@ -1834,16 +2759,21 @@ The source is `$KVADRO_ROOT/demo/app/src/styles/tokens.css` and the related file
   - The order of the 24 `@import`s in `$KVADRO_ROOT/demo/app/src/styles/index.css:2-25` **is** the cascade of the
     original bundle; the CSS must be imported after `App` in `main.jsx` (`main.jsx:2,17`). Release
     `index-BnFvC-Ft.js` adds a 25th, `card-style.css`, last (`index.css:26`; in the production CSS these rules are the
-    last bytes, `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:34`).
+    last bytes, `$KVADRO_ROOT/demo/app/docs/releases/2026-11-17_index-BnFvC-Ft/REPORT.md:34`). Release
+    `index-CBlEKxdL.js` adds a 26th, `owner-shared.css`, last (`index.css:26-27` at r31).
   - `MapScreen.css` arrives through App, and lazy chunks bring `mapgl.css` and `leaflet.css`.
   - `lite.css` and `fallbacks.css` rely on coming late.
-  - The only feature fallback is `@supports not (color: color-mix(…))`; `:has()` is used without a fallback.
+  - The only feature fallback is `@supports not (color: color-mix(…))`; `:has()` is used without a fallback. Since
+    release `index-CBlEKxdL.js` `:has()` also sets the toast offsets (SCR-042).
 - **Product-encoding CSS:**
   - verdict tones `good / high / same / mixed / no_repair / suspicious / check` drive `.delta`, `.deal`, `.marker` and
     pin colours;
   - inactive radar tiles are greyscale;
   - `.danger-row` is `#ff5c5c`;
-  - feed cards use `content-visibility: auto` with an intrinsic size of 420 px.
+  - feed cards use `content-visibility: auto` with an intrinsic size of 420 px;
+  - since release `index-CBlEKxdL.js`: inactive tabs are tinted 55 % (`color-mix`, with an opacity fallback) instead of
+    opacity 0.55 (`chrome.css:130-150` at r31); the market block's class is `.island`; `.primary` is centred
+    (`justify-content: center`) and has opacity 0.5 when disabled.
 
 ## 4. Business rules visible in the client (BR-APP)
 
@@ -1876,16 +2806,16 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-023 | **Sort options:** `new`, `cheap` and `expensive` always. `deal` for non-daily apartment-only searches where `city.median !== false`. `center` when the city has zones. `ppm` for sale. An unavailable sort falls back to `new`. `new` is never sent to the API. | `$KVADRO_ROOT/demo/app/src/features/sort/SortSheet.jsx:17-34`; `App.jsx:259-263`; `$KVADRO_ROOT/demo/app/src/lib/api/feed.js:78` |
 | BR-APP-024 | **Feed paging:** `limit=20` with an opaque `cursor`, which ends when `next_cursor === null`. Items are de-duplicated by `id` across pages. | `feed.js:75-85`; `$KVADRO_ROOT/demo/app/src/features/feed/useInfiniteFeed.js:31-42` |
 | BR-APP-025 | **The few-results note** appears only when the list is fully loaded with fewer than 10 items, there are no active filters, and city stats and name are known. «Смотреть продажу / аренду · N» is offered only when the other deal has more listings in the city. | `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:89-92`; `App.jsx:420-439`; `$KVADRO_ROOT/demo/app/src/app/FewResultsNote.jsx:39` |
-| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Хозяин ✓» (`owner_verified`) > «Хозяин» (`is_owner`) > «Ниже рынка» (`good`). Since release `index-Dbpp463V.js`; before it «Ниже рынка» ranked above «Хозяин». | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:253-283`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:12-13` |
+| BR-APP-026 | **Card badge priority:** «Подозрительно дёшево» (warn) > «Проверьте цену» (warn) > «Проверенный хозяин» (`owner_verified`) > «Хозяин» (`is_owner`) > «Ниже рынка» (`good`). Since release `index-Dbpp463V.js`; before it «Ниже рынка» ranked above «Хозяин». Since release `index-CBlEKxdL.js` the verified badge reads «Проверенный хозяин» («Хозяин ✓» before) and each badge has a kind: `warn` for the two warnings, `verified` with a shield icon, `quiet` for «Хозяин», none for «Ниже рынка»; the compact map card, which has no badge, shows a shield after the price for `owner_verified`. | `$KVADRO_ROOT/demo/app/src/features/listing/format.js:253-283`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-11_index-Dbpp463V/REPORT.md:12-13`; `format.js:269-301`, `ListingCard.jsx:60-61,92-97`, `$KVADRO_ROOT/demo/app/src/styles/listing-card.css:168-188` (at r31); `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:24` (at r31); the release's units `002-modified-ListingCard.jsx.diff` and `064-modified-ru.jsx.diff:16-17` |
 | BR-APP-027 | **Market verdict wording** depends on `median_tone`: `check` (above or below), `suspicious`, `same`, `mixed`, `no_repair`, `good`. Otherwise the text says "pricier"; from +90 % it says «В {x} раза дороже рынка». Percentages are rounded `abs(delta)·100`. | `format.js:142-217` |
 | BR-APP-028 | **The market block shows** only when a verdict exists and `median_value`, `median_delta` and `median` are present. The scale is linear with ±40 % at the edges, clamped to 4–96 %. | `$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx:105,177-179` |
 | BR-APP-029 | **Metro on cards:** shown only within 1.5 km. Under 50 m only the name is shown; otherwise «{metro} · {m} м», with metres rounded to 100. | `format.js:76-87` |
 | BR-APP-030 | **The card location line** is `district · landmark · (metro label or «{km} км до центра»)`. | `$KVADRO_ROOT/demo/app/src/components/ListingCard.jsx:46-48` |
 | BR-APP-031 | **Distances in «Рядом»:** under 0.1 km «рядом»; under 0.95 km metres rounded to 100; otherwise km with 1 decimal. A `~` prefix is added when `geo_radius_m ≥ 400` (default 500). | `format.js:94-113`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/NearbySection.jsx:31` |
-| BR-APP-032 | **The main CTA**, in priority order: phone → «Позвонить»; `contact_url` → «Написать» (or «Номер платный» when `contact_paid`); otherwise «Открыть пост», unless `post_deleted`, in which case there is no action. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:28-48` |
+| BR-APP-032 | **The main CTA**, in priority order: phone → «Позвонить»; `contact_url` → «Написать» (or «Номер платный» when `contact_paid`); otherwise «Открыть пост», unless `post_deleted`, in which case there is no action. Since release `index-CBlEKxdL.js` the request of a gate listing and the "no contact" bars rank above this order (BR-APP-098). | `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:28-48` |
 | BR-APP-033 | **Calling.** On Android, `tel:` is tried first; if the app is not left within 1.2 s, the call page opens. Elsewhere the call page (`call_url`, about 10 min TTL) opens directly, refreshed when it is older than 8 min. | `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:14-40`; `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:54-81` |
 | BR-APP-034 | **Machine translation** of the original text is offered only when the interface locale is not `ru`. The first tap fetches, later taps toggle; the result is labelled «Перевод сделан ИИ». | `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js:22-39`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/OriginalText.jsx:78-80` |
-| BR-APP-035 | **Phone numbers in the original text** are detected as Uzbek numbers (`[+998] XX XXX XX XX` with a known operator or city code). Only the number that equals the listing's `phone` becomes a call button. | `$KVADRO_ROOT/demo/app/src/lib/phone.js:4-89`; `OriginalText.jsx:32-38` |
+| BR-APP-035 | **Phone numbers in the original text** are detected as Uzbek numbers (`[+998] XX XXX XX XX` with a known operator or city code). Only the number that equals the listing's `phone` becomes a call button. A self-placed listing has no original text (BR-APP-102). | `$KVADRO_ROOT/demo/app/src/lib/phone.js:4-89`; `OriginalText.jsx:32-38` |
 | BR-APP-036 | **Moderation effects on the client:** hide → hidden with undo; block → all `listing_ids` hidden with undo; `fraud` with `hidden` → hidden with undo; `rented` → hidden without undo. The `agent` reason is not offered when `is_owner === false`. Since release `index-BNLZFfL0.js` `wrong_data` is sent only together with a `detail` (`price`, `rooms`, `place`, `photos`, `other`) picked on a third view; the other reasons are sent at once and without `detail`. | `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:32-81`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:176-200`; `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:86-90`; `$KVADRO_ROOT/demo/app/docs/releases/2026-11-12_index-BNLZFfL0/REPORT.md:13-23` |
 | BR-APP-037 | **The block hint** appends «скроет N объявлений» only when the author has 20 or more listings. | `ListingActionsSheet.jsx:103-107` |
 | BR-APP-038 | **Share** is shown only when `bot_username` is known. It uses a prepared message (Telegram 8.0+); otherwise `t.me/share/url` with `https://t.me/<bot>?startapp=l_<id>` and text `title · price · price-kind label · district`; the label is «первый взнос» (`down_payment`) or, since release `index-Dbpp463V.js`, «цена за бизнес, помещение в аренде» (`business`), and is left out for other values. | `$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx:28-50,71`; `$KVADRO_ROOT/demo/app/src/features/listing/format.js:35-43` |
@@ -1906,7 +2836,7 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-053 | **The «Скрытое» group** appears only when hidden listings plus blocked authors > 0. | `SettingsScreen.jsx:135,187` |
 | BR-APP-054 | **Access gate:** a `403` from meta shows one of `private / invite / full / blocked / join` (unknown → `private`). It is re-checked 3 × 2.5 s unless `blocked`. Network failures retry after 1, 3, 7, 15, 30 s. Returning to the app retries at once. | `useAppBootstrap.js:24-26,127-158` |
 | BR-APP-055 | **The first-launch city choice** is required when there is more than one city, `meta.city_chosen === false`, nothing was picked this session, and no listing is open. | `App.jsx:257` |
-| BR-APP-056 | **Nearest city by location:** towns within 16 km; then "regions" (`zoom < 11`) within 110 km; then towns within 110 km; otherwise «Рядом с вами наших городов пока нет». | `$KVADRO_ROOT/demo/app/src/lib/geo/location.js:108-126` |
+| BR-APP-056 | **Nearest city by location:** towns within 16 km; then "regions" (`zoom < 11`) within 110 km; then towns within 110 km; otherwise «Рядом с вами наших городов пока нет». | `$KVADRO_ROOT/demo/app/src/lib/geo/location.js:108-126`; `$KVADRO_ROOT/docs/api.md:499-500` (r31) states the rule as contract, still derived from the code (Q-APP-004) |
 | BR-APP-057 | **`?news=pets`** without a listing link opens the filters focused on the pets section and switches to long-term rent defaults if needed. The «Новое» pill shows until `kv-new-pets` is set. | `useAppBootstrap.js:115-124`; `$KVADRO_ROOT/demo/app/src/features/filters/sheet/PreferenceSections.jsx:68,80` |
 | BR-APP-058 | **Pull-to-refresh** reloads the radar list on the radar tab and re-creates the list elsewhere; it is disabled on settings, the map and under any overlay. | `App.jsx:359-365,530-541` |
 | BR-APP-059 | **Photos:** a `.s.jpg` (480 px) thumbnail exists only for `/media/<n>/<n>.jpg?…`. Save-Data, ≤ 3g or lite loads only thumbnails; otherwise `srcset` uses 480w / 800w. There is no retry after a load error. | `$KVADRO_ROOT/demo/app/src/lib/images.js:9-60`; `$KVADRO_ROOT/demo/app/src/components/Photo.jsx:16-46` |
@@ -1925,6 +2855,35 @@ All rules below are `CONFIRMED` in client code. Server-side enforcement of the s
 | BR-APP-072 | **In-feed radar card** (since release `index-DY_DH7h-.js`) on the search list when meta and the radars are loaded, no radar exists for the search (the test of BR-APP-071), radars < max and the card is not snoozed. It follows the 8th card, or the last card when the list has 8 or fewer, is fully loaded and has no few-results note. The title depends on the base deal (rent, including daily, or sale), the button on custom or default filters. × hides it for 7 days on every search and does not count towards the nudge close streak. | `followNudge.js:219-244`; `$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx:98-106,128-139`; `App.jsx:297-303,629-645` (at the pin) |
 | BR-APP-073 | **«Включить радар» from the return banner or the in-feed card** resets the close streak. Custom filters go straight to the radar flow of BR-APP-041 with `entry` `return` / `feed`; default filters open the create-radar sheet (SCR-030), which sends the same `entry` (and `relaxed` when an option was picked). «+» and the empty radar screen open that sheet with `entry` `empty`, which it always sent before this release. | `App.jsx:399-415,629-635,712-721,749-753` (at the pin) |
 | BR-APP-074 | **Card style of the bot's listing cards** (since release `index-BnFvC-Ft.js`). The value is `card_style ?? 'classic'`. A pick in SCR-048 does nothing when it equals the current style or while a sample is sending; otherwise it resets the sample result to `idle` and saves `PUT /api/settings {card_style}` optimistically with a light haptic, takes the full answer as the new settings, and on failure restores the previous settings with the error haptic. «Прислать пример в чат» plays a light haptic, shows `sending` and sends `POST /api/settings/card-sample` without a body: `sent: true` → «Пример — в чате с ботом» with the minimise hint and the success haptic; `sent: false` or a failed request → «Пример не отправился — вид всё равно сохранён» and the warning haptic. The result stays until the next pick or until the Settings tab unmounts. The sample is sent in the saved style (`$KVADRO_ROOT/docs/api.md:1040-1043`, r31). | `SettingsScreen.jsx:94-96,133-171` (at r31, the same code as the release's unit `008-added-NEW$pj.jsx`); `CardStylePicker.jsx:17-56` (at r29); `$KVADRO_ROOT/demo/app/src/lib/api/settings.js:7-14` (at r29); `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:53-54` |
+| BR-APP-075 | **Entry into the owner form and the new draft** (since release `index-CBlEKxdL.js`). The form opens for a new draft (`id: null`) from the Settings row (unless `can_add` is false), from «Сдать ещё одну квартиру» in the list (same check), from «Сдать ещё одну» on the panel (no check) and at launch when `start_param` is `owner_new` or `owner-new`, or the page query has `owner=new` (TMA-046). The launch state is set once, when `App` mounts. Every opening sends `POST /api/owner/listings`; the client never looks for an existing draft (LB-APP-054). | `App.jsx:133-135`; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71`; `SettingsScreen.jsx:245-252`; `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:363-371`; `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:212`; `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:183-186` (at r31) |
+| BR-APP-076 | **Start view of the place picker** (since release `index-CBlEKxdL.js`). A saved point gives zoom 17. Otherwise, and only when the listing has no point, `GET /api/owner/map-start` is awaited for up to 1.5 s; an answer that arrives after the timer is ignored. Without it the view is the centre of the form's city (or of the first city in meta) at that city's `zoom + 1` (`zoom` defaults to 12), else Tashkent 41.311, 69.28. | `OwnerForm.jsx:105,111-114,197-209,526-544` (at r31); `$KVADRO_ROOT/docs/api.md:502-505,1474-1475` (r31) |
+| BR-APP-077 | **Address under the pin** (since release `index-CBlEKxdL.js`). The lookup `POST /api/owner/place` runs 400 ms after each stop of the map, aborting the previous request, and only when the centre is inside lat 37–46, lon 55–74; outside, the label is "unknown" at once. Label: `address`, else «landmark · district», else the city name, else `own.pickNoAddr`. A failed request gives `own.pickNoAddr`. | `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:15-16,24,63-83,203-216` (at r31); `$KVADRO_ROOT/docs/api.md:1471-1473` (r31) |
+| BR-APP-078 | **Place from the point after «Готово»** (since release `index-CBlEKxdL.js`). The coordinates are rounded to 5 decimals. `POST /api/owner/place` is sent again (without abort). The answer is dropped when the point changed meanwhile or the call failed, and a `city` that meta does not know is ignored. Empty fields are filled silently and `own.placeNote` shows. Fields that already hold a different value are replaced, with the toast «Адрес обновили по карте» and «Вернуть», which restores the previous values. When both the district and the landmark were empty before the pick, the city counts as empty too. | `PlacePicker.jsx:19,153`; `OwnerForm.jsx:550-622`; `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:36-37,47` (at r31) |
+| BR-APP-079 | **Autosave of the owner form** (since release `index-CBlEKxdL.js`). Every edit marks its fields as dirty and restarts a 600 ms timer. The dirty fields are also flushed before «Дальше», before publish and when the form unmounts (closing the form saves). Flushes run one at a time; a flush that waits for a failed one reports "not saved". The body holds the current values of the dirty fields, with cleared fields as `null`. While `floor > floors_total` those two fields are held back and the flush reports "not saved". Errors: `409`, or `detail: "missing:status"`, means locked (`own.notEditable` and «Мои объявления»); a network failure gives `own.editOffline`. `422 invalid:a,b` highlights those fields (`floor` → both floor fields; `point` / `lat` / `lon` → both coordinates). When only some of the fields were rejected, the rest of the same save is re-sent in a separate `PATCH`. Fields that failed stay dirty. Editing a field removes its highlight. | `OwnerForm.jsx:78,245-337,1437-1447` (at r31); `$KVADRO_ROOT/docs/api.md:1439-1442` (r31) |
+| BR-APP-080 | **Defaults and couplings of the owner form** (since release `index-CBlEKxdL.js`). A draft without a city gets `meta.city` (which itself sends a `PATCH`). Typing a price also sets the currency (USD when none). The price takes digits only, at most 12. Choosing another city clears the district, the landmark and the point. Erasing the address while a point is set clears the point. `room` and `rooms` exclude each other. «5/9» in the floor field sets the floor to 5 and the number of floors to 9. Numbers must be > 0; the area may be decimal (a comma works); fields hold at most 6 characters (7 for the floor). The description holds at most 600 characters, the landmark at most 120. There is no client upper bound or sanity check on area, floor or price. | `OwnerForm.jsx:339-346,1022-1036,1140-1158,1186-1210,1262-1270,1374-1376`; `$KVADRO_ROOT/demo/app/src/features/owner/NumberField.jsx:4-60` (at r31) |
+| BR-APP-081 | **The «Дальше» gate** (since release `index-CBlEKxdL.js`). Required: a city; a place (a district, a landmark or a point); rooms or «Комната»; a price and a currency; at least one photo; and a floor no higher than the number of floors. If something is missing, the sections are highlighted, the footer shows «Заполните: город, район или ориентир, комнаты, цену, фото» (only the missing items, `own.need.*`) and a warning haptic plays. Next comes a flush; if it fails, an error haptic and the save-failed text. Then the phone step, or the mode step when `phone_set`. | `OwnerForm.jsx:93-98,415-433,624-642`; `owner.js:80-84` (at r31) |
+| BR-APP-082 | **Owner photos** (since release `index-CBlEKxdL.js`). At most 10. A selection larger than the free slots is cut, and «Не больше 10 фото.» shows. One batch runs at a time. Files go up one by one; each is first shrunk (long side ≤ 2048 px, JPEG quality 0.88; if the browser cannot, the **original file** is sent, LB-APP-061) and sent as the multipart field `file` named `photo.jpg`, with a 90 s timeout. `photo:too_many` stops the batch; `photo:not_image`, `photo:too_big` and other errors show a message and the batch goes on. The first photo is the cover. «Сделать обложкой» sends the full order with that id first. «Удалить фото» acts at once, without confirmation or undo (LB-APP-067). The form shows thumbnails by replacing the first `.jpg?` with `.s.jpg?`; the list shows the cover as is. | `OwnerForm.jsx:74,435-524`; `$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js:3-26`; `$KVADRO_ROOT/demo/app/src/lib/api/owner.js:57-85`; `$KVADRO_ROOT/demo/app/src/lib/api/client.js:24-27`; `owner.js:712-713` (at r31); `$KVADRO_ROOT/docs/api.md:1230-1231,1443-1447` (r31) |
+| BR-APP-083 | **Demand and usual price** (since release `index-CBlEKxdL.js`). Requested 500 ms after a change of city, district, rooms, room, price or currency, aborting the previous request, and never without a city, so the client helper's `tashkent` default is dead code. The query has `city`, then `district`, then `room=true` or `rooms`, then `price` + `currency` (USD by default). The footer, and the done screen, show «Сейчас такую ищут {n} человек с радаром» when `count > 0`. «≈ обычная цена: {range} — {what}, {place}» shows when both usual bounds and a rooms choice exist. In a UZS form the range is in millions through `meta.usd_uzs` (`money.mln`); otherwise «$low–high». Errors are silent. | `OwnerForm.jsx:347-369,812-827,1289-1297`; `$KVADRO_ROOT/demo/app/src/lib/api/owner.js:165-184` (at r31); `$KVADRO_ROOT/docs/api.md:1476-1479` (r31) |
+| BR-APP-084 | **Phone confirmation** (since release `index-CBlEKxdL.js`). «Поделиться номером» calls `WebApp.requestContact` when the client version is ≥ 6.9 (TMA-034). The result is a consent flag only; the contact goes to the bot. On `null` (an old client), the old-client text shows and polling starts anyway; on `false`, the denied text; on `true`, polling. Polling sends `GET /api/owner/listings/:id` at once, then every 1.5 s without overlapping requests, for up to 90 s, and also at once whenever the app becomes visible. After 20 s the "late" hint with «Открыть бот» shows. After 90 s polling stops and restarts on the next return to the app. It ends on `phone_set` (success haptic, then the mode step), on `status: rejected` (error haptic, SCR-054), or on a draft `reject_reason` of `not_uz` or `not_own`. A reason equal to the one shown before the tap is ignored for the first 8 s as stale. A failed poll is retried on the next tick. | `OwnerForm.jsx:80-86,1484-1620`; `share.js:45-58` (at r31); `$KVADRO_ROOT/docs/api.md:1436-1438` (r31) |
+| BR-APP-085 | **Rejection outcomes** (since release `index-CBlEKxdL.js`). `status: "rejected"` with `reject_reason` `agent` (the default), `fraud` or `limit` shows SCR-054. On a draft, `reject_reason` `not_uz` / `not_own` is an inline error on the phone step: one field with two meanings. A publish answered `rejected:<reason>` re-reads the listing. If the server's copy is rejected, it is used; otherwise the listing is marked rejected locally with that reason. Then the phone step shows. | `OwnerForm.jsx:708-721,1484-1488,1514-1515` (at r31); `$KVADRO_ROOT/docs/api.md:1368-1369` (r31) |
+| BR-APP-086 | **Contact mode** (since release `index-CBlEKxdL.js`). A tap changes the mode at once (light haptic), sends `POST …/contact_mode`, and the answer replaces the listing. On an error the previous state comes back, with an error haptic and a footer error. A tap on the current mode does nothing. A `null` mode shows no selection, and publish does not ask for one (LB-APP-056). | `OwnerForm.jsx:644-667,906-929` (at r31) |
+| BR-APP-087 | **Publish** (since release `index-CBlEKxdL.js`). One at a time. First a flush; if it fails, back to the form with the save-failed text. Then `POST …/publish`, the same call that saves edits of a published listing. On success: a celebration (new) or a success haptic (edit), `onChanged` (refetches the lists and the pending counter, `App.jsx:144-147`), then the done step. Errors by `detail`: a `missing:` list that includes `limit` → `own.limitText` and «Мои объявления»; one that includes `status`, or `409` with `status:…` → `own.notEditable` and «Мои объявления»; `rejected:<reason>` → BR-APP-085; `missing:` with `phone` → the phone step; any other `missing:` → the form with highlights (and the save-failed text when the client itself sees nothing missing). Otherwise a network failure gives `own.publishOffline` / `own.editOffline`, and anything else `own.publishFailed` / `own.saveFailed`. | `OwnerForm.jsx:668-741` (at r31); `$KVADRO_ROOT/docs/api.md:1450-1454` (r31) |
+| BR-APP-088 | **Status actions of an owner listing** (since release `index-CBlEKxdL.js`). List card: a draft offers «Удалить» and «Продолжить». `active` / `paused` (not `withdrawn`, not `held`) offer «Отклики», «Пауза» / «Вернуть» and «Сдано». `held` or `withdrawn` offer «Отклики» (when requests > 0) and «Поддержка». Anything else offers «Отклики» when requests > 0. The panel adds «Изменить» and «Снять» for manageable listings (SCR-059). «Сдано», «Снять» and «Удалить» on a draft ask through `showConfirm`: «Отметить «Сдано»? Объявление уйдёт из ленты, а тем, кто ждёт ответа, скажем, что квартиру сдали.», «Снять объявление?», «Удалить черновик?». One change runs at a time. On success: a success haptic and the toast `own.toast.*` («Отметили «Сдано». Поздравляем!», «На паузе: в ленту и радар не уходит», «Снова в ленте», «Сняли объявление», «Черновик удалили»). In the list, a deleted draft leaves the list and other listings are replaced by the answer; then the list and the pending counter are refetched. The panel only reloads the listing screen. Errors: an error haptic and the toast `own.actionOffline` or `common.saveFailed`. Nothing leads out of `rented` or `removed`: there is no relisting. «Снять» exists only on the panel. | `OwnerListings.jsx:80-170,322-361`; `OwnerPanel.jsx:87-218`; `owner.js:203-211,765-775` (at r31); `$KVADRO_ROOT/docs/api.md:1455-1457` (r31) |
+| BR-APP-089 | **Apartment limit** (since release `index-CBlEKxdL.js`). `max` and `can_add` come from `GET /api/owner/listings`; the texts assume 2 (LB-APP-057). When `can_add` is false, the Settings row shows «{max} из {max}» and opens the limit sheet (SCR-049), and «Сдать ещё одну квартиру» in the list opens the sheet. The panel's «Сдать ещё одну» does not check, so it reaches `POST` → `409` → the limit state. `POST` `409` gives «Уже две квартиры». A publish answered `missing:limit` gives the limit text. A phone rejection with reason `limit` gives «С этим номером уже сдаются 2 квартиры». | `SettingsScreen.jsx:230-262`; `OwnerListings.jsx:363-371`; `OwnerPanel.jsx:212`; `OwnerForm.jsx:695-700,747-759` (at r31); `$KVADRO_ROOT/docs/api.md:1406-1411,1434-1435` (r31) |
+| BR-APP-090 | **Answering requests** (since release `index-CBlEKxdL.js`). The actions are `give`, `decline`, `reason_found`, `reason_agent`, `undo` and `late`, one at a time, with no confirmation (not even for «Дать номер»). The answer replaces the item; when the answer has no name, the old name stays. A reason chosen in this session is remembered: the reason buttons hide, and «found» shows «Причина: …». `undo` or `decline` clears it. The toast is `own.answered.<action>`, or `own.unmarked` «Отметку сняли» for `undo` on a `given` request. A `409` reloads the list, and for `undo` also shows «Отменить уже нельзя: прошло больше 10 минут». Other errors show toasts. The server's flags `can_reason`, `can_undo` (10 minutes, per the texts) and `can_late` decide which buttons show. | `OwnerListings.jsx:493-560,600-650`; `owner.js:219-234` (at r31); `$KVADRO_ROOT/docs/api.md:1413-1427,1464-1466` (r31) |
+| BR-APP-091 | **Pending counter** (since release `index-CBlEKxdL.js`). One module-level number. It is fetched when the app starts (`App` mounts the hook) and whenever the document becomes visible; each mounted hook adds its own listener, and concurrent calls share one request. It is also fetched after the form's `onChanged`, after closing a requests page (list or panel) and after a status change in the list. Errors are ignored. Its consumers are the tab's red dot, the tab tip, and the Settings row's value and counter. A status change on the panel does not refresh it (LB-APP-059). | `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:6-57`; `App.jsx:141-147`; `OwnerListings.jsx:316-320,352`; `OwnerPanel.jsx:70-74` (at r31); `$KVADRO_ROOT/docs/api.md:1460-1462` (r31) |
+| BR-APP-092 | **Request tip** (since release `index-CBlEKxdL.js`). It is visible while pending > 0 and `kv-req-tip` is not `done`. «×» or opening any requests page dismisses it. The key is mirrored to DeviceStorage. | `$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx:7-34`; `$KVADRO_ROOT/demo/app/src/lib/storage.js:6`; `App.jsx:719-734` (at r31) |
+| BR-APP-093 | **Fill hints and focus** (since release `index-CBlEKxdL.js`). The panel has five checks: photos ≥ 5 (`ENOUGH_PHOTOS`), area, floor, renovation and description. They show only for manageable listings. A tap writes `sessionStorage['kv-own-focus']` = the field and opens the form. Once on the «form» step, the form reads and removes the key, scrolls the element with that `data-focus` token into the centre (`photos`, `area_m2 floor`, `renovation`, `description`) and highlights it for 1.6 s. | `OwnerPanel.jsx:29-30,220-244`; `OwnerForm.jsx:103,109,386-412,1067,1183,1299,1370` (at r31) |
+| BR-APP-094 | **Status label and days of an owner listing** (since release `index-CBlEKxdL.js`). `withdrawn` → «Снято по жалобам». Any status other than `active` → `own.status.<status>` («Черновик», «На паузе», «Сдано», «Снято», «Не принято»). `active` → «Сдаётся · с сегодня» when less than one full day has passed since `published_at`, else «Сдаётся · N дней». The days come from the device clock (LB-APP-062). «В kvadro² N дней» uses `stats.days_listed`, falling back to the same count, and hides at 0. | `OwnerListings.jsx:35-56,217-245`; `owner.js:141-152` (at r31) |
+| BR-APP-095 | **Returning owner** (since release `index-CBlEKxdL.js`). «С возвращением! Вы уже размещали у нас квартир: {n}» shows when `past > 0` and no `active`, `paused` or `draft` listing exists besides the open draft. The form shows it only for a new draft, after its own extra `GET /api/owner/listings`; the list shows it in an empty «Актуальные». | `owner.js:748-760`; `OwnerForm.jsx:214-219,1004-1010`; `OwnerListings.jsx:407-414` (at r31) |
+| BR-APP-096 | **Celebration after publishing** (since release `index-CBlEKxdL.js`). Publishing a new listing plays a success haptic, a heavy impact at 260 ms and a medium one at 420 ms, and shows confetti on the done screen. A tap on the mascot repeats both, at most once per 800 ms. | `OwnerForm.jsx:45-68,842-883` (at r31) |
+| BR-APP-097 | **«Найти меня» in the place picker** (since release `index-CBlEKxdL.js`). The button exists only when Telegram's LocationManager (8.0+) or browser geolocation is available (TMA-035). Denied or failed → a warning haptic and a hint. A location outside the rectangle → `own.pickFarMe`. An accuracy worse than 100 m → `own.pickRough`. Otherwise the picker shows a "me" dot with the accuracy circle and flies to zoom 17, never zooming out. | `PlacePicker.jsx:22,123-141,170-179`; `$KVADRO_ROOT/demo/app/src/features/owner/pickMap.js:112-122,169-198`; `$KVADRO_ROOT/demo/app/src/lib/geo/location.js:48-78` (at r31) |
+| BR-APP-098 | **Contact by request** (since release `index-CBlEKxdL.js`). A listing is in gate mode when it is self-placed (`owner_self`), its `contact_mode` is `gate` and the card has no `phone`. In gate mode the CTA is the request: with no request (or any status not covered below) it is «Связаться с хозяином» (icon MessageCircle), which opens SCR-061; with `pending` it is a quiet, inactive «Отклик отправлен» (`contact.sent`). When the caller's request is closed, a two-line bar replaces the CTA: bold «Квартира уже не сдаётся» (`cancelled`), «Хозяин пока не ответил» (`expired`) or «Хозяин не готов дать номер» (`declined`, and `agent`, which the seeker sees exactly like `declined`), with the muted hint «Посмотрите похожие в ленте». Gate, which implies no phone, ranks above the contact link and the post (BR-APP-032). `ListingCtaBar` also has a variant of the bar for the user's own listing, «Это ваше объявление» with the hint «Отклики — в «Мои объявления»» (`ListingCtaBar.jsx:105-121`), but the screen never renders the bar for such a card (LB-APP-070, SCR-059). | `ListingCtaBar.jsx:34-71,105-121`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:45-46,205-211,310-322`; `ru.js:616-617,657-662` (at r31); `$KVADRO_ROOT/docs/api.md:386-391` (r31) |
+| BR-APP-099 | **Request form** (since release `index-CBlEKxdL.js`). `who` is required (`one`, `couple`, `family`, `students`, `friends`); `people` is 1…20 and defaults per `who` to 1 / 2 / 3 / 2 / 2; `move_in` holds at most 32 and `message` at most 500 characters, both trimmed, with an empty value sent as `null`; the message is prefilled. One send at a time. `409 no_chat` → the write-access request and one repeat, as for radars (TMA-033). The answer's `status` becomes `my_request`; `given` re-reads the card, expecting `phone` (LB-APP-074). | `$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:13-23,50-85`; `ListingScreen.jsx:334-340` (at r31); `$KVADRO_ROOT/docs/api.md:833-838` (r31) |
+| BR-APP-100 | **Owner tiers on the listing screen** (since release `index-CBlEKxdL.js`). The owner chip (ShieldCheck, «Проверенный хозяин», ⓘ) stands under the title when the listing is `owner_verified` or self-placed; it shows from the preview already, since `owner_verified` is a preview field. A claimed owner (`is_owner`, not verified, not self-placed) gets a section «Хозяин — со слов объявления» with «Мы не проверяли — спросите при звонке, нет ли комиссии.» between «Расположение» and «Кто размещает». The author label `owner` is hidden when, after stripping leading non-letters, it starts with the UI's «Проверенный хозяин» (verified or self-placed) or equals «Хозяин — со слов объявления» (`is_owner`, not verified) (LB-APP-075). | `ListingScreen.jsx:232-235,270-281`; `ListingTitleRow.jsx:86`; `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:63-69`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/AuthorSection.jsx:13-23`; `ru.js:101-103` (at r31); `$KVADRO_ROOT/docs/api.md:392-395` (r31) |
+| BR-APP-101 | **Owner chip tip** (since release `index-CBlEKxdL.js`). Shown at most twice per device: 700 ms after the chip mounts for a listing, the chip pulses and a tip «Нажмите — расскажем, что это значит» (`owner.tip`) with × (`owner.tipClose`) appears for 7 s. Each show increments `kv-owner-tip`; a tap on the chip or the tip, or ×, writes `done`. A tap also plays a light haptic and sends `owner_info_opened {listing_id}`. `kv-owner-tip` is synced through DeviceStorage. | `OwnerChip.jsx:10-62,70-86`; `storage.js:6`; `ru.js:647-648` (at r31); `$KVADRO_ROOT/docs/api.md:1192,1481-1482` (r31) |
+| BR-APP-102 | **Self-placed listings** (since release `index-CBlEKxdL.js`). A listing with `owner_self` has no «Источник» section (channels, original text, translation). A single history entry reads «Хозяин разместил квартиру в kvadro² {date}. Изменений цены пока не было.» (`details.historySelf`, no channel). «Описание» shows when `summary` or `owner_description` is set, the latter as a second paragraph. The author section adds «Обычно отвечает за {n} мин» (self-placed, with `response_minutes`, not the user's own) and, for gate with a `pending` request, «Отклик отправлен — ответ придёт в бот.» (`contact.pendingNote`). | `ListingScreen.jsx:285-303`; `HistorySection.jsx:29-40`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/DescriptionSection.jsx:8-15`; `AuthorSection.jsx:40-47`; `ru.js:286,645-646` (at r31); `$KVADRO_ROOT/docs/api.md:396-397` (r31) |
+| BR-APP-103 | **The owner's own listing** (since release `index-CBlEKxdL.js`; SCR-059). `owner_mine` alone changes the screen: the title row keeps only the share button, the price is a section with the market block under it, and there is no CTA bar. The panel «Ваше объявление» also needs `owner_listing_id`. | `ListingTitleRow.jsx:94-106`; `ListingScreen.jsx:237-255,310-311`; `$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx:7-26` (at r31) |
 
 ## 5. Known legacy bugs (LB-APP, tag `bug`)
 
@@ -1947,6 +2906,8 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
 
 - **Symptom:** `t()` dereferences `entry.other` with no fallback. Keys built from server values (`subs.mode.${mode}`,
   `type.${type}` in radar titles, `market.v3.rooms${n}`) can crash the whole app through the ErrorBoundary.
+- **Since release `index-CBlEKxdL.js`:** the lookup of the owner chunk's own dictionary throws the same way
+  (LB-APP-064).
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/i18n/index.js:118-121`; `$KVADRO_ROOT/demo/app/src/features/radar/subscriptionStatus.js:15`;
   `$KVADRO_ROOT/demo/app/src/features/filters/summary.js:111`.
 - **Proposed fix:** use a typed i18n catalogue with a build-time missing-key check across all three locales. At runtime,
@@ -2035,7 +2996,9 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
 - **Since release `index-DY_DH7h-.js`:** four keys are restored, `kv-visits` joined `DEVICE_SYNCED_KEYS` (`storage.js:6`
   at the pin); the title keeps the audited count. `kv-locale` and `kv-new-*` are still not restored. Release
   `index-BnFvC-Ft.js` adds `kv-new-cards`, written by the same `markFeatureSeen`: mirrored and not restored, like
-  `kv-new-pets` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`, unchanged since r6).
+  `kv-new-pets` (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:18`, unchanged since r6). Since release
+  `index-CBlEKxdL.js` six keys are restored: `kv-owner-tip` and `kv-req-tip` joined `DEVICE_SYNCED_KEYS` (`storage.js:6`
+  at r31; the release's unit `100-modified-DEVICE_SYNCED_KEYS.jsx.diff`).
 - **Evidence:** `$KVADRO_ROOT/demo/app/src/lib/storage.js:6,34-52`; `RECOVERY.md:171`.
 - **Proposed fix:** declare per key whether it is local-only, mirrored or restored; mirror only the keys that are
   restored.
@@ -2176,6 +3139,150 @@ These items reproduce production behaviour 1:1 in the recovered code. RECOVERY.m
   `$KVADRO_ROOT/docs/api.md:1053-1055` (r31); `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:69`.
 - **Proposed fix:** any answer without a boolean `sent`, and any error, counts as `failed`; the v1 method always
   answers JSON with a boolean `sent`.
+
+#### LB-APP-059 — A status change on the panel leaves the counters stale (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** «Сдано», «Пауза» and «Снять» on the owner panel (SCR-059) reload only the listing screen. Requests that
+  `rented` cancels keep the red dot, the tab tip and the Settings counter until the next return to the app. The list
+  «Мои объявления» does refresh the counter after the same action.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:87-113`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:245`; compare
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:350-352` and `App.jsx:144-147` (all at r31).
+- **Proposed fix:** one owner-state store that every cabinet mutation (status, answer, publish) invalidates.
+
+#### LB-APP-060 — The old-Telegram phone path cannot resume the draft (`bug`, CONFIRMED; trigger UNVERIFIED, Q-APP-027)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** below Telegram 6.9 the owner is told to open the bot, share the number there, «потом вернитесь сюда». On
+  clients older than Bot API 7.0, `openTelegramLink` closes the Mini App (Telegram documentation; external, not verified
+  here). Reopening the app from the bot carries no pointer to the draft, an `owner_new` link would create a new draft
+  (LB-APP-054), and the poll stops after 90 s. What the bot offers such a client is not known (`04` Q-BOT-047).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:50-58`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1600-1620,1684-1693`;
+  `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:55-69` (all at r31).
+- **Proposed fix:** the bot answers the contact with a Mini App button or a `startapp` link to that draft (for example
+  `owner_<id>`), and the app resumes it on the phone step.
+
+#### LB-APP-061 — A failed photo conversion uploads the original file (`bug`, CONFIRMED; security)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** when `createImageBitmap` or the canvas fails, the untouched original is sent, still named `photo.jpg`. It
+  keeps its EXIF data, including the GPS position of the flat, which the 500 m circle exists to hide. It may also be
+  HEIC or very large. Whether the server re-encodes an upload and strips its metadata is not documented (Q-API-073).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js:13-25`;
+  `$KVADRO_ROOT/demo/app/src/lib/api/owner.js:57-59`; `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:29` (all at
+  r31).
+- **Proposed fix:** the server re-encodes every upload, strips all metadata and checks the real type by content. The
+  client reports a failed conversion instead of silently sending the original.
+
+#### LB-APP-062 — Ambiguous weekday initials; days counted by the device clock (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** ru `own.weekdays` is «П,В,С,Ч,П,С,В»: two «П», two «В» and two «С». The week chart of the owner panel
+  assumes that the last value of `daily` is "today" by the device clock, and the days since publishing use the device
+  clock too.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:197`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:35-38,249-280` (at r31).
+- **Proposed fix:** the server sends dated points in Tashkent time, and the labels come from `Intl` short weekday names
+  («Пн», «Вт»…).
+
+#### LB-APP-063 — "Inside Uzbekistan" is a rectangle (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** lat 37–46 / lon 55–74 also covers large parts of Kazakhstan, Turkmenistan, Kyrgyzstan and Tajikistan
+  (`inferred` from the geography). This one test gates the label lookup, «Готово» and the form's point error. Whether
+  the server checks the point against the country is not documented (Q-API-074).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:15-16,73,147`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:990-992` (at r31).
+- **Proposed fix:** the server validates the point against the country and city polygons (PostGIS) and answers
+  `422 invalid:point`. The client keeps the rectangle only as a cheap pre-check.
+
+#### LB-APP-064 — An unknown key or enum value crashes owner screens (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** a new request or listing status, a new `who`, or a missing translation throws a `TypeError`. That takes
+  down «Мои объявления», the requests page or the panel; the panel's `LazyBlock` shows an `ErrorState`, and the others
+  fall to the boundary. It is LB-APP-002 in the owner dictionary: its lookup returns `undefined` for an unknown key, and
+  `formatEntry` reads `entry.other` of it. Keys built from server data make this reachable: `own.status.${status}`,
+  `own.req.${status}`, `own.answered.${action}` and `contact.who.${who}`. Legacy records it as a contract rule, not as a
+  guard, as for LB-APP-051.
+- **Evidence:** §3.1; `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:4,701-704`;
+  `$KVADRO_ROOT/demo/app/src/i18n/index.js:119-121`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:50,542,571,606` (all at r31);
+  `$KVADRO_ROOT/docs/api.md:1283-1285` (r31).
+- **Proposed fix:** a lookup that never throws, with a neutral fallback (HOMI's `@homi/i18n` already has never-throw
+  handlers), and a generic label for an unknown status.
+
+#### LB-APP-068 — A city change or erasing the address silently drops data (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** in the owner form another city chip clears the district, the landmark and the map point. Erasing the
+  address text to retype it also removes the map point. Unlike the map's own replacement, which shows a toast with
+  «Вернуть», neither can be undone.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1027-1034,1140-1158`; compare
+  `OwnerForm.jsx:607-620` (at r31).
+- **Proposed fix:** keep the point when the text is cleared, since they are separate facts, and offer «Вернуть» after a
+  city change.
+
+#### LB-APP-070 — The own-listing footer can be empty, and the «Это ваше объявление» bar is unreachable (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** `ListingCtaBar` has a branch for the user's own listing («Это ваше объявление» / «Отклики — в «Мои
+  объявления»», the keys `contact.mineBar` and `contact.mineBarHint`), but the screen never renders the bar for such a
+  card: it renders the owner footer instead, and the panel that fills that footer loads only with `owner_listing_id`.
+  With `owner_mine` but no `owner_listing_id` the screen shows neither the panel nor a CTA: the footer is an empty bar,
+  and the user sees no actions at all. While the panel loads, the footer is empty too.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:105-121`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:237-249,310-324`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:83-85` (all at r31).
+- **Proposed fix:** one owner of the footer: the panel's buttons when the panel is available, a footer skeleton while it
+  loads, else the «Это ваше объявление» bar. If the bar is not used so, drop the branch and its two keys.
+
+#### LB-APP-071 — The waitlist sign-up is not remembered (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** after «Сообщите, когда откроете…» (SCR-054) the confirmation is local state only. The next visit offers
+  the button again, and the answer of the call is not read.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1639-1655` (at r31);
+  `$KVADRO_ROOT/docs/api.md:1469-1470` (r31).
+- **Proposed fix:** the server returns a `waitlisted` flag (on the listing or with the user's profile), and the screen
+  shows the confirmation from it.
+
+#### LB-APP-072 — A chip tap before the card loads logs `owner_info_opened` and burns the tip (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** the owner chip shows from the preview (`owner_verified`), but its open handler is a no-op until the full
+  card arrives. A tap in that window still writes `kv-owner-tip = done`, hides the tip and sends `owner_info_opened`; no
+  sheet opens.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:232-233`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:54-62` (at r31).
+- **Proposed fix:** the chip is inert (or opens a sheet from preview data) until the card is loaded; the event and
+  `done` only when the sheet opens.
+
+#### LB-APP-074 — `given` without a phone offers a second request; the re-read resets the screen (`bug`, CONFIRMED; trigger UNVERIFIED, Q-API-076)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** after `given` the card is re-read; the re-read clears the details (skeletons, shimmer CTA) and scrolls to
+  the top. While it runs, and for good if the new card has `my_request: given` but no `phone`, gate mode holds and
+  `given` is not a closed status, so the CTA is «Связаться с хозяином» again. Whether the server puts `phone` on the
+  card after `given` is not verified (Q-API-076): the legacy document only expects it («ожидается, что в ней появится
+  `phone`»).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:206-210,337-339`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:40-52`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js:42-44` (all at r31);
+  `$KVADRO_ROOT/docs/api.md:390-391` (r31).
+- **Proposed fix:** `given` is its own CTA state («Позвонить» once the number can be fetched, a waiting state before);
+  re-read in the background without clearing the screen.
+
+#### LB-APP-078 — The info sheet still says «Номер он даёт сам, после вашего отклика» after the number was given (`bug`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** the gate test of the owner info sheet (SCR-062) lacks the screen's "no phone" condition, so with a given
+  number (a phone on the card) it still shows the gate point and the gate foot.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx:22,28-30,74` against
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:206` (at r31).
+- **Proposed fix:** one shared gate predicate.
 
 ## 5b. Questionable UX and logic decisions (LB-APP, tag `decision`)
 
@@ -2366,6 +3473,164 @@ are proposals.
 - **Proposed fix:** reset the result when the sub-page closes. Undecided; WP-31 keeps the legacy behaviour until it is
   decided.
 
+#### LB-APP-054 — Every entry creates a new draft; abandoned drafts pile up (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** the Settings row, «Сдать ещё одну», the panel and every `owner_new` launch each send
+  `POST /api/owner/listings`. A user who opens the cabinet and backs out of the first map step leaves an empty draft
+  behind (Back from «where» closes the form). Each one shows in «Мои объявления» as «Черновик». Whether the server
+  reuses an untouched draft is not documented (Q-API-068).
+- **Evidence:** BR-APP-075; `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:183-186,374-375` (at r31);
+  `$KVADRO_ROOT/docs/api.md:1434` (r31).
+- **Proposed fix:** the server answers `POST` with the user's existing untouched draft, or the client creates the draft
+  only with the first saved field. An `owner_new` launch resumes the open draft.
+
+#### LB-APP-055 — Editing a published listing autosaves, yet the last step says «Сохранить изменения» (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** in edit mode every change is sent by `PATCH` after 600 ms and again when the form closes. Photo uploads,
+  deletes and the cover change act at once. Closing the form without «Сохранить изменения» therefore still persists the
+  edits, and it is not documented whether the public listing shows them before `publish` (Q-API-070).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:308-337,435-524,668-691`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:122` (at r31); `$KVADRO_ROOT/docs/api.md:1439-1442,1450-1451`
+  (r31).
+- **Proposed fix:** choose one model. Either keep the edits of a published listing as a revision that only «Сохранить
+  изменения» applies (photos included), or let every save go live and rename the button «Готово».
+
+#### LB-APP-056 — Publish is possible with no contact mode chosen (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** when `contact_mode` is `null`, neither option is selected, and «Опубликовать» works anyway. The server
+  picks a mode the owner never saw; which one is not documented (Q-API-078).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:906-929,668-741` (at r31);
+  `$KVADRO_ROOT/docs/api.md:1365` (r31).
+- **Proposed fix:** preselect «Через kvadro²» (the recommended mode) for `null`, or block publish until a mode is
+  chosen. The server answers `missing:contact_mode`.
+
+#### LB-APP-057 — Limits are written into the texts (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:**
+  - In the owner cabinet «Уже две квартиры», «Сдавать можно до 2 квартир сразу», «С этим номером уже сдаются 2 квартиры»
+    and «сейчас n из 10» are written into the strings, while `max` comes from the server and the photo cap is a client
+    constant.
+  - In the contact request «до 10 откликов в день», «Сегодня вы уже отправили 10 откликов», «через 10 минут» and «За
+    неделю — 30 откликов» are fixed strings, while the server decides the limits (open question 17 of the legacy
+    document).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:107,136-137,170,175`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:74`; `ru.js:632-640` (all at r31);
+  `$KVADRO_ROOT/docs/api.md:1321-1325,1408-1409` (r31).
+- **Proposed fix:** interpolate `{max}` from the server and the photo cap from configuration shared with the server. The
+  request limits come from the API (reference data or the error body) and fill the texts.
+
+#### LB-APP-058 — No analytics in the owner funnel (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** the owner chunks send no event at all. One screen name, `owner/form`, covers all five steps of the form.
+  A form opened from the panel is reported as `listing`. A launch through `owner_new` has no source.
+- **Evidence:** §3.3; `$KVADRO_ROOT/demo/app/src/app/useScreenTracking.js:30-51`;
+  `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-35` (at r31). A search for `trackEvent` in
+  `src/features/owner`, `src/lib/ownerPending.js`, `src/components/ReqTip.jsx` and
+  `src/features/settings/OwnerLimitSheet.jsx` at r31 found nothing.
+- **Proposed fix:** add events for:
+  - the cabinet opened (with its entry point);
+  - a step reached;
+  - a photo upload result;
+  - the phone result: shared, denied, timeout, or rejected with the reason;
+  - the mode chosen;
+  - the publish result;
+  - status changes and request answers.
+
+  Give each step its own screen name, let the form win over the listing, and record the launch source `owner_new`.
+
+#### LB-APP-065 — A rejected owner gets no way forward (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** the rejection texts end with «напишите в поддержку», but the screen (SCR-054) has no support button. In
+  «Мои объявления» a rejected listing stays in «Актуальные» with the chip «Не принято», no reason, no action and no way
+  to delete it. `reject_reason` mixes two vocabularies.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1622-1664`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:160-170`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:104-107` (all at r31); `$KVADRO_ROOT/docs/api.md:1357,1368-1369`
+  (r31).
+- **Proposed fix:**
+  - a support button on the rejection screen and on the rejected card (HOMI: the support bot of DEC-56);
+  - the reason shown on the card;
+  - separate fields `phone_error` (`not_uz | not_own`) and `reject_reason` (`agent | fraud | limit`);
+  - «Удалить» for a rejected listing.
+
+#### LB-APP-066 — The pending counter is fetched for every user on every launch and resume (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** `App` mounts the counter for everyone, so `GET /api/owner/pending` runs at start and on every return to
+  the app, also for the large majority who never listed a flat.
+- **Evidence:** `App.jsx:141`; `$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:40-55` (at r31);
+  `$KVADRO_ROOT/docs/api.md:1460-1462` (r31).
+- **Proposed fix:** carry the pending count in a call the app already makes at start, and fetch it separately only for
+  users with owner listings and after cabinet actions.
+
+#### LB-APP-067 — Photo delete without confirmation or undo (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** one tap on the trash icon deletes the photo on the server at once. On a published listing it probably
+  disappears from the public listing at once too (`inferred`; LB-APP-055, Q-API-070).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:511-524` (at r31).
+- **Proposed fix:** an undo toast with a deferred delete.
+
+#### LB-APP-069 — The request tip leads to Settings, not to the requests (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** «Пришёл первый отклик!» only switches to the Settings tab. The owner still has to find «Мои объявления»
+  and then the listing's «Отклики», three more taps. After the first visit to any requests page the tip never shows
+  again, and new requests have only the red dot.
+- **Evidence:** `App.jsx:719-734`; `$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx:16-34`;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:495` (at r31).
+- **Proposed fix:** a tap opens the requests (or «Мои объявления») directly, and the signal for later requests is an
+  explicit decision.
+
+#### LB-APP-073 — `open`, `closed` and `own` leave the card stale (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** these errors of the contact request only print a line in the sheet (SCR-061). The card keeps gate mode
+  and «Связаться с хозяином»; a second tap sends again and fails again. «Хозяин открыл номер — обновите карточку и
+  позвоните.» asks the user to refresh, but nothing on the screen refreshes the card.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:71-80`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:334-340`; `ru.js:642-644` (at r31).
+- **Proposed fix:** `open` → close the sheet and re-read the card (it then shows «Позвонить»); `closed` → the closed
+  bar; `own` → re-read (the card becomes the user's own).
+
+#### LB-APP-075 — The author label is hidden by comparing server text with the client catalogue (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** whether the `owner` label repeats the chip is decided by matching the server's string with the UI
+  language's «Проверенный хозяин» / «Хозяин — со слов объявления». A label in another language, with other punctuation
+  or reworded on the server, shows twice.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/sections/AuthorSection.jsx:7-23` (at r31);
+  `$KVADRO_ROOT/docs/api.md:392-395` (r31). The parity mock sets `owner: 'Проверенный хозяин'` on a self-placed card
+  (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:300`); that the real server prefixes the label is `inferred` from it
+  (Q-API-078).
+- **Proposed fix:** a structured owner tier in the contract; the label carries only what the tier does not say.
+
+#### LB-APP-076 — An expired request closes contact for good (`decision`, CONFIRMED in the UI; server UNVERIFIED, Q-API-075)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** `expired` is a closed status: the seeker sees «Хозяин пока не ответил» and has no way to ask again or to
+  call. Whether the server would accept a new request after `expired` is not known (Q-API-075). `response_minutes` is
+  printed as minutes for any value («за 600 мин»).
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx:45-46,209-210`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx:111-112`;
+  `$KVADRO_ROOT/demo/app/src/features/listing/sections/AuthorSection.jsx:40-45`; `ru.js:645,661` (all at r31).
+- **Proposed fix:** after expiry allow one new request (server rule to confirm); format `response_minutes` with hours
+  and days.
+
+#### LB-APP-077 — Picking «Кто будет жить» overwrites the count the user set (`decision`, CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js`.
+- **Symptom:** in the contact request sheet (SCR-061) a tap on a chip of «Кто будет жить» sets «Сколько человек» to 1 /
+  2 / 3 / 2 / 2, also after the user has changed the stepper.
+- **Evidence:** `$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:121-125` (at r31).
+- **Proposed fix:** the default count applies only while the user has not touched the stepper.
+
 ## 6. Reconstruction guesses and open questions
 
 ### 6.1 `// TODO: inferred from build` spots (4)
@@ -2375,7 +3640,7 @@ are proposals.
 | 1 | `$KVADRO_ROOT/demo/app/vite.config.js:67` | `build.target` `chrome80 / edge80 / firefox72 / safari13.1`, from bundle syntax | UNVERIFIED (Q-APP-001) |
 | 2 | `$KVADRO_ROOT/demo/app/src/features/map/MapScreen.jsx:7` | an engine-name debug badge stripped from the build (`SHOW_ENGINE_BADGE = false`; `.map-kind` CSS is dead) | UNVERIFIED (Q-APP-002) |
 | 3 | `$KVADRO_ROOT/demo/app/src/features/map/gl/style.js:306` | the rationale of the label-halo width formula (`stroke/2 + 0.25`); the value matches the bundle, the reasoning is guessed | UNVERIFIED (Q-APP-003) |
-| 4 | `$KVADRO_ROOT/demo/app/src/lib/geo/location.js:118` | `zoom < 11` (default 12) marks a "region", not a city, for nearest-city search | UNVERIFIED (Q-APP-004) |
+| 4 | `$KVADRO_ROOT/demo/app/src/lib/geo/location.js:118` | `zoom < 11` (default 12) marks a "region", not a city, for nearest-city search; `$KVADRO_ROOT/docs/api.md:499-500` (r31) now states the rule, the code comment is unchanged | UNVERIFIED (Q-APP-004) |
 
 The recovery also states that file names, module boundaries and the versions of four range-pinned libraries are
 guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
@@ -2387,7 +3652,7 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 | Q-APP-001 | What is the real minimum WebView the Mini App must support? | Pull the `platform` / `tg` distribution from `app_launch` (with `tg` since release `index-BnFvC-Ft.js`) and `app_error` in the legacy journal or PostHog; run a syntax checker over the prod bundle in `tools/parity/original/assets/` (read-only). |
 | Q-APP-002 | Did the engine badge ever ship to users? | Inspect the prod chunks `MapView-*.js` / `MapViewGL-*.js` in `tools/parity/original/assets/` for the badge render. Product decision: drop it. |
 | Q-APP-003 | Is the GL label halo correct? | Confirm with the existing `gl-parity` style comparison (16/16 identical per RECOVERY.md:71-74); visual check against a prod screenshot. |
-| Q-APP-004 | Does `zoom < 11` really mean "region"? | Read `cities[].zoom` from a real `GET /api/meta` and confirm with the backend owner. `$KVADRO_ROOT/docs/api.md` §4 repeats the rule, but it was derived from code. |
+| Q-APP-004 | Does `zoom < 11` really mean "region"? | Read `cities[].zoom` from a real `GET /api/meta` and confirm with the backend owner. `$KVADRO_ROOT/docs/api.md` §4 repeats the rule (`:499-500`, and as its open question 12 at `:1310`, r31), but it was derived from code. |
 | Q-APP-005 | Can `GET /api/feed/flow` return 204 or an empty body? (LB-APP-006) | Call it with very narrow filters on a test account and record the status and body. |
 | Q-APP-006 | Do `POST` / `PUT /api/subscriptions` always return `relaxed[]` when `starter = 0` and `options` is empty? (LB-APP-005) | Contract check against `$KVADRO_ROOT/docs/api.md` §7 and a live call. |
 | Q-APP-007 | What values can `median_rooms` take (0, fractions)? (LB-APP-015) | Sample `GET /api/listings/:id` responses with `median_scope = near`. |
@@ -2403,22 +3668,24 @@ guesses (`$KVADRO_ROOT/demo/app/docs/RECOVERY.md:88-95`).
 | Q-APP-017 | What does `contact_paid` mean, given the button «Номер платный»? | Backend owner; sample a listing with `contact_paid: true`. |
 | Q-APP-018 | How many sessions use GL, Leaflet or lite? (decides whether to port Leaflet) | PostHog: `build` plus screen events joined with UA; or add a temporary event in the new app. |
 | Q-APP-019 | Do bot buttons open the Mini App with `?listing=` / `?news=` (URL) or with `startapp`? | Read the bot's `web_app` button URLs in `$KVADRO_ROOT/docs/telegram-bot.md` and `04-telegram-bot-audit.md`. |
-| Q-APP-020 | Do the parity mocks match real API shapes for every state above? | Record real responses for each endpoint on a test account and diff them against `tools/parity/mocks*.mjs`. |
+| Q-APP-020 | Do the parity mocks match real API shapes for every state above? | Record real responses for each endpoint on a test account and diff them against `tools/parity/mocks*.mjs`; since `index-CBlEKxdL.js` these include the owner and contact mocks (`tools/parity/mocks.mjs:253-301` at r31). |
 | Q-APP-021 | Does `GET /api/bot` return `support`, and which account? | Call `GET /api/bot`. |
 | Q-APP-022 | Do support staff use `?map=gl|leaflet|auto` overrides? | Ask the operators; otherwise treat it as a debug-only feature. |
 | Q-APP-026 | Can `GET /api/feed/new` answer `200` without a numeric `count`? (LB-APP-048) | Call it on a test account with narrow filters, with `since` in the future and with `since=0`, and record the status and the body. |
+| Q-APP-027 | On a Telegram client below 6.9 the phone step sends the owner to the bot (LB-APP-060). Does `openTelegramLink` close the Mini App there, and does reopening it bring the owner back to the same draft or to a new one (LB-APP-054)? | Take the phone step on a client below 6.9 with a test account on legacy; record what the bot offers and what the reopened app shows (with `04` Q-BOT-047). |
+| Q-APP-028 | Two spots of the owner form were read from code and CSS but not checked on a device. (a) At a first launch through `owner_new` without a chosen city, is the blocking city picker (z 60) above the form layer (z 46), so that the city is picked first (SCR-050)? (b) When both map engines fail in the place picker, does the map stay blank with «Готово» disabled and no message (SCR-051)? | Run both cases on legacy with a test account; or, at the next intake, read the rule order of `.city-backdrop` against `.sheet-backdrop` and the Leaflet mount path of `PlacePicker.jsx`. |
 
 ## 7. Summary
 
 | Kind | Count | Status |
 | ---- | ----- | ------ |
-| Screens and states (SCR) | 48: 18 `screen`, 11 `sheet`, 8 `overlay`, 2 `modal`, 9 `state` (SCR-046 and SCR-047 since `index-DY_DH7h-.js`, SCR-048 since `index-BnFvC-Ft.js`) | 48 CONFIRMED (SCR-011 contains 2 inferred style details; for SCR-048 the bot side is UNVERIFIED) |
-| i18n keys | 510 per locale (ru, uz_Latn, en) at the pinned release `index-BnFvC-Ft.js`, 482 at `index-DY_DH7h-.js`, 461 at the audit (§3.1); 0 missing; 15 plural at the pin (14 up to `index-BNLZFfL0.js`); 6 unused | CONFIRMED |
-| Client storage keys | 11 `kv-*` at the pin (6 mirrored to DeviceStorage, 4 restored; 10, 5 and 3 at the audit) + 1 dev-only | CONFIRMED |
-| Analytics | 21 journal events (`POST /api/events`) at the pin, 16 at the audit, + PostHog `$pageview` with 16 screen names, autocapture, web vitals, exceptions, replay | CONFIRMED |
-| Business rules (BR-APP) | 74 (BR-APP-070 to 073 since `index-DY_DH7h-.js`, BR-APP-074 since `index-BnFvC-Ft.js`) | CONFIRMED |
-| Legacy bugs (LB-APP, `bug`) | 28 (LB-APP-001 to 023, 046, 048, 049, 051, 052; 14 from RECOVERY.md §7, 14 found here) | 21 CONFIRMED; 7 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048) |
-| Questionable decisions (LB-APP, `decision`) | 25 (LB-APP-024 to 045, 047, 050, 053) | CONFIRMED (the intent of 053 UNVERIFIED) |
-| `TODO: inferred from build` | 4 (3 in `src`, 1 in `vite.config.js`) | UNVERIFIED |
-| Open questions (Q-APP) | 23 (Q-APP-001 to 022 and 026 here; Q-APP-023 to 025 are in `24`) | open |
-| Telegram integration points (TMA) | 45 in `05-telegram-miniapp-audit.md` (39 used, 6 confirmed absences) | CONFIRMED (2 server-side parts DOCUMENTED_ONLY) |
+| Screens and states (SCR) | 62: 24 `screen`, 14 `sheet`, 10 `overlay`, 2 `modal`, 12 `state` (SCR-046 and SCR-047 since `index-DY_DH7h-.js`, SCR-048 since `index-BnFvC-Ft.js`, SCR-049 to SCR-062 since `index-CBlEKxdL.js`) | 62 CONFIRMED in the client (SCR-011 contains 2 inferred style details; for SCR-048 the bot side is UNVERIFIED; the server and bot sides of SCR-049 to SCR-062 are DOCUMENTED_ONLY or UNVERIFIED) |
+| i18n keys | 569 per locale (ru, uz_Latn, en) at the pinned release `index-CBlEKxdL.js`, 510 at `index-BnFvC-Ft.js`, 482 at `index-DY_DH7h-.js`, 461 at the audit (§3.1); 0 missing; 15 plural at the pin (14 up to `index-BNLZFfL0.js`); 6 unused; plus 207 keys per locale in the owner chunk's own dictionary (3 plural) | CONFIRMED |
+| Client storage keys | 13 `kv-*` in localStorage at the pin (8 mirrored to DeviceStorage, 6 restored; 11, 6 and 4 at `index-BnFvC-Ft.js`; 10, 5 and 3 at the audit) + 1 in sessionStorage (`kv-own-focus`) + 1 dev-only | CONFIRMED |
+| Analytics | 22 journal events (`POST /api/events`) at the pin (`owner_info_opened` since `index-CBlEKxdL.js`), 16 at the audit, + PostHog `$pageview` with 18 screen names (`owner/form` and `owner/mine` since `index-CBlEKxdL.js`), autocapture, web vitals, exceptions, replay | CONFIRMED |
+| Business rules (BR-APP) | 103 (BR-APP-070 to 073 since `index-DY_DH7h-.js`, BR-APP-074 since `index-BnFvC-Ft.js`, BR-APP-075 to 103 since `index-CBlEKxdL.js`) | CONFIRMED |
+| Legacy bugs (LB-APP, `bug`) | 40 (LB-APP-001 to 023, 046, 048, 049, 051, 052, 059 to 064, 068, 070, 071, 072, 074, 078; 14 from RECOVERY.md §7, 26 found here) | 31 CONFIRMED; 9 with the defect CONFIRMED but the trigger or impact UNVERIFIED (005, 006, 015, 016, 020, 022, 048, 060, 074) |
+| Questionable decisions (LB-APP, `decision`) | 38 (LB-APP-024 to 045, 047, 050, 053, 054 to 058, 065 to 067, 069, 073, 075 to 077) | CONFIRMED (the intent of 053 and the server side of 076 UNVERIFIED) |
+| `TODO: inferred from build` | 4 (3 in `src`, 1 in `vite.config.js`); the owner files of `index-CBlEKxdL.js` have none | UNVERIFIED |
+| Open questions (Q-APP) | 25 (Q-APP-001 to 022 and 026 to 028 here; Q-APP-023 to 025 are in `24`) | open |
+| Telegram integration points (TMA) | 46 in `05-telegram-miniapp-audit.md` (41 used, 5 confirmed absences) | CONFIRMED (2 server-side parts DOCUMENTED_ONLY, and the bot side of TMA-034) |

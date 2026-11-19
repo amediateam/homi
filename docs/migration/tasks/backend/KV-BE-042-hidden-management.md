@@ -16,12 +16,12 @@ entry `number`, and clears both lists at once — owner-scoped, byte-compatible 
 ## Legacy reference
 
 - API-026 `GET /api/hidden`, API-027 `DELETE /api/hidden/:id`, API-028 `DELETE /api/hidden`
-  (`08-api-inventory.md:1098-1159`); client `$KVADRO_ROOT/demo/app/src/lib/api/user.js:5`, `:11-14`, `:17-20`;
+  (`08-api-inventory.md:1188-1249`); client `$KVADRO_ROOT/demo/app/src/lib/api/user.js:5`, `:11-14`, `:17-20`;
   `$KVADRO_ROOT/demo/app/src/features/settings/HiddenScreen.jsx:26-37` (optimistic removal), `:45`, `:53`, `:62`, `:66`
   (both `.length` summed); `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:64`, `:135`; confirmation
   text «Снова показывать все скрытые объявления и заблокированных авторов?» (`ru.js:216`); mock
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:108-112`; `$KVADRO_ROOT/docs/api.md:901-924`.
-- Rules: `02-legacy-backend-audit.md:541-565` (BR-API-099, Q-API-037).
+- Rules: `02-legacy-backend-audit.md:543-567` (BR-API-099, Q-API-037).
 - Fixes by policy (`09` §4.3): LB-API-040 (author entry ids preserved; two unblock routes kept). DEV-034 `PROPOSED`.
 
 ## Implementation

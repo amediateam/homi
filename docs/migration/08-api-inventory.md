@@ -10,15 +10,18 @@ decisions `LB-API-NNN` (each with a proposed fix and old-client impact), open qu
 (`GET /api/feed/new`, added in release `index-DY_DH7h-.js`) stands at its registry position, after API-006; ids stay
 stable, so it takes the next free number while the legacy registry renumbered the methods after it. API-036
 (`POST /api/settings/card-sample`, added in release `index-BnFvC-Ft.js`) stands the same way at its registry position
-#27, after API-025.
+#27, after API-025. API-037 … API-054 (the owner cabinet and the contact request, added in release
+`index-CBlEKxdL.js`) stand at their registry positions #37 – #54.
 
 - **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to
-  `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intake of 2026-11-19, to the pinned release
-  `index-BnFvC-Ft.js` (SVN r29; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`; `wave-1/baseline.md`). Text changed for
-  a later release names it; "Doc:" line numbers are those of the audited tree, "current Doc:" and "at the pin" those
-  of SVN r27. `$KVADRO_ROOT/docs/api.md` of r29 cannot be read: text of the intake cites it at r31 ("Doc r31:"), whose
-  additions for the next release (the owner methods #37–#54) it does not take over, and client files at r29 when they
-  have not changed since.
+  `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` (SVN r29,
+  the previous pin; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`) and to the pinned release `index-CBlEKxdL.js` (SVN
+  r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31; `wave-1/baseline.md`). Text changed for a later release
+  names it; "Doc:" line numbers are those of the audited tree, "current Doc:" and "at the pin" those of SVN r27.
+  "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, the pinned release's own state. The intake of
+  `index-BnFvC-Ft.js` cites the same state, because `api.md` of r29 cannot be read, and client files at r29 when they
+  have not changed since. Text of the intake of `index-CBlEKxdL.js` cites client files "at r31", the state the release
+  was read in; the checkout has moved since (`wave-1/baseline.md`).
 - **Evidence base:** the legacy backend source and database are not available. The Mini App source is decompiled from
   the production bundle; the landing is a 1:1 production mirror. Nothing was run: `RUNTIME_VERIFIED` is not used.
 - **Status per endpoint** carries two labels: **Contract** (method, path, request construction, the response fields
@@ -66,6 +69,9 @@ stable, so it takes the next free number while the legacy registry renumbered th
 - Bodies are JSON; `Content-Type: application/json` is added only when `options.body` is set (`client.js:79-83`).
   Bodiless `POST`/`DELETE` calls send no `Content-Type` and no body (for example `src/lib/api/listings.js:29-32`). —
   `CONFIRMED`
+- Since release `index-CBlEKxdL.js` `apiFetch` also takes a `FormData` body. Only the photo upload of the owner
+  cabinet uses it (API-041): `multipart/form-data` with one field `file`, sent without the JSON `Content-Type`
+  (`src/lib/api/owner.js:57-70` at r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:14` at r31). — `CONFIRMED`
 - Body keys whose value is `undefined` are dropped by `JSON.stringify` (for example `relaxed` in
   `src/lib/api/subscriptions.js:16-20` when no relax option was picked). — `CONFIRMED`
 - Path ids are interpolated without encoding: `` `/api/listings/${id}` `` (`listings.js:10`). Listing ids come from
@@ -98,12 +104,20 @@ stable, so it takes the next free number while the legacy registry renumbered th
     (`src/features/feed/ListingFeed.jsx:88`);
   - `404` on `GET /api/listings/:id` → «Объявление не загрузилось» (`src/features/listing/ListingScreen.jsx:115-116`,
     string `listing.loadFailed` in `src/i18n/locales/ru.js:156`);
-  - `409` with `detail: "no_chat"` → write-access flow (`src/lib/chatAccess.js:15-54`);
+  - `409` with `detail: "no_chat"` → write-access flow (`src/lib/chatAccess.js:15-54`); since release
+    `index-CBlEKxdL.js` also on `POST /api/listings/:id/contact` (API-054), where it is answered before a request is
+    created (Doc r31:837-838, :1290);
   - `409` without `no_chat` → radar-limit toast «Уже {max} радаров — удалите ненужный во вкладке «Радар»»
     (`src/app/subscriptionActions.js:147-155`, `ru.js:64`).
 - Network failure or the 15 s timeout → `ApiError(status 0, detail 'network' | 'timeout')`; the generic error state
   shows «Нет связи» / «Сервер не ответил. Попробуйте ещё раз через минуту.» (`client.js:103-106`,
   `src/components/ErrorState.jsx:14`, `ru.js:14-16`). — `CONFIRMED`
+- Since release `index-CBlEKxdL.js` the owner methods (API-037 … API-053) report refusals as `detail` strings that the
+  client parses: `invalid:<fields>` (`422`), `missing:<fields>`, `status:…` (`409`), `rejected:<reason>` and
+  `photo:too_many`, `photo:not_image`, `photo:too_big` (`02` BR-API-160; Doc r31:1286-1288, :1439-1442, :1450-1454;
+  `src/features/owner/OwnerForm.jsx:668-741`, `:1437-1447` at r31). A `409` on `POST /api/owner/listings` is the
+  apartment limit, shown as «Уже две квартиры» (API-038; Doc r31:1434-1435, :1286). The HTTP statuses of the other
+  codes are not documented (Q-API-069 in `02`). — `CONFIRMED` (client parsing); server statuses `DOCUMENTED_ONLY`
 
 ### 1.6 Timeouts, cancellation, prefetch and retries
 
@@ -111,6 +125,11 @@ stable, so it takes the next free number while the legacy registry renumbered th
   `/api/feed/flow` and, since release `index-DY_DH7h-.js`, `/api/feed/new`) aborts the request and is re-thrown as
   `AbortError`, so the server sees dropped connections (`client.js:64-72`, `:104`; `$KVADRO_ROOT/docs/api.md:534`). —
   `CONFIRMED`
+- Since release `index-CBlEKxdL.js` `apiFetch` takes `timeoutMs`: 90 s for a photo upload of the owner cabinet
+  (API-041), 15 s for every other call (`client.js:24-27` at r31). `/api/owner/place` and `/api/owner/demand` also
+  pass an `AbortSignal`: a new request, 400 ms after the map stops or 500 ms after a change of the form, aborts the
+  previous one (API-051, API-053; `src/features/owner/PlacePicker.jsx:24`, `:63-83`,
+  `src/features/owner/OwnerForm.jsx:107`, `:347-369` at r31). — `CONFIRMED`
 - Prefetch before React mounts (`src/main.jsx:24-39`): `GET /api/meta`; the first feed page for
   `defaultFilters('rent_long', <saved city>)` with `limit=20`; `GET /api/listings/<id>` when opened from a listing
   link. Prefetch is skipped without `initData` (`client.js:35-43`). The first `apiFetch(url)` **without options**
@@ -118,10 +137,16 @@ stable, so it takes the next free number while the legacy registry renumbered th
   immediately (`client.js:56-60`). A failed first `/api/meta` therefore produces two requests back to back. —
   `CONFIRMED`
 - Automatic retries exist only for `GET /api/meta` (§2, API-001). Mutations are never retried automatically, except
-  the single repeat after the user grants write access on `409 no_chat` (`src/lib/chatAccess.js:27-54`). —
-  `CONFIRMED`
+  the single repeat after the user grants write access on `409 no_chat` (`src/lib/chatAccess.js:27-54`); since release
+  `index-CBlEKxdL.js` the contact request (API-054) repeats the same way
+  (`src/features/listing/ContactRequestSheet.jsx:59-68` at r31). — `CONFIRMED`
 - Debounced live requests: `/api/feed/count` 250 ms and `/api/feed/flow` 500 ms after each filter change, previous
   request aborted (`src/features/filters/useLiveFeedStats.js:12-45`). — `CONFIRMED`
+- Since release `index-CBlEKxdL.js` two requests repeat on their own. While the owner form waits for the phone, it
+  polls `GET /api/owner/listings/:id`: at once, then every 1.5 s without overlapping requests for up to 90 s, and at
+  once on every return to the app (API-039; `src/features/owner/OwnerForm.jsx:80-86`, `:1484-1620` at r31).
+  `GET /api/owner/pending` is sent at app start and on every return to the app, for every user (API-047;
+  `src/lib/ownerPending.js:40-55`, `src/app/App.jsx:141` at r31; `03` LB-APP-066). — `CONFIRMED`
 
 ### 1.7 Common filter query (`FilterQuery`)
 
@@ -183,7 +208,10 @@ parts split by ` · `, `(…)` cut from part 1, text from the first `/` is the p
 `favorite: boolean`!, `viewed?: boolean`, `district_name: string|null`, `place?: string`, `landmark: string|null`,
 `metro: string|null`, `metro_km: number|null`!, `center_km: number|null`!, `area_total: number|null`,
 `floor: number|null`, `floors_total: number|null`, `rooms: number|null`, `pets_ok: boolean`, `is_owner?: boolean`,
-`owner_verified?: boolean`, `photos_preview: string[]`!, `photos_count?: number`, `cover?: string`,
+`owner_verified?: boolean` (since release `index-CBlEKxdL.js` `owner_verified` draws the badge «Проверенный хозяин»
+with a shield, a shield after the price on the compact map card, and the owner chip with `03` SCR-062 on the listing
+screen; `is_owner` draws the quiet «Хозяин»; Doc r31:274-276), `photos_preview: string[]`!, `photos_count?: number`,
+`cover?: string`,
 `video: unknown|null` (truthy flag only; tap opens the Telegram post — `src/features/listing/ListingScreen.jsx:150`),
 `age: string|null` (`<prefix> · <when>`), `status_text: string|null`, `market: string|null` (display label),
 `median_delta: number|null`! (fraction, `-0.12` = 12% cheaper), `median_tone: string|null`
@@ -209,6 +237,22 @@ others = per month; the parity mock uses `unit`), `median_reason?: unknown` (tru
 `price_usd?: number|null`, `price_per_m2?: number|null` (one of `median_own`/`price_per_m2`/`price_usd` must be present
 or the scale shows `$NaN`).
 
+Since release `index-CBlEKxdL.js` `ListingDetails` also has seven keys of the owner cabinet (Doc r31:343-350,
+:386-397; a breaking change of the contract per `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:43` at r31):
+`owner_self?: boolean` (the owner placed the listing in the cabinet: the owner chip, no «Источник» section, the
+`details.historySelf` line, the response time; a request instead of a call is possible), `owner_mine?: boolean` (the
+caller's own listing, `03` SCR-059), `owner_listing_id?: number` (the cabinet record; the owner panel loads only with
+`owner_mine` and this id), `contact_mode: "gate"|"open"|null` (`gate` with `owner_self` and no `phone` → a request
+instead of a call, API-054; `open` → the phone is on the card as usual),
+`my_request: "pending"|"given"|"declined"|"agent"|"expired"|"cancelled"|null` (the caller's request on this listing),
+`response_minutes: number|null` («Обычно отвечает за N мин»: the author section of a self-placed listing that is not
+the caller's, the lead of the request sheet `03` SCR-061, the info sheet `03` SCR-062),
+`owner_description: string|null` (the cabinet description, the second paragraph of «Описание»; the server must hide
+phone numbers in it, Doc r31:1390). `owner_mine` and `my_request` depend on the caller. On the card of a gate listing
+`phone` is `null` until the caller's request is `given` (Doc r31:386-391; `02` BR-API-187, BR-API-188). A
+self-placed listing has no channel source, so its `original_url` is expected to be `null` (`inferred`; Q-API-078 in
+`02`).
+
 **`FeedPage`** (`$KVADRO_ROOT/docs/api.md:355-366`): `{items: ListingPreview[], next_cursor: string|null!}` —
 `next_cursor === null` is the only end-of-list signal (`src/features/feed/useInfiniteFeed.js:41-42`).
 
@@ -217,6 +261,33 @@ or the scale shows `$NaN`).
 
 **`SubscriptionMutationResult`** (`$KVADRO_ROOT/docs/api.md:382-400`): `{subscription: Subscription, starter: number,
 options?: {code, label, rate, count: number}[], relaxed: {text: string, …}[]!}`.
+
+The five models of the owner cabinet, since release `index-CBlEKxdL.js` (Doc r31:1352-1427). The contract's own
+checklist makes three points strict: `form` is always an object and `photos` always an array; `who` takes only the
+values listed below; both `status` fields take only the values listed below. Any other value crashes the owner
+screens (Doc r31:1283-1285; `02` BR-API-159; `03` LB-APP-064). Where no type is written, the intake recorded the
+field name only.
+
+**`OwnerListing`** (Doc r31:1355-1371): `id`, `status: "draft"|"active"|"paused"|"rented"|"removed"|"rejected"`,
+`withdrawn?` (taken down after complaints), `held?` (paused by support), `published_at`, `listing_id` (the public
+listing once it is published), `photos: {id, url}[]`! (at most 10, the first is the cover), `form: OwnerListingForm`!,
+`stats: OwnerListingStats|null`, `contact_mode: "gate"|"open"|null`, `phone_set`, `phone_display`, `reject_reason?`
+(`not_own` or `not_uz` on a draft; `agent`, `fraud` or `limit` with `status: "rejected"`, Doc r31:1366-1369),
+`shown_point?: {lat, lon, radius_m}` (the circle seekers see instead of the exact point).
+
+**`OwnerListingForm`** (Doc r31:1373-1391): `city`, `district_code`, `landmark`, `lat`, `lon` (5 decimals), `room`,
+`rooms` (1…5), `area_m2`, `floor`, `floors_total`, `price`, `currency: "USD"|"UZS"`, `renovation` (a code from
+`meta.renovations.owner`, API-001), `furniture`, `tenants: ("family"|"students"|"girls"|"boys"|"foreigners")[]` (empty
+means anyone), `pets`, `description` («номер телефона в тексте сервер должен скрыть», Doc r31:1390).
+
+**`OwnerListingStats`** (Doc r31:1393-1404): `pending`, `requests`, `given`, `sent`, `opened`, `favorites?`,
+`days_listed?`, `daily[]` (the last value is today), `price_delta?`, `price_tone?`.
+
+**`OwnerListingsResponse`** (Doc r31:1406-1411): `{items: OwnerListing[], max, can_add, past?}`.
+
+**`OwnerRequest`** (Doc r31:1413-1427): `id`, `name` (the seeker's Telegram name), `who:
+"one"|"couple"|"family"|"students"|"friends"`, `people`, `move_in`, `message`, `status:
+"pending"|"given"|"declined"|"agent"|"expired"|"cancelled"`, `agent_marked?`, `can_reason?`, `can_undo?`, `can_late?`.
 
 Fields that the server may send but the client never reads (`$KVADRO_ROOT/docs/api.md:402-414`): `FeedPage.total`;
 `ListingPreview.usd`, `photos_total`, `tone`, `label`, `priced`; `ListingDetails.contacts`, `source_url`,
@@ -271,9 +342,13 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `bot_username: string|null`, `tiles: string|null`, `new_features?: string[]` (codes `pets`, the filter, and since
   release `index-BnFvC-Ft.js` `cards`, the card-style row of `03` SCR-032; seen = `kv-new-<code>`; Doc r31:488),
   `cities?: CityMeta[]`,
-  `districts: {code, name}[]`, `zones: {code, name}[]`, `renovations: Record<deal, {code, name}[]>`,
+  `districts: {code, name}[]`, `zones: {code, name}[]`, `renovations: Record<deal, {code, name}[]>` (required, Doc
+  r31:492-493; since release `index-CBlEKxdL.js` it may hold a key `owner` besides the deals, which the owner form
+  reads as `renovations.owner ?? renovations.rent_long`, `src/features/owner/OwnerForm.jsx:993` at r31),
   `appliances: {code, name}[]`, `price_presets: Record<deal, number[]>` (USD), `locales: {code, name}[]`.
-  `CityMeta` (Doc:454-463): `code`, `name`, `center: [lat, lon]`, `zoom?: number` (default 12; `< 11` = region),
+  `CityMeta` (Doc:454-463): `code`, `name`, `center: [lat, lon]`, `zoom?: number` (default 12; `< 11` = region, a rule
+  the contract states since release `index-CBlEKxdL.js`, Doc r31:499-500; `zoom + 1` is the start zoom of the owner's
+  place picker, Doc r31:500-505),
   `metro: boolean`, `median: boolean`, `districts[]`, `zones[]`. Client semantics: `locale_chosen === false` (falsy)
   → language picker built from `locales` (`src/app/App.jsx:234`); `city_chosen === false` (strict) → first city
   picker (`App.jsx:257`); `meta.city` different from the saved city replaces it and the filter city when no geography
@@ -350,7 +425,10 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   the no-access screen («Перейти в бота» with deep link `?start=s_<source>[--l<id>]`,
   `NoAccessScreen.jsx:40`, `:66`) and by the boot script when `WebApp.close` is unavailable (`index.html:91-103`).
   `support` (absent or `null` hides the item) is used by the no-access screen, «Настройки → О приложении» and the
-  listing actions sheet.
+  listing actions sheet. Since release `index-CBlEKxdL.js` it is also read by the owner panel on every mount and by
+  «Мои объявления», for the «Поддержка» button of a held or withdrawn owner listing
+  (`src/features/owner/OwnerPanel.jsx:43-52`, `:123`, `src/features/owner/OwnerListings.jsx:100-105` at r31; Doc
+  r31:549-551; `03` SCR-057, SCR-059).
 - **Errors:** non-2xx → local fallback `{username: null}` (drops `support` too); a network error rejects and is
   swallowed by callers (`src/lib/api/meta.js:15-23`).
 - **Legacy Source:** Doc:106, Doc:38-39, Doc:489-505; client `src/lib/api/meta.js:15-23`, `index.html:94-102`,
@@ -536,8 +614,12 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Business Logic:** full listing card with per-user flags, market comparison, price history, publications,
   author, contact links (`call_url` signed, ~10 min) and nearby places; the server may answer with a **different
   listing** (merged duplicate) — the screen switches to the response `id` without a second request
-  (`src/features/listing/hooks/useListingLoader.js:47-58`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:12`, `:16`). —
-  DOCUMENTED_ONLY
+  (`src/features/listing/hooks/useListingLoader.js:47-58`; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:12`, `:16`).
+  Since release `index-CBlEKxdL.js` the card of a listing placed through the owner cabinet also carries the seven
+  owner keys of §1.8 (`owner_self`, `owner_mine`, `owner_listing_id`, `contact_mode`, `my_request`,
+  `response_minutes`, `owner_description`). `owner_mine` and `my_request` depend on the caller, and the card of a gate
+  listing has `phone` only after the caller's request is `given` (Doc r31:343-350, :386-391; `02` BR-API-186 …
+  BR-API-188). — DOCUMENTED_ONLY
 - **DB Changes:** probably records view history (`viewed`, `GET /api/history`); which variant (full, preview) records
   it is unknown (Q-API-035). — UNVERIFIED
 - **Side Effects:** probably increments `stats.views` (Q-API-035). — UNVERIFIED
@@ -545,7 +627,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   minimum the compact card needs: `photos_preview` (array), `title` or `short_title`, `favorite`, and the keys
   `center_km`, `metro_km`, `median_delta` (Doc:601-604). `id` must be a number: compared with `!==` against the
   requested number (Doc:606-608). With `phone` non-null, `call_url` must be non-null (Doc:351-353). Unread:
-  `contacts`, `source_url`, `price_per_m`.
+  `contacts`, `source_url`, `price_per_m`. Since release `index-CBlEKxdL.js` `ListingDetails` includes the seven
+  owner keys (§1.8). After the caller's request becomes `given` the client reads the card again and expects `phone`
+  on it (`src/features/listing/ListingScreen.jsx:334-340` at r31; `03` LB-APP-074).
 - **Errors:** `404` → «Объявление не загрузилось» (no retry button) (`ListingScreen.jsx:115-116`); other errors → error
   state with «Повторить»; `preview=1` errors are not shown (spinner stays, neighbour can be re-requested,
   `MapSelectionCard.jsx:29-36`).
@@ -560,9 +644,13 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `facts[].key` unique; `phone` ⇒ `call_url`; preview — `?preview=1` contains the preview minimum; merge — id of a
   merged duplicate returns the surviving listing with its own `id`; negative — unknown id → `404 {"detail": …}`,
   non-numeric id → `404` or `422` (record legacy), withdrawn listing (Q-API-023); auth — missing/invalid `initData`;
-  side effect — history/`viewed` recorded per Q-API-035.
+  side effect — history/`viewed` recorded per Q-API-035; owner cabinet (since release `index-CBlEKxdL.js`) — a gate
+  listing without a request has `contact_mode: "gate"`, `my_request: null` and no `phone`; one card per `my_request`
+  value (`pending`, `given`, `declined`, `agent`, `expired`, `cancelled`); `given` ⇒ `phone` (per Q-API-076); the
+  author's own listing has `owner_mine` and `owner_listing_id`, and the same listing read by another user has neither.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-009, LB-API-010, LB-API-011,
-  LB-API-012, LB-API-029, LB-API-030, LB-API-031; Q-API-019, Q-API-021 … Q-API-024, Q-API-035.
+  LB-API-012, LB-API-029, LB-API-030, LB-API-031; Q-API-019, Q-API-021 … Q-API-024, Q-API-035; since release
+  `index-CBlEKxdL.js` `02` BR-API-186 … BR-API-189, Q-API-076, Q-API-078.
 
 ### API-009 — `GET /api/listings/:id/call`
 
@@ -576,7 +664,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   arrives as `call_url` in the listing card; this endpoint is called only to refresh it: by a timer 8 min after the
   last link was obtained (TTL assumed 10 min, refresh 2 min early) when the app is visible, on return to the app when
   the link is stale, and on «Позвонить» with a stale link (`src/features/listing/hooks/useListingContact.js:9-10`,
-  `:24-52`, `:62-72`). — DOCUMENTED_ONLY (TTL and single-use rules: Q-API-042)
+  `:24-52`, `:62-72`). Since release `index-CBlEKxdL.js` "the first link arrives in the card" does not hold for a
+  gate listing of the owner cabinet until the caller's request is `given`: before that its card carries no `phone`
+  (Doc r31:386-391; API-054; `02` BR-API-187). — DOCUMENTED_ONLY (TTL and single-use rules: Q-API-042)
 - **DB Changes:** possibly stores the token or nothing (stateless signature). — UNVERIFIED
 - **Side Effects:** none known.
 - **Response:** `200 {"url": string}` — relative (`/call/…`) or absolute; resolved against the Mini App origin and
@@ -1288,11 +1378,14 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `feed_radar_shown|closed {custom}` (`App.jsx:309-311`, `:638-640` at the pin), where `n` is the `count` of API-035
   and `custom` says the filters differ from the defaults of their deal and city (current Doc:1082-1085, :1106-1107);
   `home_screen_offered|added|closed` (`useHomeScreenOffer.js:74`, `:27`, `App.jsx:609`);
-  `chat_access_declined|allowed` (`chatAccess.js:36`, `:40`); `listing_shared {listing_id}`
+  `chat_access_declined|allowed` (`chatAccess.js:36`, `:40`; since release `index-CBlEKxdL.js` also from the contact
+  request, API-054); `listing_shared {listing_id}`
   (`ListingTitleRow.jsx:30`); `original_opened {listing_id, src: button|video|sources|price_history|offers}`
   (`ListingScreen.jsx:141`); `original_copied {listing_id}` (`sections/OriginalText.jsx:71`);
   `contact_call {listing_id, via: tel|browser, src?: "text"}` (`useListingContact.js:75`);
-  `contact_write {listing_id}` (`useListingContact.js:84`).
+  `contact_write {listing_id}` (`useListingContact.js:84`); since release `index-CBlEKxdL.js`
+  `owner_info_opened {listing_id}`, sent by a tap on the owner chip of the listing screen or on its tip
+  (`src/features/listing/OwnerChip.jsx:54-62` at r31; Doc r31:1192; `03` BR-APP-101).
 - **Validation:** must accept unknown extra fields without hard failure (Doc:1044). Size limits unknown (Q-API-045).
 - **Business Logic:** writes the action log (180 days, no texts) and forwards product events to PostHog under the
   user's random id (`$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431`). — DOCUMENTED_ONLY
@@ -1311,6 +1404,593 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `#tgWebAppData=` never stored (client strips it, server re-checks).
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-001, LB-API-047; Q-API-045,
   Q-API-046.
+
+### API-037 — `GET /api/owner/listings`
+
+API-037 … API-053 are the 17 methods of the owner cabinet «Сдать квартиру» (`/api/owner/*`; screens `03` SCR-049 …
+SCR-060), added in release `index-CBlEKxdL.js`. API-054 is the seeker's request to such an owner. Three things are
+common to the 17 and are not repeated in each entry.
+
+**Auth and ownership.** `Authorization: tma <initData>` like every `/api` call (Doc r31:31-44; §1.2). The client sends
+no role and no owner id: the server alone ties a listing `:id` or a request id to the caller. Its answer for another
+user's id is not documented (`02` BR-API-161, `UNVERIFIED`; Q-API-069).
+
+**Transport.** The `FormData` body (§1.3), the `detail` grammar of the refusals (§1.5), the timeouts and the aborted
+and repeated requests (§1.6). The models are in §1.8.
+
+**Evidence.** The contract (Doc r31 §16; registry Doc r31:142-158) and the Mini App code at r31; every client path of
+these entries is cited at r31. Nothing was run. The recovery's parity runs checked the client on mocks that its
+authors inferred (`tools/parity/mocks.mjs:253-301`), not on the real API. No server or bot code was seen, so the
+server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini App's texts describe is marked
+`UNVERIFIED` with its question. The contract asks about the limits and ranges itself (Doc r31:1321-1325, open question
+17).
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/listings`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the answer holds the caller's own listings only.
+- **Input:** none.
+- **Validation:** auth only.
+- **Business Logic:** returns every owner listing of the user, past ones included («История» holds the `rented`,
+  `removed` and `withdrawn` listings), and the apartment limit: `max` is the number of flats that may be listed at
+  once (2 today), `can_add` is `false` at the limit, and `past` counts the flats the user listed before. Whether the
+  limit counts per account or per confirmed phone, and whether drafts count toward `can_add`, is not documented
+  (`02` BR-API-162; Q-API-068). — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none.
+- **Response:** `200 OwnerListingsResponse` (§1.8): `{items, max, can_add, past?}`.
+- **Errors:** the settings screen ignores every error silently; «Мои объявления» shows an error state with a retry.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1406-1411, :1430-1433; client
+  `src/lib/api/owner.js`, `src/features/settings/SettingsScreen.jsx:101-107` (on mount, on `ownerVersion`, on opening
+  and closing «Мои объявления»), `src/features/owner/OwnerListings.jsx:307-320`, `:352` (on open, on `version`, on
+  retry, after every status change and after closing «Отклики»), `src/features/owner/OwnerForm.jsx:214-219` (a new
+  form, for «С возвращением!»).
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** positive — a user with no listings gets `items: []` and `can_add: true`; a user at `max` gets
+  `can_add: false`; `past` counts only finished listings; isolation — another user's listings never appear; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-162; `03` SCR-032, SCR-049,
+  SCR-057, BR-APP-089, BR-APP-095; Q-API-068.
+
+### API-038 — `POST /api/owner/listings`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** none (no body; `src/lib/api/owner.js:30-34`). Every entry into a new draft sends it (`03` BR-APP-075),
+  and so does each retry after a load error.
+- **Validation:** the apartment limit. — DOCUMENTED_ONLY
+- **Business Logic:** creates a draft. The contract says only "a new draft": nothing says that an untouched draft is
+  reused, so every call may leave one behind (`02` BR-API-163; `03` LB-APP-054; Q-API-068). — DOCUMENTED_ONLY
+- **DB Changes:** a new owner-listing row (`inferred`). — UNVERIFIED (Q-API-068)
+- **Side Effects:** none known.
+- **Response:** a new `OwnerListing` (§1.8) with `status: "draft"`. Its `form` may hold nothing; the client then fills
+  `city` from `meta.city` (`src/features/owner/OwnerForm.jsx:339-346`).
+- **Errors:** `409` at the apartment limit → the limit state «Уже две квартиры»; any other error → an error state
+  with a retry, and the retry posts again (Doc r31:1434-1435, :1286).
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1434-1435, :1286; client
+  `src/lib/api/owner.js:30-34`, `src/features/owner/OwnerForm.jsx:183-238`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** at the limit → `409`; below it → `200` or `201` (record legacy) with `photos: []` and `form: {}`;
+  repeated calls → per Q-API-068 (a new draft each time, or the untouched one again); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-162, BR-API-163; `03`
+  SCR-050, BR-APP-075, BR-APP-089, LB-APP-054; Q-API-068.
+
+### API-039 — `GET /api/owner/listings/:id`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/listings/:id`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** path `id` of an owner listing. Callers: the form when it loads an existing listing; the phone poll,
+  every 1.5 s for up to 90 s and on every return to the app (`03` BR-APP-084; §1.6); the re-read after a publish
+  answered `rejected:`; the owner panel on mount, on `ownerVersion` and on retry (`03` SCR-059).
+- **Validation:** the listing belongs to the caller; the answer for another user's id is not documented. — UNVERIFIED
+  (Q-API-069)
+- **Business Logic:** returns one owner listing. The phone state must become visible here within seconds of the bot
+  receiving the owner's contact: the Mini App learns the result of `requestContact` only from this method (`02`
+  BR-API-170, BR-API-171; `04` BOT-086; `05` TMA-034). The answer also carries `shown_point`, the circle seekers see
+  instead of the exact point (`02` BR-API-167). — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none.
+- **Response:** `200 OwnerListing` (§1.8). During the phone poll the client watches `phone_set`, `status: "rejected"`
+  and, on a draft, a `reject_reason` of `not_uz` or `not_own` (Doc r31:1436-1438).
+- **Errors:** in the form → an error state with a retry; in the poll → retried on the next tick; on the panel → an
+  error state inside the panel's island.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1436-1438, :1346-1348; client
+  `src/lib/api/owner.js`, `src/features/owner/OwnerForm.jsx:183-238` (the load), `:708-721` (the re-read),
+  `:1484-1620` (the poll), `src/features/owner/OwnerPanel.jsx` (the panel).
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** an id of another user → not found or forbidden (the legacy status is unknown, Q-API-069); the poll sees
+  `phone_set` after the bot processes the contact; `shown_point` stays the same between reads (Q-API-074); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-167, BR-API-170, BR-API-171;
+  `03` SCR-053, SCR-059, BR-APP-084, BR-APP-085; Q-API-069, Q-API-074.
+
+### API-040 — `PATCH /api/owner/listings/:id`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** PATCH
+- **URL:** `/api/owner/listings/:id`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** path `id`; body — only the changed `OwnerListingForm` fields (§1.8), a cleared field as `null`. The form
+  sends it 600 ms after the last edit, before «Дальше», before publish and when it closes. It holds `floor` and
+  `floors_total` back while `floor > floors_total` (`03` BR-APP-079).
+- **Validation:** refuses fields with `422 invalid:<fields>`. The names include at least `floor`, `point`, `lat`,
+  `lon` and any form field (`inferred` from the client's handling, `src/features/owner/OwnerForm.jsx:1442-1447`). The
+  accepted ranges are not documented (Q-API-069). — DOCUMENTED_ONLY
+- **Business Logic:** merges the sent fields into the form; `null` clears one. The server must hide phone numbers
+  written into the description (Doc r31:1390; `02` BR-API-165). For a published listing, whether the change reaches
+  the public listing at once or only after `publish` is unknown (`03` LB-APP-055; Q-API-070). — DOCUMENTED_ONLY
+- **DB Changes:** the form of the owner listing.
+- **Side Effects:** none known.
+- **Response:** `200 OwnerListing`.
+- **Errors:** `409`, or `detail: "missing:status"` → the listing can no longer be edited (`own.notEditable` with
+  «Мои объявления»); `422` with `detail: "invalid:a,b"` → those fields are highlighted, and the rest of the same save
+  goes out again in a separate `PATCH`; a network failure → `own.editOffline` (Doc r31:1439-1442, :1287-1288; `03`
+  BR-APP-079).
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1373-1391, :1439-1442, :1287-1288; client
+  `src/lib/api/owner.js`, `src/features/owner/OwnerForm.jsx:245-337`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** `null` clears a field; a partial body leaves the other fields; `floor > floors_total` →
+  `422 invalid:floor`; a point outside the country → `422 invalid:point`; a rented or removed listing → `409`; a
+  phone number in `description` is hidden on the public card; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-164, BR-API-165; `03`
+  SCR-052, BR-APP-079, LB-APP-055; Q-API-069, Q-API-070.
+
+### API-041 — `POST /api/owner/listings/:id/photos`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings/:id/photos`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** path `id`; body `multipart/form-data` with one field `file`, file name `photo.jpg`, one file per call
+  (§1.3). Normally it is a JPEG with the long side ≤ 2048 px at quality 0.88; when the client's conversion fails, the
+  original file goes up unchanged (`03` LB-APP-061). The timeout is 90 s (§1.6).
+- **Validation:** at most 10 photos per listing (`photo:too_many`); the file must be an image (`photo:not_image`)
+  within a size limit (`photo:too_big`). The accepted formats and sizes are not documented (Q-API-073). —
+  DOCUMENTED_ONLY
+- **Business Logic:** appends one photo; the first photo of a listing is its cover (`02` BR-API-166). Whether the
+  server re-encodes the upload and strips EXIF and GPS data is not documented (Q-API-073). — DOCUMENTED_ONLY
+- **DB Changes:** a photo of the owner listing.
+- **Side Effects:** stores the photo and the `.s.jpg` thumbnail that the form expects (Doc r31:1230-1231). How long
+  photos are kept is not in the contract; the landing privacy page, an uncommitted working copy at the read, says
+  while the listing is in the feed or paused. — UNVERIFIED (Q-API-073)
+- **Response:** `200 OwnerListing` with the new photo appended.
+- **Errors:** `detail` `photo:too_many` (the client stops the batch), `photo:not_image` and `photo:too_big` (a
+  message, and the batch goes on); any other error → a generic message. The client never sends an 11th photo (`03`
+  BR-APP-082).
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1445, :1230-1231; client
+  `src/lib/api/owner.js:57-70`, `src/features/owner/OwnerForm.jsx:435-524`, `src/features/owner/shrinkPhoto.js:3-26`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** an 11th photo → `photo:too_many`; a non-image → `photo:not_image`; an oversize file → `photo:too_big`;
+  an original with EXIF and GPS data, and a HEIC or PNG sent as `photo.jpg` → record what legacy stores and serves
+  (`03` LB-APP-061; Q-API-073); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` SCR-052,
+  BR-APP-082, LB-APP-061; Q-API-073.
+
+### API-042 — `DELETE /api/owner/listings/:id/photos/:photoId`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** DELETE
+- **URL:** `/api/owner/listings/:id/photos/:photoId`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** path ids of the listing and the photo; no body. The client sends it on one tap, without a confirmation
+  (`src/features/owner/OwnerForm.jsx:511-524`; `03` LB-APP-067).
+- **Validation:** the photo belongs to the listing (assumed). — UNVERIFIED (Q-API-069)
+- **Business Logic:** removes the photo at once. On a published listing it probably leaves the public listing at once
+  too (`inferred`), and what happens when the last photo of a live listing is deleted is not documented
+  (Q-API-070). — DOCUMENTED_ONLY
+- **DB Changes:** the photo removed.
+- **Side Effects:** none known.
+- **Response:** `200 OwnerListing`.
+- **Errors:** a generic toast-like line; a network failure → `own.actionOffline`.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1447; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerForm.jsx:511-524`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** deleting the cover makes the next photo the cover; deleting the last photo of an active listing → per
+  Q-API-070 (a published listing without a photo breaks the rule of «Дальше»); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082,
+  LB-APP-067; Q-API-070.
+
+### API-043 — `POST /api/owner/listings/:id/photos/order`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings/:id/photos/order`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** `{"ids": [cover, ...rest]}` — always the full order, with the new cover first
+  (`src/features/owner/OwnerForm.jsx:492-510`).
+- **Validation:** not documented. — UNVERIFIED (Q-API-069)
+- **Business Logic:** stores the order of the photos; the first id becomes the cover (`02` BR-API-166). —
+  DOCUMENTED_ONLY
+- **DB Changes:** the order of the listing's photos.
+- **Side Effects:** none known.
+- **Response:** `200 OwnerListing`.
+- **Errors:** a message line in the photos section of the form.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1447; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerForm.jsx:492-510`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** ids that do not match the listing's photos → refused (`422` expected; record legacy); the order is kept
+  as sent; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082.
+
+### API-044 — `POST /api/owner/listings/:id/contact_mode`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings/:id/contact_mode`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** `{"mode": "gate" | "open"}`. The client applies the choice at once and rolls it back on an error (`03`
+  BR-APP-086).
+- **Validation:** the two values. — UNVERIFIED (Q-API-069)
+- **Business Logic:** sets how seekers reach the owner. `gate` hides the number, and seekers send a request
+  (API-054); `open` shows the number on the card to everyone. The value is `null` until the owner chooses, publishing
+  does not require a choice, and the mode of a listing published without one is unknown (`02` BR-API-173; `03`
+  LB-APP-056; Q-API-078). — DOCUMENTED_ONLY
+- **DB Changes:** the listing's `contact_mode`.
+- **Side Effects:** changes what seekers see on the public card (`ListingDetails.contact_mode`, API-008).
+- **Response:** `200 OwnerListing`, which replaces the client's copy.
+- **Errors:** the previous choice comes back, with an error haptic and an error line in the footer.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1448-1449, :1365; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerForm.jsx:644-667`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** both values are accepted; any other value → `422` (record legacy); a mode change on an active listing
+  changes `contact_mode` of the public card (API-008); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-173; `03` SCR-055,
+  BR-APP-086, LB-APP-056; Q-API-078.
+
+### API-045 — `POST /api/owner/listings/:id/publish`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings/:id/publish`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** path `id`; no body. The client first sends the unsaved fields (API-040). The same call saves the edits of
+  a listing that is already published (Doc r31:1450-1451).
+- **Validation:** the required fields, the confirmed phone, the apartment limit and the state of the listing. A
+  refusal names what is missing as `missing:<fields>`, from `city`, `place`, `rooms`, `price`, `photos`, `phone`,
+  `limit`, `status` (Doc r31:1450-1454). — DOCUMENTED_ONLY
+- **Business Logic:** checks the same required fields as the client, the confirmed phone (`missing:phone`) and the
+  apartment limit, and runs the phone checks that end in `rejected:<reason>`. Then the listing becomes visible in the
+  feed and goes to the matching radars at once: the done screen says «уже уходит тем, у кого включён радар», and the
+  stats count `sent` as «получили по радару» (`inferred` from these texts; `02` BR-API-175; Q-API-071). The contract
+  names **no check of photos or description** before a listing goes live; `withdrawn` (after complaints) and `held`
+  (by support) are the only later controls (`02` BR-API-174, BR-API-177; Q-API-071). — DOCUMENTED_ONLY; the feed and
+  radar part UNVERIFIED (Q-API-071)
+- **DB Changes:** on a first publish `status: "active"`, `published_at` and `listing_id` (`inferred`). — UNVERIFIED
+  (Q-API-070)
+- **Side Effects:** the listing enters the feed and goes to the matching radars (`inferred`; the radar push is `04`
+  BOT-081). — UNVERIFIED (Q-API-071)
+- **Response:** `200 OwnerListing`; for a new listing with `status: "active"`, `published_at` and `listing_id`
+  (`inferred`).
+- **Errors:** `detail` `missing:<fields>`; `status:…` with `409` → the listing can no longer be edited;
+  `rejected:<reason>` with `agent`, `fraud` or `limit` (Doc r31:1450-1454). What the client shows for each is `03`
+  BR-APP-087.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1450-1454; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerForm.jsx:668-741`; the text `src/features/owner/owner.js:131`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** a draft without a phone → `missing:phone`; at the limit → `missing:limit`; a realtor's phone →
+  `rejected:agent` and `status: "rejected"`; publishing a listing that is already published saves the edits and keeps
+  `published_at`; a paused listing → per Q-API-070; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-174, BR-API-175,
+  BR-API-177; `03` SCR-055, SCR-056, BR-APP-087; Q-API-070, Q-API-071.
+
+### API-046 — `POST /api/owner/listings/:id/status`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/listings/:id/status`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** `{"status": "active" | "paused" | "rented" | "removed"}`. The client asks for a confirmation before
+  `rented` and `removed` (`03` BR-APP-088).
+- **Validation:** the four values; which transitions the server refuses is not documented. — UNVERIFIED (Q-API-070)
+- **Business Logic:** known from the Mini App's texts only (`inferred`; `02` BR-API-176). `paused` takes the listing
+  out of the feed and the radars («в ленту и радар не уходит»). `active` puts it back. `rented` takes it out of the
+  feed and tells the seekers who still wait that the flat is let: their requests become `cancelled`, «Квартира сдана»
+  (`src/features/owner/owner.js:203`, `:240`). `removed` withdraws a listing or deletes a draft. The client offers no
+  way out of `rented` or `removed`. It also hides «Вернуть» for a `held` listing, one paused by support
+  (`src/features/owner/OwnerListings.jsx:86-87`); whether the server refuses `active` there is not documented (`02`
+  BR-API-177). — UNVERIFIED (Q-API-070)
+- **DB Changes:** the listing's `status`; with `rented`, the waiting requests become `cancelled` (`inferred`). —
+  UNVERIFIED (Q-API-070)
+- **Side Effects:** with `rented`, a bot message to the seekers whose requests still wait (`04` BOT-090; not
+  observed). — UNVERIFIED (Q-BOT-048 in `04`)
+- **Response:** `200 OwnerListing`. In «Мои объявления» a removed draft leaves the list.
+- **Errors:** an error haptic and the toast `own.actionOffline` or `common.saveFailed` (`03` BR-APP-088).
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1455-1457, :1358-1359; client
+  `src/lib/api/owner.js`, `src/features/owner/OwnerListings.jsx:322-361`, `src/features/owner/OwnerPanel.jsx:87-113`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** `active` on a `held` listing → refused; `rented` closes the waiting requests and tells those seekers
+  through the bot; `removed` on a draft deletes it; the transitions out of `rented` and `removed` → refused (record
+  legacy for all four, Q-API-070); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the effect of each status is `UNVERIFIED`,
+  Q-API-070). Related: `02` BR-API-176, BR-API-177; `03` SCR-057, SCR-059, BR-APP-088, LB-APP-059; Q-API-070.
+
+### API-047 — `GET /api/owner/pending`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/pending`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated. The client calls it for every user, also for those who never listed a flat
+  (`03` LB-APP-066).
+- **Input:** none. Sent at app start, on every return to the app (`visibilitychange`) and after cabinet actions (`03`
+  BR-APP-091; §1.6).
+- **Validation:** auth only.
+- **Business Logic:** the number of requests that wait for the caller's answer as an owner. — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none.
+- **Response:** `200 {"pending": number}`; `pending` must always be a number (Doc r31:1289; `02` BR-API-179). It
+  drives the red dot on the Settings tab, the tab tip and the counter of the Settings row (`03` SCR-060).
+- **Errors:** ignored silently.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1289, :1460-1462; client `src/lib/api/owner.js`,
+  `src/lib/ownerPending.js:6-57`, `src/app/App.jsx:141-147`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** a user without owner listings → `{"pending": 0}`; the count equals the sum of `stats.pending` of the
+  user's listings; the body always has a numeric `pending`; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-179; `03` SCR-006, SCR-032,
+  SCR-060, BR-APP-091, LB-APP-066.
+
+### API-048 — `GET /api/owner/requests`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/requests` (query `owner_listing_id=<id>`)
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing.
+- **Input:** query `owner_listing_id=<id>`, or no query for all requests of the caller (`src/lib/api/owner.js:122-127`).
+  The client uses only the per-listing form.
+- **Validation:** the listing belongs to the caller (assumed). — UNVERIFIED (Q-API-069)
+- **Business Logic:** lists the requests that seekers sent to the owner's listing (API-054). `status` moves by the
+  owner's answers (API-049), by time (`expired`) and by `rented` (`cancelled`). The server computes `can_reason`,
+  `can_undo` and `can_late`, by which it decides which answers the owner may still give (`02` BR-API-180). `name` is
+  the seeker's Telegram name. Whether it is stored with the request or read from Telegram when the list is shown is
+  UNVERIFIED: the contract does not say, and the landing privacy page, an uncommitted working copy at the read, says
+  the name is not stored (Q-API-077). The order of the list is not documented (Q-API-075). — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none.
+- **Response:** `200 OwnerRequest[]` (§1.8; Doc r31:1463).
+- **Errors:** an error state with a retry.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1413-1427, :1463; client
+  `src/lib/api/owner.js:122-127`, `src/features/owner/OwnerListings.jsx:477-479`,
+  `src/features/owner/OwnerPanel.jsx:271`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** only requests to the caller's own listings; `who` only from the list of §1.8; the order (newest first?)
+  → record legacy (Q-API-075); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-159, BR-API-180; `03`
+  SCR-058, BR-APP-090, LB-APP-064; Q-API-075, Q-API-077.
+
+### API-049 — `POST /api/owner/requests/:id`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/requests/:id`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated; the owner of the listing the request was sent to.
+- **Input:** path `id` of a request; body
+  `{"action": "give" | "decline" | "reason_found" | "reason_agent" | "undo" | "late"}`. The client sends one action
+  at a time and asks for no confirmation, not even before «Дать номер» (`03` BR-APP-090).
+- **Validation:** `409` when the action is no longer possible. Which actions each status allows is not documented. —
+  UNVERIFIED (Q-API-075)
+- **Business Logic:** known from the Mini App's texts only (`src/features/owner/owner.js:219-234`; `inferred`; `02`
+  BR-API-181):
+  - `give` — «Номер отправили — человек позвонит вам сам». The bot sends the owner's number to the seeker at once.
+  - `decline` — «Через 10 минут мягко ответим, что номер вы дать не готовы, и покажем похожие». A soft refusal with
+    similar listings goes out after 10 minutes; the same 10 minutes are the window of `undo`.
+  - `reason_found`, `reason_agent` — an optional reason after `decline`. `reason_agent` marks the seeker as a
+    realtor: «на ваши квартиры он больше не напишет», so the seeker can no longer write to this owner's flats.
+  - `late` — after `give`, "turned out to be a realtor" (`agent_marked`), with the same block.
+  - `undo` — inside the window it takes the last action back («отклик снова ждёт ответа»); for a `given` request it
+    removes the mark (`own.unmarked`). What `undo` does for each status is not documented.
+
+  — UNVERIFIED (Q-API-075, Q-API-077)
+- **DB Changes:** the status and the marks of the request; the block of a seeker marked by `reason_agent` or `late`
+  (`inferred`). — UNVERIFIED (Q-API-077)
+- **Side Effects:** bot messages to the seeker — the number after `give` (`04` BOT-088) and the delayed soft refusal
+  after `decline` (`04` BOT-089) — and the seeker's `my_request` on the card (API-008). None was observed. —
+  UNVERIFIED (Q-BOT-048 in `04`)
+- **Response:** `200` with the updated `OwnerRequest`. When the answer has no `name`, the client keeps the old one.
+- **Errors:** `409` → the client reloads the list; for `undo` it also shows «Отменить уже нельзя: прошло больше 10
+  минут»; any other error → a toast (Doc r31:1464-1466; `03` BR-APP-090).
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1464-1466; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerListings.jsx:493-560`; the texts `src/features/owner/owner.js:219-234`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** `give` delivers exactly one bot message with the number; `decline` and then `undo` within 10 minutes
+  sends nothing to the seeker; `undo` after 10 minutes → `409`; `late` on a request that was not `given` → `409`; a
+  seeker marked `agent` cannot send a new request to the same owner (record legacy for all five, Q-API-075,
+  Q-API-077); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the effect of each action is `UNVERIFIED`,
+  Q-API-075). Related: `02` BR-API-181; `03` SCR-058, BR-APP-090; Q-API-075, Q-API-077.
+
+### API-050 — `POST /api/owner/waitlist`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/waitlist`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated. The client offers it only on the rejection screen of a number refused as a
+  realtor's, reason `agent` (`03` SCR-054).
+- **Input:** none (no body).
+- **Validation:** not documented; that only a user with an `agent` rejection may call it is `inferred`. — UNVERIFIED
+  (Q-API-069)
+- **Business Logic:** records the user in a waiting list of realtors (`02` BR-API-182). The Mini App then promises a
+  bot message: «Хорошо, напишем в бот, когда откроем.» — DOCUMENTED_ONLY
+- **DB Changes:** a waiting-list entry (`inferred`). — UNVERIFIED (Q-BOT-049 in `04`)
+- **Side Effects:** a later bot message to the list (`04` BOT-091), promised only and never observed. — UNVERIFIED
+  (Q-BOT-049 in `04`)
+- **Response:** not read by the client (Doc r31:1469-1470).
+- **Errors:** an error haptic, and the button stays.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1469-1470; client `src/lib/api/owner.js`,
+  `src/features/owner/OwnerForm.jsx:1639-1655`; the text `src/features/owner/owner.js:110`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** a second call does not add a second entry; a user without an `agent` rejection → record legacy; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-182; `03` SCR-054,
+  LB-APP-071; Q-BOT-049 in `04`.
+
+### API-051 — `POST /api/owner/place`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** POST
+- **URL:** `/api/owner/place`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** `{"lat", "lon"}`. Two senders. The label under the pin of the place picker: 400 ms after the map stops,
+  only for a centre inside the client's rectangle (lat 37–46, lon 55–74), the previous request aborted (`03`
+  BR-APP-077). After «Готово»: once more with the point rounded to 5 decimals, to fill the city, the district and the
+  landmark (`03` BR-APP-078).
+- **Validation:** not documented; whether the server checks the point against the country is unknown (the client
+  checks only the rectangle, `03` LB-APP-063). — UNVERIFIED (Q-API-074)
+- **Business Logic:** an address lookup for a point; its data source is not documented (`02` BR-API-168; Q-API-074).
+  After «Найти меня» the map centre is the user's own position, so that position reaches the server (`inferred` from
+  the two code paths; `05` TMA-035). — DOCUMENTED_ONLY
+- **DB Changes:** none known; whether the position is stored is not documented (Q-API-074).
+- **Side Effects:** none known.
+- **Response:** `200 {address?, city?, district_code?, landmark?}`. The client ignores a `city` that meta does not
+  know.
+- **Errors:** silent: the label becomes `own.pickNoAddr`, and nothing is filled.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1471-1473; client `src/lib/api/owner.js`,
+  `src/features/owner/PlacePicker.jsx:63-83`, `src/features/owner/OwnerForm.jsx:565-571`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** a Tashkent point → `city: "tashkent"` and a district from meta's list; a point outside the country → an
+  empty object (the client sends no such point as a label, but its check of «Готово» is only the rectangle); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-168; `03` SCR-051,
+  BR-APP-077, BR-APP-078, BR-APP-097, LB-APP-063; Q-API-074.
+
+### API-052 — `GET /api/owner/map-start`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/map-start`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** none. Sent only for a listing without a point, and awaited for up to 1.5 s; an answer that arrives later
+  is ignored (`03` BR-APP-076).
+- **Validation:** auth only.
+- **Business Logic:** a start view of the place picker for the caller, «примерно по IP» in the words of the client
+  (`src/lib/api/owner.js:157`). That the server locates the caller by IP address is `inferred` from this comment;
+  whether the position is stored is not documented (`02` BR-API-168). — UNVERIFIED (Q-API-074)
+- **DB Changes:** none known.
+- **Side Effects:** none known.
+- **Response:** `200 {lat, lon, zoom}`. Without it the picker starts at the centre of the form's city at that city's
+  `zoom + 1` (API-001; Doc r31:502-505).
+- **Errors:** ignored: the picker uses the city centre.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1474-1475, :502-505; client
+  `src/lib/api/owner.js:157`, `src/features/owner/OwnerForm.jsx:197-209`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** an answer later than 1.5 s is ignored by the client; the answer is never the point 0, 0; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the IP lookup is `UNVERIFIED`, Q-API-074).
+  Related: `02` BR-API-168; `03` SCR-051, BR-APP-076; Q-API-074.
+
+### API-053 — `GET /api/owner/demand`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Method:** GET
+- **URL:** `/api/owner/demand`
+- **Auth:** `tma` required.
+- **Roles/access mode:** authenticated.
+- **Input:** query `city=<code>[&district=<code>][&room=true | &rooms=<n>][&price=<n>&currency=<USD|UZS>]`, in this
+  order. Sent 500 ms after a change of one of those fields, the previous request aborted, and never without a city
+  (`03` BR-APP-083).
+- **Validation:** not documented. — UNVERIFIED (Q-API-069)
+- **Business Logic:** `count` is the number of active radars that match the flat («ищут N человек с радаром»); the
+  usual range is the typical price for the rooms and the place, in USD whatever the form's currency (`02`
+  BR-API-169). — DOCUMENTED_ONLY
+- **DB Changes:** none.
+- **Side Effects:** none.
+- **Response:** `200 {count, usual_low_usd, usual_high_usd}` (Doc r31:1476-1479). The client shows the demand line
+  for `count > 0`, and the usual price only with both bounds and a rooms choice.
+- **Errors:** silent.
+- **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1476-1479; client
+  `src/lib/api/owner.js:165-184`, `src/features/owner/OwnerForm.jsx:347-369`.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** no matching radar → `count: 0`; with too little data both bounds are `null`, and the hint hides;
+  `currency=UZS` does not change the USD bounds; auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-169; `03` SCR-052,
+  SCR-056, BR-APP-083.
+
+### API-054 — `POST /api/listings/:id/contact`
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:14-15` at r31).
+- **Method:** POST
+- **URL:** `/api/listings/:id/contact`
+- **Auth:** `tma` required.
+- **Roles/access mode:** a seeker on an owner's listing in gate mode: the card has `owner_self`,
+  `contact_mode: "gate"` and no `phone` (API-008; `03` BR-APP-098). The bot must be able to write to the user:
+  `409 no_chat` is answered **before** a request is created (Doc r31:837-838, :1290; `02` BR-API-184).
+- **Input:** path `id` of the listing; JSON body `{who, people, move_in, message}` — `who` one of
+  `one | couple | family | students | friends` (required; the client never sends without it), `people` 1…20,
+  `move_in` at most 32 characters or `null`, `message` at most 500 characters or `null` (Doc r31:833-836). The client
+  trims both texts and sends an empty one as `null` (`03` BR-APP-099).
+- **Validation:** the server's own checks of the body are not documented; the contract asks about limits itself (Doc
+  r31:1321-1322). — UNVERIFIED (Q-API-076)
+- **Business Logic:** creates the seeker's request. The owner sees it in the bot and in «Мои объявления» (Doc
+  r31:821-822) and gives the number or declines from there (API-049; Doc r31:1464-1465). The answer reaches the seeker
+  in the bot (`src/i18n/locales/ru.js:619-620`, `:646`). The limits are the server's; the Mini App's texts name 10
+  requests a day, 30 a week and a 10-minute pause after several in a row (`02` BR-API-185; `03` LB-APP-057). What
+  `given` delivers to the seeker — the number in the bot, on the card, or both — is UNVERIFIED: the client only
+  expects `phone` on the card it reads again (Doc r31:390-391; Q-API-076). — DOCUMENTED_ONLY
+- **DB Changes:** a request row; counters for the limits and for `response_minutes` (`inferred`). — UNVERIFIED
+  (Q-API-075, Q-API-076)
+- **Side Effects:** a bot message to the owner (`04` BOT-087; `inferred`, not observed). — UNVERIFIED (Q-BOT-048 in
+  `04`)
+- **Response:** `200 {"status": "pending" | …}`; the value becomes `my_request` of the card (Doc r31:835; `02`
+  BR-API-183, BR-API-186). The parity mock answers `pending` (`tools/parity/mocks.mjs:295`). Which other values occur
+  at creation, for example an immediate `given`, is UNVERIFIED (Q-API-075).
+- **Errors:** by `detail`; the sheet shows one line of text (`src/i18n/locales/ru.js:636-644`;
+  `src/features/listing/ContactRequestSheet.jsx:25-26`, `:71-80`):
+
+  | `detail` | Text shown | Client effect |
+  | -------- | ---------- | ------------- |
+  | `no_chat` (409) | the write-access request and one repeat; if it still fails, «Ответ хозяина придёт в бот — разрешите боту писать вам и отправьте ещё раз.» | `chat_access_*` events; may offer to open the bot |
+  | `limit_fast` | «Несколько откликов подряд — следующий можно будет отправить через 10 минут.» | none |
+  | `limit_day` | «Сегодня вы уже отправили 10 откликов. Завтра можно снова.» | none |
+  | `limit_week` | «За неделю — 30 откликов, это предел. Новые можно будет отправить через несколько дней.» | none |
+  | `blocked` | «Отклики для вашего аккаунта сейчас закрыты. Если это ошибка, напишите в поддержку.» | none |
+  | `harvest` | the same text as `blocked` (the user is not told that it is an anti-harvesting block) | none |
+  | `closed` | «Хозяин уже не принимает отклики — квартиру, скорее всего, сдали.» | none (`03` LB-APP-073) |
+  | `own` | «Это ваша квартира.» | none (`03` LB-APP-073) |
+  | `open` | «Хозяин открыл номер — обновите карточку и позвоните.» | none (`03` LB-APP-073) |
+  | other | «Не получилось сохранить» | none |
+
+  The HTTP statuses of the `detail` codes other than `no_chat` are UNVERIFIED (Q-API-076).
+- **Legacy Source:** Doc r31:159 (registry #54), Doc r31:818-839, :1290; client `src/lib/api/owner.js:191-192`,
+  `src/features/listing/ContactRequestSheet.jsx:50-85`, `src/lib/chatAccess.js:27-55`; parity mock
+  `tools/parity/mocks.mjs:295`. All client paths at r31.
+- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
+  (`wave-1/README.md`), decides the v1 methods.
+- **Tests:** a record of the legacy contract — `no_chat` comes before the request is created, and the repeat creates
+  one request; each `detail` code; a `who` outside the list is refused; a second request to the same listing
+  (accepted again or `409`? UNVERIFIED, Q-API-075); the limits count per user (Q-API-076); auth.
+- **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the parts marked UNVERIFIED above: Q-API-075,
+  Q-API-076). Related: `02` BR-API-183 … BR-API-187; `03` SCR-018, SCR-061, BR-APP-098, BR-APP-099, LB-APP-057,
+  LB-APP-073, LB-APP-074, LB-APP-076; `05` TMA-033; Q-API-075, Q-API-076.
 
 ## 3. Non-API resources
 
@@ -1594,10 +2274,16 @@ resources.
 
 ### 4.1 Registry → client code
 
-All 36 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:106-141` at r31; 35 at `index-DY_DH7h-.js`,
-`:102-138` at r27; 34 at the audit, `:102-137`) are called by the client. None is documented-but-unused. "Doc #" is
-the registry number of the pinned release: since release `index-DY_DH7h-.js` `/api/feed/new` is #7, since
-`index-BnFvC-Ft.js` `/api/settings/card-sample` is #27, and every later method moved down by one each time.
+All 54 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:106-159` at r31; 36 at `index-BnFvC-Ft.js`,
+`:106-141` at r31; 35 at `index-DY_DH7h-.js`, `:102-138` at r27; 34 at the audit, `:102-137`) are called by the
+client. None is documented-but-unused. "Doc #" is the registry number of the pinned release: since release
+`index-DY_DH7h-.js` `/api/feed/new` is #7, since `index-BnFvC-Ft.js` `/api/settings/card-sample` is #27, and every
+later method moved down by one each time. Release `index-CBlEKxdL.js` added #37 – #54 at the end: the 17 owner
+methods (`:142-158`) and the contact request (`:159`). The intake recorded the range of the owner methods, not the
+row of each: the numbers 37 – 53 below follow the order of the owner section of the contract (Doc r31 §16) and are
+`inferred`. Rows 37 – 54 cite client files at r31; `OwnerForm.jsx`, `OwnerListings.jsx`, `OwnerPanel.jsx` and
+`PlacePicker.jsx` are under `src/features/owner/`, and the wrapper file is written in full because a second
+`owner.js`, the cabinet's dictionary, lies in that folder.
 
 | Doc # | Method | Path | ID | In client | Wrapper | Call sites |
 | ----: | ------ | ---- | -- | --------- | ------- | ---------- |
@@ -1636,7 +2322,25 @@ the registry number of the pinned release: since release `index-DY_DH7h-.js` `/a
 | 33 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
 | 34 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
 | 35 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
-| 36 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin (§2 API-034) |
+| 36 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin, one more since release `index-CBlEKxdL.js` (the owner chip, `OwnerChip.jsx:54-62` at r31) (§2 API-034) |
+| 37 | GET | `/api/owner/listings` | API-037 | yes | `src/lib/api/owner.js` | `SettingsScreen.jsx:101-107`, `OwnerListings.jsx:307-320`, `:352`, `OwnerForm.jsx:214-219` |
+| 38 | POST | `/api/owner/listings` | API-038 | yes | `src/lib/api/owner.js:30-34` | `OwnerForm.jsx:183-238` |
+| 39 | GET | `/api/owner/listings/:id` | API-039 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:183-238`, `:708-721`, `:1484-1620`, `OwnerPanel.jsx` |
+| 40 | PATCH | `/api/owner/listings/:id` | API-040 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:245-337` |
+| 41 | POST | `/api/owner/listings/:id/photos` | API-041 | yes | `src/lib/api/owner.js:57-70` | `OwnerForm.jsx:435-524` |
+| 42 | DELETE | `/api/owner/listings/:id/photos/:photoId` | API-042 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:511-524` |
+| 43 | POST | `/api/owner/listings/:id/photos/order` | API-043 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:492-510` |
+| 44 | POST | `/api/owner/listings/:id/contact_mode` | API-044 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:644-667` |
+| 45 | POST | `/api/owner/listings/:id/publish` | API-045 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:668-741` |
+| 46 | POST | `/api/owner/listings/:id/status` | API-046 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:322-361`, `OwnerPanel.jsx:87-113` |
+| 47 | GET | `/api/owner/pending` | API-047 | yes | `src/lib/api/owner.js` | `ownerPending.js:6-57`, `App.jsx:141-147` |
+| 48 | GET | `/api/owner/requests` | API-048 | yes | `src/lib/api/owner.js:122-127` | `OwnerListings.jsx:477-479`, `OwnerPanel.jsx:271` |
+| 49 | POST | `/api/owner/requests/:id` | API-049 | yes | `src/lib/api/owner.js` | `OwnerListings.jsx:493-560` |
+| 50 | POST | `/api/owner/waitlist` | API-050 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:1639-1655` |
+| 51 | POST | `/api/owner/place` | API-051 | yes | `src/lib/api/owner.js` | `PlacePicker.jsx:63-83`, `OwnerForm.jsx:565-571` |
+| 52 | GET | `/api/owner/map-start` | API-052 | yes | `src/lib/api/owner.js:157` | `OwnerForm.jsx:197-209` |
+| 53 | GET | `/api/owner/demand` | API-053 | yes | `src/lib/api/owner.js:165-184` | `OwnerForm.jsx:347-369` |
+| 54 | POST | `/api/listings/:id/contact` | API-054 | yes | `src/lib/api/owner.js:191-192` | `ContactRequestSheet.jsx:50-85` |
 
 ### 4.2 Client requests → documentation
 
@@ -1646,7 +2350,7 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 
 | Client request | Where | Documented in | Result |
 | -------------- | ----- | ------------- | ------ |
-| 36 `apiFetch` methods at the pin (35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-036) |
+| 54 `apiFetch` methods at the pinned release (36 at `index-BnFvC-Ft.js`, 35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-054) |
 | Prefetch of meta, first feed page, deep-link listing | `src/main.jsx:24-39` | Doc:87-98 | documented |
 | `XMLHttpRequest POST /api/events` (boot errors) | `index.html:76-88` | Doc:974-975, Doc:1007 | documented |
 | `XMLHttpRequest GET /api/bot` (boot fallback) | `index.html:94-102` | Doc:38-39, Doc:500-501 | documented |
@@ -1704,6 +2408,12 @@ Nothing here is a deletion recommendation. Proposed fixes and old-client impact 
 | `POST /api/events` | risky: unauthenticated traffic, unbounded payload | — | Doc:1012-1013, Doc:1044 | LB-API-001, LB-API-047 |
 | `POST /api/listings/:id/share` | risky: outbound Bot API call per tap | — | `ListingTitleRow.jsx:35` | LB-API-046 |
 | `POST /api/settings/card-sample` (since `index-BnFvC-Ft.js`) | risky: a chat message per tap, no documented rate limit; fragile: a `204` hangs the old client's button | — | `SettingsScreen.jsx:162-171` (at r31); Doc r31:1053-1055 | LB-APP-052, Q-API-067 |
+| `POST /api/owner/listings/:id/photos` (since `index-CBlEKxdL.js`) | risky: when the client's conversion fails, the original file goes up unconverted, with its EXIF and GPS data | — | `src/features/owner/shrinkPhoto.js:13-25`, `src/lib/api/owner.js:57-59` (at r31) | LB-APP-061, Q-API-073 |
+| `POST /api/owner/place`, `GET /api/owner/map-start` (since `index-CBlEKxdL.js`) | risky: the user's position as a map centre, and a location «примерно по IP» | — | `src/features/owner/PlacePicker.jsx:63-83`, `:139-140`, `src/lib/api/owner.js:157` (at r31) | Q-API-074; `05` TMA-035 |
+| `GET /api/owner/pending` (since `index-CBlEKxdL.js`) | risky: load (one request per user at every launch and every return to the app, also for users without a listing) | — | `src/app/App.jsx:141`, `src/lib/ownerPending.js:40-55` (at r31) | LB-APP-066 |
+| `POST /api/listings/:id/contact` (since `index-CBlEKxdL.js`) | risky: a chat message to a third person per call; the limits exist only on the server | — | Doc r31:820-822, :838-839 | BR-API-185, Q-API-076 |
+| `GET /api/owner/requests` (since `index-CBlEKxdL.js`) | risky: personal data (the seeker's Telegram name shown to the owner) | — | Doc r31:1413-1427 | Q-API-077 |
+| `POST /api/owner/listings` (since `index-CBlEKxdL.js`) | risky: a new draft per call, with no documented reuse | — | `src/lib/api/owner.js:30-34` (at r31); Doc r31:1434-1435 | LB-APP-054, Q-API-068 |
 | `POST /api/listings/:id/translate` | risky: LLM cost per call | — | `useListingTranslation.js:32` | LB-API-032 |
 | `GET /api/feed/count`, `/api/feed/flow` | risky: load (live per change + 3 requests per radar) | — | `useLiveFeedStats.js`, `useRadarPreviews.js` | LB-API-038, LB-API-052 |
 | `GET /api/feed/new` | fragile: a body without numeric `count` crashes the old client; `since` from the device clock, unbounded | — | `src/app/useReturnNudge.js:112-136` (at the pin) | LB-API-055, Q-API-066 |

@@ -14,7 +14,7 @@
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:257"
     ],
     "status": "CONFIRMED",
-    "notes": "Prefetched before render; retries 1,3,7,15,30 s on non-403; 403 re-check 3x2.5 s except blocked. server logic DOCUMENTED_ONLY. LB-API-002, -018, -019, -021, -048, -051, -053; Q-API-002..006, -026, -047, -054. new_features codes: pets, and cards since index-BnFvC-Ft.js."
+    "notes": "Prefetched before render; retries 1,3,7,15,30 s on non-403; 403 re-check 3x2.5 s except blocked. server logic DOCUMENTED_ONLY. LB-API-002, -018, -019, -021, -048, -051, -053; Q-API-002..006, -026, -047, -054. new_features codes: pets, and cards since index-BnFvC-Ft.js. Since index-CBlEKxdL.js renovations may hold a key owner besides the deals (the owner form reads renovations.owner ?? renovations.rent_long), and cities[].zoom + 1 is the start zoom of the owner's place picker."
   },
   {
     "id": "API-002",
@@ -46,7 +46,7 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:46"
     ],
     "status": "CONFIRMED",
-    "notes": "{username, support}; non-2xx -> client fallback {username:null}. server logic DOCUMENTED_ONLY. Q-API-056."
+    "notes": "{username, support}; non-2xx -> client fallback {username:null}. server logic DOCUMENTED_ONLY. Q-API-056. Since index-CBlEKxdL.js support is also read by the owner panel and by «Мои объявления», for the «Поддержка» button of a held or withdrawn owner listing."
   },
   {
     "id": "API-004",
@@ -139,7 +139,7 @@
       "$KVADRO_ROOT/demo/app/src/features/map/MapSelectionCard.jsx:29"
     ],
     "status": "CONFIRMED",
-    "notes": "Optional ?preview=1 (map card). ListingDetails; id must be a JSON number; may return another (merged) listing id. 404 -> 'Объявление не загрузилось'. server logic DOCUMENTED_ONLY. LB-API-009..012, -029..031; Q-API-019, -021..024, -035."
+    "notes": "Optional ?preview=1 (map card). ListingDetails; id must be a JSON number; may return another (merged) listing id. 404 -> 'Объявление не загрузилось'. server logic DOCUMENTED_ONLY. LB-API-009..012, -029..031; Q-API-019, -021..024, -035. Since index-CBlEKxdL.js the card also carries owner_self, owner_mine, owner_listing_id, contact_mode, my_request, response_minutes, owner_description (owner_mine and my_request per caller); phone on the card of a gate listing only after the caller's request is given. BR-API-186, BR-API-187, BR-API-188, BR-API-189; Q-API-076, Q-API-078."
   },
   {
     "id": "API-009",
@@ -153,7 +153,7 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js:26"
     ],
     "status": "CONFIRMED",
-    "notes": "{url} to /call/<token>; client assumes 10 min TTL, refreshes at 8 min; first link comes from call_url. server logic DOCUMENTED_ONLY. LB-API-016, -045; Q-API-042."
+    "notes": "{url} to /call/<token>; client assumes 10 min TTL, refreshes at 8 min; first link comes from call_url. server logic DOCUMENTED_ONLY. LB-API-016, -045; Q-API-042. Since index-CBlEKxdL.js the card of a gate listing of the owner cabinet carries no phone, so no first link, until the caller's request is given (API-054)."
   },
   {
     "id": "API-010",
@@ -557,10 +557,274 @@
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:143",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:309",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx:638",
-      "$KVADRO_ROOT/demo/app/src/app/App.jsx:744"
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:744",
+      "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx:54-62"
     ],
     "status": "CONFIRMED",
-    "notes": "{name, ...props} at top level; since index-DY_DH7h-.js also return_prompt_shown {n, custom}, return_prompt_expired|closed {custom}, feed_radar_shown|closed {custom} (last five call sites at the pin); React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046. Since index-BnFvC-Ft.js app_launch also carries tg = Telegram.WebApp.version."
+    "notes": "{name, ...props} at top level; since index-DY_DH7h-.js also return_prompt_shown {n, custom}, return_prompt_expired|closed {custom}, feed_radar_shown|closed {custom} (last five call sites at the pin); React fetch keepalive + boot XHR; accept unknown fields; 204. server logic DOCUMENTED_ONLY. LB-API-001, -047; Q-API-045, -046. Since index-BnFvC-Ft.js app_launch also carries tg = Telegram.WebApp.version. Since index-CBlEKxdL.js also owner_info_opened {listing_id} from the owner chip of the listing screen (the last call site, at r31)."
+  },
+  {
+    "id": "API-037",
+    "method": "GET",
+    "path": "/api/owner/listings",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the caller's own owner listings",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1406-1411, :1430-1433",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:101-107",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:307-320",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:352",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:214-219"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. No input; returns {items: OwnerListing[], max, can_add, past?}: every owner listing of the user, past ones included, and the apartment limit (max is 2 today, can_add is false at the limit). Settings ignores errors; «Мои объявления» shows an error state. server logic DOCUMENTED_ONLY. BR-API-162; Q-API-068."
+  },
+  {
+    "id": "API-038",
+    "method": "POST",
+    "path": "/api/owner/listings",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1434-1435, :1286",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:30-34",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:183-238"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. No body; returns a new OwnerListing with status draft on every call (no reuse of an untouched draft is documented, LB-APP-054); 409 at the apartment limit. server logic DOCUMENTED_ONLY. BR-API-162, BR-API-163; Q-API-068."
+  },
+  {
+    "id": "API-039",
+    "method": "GET",
+    "path": "/api/owner/listings/:id",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1436-1438, :1346-1348",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:183-238",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:708-721",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1484-1620",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Returns OwnerListing. Also the phone poll: every 1.5 s for up to 90 s and on every return to the app, watching phone_set, status rejected and a draft's reject_reason not_uz|not_own; the contact itself reaches the bot through requestContact (BOT-086). The answer for another user's id is not documented. server logic DOCUMENTED_ONLY. BR-API-167, BR-API-170, BR-API-171; Q-API-069, Q-API-074."
+  },
+  {
+    "id": "API-040",
+    "method": "PATCH",
+    "path": "/api/owner/listings/:id",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1373-1391, :1439-1442, :1287-1288",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:245-337"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body: only the changed OwnerListingForm fields, null clears one; autosaved 600 ms after an edit. 409 or missing:status = no longer editable; 422 invalid:<fields> names the rejected fields; the accepted ranges are not documented. The server must hide phone numbers in the description. Whether a change of a published listing goes live at once is unknown (LB-APP-055). server logic DOCUMENTED_ONLY. BR-API-164, BR-API-165; Q-API-069, Q-API-070."
+  },
+  {
+    "id": "API-041",
+    "method": "POST",
+    "path": "/api/owner/listings/:id/photos",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1443-1445, :1230-1231",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:57-70",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:435-524",
+      "$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js:3-26"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. multipart/form-data, one field file (photo.jpg), one photo per call, 90 s timeout; at most 10 per listing; detail photo:too_many|photo:not_image|photo:too_big; returns OwnerListing. A failed client conversion uploads the original file with its EXIF data (LB-APP-061). server logic DOCUMENTED_ONLY. BR-API-166; Q-API-073."
+  },
+  {
+    "id": "API-042",
+    "method": "DELETE",
+    "path": "/api/owner/listings/:id/photos/:photoId",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1443-1447",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:511-524"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Deletes one photo at once, with no confirmation on the client (LB-APP-067); returns OwnerListing. What happens to the last photo of a live listing is not documented. server logic DOCUMENTED_ONLY. BR-API-166; Q-API-070."
+  },
+  {
+    "id": "API-043",
+    "method": "POST",
+    "path": "/api/owner/listings/:id/photos/order",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1443-1447",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:492-510"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {ids: [cover, ...rest]}, always the full order; the first id is the cover; returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-166."
+  },
+  {
+    "id": "API-044",
+    "method": "POST",
+    "path": "/api/owner/listings/:id/contact_mode",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1448-1449, :1365",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:644-667"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {mode: gate|open}; gate hides the number and seekers send a request (API-054), open shows it on the card; null until the owner chooses, and publishing does not require a choice (LB-APP-056). Returns OwnerListing. server logic DOCUMENTED_ONLY. BR-API-173; Q-API-078."
+  },
+  {
+    "id": "API-045",
+    "method": "POST",
+    "path": "/api/owner/listings/:id/publish",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1450-1454",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:668-741"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. No body; also saves the edits of a published listing. Refusals: missing:<fields> (city, place, rooms, price, photos, phone, limit, status), 409 status:..., rejected:<reason> (agent, fraud, limit). No check of photos or text before going live is documented; the feed and radar fan-out is inferred from the Mini App's texts. server logic DOCUMENTED_ONLY. BR-API-174, BR-API-175; Q-API-070, Q-API-071."
+  },
+  {
+    "id": "API-046",
+    "method": "POST",
+    "path": "/api/owner/listings/:id/status",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1455-1457, :1358-1359",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:322-361",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:87-113"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {status: active|paused|rented|removed}; returns OwnerListing. The effects (out of the feed and the radars; on rented the waiting requests cancelled and the seekers told, BOT-090; a draft deleted on removed) are known from the Mini App's texts only. A status change on the panel leaves the counters stale (LB-APP-059). server logic DOCUMENTED_ONLY. BR-API-176, BR-API-177; Q-API-070."
+  },
+  {
+    "id": "API-047",
+    "method": "GET",
+    "path": "/api/owner/pending",
+    "auth": "tma <initData> required",
+    "access": "authenticated; called for every user",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1289, :1460-1462",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:6-57",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx:141-147"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Returns {pending: number}, always a number; sent at app start and on every return to the app for every user, also without a listing (LB-APP-066). Errors ignored. server logic DOCUMENTED_ONLY. BR-API-179."
+  },
+  {
+    "id": "API-048",
+    "method": "GET",
+    "path": "/api/owner/requests",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1413-1427, :1463",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:122-127",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:477-479",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx:271"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Query owner_listing_id=<id> (the only form the client uses); returns OwnerRequest[] with the seeker's Telegram name and the flags can_reason, can_undo, can_late. server logic DOCUMENTED_ONLY. BR-API-180; Q-API-075, Q-API-077."
+  },
+  {
+    "id": "API-049",
+    "method": "POST",
+    "path": "/api/owner/requests/:id",
+    "auth": "tma <initData> required",
+    "access": "authenticated; the owner of the listing the request was sent to",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1464-1466",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:493-560"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {action: give|decline|reason_found|reason_agent|undo|late}; returns the updated OwnerRequest; 409 = the action is no longer possible. What each action does (the number sent to the seeker, BOT-088; the soft refusal after 10 minutes, BOT-089; the realtor mark) is known from the Mini App's texts only. server logic DOCUMENTED_ONLY. BR-API-181; Q-API-075, Q-API-077."
+  },
+  {
+    "id": "API-050",
+    "method": "POST",
+    "path": "/api/owner/waitlist",
+    "auth": "tma <initData> required",
+    "access": "authenticated; offered only after an agent rejection",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1469-1470",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1639-1655"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. No body; the answer is not read. Records a user whose number was refused as a realtor's; the Mini App promises a bot message later (BOT-091). The client does not remember the sign-up (LB-APP-071). server logic DOCUMENTED_ONLY. BR-API-182; Q-BOT-049."
+  },
+  {
+    "id": "API-051",
+    "method": "POST",
+    "path": "/api/owner/place",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1471-1473",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:63-83",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:565-571"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {lat, lon}; returns {address?, city?, district_code?, landmark?}; sent 400 ms after the map stops (previous request aborted) and once more after «Готово». The data source is not documented; the client checks only a rectangle (LB-APP-063). server logic DOCUMENTED_ONLY. BR-API-168; Q-API-074."
+  },
+  {
+    "id": "API-052",
+    "method": "GET",
+    "path": "/api/owner/map-start",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1474-1475, :502-505",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:157",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:197-209"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. No input; returns {lat, lon, zoom}, «примерно по IP» in the client's words; only for a listing without a point, awaited for up to 1.5 s. server logic DOCUMENTED_ONLY. BR-API-168; Q-API-074."
+  },
+  {
+    "id": "API-053",
+    "method": "GET",
+    "path": "/api/owner/demand",
+    "auth": "tma <initData> required",
+    "access": "authenticated",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :142-158, :1476-1479",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:165-184",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:347-369"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Query city, district, room|rooms, price, currency; returns {count, usual_low_usd, usual_high_usd}: the active radars that match the flat and the usual price range in USD. Sent 500 ms after a change, previous request aborted; errors silent. server logic DOCUMENTED_ONLY. BR-API-169."
+  },
+  {
+    "id": "API-054",
+    "method": "POST",
+    "path": "/api/listings/:id/contact",
+    "auth": "tma <initData> required",
+    "access": "a seeker on an owner's listing in gate mode",
+    "doc_ref": "$KVADRO_ROOT/docs/api.md (r31, release index-CBlEKxdL.js) :159, :818-839, :1290",
+    "client_call_sites": [
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js:191-192",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:50-85"
+    ],
+    "status": "CONFIRMED",
+    "notes": "Since index-CBlEKxdL.js. Body {who, people, move_in, message}; returns {status}, which becomes my_request of the card. 409 no_chat is answered before a request is created (write-access flow, one repeat); the other detail codes are limit_fast, limit_day, limit_week, blocked, harvest, closed, own, open, and their HTTP statuses are not documented. The owner answers in the bot or in the cabinet (API-049). Parity mock tools/parity/mocks.mjs:295. server logic DOCUMENTED_ONLY. BR-API-183, BR-API-184, BR-API-185, BR-API-186, BR-API-187; LB-APP-057, LB-APP-073, LB-APP-074, LB-APP-076; Q-API-075, Q-API-076."
   },
   {
     "id": "RES-001",

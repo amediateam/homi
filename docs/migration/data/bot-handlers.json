@@ -1198,6 +1198,83 @@
     "source": "api.md:1040-1055 (r31); demo/app/src/features/settings/SettingsScreen.jsx:162-171 (r31)"
   },
   {
+    "id": "BOT-086",
+    "kind": "scenario-step",
+    "trigger": "Owner cabinet: the contact arrives from the Mini App (WebApp.requestContact, since Mini App release index-CBlEKxdL.js)",
+    "summary": "«Поделиться номером» in the Mini App makes Telegram send the user's contact into the bot chat. It is tied to the user's draft and checked: own contact, +998, the realtor and fraud checks, the limit per phone; the result shows in GET /api/owner/listings/:id within seconds. The Mini App adds «Загляните в чат с ботом — там может быть ответ» and sends users of clients below 6.9 to the bot to share the number there. Not described in telegram-bot.md; the chat reply, the old-client path and the relation to /owner (BOT-075 … BOT-077) are unknown (Q-BOT-047, Q-API-072).",
+    "buttons": [],
+    "backend_effects": [
+      "Phone stored with the owner listing",
+      "phone_set, phone_display, reject_reason set"
+    ],
+    "status": "UNVERIFIED",
+    "source": "api.md:1346-1348, :1366-1369, :1436-1438 (r31); demo/app/src/features/owner/owner.js:89-107 (r31); demo/app/src/features/owner/OwnerForm.jsx:1484-1620, :1684-1693 (r31)"
+  },
+  {
+    "id": "BOT-087",
+    "kind": "scheduled-message",
+    "trigger": "A seeker sent a request (POST /api/listings/:id/contact; not scheduled)",
+    "summary": "The owner receives the request in the bot chat and can answer there or in «Мои объявления»: «Отклики придут в бот. Ответить можно там или в «Мои объявления»». Text and answer buttons not observed (Q-BOT-048).",
+    "buttons": [],
+    "backend_effects": [
+      "Reads the request",
+      "An answer given in the chat changes its status (inferred)"
+    ],
+    "status": "UNVERIFIED",
+    "source": "api.md:820-822 (r31); demo/app/src/features/owner/owner.js:134 (r31)"
+  },
+  {
+    "id": "BOT-088",
+    "kind": "scheduled-message",
+    "trigger": "The owner pressed «Дать номер» (action give; not scheduled)",
+    "summary": "The seeker receives the owner's number in the bot chat («Номер отправили — человек позвонит вам сам»). The Mini App tells the seeker to press «Ответил риелтор» in the bot if the answerer turns out to be a realtor, so the message probably carries that button (inferred). Form of the number and the buttons not observed (Q-BOT-048, Q-API-076).",
+    "buttons": [],
+    "backend_effects": [
+      "Request given",
+      "Writes the seeker's chat"
+    ],
+    "status": "UNVERIFIED",
+    "source": "demo/app/src/features/owner/owner.js:219 (r31); demo/app/src/i18n/locales/ru.js:654 (r31)"
+  },
+  {
+    "id": "BOT-089",
+    "kind": "scheduled-message",
+    "trigger": "10 minutes after the owner pressed «Не подходит» (action decline), unless it was undone",
+    "summary": "A soft refusal to the seeker with similar listings: «Через 10 минут мягко ответим, что номер вы дать не готовы, и покажем похожие». The owner is told the seeker gets the same soft answer whatever reason is chosen. Not observed (Q-BOT-048, Q-API-075).",
+    "buttons": [],
+    "backend_effects": [
+      "Request declined or agent",
+      "Writes the seeker's chat"
+    ],
+    "status": "UNVERIFIED",
+    "source": "demo/app/src/features/owner/owner.js:220, :226-227 (r31)"
+  },
+  {
+    "id": "BOT-090",
+    "kind": "scheduled-message",
+    "trigger": "The owner marked the flat «Сдано» (status rented; not scheduled)",
+    "summary": "The seekers whose requests still wait are told that the flat is let («тем, кто ждёт ответа, скажем, что квартиру сдали»); their requests become cancelled. Not observed (Q-BOT-048).",
+    "buttons": [],
+    "backend_effects": [
+      "Requests cancelled",
+      "Writes the seekers' chats"
+    ],
+    "status": "UNVERIFIED",
+    "source": "demo/app/src/features/owner/owner.js:203, :240 (r31)"
+  },
+  {
+    "id": "BOT-091",
+    "kind": "scheduled-message",
+    "trigger": "The cabinet opens for realtors (a later broadcast to the waiting list of POST /api/owner/waitlist)",
+    "summary": "Promised by the Mini App only: «Хорошо, напишем в бот, когда откроем.». Never observed; text and sender unknown (Q-BOT-049).",
+    "buttons": [],
+    "backend_effects": [
+      "Reads the waiting list"
+    ],
+    "status": "UNVERIFIED",
+    "source": "demo/app/src/features/owner/owner.js:110 (r31); api.md:1469-1470 (r31)"
+  },
+  {
     "id": "BTN-001",
     "kind": "callback",
     "trigger": "web_app, primary button: `📱 Открыть kvadro²` · EN `📱 Open kvadro²`",

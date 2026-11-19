@@ -16,12 +16,12 @@ with a stable public integer `number` so «Скрытое» (KV-BE-042) and migr
 
 ## Legacy reference
 
-- API-014 and API-015 (`08-api-inventory.md:692-740`): client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:65-68`,
+- API-014 and API-015 (`08-api-inventory.md:782-830`): client `$KVADRO_ROOT/demo/app/src/lib/api/listings.js:65-68`,
   `:74-77`; `$KVADRO_ROOT/demo/app/src/features/listing/ListingActionsSheet.jsx:79-85`;
   `$KVADRO_ROOT/demo/app/src/app/useListingActions.js:52-60` (spread of `listing_ids`, undo); toast «Автор {label}
   заблокирован» (`$KVADRO_ROOT/demo/app/src/i18n/locales/ru.js:203`); masked label in
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:187`; `$KVADRO_ROOT/docs/api.md:657-673`.
-- Rules: `02-legacy-backend-audit.md:541-565` (BR-API-097, BR-API-098, BR-API-099, Q-API-036, Q-API-038);
+- Rules: `02-legacy-backend-audit.md:543-567` (BR-API-097, BR-API-098, BR-API-099, Q-API-036, Q-API-038);
   `$KVADRO_ROOT/docs/about.md:227` (block by phone or channel).
 - Data: ENT-017, ENT-030 (`06` §2.3–§2.4, §4.2 `blocked_authors`, `listing_authors`); entry ids preserved by the
   migration (`14` §3, KV-DB-020).

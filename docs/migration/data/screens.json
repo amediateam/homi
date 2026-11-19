@@ -114,11 +114,14 @@
       "$KVADRO_ROOT/demo/app/src/app/TabBar.jsx",
       "$KVADRO_ROOT/demo/app/src/app/tabs.js",
       "$KVADRO_ROOT/demo/app/src/app/ViewToggle.jsx",
-      "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js"
+      "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js",
+      "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
+      "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js"
     ],
     "apis": [
       "GET /api/subscriptions",
-      "GET /api/cities"
+      "GET /api/cities",
+      "GET /api/owner/pending"
     ],
     "storage_keys": [],
     "analytics_events": [
@@ -439,23 +442,32 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingLoader.js",
       "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingContact.js",
       "$KVADRO_ROOT/demo/app/src/features/listing/hooks/useListingTranslation.js",
-      "$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/listing/spot/SpotMap.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/layers.js",
+      "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx"
     ],
     "apis": [
       "GET /api/listings/:id",
       "GET /api/listings/:id/call",
       "POST /api/listings/:id/translate",
       "POST /api/listings/:id/favorite",
-      "POST /api/listings/:id/share"
+      "POST /api/listings/:id/share",
+      "POST /api/listings/:id/contact"
     ],
-    "storage_keys": [],
+    "storage_keys": [
+      "kv-owner-tip"
+    ],
     "analytics_events": [
       "$pageview",
       "listing_shared",
       "original_opened",
       "original_copied",
       "contact_call",
-      "contact_write"
+      "contact_write",
+      "owner_info_opened"
     ],
     "status": "CONFIRMED"
   },
@@ -753,7 +765,8 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/AboutGroup.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsGroup.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsRow.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/settings/useHomeScreenStatus.js"
+      "$KVADRO_ROOT/demo/app/src/features/settings/useHomeScreenStatus.js",
+      "$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx"
     ],
     "apis": [
       "GET /api/settings",
@@ -761,7 +774,9 @@
       "GET /api/hidden",
       "GET /api/bot",
       "PUT /api/settings",
-      "POST /api/settings/card-sample"
+      "POST /api/settings/card-sample",
+      "GET /api/owner/listings",
+      "GET /api/owner/pending"
     ],
     "storage_keys": [
       "kv-new-cards"
@@ -970,7 +985,8 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/components/Toast.jsx",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/feedback.css"
     ],
     "apis": [],
     "storage_keys": [],
@@ -985,7 +1001,8 @@
       "clear history",
       "delete radar",
       "return all hidden",
-      "bot cannot write after 409 no_chat"
+      "bot cannot write after 409 no_chat",
+      "owner cabinet: mark a flat as let, withdraw a listing, delete a draft (since index-CBlEKxdL.js)"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/lib/telegram/dialogs.js",
@@ -1135,6 +1152,317 @@
     ],
     "storage_keys": [],
     "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-049",
+    "name": "Limit sheet «Сдаются N из max квартир»",
+    "kind": "sheet",
+    "entry_points": [
+      "Сдать квартиру row in settings at the limit of flats (since index-CBlEKxdL.js)",
+      "Сдать ещё одну квартиру in «Мои объявления» at the limit (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-050",
+    "name": "Owner form «Сдать квартиру»: layer, loading, error and limit states",
+    "kind": "screen",
+    "entry_points": [
+      "Сдать квартиру row of the group «Сдаю квартиру» in settings; «Продолжить» or «Изменить» on an owner listing (since index-CBlEKxdL.js)",
+      "start_param owner_new or ?owner=new (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/layers.js",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.js",
+      "$KVADRO_ROOT/demo/app/src/styles/owner-shared.css"
+    ],
+    "apis": [
+      "POST /api/owner/listings",
+      "GET /api/owner/listings/:id",
+      "GET /api/owner/listings"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-051",
+    "name": "Place picker «Где квартира?»",
+    "kind": "overlay",
+    "entry_points": [
+      "step «where» of the owner form for a new draft without a point (since index-CBlEKxdL.js)",
+      "Карта button of the address field or the spot preview in the questionnaire (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/pickMap.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx"
+    ],
+    "apis": [
+      "GET /api/owner/map-start",
+      "POST /api/owner/place"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-052",
+    "name": "Owner form › Questionnaire",
+    "kind": "screen",
+    "entry_points": [
+      "step «form» of the owner form: after the place picker, or at once for a listing that has a point (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/NumberField.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js"
+    ],
+    "apis": [
+      "PATCH /api/owner/listings/:id",
+      "POST /api/owner/listings/:id/photos",
+      "DELETE /api/owner/listings/:id/photos/:photoId",
+      "POST /api/owner/listings/:id/photos/order",
+      "GET /api/owner/demand",
+      "POST /api/owner/place"
+    ],
+    "storage_keys": [
+      "kv-own-focus"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-053",
+    "name": "Owner form › Phone confirmation «Подтвердите номер»",
+    "kind": "screen",
+    "entry_points": [
+      "Дальше in the questionnaire while the phone is not confirmed (since index-CBlEKxdL.js)",
+      "publish answered missing:phone (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/share.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/links.js"
+    ],
+    "apis": [
+      "GET /api/owner/listings/:id"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-054",
+    "name": "Owner form › Rejection «Не получилось» and the realtor waitlist",
+    "kind": "state",
+    "entry_points": [
+      "phone step of the owner form when the owner listing is rejected (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx"
+    ],
+    "apis": [
+      "POST /api/owner/waitlist"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-055",
+    "name": "Owner form › Contact mode and preview «Как с вами связываться?»",
+    "kind": "screen",
+    "entry_points": [
+      "after the phone is confirmed, or Дальше in the questionnaire when it already is (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx"
+    ],
+    "apis": [
+      "POST /api/owner/listings/:id/contact_mode",
+      "POST /api/owner/listings/:id/publish"
+    ],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-056",
+    "name": "Owner form › Done «Готово» / «Сохранили»",
+    "kind": "state",
+    "entry_points": [
+      "after a successful publish in the owner form (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/DoneMascot.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-057",
+    "name": "Settings › «Мои объявления»",
+    "kind": "screen",
+    "entry_points": [
+      "Мои объявления row of the group «Сдаю квартиру» in settings (since index-CBlEKxdL.js)",
+      "Мои объявления button of the limit sheet, the owner form and the limit rejection (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx"
+    ],
+    "apis": [
+      "GET /api/owner/listings",
+      "POST /api/owner/listings/:id/status",
+      "GET /api/owner/pending"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "$pageview"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-058",
+    "name": "Requests «Отклики»",
+    "kind": "screen",
+    "entry_points": [
+      "Отклики on a card of «Мои объявления» (since index-CBlEKxdL.js)",
+      "Отклики tab or «Ответить» on the owner panel of the listing screen (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx"
+    ],
+    "apis": [
+      "GET /api/owner/requests",
+      "POST /api/owner/requests/:id"
+    ],
+    "storage_keys": [
+      "kv-req-tip"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-059",
+    "name": "The owner's own listing: panel «Ваше объявление» and the owner_mine variant (state of SCR-018)",
+    "kind": "state",
+    "entry_points": [
+      "listing screen of a card with owner_mine (since index-CBlEKxdL.js)",
+      "tap on a published card in «Мои объявления» (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerPanel.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx"
+    ],
+    "apis": [
+      "GET /api/listings/:id",
+      "GET /api/owner/listings/:id",
+      "GET /api/bot",
+      "POST /api/owner/listings/:id/status"
+    ],
+    "storage_keys": [
+      "kv-own-focus"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-060",
+    "name": "Request signals: red dot on the Settings tab, «Пришёл первый отклик!» and the card tip",
+    "kind": "overlay",
+    "entry_points": [
+      "requests waiting for the owner: red dot on the Settings tab and the tab tip (since index-CBlEKxdL.js)",
+      "first card with waiting requests in «Мои объявления» (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/app/TabBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js",
+      "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
+      "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx"
+    ],
+    "apis": [
+      "GET /api/owner/pending"
+    ],
+    "storage_keys": [
+      "kv-req-tip"
+    ],
+    "analytics_events": [],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-061",
+    "name": "Contact request sheet «Отклик хозяину»",
+    "kind": "sheet",
+    "entry_points": [
+      "Связаться с хозяином on the listing screen of an owner who hides the number (gate mode) (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js",
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js"
+    ],
+    "apis": [
+      "POST /api/listings/:id/contact"
+    ],
+    "storage_keys": [],
+    "analytics_events": [
+      "chat_access_declined",
+      "chat_access_allowed"
+    ],
+    "status": "CONFIRMED"
+  },
+  {
+    "id": "SCR-062",
+    "name": "Owner info sheet «Проверенный хозяин»",
+    "kind": "sheet",
+    "entry_points": [
+      "tap on the owner chip of the listing screen or on its tip (since index-CBlEKxdL.js)"
+    ],
+    "source_files": [
+      "$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx"
+    ],
+    "apis": [],
+    "storage_keys": [
+      "kv-owner-tip"
+    ],
+    "analytics_events": [
+      "owner_info_opened"
+    ],
     "status": "CONFIRMED"
   }
 ]

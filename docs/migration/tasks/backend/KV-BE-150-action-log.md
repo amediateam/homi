@@ -19,7 +19,7 @@ allow-listed event names and property keys, so the log can never hold free text,
 - ENT-021 (`06:535-553`): fields user, name, props, channel, created_at; "no texts", 180 days; volume unknown
   (Q-DATA-021).
 - `$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431` (action log promise in `/privacy`); bot audit
-  `04-telegram-bot-audit.md:1168` (BR-BOT-086).
+  `04-telegram-bot-audit.md:1211` (BR-BOT-086).
 - Rules: BR-API-125, BR-BOT-086, BR-DATA-004 (180 days, no texts); BR-API-123 (closed client catalogue), BR-API-124
   (client-side bounds of `app_error`).
 - Defects: LB-DATA-015 (`app_error.message` is free text inside a log promised to hold no texts — fixed here by an

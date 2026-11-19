@@ -7,7 +7,9 @@ behaviour is in `04-telegram-bot-audit.md` (`BOT-NNN`). Endpoints are named by `
 Evidence comes from the recovered code `$KVADRO_ROOT/demo/app/…`. Nothing was run. "Not used" items are `CONFIRMED`
 absences: they were checked by grep over `$KVADRO_ROOT/demo/app/src` and `index.html` for the API name. Server-side
 claims (signature checks, prepared messages) are `DOCUMENTED_ONLY`, because the legacy backend source is not
-available.
+available. Text added for a later release names it. The audit is brought up to the pinned release
+`index-CBlEKxdL.js` (SVN r31; `wave-1/baseline.md`); text of that intake cites files "at r31", the state the release
+was read in.
 
 Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defects are tracked as `LB-APP-NNN` in
 `03-legacy-frontend-audit.md` §5 and §5b.
@@ -131,7 +133,9 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - `?news=<a-z_{1,32}>`: entry `news`; `pets` opens the pets filter (`$KVADRO_ROOT/demo/app/src/lib/newFeatures.js:24-30`;
     `$KVADRO_ROOT/demo/app/src/app/useAppBootstrap.js:115-124`);
   - `?map=gl|leaflet|auto`: map engine override (`$KVADRO_ROOT/demo/app/src/features/map/engine.js:74-87`);
-  - `?mapdebug`: exposes `window.kvGL` (`$KVADRO_ROOT/demo/app/src/features/map/gl/useMapInstance.js:118-120`).
+  - `?mapdebug`: exposes `window.kvGL` (`$KVADRO_ROOT/demo/app/src/features/map/gl/useMapInstance.js:118-120`);
+  - `?owner=new`: since release `index-CBlEKxdL.js` it opens the owner form on a new draft, like the `start_param`
+    `owner_new` (TMA-046; `$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71` at r31).
 - **Open question:** whether bot buttons actually use `?listing=` / `?news=` is Q-APP-019.
 
 #### TMA-013 — Deep links the Mini App creates (CONFIRMED)
@@ -148,6 +152,21 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 
 - **Bot username sources:** `meta.bot_username` (authorised `GET /api/meta`) for share and chat restart;
   `GET /api/bot` → `{username, support}` (no auth) for the boot screen, no-access screen, actions sheet and settings.
+
+#### TMA-046 — `start_param` `owner_new` opens the owner form (CONFIRMED)
+
+- **Since:** release `index-CBlEKxdL.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-45` at r31).
+- **Parsing:** a `start_param` equal to `owner_new` or `owner-new`, or the page query `owner=new` (TMA-012). Any of
+  them opens the owner form on a new draft, once, when the app mounts
+  (`$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:60-71`; `$KVADRO_ROOT/demo/app/src/app/App.jsx:133-135`, both at
+  r31). It stands beside TMA-010 to TMA-012.
+- **Effect:** the form of `03` SCR-050 with a new draft (`03` BR-APP-075). Every such launch sends
+  `POST /api/owner/listings`, so it creates one more draft (`03` LB-APP-054).
+- **Attribution:** `getStartSource()` returns `null` for anything that is not `l_…`, so a cabinet launch has no source
+  in `app_launch` (`$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-35` at r31).
+- **Producer:** neither the Mini App, the landing (`$KVADRO_ROOT/demo/landing/site`) nor the legacy docs build such a
+  link; `$KVADRO_ROOT/docs/api.md:1349-1350` (r31) only names it. The likely producer is the bot or a campaign
+  (`inferred`; `04` Q-BOT-049).
 
 ### 1.4 Window, viewport, safe areas and theme
 
@@ -213,6 +232,14 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - Each unsubscribe uses the WebApp instance captured at push time.
 - **Layers using it:** `03-legacy-frontend-audit.md` §1.2. There is no Back on the root tabs; Telegram then shows its
   Close.
+- **Owner layers** (since release `index-CBlEKxdL.js`): they push onto the same stack, in this order. The lazy frame
+  pushes its close while the chunk loads (`$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx:97-118` at r31). Then
+  the owner form pushes its own handler: it closes an open photo menu, steps back from the phone and mode steps to
+  the questionnaire, and otherwise closes the form, each time with a light haptic
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:370-385` at r31). An open place picker pushes its close on
+  top (`$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:51-52` at r31); on the first map step of a new draft
+  that close shuts the whole form. «Мои объявления» and «Отклики» close like any settings sub-page, and the limit
+  sheet closes itself (`03` SCR-049 to SCR-058).
 - **Gesture parity:** swipe-back exists on iOS and desktop only (`$KVADRO_ROOT/demo/app/src/hooks/useSwipeBack.js:27`).
 - **Gaps:** the map selection card is not in the stack (LB-APP-024).
 
@@ -238,11 +265,20 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 - **Not used:** `selectionChanged`.
 - **Uses:** about 60 call sites, including tabs, chips, sheets, the lasso, pull-to-refresh, favourites, results of API
   mutations and the Back handlers.
+- **Since release `index-CBlEKxdL.js`:** the owner cabinet adds two calls that the list above does not have. The
+  `heavy` impact belongs to the celebration after publishing (`03` BR-APP-096;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:45-68,842-883` at r31). `notificationOccurred('warning')`
+  marks a missing field at «Дальше», a denied or failed location and a point outside the rectangle (`03` BR-APP-081,
+  BR-APP-097, SCR-051). The card-style sub-page of release `index-BnFvC-Ft.js` already plays `warning` (`03`
+  BR-APP-074).
 
 #### TMA-026 — `showConfirm` (CONFIRMED)
 
 - **Behaviour:** `WebApp.showConfirm` when `isVersionAtLeast('6.2')`, else `window.confirm` (`$KVADRO_ROOT/demo/app/src/lib/telegram/dialogs.js:9-17`).
 - **Uses:** clear history, delete radar, return all hidden, and «Открыть чат с ботом?» after `no_chat` (SCR-043).
+  Since release `index-CBlEKxdL.js` also three confirmations of the owner cabinet: «Отметить «Сдано»? …», «Снять
+  объявление?» and «Удалить черновик?» (`$KVADRO_ROOT/demo/app/src/features/owner/owner.js:765-775` at r31; `03`
+  BR-APP-088).
 
 #### TMA-027 — `showPopup`, `showAlert`, `showScanQrPopup` (CONFIRMED absence)
 
@@ -256,7 +292,11 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   `try_instant_view`). Outside Telegram, `window.open(url, '_blank', 'noopener')`.
 - **Debounce:** the same URL is ignored for 1.5 s; the function returns `false` then (`$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:42-74`).
 - **Uses:** original posts, channel chips, offers, the methodology page, Yandex / Google maps, the call page, support,
-  Instagram and bot hand-offs.
+  Instagram and bot hand-offs. Since release `index-CBlEKxdL.js` also two links of the owner cabinet through
+  `openTelegramLink`: «Открыть бот» of the phone step, to `https://t.me/<meta.bot_username>` (TMA-034;
+  `$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1684-1693` at r31), and «Поддержка» of a held or withdrawn
+  owner listing, to `https://t.me/<support>` from `GET /api/bot`
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx:100-105`, `OwnerPanel.jsx:123` at r31).
 
 #### TMA-029 — Phone calls (CONFIRMED)
 
@@ -292,19 +332,38 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 #### TMA-033 — `requestWriteAccess` after `409 no_chat` (CONFIRMED)
 
 - **Flow** (`$KVADRO_ROOT/demo/app/src/lib/chatAccess.js:27-55`; `share.js:34-42`):
-  1. Radar create, enable, edit or widen gets `409 {"detail":"no_chat"}`.
+  1. Radar create, enable, edit or widen gets `409 {"detail":"no_chat"}`. Since release `index-CBlEKxdL.js` the
+     contact request to an owner (`POST /api/listings/:id/contact`, `08` API-054) enters the same flow
+     (`$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx:59-68` at r31).
   2. `requestWriteAccess` runs when `isVersionAtLeast('6.9')`.
   3. Denied → `chat_access_declined`, and the error is rethrown.
   4. Allowed → `chat_access_allowed`, and the request is retried once.
   5. If the method is unavailable or the retry still says `no_chat`: confirm `chat.restart` → `https://t.me/<bot>`,
      then rethrow.
-- **Toast:** «Радар не включён — боту нужно разрешение писать вам в чат».
+- **Toast:** «Радар не включён — боту нужно разрешение писать вам в чат». The contact request shows its own line in
+  the sheet instead: «Ответ хозяина придёт в бот — разрешите боту писать вам и отправьте ещё раз.» (`03` SCR-061).
 
-#### TMA-034 — `requestContact` and phone sharing (CONFIRMED absence in the Mini App)
+#### TMA-034 — `requestContact` and phone sharing (CONFIRMED client since release `index-CBlEKxdL.js`; bot side DOCUMENTED_ONLY; a CONFIRMED absence before it)
 
-- **Not used** in the Mini App.
-- **Bot side:** phone verification is a bot feature (`/owner` with a `request_contact` reply keyboard,
-  `$KVADRO_ROOT/docs/about.md` §5.6, §6.3). Status there: DOCUMENTED_ONLY.
+- **Before the release:** up to `index-BnFvC-Ft.js` the Mini App did not use `requestContact`. Phone verification was
+  only a bot feature (`/owner` with a `request_contact` reply keyboard, `$KVADRO_ROOT/docs/about.md` §5.6, §6.3;
+  DOCUMENTED_ONLY).
+- **Call:** `WebApp.requestContact(callback)`, only when the method exists and `isVersionAtLeast('6.9')`. The client
+  resolves with the first callback argument (shared or not) and nothing else. Below 6.9 it resolves `null`
+  (`$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:45-58` at r31).
+- **Use:** «Поделиться номером» on the phone step of the owner form (`03` SCR-053, BR-APP-084).
+- **What reaches whom:** the contact goes to the bot as a message in the user's chat. The Mini App gets only the yes
+  or no, and learns the result by polling `GET /api/owner/listings/:id` (`$KVADRO_ROOT/docs/api.md:1346-1348`, r31;
+  `$KVADRO_ROOT/demo/app/src/features/owner/owner.js:89` at r31). The bot's side is DOCUMENTED_ONLY: the contract and
+  the Mini App's texts say that the bot receives and checks the contact, and no bot code or chat was seen (`04`
+  BOT-086, Q-BOT-047; `02` BR-API-170).
+- **Fallback:** on an old client (`null`) the step shows «Открыть бот», which opens `https://t.me/<meta.bot_username>`
+  through `openTelegramLink` (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1684-1693`;
+  `$KVADRO_ROOT/demo/app/src/lib/telegram/links.js:55-69`, both at r31). In the chat the bot then has to offer a share
+  button of its own, probably the reply keyboard of `/owner` (`$KVADRO_ROOT/docs/telegram-bot.md:827`; `inferred`;
+  `04` Q-BOT-047). Whether the owner gets back to the same draft is `03` LB-APP-060 and Q-APP-027.
+- **Port note** (external, not verified here): the Telegram SDK may pass contact data to the callback as a second
+  argument. Legacy ignores it.
 
 #### TMA-035 — Location (CONFIRMED)
 
@@ -313,9 +372,14 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   `horizontal_accuracy`.
 - **Fallback:** browser geolocation, `enableHighAccuracy`, 12 s timeout, max age 60 s (`$KVADRO_ROOT/demo/app/src/lib/geo/location.js:5-78`).
 - **Not used:** `openSettings`.
-- **Uses:** the city picker («Определить по геопозиции»), the map «Где я» and the fullscreen spot map.
+- **Uses:** the city picker («Определить по геопозиции»), the map «Где я» and the fullscreen spot map. Since release
+  `index-CBlEKxdL.js` also «Найти меня» of the owner's place picker (`03` SCR-051, BR-APP-097;
+  `$KVADRO_ROOT/demo/app/src/features/owner/PlacePicker.jsx:123-141,170-179` at r31).
 - **Gap:** no timeout on the Telegram path (LB-APP-009). The location is never sent to the server
-  (`$KVADRO_ROOT/docs/about.md` §5.11).
+  (`$KVADRO_ROOT/docs/about.md` §5.11), with one exception since release `index-CBlEKxdL.js`. After «Найти меня» the
+  picker's map flies to the user's position, and the next address lookup sends that centre to `POST /api/owner/place`
+  (`PlacePicker.jsx:63-83,139-140` at r31). So the user's own position reaches the server as a map centre (`inferred`
+  from the two code paths; `02` Q-API-074).
 
 #### TMA-036 — Home-screen shortcut (CONFIRMED)
 
@@ -330,7 +394,10 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 - **Restore:** `getItem` restores `kv-nudge`, `kv-home`, `kv-city` and, since release `index-DY_DH7h-.js`, `kv-visits`
   (the visit times of the return banner, SCR-046) when they are missing locally, with a 1.5 s timeout each
   (`$KVADRO_ROOT/demo/app/src/lib/storage.js:6-87`;
-  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md:22`).
+  `$KVADRO_ROOT/demo/app/docs/releases/2026-11-14_index-DY_DH7h-/REPORT.md:22`). Since release `index-CBlEKxdL.js`
+  also `kv-owner-tip` (the tip of the owner chip, `03` BR-APP-101) and `kv-req-tip` (the request tip, `03`
+  BR-APP-092): both joined `DEVICE_SYNCED_KEYS` (`storage.js:6` at r31;
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:33` at r31).
 - **Gaps:** LB-APP-012, LB-APP-021.
 
 #### TMA-038 — CloudStorage, SecureStorage, BiometricManager, Accelerometer, Gyroscope, DeviceOrientation (CONFIRMED absence)
@@ -349,7 +416,11 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   the immediate meta retry (`useAppBootstrap.js:150-158`), the contact-link refresh (`useListingContact.js:36-52`) and
   `tel:` detection (TMA-029). Since release `index-DY_DH7h-.js` it also drives the visit sessions of the return banner:
   going to the background on the search tab records a visit, and a return after ≥ 6 h starts a new session and
-  re-reads the radars (`$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:50-71` at the pin; BR-APP-070).
+  re-reads the radars (`$KVADRO_ROOT/demo/app/src/app/useReturnNudge.js:50-71` at the pin; BR-APP-070). Since
+  release `index-CBlEKxdL.js` a return to the app also refetches the owner's pending counter
+  (`$KVADRO_ROOT/demo/app/src/lib/ownerPending.js:45-50` at r31; `03` BR-APP-091). While the owner form waits for the
+  phone, the return polls the listing at once and restarts the poll after its 90 s timeout
+  (`$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx:1573-1599` at r31; `03` BR-APP-084).
 
 ### 1.9 Platform checks, version gates and life outside Telegram
 
@@ -374,7 +445,7 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 | none (optional chaining) | `ready`, `expand`, `close`, `HapticFeedback`, `openLink`, `openTelegramLink`, `BackButton`, `onEvent` | `webApp.js`, `haptics.js`, `links.js`, `buttons.js` |
 | 6.1 | `setHeaderColor`, `setBackgroundColor` (`bg_color` key) | `theme.js:36-49` |
 | 6.2 | `showConfirm` (else `window.confirm`) | `dialogs.js:11` |
-| 6.9 | exact hex header and background; `requestWriteAccess` | `theme.js:42`; `share.js:36` |
+| 6.9 | exact hex header and background; `requestWriteAccess`; since release `index-CBlEKxdL.js` `requestContact` (TMA-034) | `theme.js:42`; `share.js:36`; `share.js:45-58` at r31 |
 | 7.0 | `SettingsButton` | `buttons.js:43` |
 | 7.7 | `disableVerticalSwipes` | `webApp.js:190` |
 | 8.0 | `requestFullscreen` (mobile), `shareMessage`, home-screen API, `LocationManager` | `webApp.js:193`; `share.js:13,48`; `homeScreen.js:12`; `location.js:6` |
@@ -428,18 +499,23 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | Create, edit, pause, delete radars; flow estimate; widen | **yes** (SCR-026 to SCR-031) | a step-by-step wizard and free-text (Gemini) creation (§5.3) |
 | **Deliver** radar results (instant / digest, quiet hours) | no; only settings and status | **yes**: messages in the chat (§5.3) |
 | Settings: language, currency, theme, quiet hours, digest time | **yes** (SCR-032 to SCR-038); language and currency also apply to the bot (`notify.languageHint`, `notify.currencyHint`); since release `index-BnFvC-Ft.js` also the style of the bot's listing cards (`classic` / `rich`) and «Прислать пример в чат» (SCR-048) | `setMyCommands` localisation follows the language (§6.3); sends the listing cards in the chosen style and the sample card (`POST /api/settings/card-sample`, `04` BOT-085, §3.10) |
-| Owner phone verification (`owner_verified`) | no (TMA-034) | **yes**: `/owner` with `request_contact` (§5.6) |
+| Owner phone verification (`owner_verified`) | no for `/owner`; since release `index-CBlEKxdL.js` the owner cabinet confirms a phone with `requestContact` (TMA-034), and the listing screen shows «Проверенный хозяин» with an info sheet (SCR-062) | **yes**: `/owner` with `request_contact` (§5.6) |
+| List a flat for rent («Сдать квартиру»: form, photos, place, contact mode, publish, «Мои объявления», requests) | **yes** since release `index-CBlEKxdL.js` (SCR-049 to SCR-060) | receives the owner's contact, delivers the requests and the answers (`04` BOT-086 to BOT-091); whether it has an entry of its own is unknown (`04` Q-BOT-049) |
+| Ask an owner who hides the number for it | **yes** since release `index-CBlEKxdL.js` (SCR-061, `POST /api/listings/:id/contact`) | delivers the request and the answer (`04` BOT-087 to BOT-090) |
 | Privacy policy, «Удалить мои данные» | no (SCR-032) | **yes**: `/privacy` (§5.11) |
 | Support conversation | only a link to the support account | a separate support account; the main bot handles the conversation per §5.11 🔶 |
 | Share a listing | `shareMessage` / `startapp` link (TMA-030, TMA-031) | 🔶 `savePreparedInlineMessage` on the server prepares the message |
-| Entry deep links | receives `startapp=l_<id>[-src]` (TMA-010, TMA-011) | receives `start=s_<src>[--l<id>]`, `s_friend`, `s_web…` (§5.10) |
-| Write access | asks for it (`requestWriteAccess`, TMA-033) | needs it to deliver radars |
+| Entry deep links | receives `startapp=l_<id>[-src]` (TMA-010, TMA-011) and, since release `index-CBlEKxdL.js`, `startapp=owner_new` (TMA-046) | receives `start=s_<src>[--l<id>]`, `s_friend`, `s_web…` (§5.10) |
+| Write access | asks for it (`requestWriteAccess`, TMA-033), since release `index-CBlEKxdL.js` also before a contact request | needs it to deliver radars and, since that release, the answers to contact requests |
 | Access gate (closed beta) | shows reasons from `403` (SCR-003) | «Старт» in the bot unlocks `join` (text `noAccess.text.join`) |
 
 Rule for the port: every Mini App action that results in a chat message (radar create, enable, edit, widen; since
 release `index-BnFvC-Ft.js` the sample card) depends on the bot's write access. The `409 no_chat` contract (TMA-033)
 is the seam between the two interfaces. The sample card is the exception: it reports a failure as `sent: false`, not
-as `409 no_chat`, and the Mini App does not ask for write access first (`03` BR-APP-074; Q-API-067).
+as `409 no_chat`, and the Mini App does not ask for write access first (`03` BR-APP-074; Q-API-067). Since release
+`index-CBlEKxdL.js` the contact request to an owner joins the actions behind `409 no_chat`: the owner's answer comes
+as a chat message (`08` API-054). The owner's phone confirmation depends on the bot in another way: the bot has to
+receive the contact that `requestContact` sends (TMA-034).
 
 ## 3. Diagrams
 
@@ -537,11 +613,11 @@ How it works:
 | ----- | ----- | ------ |
 | SDK loading and boot | TMA-001 to TMA-005 | CONFIRMED |
 | Identity, auth, language, privacy | TMA-006 to TMA-009 | CONFIRMED (server signature check DOCUMENTED_ONLY) |
-| Launch parameters and deep links | TMA-010 to TMA-013 | CONFIRMED |
+| Launch parameters and deep links | TMA-010 to TMA-013, TMA-046 | CONFIRMED |
 | Window, viewport, safe areas, theme | TMA-014 to TMA-021 | CONFIRMED (TMA-018 is an absence) |
 | Buttons | TMA-022 to TMA-024 | CONFIRMED (TMA-024 is an absence) |
 | Feedback and dialogs | TMA-025 to TMA-027 | CONFIRMED (TMA-027 is an absence) |
 | Links, calls, sharing | TMA-028 to TMA-032 | CONFIRMED (TMA-030 server side DOCUMENTED_ONLY; TMA-032 is an absence) |
-| Permissions, device, storage | TMA-033 to TMA-040 | CONFIRMED (TMA-034 and TMA-038 are absences) |
+| Permissions, device, storage | TMA-033 to TMA-040 | CONFIRMED (TMA-038 is an absence; TMA-034 was one up to `index-BnFvC-Ft.js`, its bot side is DOCUMENTED_ONLY) |
 | Platform, gates, outside Telegram, dev tooling | TMA-041 to TMA-045 | CONFIRMED |
-| **Total** | **45** (39 used integration points, 6 confirmed absences) | — |
+| **Total** | **46** (41 used integration points, 5 confirmed absences) | — |

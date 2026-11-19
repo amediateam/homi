@@ -20,13 +20,13 @@ The bot's `/settings` (M5) writes through the same `SettingsService`.
 - Since legacy release `index-BnFvC-Ft.js` the profile also holds `card_style` (`classic` | `rich`), and
   `POST /api/settings/card-sample` (API-036) asks the bot for a sample card (`03` SCR-048, BR-APP-074; the v1
   contract is WP-11's, storage WP-40's).
-- API-024 and API-025 (`08-api-inventory.md:1010-1070`); client `$KVADRO_ROOT/demo/app/src/lib/api/settings.js:5`,
+- API-024 and API-025 (`08-api-inventory.md:1100-1160`); client `$KVADRO_ROOT/demo/app/src/lib/api/settings.js:5`,
   `:11-15`; `$KVADRO_ROOT/demo/app/src/features/settings/SettingsScreen.jsx:59`, `:83-95`, `:105`, `:115-126`;
   `$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx:52-61` (`digest.split(',')`);
   `$KVADRO_ROOT/demo/app/src/features/onboarding/LanguagePicker.jsx:32`; `$KVADRO_ROOT/demo/app/src/lib/city.js:20-26`;
   `$KVADRO_ROOT/docs/api.md:842-897`; bot presets `$KVADRO_ROOT/docs/telegram-bot.md:990`; mock
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:124`.
-- Rules: `02-legacy-backend-audit.md:823-857` (§21: BR-API-143…149, Q-API-057, LB-API-018), §22 (BR-API-150), BR-API-085
+- Rules: `02-legacy-backend-audit.md:1031-1065` (§21: BR-API-143…149, Q-API-057, LB-API-018), §22 (BR-API-150), BR-API-085
   and contradiction C-03 (`07` §3: the server serves the bot-observed sets to both surfaces), BR-DATA-013, BR-DATA-014,
   BR-DATA-015.
 - Fixes by policy (`09` §4.3): LB-API-018, LB-API-048, LB-API-049, LB-API-050, LB-DATA-014. CF-006 (`10` §3.7).
