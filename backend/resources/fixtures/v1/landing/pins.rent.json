@@ -101,6 +101,26 @@
             "is_owner": false,
             "in_all": true,
             "in_rooms": false
+        },
+        {
+            "number": 100002,
+            "x": 47.3,
+            "y": 38.9,
+            "rooms": 4,
+            "price_usd": 1500,
+            "delta_pct": 5,
+            "tone": null,
+            "area": null,
+            "floor": null,
+            "floors_total": 2,
+            "district_code": "mirzo_ulugbek",
+            "point": null,
+            "photo_url": "{media}/stub/100002/1.jpg?e=0&s=stub",
+            "link": "https://t.me/homi_stub_bot?startapp=l_100002-web",
+            "age_min": 65,
+            "is_owner": true,
+            "in_all": true,
+            "in_rooms": false
         }
     ],
     "medians": [

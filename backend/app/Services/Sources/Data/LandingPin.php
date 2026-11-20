@@ -4,7 +4,8 @@ namespace App\Services\Sources\Data;
 
 /**
  * A pin of the landing map (WP-13, RES-011): `x` and `y` are percentages on the static map image; no phone, no text,
- * no author.
+ * no author. `floor` is null when the listing names none (legacy data since 2026-11-19, the landing intake of
+ * `d9bbbc696337`).
  */
 final readonly class LandingPin
 {
@@ -17,7 +18,7 @@ final readonly class LandingPin
         public ?int $deltaPct,
         public ?string $tone,
         public ?float $area,
-        public int $floor,
+        public ?int $floor,
         public int $floorsTotal,
         public ?NamedCode $district,
         public ?string $point,
@@ -43,7 +44,7 @@ final readonly class LandingPin
             deltaPct: Fields::nullableInt($data, 'delta_pct'),
             tone: Fields::nullableString($data, 'tone'),
             area: Fields::nullableFloat($data, 'area'),
-            floor: Fields::int($data, 'floor'),
+            floor: Fields::nullableInt($data, 'floor'),
             floorsTotal: Fields::int($data, 'floors_total'),
             district: $district === null ? null : NamedCode::fromArray($district),
             point: Fields::nullableString($data, 'point'),

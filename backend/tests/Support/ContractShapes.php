@@ -175,6 +175,7 @@ final class ContractShapes
             'district' => ['code' => 'string', 'name' => 'string'], 'area' => 'float|int', 'seen_at' => 'string', 'link' => 'string',
         ]],
         'sheet' => ['all' => ['count' => 'int', 'per_day' => 'float|int'], 'demo' => ['count' => 'int', 'per_day' => 'float|int']],
+        'showcase' => ['rent' => ['*' => ['district_code' => 'string', 'count' => 'int']], 'sale' => ['*' => ['district_code' => 'string', 'count' => 'int']]],
     ];
 
     /** `data` of `GET /landing/pins` (WP-13): `bargains_week` is null and `medians` empty for sale. */

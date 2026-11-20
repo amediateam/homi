@@ -69,5 +69,103 @@
             "count": 310,
             "per_day": 11.5
         }
+    },
+    "showcase": {
+        "rent": [
+            {
+                "district_code": "mirzo_ulugbek",
+                "count": 412
+            },
+            {
+                "district_code": "yunusobod",
+                "count": 388
+            },
+            {
+                "district_code": "mirobod",
+                "count": 301
+            },
+            {
+                "district_code": "yakkasaroy",
+                "count": 256
+            },
+            {
+                "district_code": "yashnobod",
+                "count": 240
+            },
+            {
+                "district_code": "chilonzor",
+                "count": 233
+            },
+            {
+                "district_code": "shayxontohur",
+                "count": 198
+            },
+            {
+                "district_code": "sergeli",
+                "count": 121
+            },
+            {
+                "district_code": "uchtepa",
+                "count": 117
+            },
+            {
+                "district_code": "olmazor",
+                "count": 96
+            },
+            {
+                "district_code": "yangihayot",
+                "count": 54
+            },
+            {
+                "district_code": "bektemir",
+                "count": 21
+            }
+        ],
+        "sale": [
+            {
+                "district_code": "mirzo_ulugbek",
+                "count": 96
+            },
+            {
+                "district_code": "yunusobod",
+                "count": 88
+            },
+            {
+                "district_code": "mirobod",
+                "count": 61
+            },
+            {
+                "district_code": "yakkasaroy",
+                "count": 40
+            },
+            {
+                "district_code": "yashnobod",
+                "count": 52
+            },
+            {
+                "district_code": "chilonzor",
+                "count": 57
+            },
+            {
+                "district_code": "shayxontohur",
+                "count": 33
+            },
+            {
+                "district_code": "sergeli",
+                "count": 29
+            },
+            {
+                "district_code": "uchtepa",
+                "count": 24
+            },
+            {
+                "district_code": "olmazor",
+                "count": 18
+            },
+            {
+                "district_code": "yangihayot",
+                "count": 12
+            }
+        ]
     }
 }

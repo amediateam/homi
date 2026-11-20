@@ -44,6 +44,20 @@ it('answers the pins of rent by default and of sale on request', function (): vo
         ->and($rent->json('data.pins.0.link'))->toContain('startapp=l_');
 });
 
+it('answers the showcase counts per deal by district code', function (): void {
+    $showcase = $this->getJson('/api/v1/landing/live')->assertOk()->json('data.showcase');
+
+    expect(array_column($showcase['rent'], 'district_code'))->toContain('yunusobod', 'mirzo_ulugbek')
+        ->and(array_column($showcase['sale'], 'district_code'))->not->toContain('bektemir')
+        ->and(collect([...$showcase['rent'], ...$showcase['sale']])->every(fn (array $d): bool => is_int($d['count']) && $d['count'] > 0))->toBeTrue();
+});
+
+it('answers a pin without a floor', function (): void {
+    $pins = collect($this->getJson('/api/v1/landing/pins')->assertOk()->json('data.pins'));
+
+    expect($pins->firstWhere('number', 100002))->toMatchArray(['floor' => null, 'floors_total' => 2]);
+});
+
 it('refuses an unknown deal', function (): void {
     $this->getJson('/api/v1/landing/pins?deal=x')->assertStatus(422)->assertJsonValidationErrors(['deal']);
 });

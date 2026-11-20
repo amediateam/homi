@@ -33,6 +33,10 @@ class LandingLiveResource extends JsonResource
                 'all' => ['count' => $live->allCount, 'per_day' => $live->allPerDay],
                 'demo' => ['count' => $live->demoCount, 'per_day' => $live->demoPerDay],
             ],
+            'showcase' => [
+                'rent' => LandingShowcaseDistrictResource::collection($live->showcaseRent),
+                'sale' => LandingShowcaseDistrictResource::collection($live->showcaseSale),
+            ],
         ];
     }
 }
