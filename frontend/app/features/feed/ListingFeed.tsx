@@ -124,7 +124,8 @@ function FeedError({ error, hasItems, onRetry }: { error: UiError; hasItems: boo
  * The sentinel asks for the next page within 800 px. It is observed only while the session is ready and a page can
  * follow, and anew after each page: an observer reports only a crossing, and a sentinel still in reach must ask
  * again. Nothing asks after an error. A spinner stands at the sentinel while a page loads. After the cards: the
- * few-results note or the empty state, as `listEnd` decides; `inline` stands among the cards at `inlineSlotIndex`.
+ * few-results note or the empty state, as `listEnd` decides; `inline` stands among the cards at `inlineSlotIndex`;
+ * the search feed loaded to its end says «Это всё по вашему поиску» (`data-feed-end`) unless the note shows.
  * The answers' `meta.source` reaches the demo marker only while the list's own address is shown, not under a listing
  * or a sheet opened over it (KI-43). `inline` is one keyed row among the cards, so a card hidden above it moves it
  * without a remount.
@@ -159,6 +160,9 @@ export function ListingFeed({
   const visible = visibleOf(feed.items, source, favs, hidden);
   const end = listEnd({ source, done: feed.done, error: feed.error !== null, visible: visible.length }, few?.context ?? null);
   const slot = source === "feed" ? inlineSlotIndex(visible.length, feed.done, end === "few") : null;
+  // «Это всё по вашему поиску» (WP-39, DEC-90): the search feed loaded to its end with cards, unless the few-results
+  // note already says so. WP-82 adds the owner invitation to this block, which then shows under the note too.
+  const feedEnd = source === "feed" && feed.done && feed.error === null && visible.length > 0 && end !== "few";
 
   const answered = feed.status !== "loading";
   useEffect(() => {
@@ -218,6 +222,11 @@ export function ListingFeed({
       {feed.status === "loading" ? SKELETONS.map((key) => <ListingCardSkeleton key={key} />) : null}
       {feed.error ? <FeedError error={feed.error.error} hasItems={hasItems} onRetry={onRetry} /> : null}
       {end === "few" ? few?.render(visible.length) : null}
+      {feedEnd ? (
+        <div data-feed-end="" className="-mt-[8px] flex flex-col gap-[12px]">
+          <p className="text-center text-[13px] text-hint">{t("feed.end")}</p>
+        </div>
+      ) : null}
       {end === "empty" ? emptySlot : null}
       <div ref={sentinel} data-sentinel="" className="grid min-h-[48px] place-items-center">
         {feed.loadingMore ? <Spinner aria-hidden className="size-[22px] border-[2.5px] text-accent" /> : null}

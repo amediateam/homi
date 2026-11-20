@@ -1,12 +1,14 @@
 import { getMessages } from "@homi/i18n";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TOAST_DISMISS_DRAG_PX, ToastHost } from "@/features/shell/ToastHost";
 import { clearRecentErrors, recentErrors } from "@/lib/errors/report";
 import { type BottomMark, useBottomMark } from "@/lib/ui/shellState";
-import { currentToast, dismissToast, showToast, TOAST_MS, type ToastScope } from "@/lib/ui/toast";
+import { currentToast, dismissToast, showToast, TOAST_ACTION_MS, TOAST_MS, type ToastScope } from "@/lib/ui/toast";
 
 function host(scope?: ToastScope, locale: "ru" | "uz" = "ru") {
   return render(
@@ -274,5 +276,103 @@ describe("ToastHost (SCR-042)", () => {
     expect(dragFrame()?.className).toMatch(/touch-none/);
     drag(20, { lift: false });
     expect(dragFrame()?.style.transform).toBe("translateY(20px)");
+  });
+});
+
+describe("ToastHost: the countdown ring and the leave (WP-39, BR-APP-118, BR-APP-112)", () => {
+  const ring = () => region()?.querySelector<SVGElement>("[data-toast-ring]") ?? null;
+  const css = readFileSync(join(import.meta.dirname, "../../styles/motion.css"), "utf8");
+
+  it("an action toast shows the ring on its button, running for the toast's six seconds", () => {
+    host();
+    act(() => showToast({ text: "Объявление скрыто", action: "Отменить", run: () => undefined }));
+
+    const button = screen.getByRole("button", { name: "Отменить" });
+    expect(button.contains(ring())).toBe(true);
+    expect(ring()?.getAttribute("aria-hidden")).toBe("true");
+    const [track, left] = [...ring()!.querySelectorAll<SVGCircleElement>("circle")];
+    expect(track!.getAttribute("r")).toBe("8");
+    expect(left!.getAttribute("pathLength")).toBe("1");
+    expect(left!.style.animationDuration).toBe(`${TOAST_ACTION_MS}ms`);
+    expect(TOAST_ACTION_MS).toBe(6000);
+  });
+
+  it("a plain toast has no ring", () => {
+    host();
+    act(() => showToast("Сохранено"));
+    expect(ring()).toBeNull();
+  });
+
+  it("a replacement restarts the ring with the timer: a new element, also for the same text (LB-APP-085)", () => {
+    host();
+    const message = { text: "Объявление скрыто", action: "Отменить", run: () => undefined };
+    act(() => showToast(message));
+    const first = ring();
+    act(() => vi.advanceTimersByTime(TOAST_ACTION_MS - 1000));
+    act(() => showToast(message));
+
+    expect(ring()).not.toBe(first);
+    act(() => vi.advanceTimersByTime(TOAST_ACTION_MS - 1));
+    expect(toastElement()).not.toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(toastElement()).toBeNull();
+  });
+
+  it("the ring is 16 px, its dash runs out linearly and holds; under reduced motion nothing animates, so it stays full", () => {
+    expect(css).toMatch(/\[data-toast-ring\] \{\s*width: 16px;\s*height: 16px;/);
+    expect(css).toMatch(/circle:last-child \{[\s\S]*?stroke-dasharray: 1;\s*stroke-dashoffset: 0;\s*animation: toast-ring linear forwards;/);
+    expect(css).toMatch(/@keyframes toast-ring \{\s*to \{\s*stroke-dashoffset: 1;/);
+  });
+
+  describe("the leave", () => {
+    const copies = () => [...document.querySelectorAll<HTMLElement>('[data-leave="toast"]')];
+    const settle = () => act(async () => undefined);
+    let played: Array<{ frames: Keyframe[]; timing: KeyframeAnimationOptions }> = [];
+
+    beforeEach(() => {
+      played = [];
+      Element.prototype.animate = function animate(frames: Keyframe[], timing: KeyframeAnimationOptions) {
+        played.push({ frames, timing });
+        return { finished: new Promise<void>(() => undefined) } as unknown as Animation;
+      } as unknown as typeof Element.prototype.animate;
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, "animate");
+      document.querySelector("[data-leave-layer]")?.remove();
+    });
+
+    it("a toast that closes leaves a copy that sinks 10 px and fades over 180 ms; the copy is not a toast", async () => {
+      host();
+      act(() => showToast("Сохранено"));
+      fireEvent.click(toastElement()!);
+      await settle();
+
+      expect(toastElement()).toBeNull();
+      expect(copies()).toHaveLength(1);
+      expect(copies()[0]!.textContent).toBe("Сохранено");
+      expect(document.querySelectorAll("[data-toast], [data-toast-drag]")).toHaveLength(0);
+      expect(played).toEqual([
+        { frames: [{ transform: "translateY(10px)", opacity: 0 }], timing: { duration: 180, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" } },
+      ]);
+    });
+
+    it("no leave when another toast replaces it, when a drag took it away, or when its host goes with it", async () => {
+      const view = host();
+      act(() => showToast("Первый"));
+      act(() => showToast("Второй"));
+      await settle();
+      expect(copies()).toHaveLength(0);
+
+      drag(TOAST_DISMISS_DRAG_PX + 10);
+      await settle();
+      expect(toastElement()).toBeNull();
+      expect(copies()).toHaveLength(0);
+
+      act(() => showToast("Третий"));
+      view.unmount();
+      await settle();
+      expect(copies()).toHaveLength(0);
+    });
   });
 });

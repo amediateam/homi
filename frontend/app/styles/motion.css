@@ -1,0 +1,174 @@
+/*
+ * The Mini App's own motion of the pinned release (WP-39): the favourite's heart and burst (BR-APP-117, legacy
+ * `listing-card.css`) and the countdown ring of an action toast (BR-APP-118, legacy `feedback.css`). The values are
+ * legacy's. Reduced motion stops every keyframe animation through `@homi/ui`'s motion.css; the two rules at the end
+ * are what must then stand still in a given state — no burst, a full ring. Lite graphics play both, as legacy.
+ */
+
+/* A tap that adds: the heart squashes, overshoots and settles, 0.8 s. */
+@keyframes fav-like {
+  0% {
+    transform: scale(0.84, 0.6);
+  }
+  3% {
+    transform: scale(0.971, 0.829);
+  }
+  6% {
+    transform: scale(0.998, 1.04);
+  }
+  9% {
+    transform: scale(1.007, 1.185);
+  }
+  12% {
+    transform: scale(1.057, 1.243);
+  }
+  16% {
+    transform: scale(1.026, 1.207);
+  }
+  20% {
+    transform: scale(0.991, 1.096);
+  }
+  25% {
+    transform: scale(0.998, 0.961);
+  }
+  30% {
+    transform: scale(0.991, 0.904);
+  }
+  36% {
+    transform: scale(0.996, 0.939);
+  }
+  43% {
+    transform: scaleY(1.016);
+  }
+  50% {
+    transform: scale(0.999, 1.037);
+  }
+  60% {
+    transform: scaleY(0.997);
+  }
+  72% {
+    transform: scaleY(0.991);
+  }
+  85% {
+    transform: scaleY(1.006);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* A tap that removes: a smaller dip, 0.6 s. */
+@keyframes fav-dip {
+  0% {
+    transform: scale(0.977, 0.85);
+  }
+  6% {
+    transform: scale(0.999, 0.968);
+  }
+  12% {
+    transform: scale(0.997, 1.059);
+  }
+  16% {
+    transform: scale(0.993, 1.083);
+  }
+  25% {
+    transform: scale(0.997, 1.051);
+  }
+  36% {
+    transform: scale(0.999, 0.977);
+  }
+  43% {
+    transform: scale(0.999, 0.967);
+  }
+  60% {
+    transform: scaleY(1.009);
+  }
+  85% {
+    transform: scaleY(0.996);
+  }
+  to {
+    transform: none;
+  }
+}
+
+[data-fav-heart="like"] {
+  animation: fav-like 0.8s linear;
+}
+
+[data-fav-heart="dip"] {
+  animation: fav-dip 0.6s linear;
+}
+
+/* The burst: eight 6 px sparks fly from 8 px to 24 px (odd, the heart's colour) or 29 px (even, the accent). */
+[data-fav-burst] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+[data-fav-burst] i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--heart);
+  opacity: 0;
+  --r: 24px;
+  animation: fav-spark 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+[data-fav-burst] i:nth-child(2n) {
+  background: var(--accent);
+  --r: 29px;
+}
+
+@keyframes fav-spark {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translate(8px) scale(1);
+  }
+  60% {
+    opacity: 0.64;
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translate(var(--r)) scale(0.3);
+  }
+}
+
+/* The countdown ring of an action toast: the dash runs out over the toast's life, set inline as the duration. */
+[data-toast-ring] {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  transform: rotate(-90deg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
+[data-toast-ring] circle:first-child {
+  opacity: 0.25;
+}
+
+[data-toast-ring] circle:last-child {
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: toast-ring linear forwards;
+}
+
+@keyframes toast-ring {
+  to {
+    stroke-dashoffset: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fav-burst] {
+    display: none;
+  }
+}

@@ -656,6 +656,54 @@ describe("useSubscribe(): the flow bound to the page", () => {
     expect(lists.sent).toEqual([{ path: "radars", query: undefined }]);
   });
 
+  it("confirm (WP-39): after the success haptic the tick is awaited, and only then the toast shows and the call resolves", async () => {
+    actions.createRadar.mockResolvedValueOnce(ok(mutation({ starter: 3 })));
+    const result = subscriber();
+    let drawn = () => undefined as void;
+    const confirm = vi.fn(() => new Promise<void>((resolve) => (drawn = resolve)));
+    const settled = vi.fn();
+
+    await act(async () => {
+      void result.current.subscribe(SEARCH, "filters", null, { scope: "sheet", confirm }).then(settled);
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    });
+    expect(haptics()).toEqual(["success"]);
+    expect(currentToast("app")).toBeNull();
+    expect(settled).not.toHaveBeenCalled();
+
+    await act(async () => {
+      drawn();
+      await vi.waitFor(() => expect(settled).toHaveBeenCalledWith({ ok: true }));
+    });
+    expect(currentToast("app")?.message).toEqual({ key: "toast.subSaved", values: { count: "3 объявления" } });
+  });
+
+  it("confirm: an edit awaits it too", async () => {
+    actions.replaceRadar.mockResolvedValueOnce(ok(mutation({ starter: 2 })));
+    const result = subscriber();
+    const confirm = vi.fn(() => Promise.resolve());
+
+    await expect(act(() => result.current.saveEdit(A, SEARCH, null, { confirm }))).resolves.toEqual({ ok: true });
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(currentToast("app")).not.toBeNull();
+  });
+
+  it("confirm: not awaited for a radar that was already on, nor on a failure", async () => {
+    const confirm = vi.fn(() => Promise.resolve());
+    lists.answers.push(ok([raw(A, SEARCH)]));
+    const result = subscriber();
+
+    await expect(act(() => result.current.subscribe(SEARCH, "filters", null, { confirm }))).resolves.toEqual({ ok: true });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(currentToast("app")?.message).toEqual({ key: "toast.alreadyOn" });
+    dismissToast("app");
+
+    actions.createRadar.mockResolvedValueOnce(failed("conflict", 409, "radar_limit"));
+    await expect(act(() => result.current.subscribe({ ...SEARCH, rooms_min: 3 }, "filters", null, { scope: "sheet", confirm }))).resolves.toEqual({ ok: false });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(currentToast("sheet")).not.toBeNull();
+  });
+
   it("the page's locale reaches the action and the texts; the restart question is the catalogue's", async () => {
     actions.createRadar.mockResolvedValueOnce(ok(mutation({ starter: 3 })));
     const result = subscriber("uz");

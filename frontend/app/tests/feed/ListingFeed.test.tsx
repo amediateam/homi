@@ -632,3 +632,62 @@ describe("ListingFeed: the demo marker (25 §4.4, KI-43)", () => {
     expect(marker()).toBeNull();
   });
 });
+
+describe("ListingFeed: the end of the search feed (WP-39, DEC-90)", () => {
+  const end = () => document.querySelector<HTMLElement>("[data-feed-end]");
+
+  it("«Это всё по вашему поиску» after the last card of a search feed loaded to its end, above the sentinel", () => {
+    feed(adopted(page(range(1, 3), null)));
+
+    expect(end()?.textContent).toBe("Это всё по вашему поиску");
+    expect(end()!.previousElementSibling).toBe(card(3));
+    expect(end()!.nextElementSibling).toBe(document.querySelector("[data-sentinel]"));
+  });
+
+  it("not while more pages can follow, and it comes with the last page", async () => {
+    feed(adopted(page(range(1, 20), "c1")));
+    expect(end()).toBeNull();
+
+    intersect();
+    await answer(0, page(range(21, 25), null));
+    expect(cards()).toHaveLength(25);
+    expect(end()).not.toBeNull();
+  });
+
+  it("not with the few-results note, which already says so", () => {
+    feed({ few: { context: FEW, render: (visible) => <p data-test-few={visible} /> }, ...adopted(page(range(1, 5), null)) });
+
+    expect(document.querySelector("[data-test-few]")).not.toBeNull();
+    expect(end()).toBeNull();
+  });
+
+  it("not on an empty feed, and not when its only cards were hidden in this launch", () => {
+    const view = feed(adopted(page([], null)));
+    expect(end()).toBeNull();
+    cleanup();
+
+    feed(adopted(page([1, 2], null)));
+    expect(end()).not.toBeNull();
+    act(() => hide([1, 2]));
+    expect(end()).toBeNull();
+    void view;
+  });
+
+  it("not after an error on a later page", async () => {
+    feed(adopted(page(range(1, 20), "c1")));
+    intersect();
+    await answer(0, failed("server", 500));
+
+    expect(end()).toBeNull();
+  });
+
+  it.each([
+    ["favorites", "favorites"],
+    ["history", "history"],
+  ] as const)("not on %s", (source, path) => {
+    feed({ source, path, ...adopted(page([1, 2], null, () => ({ favorite: true }))) });
+
+    expect(cards()).toHaveLength(2);
+    expect(end()).toBeNull();
+  });
+});
