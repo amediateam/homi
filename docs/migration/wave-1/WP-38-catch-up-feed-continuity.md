@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#97) |
 | Depends on | WP-36 (and through it WP-35 and WP-34: `TabBar.tsx`, the listing's one close path, `lib/deeplinks/launch.ts`) |
 | Size | about 630 changed lines with tests, L |
 | Behaviour reference | `03` §2 (SCR-006, SCR-007, SCR-028, SCR-046, SCR-063), §4 (BR-APP-070, BR-APP-104, BR-APP-105, BR-APP-108), §5b (LB-APP-082); `05` (TMA-010, TMA-023); `24` Q-APP-030; `wave-1/baseline.md`, built code behind the pin, rows 13, 14, 16, 37 |
@@ -59,6 +59,11 @@ Out:
 - Only the list moves: the filters and the sort stay, so the return banner's candidate survives the reload.
 - Exported for WP-31 (the hidden list's success path bumps the epoch).
 
+*As built (rule 6):* the epoch is not a fourth part of the key. `FeedScreen` keeps the epoch it last took beside the
+pull version, and a bump counts as one more pull of the search shown (`Refreshed.epoch`), so the key differs from the
+server's page one; another search starts again from `FIRST_VERSION` and adopts its server page one. A global epoch in
+the key would have kept every later search from adopting it. `feedListKey` keeps its three arguments.
+
 ### Long return
 
 - `features/nudges/visits.ts` (`:104-109`, `:176-185`): the tracker gets a third callback, `onLongReturn`, called
@@ -76,6 +81,18 @@ Out:
     on a new key; an error shows nothing.
 - The count is kept in the store of `fresh.ts` and resets to 0 on a new list key.
 
+*As built (rule 6):*
+- `useFreshFeed(context)` returns a stable `onLongReturn`, which `NudgeHost` passes through the options of
+  `useReturnNudge` to the tracker; the tracker keeps the callbacks of its first render, so the handler reads the host's
+  context (`searchTab`, `coversSearch`, the route for the view) from a ref.
+- "Covered" is `coversSearch`: a layer address, or the parameters `pick`, `draw` and `step`. The map's selected point
+  (`pin`) does not cover the search, since legacy's covered list has no map card, so `NudgeEnv.layer` is not used.
+- The list on screen is handed to `fresh.ts` by `FeedScreen` (`freshFeed.show(key, filters)`); `since` is the first
+  time that key was shown, in whole seconds.
+- `newCount` moved to `features/nudges/newCount.ts` (`returnRules.ts` re-exports it), so the feed's module does not
+  load the radar rules.
+- The clock is read through `Date` on every call, so a clock installed later (tests, Playwright) counts.
+
 ### Fresh pill
 
 - `features/shell/TopBar.tsx:136-151` (`SearchListBar`): the pill under the header while the count is above 0 and
@@ -85,6 +102,12 @@ Out:
   `--top-inset` + 54 px, in lite graphics by 42 px (`styles/shell.css:74-131,147-220`). Icon `ArrowUp` 16 px,
   exported by `frontend/packages/ui/src/icons/index.ts`; text the plural `app.freshShow`.
 - Tap: light haptic, scroll to the top, `bumpFeedEpoch()`; the count goes with the new key. No timer, no event.
+
+*As built (rule 6):*
+- The pill is `features/feed/FreshPill.tsx`, rendered by `SearchListBar`.
+- It is an opaque pill on `--sheet` with a shadow and a fade, as legacy `.fresh-pill` (`chrome.css:183-213`), not
+  glass.
+- Its rule is `feedListFree`, which `NudgeEnv.allowed` now uses too.
 
 ### Scroll memory
 
@@ -96,6 +119,19 @@ Out:
 - `features/shell/TabBar.tsx:65-70,78-84,89`: arriving on the search tab does not scroll to 0 when a memory matches;
   a press of the active tab forgets it and scrolls to the top.
 - «Смотреть найденное» (`features/radars/RadarSheet.tsx:141-142`) and the Back from a radar's feed forget it.
+
+*As built (rule 6):*
+- The memory key is the `FeedScreen` instance (`useId`) and the list key, so a list re-created by Next's route cache
+  scrolls to the top instead of taking the position of the list it replaced. `takeFeedScroll` says `"other"` for such
+  an entry, and the list goes to the top.
+- While the list is its own address its position is followed by the scroll events; it is not read when it stops being
+  its own, since that commit may already have shrunk the document or scrolled the next tab to its top. The restore is
+  repeated in the next frame, after the browser's own restoration on a Back, and is skipped when the window is already
+  there (under a layer).
+- `TabBar` decides at the press whether the arrival scrolls to 0, because the list's layout effect runs before the
+  bar's in the arrival commit.
+- The Back from a radar's feed is told by `RadarReturn.via === "feed"` in `RadarSheetRoute`; a find's return keeps the
+  memory.
 
 ### Sale switch
 
@@ -115,6 +151,21 @@ Out:
   loaded listing (the app's history holds no page below) moves back over the sheet and the listing in one step and
   replaces the address with the feed; that replace must carry the sale defaults too.
 
+*As built (rule 6):*
+- The feed's search is the list `FeedScreen` shows (`freshFeed.feed()`). Without one in this launch it is the default
+  rent feed of the profile's city.
+- `leaveListingRoute(number)` takes the mark at once. When the page below is the feed (the app's stack) it runs
+  `closeThen(sale)`: back, then the replace. It does not use `applyFilters`, which would tell the apply listeners and
+  arm the follow nudge. At depth 0 it is the replace alone; another page below only goes back.
+- `closeListing(step, close, number)` takes the mark before its await in the direct-load branch.
+- The layer's hide drops the mark of its number only once the app's stack no longer holds the listing (a Back of the
+  browser, a tab press); a page pushed over it (Telegram's Settings button) keeps it. Opening another listing drops it
+  too.
+- The first close or final hide of the launch listing ends its check, so the same listing opened later from a list
+  switches nothing, even when it closed before its record came (BR-APP-108: the reference is cleared on close).
+- Not handled: a launch link to a merged number. The record names the merged number, not the launch's, so it switches
+  nothing.
+
 ### Radar sheet
 
 - `features/radars/radarReturn.ts:16-22`: `RadarReturn` also holds `stripX` and `sheetY`.
@@ -124,10 +175,21 @@ Out:
 - `features/radars/RadarSheetRoute.tsx:143-145,160-165`: the instant opening restores the tab's scroll as today, and
   then the sheet's and the strip's.
 
+*As built (rule 6):*
+- `RadarReturn` holds `via`, `stripX` and `sheetY`.
+- `RadarSheet` finds its scroll body with `closest('[data-slot="bottom-sheet-body"]')` and the strip with
+  `querySelector`, as `ListingLayer` finds its scroller. `BottomSheet` and `RadarStrip` are unchanged.
+- The body's scroll is restored once the radar renders, and the strip's once its finds replace the ghosts (a ghost
+  strip would clamp it). Both are restored once per opening, for a find and for «Смотреть найденное».
+- Each restore is set again on the next frames until it holds (at most 10). The sheet's header and footer padding
+  (`useSheetChrome`, a passive effect) arrives after the opening's layout effect and would clamp the first write; the
+  second CI run showed it.
+
 ## Files
 
 New, under `frontend/app/`: `features/feed/{fresh,feedScroll}.ts`, `features/listing/saleSwitch.ts`, their tests
-`tests/feed/{fresh,feedScroll}.test.ts`, `tests/listing/saleSwitch.test.ts`, and `e2e/feed-continuity.spec.ts`.
+`tests/feed/{fresh,feedScroll}.test.ts`, `tests/listing/saleSwitch.test.ts`, and `e2e/feed-continuity.spec.ts`. *As
+built:* also `features/feed/FreshPill.tsx` and `features/nudges/newCount.ts`.
 
 Changed, under `frontend/app/`:
 
@@ -140,7 +202,10 @@ Changed, under `frontend/app/`:
   `tests/deeplinks/launch.test.tsx`, `tests/listing/closeListing.test.ts`, `tests/nudges/ReturnNudge.test.tsx`
 
 Changed in `frontend/packages/ui/`: `src/icons/index.ts`, `src/components/BottomSheet.tsx`,
-`tests/{controls,BottomSheet}.test.tsx`.
+`tests/{controls,BottomSheet}.test.tsx`. *As built:* only `src/icons/index.ts` and `tests/controls.test.tsx`; also
+changed under `frontend/app/`: `features/nudges/{useReturnNudge,returnRules}.ts`, `features/listing/ListingLayer.tsx`,
+`features/listing/actions/useListingActions.ts` and `tests/listing/useListingActions.test.tsx`; not changed:
+`features/radars/RadarStrip.tsx`.
 
 In `docs/migration/wave-1/baseline.md`, built code behind the pin: rows 13, 14, 16 and 37 are marked closed.
 
@@ -245,4 +310,35 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 
 ## Handoff
 
-Empty.
+- **Done** on `wp-38-catch-up-feed-continuity` (from `main` = `efa4f9b`, after #96) by the main session. Steps 1 – 6
+  as written. Step 7 is partly done: the unit, component and end-to-end tests are written. The Q-APP-030 measurement
+  and the checklist on staging wait for the production track.
+- **Departures recorded under rule 6:** under Design and Files above.
+- **The close paths of the sale switch:**
+  - Telegram's Back at the listing's own address, the swipe, the fallback cross, «Смотреть свежие» and the layer's
+    `close` all reach `leaveListingRoute(number)` through `ListingLayer`'s `changeRoute`.
+  - `closeListing()` reaches it through `close`, except on a directly loaded listing, whose single move replaces with
+    the taken mark.
+  - A Back of the browser hides the layer, which drops the mark.
+- **Review.**
+  - One independent read-only review subagent read the frontend diff.
+  - Fixed: the e2e radar case's click, which scrolled the strip, and its sheet half, which could pass without a scroll;
+    the same-second `since` in the e2e count case; the mark dropped under a page pushed over the listing; a launch
+    listing closed before its record still able to switch later. The radar case now runs in both session modes.
+  - Left as nits: a feed hidden on the map shows its old cards for one frame before the bumped list re-keys; the merged
+    launch number above.
+- **Checks.** `make ci-frontend` exit 0 (generated types, lint, typecheck, the three builds; app 220 files, 3 698 tests).
+- **CI e2e on `861a5ee`:** 389 passed. Every case of `feed-continuity.spec.ts` passed in both modes except the radar
+  case (the click above). `radars.spec.ts:509` in header mode ended with a route callback still in flight
+  (`route.fetch: Test ended`); WP-38 does not touch that spec, and it passed on the next run.
+- **CI e2e on `95289e3`:** 390 passed. The radar case restored the strip but not the sheet's body (`0` for `80`), which
+  the frame hold fixes.
+- **CI on `1330323`:** `ci` success (run 44809560859); `e2e` success (run 44809560801): 392 passed, the radar specs
+  and both modes of `feed-continuity.spec.ts` included, then the `@radars-off` run with 14 passed.
+- **CI on `7dd1b09`** (docs only): `e2e` failed twice in specs WP-38 does not touch — `foundation.spec.ts:195` (KI-63),
+  then on the rerun `radars.spec.ts:509` in header mode (`route.fetch: Test ended`). The second is a race of the
+  header-mode `/bff/session` route of `@homi/testing/playwright`: a test that ends with the exchange in flight fails
+  the next one. The route now forgives a closed page (KI-63).
+- **End to end.** `e2e/feed-continuity.spec.ts` was not run locally: this machine's API answered `500`, because its
+  database host was unreachable (`No route to host`). The spec runs in CI. Its radar case needs radars on, which CI
+  has.

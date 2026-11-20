@@ -32,3 +32,32 @@ export function feedSearchKey(filters: SearchFilters, sort: ListingSort): string
 export function feedListKey(filters: SearchFilters, sort: ListingSort, version: number = FIRST_VERSION): string {
   return `${feedSearchKey(filters, sort)}|${version}`;
 }
+
+/**
+ * The feed epoch (WP-38, BR-APP-104): a counter of this launch that re-creates the search list without a pull. A bump
+ * counts as one pull of the search the feed shows (`FeedScreen`), so the list reads page one itself, while another
+ * search starts again from `FIRST_VERSION` and adopts its server page one: `FeedServer` always keys page one with
+ * `FIRST_VERSION`. A feed hidden by `cacheComponents` takes the bump when it is shown again, and its list reads page
+ * one only then. Bumped by a long return (`features/feed/fresh.ts`), a tap on the fresh pill, and WP-31.
+ */
+let epoch = 0;
+const epochListeners = new Set<() => void>();
+
+export function feedEpoch(): number {
+  return epoch;
+}
+
+/** Re-creates the search list: the filters and the sort stay, only the list moves. */
+export function bumpFeedEpoch(): void {
+  epoch += 1;
+  for (const listener of [...epochListeners]) {
+    listener();
+  }
+}
+
+export function subscribeFeedEpoch(listener: () => void): () => void {
+  epochListeners.add(listener);
+  return () => {
+    epochListeners.delete(listener);
+  };
+}

@@ -106,6 +106,11 @@ export interface VisitTrackerDeps {
   onVisit: (visit: SearchVisit) => void;
   /** A new visit session began: the radar list is read again (`refreshRadars`). */
   onSession: () => void;
+  /**
+   * The same long return, after `onSession` and the visit it records (WP-38, BR-APP-104): the search feed decides
+   * whether it is re-created or offers its new listings (`features/feed/fresh.ts`).
+   */
+  onLongReturn?: () => void;
 }
 
 export interface VisitTracker {
@@ -127,8 +132,9 @@ export interface VisitTracker {
  * - when the app goes to the background while on the search tab (`tg.onHidden`, TMA-040): the stored time becomes that
  *   moment, without a cue;
  * - when the app becomes visible after at least 6 h in the background (`tg.onVisible`): a new visit session begins
- *   (`resetVisitSession`), the radar list is read again (`onSession`), and on the search tab the visit is recorded
- *   once more with its cue — the return banner's main way back for a Mini App left open (legacy re-armed its check).
+ *   (`resetVisitSession`), the radar list is read again (`onSession`), on the search tab the visit is recorded once
+ *   more with its cue — the return banner's main way back for a Mini App left open (legacy re-armed its check) — and
+ *   then the search feed takes the long return (`onLongReturn`, since legacy `index-CIa0Ldj2.js`).
  *
  * Visits are recorded whether radars are switched on or not; only the return banner asks for radars.
  */
@@ -182,6 +188,7 @@ export function createVisitTracker(deps: VisitTrackerDeps): VisitTracker {
       deps.onSession();
       recorded = null;
       record();
+      deps.onLongReturn?.();
     },
   };
 }

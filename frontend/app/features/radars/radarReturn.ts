@@ -7,23 +7,36 @@ import type { Radar } from "./normalize";
 
 /**
  * The return to a radar sheet (SCR-028, WP-30 "Return from a radar feed"; legacy `radarReturn` / `resume` of
- * `App.jsx` and `RadarScreen.jsx`): module memory of this launch, `{ id, scrollY }`. «Смотреть найденное» and a find
- * of the strip store it before they leave the sheet; when that radar's sheet is shown again (Back), it opens without
- * the rise (`instant`, legacy `.instant`) and the tab below scrolls back to `scrollY` — legacy re-mounted the sheet
- * instant after a listing as well. A tile tap and a tab press forget it (legacy `switchTab` cleared it), so a later
- * opening rises as usual.
+ * `App.jsx` and `RadarScreen.jsx`): module memory of this launch. «Смотреть найденное» and a find of the strip store it
+ * before they leave the sheet; when that radar's sheet is shown again (Back), it opens without the rise (`instant`,
+ * legacy `.instant`), the tab below scrolls back to `scrollY`, and the sheet's body and the strip go back to where
+ * they were (WP-38, DEC-64: legacy keeps the sheet mounted, HOMI re-opens it and restores both). A tile tap and a tab
+ * press forget it (legacy `switchTab` cleared it), so a later opening rises as usual.
  */
 export interface RadarReturn {
   id: string;
   /** `window.scrollY` of the radar tab when the sheet was left. */
   scrollY: number;
+  /** What the sheet was left for: the radar's feed («Смотреть найденное») or a find of the strip. */
+  via: "feed" | "listing";
+  /** `scrollLeft` of the strip of finds. */
+  stripX: number;
+  /** `scrollTop` of the sheet's body. */
+  sheetY: number;
 }
+
+/** Where the sheet was left: what for, and its two scrolls. */
+export type RadarPlace = Pick<RadarReturn, "via" | "stripX" | "sheetY">;
+
+const AT_TOP: RadarPlace = { via: "listing", stripX: 0, sheetY: 0 };
 
 let pending: RadarReturn | null = null;
 
+const position = (value: number): number => (Number.isFinite(value) ? Math.max(0, value) : 0);
+
 /** Stores the return to the sheet of `id`, replacing any other. */
-export function rememberRadarReturn(id: string, scrollY: number): void {
-  pending = { id, scrollY: Number.isFinite(scrollY) ? Math.max(0, scrollY) : 0 };
+export function rememberRadarReturn(id: string, scrollY: number, place: RadarPlace = AT_TOP): void {
+  pending = { id, scrollY: position(scrollY), via: place.via, stripX: position(place.stripX), sheetY: position(place.sheetY) };
 }
 
 /** The stored return when it is the sheet of `id` (either case), else `null`; it stays stored. */

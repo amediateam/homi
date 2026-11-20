@@ -166,11 +166,20 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
   }
   if (mode === "header") {
     await page.route("**/bff/session", async (route) => {
-      const response = await route.fetch();
-      // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
-      await page.context().clearCookies({ name: /^homi_session/ });
-      const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
-      await route.fulfill({ response, headers });
+      try {
+        const response = await route.fetch();
+        // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
+        await page.context().clearCookies({ name: /^homi_session/ });
+        const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
+        await route.fulfill({ response, headers });
+      } catch (error) {
+        // A test that ends with the exchange in flight closes the page under it ("route.fetch: Test ended"), and the
+        // rejection would fail the next test. Only that end is forgiven; anything else still fails the test.
+        const ended = page.isClosed() || /Test ended|has been closed/.test(error instanceof Error ? error.message : String(error));
+        if (!ended) {
+          throw error;
+        }
+      }
     });
   }
   const config = resolveFakeTelegramConfig({ ...telegram, initData: launchData });

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import { freshFeed } from "@/features/feed/fresh";
 import { useRouter } from "@/i18n/navigation";
 import { bffFetch } from "@/lib/api/browser";
 import type { ApiFailure } from "@/lib/api/errors";
@@ -25,6 +26,7 @@ import {
   type ListingShowData,
   toRecord,
 } from "./listingData";
+import { saleSwitchOpened, saleSwitchRecord } from "./saleSwitch";
 
 export type ListingView =
   | { state: "skeleton" }
@@ -117,7 +119,8 @@ function errorView(error: ApiFailure, retry: () => void): ListingView {
  * An answer for another number (a merged listing) seeds that number and replaces the address once; a child route or
  * a sheet step opened over the alias's preview is stepped back over first, so the replace takes the alias's own entry
  * and Back reaches the page below (at depth 0 nothing is stepped over and the replace drops the child). A number left
- * before its answer came drops that answer (the resource aborts it). The resolved instance marks the number seen.
+ * before its answer came drops that answer (the resource aborts it). The resolved instance marks the number seen and
+ * hands its first full record to the sale switch of a launch listing (`saleSwitch.ts`, WP-38).
  */
 export function useListing(number: number, { initial, flags = devFlags }: UseListingOptions): ListingView {
   const session = useSession();
@@ -170,8 +173,17 @@ export function useListing(number: number, { initial, flags = devFlags }: UseLis
   useEffect(() => {
     if (resolved) {
       markSeen(number);
+      saleSwitchOpened(number);
     }
   }, [resolved, number]);
+
+  const record = resource.data && resource.data.listing.number === number ? resource.data.listing : null;
+  const profileCity = session.me?.city ?? null;
+  useEffect(() => {
+    if (resolved && record !== null) {
+      saleSwitchRecord(number, record.deal, freshFeed.feed()?.filters ?? null, profileCity);
+    }
+  }, [resolved, number, record, profileCity]);
 
   const preview = getPreview(number);
   if (retrying) {

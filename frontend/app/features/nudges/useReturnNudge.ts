@@ -380,6 +380,8 @@ export interface ReturnNudgeOptions {
   searchTab: boolean;
   /** The app's flags; the query is built with `searchRules(flags)`. */
   flags?: DevFlags;
+  /** The long return of the search feed (`useFreshFeed`), passed to the visit tracker; stable. */
+  onLongReturn?: () => void;
 }
 
 /**
@@ -388,7 +390,7 @@ export interface ReturnNudgeOptions {
  * `refreshRadars`) feed `createReturnNudge`, which gets the host's `env` after every render — before the visits, so
  * a visit always meets the env it was recorded in.
  */
-export function useReturnNudge(env: NudgeEnv, { searchTab, flags = devFlags }: ReturnNudgeOptions): ReturnNudgeApi {
+export function useReturnNudge(env: NudgeEnv, { searchTab, flags = devFlags, onLongReturn }: ReturnNudgeOptions): ReturnNudgeApi {
   const [back] = useState(() =>
     createReturnNudge({ fetchNew: (filters, since, signal) => readNew(filters, since, signal, searchRules(flags)) }),
   );
@@ -402,7 +404,7 @@ export function useReturnNudge(env: NudgeEnv, { searchTab, flags = devFlags }: R
 
   useSearchVisits(
     { searchTab, filters: env.filters, ready: env.referenceLoaded && status === "ready" },
-    { onVisit: back.visit, onSession: () => refreshRadars() },
+    { onVisit: back.visit, onSession: () => refreshRadars(), onLongReturn },
   );
 
   const view = useSyncExternalStore(back.subscribe, back.view, () => null);

@@ -168,6 +168,47 @@ html.chrome-mini [data-topbar="search-list"] {
   transform: translateY(calc(-100% - 12px));
 }
 
+/*
+ * The fresh pill «Показать N новых» (SCR-063, FreshPill.tsx): centred 10 px under the search list's top bar, which
+ * positions it. While the bar is slid away it moves down by the bar's travel, so it stays under the top of the screen;
+ * lite graphics has the shorter offset of legacy. An opaque sheet-coloured pill with a shadow, not glass (legacy
+ * `.fresh-pill`, `chrome.css:183-213` of `index-CIa0Ldj2.js`).
+ */
+[data-fresh-pill] {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+  border-radius: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--sheet);
+  box-shadow:
+    0 6px 18px #0000002e,
+    0 0 0 0.5px var(--sep);
+  transition: transform var(--dur-slow) var(--ease-ios);
+  animation: fade var(--dur-fast) ease-out;
+}
+
+[data-fresh-pill]:active {
+  opacity: 0.7;
+}
+
+html.chrome-mini [data-fresh-pill] {
+  transform: translate(-50%, calc(var(--top-inset) + 54px));
+}
+
+html.lite.chrome-mini [data-fresh-pill] {
+  transform: translate(-50%, calc(var(--top-inset) + 42px));
+}
+
 /* The mini title waits above its place, hidden and out of the accessibility tree, until the chrome collapses. */
 [data-mini-title] {
   visibility: hidden;

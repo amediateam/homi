@@ -95,7 +95,7 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
 
   const leave = (here: boolean, what: "listing" | "sheet", n: number) => {
     if (here) {
-      void (what === "listing" ? closeListing(stepInAddress(), closeLayer) : closeActions(n, stepInAddress()));
+      void (what === "listing" ? closeListing(stepInAddress(), closeLayer, n) : closeActions(n, stepInAddress()));
     }
   };
 

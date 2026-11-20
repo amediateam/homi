@@ -14,6 +14,7 @@ vi.mock("@/lib/navigation/nav", () => ({ nav: { tab: state.tab } }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.search) }));
 vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname }));
 
+import { forgetFeedScroll, hasFeedScroll, rememberFeedScroll } from "@/features/feed/feedScroll";
 import { clearRadarReturn, peekRadarReturn, rememberRadarReturn } from "@/features/radars/radarReturn";
 import type { ShellTab } from "@/features/shell/shellVariant";
 import { LONG_LABEL_CHARS, radarFeedAsSearch, TabBar } from "@/features/shell/TabBar";
@@ -46,6 +47,7 @@ beforeEach(() => {
   state.pathname = "/";
   state.search = "";
   clearRadarReturn();
+  forgetFeedScroll();
   scrollTo.mockReset();
   vi.stubGlobal("scrollTo", scrollTo);
   rememberHref("/", "");
@@ -141,6 +143,39 @@ describe("TabBar (SCR-006)", () => {
     expect(state.tab).not.toHaveBeenCalled();
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
     expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+  });
+
+  it("the search list's scroll memory (WP-38, BR-APP-105): arriving on the search tab with one leaves the scroll to the list", () => {
+    rememberFeedScroll("r1#city=tashkent|0", 900);
+    const view = renderBar("saved");
+
+    fireEvent.click(button("search"));
+    view.rerender(bar("search"));
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(hasFeedScroll()).toBe(true);
+  });
+
+  it("without a memory, or arriving on another tab, the arrival still scrolls to the top", () => {
+    const view = renderBar("saved");
+    fireEvent.click(button("search"));
+    view.rerender(bar("search"));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
+
+    rememberFeedScroll("r1#city=tashkent|0", 900);
+    fireEvent.click(button("radars"));
+    view.rerender(bar("radars"));
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+  });
+
+  it("a press on the active tab forgets the memory and scrolls to the top", () => {
+    rememberFeedScroll("r1#city=tashkent|0", 900);
+    renderBar("search");
+
+    fireEvent.click(button("search"));
+
+    expect(hasFeedScroll()).toBe(false);
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   it("a press while the chrome is collapsed only expands it", () => {

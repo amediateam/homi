@@ -1,5 +1,6 @@
 import type { Locale } from "@homi/config";
 import { getMessages } from "@homi/i18n";
+import { defaultFilters } from "@homi/search";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -18,6 +19,9 @@ const state = vi.hoisted(() => ({
   loaded: true,
   /** `radarsEnabled` of the reference data: the switch `useRadarsEnabled()` reads (DEC-51). */
   radarsEnabled: true,
+  status: "ready",
+  /** The count `GET /listings/new` answers for the fresh pill (WP-38). */
+  freshCount: 3 as unknown,
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.search) }));
 /** The counted `Link` needs the App Router; a plain anchor keeps its address. */
@@ -33,7 +37,8 @@ vi.mock("@/lib/navigation/nav", () => ({
   },
 }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
-vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: null }) }));
+vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: null, status: state.status }) }));
+vi.mock("@/lib/api/browser", () => ({ bffFetch: async () => ({ ok: true, data: { count: state.freshCount }, meta: {} }) }));
 /** The real memory of the last search (`rememberHref`, `lastSearchQuery`); the too-small mark is the test's. */
 vi.mock("@/lib/ui/shellState", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ui/shellState")>()),
@@ -67,6 +72,8 @@ vi.mock("@/lib/reference/useReference", () => ({
 }));
 
 import type { ShellVariant } from "@/features/shell/shellVariant";
+import { feedEpoch } from "@/features/feed/feedQuery";
+import { freshFeed } from "@/features/feed/fresh";
 import { TopBar } from "@/features/shell/TopBar";
 import { rememberHref } from "@/lib/ui/shellState";
 
@@ -115,6 +122,9 @@ beforeEach(() => {
   state.tooSmall = false;
   state.loaded = true;
   state.radarsEnabled = true;
+  state.status = "ready";
+  state.freshCount = 3;
+  freshFeed.dismiss();
   fake = fakeTelegram({ version: "8.0" });
   vi.stubGlobal("scrollTo", scrollTo);
   window.localStorage.clear();
@@ -125,6 +135,83 @@ afterEach(() => {
   fake?.uninstall();
   fake = null;
   vi.unstubAllGlobals();
+});
+
+describe("the fresh pill (WP-38, SCR-063)", () => {
+  let lists = 0;
+  /** A long return with the list covered: the count is asked for the list on screen and answered. */
+  async function longReturn() {
+    lists += 1;
+    freshFeed.show(`r${lists}#city=tashkent|0`, { ...defaultFilters("rent_long", "tashkent") });
+    freshFeed.longReturn({ searchTab: true, covered: true, view: "list" });
+    await act(async () => undefined);
+  }
+  const pill = () => document.querySelector<HTMLButtonElement>("[data-fresh-pill]");
+
+  it.each([
+    ["ru", "Показать 3 новых", 3],
+    ["ru", "Показать 1 новое", 1],
+    ["uz", "3 ta yangisini koʻrsatish", 3],
+    ["en", "Show 3 new", 3],
+  ] as const)("in %s reads «%s» under the search list's bar while the feed list is free", async (locale, label, count) => {
+    state.freshCount = count;
+    at("/", "city=tashkent");
+    await longReturn();
+    bar("search-list", locale);
+    expect(pill()?.textContent).toBe(label);
+    expect(pill()?.closest("[data-topbar]")?.getAttribute("data-topbar")).toBe("search-list");
+  });
+
+  it("shows with radars switched off too: it is no radar offer (DEC-51)", async () => {
+    state.radarsEnabled = false;
+    at("/", "city=tashkent");
+    await longReturn();
+    bar("search-list");
+    expect(pill()).not.toBeNull();
+  });
+
+  it("none with a count of 0, under a listing or a layer parameter, or before the session is ready", async () => {
+    state.freshCount = 0;
+    at("/", "city=tashkent");
+    await longReturn();
+    const view = bar("search-list");
+    expect(pill()).toBeNull();
+
+    state.freshCount = 3;
+    await longReturn();
+    at("/listing/42");
+    view.rerender(
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <TopBar variant="search-list" />
+      </NextIntlClientProvider>,
+    );
+    expect(pill()).toBeNull();
+
+    cleanup();
+    at("/", "city=tashkent&pick=city");
+    bar("search-list");
+    expect(pill()).toBeNull();
+
+    cleanup();
+    at("/", "city=tashkent");
+    state.status = "booting";
+    bar("search-list");
+    expect(pill()).toBeNull();
+  });
+
+  it("a tap: a light haptic, the top, the list re-created, and the pill gone", async () => {
+    at("/", "city=tashkent");
+    await longReturn();
+    bar("search-list");
+    const epoch = feedEpoch();
+
+    fireEvent.click(pill()!);
+
+    expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(feedEpoch()).toBe(epoch + 1);
+    expect(pill()).toBeNull();
+  });
 });
 
 describe("TopBar variants (SCR-006), in ru, uz and en", () => {

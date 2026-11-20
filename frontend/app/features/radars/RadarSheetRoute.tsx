@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { forgetFeedScroll } from "@/features/feed/feedScroll";
 import type { RoutePresentation } from "@/features/shell/RouteSheet";
 import { usePathname } from "@/i18n/navigation";
 import { type DevFlags, devFlags } from "@/lib/flags";
@@ -140,6 +141,10 @@ export function RadarSheetRoute({ id, presentation, flags = devFlags, children }
       return undefined;
     }
     clearRadarReturn();
+    if (stored.via === "feed") {
+      // The Back from a radar's feed drops the search list's position (BR-APP-105).
+      forgetFeedScroll();
+    }
     window.scrollTo(0, stored.scrollY);
     // The tab below is shown again in the same commit; a late scroll of the browser's own restoration loses to this.
     const frame = requestAnimationFrame(() => window.scrollTo(0, stored.scrollY));
@@ -163,6 +168,7 @@ export function RadarSheetRoute({ id, presentation, flags = devFlags, children }
       radar={found ?? (leaving || !loaded ? kept : undefined)}
       presentation={presentation}
       instant={current.return !== null || current.handover}
+      restore={current.return}
       onLeave={() => setLeaving(true)}
       flags={flags}
     >

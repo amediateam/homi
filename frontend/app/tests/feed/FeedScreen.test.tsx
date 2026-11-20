@@ -1,7 +1,7 @@
 import { getMessages } from "@homi/i18n";
 import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { ComponentProps, ReactElement } from "react";
+import { Activity, type ComponentProps, type ReactElement } from "react";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,8 +65,10 @@ vi.mock("next/cache", () => ({ io: async () => undefined }));
 vi.mock("next/root-params", () => ({ locale: async () => "ru" }));
 
 import { resetPendingFavorites } from "@/features/feed/FavButton";
-import { feedListKey } from "@/features/feed/feedQuery";
+import { bumpFeedEpoch, feedListKey } from "@/features/feed/feedQuery";
+import { forgetFeedScroll, hasFeedScroll, peekFeedScroll } from "@/features/feed/feedScroll";
 import { FeedScreen, type FeedScreenProps } from "@/features/feed/FeedScreen";
+import { freshFeed } from "@/features/feed/fresh";
 import { readFirstPage } from "@/features/feed/FeedServer";
 import { resetSessionMaps } from "@/lib/data/sessionMaps";
 import { resetSources } from "@/lib/data/sources";
@@ -162,6 +164,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  forgetFeedScroll();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -510,6 +513,72 @@ describe("FeedScreen: the top of the list (SCR-007, KI-43)", () => {
   });
 });
 
+describe("FeedScreen: the feed epoch (WP-38, BR-APP-104)", () => {
+  it("the server's key with epoch 0 is adopted; a bump re-creates the list from page one through /bff", async () => {
+    at("/", "city=tashkent");
+    screen({ initial: { key: "city=tashkent|0", result: page([1, 2]) } });
+    expect(state.sent).toHaveLength(0);
+    expect(cards()).toEqual([1, 2]);
+
+    act(() => bumpFeedEpoch());
+
+    expect(skeletons()).toBe(3);
+    expect(state.sent).toHaveLength(1);
+    expect(state.sent[0].query.has("cursor")).toBe(false);
+    await answer(0, page([7]));
+    expect(cards()).toEqual([7]);
+    expect(scrolls).toEqual([[0, 0]]);
+  });
+
+  it("after a bump another search still adopts its server page one: no /bff read", () => {
+    at("/", "city=tashkent");
+    const view = screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+    act(() => bumpFeedEpoch());
+    expect(state.sent).toHaveLength(1);
+
+    at("/", "city=tashkent&rooms_min=2");
+    view.rerender({ initial: { key: "city=tashkent&rooms_min=2|0", result: page([5]) } });
+
+    expect(state.sent).toHaveLength(1);
+    expect(cards()).toEqual([5]);
+  });
+
+  it("a feed hidden by the route cache reads nothing on a bump and page one once it is shown", async () => {
+    at("/", "city=tashkent");
+    const tree = (mode: "visible" | "hidden") => (
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <Activity mode={mode}>
+          <FeedScreen initial={{ key: "city=tashkent|0", result: page([1]) }} serverSmallOnly={false} />
+        </Activity>
+      </NextIntlClientProvider>
+    );
+    const view = render(tree("visible"));
+    at("/saved");
+    view.rerender(tree("hidden"));
+
+    act(() => bumpFeedEpoch());
+    await act(async () => undefined);
+    expect(state.sent).toHaveLength(0);
+
+    at("/", "city=tashkent");
+    view.rerender(tree("visible"));
+    await act(async () => undefined);
+    expect(state.sent).toHaveLength(1);
+  });
+
+  it("tells the fresh store which list is on screen: a new key is a new list", () => {
+    at("/", "city=tashkent");
+    screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+    const first = freshFeed.feed();
+    expect(first?.key).toMatch(/#city=tashkent\|0$/);
+    expect(first?.filters.city).toBe("tashkent");
+
+    act(() => bumpFeedEpoch());
+
+    expect(freshFeed.feed()?.key).toMatch(/#city=tashkent\|1$/);
+  });
+});
+
 describe("FeedScreen: what follows the cards (SCR-009)", () => {
   it("no result with an active filter shows the search empty state", async () => {
     feedReference({ stats: [{ code: "tashkent", counts: { rent_long: 3, rent_daily: 0, sale: 120 }, price_presets: {}, typical_price: {} }] });
@@ -563,5 +632,73 @@ describe("FeedScreen: the scroll measurement of lite graphics (03 §1.7)", () =>
     window.dispatchEvent(new Event("scroll"));
 
     expect(state.measure).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Last: its scroll events would start the once-per-launch measurement of the test above.
+describe("FeedScreen: the scroll memory (WP-38, BR-APP-105, TMA-023)", () => {
+  /** The window at `y`, as a user scroll leaves it: the value and the event. */
+  const scrollAt = (y: number) => {
+    Object.defineProperty(window, "scrollY", { configurable: true, value: y });
+    window.dispatchEvent(new Event("scroll"));
+  };
+
+  afterEach(() => {
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("the list left for the map keeps its position and goes back to it with the same key", () => {
+    at("/", "city=tashkent");
+    const view = screen({ initial: { key: "city=tashkent|0", result: page([1, 2]) } });
+    scrollAt(1200);
+
+    // The commit that leaves may already have moved the window, without a scroll event yet: the followed position
+    // counts, not the window's.
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+    at("/map", "city=tashkent");
+    view.rerender();
+    expect(hasFeedScroll()).toBe(true);
+
+    at("/", "city=tashkent");
+    view.rerender();
+
+    expect(scrolls).toEqual([[0, 1200]]);
+    expect(hasFeedScroll()).toBe(false);
+  });
+
+  it("a changed search restores nothing and goes to the top", () => {
+    at("/", "city=tashkent");
+    const view = screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+    scrollAt(800);
+    at("/map", "city=tashkent&rooms_min=2");
+    view.rerender();
+
+    at("/", "city=tashkent&rooms_min=2");
+    view.rerender();
+
+    expect(scrolls).toEqual([[0, 0]]);
+  });
+
+  it("a list re-created by the route cache never takes the position of the one it replaced", () => {
+    at("/", "city=tashkent");
+    const first = screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+    scrollAt(900);
+    first.unmount();
+    expect(hasFeedScroll()).toBe(true);
+
+    screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+
+    expect(scrolls).toEqual([[0, 0]]);
+  });
+
+  it("a layer over the list remembers it under the list's key", () => {
+    at("/", "city=tashkent");
+    const view = screen({ initial: { key: "city=tashkent|0", result: page([1]) } });
+    scrollAt(640);
+
+    at("/listing/42");
+    view.rerender();
+
+    expect(peekFeedScroll(freshFeed.feed()!.key)).toBe(640);
   });
 });

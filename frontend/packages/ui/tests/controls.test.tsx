@@ -246,6 +246,7 @@ describe("icons", () => {
   it("the package re-exports the lucide icons the app uses (D-UI-1)", () => {
     const names = [
       "ArrowDown",
+      "ArrowUp",
       "Check",
       "ChevronDown",
       "ChevronLeft",

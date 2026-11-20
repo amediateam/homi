@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { FeedRadarCard, useFeedRadar } from "@/features/nudges/FeedRadarCard";
 import { usePathname } from "@/i18n/navigation";
@@ -10,8 +10,10 @@ import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
 import { registerRefresh } from "@/lib/ui/shellState";
 
 import { FeedEmpty } from "./FeedEmpty";
-import { FIRST_VERSION, feedListKey, feedQuery, feedSearchKey } from "./feedQuery";
+import { FIRST_VERSION, feedEpoch, feedListKey, feedQuery, feedSearchKey, subscribeFeedEpoch } from "./feedQuery";
+import { feedScrollKey, rememberFeedScroll, takeFeedScroll } from "./feedScroll";
 import { FewResultsNote, useFewResultsContext } from "./FewResultsNote";
+import { freshFeed } from "./fresh";
 import { ListingFeed } from "./ListingFeed";
 import type { ListingPreview } from "./types";
 import type { FeedInitial } from "./useCursorFeed";
@@ -30,11 +32,13 @@ export interface FeedScreenProps {
 
 /**
  * The pulls of the search shown. Another search, a return to an earlier one included, starts again from
- * `FIRST_VERSION`, the version of the server's page one.
+ * `FIRST_VERSION`, the version of the server's page one. `epoch` is the feed epoch the version last took: a bump
+ * (`bumpFeedEpoch`) counts as one more pull of the search shown, without the indicator.
  */
 interface Refreshed {
   search: string;
   version: number;
+  epoch: number;
 }
 
 /** The scroll measurement of lite graphics runs once per launch, on the first scroll of the feed (`03` §1.7). */
@@ -46,8 +50,12 @@ let measured = false;
  * the list is neither re-created nor scrolled. The list key is the canonical query of the search and the refresh
  * version (`feedListKey`), the key `readFirstPage` gave the server's page one. A pull bumps the version of this
  * search, re-creates the list from page one through `/bff/listings`, and the indicator spins until page one has
- * answered; another search resets the version, so the server's page one of any later search is adopted. A new key
- * scrolls to the top before it is painted (SCR-007), never on the first render and never while the feed is covered.
+ * answered; another search resets the version, so the server's page one of any later search is adopted. A bump of the
+ * feed epoch (WP-38: a long return, the fresh pill, WP-31) counts as one more pull without the indicator, taken when
+ * the feed is shown again if it was hidden. A new key scrolls to the top before it is painted (SCR-007), never on the
+ * first render and never while the feed is covered. The list's position is remembered when it stops being its own
+ * address and restored when it is again with the same key (`feedScroll.ts`, BR-APP-105); the list on screen is handed
+ * to the long return (`fresh.ts`).
  * After the cards: the few-results note (BR-APP-025) or the search empty state (SCR-009), as `listEnd` decides. Among
  * them, in the `inline` slot, the radar card (SCR-047, WP-30) while `useFeedRadar` holds — never while radars are
  * switched off (DEC-51).
@@ -58,16 +66,25 @@ export function FeedScreen({ initial, serverSmallOnly, profileCity }: FeedScreen
   const own = matchRoute(usePathname()).route === "feed";
   const few = useFewResultsContext(filters);
   const radarCard = useFeedRadar(filters);
+  // Each mounted list has an id of its own: the scroll memory of one never restores another (`feedScroll.ts`).
+  const instance = useId();
 
   const searchKey = feedSearchKey(filters, sort);
-  const [stored, setRefreshed] = useState<Refreshed>({ search: searchKey, version: FIRST_VERSION });
+  const epoch = useSyncExternalStore(subscribeFeedEpoch, feedEpoch, () => 0);
+  const [stored, setRefreshed] = useState<Refreshed>({ search: searchKey, version: FIRST_VERSION, epoch });
   let refreshed = stored;
   if (stored.search !== searchKey) {
     // Adjusted while rendering, as `useCursorFeed` does: the version of the search left behind is forgotten.
-    refreshed = { search: searchKey, version: FIRST_VERSION };
+    refreshed = { search: searchKey, version: FIRST_VERSION, epoch };
+  } else if (stored.epoch !== epoch) {
+    // A bump while this search shows, or while the feed was hidden: one more version, so page one is read again.
+    refreshed = { search: searchKey, version: stored.version + 1, epoch };
+  }
+  if (refreshed !== stored) {
     setRefreshed(refreshed);
   }
   const listKey = feedListKey(filters, sort, refreshed.version);
+  const scrollKey = feedScrollKey(instance, listKey);
 
   const waiting = useRef<(() => void)[]>([]);
   const settlePulls = useCallback(() => {
@@ -86,6 +103,7 @@ export function FeedScreen({ initial, serverSmallOnly, profileCity }: FeedScreen
           setRefreshed((current) => ({
             search: searchKey,
             version: (current.search === searchKey ? current.version : FIRST_VERSION) + 1,
+            epoch: feedEpoch(),
           }));
         }),
     );
@@ -96,13 +114,50 @@ export function FeedScreen({ initial, serverSmallOnly, profileCity }: FeedScreen
     };
   }, [searchKey, settlePulls]);
 
+  // The scroll memory (BR-APP-105): while the list is its own address its position is followed by the scroll events —
+  // not read when it stops being its own, since the commit that hides it may already have shrunk the document or
+  // scrolled the next tab to its top. Its own again with the same key, it goes back there (also once more in the next
+  // frame, after the browser's own restoration on a Back); with another key, or after another list's memory, to the
+  // top. The first render scrolls nowhere.
   const scrolledFor = useRef(listKey);
   useLayoutEffect(() => {
-    if (own && scrolledFor.current !== listKey) {
+    if (!own) {
+      return undefined;
+    }
+    let frame: number | null = null;
+    const memory = takeFeedScroll(scrollKey);
+    if (typeof memory === "number") {
+      scrolledFor.current = listKey;
+      // Under a layer the window never moved: nothing to do then.
+      const restore = () => {
+        if (window.scrollY !== memory) {
+          window.scrollTo(0, memory);
+        }
+      };
+      restore();
+      frame = requestAnimationFrame(restore);
+    } else if (memory === "other" || scrolledFor.current !== listKey) {
       scrolledFor.current = listKey;
       window.scrollTo(0, 0);
     }
-  }, [own, listKey]);
+    let y = typeof memory === "number" ? memory : window.scrollY;
+    const follow = () => {
+      y = window.scrollY;
+    };
+    window.addEventListener("scroll", follow, { passive: true });
+    return () => {
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+      window.removeEventListener("scroll", follow);
+      rememberFeedScroll(scrollKey, y);
+    };
+  }, [own, listKey, scrollKey]);
+
+  // The list on screen for the long return and the fresh pill (`fresh.ts`): a new key is a new list.
+  useEffect(() => {
+    freshFeed.show(scrollKey, filters);
+  }, [scrollKey, filters]);
 
   useEffect(() => {
     if (measured) {
