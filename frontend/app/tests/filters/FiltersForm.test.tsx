@@ -102,6 +102,7 @@ import { resetReference } from "@/lib/reference/useReference";
 import { currentToast, dismissToast } from "@/lib/ui/toast";
 
 import { cityOf, feedReference } from "../helpers/reference";
+import { shownText } from "../helpers/shown";
 
 const TASHKENT = cityOf({
   zones: [{ code: "center", name: "Центр" }],
@@ -151,7 +152,7 @@ const sectionNames = () => [...content().querySelectorAll(":scope > [data-sectio
 const footer = () => sheet().querySelector<HTMLElement>('[data-slot="filters-footer"]')!;
 const actions = () => [...footer().querySelectorAll("[data-action]")].map((node) => node.getAttribute("data-action"));
 const action = (name: string) => footer().querySelector<HTMLButtonElement>(`[data-action="${name}"]`);
-const flowLine = () => footer().querySelector('[data-slot="flow-line"]')!.textContent;
+const flowLine = () => shownText(footer().querySelector('[data-slot="flow-line"]'));
 const tapReset = () => fireEvent.click(sheet().querySelector('[data-action="reset"]')!);
 /** The draft as «Показать» hands it over. */
 function applied(): SearchFilters {
@@ -213,13 +214,13 @@ describe("FiltersForm: the three modes", () => {
 
   it("radar modes: «Сейчас подходит: {n}», empty until the first count; the button disabled while submitting", () => {
     form({ mode: "radar-new", submitting: true });
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe("");
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe("");
     expect(action("subscribe")?.disabled).toBe(true);
     cleanup();
 
     state.live = { count: 14, flow: null };
     form({ mode: "radar-edit" });
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe("Сейчас подходит: 14");
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe("Сейчас подходит: 14");
     fireEvent.click(action("save")!);
     expect(handlers.onSave).toHaveBeenCalledWith(expect.objectContaining({ city: "tashkent" }), null);
   });
@@ -387,7 +388,7 @@ describe("FiltersForm: the footer", () => {
     state.live = { count, flow: null };
     form({}, { rooms_min: 2 });
 
-    expect(action("apply")?.textContent).toBe(label);
+    expect(shownText(action("apply"))).toBe(label);
     expect(applied()).toMatchObject({ rooms_min: 2 });
   });
 

@@ -242,7 +242,7 @@ describe("FiltersSheetRoute: «Включить радар»", () => {
     route();
 
     fireEvent.click(button("subscribe"));
-    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: expect.any(Function) });
+    expect(state.subscribe).toHaveBeenCalledWith(expect.objectContaining({ rooms_min: 2 }), "filters", null, { scope: expect.any(Function), confirm: expect.any(Function) });
     expect(button("subscribe").disabled).toBe(true);
     fireEvent.click(button("subscribe"));
     expect(state.subscribe).toHaveBeenCalledTimes(1);

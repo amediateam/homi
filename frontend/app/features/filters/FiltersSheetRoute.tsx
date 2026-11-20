@@ -1,5 +1,6 @@
 "use client";
 
+import { useSavePhase } from "@homi/ui";
 import { defaultFilters, normalizeSort, type SearchFilters, sortOptions, toSearchParams } from "@homi/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -78,6 +79,7 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
   const saveCity = useSaveCity();
   const { subscribe } = useSubscribe();
   const [submitting, setSubmitting] = useState(false);
+  const savePhase = useSavePhase();
   const rules = searchRules(devFlags);
   const focus = address?.get("focus") ?? null;
   const target = address?.get("from") === "map" ? routes.map : routes.feed;
@@ -106,17 +108,23 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
       return;
     }
     setSubmitting(true);
+    savePhase.setPhase("busy");
     const at = currentAddress();
     const here = () => currentAddress() === at;
-    void subscribe(draft, "filters", relaxed, { scope: () => (here() ? "sheet" : "app") }).then(
+    // The tick only while the sheet still shows: a sheet the user already left has no button to draw it on.
+    const confirm = () => (here() ? savePhase.confirm() : Promise.resolve());
+    void subscribe(draft, "filters", relaxed, { scope: () => (here() ? "sheet" : "app"), confirm }).then(
       (result) => {
         setSubmitting(false);
         if (result.ok && here()) {
           back();
+        } else {
+          savePhase.setPhase("idle");
         }
       },
       (error: unknown) => {
         setSubmitting(false);
+        savePhase.setPhase("idle");
         reportError(error, { kind: "error", where: "subscribe" });
       },
     );
@@ -147,6 +155,7 @@ export function FiltersSheetRoute({ presentation }: { presentation: RoutePresent
       onSave={noSave}
       onDraw={draw}
       submitting={submitting}
+      phase={savePhase.phase}
     />
   );
 }

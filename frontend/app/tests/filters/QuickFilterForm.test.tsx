@@ -52,6 +52,7 @@ import { searchRules } from "@/lib/search/rules";
 
 import { withDevFlags } from "../helpers/flags";
 import { cityOf, feedReference } from "../helpers/reference";
+import { shownText } from "../helpers/shown";
 
 const rules = withDevFlags({}, searchRules);
 const TASHKENT = cityOf();
@@ -204,11 +205,11 @@ describe("QuickFilterForm (SCR-015)", () => {
       state.count = ok(42);
       form("rooms");
 
-      expect(apply().textContent).toBe("Показать");
+      expect(shownText(apply())).toBe("Показать");
       await wait(249);
       expect(state.sent).toEqual([]);
       await wait(1);
-      expect(apply().textContent).toBe("Показать 42");
+      expect(shownText(apply())).toBe("Показать 42");
       await wait(1_000);
       expect(state.sent.map((request) => request.path)).toEqual(["listings/count"]);
     });
@@ -218,7 +219,7 @@ describe("QuickFilterForm (SCR-015)", () => {
       form("rooms");
       await wait(250);
 
-      expect(apply().textContent).toBe("Ничего нет");
+      expect(shownText(apply())).toBe("Ничего нет");
       expect((apply() as HTMLButtonElement).disabled).toBe(false);
       fireEvent.click(apply());
       expect(onApply).toHaveBeenCalledTimes(1);
@@ -228,13 +229,13 @@ describe("QuickFilterForm (SCR-015)", () => {
       state.count = ok(7);
       form("rooms");
       await wait(250);
-      expect(apply().textContent).toBe("Показать 7");
+      expect(shownText(apply())).toBe("Показать 7");
 
       state.count = failed;
       fireEvent.click(screen.getByRole("button", { name: "3" }));
       await wait(250);
       expect(state.sent).toHaveLength(2);
-      expect(apply().textContent).toBe("Показать 7");
+      expect(shownText(apply())).toBe("Показать 7");
     });
 
     it("a count still on its way does not hold the apply back; the payload is the draft", () => {

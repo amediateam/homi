@@ -40,6 +40,22 @@ export function flowRate(flow: unknown): FlowRate | null {
 }
 
 /**
+ * The flow line in parts — its message and its number — so a surface can show the number rolling (WP-39,
+ * BR-APP-113; legacy `flowParts`). `null` without a rate and for "none this week", whose line has no number:
+ * `formatFlow` words that one. The vocabulary is `formatFlow`'s.
+ */
+export function flowParts(
+  rate: FlowRate | null,
+  surface: FlowSurface,
+  { oneVocabulary = false }: FlowOptions = {},
+): { key: MessageKey; n: number } | null {
+  if (!rate || rate.kind === "none") {
+    return null;
+  }
+  return { key: VOCABULARY[oneVocabulary ? "sheet" : surface][rate.kind], n: rate.n };
+}
+
+/**
  * The flow line of a surface; `null` without a rate (no line is rendered). Legacy words "none this week" three
  * ways and the counts two ways (LB-APP-033); `oneVocabulary` on uses the sheet vocabulary on every surface.
  */

@@ -266,6 +266,12 @@ export interface SubscribeOptions {
    * function read when the answer arrives, so a sheet the user already closed sends its failure to the app's host.
    */
   scope?: ToastScope | (() => ToastScope);
+  /**
+   * The tick of the sheet's save button (`useSavePhase().confirm`, WP-39, BR-APP-114): awaited after the success haptic
+   * and before the toast, so the sheet closes and the toast shows once the tick was drawn. Not awaited for a radar
+   * that was already on (no haptic: the sheet closes at once) nor on a failure.
+   */
+  confirm?: () => Promise<void>;
 }
 
 export interface Subscriber {
@@ -278,16 +284,24 @@ export interface Subscriber {
 const presented = new WeakSet<Outcome>();
 
 /**
- * Plays the outcome's haptic, then shows its toast — in the app's host on success (the sheet that asked closes on
- * `ok`), in `scope` on failure (the sheet stays open) — and answers `{ ok }`.
+ * Plays the outcome's haptic, waits for the save button's tick after a success with a haptic (`confirm`), then shows
+ * its toast — in the app's host on success (the sheet that asked closes on `ok`), in `scope` on failure (the sheet
+ * stays open) — and answers `{ ok }`.
  */
-function present(outcome: Outcome, scope: ToastScope | (() => ToastScope) = "app"): SubscribeResult {
+async function present(
+  outcome: Outcome,
+  scope: ToastScope | (() => ToastScope) = "app",
+  confirm?: () => Promise<void>,
+): Promise<SubscribeResult> {
   if (!presented.has(outcome)) {
     presented.add(outcome);
     if (outcome.haptic === "success") {
       tg.haptic.success();
     } else if (outcome.haptic === "error") {
       tg.haptic.error();
+    }
+    if (outcome.ok && outcome.haptic === "success" && confirm) {
+      await confirm();
     }
     if (outcome.toast !== null) {
       showToast(outcome.toast, outcome.ok ? "app" : typeof scope === "function" ? scope() : scope);
@@ -324,9 +338,9 @@ export function useSubscribe({ flags = devFlags }: { flags?: DevFlags } = {}): S
     const relax = (id: string, code: string) => runRelax(deps, id, code).then((outcome) => present(outcome, "app"));
     return {
       subscribe: (filters, entry, relaxed, options) =>
-        runSubscribe(deps, filters, entry, relaxed).then((outcome) => present(outcome, options?.scope)),
+        runSubscribe(deps, filters, entry, relaxed).then((outcome) => present(outcome, options?.scope, options?.confirm)),
       saveEdit: (id, filters, relaxed, options) =>
-        runSaveEdit(deps, id, filters, relaxed).then((outcome) => present(outcome, options?.scope)),
+        runSaveEdit(deps, id, filters, relaxed).then((outcome) => present(outcome, options?.scope, options?.confirm)),
       relax,
     };
   }, [locale, t, radarLimit, flags]);

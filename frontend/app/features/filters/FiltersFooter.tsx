@@ -1,13 +1,14 @@
 "use client";
 
-import { flowRate, formatFlow, type Translate } from "@homi/i18n/format";
+import { flowParts, flowRate, formatFlow, type Translate } from "@homi/i18n/format";
 import type { SearchFilters, SearchMode } from "@homi/search";
-import { Button, Check, FilterChip, RadarIcon } from "@homi/ui";
+import { Button, Check, FilterChip, RadarIcon, saveButtonProps, type SavePhase, SaveState } from "@homi/ui";
 import { useTranslations } from "next-intl";
 
 import { useRadarsEnabled } from "@/features/radars/capability";
 import { useHasActiveRadar } from "@/features/radars/match";
 import { tg } from "@/lib/telegram";
+import { rollText } from "@/lib/ui/rollText";
 
 import type { LiveFlow, LiveFlowOption } from "./useLiveStats";
 
@@ -23,6 +24,8 @@ export interface FiltersFooterProps {
   oneVocabulary: boolean;
   /** A subscribe or save is on its way: its button is disabled. */
   submitting: boolean;
+  /** The phase of the subscribe or save button (`useSavePhase` of its owner); `idle` without one. */
+  phase?: SavePhase;
   onApply: () => void;
   onSubscribe: () => void;
   onSave: () => void;
@@ -43,6 +46,9 @@ const BUTTON = "h-[48px] min-w-0 flex-1 px-[20px] text-[16px]";
  *   «Ничего нет», which still applies.
  * - Radar modes: «Сейчас подходит: {n}» (empty until the first count) and one button, «Включить радар» for a new
  *   radar, «Сохранить» for an edit, disabled while submitting.
+ * - The numbers roll (WP-39, BR-APP-113): the flow's count, «Показать {n}» between counts above 0 and «Сейчас
+ *   подходит: {n}» to and from 0. «Включить радар» and «Сохранить» show their owner's save phase (BR-APP-114): the
+ *   spinner while the request runs, the tick before the sheet closes.
  */
 export function FiltersFooter({
   mode,
@@ -51,6 +57,7 @@ export function FiltersFooter({
   flow,
   oneVocabulary,
   submitting,
+  phase = "idle",
   onApply,
   onSubscribe,
   onSave,
@@ -61,13 +68,15 @@ export function FiltersFooter({
   const radarsEnabled = useRadarsEnabled();
   // Only search mode shows the ✓: the radar forms send no plain radar read (the radar tab reads its own list only).
   const radarOn = useHasActiveRadar(draft, mode === "search");
-  const flowLine = formatFlow(flowRate(flow), "sheet", translate, { oneVocabulary });
+  const rate = flowRate(flow);
+  const flowLine = formatFlow(rate, "sheet", translate, { oneVocabulary });
+  const flowNumber = flowParts(rate, "sheet", { oneVocabulary });
   const options = flowLine === null ? [] : (flow?.options ?? []);
 
   return (
     <div data-slot="filters-footer" className="flex flex-col gap-[10px]">
       <p data-slot="flow-line" className="min-h-[18px] text-center text-[13px] leading-[18px] text-hint">
-        {flowLine}
+        {flowNumber === null ? flowLine : rollText((n) => t(flowNumber.key, { n }), flowNumber.n)}
       </p>
       {options.length > 0 ? (
         <div
@@ -107,28 +116,31 @@ export function FiltersFooter({
                 disabled={submitting}
                 onClick={onSubscribe}
                 className={BUTTON}
+                {...saveButtonProps(phase)}
               >
-                <RadarIcon size={18} aria-hidden />
-                {t("sheet.subscribe")}
+                <SaveState phase={phase}>
+                  <RadarIcon size={18} aria-hidden />
+                  {t("sheet.subscribe")}
+                </SaveState>
               </Button>
             )
           ) : null}
           <Button data-action="apply" onClick={onApply} className={BUTTON}>
-            {count === null ? t("sheet.show") : count > 0 ? t("sheet.showN", { n: count }) : t("sheet.nothing")}
+            {count === null ? t("sheet.show") : count > 0 ? rollText((n) => t("sheet.showN", { n }), count) : t("sheet.nothing")}
           </Button>
         </div>
       ) : (
         <>
           <p data-slot="matching-now" className="min-h-[18px] text-center text-[13px] leading-[18px] text-hint">
-            {count === null ? "" : t("sheet.matchingNow", { n: count })}
+            {count === null ? "" : rollText((n) => t("sheet.matchingNow", { n }), count)}
           </p>
           {mode === "radar-new" ? (
-            <Button data-action="subscribe" disabled={submitting} onClick={onSubscribe} className={BUTTON}>
-              {t("sheet.subscribe")}
+            <Button data-action="subscribe" disabled={submitting} onClick={onSubscribe} className={BUTTON} {...saveButtonProps(phase)}>
+              <SaveState phase={phase}>{t("sheet.subscribe")}</SaveState>
             </Button>
           ) : (
-            <Button data-action="save" disabled={submitting} onClick={onSave} className={BUTTON}>
-              {t("sheet.save")}
+            <Button data-action="save" disabled={submitting} onClick={onSave} className={BUTTON} {...saveButtonProps(phase)}>
+              <SaveState phase={phase}>{t("sheet.save")}</SaveState>
             </Button>
           )}
         </>

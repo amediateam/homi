@@ -70,6 +70,7 @@ import { resetReference } from "@/lib/reference/useReference";
 import { rememberHref } from "@/lib/ui/shellState";
 
 import { cityOf, feedReference } from "../helpers/reference";
+import { shownText } from "../helpers/shown";
 
 const ID = "01JD0000000000000000000001";
 const OTHER = "01JD0000000000000000000002";
@@ -228,7 +229,7 @@ describe("RadarForms: titles and buttons per mode (SCR-029, SCR-030)", () => {
       await edit();
     }
 
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe(text);
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe(text);
   });
 });
 
@@ -374,7 +375,7 @@ describe("RadarForms: the editor", () => {
     expect(impacts()).toEqual(["medium"]);
     expect(scopeOf(state.saveEdit.mock.calls[0][3])).toBe("sheet");
     await settle();
-    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: expect.any(Function) });
+    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: expect.any(Function), confirm: expect.any(Function) });
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(state.listOptions[0]).toEqual(expect.objectContaining({ previews: true }));
   });

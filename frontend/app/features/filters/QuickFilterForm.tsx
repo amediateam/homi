@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { type RoutePresentation, RouteSheet } from "@/features/shell/RouteSheet";
 import type { QuickFilterKind } from "@/lib/navigation/routes";
+import { rollText } from "@/lib/ui/rollText";
 import { useCityStats, useReference } from "@/lib/reference/useReference";
 
 import { RoomsPicker } from "./RoomsPicker";
@@ -53,7 +54,7 @@ export function QuickFilterForm({ kind, initial, presentation, rules, onApply }:
   const priceTitle = usePriceTitle(draft);
 
   const title = kind === "rooms" ? t("sheet.rooms") : kind === "price" ? priceTitle : t("sheet.who");
-  const label = count === null ? t("sheet.show") : count > 0 ? t("sheet.showN", { n: count }) : t("sheet.nothing");
+  const label = count === null ? t("sheet.show") : count > 0 ? rollText((n) => t("sheet.showN", { n }), count) : t("sheet.nothing");
 
   const footer = (
     <div className="flex gap-[10px]">
