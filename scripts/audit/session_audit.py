@@ -190,8 +190,13 @@ def analyse(path: str, t0: float, t1: float) -> dict | None:
             params = entry.get("params") or {}
             requests[entry.get("id")] = {"at": at, "model": params.get("model"), "effort": (params.get("output_config") or {}).get("effort")}
         elif kind == "assistant":
+            if entry.get("isApiErrorMessage"):
+                # An error text the client wrote, not a model answer: it has no request and takes no model time.
+                previous_at = at
+                continue
             # Transcripts older than the `api-request` entry: the request starts at the entry before its first block.
-            ref = entry.get("requestRef") or ("rid:" + str(entry.get("requestId")))
+            # An entry that names no request is its own step, never one shared by all such entries.
+            ref = entry.get("requestRef") or ("rid:" + str(entry.get("requestId") or entry.get("uuid") or at))
             if ref not in requests:
                 requests[ref] = {"at": previous_at, "model": (entry.get("message") or {}).get("model"), "effort": entry.get("effort")}
             blocks[ref].append((at, entry))
@@ -214,9 +219,11 @@ def analyse(path: str, t0: float, t1: float) -> dict | None:
             if not is_result:
                 origin = (entry.get("origin") or {}).get("kind")
                 text = text_of(content)
-                if origin in ("task-notification", "peer"):
-                    notifications.append((at, text, origin))
-                elif not entry.get("isMeta") and not entry.get("isCompactSummary") and (origin == "human" or "<command-name>" in text):
+                local_command = text.lstrip().startswith(("<local-command", "<command-name>", "<command-message>"))
+                plain = not entry.get("isMeta") and not entry.get("isCompactSummary")
+                if origin in ("task-notification", "peer") or (origin is None and plain and not local_command):
+                    notifications.append((at, text, origin or "peer"))
+                elif plain and (origin == "human" or "<command-name>" in text):
                     slash = "<command-name>" in text
                     humans.append((at, "slash command" if slash else "prompt"))
                     if origin == "human" and not slash:
@@ -438,9 +445,9 @@ def print_all_sessions(sessions: list, streams: list) -> None:
     print(f"{'share':30} {'':8} {'':17} {'':>6} " + " ".join(f"{100 * sums.get(b, 0) / total:10.0f}%" for b in BUCKETS))
     hours = defaultdict(set)
     for at, stream in streams:
-        hours[local(at, "%d %Hh")].add(stream.split("/")[0])
+        hours[local(at, "%Y-%m-%d %Hh")].add(stream.split("/")[0])
     print("\n=== 2. Sessions with a model request, per local hour")
-    print("  " + "  ".join(f"{hour[3:]}:{len(ids)}" for hour, ids in sorted(hours.items())))
+    print("  " + "  ".join(f"{hour[8:]}:{len(ids)}" for hour, ids in sorted(hours.items())))
     print()
 
 
@@ -459,9 +466,11 @@ def print_project(sessions: list, streams: list, t0: float, t1: float, long_wait
     print("  --- the same, finer")
     for name, seconds in detail.most_common():
         print(f"    {name:36} {hm(seconds):>6}")
-    for earlier, later in zip(sessions, sessions[1:]):
-        if later["from"] - earlier["to"] > 60:
-            print(f"  no session open: {hm(later['from'] - earlier['to'])} ({local(earlier['to'])}..{local(later['from'], '%H:%M')})")
+    latest_end = sessions[0]["to"]
+    for later in sessions[1:]:
+        if later["from"] - latest_end > 60:
+            print(f"  no session open: {hm(later['from'] - latest_end)} ({local(latest_end)}..{local(later['from'], '%H:%M')})")
+        latest_end = max(latest_end, later["to"])
 
     print("  --- per git branch (h:mm)")
     per_branch = defaultdict(Counter)
@@ -510,7 +519,7 @@ def print_project(sessions: list, streams: list, t0: float, t1: float, long_wait
     own = {s["id"] for s in sessions}
     for step in steps:
         low, high = bisect.bisect_left(stream_at, step["at"] - 120), bisect.bisect_right(stream_at, step["at"] + 120)
-        others = {streams[i][1] for i in range(low, high)} - own
+        others = {streams[i][1] for i in range(low, high) if streams[i][1].split("/")[0] not in own}
         groups["0" if not others else "1-2" if len(others) <= 2 else "3+"].append(step)
     print("    latency by other streams with a request within two minutes: n | median s")
     for name in ("0", "1-2", "3+"):
