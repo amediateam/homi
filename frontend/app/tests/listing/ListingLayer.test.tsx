@@ -437,6 +437,7 @@ describe("ListingLayer (WP-26, D-20)", () => {
       telegramBack();
       expect(leaving()).toBe(true);
       expect(overlay().className).toContain("animate-listing-out");
+      expect(overlay().className).not.toContain("animate-listing-in");
       expect(overlay().className).toContain("pointer-events-none");
       expect(state.navBack).not.toHaveBeenCalled();
 
@@ -461,6 +462,16 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       expect(state.navReplace.mock.calls).toEqual([["/"]]);
       expect(state.navBack).not.toHaveBeenCalled();
+    });
+
+    it("an overlay copy at depth 0 (over a standalone copy) changes the route at once, without the leave", async () => {
+      state.depth = 0;
+      await mount();
+
+      telegramBack();
+
+      expect(leaving()).toBe(false);
+      expect(state.navReplace.mock.calls).toEqual([["/"]]);
     });
 
     it("takes Telegram's Back only at its own address: not while a child route is open", async () => {
@@ -532,6 +543,34 @@ describe("ListingLayer (WP-26, D-20)", () => {
       act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
 
       expect(state.navBack).toHaveBeenCalledTimes(2);
+    });
+
+    it("a replace (depth 0) is never released: the layer stays faded and latched while the feed loads", async () => {
+      state.depth = 0;
+      await mount({ presentation: "standalone" });
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navReplace).toHaveBeenCalledTimes(1);
+
+      act(() => vi.advanceTimersByTime(LISTING_CLOSE_SETTLE_MS * 3));
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(leaving()).toBe(true);
+      expect(state.navReplace).toHaveBeenCalledTimes(1);
+    });
+
+    it("a step back whose address changed is not released, however long the page takes", async () => {
+      await mount();
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+      window.history.pushState(null, "", "/ru?landed=1");
+
+      act(() => vi.advanceTimersByTime(LISTING_CLOSE_SETTLE_MS));
+
+      expect(leaving()).toBe(true);
+      window.history.replaceState(null, "", "/");
     });
 
     it("«Смотреть свежие» of a missing listing closes through the same path, once", async () => {

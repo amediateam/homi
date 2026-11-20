@@ -199,7 +199,8 @@ describe("rules of the stylesheet", () => {
   it("moves the listing layer as legacy: in from 24 % over 0.25 s, out over 0.2 s ease-in and held; none under lite (WP-36)", () => {
     const motion = css["motion.css"].replace(/\/\*[\s\S]*?\*\//g, "");
     expect(motion).toMatch(/@keyframes listing-in\s*\{\s*from\s*\{\s*opacity: 0;\s*transform: translateX\(24%\);\s*\}\s*\}/);
-    expect(motion).toMatch(/@keyframes listing-out\s*\{\s*to\s*\{\s*opacity: 0;\s*transform: translateX\(24%\);\s*\}\s*\}/);
+    // The leave moves the insets: a transform would make the scrolling layer the containing block of its fixed bar.
+    expect(motion).toMatch(/@keyframes listing-out\s*\{\s*to\s*\{\s*opacity: 0;\s*left: 24%;\s*right: -24%;\s*\}\s*\}/);
     const theme = css["theme.css"].replace(/\/\*[\s\S]*?\*\//g, "");
     expect(theme).toMatch(/--animate-listing-in: listing-in var\(--dur-fast\) var\(--ease-ios\);/);
     expect(theme).toMatch(/--animate-listing-out: listing-out 0\.2s ease-in forwards;/);

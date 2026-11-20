@@ -154,6 +154,17 @@ for (const mode of ["cookie", "header"] as const) {
       expect(actions[1].postData() ?? "").toContain(`{"number":${LISTING}}`);
     });
 
+    test("hide on a listing loaded directly: the sheet and the listing close to the feed in one move (WP-36)", async ({ page }) => {
+      await open(page, mode, `/listing/${LISTING}`);
+      await loaded(page, LISTING);
+      await openMenu(page, LISTING);
+
+      await row(page, "hide").click();
+      await expect(appToast(page)).toContainText("Объявление скрыто");
+      await onFeed(page);
+      await expect(card(page, LISTING)).toHaveCount(0);
+    });
+
     test("block: every listing of the author leaves the feed; the toast names the author by the server's label", async ({ page }) => {
       await open(page, mode);
       await expect(card(page, LISTING)).toBeVisible();

@@ -57,6 +57,7 @@ export const labelTables = {
     full: "noAccess.title.full",
     blocked: "noAccess.title.blocked",
     join: "noAccess.title.join",
+    paused: "noAccess.title.paused",
   },
   noAccessText: {
     private: "noAccess.text.private",
@@ -64,6 +65,7 @@ export const labelTables = {
     full: "noAccess.text.full",
     blocked: "noAccess.text.blocked",
     join: "noAccess.text.join",
+    paused: "noAccess.text.paused",
   },
 } as const satisfies Record<string, Record<string, MessageKey>>;
 

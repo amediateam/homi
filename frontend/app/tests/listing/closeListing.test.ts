@@ -105,7 +105,7 @@ describe("leaveListingRoute (WP-36)", () => {
     nav.push("/listing/100001");
     const landed = popped();
 
-    leaveListingRoute();
+    expect(leaveListingRoute()).toBe("back");
     await landed;
 
     expect(router.back).toHaveBeenCalledTimes(1);
@@ -116,7 +116,7 @@ describe("leaveListingRoute (WP-36)", () => {
   it("replaces a listing loaded directly (depth 0) with the feed", async () => {
     const { leaveListingRoute } = await fresh("/ru/listing/100001");
 
-    leaveListingRoute();
+    expect(leaveListingRoute()).toBe("replace");
 
     expect(router.back).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
@@ -220,14 +220,29 @@ describe("closeListing", () => {
     expect(history.depth()).toBe(0);
   });
 
-  it("a listing loaded directly: back to it, then the layer's close replaces it with the feed", async () => {
+  it("a listing loaded directly: the sheet and the listing in one move, then the feed replaces it, without the layer's close", async () => {
+    // The sheet's soft push opened an overlay copy over the standalone one: the step back hides the copy whose close
+    // this would be (review of WP-36), so the old single move stays.
     const loaded = await fresh("/ru/listing/100001");
     loaded.nav.push("/listing/100001/actions");
     const { close } = layerClose(loaded);
 
     await loaded.closeListing(null, close);
 
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
+    expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
+    expect(here()).toBe("/ru");
+  });
+
+  it("a listing loaded directly with the report step open: the same single move", async () => {
+    const loaded = await fresh("/ru/listing/100001");
+    loaded.nav.push("/listing/100001/actions");
+    openStep(loaded.history, "report");
+    const { close } = layerClose(loaded);
+
+    await loaded.closeListing("report", close);
+
+    expect(close).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
     expect(here()).toBe("/ru");
   });

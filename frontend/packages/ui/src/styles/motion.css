@@ -62,8 +62,10 @@
  * The listing layer (WP-36, legacy `.listing-layer` since `index-CBlEKxdL.js`, `03` SCR-018): it enters from 24 % to
  * the right, faded in, over 0.25 s, and leaves the same way over 0.2 s ease-in. The entrance sets no fill mode, as
  * `subpage-in`, so a swipe back moves the layer by its inline transform; the leave holds its end state until the
- * route change removes the layer. Lite graphics stop both (lite.css), as reduced motion does (below); the app then
- * closes at once.
+ * route change removes the layer. The leave moves the layer's insets, not a transform: the layer scrolls itself, and
+ * a transform would make it the containing block of its fixed children (the CTA bar, the fallback cross), which
+ * would then jump by the scroll offset; the entrance starts at the top, where that cannot show. Lite graphics stop
+ * both (lite.css), as reduced motion does (below); the app then closes at once.
  */
 @keyframes listing-in {
   from {
@@ -75,7 +77,8 @@
 @keyframes listing-out {
   to {
     opacity: 0;
-    transform: translateX(24%);
+    left: 24%;
+    right: -24%;
   }
 }
 

@@ -279,8 +279,9 @@ for (const mode of ["cookie", "header"] as const) {
       await nothingAsked(page, (request) => new URL(request.url()).pathname === "/bff/listings");
       expect(feedReads).toEqual([]);
 
+      // Opened again: the earlier opening's screen can stay hidden in the layer beside the new one, so the visible one.
       await softNavigate(page, "/ru/listing/999404");
-      await expect(stateOf(page, 999404)).toHaveAttribute("data-listing-state", "not_found");
+      await expect(layer(page, 999404).locator('[data-listing-state="not_found"]').filter({ visible: true })).toBeVisible();
       await press(page, "backButtonClicked");
       await onFeed(page);
 
@@ -420,3 +421,41 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 }
+
+test.describe("listing open: the leave (WP-36)", () => {
+  test("a scrolled listing leaves with its CTA bar at the bottom of the screen, then the feed shows", async ({ page }) => {
+    await open(page, "cookie");
+    await expect(cards(page).first()).toBeVisible();
+    const number = Number(await cards(page).first().getAttribute("data-listing"));
+    await card(page, number).locator("a").click();
+    await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
+    await layer(page, number).evaluate((root) => {
+      const scroller = root.closest<HTMLElement>('[data-slot="route-overlay"]')!;
+      scroller.scrollTop = 600;
+    });
+
+    // Back, then the leave held half-way: the fixed bar must not move with the layer's scroll.
+    const [bottom, height] = await page.evaluate(
+      () =>
+        new Promise<[number, number]>((resolve) => {
+          (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked");
+          const check = () => {
+            const overlay = document.querySelector<HTMLElement>('[data-slot="route-overlay"][data-leaving]');
+            if (overlay === null) {
+              requestAnimationFrame(check);
+              return;
+            }
+            for (const animation of overlay.getAnimations()) {
+              animation.pause();
+              animation.currentTime = 100;
+            }
+            resolve([overlay.querySelector("[data-cta]")!.getBoundingClientRect().bottom, window.innerHeight]);
+          };
+          check();
+        }),
+    );
+    expect(Math.abs(bottom - height)).toBeLessThan(2);
+
+    await onFeed(page);
+  });
+});

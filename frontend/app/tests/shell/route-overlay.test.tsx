@@ -135,6 +135,7 @@ describe("RouteOverlay (the listing layer)", () => {
 
       expect(layer().hasAttribute("data-leaving")).toBe(true);
       expect(layer().className).toContain("animate-listing-out");
+      expect(layer().className).not.toContain("animate-listing-in");
       expect(layer().className).toContain("pointer-events-none");
     });
 

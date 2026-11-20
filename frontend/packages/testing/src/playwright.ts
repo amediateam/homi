@@ -186,11 +186,8 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
 /** The stub catalogue's photos (WP-12): `{media}/stub/<number>/<n>[.s].jpg?…` under `MEDIA_PUBLIC_URL` of `backend/.env.example`. */
 export const STUB_MEDIA = /^https:\/\/cdn\.homi\.loc\/stub\//;
 
-/**
- * An 8 × 6 grey baseline JPEG of 338 bytes: an `<img>` answered with it decodes, so its `naturalWidth` is 8. Opaque,
- * so a spec that answers map tiles with it can see whether a control is painted above the map (WP-36).
- */
-export const STUB_JPEG = Buffer.from(
+/** An 8 × 6 grey baseline JPEG of 338 bytes: an `<img>` answered with it decodes, so its `naturalWidth` is 8. */
+const STUB_JPEG = Buffer.from(
   "/9j/4AAQSkZJRgABAQAASABIAAD/wAALCAAGAAgBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9sAQwAJCQkJCQkQCQkQFhAQEBYeFhYWFh4mHh4eHh4mLiYmJiYmJi4uLi4uLi4uNzc3Nzc3QEBAQEBISEhISEhISEhI/90ABAAB/9oACAEBAAA/APRK/9k=",
   "base64",
 );

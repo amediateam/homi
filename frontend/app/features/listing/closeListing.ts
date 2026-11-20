@@ -22,14 +22,15 @@ export function listingLeavePlays(): boolean {
 /**
  * The route change that closes the listing layer, read from the live stack (it may run after an await): one step back
  * when the app pushed a page below, else the replace to the listing's parent, the feed — what `back()` of `useBack()`
- * does at the listing's own address.
+ * does at the listing's own address. Says which it made: only a history step can be refused by the client.
  */
-export function leaveListingRoute(): void {
+export function leaveListingRoute(): "back" | "replace" {
   if (depth() > 0) {
     nav.back();
-  } else {
-    nav.replace(routes.feed());
+    return "back";
   }
+  nav.replace(routes.feed());
+  return "replace";
 }
 
 /**
@@ -58,16 +59,22 @@ export async function closeActions(number: number, step: string | null): Promise
 
 /**
  * Closes the actions sheet, its steps and the listing (WP-26: after hide, block, `rented` and a `fraud` report that
- * hid the listing), back to the page the listing was opened from. The sheet and its steps go first, in one step back
- * that is awaited (two history changes in one tick collapse into one); then `close`, the listing layer's own close
- * (`ListingLayerContext`), plays the leave and changes the route (WP-36). When the app's history holds fewer entries
- * than the sheet (a direct load), the address is replaced with the feed at once, without a leave. History never grows.
+ * hid the listing), back to the page the listing was opened from. When the app pushed the listing over a page, the
+ * sheet and its steps go first, in one step back that is awaited (two history changes in one tick collapse into one);
+ * then `close`, the listing layer's own close (`ListingLayerContext`), plays the leave and changes the route (WP-36).
+ * When the listing itself was loaded directly (the app's history holds no page below it), the copy under the sheet is
+ * not the one whose `close` this is — the sheet's soft push opened an overlay copy over the standalone one — so the
+ * sheet and the listing go in one move without a leave and the feed replaces the address, as before WP-36. History
+ * never grows.
  */
 export async function closeListing(step: string | null, close: () => void): Promise<void> {
-  const steps = stepLayersOf(step) + 1;
-  if ((await backBy(steps)) < steps) {
-    nav.replace(routes.feed());
+  const sheet = stepLayersOf(step) + 1;
+  if (depth() < sheet + 1) {
+    if ((await backBy(sheet + 1)) < sheet + 1) {
+      nav.replace(routes.feed());
+    }
     return;
   }
+  await backBy(sheet);
   close();
 }

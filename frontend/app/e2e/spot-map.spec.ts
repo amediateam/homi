@@ -1,4 +1,4 @@
-import { expect, launchApp, STUB_JPEG, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
 import type { CDPSession, Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -494,53 +494,54 @@ for (const engine of ENGINES) {
 }
 
 /**
- * Whether `control` is painted above everything under it: hiding it changes the pixels of its box. The map is drawn on
- * opaque tiles first, so a control that a map pane covers leaves its box unchanged when hidden.
+ * The nearest stacking context around the Leaflet map pane inside `host`, described by its `data-*` names: the element
+ * whose z-order Leaflet's panes (z-index 200 … 700) take part in.
  */
-async function paintedOnTop(page: Page, control: Locator): Promise<boolean> {
-  const box = await control.boundingBox();
-  if (box === null) {
-    throw new Error("the control has no box");
-  }
-  const shown = await page.screenshot({ clip: box, animations: "disabled" });
-  await control.evaluate((element: HTMLElement) => element.style.setProperty("visibility", "hidden"));
-  const hidden = await page.screenshot({ clip: box, animations: "disabled" });
-  await control.evaluate((element: HTMLElement) => element.style.removeProperty("visibility"));
-  return !shown.equals(hidden);
+function paneContext(host: Locator): Promise<string> {
+  return host.locator(".leaflet-map-pane").evaluate((pane) => {
+    for (let node = pane.parentElement; node !== null; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      const positioned = style.position !== "static";
+      const creates =
+        style.position === "fixed" ||
+        style.position === "sticky" ||
+        (positioned && style.zIndex !== "auto") ||
+        style.isolation === "isolate" ||
+        Number(style.opacity) < 1 ||
+        style.transform !== "none" ||
+        style.filter !== "none" ||
+        style.backdropFilter !== "none" ||
+        /paint|layout|strict|content/.test(style.contain);
+      if (creates) {
+        return Object.keys(node.dataset).join(" ") || node.tagName.toLowerCase();
+      }
+    }
+    return "root";
+  });
 }
 
 /**
- * Row 10 of the built code behind the pin (WP-36): Leaflet's panes carry z-indices of 200 … 700 of their own, so
- * without a stacking context around the map they paint over the mini map's expand chip and the fullscreen controls,
- * which follow the map in the document (a tap still reaches them: the map's box takes no pointer events, and the
- * panes' own boxes are empty). Opaque tiles make the cover visible.
+ * Row 10 of the built code behind the pin (WP-36): Leaflet's panes carry z-indices of their own (the map pane 400), so
+ * without a stacking context around the map they paint over what follows it — the mini map's expand chip, the
+ * listing's CTA bar, and the whole fullscreen map (z-index 100) opened inside the same listing layer; on the
+ * fullscreen map over its ×, «Где я», attribution and card. A tap still reached the controls (the map's box takes no
+ * pointer events), so the earlier tests passed. Each map's box is now that stacking context (`data-spot-map-frame`).
  */
 test.describe("spot map on leaflet: the controls above the panes", () => {
   const leaflet = ENGINES.find((engine) => engine.name === "leaflet")!;
 
-  test("the expand chip, the close, «Где я» and the attribution are painted above the map, and the chip opens the fullscreen map", async ({ page }) => {
-    await page.route(/^https:\/\/tile\.openstreetmap\.org\//, (route) =>
-      route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "access-control-allow-origin": "*" }, body: STUB_JPEG }),
-    );
+  test("each map's panes stay inside its own box; the expand chip opens the fullscreen map", async ({ page }) => {
     await openOverFeed(page, leaflet);
     await miniReady(page, leaflet);
     const box = mini(page, LISTING);
-    await expect(mapView(box).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+    expect(await paneContext(box)).toBe("spotMapFrame");
 
-    const chip = box.locator("[data-spot-expand]");
-    expect(await paintedOnTop(page, chip), "the expand chip").toBe(true);
-
-    await chip.click();
+    await box.locator("[data-spot-expand]").click();
     await expect(page).toHaveURL(new RegExp(`/ru/listing/${LISTING}/location$`));
     await fullscreenReady(page, leaflet);
-    await expect(mapView(fullscreen(page)).locator("img.leaflet-tile-loaded").first()).toBeVisible();
-    for (const [name, control] of [
-      ["close", fullscreen(page).getByRole("button", { name: "Закрыть" })],
-      ["locate", fullscreen(page).getByRole("button", { name: "Где я" })],
-      ["attribution", fullscreen(page).locator("[data-map-attribution]")],
-    ] as const) {
-      expect(await paintedOnTop(page, control), name).toBe(true);
-    }
+    expect(await paneContext(fullscreen(page))).toBe("spotMapFrame");
+    // The mini map's panes, still in the listing layer under the fullscreen map, stay inside the mini map's box.
+    expect(await paneContext(box)).toBe("spotMapFrame");
 
     await fullscreen(page).getByRole("button", { name: "Закрыть" }).click();
     await onListing(page, LISTING);

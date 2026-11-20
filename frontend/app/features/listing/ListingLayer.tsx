@@ -46,8 +46,9 @@ function overlayCopyShown(): boolean {
 }
 
 /**
- * How long after its route change a layer that is still shown takes taps and Back again: a history step the client
- * refused must not leave it latched (or faded out) for good. Longer than `backBy`'s wait for its `popstate`.
+ * How long after its step back a layer whose address has not changed takes taps and Back again: a history step the
+ * client refused must not leave it latched (or faded out) for good. Longer than `backBy`'s wait for its `popstate`.
+ * A replace is never released: Next keeps the old address until the new page is there, however long that takes.
  */
 export const LISTING_CLOSE_SETTLE_MS = 1000;
 
@@ -74,9 +75,10 @@ export const LISTING_CLOSE_SETTLE_MS = 1000;
  * child route is open and no overlay copy covers this standalone one), the fallback cross, «Смотреть свежие» and
  * `closeListing()` all end in this one function, once per opening. It plays the leave (`animate-listing-out`, 200 ms)
  * and then changes the route (`leaveListingRoute`); in lite graphics, under reduced motion or after a swipe, which has
- * already slid the layer out, it changes the route at once. When the address or the app's history moved during the
- * leave (a new opening, a browser Back), the leave is cancelled and the route is left alone; a hidden or unmounted
- * layer drops a pending leave. The overlay copy enters with `animate-listing-in`; a direct load does not.
+ * already slid the layer out, it changes the route at once, and so does an overlay copy at the app's depth 0, which
+ * lies over a standalone copy rather than over the page Back reveals. When the address or the app's history moved
+ * during the leave (a new opening, a browser Back), the leave is cancelled and the route is left alone; a hidden or
+ * unmounted layer drops a pending leave. The overlay copy enters with `animate-listing-in`; a direct load does not.
  */
 export function ListingLayer({ params, presentation, screen, children }: ListingLayerProps) {
   const raw = use(params).number;
@@ -107,11 +109,16 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
   }, []);
 
   const changeRoute = useCallback(() => {
-    leaveListingRoute();
+    const from = window.location.href;
+    if (leaveListingRoute() !== "back") {
+      return;
+    }
     settleTimer.current = setTimeout(() => {
       settleTimer.current = null;
-      closing.current = false;
-      setLeaving(false);
+      if (window.location.href === from) {
+        closing.current = false;
+        setLeaving(false);
+      }
     }, LISTING_CLOSE_SETTLE_MS);
   }, []);
 
@@ -121,7 +128,10 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
         return;
       }
       closing.current = true;
-      if (kind === "swipe" || !listingLeavePlays()) {
+      // An overlay copy at depth 0 (a replace onto a listing address: a merged number, a depth-0 close of a child)
+      // lies over a standalone copy, not over what Back reveals: no leave there.
+      const nothingBelow = presentation === "layer" && historyDepth() === 0;
+      if (kind === "swipe" || nothingBelow || !listingLeavePlays()) {
         changeRoute();
         return;
       }
@@ -138,7 +148,7 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
         setLeaving(false);
       }, LISTING_LEAVE_MS);
     },
-    [changeRoute],
+    [changeRoute, presentation],
   );
 
   // Hidden (Activity) or unmounted, an overlay copy no longer counts; the latch below stays set.
