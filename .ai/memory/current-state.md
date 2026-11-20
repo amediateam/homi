@@ -333,7 +333,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     shown launch listing as `<cyrb53 of the hash>:<number>` and `launchTarget` skips a marked one. `app_launch` has `tg`.
   - The spot map's boxes are `isolate` (`data-spot-map-frame`): Leaflet's panes had painted over the controls and,
     from the mini map, over the whole fullscreen map. The swipe's own jump of the fixed children is KI-67.
-  - Tests: `pnpm test` app 217 files, 3 628 tests on `5ef3961`; e2e each alone on `5ef3961`: `listing-open` 21,
+  - Tests: `make ci-frontend` exit 0 on `028a144` (app 217 files, 3 629 tests); e2e each alone on `5ef3961`: `listing-open` 21,
     `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6,
     `map` 18 passed (the other specs on `006cb5a`; the radar ones need radars on, KI-65).
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.

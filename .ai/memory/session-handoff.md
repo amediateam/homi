@@ -13,15 +13,15 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-20: «Дальше по очереди WP-34»; «Продолжим по плану»; «сливай #92»; «Продолжим» (WP-36); «запустил nginx» (the developer started nginx by hand for the e2e runs).
 
 ## State at handoff
-- `main` = `989d041` (#93). Open: #94, branch `wp-36-catch-up-listing-gates-shell`: `006cb5a` code and tests, `5ef3961` review fixes, then the docs and memory commit.
+- `main` = `989d041` (#93). Open: #94, branch `wp-36-catch-up-listing-gates-shell`: `006cb5a` code and tests, `5ef3961` review fixes, `c9ecd02` docs and memory, `028a144` the leave after a slid-back swipe and the animations read in the browser, then the final docs commit.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`. Ignored Playwright output in `frontend/test-results/` and `frontend/playwright-report/`.
-- Verify: `cd frontend && pnpm test` (app 217 files, 3 628 tests on `5ef3961`); e2e each spec alone, e.g. `pnpm exec playwright test --project=miniapp app/e2e/listing-open.spec.ts` (nginx must be up: `sudo nginx`, by hand).
+- Verify: `make ci-frontend` (exit 0 on `028a144`, app 217 files, 3 629 tests); e2e each spec alone, e.g. `pnpm exec playwright test --project=miniapp app/e2e/listing-open.spec.ts` (nginx must be up: `sudo nginx`, by hand).
 
 ## Done this session
 - **WP-36** (#94): the "gone" and day-limit states (`ApiError.reason`, `ApiFailure.reason: "daily"`); one close of the listing layer (`ListingLayer`'s `close`, `takeOverBack`, the leave by insets, the overlay copy's entrance); `FallbackClose`; the mini chrome under a listing over the feed; `paused`; `s_seo_en` / `s_seo_uz`; the launch mark in `sessionStorage`; `tg` in `app_launch`; `body.subpage-open`; the spot map's boxes `isolate`. Baseline rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 closed; the parity notes of WP-21 … WP-28 and WP-33 say "WP-36 closed it"; WP-35's row is WAITING.
   - Row 10 checked on Leaflet with red tiles: the panes (z-index 400) covered the controls and the mini map covered the fullscreen map; `isolate` fixes it; the e2e case fails without it (checked).
   - Review subagent of `006cb5a`: the direct-load «Скрыть» regression, the leave's transform moving the CTA bar, the depth-0 leave flash, the slow-replace settle, the i18n tables — fixed in `5ef3961`. Running the tests also showed `cn` kept both animation classes; fixed. The swipe's own jump is KI-67.
-  - Checks: `pnpm test` every project green; `pnpm -r lint`, `pnpm -r typecheck` exit 0; six mutation checks fail their tests; e2e on `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed; 12 more specs green on `006cb5a` (WP-36 Handoff lists them).
+  - Checks: `make ci-frontend` exit 0 on `028a144`; e2e on `028a144`: `listing-open` 21 (with `listing-in` / `listing-out` read in the browser), `shell` 19, `listing-actions` 22, `spot-map` 14, `back` 11; `pnpm -r lint`, `pnpm -r typecheck` exit 0; six mutation checks fail their tests; e2e on `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed; 12 more specs green on `006cb5a` (WP-36 Handoff lists them).
   - Not green here: `foundation` (its radar case), `feed-radar`, `follow-nudge`, `return-nudge` need radars on (KI-65); `radar-forms`, `radar-subscribe`, `radars` not run.
 
 ## Waiting for the developer (do NOT start on your own)

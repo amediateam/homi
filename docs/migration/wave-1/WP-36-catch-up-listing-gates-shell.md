@@ -384,10 +384,12 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   listing on screen (a regression); the leave's transform moved the CTA bar and the cross on a scrolled listing; an
   overlay copy at depth 0 faded out to its standalone twin; the settle could show the layer again during a slow
   replace; the `@homi/i18n` no-access tables lacked `paused`. Running the tests also showed that `cn` kept both
-  animation classes while leaving; the entrance class is now dropped. Left as legacy: the layer takes no taps while
+  animation classes while leaving; the entrance class is now dropped. A second look found that `useSwipeBack` leaves
+  `animation: none` inline after a swipe that slid back, which would have stopped the leave; `RouteOverlay` clears it
+  (`028a144`). Left as legacy: the layer takes no taps while
   it leaves. Left for later: the swipe's same jump of the fixed children (KI-67, structural).
-- **Checks.** `pnpm test` (every project): app 217 files, 3 628 tests passed on `5ef3961`; `pnpm -r lint` and `pnpm -r
-  typecheck` exit 0. Mutation checks: `closeListing` without the direct-load rule, the layer without the depth-0 rule,
+- **Checks.** `make ci-frontend` exit 0 on `028a144` (types, lint, typecheck, the three builds; app 217 files, 3 629
+  tests); before it `pnpm test` app 3 628 on `5ef3961`. Mutation checks: `closeListing` without the direct-load rule, the layer without the depth-0 rule,
   `listingOpened` always false, `failureOf` keeping `daily` on any status, the chrome rule without the listing, and
   `NO_SOURCE` without `paused` each fail their new tests.
 - **Local end-to-end runs**, one build per batch, each spec alone (KI-32), cookie and header mode where the spec has
@@ -398,7 +400,9 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   `foundation` 18 of 19, `feed-radar` 0 of 10, `follow-nudge` 2 of 12 and `return-nudge` 0 of 16 failed only where
   they need radars, which are off on this machine (KI-65); `radar-forms`, `radar-subscribe` and `radars` were not run
   (KI-65). On `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10,
-  `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed.
+  `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed. On `028a144` (the leave after a slid-back swipe, the
+  animations read in the browser): `listing-open` 21, `shell` 19, `listing-actions` 22, `spot-map` 14, `back` 11
+  passed.
 - **Left for the production track:** the regular deploy (no environment key, no migration), then the acceptance
   checklist inside Telegram on staging on iOS, Android, Desktop and Web, including a reload inside one launch and the
   spot map on a client that falls to Leaflet.
