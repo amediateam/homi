@@ -105,10 +105,10 @@ styles per phase (busy: clipped to a 48 px pill `inset(0 calc(50% - 24px) round 
 in 0.7 s; done: full width, `--good`, the tick drawn in 0.4 s after 0.15 s; the clip transition 0.66 s on the spring;
 no shrink and a still tick under reduced motion).
 
-- Buttons: «Сохранить» of the radar editor and of the new radar (the primary of `FiltersFooter` in the two radar
-  modes) and «Включить радар» (its secondary in search mode).
-- Order, legacy's: the answer arrives → success haptic → `done` and the 900 ms wait → the sheet closes → the success
-  toast in the app's host. `subscribe` and `saveEdit` (`features/radars/subscribe.ts`) take an optional `confirm` and
+- Buttons: the primary of `FiltersFooter` in the two radar modes — «Сохранить» of the radar editor, «Включить радар»
+  of the new radar — and «Включить радар», its secondary in search mode.
+- Order, legacy's: the answer arrives → success haptic → `done` and the 900 ms wait → the sheet closes and the
+  success toast shows in the app's host in the same step. `subscribe` and `saveEdit` (`features/radars/subscribe.ts`) take an optional `confirm` and
   await it before they show the toast and resolve; the sheets call `back()` after they resolve, as built.
 - Not for an already active radar (it closes at once with `toast.alreadyOn`), not on an error (back to `idle`, the
   sheet stays open with its toast in the sheet's scope).
@@ -264,7 +264,7 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
       swipe, under reduced motion or in lite graphics.
 - [ ] The radar sheet closed for a listing opened from it plays no leave and re-opens as built.
 - [ ] «Показать N», «Сейчас подходит: N» and the radar flow roll; 0 and none keep their texts.
-- [ ] «Сохранить» and «Включить радар» go spinner → tick → close → toast; an already active radar closes at once; an
+- [ ] «Сохранить» and both «Включить радар» go spinner → tick → close with the toast; an already active radar closes at once; an
       error leaves the sheet open.
 - [ ] The heart springs on every tap and bursts only on an add.
 - [ ] The countdown ring runs 6 s on every action toast.

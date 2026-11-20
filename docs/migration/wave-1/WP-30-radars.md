@@ -411,7 +411,7 @@ Callers: the filters footer shows ✓ «Радар включён» instead of t
 filters exists, and disables the button while submitting; the sheet closes on `ok` only while the user is still on
 it (`currentAddress()` read at the tap and with the answer), so a sheet left meanwhile (×, Back, «Показать») is not
 stepped back once more. The few-results note hides its radar button when such a radar exists. Since legacy release
-`index-YX9bFVws.js` «Сохранить» and «Включить радар» go spinner → tick (900 ms) → close → toast, except for an already
+`index-YX9bFVws.js` «Сохранить» and «Включить радар» go spinner → tick (900 ms) → close with the toast, except for an already
 active radar and on an error (`03` BR-APP-114; *added by the intake of `index-YX9bFVws.js`*; row 48, WP-39).
 
 ### Radar tab (SCR-026, SCR-027)
