@@ -66,7 +66,7 @@ All paths are under `$KVADRO_ROOT` (an SVN working copy, revision 18, last chang
 | `demo/app/tools/` | `parity/` (28 + 35 + 16 scenarios), `recover/`, `sync/`, `dev/` | Parity harness (headless Chrome, prod snapshot vs rebuilt `dist/`, identical mocks); decompile pipeline; release-sync engine; dev-only Telegram emulation | Recovery team |
 | `demo/landing/site/` | 4 HTML, 4 JS, 2 CSS, images | Prod files 1:1 (`index.html`, `privacy.html`, `uz/`, `en/`, `landing.js`, `landing-i18n.js`, `stats.js`, `miniapp.css`, `miniapp-i18n.js`) | Mirror |
 | `demo/landing/docs/` | `RECOVERY.md`, `CHANGELOG.md` | File map, backend contract, kept quirks | Recovery team |
-| `demo/landing/tools/` | parity (40 scenarios), sync, fixtures | Landing parity and sync engine; fixture data | Recovery team |
+| `demo/landing/tools/` | parity (47 scenarios since landing release `d9bbbc696337`; 40 at the audit), sync, fixtures | Landing parity and sync engine; fixture data | Recovery team |
 | `.claude/commands/` | `sync_frontend_app.md`, `sync_frontend_landing.md` | Commands that port new prod releases into the recovery repo and update `docs/api.md` | Recovery team |
 
 `node_modules/` (≈ 296 MB in `demo/app`, plus `demo/landing`) and `dist/` are installed or generated. They are

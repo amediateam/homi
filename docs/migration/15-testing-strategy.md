@@ -88,7 +88,7 @@ output stays in the record for history.
 | O2 | Legacy client code (decompiled Mini App, landing JS) | what the client parses and what crashes it (LB-APP-002, LB-API-009, LB-API-011) | decompiled, not original source | strictness rules, enum safety (§3.12) |
 | O3 | Legacy Mini App production build as a reference client | the old client works end to end on HOMI: DOM, `<html class>`, `lang`, API request set | needs a runner (approval) and data seeded to mirror the mocks | §2.5 |
 | O4 | Parity mocks (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs`, `mocks-filters.mjs`, `gl-parity.mjs`) | realistic shapes, scenario steps, fault cases (403, 500, 204) | inferred from code, not recorded (`$KVADRO_ROOT/CLAUDE.md:34`); values invented | fixtures, reference-client seed |
-| O5 | Landing production mirror (`$KVADRO_ROOT/demo/landing/site/`) and its 40 scenarios with fixtures (`$KVADRO_ROOT/demo/landing/tools/parity/`) | landing DOM, language rules, CSP hashes, landing-data schema | landing data is a snapshot; SEO pages are not mirrored (25 of 1 008 sampled, Q-SEO-001) | §2.9 |
+| O5 | Landing production mirror (`$KVADRO_ROOT/demo/landing/site/`) and its 47 scenarios (40 at the audit; landing intake) with fixtures (`$KVADRO_ROOT/demo/landing/tools/parity/`) | landing DOM, language rules, CSP hashes, landing-data schema | landing data is a snapshot; SEO pages are not mirrored (25 of 1 008 sampled, Q-SEO-001) | §2.9 |
 | O6 | Bot transcripts (`$KVADRO_ROOT/docs/telegram-bot.md`, `04`) | texts (TXT-BOT-…), keyboards, flows, toasts | pushes, digests and quiet hours never observed (`04` §5); `callback_data` grammar unknown (Q-BOT-017) | bot conversation tests (§2.6) |
 | O7 | Legacy database dump (`14`) | carried-over data: counts, fingerprints, relations, business checks | blocked by P1–P5 (`14` §1.1) | migration validation (§2.10) |
 | O8 | Read-only recording of production responses with the owner-approved test account (§1.6) | real formats and statuses (Q-API-022, Q-API-003, Q-API-007) | **needs developer approval: touches production**; one account's view | fixture refresh |
@@ -188,7 +188,7 @@ empty; the affected cases stay spec-tested.
 | Bot conversation | Updates in, Bot API calls out | Pest + `Http::fake` (existing) | `backend/tests/Feature/Bot/` | PR | KV-QA-003, KV-QA-009 |
 | E2E, new clients | New Mini App, landing, ARM | Playwright or the Pest browser plugin — PROPOSED (HANDOFF T8); Dusk (existing) as interim smoke | `frontend/*`, `backend/tests/Browser/` | nightly, pre-release | T8; KV-QA-022 (device pass) |
 | Visual regression | Key states look the same | screenshots from the KV-QA-010 runner; diff tool PROPOSED | `docs/migration/visual-baseline/` | on demand, pre-release | KV-QA-019 |
-| Landing and public URLs | 40 landing scenarios, 62 URL patterns, 1 008 SEO URLs, deep links | KV-QA-010 runner; Pest `Smoke` suite with the HTTP client (existing) | `backend/tests/Smoke/` | nightly, pre-release | KV-QA-013, KV-QA-014 |
+| Landing and public URLs | 47 landing scenarios, 66 URL patterns (40 and 62 at the audit; landing intake), 1 008 SEO URLs, deep links | KV-QA-010 runner; Pest `Smoke` suite with the HTTP client (existing) | `backend/tests/Smoke/` | nightly, pre-release | KV-QA-013, KV-QA-014 |
 | Migration validation | Counts, checksums, RI, business checks — and tests of those checks | Pest on PostgreSQL + the validation command (KV-DB-022) | `backend/tests/Feature/Migration/` | PR (synthetic), rehearsals | KV-QA-018 |
 | Security | The test plan of `16` §5 | Pest (existing) | `backend/tests/Feature/Security/` | PR | KV-QA-015, KV-QA-016, KV-QA-017 |
 | Performance | Feed/map p95, radar matching throughput, Telegram send rate | `Benchmark`, `EXPLAIN`, burst runner (existing); k6 PROPOSED | `backend/tests/Performance/` (not in default run) | weekly, staging | KV-QA-020 |
@@ -338,7 +338,7 @@ HOMI — it needs a scratch `npm` install (approval) and runs the decompiled sou
 
 ### 2.9 Landing, SEO and public URLs
 
-- **Landing:** the 40 legacy scenarios (`$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`, groups in `03b` §1.6)
+- **Landing:** the 47 legacy scenarios (40 at the audit; landing intake) (`$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`, groups in `03b` §1.6)
   run with base = the production mirror and candidate = the new `frontend/landing`, comparing DOM with origins
   stripped, `<html class>`, `lang`, title and description, localStorage, CSP violations and same-origin requests
   (`$KVADRO_ROOT/demo/landing/tools/parity/parity.mjs:26-83`). Expected differences follow the LB-LND decisions and
@@ -773,7 +773,7 @@ numerator / denominator, with the denominator stated and dated:
 | Endpoints with green contract tests | 34 API + the backend-served RES (RES-001, RES-002, RES-003, RES-005, RES-010 … RES-013, RES-015, RES-018 … RES-020, RES-022) | `08` |
 | Endpoints with golden fixtures | 34 | `08` |
 | Reference-client scenarios identical or DEV-mapped | data-path subset of 43 + 36 + 16 (fixed in KV-QA-011 / KV-QA-012) | legacy harness |
-| Landing scenarios identical or DEV-mapped | 40 | `03b` §1.6 |
+| Landing scenarios identical or DEV-mapped | 47 | `03b` §1.6 |
 | Bot rows / buttons / texts with a transcript assertion | 84 BOT / 76 BTN / 88 TXT-BOT | `04` |
 | Must-keep URL patterns with a regression check | 49 of 62 | `data/public-urls.json` |
 | SEO URLs answering as expected | 1 008 | `03b` §2.1 |
@@ -808,7 +808,7 @@ All `PROPOSED`. Task files: `tasks/qa/KV-QA-NNN-<slug>.md`. Order and dependenci
 | KV-QA-010 | Reference-client runner spike | runner approval (option A or B) or option C | decision recorded; scenario `feed` runs in both modes; artefact manifest committed | `PROPOSED` |
 | KV-QA-011 | Reference-client base scenarios with the mock-equivalent seed | KV-QA-010; legacy routes of the covered screens | data-path scenarios of `mocks.mjs` identical or DEV-mapped; results file written | `PROPOSED` |
 | KV-QA-012 | Reference-client filter and map scenarios | KV-QA-011 | data-path scenarios of `mocks-filters.mjs` and `gl-parity.mjs` identical or DEV-mapped | `PROPOSED` |
-| KV-QA-013 | Landing reference scenarios against the new landing | KV-QA-010; new landing; CF-010 | 40 scenarios identical or mapped to LB-LND decisions | `PROPOSED` |
+| KV-QA-013 | Landing reference scenarios against the new landing | KV-QA-010; new landing; CF-010 | 47 scenarios identical or mapped to LB-LND decisions | `PROPOSED` |
 | KV-QA-014 | Public-URL and deep-link regression suite | KV-DB-006; Q-SYS-006 | every must-keep URL pattern and the generated SEO list checked per profile; payload parser datasets green | `PROPOSED` |
 | KV-QA-015 | Security suite 1: authentication, access gate, IDOR, rate limits | KV-QA-003, KV-QA-004, KV-QA-008; T6 | `16` §5.1, §5.2, §5.7 cases implemented; generated IDOR matrix has no uncovered route | `PROPOSED` |
 | KV-QA-016 | Security suite 2: webhook, bot input, injection, media and call URLs | KV-QA-003, KV-QA-009; T1 | `16` §5.3, §5.5, §5.6 cases implemented with a synthetic payload corpus | `PROPOSED` |

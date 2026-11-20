@@ -20,6 +20,8 @@ from a catalogue value.
 
 - LND-028 (client texts: `data-l` → `innerHTML`, `data-la`, `data-tx`/`data-t`/`data-tp`, fallback to ru; 106 landing
   keys and 188 Mini App keys complete in three languages), LND-029 (server-side `/uz/`, `/en/` from `landing-i18n.js`).
+- *Since landing release `67b3942a8340` (landing intake):* `landing-i18n.js` has 146 keys per language (new `vit.*`, more `foot.*`,
+  `faq.q0`/`faq.a0`, `faq.q9`/`faq.a9`; new `meta.*` and `hero.kicker` texts); the 106 below is the audit's count.
 - Sources: `$KVADRO_ROOT/demo/landing/site/landing-i18n.js` (`window.LANDING_TEXTS`), `$KVADRO_ROOT/demo/landing/site/miniapp-i18n.js`
   (`window.MINIAPP_TEXTS`, generated — do not hand-port its chrome keys, reuse the Mini App catalogue of KV-FE-016);
   SEO templates `03b` §2.3 and BR-SEO-009 (ru), uz/en from the archive of KV-FE-007.

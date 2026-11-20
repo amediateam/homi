@@ -26,8 +26,12 @@ pages). The static assets that external caches and the JSON-LD point to — icon
 - URL-011 (robots — content in KV-FE-128), URL-013 (`/site.webmanifest`), URL-014 (`/logo.svg`, `/favicon-32.png`,
   `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`), URL-015 (`/favicon.ico`, UNVERIFIED, Q-LND-006),
   URL-016 (`/og-ru.jpg`, `/og-uz.jpg`, `/og-en.jpg`).
+- *Since landing releases `67b3942a8340` and `65998117d6ec` (landing intake):* title, description, og texts and the H1 read «Аренда и
+  продажа квартир в Ташкенте — сервис поиска жилья», og images carry `?v=20261109`, `favicon.ico` is in the mirror
+  (`site/favicon.ico`), and every page links icons of 48, 96 and 192 px (`/favicon-48.png`, `/favicon-96.png` new;
+  `index.html:30-35`).
 - Rules: BR-SEO-007 (head of every page), BR-SEO-009 (title templates, via KV-FE-102).
-- Evidence: `$KVADRO_ROOT/demo/landing/site/index.html:5-36`, `$KVADRO_ROOT/demo/landing/site/uz/index.html:1-27`,
+- Evidence: `$KVADRO_ROOT/demo/landing/site/index.html:5-36`, `$KVADRO_ROOT/demo/landing/site/uz/index.html:1-47`,
   `$KVADRO_ROOT/demo/landing/site/site.webmanifest`; `$KVADRO_ROOT/docs/seo-pages.md:139-170`.
 - Deviation: LB-LND-014 → DEV-042 (per-locale manifest).
 
@@ -42,7 +46,7 @@ pages). The static assets that external caches and the JSON-LD point to — icon
    `type: website`, `siteName: 'kvadro²'`, `url`, `title`, `description`, `images: [{url: /og-<lang>.jpg, width: 1200,
    height: 630, alt}]`, `locale`; `twitter.card: 'summary_large_image'`.
 3. Landing head (`app/[lang]/page.tsx` `generateMetadata`): titles and descriptions from `landing` `meta.title`,
-   `meta.desc` and the og description and alt of `index.html:10-16`; canonical `/`, `/uz/`, `/en/` (LND-002 behaviour,
+   `meta.desc` and the og description and alt of `index.html:11-16`; canonical `/`, `/uz/`, `/en/` (LND-002 behaviour,
    no `<base>`).
 4. `frontend/landing/components/JsonLd.tsx`: the only `dangerouslySetInnerHTML` in the app; serialises with `<`, `>`,
    `&`, U+2028 and U+2029 escaped (SEC-REQ-021; the Next guide escapes `<` only — extend it). Landing `@graph`:

@@ -16,10 +16,10 @@ is deleted at once on withdrawal, takedown or purge, and never outlives the 30-d
 
 ## Legacy reference
 
-- RES-013 (`08` lines 1390-1398): `GET /img/snap/<listing_id>.webp`, 316 files, unsigned, `robots.txt` disallows
-  `/img/snap/` and `/*/img/snap/`; producer `scripts/landing_snapshot.py` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`).
+- RES-013 (`08` lines 2544-2554): `GET /img/snap/<listing_id>.webp`, 316 files (fixture of 2026-11-08), unsigned, `robots.txt` disallows
+  `/img/snap/` and `/*/img/snap/`; producer `scripts/landing_snapshot.py` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:69-70`).
 - Robots: `$KVADRO_ROOT/demo/landing/site/robots.txt:6-8`; privacy promise «копии фото — до 30 дней» cited in
-  LB-LND-012 (`03b` lines 1666-1673, `PRV:66`).
+  LB-LND-012 (`03b` lines 2114-2123, `PRV:72`).
 - Rules: BR-API-134 (pin `photo` = `img/snap/<id>.webp`); defects LB-API-054, LB-DATA-016, LB-LND-012; DEV-012
   `PROPOSED` (signed or short-lived landing photos); SEC-014; ENT-027, ENT-054; URL-020 (public pattern).
 

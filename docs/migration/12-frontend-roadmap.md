@@ -272,7 +272,7 @@ pages, sitemap, robots and the CSV links for **S2** (FE-3a), and the re-implemen
 
 **Exit criteria.** FE-3a: every URL of the generated 1 008-page list and of `data/public-urls.json` that is owned by
 the landing app answers on staging as the URL suite (KV-QA-014) and the crawl comparison (KV-FE-176) expect: status,
-canonical, hreflang, robots, title, H1, card count, CSV link. FE-3b: the 40 landing scenarios (KV-QA-013) pass or map to
+canonical, hreflang, robots, title, H1, card count, CSV link. FE-3b: the 47 landing scenarios (40 at the audit; landing intake) (KV-QA-013) pass or map to
 an `LB-LND` decision.
 
 **Blockers.** The public statistics API, sitemap data, CSV files and landing data (KV-BE-154…KV-BE-163, `11a`);

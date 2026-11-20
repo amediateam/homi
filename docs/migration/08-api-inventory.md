@@ -49,7 +49,7 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
 | Dev proxy | `/api`, `/media`, `/tiles` → `VITE_API_PROXY \|\| https://app.kvadro.app` | `vite.config.js:49-63`; `$KVADRO_ROOT/docs/api.md:24-28` | CONFIRMED |
 | Separate API host | None: `api.`, `dev.`, `staging.`, `beta.`, `admin.` subdomains do not exist | `docs/RECOVERY.md:17` | CONFIRMED |
 | Published spec | None: `/api/openapi.json` and `/docs` → 404 | `docs/RECOVERY.md:16` | CONFIRMED |
-| Landing and SEO | `https://kvadro.app` (`/`, `/uz/`, `/en/`, SEO sections, `sitemap.xml`) | `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:52-64`; `$KVADRO_ROOT/docs/seo-pages.md:44-129` | CONFIRMED |
+| Landing and SEO | `https://kvadro.app` (`/`, `/uz/`, `/en/`, SEO sections, `sitemap.xml`) | `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:55-83`; `$KVADRO_ROOT/docs/seo-pages.md:44-129` | CONFIRMED |
 | `/media` | Served identically from `kvadro.app` and `app.kvadro.app` | `$KVADRO_ROOT/docs/seo-pages.md:385-386` | DOCUMENTED_ONLY |
 | Edge | Cloudflare in front of both hosts | `$KVADRO_ROOT/docs/about.md:116`; `$KVADRO_ROOT/docs/seo-pages.md:375-378` | DOCUMENTED_ONLY |
 
@@ -2412,7 +2412,7 @@ resources.
 
 - **Method / URL:** posthog-js 1.434.15 requests to `meta.analytics.host` (Mini App; bundled SDK chunks,
   `disable_external_dependency_loading: true`) and to `https://eu.i.posthog.com` + `https://eu-assets.i.posthog.com/static/<version>/array.js`
-  (landing and SEO pages via `stats.js`) (`src/lib/analytics.js:122-199`; `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:64`;
+  (landing and SEO pages via `stats.js`) (`src/lib/analytics.js:122-199`; `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:83`;
   `$KVADRO_ROOT/docs/about.md:115`).
 - **Auth:** PostHog project key (delivered in `meta.analytics.key` and templated into `stats.js` — value not copied).
 - **Behaviour:** Mini App: memory persistence, no pageview autocapture, web vitals, exception capture, optional
@@ -2468,8 +2468,18 @@ resources.
   (`$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:79-92` at r38; `05` TMA-048). The contract's checklist
   asks the landing to serve them and accept the mark, and its question 19 asks whether the mark is attributed
   anywhere (Doc r38:1411-1412, :1453-1454). None of the three is in the landing mirror
-  (`$KVADRO_ROOT/demo/landing/site` on 2026-11-20). — DOCUMENTED_ONLY
-- **Legacy Source:** `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25-34`, `:52-59`; `$KVADRO_ROOT/docs/about.md:330-333`.
+  (`$KVADRO_ROOT/demo/landing/site` on 2026-11-20), and none can come with a landing sync: it downloads only `/`,
+  `/uz/`, `/en/`, `/privacy.html`, `robots.txt` and their assets, never a backend-rendered page
+  (`$KVADRO_ROOT/demo/landing/tools/sync/fetch.mjs:6-8`; *landing intake*, Q-LND-012). — DOCUMENTED_ONLY
+- **Since landing release `67b3942a8340` (landing intake):** the server answers `/uz/<path with a dot>` and
+  `/en/<…>` with `301` to the path without the language prefix, even for a missing file, and any slashless path
+  without a dot in its last segment with `308` to the slashed path (query kept;
+  `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:59-64`); `favicon.ico` is served from the root. The pages link
+  backend-rendered pages that the mirror does not hold: the showcase's search and cards (`03b` URL-063, URL-064) and
+  the footer's «О сервисе» `o-servise/` (`uz/haqida/`, `en/about/`; URL-065). Since `65998117d6ec` every page links
+  icons of 48, 96 and 192 px. Since `d9bbbc696337` the HTML has no comments and `privacy.html` has a new inline-script
+  hash (`$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md:15-18`).
+- **Legacy Source:** `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:24-35`, `:57-68`; `$KVADRO_ROOT/docs/about.md:330-333`.
 - **Migration Target:** ownership in `03b-legacy-landing-seo-audit.md` (`LND-`, `URL-`); server part TBD
   (`10-target-architecture.md`).
 - **Tests:** redirects (`308`, `301`); uz/en bodies equal the text substitution of `landing-i18n.js`; CSP hashes match.
@@ -2481,12 +2491,22 @@ resources.
   (`$KVADRO_ROOT/demo/landing/site/landing.js:66-75`). Relative URL: on `/uz/`, `/en/` it resolves through
   `<base href="../">`.
 - **Auth:** none. **Producer:** backend job (`scripts/landing_snapshot.py`, `live.json` ← `app/api/landing.py`);
-  observed rewrite 02:02; `max-age=1800` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, `:68-69`).
+  observed rewrite 02:02; `max-age=1800` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:69-70`, `:87-88`).
 - **Response shape** (fixture `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/live.json`): `{now: ISO string,
   day: int, week: int, since: null, latest: {id: int, rooms: int, price_usd: int, delta: int, tone: string,
   district: string, district_code: string, area: number|null, seen_at: ISO string, link: string
   ("https://t.me/KvadroAppBot?startapp=l_<id>-web")}[], sheet: {all: {count: int, per_day: float}, demo: {count: int,
-  per_day: float}}}`. Read at `landing.js:1115`, `:2102`, `:2165`, `:2229`.
+  per_day: float}}}`. Read at `landing.js:1115`, `:2102`, `:2165`, `:2229`, `:2243`, `:2508`.
+- **Since landing release `67b3942a8340` (landing intake):** `showcase: {rent: S, sale: S}` with
+  `S = {districts: {<district_code>: int}, total: int, owners: int}` (fixture of 2026-11-12); the code reads only
+  `showcase.<deal>.districts`, for the district counts of the showcase (`landing.js:2429-2433`, `vitRender`; no block →
+  no numbers), and `now` also ages the showcase cards (`:2373-2377`). The file is now requested at load for the hero
+  count (`:2243-2245`) and when the showcase comes within two screens (`:2505-2508`). Since `d9bbbc696337`
+  `latest[]` no longer has `area: null` (backend data, not a release; `$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md:19`).
+  The parity fixtures were replaced by a snapshot of 2026-11-12 (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:93-95`).
+- **HOMI:** the v1 contract carries `showcase.{rent,sale}` of `GET /landing/live` as lists of
+  `{district_code, count}` (legacy `total` and `owners` are not read by its code and are not carried) and a nullable
+  `floor` on `GET /landing/pins` since the landing intake (`docs/api/openapi.json`).
 - **Errors:** fetch failure → retried on the next use (`landing.js:72`); the block keeps its static text.
 - **Migration Target:** same path and shape for the legacy landing; generator TBD (`10-target-architecture.md`).
 - **Tests:** schema snapshot; `latest[].link` uses `-web` source; no phone numbers or texts in the file.
@@ -2502,7 +2522,13 @@ resources.
   district: string, district_code: string, point: string (landmark), photo: "img/snap/<id>.webp", link: string,
   age_min: int, is_owner: bool|null, in_all: bool, in_rooms: bool}[], dots: [float, float, float][],
   medians: {district_code: string, rooms: int, median_usd: int, n: int}[], bargains_week: int}`. `medians` and
-  `bargains_week` drive «Хорошая ли цена» (`landing.js:2257`).
+  `bargains_week` drive «Хорошая ли цена» (`landing.js:2317-2323`).
+- **Since landing release `67b3942a8340` (landing intake):** the showcase also reads `id`, `photo` (a pin without one
+  is not shown), `age_min`, `price_usd`, `rooms`, `area`, `floor`, `floors_total`, `district_code` and `district`
+  (`landing.js:2378-2412`). Since 2026-11-19 `district`, `district_code` and `floor` may be `null` (backend data, not a
+  release; `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:71-76`): without a floor the facts are shorter; without a
+  district the live map keeps the landmark `point`, a showcase card shows no place, and the live map's district filter
+  drops such pins.
 - **Migration Target / Tests / Status:** as RES-010. `CONFIRMED` / schedule `DOCUMENTED_ONLY`.
 
 ### RES-012 — Landing data: `data/pins-sale.json`
@@ -2510,14 +2536,18 @@ resources.
 - **Method / URL:** `GET /data/pins-sale.json?v=202610171944` (`landing.js:1043`).
 - **Response shape:** as RES-011, with `area: float`, `is_owner: bool`; `dots: []`, `medians: []`,
   `bargains_week: null` in the fixture.
+- **Since landing release `67b3942a8340` (landing intake):** read by the showcase as RES-011. `district` and
+  `district_code` may be `null` since 2026-11-19, and `floor` since `d9bbbc696337` (backend data;
+  `$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md:19`, `:36`).
 - **Migration Target / Tests / Status:** as RES-010. `CONFIRMED` / schedule `DOCUMENTED_ONLY`.
 
 ### RES-013 — Landing photo snapshots
 
-- **Method / URL:** `GET /img/snap/<listing_id>.webp` (316 files in the fixture), referenced by `pins[].photo`.
+- **Method / URL:** `GET /img/snap/<listing_id>.webp` (316 files in the fixture of 2026-11-08; the fixture was replaced on
+  2026-11-12), referenced by `pins[].photo`.
 - **Auth:** none — unsigned copies of channel photos, outside the signed `/media` policy; `robots.txt` disallows
   `/img/snap/` and `/*/img/snap/` (`$KVADRO_ROOT/docs/seo-pages.md:133-134`).
-- **Producer:** `scripts/landing_snapshot.py` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`).
+- **Producer:** `scripts/landing_snapshot.py` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:69-70`).
 - **Migration Target:** TBD (`10-target-architecture.md`); purge on takedown and after retention (LB-API-054).
 - **Tests:** every `pins[].photo` resolves; files of withdrawn/taken-down listings are removed.
 - **Status:** `CONFIRMED` (fixture) / generation `DOCUMENTED_ONLY`. Related: LB-API-054.
@@ -2536,7 +2566,7 @@ resources.
 ### RES-015 — CSP violation reports
 
 - **Method / URL:** `POST /api/csp-report` (browser-generated `application/csp-report` JSON) — `report-uri` of the
-  landing, SEO and privacy pages (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:56-57`; `seo-pages.md:376-377`;
+  landing, SEO and privacy pages (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:65-66`; `seo-pages.md:376-377`;
   `$KVADRO_ROOT/docs/about.md:304`).
 - **Auth:** none. Behaviour, response and storage unknown (Q-API-050).
 - **Migration Target:** keep accepting reports at the same path while legacy pages are served; TBD.
@@ -2545,9 +2575,11 @@ resources.
 
 ### RES-016 — `/api/landing/live`, `/api/landing/pins` (referenced only in comments)
 
-- **Method / URL:** `GET /api/landing/live`, `GET /api/landing/pins` — named in HTML comments of the landing
-  (`$KVADRO_ROOT/demo/landing/site/index.html:62`, `:282`, `:375`, `:416`). The page itself reads `data/*.json` and
-  «к API страница не обращается» (`landing.js:64-65`; `RECOVERY.md:61`).
+- **Method / URL:** `GET /api/landing/live`, `GET /api/landing/pins` — named in HTML comments of the landing up to
+  release `b1b9a919ecc4`; release `d9bbbc696337` removed every HTML comment, so no landing file names them any more
+  (`$KVADRO_ROOT/demo/landing/docs/releases/2026-11-19_d9bbbc696337/delta/diffs/index.html.diff:58`, `:119`, `:153`,
+  `:181`; *landing intake*). The page itself reads `data/*.json` and «к API страница не обращается» (`landing.js:64-65`;
+  `RECOVERY.md:70`).
 - **Status:** `UNVERIFIED` — possibly the live sources that the snapshot job copies, or obsolete
   (`DEPRECATED_CANDIDATE`). Related: Q-API-049.
 
@@ -2587,7 +2619,7 @@ resources.
 ### RES-021 — Cloudflare edge artifacts
 
 - **Method / URL:** `/cdn-cgi/l/email-protection#…` links and the injected `email-decode.min.js` on `privacy.html` and
-  the methodology page (Cloudflare Email Obfuscation) (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:85-87`;
+  the methodology page (Cloudflare Email Obfuscation) (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:107-109`;
   `seo-pages.md:378`).
 - **Served by:** Cloudflare, not the origin.
 - **Status:** `CONFIRMED`.
@@ -2699,11 +2731,11 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 | Lazy chunks `/assets/*` (`posthog-js`, `pmtiles`) | `src/lib/analytics.js:129-133`, `engine.js:55` | `demo/app/docs/RECOVERY.md:39-40` | documented as bundle, not in Doc (RES-008) |
 | `/favicon.svg`, `/favicon.ico` | `index.html:8` | — | undocumented static asset (RES-008) |
 | `GET /api/__probe/<method>?n=<n>` | `tools/parity/mocks.mjs:30-34` (test harness) | `tools/parity/README.md:30-32` | **test-only**, never sent by production code — do not implement |
-| Landing `data/live.json`, `data/pins-rent.json`, `data/pins-sale.json` | `demo/landing/site/landing.js:66-75` | `demo/landing/docs/RECOVERY.md:60-61`, `about.md:331-332` | documented outside Doc (RES-010 … RES-012) |
-| Landing `img/snap/<id>.webp` | `pins[].photo` | `RECOVERY.md:60` | documented outside Doc (RES-013) |
-| Landing `stats.js` + PostHog EU | `site/stats.js` | `RECOVERY.md:33`, `:64` | documented outside Doc (RES-014, RES-006) |
-| Browser CSP reports to `/api/csp-report` | CSP header | `RECOVERY.md:56-57`, `about.md:304` | documented outside Doc (RES-015) |
-| `/api/landing/live`, `/api/landing/pins` | HTML comments only | — | referenced, never requested (RES-016) |
+| Landing `data/live.json`, `data/pins-rent.json`, `data/pins-sale.json` | `demo/landing/site/landing.js:66-75` | `demo/landing/docs/RECOVERY.md:69-70`, `about.md:331-332` | documented outside Doc (RES-010 … RES-012) |
+| Landing `img/snap/<id>.webp` | `pins[].photo` | `RECOVERY.md:69` | documented outside Doc (RES-013) |
+| Landing `stats.js` + PostHog EU | `site/stats.js` | `RECOVERY.md:34`, `:83` | documented outside Doc (RES-014, RES-006) |
+| Browser CSP reports to `/api/csp-report` | CSP header | `RECOVERY.md:65-66`, `about.md:304` | documented outside Doc (RES-015) |
+| `/api/landing/live`, `/api/landing/pins` | HTML comments only, removed in landing release `d9bbbc696337` | — | referenced until `b1b9a919ecc4`, never requested (RES-016) |
 
 Telegram navigations (`t.me/<bot>?start=…`, `?startapp=…`, `t.me/<channel>/<post>`) are links, not requests to the
 legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`.
@@ -2717,7 +2749,7 @@ legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`
 | 3 | Phone exposure | «номера телефонов открываются только через временные ссылки звонка» (`about.md:349`) | `ListingDetails.phone` is plain `+998…` (Doc:316) and dialled as `tel:${phone}` on Android (`src/lib/telegram/links.js:28`) | the raw number reaches every client (LB-API-030) |
 | 4 | Quiet/digest presets | examples `off, 23-08, 22-09` / `09, 09,21, 21` (Doc:846-847, mock) | bot presets `off, 22-08, 23-08, 00-09, 23-07` / `09, 09,19, 12,20, 19` (`telegram-bot.md:990`) | unknown — Q-API-029 |
 | 5 | `median_metric` values | `m2 \| person \| string` (Doc:325) | mock uses `unit` (`tools/parity/mocks.mjs:98`); client treats others as per month | compatible |
-| 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:63-65`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:68-70`) | data is live (LB-API-017) |
+| 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:63-65`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:87-89`) | data is live (LB-API-017) |
 | 7 | `useMapTilePrefetch` JSDoc | `tiles` "object" (`src/app/useMapTilePrefetch.js:12`) | `meta.tiles` is a string (Doc:443) | string |
 | 8 | `entry` JSDoc (release `index-DY_DH7h-.js`) | `'filters' \| 'few' \| 'prompt' \| 'empty'` (`src/app/subscriptionActions.js:92`, `src/lib/api/subscriptions.js:10`) | the app also sends `feed` and `return` (`App.jsx:635`, `:752` at the pin); current Doc:789 lists all six | six values |
 | 9 | Undo of «Уже сдано» (release `index-CIa0Ldj2.js`) | the toast action reads «Отменить» (Doc r35:854; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:21` at r36) | `toast.undo` = «Вернуть» / «Undo» / «Qaytarish» (`src/app/useListingActions.js:36-50`, `src/i18n/locales/ru.js:241` at r33) | code text: «Вернуть» |
@@ -2741,7 +2773,7 @@ Nothing here is a deletion recommendation. Proposed fixes and old-client impact 
 | `meta.districts`, `meta.zones` (top level) | obsolete field | `DEPRECATED_CANDIDATE` | Doc:446-447 "legacy fallback для Tashkent"; read only when `cities` is empty (`src/features/filters/summary.js`) | keep while the legacy client runs |
 | Fields never read by the client (`FeedPage.total`, `ListingPreview.usd/photos_total/tone/label/priced`, `ListingDetails.contacts/source_url/price_per_m`, `Subscription.title/new_count/finds/created_at/hidden_count`, `SubscriptionMutationResult.ask_found/options[].filters`, `FeedFlowResponse.options[].count`, `SettingsResponse.theme/city`, `CityStats.name/center`) | unused fields | `DEPRECATED_CANDIDATE` | Doc:402-414 | may be used by the bot or analytics — check before dropping |
 | Filter key `zone` / query `zone=` | obsolete contract | `DEPRECATED_CANDIDATE` | `CHANGELOG.md:46-54` | stored radars may still carry it (Q-API-013) |
-| `/api/landing/live`, `/api/landing/pins` | unknown endpoints | `UNVERIFIED` / `DEPRECATED_CANDIDATE` | landing HTML comments | RES-016, Q-API-049 |
+| `/api/landing/live`, `/api/landing/pins` | unknown endpoints | `UNVERIFIED` / `DEPRECATED_CANDIDATE` | landing HTML comments up to `b1b9a919ecc4` | RES-016, Q-API-049 |
 | `/api/__probe/*` | test harness | not an endpoint | `tools/parity/mocks.mjs:30-34` | never implement |
 | Unblock author: `DELETE /api/listings/:id/block-author` vs `DELETE /api/hidden/:id` | duplicate | — | API-015, API-027 | LB-API-040 |
 | Radar activation: `POST /api/subscriptions` vs `PATCH {active:true}` on a paused twin | duplicate path | — | `subscriptionActions.js:94-129` | LB-API-034 |

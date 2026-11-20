@@ -28,6 +28,9 @@ characters at generation time, with the attribution improvements of DEV-040 and 
   dropped silently; `--v` + visit if `^[a-z0-9]{10}$`; at most 59 characters; applied as
   `href.split("?")[0] + "?start=" + START`), BR-SEO-025 (CTA grammar and slice tags), BR-SEO-026 (card deep link and the
   Mini App parser regexes), BR-LND-017 (click targets in the live map).
+- *Since landing release `67b3942a8340` (landing intake):* the tag is sanitised before the check — characters outside `[a-z0-9_-]`
+  become `-`, leading and trailing `-` are trimmed, the rest is cut to 40 — so only a tag with nothing left is dropped
+  (`utm_source=chatgpt.com` → `s_web_chatgpt-com`; BR-LND-001).
 - Source: `$KVADRO_ROOT/demo/landing/site/landing.js:26-47`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:2-54`.
 - Deviations: LB-LND-007 → DEV-040 (QR with `s_web_qr`, tags in `startapp`), LB-SEO-011 → DEV-049 (formal `s_seo`
   grammar).
@@ -120,6 +123,8 @@ Reads `sessionStorage` `kv-visit` through KV-FE-105; writes nothing.
 ## Edge cases
 
 - `?s=` in upper case → lowercased; a tag with Cyrillic → dropped.
+  *Since landing release `67b3942a8340` (landing intake):* only a tag with nothing else in it (`insta тест` → `insta`), and a
+  41-character tag is cut to 40 instead of dropped.
 - A bot username environment variable missing at build → build fails (no silent `https://t.me/undefined`).
 - Channel names of exactly 4 and 32 characters; post numbers of 12 digits.
 

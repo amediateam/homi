@@ -27,9 +27,11 @@ scene contents themselves are KV-FE-110…KV-FE-112.
   layout), LND-025 (responsive), LND-026 (theme colour), LND-037 (debug parameters).
 - URL-008 (`?v=1|2`), URL-009 (debug parameters), URL-017, URL-018 (assets replaced by the build).
 - Rules: BR-LND-018 (display version), BR-LND-019 (simple v2), BR-LND-021 (theme colour).
+- *Since landing release `67b3942a8340` (landing intake):* the v2 dark-scene lag is measured from the block right after the story
+  (`story.nextElementSibling`) — now the showcase `#vit`, not «Узнавайте первым».
 - Defects and deviations: LB-LND-015 → DEV-043, LB-LND-010 (monolithic assets, fix `APPROVED`).
 - Source: `$KVADRO_ROOT/demo/landing/site/index.html:37-43`; `$KVADRO_ROOT/demo/landing/site/landing.js:129-539`,
-  `:1351-1938`, `:2145-2211`; `$KVADRO_ROOT/demo/landing/site/landing.css` (27 uses of `animation-timeline: --cloud`,
+  `:1354-1942`, `:2149-2215`; `$KVADRO_ROOT/demo/landing/site/landing.css` (27 uses of `animation-timeline: --cloud`,
   13 `prefers-reduced-motion` blocks, 3 `@supports not (animation-timeline: view())`).
 
 ## Implementation

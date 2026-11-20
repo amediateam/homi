@@ -17,10 +17,15 @@ photo exists.
 
 ## Legacy reference
 
-- RES-011, RES-012 (`08` lines 1371-1388); landing contract `03b` §1.5; LND-008, LND-012, LND-014; ENT-054
+- RES-011, RES-012 (`08` lines 2516-2543); landing contract `03b` §1.5; LND-008, LND-012, LND-014; ENT-054
   (2026-11-08 snapshot: 167 rent pins, 149 sale pins, 1 310 dots, 2 069 median rows = 36 district + 2 033 point).
 - Fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/pins-rent.json`, `…/pins-sale.json`; reader
   `$KVADRO_ROOT/demo/landing/site/landing.js:1041-1083`, `:2257`, `:2267-2324`.
+- *Since landing release `67b3942a8340` (landing intake):* the showcase reads the pins' `photo` (a pin without one is not shown),
+  `age_min`, `price_usd`, `rooms`, `area`, `floor`, `floors_total`, `district_code` and `district`
+  (`landing.js:2378-2412`); since 2026-11-19 `district`, `district_code` and `floor` may be `null`, which the legacy
+  client tolerates (`08` RES-011, RES-012). The parity fixtures are the snapshot of 2026-11-12 (154 rent and 146
+  sale pins); the counts above are of the replaced 2026-11-08 snapshot.
 - Rules: BR-API-134 (`x`/`y` in % of the static Tashkent map image, `img/snap/<id>.webp`, `startapp=l_<id>-web`,
   medians by district × rooms), BR-LND-008 (savings block uses medians with `rooms ∈ 1..3`, `median_usd > 0`),
   BR-LND-009 (bargains line shown when `bargains_week ≥ 100`; server definition «на 20% и больше дешевле»),

@@ -32,7 +32,7 @@ scenario is identical, or its difference is mapped to a DEV row, a defect fix or
    (`docs/migration/data/legacy-landing-manifest.json`).
 3. Serve the candidate: `frontend/landing` with `next build && next start` on a free port (or `https://homi.loc` on
    the local stack), with landing data served from the same fixtures as the base.
-4. Port the prepare/capture logic of the landing runner into the chosen runner; run all 40 scenarios on both sides.
+4. Port the prepare/capture logic of the landing runner into the chosen runner; run all 47 scenarios on both sides (40 at the audit; landing intake).
 5. For each scenario record the comparison type: `behaviour` (DOM equality) when CF-010 keeps the landing 1:1, or a
    checklist (texts, links, language rules, bot payloads, no CSP violations) when CF-010 approves a redesign; write
    the results to `docs/migration/data/landing-scenario-results.csv`.
@@ -55,7 +55,7 @@ of the LANDING module per their state.
 
 ## Acceptance criteria
 
-- All 40 scenarios run on both sides; each has a result row and, if different, a resolution.
+- All 47 scenarios run on both sides; each has a result row and, if different, a resolution.
 - Candidate runs report zero CSP violations (SEC-REQ-031).
 - Bot links on the candidate carry `s_web[_<tag>][--v<visit>]` with the 49-character cut (URL-046, BOT-029).
 

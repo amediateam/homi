@@ -811,8 +811,8 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   only from the Mini App's texts. *Evidence:* Doc r31:1366-1369; `src/features/owner/owner.js:89-107`. (Q-API-072)
 - **BR-API-172** · `UNVERIFIED` — The cabinet keeps the owner's number itself, not a hash as `/owner` does
   (BR-API-107): `phone_display` shows it to the owner, «Дать номер» hands it to a seeker, and `open` mode shows it on
-  the card. Where and how long it is stored is known only from a landing privacy text that was an uncommitted working
-  copy at the read. *Evidence:* Doc r31:1366-1367; `src/features/owner/OwnerForm.jsx:947-949`;
+  the card. Where and how long: a landing privacy text, uncommitted at the read, published in landing `b1b9a919ecc4`
+  (number, answers, photos kept; `privacy.html:55-59`, landing intake). *Evidence:* Doc r31:1366-1367; `src/features/owner/OwnerForm.jsx:947-949`;
   `src/features/owner/owner.js:219`. (Q-API-072; LB-API-056)
 - **BR-API-173** · `DOCUMENTED_ONLY` — `contact_mode` is `gate`, `open` or `null`. `gate` hides the number, and
   seekers send a request (`08` API-054); `open` shows the number on the card to everyone. The value is `null` until
@@ -913,7 +913,7 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   flats the number must appear; `/owner` refuses the badge at 3 or more, BR-API-109, the cabinet's limit is 2), the
   source of the `fraud` list and the appeal path; whether the checks run when the contact arrives, at publish, or
   both; where the number itself is stored, for how long, and whether deleting the user's data erases it. The landing
-  privacy text of the release was an uncommitted working copy at the read. *Check:* confirm a phone on a test
+  privacy text was an uncommitted working copy at the read (published in landing `b1b9a919ecc4`). *Check:* confirm a phone on a test
   account and read `phone_display` and `reject_reason`; confirm a number that already stands in listings of other
   flats; ask where the number is kept and what «Удалить мои данные» erases: the operator's answer; a test owner
   listing and a test seeker account on the legacy product, with the product owner's approval.
@@ -1056,20 +1056,20 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
 
 - **BR-API-133** · `DOCUMENTED_ONLY` — A backend job rewrites `data/live.json`, `data/pins-rent.json`,
   `data/pins-sale.json` and `img/snap/*.webp` on a schedule (2026-11-08: `live.json` 02:02, pins 15:00); served with
-  `max-age=1800`. *Evidence:* `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, :68-69.
+  `max-age=1800`. *Evidence:* `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:69-70`, :87-88.
 - **BR-API-134** · `CONFIRMED` — Landing pins carry `x`/`y` as percentages of the static Tashkent map image, a photo
   `img/snap/<id>.webp`, a Mini App link `startapp=l_<id>-web`, and medians by district × rooms (rent). *Evidence:*
-  fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/*.json`; `landing.js:1043`, :2242.
+  fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/*.json`; `landing.js:1043`, :2257.
 - **BR-API-135** · `DOCUMENTED_ONLY` — `/uz/` and `/en/` landing pages are produced by the backend
   (`app/api/landing_pages.py`) from `index.html` + `landing-i18n.js`; the same module rewrites SEO links (`arenda/` →
-  `uz/ijara/`, `en/rent/`). *Evidence:* `RECOVERY.md:26`; `$KVADRO_ROOT/demo/landing/site/index.html:503-503`.
+  `uz/ijara/`, `en/rent/`). *Evidence:* `RECOVERY.md:27`; footers `landing/site/index.html:436-477`, `landing/site/uz/index.html:437-478`.
 - **BR-API-136** · `DOCUMENTED_ONLY` — SEO pages are rendered by the backend from the database
   (`app/api/area_pages.py`), CDN-cached 5 minutes; pages with ≤ 9 listings are `noindex,follow` and excluded from the
   dynamic sitemap (threshold ~10 🔶). *Evidence:* About:524-527; SEO:131-140, :375.
 - **BR-API-137** · `DOCUMENTED_ONLY` — `stats.js` is templated by the backend (`app/api/site_stats.py`) with the PostHog
-  key and host. *Evidence:* `RECOVERY.md:33`.
+  key and host. *Evidence:* `RECOVERY.md:34`.
 - **BR-API-138** · `DOCUMENTED_ONLY` — Landing, privacy and SEO pages send a CSP with sha256 hashes of inline scripts
-  and `report-uri /api/csp-report`. *Evidence:* `RECOVERY.md:56-57`; SEO:376-377.
+  and `report-uri /api/csp-report`. *Evidence:* `RECOVERY.md:65-66`; SEO:376-377.
 - **BR-API-139** · `DOCUMENTED_ONLY` — Rent index: median of the month's **new** listings (month of first appearance,
   last price); weeks Monday–Sunday; month/week shown only with ≥ 50 listings per rooms; data since 2026-10-01; rent in
   salaries = monthly median in UZS at CBU rate / Natskomstat average salary. *Evidence:* SEO:300-311.
@@ -1081,7 +1081,7 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   `pins` (age, area, tones). *Check:* poll the files' `Last-Modified` for a week; owner interview.
 - **LB-API-017** · `bug` · `CONFIRMED` — The landing appends a constant `?v=202610171944` (`DATA_V`) to data files
   that change daily, so the version key never busts caches; freshness depends only on `max-age=1800`, and the code
-  comment claims the data is fixed. *Evidence:* `landing.js:63-75`; `RECOVERY.md:68-70`.
+  comment claims the data is fixed. *Evidence:* `landing.js:63-75`; `RECOVERY.md:87-89`.
   - **Proposed fix:** version data URLs by content hash or generation timestamp published with the page (or drop the
     key and rely on `ETag` + short `max-age`).
   - **Old-client impact:** none for the Mini App; the legacy landing keeps working with the constant key as long as
@@ -1107,7 +1107,7 @@ None of these jobs is visible; the table lists what the observable behaviour req
 | Purge action log | after 180 days | About:268 | `DOCUMENTED_ONLY` |
 | Purge support mappings / summaries | 90 days / 1 year | About:269 | `DOCUMENTED_ONLY` |
 | Backups and their expiry | ~2 weeks retention | About:272, :588-589 | `DOCUMENTED_ONLY` |
-| Landing data and snapshots | daily (02:02, 15:00 observed) | `RECOVERY.md:68` | `DOCUMENTED_ONLY` |
+| Landing data and snapshots | daily (02:02, 15:00 observed) | `RECOVERY.md:87` | `DOCUMENTED_ONLY` |
 | Rent index and sale price series | monthly/weekly | SEO:300-318 | `DOCUMENTED_ONLY` |
 | PostHog person deletion | on user request | About:272-273 | `DOCUMENTED_ONLY` |
 | Rented/agent vote evaluation | per vote or batch | About:223-224 | `UNVERIFIED` |
@@ -1153,7 +1153,7 @@ None of these jobs is visible; the table lists what the observable behaviour req
 | -------- | --------------- | -------- | ------ |
 | `/media/*` | `Cache-Control: public, max-age=86400`, `ETag`; one URL per photo per day | SEO:380-386 | `DOCUMENTED_ONLY` |
 | SEO pages, `sitemap.xml` | `public, max-age=0, must-revalidate, s-maxage=300` | SEO:135, :375 | `DOCUMENTED_ONLY` |
-| Landing data `data/*.json` | `max-age=1800` | `RECOVERY.md:69` | `DOCUMENTED_ONLY` |
+| Landing data `data/*.json` | `max-age=1800` | `RECOVERY.md:88` | `DOCUMENTED_ONLY` |
 | `/api/*` | unknown (responses are per-user) | — | `UNVERIFIED` |
 | Client prefetch | one-shot promise per exact URL | `client.js:26-60` | `CONFIRMED` |
 | Client call link | 10 min, refreshed at 8 min | `useListingContact.js:9-10` | `CONFIRMED` |
@@ -1460,7 +1460,7 @@ the transition (About:437-440).
   release `index-CBlEKxdL.js` (§12a). *Evidence:* Bot:819-822, :852; About:232;
   `src/features/owner/OwnerForm.jsx:947-949` («Ваш номер: …») and `src/features/owner/owner.js:219` («Дать номер»),
   both at r31. The only text that states the storage of the number itself is the landing privacy page, an uncommitted
-  working copy at the read, not cited as a release. (Q-API-072; BR-API-172)
+  working copy at the read; published in landing `b1b9a919ecc4` (landing intake). (Q-API-072; BR-API-172)
   - **Proposed fix:** one rule for both flows. If the number itself is kept for cabinet owners: encrypt it at rest,
     keep it apart from the `/owner` hash, bring the bot's `/owner` and `/privacy` texts in line with it, and erase it
     when the user deletes their data.
@@ -1495,7 +1495,7 @@ the transition (About:437-440).
 
 - **LB-API-054** · `decision` · `CONFIRMED` — The landing republishes third-party listing photos as unsigned static
   files `img/snap/<listing_id>.webp`, outside the signed `/media` policy; takedown requests and the 90-day PII purge
-  must also reach these copies, which nothing documents. *Evidence:* RES-013 in `08`; `RECOVERY.md:60-61`, :70-71;
+  must also reach these copies, which nothing documents. *Evidence:* RES-013 in `08`; `RECOVERY.md:69-70`, :89-90;
   About:181-185.
   - **Proposed fix:** generate snapshots through the media pipeline (or reference signed `/media` URLs) and purge them
     on takedown and retention.
