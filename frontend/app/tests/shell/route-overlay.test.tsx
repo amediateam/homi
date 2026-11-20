@@ -152,6 +152,18 @@ describe("RouteOverlay (the listing layer)", () => {
       expect(state.back).not.toHaveBeenCalled();
     });
 
+    it("a swipe that slid back does not stop the leave: its inline animation is cleared when the leave starts", () => {
+      const view = render(inIntl(<RouteOverlay data-testid="overlay" entrance swipeBack onClose={vi.fn()} />));
+      swipeRight(layer(), 40);
+      act(() => vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS));
+      expect(layer().style.animation).toBe("none");
+
+      view.rerender(inIntl(<RouteOverlay data-testid="overlay" entrance swipeBack onClose={vi.fn()} leaving />));
+
+      expect(layer().style.animation).toBe("");
+      expect(layer().className).toContain("animate-listing-out");
+    });
+
     it("with onClose the swipe asks for its close with swipe, not back()", () => {
       const onClose = vi.fn();
       render(inIntl(<RouteOverlay data-testid="overlay" swipeBack onClose={onClose} />));

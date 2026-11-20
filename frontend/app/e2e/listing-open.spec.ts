@@ -423,21 +423,41 @@ for (const mode of ["cookie", "header"] as const) {
 }
 
 test.describe("listing open: the leave (WP-36)", () => {
-  test("a scrolled listing leaves with its CTA bar at the bottom of the screen, then the feed shows", async ({ page }) => {
+  test("the listing enters with its animation; a scrolled listing leaves with its own, the CTA bar at the bottom, then the feed shows", async ({
+    page,
+  }) => {
     await open(page, "cookie");
     await expect(cards(page).first()).toBeVisible();
     const number = Number(await cards(page).first().getAttribute("data-listing"));
+
+    // The entrance runs: read the overlay's animations in the frame it appears.
+    const entering = page.evaluate(
+      () =>
+        new Promise<string[]>((resolve) => {
+          const check = () => {
+            const overlay = document.querySelector('[data-slot="route-overlay"][data-presentation="layer"]');
+            if (overlay === null) {
+              requestAnimationFrame(check);
+              return;
+            }
+            resolve(overlay.getAnimations().map((animation) => (animation as CSSAnimation).animationName));
+          };
+          check();
+        }),
+    );
     await card(page, number).locator("a").click();
+    expect(await entering).toEqual(["listing-in"]);
     await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
     await layer(page, number).evaluate((root) => {
       const scroller = root.closest<HTMLElement>('[data-slot="route-overlay"]')!;
       scroller.scrollTop = 600;
     });
 
-    // Back, then the leave held half-way: the fixed bar must not move with the layer's scroll.
-    const [bottom, height] = await page.evaluate(
+    // Back, then the leave held half-way: it runs (its name, the layer moved right), and the fixed bar does not move
+    // with the layer's scroll.
+    const [names, left, bottom, height] = await page.evaluate(
       () =>
-        new Promise<[number, number]>((resolve) => {
+        new Promise<[string[], number, number, number]>((resolve) => {
           (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked");
           const check = () => {
             const overlay = document.querySelector<HTMLElement>('[data-slot="route-overlay"][data-leaving]');
@@ -445,15 +465,23 @@ test.describe("listing open: the leave (WP-36)", () => {
               requestAnimationFrame(check);
               return;
             }
-            for (const animation of overlay.getAnimations()) {
+            const animations = overlay.getAnimations();
+            for (const animation of animations) {
               animation.pause();
               animation.currentTime = 100;
             }
-            resolve([overlay.querySelector("[data-cta]")!.getBoundingClientRect().bottom, window.innerHeight]);
+            resolve([
+              animations.map((animation) => (animation as CSSAnimation).animationName),
+              overlay.getBoundingClientRect().left,
+              overlay.querySelector("[data-cta]")!.getBoundingClientRect().bottom,
+              window.innerHeight,
+            ]);
           };
           check();
         }),
     );
+    expect(names).toEqual(["listing-out"]);
+    expect(left).toBeGreaterThan(0);
     expect(Math.abs(bottom - height)).toBeLessThan(2);
 
     await onFeed(page);

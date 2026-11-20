@@ -1,7 +1,7 @@
 "use client";
 
 import { cn, useSwipeBack } from "@homi/ui";
-import { type ComponentProps, useRef } from "react";
+import { type ComponentProps, useLayoutEffect, useRef } from "react";
 
 import { useBack } from "@/lib/navigation/useBack";
 import { tg } from "@/lib/telegram";
@@ -62,6 +62,13 @@ export function RouteOverlay({
     enabled: swipeBack && presentation === "layer" && !tg.isAndroid(),
     onCommit: () => tg.haptic.impact(),
   });
+  // A swipe that started and slid back leaves `animation: none` inline (it stops the entrance while the finger
+  // moves the layer); the leave must not be stopped by it.
+  useLayoutEffect(() => {
+    if (leaving) {
+      layerRef.current?.style.removeProperty("animation");
+    }
+  }, [leaving]);
 
   return (
     <div

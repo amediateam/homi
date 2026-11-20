@@ -154,7 +154,9 @@ Out:
     insets (`left: 24%; right: -24%`), not a transform: the layer is its own scroller, and a transform would make it
     the containing block of its fixed children (the CTA bar, the fallback cross), which would jump by the scroll
     offset (review of WP-36; the swipe still does, KI-67). The entrance keeps the transform: it starts at the top. The
-    layer takes no taps while it leaves (legacy `.leaving { pointer-events: none }`). After 200 ms the route changes
+    entrance class is dropped while the layer leaves (both utilities set `animation`, and `cn` keeps both), and the
+    leave clears the inline `animation: none` that a swipe which slid back leaves behind (`useSwipeBack` stops the
+    entrance that way). The layer takes no taps while it leaves (legacy `.leaving { pointer-events: none }`). After 200 ms the route changes
     only when neither the address nor the app's stack moved meanwhile; otherwise the leave is dropped and the layer
     shows again.
   - An overlay copy at the app's depth 0 changes the route at once, without a leave: it lies over a standalone copy
@@ -331,8 +333,11 @@ As built *(rule 6)*:
 - `e2e/spot-map.spec.ts`: the Leaflet check reads the nearest stacking context around `.leaflet-map-pane` (the
   map's box, `data-spot-map-frame`) rather than pixels: the raster tiles are drawn translucent, so a control under
   them still changes the screenshot when hidden.
-- Also added: `e2e/listing-open.spec.ts` the CTA bar of a scrolled listing during the leave (the animation held half
-  way), and `e2e/listing-actions.spec.ts` «Скрыть» on a directly loaded listing.
+- Also added: `e2e/listing-open.spec.ts` the entrance (`listing-in` running as the layer appears) and, on a scrolled
+  listing, the leave held half way (`listing-out` running, the layer moved right, the CTA bar at the bottom of the
+  screen); `e2e/listing-actions.spec.ts` «Скрыть» on a directly loaded listing; `tests/shell/route-overlay.test.tsx`
+  the leave after a swipe that slid back.
+- WP-38's text on the one close function says where its sale switch hooks as built (rule 6).
 
 ## Acceptance checklist
 
