@@ -54,16 +54,19 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
 
 1. **Take the first package that is not `DONE`.** Do not skip ahead. A package marked `WAITING` names what it waits
    for; work then continues with the next package only if that package does not list the waiting one under
-   "Depends on".
+   "Depends on". A package in `REVIEW` is finished and waits only for its merge: the next one is taken on a branch
+   from its branch, so it has what it depends on (rule 8).
 2. **Read** `25` once, then the package's specification, then only the audit sections the specification cites.
 3. **One package = one branch = one PR**, about 1 500–3 000 changed lines without generated files, reviewed by the
-   other developer before merge (DEC-45). Branch name: `feat/wp-<number>-<slug>`.
+   other developer before merge (DEC-45); while the queue runs under rule 8, an independent review of the diff stands
+   in for that reading, and the other developer reads the merged PR. Branch name: `feat/wp-<number>-<slug>`.
 4. **If you stop before the package is done,** push the branch, fill "Handoff" at the end of the specification
    (what is finished, what is half-done, the next concrete step, any decision you took), set the status to
    `IN_PROGRESS (<branch>)`, and run the `save-session` skill. The other developer continues on the same branch.
 5. **When the package is done:** tick its acceptance checklist in the PR, merge after review, deploy to staging and
    production with the production track, check inside Telegram where the package says so, set the status to `DONE`
-   here, and update the session handoff.
+   here, and update the session handoff. A status that changes after the PR's last code commit is written in the
+   next PR (rule 8), not pushed on its own.
 6. **If something in a specification is wrong or missing,** fix the specification in the same PR and say so in the
    PR description. Do not work around it silently.
 7. **A new legacy release** (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, and for the landing
@@ -85,7 +88,8 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
      API on a developer machine, no nginx and no database of `backend/.env`); the whole suite stays in CI.
    - The independent review starts together with the CI run, not before the push.
 
-Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `DONE`. A package number is a name;
+Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `REVIEW (<PR>)` — the PR is open and waits for its checks, its review or
+its merge —, `WAITING (<what for>)`, `DONE`. A package number is a name;
 its row is its place in the queue.
 
 ## Stage 0 — Start

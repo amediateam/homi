@@ -9,8 +9,14 @@
 #   scripts/dev/e2e-local.sh                                              # the whole suite, about as long as in CI
 #   E2E_RADARS_OFF=1 scripts/dev/e2e-local.sh                             # only the @radars-off tests (radars switched off)
 #
-# Every argument goes to `playwright test`. Playwright builds and starts `app` on :3001 itself, so that port must be
-# free (`make dev-stop`). No value of the backend's env file is printed; the overrides below reach the API process only.
+# Every argument goes to `playwright test`, which runs with `CI=1`: one worker and no `@flaky` tests, as in the CI job
+# (`--workers=4` on the command line still wins). Playwright builds and starts `app` on :3001 itself, so that port must
+# be free (`make dev-stop`). No value of the backend's env file is printed; the overrides below reach the API process
+# only.
+#
+# Not the CI job: the backend's own env file and `frontend/app/.env.local` still apply where the overrides do not reach
+# (CI has a copy of `.env.example` and no `.env.local`), and PHP is the local one. A green run here is a fast check
+# before the push; the CI run stays the judge.
 
 . "$(dirname "$0")/lib.sh"
 cd "$HOMI_ROOT"
@@ -57,28 +63,35 @@ trap 'exit 130' INT TERM
 
 # The CI job's variables (they override the env file); DB_URL is emptied so a URL in that file cannot win over them.
 api_env() {
-    env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= CACHE_STORE=array QUEUE_CONNECTION=sync \
-        SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false SOURCES_ALLOW_STUB=true \
+    env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= PULSE_DB_CONNECTION=sqlite CACHE_STORE=array \
+        QUEUE_CONNECTION=sync SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false SOURCES_ALLOW_STUB=true \
         RADAR_CREATION_ENABLED="$radars" "$@"
 }
 
 : > "$database"
-# Prove the overrides took before anything is migrated: the connection must be this file.
-if ! (cd backend && api_env php artisan config:show database.default 2>/dev/null) | grep -q 'sqlite'; then
-    die "the API's default connection is not sqlite with the overrides: nothing was migrated"
-fi
-if ! (cd backend && api_env php artisan config:show database.connections.sqlite 2>/dev/null) | grep -q "$database"; then
-    die "the API's sqlite connection is not the temporary file: nothing was migrated"
-fi
+# Prove the overrides took before anything is migrated: artisan must succeed, the default connection must be sqlite
+# and the sqlite connection must be this file. Pulse's migration follows its own connection key, overridden above.
+default_connection="$(cd backend && api_env php artisan config:show database.default 2>/dev/null)" \
+    || die "artisan could not read the configuration: nothing was migrated"
+case "$default_connection" in
+    *sqlite*) ;;
+    *) die "the API's default connection is not sqlite with the overrides: nothing was migrated" ;;
+esac
+sqlite_connection="$(cd backend && api_env php artisan config:show database.connections.sqlite 2>/dev/null)" \
+    || die "artisan could not read the sqlite connection: nothing was migrated"
+case "$sqlite_connection" in
+    *"$database"*) ;;
+    *) die "the API's sqlite connection is not the temporary file: nothing was migrated" ;;
+esac
 if ! (cd backend && api_env php artisan migrate --force --no-interaction) > "$work/migrate.log" 2>&1; then
     tail -n 30 "$work/migrate.log"
     die "migrations failed on the temporary SQLite database"
 fi
 
 # Laravel's router script takes the public directory from the working directory, as `artisan serve` does.
-(cd backend/public && exec env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= CACHE_STORE=array \
-    QUEUE_CONNECTION=sync SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false SOURCES_ALLOW_STUB=true \
-    RADAR_CREATION_ENABLED="$radars" \
+(cd backend/public && exec env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= PULSE_DB_CONNECTION=sqlite \
+    CACHE_STORE=array QUEUE_CONNECTION=sync SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false \
+    SOURCES_ALLOW_STUB=true RADAR_CREATION_ENABLED="$radars" \
     php -S "127.0.0.1:$api_port" ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php) > "$api_log" 2>&1 &
 api_pid=$!
 
@@ -103,8 +116,9 @@ info "API on stubs: http://127.0.0.1:$api_port (SQLite, radars_enabled $radars, 
 info "Playwright builds and starts app on :$APP_PORT"
 
 cd "$HOMI_ROOT/frontend"
-# The variables of the CI job's "End-to-end tests" step.
-API_URL="http://127.0.0.1:$api_port/api/v1" \
+# The variables of the CI job's "End-to-end tests" step, and `CI` itself for the config's one worker and tag filter.
+CI=1 \
+    API_URL="http://127.0.0.1:$api_port/api/v1" \
     NEXT_PUBLIC_CDN_URL="https://cdn.homi.loc" \
     NEXT_PUBLIC_APP_ENV="ci" \
     NEXT_PUBLIC_API_URL="https://api.homi.loc/api/v1" \
