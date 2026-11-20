@@ -13,9 +13,9 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-21: «Следующий по очереди WP-38».
 
 ## State at handoff
-- `main` = `efa4f9b` (#96). Branch `wp-38-catch-up-feed-continuity`: `7856eb9` code and tests, `460a7cd` spec as built + baseline rows 13, 14, 16, 37 closed + the landing intake row WAITING, `3f2da7c` review follow-ups (`coversSearch`, the e2e spec on expanded chrome), then this memory; pushed, **PR #97** (open; CI started on push).
+- `main` = `efa4f9b` (#96). Branch `wp-38-catch-up-feed-continuity`: `7856eb9` code and tests, `460a7cd` spec as built + baseline rows 13, 14, 16, 37 closed + the landing intake row WAITING, `3f2da7c` advisor follow-ups (`coversSearch`, the e2e spec on expanded chrome), `861a5ee` memory, `3172445` + `95289e3` + `1330323` fixes from CI and the review, then this memory; pushed, **PR #97** (open; CI green on `1330323`: `ci` 44809560859, `e2e` 44809560801 — 392 passed + `@radars-off` 14; MERGEABLE CLEAN).
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
-- Verify: `make ci-frontend` (exit 0 on `460a7cd`: app 220 files, 3 698 tests); after `3f2da7c` `pnpm exec tsc --noEmit -p .` and `pnpm exec eslint` in `frontend/app` clean, the touched suites green.
+- Verify: `make ci-frontend` (exit 0 on `95289e3`: app 220 files, 3 704 tests); after `1330323` the radar suites (287) and `tsc` green.
 
 ## Done this session
 - **#96 merged** (`efa4f9b`, «сливай #96»); its queue row is WAITING on the WP-38 branch.
@@ -26,10 +26,11 @@ Written for whoever continues the **development track**. The production track's 
   - the sale switch of a launch listing on close (DEC-65, `saleSwitch.ts`, `leaveListingRoute(number)`, `closeThen`);
   - the radar sheet's body and strip scrolls (DEC-64).
   - Mutation checks (each fails its tests): a global epoch in the key, `window.scrollY` read at the leave, no `feedBelow()`, no once-per-listing latch.
-  - One advisor pass before the push. An independent read-only review subagent was started on the diff (see below).
+  - One advisor pass before the push; one independent read-only review of the diff (reported, not re-run). Fixed from it: the sale mark kept under a pushed page (`listingInStack`), the launch listing settled on its first close, the e2e radar click and same-second `since`. Left as nits in the spec: a one-frame flash of a feed bumped while hidden on the map; a merged launch number never switches.
+  - CI found two e2e faults of the new spec, fixed: Playwright's click scrolled the strip; the sheet's padding (`useSheetChrome`, a passive effect) clamped the first restore of its body (now held over up to 10 frames).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **CI of #97** (`ci`, `e2e`), the review's findings, then «сливай #97».
+1. **«сливай #97»** (CI green on `1330323`; the docs-only commit after it re-runs CI).
 2. **Then WP-39**, then **WP-31** (WP-37 any time). WP-62 and WP-61 stay at stage E.
 3. **The owners' page** (DEC-97): when WP-61 starts, legacy's page if it is known, else HOMI's own text.
 4. **The operator texts** (WP-02 Part A and the addendum) — handed over by the developer, never sent from the connected Gmail.
@@ -46,4 +47,4 @@ Written for whoever continues the **development track**. The production track's 
 - Next numbers: AM-102, KI-68, ADR 0021; DEC-98, LND-070, BR-LND-030, LB-LND-020, Q-LND-015, Q-SEO-023, URL-067, DEV-068, F-LANDING-014, BR-APP-122, LB-APP-092, Q-APP-032, TMA-049, F-OWNER-012, baseline row 56; free WP numbers 49, 63–69, 72–79, 90–99.
 
 ## Active subagent work at handoff
-- One independent read-only review of the WP-38 frontend diff was running at the time of writing. Its findings go into PR #97 before the merge.
+- None running (the review of the WP-38 diff has finished; its findings are fixed or recorded in the spec).

@@ -345,8 +345,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - The scroll memory (`features/feed/feedScroll.ts`) per `FeedScreen` instance and list key; the sale switch of a
     launch listing (`features/listing/saleSwitch.ts`, `launchListing()`, `leaveListingRoute(number)`); the radar
     sheet's body and strip scrolls (`RadarReturn.via`, `stripX`, `sheetY`).
-  - Tests: `make ci-frontend` exit 0 on `460a7cd` (app 220 files, 3 698 tests); `e2e/feed-continuity.spec.ts` not run
-    here (the local API answered `500`: database host unreachable).
+  - Tests: `make ci-frontend` exit 0 on `95289e3` (app 220 files, 3 704 tests); `e2e/feed-continuity.spec.ts` not run
+    here (the local API answered `500`: database host unreachable); CI on `1330323`: e2e 392 passed + `@radars-off` 14.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure

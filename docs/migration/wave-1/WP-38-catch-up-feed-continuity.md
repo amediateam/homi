@@ -333,6 +333,8 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   (`route.fetch: Test ended`); WP-38 does not touch that spec, and it passed on the next run.
 - **CI e2e on `95289e3`:** 390 passed. The radar case restored the strip but not the sheet's body (`0` for `80`), which
   the frame hold fixes.
+- **CI on `1330323`:** `ci` success (run 44809560859); `e2e` success (run 44809560801): 392 passed, the radar specs
+  and both modes of `feed-continuity.spec.ts` included, then the `@radars-off` run with 14 passed.
 - **End to end.** `e2e/feed-continuity.spec.ts` was not run locally: this machine's API answered `500`, because its
   database host was unreachable (`No route to host`). The spec runs in CI. Its radar case needs radars on, which CI
   has.
