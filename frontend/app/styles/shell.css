@@ -6,10 +6,10 @@
  */
 
 :root {
-  /* The springs of the chrome (legacy, off the motion scale): the collapse morph, the tab buttons, the lens. */
-  --ease-chrome: cubic-bezier(0.3, 1.1, 0.45, 1);
-  --ease-tab: cubic-bezier(0.3, 1.2, 0.45, 1);
-  --ease-lens: cubic-bezier(0.3, 1.35, 0.45, 1);
+  /* The springs of the chrome: the collapse morph, the tab buttons and the lens all take the release's spring (WP-39). */
+  --ease-chrome: var(--ease-spring);
+  --ease-tab: var(--ease-spring);
+  --ease-lens: var(--ease-spring);
   --dur-chrome: 0.42s;
   /* Floating chrome sits 20 px inside the phone column, which a wider window centres. */
   --chrome-side: max(20px, calc(50% - var(--feed-max) / 2 + 20px));
@@ -19,7 +19,7 @@
 [data-tabbar] {
   left: var(--chrome-side);
   right: var(--chrome-side);
-  clip-path: inset(-30px round 60px);
+  clip-path: inset(-30px round 999px);
   transition: clip-path var(--dur-chrome) var(--ease-chrome);
   will-change: clip-path;
 }
@@ -92,7 +92,7 @@
  * centred in it, the labels and the lens fade. The ring gives the circle the shadow the clip cut off.
  */
 html.chrome-mini [data-tabbar] {
-  clip-path: inset(0 calc(100% - var(--tabbar-h)) 0 0 round calc(var(--tabbar-h) / 2));
+  clip-path: inset(0 calc(100% - var(--tabbar-h)) 0 0 round 999px);
 }
 
 html.chrome-mini [data-tab] {
@@ -252,7 +252,7 @@ html.fullscreen [data-mini-title] {
   --toggle-side: max(20px, calc(50vw - var(--feed-max) / 2 + 20px));
   transform: translateX(-50%);
   transform-origin: 27px 50%;
-  clip-path: inset(-30px round 60px);
+  clip-path: inset(-30px round 999px);
   transition:
     transform var(--dur-chrome) var(--ease-chrome),
     clip-path var(--dur-chrome) var(--ease-chrome);
@@ -268,7 +268,7 @@ html.fullscreen [data-mini-title] {
 }
 
 html.chrome-mini [data-view-toggle] {
-  clip-path: inset(0 calc(100% - 49px) 0 5px round 22px);
+  clip-path: inset(0 calc(100% - 49px) 0 5px round 999px);
   transform: translate(calc(50vw - var(--toggle-side) - var(--tabbar-h) / 2 - 27px), calc(var(--tabbar-h) + 3px))
     scale(1.41);
 }

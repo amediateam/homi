@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@homi/ui";
+import { cn, leaveRef } from "@homi/ui";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, type ReactNode, type TouchEvent, useLayoutEffect, useRef, useState } from "react";
 
@@ -74,12 +74,18 @@ function useToastDrag(close: () => void) {
 const SURFACE = "animate-rise-in rounded-[14px] bg-text/92 text-[14px] font-medium text-bg shadow-(--shadow-float)";
 
 /**
+ * The toast's leave (WP-39, BR-APP-112): a copy sinks 10 px and fades over 180 ms. None when a drag took the toast away
+ * (the frame's inline transform), when another toast replaced it in the same commit, or when its host went with it.
+ */
+const toastLeave = leaveRef("toast", { selector: "[data-toast-drag]" });
+
+/**
  * The element that follows the drag. Not the surface itself: its rise-in fills `both` and holds `transform: none`
  * after it ran, which would win over the drag's inline transform.
  */
 function DragFrame({ drag, children }: { drag: ReturnType<typeof useToastDrag>; children: ReactNode }) {
   return (
-    <div data-toast-drag="" {...drag.handlers} style={drag.style} className="pointer-events-auto touch-none">
+    <div ref={toastLeave} data-toast-drag="" {...drag.handlers} style={drag.style} className="pointer-events-auto touch-none">
       {children}
     </div>
   );

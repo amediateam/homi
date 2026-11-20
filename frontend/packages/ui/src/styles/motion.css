@@ -108,6 +108,17 @@
 }
 
 /*
+ * A leaving copy (WP-39, `lib/leave.ts`): no entrance replays on it, nothing in it moves by a transition and no
+ * pointer reaches it. Its way out is a Web Animation, which these rules do not touch.
+ */
+.leave,
+.leave * {
+  animation: none !important;
+  transition: none !important;
+  pointer-events: none !important;
+}
+
+/*
  * Reduced motion: no keyframe animation and no transition anywhere. Legacy stopped the shimmer, the spinner and
  * transitions; WP-23 (D-UI-7) adds the entrances — the sheet's rise, the rise-in of dialogs and toasts, the
  * backdrop's fade, the sub-page's slide. One rule here rather than a variant per component: a

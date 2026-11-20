@@ -72,3 +72,4 @@ export {
   useSwipeBack,
 } from "./hooks/useSwipeBack";
 export * from "./icons";
+export { LEAVE_BACKDROP, LEAVE_MAX_MS, LEAVE_MOTION, type LeaveKind, type LeaveOptions, leaveRef, playLeave, skipLeave, useLeave } from "./lib/leave";

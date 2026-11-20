@@ -78,7 +78,7 @@ export function RouteOverlay({
       data-layer-motion={entrance || leaving ? "" : undefined}
       data-leaving={leaving ? "" : undefined}
       className={cn(
-        "fixed inset-0 z-(--z-overlay) overflow-y-auto overscroll-contain bg-bg text-text",
+        "fixed inset-0 z-(--z-overlay) overflow-x-hidden overflow-y-auto overscroll-contain bg-bg text-text",
         // One animation at a time: both utilities set `animation`, and `cn` does not drop either.
         entrance && !leaving && "animate-listing-in",
         leaving && "pointer-events-none animate-listing-out",

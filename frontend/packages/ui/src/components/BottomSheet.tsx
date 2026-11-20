@@ -8,6 +8,7 @@ import { cn } from "../cn";
 import { useBodyClass } from "../hooks/useBodyClass";
 import { useSheetChrome } from "../hooks/useSheetChrome";
 import { useSheetDrag } from "../hooks/useSheetDrag";
+import { useLeave } from "../lib/leave";
 import { buttonVariants } from "./Button";
 
 export interface BottomSheetProps {
@@ -87,7 +88,9 @@ function useInstantOpening(open: boolean, instant: boolean): boolean {
  * paddings `useSheetChrome` measures. While open, `body` carries `sheet-open` (and `locked` for the full variant),
  * counted across stacked sheets; the page under the sheet does not scroll or rubber-band, while the sheet body and
  * horizontal strips marked `data-scroll-x` do. Under `prefers-reduced-motion` the entrance does not play (motion.css);
- * an `instant` opening has none either (`data-instant` on the sheet).
+ * an `instant` opening has none either (`data-instant` on the sheet). When the sheet goes — closed, unmounted or its
+ * route hidden — a copy of it slides down over a fading copy of the backdrop (`lib/leave.ts`, WP-39), unless its drag
+ * took it away.
  */
 export function BottomSheet({
   open,
@@ -265,6 +268,8 @@ function SheetFrame({
   useSheetChrome(sheetRef, headerRef, footerRef, Boolean(footer));
   usePageLock(overlayRef, sheetRef, bodyRef);
   useScrolledMark(sheetRef, bodyRef);
+  // Through the header: the sheet's own ref is attached after this component's layout effects.
+  useLeave(headerRef, "sheet", { closest: '[data-slot="bottom-sheet"]', backdropRef: overlayRef });
 
   const close = closeLabel ? (
     <button

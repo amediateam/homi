@@ -59,7 +59,8 @@ body.subpage-open {
 }
 
 /* Inside a sheet the page colour and its glass are the sheet's (legacy `.fsheet, .csheet`). */
-[data-slot="bottom-sheet"] {
+[data-slot="bottom-sheet"],
+[data-slot="bottom-sheet-leave"] {
   --bg: var(--sheet);
   --material: color-mix(in srgb, var(--sheet) 72%, transparent);
 }
