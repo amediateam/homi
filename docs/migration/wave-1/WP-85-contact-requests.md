@@ -57,6 +57,9 @@ Out:
 - DEC-76: the owner sees the seeker's Telegram first name, read from the signed launch data at the time of the
   request, stored with the request and erased with it; nothing else of the seeker is shown. SEC-039 and SEC-REQ-053
   apply.
+- DEC-85: a seeker whom an owner closed his flats to (`reason_agent`, `late`: an `owner_seeker_blocks` row) learns
+  it only from `409 request_closed` on that owner's other listings, the same answer as for a let flat, as legacy
+  answers `closed` (BR-API-181, BR-API-185); recorded for WP-70's review.
 - DEC-19 (open): the thresholds of the disclosure quota are not decided. A `given` number is counted by the quota and
   never refused by it (integrator default 23 of the owner-cabinet plan).
 - SEC-REQ-003 names the v1 sign-in as the only body that accepts `initData`. By DEC-76 and the default below the
@@ -89,9 +92,7 @@ Out:
     (`requests:block`), because HOMI has no rule for legacy's `blocked` and `harvest` (Q-API-089);
     `response_minutes` is the median answer time of the owner's last 20 answers, `null` below three; a request on a
     listing that was removed or withdrawn is left to expire; the first name is normalised before it is stored
-    ("The seeker's first name"); a seeker whom an owner closed his flats to learns it from `409 request_closed` on
-    that owner's other listings, as legacy answers `closed` (BR-API-181, BR-API-185) — accepted, recorded for
-    WP-70's review.
+    ("The seeker's first name").
 - `agent` shows to the seeker as `declined`: legacy behaviour (BR-APP-098), not a default.
 
 ## Design
@@ -213,7 +214,7 @@ request_answer_closed`). The flags of the owner request object: `can_undo` = now
 - `RequestAnswered` (request id, action) is dispatched after commit for every action; WP-89 tells the seeker on
   `give` (with «📞 Показать номер», which discloses through `ContactService`, DEC-52).
 - `agent` appears to the seeker as `declined` (BR-APP-098); his later requests on this owner's listings answer `409
-  request_closed` (the residual of "Decisions that bind this package").
+  request_closed` (DEC-85).
 
 ### Expiry and the let flat
 

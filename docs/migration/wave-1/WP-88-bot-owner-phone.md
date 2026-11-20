@@ -42,7 +42,7 @@ Out:
   the number and its two read paths — WP-84 ("The phone window and the number", "Publish and checks").
 - The Mini App's phone step: `tg.requestContact()`, `POST /owner/listings/{id}/phone-request`, the poll of `GET
   /owner/listings/{id}`, the rejection screen and the «Открыть бот» link of an old client — WP-81 (it offers
-  no waitlist, default 32).
+  no waitlist, DEC-82).
 - `/owner` itself (BOT-075 … BOT-079) — WP-56, unchanged outside an open window (DEV-011).
 - Requests, answers and the operators' notice — WP-89. The realtor waitlist message (BOT-091) — a later broadcast
   of WP-57's tool.
@@ -67,13 +67,15 @@ Out:
   observed (Q-BOT-047). Every chat text here is HOMI's, written in the brand layer for the product owner to approve;
   the checklist claims no parity for it.
 - DEC-40: the texts name HOMI through the brand layer (`:brand`, `:bot`).
+- DEC-88: DEC-81's switch goes on on staging, for staff accounts only (`OWNER_CABINET_ALLOWED_IDS`, item 30) with
+  their written consent and after the leak protections, for the checks inside Telegram before the legal gate closes;
+  on production only after the gates of `25` §5.
 - *Integrator defaults, listed for the reviewer:* item 6 (the phone window: `POST
   /owner/listings/{id}/phone-request` opens ten minutes in which an own `+998` contact shared with HOMI's bot becomes
-  the draft's number; outside a window a contact goes to `/owner`), item 22 (DEC-81's switch goes on on staging, with
-  test accounts, for the checks inside Telegram before the legal gate closes; on production only after the gates of
-  `25` §5), item 26 (the realtor check holds at publish instead of refusing a number), item 28 (the leak protections
-  ship with the code that first stores the number; this package's part is "Observability"), item 30 (the staging
-  allow-list `OWNER_CABINET_ALLOWED_IDS`) and item 32 (`reject_reason` `denied` or `limit`). Defaults of this
+  the draft's number; outside a window a contact goes to `/owner`), item 26 (the realtor check holds at publish
+  instead of refusing a number), item 28 (the leak protections ship with the code that first stores the number; this
+  package's part is "Observability"), item 30 (the allow-list `OWNER_CABINET_ALLOWED_IDS`) and item 32
+  (`reject_reason` `denied` or `limit`). Defaults of this
   specification, in the same list:
   a cabinet contact does not also verify the user for `/owner`; an old client reaches the share button through the
   payload `owner_phone`; the chat names no rejection reason; a contact sent while the cabinet prompt is open but the

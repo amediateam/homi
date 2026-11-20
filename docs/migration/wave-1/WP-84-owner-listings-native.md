@@ -40,13 +40,14 @@ In, part B (second PR):
   owner's view and by WP-85's disclosure inside `ContactService::disclose()` (WP-43); the moment of consent.
 - Publish with the automatic checks; statuses and their effects; the limits per account and per phone; the
   allow-list `owner.allowed_ids`; `held` by the realtor check, the votes (WP-44) and the operators, with the evidence
-  in `owner_check_results`; `withdrawn` by the operators' commands; the waitlist (`owner_waitlist`,
+  in `owner_check_results`, kept until an operator decides, with the reminder after 24 h (DEC-83); `withdrawn` by
+  the operators' commands; the waitlist (`owner_waitlist`,
   `owner_phone_denials`, `owner_moderation_actions`).
 - The harvester (`harvested_medians`) on WP-42's card read and `GET /owner/demand`; the stats of a listing.
 - Erasure entries in WP-47's registry, the 90-day purge and the purge of stale drafts; `GET /me`'s
   `owner.has_listings` and `owner.waitlisted`; the switch of DEC-81 kept on the routes WP-80 names.
 - The events `OwnerListingPublished`, `OwnerListingWithdrawn`, `OwnerListingRented`, `OwnerListingHeld`,
-  `OwnerListingEdited` and `OwnerListingErased` for WP-86, WP-85 and WP-89.
+  `OwnerListingEdited`, `OwnerHoldOverdue` and `OwnerListingErased` for WP-86, WP-85 and WP-89.
 
 Out:
 
@@ -73,8 +74,9 @@ Out:
   listing change; a resume (`resumed`) carries the groups changed while the owner had the listing paused. That WP-89
   sends them to the operators' private chats from HOMI's main bot, and announces an edit at most once per listing per
   hour, are integrator defaults (below).
-- DEC-74, DEC-80: DEV-054 (one open draft), DEV-055 (the contact mode is always chosen), DEV-056 (a way forward
-  after a rejection), DEV-061 (no IP lookup) and DEV-062 (every save is live) are on without flags.
+- DEC-74, DEC-80, DEC-84: DEV-054 (one open draft), DEV-055 (the contact mode is always chosen), DEV-056 (a way
+  forward after a rejection), DEV-061 (no IP lookup), DEV-062 (every save is live) and DEV-063 (a small demand is
+  «несколько человек») are on without flags.
 - DEC-77: «Проверенный хозяин» on a native listing means that the owner confirmed his own number with Telegram;
   HOMI runs its own realtor check at publish. It labels people, so it never decides alone (below) and the security
   review of WP-70 checks it (SEC-REQ-045).
@@ -85,8 +87,18 @@ Out:
 - DEC-81: the switch `OWNER_CABINET_ENABLED` stays on the routes WP-80 names ("The switch (DEC-81)"); this package
   adds the allow-list `owner.allowed_ids` to the create, phone-request and publish routes. On the servers the switch
   stays off until WP-89.
+- DEC-82: `PUT /owner/waitlist` records the caller and `GET /me` says so; no screen of Wave 1 calls it.
+- DEC-83: a held listing stays held until an operator decides; nothing releases it by time, and the operators get a
+  reminder after 24 h ("Moderation").
+- DEC-84: `GET /owner/demand` gives the exact count from 5 matching radars, `count: null` with `few: true` for 1 … 4,
+  and `count: 0` for none ("Harvested medians and demand").
+- DEC-86: a realtor vote from the bot is the same vote of `VoteService` as the Mini App's, so its threshold holds a
+  native listing like any other (`votes_agent`, "Moderation").
+- DEC-87: the consent text the phone step shows is approved by the lawyer before the production switch-on and marked
+  "pending legal review" until then; `consent_version` names the version in force.
+- DEC-88: `owner.allowed_ids` is the staging run's allow-list of staff accounts before the legal gate (WP-89).
 - DEC-48: HOMI's report votes act on native listings too, and are never passed to legacy.
-- DEC-51: while radars are off, `GET /owner/demand` answers `count: 0` and `stats.sent` is 0.
+- DEC-51: while radars are off, `GET /owner/demand` answers `count: 0` with `few: false`, and `stats.sent` is 0.
 - DEC-12 (retention, open): the 90-day period below is a configurable default.
 - *Integrator defaults, listed for the reviewer* (the owner-cabinet plan's defaults, not decisions of the developer;
   listed in that PR):
@@ -102,8 +114,8 @@ Out:
     BR-API-109; native numbers are not counted) or is marked by HOMI's votes. The signal never rejects: the listing is
     held (`hold_reason: check_agent`) with the evidence in `owner_check_results`, the operators decide (`owner:release`,
     `owner:withdraw`, `owner:deny-phone`), and the owner sees «На проверке» without being told he was marked (default
-    26). `denied` (legacy's `fraud`; default 32) from the operators' deny list rejects; `limit` at two listings per
-    phone across accounts rejects at the confirmation;
+    26; the hold waits for an operator, DEC-83). `denied` (legacy's `fraud`; default 32) from the operators' deny
+    list rejects; `limit` at two listings per phone across accounts rejects at the confirmation;
   - a vote threshold of WP-44 on a native number (`agent`, `fraud`, `rented`) holds the listing (`votes_agent`,
     `votes_fraud`, `votes_rented`) with the counts in `owner_check_results`; it never withdraws on its own;
   - limits: two listings per account and two per phone; drafts do not count; ten photos;
@@ -134,10 +146,11 @@ Out:
   - the leak protections — the cabinet's Telescope filter, the masking cast of the number, the exception mapping of
     the cabinet's tables — ship here, before any owner data is stored, not with WP-70 (default 28);
   - `OWNER_CABINET_ALLOWED_IDS` (WP-80): when set, only these Telegram ids may create a draft, ask for the phone and
-    publish (the staging run with staff accounts; default 30);
+    publish (the staging run with staff accounts of DEC-88; default 30);
   - the moment a number is accepted is recorded with the version of the privacy text in force
-    (`phone_consented_at`, `phone_consent_version`) and erased with the number; the wording of the consent is the
-    lawyer's (Q-SEC-021);
+    (`phone_consented_at`, `phone_consent_version`) and erased with the number; the wording of the consent is
+    approved by the lawyer before the production switch-on, and marked "pending legal review" until then (DEC-87,
+    Q-SEC-021);
   - defaults of this specification: the sanity range of the price at publish is 50 … 20 000 USD a month (the
     median's bounds of BR-API-057); the tone of a verdict is `good` at 10 % or more below the median, `same` within
     10 %, `null` above, because the thresholds of `check` and `suspicious` are unknown (Q-API-021); a number that
@@ -162,7 +175,7 @@ caller whose `telegram_user_id` is not in a non-empty `owner.allowed_ids` answer
 
 | Table | Columns | Notes |
 | ----- | ------- | ----- |
-| `owner_listings` | `id` (ULID, primary key); `user_id` (foreign key, cascade); `number` (`unsignedBigInteger`, unique, nullable); `status` (string 16); `withdrawn_at`, `held_at` (`timestampTz`, nullable); `hold_reason` (string 16, nullable: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`, `moderator`), `withdraw_reason` (string 32, nullable); `photo_token` (char 20, nullable: the current version of the public copies); `paused_edits` (json, nullable: the groups `photos`, `description` changed while the owner had the listing paused); `published_at`, `left_feed_at`, `purged_at` (nullable); `city`, `district_code` (string 64, nullable); `landmark` (string 120, nullable); `location`, `shown_location` (`geography(Point,4326)`, nullable); `room` (boolean, default false); `rooms`, `floor`, `floors_total` (smallint, nullable); `area_m2` (`decimal(7,1)`, nullable); `price` (bigint, nullable); `currency` (char 3, default `USD`); `price_usd` (integer, nullable); `renovation` (string 32, nullable); `furniture`, `pets` (boolean, nullable); `tenants` (json); `description` (text, nullable); `contact_mode` (string 8, default `request`); part B: `phone` (string 16, nullable, E.164, plain, cast by `OwnerPhoneCast`), `phone_author_key` (string 96, nullable, indexed), `phone_error`, `reject_reason` (string 8, nullable: `denied`, `limit`), `phone_window_until`, `phone_consented_at` (`timestampTz`, nullable), `phone_consent_version` (string 16, nullable); timestamps | index (`user_id`, `created_at`); partial index (`city`, `status`) for the listed rows; GiST on `shown_location` |
+| `owner_listings` | `id` (ULID, primary key); `user_id` (foreign key, cascade); `number` (`unsignedBigInteger`, unique, nullable); `status` (string 16); `withdrawn_at`, `held_at`, `hold_reminded_at` (`timestampTz`, nullable); `hold_reason` (string 16, nullable: `check_agent`, `votes_agent`, `votes_fraud`, `votes_rented`, `moderator`), `withdraw_reason` (string 32, nullable); `photo_token` (char 20, nullable: the current version of the public copies); `paused_edits` (json, nullable: the groups `photos`, `description` changed while the owner had the listing paused); `published_at`, `left_feed_at`, `purged_at` (nullable); `city`, `district_code` (string 64, nullable); `landmark` (string 120, nullable); `location`, `shown_location` (`geography(Point,4326)`, nullable); `room` (boolean, default false); `rooms`, `floor`, `floors_total` (smallint, nullable); `area_m2` (`decimal(7,1)`, nullable); `price` (bigint, nullable); `currency` (char 3, default `USD`); `price_usd` (integer, nullable); `renovation` (string 32, nullable); `furniture`, `pets` (boolean, nullable); `tenants` (json); `description` (text, nullable); `contact_mode` (string 8, default `request`); part B: `phone` (string 16, nullable, E.164, plain, cast by `OwnerPhoneCast`), `phone_author_key` (string 96, nullable, indexed), `phone_error`, `reject_reason` (string 8, nullable: `denied`, `limit`), `phone_window_until`, `phone_consented_at` (`timestampTz`, nullable), `phone_consent_version` (string 16, nullable); timestamps | index (`user_id`, `created_at`); partial index (`city`, `status`) for the listed rows; GiST on `shown_location` |
 | `owner_listing_photos` | `id` (ULID); `owner_listing_id` (foreign key, cascade); `position` (smallint); `original_path` (string; the key of `HashedUploader` on the private disk, shared by identical uploads); `version` (char 8: the first 8 hex of the stored bytes' SHA-256); timestamps | unique (`owner_listing_id`, `position`); index (`original_path`): a row is a reference, not the object |
 | `owner_listing_opens` | `owner_listing_id` (foreign key, cascade); `day` (date, Asia/Tashkent); `opens` (integer) | primary key (`owner_listing_id`, `day`); the source of `stats.daily` |
 | `geo_boundaries` | `id`; `kind` (`country`, `city`, `district`); `code` (string 64); `city_code` (string 64, nullable); `geom` (`geometry(MultiPolygon,4326)`); `source`, `licence`, `attribution` (string); `loaded_at` | unique (`kind`, `code`); GiST on `geom` |
@@ -323,9 +336,9 @@ WP-85 adds its columns to the same mechanisms; the bot side (the contact branch 
   - else `phone` = the number in E.164, `phone_author_key` = `AuthorKey` of WP-42 ("`listing_refs` and author
     keys"): `phone:` + the first 32 hex of HMAC-SHA-256 of the E.164 number with `AUTHOR_KEY_SECRET`;
     `phone_consented_at` = now and `phone_consent_version` = `config('owner.consent_version')`, the version of the
-    privacy text the phone step shows (WP-81; its wording is the lawyer's, Q-SEC-021); the window closes; then the
-    `denied` and `limit` rules of "Checks" run, and a refused number sets `status: rejected` with `reject_reason`.
-    The `agent` signal is not read here: it is a matter for the publish, and it never rejects.
+    privacy text the phone step shows (WP-81; its wording is approved by the lawyer, DEC-87); the window closes;
+    then the `denied` and `limit` rules of "Checks" run, and a refused number sets `status: rejected` with
+    `reject_reason`. The `agent` signal is not read here: it is a matter for the publish, and it never rejects.
   The Mini App learns the outcome from its poll of `GET /owner/listings/{id}` (BR-API-170).
 - The number is read by two code paths only: `OwnerListing::phoneForOwnerView()` (`phone_display` of the owner listing
   object) and `OwnerListing::phoneForDisclosure()`, called only by WP-85's `App\Services\Requests\NativeContact`, the
@@ -376,7 +389,7 @@ card yields a `phone:` key only when the operator sends no author key of its own
 keys"); with such a key the count sees none of that person's cards, which WP-70's review records. `rule_version` of
 `owner_check_results` names the version of these rules. `owner.checks.agent` (default `true`) turns the signal off in
 configuration, the kill switch of SEC-REQ-045. The rejection screen and the «На проверке» state
-are WP-81's (it offers no waitlist, default 32); the support button is DEV-056's.
+are WP-81's (it offers no waitlist, DEC-82); the support button is DEV-056's.
 
 ### Statuses and their effects (part B)
 
@@ -389,7 +402,7 @@ are WP-81's (it offers no waitlist, default 32); the support button is DEV-056's
 | `active`, `paused` | `rented` | status | `left_feed_at`; public copies deleted; `OwnerListingRented` — WP-85 cancels the pending requests and WP-89 tells the waiting seekers (BR-API-176) |
 | `active`, `paused` | `removed` | status | `left_feed_at`; public copies deleted; `OwnerListingWithdrawn` (`removed`) |
 | any listed | held (`paused`) | `owner:hold`, «Снять» (WP-89): `moderator`; a vote threshold (WP-44): `votes_agent`, `votes_fraud`, `votes_rented` | `held_at`, `hold_reason`; out of the feed; public copies deleted; `OwnerListingWithdrawn` (`held`); for votes also an `owner_check_results` row and `OwnerListingHeld`; the owner cannot resume it (BR-API-177) |
-| held | the status it had (`active` for a listing held at its first publish) | `owner:release` | `held_at` and `hold_reason` cleared; back in the feed when `active`: public copies under a new token and `OwnerListingPublished` (`released`, or `first` with `published_at` for a listing held at its first publish) |
+| held | the status it had (`active` for a listing held at its first publish) | `owner:release` | `held_at`, `hold_reason` and `hold_reminded_at` cleared; back in the feed when `active`: public copies under a new token and `OwnerListingPublished` (`released`, or `first` with `published_at` for a listing held at its first publish) |
 | any listed | `withdrawn` | `owner:withdraw`; `owner:deny-phone` | `withdrawn_at`, `withdraw_reason`, `left_feed_at`; public copies deleted; `OwnerListingWithdrawn` (`withdrawn`); moves to «История» |
 | `rejected` | `draft` | `owner:release` | `reject_reason` cleared; the owner may publish again |
 
@@ -413,7 +426,15 @@ cards for every reason except `paused` (WP-89, "Sent cards of a native listing t
   it is rejected `denied` at its next check.
 - `config('owner.moderator_ids')` ← `OWNER_MODERATOR_IDS` (comma-separated Telegram ids; empty: no notice). WP-89
   sends the notices on `OwnerListingPublished` (`first` and `released`, and `resumed` with `fields`),
-  `OwnerListingHeld` and `OwnerListingEdited`.
+  `OwnerListingHeld`, `OwnerListingEdited` and `OwnerHoldOverdue`.
+- No automatic release (DEC-83): a held listing stays held until an operator runs `owner:release`, `owner:withdraw`
+  or `owner:deny-phone`; no rule releases it by time. `php artisan owner:remind-holds`, scheduled hourly
+  (`onOneServer`), takes every listing held by the checks or the votes (`hold_reason` `check_agent`, `votes_agent`,
+  `votes_fraud` or `votes_rented`) whose `held_at` is older than `owner.holds.remind_after_hours` (24) and whose
+  `hold_reminded_at` is `null`, sets `hold_reminded_at` and dispatches `OwnerHoldOverdue` (listing id, number,
+  `hold_reason`, `held_at`) after commit; WP-89 sends the reminder. A release clears `hold_reminded_at`, so a later
+  hold is reminded again. One reminder per hold, and none for an operator's own `moderator` hold, which is already
+  his decision, are defaults of this specification.
 - Votes: WP-84 adds to `VoteService` (WP-44, "Reports and votes") the event
   `App\Events\Personal\VoteThresholdCrossed` (listing number, kind `rented`, `agent` or `fraud`), dispatched once when
   step 5 crosses a threshold. The listener `HoldOwnerListingByVotes` acts on native numbers only: it holds the
@@ -424,8 +445,8 @@ cards for every reason except `paused` (WP-89, "Sent cards of a native listing t
 
 ### Waitlist and `GET /me` (part B)
 
-- `PUT /owner/waitlist` upserts `owner_waitlist` for the caller (BR-API-182); idempotent, `204`. The broadcast «когда
-  откроем» is a later broadcast of WP-57's tool (BOT-091, `UNVERIFIED`).
+- `PUT /owner/waitlist` upserts `owner_waitlist` for the caller (BR-API-182); idempotent, `204`. No screen of Wave 1
+  calls it (DEC-82). The broadcast «когда откроем» is a later broadcast of WP-57's tool (BOT-091, `UNVERIFIED`).
 - `App\Services\Owner\OwnerSummary::for(User): array{has_listings: bool, waitlisted: bool}` feeds `GET /me`'s
   `owner` (WP-40's controller); `pending` is WP-85's and `0` until it is merged.
 
@@ -462,9 +483,11 @@ cards for every reason except `paused` (WP-89, "Sent cards of a native listing t
 - `count` of `GET /owner/demand`: the active radars (WP-45) whose filter set (`radar_filter_sets` of WP-46) matches
   the flat by `DemandMatcher::matches(SearchFilters, OwnerListingForm, GeoPoint $shown)`, the in-memory rule that
   WP-86's `NativeListingFilter` must agree with (WP-86 runs one table against both); `0` while
-  `radar.creation_enabled` is false (DEC-51). The matcher reads every active radar, so `DemandEstimator` caches an
-  answer for five minutes per city, district, rooms, room and price band of 50 USD (`owner.demand.cache_minutes`),
-  and the route has its own limiter (WP-80).
+  `radar.creation_enabled` is false (DEC-51). `DemandEstimator` answers the matches `n` as DEC-84 says (DEV-063):
+  `n` ≥ `owner.demand.exact_from` (5) → `count: n`, `few: false`; 1 ≤ `n` < 5 → `count: null`, `few: true`; 0 →
+  `count: 0`, `few: false`. The matcher reads every active radar, so `DemandEstimator` caches an answer for five
+  minutes per city, district, rooms, room and price band of 50 USD (`owner.demand.cache_minutes`); the cache holds
+  the answer, not `n`, and nothing logs `n`. The route has its own limiter (WP-80).
 
 ### Erasure and retention (part B; WP-47)
 
@@ -501,7 +524,8 @@ cards for every reason except `paused` (WP-89, "Sent cards of a native listing t
 (420), `geo_radius_m` (500), `moderator_ids` (`OWNER_MODERATOR_IDS`, a list of integers), `checks.agent` (`true`),
 `checks.rule_version`, `consent_version` (a string; raised in the same PR as any change of `own.phoneKept`,
 `contact.noteLimit`, `contact.noteRelay` or the privacy page), `retention_days` (90), `drafts.max_age_days` (180),
-`denials.max_age_days` (1 095), `medians.max_age_days` (60), `demand.cache_minutes` (5), `price_usd.min` (50) and
+`denials.max_age_days` (1 095), `medians.max_age_days` (60), `demand.cache_minutes` (5), `demand.exact_from` (5,
+DEC-84), `holds.remind_after_hours` (24, DEC-83), `price_usd.min` (50) and
 `price_usd.max` (20 000). `limits.listings` is read for the account and the phone alike; `allowed_ids` (WP-80) is
 read by the middleware. `backend/config/media.php` gains `max_pixels` (40 000 000).
 
@@ -515,10 +539,10 @@ read by the middleware. `backend/config/media.php` gains `max_pixels` (40 000 00
   (`php artisan make:cast OwnerPhoneCast`); `backend/app/Exceptions/Owner/PersonalDataWriteFailed.php`
 - `backend/app/Jobs/Owner/WritePublicPhotos.php`; `backend/app/Listeners/Owner/{HarvestMedian,HoldOwnerListingByVotes}.php`
   (discovered like `App\Listeners\RecordSourceFlagChange`, not registered by hand)
-- `backend/app/Events/Owner/{OwnerListingPublished,OwnerListingWithdrawn,OwnerListingRented,OwnerListingHeld,OwnerListingEdited,OwnerListingErased}.php`,
+- `backend/app/Events/Owner/{OwnerListingPublished,OwnerListingWithdrawn,OwnerListingRented,OwnerListingHeld,OwnerListingEdited,OwnerHoldOverdue,OwnerListingErased}.php`,
   `backend/app/Events/Listings/LegacyCardFetched.php`, `backend/app/Events/Personal/VoteThresholdCrossed.php`
-- `backend/app/Console/Commands/Owner/{GeoLoadBoundaries,OwnerHold,OwnerRelease,OwnerWithdraw,OwnerDenyPhone,OwnerPurge,OwnerReprice}.php`;
-  `backend/routes/console.php` (the schedule of `owner:reprice`)
+- `backend/app/Console/Commands/Owner/{GeoLoadBoundaries,OwnerHold,OwnerRelease,OwnerWithdraw,OwnerDenyPhone,OwnerRemindHolds,OwnerPurge,OwnerReprice}.php`;
+  `backend/routes/console.php` (the schedules of `owner:reprice` and `owner:remind-holds`)
 - The owner controllers of WP-80 (real bodies); `backend/app/Services/Sources/Stub/NativeStubs.php` (WP-40; the stub
   bodies)
 - Created by earlier packages and changed here: `backend/app/Services/Sources/Legacy/LegacyListingSource.php` (WP-42;
@@ -565,8 +589,8 @@ Part B:
     number; `PhoneLeakTest`.
 11. `OwnerChecks`, `OwnerPublisher` with the hold of the `agent` signal; the allow-list of the middleware; publish and
     contact mode controllers.
-12. Statuses with their events; `OwnerModeration` and the four commands; `VoteThresholdCrossed` in `VoteService`
-    and its listener.
+12. Statuses with their events; `OwnerModeration` and the four commands; `owner:remind-holds` and its schedule
+    (DEC-83); `VoteThresholdCrossed` in `VoteService` and its listener.
 13. Waitlist; `OwnerSummary` in `GET /me`; `OwnerStats` and the line in `ViewRecorder`.
 14. `LegacyCardFetched`, `HarvestMedian`, `MedianBook`, `MarketVerdict`; `DemandMatcher`, `DemandEstimator` with its
     cache, the demand controller; `owner:reprice`.
@@ -591,7 +615,7 @@ Part B:
 - The place lookup answers city and district from HOMI's boundaries; the start view of the picker is not looked up
   (BR-API-168; DEV-061).
 - The demand method answers the number of matching active radars and the usual price in USD whatever the form's
-  currency (BR-API-169).
+  currency (BR-API-169); the number is exact only from 5, and 1 … 4 is `few` (DEC-84, DEV-063).
 - The phone is confirmed through the bot and the client polls (BR-API-170); of the refusals `not_own`, `not_uz`,
   `agent`, `fraud`, `limit` (BR-API-171, `UNVERIFIED`) HOMI keeps `not_own`, `not_uz` and `limit`, `fraud` becomes
   `denied`, and `agent` becomes a hold for the operators (integrator default); the number is kept itself (BR-API-172,
@@ -604,7 +628,7 @@ Part B:
 - `withdrawn` and `held` are set by the service, not by the owner (BR-API-177).
 - `stats` with `daily`, the last value today (BR-API-178); dated in Asia/Tashkent (fix of LB-APP-062 on the server's
   side).
-- `PUT /owner/waitlist` records the caller (BR-API-182); no screen of WP-81 calls it (default 32).
+- `PUT /owner/waitlist` records the caller (BR-API-182); no screen of WP-81 calls it (DEC-82).
 
 ## Tests
 
@@ -667,16 +691,20 @@ Part B:
   «Снять» through `OwnerModeration::hold()` sets `held` with `moderator`; `owner:deny-phone` accepts a listing or
   `--stdin` and has no argument for a number; `VoteThresholdCrossed` of each kind for a native number holds it
   (`votes_rented`, `votes_agent`, `votes_fraud`) with an `owner_check_results` row and never withdraws it, for a
-  legacy number does nothing. `ModerationAuditTest` (`tests/Pgsql`): an `UPDATE` and a `DELETE` of
-  `owner_moderation_actions` are refused.
+  legacy number does nothing; a vote cast through the bot's card holds as one cast in the Mini App (DEC-86).
+  `ModerationAuditTest` (`tests/Pgsql`): an `UPDATE` and a `DELETE` of `owner_moderation_actions` are refused.
+- Hold reminder (time travel, DEC-83): a `check_agent` hold at 23 h 59 min → no event; at 24 h 1 min one
+  `OwnerHoldOverdue` and `hold_reminded_at` set; a second run → none; a `moderator` hold → none; after 7 days the
+  listing is still held; `owner:release` clears `hold_reminded_at`, and a new hold is reminded once more.
 - Waitlist: `204` twice, one row; `GET /me` says `waitlisted: true`, `has_listings` follows the rows.
 - Stats: `daily` has seven values, the last today in Tashkent at 23:30 UTC; `opened`, `favorites`, `sent` count
   their rows.
 - Harvester: a `district` comparison is stored; a `near` one is skipped; an `updated` of 61 days ago is skipped; an
   older `updated` never replaces a newer one; `MedianBook` falls back to the city row; the usual price is ± 10 %;
   `MarketVerdict` at −12 %, −5 % and +15 % gives `good`, `same`, `null`.
-- Demand: two matching radars and one that does not → `count: 2`; `count: 0` with `radar.creation_enabled` off; a
-  second call within five minutes reads no radar.
+- Demand: five matching radars and one that does not → `count: 5`, `few: false`; two matching → `count: null`,
+  `few: true`, and no log line or answer holds the 2; none → `count: 0`, `few: false`; `count: 0`, `few: false` with
+  `radar.creation_enabled` off; a second call within five minutes reads no radar.
 - Erasure: `ErasureService::erase()` of an owner removes his listings, photo references (both disks, the originals that
   no other reference names), check results and waitlist row; `ErasureRegistryTest` and `RetentionRegistryTest` pass with
   the new tables; `OwnerListingErased` (`erased`) once per numbered listing. Purge (time travel): at 90 days − 1 s
@@ -707,6 +735,9 @@ Part B:
       realtor.
 - [ ] `owner:hold`, `owner:release`, `owner:withdraw` and `owner:deny-phone` work and are logged with who and the
       system user in an append-only table; votes hold a native listing and never withdraw it.
+- [ ] A held listing stays held until an operator decides; `owner:remind-holds` raises one `OwnerHoldOverdue` per
+      hold of the checks or the votes after 24 h (DEC-83).
+- [ ] `GET /owner/demand` never answers a count of 1 … 4: `few: true` instead (DEC-84).
 - [ ] The usual price and `stats.price_delta` appear wherever a harvested median exists, and nowhere else.
 - [ ] Erasure, the 90-day purge and the purge of stale drafts and deny-list entries are registered and tested with
       time travel.

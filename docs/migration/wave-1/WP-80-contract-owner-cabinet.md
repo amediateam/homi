@@ -46,8 +46,8 @@ Out:
 ## Decisions that bind this package
 
 - DEC-69: the owner cabinet of legacy release `index-CBlEKxdL.js` is in Wave 1, owner side and seeker side; this
-  package fixes its whole contract. Functional parity (DEC-46) applies; the cabinet's deviations DEV-054 … DEV-062
-  are on without flags (DEC-74, DEC-80), and the contract below already carries them.
+  package fixes its whole contract. Functional parity (DEC-46) applies; the cabinet's deviations DEV-054 … DEV-063
+  are on without flags (DEC-74, DEC-80, DEC-84), and the contract below already carries them.
 - DEC-70: HOMI owners' listings live in HOMI's tables and are shown beside the legacy ones. Every listing item says
   where it comes from (`origin`); native numbers come from a range legacy never uses (the floor below).
 - DEC-71: the request method covers legacy numbers as well; a legacy self-placed listing in `gate` mode is relayed
@@ -68,9 +68,16 @@ Out:
 - DEC-81: the server switch `OWNER_CABINET_ENABLED`, off by default. While it is off no draft can be created or
   published and the settings have no group «Сдаю квартиру»; taking a listing down, pausing it, «Сдано» and answering a
   request always work. Which methods the switch closes is the plan's reading of DEC-81, below ("The switch (DEC-81)").
+- DEC-82: `PUT /owner/waitlist` and `owner.waitlisted` of `GET /me` stay in the contract; no screen of Wave 1 calls
+  the method (the Mini App offers no entry), and whether and where to offer one is decided later.
+- DEC-84: `GET /owner/demand` gives the exact `count` from 5 matching radars; for 1 … 4 it answers `count: null` with
+  `few: true`, which the form shows as «несколько человек»; 0 is `count: 0` and hides the line (DEV-063).
+- DEC-85: a seeker whom an owner closed his requests to (`reason_agent`, `late`) gets `409 request_closed` on that
+  owner's listings, the same answer as for a let flat; nothing tells him why.
+- DEC-88: `OWNER_CABINET_ALLOWED_IDS` is the staging run's allow-list of staff accounts (below).
 - DEC-52: no number in any card or preview; `owner.description` is masked in `fromArray()` like every author-written
   text (WP-12, "Phone numbers in listing texts").
-- DEC-51: while radars are off, `GET /owner/demand` answers `count: 0`, on stubs too.
+- DEC-51: while radars are off, `GET /owner/demand` answers `count: 0` and `few: false`, on stubs too.
 - *Integrator defaults, listed for the reviewer* (the owner-cabinet plan's defaults, not decisions of the developer;
   listed in that PR):
   - two contact methods: the request is `POST /listings/{number}/contact-request`, and `POST
@@ -98,11 +105,11 @@ Out:
     `held: true` and `hold_reason` (default 26); `reject_reason` is `denied` (the operators' deny list, legacy's
     `fraud`; default 32) or `limit` (the phone limit at the confirmation), and legacy's `agent` is not produced;
   - `OWNER_CABINET_ALLOWED_IDS`: when set, only these Telegram ids may create a draft, ask for the phone and publish
-    (the staging run with staff accounts; WP-84 enforces it; default 30); `OWNER_LISTINGS_PUBLIC` (on unless set to
-    `false`): off takes every native listing out of every public answer at once and closes the seeker's side of a
-    native number — the request method answers `409 request_closed`, the contact method `404 contact_unavailable` —
-    while the owner's cabinet and his answers to requests already open keep working (WP-86 and WP-85 enforce it;
-    default 31);
+    (the staging run with staff accounts of DEC-88; WP-84 enforces it; default 30); `OWNER_LISTINGS_PUBLIC` (on
+    unless set to `false`): off takes every native listing out of every public answer at once and closes the seeker's
+    side of a native number — the request method answers `409 request_closed`, the contact method `404
+    contact_unavailable` — while the owner's cabinet and his answers to requests already open keep working (WP-86 and
+    WP-85 enforce it; default 31);
   - the consent of an owner and of a seeker is recorded on the server with the version of the privacy text in force
     (`config('owner.consent_version')`, WP-84 and WP-85), so no method takes a consent field;
   - defaults of this specification: the shapes of the owner listing and owner request objects below (the legacy
@@ -266,9 +273,9 @@ answers the owner may still give (BR-API-180).
 | `PUT /owner/listings/{id}/status` | `api.v1.owner.listings.status` | `app:write`, switch for `active`, `throttle:owner-writes` | API-046 | `{status: "active" \| "paused" \| "rented" \| "removed"}`; `active` refused for `held`; nothing leaves `withdrawn`, `rented` or `removed` |
 | `GET /owner/listings/{id}/requests` | `api.v1.owner.listings.requests.index` | `app:read` | API-048 | cursor list, newest first, 20 a page; the "all requests" form is not built |
 | `POST /owner/requests/{id}/answer` | `api.v1.owner.requests.answer` | `app:write`, `throttle:owner-writes` | API-049 | `{action}`; `409 request_answer_closed` |
-| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (LB-APP-071 has no Mini App entry, default 32) |
+| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | API-050 | idempotent; `GET /me` says `owner.waitlisted` (the Mini App offers no entry, so LB-APP-071 has nothing to fix there; DEC-82) |
 | `GET /owner/place` | `api.v1.owner.place` | `app:read`, `throttle:owner-place` | API-051 | `?lat=&lon=` (3 decimals) → `{city, district_code}`, either `null` (DEC-79) |
-| `GET /owner/demand` | `api.v1.owner.demand` | `app:read`, `throttle:owner-demand` | API-053 | `?city=&district=&rooms=&room=&price=&currency=` → `{count, usual_low_usd, usual_high_usd}` |
+| `GET /owner/demand` | `api.v1.owner.demand` | `app:read`, `throttle:owner-demand` | API-053 | `?city=&district=&rooms=&room=&price=&currency=` → `{count, few, usual_low_usd, usual_high_usd}` (DEC-84) |
 
 Not built: `GET /owner/pending` (API-047: its number is `owner.pending` of `GET /me`); `GET /owner/map-start`
 (API-052, DEV-061: the picker starts at the centre of the form's city or at the user's own location).
@@ -352,7 +359,8 @@ phone request, keyed per route and actor, on top of `owner-writes`), `owner-plac
   → `declined` with the reason «уже нашли»; `reason_agent` and `late` → `agent` (the seeker can no longer write to
   this owner's flats); `undo` → the previous answer. An action its flags do not allow, or a request that changed
   meanwhile → `409 request_answer_closed`. Works with the switch off.
-- `PUT /owner/waitlist` — no body → `204`, also on a repeat. `GET /me` then says `owner.waitlisted: true`.
+- `PUT /owner/waitlist` — no body → `204`, also on a repeat. `GET /me` then says `owner.waitlisted: true`. No screen
+  of Wave 1 calls it (DEC-82).
 
 #### Place and demand
 
@@ -362,8 +370,10 @@ phone request, keyed per route and actor, on top of `owner-writes`), `owner-plac
   either may be `null` (outside HOMI's boundaries, DEC-79).
 - `GET /owner/demand?city=&district=&rooms=&room=&price=&currency=` — `city` required; `district` a district code;
   `rooms` 1 … 5; `room` boolean; `price` an integer and `currency` `USD` or `UZS`, both optional → `200 {"data":
-  {"count": 7, "usual_low_usd": 550, "usual_high_usd": 680}}`. `count` is the number of active radars that would
-  match the flat, `0` while radars are off (DEC-51); the bounds are `null` without a harvested median (DEC-78).
+  {"count": 7, "few": false, "usual_low_usd": 550, "usual_high_usd": 680}}`. `count` is the number of active radars
+  that would match the flat when it is 5 or more; for 1 … 4 the answer is `count: null` with `few: true`, never the
+  number; 0 is `count: 0`, also while radars are off (DEC-51); `few` is `true` only for 1 … 4 (DEC-84, DEV-063). The
+  bounds are `null` without a harvested median (DEC-78).
 
 ### The request method: `POST /listings/{number}/contact-request`
 
@@ -393,7 +403,7 @@ Errors, checked before anything is created:
 | `409 no_chat` | HOMI's bot cannot write to the seeker yet; nothing was created (BR-API-184); the client asks for write access and repeats once |
 | `429 rate_limited` | `reason` `requests_fast` (the pause after several requests in a row), `requests_day` or `requests_week`; `Retry-After` in seconds |
 | `403 requests_blocked` | requests of this user are closed (legacy `blocked` and `harvest` alike) |
-| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, the owner marked this seeker as a realtor, the listing already took its requests of the day (`owner.limits.requests.per_listing_day`, WP-85), or a native listing while `OWNER_LISTINGS_PUBLIC` is off (default 31) |
+| `409 request_closed` | the listing takes no requests: not in `request` mode, let, paused, removed, a legacy `gate` listing while the relay is off, the owner marked this seeker as a realtor (DEC-85), the listing already took its requests of the day (`owner.limits.requests.per_listing_day`, WP-85), or a native listing while `OWNER_LISTINGS_PUBLIC` is off (default 31) |
 | `409 own_listing` | the caller's own listing |
 | `409 contact_open` | the listing shows its number now (`phone` mode); the client reads the card again |
 
@@ -558,7 +568,7 @@ verified, else `null`) and `contact.mode: null`, `contact.request: null`.
   true`, `past: 0`) and `list.returning.json` (`items: []`, `can_add: true`, `past: 3`).
 - `requests.json` — requests in every owner-side status, two of them `pending`, one `declined` with `can_undo`, one
   `given` with `can_late`, one `agent` with `agent_marked`.
-- `demand.json`, `place.json`.
+- `demand.json` (`count: 7`, `few: false`, both bounds), `place.json`.
 - Photo addresses reuse the photos of the native catalogue entries, so `sources:publish-stub-media` covers them.
 
 Show answers the entry of `list.json` with that id (`404` for any other id); writes answer that entry with the sent
@@ -579,6 +589,7 @@ not in `list.json` answers `404 not_found`. The `me` fixtures gain `owner` (`{2,
 | `owner_limit` | store, publish | `409 owner_limit` (`limit: "account"`, `max: 2`) |
 | `owner_disabled` | store, update, photo writes, contact mode, phone request, publish, status with `active` | `403 owner_disabled` (the switch itself is configuration) |
 | `owner_waitlisted` | `GET /me` | `owner.waitlisted: true` |
+| `demand_few` | demand | `count: null`, `few: true`, the bounds of `demand.json` (DEC-84) |
 | `phone_set` | show | the complete draft with `phone_set: true` and `phone_display` |
 | `phone_not_uz`, `phone_not_own` | show | the complete draft with `phone_error` `not_uz` or `not_own` |
 | `rejected_denied`, `rejected_limit` | publish; show | `409 owner_rejected` with `reason` `denied` or `limit`; show answers the complete draft `rejected` with that `reject_reason` |
@@ -707,7 +718,9 @@ items placed by HOMI's own owners carry `origin: native`.»
   not from the card (BR-API-187, DEC-52).
 - Self-placed listings carry the owner fields and no channel source (BR-API-188); the tier is a field, not a label
   (BR-API-189 `UNVERIFIED` in legacy; fix of LB-APP-075).
-- The waitlist is recorded and `GET /me` says so (BR-API-182; LB-APP-071 has no Mini App entry, default 32).
+- The waitlist is recorded and `GET /me` says so (BR-API-182; the Mini App offers no entry, so LB-APP-071 has nothing
+  to fix there; DEC-82).
+- The demand count is exact only from 5; 1 … 4 is `few` (BR-API-169 changed by DEC-84, DEV-063).
 
 ## Tests
 
@@ -738,8 +751,9 @@ items placed by HOMI's own owners carry `origin: native`.»
 - Requests (owner side): the cursor walk; the answer with each action → the status of the table; `request_answer_closed`
   → `409`; an unknown request id → `404`.
 - Waitlist: `204` twice. Place: a Tashkent point → `tashkent` / `yunusobod`, also sent with 6 decimals; a point in
-  Andijan → both `null`; a missing `lon` → `422`. Demand: the fixture with radars on; `count: 0` with
-  `radar.creation_enabled` off; `rooms: 6` → `422`.
+  Andijan → both `null`; a missing `lon` → `422`. Demand: the fixture with radars on (`count: 7`, `few: false`);
+  `demand_few` → `count: null`, `few: true`; `count: 0` and `few: false` with `radar.creation_enabled` off; `rooms: 6`
+  → `422`.
 - Request method: the answers by number above; each scenario its code, `Retry-After` on the three limits; a missing
   `init_data`, one over 4 096 bytes, `who: "group"`, `people: 0`, a 33-character `move_in` → `422`; the answer and
   the logs never contain the sent `init_data`.

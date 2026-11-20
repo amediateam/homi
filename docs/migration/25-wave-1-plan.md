@@ -369,9 +369,10 @@ While `OWNER_CABINET_ENABLED` is off (DEC-81) creating a draft, asking for the p
 `403 owner_disabled`, and removing, pausing, «Сдано» and answering a request always work. The details are the plan's
 reading of DEC-81, listed for the reviewer: resuming a paused listing and every content edit (the form, photos, the
 contact mode) are refused as well, while reads, deleting a draft or a rejected listing, the waitlist, the place
-lookup and demand stay open; `GET /reference` says `owner_enabled: false`; the Mini App opens no form, ignores an
-owner launch and shows the group «Сдаю квартиру» only to a user who has listings, with «Мои объявления» alone (WP-80,
-WP-81, WP-82). A request is its own method,
+lookup and demand stay open; `GET /reference` says `owner_enabled: false`; the Mini App opens no form and ignores an
+owner launch. It shows the group «Сдаю квартиру» only to a user who has listings, with «Мои объявления» alone, which
+the developer confirmed on 2026-11-20 (answer 15 of `decisions/2026-11-19-developer-answers.md`; WP-80, WP-81,
+WP-82). A request is its own method,
 `POST /listings/{number}/contact-request`; `POST /listings/{number}/contact` stays the only method that returns a
 number (*integrator default, listed for the reviewer*).
 
@@ -459,16 +460,17 @@ its number is HOMI's.
 
 **The owner cabinet before real owners.** The cabinet's packages are merged and deployed with
 `OWNER_CABINET_ENABLED` off (DEC-81). Seven gates stand between them and real owners. The developer named the bot
-and the legal gate (answer 14); the others are the plan's (*integrator defaults, listed for the reviewer*), gates
+and the legal gate (answer 14), put the consent text into the legal gate (DEC-87) and let staging go on before it
+with staff accounts (DEC-88); the other gates are the plan's (*integrator defaults, listed for the reviewer*), gates
 5 – 7 from the security review of the plan:
 
 | # | Gate | Blocks | Buildable before it |
 | - | ---- | ------ | ------------------- |
-| 1 | **The legal basis** (Q-SEC-021) and the privacy text for the owner's number in plain text, the photos and the true location, the form, the requests with the seeker's first name, and the relay to the operator | The switch-on of DEC-81 on production (on staging only the checks of WP-89 with test accounts, limited by `OWNER_CABINET_ALLOWED_IDS`, defaults 22 and 30: *integrator defaults, listed for the reviewer*); the final texts of WP-56, WP-61 and WP-70; the relay's switch (WP-87) | WP-80 … WP-83 on stubs; WP-84 … WP-86, WP-88, WP-89 merged with the switch off; the texts marked "pending legal review" as WP-56 does |
+| 1 | **The legal basis** (Q-SEC-021) and the privacy text for the owner's number in plain text, the photos and the true location, the form, the requests with the seeker's first name, and the relay to the operator; the owner's consent text approved by the lawyer (DEC-87) | The switch-on of DEC-81 on production (on staging the checks of WP-89 run before this gate, by DEC-88: only staff accounts, limited by `OWNER_CABINET_ALLOWED_IDS`, with the written consent of each, their data erased after the checks, and gate 5 first); the final texts of WP-56, WP-61 and WP-70; the relay's switch (WP-87) | WP-80 … WP-83 on stubs; WP-84 … WP-86, WP-88, WP-89 merged with the switch off; the texts marked "pending legal review" as WP-56 does |
 | 2 | **The operator's answers** (points 14 – 21 of `decisions/2026-11-14-operator-request.md`) | WP-87 only | The request sheet for a legacy `gate` listing on stubs (`100024`, scenario `relay_on`); the neutral bar of DEC-75 |
 | 3 | **The bot can confirm a phone and deliver requests** (WP-88, WP-89) | The switch-on | Everything; it is why the switch exists |
 | 4 | **Infrastructure**: PostGIS in `homi_db` (`docs/infrastructure/deployment.md:140`); the boundary file loaded (Q-DATA-051); the `owner/` path of the public disk served by the CDN host; `SHOWN_POINT_SECRET`, `OWNER_MODERATOR_IDS` set | The deploy of WP-84 to production (PostGIS); the switch-on (the rest) | Everything else |
-| 5 | **No number in the observability tools** (default 28): the leak protections of WP-84 and WP-88 deployed — Telescope hides the phone, `init_data` and the contact fields, the number's masking cast, an exception reporter that drops the query bindings and messages that carry it — and Telescope records none of the cabinet's requests and jobs with their values. Whether `TELESCOPE_RECORD_ALL` changes on the servers is the production track's to answer | The switch-on of DEC-81, on staging too | Everything else |
+| 5 | **No number in the observability tools** (default 28; on staging too, DEC-88): the leak protections of WP-84 and WP-88 deployed — Telescope hides the phone, `init_data` and the contact fields, the number's masking cast, an exception reporter that drops the query bindings and messages that carry it — and Telescope records none of the cabinet's requests and jobs with their values. Whether `TELESCOPE_RECORD_ALL` changes on the servers is the production track's to answer | The switch-on of DEC-81, on staging too | Everything else |
 | 6 | **Hardening and a way to contest**: WP-70 merged and deployed (Telescope off on production, `RedactSecrets`, the leak scans and `security:check` green); a working contact for an owner to contest a hold or a rejection — the support bot of WP-59 (DEC-56) or another channel named in the rejection, hold and privacy texts | The switch-on on production (on staging a team contact in the texts is enough) | Everything else |
 | 7 | **The disclosure quota**: DEC-19's soft and hard thresholds and the daily cap of Q-API-085 are numbers in the production env, not blank, so that no account can walk the native numbers and collect every `phone`-mode owner's number | The switch-on on production | Everything else |
 
@@ -524,7 +526,7 @@ photos and the requests with the seeker's first name, and the relay to the opera
    same day (the owner cabinet «Сдать квартиру», the contact request and the changes outside them;
    `wave-1/baseline.md`); then `index-CIa0Ldj2.js` (the release of 18 Nov 2026: built screens change, seven contract
    points on stubs, eleven decisions DEC-58 … DEC-68, and the catch-up packages WP-34 … WP-38;
-   `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-81;
+   `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-88;
    WP-80 … WP-89).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 

@@ -63,8 +63,8 @@ DEV-054 … DEV-058, DEV-061 and DEV-062.
   Mini App, and the client never stores or logs it. The element that shows it carries the `.ph-mask` class of WP-32's
   replay masking, a failed action reaches the error facade of WP-32 as its `UiError` code only, never with its input
   or answer, and no analytics property holds the number.
-- DEC-74 (amends DEC-36 for these rows): DEV-054 … DEV-058 and DEV-061 are on without a flag; DEC-80: DEV-062 is on
-  without a flag. None of them gets a `dev…` flag in `lib/flags.ts`.
+- DEC-74 (amends DEC-36 for these rows): DEV-054 … DEV-058 and DEV-061 are on without a flag; DEC-80: DEV-062 and
+  DEC-84: DEV-063 are on without a flag. None of them gets a `dev…` flag in `lib/flags.ts`.
 - DEC-78: the usual price «≈ обычная цена» shows only where `GET /owner/demand` gives both bounds (a harvested
   median exists); sparse at first, and never an error.
 - DEC-79: the place lookup answers `{city, district_code}` only. There is no street address: the label under the pin
@@ -75,7 +75,15 @@ DEV-054 … DEV-058, DEV-061 and DEV-062.
   ignored, and `403 owner_disabled` closes the form with a toast. The server then refuses every create, content
   save, phone request, publish and resume (WP-80), so the form has nothing to do; «Мои объявления», «Отклики» and the
   owner panel stay open for a user who has listings (WP-82), so pausing, «Сдано», «Снять» and the answers work as
-  DEC-81 says (*the plan's reading of DEC-81, listed for the reviewer*).
+  DEC-81 says (the group for a user who has listings: confirmed by the developer on 2026-11-20, answer 15; the
+  methods the server refuses: the plan's reading, WP-80).
+- DEC-82: the form offers no realtor waitlist in Wave 1; `PUT /owner/waitlist` stays in the contract unused (section
+  "Rejection").
+- DEC-84: the demand line gives the number from 5 matching radars and «несколько человек» for 1 … 4 (`few`); 0 hides
+  it (DEV-063, section "Demand and usual price").
+- DEC-87: the line on how the number is kept (`own.phoneKept`) is part of the consent text that the lawyer approves
+  before the production switch-on; until then it is marked "pending legal review" (section "Phone").
+- DEC-88: the checks inside Telegram of WP-89 run on staging with staff accounts before the legal gate.
 - DEC-51: while radars are switched off (`useRadarsEnabled()` of WP-24 is `false`), the demand line and the radar
   sentence of the done step are not shown.
 - DEC-56: the support button of DEV-056 opens HOMI's support bot (`supportUrl` of `lib/deeplinks/build.ts`) and is
@@ -86,18 +94,18 @@ DEV-054 … DEV-058, DEV-061 and DEV-062.
   `POST …/phone-request`), default 9 (two listings per account and per phone, ten photos, from `GET /reference`),
   default 16 (the renovation list `renovations.owner`), default 18 (long-term rent only), default 19 (publishing a
   `paused` listing keeps it paused; a `rejected` listing is published again only after the operators release it —
-  so the form never sends a publish for a non-draft), default 22 (the cabinet goes on on staging for the checks
-  inside Telegram of WP-89, before the legal gate). New in this specification: (a) the owner dictionary is imported
+  so the form never sends a publish for a non-draft). New in this specification: (a) the owner dictionary is imported
   from the pinned release by `scripts/import-legacy.mjs`, not written by hand; (b) photos travel through a Server
   Action whose body limit is raised to `'4mb'`, and a photo the client cannot shrink is refused, not sent; (c) an
   owner launch waits behind the first-launch pickers, as legacy's city picker covers the form (`03` SCR-050,
   `inferred`, Q-APP-028); (d) the form takes the `@overlay` slot, so a form opened from the owner panel replaces the
   listing there, and Back opens the listing again; (e) a publish that the server's checks hold for the operators
   (`held` with `hold_reason`, default 26) ends on the done step's «На проверке» form, which never says why (WP-70
-  row 45), and the realtor waitlist is not offered (section "Rejection"); (f) the place
+  row 45), and the realtor waitlist is not offered (section "Rejection", DEC-82); (f) the place
   label is read with the map's centre rounded to 3 decimals, so the owner's pin trail does not reach the API's logs
   at metre precision (`16` SEC-REQ-052); (g) the phone step shows one line on how the number is kept, with the
-  privacy link, and the landmark field the hint that it is public — both texts for the product owner to approve.
+  privacy link, and the landmark field the hint that it is public — both texts for the product owner to approve, the
+  first also for the lawyer (DEC-87).
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` (slots, `default.js`),
 `intercepting-routes.md`, `03-api-reference/05-config/01-next-config-js/serverActions.md` (`bodySizeLimit`, default
@@ -282,8 +290,9 @@ changes for the other callers. The rule that a touch inside a nested sub-page is
   `own.photoDeleted` «Фото удалили» (DEV-057), `own.cityChanged` «Район и точку сбросили» (DEV-058),
   `own.disabled` «Сдать квартиру пока нельзя» (DEC-81), `own.photoUnreadable` «Это фото не открылось — выберите
   другое» (the refused shrink), `own.support` «Написать в поддержку» (DEV-056), `own.edit.done` «Готово»
-  (DEV-062), `own.review.title` and `own.review.text` (the held publish), `own.phoneKept` (the phone step) and
-  `own.landmarkHint` (the landmark field).
+  (DEV-062), `own.review.title` and `own.review.text` (the held publish), `own.phoneKept` (the phone step; "pending
+  legal review", DEC-87), `own.landmarkHint` (the landmark field) and `own.demandFew` «Сейчас такую ищут несколько
+  человек с радаром» (DEC-84, DEV-063; the developer's words are «несколько человек»).
 - Texts built from server values (`own.need.*`, the rejection reasons, `phone_error`) are read through `labelFor` of
   `@homi/i18n` with the new label tables `ownerNeed`, `ownerReject` and `phoneError` (WP-82 adds the tables of the
   statuses and the requests); an unknown value reads `fallback.other` and reports once (fix of LB-APP-064). The
@@ -306,8 +315,8 @@ Listings that already exist when the switch goes off (staging after WP-89's chec
 is unset again, WP-89 "Switching the cabinet on") keep every action DEC-81 names: «Мои объявления»
 (`/settings/owner`), «Отклики» and the owner panel (SCR-059) are not closed by the switch (WP-82); only `/owner/new`
 and the form's addresses are, since the server refuses creating, every content edit, the phone request, publish and
-resume while it is off (WP-80). This is the plan's reading of DEC-81, listed for the reviewer: if the developer
-wants the group hidden for everyone, the owner can only act through the bot's answers.
+resume while it is off (WP-80). The developer confirmed this reading of DEC-81 on 2026-11-20 (answer 15): the group
+stays, with «Мои объявления» alone, for an owner who has listings.
 
 ### Analytics (`03` §3.3, LB-APP-058)
 
@@ -478,7 +487,9 @@ Changed:
 
 - `GET /owner/demand` 500 ms after a change of city, district, rooms, room, price or currency, aborting the previous
   read, never without a city; errors are silent.
-- «Сейчас такую ищут {n} человек с радаром» in the footer and on the done step when `count > 0` and radars are on.
+- The demand line in the footer and on the done step while radars are on (DEC-84, DEV-063): «Сейчас такую ищут {n}
+  человек с радаром» when `count` is a number above 0 (the server gives one only from 5), `own.demandFew` «Сейчас
+  такую ищут несколько человек с радаром» when `few` is `true`; none when `count` is 0.
 - «≈ обычная цена: {range} — {what}, {place}» when both `usual_low_usd` and `usual_high_usd` are set and a rooms
   choice exists; in a UZS form the range is in millions through `reference.rates.usd_uzs` (`money.mln`), else
   «$low–high». Without a harvested median the line is absent.
@@ -494,7 +505,8 @@ Changed:
   new tap starts a new attempt. Above it one line, `own.phoneKept` «Номер хранится в HOMI и виден только тем, кому вы
   его дадите.» with «Политика конфиденциальности» linked to `brand.links.privacy` of the locale (the link hidden while
   it is `null`; default (g)). A change of this line raises `owner.consent_version` in the same PR (WP-84,
-  "Configuration").
+  "Configuration"). The line is part of the consent text of DEC-87: marked "pending legal review" until the lawyer
+  approves it, and the production switch-on waits for the approved text (`25` §5 gate 1).
 - A tap: medium haptic, `requestOwnerPhone({ id })` (opens the window of default 6), then `tg.requestContact()`.
   `null` (below 6.9) → the old-client text, and polling starts anyway; `false` → the denied text; `true` → polling.
 - Polling (`usePhonePoll`): `GET /owner/listings/{id}` at once, then every 1.5 s without overlap, for up to 90 s, and
@@ -515,8 +527,8 @@ Changed:
 - The realtor waitlist that legacy offered under its `agent` text («Сообщите, когда откроете вход для риелторов»,
   API-050, LB-APP-071) is not offered: HOMI rejects nobody as a realtor (default 26), and offering it after `denied`
   or `limit` would tell the owner what HOMI suspects. The form builds no waitlist action; `PUT /owner/waitlist` and
-  `me.owner.waitlisted` stay in the contract (WP-80), and LB-APP-071 has nothing to fix here (*integrator default,
-  listed for the reviewer*).
+  `me.owner.waitlisted` stay in the contract (WP-80), and LB-APP-071 has nothing to fix here (DEC-82: whether and
+  where to offer a waitlist is decided later).
 - `409 owner_rejected` from publish re-reads the listing; the server's rejected copy is used, else the listing is
   marked rejected locally with the answer's `reason`; then this state shows. Back returns to the questionnaire.
 
@@ -549,7 +561,8 @@ Changed:
 - A new listing: 12 confetti pieces staggered by 25 ms and HOMI's mascot button (the art is HOMI's, DEC-40); the
   success haptic, a heavy impact at 260 ms and a medium one at 420 ms. A mascot tap repeats both at most once per
   800 ms and sends `owner_mascot_tap` at most once per 30 000 ms. Lite graphics and reduced motion show the confetti
-  still. Then `own.doneText` (or `own.doneTextNoRadar` with radars off), the demand line when `count > 0`, and
+  still. Then `own.doneText` (or `own.doneTextNoRadar` with radars off), the demand line (section "Demand and usual
+  price"), and
   `own.doneNext` «Отклики придут в бот. Ответить можно там или в «Мои объявления».»
 - An edit: «Сохранили» and «Объявление обновлено.»; confetti only after a mascot tap.
 - A held publish (default 26, default (e)): no confetti and no haptic pattern; the title `own.review.title` «На
@@ -587,7 +600,8 @@ Changed:
   shrink sends nothing and the batch goes on; `owner_photo_limit` stops it; the cover order; delete with undo sends
   nothing, delete without undo sends one `DELETE` when the toast ends and on unmount.
 - `demand.test.ts`: 500 ms, abort on a new change, no read without a city, the UZS range in millions, no usual
-  price with a `null` bound.
+  price with a `null` bound; `count: 7` → the number, `few: true` → «несколько человек», `count: 0` → no line
+  (DEC-84).
 - `applyPlace.test.ts`: silent fill, replace with undo, the city counted as empty, an unknown city ignored, a
   stale answer dropped; the two `owner_place_autofill` results.
 - `phonePoll.test.ts` (fake clock): the 1.5 s ticks without overlap, the 20 s hint, the 90 s stop and the restart on
@@ -637,7 +651,7 @@ without confetti or any reason.
 Run in ru, uz and en, light and dark; cookie mode and header mode where a request is involved. Staging and
 production keep the cabinet switched off until WP-89 (DEC-81); these lines run on a local stack whose backend env
 has `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and once more inside Telegram on staging when
-WP-89 switches the cabinet on there with test accounts (default 22).
+WP-89 switches the cabinet on there with staff accounts (DEC-88).
 
 - [ ] With the cabinet off: no address of the form opens, an `owner_new` launch opens the feed, and the form sends no
       owner request. Seen on staging in three languages.
@@ -654,7 +668,8 @@ WP-89 switches the cabinet on there with test accounts (default 22).
 - [ ] Photos: up to ten, the cover badge, «Сделать обложкой», delete with «Вернуть» (DEV-057); an unreadable file is
       refused with its text.
 - [ ] Clearing the address keeps the point; another city offers «Вернуть» (DEV-058).
-- [ ] The demand line and the usual price show only with their data, and no radar sentence while radars are off.
+- [ ] The demand line and the usual price show only with their data, and no radar sentence while radars are off;
+      the scenario `demand_few` reads «несколько человек», never a number (DEC-84).
 - [ ] Phone: «Поделиться номером» asks Telegram; yes → the mode step within seconds; no → the denied text; an old
       client → «Открыть бот»; the late hint after 20 s; `not_uz` and `not_own` inline.
 - [ ] Each rejection reason (`denied`, `limit`) with its text and the support button; no screen mentions realtors

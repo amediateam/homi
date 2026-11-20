@@ -66,21 +66,21 @@ approved deviations DEV-056 (the card's half) and DEV-059.
   «Отклики» and the owner panel of his own listing, so pausing, «Сдано», «Снять» and the answers work as DEC-81
   says («Снять, поставить на паузу, отметить «Сдано» и ответить на отклик можно всегда»). What opens the form or
   puts a listing back into the feed — «Продолжить», «Изменить», «Вернуть», «Сдать ещё одну», the fill hints — is
-  not offered while the switch is off, since the server refuses it (WP-80). *The plan's reading of DEC-81, listed for
-  the reviewer: if the developer wants the group hidden for everyone, the owner can only act through the bot's
-  answers.*
+  not offered while the switch is off, since the server refuses it (WP-80). The developer confirmed this reading of
+  DEC-81 on 2026-11-20 (answer 15, ««Мои объявления» для хозяев (Recommended)»).
 - DEC-56: «Поддержка» and the support row open HOMI's support bot (`supportUrl`) and are hidden while
   `reference.bot.support_username` is `null`.
 - DEC-72: no list, card or panel shows the owner's number; only the form of WP-81 does.
+- DEC-88: the checks inside Telegram on staging run when WP-89 switches the cabinet on there for staff accounts,
+  before the legal gate.
 - *Integrator defaults, listed for the reviewer:* default 9 (two listings per account and per phone; `max` and
   `can_add` from `GET /owner/listings`), default 13 (the request lifecycle: the undo window of ten minutes, «Оказался
   риелтором» for seven days after `given`; as in legacy, `agent` reaches the seeker as `declined`, BR-APP-098),
-  default 20 (no relisting from «История»), default 22 (the checks inside Telegram on staging run when WP-89 switches
-  the cabinet on there). New in this specification: (a) `GET /owner/listings` is read only for a user whose `GET /me`
-  says `owner.has_listings`, and the pending count is re-read on a return to the app only for such a user; (b)
-  «Пришёл первый отклик!» opens «Мои объявления» scrolled to the first listing with pending requests, which carries
-  the card tip (the reading of DEV-059's «on the listing with pending requests»); (c) the request tip's key is
-  HOMI's `homi-req-tip`; (d) «Мои объявления» of the limit sheet goes back, then pushes the list (section "Limit
+  default 20 (no relisting from «История»). New in this specification: (a) `GET /owner/listings` is read only for
+  a user whose `GET /me` says `owner.has_listings`, and the pending count is re-read on a return to the app only for
+  such a user; (b) «Пришёл первый отклик!» opens «Мои объявления» scrolled to the first listing with pending requests,
+  which carries the card tip (the reading of DEV-059's «on the listing with pending requests»); (c) the request tip's
+  key is HOMI's `homi-req-tip`; (d) «Мои объявления» of the limit sheet goes back, then pushes the list (section "Limit
   sheet").
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` and `intercepting-routes.md` (the
@@ -414,7 +414,7 @@ known listing.
 Run in ru, uz and en, light and dark; cookie mode and header mode where a request is involved. Staging and
 production keep the cabinet off until WP-89 (DEC-81); these lines run on a local stack with
 `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and inside Telegram on staging when WP-89 switches the
-cabinet on there (default 22).
+cabinet on there (DEC-88).
 
 - [ ] With the cabinet off, Settings has no group «Сдаю квартиру» and no owner request is sent for a user without
       listings; an owner with listings sees only «Мои объявления», and pausing, «Сдано», «Снять», «Удалить» of a

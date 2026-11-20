@@ -961,10 +961,12 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   the update ledger (only its HMAC), analytics, Telescope and Pulse entries, an outgoing-request record, a command-line
   argument or the operators' notices; masked in every listing text (`PhoneMasker`); erased by «Удалить мои данные»
   and 90 days after the listing left the feed for good; access to the database and its dumps is the production
-  track's. *Acceptance:* a leak scan over logs, `failed_jobs`, Horizon payloads, `telescope_entries`, the ledger and
-  PostHog after a publish and a `given` request finds no digit sequence of the number; erasure and the 90-day purge
-  are tested with time travel; after the first switch-on run on staging, the production track's SQL scan of
-  `telescope_entries`, the Laravel log and `failed_jobs` finds no test number.
+  track's. The staging switch-on comes before the legal gate (DEC-88), so it holds only staff accounts listed in
+  `OWNER_CABINET_ALLOWED_IDS`, each with written consent and erased after the checks, and only once the leak
+  protections of `25` §5 gate 5 are deployed. *Acceptance:* a leak scan over logs, `failed_jobs`, Horizon payloads,
+  `telescope_entries`, the ledger and PostHog after a publish and a `given` request finds no digit sequence of the
+  number; erasure and the 90-day purge are tested with time travel; after the first switch-on run on staging, the
+  production track's SQL scan of `telescope_entries`, the Laravel log and `failed_jobs` finds no test number.
 - **SEC-REQ-052** — Owner listing location and photos: the true point is returned only to its owner; every public use
   (preview, map points, centre distance, metro distance, polygon filter) reads the shown point, derived only from the
   owner and the 100 m grid cell of the true point with `SHOWN_POINT_SECRET` (never from the exact point or the
@@ -1081,7 +1083,9 @@ Every requirement has an acceptance test. "Legacy surface" = the compatibility r
   edge if kept, Q-SEC-006); a privacy policy in uz, ru and en that matches actual processing, versioned, with the
   version and time of consent recorded per user (`consented_at`, policy version) and a notice to migrated users
   (Q-SEC-009), and for the owner cabinet the time and policy version of an owner's consent to keep his number
-  (`phone_consented_at`, `phone_consent_version`, WP-84) and the version a request was sent under (WP-85); working
+  (`phone_consented_at`, `phone_consent_version`, WP-84) and the version a request was sent under (WP-85), the
+  cabinet's consent text approved by the lawyer before the production switch-on and marked "pending legal review"
+  until then (DEC-87); working
   access, correction and deletion paths and a contact channel. *Acceptance:* the cut-over
   checklist (`18`) contains each item with evidence; `/privacy` texts match SEC-REQ-036…040 line by line.
 

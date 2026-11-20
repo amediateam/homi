@@ -63,19 +63,26 @@ exposes them.
 - DEC-77: on a HOMI owner listing «Проверенный хозяин» means that the owner confirmed his own number with Telegram;
   the info sheet says what HOMI checked instead of legacy's «этот номер не встречается в объявлениях риелторов»
   (the reworded text is for the product owner to approve).
+- DEC-85: a seeker whom the owner closed his requests to (`reason_agent`, `late`) gets `409 request_closed` on that
+  owner's listings, the same answer as for a let flat; the sheet handles it like every other `request_closed`
+  (section "Request sheet «Отклик хозяину»") and never says why.
+- DEC-87: the sheet's note that the owner sees the seeker's first name and answers (`contact.noteLimit`, and
+  `contact.noteRelay` for a relayed request) is part of the consent text that the lawyer approves before the
+  production switch-on; until then it is marked "pending legal review".
+- DEC-88: the checks inside Telegram on staging run when WP-89 switches the cabinet on there for staff accounts,
+  before the legal gate.
 - *Integrator defaults, listed for the reviewer:* default 1 (the request is `POST /listings/{number}/contact-request`
   and `POST …/contact` alone returns a number), default 2 (`429 rate_limited` with `reason` `requests_fast`,
   `requests_day` or `requests_week` and `Retry-After`), default 3 (`contact.mode: hidden`), default 7 (the first name
   from the launch data the request carries), default 23 (a `given` number counts against the disclosure quota of
   DEC-19 and is never refused by it), default 21 (a HOMI realtor mark wins: `is_owner: false` hides the chip), default
   24 (a native listing's author is `{kind: "phone", label: «Хозяин»}`, so WP-26's «Это риелтор» is offered there
-  unchanged), default 22 (the checks inside Telegram on staging run when WP-89 switches the cabinet on
-  there). New in this specification: (a) `given` is always «Позвонить», and the contact method decides whether a
-  number exists; (b) `expired` offers «Связаться с хозяином» again with «Хозяин пока не ответил» as the bar's note;
-  (c) `response_minutes` shown in hours and days is a formatting fix, not a `DEV` row; (d) the info sheet of a HOMI
-  owner listing ends with the report path of the listing's «⋯» (`owner.info.foot`), since no «Ответил риелтор»
-  button of HOMI's bot is specified (WP-89); (e) `c_<number>` opens the listing, then its request sheet. As in legacy
-  (BR-APP-098), the server's `agent` reaches the seeker as `declined`.
+  unchanged; DEC-86 decided the same for the bot). New in this specification: (a) `given` is always «Позвонить»,
+  and the contact method decides whether a number exists; (b) `expired` offers «Связаться с хозяином» again with
+  «Хозяин пока не ответил» as the bar's note; (c) `response_minutes` shown in hours and days is a formatting fix, not a
+  `DEV` row; (d) the info sheet of a HOMI owner listing ends with the report path of the listing's «⋯»
+  (`owner.info.foot`), since no «Ответил риелтор» button of HOMI's bot is specified (WP-89); (e) `c_<number>` opens the
+  listing, then its request sheet. As in legacy (BR-APP-098), the server's `agent` reaches the seeker as `declined`.
 
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md`, `intercepting-routes.md` and
 `02-guides/preserving-ui-state.md` in `frontend/app/node_modules/next/dist/docs/01-app/` (the sheets as children of
@@ -278,7 +285,7 @@ Changed:
   | `429 rate_limited`, `reason: requests_day` | `contact.err.requestsDay` with `day` | none |
   | `429 rate_limited`, `reason: requests_week` | `contact.err.requestsWeek` with `week` | none |
   | `403 requests_blocked` (legacy `blocked` and `harvest` alike) | «Отклики для вашего аккаунта сейчас закрыты. Если это ошибка, напишите в поддержку.» (`contact.err.blocked`) | none |
-  | `409 request_closed` | — | the sheet closes; the card is read again and shows its closed bar (fix of LB-APP-073) |
+  | `409 request_closed` | «Хозяин уже не принимает отклики — квартиру, скорее всего, сдали.» (`contact.err.closed`, legacy's text) | the card is read again and shows its closed bar (fix of LB-APP-073); when the card read again still offers a request — the owner closed his requests to this seeker only (DEC-85) — the CTA shows the closed bar for this number until the end of the launch (the per-number request state), so the button does not come back |
   | `409 own_listing` | — | the sheet closes; the card is read again and becomes the user's own (WP-82) |
   | `409 contact_open` | — | the sheet closes; the card is read again and offers «Позвонить» |
   | any other | «Не получилось сохранить» (`common.saveFailed`) | none |
@@ -390,7 +397,7 @@ self-placed sections.
 Run in ru, uz and en, light and dark; cookie mode and header mode where a request is involved. Staging and
 production keep the cabinet off until WP-89 (DEC-81), and no listing there has an owner tier of HOMI until then;
 these lines run on a local stack with `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and inside
-Telegram on staging when WP-89 switches the cabinet on there (default 22).
+Telegram on staging when WP-89 switches the cabinet on there (DEC-88).
 
 - [ ] A HOMI owner listing in request mode offers «Связаться с хозяином»; the sheet shows the lead with the response
       time, the five chips, the stepper, «Въезд», the prefilled message and the note about the first name.
@@ -398,7 +405,7 @@ Telegram on staging when WP-89 switches the cabinet on there (default 22).
 - [ ] A sent request shows «Отклик отправлен» at once, without a jump of the screen.
 - [ ] `no_chat`: Telegram asks for write access; allowed → the request is sent; declined → the line asks to allow it.
 - [ ] The three limits name the numbers of the reference data; a blocked account reads the blocked line.
-- [ ] `request_closed`, `own_listing` and `contact_open` close the sheet and update the card.
+- [ ] `request_closed`, `own_listing` and `contact_open` close the sheet and update the card; `request_closed` shows `contact.err.closed`, and a card that still offers a request after it (DEC-85) keeps the closed bar for that number in this launch.
 - [ ] `given` shows «Позвонить»; the number appears only after the tap.
 - [ ] `expired` offers a new request with «Хозяин пока не ответил»; `declined` and `cancelled` show their bars.
 - [ ] A legacy owner listing that hides its number shows the neutral bar and no contact action; with the relay on it

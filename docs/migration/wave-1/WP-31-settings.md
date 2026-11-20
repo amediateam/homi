@@ -43,7 +43,8 @@ the home-offer half of LB-APP-049 (the slot and its priority are WP-30's).
   are bot functions (WP-56).
 - The first group «Сдаю квартиру» (SCR-032 since `index-CBlEKxdL.js`): WP-82; this package leaves its slot first.
   While `owner_enabled` is `false` the group is hidden for a user without owner listings and shows only «Мои
-  объявления» for one with listings (WP-82, the plan's reading of DEC-81) (*added by the owner-cabinet plan*).
+  объявления» for one with listings (WP-82; the plan's reading of DEC-81, confirmed by the developer on 2026-11-20)
+  (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 

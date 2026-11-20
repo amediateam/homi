@@ -14,7 +14,7 @@ The team can send a service-news message in ru / uz / en to every reachable user
 with the recipient count, a second confirmation, paced and resumable sending, per-recipient status, and an opt-out that
 takes effect immediately. The same mechanism serves the cut-over notices (`18` §9) and the owner re-verification
 campaign (KV-DB-030, `14` §8). Since the owner-cabinet plan the later broadcast to the realtor waitlist (BOT-091) would
-also use this tool; HOMI's form offers no realtor waitlist for now (default 32 of the owner-cabinet plan).
+also use this tool; HOMI's form offers no realtor waitlist in Wave 1 (DEC-82).
 
 ## Legacy reference
 
