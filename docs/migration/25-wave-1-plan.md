@@ -132,7 +132,8 @@ owner's own listing (SCR-059, a state of SCR-018), the request signals (SCR-060)
   (TMA-023). The helper that knows each address's parent is defined once (WP-20) and used everywhere.
 - **Launch.** The bot opens `/`; `proxy.ts` redirects to the locale. A `start_param` of the form `l_<number>` or a
   `?listing=` query redirects to the listing; `?news=pets` opens the filters on the pets section
-  (TMA-010 … TMA-012). `owner_new`, `owner-new` and `?owner=new` open `/owner/new` (TMA-046); HOMI's own `o_<id>`
+  (TMA-010 … TMA-012); HOMI's own `f_<deal>-c<city>[…]` opens the feed with that search, the target of the landing
+  showcase's links (DEC-95, WP-62). `owner_new`, `owner-new` and `?owner=new` open `/owner/new` (TMA-046); HOMI's own `o_<id>`
   opens a draft on its phone step (fix of LB-APP-060) and `c_<number>` the request sheet of a listing (the bot's
   request button).
 
@@ -617,7 +618,7 @@ needs from that track, and a migration reaches production only with that track's
 
 ## 12. The queue in outline
 
-Sixty work packages in seven stages (0, A … F), worked strictly in order by whoever holds the relay (DEC-45). The
+Sixty-two work packages in seven stages (0, A … F), worked strictly in order by whoever holds the relay (DEC-45). The
 table of record with statuses is `wave-1/README.md`.
 
 | Stage | Packages | Content |

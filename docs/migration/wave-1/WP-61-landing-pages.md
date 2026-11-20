@@ -6,7 +6,7 @@
 | Status | TODO |
 | Depends on | WP-60, WP-20, WP-62 |
 | Size | about 7 900 changed lines, L — the legacy landing is one 154 KB script plus its styles (*the landing intake added the showcase, the count under the first button and the hint bar: about 900*). Three PRs: part A = steps 1–9 (routing, texts, links, head, headers, data loader, frame: a complete simple page). Part B = steps 10–12 (display versions, hero and phone, live map). Part C = steps 13–17 (sections with the showcase, privacy, analytics, scenarios). Production works after each part |
-| Behaviour reference | `03b` at legacy landing release `d9bbbc696337` (the landing intake): §1 (LND-001 … LND-039, LND-065 … LND-069), §1.5, §1.6 (the 47 parity scenarios), §3.1 (BR-LND-001 … BR-LND-029), §4.1 (LB-LND-001 … LB-LND-016 and those the intake added), §5.1; `04` §6.1 (payloads the bot accepts); `25` §3.6, §3.7, §3.9, §4.4, §7; task files KV-FE-100, KV-FE-102 … KV-FE-113. Not used: KV-FE-101 and KV-FE-114 … KV-FE-129 (SEO, Wave 3) |
+| Behaviour reference | `03b` at legacy landing release `d9bbbc696337` (the landing intake): §1 (LND-001 … LND-039, LND-065 … LND-069), §1.5, §1.6 (the 47 parity scenarios), §3.1 (BR-LND-001 … BR-LND-029), §4.1 (LB-LND-001 … LB-LND-019), §5.1; `04` §6.1 (payloads the bot accepts); `25` §3.6, §3.7, §3.9, §4.4, §7; task files KV-FE-100, KV-FE-102 … KV-FE-113. Not used: KV-FE-101 and KV-FE-114 … KV-FE-129 (SEO, Wave 3) |
 | Needs from the production track | (1) The landing app served at `https://homi.uz` and `https://staging.homi.uz` (vhost, TLS, the Node process of `frontend/landing`); staging answers with `X-Robots-Tag: noindex` on every path. (2) Env of the landing app per environment. Keys that `frontend/landing/.env.example` already has keep their names: `NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CDN_URL` (the media host of the CSP and of the snapshot photos), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`. New: `NEXT_PUBLIC_SITE_URL`, `API_URL` (server-side address of the API, the name WP-21 uses in `frontend/app`; falls back to `NEXT_PUBLIC_API_URL`), `NEXT_PUBLIC_SUPPORT_USERNAME`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (HOMI's own project of that environment, DEC-47). (3) nginx adds no second `Content-Security-Policy` header and keeps HSTS, `nosniff` and `Referrer-Policy` consistent with the app's values (below). (4) The media host serves the snapshot proxy of WP-60. Nothing else |
 
 ## Goal
@@ -110,6 +110,7 @@ frontend/landing/
 │   │   ├── layout.tsx          html lang, fonts, display-version script, analytics mount, demo marker
 │   │   ├── page.tsx            the landing
 │   │   ├── privacy/page.tsx    the privacy page
+│   │   ├── <owners' page>/     the owners' page (step 14, DEC-97); its three localised segments by the routing of step 3
 │   │   ├── not-found.tsx       localised 404, noindex
 │   │   └── error.tsx
 │   ├── robots.ts  sitemap.ts  manifest.ts
@@ -126,6 +127,7 @@ frontend/landing/
 | ------- | ------ |
 | `/`, `/uz/`, `/en/` | the landing in ru, uz, en; `<html lang>` accordingly (LND-001, LND-002) |
 | `/privacy/`, `/uz/privacy/`, `/en/privacy/` | the privacy page |
+| `/sdat-kvartiru/`, `/uz/kvartira-ijaraga-berish/`, `/en/list-your-apartment/` | the owners' page in ru, uz, en, keeping `?s=` (LND-068, DEC-97); reserved: until step 14 builds it these addresses answer the HTML 404 of the last row, and `brand.links.owners` of the Mini App stays `null` (WP-82) |
 | `/uz`, `/en`, `/privacy` | permanent redirect to the slashed address, query kept (LND-038) |
 | `/ru/…` | permanent redirect to the same path without the prefix |
 | `/index.html`, `/privacy.html` | permanent redirect to `/` and `/privacy/`, query kept |
@@ -136,18 +138,21 @@ Language of `/` (BR-LND-004 as legacy has it since landing release `d9bbbc696337
 page: they only show the hint bar.
 
 - Steps 1 and 3 end on the page of that language: `proxy.ts` redirects a request for `/` with `?lang=uz|en` to
-  `/uz/` or `/en/`, keeping `s`, `utm_source` and other parameters and dropping `lang`; a small inline script on `/`
+  `/uz/` or `/en/`, keeping `s`, `utm_source` and other parameters and dropping `lang`; `?lang=ru` serves ru without
+  a redirect and hides the hint bar, and an unknown value is ignored, as legacy; a small inline script on `/`
   redirects before the first paint when a stored choice differs. Legacy translates the page in place instead; the
   visible result is the same, and the address says the language (HOMI's own, as before).
 - Hint bar (LND-067, BR-LND-029): on `/` without `?lang=` and without a stored choice, when the browser languages
   resolve to uz or en by the old rule — `uz` or `ru` wins; `kk`, `ky`, `tg`, `tk`, `be` count as `ru`; `en` only when
   none of those appears anywhere in the list — `components/landing/LangHint.tsx` shows one line under the header
-  «Oʻzbek tilida ochish · Open in English» with plain links to `/uz/` and `/en/`. It is decided in the browser (the
+  «Oʻzbek tilida ochish · Open in English» with links to `/uz/` and `/en/` that keep the current query (without
+  `lang`) and hash, as the menu's addresses do (fix of LB-LND-019: legacy's links are bare and lose `?s=` and
+  `utm_source`). It is decided in the browser (the
   server HTML of `/` is the same for everyone and is cached; *integrator's choice*), so the bar is in the HTML with
   `hidden` and the inline script of step 3 unhides it; a link of the bar stores nothing, so the bar shows again on the next visit to `/`; a
   choice in the language menu stores the choice and hides the bar. Styles: centred under the header over the post
   cloud, as wide as its text and at most the viewport less 32 px, its own white background, `#0e0e10` over the dark
-  first scene, more compact at 400 px and below. A crawler without `Accept-Language` gets ru without the bar.
+  first scene, more compact at 400 px and below. A visitor or crawler whose browser languages do not resolve to uz or en gets ru without the bar.
 - Step 3: the choice is kept in `localStorage` under `homi-landing-lang` — not in a cookie, because the privacy text
   says the site sets none.
 - A language switch (menu or footer buttons) is a navigation to the address of that language with the query and
@@ -158,8 +163,8 @@ page: they only show the hint bar.
 
 ### Texts and formats
 
-- The landing keys (106 at the audit; 146 at legacy landing release `d9bbbc696337`, with `vit.*`, `foot.*`,
-  `dist.*` and the new FAQ questions) and the privacy texts live in `@homi/i18n` under `messages/landing/{ru,uz,en}.json` and
+- The landing keys (106 at the audit; 146 at legacy landing release `d9bbbc696337`, with 32 `vit.*`, 4 `foot.*`
+  and 4 `faq.*` keys added) and the privacy texts live in `@homi/i18n` under `messages/landing/{ru,uz,en}.json` and
   `messages/privacy/{ru,uz,en}.json`, with the legacy key names (LND-028). They are imported once from the legacy
   catalogue file with the importer pattern of WP-20, then brand words are rewritten by the `messages/homi` layer.
   The keys of the phone demo are the Mini App keys already in the package (WP-20).
@@ -239,7 +244,7 @@ Each block is one component under `components/landing/`. "Server" means its text
 | Block | Component | Content and rules |
 | ----- | --------- | ----------------- |
 | Header (LND-004) | `Header`, `LanguageMenu`, `LangHint` | logo wordmark (brand), a globe button with the language code, `aria-label` of the pattern «RU — Язык: Русский», a `role=menu` with three `menuitemradio` «Русский», «Oʻzbekcha», «English»; outside click or Escape closes, Escape returns focus; under it on `/` the hint bar (LND-067, see "Routes") |
-| Hero (LND-005, LND-066) | `Hero`, `HeroCount` | seven example channel posts gather into one card; `h1` «Аренда и продажа квартир в Ташкенте» (`hero.kicker`, since `67b3942a8340`), slogan, lead, the CTA «Открыть в Telegram», caption; under the CTA «Бесплатно» and, with data, « · N новых квартир за сутки» (or «за неделю») by the counter rule of the final block (BR-LND-028, BR-LND-007), without the count-up. Server |
+| Hero (LND-005, LND-066) | `Hero`, `HeroCount` | seven example channel posts gather into one card; `h1` «Аренда и продажа квартир в Ташкенте» (`hero.kicker`, since `67b3942a8340`), slogan, lead, the CTA «Открыть в Telegram», caption; under the CTA «Бесплатно» and, with data, « · N новых квартир за сутки» (or «за неделю») by the counter rule of the final block (BR-LND-028, BR-LND-007), counting up over 1.2 s except under reduced motion. Server |
 | Phone demo (LND-006) | `PhoneDemo` (lazy chunk) | a static replica of the Mini App: top bar «Аренда · Ташкент», tabs, chips, feed with the first card, favourites, radar, settings, tab bar, filter sheet, static map, lock-screen wall; `role=img` with a label; every control inert until the live phase |
 | Steps (LND-007) | `Steps` | «Как приложение. Прямо в Telegram.» — three steps feed → filters → map; a progress bar on narrow screens. Server |
 | Hints (LND-009, LND-010) | `DemoFinger`, `ScrollCue` | the demo finger on a five-second cycle, stops at the first touch; «Попробуйте сами»; «Листайте дальше» |
@@ -248,8 +253,10 @@ Each block is one component under `components/landing/`. "Server" means its text
 | «Узнавайте первым» (LND-012) | `LiveSection` | a lock-screen phone with clock and date in Asia/Tashkent, pushes dripping one per second while at least 35 % visible, ages refreshed every 30 s, the counter; shown where the lock phase does not run. Without JavaScript one example push. Server |
 | Owner and agent (LND-013) | `OwnerAgentSwitch` | the heading is a `role=switch` «Хозяин» ◐ «Риелтор»; three cards per side with evidence lines; the sets slide 200 ms out and 380 ms in, not at all under reduced motion; card facts re-rendered per language |
 | Savings (LND-014) | `SavingsBlock` | BR-LND-008: `cheap = round to 10 (median × 0.8)`; yearly saving `(median − cheap) × 12`; defaults two rooms and `chilonzor`; room buttons 1, 2, 3; district buttons ordered by the sum of `n`, descending; a district without the chosen rooms selects the first entry. The weekly line when `bargains_week` ≥ 100 (BR-LND-009). Rent only. Server |
-| Showcase (LND-065) | `Showcase`, `ShowcaseSearch`, `ShowcaseCards`, `ShowcaseDistricts` | after the dark scene. «Квартиры прямо сейчас», the lead with the day or week count (the counter rule; «N новых квартир за сутки — …»), «Снять / Купить» (`aria-pressed`) switching the cards, the district counts, the budget options and the link target (BR-LND-024). Search form: district (the twelve Tashkent districts), rooms 1 … 4, budget «до $N» — rent 300, 500, 700, 1 000, 1 500; sale 50 000, 80 000, 100 000, 150 000, 250 000 — and «только хозяева»; a submit opens the WP-62 link (BR-LND-026). At 760 px and below the form is a pill that opens a sheet with a history step, closed by Back, Escape, the cross and its back button, and when the viewport grows; focus moves into the sheet and back to the pill; the page does not scroll behind it (BR-LND-027). Cards: the ten freshest pins with a photo by `age_min`, price with «/мес» for rent, the facts line as the live map's, the district name or the `point`, «N ч назад» as `age_min` plus the minutes since `now` of the data, the tone tag; scrolled by two buttons, disabled at either end (BR-LND-025). District links with «N квартир» (BR-LND-024). Data is loaded when the block is within two screens; no data → no cards, no numbers; the search and the districts still work. Server for the texts and counts, a client island for the switch, the sheet and the card row |
-| FAQ (LND-015) | `Faq` | ten `<details>` in two columns, the first open (`faq.q0` … `faq.q9`; eight at the audit, two added in `67b3942a8340`); no `FAQPage` structured data. Server |
+| Showcase (LND-065) | `Showcase`, `ShowcaseSearch`, `ShowcaseCards`, `ShowcaseDistricts` | after the dark scene. «Квартиры прямо сейчас», the lead with the day or week count (the counter rule; «N новых квартир за сутки — …»), «Снять / Купить» (`aria-pressed`) switching the cards, the district counts, the budget options and the link target (BR-LND-024). Search form: district (the twelve Tashkent districts), rooms 1 … 4, budget «до $N» — rent 300, 500, 700, 1 000, 1 500; sale 50 000, 80 000, 100 000, 150 000, 250 000 — and «только хозяева»; a submit opens the WP-62 link (BR-LND-026). At 760 px and below the form is a pill that opens a sheet with a history step, closed by Back, Escape, the cross and a tap on its backdrop, and when the viewport grows; focus moves into the sheet and back to the pill; the page does not scroll behind it (BR-LND-027). Cards: the ten freshest pins with a photo by `age_min`, price with «/мес» for rent, the facts line as the live map's, the district name (from the `dist.*` texts by code, else the pin's `district` name, else nothing — no `point`, BR-LND-025), «N ч назад» computed on the server at render time as `age_min` plus the minutes between the pins' `generated_at`
+and the render (fix of LB-LND-018: legacy adds the minutes from `live.json`'s `now` to the visitor's clock; *integrator's
+choice*), the tag «Ниже рынка» for the tone `good`, else «Хозяин» when `is_owner`, else none (BR-LND-025); scrolled by two buttons, disabled at either end (BR-LND-025). District links with «N квартир» (BR-LND-024); the row's heading link «Свежая аренда в Ташкенте» / «Свежая продажа в Ташкенте» opens the Mini App's feed of that deal in Tashkent (`f_<deal>-ctashkent-web`, DEC-95). The rent cards and the counts are in the server HTML (legacy loads them when the block is within two screens; HOMI's page has them from the server, see "Data"); the sale pins come through the `pins` route handler on the first «Купить»; no data → no cards, no numbers; the search and the districts still work. A client island for the switch, the sheet and the card row |
+| FAQ (LND-015) | `Faq` | ten `<details>` in two columns, the first open (`faq.q0` … `faq.q9`; eight at the audit, two added in `67b3942a8340`); no `FAQPage` structured data. Legacy's «Вы видите мои данные?» (`faq.a8`) still says «Имя, телефон и контакты не храним», which its own privacy text no longer supports since `b1b9a919ecc4` (`03b` LND-003): the `homi` layer gives an answer that matches HOMI's privacy text, approved with it by WP-70 (*added by the landing intake*). Server |
 | Final block (LND-016) | `FinalBlock` | «Бесплатно · N новых квартир за сутки» (or «за неделю»; BR-LND-007: `day` when ≥ 100, else `week` when ≥ 100, else no number; count-up 1.2 s), `h2` «Найдите квартиру сегодня», the CTA, the QR with «Откройте на телефоне» on desktop. Server |
 | Footer (LND-017) | `Footer` | «© 2026 kvadro² [brand → HOMI]», language buttons with `aria-pressed`, links «Поддержка», «Instagram», «Конфиденциальность», «Карта: © OpenStreetMap»; the large wordmark, `aria-hidden`. Legacy's footer has, since `67b3942a8340`, link columns into its SEO pages and «О сервисе» (LND-018, LND-069): they come with the SEO pages in Wave 3, so the HOMI footer keeps the row of this table |
 | Floating QR (LND-019) | `FloatingQr` | only at `min-width: 1200px` with hover and a fine pointer, after the first scene; expands into the final block's QR panel when that block is more than half visible; «Скрыть QR-код» hides it for the page view (BR-LND-023) |
@@ -287,7 +294,7 @@ Each block is one component under `components/landing/`. "Server" means its text
 | Open Graph, Twitter | `og:url`, title, description, `og:image` = `og-<locale>.jpg`, `og:locale` `ru_RU`, `uz_UZ`, `en_US`; `twitter:card summary_large_image` |
 | Structured data | one `@graph` with `Organization` and `WebSite` on the landing; none on the privacy pages; serialised so that a `</script>` in a value is inert |
 | Manifest | one, in Russian, HOMI name and icons (legacy; LB-LND-014). Flag `dev042LocaleManifest` (DEV-042, off) |
-| `robots.txt`, sitemap (LND-035) | production: allow all, sitemap with the three landing pages and the three privacy pages. Any other `NEXT_PUBLIC_SITE_URL`: disallow all, and `noindex` in the head |
+| `robots.txt`, sitemap (LND-035) | production: allow all, sitemap with the three landing pages, the three privacy pages and, once step 14 has built it, the three owners' pages. Any other `NEXT_PUBLIC_SITE_URL`: disallow all, and `noindex` in the head |
 
 Security headers from `lib/security-headers.ts`, set in `next.config.ts` (fix of LB-LND-009: no hand-pinned hashes,
 a narrow `img-src`):
@@ -299,10 +306,12 @@ style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob: https://<media host>;
 font-src 'self' data:;
 connect-src 'self' https://<PostHog host>;
-worker-src 'self' blob:;  object-src 'none';  base-uri 'none';  form-action 'self';  frame-ancestors 'none'
+worker-src 'self' blob:;  object-src 'none';  base-uri 'none';  form-action 'self' https://t.me;  frame-ancestors 'none'
 ```
 
-plus `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and `report-uri` when `CSP_REPORT_URI` is
+(`https://t.me` in `form-action` because the showcase's search form without JavaScript posts to the landing's
+`showcase` route handler, whose `303` leads to `t.me`, and browsers apply `form-action` to a form's redirect; *added by
+the landing intake*), plus `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and `report-uri` when `CSP_REPORT_URI` is
 set (WP-70 decides the endpoint). The landing does not call the API from the browser, so the API host is not in
 `connect-src`. `posthog-js` is bundled, so no script host is added.
 
@@ -492,6 +501,9 @@ LND-036 counted as in through its replacements; 25 SEO items out (*the landing i
 | 14 | Manifest in Russian only | LB-LND-014 | legacy kept; per-language manifest is DEV-042, flag off |
 | 15 | Debug switches public | LB-LND-015 | the overlays are not rebuilt; the display switches stay |
 | 16 | Dependence on a CDN e-mail rewrite | LB-LND-016 | fixed by construction: plain link |
+| 17 | Showcase cards: four and more rooms read «4‑комн.»; data written into `innerHTML` | LB-LND-017 | `innerHTML`: fixed by construction (components set text and attributes; photo addresses come from WP-60 on the media host). The four-room label for five and more: legacy kept, as on the live map (BR-LND-013); whether such flats occur is Q-LND-013 (*integrator's choice*) |
+| 18 | Showcase ages mix two files and the visitor's clock | LB-LND-018 | fixed: one clock, the server's at render time, against the pins' `generated_at` (see the showcase row) |
+| 19 | The hint bar's links lose the source tag | LB-LND-019 | fixed: the links keep the query without `lang` |
 
 ### Scenarios
 
@@ -508,25 +520,27 @@ The 47 parity scenarios of `03b` §1.6 are the scenario list (40 at the audit; s
 | Static | `{ru,uz,en}-desktop-static`, `{ru,uz,en}-phone-static` | every block visible, no animation |
 | Language | `browser-uz`, `browser-en`, `browser-en-phone`, `browser-kk`, `browser-en-menu-uz`, `query-lang-en`, `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz` | the final language and address of BR-LND-004 and BR-LND-005: a browser in uz or en stays on the ru `/` with the hint bar (also on a phone), `kk` without it, a menu choice of uz opens `/uz/` without it; after a switch every image and link answers `200` |
 | Attribution | `source-tag` (`/?s=Insta_1`), `source-tag-chatgpt` (`/?utm_source=chatgpt.com`) | every bot button carries `s_web_insta_1--v<visit>`, or `s_web_chatgpt-com--v<visit>` |
-| Privacy | `privacy-ru`, `privacy-uz`, `privacy-en-browser`, `privacy-stored-uz` | the page of that language; `?lang=uz` on the ru page redirects to `/uz/privacy/` |
+| Privacy | `privacy-ru`, `privacy-uz`, `privacy-en-browser`, `privacy-stored-uz` | the page of the address or of `?lang=`: a browser in English on the ru page stays on the ru page (legacy since `d9bbbc696337` no longer follows the browser language there); `?lang=uz` on the ru page redirects to `/uz/privacy/`; a stored choice of uz on the ru page redirects there too, as on `/` |
 
 Edge cases: fewer than four `latest` items → as many pushes; `medians` empty → no district row; a pin photo that
 answers `404` → the card hides the image; a pin without `link` → the bot link; `is_owner: null` → kept by "без
 риелторов", dropped by "только хозяева"; rooms of five and more use the four-room title; storage blocked → the
 choice is not remembered and nothing throws; a background tab during the intro or the QR morph ends in a consistent
 state; `?lang=xx` is ignored; the showcase without pins of a deal shows no cards and keeps its search and districts;
-a pin without a photo is not a showcase card; a pin with `floor: null` drops the floor from its facts line.
+a pin without a photo is not a showcase card; a pin with `floor: null` drops the floor from its facts line; without
+JavaScript the search form still reaches the Mini App through the route handler (legacy's form then sends `?d=` to
+`arenda/tashkent/` whatever the page's language, `03b` LND-065).
 
 ## Tests
 
 | # | Layer | Test | Cases |
 | - | ----- | ---- | ----- |
-| 1 | Unit (Vitest) | language resolver, `langHint.ts` | the three steps of BR-LND-004; unknown `?lang`; the hint bar for the browser lists with uz, en, `kk`, `ky`, `tg`, `tk`, `be` (`en` only without the others), not with a stored choice or `?lang=`, hidden after a menu choice |
+| 1 | Unit (Vitest) | language resolver, `langHint.ts` | the three steps of BR-LND-004; unknown `?lang`; the hint bar for the browser lists with uz, en, `kk`, `ky`, `tg`, `tk`, `be` (`en` only without the others), not with a stored choice or `?lang=`, hidden after a menu choice; its links keep `?s=` and `utm_source` and drop `lang` (LB-LND-019) |
 | 2 | Unit | `format.ts` | plurals 1, 2, 5, 21 in ru; en two forms; uz one; number grouping per locale; ages from the data `now`; the non-breaking hyphen of «2‑комн.»; Uzbek date names |
 | 3 | Unit | `telegram.ts`, `visit.ts` | `?s=Insta_1`, `?utm_source=tg`, `?utm_source=chatgpt.com` → `chatgpt-com`, `?s=..a..` → `a`, a tag of only invalid characters → no tag, 40-character tag, the 59-character bound, visit format, `startapp` links untouched, the showcase links through WP-62's encoder, missing username throws |
 | 4 | Unit | `savings.ts`, `counter.ts` | median 600 → cheap 480, «$1 440»; district order; missing rooms → first entry; `day` 120; `day` 80 and `week` 450; both small → hidden |
 | 5 | Unit | `pins.ts`, `filters.ts` | the demo filter semantics; declutter leaves no overlap in the fixtures; owner tri-state |
-| 5a | Unit | `showcase.ts` | the ten freshest pins with a photo; ages from `now` plus the elapsed minutes; budgets per deal; the district counts by code with an empty list; the facts line without a floor |
+| 5a | Unit | `showcase.ts` | the ten freshest pins with a photo; ages from the pins' `generated_at` and the render time (LB-LND-018); budgets per deal; the district counts by code with an empty list; the facts line without a floor |
 | 6 | Unit | `landing-data.ts` | valid answers; `503`; timeout; a shape error; `source = stub` sets the marker; a `pt:` code never reaches the savings rows |
 | 7 | Unit | metadata, structured data, security headers | canonical without query; four `hreflang` links; `og:image` per locale; an injected `</script>` is inert; exactly one policy string per environment |
 | 8 | Component (Testing Library) | `LanguageMenu`, `LangHint`, `OwnerAgentSwitch`, `Showcase`, `Faq`, `SavingsBlock`, `FloatingQr` | roles, keyboard, `aria` states, reduced motion; the showcase sheet's focus and history step |
@@ -578,7 +592,9 @@ Run in ru, uz and en, at 1 366 × 860 and 390 × 844, on staging and on producti
 - [ ] Head: title, description, canonical, `hreflang`, Open Graph image per language; the manifest and icons load.
 - [ ] No cookie is set; no CSP violation appears in the console; PostHog receives the page view with `site`,
       `visit`, `env` in HOMI's project.
-- [ ] Staging is `noindex`; production serves `robots.txt` and the sitemap of six pages.
+- [ ] Staging is `noindex`; production serves `robots.txt` and the sitemap of six pages, nine with the owners' page.
+- [ ] The owners' page exists in three languages at its legacy addresses, keeps `?s=tenant`, and «Отправить хозяину»
+      of the Mini App's survey opens it (DEC-97: from legacy's page or HOMI's own, as step 1 found).
 - [ ] The 47 scenario cases, the unit and component tests and `make ci-frontend` are green.
 
 ## Handoff
