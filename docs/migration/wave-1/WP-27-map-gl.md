@@ -243,7 +243,7 @@ type MapViewProps = {
   verdict, no badges, but the shield after the price for `owner_verified` (WP-24's compact card), no "viewed" eye) and
   a × (aria `common.close`). The shield is legacy since `index-CBlEKxdL.js`
   (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 2)). Several numbers: header `map.stackOf` and a horizontal
+  (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it). Several numbers: header `map.stackOf` and a horizontal
   scroll-snap track with one slot per number; only slots within ±1 of the current index render content; slots are
   85–90 % wide so neighbours peek. Z-index 31, above the tab bar and the bottom inset. The track follows the
   selection's index: a spread-pin tap scrolls it, a swipe reports the new index, new numbers start it again.
@@ -473,7 +473,7 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] The card shows one photo, price with its price-kind label (WP-24), short verdict, no badges, but the shield
       after the price for `owner_verified` (WP-24's compact card), and no eye; the heart toggles; a tap opens the
       listing and Back returns to the same card (the shield: *added by the intake of `index-CBlEKxdL.js`*; a parity
-      item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)).
+      item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it).
 - [ ] A stack card shows «{n} из {total}» and swipes; only neighbouring previews are requested.
 - [ ] A failed preview shows «Не загрузилось — повторить» and recovers.
 - [ ] «На карте {shown} из {total} · …» appears for 6 s when some listings have no coordinates, with the right

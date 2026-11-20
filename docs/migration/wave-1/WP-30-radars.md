@@ -462,7 +462,7 @@ ghosts.
 | Part | Rule and text |
 | ---- | ------------- |
 | Strip, loading | 3 ghost mini-cards |
-| Strip, finds | title `radar.latest` «Последние находки»; mini-card: cover, badge `radar.new` «новое» only when the radar is active and the find is not viewed (the server's `viewed`, or opened in this launch: the `seen` map, as the card's eye), price (`—` when absent), district · age; then `radar.all` «Все {n} ›». The age is the card's formatter of WP-24 over `posted.at`, computed at render and without the minute clock, since legacy release `index-CIa0Ldj2.js` (`03` BR-APP-109; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarStrip` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20)) |
+| Strip, finds | title `radar.latest` «Последние находки»; mini-card: cover, badge `radar.new` «новое» only when the radar is active and the find is not viewed (the server's `viewed`, or opened in this launch: the `seen` map, as the card's eye), price (`—` when absent), district · age; then `radar.all` «Все {n} ›». The age is the card's formatter of WP-24 over `posted.at`, computed at render and without the minute clock, since legacy release `index-CIa0Ldj2.js` (`03` BR-APP-109; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarStrip` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20); WP-35 closed it) |
 | Strip, none | `radar.none` «Пока ничего — радар пришлёт, как появится» |
 | Send switch | `radar.send` «Присылать в чат»; same action as the tile switch |
 | Mode rows | only while active: `subs.mode.instant` «Сразу» + `radar.instantHint` «Каждое новое — как только появится»; `subs.mode.digest` «Подборкой» + `radar.digestHint` «Списком в {time}» (e.g. «Списком в 9 и 21», hours joined with `notify.and`) or `radar.digestHintAny` «Списком в заданное время» when settings are not loaded |
@@ -508,7 +508,7 @@ link together, in WP-57 (*added by the intake of `index-CIa0Ldj2.js`*; a parity 
 
 Both mount `FiltersForm` (WP-25). Since legacy release `index-CIa0Ldj2.js` «Площадь» is offered for rent radars too,
 as in the search sheet (DEC-62; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a
-later package (`wave-1/baseline.md`, built code behind the pin, row 38)). Differences from the search mode (BR-APP-021
+later package (`wave-1/baseline.md`, built code behind the pin, row 38); WP-35 closed it). Differences from the search mode (BR-APP-021
 is WP-22's rule):
 
 | Mode | Title | Start filters | Footer |
@@ -876,14 +876,14 @@ had radars switched off on 2026-11-18 (AM-99, KI-65): there the local runs used 
       for a later package (`wave-1/baseline.md`, built code behind the pin, row 37)).
 - [ ] The age of a find reads like the card's («5 мин назад», «3 ч назад») and does not tick (*added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `RadarStrip` for a later package (`wave-1/baseline.md`, built code behind
-      the pin, row 20)).
+      the pin, row 20); WP-35 closed it).
 - [ ] A failed switch, mode change, unhide and delete each show «Не получилось сохранить»; a deleted radar shows no
       «Радар удалён» (`dev016SuccessToastOnDestructive` off; *added by the intake of `index-CIa0Ldj2.js`*; a parity
       item of `failed()` and `RadarSheet` for a later package (`wave-1/baseline.md`, built code behind the pin, row
       21)).
 - [ ] «Площадь» is offered in «Новый радар» and in the editor for a rent radar (DEC-62; *added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code
-      behind the pin, row 38)).
+      behind the pin, row 38); WP-35 closed it).
 - [ ] Back order: editor → radar sheet → tab; ×, backdrop and drag close each sheet.
 - [ ] «+» opens «Новый радар» with the current search filters, without «Опубликовано», with «Сейчас подходит: N»
       and «Включить радар»; success closes it with the right toast.

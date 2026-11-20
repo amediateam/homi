@@ -437,7 +437,7 @@ success or error on an action result; error on every contact failure; none for t
    (`03` BR-APP-110): `floor: 0` gives the tile `listing.floorGround` «Цокольный этаж» and a negative floor
    `listing.floorBasement` «Подвал», both with an empty caption; only `null` leaves the tile out (*added by the intake
    of `index-CIa0Ldj2.js`*; a parity item of `KeyFacts` for a later package (`wave-1/baseline.md`, built code behind
-   the pin, row 26)).
+   the pin, row 26); WP-35 closed it).
 5. **Market block** (BR-APP-028, D-4): shown only in the loaded state, when `verdict.ts` returns a verdict **and**
    `comparison !== null` **and** `market.median_delta !== null`. Title `market.title` «Сравнение с районом»,
    `market.titleNear` «Сравнение с похожими рядом» (scope `near`) or `market.titleCity` «Сравнение с городом» (scope
@@ -929,7 +929,7 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Title row: title, «district · landmark», share (only with a bot name), favourite toggles, «⋯» opens the sheet.
 - [ ] Key facts show rooms, m², floor, building; nothing when all are absent. `floor: 0` shows «Цокольный этаж» and a
       negative floor «Подвал» (the stub listings `100022` and `100023`; *added by the intake of `index-CIa0Ldj2.js`*;
-      a parity item of `KeyFacts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 26)).
+      a parity item of `KeyFacts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 26); WP-35 closed it).
 - [ ] Market block: three titles by scope; verdict, scale, «обычно …», context line, warnings; hidden without a
       comparison; no «$NaN» anywhere.
 - [ ] Facts grid in server order; a long value spans the row; an unknown key has the house icon.

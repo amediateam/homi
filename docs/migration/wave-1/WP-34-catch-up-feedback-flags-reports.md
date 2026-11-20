@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#92) |
+| Status | WAITING (merged in #92 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | intake `index-CIa0Ldj2` (the method `DELETE /listings/{number}/reports`, the field `agent_marked` of the report answer, the texts `toast.showForMe` and `toast.reportedAgentNoted`), WP-30 |
 | Size | about 430 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-004, SCR-023, SCR-042), §4 (BR-APP-036, BR-APP-039, BR-APP-048, BR-APP-067, BR-APP-069), §5 (LB-APP-025, LB-APP-027), §5b (LB-APP-081); `02` (BR-API-190, BR-API-191); `08` (API-055); `09` §4.2 (DEV-010, DEV-014, DEV-016, DEV-051); `wave-1/baseline.md`, built code behind the pin, rows 4, 21, 22, 23, 24, 25, 27, 30 |

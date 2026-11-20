@@ -197,7 +197,7 @@ cache.
 
 | File | Content |
 | ---- | ------- |
-| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite` (`favorite` and `viewed` default to the card's flags; `onFavorite` is `FavButton`'s `onChange`). Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay. For `owner_verified` the compact card shows a `ShieldCheck` (16 px, `--good`, `role="img"` labelled `card.ownerVerified`) after the price and the short verdict (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)) |
+| `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite` (`favorite` and `viewed` default to the card's flags; `onFavorite` is `FavButton`'s `onChange`). Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay. For `owner_verified` the compact card shows a `ShieldCheck` (16 px, `--good`, `role="img"` labelled `card.ownerVerified`) after the price and the short verdict (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it) |
 | `ListingCardSkeleton.tsx` | Shimmer photo and three bars (62 %, 80 %, 35 %); `FeedSkeleton`, three of them in the list column (`FEED_FRAME`), the page's Suspense fallback |
 | `PhotoStrip.tsx`, `Photo.tsx` | Scroll-snap strip with lazy slides, dots, video badge, placeholder; `Photo.tsx` also exports `PhotoPlaceholder` and `PhotoBackdrop` (the blurred copy behind a video photo), so every `<img>` of the card is in that file |
 | `FavButton.tsx` | Heart with optimistic state; the `overlay` variant (`full`, `compact`) over a photo and the `plain` one of the listing's title row (WP-26) |
@@ -392,7 +392,7 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   re-signed one after a refresh, is a new photo). `Photo` itself clears its "loaded" and "failed" state when its `src`
   changes, so a reused element never keeps the state of the address before (legacy since `index-CIa0Ldj2.js`, `03`
   BR-APP-059; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `Photo` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 31)).
+  (`wave-1/baseline.md`, built code behind the pin, row 31); WP-35 closed it).
 - Photos (BR-APP-059): the small variant `.s.jpg` (480 px) is derived only for addresses of the form
   `…/<digits>/<digits>.jpg?…`; other addresses are used as they are. With Save-Data, a connection of 3g or
   slower, or lite graphics only the small variant is requested; otherwise `srcset` offers 480w and 800w with
@@ -423,11 +423,11 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   with a green `ShieldCheck` (15 px, stroke 2.4; padding-left 8 px, gap 5 px); `quiet` for «Хозяин» (`#4b4f57`, weight
   500); «Ниже рынка» has no kind and stays the plain tag. The priority order did not change
   (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 1)).
+  (`wave-1/baseline.md`, built code behind the pin, row 1); WP-35 closed it).
 - Compact card (legacy since `index-CBlEKxdL.js`; `ListingCard.jsx:92-97`, `listing-card.css:182-188` at r31): still
   no badge, but for `owner_verified` a `ShieldCheck` (16 px, `--good`) follows the price and the short verdict, with
   `role="img"` and `card.ownerVerified` as its label and title (*added by the intake of `index-CBlEKxdL.js`*; a parity
-  item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)).
+  item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it).
 - Price line: amount, period, and the price-kind label `priceKindLabel(kind)` of `cardText.ts`: «· первый взнос»
   (`card.downPayment`) for `down_payment`, «· цена за бизнес, помещение в аренде» (`card.businessPrice`; uz
   «biznes narxi, joy ijarada», en «business price, premises rented», `03` SCR-007) for `business` (BR-API-156),
@@ -460,7 +460,7 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   `fmt.floorGround` «цокольный этаж»; a negative floor reads `fmt.floorBasement` «подвал»; both without the total.
   Only `null` shows nothing: "a zero … floor is left out" above holds for the area alone (*added by the intake of
   `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code behind
-  the pin, row 26)).
+  the pin, row 26); WP-35 closed it).
 - Age (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-109): the label is computed from `posted.at` by the four steps of
   WP-22's formatter — «только что», «{n} мин назад», «{n} ч назад», «{n} дн. назад» (`card.ageNow`, `card.ageMin`,
   `card.ageHours`, `card.ageDays`). The server's `posted.when` is the fallback when `at` is missing or unparsable, and
@@ -468,7 +468,7 @@ which always carries the city (`/filters?city=tashkent` from `/ru`). They read t
   minute clock, checked every 15 s and on `visibilitychange` and running only while a card is mounted, re-renders only
   the label, not the card. The compact card still shows no age (*added by the intake of `index-CIa0Ldj2.js`*; a parity
   item of `cardText.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row
-  20)).
+  20); WP-35 closed it).
 - Location line (BR-APP-030): `district · landmark · (metro label or «{km} км до центра»)`. The metro label and
   its 1.5 km limit are `formatMetroLabel()` of WP-22 (rule BR-APP-029 and the flag of LB-APP-031 are owned there);
   the centre distance is `fmt.centerKm` with one decimal. A missing part is left out; a long landmark ellipsises.
@@ -578,7 +578,7 @@ Unit (Vitest, `frontend/app/tests/feed/`):
   delta, not from a negative delta; nothing matching → `null`; the kind of each badge (`warn`, `verified`, `quiet`,
   none for «Ниже рынка») and, on the compact card, the shield for `owner_verified` and no tag (the kinds and the
   shield: *added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later
-  package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2)).
+  package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2); WP-35 closed it).
 - `images`: derivation for a media address with a query; no derivation for a foreign address; Save-Data, `2g`,
   `3g`, lite → small only; otherwise `srcset` with 480w and 800w.
 - `cardText`: price from `display` and `period`; `kind: 'down_payment'` and `kind: 'business'` with their labels in
@@ -586,9 +586,9 @@ Unit (Vitest, `frontend/app/tests/feed/`):
   and without floor total; age from `posted.when`, `posted.label` only without it; location with metro, with centre
   distance, with neither. Since the intake of `index-CIa0Ldj2.js`: the age steps with a frozen clock at 20 s, 5 min,
   3 h and 50 h, a time in the future and a missing `at` (the fallback) (*added by the intake of `index-CIa0Ldj2.js`*; a
-  parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20)); floor
+  parity item of `cardText.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 20); WP-35 closed it); floor
   `0`, `-1` and `null` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later
-  package (`wave-1/baseline.md`, built code behind the pin, row 26)).
+  package (`wave-1/baseline.md`, built code behind the pin, row 26); WP-35 closed it).
 - `inlineSlot`: 20 visible → after the 8th; 9 with the note → after the 8th; 9 still loading → after the 8th; 8,
   fully loaded, no note → after the 8th; 8 still loading → none; 5 fully loaded, no note → after the 5th; 5 with the
   note → none; 5 still loading → none; 1 fully loaded → after the 1st; 0 → none (the empty state shows instead).
@@ -616,7 +616,7 @@ Component (Vitest + Testing Library):
   photo and a re-signed address; the network rule, a connection that drops to 3g; eager photos not faded; the
   server render and hydration with and without the server's hint, with no mismatch; a `Photo` whose `src` changes
   after a failure loads again (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `Photo` for a later
-  package (`wave-1/baseline.md`, built code behind the pin, row 31)).
+  package (`wave-1/baseline.md`, built code behind the pin, row 31); WP-35 closed it).
 - `FavButton`: optimistic fill, rollback on failure, taps ignored while busy across every heart of the listing,
   haptic style per direction, `PUT` versus `DELETE`; a failed save gives the error haptic and the toast (*added by the
   intake of `index-CIa0Ldj2.js`*; a parity item of `FavButton` for a later package (`wave-1/baseline.md`, built code
@@ -733,17 +733,17 @@ Card
 - [ ] The badges have kinds: the two warnings are orange, «Проверенный хозяин» carries a green shield, «Хозяин» is the
       quiet grey tag, «Ниже рынка» the plain one; the compact card shows no tag, and a shield after the price for a
       verified owner (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for
-      a later package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2)).
+      a later package (`wave-1/baseline.md`, built code behind the pin, row 1 and row 2); WP-35 closed it).
 - [ ] The market chip shows «−N% к рынку» / «+N% к рынку», «≈ обычная», «≈ спорно» with the tone colour; an
       unknown tone shows the real sign in the neutral colour.
 - [ ] The facts line shows title, area, floor, market and the pets mark when present, then the age.
 - [ ] The age reads «только что», «5 мин назад», «3 ч назад», «2 дн. назад» from `posted.at` and changes when the
       minute changes; without `at` it is the server's text (*added by the intake of `index-CIa0Ldj2.js`*; a parity
       item of `cardText.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin,
-      row 20)).
+      row 20); WP-35 closed it).
 - [ ] `floor: 0` reads «цокольный этаж» and `floor: -1` «подвал» (the stub listings `100022` and `100023`) (*added by
       the intake of `index-CIa0Ldj2.js`*; a parity item of `cardText.ts` for a later package (`wave-1/baseline.md`,
-      built code behind the pin, row 26)).
+      built code behind the pin, row 26); WP-35 closed it).
 - [ ] The location line shows district, landmark and the metro within 1.5 km, else the distance to the centre.
 - [ ] Photos swipe inside the card with dots; a video listing shows ▶; a listing without photos, and a broken
       photo, show the placeholder.
