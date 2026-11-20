@@ -3,7 +3,7 @@
 import { ChevronRight } from "@homi/ui";
 import { useTranslations } from "next-intl";
 
-import { ageText } from "@/features/feed/cardText";
+import { useAgeLabel } from "@/features/feed/CardAge";
 import { Photo } from "@/features/feed/Photo";
 import type { ListingPreview } from "@/features/feed/types";
 import { useSessionMap } from "@/lib/data/sessionMaps";
@@ -22,9 +22,17 @@ export interface RadarStripProps {
   onAll: () => void;
 }
 
-/** The sub-line of a mini-card: the district (else the place) · the age, each only when known. */
-function subLine(item: ListingPreview): string {
-  return [item.district?.name ?? item.place, ageText(item)].filter(Boolean).join(" · ");
+/**
+ * The sub-line of a mini-card: the district (else the place) · the age, each only when known. The age is computed when
+ * the strip renders and does not follow the minute clock (legacy `RadarStrip`).
+ */
+function SubLine({ item }: { item: ListingPreview }) {
+  const age = useAgeLabel(item, false);
+  return (
+    <span className="-mt-[4px] truncate text-[12px] text-hint">
+      {[item.district?.name ?? item.place, age].filter(Boolean).join(" · ")}
+    </span>
+  );
 }
 
 /**
@@ -80,7 +88,7 @@ export function RadarStrip({ finds, active, allLabel, onListing, onAll }: RadarS
                   {item.price?.display ?? "—"}
                   {item.price?.period ? <small className="text-[12px] font-medium text-hint">{item.price.period}</small> : null}
                 </b>
-                <span className="-mt-[4px] truncate text-[12px] text-hint">{subLine(item)}</span>
+                <SubLine item={item} />
               </button>
             );
           })}

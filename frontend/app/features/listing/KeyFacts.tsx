@@ -14,9 +14,10 @@ export interface KeyFactsProps {
 
 /**
  * The fact tiles under the title (SCR-018 block 4): rooms with their plural, the area in m², the floor `n/total` (or
- * `n` without a total) and the building, «Новый» for the code `new`, «Вторичка» for any other. A tile is left out
- * when its value is unknown; rooms, area and floor also at zero, as the card leaves area and floor out. Nothing at all
- * when no tile is left.
+ * `n` without a total) and the building, «Новый» for the code `new`, «Вторичка» for any other. Floor `0` is the tile
+ * «Цокольный этаж» and a negative floor «Подвал», both with an empty caption (BR-APP-110, legacy since
+ * `index-CIa0Ldj2.js`). A tile is left out when its value is unknown; rooms and area also at zero, as the card leaves
+ * the area out. Nothing at all when no tile is left.
  */
 export function KeyFacts({ item, marketCode }: KeyFactsProps) {
   const t = useTranslations();
@@ -28,7 +29,9 @@ export function KeyFacts({ item, marketCode }: KeyFactsProps) {
   if (item.area_total) {
     tiles.push({ fact: "area", value: formatNumber(item.area_total, locale), label: t("listing.m2") });
   }
-  if (item.floor) {
+  if (typeof item.floor === "number" && item.floor <= 0) {
+    tiles.push({ fact: "floor", value: t(item.floor === 0 ? "listing.floorGround" : "listing.floorBasement"), label: "" });
+  } else if (item.floor) {
     const value = item.floors_total ? `${item.floor}/${item.floors_total}` : String(item.floor);
     tiles.push({ fact: "floor", value, label: t("listing.floor") });
   }

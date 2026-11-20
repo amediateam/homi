@@ -88,9 +88,10 @@ describe("deal helpers", () => {
     expect(isApartmentSearch({ ...defaultFilters(), types: ["apartment", "house"] })).toBe(false);
   });
 
-  it("every rule is off by default", () => {
+  it("the rules default to the pinned release (DEC-58): only the pets rule legacy adopted is on", () => {
     expect(DEFAULT_RULES).toEqual({
       dev017TenantPetsDailyRule: false,
+      dev017PetsLongRentOnly: true,
       dev018ResetKeepsDaily: false,
       dev025ValidateRanges: false,
       dev052UnifiedBelowMedianRule: false,

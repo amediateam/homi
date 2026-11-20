@@ -5,8 +5,11 @@ import { verdictToneOf } from "./verdict";
 
 export type BadgeKind = "suspiciousCheap" | "checkPrice" | "ownerVerified" | "owner" | "belowMarket";
 
-/** `warn` for the two price warnings, `good` for «Ниже рынка», `plain` for the owner marks. */
-export type BadgeTone = "warn" | "good" | "plain";
+/**
+ * How the tag is drawn (legacy `badge.kind` since `index-CBlEKxdL.js`): `warn` for the two price warnings, `verified`
+ * for «Проверенный хозяин» (with the shield), `quiet` for «Хозяин»; «Ниже рынка» has no kind of its own, `plain`.
+ */
+export type BadgeTone = "warn" | "verified" | "quiet" | "plain";
 
 export interface CardBadge {
   kind: BadgeKind;
@@ -17,8 +20,8 @@ export interface CardBadge {
 /**
  * The one badge over a card's photo (BR-APP-026, BR-API-111), first match wins: «Подозрительно дёшево» >
  * «Проверьте цену» > «Проверенный хозяин» > «Хозяин» > «Ниже рынка». The pinned order is that of `index-Dbpp463V.js` and
- * later, where «Хозяин» ranks above «Ниже рынка». The tones come from the verdict, so they need a delta as well
- * (`verdictToneOf`): «Ниже рынка» is the tone `good`, not any negative delta.
+ * later, where «Хозяин» ranks above «Ниже рынка». The market badges come from the verdict, so they need a delta as
+ * well (`verdictToneOf`): «Ниже рынка» is the verdict tone `good`, not any negative delta.
  */
 export function cardBadge(item: Pick<ListingPreview, "market" | "is_owner" | "owner_verified">): CardBadge | null {
   const tone = verdictToneOf(item.market);
@@ -29,13 +32,13 @@ export function cardBadge(item: Pick<ListingPreview, "market" | "is_owner" | "ow
     return { kind: "checkPrice", tone: "warn", key: "card.checkPrice" };
   }
   if (item.owner_verified) {
-    return { kind: "ownerVerified", tone: "plain", key: "card.ownerVerified" };
+    return { kind: "ownerVerified", tone: "verified", key: "card.ownerVerified" };
   }
   if (item.is_owner) {
-    return { kind: "owner", tone: "plain", key: "card.owner" };
+    return { kind: "owner", tone: "quiet", key: "card.owner" };
   }
   if (tone === "good") {
-    return { kind: "belowMarket", tone: "good", key: "card.belowMarket" };
+    return { kind: "belowMarket", tone: "plain", key: "card.belowMarket" };
   }
   return null;
 }

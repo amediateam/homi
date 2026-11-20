@@ -114,12 +114,15 @@ export type MissingFilterKey = AssertNever<Exclude<FilterKey, (typeof FILTER_KEY
 export type SearchMode = "search" | "radar-new" | "radar-edit";
 
 /**
- * The flagged branches of this package (DEC-36). Every member is `false` by default; the app fills them from its
- * `devFlags` (`frontend/app/lib/search/rules.ts`), whose names they repeat.
+ * The flagged branches of this package (DEC-36). A member's default is the behaviour of the pinned legacy release
+ * (DEC-58): on for a departure legacy has since adopted, else off. The app fills them from its `devFlags`
+ * (`frontend/app/lib/search/rules.ts`), whose names they repeat.
  */
 export type SearchRules = {
-  /** LB-APP-029: hide the tenant and pets sections for daily rent. */
+  /** LB-APP-029: hide the tenant section for daily rent (the half of DEV-017 legacy did not adopt). */
   readonly dev017TenantPetsDailyRule: boolean;
+  /** DEV-017: the pets section only for long-term rent (legacy since `index-CIa0Ldj2.js`; on by default). */
+  readonly dev017PetsLongRentOnly: boolean;
   /** LB-APP-030: «Сбросить» keeps daily rent. */
   readonly dev018ResetKeepsDaily: boolean;
   /** LB-APP-043: swap inverted price and area ranges before they are sent. */

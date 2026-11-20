@@ -221,6 +221,24 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => backVisible(page)).toBe(false);
     });
 
+    test("the cards of a ground floor and a basement open listings whose floor tile is the word, without a caption (BR-APP-110)", async ({ page }) => {
+      await open(page, mode, "/?city=tashkent_region");
+      for (const [number, word] of [
+        [100022, "Цокольный этаж"],
+        [100023, "Подвал"],
+      ] as const) {
+        await card(page, number).locator("a").click();
+        await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
+        const floor = layer(page, number).locator('[data-key-facts] [data-fact="floor"]');
+        await expect(floor.locator("b")).toHaveText(word);
+        await expect(floor.locator("span")).toHaveText("");
+
+        await press(page, "backButtonClicked");
+        await expect(page).toHaveURL(/\/ru\?city=tashkent_region$/);
+        await expect(visible(page, '[data-route="listing"]')).toHaveCount(0);
+      }
+    });
+
     test("the merged number 100016 shows 100001 with one read and replaces the address; Back goes to the feed", async ({ page }) => {
       const aliasReads = recordRequests(page, (request) => isListingRead(100016)(new URL(request.url())));
       const targetReads = recordRequests(page, (request) => isListingRead(LISTING)(new URL(request.url())));

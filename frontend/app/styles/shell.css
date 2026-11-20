@@ -46,6 +46,25 @@
     transform var(--dur-chrome) var(--ease-tab);
 }
 
+/*
+ * An inactive tab is tinted with the text colour at 55 % (legacy since `index-CBlEKxdL.js`, `03` SCR-006, §3.6); a
+ * WebView without color-mix() dims the whole tab to 0.55 instead.
+ */
+[data-tab]:not([aria-current]) {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  [data-tab]:not([aria-current]) {
+    color: var(--text);
+    opacity: 0.55;
+  }
+
+  [data-tab]:not([aria-current]):active {
+    opacity: 0.8;
+  }
+}
+
 [data-tab] svg,
 [data-tab] span {
   transition:

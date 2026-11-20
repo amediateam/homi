@@ -491,6 +491,21 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator(`[data-radar-tile="${ACTIVE}"]`)).toBeAttached();
     });
 
+    test("the rent radar's editor offers «Площадь, м²» (DEC-62) and «Животные» for long-term rent", async ({ page }) => {
+      await open(page, mode, `/radars/${ACTIVE}/edit`);
+      const editor = page.getByRole("dialog", { name: "Условия радара" });
+      await expect(editor).toBeVisible();
+      await expect(editor.locator('[data-section="area"]').getByRole("heading")).toHaveText("Площадь, м²");
+      await expect(editor.locator('[data-section="pets"]')).toHaveCount(1);
+    });
+
+    test("a new radar on rent offers «Площадь, м²» (DEC-62)", async ({ page }) => {
+      await open(page, mode, "/radars/new?city=tashkent");
+      const create = page.getByRole("dialog", { name: "Новый радар" });
+      await expect(create).toBeVisible();
+      await expect(create.locator('[data-section="area"]').getByRole("heading")).toHaveText("Площадь, м²");
+    });
+
     test("Back from a directly loaded editor closes it to the radar sheet, then to the tab", async ({ page }) => {
       await open(page, mode, `/radars/${ACTIVE}/edit`);
       await expect(visible(page, '[data-route="radar/edit"]:not([data-state])')).toBeVisible();

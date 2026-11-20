@@ -69,12 +69,20 @@ export function PhotoPlaceholder() {
 /**
  * One photo: `srcset` and `sizes` from `photoSources`; a lazy photo fades in once loaded. The first photo that loads
  * marks the first content (`markFirstContent`). A server-rendered photo can finish before hydration attaches `onLoad`
- * and `onError`, so the element is read once when it mounts.
+ * and `onError`, so the element is read once when it mounts. A new `src` starts over, unloaded (loaded when `eager`)
+ * and not failed (BR-APP-059): a reused photo, such as the radar strip's cover keyed by listing, does not keep the
+ * state of the old address.
  */
 export function Photo({ src, sizes, eager = false, fit = "cover", serverSmallOnly }: PhotoProps) {
   const smallOnly = useSmallPhotosOnly(serverSmallOnly);
   const [loaded, setLoaded] = useState(eager);
   const [failed, setFailed] = useState(false);
+  const [shownSrc, setShownSrc] = useState(src);
+  if (src !== shownSrc) {
+    setShownSrc(src);
+    setLoaded(eager);
+    setFailed(false);
+  }
   const shown = useCallback(() => {
     setLoaded(true);
     markFirstContent();

@@ -1,8 +1,10 @@
 import type { Locale } from "@homi/config";
 import { getMessages } from "@homi/i18n";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { freezeClock } from "@homi/testing";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
+import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,7 +29,13 @@ vi.mock("@/i18n/navigation", () => ({
     );
   },
 }));
+/** `factsLine` runs once per render of the card's body: the count tells a re-rendered card from a re-rendered age. */
+vi.mock("@/features/feed/cardText", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/feed/cardText")>();
+  return { ...actual, factsLine: vi.fn(actual.factsLine) };
+});
 
+import { factsLine } from "@/features/feed/cardText";
 import { resetPendingFavorites } from "@/features/feed/FavButton";
 import { ListingCard, type ListingCardProps } from "@/features/feed/ListingCard";
 import { ListingCardSkeleton } from "@/features/feed/ListingCardSkeleton";
@@ -76,12 +84,13 @@ describe("ListingCard: the full card (SCR-007)", () => {
 
     expect(text("[data-badge]")).toBe("Хозяин");
     expect(document.querySelector("[data-badge]")?.getAttribute("data-badge")).toBe("owner");
+    expect(document.querySelector("[data-badge]")?.getAttribute("data-badge-tone")).toBe("quiet");
     expect(document.querySelector("button[data-fav]")?.getAttribute("aria-label")).toBe("В избранное");
     expect(text("[data-price] b")).toBe("$600");
     expect(text("[data-price]")).toBe("$600/мес−12% к рынку");
     expect(document.querySelector("[data-tone]")?.getAttribute("data-tone")).toBe("good");
     expect(text("[data-facts] span:first-child")).toBe("2-комн. квартира, 54 м² · 54 м² · 3/9 эт. · Вторичка");
-    expect(text("[data-facts] span:last-child")).toBe("сегодня");
+    expect(text("[data-age]")).toBe("сегодня");
     expect(text("[data-location]")).toBe("Юнусабад · Мегапланет · Минор · 700 м");
   });
 
@@ -304,6 +313,88 @@ describe("ListingCard: the full card (SCR-007)", () => {
   });
 });
 
+describe("ListingCard: the badge kinds (BR-APP-026, since index-CBlEKxdL.js)", () => {
+  const badge = () => document.querySelector("[data-badge]")!;
+  const classes = () => badge().className.split(" ");
+
+  it("«Проверенный хозяин» carries the green shield before its text", () => {
+    card({ item: previewOf({ owner_verified: true, is_owner: true, market: BELOW }) });
+
+    expect(badge().getAttribute("data-badge-tone")).toBe("verified");
+    expect(badge().textContent).toBe("Проверенный хозяин");
+    const shield = badge().querySelector("svg")!;
+    expect(shield.getAttribute("aria-hidden")).toBe("true");
+    expect(shield.getAttribute("width")).toBe("15");
+    expect(shield.getAttribute("stroke-width")).toBe("2.4");
+    expect(shield.getAttribute("class")).toContain("text-[#16a34a]");
+    expect(classes()).toEqual(expect.arrayContaining(["inline-flex", "items-center", "gap-[5px]", "pl-[8px]"]));
+  });
+
+  it("«Хозяин» is the quiet tag: grey and lighter, without an icon", () => {
+    card({ item: previewOf({ is_owner: true, market: BELOW }) });
+
+    expect(badge().getAttribute("data-badge-tone")).toBe("quiet");
+    expect(classes()).toEqual(expect.arrayContaining(["font-medium", "text-[#4b4f57]"]));
+    expect(badge().querySelector("svg")).toBeNull();
+  });
+
+  it("the price warnings are orange and «Ниже рынка» is the plain tag", () => {
+    card({ item: previewOf({ is_owner: false, market: { label: null, median_delta: -0.55, tone: "check" } }) });
+    expect(badge().getAttribute("data-badge-tone")).toBe("warn");
+    expect(classes()).toEqual(expect.arrayContaining(["bg-[#fff4e6f5]", "text-[#9a4a00]"]));
+    cleanup();
+
+    card({ item: previewOf({ is_owner: false, market: BELOW }) });
+    expect(badge().getAttribute("data-badge-tone")).toBe("plain");
+    expect(classes()).toEqual(expect.arrayContaining(["font-semibold", "text-[#111]"]));
+    expect(badge().querySelector("svg")).toBeNull();
+  });
+});
+
+describe("ListingCard: the age (BR-APP-109, since index-CIa0Ldj2.js)", () => {
+  const AT = "2026-11-14T06:40:00+00:00";
+  const posted = { label: "Опубликовано", when: "сегодня", at: AT };
+  let restore: (() => void) | null = null;
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("the server render prints the server's string; after hydration the card shows the computed label", async () => {
+    restore = freezeClock("2026-11-14T06:45:00Z");
+    const element = withIntl(<ListingCard item={previewOf({ posted })} />);
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(element);
+    expect(container.querySelector("[data-age]")?.textContent).toBe("сегодня");
+
+    document.body.appendChild(container);
+    const root = await act(async () => hydrateRoot(container, element));
+    expect(container.querySelector("[data-age]")?.textContent).toBe("5 мин назад");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("follows the minute clock: a new minute changes the label and does not re-render the card", () => {
+    restore = freezeClock("2026-11-14T06:45:50Z");
+    card({ item: previewOf({ posted }) });
+    expect(text("[data-age]")).toBe("5 мин назад");
+    const bodyRenders = vi.mocked(factsLine).mock.calls.length;
+
+    act(() => vi.advanceTimersByTime(15_000));
+
+    expect(text("[data-age]")).toBe("6 мин назад");
+    expect(vi.mocked(factsLine).mock.calls.length).toBe(bodyRenders);
+  });
+
+  it("without a `posted.at` it keeps the server's string", () => {
+    restore = freezeClock("2026-11-14T06:45:00Z");
+    card({ item: previewOf({ posted: { ...posted, at: null } }) });
+
+    expect(text("[data-age]")).toBe("сегодня");
+  });
+});
+
 describe("ListingCard: the compact card (WP-27)", () => {
   it("one photo, no dots, no badge, no eye, no age; the short verdict only", () => {
     card({
@@ -333,6 +424,26 @@ describe("ListingCard: the compact card (WP-27)", () => {
     expect(classes).not.toContain("top-[4px]");
     expect(classes).not.toContain("right-[4px]");
     expect(article().className.split(" ")).toEqual(expect.arrayContaining(["relative", "rounded-small", "has-[a:focus-visible]:ring-2"]));
+  });
+
+  it("shows a shield after the price and the short verdict for a verified owner, and only then", () => {
+    card({ compact: true, item: previewOf({ owner_verified: true, is_owner: true, market: BELOW }) });
+
+    const shield = screen.getByRole("img", { name: "Проверенный хозяин" });
+    expect(shield.getAttribute("title")).toBe("Проверенный хозяин");
+    expect(shield.closest("[data-price]")?.lastElementChild).toBe(shield);
+    expect(shield.previousElementSibling?.getAttribute("data-tone")).toBe("good");
+    expect(shield.className.split(" ")).toEqual(expect.arrayContaining(["text-good", "ml-[4px]"]));
+    expect(shield.querySelector("svg")?.getAttribute("width")).toBe("16");
+    expect(document.querySelector("[data-badge]")).toBeNull();
+    cleanup();
+
+    card({ compact: true, item: previewOf({ owner_verified: false, is_owner: true, market: BELOW }) });
+    expect(document.querySelector("[data-verified]")).toBeNull();
+    cleanup();
+
+    card({ item: previewOf({ owner_verified: true, market: BELOW }) });
+    expect(document.querySelector("[data-verified]")).toBeNull();
   });
 
   it("keeps the price-kind label, the status text, the heart and the link", () => {

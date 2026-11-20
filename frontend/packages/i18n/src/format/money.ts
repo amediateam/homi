@@ -1,5 +1,6 @@
 import type { Locale } from "@homi/config";
 
+import { numberLocale } from "../locale";
 import { type I18nReporter, reportOnce } from "../report";
 import { formatDecimal, formatNumber, type Translate } from "./number";
 
@@ -32,9 +33,12 @@ export type Money = {
   format(usd: number): string;
   /** The unit next to a price input: «млн сум» or `$`. */
   unitLabel(): string;
-  /** A price input's text: the USD integer, or millions of сум with one decimal; `""` for no value. */
+  /** A price input's text: the USD integer, or millions of сум with one decimal and no grouping; `""` for no value. */
   toInput(usd: number | null): string;
-  /** A price input's text back to whole USD; `null` for empty, zero or not a number. */
+  /**
+   * A price input's text back to whole USD; a dollar amount may carry one `$`. `null` for empty, zero or not a
+   * number.
+   */
   parseInput(text: string): number | null;
   /** Preset chips of a deal (BR-APP-014, BR-APP-015). */
   presets(deal: PresetDeal, sources: PresetSources): PricePreset[];
@@ -119,10 +123,10 @@ export function createMoney({ locale, currency, usdUzs, t, report }: MoneyOption
       if (usd === null || !showable(usd)) {
         return "";
       }
-      return isUzs ? formatDecimal((usd * rate) / MILLION, locale) : String(usd);
+      return isUzs ? formatInputDecimal((usd * rate) / MILLION, locale) : String(usd);
     },
     parseInput(text) {
-      const value = parseAmount(text);
+      const value = parseAmount(isUzs ? text : withoutDollar(text));
       if (value === null) {
         return null;
       }
@@ -146,6 +150,26 @@ export function createMoney({ locale, currency, usdUzs, t, report }: MoneyOption
       return sums.map((sum) => ({ usd: Math.round(sum / rate), label: formatSum(sum) }));
     },
   };
+}
+
+/**
+ * Millions of сум for a price field: at most one decimal and no thousands separator («1500», «1500,5» in ru, «1500.5»
+ * in en), as legacy's field (`03` §3.5), so the field's own text parses back.
+ */
+function formatInputDecimal(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(numberLocale(locale), { maximumFractionDigits: 1, useGrouping: false }).format(value);
+}
+
+/**
+ * A dollar field's text without one `$` before or after the amount and the spaces around it («$1 200», «1 200 $»;
+ * legacy `parsePriceInput`). A second `$` stays and makes the text unreadable; a сум field never drops one.
+ */
+function withoutDollar(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("$")) {
+    return trimmed.slice(1);
+  }
+  return trimmed.endsWith("$") ? trimmed.slice(0, -1) : trimmed;
 }
 
 /**

@@ -105,13 +105,23 @@ describe("unitLabel", () => {
 });
 
 describe("toInput", () => {
-  it("is the integer in USD and millions of сум with one decimal in UZS", () => {
+  it("is the integer in USD and millions of сум with one decimal and no grouping in UZS (`03` §3.5)", () => {
     expect(money("ru", "USD", 12650).toInput(1200)).toBe("1200");
     expect(money("ru", "UZS", 12650).toInput(100)).toBe("1,3");
     expect(money("uz", "UZS", 12650).toInput(100)).toBe("1,3");
     expect(money("en", "UZS", 12650).toInput(100)).toBe("1.3");
-    expect(money("ru", "UZS", 12650).toInput(118_577)).toBe(ru("1_500"));
-    expect(money("en", "UZS", 12650).toInput(118_577)).toBe("1,500");
+    expect(money("ru", "UZS", 12650).toInput(118_577)).toBe("1500");
+    expect(money("uz", "UZS", 12650).toInput(118_577)).toBe("1500");
+    expect(money("en", "UZS", 12650).toInput(118_577)).toBe("1500");
+    expect(money("ru", "UZS", 10_000).toInput(150_050)).toBe("1500,5");
+    expect(money("en", "UZS", 10_000).toInput(150_050)).toBe("1500.5");
+  });
+
+  it("1 500,5 млн сум reads back as the same value", () => {
+    const sum = money("ru", "UZS", 10_000);
+    expect(sum.parseInput("1500,5")).toBe(150_050);
+    expect(sum.toInput(sum.parseInput("1500,5"))).toBe("1500,5");
+    expect(money("en", "UZS", 10_000).parseInput("1500.5")).toBe(150_050);
   });
 
   it("is empty for no value and for an amount that cannot be shown", () => {
@@ -164,8 +174,18 @@ describe("parseInput", () => {
     expect(sum.parseInput(ru("1_500"))).toBe(118_577);
   });
 
+  it("a dollar amount may carry one `$` before or after it (`03` §3.5); a сум amount may not", () => {
+    for (const text of ["$1200", "$1 200", "1 200 $", "1200$", "$1,200", " $ 1 200 "]) {
+      expect(usd.parseInput(text), JSON.stringify(text)).toBe(1200);
+      expect(sum.parseInput(text), JSON.stringify(text)).toBeNull();
+    }
+    for (const text of ["$1 200 $", "$$1200", "1$200", "$"]) {
+      expect(usd.parseInput(text), JSON.stringify(text)).toBeNull();
+    }
+  });
+
   it("reads zero, empty text and non-numbers as no value", () => {
-    for (const text of ["0", "0,0", "", "   ", "abc", ",", ".", "12abc", "$1200", "-5", "1e5"]) {
+    for (const text of ["0", "0,0", "", "   ", "abc", ",", ".", "12abc", "-5", "1e5", "$0"]) {
       expect(usd.parseInput(text), JSON.stringify(text)).toBeNull();
       expect(sum.parseInput(text), JSON.stringify(text)).toBeNull();
     }

@@ -19,12 +19,12 @@ function badge({ tone, delta = -0.3, verified = false, owner = null }: Signals) 
 const kind = (signals: Signals) => badge(signals)?.kind ?? null;
 
 describe("BR-APP-026: card badge priority", () => {
-  it("gives each badge its key and tone", () => {
+  it("gives each badge its key and the kind it is drawn with (since index-CBlEKxdL.js)", () => {
     expect(badge({ tone: "suspicious" })).toEqual({ kind: "suspiciousCheap", tone: "warn", key: "card.suspiciousCheap" });
     expect(badge({ tone: "check" })).toEqual({ kind: "checkPrice", tone: "warn", key: "card.checkPrice" });
-    expect(badge({ verified: true })).toEqual({ kind: "ownerVerified", tone: "plain", key: "card.ownerVerified" });
-    expect(badge({ owner: true })).toEqual({ kind: "owner", tone: "plain", key: "card.owner" });
-    expect(badge({ tone: "good" })).toEqual({ kind: "belowMarket", tone: "good", key: "card.belowMarket" });
+    expect(badge({ verified: true })).toEqual({ kind: "ownerVerified", tone: "verified", key: "card.ownerVerified" });
+    expect(badge({ owner: true })).toEqual({ kind: "owner", tone: "quiet", key: "card.owner" });
+    expect(badge({ tone: "good" })).toEqual({ kind: "belowMarket", tone: "plain", key: "card.belowMarket" });
   });
 
   it("ranks every pair of adjacent badges", () => {

@@ -1,5 +1,5 @@
 import { getMessages } from "@homi/i18n";
-import { fakeTelegram, type FakeTelegram } from "@homi/testing";
+import { fakeTelegram, type FakeTelegram, freezeClock } from "@homi/testing";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
@@ -257,6 +257,25 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(cards[1].textContent).toContain("Чиланзар · вчера");
     expect(cards[0].querySelector("img")).not.toBeNull();
     expect(strip().querySelector("[data-radar-all]")?.textContent).toBe("Все 3");
+  });
+
+  it("the strip's age is computed from `posted.at` when the sheet renders and does not follow the minute clock (BR-APP-109)", async () => {
+    const restore = freezeClock("2026-11-14T06:45:50Z");
+    try {
+      const posted = { label: "Опубликовано", when: "сегодня", at: "2026-11-14T06:40:00+00:00" };
+      seed(radar(A, { preview: { items: [previewOf({ number: 100001, posted })], count: 1, flow: null } }));
+      renderSheet();
+      await settle();
+      const find = () => strip().querySelector<HTMLElement>('[data-radar-find="100001"]')!;
+      expect(find().textContent).toContain("Юнусабад · 5 мин назад");
+
+      await act(async () => vi.advanceTimersByTime(60_000));
+
+      expect(find().textContent).toContain("Юнусабад · 5 мин назад");
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      restore();
+    }
   });
 
   it("a find opens the listing over the tab: seen and the preview recorded, the return stored", async () => {

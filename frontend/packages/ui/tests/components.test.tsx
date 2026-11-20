@@ -71,6 +71,27 @@ describe("base components", () => {
     expectTokenClassesOnly();
   });
 
+  it("a disabled primary button is at opacity 0.5, the other variants at 0.4 (`03` §3.6)", () => {
+    const variants = ["primary", "secondary", "ghost", "danger", "text"] as const;
+    render(
+      <div>
+        {variants.map((variant) => (
+          <Button key={variant} variant={variant} disabled>
+            {variant}
+          </Button>
+        ))}
+      </div>,
+    );
+
+    const classes = (name: string) => screen.getByRole("button", { name }).className.split(" ");
+    expect(classes("primary")).toContain("disabled:opacity-50");
+    expect(classes("primary")).not.toContain("disabled:opacity-40");
+    for (const variant of variants.slice(1)) {
+      expect(classes(variant)).toContain("disabled:opacity-40");
+      expect(classes(variant)).not.toContain("disabled:opacity-50");
+    }
+  });
+
   it("Button as a child keeps the look on a link", () => {
     render(
       <Button asChild variant="secondary">

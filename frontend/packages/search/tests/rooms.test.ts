@@ -50,4 +50,11 @@ describe("isRoomPicked", () => {
     expect(ROOM_OPTIONS.filter((value) => isRoomPicked(tap(1, 3), value))).toEqual([1, 2, 3]);
     expect(ROOM_OPTIONS.filter((value) => isRoomPicked(defaultFilters(), value))).toEqual([]);
   });
+
+  it("BR-APP-007 only an upper bound («до 2», a radar's filters) counts from 1", () => {
+    const upTo = (rooms_max: number) => ({ rooms_min: null, rooms_max });
+    expect(ROOM_OPTIONS.filter((value) => isRoomPicked(upTo(2), value))).toEqual([1, 2]);
+    expect(ROOM_OPTIONS.filter((value) => isRoomPicked(upTo(1), value))).toEqual([1]);
+    expect(ROOM_OPTIONS.filter((value) => isRoomPicked({ rooms_min: null, rooms_max: null }, value))).toEqual([]);
+  });
 });

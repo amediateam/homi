@@ -13,10 +13,11 @@ export type Sections = {
   readonly unitPriceHint: boolean;
   /** BR-APP-017: «Не дороже рынка». */
   readonly belowMedian: boolean;
-  /** BR-APP-019 (LB-APP-029 behind `dev017TenantPetsDailyRule`). */
+  /** BR-APP-019: both rents; daily rent loses it with `dev017TenantPetsDailyRule` (LB-APP-029). */
   readonly tenant: boolean;
+  /** BR-APP-019: long-term rent with `dev017PetsLongRentOnly` (legacy since `index-CIa0Ldj2.js`), else both rents. */
   readonly pets: boolean;
-  /** BR-APP-020. */
+  /** BR-APP-020: every deal (DEC-62). */
   readonly area: boolean;
   readonly market: boolean;
   readonly appliances: boolean;
@@ -54,7 +55,6 @@ export function sectionsFor(
   const daily = filters.deal === "rent_daily";
   const sale = filters.deal === "sale";
   const typical = stats?.typical_price?.[filters.deal];
-  const tenantAndPets = rent && !(resolved.dev017TenantPetsDailyRule && daily);
   return {
     rentTerm: rent && (daily || (stats?.counts?.rent_daily ?? 0) > 0),
     rooms: !filters.types.every((type) => NO_ROOMS_TYPES.has(type)),
@@ -64,9 +64,9 @@ export function sectionsFor(
         : null,
     unitPriceHint: sale && filters.types.some((type) => type === "land" || type === "house"),
     belowMedian: belowMedianAvailable(filters, city, resolved),
-    tenant: tenantAndPets,
-    pets: tenantAndPets,
-    area: sale,
+    tenant: rent && !(resolved.dev017TenantPetsDailyRule && daily),
+    pets: rent && !(resolved.dev017PetsLongRentOnly && daily),
+    area: true,
     market: sale,
     appliances: rent,
     posted: mode === "search",

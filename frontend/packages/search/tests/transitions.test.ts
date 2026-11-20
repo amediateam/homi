@@ -98,6 +98,16 @@ describe("switchRentTerm", () => {
     });
   });
 
+  it("BR-APP-020 an area range survives a long ↔ daily switch and a switch to sale clears it (DEC-62)", () => {
+    const rent = { ...busy, area_min: 40, area_max: 80 } as SearchFilters;
+    const daily = switchRentTerm(rent, "rent_daily");
+    expect([daily.area_min, daily.area_max]).toEqual([40, 80]);
+    const back = switchRentTerm(daily, "rent_long");
+    expect([back.area_min, back.area_max]).toEqual([40, 80]);
+    const sale = switchDeal(daily, "sale");
+    expect([sale.area_min, sale.area_max]).toEqual([null, null]);
+  });
+
   it("BR-APP-003 picking the current term changes nothing", () => {
     expect(switchRentTerm(busy, "rent_long")).toEqual(busy);
   });

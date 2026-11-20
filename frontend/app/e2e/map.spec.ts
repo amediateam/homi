@@ -43,6 +43,8 @@ type Mode = "cookie" | "header";
 /** The default search's map answer of the stubs on the fitted screen: four addresses with eleven listings each. */
 const STACKS = 4;
 const STACK_SIZE = 11;
+/** The stub listing of a verified owner (`owner_verified`), one of the default search's points. */
+const VERIFIED = 100014;
 
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 const html = (page: Page) => page.locator("html");
@@ -384,6 +386,32 @@ test.describe("map (cookie mode)", () => {
     await expect(pin).not.toHaveClass(/(^|\s)active(\s|$)/);
     // Locate is hidden while a card is open (WP-27 "Actions", rules).
     await expect(locateButton(page)).toBeVisible();
+  });
+
+  test("the card of a verified owner shows the shield after the price, and no badge (since index-CBlEKxdL.js)", async ({ page }) => {
+    await openFeed(page);
+    // The stub 100014 is the verified owner; moved to the middle of the others, so it is a pin of its own.
+    await page.route(
+      (url) => isMapRead(url),
+      async (handled) => {
+        const response = await handled.fetch();
+        const body = (await response.json()) as { data: { points: { number: number; lat: number; lon: number }[] } };
+        const { points } = body.data;
+        const verified = points.find((item) => item.number === VERIFIED)!;
+        verified.lat = points.reduce((sum, item) => sum + item.lat, 0) / points.length;
+        verified.lon = points.reduce((sum, item) => sum + item.lon, 0) / points.length;
+        await handled.fulfill({ response, json: body });
+      },
+    );
+    await toMap(page);
+
+    await visible(page, `[data-marker="pin"][data-number="${VERIFIED}"]`).click();
+    const listing = slot(page, 0).locator(`article[data-listing="${VERIFIED}"]`);
+    await expect(listing).toBeVisible();
+    const shield = listing.getByRole("img", { name: "Проверенный хозяин" });
+    await expect(shield).toBeVisible();
+    await expect(listing.locator("[data-price] > :last-child")).toHaveAttribute("data-verified", "");
+    await expect(listing.locator("[data-badge]")).toHaveCount(0);
   });
 
   /**
