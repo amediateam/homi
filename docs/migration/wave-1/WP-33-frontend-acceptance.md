@@ -348,7 +348,9 @@ The numbers in the headings below are unchanged (*added by the intake of `index-
 Since the intake of `index-YX9bFVws.js` the audit also holds BR-APP-112 … BR-APP-121, LB-APP-084 … LB-APP-091 and
 TMA-048; their lines are in the specifications of WP-39 (BR-APP-112, BR-APP-113, BR-APP-114, BR-APP-116,
 BR-APP-117, BR-APP-118, BR-APP-121), WP-81 (BR-APP-119, BR-APP-120 and the owner form's halves of BR-APP-113 and
-BR-APP-114) and WP-82 (BR-APP-115, the landlord block of BR-APP-116, TMA-048) and join this checklist with them, with
+BR-APP-114), WP-82 (BR-APP-115, the landlord block of BR-APP-116, the request tips' leave of BR-APP-112, the fill
+hints' «n из 5» of BR-APP-113, TMA-048) and WP-83 (the owner chip tip's leave of BR-APP-112) and join this checklist
+with them, with
 the scenarios of that release under the acceptance checklist. The numbers in the headings below are unchanged
 (*added by the intake of `index-YX9bFVws.js`*).
 
@@ -666,7 +668,7 @@ merged (*added by the intake of `index-YX9bFVws.js`*).
 | 2 | 7 | `feed-owner-entry` | WP-82 | under it the row «Сдаёте квартиру? Разместите бесплатно ›»; none while the cabinet is off |
 | 3 | 9 | `feed-empty-owner-entry` | WP-82 | the line under the empty search feed; none in favourites or history |
 | 4 | 9 | `feed-empty-owner-entry-open` | WP-82 | its tap: `owner_entry {src: empty}`, then the form (`can_add`) |
-| 5 | 18 | `listing-owner-entry` | WP-82 | «Тоже сдаёте квартиру? Разместите бесплатно ›» last on a card with `owner_entry` (DEC-94) |
+| 5 | 18 | `listing-owner-entry` | WP-82 | «Тоже сдаёте квартиру? Разместите бесплатно ›» last on a card with `owner.entry` (DEC-94) |
 | 6 | 18 | `listing-owner-entry-open` | WP-82 | its tap with `can_add`: a new form |
 | 7 | 18 | `listing-owner-entry-limit` | WP-82 | its tap without `can_add`: Settings › «Мои объявления» |
 | 8 | 7 | `fav-like` | WP-39 | the heart springs on each tap; the burst only on an add |
@@ -683,6 +685,8 @@ merged (*added by the intake of `index-YX9bFVws.js`*).
 ### Statements
 
 - [ ] Rows 1–48 are ticked in ru, uz and en and in light and dark, with staging screenshots; the reviewer signed.
+- [ ] The 17 scenarios of `index-YX9bFVws.js` are ticked; the cabinet's rows (2 – 7, 13 and 14 for the landlord
+      block, 15 – 17) on a local stack with `OWNER_CABINET_ENABLED=true` (DEC-89) (*added by the intake of `index-YX9bFVws.js`*).
       Rows 26 … 31 carry the staging screenshot of the "soon" state and local screenshots of the radar screens;
       rows 40, 46 and 47 a staging screenshot of the feed without them and local screenshots of each; all of them
       are ticked inside Telegram in WP-57 (DEC-51).

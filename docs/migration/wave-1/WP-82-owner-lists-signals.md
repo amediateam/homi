@@ -167,8 +167,9 @@ Nothing of this renders, and nothing is requested or sent, while `owner_enabled`
 - `features/owner/entry/{OwnerEntryRow,OwnerEntryLine}.tsx` and `features/owner/entry/useOwnerEntry.ts`.
 - End of the search feed: in WP-39's end block (`data-feed-end`, DEC-90), under «Это всё по вашему поиску», a row
   with a house icon, «Сдаёте квартиру? Разместите бесплатно» (`own.entryAsk`, `own.entryCta`) and a chevron, `src`
-  `feed_end`. When the few-results note hides the end line (legacy: the text only without the note), the row stands
-  alone under the note. The search feed only; never favourites or history.
+  `feed_end`. WP-39's block renders for every search feed loaded to its end with cards and holds the end line only
+  without the few-results note, so with the note the row stands alone under it, as legacy's row does. The search feed
+  only; never favourites or history.
 - Empty search feed: a line «Сдаёте квартиру? **Разместите бесплатно ›**» under the empty state, or under the
   few-results note when no card is left, `src` `empty`.
 - The listing card: «Тоже сдаёте квартиру? **Разместите бесплатно ›**» (`own.entryAskToo`) as the last line of the
@@ -188,14 +189,15 @@ Nothing of this renders, and nothing is requested or sent, while `owner_enabled`
     (`found.landlordSendBot`) shares `found.landlordShareBot` with `{url}` = `https://t.me/<bot>?start=owner_new`
     (WP-88);
   - without the page: one button «Отправить хозяину» that shares `found.landlordShareBot` with the bot link;
-  - without a bot name (`brand.botUsername` empty): no bot button; with neither, no block.
+  - without a bot name (`brand.botUsername` empty): no bot button; with neither, no block (these two fallbacks are
+    defaults of the integrator, listed for the reviewer).
   - Each tap: a light haptic, `landlord_share {src: homi | elsewhere, to: page | bot}` (`src` is `homi` on `done`,
     `elsewhere` on `moved`), then the share.
 - The share (TMA-048): `tg.shareText(text)` (new in `lib/telegram/share.ts`): inside Telegram
   `openTelegramLink("https://t.me/share/url?url=" + encodeURIComponent(text))`, as legacy; else
   `navigator.share({ text })` with its errors swallowed; else `window.open(link, "_blank", "noopener")`. LB-APP-090
-  (the message in `url`) is not adopted: legacy's message carries its link inside the text, which a separate `text`
-  beside `url` would repeat.
+  (the message in `url`) is not adopted, a default of the integrator listed for the reviewer: legacy's message carries
+  its link inside the text, which a separate `text` beside `url` would repeat.
 - HOMI's texts of DEC-91 in `messages/homi/{ru,uz,en}.json` (the integrator's wording; the reviewer may change it):
   `found.landlordSendBot` «Отправить ссылку на бота» / «Bot havolasini yuborish» / «Send the bot link»;
   `found.landlordShareBot` «Здравствуйте! Я съезжаю. Нового жильца можно найти бесплатно и без риелтора через

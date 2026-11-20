@@ -221,8 +221,9 @@ the owner to the bot (WP-81). The bot side:
 - The same link reaches the bot from outside: the survey's landlord block shares `https://t.me/<bot>?start=owner_new`
   with a tenant's message to the landlord (DEC-91, WP-82), so a landlord who has never used HOMI starts here; the
   ordinary welcome comes first, as for any new user (*added by the intake of `index-YX9bFVws.js`*).
-- While `owner.enabled` is false the third message is not sent. Which links of the operator or of HOMI carry this
-  payload is open (Q-BOT-049); nothing in Wave 1 depends on it.
+- While `owner.enabled` is false the third message is not sent. Which links of the operator carry this payload is
+  open (Q-BOT-049); HOMI's own link is the survey's landlord block (DEC-91), shown only while the cabinet is on
+  (DEC-89), so nothing in Wave 1 depends on the operator's links.
 
 ### Mini App addresses (WP-52, "Mini App addresses")
 

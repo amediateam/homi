@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | intake `index-YX9bFVws`; WP-38 (the queue's order of 2026-11-20, `decisions/2026-11-20-developer-answers.md`; both edit `FeedScreen` and `RadarSheetRoute`) |
+| Depends on | intake `index-YX9bFVws`; WP-38 (the queue's order of 2026-11-20, `decisions/2026-11-20-developer-answers.md`; both edit `RadarSheetRoute`) |
 | Size | about 2 100 changed lines with tests, L (the integrator's estimate; if the PR passes 3 000 lines, split it at the line between "Leave" and the rest, and give the second half the next free number) |
 | Behaviour reference | `03` §1.2, §2 (SCR-007, SCR-014, SCR-015, SCR-022, SCR-028 … SCR-031, SCR-032, SCR-042), §2.1, §3.4, §3.6, §4 (BR-APP-112 … BR-APP-118, BR-APP-121), §5 / §5b (LB-APP-085, LB-APP-086, LB-APP-087, LB-APP-089, LB-APP-091); `wave-1/baseline.md`, built code behind the pin, rows 44 – 54 |
 | Needs from the production track | the regular deploy; then the manual checks inside Telegram on staging that the acceptance checklist names |
@@ -47,8 +47,9 @@ Out:
 
 - DEC-93: everything of the release's motion on built screens is ported, as legacy has it; lite graphics follow legacy.
 - DEC-90: «Это всё по вашему поиску» shows at the end of the search feed also while the cabinet is off (DEV-064).
-- DEC-64: HOMI re-opens the radar sheet after a listing instead of legacy's parked mount; the close of the radar sheet
-  for a listing opened from it plays no leave, as legacy's parked sheet does not.
+- DEC-64: HOMI re-opens the radar sheet after a listing instead of legacy's parked mount. That the close of the radar
+  sheet for a listing opened from it plays no leave, as legacy's parked sheet does not, is the integrator's reading
+  (listed for the reviewer); DEC-64 says nothing about the leave.
 - DEC-89: nothing of the owner invitations or the landlord block is built here.
 
 ## Design
@@ -66,7 +67,9 @@ copy is the one approach that does not depend on how the layer closes (Back, ×,
   - sheet: 280 ms; the backdrop's colour to transparent (`ease-out`), the sheet `translateY(100%)`
     (`cubic-bezier(0.3, 0, 0.2, 1)`), other children opacity 0 in 160 ms;
   - sub-page: 200 ms, `translateX(24%)` and opacity 0, `cubic-bezier(0.4, 0, 1, 1)`;
-  - toast: 180 ms, `translateY(10px)` and opacity 0, the same curve.
+  - toast: 180 ms, `translateY(10px)` and opacity 0, the same curve;
+  - tip: 160 ms, `translateY(-6px) scale(.92)` and opacity 0, the same curve — no caller here; the cabinet's tips use
+    it (WP-82, WP-83).
   - Every animation `fill: forwards`; the copy goes when all finish or after 600 ms at the latest.
 - The copy: `cloneNode(true)`, the scroll positions of the node and its descendants copied, class `leave`,
   `aria-hidden`, `inert`; `.leave, .leave *` stop every CSS animation and transition and every pointer event, so no
@@ -75,11 +78,14 @@ copy is the one approach that does not depend on how the layer closes (Back, ×,
   (`BottomSheet.tsx:209`), and a hidden route's host nodes get `display: none`, so the copy goes into one leave layer
   at the end of `body` with the node's box (position and size read before the clone), unless the parent is a portal
   container that stays shown. The browser check of the end-to-end spec decides.
-- Skip rules, all of legacy's: reduced motion; `html.lite`; a close by gesture (the drag of `useSheetDrag` and the
-  swipe of `useSwipeBack` mark the node `data-gone`, the toast's drag leaves an inline transform); the radar sheet
-  closed for a listing opened from it (DEC-64, legacy's `.parked`); a parent no longer in the document; and a new node
-  of the same kind in the same commit (a toast replaced by a toast, a sheet by a sheet), checked in a microtask
-  against a snapshot taken in the cleanup.
+- Skip rules, legacy's: reduced motion; `html.lite`; a close by gesture (the drag of `useSheetDrag` and the swipe of
+  `useSwipeBack` mark the node `data-gone`, the toast's drag leaves an inline transform); the radar sheet closed for a
+  listing opened from it (legacy's `.parked`; see DEC-64 above); a parent no longer in the document; and a new node of
+  the same kind in the same commit (a toast replaced by a toast, a sheet by a sheet), checked in a microtask against a
+  snapshot taken in the cleanup. One of legacy's rules changes: legacy skips when the node is still in the document
+  after the commit (it was not removed). A route hidden by `<Activity>` keeps its nodes in the document with
+  `display: none`, so HOMI skips only when the node is still in the document **and shown**; a hidden one leaves (a
+  default of the integrator, listed for the reviewer; the browser check decides).
 - Wiring: `BottomSheet` (every sheet: `RouteSheet`, the city picker, the gallery's samples), `SubPageFrame`, and the
   toast surface of `ToastHost`. Focus does not move to the copy; the focus return of the sheets stays as built.
 
@@ -95,7 +101,8 @@ legacy does; it serves only messages with a plain `{n}` (no plural), which holds
 `sheet.matchingNow`, `sheet.flowDay` and `sheet.flowWeek`. Call sites: the apply button of `FiltersFooter` and
 `QuickFilterForm` («Показать {n}»), the «Сейчас подходит: {n}» line, and the radar flow line (`formatFlow` of
 `@homi/i18n/format` gains a `parts` form, legacy's `flowParts`, so the footer can roll the number; `sheet.flowNone`
-stays plain text). A count of 0 or none keeps its other text.
+stays plain text). «Показать {n}» keeps `sheet.show` while the count is unknown and `sheet.nothing` at 0, so it
+rolls only between counts above 0; «Сейчас подходит: {n}» rolls to and from 0 and is empty while unknown, as built.
 
 ### Save phases
 
@@ -124,8 +131,8 @@ the integrator, listed for the reviewer).
 ### Countdown ring
 
 The action toast of `ToastHost` shows a 16 px ring on its button: a circle whose dash offset runs from 0 to 1 in
-`TOAST_ACTION_MS` (6 s), linear, keyed by the toast's id (LB-APP-085: a replacement toast restarts both the timer and
-the ring); at the end the toast goes without running its action, as built; under reduced motion the ring stays full.
+`TOAST_ACTION_MS` (6 s), linear, keyed by the toast's id, so a replacement toast restarts both the timer and the ring
+(the fix of LB-APP-085, a default of the integrator listed for the reviewer; legacy keys the ring by the text); at the end the toast goes without running its action, as built; under reduced motion the ring stays full.
 
 ### Segmented thumb
 
@@ -141,6 +148,8 @@ control's padding and gap. Legacy has no reduced-motion rule for it; HOMI adds n
   `--ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1)`.
 - `styles/shell.css`: `--ease-chrome` (1.1) and `--ease-lens` (1.35) become the spring (1.2), as legacy's chrome
   rules do; the clip radii 60 px, `calc(var(--tabbar-h) / 2)` and 22 px become 999 px.
+- `features/shell/RouteOverlay.tsx`: the listing layer clips sideways overflow (`overflow-x: hidden`, legacy's
+  `.listing`; SCR-018), so nothing in it scrolls the page sideways.
 - `features/listing/sections/MarketBlock.tsx`: the marker moves by `translateX` of a full-width wrapper (the marker at
   its right edge, `translate(50%)`), 0.7 s on `--ease-out`, instead of `left`; the first-show rule stays.
   `features/listing/market/MarketSheet.tsx`: the demonstration dot on `--ease-out`.
@@ -155,10 +164,11 @@ override, if any, goes. The landlord block is WP-82's (DEC-89).
 
 ### End of the search feed
 
-`ListingFeed` of the search feed (not favourites, not history): when the feed is loaded to its end, has no error,
-shows at least one card and no few-results note, a muted line «Это всё по вашему поиску» (`feed.end`) follows the
-last card (and the in-feed radar card, when it is the last row), above the sentinel; a `data-feed-end` block that
-WP-82 extends with the invitation row (DEC-90).
+`ListingFeed` of the search feed (not favourites, not history): when the feed is loaded to its end, has no error and
+shows at least one card, a `data-feed-end` block follows the last row (the last card, the in-feed radar card when it
+is last, or the few-results note), above the sentinel. It holds a muted line «Это всё по вашему поиску» (`feed.end`)
+only while no few-results note is shown (DEC-90); without the line the block renders nothing until WP-82 adds the
+invitation row to it, which then shows under the note too, as legacy's row does.
 
 ## Files
 
@@ -175,7 +185,7 @@ Changed under `frontend/app/`:
 
 - `features/shell/ToastHost.tsx`, `lib/ui/toast.ts`, `features/filters/{FiltersFooter,QuickFilterForm,
   FiltersSheetRoute}.tsx`, `features/radars/{subscribe.ts,RadarCreateSheet.tsx,RadarEditSheet.tsx,FoundSheet.tsx,
-  RadarSheetRoute.tsx}`, `features/feed/{FavButton,ListingFeed,FeedScreen}.tsx`,
+  RadarSheetRoute.tsx}`, `features/feed/{FavButton,ListingFeed}.tsx`, `features/shell/RouteOverlay.tsx`,
   `features/listing/sections/MarketBlock.tsx`, `features/listing/market/MarketSheet.tsx`, `styles/shell.css`,
   `features/gallery/UiGallery.tsx` (the new components)
 - tests: `tests/shell/{route-sheet,sub-page}.test.tsx`, `tests/ui/{toast-host.test.tsx,toast.test.ts}`,
@@ -263,7 +273,7 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - [ ] Every sheet, the settings sub-page frame and every toast leave as legacy does, and do not after a drag or a
       swipe, under reduced motion or in lite graphics.
 - [ ] The radar sheet closed for a listing opened from it plays no leave and re-opens as built.
-- [ ] «Показать N», «Сейчас подходит: N» and the radar flow roll; 0 and none keep their texts.
+- [ ] «Показать N», «Сейчас подходит: N» and the radar flow roll; «Показать» keeps its texts for none and 0.
 - [ ] «Сохранить» and both «Включить радар» go spinner → tick → close with the toast; an already active radar closes at once; an
       error leaves the sheet open.
 - [ ] The heart springs on every tap and bursts only on an add.

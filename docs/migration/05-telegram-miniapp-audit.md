@@ -408,6 +408,7 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 - **Legacy decision:** the whole message in `url` is LB-APP-090 (`03` §5b); its proposed fix sends the link in `url`
   and the message in `text`.
 - **Beside:** TMA-031 (`shareUrl`, link and text apart), TMA-043 (outside Telegram).
+- **HOMI:** the landlord block has two buttons, the owners' page and the bot link (DEC-91), shared this way (WP-82).
 - **Parity scenarios:** `found-moved-landlord` and `found-kvadro-landlord-uz`, with the probe `linkProbe`, which
   records every `openTelegramLink` URL (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:58-60`, `:628-630` at r38).
 

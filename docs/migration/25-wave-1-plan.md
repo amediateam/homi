@@ -27,16 +27,16 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
 | Mini App screens, sheets, overlays, states | 63 (SCR-001 … SCR-063) | `03` §2, `data/screens.json` |
-| Client business rules | 111 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 83 (`LB-APP`) | `03` §5, §5b |
-| Telegram integration points | 47, of which 42 in use (TMA-001 … TMA-047) | `05` |
+| Client business rules | 121 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 91 (`LB-APP`) | `03` §5, §5b |
+| Telegram integration points | 48, of which 43 in use (TMA-001 … TMA-048) | `05` |
 | API methods the client uses | 55 (API-001 … API-055) | `08` §2 |
 | Bot handlers, buttons, texts | 91, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 587 keys per locale at the baseline `index-CIa0Ldj2.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 597 keys per locale at the baseline `index-YX9bFVws.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-CIa0Ldj2.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
-(before it `index-CBlEKxdL.js` and `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024).
+The audit describes legacy release `index-YX9bFVws.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-20
+(before it `index-CIa0Ldj2.js`, `index-CBlEKxdL.js` and `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024).
 Each later release is read into the audit as described in section 8.
 
 The owner cabinet «Сдать квартиру» and the contact request to an owner arrived with `index-CBlEKxdL.js`: SCR-049 …
