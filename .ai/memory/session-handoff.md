@@ -13,7 +13,7 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-20, landing intake: «Следующий по очереди»; four answers verbatim in `docs/migration/decisions/2026-11-20-landing-answers.md` (DEC-95 … DEC-97 and «Поменять контракт в этом PR»).
 
 ## State at handoff
-- `main` = `3f9baa0` (#95). Branch `feat/intake-landing-d9bbbc696337`: `78b7a4d` contract on stubs, `f3ea168` line references moved, `7bb94a6` decisions + WP-62 + specifications, `5abcc94` audit + registers, `c1c544e` and `2e3e57b` review fixes, then notes, memory and the PR number; pushed, PR open (number in the queue row).
+- `main` = `3f9baa0` (#95). Branch `feat/intake-landing-d9bbbc696337`: `78b7a4d` contract on stubs, `f3ea168` line references moved, `7bb94a6` decisions + WP-62 + specifications, `5abcc94` audit + registers, `c1c544e` and `2e3e57b` review fixes, then notes, memory and the PR number; pushed, **PR #96** (open, CI pending).
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `python3 scripts/migration/collect_ids.py --check` (exit 0, 2 577 ids); `cd backend && composer ci:check` (green on `78b7a4d` except `openapi:check`, which passes once the export is committed); `make ci-frontend` (exit 0 on the code of `78b7a4d`; only docs after).
 
@@ -26,7 +26,7 @@ Written for whoever continues the **development track**. The production track's 
   - The claim of #95 that a landing sync would bring the owners' page was wrong: the sync downloads no backend page (`tools/sync/fetch.mjs:6-8`); corrected in DEC-91's note, WP-61, the queue.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **CI of the landing PR**, then «сливай #N».
+1. **CI of #96**, then «сливай #96».
 2. **Then WP-38**, **WP-39**, **WP-31** (WP-37 any time). WP-62 and WP-61 stay at stage E.
 3. **The owners' page** (DEC-97): when WP-61 starts, legacy's page if it is known (the developer may bring a copy of `kvadro.app/sdat-kvartiru/`), else HOMI's own text.
 4. **The operator texts** (WP-02 Part A and the addendum) — handed over by the developer, never sent from the connected Gmail.
