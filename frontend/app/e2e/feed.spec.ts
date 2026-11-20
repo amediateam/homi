@@ -532,6 +532,10 @@ for (const mode of ["cookie", "header"] as const) {
       // LB-APP-027 is fixed in legacy since `index-CIa0Ldj2.js`: the error haptic and the toast (DEC-58).
       await expect(page.locator('[data-toast-host="app"] [data-toast]')).toHaveText("Не получилось сохранить");
       await expect.poll(() => errors(app)).toBe(1);
+      // Over the feed the view toggle is shown: tab bar 62 px + no bottom inset + 78 px (SCR-042, WP-34).
+      const host = page.locator('[data-toast-host="app"]');
+      await expect(host).toHaveAttribute("data-placement", "toggle");
+      expect(await host.evaluate((element) => getComputedStyle(element).bottom)).toBe("140px");
       expect(actions).toHaveLength(3);
       await page.context().clearCookies({ name: "homi_stub_scenario" });
     });

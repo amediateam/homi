@@ -177,7 +177,8 @@ Changed, under `frontend/app/`:
   `RadarSoon.test.tsx` (`RadarTiles.test.tsx` renders the tiles only); the contact flows in
   `useListingContact.test.tsx`; `HistorySection.test.tsx` already covered both branches of `dev014TashkentDates`
   (an event at 20:30 UTC: «15 нояб» and 01:30 in Tashkent) and is unchanged
-- end to end: `e2e/feed.spec.ts`, `e2e/listing-actions.spec.ts`, `e2e/radars.spec.ts` (a comment only)
+- end to end: `e2e/feed.spec.ts`, `e2e/listing-actions.spec.ts`, `e2e/radars.spec.ts` (a comment only),
+  `e2e/shell.spec.ts` (the gallery's toast offset, 140 px → 82 px; *rule 6*: the specification missed it)
 
 Changed in `frontend/packages/i18n/`: `messages/homi/{ru,uz,en}.json`, `tests/catalogue.test.ts`.
 
@@ -330,6 +331,9 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   and header mode. Run together they fail at the sign-in (`data-session` stays `booting`): the local API limiter of
   KI-32. `radars.spec.ts` cannot pass on this machine, whose backend has radars off (AM-99, KI-65); it changes one
   comment here, and CI runs it.
+- **CI's first end-to-end run** (`frontend-e2e` 44656571365, 355 passed, 1 failed) caught `shell.spec.ts`, which
+  pinned the gallery's toast at the old 140 px; it now expects 82 px and `data-placement="tabbar"`, and the feed's
+  heart case checks 140 px with `toggle` over the real view toggle.
 - **Left for the production track:** the regular deploy, then the acceptance checklist inside Telegram on staging
   (the toast's drag and offsets, the language picker's line, the rented undo, Tashkent dates with the device in another
   zone) on iOS, Android, Desktop and Web.
