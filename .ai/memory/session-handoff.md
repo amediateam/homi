@@ -13,7 +13,7 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-20, asked whether the plan needs correcting after the new legacy updates: «задай все свои вопросы по одному и с вариантами ответа»; nine answers (verbatim in `docs/migration/decisions/2026-11-20-developer-answers.md`, DEC-89 … DEC-94); «Приём, WP-38, WP-39, WP-31 (рекомендую)»; the landing «Отдельным PR сейчас»; «первый — приём приложения»; «Начинать сейчас».
 
 ## State at handoff
-- `main` = `d03a34f` (#94). Branch `feat/intake-index-YX9bFVws`: `41b291c` catalogue, `b3ac399` decisions + WP-39 + specifications, `a15ad09` audit + registers, `7abd3cc`, `8075488` intake-log row, `122781d` review fixes, then the notes and memory commit; pushed with a PR (its number is in the queue row and the relay memory).
+- `main` = `d03a34f` (#94). Branch `feat/intake-index-YX9bFVws`: `41b291c` catalogue, `b3ac399` decisions + WP-39 + specifications, `a15ad09` audit + registers, `7abd3cc`, `8075488` intake-log row, `122781d` review fixes, `46547da` notes and memory, then the PR number; pushed, **PR #95** (open, CI pending).
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - The intake drafts (legacy delta, HOMI map, plan state, id map, answers) are kept outside the repository, in the user-level Claude project folder; the relay memory names them.
 - Verify: `python3 scripts/migration/collect_ids.py --check` (exit 0, 2 549 ids, final tree); `make ci-frontend` (exit 0 on the tree of `8075488`; only docs changed after).
@@ -23,7 +23,7 @@ Written for whoever continues the **development track**. The production track's 
   - Audit by two subagent writers on disjoint files from a fixed id map; references refreshed by id. Reviews: 104 audit claims against the legacy source, 100 agreed (reported, not re-run; three re-read in the main session); decisions against specifications, 22 findings. All fixed in `122781d`.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **CI of the intake PR**, then «сливай #N».
+1. **CI of #95**, then «сливай #95».
 2. **Then the landing intake** (legacy landing releases `b1b9a919ecc4`, `d9bbbc696337` of 19 Nov; `03b`, WP-61; the owners' page needs a legacy landing sync first), its own docs PR; then **WP-38**, **WP-39**, **WP-31** (WP-37 any time).
 3. **The operator texts** (WP-02 Part A and the addendum) — handed over by the developer, never sent from the connected Gmail.
 4. **Production track:** WP-27/28 need `CSP_TILE_HOSTS`; WP-29, WP-30, #88 … #90, WP-34 … WP-36 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51); the Telegram checklists of WP-34 … WP-36 on staging.
