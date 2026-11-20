@@ -53,6 +53,7 @@ export {
   Ruler,
   School,
   Search,
+  SearchX,
   Send,
   Settings,
   Share,

@@ -5,9 +5,11 @@ import type { Page, Request } from "@playwright/test";
  * Opening the listing screen of WP-26 (SCR-018, SCR-019) against the API on stubs, in cookie and header mode: a feed
  * card opens the listing over the feed with the card's preview at once and Back returns to the same scroll position;
  * a direct load shows the skeleton, then the listing, and Back goes to the feed; the reserved numbers of WP-12 —
- * `100016` answers as `100001` (the address is replaced, no second browser read), `999404` is not found, `999503`
- * fails on every «Повторить»; a source failure on an ordinary number (the scenario `source_unavailable`, set once the
- * session is ready and cleared before «Повторить») recovers on «Повторить»; in uz the original text translates and
+ * `100016` answers as `100001` (the address is replaced, no second browser read), `999404` is gone («Этого объявления
+ * уже нет», whose «Смотреть свежие» closes to the feed, WP-36), `999503` fails on every «Повторить»; the day limit (the
+ * scenario `daily_limit`) shows «Лимит на сегодня» and recovers on «Повторить» once the scenario is cleared; a source
+ * failure on an ordinary number (the scenario `source_unavailable`, set once the session is ready and cleared before
+ * «Повторить») recovers on «Повторить»; in uz the original text translates and
  * toggles back; Telegram's SettingsButton closes the listing; a directly loaded market sheet shows its text, its
  * backdrop closes it to the listing and Back then goes to the feed (review X1).
  *
@@ -259,16 +261,26 @@ for (const mode of ["cookie", "header"] as const) {
       await onFeed(page);
     });
 
-    test("999404 shows only «Объявление не загрузилось»; 999503 fails again on «Повторить»", async ({ page }) => {
+    test("999404 shows «Этого объявления уже нет», «Смотреть свежие» closes to the feed; 999503 fails again on «Повторить»", async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
 
       await softNavigate(page, "/ru/listing/999404");
       await expect(stateOf(page, 999404)).toHaveAttribute("data-listing-state", "not_found");
-      await expect(stateOf(page, 999404)).toHaveText("Объявление не загрузилось");
+      const gone = layer(page, 999404).getByRole("alert");
+      await expect(gone).toContainText("Этого объявления уже нет — квартиру, похоже, сдали или продали");
       for (const part of ["[data-hero]", "[data-listing-title]", "[data-cta]", '[data-slot="error-state"]']) {
         await expect(layer(page, 999404).locator(part), part).toHaveCount(0);
       }
+      const feedReads = recordRequests(page, (request) => new URL(request.url()).pathname === "/bff/listings");
+      await gone.getByRole("button", { name: "Смотреть свежие" }).click();
+      await onFeed(page);
+      // The feed below is uncovered as it was: not read again.
+      await nothingAsked(page, (request) => new URL(request.url()).pathname === "/bff/listings");
+      expect(feedReads).toEqual([]);
+
+      await softNavigate(page, "/ru/listing/999404");
+      await expect(stateOf(page, 999404)).toHaveAttribute("data-listing-state", "not_found");
       await press(page, "backButtonClicked");
       await onFeed(page);
 
@@ -286,6 +298,27 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => reads.length).toBe(before + 1);
       await expect(stateOf(page, 999503)).toHaveAttribute("data-listing-state", "server");
       await expect(failure.locator('[data-slot="error-state-title"]')).toHaveText("Не загрузилось");
+    });
+
+    test("the day limit shows «Лимит на сегодня»; «Повторить» without the scenario loads the listing (DEC-59)", async ({ page }) => {
+      await open(page, mode);
+      await expect(cards(page).first()).toBeVisible();
+      const number = Number(await cards(page).first().getAttribute("data-listing"));
+
+      await stubScenario(page, "daily_limit");
+      await card(page, number).locator("a").click();
+      await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "day_limit");
+      const limit = layer(page, number).locator('[data-slot="error-state"]');
+      await expect(limit.locator('[data-slot="error-state-title"]')).toHaveText("Лимит на сегодня");
+      await expect(limit.locator('[data-slot="error-state-text"]')).toHaveText(
+        "За сутки открыто очень много объявлений. Попробуйте позже — Радар продолжит присылать новые в чат.",
+      );
+      await expect(layer(page, number).locator("[data-hero], [data-cta]")).toHaveCount(0);
+
+      await clearScenario(page);
+      await limit.getByRole("button", { name: "Повторить" }).click();
+      await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
+      await expect(html(page)).toHaveAttribute("data-session", "ready");
     });
 
     test("a source failure on an ordinary listing shows «Не загрузилось»; «Повторить» reads again and shows it", async ({ page }) => {

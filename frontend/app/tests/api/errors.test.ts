@@ -44,3 +44,29 @@ describe("failureOf (SEC-REQ-047)", () => {
     expect(failureOf({ method: "GET", path: "me" }, "offline")).toEqual({ ok: false, error: "offline", status: 0, method: "GET", path: "me" });
   });
 });
+
+describe("failureOf: the day limit (WP-36, DEC-59, SCR-008)", () => {
+  const call = { method: "GET", path: "listings/:number" };
+
+  it("a 429 with reason daily keeps the reason, and is still rate_limited", () => {
+    expect(failureOf(call, { status: 429, code: "rate_limited", reason: "daily" })).toEqual({
+      ok: false,
+      error: "rate_limited",
+      status: 429,
+      code: "rate_limited",
+      reason: "daily",
+      method: "GET",
+      path: "listings/:number",
+    });
+  });
+
+  it("a 429 without it, or with another reason, has none", () => {
+    expect(failureOf(call, { status: 429, code: "rate_limited" })).not.toHaveProperty("reason");
+    expect(failureOf(call, { status: 429, code: "rate_limited", reason: "hourly" })).not.toHaveProperty("reason");
+  });
+
+  it("another status with reason daily has none; the access gate's reason is not carried either", () => {
+    expect(failureOf(call, { status: 500, reason: "daily" })).not.toHaveProperty("reason");
+    expect(failureOf(call, { status: 403, code: "access_denied", reason: "paused" })).not.toHaveProperty("reason");
+  });
+});

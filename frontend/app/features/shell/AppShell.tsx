@@ -69,14 +69,16 @@ function ShellTop() {
  * The chrome below the page and the shell's memory. The list/map toggle shows on the search tab and not while
  * drawing; the nudges (WP-30, `NudgeHost`, z 35 above the tab bar) everywhere, since each decides where it shows; the
  * tab bar wherever the variant has a tab. The collapsing chrome follows the feed itself — not a sheet over it, nor a
- * layer parameter on it (`parentOf` of the feed is not `null` only then). The search and saved roots are remembered
- * for the tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
+ * layer parameter on it (`parentOf` of the feed is not `null` only then) — and stays as it was while a listing lies
+ * over the feed (WP-36, `03` SCR-006: collapsed stays collapsed). The search and saved roots are remembered for the
+ * tab bar. The spacer keeps the end of the page above the tab bar and the floating toggle.
  */
 function ShellBottom() {
   const { pathname, query, searchParams, variant } = useShellAddress();
   const tab = activeTabOf(variant);
+  const route = matchRoute(pathname).route;
 
-  useMiniChrome(matchRoute(pathname).route === "feed" && parentOf(pathname, searchParams) === null);
+  useMiniChrome((route === "feed" && parentOf(pathname, searchParams) === null) || (route === "listing" && variant === "search-list"));
 
   useEffect(() => {
     rememberHref(pathname, query);

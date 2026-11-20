@@ -85,7 +85,10 @@ export function SpotMap({ number, spot }: { number: number; spot: Spot }) {
         <div className="pointer-events-none absolute inset-0">
           <div ref={container} data-spot-map-view="" aria-hidden className="size-full" style={{ backgroundColor: "var(--bg2)" }} />
         </div>
-        <span className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)">
+        <span
+          data-spot-expand=""
+          className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)"
+        >
           <Maximize2 size={16} strokeWidth={2.25} aria-hidden />
         </span>
       </button>

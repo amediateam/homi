@@ -260,7 +260,15 @@ async function run(): Promise<void> {
   }
   if (launch === null) {
     launch = parseLaunch(tg.initData(), typeof window === "undefined" ? "" : window.location.search);
-    track("app_launch", { entry: launch.entry, ms: Math.round(performance.now()), v: BUILD_VERSION, sdk: outcome, js: String(jsStart), platform: tg.platform() });
+    track("app_launch", {
+      entry: launch.entry,
+      ms: Math.round(performance.now()),
+      v: BUILD_VERSION,
+      sdk: outcome,
+      js: String(jsStart),
+      platform: tg.platform(),
+      tg: tg.version(),
+    });
   }
   const recheck = state.status === "denied";
   update(recheck ? { prepared: true, error: null } : { status: "booting", prepared: true, error: null });

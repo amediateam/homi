@@ -303,7 +303,7 @@ function route(
   { mode = "visible", extra = null, view = null }: { mode?: "visible" | "hidden"; extra?: ReactNode; view?: ListingView["state"] | null } = {},
 ) {
   return intl(
-    <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view }}>
+    <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view, close: () => {} }}>
       {extra}
       <Activity mode={mode}>
         <SpotMapRoute />
@@ -377,7 +377,7 @@ describe("SpotMapRoute (/listing/{number}/location)", () => {
     expect(lastMap().spot).not.toBeNull();
   });
 
-  it.each(["not_found", "offline", "server"] as const)(
+  it.each(["not_found", "day_limit", "offline", "server"] as const)(
     "goes back when the listing screen shows %s with nothing in the resource (the server's read in cookie mode)",
     (view) => {
       render(route(100001, { view }));

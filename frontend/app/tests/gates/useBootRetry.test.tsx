@@ -178,6 +178,26 @@ describe("useBootRetry (BR-APP-054, D-S-3)", () => {
     expect(state.retry).toHaveBeenCalledTimes(3);
   });
 
+  it("re-checks paused 3 times as the other refusals, with the checking line (WP-36, DEC-60)", async () => {
+    mount({ status: "denied", reason: "paused" });
+    expect(shown().checking).toBe(true);
+    for (let check = 1; check <= 3; check += 1) {
+      act(() => vi.advanceTimersByTime(RECHECK_DELAY_MS));
+      expect(state.retry).toHaveBeenCalledTimes(check);
+      await outcome({ status: "denied", reason: "paused" });
+    }
+
+    expect(shown().checking).toBe(false);
+    act(() => vi.advanceTimersByTime(30_000));
+    expect(state.retry).toHaveBeenCalledTimes(3);
+  });
+
+  it("returning to the app re-checks paused at once", async () => {
+    mount({ status: "denied", reason: "paused" });
+    visible();
+    expect(state.retry).toHaveBeenCalledTimes(1);
+  });
+
   it("never re-checks blocked, and shows no checking line for it", () => {
     mount({ status: "denied", reason: "blocked" });
     act(() => vi.advanceTimersByTime(10_000));

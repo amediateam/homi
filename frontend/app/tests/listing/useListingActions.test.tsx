@@ -19,7 +19,9 @@ const state = vi.hoisted(() => ({
   reportListing: vi.fn<Call<unknown>>(),
   unreportListing: vi.fn<Call<{ number: number }>>(),
   closeActions: vi.fn<(number: number, step: string | null) => Promise<void>>(),
-  closeListing: vi.fn<(step: string | null) => Promise<void>>(),
+  closeListing: vi.fn<(step: string | null, close: () => void) => Promise<void>>(),
+  /** The listing layer's own close (WP-36): `closeListing` receives it. */
+  closeLayer: vi.fn(),
 }));
 vi.mock("@/lib/actions/hidden", () => ({
   hideListing: state.hideListing,
@@ -29,8 +31,11 @@ vi.mock("@/lib/actions/hidden", () => ({
 }));
 vi.mock("@/lib/actions/reports", () => ({ reportListing: state.reportListing, unreportListing: state.unreportListing }));
 vi.mock("@/features/listing/closeListing", () => ({ closeActions: state.closeActions, closeListing: state.closeListing }));
+/** `useListing` (the layer's context) imports the locale router; nothing here navigates through it. */
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 import { type UseListingActionsOptions, useListingActions } from "@/features/listing/actions/useListingActions";
+import { ListingLayerContext } from "@/features/listing/useListing";
 import { clearTracked, recentTracked } from "@/lib/analytics/events";
 import { isHidden, resetSessionMaps } from "@/lib/data/sessionMaps";
 import { clearRecentErrors, recentErrors } from "@/lib/errors/report";
@@ -67,7 +72,9 @@ let mode: "visible" | "hidden" = "visible";
 function wrapper({ children }: { children: ReactNode }) {
   return (
     <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
-      <Activity mode={mode}>{children}</Activity>
+      <ListingLayerContext value={{ number: 100001, scrollToTop: () => {}, reportView: () => {}, view: null, close: state.closeLayer }}>
+        <Activity mode={mode}>{children}</Activity>
+      </ListingLayerContext>
     </NextIntlClientProvider>
   );
 }
@@ -107,6 +114,7 @@ beforeEach(() => {
   }
   state.closeActions.mockReset().mockResolvedValue(undefined);
   state.closeListing.mockReset().mockResolvedValue(undefined);
+  state.closeLayer.mockReset();
   fake = fakeTelegram({ version: "8.0" });
 });
 
@@ -137,7 +145,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
 
     expect(haptics()).toEqual([LIGHT, SUCCESS]);
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
     expect(state.closeActions).not.toHaveBeenCalled();
     expect(appToast()).toMatchObject({ text: "Объявление скрыто", action: "Вернуть" });
     expect(sheetToast()).toBeNull();
@@ -182,7 +190,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
 
     expect(state.blockAuthor.mock.calls).toEqual([[{ number: 100001 }, undefined, "ru"]]);
     expect([100001, 101001, 101005].map(isHidden)).toEqual([true, true, true]);
-    expect(state.closeListing.mock.calls).toEqual([[null]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
     expect(appToast()).toMatchObject({ text: "Автор +998 ** *** ** 67 заблокирован", action: "Вернуть" });
     expect(haptics()).toEqual([LIGHT, SUCCESS]);
 
@@ -221,7 +229,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     await settle();
 
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
     expect(appToast()).toMatchObject({ text: "Спасибо, посмотрим. Это объявление у вас скрыли", action: "Показывать у меня" });
 
     state.unhideListing.mockResolvedValueOnce(DONE);
@@ -252,7 +260,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     await settle();
 
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
     expect(appToast()).toEqual({ key: "toast.reportedRented" });
   });
 

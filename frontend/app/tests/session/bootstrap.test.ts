@@ -118,6 +118,16 @@ describe("session bootstrap (25 §3.4)", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
+  it("app_launch carries tg, Telegram's WebApp version as the client reports it (WP-36)", async () => {
+    server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });
+    const { session, events } = await load({ startParam: "l_42" });
+
+    await session.startSession();
+
+    const launch = events.recentTracked().find((event) => event.name === "app_launch");
+    expect(launch?.props).toMatchObject({ entry: "link", tg: "9.0" });
+  });
+
   it("a cookie of another Telegram user signs in again", async () => {
     let signed = false;
     server({

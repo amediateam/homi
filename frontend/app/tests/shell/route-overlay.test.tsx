@@ -3,7 +3,7 @@ import { SWIPE_BACK_SETTLE_MS } from "@homi/ui";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ back: vi.fn() }));
@@ -103,5 +103,64 @@ describe("RouteOverlay (the listing layer)", () => {
 
     expect(state.back).not.toHaveBeenCalled();
     expect(haptics()).toEqual([]);
+  });
+
+  describe("the listing's own close, entrance and leave (WP-36)", () => {
+    const cross = () => document.querySelector<HTMLButtonElement>("[data-fallback-close]");
+    const inIntl = (ui: ReactNode) => (
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        {ui}
+      </NextIntlClientProvider>
+    );
+
+    it("plays nothing and carries no cross by default (the fullscreen map keeps its own ×)", () => {
+      fake?.uninstall();
+      fake = null;
+      render(inIntl(<RouteOverlay data-testid="overlay" />));
+
+      expect(layer().className).not.toContain("animate-listing-in");
+      expect(layer().hasAttribute("data-layer-motion")).toBe(false);
+      expect(cross()).toBeNull();
+    });
+
+    it("entrance: the listing-in animation, marked for lite graphics", () => {
+      render(inIntl(<RouteOverlay data-testid="overlay" entrance />));
+
+      expect(layer().className).toContain("animate-listing-in");
+      expect(layer().hasAttribute("data-layer-motion")).toBe(true);
+    });
+
+    it("leaving: the listing-out animation and no taps", () => {
+      render(inIntl(<RouteOverlay data-testid="overlay" entrance leaving />));
+
+      expect(layer().hasAttribute("data-leaving")).toBe(true);
+      expect(layer().className).toContain("animate-listing-out");
+      expect(layer().className).toContain("pointer-events-none");
+    });
+
+    it("with onClose and without the SDK it carries the cross, which asks for the leave", () => {
+      fake?.uninstall();
+      fake = null;
+      const onClose = vi.fn();
+      render(inIntl(<RouteOverlay data-testid="overlay" onClose={onClose} />));
+
+      expect(cross()?.getAttribute("aria-label")).toBe("Закрыть");
+      act(() => cross()!.click());
+
+      expect(onClose.mock.calls).toEqual([["leave"]]);
+      expect(state.back).not.toHaveBeenCalled();
+    });
+
+    it("with onClose the swipe asks for its close with swipe, not back()", () => {
+      const onClose = vi.fn();
+      render(inIntl(<RouteOverlay data-testid="overlay" swipeBack onClose={onClose} />));
+
+      swipeRight(layer(), 150);
+      act(() => vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS));
+
+      expect(onClose.mock.calls).toEqual([["swipe"]]);
+      expect(state.back).not.toHaveBeenCalled();
+      expect(cross()).toBeNull();
+    });
   });
 });

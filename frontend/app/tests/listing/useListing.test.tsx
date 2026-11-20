@@ -72,7 +72,7 @@ const initialOk = (details: ListingDetails = detailsOf()): ListingInitial => ({
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: () => {}, view: null }}>{children}</ListingLayerContext>
+    <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: () => {}, view: null, close: () => {} }}>{children}</ListingLayerContext>
   );
 }
 
@@ -191,6 +191,17 @@ describe("useListing (WP-26, SCR-018, SCR-019)", () => {
         expect(state.sent).toEqual([]);
       },
     );
+
+    it("rate_limited with reason daily → day_limit with a retry, from the server and through /bff (WP-36, DEC-59)", async () => {
+      const daily = { ...failure("rate_limited"), status: 429, reason: "daily" as const };
+      const fromServer = listing(100001, { initial: daily });
+      expect(fromServer.result.current).toMatchObject({ state: "day_limit", retry: expect.any(Function) });
+      fromServer.unmount();
+
+      const { result } = listing(100002, { initial: null });
+      await act(async () => state.sent.at(-1)!.resolve(daily));
+      expect(result.current.state).toBe("day_limit");
+    });
   });
 
   it("a different number in the answer seeds that number and replaces the address once, without a second read", async () => {

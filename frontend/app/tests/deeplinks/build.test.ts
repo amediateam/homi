@@ -14,6 +14,21 @@ describe("deep-link builders (TMA-013)", () => {
     expect(noAccessStartUrl("access", 42)).toBe("https://t.me/homi_test_bot?start=s_access--l42");
   });
 
+  it("the SEO source carries the interface language: seo_en in en, seo_uz in uz, seo in ru (WP-36, BR-API-194)", () => {
+    expect(noAccessStartUrl("seo", 42, "ru")).toBe("https://t.me/homi_test_bot?start=s_seo--l42");
+    expect(noAccessStartUrl("seo", 42, "uz")).toBe("https://t.me/homi_test_bot?start=s_seo_uz--l42");
+    expect(noAccessStartUrl("seo", 42, "en")).toBe("https://t.me/homi_test_bot?start=s_seo_en--l42");
+    expect(noAccessStartUrl("seo", 42)).toBe("https://t.me/homi_test_bot?start=s_seo--l42");
+  });
+
+  it("other sources are passed as they are in every locale", () => {
+    for (const locale of ["ru", "uz", "en"] as const) {
+      expect(noAccessStartUrl("share", 42, locale)).toBe("https://t.me/homi_test_bot?start=s_share--l42");
+      expect(noAccessStartUrl("web", 42, locale)).toBe("https://t.me/homi_test_bot?start=s_web--l42");
+      expect(noAccessStartUrl("fb12", 42, locale)).toBe("https://t.me/homi_test_bot?start=s_fb12--l42");
+    }
+  });
+
   it("build the support and channel links", () => {
     expect(supportUrl("homi_support")).toBe("https://t.me/homi_support");
     expect(supportUrl("homi_support", 42)).toBe("https://t.me/homi_support?start=l_42");

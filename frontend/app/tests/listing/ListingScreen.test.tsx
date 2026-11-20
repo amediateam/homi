@@ -17,6 +17,8 @@ const state = vi.hoisted(() => ({
   replace: vi.fn(),
   reportView: vi.fn(),
   scrollToTop: vi.fn(),
+  /** The listing layer's close (WP-36), which «Смотреть свежие» calls. */
+  close: vi.fn(),
   /** The listing screen's Server Actions (contact, translation, share): none is called by these cases. */
   getContact: vi.fn<(input: { number: number }) => Promise<ActionResult<unknown>>>(() => new Promise(() => {})),
   translate: vi.fn<(input: { number: number }) => Promise<ActionResult<unknown>>>(() => new Promise(() => {})),
@@ -63,7 +65,7 @@ const failure = (error: UiError, status = 500): ApiFailure => ({ ok: false, erro
 function screen(props: Partial<ListingScreenProps> = {}) {
   return render(
     <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
-      <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: state.reportView, view: null }}>
+      <ListingLayerContext value={{ number: 100001, scrollToTop: state.scrollToTop, reportView: state.reportView, view: null, close: state.close }}>
         <ListingScreen number={100001} {...props} />
       </ListingLayerContext>
     </NextIntlClientProvider>,
@@ -84,6 +86,7 @@ beforeEach(() => {
   state.replace.mockReset();
   state.reportView.mockReset();
   state.scrollToTop.mockReset();
+  state.close.mockReset();
   fake = fakeTelegram({ version: "8.0" });
 });
 
@@ -273,16 +276,61 @@ describe("ListingScreen (WP-26, SCR-018, SCR-019)", () => {
     });
   });
 
-  it("not found: the text only, clear of Telegram's header", () => {
+  it("not found: «Этого объявления уже нет» with SearchX and «Смотреть свежие», an alert clear of Telegram's header (WP-36)", () => {
     setPreview(100001, previewOf());
     screen({ initial: failure("not_found", 404) });
 
     expect(root().getAttribute("data-listing-state")).toBe("not_found");
-    const text = root().querySelector("p")!;
-    expect(text.textContent).toBe("Объявление не загрузилось");
-    expect(text.className).toMatch(/(?:^|\s)pt-\[calc\(16px\+var\(--top-inset\)\)\](?:\s|$)/);
-    expect(root().querySelector("button")).toBeNull();
+    const gone = root().querySelector<HTMLElement>("[data-listing-gone]")!;
+    expect(gone.getAttribute("role")).toBe("alert");
+    expect(gone.className).toMatch(/(?:^|\s)pt-\[calc\(16px\+var\(--top-inset\)\)\](?:\s|$)/);
+    expect(gone.querySelector("svg.lucide-search-x")).not.toBeNull();
+    expect(gone.querySelector("p")?.textContent).toBe("Этого объявления уже нет — квартиру, похоже, сдали или продали");
+    expect(Array.from(gone.querySelectorAll("button")).map((button) => button.textContent)).toEqual(["Смотреть свежие"]);
+    expect(document.querySelector('[data-slot="error-state"]')).toBeNull();
     expect(document.querySelector("[data-hero]")).toBeNull();
+    expect(document.querySelector("[data-cta]")).toBeNull();
+  });
+
+  it("«Смотреть свежие» gives a light impact and closes the listing once through the layer; nothing is read", () => {
+    screen({ initial: failure("not_found", 404) });
+
+    fireEvent.click(root().querySelector("[data-listing-gone] button")!);
+
+    expect(haptics()).toEqual(["HapticFeedback.impactOccurred(light)"]);
+    expect(state.close).toHaveBeenCalledTimes(1);
+    expect(state.sent).toEqual([]);
+    expect(state.push).not.toHaveBeenCalled();
+    expect(state.replace).not.toHaveBeenCalled();
+  });
+
+  it("the day limit (429 with reason daily): «Лимит на сегодня», its text, CloudOff and «Повторить», which reads again (DEC-59)", async () => {
+    setPreview(100001, previewOf());
+    screen({ initial: { ...failure("rate_limited", 429), reason: "daily" } });
+
+    expect(root().getAttribute("data-listing-state")).toBe("day_limit");
+    const errorState = document.querySelector<HTMLElement>('[data-slot="error-state"]')!;
+    expect(errorState.getAttribute("data-reason")).toBe("day_limit");
+    expect(errorState.querySelector("svg.lucide-cloud-off")).not.toBeNull();
+    expect(errorState.querySelector('[data-slot="error-state-title"]')?.textContent).toBe("Лимит на сегодня");
+    expect(errorState.querySelector('[data-slot="error-state-text"]')?.textContent).toBe(
+      "За сутки открыто очень много объявлений. Попробуйте позже — Радар продолжит присылать новые в чат.",
+    );
+    expect(errorState.parentElement?.className).toMatch(/(?:^|\s)pt-\[calc\(16px\+var\(--top-inset\)\)\](?:\s|$)/);
+
+    fireEvent.click(errorState.querySelector("button")!);
+
+    expect(state.sent.map((sent) => sent.path)).toEqual(["listings/100001"]);
+    expect(root().getAttribute("data-listing-state")).toBe("preview");
+    await act(async () => state.sent[0].resolve({ ok: true, data: detailsOf(), meta: { source: "stub" } }));
+    expect(root().getAttribute("data-listing-state")).toBe("loaded");
+  });
+
+  it("another 429 shows «Не загрузилось»", () => {
+    screen({ initial: failure("rate_limited", 429) });
+
+    expect(root().getAttribute("data-listing-state")).toBe("server");
+    expect(document.querySelector('[data-slot="error-state-title"]')?.textContent).toBe("Не загрузилось");
   });
 
   it.each([

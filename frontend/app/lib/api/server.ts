@@ -95,7 +95,11 @@ export function createServerApi(config: ServerApiConfig) {
       return { ok: true, data: answer.data, meta: answer.meta ?? {} };
     } catch (error) {
       if (error instanceof ApiError) {
-        return failureOf(where, { status: error.status, ...(error.code === "unknown" ? {} : { code: error.code }) });
+        return failureOf(where, {
+          status: error.status,
+          ...(error.code === "unknown" ? {} : { code: error.code }),
+          ...(error.reason === undefined ? {} : { reason: error.reason }),
+        });
       }
       if (options.signal?.aborted) {
         throw error;

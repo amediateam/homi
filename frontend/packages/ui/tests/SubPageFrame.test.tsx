@@ -322,6 +322,15 @@ function intersect(observer: FakeObserver, isIntersecting: boolean): void {
 const header = () => document.querySelector('[data-slot="subpage-header"]') as HTMLElement;
 
 describe("SubPageFrame", () => {
+  it("holds body.subpage-open while mounted, so the page under it does not scroll (WP-36)", () => {
+    const { unmount } = render(<SubPageFrame title="Тема" onBack={vi.fn()} />);
+    expect(document.body.classList.contains("subpage-open")).toBe(true);
+
+    unmount();
+
+    expect(document.body.classList.contains("subpage-open")).toBe(false);
+  });
+
   it("is a fixed layer at the sub-page level with the title, a card and the hint", () => {
     render(
       <SubPageFrame title="Тема" hint="Для приложения, бота и карточек объявлений." onBack={vi.fn()}>

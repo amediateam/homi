@@ -261,7 +261,7 @@ describe("MarketSheetRoute (WP-26)", () => {
   function route(number: number | null = 100001) {
     return render(
       intl(
-        <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view: null }}>
+        <ListingLayerContext value={{ number, scrollToTop: () => {}, reportView: () => {}, view: null, close: () => {} }}>
           <MarketSheetRoute />
         </ListingLayerContext>,
       ),

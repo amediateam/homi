@@ -18,10 +18,13 @@ export interface Me {
 
 export const ME_KEYS = ["locale", "locale_chosen", "currency", "theme", "city", "city_chosen", "team", "analytics"] as const satisfies readonly (keyof Me)[];
 
-/** `reason` of `403 access_denied`; an unknown or missing one counts as `private` (`docs/api/README.md`). */
-export type AccessReason = "private" | "invite" | "full" | "blocked" | "join";
+/**
+ * `reason` of `403 access_denied`; an unknown or missing one counts as `private` (`docs/api/README.md`). `paused`: the
+ * whole service is on pause (legacy since `index-CIa0Ldj2.js`, DEC-60; only the stub scenario answers it so far).
+ */
+export type AccessReason = "private" | "invite" | "full" | "blocked" | "join" | "paused";
 
-export const ACCESS_REASONS: readonly AccessReason[] = ["private", "invite", "full", "blocked", "join"];
+export const ACCESS_REASONS: readonly AccessReason[] = ["private", "invite", "full", "blocked", "join", "paused"];
 
 export function accessReason(value: unknown): AccessReason {
   return ACCESS_REASONS.includes(value as AccessReason) ? (value as AccessReason) : "private";

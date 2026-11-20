@@ -96,64 +96,151 @@ describe("closeActions", () => {
   });
 });
 
+/** The next `popstate` (a `history.back()` lands asynchronously). */
+const popped = () => new Promise<void>((resolve) => window.addEventListener("popstate", () => resolve(), { once: true }));
+
+describe("leaveListingRoute (WP-36)", () => {
+  it("steps back once when the app pushed a page below the listing", async () => {
+    const { nav, history, leaveListingRoute } = await fresh("/ru/saved");
+    nav.push("/listing/100001");
+    const landed = popped();
+
+    leaveListingRoute();
+    await landed;
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(here()).toBe("/ru/saved");
+    expect(history.depth()).toBe(0);
+  });
+
+  it("replaces a listing loaded directly (depth 0) with the feed", async () => {
+    const { leaveListingRoute } = await fresh("/ru/listing/100001");
+
+    leaveListingRoute();
+
+    expect(router.back).not.toHaveBeenCalled();
+    expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
+    expect(here()).toBe("/ru");
+  });
+});
+
+describe("listingLeavePlays (WP-36)", () => {
+  it("plays outside lite graphics and without reduced motion", async () => {
+    const { listingLeavePlays } = await fresh("/ru");
+    expect(listingLeavePlays()).toBe(true);
+  });
+
+  it("not in lite graphics", async () => {
+    const { listingLeavePlays } = await fresh("/ru");
+    document.documentElement.classList.add("lite");
+    try {
+      expect(listingLeavePlays()).toBe(false);
+    } finally {
+      document.documentElement.classList.remove("lite");
+    }
+  });
+
+  it("not under reduced motion", async () => {
+    const { listingLeavePlays } = await fresh("/ru");
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce") }) as MediaQueryList);
+    try {
+      expect(listingLeavePlays()).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("closeListing", () => {
-  it("from the menu: the sheet and the listing in one move, back to the feed", async () => {
-    const { nav, history, closeListing } = await fresh("/ru");
+  /**
+   * The layer's close as it ends after its leave: the route change, checked to run at the listing's own address.
+   * `landed` resolves on the `popstate` of that change (the sheet's own step back lands before it).
+   */
+  function layerClose(loaded: Awaited<ReturnType<typeof fresh>>) {
+    let land: () => void = () => {};
+    const landed = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+    const close = vi.fn(() => {
+      expect(here()).toBe("/ru/listing/100001");
+      window.addEventListener("popstate", () => land(), { once: true });
+      loaded.leaveListingRoute();
+    });
+    return { close, landed };
+  }
+
+  it("from the menu: the sheet goes first, then the layer's own close takes the listing back to the feed", async () => {
+    const loaded = await fresh("/ru");
+    const { nav, history, closeListing } = loaded;
     nav.push("/listing/100001");
     nav.push("/listing/100001/actions");
     const length = window.history.length;
+    const { close, landed } = layerClose(loaded);
 
-    await closeListing(null);
+    await closeListing(null, close);
+    await landed;
 
+    expect(close).toHaveBeenCalledTimes(1);
     expect(here()).toBe("/ru");
     expect(history.depth()).toBe(0);
     expect(router.replace).not.toHaveBeenCalled();
-    expect(router.back).not.toHaveBeenCalled();
     expect(window.history.length).toBe(length);
   });
 
   it("from the report step: back to the page the listing was opened from", async () => {
-    const { nav, history, closeListing } = await fresh("/ru/saved");
+    const loaded = await fresh("/ru/saved");
+    const { nav, history, closeListing } = loaded;
     nav.push("/listing/100001");
     nav.push("/listing/100001/actions");
     openStep(history, "report");
+    const { close, landed } = layerClose(loaded);
 
-    await closeListing("report");
+    await closeListing("report", close);
+    await landed;
 
+    expect(close).toHaveBeenCalledTimes(1);
     expect(here()).toBe("/ru/saved");
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("from the detail step: four entries at once", async () => {
-    const { nav, history, closeListing } = await fresh("/ru");
+  it("from the detail step: the three entries of the sheet at once, then the listing", async () => {
+    const loaded = await fresh("/ru");
+    const { nav, history, closeListing } = loaded;
     nav.push("/listing/100001");
     nav.push("/listing/100001/actions");
     openStep(history, "report");
     openStep(history, "detail");
+    const { close, landed } = layerClose(loaded);
 
-    await closeListing("detail");
+    await closeListing("detail", close);
+    await landed;
 
+    expect(close).toHaveBeenCalledTimes(1);
     expect(here()).toBe("/ru");
     expect(history.depth()).toBe(0);
   });
 
-  it("a listing loaded directly: back to it, then the feed replaces it", async () => {
-    const { nav, closeListing } = await fresh("/ru/listing/100001");
-    nav.push("/listing/100001/actions");
+  it("a listing loaded directly: back to it, then the layer's close replaces it with the feed", async () => {
+    const loaded = await fresh("/ru/listing/100001");
+    loaded.nav.push("/listing/100001/actions");
+    const { close } = layerClose(loaded);
 
-    await closeListing(null);
+    await loaded.closeListing(null, close);
 
+    expect(close).toHaveBeenCalledTimes(1);
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
     expect(here()).toBe("/ru");
   });
 
-  it("a direct load of the sheet (depth 0) replaces the address with the feed", async () => {
+  it("a direct load of the sheet (depth 0) replaces the address with the feed at once, without the layer's close", async () => {
     const go = vi.spyOn(window.history, "go");
-    const { closeListing } = await fresh("/ru/listing/100001/actions");
+    const loaded = await fresh("/ru/listing/100001/actions");
+    const { close } = layerClose(loaded);
 
-    await closeListing(null);
+    await loaded.closeListing(null, close);
 
     expect(go).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
     expect(here()).toBe("/ru");
   });

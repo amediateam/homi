@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import { normaliseAddress } from "@/lib/navigation/history";
 import { routes } from "@/lib/navigation/routes";
+import { storageGet, storageSet } from "@/lib/storage";
 import { tg } from "@/lib/telegram";
 
 import { type Launch, type MapOverride, parseLaunch } from "./parse";
@@ -49,10 +50,48 @@ export function useLaunchGate(): number {
   return useSyncExternalStore(subscribe, () => version, () => 0);
 }
 
-/** What a launch opens (`LaunchRedirector`): its listing, or the filters on the pets section for `?news=pets`. */
+/**
+ * cyrb53 (a public-domain 53-bit string hash): synchronous and not reversible, so the launch mark keeps no launch data
+ * in the clear. Not a security boundary: the mark only tells one launch from another.
+ */
+function digest(text: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+/** The mark of this launch's listing: the digest of the launch data's `hash` (empty when absent) and the number. */
+function launchMark(number: number): string {
+  return `${digest(new URLSearchParams(tg.initData()).get("hash") ?? "")}:${number}`;
+}
+
+/**
+ * Whether this launch has already opened its listing (WP-36, BR-APP-106, legacy `kv-start-done` since
+ * `index-CIa0Ldj2.js`): `homi-launch-done` in `sessionStorage` holds the mark of the listing the address showed, so a
+ * reload inside the same launch does not open it again, while a new launch — a new `hash` (Q-APP-029) — does. Legacy
+ * keeps `<hash>:<id>` in the clear; this keeps a digest (SEC-REQ-007). A store that cannot be read reads as "not
+ * opened yet".
+ */
+function listingOpened(number: number): boolean {
+  return storageGet("homi-launch-done") === launchMark(number);
+}
+
+/**
+ * What a launch opens (`LaunchRedirector`): its listing unless this launch has already shown it, or the filters on the
+ * pets section for `?news=pets`, which is not marked.
+ */
 export function launchTarget(launch: Launch): string | null {
   if (launch.listingNumber !== null) {
-    return routes.listing(launch.listingNumber);
+    return listingOpened(launch.listingNumber) ? null : routes.listing(launch.listingNumber);
   }
   return launch.news === "pets" ? routes.filters({ focus: "pets" }) : null;
 }
@@ -60,6 +99,8 @@ export function launchTarget(launch: Launch): string | null {
 let consumed = false;
 /** The address the consumed launch opens; `null` when it opens nothing or once the address has shown it. */
 let target: string | null = null;
+/** The listing of `target`, marked once the address has shown it; `null` for `?news=pets`. */
+let targetNumber: number | null = null;
 /** The query the Mini App was opened with, read when the module loads: on a gate route the address has none. */
 const launchSearch = typeof window === "undefined" ? "" : window.location.search;
 
@@ -109,6 +150,7 @@ function dropTarget(): void {
     return;
   }
   target = null;
+  targetNumber = null;
   changed();
 }
 
@@ -119,7 +161,9 @@ export function consumeLaunch(): boolean {
   }
   consumed = true;
   // What the redirect opens now, from the address it reads (`LaunchRedirector`).
-  target = typeof window === "undefined" ? null : launchTarget(parseLaunch(tg.initData(), window.location.search));
+  const launch = typeof window === "undefined" ? null : parseLaunch(tg.initData(), window.location.search);
+  target = launch === null ? null : launchTarget(launch);
+  targetNumber = target !== null && launch !== null ? launch.listingNumber : null;
   if (target !== null) {
     clearPendingTimer();
     pendingTimer = setTimeout(dropTarget, LAUNCH_PENDING_MS);
@@ -132,8 +176,8 @@ export function consumeLaunch(): boolean {
  * Read-only for the navigation (WP-23, D-S-8, BR-APP-055): true while the launch redirect has yet to open its
  * target — before `consumeLaunch()` while the launch names a listing or `?news=pets` (in `start_param` or the query it
  * was opened with), and after it until the address has shown the target's path, i.e. the router committed the push.
- * The first read that sees it forgets the target, so Back from the listing does not make the launch pending again;
- * `GateRedirector` reads it on every address. The city gate waits for it, so a launch by a listing link shows the
+ * The first read that sees it forgets the target, so Back from the listing does not make the launch pending again,
+ * and marks a listing target as opened in this launch (`listingOpened`); `GateRedirector` reads it on every address. The city gate waits for it, so a launch by a listing link shows the
  * listing first. A consumed launch whose push never lands is forgotten `LAUNCH_PENDING_MS` later (`dropTarget` tells
  * `useLaunchGate`), so row 6 is not blocked for the rest of the launch. Not `history.length`: Chromium caps it at 50,
  * and in Telegram Web the Mini App is an iframe that shares the tab's history.
@@ -146,7 +190,11 @@ export function launchPending(): boolean {
     return launchTarget(parseLaunch(tg.initData(), launchSearch)) !== null;
   }
   if (target !== null && normaliseAddress(window.location.pathname) === target.split("?")[0]) {
+    if (targetNumber !== null) {
+      storageSet("homi-launch-done", launchMark(targetNumber));
+    }
     target = null;
+    targetNumber = null;
     clearPendingTimer();
   }
   return target !== null;

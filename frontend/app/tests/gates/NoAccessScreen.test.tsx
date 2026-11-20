@@ -41,6 +41,7 @@ const TEXTS: Record<Locale, Record<AccessReason, [title: string, text: string]>>
     full: ["Мест пока нет", "Сейчас все места заняты. Попробуйте позже."],
     blocked: ["Нет доступа", "Доступ к приложению закрыт."],
     join: ["Сначала — бот", "Нажмите «Старт» в боте — после этого приложение откроется."],
+    paused: ["Бот на паузе", "Скоро вернёмся. Ваши Радары и избранное на месте."],
   },
   uz: {
     private: ["Maxfiy bot", "Ilova hozir faqat HOMI jamoasi uchun ochiq."],
@@ -48,6 +49,7 @@ const TEXTS: Record<Locale, Record<AccessReason, [title: string, text: string]>>
     full: ["Joy qolmadi", "Hozir joy qolmadi. Keyinroq urinib koʻring."],
     blocked: ["Ruxsat yoʻq", "Ilovaga kirish cheklangan."],
     join: ["Avval — bot", "Botda «Start»ni bosing — keyin ilova ochiladi."],
+    paused: ["Bot pauzada", "Tez orada qaytamiz. Radarlaringiz va saralanganlaringiz joyida."],
   },
   en: {
     private: ["This bot is private", "The app is available only to the HOMI team for now."],
@@ -55,6 +57,7 @@ const TEXTS: Record<Locale, Record<AccessReason, [title: string, text: string]>>
     full: ["No spots yet", "All spots are taken right now. Please try again later."],
     blocked: ["No access", "Access to the app is closed."],
     join: ["Start with the bot", "Tap “Start” in the bot — then the app will open."],
+    paused: ["The bot is paused", "We’ll be back soon. Your Radars and favorites are safe."],
   },
 };
 
@@ -151,7 +154,7 @@ describe("NoAccessScreen: the refusal (SCR-003)", () => {
       expect(screenEl()?.querySelector("h1")?.textContent).toBe(title);
       expect(screenEl()?.querySelector("h1 + p")?.textContent).toBe(text);
       expect(buttons().map((element) => element.textContent)).toEqual(
-        reason === "blocked"
+        reason === "blocked" || reason === "paused"
           ? [LINES[locale].post, LINES[locale].back, LINES[locale].support]
           : [LINES[locale].post, LINES[locale].toBot, LINES[locale].support],
       );
@@ -214,6 +217,25 @@ describe("NoAccessScreen: the rows", () => {
     show({ startParam: "l_123" });
     act(() => button("toBot").click());
     expect(openLink).toHaveBeenCalledExactlyOnceWith("https://t.me/homi_test_bot?start=s_share--l123");
+  });
+
+  it.each([
+    ["ru", "s_seo--l123"],
+    ["uz", "s_seo_uz--l123"],
+    ["en", "s_seo_en--l123"],
+  ] as const)("an SEO link in %s carries the language in the source: %s (WP-36)", (locale, payload) => {
+    show({ locale, startParam: "l_123-seo" });
+    act(() => button("toBot").click());
+    expect(openLink).toHaveBeenCalledExactlyOnceWith(`https://t.me/homi_test_bot?start=${payload}`);
+  });
+
+  it("paused: «Вернуться в бот» closes the app and passes no source to the bot", () => {
+    state.reason = "paused";
+    show({ startParam: "l_123-seo" });
+    expect(actions()).toEqual(["back"]);
+    act(() => button("back").click());
+    expect(close).toHaveBeenCalledOnce();
+    expect(openLink).not.toHaveBeenCalled();
   });
 
   it.each([

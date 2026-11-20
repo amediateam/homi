@@ -244,6 +244,29 @@ describe("AppShell (SCR-006)", () => {
     }
   });
 
+  it("a listing opened over the feed keeps the collapsed chrome collapsed (WP-36, SCR-006)", () => {
+    const view = renderShell("/");
+    scrollTo(500);
+    expect(document.documentElement.classList.contains("chrome-mini")).toBe(true);
+
+    navigate(view, "/listing/100001");
+    expect(document.documentElement.classList.contains("chrome-mini")).toBe(true);
+
+    navigate(view, "/");
+    expect(document.documentElement.classList.contains("chrome-mini")).toBe(true);
+  });
+
+  it("a listing over the saved tab, or loaded directly, does not collapse the chrome", () => {
+    for (const first of ["/saved", "/listing/100001"]) {
+      vi.stubGlobal("scrollY", 0);
+      const view = renderShell(first);
+      navigate(view, "/listing/100001");
+      scrollTo(500);
+      expect(document.documentElement.classList.contains("chrome-mini"), first).toBe(false);
+      cleanup();
+    }
+  });
+
   it("shows ErrorState in the content area after the sixth failed sign-in, the chrome around it (D-S-3)", () => {
     const retry = vi.fn();
     setBootRetryHandler(retry);

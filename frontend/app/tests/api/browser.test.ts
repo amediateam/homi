@@ -107,6 +107,14 @@ describe("bffFetch (WP-22)", () => {
     expect(reportSource).not.toHaveBeenCalled();
   });
 
+  it("passes the body's reason on: a 429 with reason daily is the day limit (WP-36)", async () => {
+    setCookieAuth(null);
+    answers.push(status(429, { success: false, message: "Too many today", code: "rate_limited", reason: "daily" }));
+    const result = await bffFetch("listings/100001");
+
+    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", method: "GET", path: "listings/:number" });
+  });
+
   it("offline when the request never completes, timeout after 15 s", async () => {
     setCookieAuth(null);
     answers.push(() => Promise.reject(new TypeError("Failed to fetch")));

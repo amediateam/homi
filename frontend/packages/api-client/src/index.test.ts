@@ -37,6 +37,33 @@ describe("createApiClient — empty and unreadable bodies (WP-22)", () => {
   });
 });
 
+describe("createApiClient — the error body (WP-36)", () => {
+  it("keeps the envelope's reason when it is a string", async () => {
+    const { api } = client(() => Response.json({ success: false, message: "Too many today", code: "rate_limited", reason: "daily" }, { status: 429 }));
+
+    const failure = await api.get("listings/1").catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure).toMatchObject({ status: 429, code: "rate_limited", reason: "daily" });
+  });
+
+  it("has no reason when the body has none or it is not a string", async () => {
+    const caught = (body: unknown) =>
+      client(() => Response.json(body, { status: 429 }))
+        .api.get("listings/1")
+        .then(
+          () => null,
+          (error: unknown) => error as ApiError,
+        );
+    const none = await caught({ success: false, message: "x", code: "rate_limited" });
+    const odd = await caught({ success: false, message: "x", code: "rate_limited", reason: 7 });
+
+    expect(none).toBeInstanceOf(ApiError);
+    expect(none?.reason).toBeUndefined();
+    expect(odd).toBeInstanceOf(ApiError);
+    expect(odd?.reason).toBeUndefined();
+  });
+});
+
 describe("createApiClient — query (WP-22)", () => {
   it("accepts URLSearchParams, so a list filter is sent once per value", async () => {
     const { api, fetch } = client(() => Response.json({ success: true, data: [] }));

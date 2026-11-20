@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, STUB_JPEG, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
 import type { CDPSession, Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -492,6 +492,60 @@ for (const engine of ENGINES) {
     });
   });
 }
+
+/**
+ * Whether `control` is painted above everything under it: hiding it changes the pixels of its box. The map is drawn on
+ * opaque tiles first, so a control that a map pane covers leaves its box unchanged when hidden.
+ */
+async function paintedOnTop(page: Page, control: Locator): Promise<boolean> {
+  const box = await control.boundingBox();
+  if (box === null) {
+    throw new Error("the control has no box");
+  }
+  const shown = await page.screenshot({ clip: box, animations: "disabled" });
+  await control.evaluate((element: HTMLElement) => element.style.setProperty("visibility", "hidden"));
+  const hidden = await page.screenshot({ clip: box, animations: "disabled" });
+  await control.evaluate((element: HTMLElement) => element.style.removeProperty("visibility"));
+  return !shown.equals(hidden);
+}
+
+/**
+ * Row 10 of the built code behind the pin (WP-36): Leaflet's panes carry z-indices of 200 … 700 of their own, so
+ * without a stacking context around the map they paint over the mini map's expand chip and the fullscreen controls,
+ * which follow the map in the document (a tap still reaches them: the map's box takes no pointer events, and the
+ * panes' own boxes are empty). Opaque tiles make the cover visible.
+ */
+test.describe("spot map on leaflet: the controls above the panes", () => {
+  const leaflet = ENGINES.find((engine) => engine.name === "leaflet")!;
+
+  test("the expand chip, the close, «Где я» and the attribution are painted above the map, and the chip opens the fullscreen map", async ({ page }) => {
+    await page.route(/^https:\/\/tile\.openstreetmap\.org\//, (route) =>
+      route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "access-control-allow-origin": "*" }, body: STUB_JPEG }),
+    );
+    await openOverFeed(page, leaflet);
+    await miniReady(page, leaflet);
+    const box = mini(page, LISTING);
+    await expect(mapView(box).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+
+    const chip = box.locator("[data-spot-expand]");
+    expect(await paintedOnTop(page, chip), "the expand chip").toBe(true);
+
+    await chip.click();
+    await expect(page).toHaveURL(new RegExp(`/ru/listing/${LISTING}/location$`));
+    await fullscreenReady(page, leaflet);
+    await expect(mapView(fullscreen(page)).locator("img.leaflet-tile-loaded").first()).toBeVisible();
+    for (const [name, control] of [
+      ["close", fullscreen(page).getByRole("button", { name: "Закрыть" })],
+      ["locate", fullscreen(page).getByRole("button", { name: "Где я" })],
+      ["attribution", fullscreen(page).locator("[data-map-attribution]")],
+    ] as const) {
+      expect(await paintedOnTop(page, control), name).toBe(true);
+    }
+
+    await fullscreen(page).getByRole("button", { name: "Закрыть" }).click();
+    await onListing(page, LISTING);
+  });
+});
 
 test.describe("spot map (cookie mode)", () => {
   /** S "Locate denied"; acceptance "Locate on the fullscreen map: denied text". Engine-independent: GL, the default. */

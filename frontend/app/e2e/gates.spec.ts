@@ -159,6 +159,56 @@ test.describe("gates", () => {
     await expect.poll(() => closes(app)).toBe(1);
   });
 
+  test("paused: «Бот на паузе» and «Вернуться в бот» only, also for a listing link; «Вернуться в бот» closes (DEC-60)", async ({ page }) => {
+    await stubScenario(page, "access_paused");
+    const app = await launchApp(page, { startParam: "l_123-seo" });
+
+    await expect(page).toHaveURL(/\/ru\/no-access\?reason=paused$/);
+    await expect(noAccess(page)).toHaveAttribute("data-reason", "paused");
+    await expect(noAccess(page).getByRole("heading", { level: 1 })).toHaveText("Бот на паузе");
+    await expect(noAccess(page)).toContainText("Скоро вернёмся. Ваши Радары и избранное на месте.");
+    await expect(visible(page, "[data-checking]")).toBeVisible();
+    // No source is passed to the bot: no «Перейти в бота», whatever the build's bot name.
+    await expect(visible(page, '[data-action="toBot"]')).toHaveCount(0);
+    await expect(visible(page, '[data-action="back"]')).toHaveText("Вернуться в бот");
+
+    await visible(page, '[data-action="back"]').click();
+    await expect.poll(() => closes(app)).toBe(1);
+    expect((await app.calls()).filter((call) => call.member === "openTelegramLink")).toEqual([]);
+  });
+
+  test("paused re-checks by itself and leaves for the feed once the access is back", async ({ page }) => {
+    await stubScenario(page, "access_paused");
+    await launchApp(page);
+    await expect(noAccess(page)).toHaveAttribute("data-reason", "paused");
+    await expect(visible(page, "[data-checking]")).toBeVisible();
+
+    await page.context().clearCookies({ name: "homi_stub_scenario" });
+
+    await expect(route(page, "feed")).toBeVisible({ timeout: 10_000 });
+    await expect(session(page)).toHaveAttribute("data-session", "ready");
+    await expect(noAccess(page)).toHaveCount(0);
+  });
+
+  test("a listing link with the SEO source in en offers the bot with s_seo_en (BR-API-194)", async ({ page }) => {
+    await stubScenario(page, "access_private");
+    const app = await launchApp(page, { locale: "en", startParam: "l_123-seo" });
+
+    await expect(page).toHaveURL(/\/en\/no-access\?reason=private$/);
+    await expect(noAccess(page).getByRole("heading", { level: 1 })).toHaveText("This bot is private");
+    const toBot = visible(page, '[data-action="toBot"]');
+    if ((await toBot.count()) === 0) {
+      // A build without a bot name (CI) has no bot link at all; the unit tests prove the payload.
+      test.info().annotations.push({ type: "note", description: "no NEXT_PUBLIC_TELEGRAM_BOT_USERNAME in this build" });
+      await expect(visible(page, '[data-action="back"]')).toBeVisible();
+      return;
+    }
+    await toBot.click();
+    await expect
+      .poll(async () => (await app.calls()).filter((call) => call.member === "openTelegramLink").map((call) => String(call.args[0])))
+      .toEqual([expect.stringMatching(/\?start=s_seo_en--l123$/)]);
+  });
+
   test("a listing link on a first launch: language, then the listing, and the city page after Back; a located pick", async ({ page }) => {
     await stubScenario(page, "first_launch");
     // Near Andijan (the stub reference's town, 40.7821 / 72.3442), for the location row of the city page.

@@ -18,6 +18,7 @@ async function flush(): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 afterEach(() => {
@@ -39,7 +40,26 @@ describe("storage policy", () => {
       "homi-graphics": "local",
       "homi-graphics-measured": "local",
       "homi-map-engine": "local",
+      "homi-launch-done": "session",
     });
+  });
+
+  it("keeps a session key in sessionStorage only, never mirrored, and refuses launch data there too (WP-36)", async () => {
+    fake = fakeTelegram({ version: "9.0" });
+
+    storageSet("homi-launch-done", "1x2y3z:42");
+    await flush();
+
+    expect(storageGet("homi-launch-done")).toBe("1x2y3z:42");
+    expect(window.sessionStorage.getItem("homi-launch-done")).toBe("1x2y3z:42");
+    expect(window.localStorage.getItem("homi-launch-done")).toBeNull();
+    expect(deviceCalls(fake)).toEqual([]);
+
+    storageSet("homi-launch-done", "hash=abc&auth_date=1:42");
+    expect(storageGet("homi-launch-done")).toBe("1x2y3z:42");
+
+    storageSet("homi-launch-done", null);
+    expect(storageGet("homi-launch-done")).toBeNull();
   });
 
   it("writes a synced key to both stores and a local key to localStorage only (9.0)", async () => {

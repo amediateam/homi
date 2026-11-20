@@ -8,7 +8,8 @@ type Entry = "link" | "news" | "menu";
 type Empty = Record<string, never>;
 
 export type JournalEvents = {
-  app_launch: { entry: Entry; ms: number; v: string; sdk?: string; js: string; platform: string };
+  /** `tg`: Telegram's WebApp version, as the client reports it (legacy since `index-BnFvC-Ft.js`). */
+  app_launch: { entry: Entry; ms: number; v: string; sdk?: string; js: string; platform: string; tg: string };
   app_opened: { entry: "link"; listing_id: number; ms: number } | { entry: "news" | "menu"; ms: number };
   app_error: {
     v: string;
