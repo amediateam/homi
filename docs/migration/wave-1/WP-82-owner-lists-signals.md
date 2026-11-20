@@ -4,9 +4,9 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-81, WP-31, WP-26 |
-| Size | about 2 600 changed lines with tests, L |
-| Behaviour reference | `03` SCR-032 (the group «Сдаю квартиру»), SCR-049, SCR-057 … SCR-060, §3.3 (`owner_attention`, `owner_limit_sheet`, `owner_hint_opened`, `owner/mine`, `owner/listing`), BR-APP-088 … BR-APP-095, BR-APP-103, LB-APP-057, LB-APP-059, LB-APP-062, LB-APP-064, LB-APP-065 (the card), LB-APP-066, LB-APP-069, LB-APP-070; `05` TMA-037 (`kv-req-tip`); `09` DEV-056 (the card), DEV-059 |
+| Depends on | WP-81, WP-31, WP-26, WP-39 (the end block of the search feed, the survey's `moved` step, `RollNumber`, the leave helper; *added by the intake of `index-YX9bFVws.js`*) |
+| Size | about 3 050 changed lines with tests, L (about 450 of them for the invitations and the landlord block of legacy release `index-YX9bFVws.js`; if the PR passes 3 000 lines, they go into a PR of their own after it) |
+| Behaviour reference | `03` SCR-032 (the group «Сдаю квартиру»), SCR-049, SCR-057 … SCR-060, §3.3 (`owner_attention`, `owner_limit_sheet`, `owner_hint_opened`, `owner/mine`, `owner/listing`), BR-APP-088 … BR-APP-095, BR-APP-103, LB-APP-057, LB-APP-059, LB-APP-062, LB-APP-064, LB-APP-065 (the card), LB-APP-066, LB-APP-069, LB-APP-070; `05` TMA-037 (`kv-req-tip`); `09` DEV-056 (the card), DEV-059; since `index-YX9bFVws.js`: BR-APP-092 (changed), BR-APP-112, BR-APP-113, BR-APP-115, BR-APP-116, LB-APP-084, LB-APP-088, LB-APP-090, TMA-048, DEC-89, DEC-91, DEC-94 |
 | Needs from the production track | the regular deploy; then the manual checks inside Telegram on staging |
 
 ## Goal
@@ -35,6 +35,12 @@ approved deviations DEV-056 (the card's half) and DEV-059.
 - The nested sub-page rule of `useSwipeBack` and its 300 ms reset of the inline styles after a closing swipe.
 - The events `owner_attention`, `owner_limit_sheet`, `owner_hint_opened`; the screen names `owner/mine` and
   `owner/listing`.
+- Since legacy release `index-YX9bFVws.js` (*added by the intake of `index-YX9bFVws.js`*): the invitations into the cabinet from the search feed and
+  the listing card (BR-APP-115, F-OWNER-010), the survey's landlord block (the second half of BR-APP-116,
+  F-OWNER-011), both only while the cabinet is on (DEC-89, DEV-066), with DEC-91's two buttons (DEV-065) and the
+  events `owner_entry` and `landlord_share`; the rolling «n из 5» of the fill hints (BR-APP-113); the request tips'
+  leave (BR-APP-112) and their hiding by a restored `done` (BR-APP-092); Telegram point TMA-048; defects LB-APP-084
+  (adopted), LB-APP-088 (decided by DEC-89) and LB-APP-090 (not adopted).
 
 **Out.**
 
@@ -86,6 +92,11 @@ approved deviations DEV-056 (the card's half) and DEV-059.
 Read before coding: `03-api-reference/03-file-conventions/parallel-routes.md` and `intercepting-routes.md` (the
 sheet `/owner/limit`), `02-guides/preserving-ui-state.md` (the sub-page kept mounted under its child) in
 `frontend/app/node_modules/next/dist/docs/01-app/` — verify in the installed documentation.
+
+- DEC-89: the invitations and the landlord block show only while `owner_enabled` is true; while it is off nothing of
+  them renders and nothing is requested. DEC-90: the end line of the search feed is WP-39's and stays when the cabinet
+  is off; the invitation row is added under it. DEC-91: the landlord block's two buttons. DEC-94: `owner.entry` of
+  the card (WP-80) decides the listing's invitation (*added by the intake of `index-YX9bFVws.js`*).
 
 ## Design
 
@@ -149,6 +160,49 @@ one with listings (DEC-81, the reading above).
 - The list is read again after every cabinet mutation (`invalidateOwner()`), so closing «Мои объявления» finds the
   group current without a read of its own.
 
+### Invitations and the landlord block (BR-APP-115, BR-APP-116, TMA-048; *added by the intake of `index-YX9bFVws.js`*)
+
+Nothing of this renders, and nothing is requested or sent, while `owner_enabled` is false (DEC-89).
+
+- `features/owner/entry/{OwnerEntryRow,OwnerEntryLine}.tsx` and `features/owner/entry/useOwnerEntry.ts`.
+- End of the search feed: in WP-39's end block (`data-feed-end`, DEC-90), under «Это всё по вашему поиску», a row
+  with a house icon, «Сдаёте квартиру? Разместите бесплатно» (`own.entryAsk`, `own.entryCta`) and a chevron, `src`
+  `feed_end`. When the few-results note hides the end line (legacy: the text only without the note), the row stands
+  alone under the note. The search feed only; never favourites or history.
+- Empty search feed: a line «Сдаёте квартиру? **Разместите бесплатно ›**» under the empty state, or under the
+  few-results note when no card is left, `src` `empty`.
+- The listing card: «Тоже сдаёте квартиру? **Разместите бесплатно ›**» (`own.entryAskToo`) as the last line of the
+  loaded card, after the sources, when `owner.entry` is true (WP-80, DEC-94; the server's rule already leaves out the
+  user's own listing), `src` `listing`.
+- A tap (`useOwnerEntry`): a light haptic; `owner_entry {src}`; the owner list read through the store of WP-81:
+  `can_add` → `routes.ownerNew()`; else a tab press to Settings followed by `nav.push(routes.ownerListings())`, as
+  the tab tip opens the list (DEV-059); an error → `routes.ownerNew()`, whose own limit state answers a full
+  account. One opening at a time: a tap while the read runs does nothing, and the event is sent once per opening
+  (the fix of LB-APP-084, a default of the integrator).
+- The landlord block of `FoundSheet` (`features/radars/FoundSheet.tsx`), on the step `done` (after «Да, через
+  HOMI», below the share button) and on WP-39's step `moved`: «Съезжаете со старой квартиры?»
+  (`found.landlordTitle`), `found.landlordText`, then DEC-91's buttons:
+  - with the owners' landing page (`brand.links.owners`, a `LocaleLink` of `lib/brand` that stays `null` until WP-61
+    builds the page): «Отправить хозяину» (`found.landlordSend`) shares legacy's `found.landlordShare` with `{url}` =
+    the page of the locale with `?s=tenant`; a second button «Отправить ссылку на бота»
+    (`found.landlordSendBot`) shares `found.landlordShareBot` with `{url}` = `https://t.me/<bot>?start=owner_new`
+    (WP-88);
+  - without the page: one button «Отправить хозяину» that shares `found.landlordShareBot` with the bot link;
+  - without a bot name (`brand.botUsername` empty): no bot button; with neither, no block.
+  - Each tap: a light haptic, `landlord_share {src: homi | elsewhere, to: page | bot}` (`src` is `homi` on `done`,
+    `elsewhere` on `moved`), then the share.
+- The share (TMA-048): `tg.shareText(text)` (new in `lib/telegram/share.ts`): inside Telegram
+  `openTelegramLink("https://t.me/share/url?url=" + encodeURIComponent(text))`, as legacy; else
+  `navigator.share({ text })` with its errors swallowed; else `window.open(link, "_blank", "noopener")`. LB-APP-090
+  (the message in `url`) is not adopted: legacy's message carries its link inside the text, which a separate `text`
+  beside `url` would repeat.
+- HOMI's texts of DEC-91 in `messages/homi/{ru,uz,en}.json` (the integrator's wording; the reviewer may change it):
+  `found.landlordSendBot` «Отправить ссылку на бота» / «Bot havolasini yuborish» / «Send the bot link»;
+  `found.landlordShareBot` «Здравствуйте! Я съезжаю. Нового жильца можно найти бесплатно и без риелтора через
+  Telegram-бота: {url}» / «Assalomu alaykum! Men koʻchib ketyapman. Yangi ijarachini bepul va maklersiz Telegram-bot
+  orqali topish mumkin: {url}» / «Hi! I’m moving out. You can find a new tenant for free and without an agent through
+  this Telegram bot: {url}». The block's other texts are legacy's (`03` §3.1).
+
 ### Pending count and the store (BR-APP-091, LB-APP-059, LB-APP-066)
 
 - The count is `owner.pending` of `GET /me`, which the session holds (`SessionState.me`, `lib/session/bootstrap.ts`;
@@ -186,6 +240,11 @@ New, under `frontend/app/`:
   OwnerPanelFooter,RequestTip}.test.tsx`, `tests/actions/ownerStatus.test.ts`.
 - End to end: `e2e/owner-lists.spec.ts`, `e2e/owner-requests.spec.ts`, `e2e/owner-panel.spec.ts`,
   `e2e/owner-signals.spec.ts`.
+- Since `index-YX9bFVws.js`: the entry modules of "Invitations and the landlord block", `tests/owner/{OwnerEntry,
+  useOwnerEntry}.test.tsx`, `tests/telegram/shareText.test.ts` and `e2e/owner-entry.spec.ts`; changed
+  `features/feed/ListingFeed.tsx`, `features/listing/ListingScreen.tsx`, `features/radars/FoundSheet.tsx`,
+  `lib/telegram/{share,index}.ts`, `lib/brand` (`links.owners`) and `tests/radars/FoundSheet.test.tsx`
+  (*added by the intake of `index-YX9bFVws.js`*).
 
 Changed:
 
@@ -323,7 +382,8 @@ Changed:
   полнее», «n из 5» and a 5-segment bar; the open items first — photos below 5 «Добавьте фото — сейчас n из 10», else «Фото — n из 10»; «Укажите
   площадь», «Укажите этаж», «Укажите ремонт», «Напишите пару слов о квартире»; all filled: «Объявление заполнено
   полностью». A tap opens `routes.ownerForm(id, { focus })` with `photos`, `area_m2`, `floor`, `renovation` or
-  `description` and sends `owner_hint_opened {field}`.
+  `description` and sends `owner_hint_opened {field}`. Since `index-YX9bFVws.js` the «n из 5» rolls (`RollNumber` of
+  WP-39, BR-APP-113) (*added by the intake of `index-YX9bFVws.js`*).
 - `owner_attention {what: "banner"}`: `shown` when the panel has `stats.pending > 0`, `clicked` on a tap on the row
   «N человек ждут ответа · Ответить», each once per launch.
 - The screen name: WP-32's listing pageview, sent once the record is known, names `owner/listing` when the record has
@@ -340,7 +400,11 @@ Changed:
 - The card tip «Вот здесь ваши отклики» on the first card with pending requests in the current tab of «Мои
   объявления»; a tap opens that listing's requests.
 - `homi-req-tip` is a synced key of `lib/storage.ts`, mirrored to DeviceStorage and restored from it (TMA-037). «×»
-  on either tip, or opening any requests page, writes `done` and hides both at once.
+  on either tip, or opening any requests page, writes `done` and hides both at once. Since `index-YX9bFVws.js`
+  (BR-APP-092; *added by the intake of `index-YX9bFVws.js`*): a `done` that the restore from DeviceStorage brings after the first render hides a tip
+  that is already shown, and a dismissal always tells the shown tips, also when the key was `done` already. A tip that
+  unmounts leaves as legacy's tips do (BR-APP-112, the tip kind of WP-39's leave helper: 160 ms, `translateY(-6px)
+  scale(.92)` and opacity 0).
 - `owner_attention {what, action}`, each pair at most once per launch: `dot` / `shown` when the count is above 0 on
   any tab; `dot` / `clicked` on a tap on the Settings tab while it is above 0, unless the tap only expanded the
   collapsed chrome; `coach` / `shown` when a tip mounts; `coach` / `clicked` on a tap on its text. «×» sends nothing.
@@ -416,6 +480,13 @@ production keep the cabinet off until WP-89 (DEC-81); these lines run on a local
 `OWNER_CABINET_ENABLED=true`, with the screenshots in the PR, and inside Telegram on staging when WP-89 switches the
 cabinet on there (DEC-88).
 
+- [ ] With the cabinet off there is no invitation on the search feed, the empty feed or a listing card, no landlord
+      block in the survey, and no `owner_entry` or `landlord_share`; «Это всё по вашему поиску» still ends the feed
+      (*added by the intake of `index-YX9bFVws.js`*).
+- [ ] With the cabinet on: the three invitations with their `src`; a tap opens a new form with `can_add`, «Мои
+      объявления» without it, a new form on an error; a double tap opens once; the landlord block on both
+      congratulation steps with one button (bot link) while `brand.links.owners` is `null` and two when it is set
+      (*added by the intake of `index-YX9bFVws.js`*).
 - [ ] With the cabinet off, Settings has no group «Сдаю квартиру» and no owner request is sent for a user without
       listings; an owner with listings sees only «Мои объявления», and pausing, «Сдано», «Снять», «Удалить» of a
       draft and the answers work, while nothing opens the form. Seen on staging.

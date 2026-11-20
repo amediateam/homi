@@ -17,10 +17,12 @@ touch; neither went through the verification pass.
 Five catch-up specifications, WP-34 … WP-38, were added on 2026-11-19 by the intake of legacy release
 `index-CIa0Ldj2.js`. Each closes rows of the table "Built code behind the pin" of [`baseline.md`](baseline.md): the
 places where merged code is behind the pinned legacy release. They are smaller than rule 3 asks (about 250 to 630
-changed lines each), because each is cut to be reviewed alone; they did not go through the verification pass.
+changed lines each), because each is cut to be reviewed alone; they did not go through the verification pass. A
+sixth, WP-39 (motion and small UX, about 2 100 lines), was added on 2026-11-20 by the intake of `index-YX9bFVws.js`
+(DEC-93).
 
 Ten specifications of the owner cabinet, WP-80 … WP-89, were added on 2026-11-20 by the owner-cabinet plan (DEC-69 …
-DEC-81), about 24 000 changed lines; they did not go through the verification pass. Their numbers follow no stage: a
+DEC-88), about 24 000 changed lines; they did not go through the verification pass. Their numbers follow no stage: a
 package number is a name, and its row in the tables below is its place.
 
 **Verification pass (2026-11-14).** Every specification was read in full against four things: the repository as it
@@ -109,16 +111,18 @@ its row is its place in the queue.
 | Owner-cabinet plan | The developer's decisions DEC-69 … DEC-88 on the owner cabinet, the ten cabinet packages WP-80 … WP-89 with their specifications and rows, the specification edits of both sides, the audit's cabinet rows in `06`, `07`, `08`, `09`, `16`, and the operator addendum | intake `index-CIa0Ldj2` | DONE (merged in #91 on 2026-11-20; docs only, nothing for the production track) |
 | [WP-34](WP-34-catch-up-feedback-flags-reports.md) | Catch-up: failure feedback, flags and reports | intake `index-CIa0Ldj2`, WP-30 | WAITING (merged in #92 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-35](WP-35-catch-up-card-filters-price.md) | Catch-up: card, facts, filters and price input | WP-34 | WAITING (merged in #93 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
-| [WP-36](WP-36-catch-up-listing-gates-shell.md) | Catch-up: listing states, gates and the Telegram shell | WP-35 | REVIEW (#94) |
+| [WP-36](WP-36-catch-up-listing-gates-shell.md) | Catch-up: listing states, gates and the Telegram shell | WP-35 | WAITING (merged in #94 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
+| [Intake `index-YX9bFVws`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 20 Nov 2026 — motion and small UX on built screens, two entry points into the owner cabinet, the survey's «Поздравляем!» step and the owners' landing link — audit, the developer's decisions DEC-89 … DEC-94, specifications, the `legacy` catalogue; no stub or contract change. It defines the catch-up package WP-39 ([`baseline.md`](baseline.md#built-code-behind-the-pin), rows 44 – 54) | intake `index-CIa0Ldj2`, WP-36 | REVIEW |
 | [WP-37](WP-37-catch-up-map.md) | Catch-up: map | intake `index-CIa0Ldj2`, WP-28 | TODO |
 | [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | TODO |
-| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38 | TODO |
+| [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | TODO |
+| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
 | [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | TODO |
-| [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36 | TODO |
-| [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26 | TODO |
+| [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36, WP-39 | TODO |
+| [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26, WP-39 | TODO |
 | [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | TODO |
-| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-38, WP-80 … WP-83 | TODO |
+| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-39, WP-80 … WP-83 | TODO |
 
 ## Stage C — API
 

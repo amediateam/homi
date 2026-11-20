@@ -448,7 +448,8 @@ success or error on an action result; error on every contact failure; none for t
    `clamp(4, 96, 50 + delta / 0.4 × 50)` %; own value = `comparison.own ?? (metric m2 ? comparison.price_per_m2 :
    comparison.price_usd)`; no marker when it is null (never «$NaN»); the marker is labelled with the own price,
    without a unit. On the first render that has a median of a number in this launch the marker starts at 50 % and
-   moves after two frames (0.7 s) while the verdict fades in after 0.45 s; later shows start in place (HOMI: legacy
+   moves after two frames (0.7 s; since legacy release `index-YX9bFVws.js` by `translateX` of a full-width wrapper on
+   `--ease-out`, not by `left`, *added by the intake of `index-YX9bFVws.js`*, row 52, WP-39) while the verdict fades in after 0.45 s; later shows start in place (HOMI: legacy
    counted its first mount, the preview, so on the card → listing path its marker never ran). No transition with
    lite graphics or reduced motion (`motion.css`). Context line, the first that applies: metric `person` →
    `market.ctxPerson`; scope `near` → `market.ctxNear` / `ctxNearSale`; metric `m2` with `has_reason` →

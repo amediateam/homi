@@ -405,7 +405,10 @@ nothing.
 - Footer buttons carry `data-action` (`apply`, `subscribe`, `save`; the header's «Сбросить» is `reset`); the footer
   is `[data-slot="filters-footer"]`, its lines `[data-slot="flow-line"]` and `[data-slot="matching-now"]`, a relax
   chip `[data-relax="<code>"]`. They sit outside the `data-route` content, in the sheet's header and footer.
-- The count label is `t('sheet.showN', { n })` with the plain number, as in the quick sheet.
+- The count label is `t('sheet.showN', { n })` with the plain number, as in the quick sheet. Since legacy release
+  `index-YX9bFVws.js` the number of «Показать {n}», of «Сейчас подходит: {n}» and of the flow line rolls, and
+  «Включить радар» shows a spinner, then a tick for 900 ms before the sheet closes (`03` BR-APP-113, BR-APP-114;
+  *added by the intake of `index-YX9bFVws.js`*; rows 47 and 48, WP-39).
 - Flow wording comes from WP-22 (BR-APP-044): `formatFlow(flowRate(flow), 'sheet', t, { oneVocabulary })` with
   `oneVocabulary = devFlags.dev021OneFlowVocabulary`. Off: the three sheet texts above. On: the shared vocabulary
   of DEV-021 (LB-APP-033), which on the sheet surface is the same three texts.

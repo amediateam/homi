@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-24 … WP-32, WP-34 … WP-38, WP-80 … WP-83 (*added by the owner-cabinet plan*) |
+| Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
 | Needs from the production track | (1) Deploy of the merged stage B to staging and to production. (2) The Mini App address attached to the staging bot and the production bot, so the app opens inside Telegram on both. (3) The app vhosts without `X-Frame-Options`, so Telegram Web can frame the app (Q-SEC-012, requested by WP-21). (4) `NEXT_PUBLIC_APP_ENV=staging` on staging (the stub scenario cookie and the gallery work there, not on production). (5) The PostHog keys of WP-32 on staging. (6) One test account per client for the pass |
@@ -345,6 +345,13 @@ LB-APP-083 and TMA-047; their lines are in the specifications of WP-34 … WP-38
 checklist with them.
 The numbers in the headings below are unchanged (*added by the intake of `index-CIa0Ldj2.js`*).
 
+Since the intake of `index-YX9bFVws.js` the audit also holds BR-APP-112 … BR-APP-121, LB-APP-084 … LB-APP-091 and
+TMA-048; their lines are in the specifications of WP-39 (BR-APP-112, BR-APP-113, BR-APP-114, BR-APP-116,
+BR-APP-117, BR-APP-118, BR-APP-121), WP-81 (BR-APP-119, BR-APP-120 and the owner form's halves of BR-APP-113 and
+BR-APP-114) and WP-82 (BR-APP-115, the landlord block of BR-APP-116, TMA-048) and join this checklist with them, with
+the scenarios of that release under the acceptance checklist. The numbers in the headings below are unchanged
+(*added by the intake of `index-YX9bFVws.js`*).
+
 ### Rules (74)
 
 | # | Rules | Package | Proved by |
@@ -645,6 +652,33 @@ those are merged; "built" means the merged code already does it (*added by the i
 | 30 | 28 | `radar-sheet-listing` | WP-38 | a find opened from the sheet loses «новое»; legacy parks the sheet, HOMI re-opens it (DEC-64) |
 | 31 | 28 | `radar-sheet-listing-back` | WP-38 | Back from that listing returns to the sheet, with the strip and the sheet's scroll where they were |
 | 32 | 28 | `radar-sheet-age` | WP-35 | the age of a find from `posted.at`, as on the card |
+
+### Scenarios of legacy release `index-YX9bFVws.js` (17)
+
+That release added 17 scenarios to legacy's base parity suite (113 → 130; `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs`
+at r38). One line per scenario, next to the screen row it belongs to ("cabinet n" is a row of "Screens of the owner
+cabinet"). The cabinet's lines are ticked only with the cabinet switched on (DEC-89); "WP-39" lines once WP-39 is
+merged (*added by the intake of `index-YX9bFVws.js`*).
+
+| # | Screen row | Legacy scenario | Package | What to tick |
+| - | ---------- | --------------- | ------- | ------------ |
+| 1 | 7 | `feed-end-many` | WP-39 | «Это всё по вашему поиску» after the last card of a search feed loaded to its end, also with the cabinet off (DEC-90) |
+| 2 | 7 | `feed-owner-entry` | WP-82 | under it the row «Сдаёте квартиру? Разместите бесплатно ›»; none while the cabinet is off |
+| 3 | 9 | `feed-empty-owner-entry` | WP-82 | the line under the empty search feed; none in favourites or history |
+| 4 | 9 | `feed-empty-owner-entry-open` | WP-82 | its tap: `owner_entry {src: empty}`, then the form (`can_add`) |
+| 5 | 18 | `listing-owner-entry` | WP-82 | «Тоже сдаёте квартиру? Разместите бесплатно ›» last on a card with `owner_entry` (DEC-94) |
+| 6 | 18 | `listing-owner-entry-open` | WP-82 | its tap with `can_add`: a new form |
+| 7 | 18 | `listing-owner-entry-limit` | WP-82 | its tap without `can_add`: Settings › «Мои объявления» |
+| 8 | 7 | `fav-like` | WP-39 | the heart springs on each tap; the burst only on an add |
+| 9 | 14 | `leave-filters-sheet` | WP-39 | the closed filters sheet leaves (a copy slides down); none after a drag |
+| 10 | 32 | `leave-subpage` | WP-39, WP-31 | a closed settings sub-page leaves; none after the swipe |
+| 11 | 42 | `leave-toast` | WP-39 | a toast leaves; none when another toast replaces it or after a drag |
+| 12 | 29 | `radar-edit-save-phase` | WP-39 | «Сохранить»: spinner, then the tick, then the close and the toast |
+| 13 | 31 | `found-moved-landlord` | WP-39, WP-82 | a "where found" answer shows «Поздравляем!» (WP-39); with the cabinet on, the landlord block with its buttons (DEC-91) |
+| 14 | 31 | `found-kvadro-landlord-uz` | WP-82 | in uz the landlord block on the «через HOMI» congratulation; the shared link of the locale |
+| 15 | cabinet 4 | `owner-form-limit` | WP-81 | the description ring near the limit and full at 600 |
+| 16 | cabinet 4 | `owner-form-limit-shake` | WP-81 | typing beyond 600 shakes the ring |
+| 17 | cabinet 4 | `owner-form-photo-upload` | WP-81 | the ring with the percent, the waiting pulse, the tick on the new photo (DEC-92) |
 
 ### Statements
 

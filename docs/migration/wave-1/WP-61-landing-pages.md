@@ -28,6 +28,12 @@ In:
 - Link builders for HOMI's bot and Mini App.
 - The data loader for `GET /api/v1/landing/live` and `/landing/pins`; the demo marker.
 - Every block and behaviour of the table "LND items" marked "in".
+- The owners' page «Сдать квартиру» in three languages (DEC-91): the target of «Отправить хозяину» in the Mini App's
+  survey (WP-82), which links it with `?s=tenant`; once it is built, `brand.links.owners` of the Mini App points at it.
+  Legacy links `/sdat-kvartiru/`, `/uz/kvartira-ijaraga-berish/` and `/en/list-your-apartment/`
+  (`$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:80-92` at r38); the checkout's mirror of the legacy
+  landing had no such page on 2026-11-20, so its content and the mark's attribution are specified by the landing
+  intake that reads it (*added by the intake of `index-YX9bFVws.js`*).
 
 Out:
 

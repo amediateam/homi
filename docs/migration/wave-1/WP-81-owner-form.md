@@ -4,9 +4,9 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-80, WP-28, WP-36 |
+| Depends on | WP-80, WP-28, WP-36, WP-39 (`RollNumber`, the save phase and the leave helper, *added by the intake of `index-YX9bFVws.js`*) |
 | Size | about 3 000 changed lines with tests, L |
-| Behaviour reference | `03` SCR-050 … SCR-056, §1.9 (lazy chunks), §3.3 (`owner_place_set`, `owner_place_autofill`, `owner_mascot_tap`), BR-APP-075 … BR-APP-087, BR-APP-093, BR-APP-096, BR-APP-097, LB-APP-054 … LB-APP-058, LB-APP-060 … LB-APP-065, LB-APP-067, LB-APP-068, LB-APP-071; `05` TMA-034, TMA-035, TMA-046, TMA-047; `09` DEV-054 … DEV-058, DEV-061, DEV-062 |
+| Behaviour reference | `03` SCR-050 … SCR-056, §1.9 (lazy chunks), §3.3 (`owner_place_set`, `owner_place_autofill`, `owner_mascot_tap`), BR-APP-075 … BR-APP-087, BR-APP-113, BR-APP-114, BR-APP-119, BR-APP-120 (since `index-YX9bFVws.js`, with Q-APP-031), BR-APP-093, BR-APP-096, BR-APP-097, LB-APP-054 … LB-APP-058, LB-APP-060 … LB-APP-065, LB-APP-067, LB-APP-068, LB-APP-071; `05` TMA-034, TMA-035, TMA-046, TMA-047; `09` DEV-054 … DEV-058, DEV-061, DEV-062 |
 | Needs from the production track | the regular deploy; `CSP_PRIVATE_MEDIA_HOSTS` in the app's env on staging and production (the origin of the private disk's temporary URLs, for a draft's photos); then the manual checks inside Telegram on staging |
 
 ## Goal
@@ -96,7 +96,8 @@ DEV-054 … DEV-058, DEV-061 and DEV-062.
   `paused` listing keeps it paused; a `rejected` listing is published again only after the operators release it —
   so the form never sends a publish for a non-draft). New in this specification: (a) the owner dictionary is imported
   from the pinned release by `scripts/import-legacy.mjs`, not written by hand; (b) photos travel through a Server
-  Action whose body limit is raised to `'4mb'`, and a photo the client cannot shrink is refused, not sent; (c) an
+  Action whose body limit is raised to `'4mb'` — since DEC-92 the transport is open: it must report upload progress
+  (`03` Q-APP-031, "Photos" below) — and a photo the client cannot shrink is refused, not sent; (c) an
   owner launch waits behind the first-launch pickers, as legacy's city picker covers the form (`03` SCR-050,
   `inferred`, Q-APP-028); (d) the form takes the `@overlay` slot, so a form opened from the owner panel replaces the
   listing there, and Back opens the listing again; (e) a publish that the server's checks hold for the operators
@@ -222,7 +223,7 @@ its check makes no request:
 | ------ | ------ |
 | `createOwnerListing()` | `POST /owner/listings` — the caller's untouched draft when one exists (DEV-054) |
 | `updateOwnerListing({ id, fields })` | `PATCH /owner/listings/{id}` — changed fields only, `null` clears |
-| `uploadOwnerPhoto(form: FormData)` | `POST /owner/listings/{id}/photos`, multipart `file`; `id` is a field of the form data |
+| `uploadOwnerPhoto(form: FormData)` | `POST /owner/listings/{id}/photos`, multipart `file`; `id` is a field of the form data. Since DEC-92 replaced by a transport that reports progress (Q-APP-031, "Photos") |
 | `deleteOwnerPhoto({ id, photo })` | `DELETE /owner/listings/{id}/photos/{photo}` |
 | `orderOwnerPhotos({ id, ids })` | `PUT /owner/listings/{id}/photos/order` — the full order, the cover first |
 | `setContactMode({ id, mode })` | `PUT /owner/listings/{id}/contact-mode`, `mode` `request` or `phone` |
@@ -438,7 +439,11 @@ Changed:
   (digits only, at most 12, grouped, `PriceInput`), the currency «$» / «сум» (USD by default), the usual price,
   renovation chips from `renovations.owner`, furniture «С мебелью» / «Без мебели» (three states); «Кому сдаёте» with
   «Семьям», «Студентам», «Девушкам», «Парням», «Иностранцам» and its hint; pets (three states); the description of
-  at most 600 characters with `own.descriptionHint` «{n} из {max}. Номер здесь не пишите — мы его скроем.»
+  at most 600 characters with `own.descriptionHint` «{n} из {max}. Номер здесь не пишите — мы его скроем.» and the
+  limit ring of legacy release `index-YX9bFVws.js` (`03` BR-APP-120): absent while the field is empty, the share
+  `n / 600` drawn as a ring, `near` (the warning colour) from 90 %, `full` (the error colour) at 600; a keystroke
+  that would pass 600 with a collapsed selection shakes the ring for 0.32 s (±3 px; none under reduced motion)
+  (*added by the intake of `index-YX9bFVws.js`*).
 - Couplings (BR-APP-080): a draft without a city gets the profile's city (`me.city`); a typed price sets the
   currency; `room` and `rooms` exclude each other; numbers are above 0; fields hold at most 6 characters (7 for the
   floor). DEV-058: clearing the address text keeps the point; another city clears the district and the point and
@@ -478,6 +483,22 @@ Changed:
   and the batch goes on (fix of LB-APP-061's client half; the server re-encodes every upload, WP-84).
   `409 owner_photo_limit` stops the batch; `unsupported_mime`, `too_large`, `too_big`, `undecodable` show their
   message and the batch goes on.
+- Upload progress (DEC-92, `03` BR-APP-119; *added by the intake of `index-YX9bFVws.js`*). Each uploading tile
+  shows a ring with the percent, eased toward the real progress (`1 − e^(−dt / 0.25 s)` per frame, a frame step of
+  at most 50 ms, snapped below 0.002), the percent only between 0.5 % and 99.5 %; from 99.5 % the ring pulses (1.6 s,
+  to opacity 0.45) while the answer is awaited; a queued file shows a grey ring at half opacity. A photo id absent
+  before the upload carries a green tick for 1.5 s (`--ease-pop`; hidden under reduced motion, which also jumps the
+  ring to its target). Errors: a network failure and the 90 s timeout show `own.photoFailed`, and so does a 2xx
+  answer without JSON. The «N из 10» of `own.photosHint` rolls (`RollNumber` of WP-39, BR-APP-113).
+  - The transport (`03` Q-APP-031): the browser reports upload progress only to `XMLHttpRequest`
+    (`upload.onprogress`); React calls a Server Action through `fetch`, and Next's guide of Server Actions documents
+    no upload progress (`node_modules/next/dist/docs/01-app/01-getting-started/07-mutating-data.md`). The
+    integrator's recommendation: an `XMLHttpRequest` to a `/bff` route allow-listed for this one write
+    (`POST /bff/owner/listings/{id}/photos`), which forwards the multipart body with the session's token as the
+    other `/bff` calls do, so cookie mode and header mode both work; it changes WP-22's rule that `/bff` passes reads
+    only, for this method, and the size limit becomes the route's own (4 MB) instead of `bodySizeLimit`. A request
+    straight to the API works only in header mode (the cookie session holds no token the browser can send). The
+    package decides with the reviewer and records the choice here.
 - «Сделать обложкой» sends the full order with that id first. «Удалить фото» hides the photo at once and shows
   `own.photoDeleted` with «Вернуть» for 6 s; the delete is sent when the toast ends or the form unmounts, not before;
   «Вернуть» shows it again and sends nothing (DEV-057).
@@ -553,12 +574,13 @@ Changed:
   `own.notEditable` and «Мои объявления»; `409 owner_rejected` → the rejection state; `409 owner_phone_required` → the
   phone step; `422 validation_failed` → the questionnaire with the highlights (the save-failed text when the client
   sees nothing missing); offline → `own.publishOffline`; anything else → `own.publishFailed`.
-- Any other listing (DEV-062, DEC-80): «Готово» flushes, plays the success haptic and shows the done step in its
-  edit form; no publish call is sent, so a `paused` listing stays paused (default 19).
+- Any other listing (DEV-062, DEC-80): «Готово» flushes, plays the success haptic, goes through the save phase of
+  WP-39 (spinner, then the tick for 900 ms, 250 ms under reduced motion; `03` BR-APP-114, legacy since
+  `index-YX9bFVws.js`, which does it only for an edit) and shows the done step in its edit form; no publish call is sent, so a `paused` listing stays paused (default 19).
 
 ### Done (SCR-056, BR-APP-096)
 
-- A new listing: 12 confetti pieces staggered by 25 ms and HOMI's mascot button (the art is HOMI's, DEC-40); the
+- A new listing: 12 confetti pieces (1.1 s on `--ease-out` since `index-YX9bFVws.js`) staggered by 25 ms and HOMI's mascot button (the art is HOMI's, DEC-40); the
   success haptic, a heavy impact at 260 ms and a medium one at 420 ms. A mascot tap repeats both at most once per
   800 ms and sends `owner_mascot_tap` at most once per 30 000 ms. Lite graphics and reduced motion show the confetti
   still. Then `own.doneText` (or `own.doneTextNoRadar` with radars off), the demand line (section "Demand and usual

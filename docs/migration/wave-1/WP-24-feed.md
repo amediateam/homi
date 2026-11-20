@@ -176,7 +176,9 @@ app/[locale]/(main)/page.tsx
   `features/feed/inlineSlot.ts` gives (`number | null`, the count of visible cards before it): after the 8th
   visible card; with 8 or fewer visible cards after the last one, but only when the list is fully loaded without
   an error and the few-results note is not shown; otherwise not at all. With 9 visible cards it stands after the
-  8th and the note below the list (SCR-007, BR-APP-072). It is one keyed row among the cards, so a card hidden above
+  8th and the note below the list (SCR-007, BR-APP-072). Since legacy release `index-YX9bFVws.js` a search feed
+  loaded to its end with cards and without the note ends with «Это всё по вашему поиску» (`feed.end`; DEC-90,
+  DEV-064; *added by the intake of `index-YX9bFVws.js`*; row 54, WP-39). It is one keyed row among the cards, so a card hidden above
   it moves it without a remount (the radar card keeps its state). This package passes nothing into it; WP-30 passes
   the radar card. It reads the session maps of WP-22: `favorite = favs.get(number) ?? item.favorite`,
   `viewed = source !== 'history' && (seen.has(number) || item.viewed)`; the search and favourites drop items in
@@ -200,7 +202,7 @@ cache.
 | `ListingCard.tsx` | Props `item`, `favorite`, `viewed`, `compact`, `eager`, `serverSmallOnly`, `href`, `onOpen`, `onFavorite` (`favorite` and `viewed` default to the card's flags; `onFavorite` is `FavButton`'s `onChange`). Compact: one photo, short verdict only, no badge, no eye, no dots, no age (legacy `.lc.compact .lc-ago`); the price-kind label and the status tag stay. For `owner_verified` the compact card shows a `ShieldCheck` (16 px, `--good`, `role="img"` labelled `card.ownerVerified`) after the price and the short verdict (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it) |
 | `ListingCardSkeleton.tsx` | Shimmer photo and three bars (62 %, 80 %, 35 %); `FeedSkeleton`, three of them in the list column (`FEED_FRAME`), the page's Suspense fallback |
 | `PhotoStrip.tsx`, `Photo.tsx` | Scroll-snap strip with lazy slides, dots, video badge, placeholder; `Photo.tsx` also exports `PhotoPlaceholder` and `PhotoBackdrop` (the blurred copy behind a video photo), so every `<img>` of the card is in that file |
-| `FavButton.tsx` | Heart with optimistic state; the `overlay` variant (`full`, `compact`) over a photo and the `plain` one of the listing's title row (WP-26) |
+| `FavButton.tsx` | Heart with optimistic state; the `overlay` variant (`full`, `compact`) over a photo and the `plain` one of the listing's title row (WP-26). Since legacy release `index-YX9bFVws.js` each tap re-plays the heart and an add bursts (`03` BR-APP-117; *added by the intake of `index-YX9bFVws.js`*; row 49, WP-39) |
 | `images.ts` | Small-variant derivation and the network rule |
 | `cardText.ts` | Price, facts, age and location lines from a card |
 | `verdict.ts` | `marketVerdict(item, locale, t)` → `{ tone, text, short }` (the locale formats the «x» of `fmt.marketTimes`); `marketChipText(verdict, t)`, the chip's text; `verdictToneOf(market)`, shared with `badges.ts` |

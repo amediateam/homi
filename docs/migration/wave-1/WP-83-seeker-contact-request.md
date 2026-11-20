@@ -164,6 +164,13 @@ and the sheet's fields carry the `.ph-mask` class of WP-32's replay masking.
 | `ClaimedOwnerSection.tsx` | the section of a claimed owner |
 
 `lib/storage.ts`: `homi-owner-tip` is a synced key (mirrored to DeviceStorage and restored from it, TMA-037).
+
+Since legacy release `index-YX9bFVws.js` (*added by the intake of `index-YX9bFVws.js`*): the chip's tip leaves when it unmounts (`03` BR-APP-112, the
+tip kind of WP-39's leave helper: 160 ms, `translateY(-6px) scale(.92)` and opacity 0, none under reduced motion or
+in lite); the chip takes the title row's full width as its own grid row (`grid-column: 1 / -1`, aligned to the start)
+and never wraps (`white-space: nowrap`); the info sheet's shield draws in 0.7 s on `--ease-out` after 0.25 s, its
+check in 0.35 s after 0.85 s (`$KVADRO_ROOT/demo/app/src/styles/owner-shared.css:375-383` at r38). The leave helper
+comes from WP-39.
 `lib/analytics/events.ts`: `owner_info_opened: { listing_id: number }` joins `JournalEvents` and `JOURNAL_EVENTS`.
 
 ### Sections of an owner listing (`features/listing/sections/`)

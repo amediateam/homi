@@ -527,7 +527,9 @@ photos and the requests with the seeker's first name, and the relay to the opera
    `wave-1/baseline.md`); then `index-CIa0Ldj2.js` (the release of 18 Nov 2026: built screens change, seven contract
    points on stubs, eleven decisions DEC-58 … DEC-68, and the catch-up packages WP-34 … WP-38;
    `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-88;
-   WP-80 … WP-89).
+   WP-80 … WP-89). Then `index-YX9bFVws.js` on 2026-11-20 (the release of 20 Nov 2026: motion and small UX on built
+   screens, the cabinet's invitations and the survey's landlord link; six decisions DEC-89 … DEC-94, the catch-up
+   package WP-39, no contract change; `wave-1/baseline.md`).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
@@ -616,7 +618,7 @@ table of record with statuses is `wave-1/README.md`.
 | ----- | -------- | ------- |
 | 0 Start | WP-00 … WP-03 | Media ownership fix; ADRs and shared files; operator request and baseline pin; dependencies and test tooling |
 | A Contract | WP-10 … WP-13 | Source drivers, flags, stubs, OpenAPI, generated types; the stub contract of every method |
-| B Mini App on stubs | WP-20 … WP-38, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-38 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
+| B Mini App on stubs | WP-20 … WP-39, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-39 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
 | C API | WP-40 … WP-48, WP-84 … WP-87 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off; owner listings, contact requests, the mixed feed, the relay |
 | D Bot | WP-50 … WP-59, WP-88, WP-89 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot; the owner's phone, requests and answers, the cabinet's switch-on |
 | E Landing | WP-60, WP-61 | Landing data, landing pages |

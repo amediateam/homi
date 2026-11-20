@@ -453,6 +453,7 @@ without a digit of the owner's number:
 | `owner.tier` | `self` (placed by its owner, in HOMI or in legacy), `verified` (`owner_verified`), `claimed` (`is_owner` and not verified) or `null`; it replaces the string match of labels (fix of LB-APP-075) |
 | `owner.mine` | boolean: the caller's own listing (per user) |
 | `owner.listing_id` | the owner listing's ULID, only when `mine`, else `null` |
+| `owner.entry` | boolean: the card invites the caller to place a listing of his own («Тоже сдаёте квартиру?», `03` BR-APP-115). True when the cabinet is on (`owner_enabled`), the listing is posted by an owner (`is_owner`, of any `tier`) and it is not the caller's own (`mine` false); else false (DEC-94). Legacy's field is `owner_entry` at the top of the card (`$KVADRO_ROOT/docs/api.md` §3, r38); HOMI keeps it with the other per-user owner keys (*added by the intake of `index-YX9bFVws.js`*) |
 | `owner.response_minutes` | the owner's usual answer time in minutes, or `null` |
 | `owner.description` | the owner's own text, masked in `fromArray()` (DEC-52), or `null` |
 | `contact.mode` | `phone`, `request`, `hidden` (DEC-75) or `null` (a listing that is not self-placed) |
@@ -548,6 +549,9 @@ verified, else `null`) and `contact.mode: null`, `contact.request: null`.
   `{media}/stub/<number>/<n>.jpg?e=0&s=stub`, so `sources:publish-stub-media` writes them.
 - The per-user parts (`owner.mine`, `contact.request`) are fixed in the entries, as `favorite` and `viewed` are while
   `sources.native_stubs` is on (WP-42, "Overlay").
+- `owner.entry` is computed by the stub source from DEC-94's rule, not stored: true on every entry with `is_owner`
+  that is not `10000008` while `owner.enabled` is on, so it is false everywhere by default (*added by the intake of
+  `index-YX9bFVws.js`*).
 - `StubListingSource`: the contact method answers the synthetic number of `10000003` and `10000007` and `404
   contact_unavailable` for the other native entries and for `100024`; the translation method answers `404
   not_found` for every native number. Its doc comment lists the new numbers.

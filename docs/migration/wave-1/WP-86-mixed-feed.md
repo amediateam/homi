@@ -293,7 +293,7 @@ to approve.
 | `geo_radius_m` | 500 (item 5) |
 | `author` | `{"kind": "phone", "label": <the catalogue text «Хозяин» of `listings.php`>, "count": <the owner's listings in the feed>}` (WP-80, "Listing items and the card"); no digit of the owner's number |
 | `owner_label` | `null`: the tier says it |
-| `owner` | `{tier: "self", mine: false, listing_id: null, response_minutes: <WP-85's response time>, description: <the owner's text>}`; `mine` and `listing_id` are the overlay's (WP-85) |
+| `owner` | `{tier: "self", mine: false, listing_id: null, response_minutes: <WP-85's response time>, description: <the owner's text>}`; `mine` and `listing_id` are the overlay's (WP-85), and so is `entry` (DEC-94, WP-42's overlay; *added by the intake of `index-YX9bFVws.js`*) |
 | `contact` | `{has_phone: <contact_mode = phone>, contact_url: null, contact_paid: false, mode: "phone" or "request", request: null}`; the per-user part is the overlay's (WP-85) |
 | `summary`, `offers`, `original`, `sources`, `source_ref` | `null`, `[]`, `{text: null, url: null, deleted: false}`, `[]`, `null` |
 
