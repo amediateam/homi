@@ -263,11 +263,11 @@ changed here (D-8).
   once, because the finger has already moved the layer out. Under lite graphics or reduced motion there is neither
   animation. A new opening during the leave cancels it. How the leave is sequenced with the route change is decided by
   the package that builds it (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`,
-  `ListingLayer` and `closeListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)).
+  `ListingLayer` and `closeListing` for a later package (`wave-1/baseline.md`, built code behind the pin, row 5); WP-36 closed it).
 - While the SDK is absent the layer shows the fallback close, the app's own cross labelled `common.close`, in every
   state — skeleton, preview, details, "gone", day limit and the error states. It closes like Back and goes when the
   SDK arrives (legacy since `index-CIa0Ldj2.js`, `05` TMA-047; *added by the intake of `index-CIa0Ldj2.js`*; a parity
-  item of `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+  item of `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it).
 - The listing of a launch link that is a sale over a feed that is not: when it closes — by Back, swipe, the fallback
   close or `closeListing` — the feed's address is replaced by the sale defaults of the feed's own city instead of a
   plain Back (DEC-65). Legacy switches the feed while the listing is open (`03` BR-APP-108); here the page under an
@@ -392,8 +392,8 @@ market sheet shows a section skeleton, the menu a generic block hint.
 | Skeleton | no preview and no answer yet | shimmer hero and three bars; swipe-back off |
 | Preview | card data in the cache, answer pending | hero, title, key facts (no building tile) from the preview; `SectionSkeleton` of 3 lines and of 4 lines; no market block; the CTA bar with the card's price and market chip and a shimmer in place of the action |
 | Loaded | answer arrived | all sections; photos from the full set |
-| Not found | `not_found` | a block with `role="alert"`: the `SearchX` icon, the text `listing.gone` «Этого объявления уже нет — квартиру, похоже, сдали или продали» (uz «Bu eʼlon endi yoʻq — uy, shekilli, ijaraga berilgan yoki sotilgan», en «This listing is gone — the flat has probably been rented out or sold») and the button `listing.goneFresh` «Смотреть свежие» (uz «Yangilarini koʻrish», en «See the latest»): a light haptic, then the layer closes; a directly loaded listing goes to the feed. No retry; Back closes. Legacy since `index-CIa0Ldj2.js` (`03` SCR-019); as built: only the text `listing.loadFailed` «Объявление не загрузилось», no button (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17)) |
-| Day limit | `rate_limited` with `reason: "daily"` | tall `ErrorState`: `error.dayLimit` «Лимит на сегодня», `error.dayLimitText` «За сутки открыто очень много объявлений. Попробуйте позже — Радар продолжит присылать новые в чат.», «Повторить» (DEC-59; legacy since `index-CIa0Ldj2.js`, `03` SCR-008; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)) |
+| Not found | `not_found` | a block with `role="alert"`: the `SearchX` icon, the text `listing.gone` «Этого объявления уже нет — квартиру, похоже, сдали или продали» (uz «Bu eʼlon endi yoʻq — uy, shekilli, ijaraga berilgan yoki sotilgan», en «This listing is gone — the flat has probably been rented out or sold») and the button `listing.goneFresh` «Смотреть свежие» (uz «Yangilarini koʻrish», en «See the latest»): a light haptic, then the layer closes; a directly loaded listing goes to the feed. No retry; Back closes. Legacy since `index-CIa0Ldj2.js` (`03` SCR-019); as built: only the text `listing.loadFailed` «Объявление не загрузилось», no button (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17); WP-36 closed it) |
+| Day limit | `rate_limited` with `reason: "daily"` | tall `ErrorState`: `error.dayLimit` «Лимит на сегодня», `error.dayLimitText` «За сутки открыто очень много объявлений. Попробуйте позже — Радар продолжит присылать новые в чат.», «Повторить» (DEC-59; legacy since `index-CIa0Ldj2.js`, `03` SCR-008; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18); WP-36 closed it) |
 | Offline | `offline`, `timeout` | tall `ErrorState`: `error.offline` «Нет связи», `error.offlineText` «Проверьте интернет и попробуйте ещё раз.», `error.retry` «Повторить» |
 | Server | `server`, `source_unavailable`, `rate_limited` without the reason | tall `ErrorState`: `common.loadFailed` «Не загрузилось», `error.serverText` «Сервер не ответил. Попробуйте ещё раз через минуту.», «Повторить» |
 | Forbidden | `forbidden` | the server state above; with `dev001AnyForbiddenShowsAccess` `onForbidden()` sends the user to the access screen once the session is ready |
@@ -813,8 +813,8 @@ count. The digit check of the stub number (`100001`, raw `+998 00 000 00 67`) lo
 
 - `ListingScreen.test.tsx`: skeleton, preview, loaded, not found — the "gone" block and its button (*added by the
   intake of `index-CIa0Ldj2.js`*; a parity item of `ListingScreen` for a later package (`wave-1/baseline.md`, built
-  code behind the pin, row 17)) —, the day limit (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
-  `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)),
+  code behind the pin, row 17); WP-36 closed it) —, the day limit (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
+  `useListing` and `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18); WP-36 closed it),
   offline, server (with the top inset); video tap
   with and without a deleted post and while pending; no `h1` without a title; the counter rule (a one-photo preview
   with a count of 5 shows none); none of the digit forms in the document, the masked form shown.
@@ -909,16 +909,16 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
 - [ ] Not found shows «Этого объявления уже нет — квартиру, похоже, сдали или продали» with «Смотреть свежие», which
       returns to the feed; Back closes it too (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
       `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 17); as built: only
-      «Объявление не загрузилось»).
+      «Объявление не загрузилось»; WP-36 closed it).
 - [ ] The day limit (`429` with `reason: "daily"`, scenario `daily_limit`) shows «Лимит на сегодня» with its text and
       «Повторить» (DEC-59; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `useListing` and
-      `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18)).
+      `ListingScreen` for a later package (`wave-1/baseline.md`, built code behind the pin, row 18); WP-36 closed it).
 - [ ] Without the SDK (`launchApp(page, { sdk: false })`) the listing has a close cross in its skeleton, content and
       error states, and it goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
-      `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+      `RouteOverlay` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it).
 - [ ] A reload inside one launch does not reopen the listing of the launch link (*added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and `LaunchRedirector` for a later package
-      (`wave-1/baseline.md`, built code behind the pin, row 15)).
+      (`wave-1/baseline.md`, built code behind the pin, row 15); WP-36 closed it).
 - [ ] Offline shows «Нет связи» with «Повторить»; a server or source failure shows «Не загрузилось»; retry loads.
 - [ ] Opened again after a failure, the listing shows its preview or skeleton, not the old error.
 - [ ] A redirected number shows the surviving listing with one request and no leftover state.
@@ -977,7 +977,7 @@ Run every line in ru, uz and en, in light and dark, on staging; attach screensho
       directly loaded listing.
 - [ ] An opening listing slides in from 24 % and fades in over 250 ms (this line and the five after it:
       *added by the intake of `index-CBlEKxdL.js`*; a parity item of `RouteOverlay`, `ListingLayer` and `closeListing`
-      for a later package (`wave-1/baseline.md`, built code behind the pin, row 5)).
+      for a later package (`wave-1/baseline.md`, built code behind the pin, row 5); WP-36 closed it).
 - [ ] Telegram Back closes the listing with the leave: it slides out to 24 % and fades over 200 ms.
 - [ ] A close by `closeListing` (hide, block, a `rented` report, a `fraud` report that hid the listing) plays the same
       leave.

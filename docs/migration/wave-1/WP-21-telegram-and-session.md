@@ -144,7 +144,7 @@ member is a no-op or returns `null` / `false` and never throws.
 | 32 | TMA-043 | whole facade | — | the outside-Telegram fallbacks named in each row |
 | 33 | TMA-044 | `safeCallback(fn)` | — | wraps every SDK event handler: catch, then rethrow on a zero timeout so the dispatcher survives and the global handler reports once |
 | 34 | TMA-045 | `frontend/app/dev/` | — | emulator (below) |
-| 35 | TMA-047 | none of its own: `webApp()` and `subscribeSdk` of `sdk.ts` | — | the app's own close control while the SDK is absent (legacy since `index-CIa0Ldj2.js`): built in `features/shell/` over these two members, shown while `webApp()` is `null` and gone when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RouteOverlay` and `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)) |
+| 35 | TMA-047 | none of its own: `webApp()` and `subscribeSdk` of `sdk.ts` | — | the app's own close control while the SDK is absent (legacy since `index-CIa0Ldj2.js`): built in `features/shell/` over these two members, shown while `webApp()` is `null` and gone when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RouteOverlay` and `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it) |
 
 Legacy binds the Back and Settings handlers only when the SDK arrives, and restarts the launch when a late SDK
 brings launch data, since `index-CIa0Ldj2.js` (`05` TMA-004, TMA-022). That is already how this package works: rows
@@ -590,7 +590,7 @@ Run in ru, uz and en and in light and dark; lines marked (T) also inside Telegra
 - [ ] `?news=pets` opens the filters address with `focus=pets`; a listing link wins over it.
 - [ ] A reload inside one launch does not reopen the listing of the launch link; a new launch does; the mark holds no
       launch data in the clear (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `launch.ts` and
-      `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row 15)).
+      `LaunchRedirector` for a later package (`wave-1/baseline.md`, built code behind the pin, row 15); WP-36 closed it).
 - [ ] A sale listing opened by a launch link over a rent feed leaves the sale defaults of the feed's city behind it
       when it closes; a daily-rent listing changes nothing (DEC-65; *added by the intake of `index-CIa0Ldj2.js`*; a
       parity item of `launch.ts` and the close path of the listing for a later package (`wave-1/baseline.md`, built

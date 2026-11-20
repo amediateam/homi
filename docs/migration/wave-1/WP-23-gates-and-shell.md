@@ -59,7 +59,7 @@ builds on. Every route under `(main)` still shows its WP-20 placeholder inside t
 | Interface | DEC-44, 25 §3.6 | Primitives are shadcn/ui and Radix components from WP-20, restyled; the sheet drag with velocity, swipe back and the collapsing header are written on top of them, not replaced by other behaviour |
 | Defects and flags | DEC-36, DEC-58 | LB-APP-027 and LB-APP-035 are `DEV` rows (DEV-016, DEV-023): both branches are written and tested. `dev023CityCountsIncludeDaily` stays off. `dev016ErrorToastOnFailure` is on by default since the intake of `index-CIa0Ldj2.js` (DEC-58: legacy shows the failure toast itself since that release) and gates the failure toast only; the success confirmation of destructive actions moves to `dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` and `failed()` for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)) |
 | Brand | DEC-40, 25 §2 rule 5 | The bot name and links come from `lib/brand`; no brand word is written in a component |
-| Access | DEC-43, DEC-60 | The gate is built for all five reasons although the mode is "open", and for a sixth, `paused`, since the intake of `index-CIa0Ldj2.js` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a later package (`wave-1/baseline.md`, built code behind the pin, row 28)) |
+| Access | DEC-43, DEC-60 | The gate is built for all five reasons although the mode is "open", and for a sixth, `paused`, since the intake of `index-CIa0Ldj2.js` (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a later package (`wave-1/baseline.md`, built code behind the pin, row 28); WP-36 closed it) |
 | Acceptance | DEC-46, 25 §9 | The acceptance checklist below is ticked in ru / uz / en and light / dark |
 | Baseline | 25 §8, `wave-1/baseline.md` | The texts below are those of the pinned release `index-DY_DH7h-.js`. Its predecessor `index-Dbpp463V.js` removed the beta from two no-access texts (`noAccess.title.invite`, `noAccess.text.full`; SCR-003, API-001); the reason codes and the gate logic did not change. Since `index-CBlEKxdL.js`: the `private` no-access text names the team; the toast can be dragged down and its offset depends on what is below it; swipe-back gained an edge-only zone and a nested-sub-page rule for the owner cabinet (*added by the intake of `index-CBlEKxdL.js`*). Since `index-CIa0Ldj2.js`: the fresh pill and the feed's scroll memory; `paused`; the SEO source with the language; the inline save error of the language picker; a close control without the SDK; the collapsed title of daily rent; failure toasts (*added by the intake of `index-CIa0Ldj2.js`*) |
 
@@ -223,7 +223,7 @@ sheet and the sub-page are `position: fixed` inside them.
 | `BottomSheet` | Props `open`, `onClose`, `dismissible` (default `true`), `variant: 'full' \| 'compact'`, `title`, `header`, `footer`, `closeLabel`, `stacked` (z 60 = `--z-toast` over 50: the city sheet over the filters), `closeOnEscape` (default `dismissible`), `portal` (default `true`; `false` renders the sheet in place, so the server HTML holds it), `onDragStart`, `onDragCommit` (a drag closes it; the owner plays the light impact), `className`. Composes the Radix Dialog parts of WP-20 itself (Portal, Overlay, Content; the WP-20 `Sheet*` parts have no variant, header, footer or drag hooks). Focus moves to the title on open and back to the element that had it on close (Radix has no Trigger here). Sticky header and footer; `useSheetChrome()` writes their heights to `--fsheet-head` / `--fsheet-foot` |
 | `useSheetDrag` | Pointer events, so a mouse may drag a sheet header; on the handle area only: start 6 px, close at 25 % of the sheet height or 0.5 px/ms, settle 200 ms, backdrop dims with the drag. Exported constants |
 | `useBodyClass` | `useBodyClass(className, active)`, ref-counted per class name: the sheets hold `body.sheet-open` and `body.locked`, WP-26's listing `listing-open` |
-| `SubPageFrame` | Fixed layer (`--z-subpage`), 24 % slide-in (`--animate-subpage-in`), header with a shadow when scrolled, optional `back` and `hint`, `bare` mode; `onBack`, `swipeBack`, `onSwipeStart`, `onSwipeCommit`. Its `back` slot carries the fallback close of the audit's TMA-047: the app's own close control while the SDK is absent (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)) |
+| `SubPageFrame` | Fixed layer (`--z-subpage`), 24 % slide-in (`--animate-subpage-in`), header with a shadow when scrolled, optional `back` and `hint`, `bare` mode; `onBack`, `swipeBack`, `onSwipeStart`, `onSwipeCommit`. Its `back` slot carries the fallback close of the audit's TMA-047: the app's own close control while the SDK is absent (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it) |
 | `useSwipeBack` | Touch events only, as legacy (a mouse drag over a page selects its text): rightward swipe, start 10 px, sideways travel at least 1.5 × the vertical, close at 33 % of the width or 0.5 px/ms, settle 180 ms; option `enabled`; never starts inside `[data-no-swipe]`, `[data-scroll-x]`, `input`, `textarea`, `select`, `[contenteditable]` or a map container. Exported constants. Legacy since `index-CBlEKxdL.js` has three more rules (*added by the intake of `index-CBlEKxdL.js`*): a layer marked `data-edge-swipe` takes the swipe only from the left 24 px and ignores the exclusion list; a touch inside a nested sub-page of the layer is not the layer's; the inline styles are removed 300 ms after the close. Only the owner cabinet uses the first two; they are not built here: WP-81 builds the edge-only rule for the owner form (the option `edgeOnly`), WP-82 the nested sub-page rule for «Отклики» (*added by the owner-cabinet plan*) |
 | `HeaderChip`, `FilterChip` | `HeaderChip`: highlighted state, optional count badge, `aria-label`. `FilterChip`: `aria-pressed`. Long labels ellipsise; a plain-text label is also the `title` |
 | `SegmentedControl` | Two or three options, always one selected; compact size for the map top bar. In the dark theme the selected segment is `--sep` over `--fill`, not the legacy `color-mix`, which old WebViews lack |
@@ -448,7 +448,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   anything else, a missing or non-string value renders as `private`. The `reason` in the address is informative;
   the screen trusts the session state only. Since the intake of `index-CIa0Ldj2.js` the whitelist also holds `paused`
   (DEC-60; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a
-  later package (`wave-1/baseline.md`, built code behind the pin, row 28)).
+  later package (`wave-1/baseline.md`, built code behind the pin, row 28); WP-36 closed it).
 - Layout: Lock icon, title, text, optional checking line, list of large buttons; the first button of the list is
   `primary`, the others `secondary` (legacy `.lang-btn:first-child`), so with a post row the post is accented and
   «Перейти в бота» is not. The title (`tabIndex=-1`) takes the focus when the refusal first shows.
@@ -470,7 +470,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   Radarlaringiz va saralanganlaringiz joyida.», en «The bot is paused» / «We’ll be back soon. Your Radars and
   favorites are safe.» It builds no start link, like `blocked`, and is re-checked like the other reasons (*added by
   the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and the session types for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 28)).
+  (`wave-1/baseline.md`, built code behind the pin, row 28); WP-36 closed it).
 
   The two texts reworded by `index-Dbpp463V.js` in uz and en: `invite` «Taklif orqali kirish» / «Invite only»;
   `full` «Hozir joy qolmadi. Keyinroq urinib koʻring.» / «All spots are taken right now. Please try again later.».
@@ -494,7 +494,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
     WP-21, fixed here, see Files). Since legacy release `index-CIa0Ldj2.js` the source `seo` is written `seo_en` or
     `seo_uz` when the locale of the address is en or uz, and `seo` in ru; HOMI's bot reads all three (WP-52) (*added
     by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `lib/deeplinks/build.ts` for a later
-    package (`wave-1/baseline.md`, built code behind the pin, row 29)). The launch is read with
+    package (`wave-1/baseline.md`, built code behind the pin, row 29); WP-36 closed it). The launch is read with
     `parseLaunch(tg.initData(), location.search)`; on `/no-access` the
     query is `?reason=`, so only the start parameter (never `?listing=`) makes this button. Otherwise «Вернуться в
     бот» (`noAccess.back`) calls `tg.close()`.
@@ -645,7 +645,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   removes the class. Since `index-CBlEKxdL.js` a listing opened over the list is not such a layer: the chrome
   keeps its state under the open listing and after it closes (`03` §1.2; the effect is `inferred` from the code;
   *added by the intake of `index-CBlEKxdL.js`*; a parity item of `AppShell` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 6)).
+  (`wave-1/baseline.md`, built code behind the pin, row 6); WP-36 closed it).
 - Mini title: `«<base deal> · <filtersSummary>»` (rule BR-APP-064 and the whole-city label of LB-APP-026, both
   WP-22's); the deal is the title tabs' base deal. For daily rent the title is the summary alone, with no deal word in
   front: «… · Посуточно» (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-064). DEC-66 amends D-SH-3 for it: as built,
@@ -682,7 +682,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 - While the SDK is absent a sub-page shows the fallback close in its header: the app's own control, labelled
   `common.close`, which goes back like BackButton and disappears when the SDK arrives (legacy since
   `index-CIa0Ldj2.js`, `05` TMA-047; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a
-  later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+  later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it).
 - Haptics: light on chips, switches and buttons, as passed in by the wrappers (TMA-025).
 
 ### Pull-to-refresh (SCR-010, BR-APP-058)
@@ -784,9 +784,9 @@ Unit (Vitest):
   `blocked`. `parse.test.ts` (WP-21) pins `fb12` / `tg7` / `ig1234` and `l_123-seoul_flats-45` → `share`.
   Since the intake of `index-CIa0Ldj2.js`: `paused` is the sixth reason and builds no start link (*added by the intake
   of `index-CIa0Ldj2.js`*; a parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code
-  behind the pin, row 28)); a `seo` source gives `s_seo_en--l123` in en, `s_seo_uz--l123` in uz and `s_seo--l123` in
+  behind the pin, row 28); WP-36 closed it); a `seo` source gives `s_seo_en--l123` in en, `s_seo_uz--l123` in uz and `s_seo--l123` in
   ru (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `build.ts` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 29)).
+  (`wave-1/baseline.md`, built code behind the pin, row 29); WP-36 closed it).
 - `nearestCity`: inside 16 km; region within 110 km preferred over a farther town; town within 110 km; none;
   missing region flag → town; empty list → `null`; the 16 and 110 km lines pinned with literal points (15.9 /
   16.1 km, 109.9 / 110.1 km).
@@ -821,14 +821,14 @@ Component (Vitest + Testing Library):
 - `RouteSheet`, `RouteOverlay`, `SubPage`, `ToastHost`, `AppShell` (`ErrorState` after the sixth failure),
   `TelegramButtons` (SettingsButton hidden again on a gate and while not ready), the gallery page. `SubPage` without
   the SDK shows the fallback close, and it goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a
-  parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+  parity item of `SubPage` for a later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it).
 - `LanguagePicker`: order and headings for Telegram `ru`, `uz-UZ`, `en-US`, `de`; `aria-disabled` while saving with
   the focus kept; failure: the line under the list and no toast with the flag on and off, cleared by the next pick
   (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `LanguagePicker` for a later package
   (`wave-1/baseline.md`, built code behind the pin, row 30); as built: the haptic only with the flag off, the toast
   with it on; WP-34 closed it); the heading's focus.
 - `NoAccessScreen`: each reason in each locale — `paused` among them (*added by the intake of `index-CIa0Ldj2.js`*; a
-  parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code behind the pin, row 28)) —, with
+  parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code behind the pin, row 28); WP-36 closed it) —, with
   the texts of the pinned release (no value contains «бета» or, ignoring case, «beta»); support row absent without an
   account; post row only for channel
   links; checking line never for `blocked`; `GateWait` and `ErrorState` of both kinds before `denied`.
@@ -901,14 +901,14 @@ Gates
       a beta (SCR-003).
 - [ ] `paused` shows «Бот на паузе» with its text and «Вернуться в бот»: no start link, whatever the start parameter
       (DEC-60; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` for a later package
-      (`wave-1/baseline.md`, built code behind the pin, row 28)).
+      (`wave-1/baseline.md`, built code behind the pin, row 28); WP-36 closed it).
 - [ ] The checking line shows during the three automatic re-checks and never for `blocked`.
 - [ ] After access is granted the app opens by itself, without a reload.
 - [ ] «Перейти в бота» carries `s_web--l123` for `l_123-web` and `s_share--l123` for `l_123`; without a start
       parameter the button is «Вернуться в бот» and closes the app.
 - [ ] A `seo` start parameter builds `s_seo_en--l123` with the interface in en and `s_seo_uz--l123` in uz (*added by
       the intake of `index-CIa0Ldj2.js`*; a parity item of `accessReason` and `build.ts` for a later package
-      (`wave-1/baseline.md`, built code behind the pin, row 29)).
+      (`wave-1/baseline.md`, built code behind the pin, row 29); WP-36 closed it).
 - [ ] «📢 Открыть пост в канале» appears only for a channel-and-post start parameter and opens that post.
 - [ ] «Написать в поддержку» appears only when a support account is known.
 - [ ] First launch: the language page shows the heading in the Telegram language, the other two in the subtitle,
@@ -953,7 +953,7 @@ Shell
       swipe is touch only); no swipe back on Android.
 - [ ] Without the SDK (`launchApp(page, { sdk: false })`) a sub-page shows the fallback close; it closes the sub-page
       and goes when the SDK arrives (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `SubPage` for a
-      later package (`wave-1/baseline.md`, built code behind the pin, row 19)).
+      later package (`wave-1/baseline.md`, built code behind the pin, row 19); WP-36 closed it).
 - [ ] Lite graphics: the chrome collapses without the morph and without the mini title.
 
 Feedback and errors

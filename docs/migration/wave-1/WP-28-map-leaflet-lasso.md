@@ -177,8 +177,10 @@ versions; the list is in step 1.
   component state, is dropped on close and is never sent (TMA-035). The mini-map and fullscreen controls stay above
   Leaflet's panes (legacy `z-index: 1000` since `index-CBlEKxdL.js`, `spot-map.css:31-35` at r31;
   *added by the intake of `index-CBlEKxdL.js`*; a parity item of `SpotMap` and `SpotMapFullscreen` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 10)). Whether the built controls already do is not verified
-  yet; that row says what was read.
+  (`wave-1/baseline.md`, built code behind the pin, row 10); WP-36 closed it). As built by WP-28 they did not: Leaflet's
+  panes (the map pane at z-index 400) painted over the expand chip, the fullscreen controls and card, and the mini
+  map's panes over the whole fullscreen map; a tap still reached the controls. WP-36 makes each map's box a stacking
+  context (`isolate`) instead of legacy's z-index 1000 on the controls.
 
 ## Files
 

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#94) |
 | Depends on | WP-35 (and through it WP-34: `failed()` and `lib/flags.ts`) |
 | Size | about 565 changed lines with tests, M – L |
 | Behaviour reference | `03` §1.2, §2 (SCR-003, SCR-006, SCR-008, SCR-018, SCR-019, SCR-033), §3.3 (`app_launch`), §4 (BR-APP-054, BR-APP-106), §5 (LB-APP-080); `05` (TMA-010, TMA-022, TMA-047); `02` (BR-API-193, BR-API-194); `16` SEC-REQ-007; `wave-1/baseline.md`, built code behind the pin, rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 |
@@ -136,9 +136,68 @@ Out:
   the fullscreen controls (`SpotMapFullscreen.tsx:110-125`) receive taps above Leaflet's panes. Where one does not,
   give it a z-index above the panes (legacy: 1000). Record the result in the PR.
 
+### As built *(rule 6)*
+
+- **The close path.** The one close is `close` of `ListingLayerContext`, owned by `ListingLayer` (the layer holds the
+  leave state, its latch and its timers, so a hidden or remounted layer drops them); `closeListing.ts` keeps the parts
+  without React: `LISTING_LEAVE_MS` (200), `listingLeavePlays()` (not under `html.lite`, not under reduced motion),
+  `leaveListingRoute()` and `closeListing(step, close)`. `leaveListingRoute()` reads the app's stack live (`depth()`):
+  one step back when a page is below, else the replace to the feed — what `back()` of `useBack()` does at the
+  listing's own address, but safe after an await, where a captured `back()` would see the sheet's depth.
+  - Telegram's Back reaches it through `lib/navigation/backHandler.ts` (new): the layer registers its close with
+    `takeOverBack()` while its own address shows (no child route; a standalone copy only while no overlay copy covers
+    it), and `TelegramButtons` calls the last registered handler instead of `back()`.
+  - The swipe passes `swipe` through the new `onClose` prop of `RouteOverlay` and changes the route at once; the
+    fallback cross passes `leave`. Without `onClose` (the fullscreen spot map) `RouteOverlay` keeps `back()` and shows
+    no cross.
+  - The leave is a keyframe animation held at its end (`animate-listing-out`, `forwards`) that moves the layer's
+    insets (`left: 24%; right: -24%`), not a transform: the layer is its own scroller, and a transform would make it
+    the containing block of its fixed children (the CTA bar, the fallback cross), which would jump by the scroll
+    offset (review of WP-36; the swipe still does, KI-67). The entrance keeps the transform: it starts at the top. The
+    layer takes no taps while it leaves (legacy `.leaving { pointer-events: none }`). After 200 ms the route changes
+    only when neither the address nor the app's stack moved meanwhile; otherwise the leave is dropped and the layer
+    shows again.
+  - An overlay copy at the app's depth 0 changes the route at once, without a leave: it lies over a standalone copy
+    (a merged number's replace, a depth-0 close of a directly loaded child), not over the page Back reveals.
+  - A step back whose address has not changed `LISTING_CLOSE_SETTLE_MS` (1 s) later releases the latch and shows the
+    layer again, so a refused history step cannot leave it faded for good; a replace is never released, since Next
+    keeps the old address until the new page is there.
+  - The entrance (`animate-listing-in`, no fill mode) plays for the overlay copy only: a directly loaded listing is
+    the first paint and does not slide in. `data-layer-motion` lets `lite.css` stop both animations.
+  - `closeListing(step, close)`: when the app pushed the listing over a page, it steps back over the sheet and its
+    steps first and awaits it, then calls the layer's close. When the listing itself was loaded directly, the sheet's
+    soft push had opened an overlay copy over the standalone one, so the copy whose close this is would hide on the
+    step back and drop its leave (review of WP-36); there the sheet and the listing go in one move and the feed
+    replaces the address, without a leave, as before.
+- **The "gone" block** stays local to the listing (`ListingGone` in `ListingScreen.tsx`; `EmptyState` is unchanged),
+  laid out with the classes of the tall `ErrorState`. The day limit is `ErrorState` with `kind="server"` (CloudOff,
+  as legacy's `ErrorState.jsx`) and `data-reason="day_limit"`. `SpotMapRoute` counts `day_limit` among the failed
+  states, so its address goes back as for the other errors.
+- **The error reason** is typed on the envelope as well: `ApiFailure.reason?: string` of `@homi/types` (hand-written
+  part). `failureOf` keeps it only as `"daily"` on a `429`; the access gate's reason never reaches `ApiFailure`.
+- **The fallback cross** sits at z-index 3 of the layer it is in, as legacy's `.fallback-close`; it gives no haptic
+  (without the SDK there is none). In `SubPage` it fills the header's `back` slot, so `SubPageProps` no longer passes
+  `back` through.
+- **Gates.** `noAccessView` and `mainRow` take the address's locale (`useLocale()` in `NoAccessScreen`), and
+  `noAccessStartUrl(source, number, locale)` tags `seo` only.
+- **The launch mark** is `<cyrb53 of the hash, base36>:<number>`. `looksSecret` of `lib/storage.ts` is exported for
+  the tests.
+- **Row 10.** The check found the controls under Leaflet's panes: the map pane carries z-index 400 and nothing
+  between it and the listing layer (z-index 45) or the fullscreen layer (z-index 100) made a stacking context, so the
+  tiles and the circle painted over the expand chip and over the fullscreen ×, «Где я», attribution and card, and the
+  mini map's panes painted over the whole fullscreen map opened inside the same listing layer. A tap still reached
+  every control: the map's box takes no pointer events and the panes' own boxes are empty, which is why WP-28's
+  clicks passed. Each map's box is now a stacking context (`isolate`, `data-spot-map-frame`) in `SpotMap.tsx` and
+  `SpotMapFullscreen.tsx`. Legacy's z-index 1000 on the controls was not copied: inside the listing layer it would lift
+  the chip over the CTA bar and the fallback cross. The search map is not affected: its box is `position: fixed`,
+  itself a stacking context.
+- **The collapsed chrome** stays on for a listing address drawn over the `search-list` variant, not for the variant
+  alone (the filter sheets over the feed share it and must not keep the chrome collapsed).
+
 ## Files
 
-New, under `frontend/app/`: `features/shell/FallbackClose.tsx`, `tests/shell/FallbackClose.test.tsx`.
+New, under `frontend/app/`: `features/shell/FallbackClose.tsx`, `tests/shell/FallbackClose.test.tsx`; as built also
+`lib/navigation/backHandler.ts`.
 
 Changed, under `frontend/app/`:
 
@@ -146,7 +205,9 @@ Changed, under `frontend/app/`:
   `lib/deeplinks/{launch,build}.ts`, `lib/storage.ts`
 - `features/listing/{useListing.ts,ListingScreen.tsx,ListingLayer.tsx,closeListing.ts}`,
   `features/shell/{RouteOverlay,SubPage,AppShell}.tsx`, `features/gates/accessReason.ts`, and the spot map's two
-  files if the check needs it
+  files if the check needs it (it did: `features/listing/spot/{SpotMap,SpotMapFullscreen}.tsx`); as built also
+  `features/shell/TelegramButtons.tsx`, `features/gates/NoAccessScreen.tsx`, `features/listing/actions/useListingActions.ts`
+  (the layer's close for `closeListing`) and `features/listing/spot/SpotMapRoute.tsx` (`day_limit` is a failure)
 - tests: `tests/listing/{ListingScreen,useListing,ListingLayer}.test.tsx`, `tests/listing/closeListing.test.ts`,
   `tests/api/errors.test.ts`, `tests/gates/{accessReason.test.ts,NoAccessScreen.test.tsx}`,
   `tests/deeplinks/{launch.test.tsx,build.test.ts}`, `tests/shell/{route-overlay,sub-page,AppShell}.test.tsx`,
@@ -155,7 +216,10 @@ Changed, under `frontend/app/`:
   `e2e/spot-map.spec.ts`
 
 Changed in `frontend/packages/`: `api-client/src/{index,index.test}.ts`, `ui/src/icons/index.ts` (`SearchX`),
-`ui/src/components/SubPageFrame.tsx`, `ui/src/styles/layout.css`, `ui/tests/{controls,SubPageFrame}.test.tsx`.
+`ui/src/components/SubPageFrame.tsx`, `ui/src/styles/layout.css`, `ui/tests/{controls,SubPageFrame}.test.tsx`; as
+built also `types/src/index.ts` (`reason` on the failure envelope), `ui/src/styles/{motion,theme,lite}.css` (the
+layer's keyframes, their tokens and the lite rule), `ui/tests/tokens.test.ts`, and `i18n/src/labels.ts` with
+`i18n/tests/labels.test.ts` (the no-access tables know `paused`).
 
 In `docs/migration/wave-1/baseline.md`, built code behind the pin: rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28 and 29
 are marked closed.
@@ -249,6 +313,27 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 - `tests/gates/useBootRetry.test.tsx`: `paused` is checked again three times and on the return to the app; `blocked`
   is not.
 
+As built *(rule 6)*:
+
+- Unit and component tests also changed: `tests/api/{browser,server}.test.ts` (the reason through both readers),
+  `tests/storage.test.ts` (the `session` policy), `tests/gates/useBootRetry.test.tsx` (`paused` re-checks),
+  `tests/listing/useListingActions.test.tsx` (`closeListing` receives the layer's close),
+  `tests/listing/SpotMapFullscreen.test.tsx` (`day_limit` goes back), the contexts of
+  `tests/listing/{ListingActionsSheet,MarketSheet,PhotoViewer}.test.tsx`, `frontend/packages/ui/tests/tokens.test.ts`
+  (the keyframes, the lite rule, the body lock) and `frontend/packages/i18n/tests/labels.test.ts`.
+- `tests/listing/closeListing.test.ts` also covers `leaveListingRoute` and `listingLeavePlays`, and the single move of
+  a directly loaded listing; `tests/listing/ListingLayer.test.tsx` the overlay copy at depth 0, the settle of a step
+  back and the replace that is never released.
+- `e2e/launch.spec.ts`: the new launch opens in a new page (a new webview has a new `sessionStorage`, as in
+  Telegram); that another `hash` alone opens the listing again is proven by `tests/deeplinks/launch.test.tsx`.
+- `e2e/gates.spec.ts`: the `seo_en` case checks the bot link only in a build with a bot name; without one (CI, and
+  the local build of this package) it sees «Back to the bot» and the unit tests prove the payload.
+- `e2e/spot-map.spec.ts`: the Leaflet check reads the nearest stacking context around `.leaflet-map-pane` (the
+  map's box, `data-spot-map-frame`) rather than pixels: the raster tiles are drawn translucent, so a control under
+  them still changes the screenshot when hidden.
+- Also added: `e2e/listing-open.spec.ts` the CTA bar of a scrolled listing during the leave (the animation held half
+  way), and `e2e/listing-actions.spec.ts` «Скрыть» on a directly loaded listing.
+
 ## Acceptance checklist
 
 Run in ru, uz and en, light and dark, in Telegram on staging.
@@ -277,4 +362,38 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 
 ## Handoff
 
-Empty.
+- **Done** on `wp-36-catch-up-listing-gates-shell` (from `main` = `989d041`, after #93) by the main session. Steps 1 –
+  7 as written; the design note of the close path is in the PR and, as built, under Design; the checklist on staging
+  waits for the production track.
+- **Departures recorded under rule 6** (Design, Files and Tests above): the close owned by `ListingLayer` with
+  `takeOverBack` for Telegram's Back; the leave by insets; no leave for an overlay copy at depth 0; the settle; the
+  single move of `closeListing` on a directly loaded listing; `isolate` instead of z-index 1000 for row 10; the extra
+  files.
+- **Row 10 check.** Run on the Leaflet engine with opaque red tiles: the stacking chain of `.leaflet-map-pane` (z-index
+  400) reached the listing layer (45) and the fullscreen layer (100) with no stacking context between, and the
+  screenshots showed the tiles over the chip, the fullscreen ×, «Где я», attribution and card, and the mini map's
+  tiles and circle over the whole fullscreen map. With `isolate` the chain stops at the map's box; without it the new
+  end-to-end case fails (checked by removing it).
+- **Review.** One independent review subagent read `006cb5a`. Its findings, fixed in `5ef3961`: `closeListing` on a
+  directly loaded listing called the close of the overlay copy that the step back hid, so «Скрыть» left the hidden
+  listing on screen (a regression); the leave's transform moved the CTA bar and the cross on a scrolled listing; an
+  overlay copy at depth 0 faded out to its standalone twin; the settle could show the layer again during a slow
+  replace; the `@homi/i18n` no-access tables lacked `paused`. Running the tests also showed that `cn` kept both
+  animation classes while leaving; the entrance class is now dropped. Left as legacy: the layer takes no taps while
+  it leaves. Left for later: the swipe's same jump of the fixed children (KI-67, structural).
+- **Checks.** `pnpm test` (every project): app 217 files, 3 628 tests passed on `5ef3961`; `pnpm -r lint` and `pnpm -r
+  typecheck` exit 0. Mutation checks: `closeListing` without the direct-load rule, the layer without the depth-0 rule,
+  `listingOpened` always false, `failureOf` keeping `daily` on any status, the chrome rule without the listing, and
+  `NO_SOURCE` without `paused` each fail their new tests.
+- **Local end-to-end runs**, one build per batch, each spec alone (KI-32), cookie and header mode where the spec has
+  both. On `006cb5a` with the row-10 fix: `listing-open` 19 of 20 (the second opening of 999404 met two screens in the
+  layer; the case now reads the visible one), `gates` 11, `launch` 6, `shell` 19, `spot-map` 14, `listing-actions`
+  20, `photo-viewer` 6, `back` 11, `saved` 10, `map` 18, `feed` 23, `listing-contact` 14, `map-leaflet` 17, `map-lasso`
+  9, `session` 7, `city` 6, `data` 5, `crash` 4, `csp` 3, `boot-failure` 6, `smoke` 2, `filters` 22 passed;
+  `foundation` 18 of 19, `feed-radar` 0 of 10, `follow-nudge` 2 of 12 and `return-nudge` 0 of 16 failed only where
+  they need radars, which are off on this machine (KI-65); `radar-forms`, `radar-subscribe` and `radars` were not run
+  (KI-65). On `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10,
+  `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed.
+- **Left for the production track:** the regular deploy (no environment key, no migration), then the acceptance
+  checklist inside Telegram on staging on iOS, Android, Desktop and Web, including a reload inside one launch and the
+  spot map on a client that falls to Leaflet.

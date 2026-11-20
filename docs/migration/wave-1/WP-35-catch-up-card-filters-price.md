@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#93) |
+| Status | WAITING (merged in #93 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-34 (`lib/flags.ts` with the defaults of the pinned release) |
 | Size | about 420 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-006, SCR-007, SCR-013, SCR-018), §3.5 (price input), §3.6 (tokens), §4 (BR-APP-007, BR-APP-019, BR-APP-020, BR-APP-026, BR-APP-059, BR-APP-064, BR-APP-109, BR-APP-110), §5 (LB-APP-011, LB-APP-029), §5b (LB-APP-083); `02` (BR-API-195, BR-API-196); `09` §4.2 (DEV-017); `wave-1/baseline.md`, built code behind the pin, rows 1, 2, 11, 12, 20, 26, 31, 32, 38, 39, 40, 41, 42 |
