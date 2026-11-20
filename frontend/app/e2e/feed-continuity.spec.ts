@@ -291,7 +291,14 @@ test.describe("feed continuity: the radar sheet (radars on)", () => {
     });
     expect(place.x).toBeGreaterThan(0);
 
-    await visible(page, "[data-radar-find]").first().click();
+    // A tap on a find already in view: Playwright's own click would first scroll the first find into view and move
+    // the strip, so the find in view is clicked in the page.
+    await page.evaluate(() => {
+      const row = document.querySelector<HTMLElement>('[data-route="radar"] [data-radar-strip="finds"]')!;
+      const left = row.getBoundingClientRect().left;
+      const inView = [...row.querySelectorAll<HTMLElement>("[data-radar-find]")].find((find) => find.getBoundingClientRect().left >= left);
+      inView!.click();
+    });
     await expect(route(page, "listing")).toBeVisible();
     await press(page, "backButtonClicked");
 
