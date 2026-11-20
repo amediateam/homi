@@ -915,7 +915,7 @@
     "count_estimate": 3,
     "owner_after_migration": "landing app",
     "must_keep": true,
-    "status": "UNVERIFIED",
+    "status": "CONFIRMED (emitted) / UNVERIFIED (target)",
     "source": "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:80-92 (r38); $KVADRO_ROOT/docs/api.md:1199-1202, :1411-1412"
   }
 ]

@@ -135,8 +135,8 @@ the landing intake). `URL-NNN` is sequential.
    only in that release's diff (`DIFF:67b3942a8340/index.html:292-293`). The SEO equity at stake is real but modest,
    and the thin-page policy deserves a review (LB-SEO-012).
 9. **The showcase funnels visitors into SEO pages** (*since `67b3942a8340`, landing intake*). «Квартиры прямо
-   сейчас» (LND-065) sends its search form and its 12 district links to the backend's SEO area pages with a filter in
-   the address (`?rooms=&max=&owners=1`, URL-064), and its cards to backend listing pages (`obyavlenie/<id>/`,
+   сейчас» (LND-065) sends its search form (with a filter in the address, `?rooms=&max=&owners=1`, URL-064) and its 12
+   district links (no query) to the backend's SEO area pages, and its cards to backend listing pages (`obyavlenie/<id>/`,
    URL-063). Neither the filter semantics nor the listing pages are in our material (Q-SEO-022).
    - HOMI: DEC-95 — WP-61 builds the whole showcase, but its links open HOMI's Mini App: the cards the listing
      (`l_<number>-web`), the search and the districts the feed with that filter (DEV-067, WP-62). The SEO pages come
@@ -161,8 +161,8 @@ All 38 files under `site/` are prod files byte for byte, except `privacy.html`, 
 removed (`REC:107-109`; `RPT:b1b9a919ecc4:33`). There is no build step and no source map (`REC:9-13`). (*Since
 `67b3942a8340` and `65998117d6ec`, landing intake:* 35 → 36 → 38 files with `favicon.ico`, `favicon-48.png` and
 `favicon-96.png`. `REC:113` still says «35 из 36»; the release reports and `REL` say 38.) Sizes are bytes / lines of
-release `d9bbbc696337` (`wc -c`, `wc -l`); where `REC:24-35` gives other line counts (for example 1 412 for
-`landing.css`), the files win.
+release `d9bbbc696337` (`wc -c`, `wc -l`); where `REC:24-35` gives another line count (only `landing.css`: 1 412
+against 1 426), the file wins.
 
 | File | Size / lines | Role | Produced by | Status |
 | ---- | ------------ | ---- | ----------- | ------ |
@@ -876,8 +876,8 @@ audit's `fileCount 35` and data `fileCount 319` were of `c63da0e3476a`.)
   - (*Since `67b3942a8340`, landing intake:*) `Organization` grew: `alternateName` [«kvadro», «Kvadro», «kvadro2»,
     «Квадро», «KvadroApp»], the logo as an `ImageObject` 512 × 512 plus `image`, a ru `description` («Бесплатный
     сервис поиска жилья в Узбекистане: аренда и продажа квартир…»), `slogan`, `areaServed` Uzbekistan and `sameAs`
-    with the bot and Instagram; the uz/en pages keep the ru JSON-LD (`IDX:24-29`; the removed comment named it «для
-    поисковиков и ИИ-ассистентов», `DIFF:67b3942a8340/index.html:24-35`).
+    with the bot and Instagram; the uz/en pages keep the ru JSON-LD (`IDX:24-29`; the comment added in `67b3942a8340` named it «для
+    поисковиков и ИИ-ассистентов»; removed in `DIFF:d9bbbc696337/index.html:21`).
 - **Icons and manifest:** `logo.svg`, `favicon-32.png`, `apple-touch-icon.png`, `site.webmanifest`. (*Since
   `65998117d6ec`, landing intake:* plus `<link rel="icon">` for `favicon-48.png`, `favicon-96.png` and `icon-192.png`
   on every page, `IDX:30-36`; `favicon.ico` exists since `67b3942a8340` but no page links it.)
@@ -1968,7 +1968,7 @@ already captured a rule, the matching `BR-API` item is named.
     `/uz/<…>/<file>` and `/en/<…>/<file>` with a `301` to the unprefixed file (LND-038), so images, the favicon, lazy
     images, `img/snap` photos, later data fetches and `/en/privacy.html?lang=en` load again, each with one extra
     request. Links without a file name are not covered: the footer's SEO and «О сервисе» links (`/en/arenda/…`, now
-    34 of them) and the logo link `/en/en/` still lead under the prefix (presumably a `404`, not observed). The
+    27: 21 `arenda`, 4 `prodazha`, 1 `novostrojki`, 1 `o-servise`, `IDX:436-483`) and the logo link `/en/en/` still lead under the prefix (presumably a `404`, not observed). The
     showcase's links are built from the site root by the script and are not affected.
   - *Evidence:* `REC:100-106`; `LJS:2614-2661`; `IDX:432-488`; `RPT:67b3942a8340:43-47`.
   - **Proposed fix:**
@@ -2416,7 +2416,7 @@ domain changes. "Must keep" means the pattern has to keep resolving after cut-ov
 | URL-063 | `/obyavlenie/<id>/`, `/uz/elon/<id>/`, `/en/listing/<id>/` (backend listing pages; *since `67b3942a8340`* linked from the showcase cards, LND-065) | `/obyavlenie/<id>/` | seo | ru, uz, en | per listing (10 per deal on the page) | landing app (data from backend) | 301 | unknown (Q-SEO-022) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
 | URL-064 | `<section>/tashkent/[<district>/]?rooms=<1–4>&max=<USD>&owners=1`, sections `arenda`, `uz/ijara`, `en/rent`, `prodazha`, `uz/sotuv`, `en/sale` (*since `67b3942a8340`* the showcase search, BR-LND-026) | `/arenda/tashkent/yunusobod/?rooms=2&max=700&owners=1` | seo | ru, uz, en | 6 sections × 13 places × filters | landing app | 301 with query | low (filtered variants of URL-024, URL-026; Q-SEO-022) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
 | URL-065 | `/o-servise/`, `/uz/haqida/`, `/en/about/` (*since `67b3942a8340`* the footer's «О сервисе», LND-069) | `/o-servise/` | landing | ru, uz, en | 3 | landing app | 301 | low (Q-LND-014) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
-| URL-066 | `/sdat-kvartiru/?s=tenant`, `/uz/kvartira-ijaraga-berish/?s=tenant`, `/en/list-your-apartment/?s=tenant` (emitted by the Mini App's «Нашли жильё?» survey into chats, not by the landing; LND-068, Q-LND-012) | `https://kvadro.app/sdat-kvartiru/?s=tenant` | landing | ru, uz, en | 3 | landing app | 301 with query | low | yes (the links sit in chats) | UNVERIFIED |
+| URL-066 | `/sdat-kvartiru/?s=tenant`, `/uz/kvartira-ijaraga-berish/?s=tenant`, `/en/list-your-apartment/?s=tenant` (emitted by the Mini App's «Нашли жильё?» survey into chats, not by the landing; LND-068, Q-LND-012) | `https://kvadro.app/sdat-kvartiru/?s=tenant` | landing | ru, uz, en | 3 | landing app | 301 with query | low | yes (the links sit in chats) | CONFIRMED (emitted) / UNVERIFIED (target) |
 
 Sources per row are in `data/public-urls.json`. The SEO counts add up per language to 3 + 18 + 58 + 46 + 124 + 45 + 1 +
 35 + 1 + 2 + 1 + 1 + 1 = 336 (URL-023 – URL-035). (*Landing intake:* URL-063 – URL-066 are added here;
@@ -2465,11 +2465,12 @@ Support https://t.me/KvadroSupportBot[?start=l_<id>]
 | `LB-SEO` (bug 6, decision 6) | 12 | 0 | 11 | 1 | 0 |
 | `Q-LND` | 14 | — | — | — | — |
 | `Q-SEO` | 22 | — | — | — | — |
-| `URL` | 66 | 35 | 29 | 2 | 0 |
+| `URL` | 66 | 36 | 29 | 1 | 0 |
 
 An item with two labels («CONFIRMED (client) / DOCUMENTED_ONLY (producer)») is counted under its first. (*Landing
 intake:* LND-065 – LND-069, BR-LND-024 – BR-LND-029, LB-LND-017 – LB-LND-019, Q-LND-012 – Q-LND-014, Q-SEO-022 and
-URL-063 – URL-066 are new; URL-015 moved from UNVERIFIED to CONFIRMED.)
+URL-063 – URL-066 are new (URL-066 counted under CONFIRMED, its first label); URL-015 moved from UNVERIFIED to
+CONFIRMED.)
 
 The `URL` rows by kind are:
 
