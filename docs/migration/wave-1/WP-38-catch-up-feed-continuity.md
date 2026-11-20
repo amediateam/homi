@@ -335,6 +335,10 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   the frame hold fixes.
 - **CI on `1330323`:** `ci` success (run 44809560859); `e2e` success (run 44809560801): 392 passed, the radar specs
   and both modes of `feed-continuity.spec.ts` included, then the `@radars-off` run with 14 passed.
+- **CI on `7dd1b09`** (docs only): `e2e` failed twice in specs WP-38 does not touch — `foundation.spec.ts:195` (KI-63),
+  then on the rerun `radars.spec.ts:509` in header mode (`route.fetch: Test ended`). The second is a race of the
+  header-mode `/bff/session` route of `@homi/testing/playwright`: a test that ends with the exchange in flight fails
+  the next one. The route now forgives a closed page (KI-63).
 - **End to end.** `e2e/feed-continuity.spec.ts` was not run locally: this machine's API answered `500`, because its
   database host was unreachable (`No route to host`). The spec runs in CI. Its radar case needs radars on, which CI
   has.
