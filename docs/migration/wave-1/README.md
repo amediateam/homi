@@ -19,6 +19,10 @@ Five catch-up specifications, WP-34 … WP-38, were added on 2026-11-19 by the i
 places where merged code is behind the pinned legacy release. They are smaller than rule 3 asks (about 250 to 630
 changed lines each), because each is cut to be reviewed alone; they did not go through the verification pass.
 
+Ten specifications of the owner cabinet, WP-80 … WP-89, were added on 2026-11-20 by the owner-cabinet plan (DEC-69 …
+DEC-81), about 24 000 changed lines; they did not go through the verification pass. Their numbers follow no stage: a
+package number is a name, and its row in the tables below is its place.
+
 **Verification pass (2026-11-14).** Every specification was read in full against four things: the repository as it
 is today (files, classes, signatures, routes, config and env keys, tables, CI, generator commands), the other
 specifications (every name one package uses from another), `25` with the developer's answers, and whether each step
@@ -63,7 +67,8 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
 7. **A new legacy release** (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`) becomes a row at the top of the remaining
    queue: update the audit, the affected specifications, the stub fixtures and the legacy translator (`25` §8).
 
-Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `DONE`.
+Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `DONE`. A package number is a name;
+its row is its place in the queue.
 
 ## Stage 0 — Start
 
@@ -100,8 +105,8 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-30](WP-30-radars.md) | Radars | WP-25, WP-26 | WAITING (merged in #86 on 2026-11-19; production track: the regular deploy, `RADAR_CREATION_ENABLED` left unset (DEC-51); then the "soon" state checked inside Telegram on staging; the other checklist lines run there in WP-57) |
 | [Intake `index-BnFvC-Ft`](baseline.md#intake-log) | Legacy release intake (rule 7): the card style of the bot's listing cards — audit, specifications, the contract on stubs (`card_style`, `POST /settings/card-sample`), fixtures, the `legacy` catalogue | — | WAITING (merged in #88 on 2026-11-19; production track: the regular deploy — stubs only, no new environment key, no migration) |
 | [Intake `index-CBlEKxdL`](baseline.md#intake-log) | Legacy release intake (rule 7): the owner cabinet «Сдать квартиру», the contact request to an owner and the owner chip as legacy has them — audit, the specifications of the changes outside the cabinet, the `legacy` catalogue; no contract change. The built code it leaves behind the pin is listed in [`baseline.md`](baseline.md#built-code-behind-the-pin) | intake `index-BnFvC-Ft` | WAITING (merged in #89 on 2026-11-19; production track: the regular deploy — texts only, no new environment key, no migration) |
-| [Intake `index-CIa0Ldj2`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 18 Nov 2026, which changes built screens (the feed, the listing screen, reports, both maps, radars, filters) — audit, the developer's decisions DEC-58 … DEC-68, specifications, the contract on stubs (41 pairs), the `legacy` catalogue. It defines the catch-up packages WP-34 … WP-38, which bring the built code up to the pin ([`baseline.md`](baseline.md#built-code-behind-the-pin)) | intake `index-CBlEKxdL` | REVIEW (#90) |
-| Owner-cabinet plan | The developer's decisions of 2026-11-19 on the owner cabinet, the cabinet packages and their rows, the specification and contract edits of the seeker side | intake `index-CIa0Ldj2` | TODO |
+| [Intake `index-CIa0Ldj2`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 18 Nov 2026, which changes built screens (the feed, the listing screen, reports, both maps, radars, filters) — audit, the developer's decisions DEC-58 … DEC-68, specifications, the contract on stubs (41 pairs), the `legacy` catalogue. It defines the catch-up packages WP-34 … WP-38, which bring the built code up to the pin ([`baseline.md`](baseline.md#built-code-behind-the-pin)) | intake `index-CBlEKxdL` | WAITING (merged in #90 on 2026-11-19; production track: the regular deploy — stubs and texts only, no new environment key, no migration) |
+| Owner-cabinet plan | The developer's decisions DEC-69 … DEC-88 on the owner cabinet, the ten cabinet packages WP-80 … WP-89 with their specifications and rows, the specification edits of both sides, the audit's cabinet rows in `06`, `07`, `08`, `09`, `16`, and the operator addendum | intake `index-CIa0Ldj2` | REVIEW (#91) |
 | [WP-34](WP-34-catch-up-feedback-flags-reports.md) | Catch-up: failure feedback, flags and reports | intake `index-CIa0Ldj2`, WP-30 | TODO |
 | [WP-35](WP-35-catch-up-card-filters-price.md) | Catch-up: card, facts, filters and price input | WP-34 | TODO |
 | [WP-36](WP-36-catch-up-listing-gates-shell.md) | Catch-up: listing states, gates and the Telegram shell | WP-35 | TODO |
@@ -109,7 +114,11 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | TODO |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38 | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
-| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-38 | TODO |
+| [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | TODO |
+| [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36 | TODO |
+| [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26 | TODO |
+| [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | TODO |
+| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-38, WP-80 … WP-83 | TODO |
 
 ## Stage C — API
 
@@ -123,7 +132,11 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-45](WP-45-radars-service.md) | Radars: service, limits, relax, previews | WP-42, WP-44 | TODO |
 | [WP-46](WP-46-radar-matching.md) | Radar matching and delivery planning | WP-45 | TODO |
 | [WP-47](WP-47-action-log.md) | Action log, server-side analytics, retention, erasure | WP-44 | TODO |
-| [WP-48](WP-48-stubs-off.md) | Stubs off: contract tests across drivers, flags to real sources | WP-41 … WP-47 | TODO |
+| [WP-84](WP-84-owner-listings-native.md) | Owner listings: native service, boundaries, harvested medians | WP-40, WP-42, WP-44, WP-46, WP-47 | TODO |
+| [WP-85](WP-85-contact-requests.md) | Contact requests: native service and the owner's answers | WP-84, WP-43 | TODO |
+| [WP-86](WP-86-mixed-feed.md) | The mixed feed: owner listings in feed, count, new, flow, map and card | WP-84, WP-85, WP-42, WP-46 | TODO |
+| [WP-48](WP-48-stubs-off.md) | Stubs off: contract tests across drivers, flags to real sources | WP-41 … WP-47, WP-84 … WP-86 | TODO |
+| [WP-87](WP-87-request-relay.md) | Relay of requests on legacy `gate` listings | WP-85, WP-41, WP-50 | WAITING (operator, points 14 – 21 of the addendum) |
 
 ## Stage D — Bot
 
@@ -136,8 +149,10 @@ Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `D
 | [WP-54](WP-54-bot-radar-wizard.md) | Radar wizard | WP-53, WP-45 | TODO |
 | [WP-55](WP-55-bot-radar-screens.md) | Free text and voice, poll, radar list and card, edit | WP-54 | TODO |
 | [WP-56](WP-56-bot-settings-owner-privacy.md) | Settings, owner verification, privacy, erasure | WP-52, WP-47 | TODO |
+| [WP-88](WP-88-bot-owner-phone.md) | Bot: the owner's phone and the way back to the draft | WP-56, WP-84 | TODO |
 | [WP-57](WP-57-bot-sending.md) | Sending: pacing, outbox, quiet hours, digest, withdrawn cards, broadcasts; the radar launch link `?radar=<id>` (DEC-61) | WP-53, WP-46 | TODO |
-| [WP-58](WP-58-bot-profile-tests.md) | Bot profile as code, action log, conversation tests, pass inside Telegram | WP-52 … WP-57 | TODO |
+| [WP-89](WP-89-bot-requests-switch-on.md) | Bot: requests to owners, answers to seekers, the operators' notice, the switch-on | WP-57, WP-85, WP-88, WP-53, WP-86 | TODO |
+| [WP-58](WP-58-bot-profile-tests.md) | Bot profile as code, action log, conversation tests, pass inside Telegram | WP-52 … WP-57, WP-88, WP-89 | TODO |
 | [WP-59](WP-59-support-bot.md) | Support bot: a second bot that relays between a person and the operators' private chats | WP-58 | TODO |
 
 ## Stage E — Landing

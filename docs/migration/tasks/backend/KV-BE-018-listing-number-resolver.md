@@ -5,7 +5,7 @@
 | Status | TODO |
 | Owner | Backend (track: development) |
 | Complexity | S |
-| Feature IDs | F-LISTING-001, F-SHARE-002 |
+| Feature IDs | F-LISTING-001, F-SHARE-002, F-OWNER-009 |
 | Dependencies | KV-DB-008, KV-BE-014; decision CF-003 (KV-DB-004 ADR) |
 
 ## Goal
@@ -13,6 +13,7 @@
 One resolver turns any public listing number — from a legacy route, a deep link, a bot callback, a media path or a
 migrated favourite — into the current listing, following merge aliases to the survivor, and one writer records aliases
 so that chains never form. New listings get their number from the sequence that starts above every preserved number.
+Since the owner-cabinet plan it also resolves the native range and routes by number, built by WP-80 and WP-86.
 
 ## Legacy reference
 

@@ -59,7 +59,9 @@ a pure service (SEC-REQ-001):
 
 `TelegramInitData` (final readonly, `App\Services\Identity`): `telegramUserId`, `isPremium`, `hasUsername`,
 `hasPhoto`, `allowsWriteToPm`, `languageCode`, `authDate`, `startParam`, `fingerprint` (first 12 hex of SHA-256 of
-`hash`). It never holds a name, a username or a photo address (SEC-REQ-004). Exceptions
+`hash`). It never holds a name, a username or a photo address (SEC-REQ-004). The request service of WP-85 reads the
+seeker's first name from the launch data the Mini App sends with a request, verified with this verifier (DEC-76);
+neither `users` nor `TelegramInitData` holds it (*added by the owner-cabinet plan*). Exceptions
 `App\Exceptions\Identity\InvalidInitData` (internal reason enum: `too_large`, `duplicate_key`, `missing_hash`,
 `bad_user`, `bad_signature`, `future_auth_date`) and `InitDataExpired`; neither message contains the raw value. They
 render as `401 invalid_init_data` and `401 auth_expired`.
@@ -290,6 +292,8 @@ and asserts that the three names are in Telescope's hidden lists.
 
 - [ ] Sign-in with a value signed by the environment's bot token works; any other value is refused with the right code.
 - [ ] `GET /me`, `GET /settings`, `PATCH /settings` and sign-in answer with `meta.source = native`; shapes equal WP-11.
+      The `owner` object of `GET /me` answers `{pending: 0, has_listings: false, waitlisted: false}` here; its values
+      come from WP-84 and WP-85 (*added by the owner-cabinet plan*).
 - [ ] Tokens carry only `app:read` and `app:write`, expire, are capped at 5 per user and are pruned.
 - [ ] The gate runs on every bearer route; `access:block` takes effect within 2 seconds; mode `open` lets everyone in.
 - [ ] With `ACCESS_PAUSED` on every bearer route and sign-in answer `reason: "paused"` and the public methods still

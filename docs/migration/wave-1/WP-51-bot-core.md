@@ -45,6 +45,7 @@ alert, the slow-down notice and the apology after a failed update.
 | Keys of flagged wording (`DEV` items) and of texts legacy does not have, other than the seven shared keys below | the package that owns the flag or the scenario |
 | A decoder for legacy `callback_data`, a reset of menus left by another bot (KV-TG-058, KV-TG-057) | not built: this bot has no old messages (`25` §6) |
 | The LLM gateway | WP-55 |
+| The owner cabinet's bot texts, its callback actions `rq` and `mo`, the conversation kind `OwnerPhone` | WP-88 (the owner's phone), WP-89 (requests, answers, the operators' notice) (*added by the owner-cabinet plan*) |
 
 ## Decisions that bind this package
 
@@ -459,6 +460,8 @@ Registry of actions. Each package registers its rows and adds them to `docs/infr
 | `nop` | `k1:nop` (settings section headers, answered silently) | WP-56 |
 | `ow` | `k1:ow:<rm, rmy or rmn>` | WP-56 |
 | `pv` | `k1:pv:<dl, dly or dln>` | WP-56 |
+| `rq` | `k1:rq:<request ULID>:<gv, dc, rf, ra, ud or lt>` (the owner's answer to a contact request) | WP-89 (*added by the owner-cabinet plan*) |
+| `mo` | `k1:mo:<owner listing ULID>:<hd, hdy or hdn>` (the operators' «Снять») | WP-89 (*added by the owner-cabinet plan*) |
 
 The rows of WP-52 and WP-53 repeat their specifications; the others come from the earlier task files. The
 specification of the registering package is authoritative for its operations; the grammar and the rule "one action,

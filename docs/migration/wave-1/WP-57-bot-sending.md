@@ -46,6 +46,10 @@ Out:
   log): not built; HOMI's bot has no predecessor.
 - An operator screen for broadcasts and takedowns: the admin panel is not in Wave 1 (DEC-43); artisan commands
   stand in.
+- The owner cabinet's request messages and the operators' notice — WP-89. They are not outbox items of WP-46 (its
+  outbox is unique per user and listing and groups digests): they leave as paced jobs on `notifications` through
+  this package's `TelegramPacer` and `PaceTelegramSends`, with a ledger of their own (`bot_notices`), and stop with
+  `delivery:pause` like every paced send (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 
@@ -224,6 +228,10 @@ How HOMI learns of a withdrawal in Wave 1 — legacy sends no events:
    `listing_number` and `rented_at` only. This PR adds the nullable column `listing_marks.taken_down_at` (additive
    migration) and makes `EloquentOverlayData::rentedByVotes()` of WP-44 return such numbers too, also while the
    rented detector is off. Until the admin panel exists this is the operator's tool (SEC-REQ-040).
+4. The status changes of a HOMI owner listing (WP-84) raise the same event through WP-89's listener: `source` when it
+   is removed, let or held (by the operators or by votes), `takedown` when the operators withdraw it (votes only hold
+   it), nothing when it is paused. So its sent cards become «Объявление снято» as any other listing's
+   (*added by the owner-cabinet plan*).
 
 Editing:
 

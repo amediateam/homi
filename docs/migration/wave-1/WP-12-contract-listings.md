@@ -126,6 +126,7 @@ The same 25 keys form the **filters object** in flow options and radars: every k
 | `market` | no | `market`, `median_delta`, `median_tone` | `tone`: `good`, `check`, `suspicious`, `same`, `mixed`, `no_repair`, another string, or `null` |
 | `favorite`, `viewed` | no | per-user flags | from HOMI's own data |
 | `source_ref` | yes | source link of the card | channel without `@`, numeric post id |
+| `origin` | no | — | `legacy` or `native` (a listing placed in HOMI's owner cabinet); also on map points; built on stubs by WP-80 (*added by the owner-cabinet plan*) |
 
 ### `GET /listings` — legacy: the feed (API-004)
 
@@ -232,6 +233,12 @@ preview object only and records no view. Without it `data` is the preview plus:
   `contact_paid` are grouped under `contact`; `history` became `price_history`; `owner` became
   `owner_label`; `original_text`, `original_url`, `post_deleted` are grouped under `original`; `median*` under
   `comparison`; `market_code` under `market.code`.
+- The owner cabinet (WP-80) adds to the card `origin`, `owner` (`tier`, `mine`, `listing_id`, `response_minutes`,
+  `description`, the last masked in `fromArray()`) and `contact.mode` and `contact.request`; for an owner listing
+  `price_history[].channel` and `.url` are `null`, `sources` is `[]`, `original.text` and `.url` are `null`, and
+  `author` is a `phone` author without a digit of the number (`label` «Хозяин»; no new `kind`). The stub numbers
+  `10000001` … `10000008` (native) and `100024`, `100025` (legacy-shaped owner variants) carry the cases. All of it is
+  built on stubs by WP-80 (*added by the owner-cabinet plan*).
 
 ### Phone numbers in listing texts
 

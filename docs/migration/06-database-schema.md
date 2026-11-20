@@ -128,6 +128,10 @@ rows).
 | ENT-057 | CSP violation report | Landing / SEO | `UNVERIFIED` | drop |
 | ENT-058 | Client device state (`kv-*` keys) | Outside the DB | `CONFIRMED` | not migrated (client-side) |
 | ENT-059 | Telegram-side chat state (commands, menu button, sent messages) | Outside the DB | `DOCUMENTED_ONLY` | not migrated; reset plan |
+| ENT-060 | Owner listing (cabinet «Сдать квартиру») | Owner cabinet | `DOCUMENTED_ONLY` | not migrated (DEC-40); HOMI's owner listings are native (DEC-70) |
+| ENT-061 | Owner listing photo | Owner cabinet | `DOCUMENTED_ONLY` | not migrated (DEC-40); HOMI's owner listings are native (DEC-70) |
+| ENT-062 | Contact request (seeker → owner) | Owner cabinet | `DOCUMENTED_ONLY` | not migrated (DEC-40); HOMI's owner listings are native (DEC-70) |
+| ENT-063 | Owner waitlist entry | Owner cabinet | `DOCUMENTED_ONLY` | not migrated (DEC-40); HOMI's owner listings are native (DEC-70) |
 
 Common field-table columns: **Field** (logical name; wire name in backticks when it differs or is the source),
 **Type** (PostgreSQL type the value requires), **Null**, **Values / notes**, **Evidence**, **St.**
@@ -1081,6 +1085,60 @@ Configuration values the API serves, not user data:
   grammar to decode old buttons (`Q-BOT-017`), (b) ENT-010 to find card messages, (c) the list of chats whose command
   scope was set, derivable from ENT-002 `locale` (`Q-BOT-014`, `Q-BOT-020`).
 
+### 2.9 Owner cabinet (release `index-CBlEKxdL.js`)
+
+The four entities of the cabinet «Сдать квартиру» and of the seeker's request to an owner are known only from the
+contract of that release and the Mini App code (`08` §1.8; `02` §12a; `03` SCR-049 … SCR-062). No server or bot code
+was seen, so their legacy storage is `UNVERIFIED`, as for every entity of this document. None is migrated (DEC-40):
+HOMI's owner listings and requests are its own tables (DEC-70; WP-84, WP-85).
+
+#### ENT-060 — Owner listing (cabinet «Сдать квартиру») · `DOCUMENTED_ONLY`
+
+- **Purpose.** A flat its owner lists through the Mini App, from the draft to the public listing it becomes
+  (BR-API-159 … BR-API-178; `08` API-037 … API-053).
+- **Fields (contract).** `id`; `status` (`draft`, `active`, `paused`, `rented`, `removed`, `rejected`) with the flags
+  `withdrawn` (taken down after complaints) and `held` (paused by support) (BR-API-159, BR-API-177); `published_at`;
+  `listing_id` (the public listing); `form` — city, district, landmark, point (5 decimals), room or rooms, area,
+  floors, price and currency, renovation, furniture, tenants, pets and a description whose phone numbers the server
+  hides (BR-API-164, BR-API-165); `contact_mode` (`gate`, `open` or `null`, BR-API-173); `phone_set` and
+  `phone_display`, the number itself and not a hash (BR-API-172, LB-API-056); `reject_reason` (BR-API-171);
+  `shown_point {lat, lon, radius_m}`, the circle of about 500 m seekers see instead of the point (BR-API-167); `stats`
+  (BR-API-178). At most `max` listings at once, 2 today (BR-API-162).
+- **Storage status.** `UNVERIFIED`: where and how long the number is kept is known only from an uncommitted landing
+  privacy text (Q-API-072); the derivation of `shown_point` is unknown (Q-API-074).
+- **Migration impact.** Not migrated (DEC-40). HOMI keeps its owners' listings in its own table, the number in plain
+  text with the listing (DEC-72; `16` SEC-036), and numbers them from a fixed floor (§4.3).
+
+#### ENT-061 — Owner listing photo · `DOCUMENTED_ONLY`
+
+- **Fields (contract).** `id`; the order (the first photo is the cover; `photos/order` takes the full list of ids);
+  the URL, with a `.s.jpg` thumbnail. Uploaded one per call as the multipart field `file`, at most 10 per listing
+  (BR-API-166; `08` API-041 … API-043).
+- **Storage status.** `UNVERIFIED`: whether the server re-encodes an upload and strips EXIF and GPS data is unknown
+  (Q-API-073; `16` SEC-037).
+- **Migration impact.** Not migrated (DEC-40); HOMI stores the photos of its owner listings through its own media
+  pipeline (WP-84).
+
+#### ENT-062 — Contact request (seeker → owner) · `DOCUMENTED_ONLY`
+
+- **Fields (contract).** `id`; the listing; the seeker; `name`, the seeker's Telegram name shown to the owner
+  (BR-API-180); `who` (`one`, `couple`, `family`, `students`, `friends`), `people` (1 … 20), `move_in` (at most 32
+  characters) and `message` (at most 500) (BR-API-183); `status` (`pending`, `given`, `declined`, `agent`, `expired`,
+  `cancelled`, BR-API-186); `agent_marked`; the flags `can_reason`, `can_undo` and `can_late`, by which the server
+  decides which answers the owner may still give (BR-API-180). The seeker reads it only as `my_request` of the card
+  (BR-API-186, BR-API-187).
+- **Storage status.** `UNVERIFIED`: whether the name is stored with the request or read when the list is shown
+  (Q-API-077); expiry and the undo window (Q-API-075).
+- **Migration impact.** Not migrated (DEC-40); HOMI's requests are its own, with the seeker's first name kept with the
+  request and erased with it (DEC-76; WP-85).
+
+#### ENT-063 — Owner waitlist entry · `DOCUMENTED_ONLY`
+
+- **Purpose.** A user whose number was refused as a realtor's, promised a bot message «когда откроем» (BR-API-182;
+  `04` BOT-091).
+- **Storage status.** `UNVERIFIED`: what the entry holds and who sends the message is unknown (Q-BOT-049).
+- **Migration impact.** Not migrated (DEC-40); HOMI keeps its own waitlist (WP-84).
+
 ## 3. ER diagram (logical, legacy)
 
 Logical relations only; legacy table boundaries are unknown. Cardinalities follow the rules in §2 and §6. Entities
@@ -1235,6 +1293,7 @@ Everything in this section is `PROPOSED`: it is the input for `10-target-archite
 | `blocked_authors` | ENT-017 | New | `id` ULID, `number bigint unique` (= legacy entry id when numeric), `(user_id, author_id)` unique, `created_at`. | Entry `id` (= `number`) used in `DELETE /api/hidden/:id`. | `PROPOSED` |
 | `listing_votes` | ENT-018 | New | `(user_id, listing_id, reason, weight numeric(4,3), created_at, withdrawn_at)`, unique `(user_id, listing_id, reason)`; author-level effects recorded in `listing_authors`. | Response `{hidden}` for every reason. | `PROPOSED` |
 | `owner_verifications` | ENT-019 | New | `(user_id pk, phone_hmac bytea, verified_at, legacy_hash bytea null, legacy_hash_alg text null, reverify_due_at)`. | — | `PROPOSED` |
+| `owner_listings`, `owner_listing_photos`, `contact_requests`, `owner_waitlist` | ENT-060 … ENT-063 | New (Wave 1, native: DEC-70) | see WP-84 and WP-85 | — | `PROPOSED` |
 | `found_answers` | ENT-020 | New | `(user_id, answer, trigger, where, radar_id null, channel, created_at)`; `where` linked to the latest `elsewhere` row. | — | `PROPOSED` |
 | `user_action_log` | ENT-021 | New | Partitioned monthly by `created_at`, 180-day retention by dropping partitions; `props jsonb` whitelisted keys only (LB-DATA-015). | `/api/events` accepts unknown fields and answers `204`. | `PROPOSED` |
 | — | ENT-022 | Out of scope | Support bot not audited. | — | `PROPOSED` |
@@ -1275,7 +1334,10 @@ Everything in this section is `PROPOSED`: it is the input for `10-target-archite
    `2026_11_08_171043_create_source_listings_table.php`) and `listings.number bigint unique` carries the legacy value;
    new listings take numbers from a sequence started above the legacy maximum plus a safety gap (`14` §3). Legacy
    routes, deep links, SEO and media paths use `number`; `/api/v1` exposes both. The same pattern applies to radars
-   and blocked-author entries, whose ids may be embedded in old bot `callback_data` (`Q-BOT-017`).
+   and blocked-author entries, whose ids may be embedded in old bot `callback_data` (`Q-BOT-017`). HOMI's owner
+   listings of Wave 1 take numbers from a fixed floor above any legacy id (`owner.native_number_floor`, 10 000 000;
+   WP-80; default 4 of `decisions/2026-11-19-developer-answers.md`, an integrator default), which serves the Wave 2
+   sequence as well.
 2. **USD as the filter currency** (CF-005). Legacy radars and filters are USD integers (LB-API-027); ADR-0006 stores
    source currency. Listings keep both: source amount + currency and `price_usd_cents` derived with HOMI's own rate.
    Migrated radars carry `price_currency = 'USD'`.
@@ -1558,14 +1620,14 @@ wire side and only legacy docs state the server side, both are given.
 
 | Prefix | Count | By status |
 | ------ | ----: | --------- |
-| `ENT-` | 59 | `CONFIRMED` 34, `DOCUMENTED_ONLY` 19, `UNVERIFIED` 6 (entity existence; legacy storage is `UNVERIFIED` for all 59) |
+| `ENT-` | 63 | `CONFIRMED` 34, `DOCUMENTED_ONLY` 23, `UNVERIFIED` 6 (entity existence; legacy storage is `UNVERIFIED` for all 63) |
 | `BR-DATA-` | 40 | `CONFIRMED` 21, `DOCUMENTED_ONLY` 19 (first label of each row; mixed rows name both) |
 | `LB-DATA-` | 20 | `CONFIRMED` 12, `DOCUMENTED_ONLY` 2, `UNVERIFIED` 6 (all `decision` except LB-DATA-004 `quirk`) |
 | `Q-DATA-` | 50 | — (each is an open check) |
 
 ### 7.2 Findings that matter most for the migration
 
-1. **No storage fact is known.** 59 entities are reconstructed; the wire shapes are proven, the storage is not.
+1. **No storage fact is known.** 63 entities are reconstructed; the wire shapes are proven, the storage is not.
    `Q-DATA-001` … `Q-DATA-005` (schema, counts, sample, access path, legal basis) block every executable step of
    `14-data-migration-plan.md`.
 2. **Numeric listing ids are part of the public surface** (BR-DATA-002). This model follows CF-003 option A (ULID key

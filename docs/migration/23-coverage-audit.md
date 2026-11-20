@@ -210,8 +210,8 @@ Coverage of the confirmed surface, with explicit denominators:
   - `start_param`.
   - The `tgWebAppData` hash.
   - Safe-area and theme CSS variables.
-- **Covered:** 34/34 (TMA-001…TMA-045). The absences are recorded too: TMA-018, TMA-024, TMA-027, TMA-032, TMA-034
-  and TMA-038.
+- **Covered:** 34/34 (TMA-001…TMA-045). The absences are recorded too: TMA-018, TMA-024, TMA-027, TMA-032
+  and TMA-038 (TMA-034 is used by the owner form since `index-CBlEKxdL.js`, WP-81).
 - **Misses:** none.
 
 ### 1.8 `TODO: inferred from build`

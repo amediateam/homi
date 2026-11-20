@@ -72,8 +72,10 @@ never sees this exception.
 
 A limit that is counted per day carries `reason: "daily"` beside the code `rate_limited`, as `access_denied` carries
 its `reason` (DEC-59): the `ApiException` `App\Exceptions\Listings\DailyLimitReached` (429, `rate_limited`, the extra
-key `reason`, `Retry-After`). Every other limit, the `ThrottleRequestsException` row above among them, has no
-`reason` (*added by the intake of `index-CIa0Ldj2.js`*).
+key `reason`, `Retry-After`). The request limits of the owner cabinet use the same code with `reason`
+`requests_fast`, `requests_day` or `requests_week` (WP-80; integrator default 2 of the owner-cabinet plan; *added by
+the owner-cabinet plan*). Every other limit, the `ThrottleRequestsException` row above among them, has no `reason`
+(*added by the intake of `index-CIa0Ldj2.js`*).
 
 `ApiController` gains two helpers; the existing ones stay, except that `error()` gains a fourth parameter
 `string $code = 'error'` and always writes it (it is the one place that still builds an error body without `code`;

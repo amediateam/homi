@@ -148,7 +148,9 @@ Rules of the tree:
 `routes.radarEdit(id)`, `routes.radarFound(q)`, `routes.settings()`, `routes.settingsPage(name)`,
 `routes.welcomeLanguage()`, `routes.welcomeCity()`, `routes.noAccess(reason?)`, `routes.outside()`. Builders
 return locale-less paths; `Link`, `useRouter`, `usePathname`, `redirect` from `frontend/app/i18n/navigation.ts`
-add the locale.
+add the locale. The owner cabinet's addresses (`/owner/*`, `/settings/owner/*`,
+`/listing/[number]/{contact,owner,requests}`) and their `parentOf` rules are added by WP-81 … WP-83 (*added by the
+owner-cabinet plan*).
 
 Pure helpers in the same file, used by WP-21 and WP-32:
 

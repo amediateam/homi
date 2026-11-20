@@ -1679,8 +1679,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   and closing «Мои объявления»), `src/features/owner/OwnerListings.jsx:307-320`, `:352` (on open, on `version`, on
   retry, after every status change and after closing «Отклики»), `src/features/owner/OwnerForm.jsx:214-219` (a new
   form, for «С возвращением!»).
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `GET /api/v1/owner/listings` (native, WP-80 on stubs, WP-84; DEC-70); the pending count moves to
+  `GET /me`.
 - **Tests:** positive — a user with no listings gets `items: []` and `can_add: true`; a user at `max` gets
   `can_add: false`; `past` counts only finished listings; isolation — another user's listings never appear; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-162; `03` SCR-032, SCR-049,
@@ -1706,8 +1706,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   with a retry, and the retry posts again (Doc r31:1434-1435, :1286).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1434-1435, :1286; client
   `src/lib/api/owner.js:30-34`, `src/features/owner/OwnerForm.jsx:183-238`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `POST /api/v1/owner/listings`: the caller's untouched draft when one exists (DEV-054); off while
+  `OWNER_CABINET_ENABLED` is off (DEC-81).
 - **Tests:** at the limit → `409`; below it → `200` or `201` (record legacy) with `photos: []` and `form: {}`;
   repeated calls → per Q-API-068 (a new draft each time, or the untouched one again); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-162, BR-API-163; `03`
@@ -1738,8 +1738,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1436-1438, :1346-1348; client
   `src/lib/api/owner.js`, `src/features/owner/OwnerForm.jsx:183-238` (the load), `:708-721` (the re-read),
   `:1484-1620` (the poll), `src/features/owner/OwnerPanel.jsx` (the panel).
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `GET /api/v1/owner/listings/{id}` (native); the only answer with the true point and the owner's
+  own number (DEC-72).
 - **Tests:** an id of another user → not found or forbidden (the legacy status is unknown, Q-API-069); the poll sees
   `phone_set` after the bot processes the contact; `shown_point` stays the same between reads (Q-API-074); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-167, BR-API-170, BR-API-171;
@@ -1770,8 +1770,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   BR-APP-079).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1373-1391, :1439-1442, :1287-1288; client
   `src/lib/api/owner.js`, `src/features/owner/OwnerForm.jsx:245-337`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `PATCH /api/v1/owner/listings/{id}` (native); every save of a published listing is live
+  (DEC-80).
 - **Tests:** `null` clears a field; a partial body leaves the other fields; `floor > floors_total` →
   `422 invalid:floor`; a point outside the country → `422 invalid:point`; a rented or removed listing → `409`; a
   phone number in `description` is hidden on the public card; auth.
@@ -1803,8 +1803,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   BR-APP-082).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1445, :1230-1231; client
   `src/lib/api/owner.js:57-70`, `src/features/owner/OwnerForm.jsx:435-524`, `src/features/owner/shrinkPhoto.js:3-26`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `POST /api/v1/owner/listings/{id}/photos` (native, `HashedUploader`: re-encoded, no
+  metadata).
 - **Tests:** an 11th photo → `photo:too_many`; a non-image → `photo:not_image`; an oversize file → `photo:too_big`;
   an original with EXIF and GPS data, and a HEIC or PNG sent as `photo.jpg` → record what legacy stores and serves
   (`03` LB-APP-061; Q-API-073); auth.
@@ -1830,8 +1830,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** a generic toast-like line; a network failure → `own.actionOffline`.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1447; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:511-524`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `DELETE /api/v1/owner/listings/{id}/photos/{photo}` (native); the Mini App offers an undo first
+  (DEV-057).
 - **Tests:** deleting the cover makes the next photo the cover; deleting the last photo of an active listing → per
   Q-API-070 (a published listing without a photo breaks the rule of «Дальше»); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082,
@@ -1855,8 +1855,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** a message line in the photos section of the form.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1447; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:492-510`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `PUT /api/v1/owner/listings/{id}/photos/order`
+  (native).
 - **Tests:** ids that do not match the listing's photos → refused (`422` expected; record legacy); the order is kept
   as sent; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` BR-APP-082; Q-API-069.
@@ -1881,8 +1881,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** the previous choice comes back, with an error haptic and an error line in the footer.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1448-1449, :1365; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:644-667`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `PUT /api/v1/owner/listings/{id}/contact-mode` (`request` or `phone`; a new listing starts in
+  `request`, DEV-055).
 - **Tests:** both values are accepted; any other value → `422` (record legacy); a mode change on an active listing
   changes `contact_mode` of the public card (API-008); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-173; `03` SCR-055,
@@ -1918,8 +1918,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   BR-APP-087.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1450-1454; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:668-741`; the text `src/features/owner/owner.js:131`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `POST /api/v1/owner/listings/{id}/publish` (native; post-moderation, DEC-73); the phone window
+  is `POST …/phone-request`.
 - **Tests:** a draft without a phone → `missing:phone`; at the limit → `missing:limit`; a realtor's phone →
   `rejected:agent` and `status: "rejected"`; publishing a listing that is already published saves the edits and keeps
   `published_at`; a paused listing → per Q-API-070; auth.
@@ -1951,8 +1951,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** an error haptic and the toast `own.actionOffline` or `common.saveFailed` (`03` BR-APP-088).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1455-1457, :1358-1359; client
   `src/lib/api/owner.js`, `src/features/owner/OwnerListings.jsx:322-361`, `src/features/owner/OwnerPanel.jsx:87-113`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `PUT /api/v1/owner/listings/{id}/status`; a draft or a rejected listing is deleted with `DELETE
+  …/{id}` (DEV-056).
 - **Tests:** `active` on a `held` listing → refused; `rented` closes the waiting requests and tells those seekers
   through the bot; `removed` on a draft deletes it; the transitions out of `rented` and `removed` → refused (record
   legacy for all four, Q-API-070); auth.
@@ -1978,8 +1978,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** ignored silently.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1289, :1460-1462; client `src/lib/api/owner.js`,
   `src/lib/ownerPending.js:6-57`, `src/app/App.jsx:141-147`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** Not built: the count is `owner.pending` of `GET /api/v1/me` (fix of
+  LB-APP-066).
 - **Tests:** a user without owner listings → `{"pending": 0}`; the count equals the sum of `stats.pending` of the
   user's listings; the body always has a numeric `pending`; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-179; `03` SCR-006, SCR-032,
@@ -2008,8 +2008,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1413-1427, :1463; client
   `src/lib/api/owner.js:122-127`, `src/features/owner/OwnerListings.jsx:477-479`,
   `src/features/owner/OwnerPanel.jsx:271`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `GET /api/v1/owner/listings/{id}/requests` (native, cursor list; the form per listing
+  only).
 - **Tests:** only requests to the caller's own listings; `who` only from the list of §1.8; the order (newest first?)
   → record legacy (Q-API-075); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-159, BR-API-180; `03`
@@ -2049,8 +2049,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
   минут»; any other error → a toast (Doc r31:1464-1466; `03` BR-APP-090).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1464-1466; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerListings.jsx:493-560`; the texts `src/features/owner/owner.js:219-234`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `POST /api/v1/owner/requests/{id}/answer` (native,
+  WP-85).
 - **Tests:** `give` delivers exactly one bot message with the number; `decline` and then `undo` within 10 minutes
   sends nothing to the seeker; `undo` after 10 minutes → `409`; `late` on a request that was not `given` → `409`; a
   seeker marked `agent` cannot send a new request to the same owner (record legacy for all five, Q-API-075,
@@ -2078,8 +2078,9 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** an error haptic, and the button stays.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1469-1470; client `src/lib/api/owner.js`,
   `src/features/owner/OwnerForm.jsx:1639-1655`; the text `src/features/owner/owner.js:110`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `PUT /api/v1/owner/waitlist` (native; `owner.waitlisted` of `GET /me`, fix of
+  LB-APP-071). The contract keeps it, but HOMI's Mini App offers no entry to it: HOMI rejects nobody as a realtor
+  (default 26 of `decisions/2026-11-19-developer-answers.md`; DEC-82).
 - **Tests:** a second call does not add a second entry; a user without an `agent` rejection → record legacy; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-182; `03` SCR-054,
   LB-APP-071; Q-API-069; Q-BOT-049 in `04`.
@@ -2107,8 +2108,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** silent: the label becomes `own.pickNoAddr`, and nothing is filled.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1471-1473; client `src/lib/api/owner.js`,
   `src/features/owner/PlacePicker.jsx:63-83`, `src/features/owner/OwnerForm.jsx:565-571`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `GET /api/v1/owner/place` (native; city and district from HOMI's PostGIS boundaries,
+  DEC-79).
 - **Tests:** a Tashkent point → `city: "tashkent"` and a district from meta's list; a point outside the country → an
   empty object (the client sends no such point as a label, but its check of «Готово» is only the rectangle); auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-168; `03` SCR-051,
@@ -2134,8 +2135,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** ignored: the picker uses the city centre.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1474-1475, :502-505; client
   `src/lib/api/owner.js:157`, `src/features/owner/OwnerForm.jsx:197-209`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** Not built (DEV-061): the picker starts at the city centre or at the user's own
+  location.
 - **Tests:** an answer later than 1.5 s is ignored by the client; the answer is never the point 0, 0; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY` (the IP lookup is `UNVERIFIED`, Q-API-074).
   Related: `02` BR-API-168; `03` SCR-051, BR-APP-076; Q-API-074.
@@ -2161,8 +2162,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** silent.
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1476-1479; client
   `src/lib/api/owner.js:165-184`, `src/features/owner/OwnerForm.jsx:347-369`.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `GET /api/v1/owner/demand` (native; the usual price from harvested medians,
+  DEC-78; the count exact from 5 and `few` for 1 … 4, DEC-84, DEV-063).
 - **Tests:** no matching radar → `count: 0`; with too little data both bounds are `null`, and the hint hides;
   `currency=UZS` does not change the USD bounds; auth.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-169; `03` SCR-052,
@@ -2216,8 +2217,8 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Legacy Source:** Doc r31:159 (registry #54), Doc r31:818-839, :1290; client `src/lib/api/owner.js:191-192`,
   `src/features/listing/ContactRequestSheet.jsx:50-85`, `src/lib/chatAccess.js:27-55`; parity mock
   `tools/parity/mocks.mjs:295`. All client paths at r31.
-- **Migration Target:** not planned in this intake: the owner-cabinet plan, the next item of the queue
-  (`wave-1/README.md`), decides the v1 methods.
+- **Migration Target:** `POST /api/v1/listings/{number}/contact-request` (native; relayed for a legacy listing, DEC-71,
+  WP-87).
 - **Tests:** a record of the legacy contract — `no_chat` comes before the request is created, and the repeat creates
   one request; each `detail` code; a `who` outside the list is refused; a second request to the same listing
   (accepted again or `409`? UNVERIFIED, Q-API-075); the limits count per user (Q-API-076); auth.

@@ -36,6 +36,7 @@ Google Maps.
 - «Обвести на карте» in the filters sheet and `applyFilters`: WP-25. Follow nudge after an apply: WP-30.
 - Location rows and «Рядом» of the listing: WP-26. Location service and its 12 s cap (LB-APP-009): WP-21.
 - Screen name `map/draw`: WP-32 (derived by `screenNameOf` of WP-20).
+- The owner's place picker reuses both engines (WP-81) (*added by the owner-cabinet plan*).
 
 ## Decisions that bind this package
 

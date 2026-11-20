@@ -121,10 +121,17 @@ nothing in this package needs it.
 3. Voter-side effect: `rented` → hide with `ReportRented`; `fraud` → hide with `ReportFraud`; both answer
    `hidden: true`. `agent` and `wrong_data` answer `hidden: false`.
 4. Aggregate over votes that are not withdrawn: `rented` — sum of weights per listing number; `agent` — sum per
-   author key over distinct users. Thresholds `votes.thresholds.rented` and `votes.thresholds.agent`, both 3.0
+   author key over distinct users; on a native number also `fraud`, summed per listing number like `rented` (step 5;
+   *added by the owner-cabinet plan*). Thresholds `votes.thresholds.rented` and `votes.thresholds.agent`, both 3.0
    (proposal): a single user can never reach them.
 5. Crossing a threshold, once: write `listing_marks.rented_at` or `author_marks.realtor_marked_at`, and a
-   `vote_decisions` row with the inputs. `wrong_data` and `fraud` have no global effect.
+   `vote_decisions` row with the inputs. `wrong_data` and `fraud` have no global effect. Report votes apply to native
+   listings too (*added by the owner-cabinet plan*): a native listing's author key is its owner's phone key (WP-80),
+   so `agent` votes on it and on that person's legacy listings sum on one key; on a native number a crossed threshold
+   — `rented`, `agent`, or `fraud` summed per listing number like `rented` (`votes.thresholds.fraud`, 3.0, read for
+   native numbers only) — puts the owner listing on hold for the operators (`votes_rented`, `votes_agent`,
+   `votes_fraud`) and never withdraws it on its own. WP-84 adds the event `App\Events\Personal\VoteThresholdCrossed`
+   to this step and the listener.
 6. `ReportOutcome` carries `agentMarked` for the `agent_marked` of WP-13: `true` for the reason `agent` when this
    vote crossed `votes.thresholds.agent`, and also when `author_marks.realtor_marked_at` was already set; `false`
    otherwise (a default of the integrator, not a decision of the developer).
@@ -177,7 +184,9 @@ with only `where`. The wire value `homi` replaces the legacy `kvadro`.
 
 `favorites`, `listing_views`, `hidden_listings`, `blocked_authors`, `listing_votes` (delete, then recount the
 affected marks), `found_answers`. `vote_decisions`, `listing_marks` and `author_marks` hold no user link.
-`listing_votes.detail` is nulled after 180 days (retention registry of WP-47).
+`listing_votes.detail` is nulled after 180 days (retention registry of WP-47). An `author_marks` row of a `phone:`
+key expires three years after its last mark, because WP-84's realtor check reads it (an integrator default of the
+owner-cabinet plan; *added by the owner-cabinet plan*).
 
 ## Files
 

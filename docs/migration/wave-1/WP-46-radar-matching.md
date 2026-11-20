@@ -59,7 +59,9 @@ Command `radar:poll`, scheduled every minute with `onOneServer()` and `withoutOv
 `PollFilterSet::handle()`:
 
 1. `ListingSource::feed()` with the set's filters, `sort = new`, in `SourceContext::system()` — the legacy client
-   treats it as a background call and gives it only its share of the outbound budget (WP-41).
+   treats it as a background call and gives it only its share of the outbound budget (WP-41). No new matcher comes
+   with the owner cabinet: the system-context feed includes native listings once WP-86 is merged, and WP-86 adds the
+   test that a listing published between two polls is delivered by the next (*added by the owner-cabinet plan*).
 2. First poll (`baseline_at` null): remember the numbers of the page as seen, set the baseline, deliver nothing. The
    past belongs to the starter list of WP-45.
 3. Later polls: new numbers are those not in `seen_numbers`. When every number of a page is new, read the next

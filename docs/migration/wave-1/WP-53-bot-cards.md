@@ -53,6 +53,12 @@ Bot API accepted the message.
 - Action-log events of card buttons, the coverage test — WP-58.
 - Call links and sharing are not part of the bot's card. The author's number is not in the card either: its text
   arrives masked, and one button gives the number through the contact service of WP-43 (DEC-52).
+- Cards of HOMI owner listings — WP-89: photos from `owner/<token>/…` (WP-84's public copies, read like any card's
+  photos), «✉️ Связаться с хозяином» on a `request`-mode listing (a `startapp=c_<number>` link to the request sheet);
+  «Это риелтор» stays as on any card, because a native card's author is the owner's phone author (WP-80), also
+  where `bot.dev010` hides it on `ownerVerified` cards (DEC-86);
+  `ListingCardData` gains `origin`, `contactMode` and `requestStatus` there (WP-89, "Cards of native listings and
+  «Связаться с хозяином»"; *added by the owner-cabinet plan*).
 
 The queue lists WP-52, WP-42, WP-44 and WP-45 under "Depends on": this package calls the radar hide-rule service
 of WP-45, so do not start before WP-45 is `DONE`. It also calls `ContactService` of WP-43, which the strict order
@@ -506,7 +512,7 @@ contains a brand word. Toasts and silent answers follow `04` §4.3 (BR-BOT-002).
 | 1 | First press (`ag:1`) | `VoteService::report(user, ref, Agent)`; toast TXT-BOT-053 `Запомнил номер как риелторский — отмечу во всех его объявлениях`; label unchanged | the same vote; toast `bot.card.agent.voted`; row 3 becomes `[⭐ …][↩️ Не риелтор]` |
 | 2 | Repeat | no second vote; toast TXT-BOT-054 `Уже отмечено` | toast `bot.card.agent.already` |
 | 3 | Undo (`ag:0`) | no button; a forged press goes to the stale-button handler | `VoteService::withdraw(user, ref, Agent)`; toast `bot.card.agent.withdrawn`; row restored |
-| 4 | Visibility | the button is on every card | hidden where `isOwner` is `false` or `ownerVerified` is `true`; a stale press answers `bot.card.agent.already` without a vote |
+| 4 | Visibility | the button is on every card | hidden where `isOwner` is `false` or `ownerVerified` is `true`, except on a HOMI owner listing's card (`origin: native`, WP-89), which keeps it (DEC-86; *added by the owner-cabinet plan*); a stale press answers `bot.card.agent.already` without a vote |
 
 - Whatever the flag: one press is one weighted vote of one user; the mark on the author appears only past the
   threshold of distinct weighted voters inside `VoteService`, with its audit trail and kill switch (SEC-REQ-045,

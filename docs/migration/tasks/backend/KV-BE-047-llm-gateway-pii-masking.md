@@ -22,7 +22,7 @@ with a kill switch, and writes an audit row without raw text.
   (§8.8, BR-API-070, Q-API-025); vendor named in the privacy text `$KVADRO_ROOT/docs/about.md` §5.11.
 - Decisions: CF-007 "where parsing happens" and DEC-03 (`10-target-architecture.md` §3.8, §8), `10` §4.14 (`laravel/ai`
   with an env-driven default provider; the package hard-codes `openai` at `backend/vendor/laravel/ai/config/ai.php:16`).
-- Security: SEC-REQ-042, SEC-REQ-043, SEC-REQ-044 (`16-security-review.md:895-912`), TB-6 (`16` §2), reviewer rule 8.
+- Security: SEC-REQ-042, SEC-REQ-043, SEC-REQ-044 (`16-security-review.md:993-1010`), TB-6 (`16` §2), reviewer rule 8.
 - Feature: F-PRIVACY-004 (`09` §3.18), BR-DATA-034.
 
 ## Implementation

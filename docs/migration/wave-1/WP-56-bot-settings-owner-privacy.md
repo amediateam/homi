@@ -105,10 +105,14 @@ key; the request class of `PATCH /api/v1/settings` does not, so the Mini App con
   `verify()` returns `VerifiedNoListings` in Wave 1, the three other outcomes are keyed and unit-tested but not
   reachable, and no badge is written. The verification is stored so that it takes effect when the listing source can
   supply a comparable hash (the operator's answer to Q-API-062, or HOMI's own listings in Wave 2). No matcher is
-  built here. The owner badge the Mini App shows on a legacy listing is the one legacy computed.
+  built here. The owner badge the Mini App shows on a legacy listing is the one legacy computed. For HOMI's own owner
+  listings the verified flag is set by HOMI (DEC-77, WP-84) and needs no matcher here
+  (*added by the owner-cabinet plan*).
 - `App\Telegram\Handlers\OwnerCommand` (command `owner`), `ContactMessage` (every private `message.contact`, with
   or without a conversation), `OwnerCancelInput` (the text `Отмена` while `awaiting = contact`),
-  `OwnerRemoveCallback` (action `ow`: `rm`, `rmy`, `rmn`).
+  `OwnerRemoveCallback` (action `ow`: `rm`, `rmy`, `rmn`). WP-88 adds the branch for an open cabinet phone window:
+  a stored contact that carries the marker `contact.cabinet` is answered by the cabinet and writes no
+  `owner_verifications` row (WP-88, "The branch in `ContactMessage`"; *added by the owner-cabinet plan*).
 - Conversation: kind `Owner`, `awaiting = contact`. Any other text while it is open ends it and is handled normally.
 
 ### Privacy and erasure
@@ -274,7 +278,7 @@ Pest `todo` that names it.
 
 | # | Promise of the legacy text | Rule | True for HOMI in Wave 1? | Mechanism and test |
 | - | -------------------------- | ---- | ------------------------ | ------------------ |
-| 1 | Stored: Telegram id, language and settings, radars, favourites, card marks, opened listings, received cards, arrival source, an action log. No name, no contacts | BR-BOT-085 | yes | `users` has no name column (WP-40); the ledger is redacted (WP-50); a schema test lists the columns of every user table |
+| 1 | Stored: Telegram id, language and settings, radars, favourites, card marks, opened listings, received cards, arrival source, an action log. No name, no contacts | BR-BOT-085 | **no** since the owner cabinet: HOMI keeps an owner's number in plain text with his listing (DEC-72) and a seeker's first name with a request (DEC-76); the paragraph is reworded (*added by the owner-cabinet plan*) | `users` has no name column (WP-40); the ledger is redacted (WP-50); a schema test lists the columns of every user table; the number lives only in the owner listing (WP-84) and the first name only in the request (WP-85), each erased with the user |
 | 2 | The action log (what was pressed, without texts) is kept 180 days | BR-BOT-086 | yes, if WP-47 keeps 180 days | retention value of WP-47 asserted; bot events carry ids only (WP-58) |
 | 3 | Three profile flags and the account age for weighing votes | BR-BOT-087 | yes | `users.is_premium`, `has_username`, `has_photo` (WP-40), vote weights (WP-44) |
 | 4 | Phones and handles are masked before text goes to the LLM vendor | BR-BOT-088 | yes; the vendor name is `:llm`, the provider configured at the time (DEC-55); without one the sentence says that no language model is used | `PiiMaskerTest`, `LlmGatewayTest` (WP-55); a case of `PrivacyPromisesTest` renders the text with `brand.llm_vendor` set and empty |
@@ -282,13 +286,22 @@ Pest `todo` that names it.
 | 6 | Analytics in PostHog under a random id; erased on deletion | BR-BOT-090 | yes, with HOMI's own project (DEC-47); the hosting region named in the text is the real one | distinct id rule and person deletion of WP-47; `PrivacyDeleteTest` asserts one deletion request |
 | 7 | Support bot: mapping 90 days, texts until the conversation ends, summary one year | BR-BOT-091 | **no** — HOMI runs no support bot; the support contact is `:support` | the paragraph is replaced by one sentence that says who answers and that those messages are not processed by the bot; the product owner supplies the facts |
 | 8 | After an author's request the listing leaves feed, map, site and broadcasts, and sent cards become «Объявление снято» | BR-BOT-092 | partly: cards are edited when the listing source withdraws the listing (WP-57). A request made to HOMI is passed to the service the listing comes from | `WithdrawnCardEditTest` (WP-57); the paragraph is reworded |
-| 9 | Removed listings are kept 90 days, then phone, text and photos are erased | BR-BOT-093 | **no** — HOMI stores no listings in Wave 1, only listing numbers in the user's lists and short-lived caches | the paragraph is replaced by: listings, phones and photos are shown from another service and are not stored by HOMI |
+| 9 | Removed listings are kept 90 days, then phone, text and photos are erased | BR-BOT-093 | **yes** for HOMI's owner listings: number, texts and photos erased 90 days after the listing left the feed (WP-84); legacy listings are still not stored (*added by the owner-cabinet plan*) | the purge of WP-84 and its time-travel test; the paragraph says both: HOMI's own rule for its owner listings, and that the other listings, phones and photos are shown from another service and not stored by HOMI |
 | 10 | «Удалить мои данные» deletes at once; backups keep data about two weeks | BR-BOT-094 | yes, when the production track confirms the backup retention | `PrivacyDeleteTest`; the retention value is a request of WP-70 |
 
 - The adapted text is written in Russian by the developer from the legacy text with rows 7, 8 and 9 reworded and one
   sentence added that listings come from another service; `uz` and `en` follow. All three are marked
   "pending legal review" in the translation status file of WP-51.
 - No promise is cut for length. The legal basis and the operator's name and address are added by WP-70.
+- Since the owner cabinet the text also rewords row 1, states HOMI's own 90 days of row 9 for its owner listings,
+  says what the cabinet keeps (the number in plain text and why, the photos while the listing is shown or paused, the
+  form until deletion or 180 days after a draft was last changed, the requests with the seeker's first name, whose
+  texts go 90 days after the request closed) and names the relay of a request to the operator
+  (DEC-71). It also says how long erased cabinet data lingers outside the database: up to 21 days in the database
+  backups (14 days and 7 of noncurrent versions, `docs/infrastructure/backup-recovery.md`), up to 30 days for deleted
+  photos in the media storage and up to an hour in the edge cache (`docs/infrastructure/cdn.md`), and that the bot's
+  sent messages about erased data are edited to remove it, not deleted (WP-89). It stays "pending legal review" like
+  the rest (*added by the owner-cabinet plan*).
 
 ### «Удалить мои данные» (BOT-080)
 

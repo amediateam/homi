@@ -5,7 +5,7 @@
 | Status | TODO (PostGIS in staging/production BLOCKED by DEC-09; local and CI per KV-DB-005 / KV-QA-001) |
 | Owner | Backend (track: development) |
 | Complexity | L |
-| Feature IDs | F-PIPELINE-004, F-LISTING-007 |
+| Feature IDs | F-PIPELINE-004, F-LISTING-007, F-OWNER-003 |
 | Dependencies | KV-DB-005 (PostGIS), KV-DB-006 (cities, districts, zones), KV-DB-034 (metro, quarters, places, boundaries), KV-BE-015, KV-BE-131; Q-API-020 |
 
 ## Goal
@@ -14,7 +14,8 @@ Every normalised listing gets a location the rest of HOMI can trust: a WGS 84 po
 (`geo_radius_m`) measured from the most specific place named in the post, the city, the district (with
 `district_source`), the zone membership (`center`, `near_center`), the quarter and place ids, the nearest metro station
 with `metro_km`, and `center_km` — all computed at write time with PostGIS so search, matching and medians need no
-spatial joins.
+spatial joins. Since the owner-cabinet plan it also gives the city and district of an owner's point from the same
+boundaries (DEC-79), built by WP-84.
 
 ## Legacy reference
 

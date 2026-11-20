@@ -5,13 +5,15 @@
 | Status | TODO |
 | Owner | QA (track: development); review by the `security-reviewer` agent and the other developer |
 | Complexity | L |
-| Feature IDs | F-ACCESS-001, F-ACCESS-002, F-ACCESS-003, F-COMPAT-002, F-CONTACT-001, F-RADAR-002 … F-RADAR-005, F-HIDE-003, F-FAV-001, F-SETTINGS-001 |
+| Feature IDs | F-ACCESS-001, F-ACCESS-002, F-ACCESS-003, F-COMPAT-002, F-CONTACT-001, F-RADAR-002 … F-RADAR-005, F-HIDE-003, F-FAV-001, F-SETTINGS-001, F-CONTACT-003, F-OWNER-006 |
 | Dependencies | KV-QA-003, KV-QA-004, KV-QA-008; T6 (shared `initData` verifier); the compatibility route group (CF-001, CF-002) |
 
 ## Goal
 
 The negative-authentication table, the access-gate matrix, the IDOR matrix and every rate limiter of `16` are
-executable tests; the IDOR matrix is generated from the route list, so a new per-user route without a row fails.
+executable tests; the IDOR matrix is generated from the route list, so a new per-user route without a row fails. Since
+the owner-cabinet plan it also covers the IDOR rows of the owner methods and the request limits, built by WP-84 and
+WP-85.
 
 ## Legacy reference
 
