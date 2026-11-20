@@ -106,7 +106,8 @@ const ENTRIES = [
   "gallery-confirm-events",
   "gallery-feedback",
   "gallery-feedback-failed",
-  "gallery-feedback-failed-dev016",
+  "gallery-feedback-failed-silent",
+  "gallery-feedback-failed-dev016-off",
   "gallery-feedback-saved",
   "gallery-bottom-sheet",
   "gallery-open-sheet-full",
@@ -233,23 +234,27 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
     expect(eventLog()).toBe("События: confirm true · confirm false");
   });
 
-  it("plays failed() with the flag off and on, and saved()", () => {
+  it("plays failed() by default, without the toast and with the flag off, and saved()", () => {
     fake = fakeTelegram();
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
     render(Page(), { wrapper: WithIntl });
 
     click("gallery-feedback-failed");
-    expect(currentToast()).toBeNull();
-    click("gallery-feedback-failed-dev016");
     expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+    dismissToast();
+    click("gallery-feedback-failed-silent");
+    expect(currentToast()).toBeNull();
+    click("gallery-feedback-failed-dev016-off");
+    expect(currentToast()).toBeNull();
     click("gallery-feedback-saved");
 
     expect(haptics()).toEqual([
       "HapticFeedback.notificationOccurred(error)",
       "HapticFeedback.notificationOccurred(error)",
+      "HapticFeedback.notificationOccurred(error)",
       "HapticFeedback.notificationOccurred(success)",
     ]);
-    expect(eventLog()).toBe("События: saved · failed, DEV-016 · failed");
+    expect(eventLog()).toBe("События: saved · failed, DEV-016 off · failed, toast: false · failed");
   });
 
   it("links the three route wrappers through their real addresses", () => {

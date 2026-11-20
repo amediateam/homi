@@ -139,6 +139,7 @@ export function createServerApi(config: ServerApiConfig) {
     unhideAll: () => call("delete", "/hidden"),
     report: (value: number, body: Body<"/listings/{number}/reports", "post">) =>
       call("post", "/listings/{number}/reports", { params: number(value), body }),
+    unreport: (value: number) => call("delete", "/listings/{number}/reports", { params: number(value) }),
     found: (body: Body<"/surveys/found", "post">) => call("post", "/surveys/found", { body }),
     foundWhere: (body: Body<"/surveys/found/where", "post">) => call("post", "/surveys/found/where", { body }),
     radars: (query?: Query) => call("get", "/radars", { query }),

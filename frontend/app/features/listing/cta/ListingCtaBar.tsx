@@ -7,6 +7,7 @@ import { Button, cn, type LucideIcon, MessageCircle, Phone, Send, Skeleton } fro
 import { useLocale, useTranslations } from "next-intl";
 
 import { marketChipText, marketVerdict, type VerdictTone } from "@/features/feed/verdict";
+import { useBottomMark } from "@/lib/ui/shellState";
 
 import type { ListingDetails, ListingPreview } from "../listingData";
 import type { ListingContactView } from "./useContact";
@@ -64,7 +65,8 @@ export function ctaActionOf(details: ListingDetails | null): CtaAction {
  * as the contract splits them, or «Договорная»; under it the verdict's short label and the price notes when there
  * are notes, else the market chip («{delta} к рынку», «≈ обычная», «≈ спорно»). No price-kind label and no `alt`
  * (D-25). Right: the action of `ctaActionOf`; without one the cell stays empty at the same width. The taps, their
- * haptics and their events are `useListingContact`'s.
+ * haptics and their events are `useListingContact`'s. While it is mounted the app's toast sits 88 px above the bottom
+ * inset, over the bar (`useBottomMark`, SCR-042).
  */
 export function ListingCtaBar({
   item,
@@ -77,6 +79,7 @@ export function ListingCtaBar({
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
+  useBottomMark("cta");
   const translate: Translate = (key, values) => t(key as never, values as never);
   const verdict = marketVerdict(item, locale, translate);
   const notes = item.price?.notes.join(SEPARATOR) ?? "";

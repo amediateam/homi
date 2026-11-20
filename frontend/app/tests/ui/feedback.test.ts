@@ -17,25 +17,33 @@ afterEach(() => {
 });
 
 describe("failed (LB-APP-027, DEV-016)", () => {
-  it("only vibrates with the flag off", () => {
+  it("vibrates and shows «Не получилось сохранить» with the default flags (DEC-58)", () => {
     fake = fakeTelegram();
     failed();
     expect(haptics()).toEqual(["HapticFeedback.notificationOccurred(error)"]);
+    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+  });
+
+  it("only vibrates with `toast: false`, whatever the flag", () => {
+    fake = fakeTelegram();
+    failed({ toast: false });
+    withDevFlags({ dev016ErrorToastOnFailure: true }, (flags) => failed({ flags, toast: false }));
+    expect(haptics()).toEqual(["HapticFeedback.notificationOccurred(error)", "HapticFeedback.notificationOccurred(error)"]);
     expect(currentToast()).toBeNull();
   });
 
-  it("also shows «Не получилось сохранить» with the flag on", () => {
+  it("only vibrates with dev016ErrorToastOnFailure off", () => {
     fake = fakeTelegram();
-    withDevFlags({ dev016ErrorToastOnFailure: true }, (flags) => failed({ flags }));
+    withDevFlags({ dev016ErrorToastOnFailure: false }, (flags) => failed({ flags }));
     expect(haptics()).toEqual(["HapticFeedback.notificationOccurred(error)"]);
-    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+    expect(currentToast()).toBeNull();
   });
 
   it("reads the app's flags when handed a rejection reason", async () => {
     fake = fakeTelegram();
     await Promise.reject(new Error("offline")).catch(failed);
     expect(haptics()).toEqual(["HapticFeedback.notificationOccurred(error)"]);
-    expect(currentToast()).toBeNull();
+    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
   });
 
   it("does not throw outside Telegram", () => {

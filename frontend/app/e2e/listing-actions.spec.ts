@@ -5,9 +5,11 @@ import type { Page, Request } from "@playwright/test";
  * The actions sheet of the listing (WP-26, SCR-023, BR-APP-036, BR-APP-037) against the API on stubs, in cookie and
  * header mode: hide from a listing opened over the feed (the toast's «Вернуть» brings the card back; the feed lacks it
  * meanwhile and the history did not grow); block (every listing of the author leaves the feed, the toast names the
- * author with the server's masked label); a `fraud` report that hides the listing; a failed report (the scenario
- * `source_unavailable`, set right before the tap) keeps the sheet with «Не получилось сохранить» in its own toast
- * host; «Неверные данные» → the detail step → «Цена» → «Спасибо! Посмотрим», with the chevron back to the reasons and
+ * author with the server's masked label); a `fraud` report that hides the listing (its toast offers «Показывать у
+ * меня»); «Уже сдано», whose «Вернуть» withdraws the report and brings the card back, or hides it again when that
+ * fails; the realtor report, whose toast follows `agent_marked` (the scenario `agent_marked`); a failed report (the
+ * scenario `source_unavailable`, set right before the tap) keeps the sheet with «Не получилось сохранить» in its own
+ * toast host; «Неверные данные» → the detail step → «Цена» → «Спасибо! Посмотрим», with the chevron back to the reasons and
  * Telegram's Back from the reasons to the menu; directly loaded, the menu shows the phone block hint and Telegram's
  * Back closes it to the listing, and the report step's × closes it to the listing, from where Back goes to the feed
  * (review X1). Each action is one Server Action. `history.length` still counts the forward entries a back step
@@ -178,7 +180,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(actions[0].postData() ?? "").toContain(`{"number":${LISTING}}`);
     });
 
-    test("a «Мошенничество или спам» report hides the listing: the sheet and the listing close, the toast offers «Вернуть»", async ({ page }) => {
+    test("a «Мошенничество или спам» report hides the listing: the sheet and the listing close, the toast offers «Показывать у меня»", async ({ page }) => {
       await open(page, mode, `/ru/listing/${LISTING}`);
       await loaded(page, LISTING);
       await openMenu(page, LISTING);
@@ -188,7 +190,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       await row(page, "fraud").click();
       await expect(appToast(page)).toContainText("Спасибо, посмотрим. Это объявление у вас скрыли");
-      await expect(appToast(page).getByRole("button", { name: "Вернуть" })).toBeVisible();
+      await expect(appToast(page).getByRole("button", { name: "Показывать у меня" })).toBeVisible();
       // Loaded directly, the history holds nothing to step back over: the feed replaces the address.
       await onFeed(page);
       await expect(cards(page).first()).toBeVisible();
@@ -197,6 +199,80 @@ for (const mode of ["cookie", "header"] as const) {
       const body = actions[0].postData() ?? "";
       expect(body).toContain(`"number":${LISTING}`);
       expect(body).toContain('"reason":"fraud"');
+    });
+
+    test("«Уже сдано»: the card leaves the feed; «Вернуть» withdraws the report with one Server Action and brings it back", async ({ page }) => {
+      await open(page, mode);
+      await expect(card(page, LISTING)).toBeVisible();
+      const before = await numbersOf(page);
+      await card(page, LISTING).locator("a").click();
+      await loaded(page, LISTING);
+      await openMenu(page, LISTING);
+      await row(page, "report").click();
+      await expect(page.getByRole("dialog", { name: "Что не так?" })).toBeVisible();
+      const actions = recordRequests(page, isServerAction);
+
+      await row(page, "rented").click();
+      await expect(appToast(page)).toContainText("Отметили: уже сдано");
+      await onFeed(page);
+      await expect(card(page, LISTING)).toHaveCount(0);
+      expect(actions).toHaveLength(1);
+      expect(actions[0].postData() ?? "").toContain('"reason":"rented"');
+
+      await appToast(page).getByRole("button", { name: "Вернуть" }).click();
+      await expect(card(page, LISTING)).toBeVisible();
+      expect(await numbersOf(page)).toEqual(before);
+      await expect.poll(() => actions.length).toBe(2);
+      // `unreportListing` (DELETE /listings/{number}/reports), not the report again: the body is the number alone.
+      expect(actions[1].postData() ?? "").toContain(`{"number":${LISTING}}`);
+      expect(actions[1].headers()["next-action"]).not.toBe(actions[0].headers()["next-action"]);
+      await nothingAsked(page, isServerAction);
+      await expect(appToast(page)).toHaveCount(0);
+    });
+
+    test("«Вернуть» of «Уже сдано» that fails hides the card again with «Не получилось сохранить» and the error haptic", async ({ page }) => {
+      const app = await open(page, mode);
+      await expect(card(page, LISTING)).toBeVisible();
+      await card(page, LISTING).locator("a").click();
+      await loaded(page, LISTING);
+      await openMenu(page, LISTING);
+      await row(page, "report").click();
+      await row(page, "rented").click();
+      await expect(appToast(page)).toContainText("Отметили: уже сдано");
+      await onFeed(page);
+
+      // The withdrawal fails on the API (`503 source_unavailable`); set right before the tap.
+      await stubScenario(page, "source_unavailable");
+      const answered = page.waitForResponse((response) => isServerAction(response.request()));
+      await appToast(page).getByRole("button", { name: "Вернуть" }).click();
+      await answered;
+      await expect(appToast(page)).toHaveText("Не получилось сохранить");
+      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await expect(card(page, LISTING)).toHaveCount(0);
+      expect(await notifications(app, "error")).toBe(1);
+    });
+
+    test("«Это риелтор, а не хозяин»: «Спасибо, учёл вашу отметку», and «Отметили номер как риелторский» when the answer marks the author", async ({ page }) => {
+      await open(page, mode, `/ru/listing/${LISTING}`);
+      await loaded(page, LISTING);
+      const actions = recordRequests(page, isServerAction);
+
+      for (const [scenario, text] of [
+        [null, "Спасибо, учёл вашу отметку"],
+        ["agent_marked", "Отметили номер как риелторский"],
+      ] as const) {
+        await openMenu(page, LISTING);
+        await row(page, "report").click();
+        await expect(row(page, "agent")).toContainText("Отметим номер как риелторский");
+        if (scenario !== null) {
+          await stubScenario(page, scenario);
+        }
+        await row(page, "agent").click();
+        await expect(appToast(page)).toHaveText(text);
+        await page.context().clearCookies({ name: "homi_stub_scenario" });
+        await onListing(page, LISTING);
+      }
+      expect(actions.map((request) => request.postData() ?? "").filter((body) => body.includes('"reason":"agent"'))).toHaveLength(2);
     });
 
     test("a failed report keeps the sheet on its step with «Не получилось сохранить» and the error haptic", async ({ page }) => {

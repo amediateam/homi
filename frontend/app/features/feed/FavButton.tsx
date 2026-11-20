@@ -7,7 +7,9 @@ import type { MouseEvent } from "react";
 import { setFavorite } from "@/lib/actions/favorites";
 import { useAction } from "@/lib/actions/useAction";
 import { setFav, useSessionMap } from "@/lib/data/sessionMaps";
+import { type DevFlags, devFlags } from "@/lib/flags";
 import { tg } from "@/lib/telegram";
+import { failed } from "@/lib/ui/feedback";
 
 /** Listings whose save is in flight, shared by every heart of a listing (the card and the listing screen). */
 const pending = new Set<number>();
@@ -28,6 +30,8 @@ export interface FavButtonProps {
   /** Each state the heart shows: the new one at the tap, the old one again after a failed save. */
   onChange?: (on: boolean) => void;
   className?: string;
+  /** The app's flags; tests pass overrides (`withDevFlags`). */
+  flags?: DevFlags;
 }
 
 const ICON_PX = { full: 24, compact: 20, plain: 22 } as const;
@@ -35,11 +39,12 @@ const ICON_PX = { full: 24, compact: 20, plain: 22 } as const;
 /**
  * The heart (BR-APP-039, `03` SCR-007). A tap fills or empties it at once — medium haptic when adding, light when
  * removing — writes the choice to `favs`, where it wins over the server's flag for this launch, and sends `PUT` or
- * `DELETE` for the new state (`setFavorite`). Success keeps it; any failure restores the state before the tap, with
- * no text and no error haptic, as legacy. Taps while the listing's save runs are ignored. The click stops at the
- * button: the card renders the heart beside its link, and an enclosing link or handler elsewhere never sees it.
+ * `DELETE` for the new state (`setFavorite`). Success keeps it; any failure restores the state before the tap, then
+ * `failed()`: the error haptic and «Не получилось сохранить», as legacy since `index-CIa0Ldj2.js` (LB-APP-027).
+ * Taps while the listing's save runs are ignored. The click stops at the button: the card renders the heart beside
+ * its link, and an enclosing link or handler elsewhere never sees it.
  */
-export function FavButton({ number, favorite, variant = "overlay", size = "full", onChange, className }: FavButtonProps) {
+export function FavButton({ number, favorite, variant = "overlay", size = "full", onChange, className, flags = devFlags }: FavButtonProps) {
   const t = useTranslations();
   const save = useAction(setFavorite);
   const on = useSessionMap("favs").get(number) ?? favorite;
@@ -63,6 +68,7 @@ export function FavButton({ number, favorite, variant = "overlay", size = "full"
     if (!saved) {
       setFav(number, on);
       onChange?.(on);
+      failed({ flags });
     }
   };
 

@@ -410,7 +410,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(tile(page, ACTIVE)).toHaveCount(0);
       await expect(tile(page, PAUSED)).toBeVisible();
       await expect(tile(page, DIGEST)).toBeVisible();
-      // Without `ask_found` the delete opens no survey and shows no toast (`dev016ErrorToastOnFailure` is off).
+      // Without `ask_found` the delete opens no survey and shows no toast (`dev016SuccessToastOnDestructive` is off).
       await expect(visible(page, '[data-route="radars/found"]')).toHaveCount(0);
       await expect(appToast(page)).toHaveCount(0);
     });

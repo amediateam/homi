@@ -112,6 +112,11 @@ async function impacts(app: LaunchedApp, style: "light" | "medium"): Promise<num
   return (await app.calls()).filter((call) => call.member === "HapticFeedback.impactOccurred" && call.args[0] === style).length;
 }
 
+/** Error notifications the page asked the fake Telegram for so far (TMA-025). */
+async function errors(app: LaunchedApp): Promise<number> {
+  return (await app.calls()).filter((call) => call.member === "HapticFeedback.notificationOccurred" && call.args[0] === "error").length;
+}
+
 /** Two animation frames: `useMiniChrome` has read the scroll position of the last scroll event by then. */
 const nextFrames = (page: Page) =>
   page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -475,7 +480,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(firstPages.map((request) => new URL(request.url()).searchParams.get("deal"))).toEqual(mode === "cookie" ? [] : ["sale"]);
     });
 
-    test("the heart fills with one Server Action and empties with the next; a failed save returns it", async ({ page }) => {
+    test("the heart fills with one Server Action and empties with the next; a failed save returns it with «Не получилось сохранить»", async ({ page }) => {
       const app = await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
       const first = cards(page).first();
@@ -519,10 +524,14 @@ for (const mode of ["cookie", "header"] as const) {
       saved = answered();
       await heart.click();
       await expect(heart).toHaveAttribute("aria-pressed", "true");
+      expect(await errors(app)).toBe(0);
       slow.release();
       await saved;
       await expect(heart).toHaveAttribute("aria-pressed", "false");
       await expect(heart).toHaveAccessibleName("В избранное");
+      // LB-APP-027 is fixed in legacy since `index-CIa0Ldj2.js`: the error haptic and the toast (DEC-58).
+      await expect(page.locator('[data-toast-host="app"] [data-toast]')).toHaveText("Не получилось сохранить");
+      await expect.poll(() => errors(app)).toBe(1);
       expect(actions).toHaveLength(3);
       await page.context().clearCookies({ name: "homi_stub_scenario" });
     });

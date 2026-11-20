@@ -50,7 +50,7 @@ vi.mock("@/lib/actions/hidden", () => ({
   blockAuthor: state.blockAuthor,
   unblockAuthor: state.unblockAuthor,
 }));
-vi.mock("@/lib/actions/reports", () => ({ reportListing: state.reportListing }));
+vi.mock("@/lib/actions/reports", () => ({ reportListing: state.reportListing, unreportListing: vi.fn() }));
 vi.mock("@/features/listing/closeListing", () => ({ closeActions: state.closeActions, closeListing: state.closeListing }));
 
 import { ListingActionsRoute } from "@/features/listing/actions/ListingActionsRoute";
@@ -271,11 +271,25 @@ describe("ListingActionsSheet: the report and detail steps", () => {
     cleanup();
     sheet({ step: "report", isOwner: true });
     expect(rows()).toContain("agent");
+    cleanup();
+    sheet({ step: "report", isOwner: null });
+    expect(rows()).toContain("agent");
   });
 
-  it("dev010RealtorVoteWording picks the review hint", () => {
-    sheet({ step: "report", agentReview: true });
-    expect(hintOf("agent")?.textContent).toBe("Проверим номер — если это риелтор, отметим его");
+  it.each([
+    ["a channel author", { kind: "source", label: "stub_channel_c", count: 23 } as const],
+    ["no author", null],
+  ])("the agent row is hidden for %s, whatever is_owner says", (_, author) => {
+    sheet({ step: "report", author, isOwner: true });
+    expect(rows()).toEqual(["rented", "wrong_data", "fraud"]);
+  });
+
+  it.each([
+    [false, "Отметим номер как риелторский"],
+    [true, "Проверим номер — если это риелтор, отметим его"],
+  ])("agentReview %s (dev010RealtorVoteWording) picks the hint %s", (agentReview, hint) => {
+    sheet({ step: "report", agentReview });
+    expect(hintOf("agent")?.textContent).toBe(hint);
   });
 
   it("the reasons: rented, agent, fraud start a report; «Неверные данные» opens the detail step and starts nothing", () => {
@@ -454,6 +468,14 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
 
     setPreview(100001, previewOf({ is_owner: false }));
     window.history.replaceState(null, "", "/ru/listing/100001/actions?step=report");
+    route(null);
+    await screen.findByRole("dialog");
+    expect(rows()).toEqual(["rented", "wrong_data", "fraud"]);
+    cleanup();
+    resetResources();
+
+    // The preview's owner flag alone keeps no realtor reason: the author is not known before the details.
+    setPreview(100001, previewOf({ is_owner: true }));
     route(null);
     await screen.findByRole("dialog");
     expect(rows()).toEqual(["rented", "wrong_data", "fraud"]);

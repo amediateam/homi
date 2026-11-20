@@ -80,7 +80,7 @@ export interface RadarSheetProps {
  *   Cancel sends nothing; OK deletes — success haptic, the radar leaves both lists, then the survey with the trigger
  *   `delete` replaces the sheet when the server asks for it, else `back()` — both only while the address is still the
  *   one of the request (`currentAddress()`): a user who left the sheet meanwhile (×, Back) is neither stepped back
- *   once more nor sent to the survey; «Радар удалён» only with `dev016ErrorToastOnFailure`;
+ *   once more nor sent to the survey; «Радар удалён» only with `dev016SuccessToastOnDestructive` (off);
  * - the sticky footer «Смотреть найденное · {n}» (`radar.foundPlain` while the count is unknown): the feed of the
  *   radar's filters with `from=radar`, the return stored with the tab's scroll, then the window scrolled to the top —
  *   the feed starts at its top whether or not it was mounted before (legacy `switchTab` scrolled to 0; `nav.push`
@@ -212,7 +212,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     tg.haptic.success();
     onLeave();
     dropRadar(current.id);
-    if (flags.dev016ErrorToastOnFailure) {
+    if (flags.dev016SuccessToastOnDestructive) {
       showToast({ key: "toast.subDeleted" });
     }
     if (currentAddress() !== at) {

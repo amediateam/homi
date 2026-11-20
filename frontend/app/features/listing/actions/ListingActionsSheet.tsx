@@ -26,9 +26,9 @@ const TITLES: Readonly<Record<ActionsStep, MessageKey>> = {
 
 export interface ListingActionsSheetProps {
   step: ActionsStep;
-  /** The listing's author; `null` while the details are on their way (the generic block hint). */
+  /** The listing's author; `null` while the details are on their way (the generic block hint, no realtor reason). */
   author: ListingAuthor | null;
-  /** `false` (not from an owner) hides «Это риелтор, а не хозяин»; `null` keeps it. */
+  /** `false` (not from an owner) hides «Это риелтор, а не хозяин»; `null` keeps it for a phone author. */
   isOwner: boolean | null;
   /** `bot.support_username` of the reference data; `null` hides the support row. */
   supportUsername: string | null;
@@ -47,6 +47,9 @@ export interface ListingActionsSheetProps {
  * steps put a back chevron left of it. The ×, the backdrop and the drag close every step at once (`actions.close`);
  * Telegram's Back and the chevron go one step. While a request runs every row is disabled. Failures show in the
  * sheet's own toast host (D-6). Portalled to `body` in both trees, so it has no server HTML.
+ *
+ * «Это риелтор, а не хозяин» is offered only for an author of kind `phone` on a listing that is not marked as not
+ * from an owner, as legacy since `index-CIa0Ldj2.js`: a channel author, no author and an author not loaded yet hide it.
  */
 export function ListingActionsSheet({ step, author, isOwner, supportUsername, actions, onOpenStep, onBack, agentReview }: ListingActionsSheetProps) {
   const t = useTranslations();
@@ -111,7 +114,7 @@ export function ListingActionsSheet({ step, author, isOwner, supportUsername, ac
         ) : step === "report" ? (
           <>
             <ActionRow action="rented" title={t("report.rented")} hint={t("report.rentedHint")} disabled={busy} onSelect={() => actions.report("rented")} />
-            {isOwner === false ? null : (
+            {isOwner === false || author?.kind !== "phone" ? null : (
               <ActionRow
                 action="agent"
                 title={t("report.agent")}

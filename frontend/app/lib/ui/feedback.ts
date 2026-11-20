@@ -4,13 +4,15 @@ import { tg } from "@/lib/telegram";
 import { showToast } from "./toast";
 
 /**
- * A save failed where legacy only vibrates (LB-APP-027): the error haptic; with DEV-016 on, also the toast
- * «Не получилось сохранить». The flags come in an options object, so `promise.catch(failed)` still reads the app's.
+ * A save failed (LB-APP-027, fixed in legacy since `index-CIa0Ldj2.js`): the error haptic, and the toast «Не
+ * получилось сохранить» with `dev016ErrorToastOnFailure` (on by default, DEC-58). `toast: false` keeps the haptic alone:
+ * the contact failures of the listing, which legacy still only vibrates, and the first-launch language picker, which
+ * shows the text under its list. The options come in an object, so `promise.catch(failed)` still reads the app's flags.
  */
-export function failed(options?: { flags?: DevFlags }): void {
+export function failed(options?: { flags?: DevFlags; toast?: boolean }): void {
   const flags = options?.flags ?? devFlags;
   tg.haptic.error();
-  if (flags.dev016ErrorToastOnFailure) {
+  if (options?.toast !== false && flags.dev016ErrorToastOnFailure) {
     showToast({ key: "common.saveFailed" });
   }
 }

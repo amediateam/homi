@@ -7,6 +7,7 @@ import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
 import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
 import { tg } from "@/lib/telegram";
+import { useBottomMark } from "@/lib/ui/shellState";
 
 import type { ShellVariant } from "./shellVariant";
 import { expandChrome } from "./useMiniChrome";
@@ -23,7 +24,9 @@ import { expandChrome } from "./useMiniChrome";
 export function ViewToggle({ variant, onIntent }: { variant: ShellVariant; onIntent?: () => void }) {
   const t = useTranslations();
   const { href } = useScreenSearchState(variant === "map" ? "map" : "feed");
-  if (variant !== "search-list" && variant !== "map") {
+  const shown = variant === "search-list" || variant === "map";
+  useBottomMark("toggle", shown);
+  if (!shown) {
     return null;
   }
   const toMap = variant === "search-list";
