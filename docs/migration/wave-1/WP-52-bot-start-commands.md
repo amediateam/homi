@@ -342,7 +342,8 @@ Rules and edge cases:
 ### 2. Payloads and attribution
 
 Formats and lengths: `04` §6.1. Builders in HOMI: the landing buttons (`s_web`, `s_web_<tag>`, the `--v<visit>`
-suffix; WP-61), the no-access screen of the Mini App (`s_<source>--l<number>`; WP-23), the survey share (`s_friend`;
+suffix; WP-61; since legacy landing release `67b3942a8340` the landing turns a tag's other characters into `-`, so
+`utm_source=chatgpt.com` arrives as `s_web_chatgpt-com` — the grammar of row 2 is unchanged, *landing intake*), the no-access screen of the Mini App (`s_<source>--l<number>`; WP-23), the survey share (`s_friend`;
 WP-30). The no-access screen writes `s_seo_en` / `s_seo_uz` when the source is `seo` and the interface is en / uz
 (legacy since `index-CIa0Ldj2.js`; built by WP-36); row 4 of the table below reads both. The SEO pages' own
 payloads have no builder until Wave 3.

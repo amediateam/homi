@@ -184,7 +184,7 @@ Nothing of this renders, and nothing is requested or sent, while `owner_enabled`
   HOMI», below the share button) and on WP-39's step `moved`: «Съезжаете со старой квартиры?»
   (`found.landlordTitle`), `found.landlordText`, then DEC-91's buttons:
   - with the owners' landing page (`brand.links.owners`, a `LocaleLink` of `lib/brand` that stays `null` until WP-61
-    builds the page): «Отправить хозяину» (`found.landlordSend`) shares legacy's `found.landlordShare` with `{url}` =
+    builds the page; where the page's content comes from is DEC-97, *added by the landing intake*): «Отправить хозяину» (`found.landlordSend`) shares legacy's `found.landlordShare` with `{url}` =
     the page of the locale with `?s=tenant`; a second button «Отправить ссылку на бота»
     (`found.landlordSendBot`) shares `found.landlordShareBot` with `{url}` = `https://t.me/<bot>?start=owner_new`
     (WP-88);

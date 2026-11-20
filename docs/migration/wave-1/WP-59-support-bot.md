@@ -174,7 +174,13 @@ The uz and en values of the seven user-facing keys are written in this package a
 
 - `config/erasure.php`: `support_threads` by `user_id` and by the Telegram id of the erased user — strategy
   `delete` (relays go with the cascade). The «Удалить мои данные» of the main bot (WP-56) thereby removes the
-  person's support thread.
+  person's support thread. A **blocked** thread is the exception: its row stays with `telegram_chat_id` and
+  `blocked_at` only (`user_id`, `locale`, the listing and every other column cleared, its relays deleted), so that
+  deleting one's data does not lift a block. Legacy's privacy text says the same since legacy landing release
+  `d9bbbc696337` («Если вас заблокировали в боте поддержки, после удаления остаётся только Telegram ID с отметкой о блокировке — и
+  больше ничего», `$KVADRO_ROOT/demo/landing/site/privacy.html:69`); WP-70 writes HOMI's sentence
+  (*added by the landing intake; the integrator's reading of legacy's text — the review of this package confirms
+  it*).
 - `config/retention.php`: `support_relays` older than 90 days by `created_at` → `delete`; `support_threads` with
   status `closed`, or without a message from either side for 180 days → `delete`.
 - The registry tests of WP-47 must pass with the three new tables (`support_operators` holds staff ids, not users:

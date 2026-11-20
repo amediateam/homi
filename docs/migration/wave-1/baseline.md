@@ -63,7 +63,28 @@ TMA-047); the launch reads `?radar=` (TMA-012) and marks a listing link as opene
 expects the landing to serve three pages for owners (`/sdat-kvartiru/`, `/uz/kvartira-ijaraga-berish/`,
 `/en/list-your-apartment/`) that accept `?s=tenant`, and the server to set `owner_entry` on the card and to answer
 `GET /api/owner/listings` quickly with `can_add` (`$KVADRO_ROOT/docs/api.md` §13, r38). The checkout's mirror of the
-legacy landing does not hold those pages (2026-11-20); HOMI answers with DEC-91 and DEC-94.
+legacy landing does not hold those pages (2026-11-20); HOMI answers with DEC-91 and DEC-94. The landing intake found
+that no landing sync can bring them (below); HOMI answers with DEC-97.
+
+## The landing pin
+
+The legacy landing (`$KVADRO_ROOT/demo/landing/`) has its own releases and changelog
+(`$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md`, reports in `docs/releases/<date>_<release>/`). `03b` and WP-60, WP-61
+describe the release pinned here (*added by the landing intake, 2026-11-20*).
+
+| Field | Content |
+| ----- | ------- |
+| Landing release | `d9bbbc696337`, synced into the legacy tree on 2026-11-19 at 14:07 (`$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md:5`); its files are the production files 1:1 (`site/`, 38 files). Pinned by the landing intake on 2026-11-20 |
+| Legacy checkout | the landing's last change is r37; the checkout is at r39 (`svn info`, read only) |
+| Audit base before | `c63da0e3476a` of 2026-11-08: `03b` was written on 2026-11-09 against it, and the queue had no landing pin until this intake |
+| What a sync brings | `tools/sync/fetch.mjs:6-8` and `docs/RECOVERY.md` §3: `/`, `/uz/`, `/en/`, `/privacy.html`, `robots.txt` and what they reference. Backend-rendered pages (the SEO pages, `o-servise/`, the listing pages, any owners' page) are never downloaded, so they are known only from links and documents |
+
+| Release | Synced | Sync report | Changes |
+| ------- | ------ | ----------- | ------- |
+| `67b3942a8340` | 2026-11-12 | `…/docs/releases/2026-11-12_67b3942a8340/REPORT.md` | The showcase «Квартиры прямо сейчас» (search into SEO pages, ten fresh listings, districts with counts; `live.json → showcase`); «Бесплатно · N новых квартир за сутки» under the first button; the footer in link columns with «О сервисе»; «Аренда и продажа» in the title, description, og and `h1`; the source tag sanitised; two FAQ questions; parity 40 → 45 |
+| `65998117d6ec` | 2026-11-14 | `…/2026-11-14_65998117d6ec/REPORT.md` | Icons of 48, 96 and 192 px on every page; the soft link underline |
+| `b1b9a919ecc4` | 2026-11-18 (19 Nov by Tashkent time) | `…/2026-11-18_b1b9a919ecc4/REPORT.md` | `privacy.html`: the owner who lists a flat himself, «Отклики», the verified-owner mark; backend data: pins' `district`, `district_code`, `floor` may be `null` |
+| `d9bbbc696337` | 2026-11-19 | `…/2026-11-19_d9bbbc696337/REPORT.md` | `/` no longer translated by the browser language, the hint bar instead; privacy without the browser language, the support-bot block sentence; HTML comments removed; parity 45 → 47 |
 
 ## Intake log
 
