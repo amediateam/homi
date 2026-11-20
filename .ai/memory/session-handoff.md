@@ -13,14 +13,14 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-20: «сливай все» → #91 merged (Dependabot #5, #57 … #60 left: dependency changes need the first developer); then «Дальше по очереди WP-34».
 
 ## State at handoff
-- `main` = `bcc7aa0` (#91). Open: #92, branch `wp-34-catch-up-feedback-flags-reports`: `08c07e9` code and tests, `68d6ada` review fixes, then the docs and memory commit.
+- `main` = `bcc7aa0` (#91). Open: #92, branch `wp-34-catch-up-feedback-flags-reports`: `08c07e9` code and tests, `68d6ada` review fixes, `e82366e` docs and memory, `8e7150a` the `shell.spec.ts` offset (CI's first e2e run 44656571365: 355 passed, 1 failed), then this memory commit.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend` (exit 0 on this branch: app 215 files, 3 501 tests); e2e each spec alone, e.g. `cd frontend && pnpm exec playwright test --project=miniapp app/e2e/listing-actions.spec.ts`.
 
 ## Done this session
 - **#91 merged** (`bcc7aa0`, merge commit, docs only, no CI run by the path filters).
 - **WP-34** (#92): flags at the pin's defaults (DEC-58: `dev010AgentMarkedToast`, `dev014TashkentDates`, `dev016ErrorToastOnFailure`, `dev051RentedUndo` on; `dev016SuccessToastOnDestructive` new, off); `failed({ toast })` (the heart toasts, contacts and the language picker do not; the picker shows a line); `unreportListing` behind «Вернуть» of «Уже сдано»; «Показывать у меня»; the realtor toast by `agent_marked`; the realtor reason only for a phone author; `toast.reportedAgentReview` removed; the toast's touch drag and its offsets by the bottom marks (`lib/ui/shellState.ts`). Baseline rows 4, 21 – 25, 27, 30 marked closed.
-  - Checks: `make ci-frontend` → exit 0; app unit 3 501 passed; e2e alone `listing-actions.spec.ts` 20 passed, `feed.spec.ts` 19 passed (cookie and header); mutation checks: contact `toast: false` (4 fail), the toggle and CTA marks (5 fail).
+  - Checks: `make ci-frontend` → exit 0; app unit 3 501 passed; e2e alone `listing-actions.spec.ts` 20, `feed.spec.ts` 19, `shell.spec.ts` 16 passed (cookie and header); mutation checks: contact `toast: false` (4 fail), the toggle and CTA marks (5 fail).
   - Not run green here: `radars.spec.ts` (radars off in this machine's backend env, KI-65); the full suite together meets KI-32. CI runs both.
   - One review subagent: no user-facing bug; two fixes taken (touch cancel, tests of the real marks).
 
@@ -36,6 +36,8 @@ Written for whoever continues the **development track**. The production track's 
 - The toast's `animate-rise-in` fills `both` and holds `transform: none`; an inline transform on the same element does nothing, so the drag moves a wrapper.
 - Playwright's webServer and `make ci-frontend` both build `frontend/app/.next`: never run them at the same time.
 - Locally, specs run together hit the API limiter (KI-32) and sessions stay `booting`; wait a minute and run each spec alone.
+- Before changing a shared offset or default, grep the e2e suite for the computed value (`140px`), not only the token or the prose (`78 px`): `shell.spec.ts` pinned the toast's pixels.
+- On a PR, a docs-only push still re-runs CI (the path filters compare the whole PR diff): push memory edits before CI, not after.
 - Next numbers: AM-102, KI-67, ADR 0021; ids: DEC-89, DEV-064, RK-40, SCR-064, BR-APP-112, LB-APP-084, TMA-048, API-056, BOT-092, BR-API-198, LB-API-058, Q-APP-031, Q-API-091, Q-BOT-052, Q-DATA-052, Q-SEC-022, F-OWNER-010, F-CONTACT-004, F-FEED-005, F-RADAR-012, ENT-064, SEC-041, SEC-REQ-054, KV-BE-052.
 
 ## Active subagent work at handoff
