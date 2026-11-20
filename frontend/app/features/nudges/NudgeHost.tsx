@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
-import { feedListFree, useFreshFeed } from "@/features/feed/fresh";
+import { coversSearch, feedListFree, useFreshFeed } from "@/features/feed/fresh";
 import { useRadarsEnabled } from "@/features/radars/capability";
 import { useRadars } from "@/features/radars/useRadars";
 import { isLayerAddress } from "@/features/shell/shellVariant";
@@ -81,7 +81,7 @@ export interface NudgeHostProps {
  * The return banner's hook comes first, so its effects — the search visits among them (`useSearchVisits`) — run before
  * the follow nudge's: a return check of the applied filters is pending before the follow nudge's wait could start
  * (BR-APP-046). The visit tracker also hands the long return to the search feed (`useFreshFeed`, WP-38), with the tab
- * and whether a layer covers the search; the fresh pill itself is the top bar's. Seam: the home offer of WP-31 renders last, while `useNudgeSlot().active === "home"`, and names its
+ * and whether a layer covers the search (`coversSearch`); the fresh pill itself is the top bar's. Seam: the home offer of WP-31 renders last, while `useNudgeSlot().active === "home"`, and names its
  * title in the live line.
  *
  * The live line (`data-nudge-live`, visually hidden) is always in the document and holds the title of the nudge on
@@ -91,7 +91,13 @@ export interface NudgeHostProps {
 export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
   const env = useNudgeEnv(searchTab);
   const slot = useNudgeSlot();
-  const onLongReturn = useFreshFeed({ searchTab, covered: env.layer, view: matchRoute(usePathname()).route === "map" ? "map" : "list" });
+  const pathname = usePathname();
+  const searchParams = new URLSearchParams(useSearchParams()?.toString() ?? "");
+  const onLongReturn = useFreshFeed({
+    searchTab,
+    covered: coversSearch(pathname, searchParams),
+    view: matchRoute(pathname).route === "map" ? "map" : "list",
+  });
   const back = useReturnNudge(env, { searchTab, flags, onLongReturn });
   const follow = useFollowNudge(env, { flags });
 

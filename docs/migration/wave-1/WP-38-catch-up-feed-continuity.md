@@ -84,7 +84,9 @@ the key would have kept every later search from adopting it. `feedListKey` keeps
 *As built (rule 6):*
 - `useFreshFeed(context)` returns a stable `onLongReturn`, which `NudgeHost` passes through the options of
   `useReturnNudge` to the tracker; the tracker keeps the callbacks of its first render, so the handler reads the host's
-  context (`searchTab`, `env.layer`, the route for the view) from a ref.
+  context (`searchTab`, `coversSearch`, the route for the view) from a ref.
+- "Covered" is `coversSearch`: a layer address, or the parameters `pick`, `draw` and `step`. The map's selected point
+  (`pin`) does not cover the search, since legacy's covered list has no map card, so `NudgeEnv.layer` is not used.
 - The list on screen is handed to `fresh.ts` by `FeedScreen` (`freshFeed.show(key, filters)`); `since` is the first
   time that key was shown, in whole seconds.
 - `newCount` moved to `features/nudges/newCount.ts` (`returnRules.ts` re-exports it), so the feed's module does not

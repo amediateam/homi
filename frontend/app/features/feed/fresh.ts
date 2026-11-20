@@ -4,6 +4,7 @@ import { type SearchFilters, toApiQuery } from "@homi/search";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { newCount } from "@/features/nudges/newCount";
+import { isLayerAddress } from "@/features/shell/shellVariant";
 import { MINI_CHROME_TOP_ZONE_PX } from "@/features/shell/useMiniChrome";
 import { bffFetch } from "@/lib/api/browser";
 import { devFlags } from "@/lib/flags";
@@ -35,7 +36,7 @@ export interface LongReturnContext {
   searchTab: boolean;
   /**
    * A layer covers the list or the map: a listing, the filters sheet, a quick filter, the city or sort sheet, the radar
-   * create or edit sheet, or the draw layer (`NudgeEnv.layer`).
+   * create or edit sheet, or the draw layer (`coversSearch`).
    */
   covered: boolean;
   /** The view of the search tab under no layer. */
@@ -187,6 +188,18 @@ export const freshFeed = createFreshFeed({ fetchNew: readNew });
  */
 export function feedListFree(pathname: string, searchParams: URLSearchParams, ready: boolean): boolean {
   return ready && matchRoute(pathname).route === "feed" && parentOf(pathname, searchParams) === null;
+}
+
+/** The layer parameters that cover the search: the nested city picker, the draw layer and a listing's sheet step. */
+const COVERING_PARAMS = ["pick", "draw", "step"] as const;
+
+/**
+ * Whether a layer covers the search for the long return (BR-APP-104): a layer address (a listing, a search sheet, a
+ * radar sheet) or a covering layer parameter. The map's selected point (`pin`) does not: legacy's map with its card
+ * open is not covered.
+ */
+export function coversSearch(pathname: string, searchParams: URLSearchParams): boolean {
+  return isLayerAddress(pathname) || COVERING_PARAMS.some((name) => searchParams.has(name));
 }
 
 /**

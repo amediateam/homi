@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { feedEpoch } from "@/features/feed/feedQuery";
 import { forgetFeedScroll, hasFeedScroll, rememberFeedScroll } from "@/features/feed/feedScroll";
-import { createFreshFeed, feedListFree, longReturnOutcome, type LongReturnContext } from "@/features/feed/fresh";
+import { coversSearch, createFreshFeed, feedListFree, longReturnOutcome, type LongReturnContext } from "@/features/feed/fresh";
 
 const filters = defaultFilters("rent_long", "tashkent");
 const NOW = Date.UTC(2026, 10, 20, 9, 0, 0);
@@ -198,5 +198,18 @@ describe("feedListFree (BR-APP-046)", () => {
     expect(feedListFree("/map", new URLSearchParams(), true)).toBe(false);
     expect(feedListFree("/listing/42", new URLSearchParams(), true)).toBe(false);
     expect(feedListFree("/filters", new URLSearchParams(), true)).toBe(false);
+  });
+});
+
+describe("coversSearch (BR-APP-104)", () => {
+  it("a listing, a search sheet, a radar sheet and the covering layer parameters cover the search; the map's point does not", () => {
+    for (const path of ["/listing/42", "/filters", "/filters/rooms", "/sort", "/city", "/radars/new"]) {
+      expect(coversSearch(path, new URLSearchParams())).toBe(true);
+    }
+    expect(coversSearch("/map", new URLSearchParams("draw=1"))).toBe(true);
+    expect(coversSearch("/", new URLSearchParams("pick=city"))).toBe(true);
+    expect(coversSearch("/map", new URLSearchParams("pin=41.3,69.2"))).toBe(false);
+    expect(coversSearch("/", new URLSearchParams("city=tashkent"))).toBe(false);
+    expect(coversSearch("/map", new URLSearchParams("city=tashkent"))).toBe(false);
   });
 });

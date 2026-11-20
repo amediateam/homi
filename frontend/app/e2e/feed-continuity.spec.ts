@@ -63,9 +63,18 @@ const answerNew = (page: Page, count: number) =>
       handled.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { count }, meta: { source: "stub" } }) }),
   );
 
-/** Launches the app as the bot does, the page's clock installed first, and waits for the session and the first cards. */
-async function open(page: Page, mode: "cookie" | "header", options: { path?: string; startParam?: string } = {}): Promise<LaunchedApp> {
-  await page.clock.install();
+/**
+ * Launches the app as the bot does and waits for the session; `clock` installs the page's clock first, for the cases
+ * that move it on (the long return).
+ */
+async function open(
+  page: Page,
+  mode: "cookie" | "header",
+  { clock = false, ...options }: { path?: string; startParam?: string; clock?: boolean } = {},
+): Promise<LaunchedApp> {
+  if (clock) {
+    await page.clock.install();
+  }
   const app = await launchApp(page, { mode, ...options });
   await expect(html(page)).toHaveAttribute("data-session", "ready", { timeout: API_MS });
   return app;
@@ -96,13 +105,27 @@ async function scrollTo(page: Page, y: number): Promise<void> {
   await nextFrames(page);
 }
 
-/** A tab press: on collapsed chrome the first press only expands it (SCR-006). */
-async function pressTab(page: Page, key: "search" | "saved" | "radars" | "settings"): Promise<void> {
+/**
+ * Collapsed chrome clips the tab bar to the circle around the active tab and the view toggle to its icon (SCR-006): a
+ * press on the active tab there only expands it.
+ */
+async function expand(page: Page): Promise<void> {
   if (await html(page).evaluate((node) => node.classList.contains("chrome-mini"))) {
-    await tab(page, key).click();
+    await visible(page, '[data-tab][aria-current="page"]').click();
     await expect(html(page)).not.toHaveClass(/chrome-mini/);
   }
+}
+
+/** A tab press, on expanded chrome. */
+async function pressTab(page: Page, key: "search" | "saved" | "radars" | "settings"): Promise<void> {
+  await expand(page);
   await tab(page, key).click();
+}
+
+/** The list/map toggle, on expanded chrome. */
+async function pressToggle(page: Page): Promise<void> {
+  await expand(page);
+  await toggle(page).click();
 }
 
 /** The list long enough to scroll: page one and the next. */
@@ -121,24 +144,38 @@ for (const mode of ["cookie", "header"] as const) {
   test.describe(`feed continuity (${mode} mode)`, () => {
     test("a listing open, 7 h away: one count request; after the close «Показать 3 новых»; a tap reloads from page one", async ({ page }) => {
       await answerNew(page, 3);
-      await open(page, mode);
+      await open(page, mode, { clock: true });
       await expect(cards(page).first()).toBeVisible({ timeout: API_MS });
-      const created = await page.evaluate(() => Math.floor(Date.now() / 1000));
-      await cards(page).first().click();
+      const shown = await page.evaluate(() => Math.floor(Date.now() / 1000));
+      await cards(page).first().locator("a").click();
       await expect(route(page, "listing")).toBeVisible();
 
       const asked = record(page, isNew);
       const hiddenAt = await away(page, 7);
 
+      // The list was created before its cards showed; the banner's visit (radars on) is the moment the app went away.
       await expect.poll(() => asked.filter((request) => sinceOf(request) < hiddenAt).length).toBe(1);
       const mine = asked.find((request) => sinceOf(request) < hiddenAt)!;
-      expect(sinceOf(mine)).toBeGreaterThanOrEqual(created - 5);
+      expect(sinceOf(mine)).toBeLessThanOrEqual(shown);
       expect(new URL(mine.url()).searchParams.get("city")).not.toBeNull();
       await expect(pill(page)).toHaveCount(0);
 
       await press(page, "backButtonClicked");
       await expect(route(page, "listing")).toHaveCount(0);
       await expect(pill(page)).toHaveText("Показать 3 новых");
+
+      // With the chrome collapsed it hangs under the top of the screen and takes the tap.
+      await scrollTo(page, 900);
+      await expect(html(page)).toHaveClass(/chrome-mini/);
+      await expect
+        .poll(() =>
+          pill(page).evaluate((node) => {
+            const box = node.getBoundingClientRect();
+            const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+            return box.top >= 0 && box.bottom <= window.innerHeight && hit !== null && node.contains(hit);
+          }),
+        )
+        .toBe(true);
 
       const pageOnes = record(page, isPageOne);
       await pill(page).click();
@@ -151,7 +188,7 @@ for (const mode of ["cookie", "header"] as const) {
       page,
     }) => {
       await answerNew(page, 3);
-      await open(page, mode);
+      await open(page, mode, { clock: true });
       await longList(page);
 
       const pageOnes = record(page, isPageOne);
@@ -168,11 +205,13 @@ for (const mode of ["cookie", "header"] as const) {
       const asked = record(page, isNew);
       const second = await away(page, 7);
       expect(second).toBeGreaterThan(hiddenAt);
+      // Off the search tab nothing is asked for: neither the count nor the banner, which records no visit there.
+      await nextFrames(page);
+      expect(asked).toHaveLength(0);
       await pressTab(page, "search");
       await expect(route(page, "feed")).toBeVisible();
       await expect.poll(() => pageOnes.length).toBe(2);
       expect(await scrollY(page)).toBe(0);
-      expect(asked.filter((request) => sinceOf(request) < second)).toHaveLength(0);
     });
 
     test("the list's scroll survives the map, the Heart tab and the Settings button", async ({ page }) => {
@@ -180,9 +219,9 @@ for (const mode of ["cookie", "header"] as const) {
       await longList(page);
 
       await scrollTo(page, 1500);
-      await toggle(page).click();
+      await pressToggle(page);
       await expect(page).toHaveURL(/\/ru\/map/);
-      await toggle(page).click();
+      await pressToggle(page);
       await expect(route(page, "feed")).toBeVisible();
       await expect.poll(() => scrollY(page)).toBe(1500);
 
@@ -201,9 +240,9 @@ for (const mode of ["cookie", "header"] as const) {
       // A second press of the active tab forgets it: the top, and the top again after the map.
       await pressTab(page, "search");
       await expect.poll(() => scrollY(page)).toBe(0);
-      await toggle(page).click();
+      await pressToggle(page);
       await expect(page).toHaveURL(/\/ru\/map/);
-      await toggle(page).click();
+      await pressToggle(page);
       await expect(route(page, "feed")).toBeVisible();
       expect(await scrollY(page)).toBe(0);
     });

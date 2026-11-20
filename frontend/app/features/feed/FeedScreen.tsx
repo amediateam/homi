@@ -50,8 +50,12 @@ let measured = false;
  * the list is neither re-created nor scrolled. The list key is the canonical query of the search and the refresh
  * version (`feedListKey`), the key `readFirstPage` gave the server's page one. A pull bumps the version of this
  * search, re-creates the list from page one through `/bff/listings`, and the indicator spins until page one has
- * answered; another search resets the version, so the server's page one of any later search is adopted. A new key
- * scrolls to the top before it is painted (SCR-007), never on the first render and never while the feed is covered.
+ * answered; another search resets the version, so the server's page one of any later search is adopted. A bump of the
+ * feed epoch (WP-38: a long return, the fresh pill, WP-31) counts as one more pull without the indicator, taken when
+ * the feed is shown again if it was hidden. A new key scrolls to the top before it is painted (SCR-007), never on the
+ * first render and never while the feed is covered. The list's position is remembered when it stops being its own
+ * address and restored when it is again with the same key (`feedScroll.ts`, BR-APP-105); the list on screen is handed
+ * to the long return (`fresh.ts`).
  * After the cards: the few-results note (BR-APP-025) or the search empty state (SCR-009), as `listEnd` decides. Among
  * them, in the `inline` slot, the radar card (SCR-047, WP-30) while `useFeedRadar` holds — never while radars are
  * switched off (DEC-51).

@@ -652,10 +652,11 @@ describe("FeedScreen: the scroll memory (WP-38, BR-APP-105, TMA-023)", () => {
     const view = screen({ initial: { key: "city=tashkent|0", result: page([1, 2]) } });
     scrollAt(1200);
 
+    // The commit that leaves may already have moved the window, without a scroll event yet: the followed position
+    // counts, not the window's.
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
     at("/map", "city=tashkent");
     view.rerender();
-    // The commit that leaves may already have moved the window: the followed position counts, not this one.
-    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
     expect(hasFeedScroll()).toBe(true);
 
     at("/", "city=tashkent");
