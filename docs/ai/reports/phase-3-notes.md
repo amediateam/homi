@@ -1730,3 +1730,15 @@ specifications have the field table and the ten sections in order. No file under
 
 Applied: none on the servers. Not applied: everything of the cabinet's code (WP-80 … WP-89); the operator texts are
 handed over by the developer.
+
+**Nine more answers** (2026-11-20, after #91 was opened, «задай все свои вопросы по одному и с вариантами ответа»):
+recorded as answers 15 … 23 and DEC-82 … DEC-88 in `461e4f2` — the realtor waitlist stays in the contract with no
+entry («Оставить как в PR», not the recommended option, DEC-82); a hold waits for the operators with a reminder after
+24 h (DEC-83); demand counts of 1 … 4 read «несколько человек» (DEC-84, DEV-063); `request_closed` with legacy's text
+for a seeker an owner closed his requests to (DEC-85); «Это риелтор» on native bot cards (DEC-86); the consent text
+approved by the lawyer before the production switch-on (DEC-87); staging before the legal gate with staff accounts and
+their written consent (DEC-88); the group of DEC-81 and DEV-060 confirmed. Question 7 carried a premise from a
+subagent's report that the audit contradicts (legacy's bot offers «Это риелтор» on every card, `04` BTN-041); the
+answer matches legacy, so the draft row DEV-064 was dropped and the decisions file says so. On `461e4f2`:
+`collect_ids.py --check` → exit 0, 2 518 ids; `task_graph.py --check` → exit 0; 284 questions; 1 195 line references
+valid.
