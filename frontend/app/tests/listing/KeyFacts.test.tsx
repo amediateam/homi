@@ -96,6 +96,15 @@ describe("KeyFacts (SCR-018 block 4)", () => {
     expect(document.querySelector('[data-fact="floor"] span')?.textContent).toBe("");
   });
 
+  it("a value wraps, hyphenated where it can, and is never cut off with an ellipsis", () => {
+    facts({ floor: 0 });
+
+    for (const value of document.querySelectorAll("[data-key-facts] b")) {
+      expect(value.className.split(" ")).toEqual(expect.arrayContaining(["break-words", "hyphens-auto"]));
+      expect(value.className.split(" ")).not.toContain("truncate");
+    }
+  });
+
   it("nothing when all four are absent", () => {
     facts({ rooms: null, area_total: null, floor: null, floors_total: null }, { marketCode: null });
 

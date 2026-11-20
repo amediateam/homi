@@ -79,8 +79,10 @@ describe("TabBar (SCR-006)", () => {
     const shell = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../styles/shell.css"), "utf8");
     expect(shell).toMatch(/\[data-tab\]:not\(\[aria-current\]\) \{\s*color: color-mix\(in srgb, var\(--text\) 55%, transparent\);\s*\}/);
     expect(shell).toMatch(
-      /@supports not \(color: color-mix\(in srgb, red 50%, blue\)\) \{\s*\[data-tab\]:not\(\[aria-current\]\) \{\s*color: var\(--text\);\s*opacity: 0\.55;/,
+      /@supports not \(color: color-mix\(in srgb, red 50%, blue\)\) \{\s*\[data-tab\]:not\(\[aria-current\]\) \{\s*color: var\(--text\);\s*opacity: 0\.55;\s*\}\s*\[data-tab\]:not\(\[aria-current\]\):active \{\s*opacity: 0\.8;/,
     );
+    // The tint fades on a tab switch, as legacy's `transition: color 0.2s`.
+    expect(shell).toMatch(/\[data-tab\] \{\s*transition:\s*color 0\.2s,/);
   });
 
   it.each<Locale>(["ru", "uz", "en"])("gives the long class to labels longer than 13 characters only (%s)", (locale) => {

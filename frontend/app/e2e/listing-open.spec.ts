@@ -232,6 +232,8 @@ for (const mode of ["cookie", "header"] as const) {
         const floor = layer(page, number).locator('[data-key-facts] [data-fact="floor"]');
         await expect(floor.locator("b")).toHaveText(word);
         await expect(floor.locator("span")).toHaveText("");
+        // The word wraps inside its tile instead of being cut off.
+        expect(await floor.locator("b").evaluate((value) => value.scrollWidth <= value.clientWidth)).toBe(true);
 
         await press(page, "backButtonClicked");
         await expect(page).toHaveURL(/\/ru\?city=tashkent_region$/);

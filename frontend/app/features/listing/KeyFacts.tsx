@@ -17,7 +17,9 @@ export interface KeyFactsProps {
  * `n` without a total) and the building, «Новый» for the code `new`, «Вторичка» for any other. Floor `0` is the tile
  * «Цокольный этаж» and a negative floor «Подвал», both with an empty caption (BR-APP-110, legacy since
  * `index-CIa0Ldj2.js`). A tile is left out when its value is unknown; rooms and area also at zero, as the card leaves
- * the area out. Nothing at all when no tile is left.
+ * the area out. Nothing at all when no tile is left. The tiles share the row equally, and a value is never cut off: it
+ * wraps, hyphenated where the browser can (legacy's `.fact b` wraps too), so «Цокольный этаж» reads whole beside three
+ * other tiles.
  */
 export function KeyFacts({ item, marketCode }: KeyFactsProps) {
   const t = useTranslations();
@@ -46,7 +48,7 @@ export function KeyFacts({ item, marketCode }: KeyFactsProps) {
     <ul data-key-facts="" className="grid auto-cols-fr grid-flow-col gap-[8px]">
       {tiles.map((tile) => (
         <li key={tile.fact} data-fact={tile.fact} className="flex min-w-0 flex-col rounded-medium bg-fill px-[10px] py-[10px]">
-          <b className="truncate text-[17px] leading-[1.2] font-bold text-text">{tile.value}</b>
+          <b className="text-[17px] leading-[1.2] font-bold break-words hyphens-auto text-text">{tile.value}</b>
           <span className="truncate text-[13px] text-hint">{tile.label}</span>
         </li>
       ))}

@@ -41,6 +41,7 @@
 
 [data-tab] {
   transition:
+    color 0.2s,
     opacity 0.2s,
     scale 0.15s,
     transform var(--dur-chrome) var(--ease-tab);
