@@ -417,8 +417,11 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
       await settle();
       await settle();
 
-      expect(tops).toEqual([220]);
-      expect(lefts).toEqual([150]);
+      // jsdom keeps no scroll position, so the hold may set it again on later frames: always the same value.
+      expect(tops.length).toBeGreaterThan(0);
+      expect(new Set(tops)).toEqual(new Set([220]));
+      expect(lefts.length).toBeGreaterThan(0);
+      expect(new Set(lefts)).toEqual(new Set([150]));
     } finally {
       vi.restoreAllMocks();
     }

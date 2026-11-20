@@ -181,6 +181,9 @@ the key would have kept every later search from adopting it. `feedListKey` keeps
   `querySelector`, as `ListingLayer` finds its scroller. `BottomSheet` and `RadarStrip` are unchanged.
 - The body's scroll is restored once the radar renders, and the strip's once its finds replace the ghosts (a ghost
   strip would clamp it). Both are restored once per opening, for a find and for «Смотреть найденное».
+- Each restore is set again on the next frames until it holds (at most 10). The sheet's header and footer padding
+  (`useSheetChrome`, a passive effect) arrives after the opening's layout effect and would clamp the first write; the
+  second CI run showed it.
 
 ## Files
 
@@ -327,7 +330,9 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - **Checks.** `make ci-frontend` exit 0 (generated types, lint, typecheck, the three builds; app 220 files, 3 698 tests).
 - **CI e2e on `861a5ee`:** 389 passed. Every case of `feed-continuity.spec.ts` passed in both modes except the radar
   case (the click above). `radars.spec.ts:509` in header mode ended with a route callback still in flight
-  (`route.fetch: Test ended`); WP-38 does not touch that spec.
+  (`route.fetch: Test ended`); WP-38 does not touch that spec, and it passed on the next run.
+- **CI e2e on `95289e3`:** 390 passed. The radar case restored the strip but not the sheet's body (`0` for `80`), which
+  the frame hold fixes.
 - **End to end.** `e2e/feed-continuity.spec.ts` was not run locally: this machine's API answered `500`, because its
   database host was unreachable (`No route to host`). The spec runs in CI. Its radar case needs radars on, which CI
   has.

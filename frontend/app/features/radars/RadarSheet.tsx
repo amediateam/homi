@@ -94,6 +94,21 @@ export interface RadarSheetProps {
  * (`not_found`) gives way to the tab. While the radar is not known yet the sheet shows its title «Радар» and the
  * strip's ghosts.
  */
+/** How many frames a restored scroll is set again while the sheet's layout settles (`holdScroll`). */
+const HOLD_FRAMES = 10;
+
+/**
+ * Sets a scroll position, then again on the next frames until it holds or `HOLD_FRAMES` have passed: the sheet's
+ * header and footer padding (`useSheetChrome`) and late rows arrive after the opening's layout effect, so the first
+ * write can be clamped short.
+ */
+function holdScroll(node: HTMLElement, axis: "scrollTop" | "scrollLeft", value: number, frames = HOLD_FRAMES): void {
+  node[axis] = value;
+  if (frames > 0 && node.isConnected && Math.abs(node[axis] - value) > 1) {
+    requestAnimationFrame(() => holdScroll(node, axis, value, frames - 1));
+  }
+}
+
 export function RadarSheet({ id, radar, presentation, instant = false, restore = null, onLeave, flags = devFlags, children }: RadarSheetProps) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -160,11 +175,11 @@ export function RadarSheet({ id, radar, presentation, instant = false, restore =
     const { body, strip } = scrollers();
     if (!restored.current.body && radar !== undefined && body !== null) {
       restored.current.body = true;
-      body.scrollTop = restore.sheetY;
+      holdScroll(body, "scrollTop", restore.sheetY);
     }
     if (!restored.current.strip && findsShown && strip !== null) {
       restored.current.strip = true;
-      strip.scrollLeft = restore.stripX;
+      holdScroll(strip, "scrollLeft", restore.stripX);
     }
   });
 
