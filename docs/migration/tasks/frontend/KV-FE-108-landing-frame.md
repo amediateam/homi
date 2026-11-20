@@ -23,6 +23,15 @@ sticky dock — with language switching as a real navigation (LB-LND-001 fix) an
   «English»; outside click or Escape closes, Escape returns focus; `body.hero-dark`), LND-016 (final block), LND-017
   (footer row), LND-018 (footer SEO links: four `<nav>`, 24 links per language), LND-019 (floating QR), LND-020 (dock),
   LND-027 (language selection and switching), LND-029.
+- *Since landing release `67b3942a8340` (landing intake):* the footer is in link columns — rent (six cities, «Без посредников», «Все
+  города и районы»), the twelve Tashkent districts, sale (Tashkent, «От хозяев», «Новостройки Ташкента», «Все города и
+  районы»), «Цены» and «О сервисе» (`o-servise/`, `uz/haqida/`, `en/about/`; «Поддержка») — above a bar with ©,
+  privacy, the OSM credit, the language buttons and Instagram: 26 section links per language plus `o-servise/`
+  (`index.html:431-504`; `03b` LND-069, URL-065).
+- *Since landing release `d9bbbc696337` (landing intake):* step 4 follows DEC-96 without a flag: `/` renders ru and, for a browser
+  whose languages resolve to uz or en, legacy's hint bar «Oʻzbek tilida ochish · Open in English» with links to
+  `/uz/` and `/en/` that keep the query without `lang` (fix of LB-LND-019; legacy's links are bare) (`index.html:58`; BR-LND-029, `03b` LND-067); `?lang=` and a stored choice lead to `/uz/` or
+  `/en/` (DEV-038, KV-FE-100).
 - URL-001…URL-003, URL-017, URL-018 (versioned assets and images, replaced by the build), URL-050, URL-060, URL-062.
   URL-051 (`t.me/KvadroSupportBot?start=l_<id>`) is emitted only by the Mini App (KV-FE-071); the landing footer emits
   the bare support link URL-050.
@@ -30,7 +39,7 @@ sticky dock — with language switching as a real navigation (LB-LND-001 fix) an
   visibility), BR-LND-023 (floating QR).
 - Defects and deviations: LB-LND-001 (relative URLs break after a switch, fix `APPROVED`), LB-LND-003 (`APPROVED`),
   LB-LND-002 → DEV-038, LB-LND-007 → DEV-040 (QR payload), LB-LND-008 → DEV-041 (privacy link target).
-- Source: `$KVADRO_ROOT/demo/landing/site/index.html:50-63`, `:334-427`; `$KVADRO_ROOT/demo/landing/site/landing.js:193-330`,
+- Source: `$KVADRO_ROOT/demo/landing/site/index.html:47-59`, `:413-519`; `$KVADRO_ROOT/demo/landing/site/landing.js:196-333`,
   `:2321-2477`; parity scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`.
 - S1–S3: these URLs are served from the legacy files by nginx (infrastructure); this task is the S4 replacement.
 
@@ -47,7 +56,7 @@ sticky dock — with language switching as a real navigation (LB-LND-001 fix) an
    `localStorage` `kv-landing-lang` and **navigates** to `/`, `/uz/` or `/en/` keeping the other query parameters and the
    hash and dropping `lang` (BR-LND-005 target URL; LB-LND-001: a real navigation instead of `history.replaceState`).
    The footer language buttons use the same handler with `aria-pressed`.
-4. Language on load (BR-LND-004), flag `dev038RootAlwaysRu` (KV-FE-100) off: on `/` only, a client resolver applies
+4. *(Superseded by the landing intake's note above: DEC-96, no flag; kept as written for the record.)* Language on load (BR-LND-004), flag `dev038RootAlwaysRu` (KV-FE-100) off: on `/` only, a client resolver applies
    `?lang=` → stored `kv-landing-lang` → browser languages (`uz`/`ru` → that language; `kk`, `ky`, `tg`, `tk`, `be` →
    `ru`; `en` only when none of those appears; else `ru`) and, when the result is uz or en, renders that language's
    messages in place without changing the URL (legacy parity; the three message sets for `/` ship with the page).

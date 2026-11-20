@@ -229,6 +229,12 @@ parameter; `id` became `number`; `delta` became `delta_pct`; `district` and `dis
 ISO 8601 with `+00:00`, like every v1 time (legacy writes `Z`, BR-API-151). `area` may be `null` (RES-010, RES-011);
 `rooms` of `medians` is 1 … 3.
 
+The landing intake (2026-11-20) added, on stubs: `GET /landing/live` → `showcase: {"rent": [{"district_code":
+"yunusobod", "count": 388}, …], "sale": […]}`, the district counts of the landing's showcase «Квартиры прямо
+сейчас» (legacy `live.json → showcase.<deal>.districts`, since legacy landing release `67b3942a8340`; an empty list
+means no counts; legacy's `total` and `owners` are not carried); and `floor` of a pin may be `null` (legacy data since
+2026-11-19). The fixture `landing/pins.rent.json` has the pin 100002 without a floor (*added by the landing intake*).
+
 ### Server classes
 
 - Data objects: `LandingLive`, `LandingPins` (in `App\Services\Sources\Data`); `LandingSource` gains `live()` and

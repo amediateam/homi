@@ -12,11 +12,34 @@ It owns the IDs `LND-NNN`, `URL-NNN`, `BR-LND-NNN`, `BR-SEO-NNN`, `LB-LND-NNN`, 
 ([`03`](03-legacy-frontend-audit.md)), the Telegram WebApp integration ([`05`](05-telegram-miniapp-audit.md)) and the
 bot (`04`) are referred to by name.
 
+**Release described.** The audit describes legacy landing release `d9bbbc696337`: the production files of 2026-11-19,
+SVN r37 of `demo/landing` (the checkout is at r39). It was first written on 2026-11-09 against release `c63da0e3476a`
+(the mirror restored on 2026-11-08) and brought up to date on 2026-11-20 by the landing intake, which read the four
+releases in between:
+
+| Release | Date | What changed (by its `REPORT.md`) |
+| ------- | ---- | --------------------------------- |
+| `67b3942a8340` | 2026-11-12 | the showcase «Квартиры прямо сейчас» (LND-065), the hero count (LND-066), the footer in link columns with «О сервисе» (LND-018, LND-069), title / description / og / h1 «Аренда и продажа…», new og images, the source tag sanitised (BR-LND-001), the dark-scene lag measured from the next block, privacy dated 9 November, `favicon.ico`; the prod server's `301` and `308` rules (LND-038); parity 40 → 45 |
+| `65998117d6ec` | 2026-11-14 | icons of 48, 96 and 192 px on every page, `favicon.ico` rebuilt, the soft link underline |
+| `b1b9a919ecc4` | downloaded 2026-11-18 | `privacy.html` only: dated 15 November; the owner who lists a flat, «Отклики», «Проверенный хозяин» (LND-003) |
+| `d9bbbc696337` | 2026-11-19 | `/` no longer translated by the browser language, the hint bar (LND-067, BR-LND-004, BR-LND-029); privacy without the browser language, home links `uz/`, `en/`, the support-bot block sentence; every HTML comment removed from `index.html` and `privacy.html`; parity 45 → 47 |
+
+Evidence: `CHG:5-75`; `RPT:67b3942a8340:8-36`, `RPT:65998117d6ec:7-17`, `RPT:b1b9a919ecc4:8-16`,
+`RPT:d9bbbc696337:8-15`. Amendments made by the intake are marked "(*since `<release>`, landing intake*)". Lines
+starting with "HOMI:" name a HOMI decision; the rest of the document describes legacy.
+
 **Status rules used here.**
 
 - **Landing.** `$KVADRO_ROOT/demo/landing/site/` holds the production files 1:1, so what is visible there is
   `CONFIRMED`. Browser effects derived by reading unambiguous code are also `CONFIRMED` and say "derived". Server-side
   generation (`/uz/`, `/en/`, data files, `stats.js` templating) is `DOCUMENTED_ONLY`.
+- **HTML comments.** Since `d9bbbc696337` `index.html` and `privacy.html` carry no HTML comments (32 and 1 removed;
+  comments in JS and CSS remain, `CHG:18`). A claim that rested on such a comment now cites the release diff that
+  removed it (`DIFF:…`); the comment is the legacy team's own note, not behaviour.
+- **Backend-rendered pages.** The sync downloads only `/`, `/uz/`, `/en/`, `/privacy.html`, `robots.txt` and the
+  assets they reference (`FET:6-8`, `REC:77-82`). Every page the backend renders (SEO pages, `o-servise/`, listing
+  pages, any owners' page) is outside the mirror: what the landing emits towards them is `CONFIRMED`, the pages
+  themselves are `DOCUMENTED_ONLY` or `UNVERIFIED`.
 - **SEO pages.** They are rendered by the unavailable backend and known only from `$KVADRO_ROOT/docs/seo-pages.md`
   (a production observation of 25 pages plus the sitemap). They are `DOCUMENTED_ONLY`. Every 🔶 item there is
   `UNVERIFIED` and paired with a `Q-…`.
@@ -27,8 +50,9 @@ bot (`04`) are referred to by name.
 **Migration policy** (README): legacy bugs and logically wrong decisions are fixed, not reproduced. Every `LB-…` item
 has a "Proposed fix:" line and a "URL/SEO impact:" line. Public URLs and deep links keep working.
 
-**Numbering.** `LND-001`–`LND-039` cover the landing and `LND-040`–`LND-064` cover the SEO pages. `URL-NNN` is
-sequential.
+**Numbering.** `LND-001`–`LND-039` cover the landing and `LND-040`–`LND-064` cover the SEO pages. Landing items
+added after the audit continue at `LND-065` and sit in page order among the landing items (LND-065 … LND-069 since
+the landing intake). `URL-NNN` is sequential.
 
 **Evidence shorthands.**
 
@@ -42,10 +66,16 @@ sequential.
 | `LI18N` / `MI18N` | `$KVADRO_ROOT/demo/landing/site/landing-i18n.js` / `…/miniapp-i18n.js` (key named) |
 | `CSS:n` | `$KVADRO_ROOT/demo/landing/site/landing.css:n` |
 | `REC:n` | `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:n` |
-| `FIX/<file>` | `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/<file>` (prod data snapshot of 2026-11-08) |
+| `CHG:n` | `$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md:n` |
+| `RPT:<release>:n` | `$KVADRO_ROOT/demo/landing/docs/releases/<date>_<release>/REPORT.md:n` |
+| `DIFF:<release>/<file>:n` | `$KVADRO_ROOT/demo/landing/docs/releases/<date>_<release>/delta/diffs/<file>.diff:n` (the release's diff against the previous one) |
+| `FIX/<file>` | `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/<file>`. The fixtures were replaced on 2026-11-12 by the snapshot of release `67b3942a8340` (303 files; before: 319 files of 2026-11-08). A figure marked "2026-11-08" is of the replaced snapshot; a figure without a date was re-counted from the current fixture by the landing intake |
 | `SCN:n` | `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs:n` |
 | `SRV:n` | `$KVADRO_ROOT/demo/landing/tools/lib/server.mjs:n` (local server that mirrors the prod routes) |
-| `REL` | `$KVADRO_ROOT/demo/landing/tools/sync/release.json` (prod fingerprint: CSP header, stamps, out-links) |
+| `FET:n` | `$KVADRO_ROOT/demo/landing/tools/sync/fetch.mjs:n` (what the sync downloads) |
+| `REL` | `$KVADRO_ROOT/demo/landing/tools/sync/release.json` (prod fingerprint: CSP header, stamps, out-links; now of `d9bbbc696337`) |
+| `APID:n` | `$KVADRO_ROOT/docs/api.md:n` |
+| `FND:n` | `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:n` (Mini App at r38) |
 | `SEO:n` | `$KVADRO_ROOT/docs/seo-pages.md:n` |
 | `ABT:n` | `$KVADRO_ROOT/docs/about.md:n` |
 | `BOT:n` | `$KVADRO_ROOT/docs/telegram-bot.md:n` |
@@ -59,7 +89,9 @@ sequential.
      `-seo-<channel>-<post>`, `-fb12`…) that sit in search caches, chats, ads and printed QR codes.
 
    If the domain changes (Q-SYS-006), every `kvadro.app` path needs a path-for-path `301`. `t.me/KvadroAppBot` links
-   cannot be redirected, so the bot username and the payload grammar must survive. See §6 (URL-001 – URL-062).
+   cannot be redirected, so the bot username and the payload grammar must survive. See §6 (URL-001 – URL-066).
+   (*Since `67b3942a8340`, landing intake:* the landing also emits listing pages, filtered SEO addresses and
+   `o-servise/`, URL-063 – URL-065; the Mini App emits the owners' page, URL-066.)
 2. **The SEO pages exist only as a description.** The renderer, `area.css`, the SVG charts and the uz/en texts of most
    page types are not in our material: 25 of 1 008 pages were sampled, and uz/en only on 4 pages.
    - **Before cut-over:** crawl and archive every sitemap URL, both CSVs and the assets. That archive is the parity
@@ -74,10 +106,16 @@ sequential.
      canonical and hreflang still say `ru` (LB-LND-002).
 
    **Fix:** server-rendered locales and real navigation. `?lang=` stays as a redirect.
-4. **Live production data breaks a landing block.** The prod `pins-rent.json` now mixes 36 district medians with
-   2 033 point medians (`pt:<lat>:<lng>[:near]`). The savings block renders every entry as a "district" button, so
-   raw codes appear in the row (LB-LND-004). The landing data contract needs to be redesigned rather than copied
-   (LB-LND-005, LB-LND-006).
+
+   (*Since `67b3942a8340` and `d9bbbc696337`, landing intake:* legacy has fixed part of both. Files under `/uz/` and
+   `/en/` now answer `301` to the unprefixed file, so images and data load again; the page links still resolve under
+   the prefix. `/` is no longer translated by the browser language: a uz or en browser sees the hint bar instead
+   (LND-067), and only `?lang=` and a stored choice still translate `/` in the page.)
+4. **Live production data breaks a landing block.** The prod `pins-rent.json` of 2026-11-08 mixed 36 district
+   medians with 2 033 point medians (`pt:<lat>:<lng>[:near]`). The savings block renders every entry as a "district"
+   button, so raw codes appear in the row (LB-LND-004). The landing data contract needs to be redesigned rather than
+   copied (LB-LND-005, LB-LND-006). (*Landing intake:* the fixture of 2026-11-12 holds 36 district medians and no
+   `pt:` entry; the client code is unchanged, so the defect waits for the next such feed.)
 5. **Attribution is leakier than it looks.**
    - The desktop QR code encodes a bare `https://t.me/KvadroAppBot` (decoded). It carries no `s_web` tag and no
      visit id.
@@ -92,34 +130,58 @@ sequential.
 7. **Some index history may not be recomputable.** The rent index promises that past months never change, and the
    sale-price history is published as CSV and may be cited. A new backend that recomputes from migrated data may not
    reproduce them. Archive the CSVs and migrate the series (Q-SEO-013).
-8. **Search Console context.** An HTML comment of 2026-11-05 records that of about 450 site pages, 94 were indexed and
-   349 were "обнаружена, не проиндексирована" (`IDX:379-380`). The SEO equity at stake is real but modest, and the
-   thin-page policy deserves a review (LB-SEO-012).
+8. **Search Console context.** An HTML comment of 2026-11-05 recorded that of about 450 site pages, 94 were indexed
+   and 349 were "обнаружена, не проиндексирована". Release `67b3942a8340` removed it with the old footer; it survives
+   only in that release's diff (`DIFF:67b3942a8340/index.html:292-293`). The SEO equity at stake is real but modest,
+   and the thin-page policy deserves a review (LB-SEO-012).
+9. **The showcase funnels visitors into SEO pages** (*since `67b3942a8340`, landing intake*). «Квартиры прямо
+   сейчас» (LND-065) sends its search form (with a filter in the address, `?rooms=&max=&owners=1`, URL-064) and its 12
+   district links (no query) to the backend's SEO area pages, and its cards to backend listing pages (`obyavlenie/<id>/`,
+   URL-063). Neither the filter semantics nor the listing pages are in our material (Q-SEO-022).
+   - HOMI: DEC-95 — WP-61 builds the whole showcase, but its links open HOMI's Mini App: the cards the listing
+     (`l_<number>-web`), the search and the districts the feed with that filter (DEV-067, WP-62). The SEO pages come
+     in Wave 3.
+10. **The language of `/` changed** (*since `d9bbbc696337`, landing intake*). `/` is Russian unless `?lang=` or a
+    stored choice says otherwise; a browser in uz or en gets the hint bar «Oʻzbek tilida ochish · Open in English»
+    (LND-067, BR-LND-004, BR-LND-029). Privacy follows: no browser language, home links `uz/`, `en/` (BR-LND-020).
+    - HOMI: DEC-96 — as legacy now, with `?lang=` and the stored choice redirected to `/uz/`, `/en/`; DEV-038 is the
+      default and has no flag.
+11. **The owners' page cannot come from the mirror.** The Mini App's «Нашли жильё?» survey shares a link to a
+    landing page «Сдать квартиру» (`/sdat-kvartiru/?s=tenant`, URL-066), but that page is not part of the static
+    landing, the sync never downloads backend-rendered pages, and legacy's own backend checklist lists it as not done
+    (LND-068, Q-LND-012).
+    - HOMI: DEC-97 — WP-61 waits for legacy's page until it starts; if the page is still unknown then, WP-61 writes
+      HOMI's own. Until it exists the survey's landlord block has one button, the bot link (DEC-91).
 
 ## 1. Landing
 
 ### 1.1 Delivery and file map
 
-All 35 files under `site/` are prod files byte for byte, except `privacy.html`, whose Cloudflare email rewrite was
-removed (`REC:89-95`). There is no build step and no source map (`REC:9-12`).
+All 38 files under `site/` are prod files byte for byte, except `privacy.html`, whose Cloudflare email rewrite was
+removed (`REC:107-109`; `RPT:b1b9a919ecc4:33`). There is no build step and no source map (`REC:9-13`). (*Since
+`67b3942a8340` and `65998117d6ec`, landing intake:* 35 → 36 → 38 files with `favicon.ico`, `favicon-48.png` and
+`favicon-96.png`. `REC:113` still says «35 из 36»; the release reports and `REL` say 38.) Sizes are bytes / lines of
+release `d9bbbc696337` (`wc -c`, `wc -l`); where `REC:24-35` gives another line count (only `landing.css`: 1 412
+against 1 426), the file wins.
 
 | File | Size / lines | Role | Produced by | Status |
 | ---- | ------------ | ---- | ----------- | ------ |
-| `index.html` | 75 KB / 434 | ru landing markup, head, inline v1/v2 script, JSON-LD | hand-written | CONFIRMED |
-| `uz/index.html`, `en/index.html` | 72 KB / 435 each | same page translated; own `<head>`; `<base href="../">`; footer slugs rewritten | backend `app/api/landing_pages.py` from `index.html` + `landing-i18n.js` (+ Mini App texts) | output CONFIRMED / generator DOCUMENTED_ONLY |
-| `privacy.html` | 25 KB / 180 | privacy policy, ru/uz/en in one file, own inline script | hand-written | CONFIRMED |
-| `landing.js` | 145 KB / 2 482 | all page logic, ES5 IIFE, unminified | hand-written | CONFIRMED |
-| `landing-i18n.js` | 23 KB / 351 | `window.LANDING_TEXTS`, 106 keys × ru/uz/en; JSON after the assignment so the server can read it | hand-written | CONFIRMED |
+| `index.html` | 82 KB / 526 | ru landing markup, head, inline v1/v2 script, JSON-LD; no HTML comments since `d9bbbc696337` | hand-written | CONFIRMED |
+| `uz/index.html`, `en/index.html` | 78 KB and 77 KB / 527 each | same page translated; own `<head>`; `<base href="../">`; footer and showcase slugs rewritten (the showcase form's `action` is not, LND-065) | backend `app/api/landing_pages.py` from `index.html` + `landing-i18n.js` (+ Mini App texts) | output CONFIRMED / generator DOCUMENTED_ONLY |
+| `privacy.html` | 28 KB / 189 | privacy policy, ru/uz/en in one file, own inline script | hand-written | CONFIRMED |
+| `landing.js` | 158 KB / 2 689 | all page logic, ES5 IIFE, unminified; 11 sections (`REC:41-53`) | hand-written | CONFIRMED |
+| `landing-i18n.js` | 30 KB / 480 | `window.LANDING_TEXTS`, 146 keys × ru/uz/en (was 106); JSON after the assignment so the server can read it | hand-written | CONFIRMED |
 | `miniapp-i18n.js` | 20 KB / 573 | `window.MINIAPP_TEXTS`, 188 keys × ru/uz/en | generated by `scripts/landing_miniapp.mjs` in the unavailable `webapp` repo | CONFIRMED / generator DOCUMENTED_ONLY |
 | `miniapp.css` | 74 KB / 1 167 | Mini App styles scoped to `.dev` | generated from `webapp/src/styles.css` by the same script | CONFIRMED / generator DOCUMENTED_ONLY |
-| `landing.css` | 102 KB / 1 197 | landing styles, scroll timelines, v2 steps | hand-written | CONFIRMED |
+| `landing.css` | 120 KB / 1 426 | landing styles, scroll timelines, v2 steps, the showcase `.vit` (`CSS:278-436`), the hint bar (`CSS:61-74`), the soft link underline (`CSS:28`) | hand-written | CONFIRMED |
 | `stats.js` | 2.5 KB / 55 | PostHog loader (no cookies), visit id, bot-link tagging; key and host written in by the server | backend `app/api/site_stats.py` | CONFIRMED / templating DOCUMENTED_ONLY |
-| `robots.txt`, `site.webmanifest` | — | crawler rules, manifest | static | CONFIRMED |
-| Images | 9 at root + 14 in `img/` | `logo.svg`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `og-{ru,uz,en}.jpg` (1200×630), `map-tashkent.webp`; `img/`: `cluster-{2k,3,4,5}.webp`, `own-{chil,mirzo,yunus}.webp`, `ag-{chil,yakka,shay}.webp`, `unk-yash.webp`, `mirobod-2k.webp`, `mascot-shrug.svg`, `qr-bot.svg` | static | CONFIRMED |
-| `data/*.json`, `img/snap/*.webp` | 3 JSON + 316 photos in the fixture | landing data snapshot (§1.5) | backend `scripts/landing_snapshot.py`, `live.json` ← `app/api/landing.py`, several times a day | shape CONFIRMED / schedule DOCUMENTED_ONLY |
+| `robots.txt`, `site.webmanifest` | — | crawler rules, manifest (both unchanged since the audit) | static | CONFIRMED |
+| Images | 12 at root + 14 in `img/` | `logo.svg`, `favicon.ico` (3 sizes, 3 561 B), `favicon-32.png`, `favicon-48.png`, `favicon-96.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `og-{ru,uz,en}.jpg` (1200×630, new images since `67b3942a8340`), `map-tashkent.webp`; `img/`: `cluster-{2k,3,4,5}.webp`, `own-{chil,mirzo,yunus}.webp`, `ag-{chil,yakka,shay}.webp`, `unk-yash.webp`, `mirobod-2k.webp`, `mascot-shrug.svg`, `qr-bot.svg` | static | CONFIRMED |
+| `data/*.json`, `img/snap/*.webp` | 3 JSON + 300 photos in the fixture of 2026-11-12 (316 photos on 2026-11-08); 310 data files on prod at the `d9bbbc696337` fetch | landing data snapshot (§1.5) | backend `scripts/landing_snapshot.py`, `live.json` ← `app/api/landing.py`, several times a day | shape CONFIRMED / schedule DOCUMENTED_ONLY |
 
-Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`; `REL` (`fileCount 35`, data
-`fileCount 319`).
+Evidence: `REC:22-37`, `REC:55-83`; `$KVADRO_ROOT/demo/landing/README.md:35-41`; `REL` (`fileCount 38`, data
+`fileCount 310`); `RPT:65998117d6ec:13`. (*Landing intake:* `REL` is now the fingerprint of `d9bbbc696337`; the
+audit's `fileCount 35` and data `fileCount 319` were of `c63da0e3476a`.)
 
 ### 1.2 Pages
 
@@ -134,13 +196,22 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   6. FAQ;
   7. a final block with a QR code;
   8. a dark footer with SEO links.
+
+  (*Since `67b3942a8340`, landing intake:* the showcase «Квартиры прямо сейчас» (LND-065) sits between the dark
+  scene and «Узнавайте первым», the hero carries a count (LND-066), and the footer is in link columns (LND-018).
+  *Since `d9bbbc696337`:* the header can show the language hint bar (LND-067).)
 - **Head:** `<title>` «Аренда квартир в Ташкенте — все объявления из Telegram | kvadro²», description, og/twitter,
   canonical, hreflang, JSON-LD, icons, manifest, `theme-color` (LND-033).
+  - (*Since `67b3942a8340`, landing intake:* `<title>` and `og:title` «Аренда и продажа квартир в Ташкенте — сервис
+    поиска жилья | kvadro²»; the description starts «Сервис поиска жилья в Узбекистане: аренда и продажа квартир,
+    новостройки и объявления от хозяев…»; `og:description` «Аренда и продажа квартир из Telegram-каналов в одной
+    ленте: без повторов, рекламы и хаоса, хозяева отмечены. Бесплатно.»; `og:image` `og-ru.jpg?v=20261109`, a new
+    image. `IDX:6-23`; `DIFF:67b3942a8340/index.html:3-35`.)
 - **Scripts:** one inline script in `<head>` (LND-021), then `stats.js`, `miniapp-i18n.js`, `landing-i18n.js`,
-  `landing.js`, all `defer` and in that order (`IDX:429-432`).
+  `landing.js`, all `defer` and in that order (`IDX:521-524`).
 - **Without JS:** the markup carries complete ru texts and example numbers. Bot buttons point to the bare
-  `https://t.me/KvadroAppBot` (`IDX:109`, `:343`, `:423`).
-- **Evidence:** `IDX:1-434`; `REC:3-5`, `REC:25`.
+  `https://t.me/KvadroAppBot` (`IDX:101`, `:418`, `:515`).
+- **Evidence:** `IDX:1-526`; `REC:3-5`, `REC:26`.
 
 #### LND-002 — Landing, uz and en (`/uz/`, `/en/`) · CONFIRMED (output) / DOCUMENTED_ONLY (generator)
 
@@ -154,30 +225,47 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
     `novostrojki/` → `uz/novostroyka/` or `en/new-builds/`, `indeks/` → `index/` (en) and `ceny/` → `narxlar/` (uz)
     or `prices/` (en).
   - **Kept as in ru:** the hreflang set and the JSON-LD.
+  - (*Since `67b3942a8340`, landing intake:* the generator also rewrites the showcase links — `vit-rt` and the 12
+    district links — and the new footer links, `o-servise/` → `uz/haqida/` or `en/about/` and `bez-posrednikov/` →
+    `maklersiz/` or `by-owner/`. It does not rewrite the showcase form's `action`, which stays `arenda/tashkent/` on
+    both pages (`UZ:199`, `EN:199`; LND-065). *Since `d9bbbc696337`:* the hint bar markup is copied too, hidden; it
+    never shows on these pages, because the path decides the language first (BR-LND-029).)
 - **Titles:**
   - uz: «Toshkentda ijaraga kvartira (arenda) — Telegramdagi barcha eʼlonlar | kvadro²»;
   - en: «Apartments for rent in Tashkent — every Telegram listing | kvadro²» (`LI18N meta.title`).
+  - (*Since `67b3942a8340`, landing intake:* uz «Toshkentda ijara va sotuvga kvartiralar — uy-joy qidirish xizmati |
+    kvadro²», en «Apartments for rent and sale in Tashkent — home search service | kvadro²»; the h1 is
+    «Toshkentda ijara va sotuvga kvartiralar» / «Apartments for rent and sale in Tashkent» (`UZ:7`, `UZ:99`, `EN:7`,
+    `EN:99`).)
 - **Client side:** `landing.js` leaves server-translated text alone when the document language already matches
-  (`LJS:2370-2378`).
-- **Evidence:** `UZ:1-30`, `EN:1-30`, `EN:370-408`; `REC:26`, `REC:54-55`; `ABT:328-333`. The generator
+  (`LJS:2573-2585`).
+- **Evidence:** `UZ:1-30`, `EN:1-30`, `EN:432-505`; `REC:27`, `REC:57-58`; `ABT:328-333`. The generator
   `app/api/landing_pages.py` is known only by name.
 
 #### LND-003 — Privacy policy (`/privacy.html`) · CONFIRMED
 
 - **What:** one HTML document with three `<article data-doc="ru|uz|en">` blocks. A single version is shown.
   - **Title:** «Конфиденциальность — kvadro²» / «Maxfiylik — kvadro²» / «Privacy — kvadro²».
-  - **Date:** «Обновлено 5 ноября 2026».
+  - **Date:** «Обновлено 5 ноября 2026». (*Landing intake:* 9 November since `67b3942a8340`, «Обновлено 15 ноября
+    2026» since `b1b9a919ecc4`, uz «Yangilangan: 2026-yil 15-noyabr», en «Updated November 15, 2026»; `PRV:40`,
+    `PRV:83`, `PRV:125`.)
   - **Sections:** «Сайт kvadro.app», «Бот и приложение kvadro² в Telegram», «Как удалить свои данные», «Авторам
     объявлений», «Вопросы»; then «← На главную».
   - **Head:** `<meta name="theme-color" content="#ffffff">`, `landing.css` plus an inline `<style>`. There is no
-    canonical, hreflang, og or JSON-LD.
-- **Language selection:** an inline script (`PRV:150-177`) picks the language in this order:
+    canonical, hreflang, og or JSON-LD. (*Landing intake:* it has a `meta description` «Что сайт kvadro.app и бот
+    kvadro² в Telegram хранят о вас и как удалить свои данные.», and since `65998117d6ec` the icons of LND-033;
+    `PRV:7-14`.)
+- **Language selection:** an inline script (`PRV:166-186`) picks the language in this order:
   1. `?lang=`;
   2. `localStorage kv-landing-lang`;
   3. browser languages, by the same rule as the landing (BR-LND-020).
 
   It then sets `html lang` and `document.title`, unhides the matching article, and for uz/en rewrites the home links
   to `./?lang=<lang>`.
+
+  (*Since `d9bbbc696337`, landing intake:* step 3 is gone — without `?lang=` or a stored choice the page is ru — and
+  the uz/en home links become `uz/` and `en/` (`PRV:173-184`). The script changed, so the privacy sha256 in the CSP
+  changed too (`RPT:d9bbbc696337:17-20`).)
 - **Promises the product must keep or rewrite:**
   - **Site analytics:** no cookies; PostHog EU; a visit number travels into the bot.
   - **Bot data:** an action log kept for 180 days; `/owner` keeps only a phone hash.
@@ -188,22 +276,100 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Deletion:** via `/privacy` → «Удалить мои данные»; backups expire in about two weeks.
   - **Listing authors:** photo copies kept for up to 30 days; withdrawn listings kept for 90 days, then text, phone and
     photo erased; takedowns via `@KvadroSupportBot` or the project mailbox.
-- **Analytics:** `stats.js` (`PRV:178`).
-- **Evidence:** `PRV:1-180`; `ABT:264-275`.
+  - (*Since `67b3942a8340`, landing intake:*) **Waitlist wording:** «если вход в бот временно закрыт или мест нет»
+    instead of «пока бот в закрытой бете» (`PRV:62`).
+  - (*Since `b1b9a919ecc4`, landing intake:*) **Phones.** «Имя бот не хранит. Телефон — только тот, что вы
+    подтвердили сами кнопкой Telegram», in two cases (`PRV:55-59`):
+    - an owner who confirmed the number with `/owner`: only its hash and the confirmation date are kept, for the mark
+      «Проверенный хозяин · номер подтверждён» (was «Хозяин · номер подтверждён»; uz «Tasdiqlangan uy egasi», en
+      «Verified owner»);
+    - an owner who lists a flat («Сдаю квартиру» in the bot or the app): the number itself is kept (to hand it to
+      those the owner taps «Дать номер» for, or to show it on the card with «Показывать номер всем»), with the
+      questionnaire answers and the photos. Photos are kept while the listing is in the feed or paused; the number and
+      the answers until the owner deletes their data.
+  - (*Since `b1b9a919ecc4`, landing intake:*) **«Отклики».** The owner sees the responder's Telegram name (not
+    stored), who will live there, the move-in date and the text; an owner-author sees the same about the responder;
+    responses are kept until data deletion (`PRV:60`).
+  - (*Since `d9bbbc696337`, landing intake:*) **Support-bot block.** A user blocked in the support bot keeps, after
+    deletion, only the Telegram ID with the block mark (`PRV:69`).
+  - (*Landing intake:*) the FAQ answer «Вы видите мои данные?» still says «Имя, телефон и контакты не храним»
+    (`IDX:407`, `LI18N faq.a8`), which the phone paragraph above no longer supports. Recorded here as a text
+    mismatch; it has no `LB` id.
+- **Analytics:** `stats.js` (`PRV:187`).
+- **Evidence:** `PRV:1-189`; `ABT:264-275`; `RPT:b1b9a919ecc4:12`.
+- HOMI: WP-61 builds the privacy pages; their final wording, the owner cabinet's paragraphs included, is WP-70's.
+
+#### LND-068 — Owners' page «Сдать квартиру» (`/sdat-kvartiru/`) · UNVERIFIED
+
+(*Since Mini App release `index-YX9bFVws.js`, landing intake.*)
+
+- **What:** a landing page for landlords, named by the Mini App and the legacy API document but absent from the
+  landing mirror:
+  - the «Нашли жильё?» survey's block «Съезжаете со старой квартиры?» shares a text with the link
+    `https://kvadro.app/sdat-kvartiru/?s=tenant` (`?s=tenant`: the link was sent by a tenant who is moving out);
+  - per interface language: `/sdat-kvartiru/` (ru), `/uz/kvartira-ijaraga-berish/` (`uz_Latn`),
+    `/en/list-your-apartment/` (en); any other locale gets the ru page.
+- **Status of the page:** legacy's own backend checklist lists it as not done: «- [ ] Лендинг отдаёт страницы «Сдать
+  квартиру» …» and «принимает метку `?s=tenant`» (`APID:1411-1412`). The landing sync never downloads a page the
+  backend renders (`FET:6-8`), so even a live page could not reach the mirror. Its existence, content, producer and
+  what `?s=tenant` does on it are unknown (Q-LND-012).
+- **What a visitor would get today if the page is missing:** UNVERIFIED. By the prod routing of LND-038 the slashed
+  path is not a file, so it is either a backend page or the backend's `404` (Q-LND-006).
+- **Evidence:** `FND:79-92`; `APID:1198-1203`, `APID:1411-1412`; `FET:6-8`; URL-066.
+- HOMI: DEC-97 — WP-61 waits for legacy's page; when WP-61 starts it describes legacy's page if it is known (its
+  documents, or the developer brings it), else writes HOMI's own. Until then the survey's landlord block has one
+  button, the bot link (DEC-91).
+
+#### LND-069 — «О сервисе» page (`o-servise/`) · UNVERIFIED
+
+(*Since `67b3942a8340`, landing intake.*)
+
+- **What:** the footer column «О сервисе» links «Что такое kvadro² и как он работает» to `o-servise/` (uz
+  `uz/haqida/` «kvadro² nima va qanday ishlaydi», en `en/about/` «What kvadro² is and how it works»).
+- **Producer:** a backend page like the SEO pages (`REC:81-82`); not in the mirror, never downloaded (`FET:6-8`).
+  Content, languages and whether uz/en exist are unknown (Q-LND-014).
+- **Evidence:** `IDX:480-486`; `UZ` and `EN` footers (`uz/haqida/`, `en/about/`); `REL outLinks` (`o-servise 1`);
+  URL-065.
 
 ### 1.3 Blocks, in page order
 
 #### LND-004 — Header: logo and language menu · CONFIRMED
 
 - **Logo:** `a.brand` with `logo.svg` and «kvadro²», `href="./"`. After a language switch it becomes `uz/` or `en/`
-  (`LJS:2433`).
+  (`LJS:2639`).
 - **Language menu:**
   - **Button:** `#lang-btn` shows a globe icon and the code (`RU`); `aria-label` «RU — Язык: Русский».
   - **Menu:** `#lang-menu` (`role=menu`) holds three `menuitemradio` buttons with `data-lang` ru/uz/en, labelled
     «Русский», «Oʻzbekcha», «English».
-  - **Closing:** an outside click or Escape closes it, and Escape returns focus to the button (`LJS:2456-2476`).
-- **Theme:** `body.hero-dark` makes the first screen dark (the comment cites an owner decision of 13.10).
-- **Evidence:** `IDX:50-63`.
+  - **Closing:** an outside click or Escape closes it, and Escape returns focus to the button (`LJS:2663-2683`).
+- **Theme:** `body.hero-dark` makes the first screen dark (the comment cites an owner decision of 13.10). (*Since
+  `d9bbbc696337`, landing intake:* the comment is gone; it survives in `DIFF:d9bbbc696337/index.html:44`.)
+- **Hint bar:** (*since `d9bbbc696337`, landing intake*) the header also holds the hidden hint bar `#lang-hint`
+  (LND-067).
+- **Evidence:** `IDX:47-59`.
+
+#### LND-067 — Language hint bar (`#lang-hint`) · CONFIRMED
+
+(*Since `d9bbbc696337`, landing intake.*)
+
+- **What:** `p.lang-hint` inside the header, `hidden` in the markup, with two plain links: «Oʻzbek tilida ochish»
+  (`href="uz/"`, `lang="uz"`) · «Open in English» (`href="en/"`, `lang="en"`). The two labels are markup text, the
+  same on every page; they are not in `landing-i18n.js`.
+- **When it shows:** only on `/`, when the language comes from none of `?lang=`, the path and the stored choice, and
+  the browser languages resolve to uz or en by `langFromBrowser` (`kk`, `ky`, `tg`, `tk`, `be` resolve to ru: no bar).
+  The page itself stays ru (BR-LND-004, BR-LND-029).
+- **When it hides:** a language chosen in the header menu or in the footer (`chooseLang`). There is no close button.
+  Following a link is an ordinary navigation and stores nothing, so the bar shows again on the next visit to `/`.
+- **Layout:** one line centred under the header (76 px from the top, as wide as its content and at most the screen
+  minus 32 px), its own white background over the post cloud, `#0e0e10` on the dark first screen, smaller at
+  ≤ 400 px (`CSS:61-74`).
+- **Pages:** `/uz/` and `/en/` carry the same hidden markup (`UZ:59`, `EN:59`); the path decides their language, so it
+  never shows there.
+- **Defect:** the links carry no query, so `?s=` and `utm_source` are lost (LB-LND-019).
+- **Parity:** `browser-uz` and `browser-en` (ru page with the bar), `browser-kk` (no bar), `browser-en-phone`,
+  `browser-en-menu-uz` (`/uz/` without the bar) (`SCN:156-164`).
+- **Evidence:** `IDX:58`; `LJS:2536-2541`, `LJS:2657`; `CSS:61-74`; `CHG:10-11`, `CHG:16`.
+- HOMI: DEC-96 — the same bar on HOMI's `/` (WP-61).
 
 #### LND-005 — First scene: posts become one card (hero) · CONFIRMED
 
@@ -214,12 +380,31 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   texts are the same in every language.
 - **`s-back` layer:**
   - **`h1`:** «Аренда квартир в Ташкенте». Per the comment, the H1 is the search query (owner decision of 18.10).
-  - **Slogan:** `p.hero-title` «Вся аренда из Telegram. В одной ленте.».
+    (*Landing intake:* «Аренда и продажа квартир в Ташкенте» since `67b3942a8340` (`IDX:98`, `LI18N hero.kicker`);
+    the comment was removed in `d9bbbc696337` and survives in `DIFF:d9bbbc696337/index.html:70`.)
+  - **Slogan:** `p.hero-title` «Вся аренда из Telegram. В одной ленте.» (unchanged, although the h1 now names sale).
   - **Lead:** «Без повторов, рекламы и хаоса.».
   - **CTA:** «Открыть в Telegram» (`data-bot-link`).
+  - **Count:** (*since `67b3942a8340`, landing intake*) «Бесплатно · N новых квартир за сутки» under the CTA
+    (LND-066).
   - **Caption:** «Семь постов — одна карточка».
 - **`s-front` layer:** the phone and the steps (LND-006, LND-007).
-- **Evidence:** `IDX:65-116`.
+- **Evidence:** `IDX:62-109`.
+
+#### LND-066 — Hero count «Бесплатно · N новых квартир за сутки» (`#hero-count`) · CONFIRMED
+
+(*Since `67b3942a8340`, landing intake.*)
+
+- **What:** `p.hero-live` under the first-screen CTA: «Бесплатно», then, when the data allows, « · N новых квартир за
+  сутки» or «… за неделю» (`#hero-day`, `#hero-what`).
+- **Data and rule:** `data/live.json`, fetched at once on load (not near the block, unlike the final block), with the
+  count rule of the other counters (BR-LND-028, BR-LND-007). The code's reason: visitors from ChatGPT arrive on
+  phones and decide on the first screen (a measurement of 06–08.11, median 11 s), and the snapshot is small (about
+  1.5 KB) (`LJS:2237-2238`).
+- **Texts:** `final.free`, `count.what` (plural), `count.day` / `count.week` (uz «Bepul · N ta yangi kvartira bir
+  kunda», en «Free · N new apartments in the past 24 hours»).
+- **Without JS or data:** «Бесплатно» alone.
+- **Evidence:** `IDX:105`; `LJS:2236-2245`, `LJS:2066-2096`; `CSS:207-209`; `CHG:61`.
 
 #### LND-006 — Phone with the Mini App demo · CONFIRMED
 
@@ -241,7 +426,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Chrome:** a lock-screen wall, an iOS status bar and Telegram header buttons.
 - **Styles and texts:** `miniapp.css` (generated); texts come from `miniapp-i18n.js` through `data-t` / `data-tp`.
   Every control has `tabindex="-1"` and is inert until live mode (LND-008).
-- **Evidence:** `IDX:137-175`; `REC:31`, `REC:45`; `LJS:537-575`.
+- **Evidence:** `IDX:129-167`; `REC:31-32`, `REC:46`; `LJS:540-578`.
 
 #### LND-007 — «Как приложение. Прямо в Telegram.» steps · CONFIRMED
 
@@ -251,7 +436,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - «Карта» — «Цены на карте — видно, что сдаётся рядом.»
 - **Narrow screens:** a segmented progress bar `.st-bar` («Лента · Фильтры · Карта») under the phone. It is
   `aria-hidden`; the list stays available to screen readers.
-- **Evidence:** `IDX:119-127`, `IDX:177-180`.
+- **Evidence:** `IDX:112-120`, `IDX:169-171`.
 
 #### LND-008 — Live price map in the phone · CONFIRMED
 
@@ -271,7 +456,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Listing:** `p.link` = `https://t.me/KvadroAppBot?startapp=l_<id>-web`, opened with
     `window.open(…, "_blank", "noopener")`.
   - **Fallback:** the bot link with the `s_web` tag (BR-LND-017).
-- **Evidence:** `LJS:537-1350`, `LJS:1834-1918`; `FIX/pins-rent.json`.
+- **Evidence:** `LJS:540-1353`, `LJS:1838-1922`; `FIX/pins-rent.json`.
 
 #### LND-009 — Interaction hints: demo finger and tap cursor · CONFIRMED
 
@@ -279,7 +464,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   the card, then drags the map. It stops for good after any user touch or when live mode ends.
 - **v2 show:** a single «кружок» cursor glides between buttons during the scripted feed → filters → map steps and
   presses them slightly early. It fades before live mode.
-- **Evidence:** `LJS:752-800`, `LJS:1430-1530`.
+- **Evidence:** `LJS:755-803`, `LJS:1433-1533`.
 
 #### LND-010 — «Попробуйте сами» hint and «Листайте дальше» cue · CONFIRMED
 
@@ -287,34 +472,79 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   карту.», the short one «Нажмите на цену или потяните карту», and there is an arrow.
 - **Cue:** `#scroll-cue` «Листайте дальше». A tap scrolls to the lock-screen phase (LND-011), or past the scene when
   that phase is absent. This matters on phones, where a finger on the map drags the map instead of the page.
-- **Evidence:** `IDX:181-189`; `LJS:2177-2192`.
+- **Evidence:** `IDX:172-178`; `LJS:2183-2196`.
 
 #### LND-011 — Lock-screen phase at the end of scene 1 (v1 only) · CONFIRMED
 
 - **When:** only if v1 is active, `timeline-scope` and `animation-timeline: view()` are supported, and reduced motion
-  is off (`LOCK_SCENE`, `LJS:2152`). Scene 1 is then 9 200 px tall (`CSS:1006-1011`).
+  is off (`LOCK_SCENE`, `LJS:2156`). Scene 1 is then 9 200 px tall (`CSS:1235-1240`).
 - **Sequence:** after 250 px of dwell on the live map (`LOCK_DWELL`), the phone moves right and dims to a lock screen.
   Up to 4 pushes about the latest real rentals (`data/live.json`) arrive with scrolling: the first at 12 % of the
   phase, then every 17 %. They leave again when scrolling back.
 - **Left column:** «Узнавайте первым», the lead «Больше не нужно листать каналы: подходящие квартиры сами придут в
   Telegram, как только появятся.» and the counter (BR-LND-007).
-- **Evidence:** `LJS:2145-2211`; `IDX:128-136`, `IDX:164-169`.
+- **Evidence:** `LJS:2149-2215`; `IDX:121-128`, `IDX:156-162`.
+
+#### LND-065 — Showcase «Квартиры прямо сейчас» (`#vit`) · CONFIRMED (client) / DOCUMENTED_ONLY (data producer)
+
+(*Since `67b3942a8340`, landing intake.*)
+
+- **Where:** `section.vit#vit`, a white block right after the dark scene and before «Узнавайте первым».
+- **Head:** `h2` «Квартиры прямо сейчас» and the lead «Свежие квартиры из Telegram-каналов, без повторов». With data
+  the lead becomes «N новых квартир за сутки — из Telegram-каналов, без повторов» (`vit.lead.n`, BR-LND-026).
+- **Deal switch:** «Снять» / «Купить» (`data-vdeal` `rent` / `sale`, `aria-pressed`, group «Что ищете»). It changes the
+  cards, the district counts and links, the budget list and where the search leads (BR-LND-024).
+- **Search form** (`form#vit-form`, `role=search`, «Поиск квартиры»):
+  - «Где»: «Ташкент, любой район» or one of the 12 Tashkent districts; the values are URL slugs (`mirzo-ulugbek`,
+    `yunusobod`, …);
+  - «Комнаты»: «Любые», «1 комната», «2 комнаты», «3 комнаты», «4 и больше»;
+  - «Бюджет в месяц» for rent (до $300, $500, $700, $1 000, $1 500) or «Бюджет» for sale (до $50 000, $80 000,
+    $100 000, $150 000, $250 000), and «Любой»;
+  - the switch «Только хозяева» with «Без риелторов и комиссии»;
+  - a round search button (`aria-label` «Найти»; its text «Показать квартиры» shows only in the phone sheet).
+
+  Each select is transparent and lies over its field; the field shows the chosen option's text. The address the
+  search builds is BR-LND-026 (URL-064).
+- **Phone (≤ 760 px):** a pill «Где искать?» / «Ташкент · комнаты · бюджет» replaces the form and opens it as a bottom
+  sheet «Поиск» with a grab bar and a cross «Закрыть» (BR-LND-027).
+- **Row of cards:** the link «Свежая аренда в Ташкенте» / «Свежая продажа в Ташкенте» (to the city's section page)
+  with round «Назад» / «Дальше» buttons that scroll the row by one width and are disabled at its ends. The row holds
+  the ten freshest listings with a photo, each a link to its listing page `obyavlenie/<id>/` (BR-LND-025, URL-063).
+- **Districts:** «Районы Ташкента» with 12 links to the district pages of the current deal, each with «N квартир»
+  from `live.json → showcase` and nothing without it (BR-LND-026).
+- **Data:** the pins of the current deal and `live.json` (`showcase.{rent,sale}` = `{districts: {<code>: n}, total,
+  owners}`; the code reads only `districts`), loaded two screens ahead (BR-LND-024, §1.5).
+- **Without JS:** the form is a plain GET form to `arenda/tashkent/` with the fields `d`, `rooms`, `max` and
+  `owners`, so the district travels as `?d=` rather than in the path. On `/uz/` and `/en/` the `action` stays
+  `arenda/tashkent/`, because the generator rewrites links but not form actions (`UZ:199`, `EN:199`): a search there
+  without JS lands in the ru section. What the SEO page does with `d=` is unknown (Q-SEO-022). The row is empty and
+  hidden, and the district links have no counts. Recorded here as a no-JS defect; it has no `LB` id.
+- **Data safety:** unlike the rest of the file (`LJS:1-2`), the card is built through `innerHTML` with data values in
+  it (LB-LND-017).
+- **Parity:** `vit-sale`, `vit-sale-uz-phone`, `vit-search`, `vit-sheet-phone` (`SCN:143-155`).
+- **Evidence:** `IDX:183-280`; `LJS:2334-2516`; `CSS:278-436`; `LI18N vit.*`; `REC:52`, `REC:71-82`; `CHG:59-60`;
+  `RPT:67b3942a8340:11-13`, `RPT:67b3942a8340:24-28`, `RPT:67b3942a8340:38-41`.
+- HOMI: DEC-95 — WP-61 builds the whole showcase; a card opens the listing in HOMI's Mini App (`l_<number>-web`), the
+  search and the districts open its feed with the filter (DEV-067, WP-62); the counts come from `GET /landing/live` →
+  `showcase` (on stubs since the landing intake), without legacy's `total` and `owners`.
 
 #### LND-012 — «Узнавайте первым» section (`#live`) · CONFIRMED
 
 - **What:** a standalone grey block with the same heading and lead, a lock-screen phone (390 × 844 points, scaled) and
   the counter `#live-count`.
   - **When shown:** CSS hides it where the lock phase of LND-011 runs, so it serves v2, reduced motion and browsers
-    without scroll timelines (`CSS:1010`).
+    without scroll timelines (`CSS:1239`).
   - **v2:** the phone is bigger and cropped from the top (`lcrop`). The dark scene above slides away with a parallax
-    of up to 260 px (`LJS:1810-1830`).
+    of up to 260 px (`LJS:1813-1834`). (*Since `67b3942a8340`, landing intake:* the lag is measured from the block
+    right after the scene, `story.nextElementSibling`, which is now the showcase and no longer this block;
+    `LJS:1817-1818`.)
 - **Behaviour:**
   - **Clock and date:** set to `Asia/Tashkent`.
   - **Pushes:** they drip one per second while the block is at least 35 % visible.
   - **Ages:** relative to the snapshot time and refreshed every 30 s.
   - **Without JS:** one example push stays: «kvadro² · только что · 2-комн. квартира · Мирабад · $600/мес · −23% к
     рынку» (BR-LND-014).
-- **Evidence:** `IDX:194-231`; `LJS:1939-2140`.
+- **Evidence:** `IDX:282-315`; `LJS:1943-2144`.
 
 #### LND-013 — «Хозяин ◐ Риелтор» switch · CONFIRMED
 
@@ -334,7 +564,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   On phones each set scrolls sideways.
 - **Data:** static cards and photos (`img/own-*.webp`, `img/ag-*.webp`). Card parameters are re-rendered per language
   from `data-params` (`2,60,1,7` → «2‑комн. · 60 м² · 1/7 эт.»).
-- **Evidence:** `IDX:234-291`; `LJS:78-125`, `LJS:2396-2400`.
+- **Evidence:** `IDX:317-373`; `LJS:81-128`, `LJS:2600-2604`.
 
 #### LND-014 — «Сразу видно, где дешевле рынка» savings block · CONFIRMED
 
@@ -348,8 +578,8 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - a weekly line «N квартир на 20% и больше дешевле обычной цены нашли за неделю в Ташкенте».
 - **Data:** `medians` and `bargains_week` of `data/pins-rent.json`. Until the data arrives, hard-coded fallback
   medians are used (BR-LND-008, BR-LND-009).
-- **Bug:** current prod data makes it render point medians as districts (LB-LND-004).
-- **Evidence:** `IDX:294-311`; `LJS:2241-2318`; `LI18N pc.*`.
+- **Bug:** the prod data of 2026-11-08 made it render point medians as districts (LB-LND-004).
+- **Evidence:** `IDX:375-391`; `LJS:2256-2333`; `LI18N pc.*`.
 
 #### LND-015 — FAQ «Вопросы» · CONFIRMED
 
@@ -364,8 +594,15 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   6. «А если квартиру уже сдали?» («Уже сдано»)
   7. «Нужно что-то устанавливать?»
   8. «Вы видите мои данные?» (`/privacy` in the bot)
+- (*Since `67b3942a8340`, landing intake:*) **Ten questions**, five per column. The open first one is new: «Есть ли
+  Telegram-бот для поиска квартир в Ташкенте?» — «Да — @KvadroAppBot, бесплатно. …» (`faq.q0` / `faq.a0`). The last
+  one is new too: «Видно, если цена снизилась?» — the price history, the radar's «Цена снизилась: было → стало» and
+  the mark «подозрительно дёшево — проверьте, прежде чем платить» (`faq.q9` / `faq.a9`). The radar answer adds the
+  digest and voice: «…а можно получать подборкой утром и вечером. Или просто напишите боту… — или скажите голосом.»
+  (`faq.a2`; `DIFF:67b3942a8340/landing-i18n.js:23-38`). The answer to «Вы видите мои данные?» contradicts the
+  privacy policy since `b1b9a919ecc4` (LND-003).
 - **No `FAQPage` JSON-LD.**
-- **Evidence:** `IDX:314-331`; `LI18N faq.*`.
+- **Evidence:** `IDX:393-411` (`faq.q0` at `IDX:397`, `faq.q9` at `IDX:408`); `LI18N faq.*` (21 keys).
 
 #### LND-016 — Final block · CONFIRMED
 
@@ -378,7 +615,8 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   error correction M, byte mode. **Decoded content: `https://t.me/KvadroAppBot`**: no `start` payload
   (LB-LND-007).
 - **Phone:** no QR, button only.
-- **Evidence:** `IDX:334-353`; `LJS:2212-2240`; decode of `$KVADRO_ROOT/demo/landing/site/img/qr-bot.svg`.
+- **Evidence:** `IDX:413-428`; `LJS:2216-2235`, `LJS:2247-2254`; decode of
+  `$KVADRO_ROOT/demo/landing/site/img/qr-bot.svg`.
 
 #### LND-017 — Footer row · CONFIRMED
 
@@ -388,13 +626,34 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - links «Поддержка» (`https://t.me/KvadroSupportBot`), «Instagram» (`https://www.instagram.com/kvadro.app/`),
     «Конфиденциальность» (`privacy.html`, becomes `privacy.html?lang=<uz|en>` after a switch);
   - «Карта: © OpenStreetMap» linking to `openstreetmap.org/copyright`.
+- (*Since `67b3942a8340`, landing intake:*) **The row is a bar under the link columns** (LND-018), behind a thin line:
+  on the left «© 2026 kvadro² · Конфиденциальность · Карта: © OpenStreetMap»; on the right a globe icon with the
+  language buttons and Instagram as an icon link (`aria-label` «Instagram»). «Поддержка» moved to the column «О
+  сервисе» (LND-018).
 - **Wordmark:** a large «kvadro²» at the bottom (`aria-hidden`).
-- **Evidence:** `IDX:356-366` (OpenStreetMap link `IDX:365`), `IDX:409`; `LJS:2432`.
+- **Evidence:** `IDX:489-502` (OpenStreetMap link `IDX:491`, Instagram `IDX:499`), `IDX:503`; `LJS:2638`.
 
 #### LND-018 — Footer SEO link blocks · CONFIRMED
 
 - **What:** four `<nav>` blocks with 24 links per language into the SEO pages. They are crawl paths: per the comment of
   2026-11-05, Google reaches the district pages through them.
+- (*Since `67b3942a8340`, landing intake:*) **Footer in link columns**, each with a heading. The comment of 2026-11-05
+  went with the old footer (`DIFF:67b3942a8340/index.html:292-293`); the new footer's comment, «Подвал как у Airbnb …
+  Google доходит до страниц районов», went in `d9bbbc696337` (`DIFF:d9bbbc696337/index.html:191-194`). The columns:
+  - «Аренда квартир»: the six cities, «Без посредников» `arenda/tashkent/bez-posrednikov/` (new), «Все города и
+    районы» `arenda/`;
+  - «Районы Ташкента»: the same 12 district links, in two columns;
+  - «Продажа квартир»: «Ташкент» `prodazha/tashkent/`, «От хозяев» `prodazha/tashkent/bez-posrednikov/` (new),
+    «Новостройки Ташкента», «Все города и районы» `prodazha/`;
+  - «Цены»: the rent index and sale prices;
+  - «О сервисе»: «Что такое kvadro² и как он работает» `o-servise/` (new, LND-069) and «Поддержка».
+
+  The uz/en pages rewrite the new slugs (`maklersiz/`, `by-owner/`; `uz/haqida/`, `en/about/`). By-owner pages for
+  sale are not among the page types of §2.1, which knows them for rent only; whether
+  `prodazha/tashkent/bez-posrednikov/` and its uz/en variants exist is unknown (Q-SEO-022). With the showcase
+  (LND-065) the page now links `arenda` 34, `prodazha` 4, `novostrojki` 1 and `o-servise` 1 times, and `uz/…` and
+  `en/…` 40 times each (`REL outLinks`; the release reports give the same figures, `RPT:65998117d6ec:15-17`). The
+  table and the counts below are of `c63da0e3476a`.
 - **Links:**
 
   | Nav | ru links | uz / en prefix |
@@ -405,9 +664,12 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   | «Цены» | `arenda/indeks/` («Индекс аренды Ташкента»), `prodazha/ceny/` («Цены на квартиры в Ташкенте») | `uz/ijara/indeks/`, `uz/sotuv/narxlar/`; `en/rent/index/`, `en/sale/prices/` |
 
 - **Relative links:** the hrefs are relative. On `/uz/` and `/en/` they resolve through `<base href="../">`. On `/`
-  after a client-side language switch they break (LB-LND-001).
-- **Counts in the prod fingerprint:** `arenda` 20, `prodazha` 3, `novostrojki` 1, `uz` 24, `en` 24 (`REL outLinks`).
-- **Evidence:** `IDX:367-408`; `UZ` and `EN` footers.
+  after a client-side language switch they break (LB-LND-001). (*Landing intake:* the showcase's links are rewritten
+  by the script to addresses from the site root at load and on every switch, so they do not break; the footer's do.)
+- **Counts in the prod fingerprint:** `arenda` 20, `prodazha` 3, `novostrojki` 1, `uz` 24, `en` 24 (`REL outLinks` of
+  `c63da0e3476a`).
+- **Evidence:** `IDX:432-488`; `UZ` and `EN` footers (`UZ:433-489`, `EN:433-489`).
+- HOMI: WP-61 leaves these link blocks out; the SEO pages they lead to come in Wave 3 (DEC-38).
 
 #### LND-019 — Floating QR (desktop) · CONFIRMED
 
@@ -417,7 +679,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Morph:** when the final block is more than half visible, the card expands into the final block's QR panel. Text
   fades in after it, and the card collapses back when the block leaves. It is computed per frame, with a timer
   fallback for background tabs. Closing hides it for the rest of the page view.
-- **Evidence:** `IDX:412-420`; `LJS:245-330`.
+- **Evidence:** `IDX:506-512`; `LJS:248-333`.
 
 #### LND-020 — Dock (sticky bottom CTA) · CONFIRMED
 
@@ -428,7 +690,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - when the final block (its own CTA or QR) is visible.
 - **v2:** shown only after the first-screen button has scrolled away and nothing of the phone is underneath.
 - **Height:** measured from the real button height, because of iOS toolbar behaviour.
-- **Evidence:** `IDX:421-427`; `LJS:193-245`.
+- **Evidence:** `IDX:514-519`; `LJS:196-248`.
 
 ### 1.4 Behaviours
 
@@ -439,7 +701,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **v1** (mouse): the scene is driven by scrolling.
   - **v2** (touch): the scenes play by time.
 - **CSP:** the script is allowed by its sha256 (LND-034).
-- **Evidence:** `IDX:39-46`; `ABT:510-512`.
+- **Evidence:** `IDX:38-43`; `ABT:510-512`.
 
 #### LND-022 — v1 scroll-driven scene and smoothing · CONFIRMED
 
@@ -451,7 +713,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Phone chrome:** the phone's own top and bottom bars collapse in the 42–58 % range, imitating Mini App
   `useMiniChrome`. On touch devices they slide away instead.
 - **Map preload:** the map image is warmed up 600 ms after `load`.
-- **Evidence:** `LJS:126-536`; `CSS` (`animation-timeline: --cloud` used 27 times).
+- **Evidence:** `LJS:129-539`; `CSS` (`animation-timeline: --cloud` used 27 times).
 
 #### LND-023 — v2 time-driven show and simple version · CONFIRMED
 
@@ -464,7 +726,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   Web Animations / IntersectionObserver, or a janky intro below about 30 fps. It skips the intro and the steps and
   shows the live map straight away. Override with `?anim=on|off` (BR-LND-019).
 - **Phone movement:** sizes change through FLIP transforms (`morphPhoneV2`).
-- **Evidence:** `LJS:1351-1938`.
+- **Evidence:** `LJS:1354-1942`.
 
 #### LND-024 — Static layout (reduced motion / no scroll timelines) · CONFIRMED
 
@@ -473,7 +735,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   skipped.
 - **Parity:** the parity suite has six «static» scenarios for this layout.
 - **Evidence:** `CSS` (13 `prefers-reduced-motion: reduce` blocks, 3 `@supports not (animation-timeline: view())`);
-  `SCN:4-8`.
+  `SCN:4-8`, `SCN:108-109`.
 
 #### LND-025 — Responsive behaviour · CONFIRMED
 
@@ -487,13 +749,13 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Touch:**
   - lighter graphics (no glass blur) on touch in v1 and on weak Android in v2;
   - `?touch=1` and `?glass=off` force these for testing.
-- **Evidence:** `CSS` media queries; `LJS:364-383`, `LJS:460-530`, `LJS:1300-1350`.
+- **Evidence:** `CSS` media queries; `LJS:367-386`, `LJS:463-533`, `LJS:1303-1353`.
 
 #### LND-026 — Browser theme colour · CONFIRMED
 
 - **What:** `meta[name=theme-color]` is `#0e0e10` while the dark first scene is under the browser toolbar and
   `#ffffff` afterwards.
-- **Evidence:** `IDX:37-38`; `LJS:240`.
+- **Evidence:** `IDX:37`; `LJS:243`.
 
 #### LND-027 — Language selection and switching · CONFIRMED
 
@@ -506,9 +768,13 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Side effects:**
   - the privacy link becomes `privacy.html?lang=<lang>` and the logo link `<lang>/`;
   - the language button code and the `aria-checked` / `aria-pressed` states update.
-- **Defects:** LB-LND-001, LB-LND-002.
-- **Evidence:** `LJS:2321-2477`; parity scenarios `browser-uz`, `browser-en`, `browser-kk`, `query-lang-en`,
-  `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz` (`SCN:104-114`).
+  - (*Since `67b3942a8340` and `d9bbbc696337`, landing intake:*) the showcase and the hero count are re-rendered,
+    and `chooseLang` hides the hint bar (LND-067).
+- (*Since `d9bbbc696337`, landing intake:*) **Browser language:** no longer translates `/`; it only decides whether
+  the hint bar shows (BR-LND-004, BR-LND-029). `?lang=` and a stored choice still translate `/` in the page.
+- **Defects:** LB-LND-001, LB-LND-002 (both partly fixed by legacy since the audit), LB-LND-019.
+- **Evidence:** `LJS:2520-2684`; parity scenarios `browser-uz`, `browser-en`, `browser-kk`, `browser-en-phone`,
+  `browser-en-menu-uz`, `query-lang-en`, `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz` (`SCN:156-168`).
 
 #### LND-028 — Client-side texts, plurals and numbers · CONFIRMED
 
@@ -517,11 +783,18 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - `data-la="attr:key;…"` → attributes;
   - `data-tx` / `data-t` / `data-tp` → `textContent` or `placeholder` from `MINIAPP_TEXTS`;
   - `data-params` → card parameters.
-- **Data safety:** data is inserted only as text or attributes, never through `innerHTML` (`LJS:1-2`).
+- **Data safety:** data is inserted only as text or attributes, never through `innerHTML` (`LJS:1-2`). (*Since
+  `67b3942a8340`, landing intake:* the showcase card breaks this rule, LB-LND-017.)
 - **Fallback:** a missing landing key falls back to ru.
 - **Plurals and numbers:** see BR-LND-006.
 - **Text sets:** 106 landing keys and 188 Mini App keys, complete in all three languages (no missing keys).
-- **Evidence:** `LJS:6-24`, `LJS:46-56`, `LJS:2356-2400`; `LI18N`; `MI18N`.
+  (*Since `67b3942a8340`, landing intake:* 146 landing keys per language, complete in all three: the 106, plus 32
+  `vit.*`, four `foot.*` (`foot.rent.owners`, `foot.sale.owners`, `foot.about`, `foot.about.what`), `faq.q0` / `a0`
+  and `faq.q9` / `a9`; none removed; `meta.title`, `meta.desc`, `hero.kicker`, `faq.a2` and `foot.map` changed
+  (`DIFF:67b3942a8340/landing-i18n.js`). Counted by parsing the JSON after `window.LANDING_TEXTS =` as text, without
+  running the file; a count of the key lines of the ru object (`LI18N` lines 10-168) gives the same 146. The Mini App
+  texts are unchanged at 188.)
+- **Evidence:** `LJS:6-24`, `LJS:49-59`, `LJS:2560-2604`; `LI18N`; `MI18N`.
 
 #### LND-029 — Server-side localisation of `/uz/` and `/en/` · CONFIRMED (output) / DOCUMENTED_ONLY (mechanism)
 
@@ -529,17 +802,23 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   trailing commas.
 - **Quirk:** the Mini App place names in English are Uzbek-Latin («Rent · Toshkent», «Mirobod»), while landing texts
   use English exonyms («Tashkent», «Mirabad») (LB-LND-011).
-- **Evidence:** `$KVADRO_ROOT/demo/landing/site/landing-i18n.js:1-7`; `REC:29`; `MI18N mini`, `city`.
+- **Evidence:** `$KVADRO_ROOT/demo/landing/site/landing-i18n.js:1-7`; `REC:30`; `MI18N mini`, `city`.
 
 #### LND-030 — Links into the bot with source tag and visit id · CONFIRMED
 
 - **Landing buttons:** every `[data-bot-link]` anchor gets `?start=s_web[_<tag>][--v<visit>]` (BR-LND-001). There are
-  four of them: hero, final, dock, and the radar «+» inside the phone.
+  four of them: hero, final, dock, and the radar «+» inside the phone. (*Landing intake:* the markup has three such
+  anchors, hero `IDX:101`, final `IDX:418` and dock `IDX:515`; the phone's radar «+» and its bot button are `.m-bot`
+  buttons that open the first tagged link, `LJS:1031-1034`, BR-LND-016. No release changed this.)
 - **SEO and other bot links:** `stats.js` tags other bot links that carry `s_…` payloads at click time (BR-LND-003).
 - **Listing links:** Mini App deep links inside the demo come from the data (`startapp=l_<id>-web`) and are not
   tagged.
 - **QR code:** carries no tag (LND-016).
-- **Evidence:** `LJS:26-44`; `STJ:15-24`; `ABT:254-262`; `BOT:997-1017`; parity scenario `source-tag` (`/?s=Insta_1`).
+- (*Since `67b3942a8340`, landing intake:*) **Tag:** an invalid tag is sanitised instead of dropped
+  (`utm_source=chatgpt.com` → `s_web_chatgpt-com`, BR-LND-001). The showcase cards link to listing pages on the site,
+  not into Telegram (URL-063). *Since `d9bbbc696337`:* the hint bar's links lose the tag (LB-LND-019).
+- **Evidence:** `LJS:26-47`; `STJ:15-24`; `ABT:254-262`; `BOT:997-1017`; parity scenarios `source-tag` (`/?s=Insta_1`)
+  and `source-tag-chatgpt` (`/?utm_source=chatgpt.com`, `SCN:169-172`).
 
 #### LND-031 — Analytics: `stats.js` and PostHog without cookies · CONFIRMED
 
@@ -557,7 +836,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Events:** the landing sends no custom events (no `posthog.capture` in `landing.js`). Every event comes from
   PostHog: `$pageview`, `$pageleave`, `$autocapture`, `$rageclick`, web vitals, heatmaps.
 - **Errors:** errors are not posted to `/api/events`; that is Mini App behaviour only.
-- **Evidence:** `STJ:1-55`; `REC:33`, `REC:64`; `PRV:42`.
+- **Evidence:** `STJ:1-55`; `REC:34`, `REC:83`; `PRV:43`.
 
 #### LND-032 — Landing data snapshot loading · CONFIRMED (client) / DOCUMENTED_ONLY (producer, schedule)
 
@@ -567,14 +846,19 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - `live.json`: sheet numbers, lock screen, `#live`, final;
   - `pins-rent.json`: on entry;
   - `pins-sale.json`: preloaded on live entry or on the first «Продажа».
+  - (*Since `67b3942a8340`, landing intake:*) `live.json` is now fetched at once on load for the hero count
+    (LND-066), and the same cached response also feeds the showcase's counts and lead (LND-065). The showcase loads
+    the pins of its current deal two screens ahead, through the same cache (BR-LND-024).
 - **No API calls:** the page never calls the API («к API страница не обращается»).
 - **Refresh:** the files and `img/snap/*` are rewritten by the backend several times a day. Observed on 2026-11-08:
   `live.json` at 02:02, `pins-*.json` at 15:00. Files carry `max-age=1800`.
 - **Stale comments:** the `DATA_V` constant and its comment «зафиксированные один раз» are out of date (LB-LND-005).
   HTML comments still name `/api/landing/live` and `/api/landing/pins`; whether those endpoints exist is open (see
-  `08-api-inventory.md`, `GET /api/landing/live`).
+  `08-api-inventory.md`, `GET /api/landing/live`). (*Since `d9bbbc696337`, landing intake:* those HTML comments are
+  removed, `DIFF:d9bbbc696337/index.html:58`, `:119`, `:153`, `:181`; `DATA_V` and its JS comment are unchanged,
+  `LJS:64-66`.)
 - **Contract:** §1.5.
-- **Evidence:** `LJS:58-72`; `REC:60-61`, `REC:66-77`; `FIX/*.json`.
+- **Evidence:** `LJS:61-75`; `REC:69-76`, `REC:85-96`; `FIX/*.json`.
 
 #### LND-033 — Landing head metadata and structured data · CONFIRMED
 
@@ -589,7 +873,15 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - `Organization` (`#org`): name «kvadro²», `alternateName` «KvadroApp», logo `icon-512.png`, the project mailbox,
     `sameAs` `https://t.me/KvadroAppBot`;
   - `WebSite` (`#site`): `inLanguage` ru/uz/en.
-- **Icons and manifest:** `logo.svg`, `favicon-32.png`, `apple-touch-icon.png`, `site.webmanifest`.
+  - (*Since `67b3942a8340`, landing intake:*) `Organization` grew: `alternateName` [«kvadro», «Kvadro», «kvadro2»,
+    «Квадро», «KvadroApp»], the logo as an `ImageObject` 512 × 512 plus `image`, a ru `description` («Бесплатный
+    сервис поиска жилья в Узбекистане: аренда и продажа квартир…»), `slogan`, `areaServed` Uzbekistan and `sameAs`
+    with the bot and Instagram; the uz/en pages keep the ru JSON-LD (`IDX:24-29`; the comment added in `67b3942a8340` named it «для
+    поисковиков и ИИ-ассистентов»; removed in `DIFF:d9bbbc696337/index.html:21`).
+- **Icons and manifest:** `logo.svg`, `favicon-32.png`, `apple-touch-icon.png`, `site.webmanifest`. (*Since
+  `65998117d6ec`, landing intake:* plus `<link rel="icon">` for `favicon-48.png`, `favicon-96.png` and `icon-192.png`
+  on every page, `IDX:30-36`; `favicon.ico` exists since `67b3942a8340` but no page links it.)
+- **og:** (*since `67b3942a8340`, landing intake*) new `og-{ru,uz,en}.jpg`, linked with `?v=20261109`.
 - **Evidence:** `IDX:5-36`; `UZ:1-30`; `EN:1-30`.
 
 #### LND-034 — CSP, inline-script hashes and `?v=` stamps · CONFIRMED
@@ -609,7 +901,10 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **SEO pages:** they send the same CSP (`SEO:375-377`).
 - **Stamps:** `?v=` is the first 10 hex characters of the file's sha256. `stats.js?v=20261020b` is a manual stamp. Who
   stamps the files in prod is unknown (Q-LND-001).
-- **Evidence:** `REL csp`, `REL pages`; `REC:56-59`; `$KVADRO_ROOT/demo/landing/README.md:38`.
+- (*Since `d9bbbc696337`, landing intake:*) **Privacy hash:** the privacy inline script changed, so its `sha256` in
+  the header changed; the `index.html` script and its hash did not (`RPT:d9bbbc696337:17-20`). The header is otherwise
+  the same. Current stamps: `landing.css?v=29641b6b56`, `landing.js?v=949ee9159b` (`REL pages`).
+- **Evidence:** `REL csp`, `REL pages`; `REC:65-68`; `$KVADRO_ROOT/demo/landing/README.md:38`.
 
 #### LND-035 — `robots.txt`, manifest, icons, og images · CONFIRMED
 
@@ -623,6 +918,8 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - `start_url` and `scope` `./`, `display: browser`;
   - colours `#0e0e10`;
   - icons 192 and 512.
+- (*Landing intake:*) `robots.txt` and the manifest are unchanged in all four releases; the manifest's name still
+  says «вся аренда», though the page now names sale. Icons and og images: LND-033.
 - **Evidence:** `$KVADRO_ROOT/demo/landing/site/robots.txt:1-10`;
   `$KVADRO_ROOT/demo/landing/site/site.webmanifest`.
 
@@ -636,20 +933,20 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 | `data/*.json`, `img/snap/*` | backend `scripts/landing_snapshot.py`, `app/api/landing.py` | Becomes an API or ISR data source (§1.5). |
 | `sitemap.xml`, SEO pages, CSV | backend `app/api/area_pages.py` | Moves to the landing app and the backend (§2). |
 
-Evidence: `REC:26-34`; `$KVADRO_ROOT/demo/landing/README.md:38-40`; `$KVADRO_ROOT/demo/landing/site/miniapp-i18n.js:1`;
+Evidence: `REC:27-34`; `$KVADRO_ROOT/demo/landing/README.md:38-40`; `$KVADRO_ROOT/demo/landing/site/miniapp-i18n.js:1`;
 `$KVADRO_ROOT/demo/landing/site/miniapp.css:1`.
 
 #### LND-037 — Debug and benchmark query parameters · CONFIRMED
 
 | Parameter | Effect | Evidence |
 | --------- | ------ | -------- |
-| `?v=1` / `?v=2` | force scroll-driven or time-driven display | `IDX:41-46` |
-| `?motion=raw` | no scroll smoothing (used by parity) | `LJS:132` |
-| `?touch=1` | behave as a touch device | `LJS:364` |
-| `?glass=off` | v2 without glass blur | `LJS:368` |
-| `?anim=on` / `?anim=off` | force the full or simple v2 | `LJS:1419` |
-| `?bench=1[&off=anim,phone,sb]` | self-scrolling frame-rate benchmark | `LJS:387-460` |
-| `?debug=vh` | viewport diagnostics (comment) | `LJS:460-470` |
+| `?v=1` / `?v=2` | force scroll-driven or time-driven display | `IDX:38-43` |
+| `?motion=raw` | no scroll smoothing (used by parity) | `LJS:135` |
+| `?touch=1` | behave as a touch device | `LJS:367` |
+| `?glass=off` | v2 without glass blur | `LJS:371` |
+| `?anim=on` / `?anim=off` | force the full or simple v2 | `LJS:1422` |
+| `?bench=1[&off=anim,phone,sb]` | self-scrolling frame-rate benchmark | `LJS:390-463` |
+| `?debug=vh` | viewport diagnostics (comment) | `LJS:463-473` |
 
 These parameters are public on prod (LB-LND-015).
 
@@ -662,32 +959,60 @@ These parameters are public on prod (LB-LND-015).
   - `/privacy.html` → HTML.
 - **Unknown path:** the local server that mirrors prod returns `404` with the JSON body `{"detail":"Not Found"}`
   (UNVERIFIED for prod, Q-LND-006, LB-LND-013). The SEO sections have their own localised 404 page (LND-055).
-- **Evidence:** `REC:54-55`; `SRV:1-3`, `SRV:39-66`.
+- (*Since `67b3942a8340`, landing intake:*) **Redirect rules of prod**, observed on 2026-11-12 and repeated by the local
+  server:
+  - a path without a trailing slash whose last segment has no dot → `308` to the same path with the slash, query
+    kept; the path is decoded and encoded again (`%2D` → `-`, `%2F` → `/`, spaces and Cyrillic as %-codes). This is
+    the general rule behind `/uz` → `/uz/` and the SEO pages' `308` (BR-SEO-004): `/arenda/tashkent` →
+    `/arenda/tashkent/`, `/api` → `/api/`;
+  - `/uz/<…>/<file>` and `/en/<…>/<file>` (a dot in the last segment) → `301` to the same path without the language
+    prefix, even for a file that does not exist; query kept, one prefix removed (`/uz/en/logo.svg` → `/en/logo.svg`).
+    On 2026-11-08 these answered `404`. This is what now repairs images and data after a language switch on `/`
+    (LB-LND-001).
+- **Evidence:** `REC:57-64`; `SRV:1-4`, `SRV:41-85`; `RPT:67b3942a8340:43-65`.
 
 #### LND-039 — Cloudflare Email Obfuscation · DOCUMENTED_ONLY
 
 - **What:** on prod, Cloudflare rewrites the `mailto:` links of `privacy.html` (12 replacements) and of the
   methodology page into `/cdn-cgi/l/email-protection#…` and injects `email-decode.min.js`. The mirror keeps the
   original `mailto:`.
-- **Evidence:** `REC:85-87`; `REL notes`; `SEO:378`.
+- **Evidence:** `REC:107-109`; `SEO:378`; `RPT:b1b9a919ecc4:33` (the fingerprint of `c63da0e3476a` noted it in `REL
+  notes`; the current one has no notes).
 
 ### 1.5 Landing data contract (as read by `landing.js`)
 
 | File | Fields read | Used by | Notes |
 | ---- | ----------- | ------- | ----- |
-| `data/live.json` | `now`, `day`, `week`, `latest[]` (`id`, `rooms`, `price_usd`, `delta`, `tone`, `district`, `district_code`, `area`, `seen_at`, `link`), `sheet.all` / `sheet.demo` (`count`, `per_day`) | counters (LND-011/012/016), pushes, filter-sheet footer, radar tile | `since` is `null` in the fixture and unused. `latest` holds 6 items. `link` = `https://t.me/KvadroAppBot?startapp=l_<id>-web`. |
-| `data/pins-rent.json` | `pins[]` (`id`, `x`, `y` in % of the map image, `rooms`, `price_usd`, `delta`, `tone`, `area`, `floor`, `floors_total`, `district`, `district_code`, `point`, `photo`, `link`, `age_min`, `is_owner`, `in_all`, `in_rooms`), `medians[]` (`district_code`, `rooms`, `median_usd`, `n`), `bargains_week` | live map, feed, radar collage, savings block | 167 pins. `dots` (1 310 triples) is unused by the page. `medians` = 36 district + 2 033 `pt:` entries (LB-LND-004). Tones seen: `good`, `high`, `same`, `mixed`. |
-| `data/pins-sale.json` | as rent | live map after «Продажа» | 149 pins. `medians` is empty, `bargains_week` is `null`, `dots` is empty. Tones also include `no_repair` and `null`. |
-| `img/snap/<id>.webp` | — | pin photos, feed cards, radar collage | 316 files. Unsigned copies of channel photos (LB-LND-012). |
+| `data/live.json` | `now`, `day`, `week`, `latest[]` (`id`, `rooms`, `price_usd`, `delta`, `tone`, `district`, `district_code`, `area`, `seen_at`, `link`), `sheet.all` / `sheet.demo` (`count`, `per_day`); (*since `67b3942a8340`*) `showcase.rent` / `showcase.sale` → `districts.<district_code>` (a number of listings) | counters (LND-011/012/016/066), pushes, filter-sheet footer, radar tile, showcase counts and lead (LND-065) | `since` is `null` in the fixture and unused. `latest` holds 6 items. `link` = `https://t.me/KvadroAppBot?startapp=l_<id>-web`. `showcase.<deal>` also has `total` and `owners`, which the code never reads; without `showcase` the districts show no numbers. (*Since `d9bbbc696337`:* prod `latest[]` no longer carries `area: null`; the fixture still has one such item.) |
+| `data/pins-rent.json` | `pins[]` (`id`, `x`, `y` in % of the map image, `rooms`, `price_usd`, `delta`, `tone`, `area`, `floor`, `floors_total`, `district`, `district_code`, `point`, `photo`, `link`, `age_min`, `is_owner`, `in_all`, `in_rooms`), `medians[]` (`district_code`, `rooms`, `median_usd`, `n`), `bargains_week` | live map, feed, radar collage, savings block; (*since `67b3942a8340`*) showcase cards: `id`, `photo` (a pin without one never enters the row), `age_min`, `price_usd`, `rooms`, `area`, `floor`, `floors_total`, `district_code` / `district`, `delta` / `tone` / `is_owner` (the tag) | 154 pins (2026-11-08: 167). `dots` (1 311 triples; 1 310 on 2026-11-08) is unused by the page. `medians` = 36 district entries and no `pt:` entry (2026-11-08: 36 district + 2 033 `pt:` entries, LB-LND-004). Tones seen: `good`, `high`, `same`, `mixed`. `rooms` is 1–4 in the fixture. (*Since `b1b9a919ecc4` data:* `district`, `district_code` and `floor` may be `null` — 2 of 162 rent pins on 2026-11-18; no fixture has such a pin.) |
+| `data/pins-sale.json` | as rent | live map after «Продажа»; showcase «Купить» | 146 pins (2026-11-08: 149). `medians` is empty, `bargains_week` is `null`, `dots` is empty. Tones also include `no_repair` and `null`. (*Since `b1b9a919ecc4` data:* `district` and `district_code` may be `null` — 1 of 131 sale pins on 2026-11-18; *since `d9bbbc696337` data:* `floor` too.) |
+| `img/snap/<id>.webp` | — | pin photos, feed cards, radar collage, showcase cards | 300 files (2026-11-08: 316). Unsigned copies of channel photos (LB-LND-012). |
 
 District codes in the data use underscores (`mirzo_ulugbek`), while URL slugs use hyphens (`mirzo-ulugbek`)
-(BR-SEO-002). Evidence: `FIX/live.json`, `FIX/pins-rent.json`, `FIX/pins-sale.json`; `LJS:1038-1080`, `LJS:1112`,
-`LJS:2098`, `LJS:2161`, `LJS:2225`, `LJS:2302-2309`.
+(BR-SEO-002). Evidence: `FIX/live.json`, `FIX/pins-rent.json`, `FIX/pins-sale.json`; `LJS:1041-1083`, `LJS:1115`,
+`LJS:2102`, `LJS:2165`, `LJS:2229`, `LJS:2317-2324`. (*Landing intake:* the code copes with the `null` fields — the
+facts line is shorter without a floor (`liveFacts`, `vitCard`), the map card keeps the landmark `point` without a
+district (`liveWhere`), the showcase card then has no place, and the demo's district filter drops such pins:
+`LJS:595-611`, `LJS:2383-2388`; `REC:71-76`; `RPT:b1b9a919ecc4:26-30`, `RPT:d9bbbc696337:24-25`; `CHG:19`,
+`CHG:36`.)
+
+HOMI: since the landing intake the contract has `GET /landing/live` → `showcase: {rent: [{district_code, count}],
+sale: [...]}` (legacy's `total` and `owners` are not carried) and allows `floor: null` in `GET /landing/pins`, on
+stubs.
 
 ### 1.6 Parity scenarios as an acceptance checklist
 
-The legacy team's 40 parity scenarios (`SCN:1-175`) are a ready-made acceptance list for the new landing. Expected
-results change where an `LB-…` fix applies.
+The legacy team's parity scenarios (`SCN:1-179`; 40 at the audit, 47 now) are a ready-made acceptance list for the
+new landing. Expected results change where an `LB-…` fix applies.
+
+(*Since `67b3942a8340` and `d9bbbc696337`, landing intake:* 47 scenarios in `SCN:1-179`: 32 literal entries plus 15
+generated per page (`SCN:104-110`). Seven are new — `vit-sale`, `vit-sale-uz-phone`, `vit-search`, `vit-sheet-phone`
+and `source-tag-chatgpt` (12 November), `browser-en-phone` and `browser-en-menu-uz` (19 November). The expected
+results of `browser-uz` and `browser-en` (now the ru page with the hint bar) and of `privacy-en-browser` (now ru)
+changed with `d9bbbc696337` (`SCN:156-158`, `SCN:173-174`). The phone scenarios of the full version send their own
+`resize` first (`resized`, `SCN:85-91`), and Chrome's connection type is pinned to 4G, so lazy showcase photos load the
+same on both sides (`RPT:67b3942a8340:66-83`). The fixtures behind them are the 2026-11-12 snapshot: they have no pin
+with a `null` district or floor, so no scenario covers that case (`RPT:b1b9a919ecc4:26-30`).)
 
 | Group | Scenarios | Covers |
 | ----- | --------- | ------ |
@@ -696,9 +1021,12 @@ results change where an `LB-…` fix applies.
 | Live prototype | `live-phone-v1`, `deal-sale`, `deal-sale-phone-v1`, `sheet-filters`, `sheet-toggles`, `sheet-sale`, `pin-card`, `pin-other`, `sub-switch` (9) | LND-008, BR-LND-010 – BR-LND-017 |
 | Blocks | `owner-agent`, `qr-close` (2) | LND-013, LND-019 |
 | Static | `{ru,uz,en}-desktop-static`, `{ru,uz,en}-phone-static` (6) | LND-024 |
-| Language | `browser-uz`, `browser-en`, `browser-kk`, `query-lang-en`, `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz` (7) | LND-027, BR-LND-004/005 |
-| Attribution | `source-tag` (`/?s=Insta_1`) (1) | BR-LND-001 |
+| Showcase (*since `67b3942a8340`*) | `vit-sale` («Купить», paging), `vit-sale-uz-phone` (`uz/sotuv/`, uz labels), `vit-search` (`/arenda/tashkent/yunusobod/?rooms=2&max=700&owners=1`), `vit-sheet-phone` (the sheet, `html.vit-lock`, the cross) (4) | LND-065, BR-LND-024 – BR-LND-027 |
+| Language | `browser-uz`, `browser-en`, `browser-kk`, `query-lang-en`, `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz`; (*since `d9bbbc696337`*) `browser-en-phone`, `browser-en-menu-uz` (9) | LND-027, LND-067, BR-LND-004/005, BR-LND-029 |
+| Attribution | `source-tag` (`/?s=Insta_1`); (*since `67b3942a8340`*) `source-tag-chatgpt` (`/?utm_source=chatgpt.com`) (2) | BR-LND-001 |
 | Privacy | `privacy-ru`, `privacy-uz` (`?lang=uz`), `privacy-en-browser`, `privacy-stored-uz` (4) | LND-003, BR-LND-020 |
+
+Evidence: `SCN:94-179`; `CHG:13`, `CHG:65`; `RPT:d9bbbc696337:35-37`.
 
 ## 2. SEO pages
 
@@ -706,7 +1034,7 @@ results change where an `LB-…` fix applies.
 
 - **What the sitemap holds:** `sitemap.xml` holds 1 012 URLs: the landing ×3, `privacy.html` and 1 008 SEO pages, 336
   per language. Every URL has `<lastmod>` (dates from 3 to 8 November) and `xhtml:link` alternates for ru/uz/en plus
-  `x-default` (= ru) (`SEO:46-47`). `REC:62` says «около 1020», an approximation; the parse in `seo-pages.md` is the
+  `x-default` (= ru) (`SEO:46-47`). `REC:77` says «около 1020», an approximation; the parse in `seo-pages.md` is the
   better figure.
 - **Pages per language:**
 
@@ -1096,9 +1424,15 @@ All `CONFIRMED` from the production files.
   - **Format:** `START = "s_web" + ("_" + tag if tag matches ^[a-z0-9_-]{1,40}$) + ("--v" + KV_VISIT if the visit
     matches ^[a-z0-9]{10}$)`.
   - **Tag:** the lowercased `?s=`, or `?utm_source=` when `s` is absent. An invalid tag is dropped silently.
+  - (*Since `67b3942a8340`, landing intake:*) **Sanitising:** the tag is no longer dropped. Every run of characters
+    outside `[a-z0-9_-]` becomes one `-`, leading and trailing hyphens are trimmed, and the result is cut to 40
+    characters; only an empty result gives no tag. `utm_source=chatgpt.com` → `s_web_chatgpt-com` (before: plain
+    `s_web`). The cut comes after the trim, so a long tag can end in `-`; a tag of Cyrillic letters only becomes empty.
+    The code's reason: ChatGPT adds `utm_source=chatgpt.com` and has been the site's main source since 06.11
+    (`LJS:36-38`).
   - **Applied to:** every `[data-bot-link]` anchor at script start, as `href = href.split("?")[0] + "?start=" + START`.
   - **Length:** at most 59 characters, within Telegram's 64.
-  - *Evidence:* `LJS:26-44`.
+  - *Evidence:* `LJS:26-47`; parity `source-tag-chatgpt`; `CHG:69`.
 - **BR-LND-002** · `CONFIRMED` — Visit id.
   - **Generation:** 10 characters from `[a-z0-9]`, from `crypto.getRandomValues` (fallback `Math.random`) with
     `byte % 36`.
@@ -1118,14 +1452,23 @@ All `CONFIRMED` from the production files.
   4. browser languages in order: `uz` or `ru` → that language; `kk`, `ky`, `tg`, `tk`, `be` → `ru`; `en` only if none
      of those appears anywhere in the list; otherwise `ru`.
 
-  The path takes priority over a stored choice. *Evidence:* `LJS:2326-2353`.
+  The path takes priority over a stored choice. *Evidence:* `LJS:2525-2557`.
+
+  (*Since `d9bbbc696337`, landing intake:* step 4 no longer picks the language. After steps 1–3 the page is `ru`;
+  the browser languages, by the same rule (`langFromBrowser`), only decide whether the hint bar shows (BR-LND-029).
+  Steps 1 and 3 still translate `/` in the page under the ru canonical. The code's reason: Google's crawler browses in
+  English and would see the ru page translated, as a copy of `/en/` (`LJS:2536-2538`). Evidence: `LJS:2527-2542`;
+  `CHG:16`, `CHG:24`; parity `browser-en`, `browser-kk`.)
+  - HOMI: DEC-96 — the same order, with `?lang=` and the stored choice answered by a redirect to `/uz/` or `/en/`
+    instead of a translation in the page.
 - **BR-LND-005** · `CONFIRMED` — Language switch.
   - **Texts:** applies them, unless the document was already server-translated into that language.
   - **Address:** rewrites it to `root + (lang === "ru" ? "" : lang + "/")`, keeping other query parameters and the hash
     and dropping `lang`.
   - **Storage:** stores the choice.
   - **Links:** sets the privacy link `privacy.html[?lang=…]` and the logo link `./` or `<lang>/`.
-  - *Evidence:* `LJS:2410-2454`.
+  - (*Since `d9bbbc696337`, landing intake:*) **Hint bar:** hides it (`LJS:2657`).
+  - *Evidence:* `LJS:2614-2661`.
 - **BR-LND-006** · `CONFIRMED` — Plurals and numbers.
   - **Plurals:**
     - ru: three forms (`n%10==1 && n%100!=11` → one; `2..4` except `12..14` → few; otherwise many);
@@ -1134,13 +1477,14 @@ All `CONFIRMED` from the production files.
   - **Numbers:** `Intl.NumberFormat("en-GB")` for en (`2,880`); `ru-RU` for ru and uz (`2 880`), because Chrome has no
     Uzbek locale data.
   - **Money:** `$` + number.
-  - *Evidence:* `LJS:6-24`, `LJS:51-56`.
+  - *Evidence:* `LJS:6-24`, `LJS:54-59`.
 - **BR-LND-007** · `CONFIRMED` — Counters («N новых квартир за сутки / за неделю»).
   - **Rule:** show `day` if `day ≥ 100`; else show `week` with «за неделю» if `week ≥ 100`; else hide the counter
     (`COUNT_MIN = 100`, «сервис не должен выглядеть маленьким»).
   - **Animation:** counts up over 1.2 s, ease-out cubic.
-  - **Used by:** the lock screen, `#live` and the final block.
-  - *Evidence:* `LJS:2062-2092`, `LJS:2216-2240`.
+  - **Used by:** the lock screen, `#live` and the final block. (*Since `67b3942a8340`, landing intake:* also the hero
+    count, BR-LND-028, and the showcase lead, BR-LND-026.)
+  - *Evidence:* `LJS:2066-2096`, `LJS:2220-2255`.
 - **BR-LND-008** · `CONFIRMED` — Savings block.
   - **Formula:** `cheap = round10(median × 0.8)`; yearly saving = `(median − cheap) × 12`.
   - **Defaults:** 2 rooms, `chilonzor`.
@@ -1148,13 +1492,13 @@ All `CONFIRMED` from the production files.
   - **District buttons:** every entry for the chosen rooms, ordered by the sum of `n` over all rooms, descending. If
     the selected district has no median for those rooms, the first entry is selected.
   - **Before data:** `PC_FALLBACK` medians (Chilonzor $500 / $600 / $650; Mirobod, Yunusobod, Mirzo-Ulugbek 2-room).
-  - *Evidence:* `LJS:2246-2309`.
+  - *Evidence:* `LJS:2261-2324`.
 - **BR-LND-009** · `CONFIRMED` — Weekly bargains line.
   - **Rule:** shown only when `bargains_week ≥ 100`, as `num(n) + plural("квартира") + " на 20% и больше дешевле
     обычной цены нашли за неделю в Ташкенте"`.
   - **Server definition:** the server defines «bargain» as 20 % or more below the usual price (comment). That is a
     different bar from the ≥ 10 % «ниже рынка» tone (Q-LND-010).
-  - *Evidence:* `LJS:2241-2244`, `LJS:2310-2316`.
+  - *Evidence:* `LJS:2256-2259`, `LJS:2325-2331`.
 - **BR-LND-010** · `CONFIRMED` — Live-map pins.
   - **Activation:** v1 enters live mode at scene progress > 0.9256 and leaves at ≤ 0.9008.
   - **Which pins:**
@@ -1164,7 +1508,7 @@ All `CONFIRMED` from the production files.
     - all filtered by BR-LND-011.
   - **Declutter:** label boxes `(len(price) × 7.4 + 18) / 2 + 3` points must not overlap; the selected pin and the
     story pin take precedence.
-  - *Evidence:* `LJS:656-735`, `LJS:1905-1918`.
+  - *Evidence:* `LJS:659-738`, `LJS:1909-1922`.
 - **BR-LND-011** · `CONFIRMED` — Demo filter semantics.
   - **Rooms:** `rooms ≥ rmin`; `rooms ≤ rmax` unless `rmax ≥ 4`.
   - **Price:** `price_usd ≤ price`, with presets of $300 – 1 500 for rent and $40 000 – 200 000 for sale.
@@ -1173,7 +1517,7 @@ All `CONFIRMED` from the production files.
   - **Deal switch:** switching between rent and sale resets the price.
   - **Display-only:** sale, zones, metro, housing, term and tenants.
   - **Rooms chips:** one value is exact, a second value gives a range, repeating a value or «Любые» resets.
-  - *Evidence:* `LJS:645-661`, `LJS:1049-1170`; `IDX:152-154`.
+  - *Evidence:* `LJS:648-664`, `LJS:1052-1173`; `IDX:144-146`.
 - **BR-LND-012** · `CONFIRMED` — Price tone on pins, cards and pushes. The server sends `delta` (%) and `tone`.
   - **No tone:** `null` or missing → no market line.
   - **`same` or `mixed`:** «≈ рынок».
@@ -1182,13 +1526,15 @@ All `CONFIRMED` from the production files.
   - **`high`:** «+N% к рынку».
   - **Tag priority:** below market, then «Хозяин» (`is_owner`).
   - **Pushes:** the mark is shown only when the tone is not `same`.
-  - *Evidence:* `LJS:609-624`, `LJS:2007-2021`.
+  - *Evidence:* `LJS:612-627`, `LJS:2011-2025`.
 - **BR-LND-013** · `CONFIRMED` — Demo card formatting.
   - **Facts:** `title.<min(rooms,4)>` · `{area} м²` · `{floor}/{total} эт.` or `{floor} эт.`.
   - **Age:** `< 1` min «только что», `< 60` «N мин назад», `< 1440` «N ч назад» (floor), else «N дн. назад».
   - **Where:** the translated district name · `point`.
   - **Period:** «/мес» for rent and nothing for sale.
-  - *Evidence:* `LJS:591-633`.
+  - (*Landing intake:*) **Rooms 4 and more:** `title.4` is «4-комн. квартира», so `min(rooms, 4)` labels a 5-room flat
+    as a 4-room one; the showcase cards share the clamp (LB-LND-017).
+  - *Evidence:* `LJS:594-636`.
 - **BR-LND-014** · `CONFIRMED` — Lock-screen pushes.
   - **Set:** at most 4 (`LIVE_MAX`), taken from `latest` and shown oldest first, so the newest arrives last at the
     bottom.
@@ -1196,28 +1542,28 @@ All `CONFIRMED` from the production files.
   - **Ages:** relative to the snapshot time `now` (no drift), re-rendered every 30 s.
   - **Clock and date:** in `Asia/Tashkent`. The Uzbek date is formatted by hand («seshanba, 13-oktabr»).
   - **Link:** each push links to `item.link`.
-  - *Evidence:* `LJS:1939-2060`.
+  - *Evidence:* `LJS:1943-2064`.
 - **BR-LND-015** · `CONFIRMED` — Filter-sheet footer.
   - **No conditions:** `sheet.all` numbers.
   - **Demo filter** (2 rooms, Chilonzor + Mirobod, «Без риелторов»): `sheet.demo` numbers.
   - **Text:** «📡 Радар: ≈N в день» if `per_day ≥ 1`, else «≈N в неделю» (`per_day × 7`), plus «Показать N».
   - **Other combinations or sale:** «Показать» without a number and no radar line.
-  - *Evidence:* `LJS:1081-1112`.
+  - *Evidence:* `LJS:1084-1115`.
 - **BR-LND-016** · `CONFIRMED` — Radar tile in the demo.
   - **Filter:** `DEMO_FILTERS` = 2 rooms, `chilonzor` + `mirobod`, `no_agents`.
   - **Collage:** up to 4 photos of matching pins.
   - **State line:** «≈N в день / в неделю» from `sheet.demo`.
   - **Controls:** the switch pauses, the tile opens the feed with that filter, and «+» / `m-bot` opens the bot link.
-  - *Evidence:* `LJS:1196-1240`, `LJS:1028-1031`.
+  - *Evidence:* `LJS:1199-1243`, `LJS:1031-1034`.
 - **BR-LND-017** · `CONFIRMED` — Click targets.
   - **Listing elements:** pins, the selected card, feed cards and pushes open `p.link` in a new window.
   - **Otherwise:** the first `[data-bot-link]` URL (tagged).
   - **When:** only while the map is live.
-  - *Evidence:* `LJS:634-644`, `LJS:928`, `LJS:950`.
+  - *Evidence:* `LJS:637-647`, `LJS:931`, `LJS:953`.
 - **BR-LND-018** · `CONFIRMED` — Display version.
   - **Rule:** v2 if `?v=2`, or if `(pointer: coarse)` and not `?v=1`; otherwise v1.
   - **When decided:** before first paint.
-  - *Evidence:* `IDX:41-46`.
+  - *Evidence:* `IDX:38-43`.
 - **BR-LND-019** · `CONFIRMED` — The simple v2 is used when any of these holds:
   - reduced motion;
   - Android with `hardwareConcurrency ≤ 4` or `deviceMemory ≤ 2`;
@@ -1226,25 +1572,98 @@ All `CONFIRMED` from the production files.
   - no IntersectionObserver;
   - the measured intro runs below about 30 fps.
 
-  Force with `?anim=on|off`. *Evidence:* `LJS:1399-1430`.
+  Force with `?anim=on|off`. *Evidence:* `LJS:1402-1433`.
 - **BR-LND-020** · `CONFIRMED` — Privacy language.
   - **Order:** `?lang=`, then `kv-landing-lang`, then browser languages as in BR-LND-004, with no path step.
   - **Home links:** uz/en rewrite them to `./?lang=<lang>`.
-  - *Evidence:* `PRV:150-177`.
+  - (*Since `d9bbbc696337`, landing intake:*) **Order now:** `?lang=`, then `kv-landing-lang`, else `ru`; the browser
+    language plays no part and there is no hint bar on this page. **Home links now:** `uz/` or `en/` (the comment: «не
+    /?lang=: копии русской главной для поиска»). Parity `privacy-en-browser` expects the ru text.
+  - *Evidence:* `PRV:166-186` (`PRV:173-177`, `PRV:181-184`); `CHG:17`.
 - **BR-LND-021** · `CONFIRMED` — Browser theme colour.
   - **Rule:** `#0e0e10` while the dark first scene is under the toolbar, `#ffffff` afterwards.
-  - *Evidence:* `LJS:236-241`.
+  - *Evidence:* `LJS:239-244`.
 - **BR-LND-022** · `CONFIRMED` — Dock visibility.
   - **Shown:** after the first-screen CTA has gone.
   - **Hidden:** on the «Как приложение» step, while the phone is full-screen (live), and when the final block shows.
   - **v2:** shown only once the hero button has scrolled away and the phone is not underneath.
-  - *Evidence:* `LJS:193-235`.
+  - *Evidence:* `LJS:196-238`.
 - **BR-LND-023** · `CONFIRMED` — Floating QR.
   - **Where:** only at `min-width: 1200px` with hover and a fine pointer, after the first scene.
   - **Morph:** expands when the final block is more than half visible and collapses when it has almost left (with
     hysteresis).
   - **Close:** hides it for the page view.
-  - *Evidence:* `LJS:245-330`.
+  - *Evidence:* `LJS:248-333`.
+- **BR-LND-024** · `CONFIRMED` — Showcase deal switch and data loading (*since `67b3942a8340`, landing intake*).
+  - **Deal:** `rent` by default. «Снять» / «Купить» sets the deal, re-renders the block and loads that deal's pins
+    once.
+  - **When data loads:** when the showcase comes within two screens of the viewport (IntersectionObserver with
+    `rootMargin: "200% 0px"`; at once without IntersectionObserver), it loads the current deal's pins
+    (`pins-rent.json` or `pins-sale.json`) and `live.json`. Each file is fetched once per page view, through the
+    cache of LND-032, so `live.json` is usually already there from the hero count.
+  - **Re-render:** on a deal switch, when `live.json` arrives, and on every language application — including the one
+    at load, which rewrites the form's `action`, the row link and the district links to addresses from the site root.
+  - **No data:** no pins → no cards (the empty row is hidden); no `live.json` or no `showcase` → no district numbers
+    and the plain lead. The search and the district links work either way.
+  - *Evidence:* `LJS:2418-2456`, `LJS:2505-2515`, `LJS:2614-2618`; `CSS:339`.
+- **BR-LND-025** · `CONFIRMED` — Showcase cards (*since `67b3942a8340`, landing intake*).
+  - **Selection:** the pins of the current deal that have a `photo`, sorted by `age_min` ascending, the first 10
+    (`VIT_CARDS`).
+  - **Link:** site root + `obyavlenie` / `uz/elon` / `en/listing` (by the current language) + `/<id>/` (URL-063); a
+    plain link in the same tab.
+  - **Photo:** `p.photo` (an `img/snap/<id>.webp` path), lazy, 420 × 315.
+  - **Tag:** «Ниже рынка» when the tone is `good`, else «Хозяин» when `is_owner`, else none (BR-LND-012).
+  - **Price:** `$N`, plus « /мес» for rent.
+  - **Facts:** `rooms.short` with `min(rooms, 4)` («2‑комн.», LB-LND-017) · «N м²» when `area` · «F/T эт.» or «F эт.»
+    when `floor` is not `null`.
+  - **Place and age:** the Mini App's district name for `district_code`, else `district`, else nothing (no `point`,
+    unlike the map card), then the age: `age_min` plus the minutes from `live.json → now` to the visitor's clock,
+    formatted as in BR-LND-013 (LB-LND-018).
+  - **Accessible name:** «price, facts, place».
+  - *Evidence:* `LJS:2372-2412`, `LJS:2341`.
+- **BR-LND-026** · `CONFIRMED` (address) — Showcase search, district links and lead (*since `67b3942a8340`, landing
+  intake*).
+  - **Section:** per deal and language — rent `arenda` / `uz/ijara` / `en/rent`, sale `prodazha` / `uz/sotuv` /
+    `en/sale` — under the site root (the path with `/uz/`, `/en/` and `index.html` cut), then `tashkent/`.
+  - **Search:** section + (the district slug + `/` when one is chosen) + `?` + `rooms=<1–4>`, `max=<USD>`,
+    `owners=1`, in that order and only those set; `location.href`, a navigation in the same tab. Example
+    `/arenda/tashkent/yunusobod/?rooms=2&max=700&owners=1` (URL-064).
+  - **Budgets:** rent 300 / 500 / 700 / 1 000 / 1 500 USD a month; sale 50 000 / 80 000 / 100 000 / 150 000 /
+    250 000 USD. A deal switch keeps the chosen budget only when the other list has the same value, which never
+    happens, so it resets to «Любой». The label is «Бюджет в месяц» or «Бюджет».
+  - **Rooms:** «4 и больше» sends `rooms=4`. Rent SEO pages exist only for 1–3 rooms (BR-SEO-003); what `rooms=4`
+    and the other parameters do on an SEO page is unknown (Q-SEO-022).
+  - **District links:** section + the code with `_` → `-` + `/`; the text «N квартир» (`vit.flats`, plural) from
+    `showcase.<deal>.districts.<code>`, nothing when it is missing or 0. The row link is the section's city page.
+  - **Lead:** «{n} {what} {when} — из Telegram-каналов, без повторов» (`vit.lead.n`) with the count of BR-LND-007,
+    else «Свежие квартиры из Telegram-каналов, без повторов».
+  - *Evidence:* `LJS:2338-2340`, `LJS:2349-2371`, `LJS:2425-2439`, `LJS:2457-2465`; parity `vit-search`
+    (`SCN:147-153`).
+- **BR-LND-027** · `CONFIRMED` — Showcase phone sheet (*since `67b3942a8340`, landing intake*).
+  - **Where:** at widths ≤ 760 px the pill replaces the form.
+  - **Open:** the pill opens the sheet (`#vit.open`); `html.vit-lock` stops the page from scrolling;
+    `history.pushState({vit: 1})` adds a history step; after 60 ms the focus goes to the form itself (`tabindex=-1`,
+    no scroll), and Tab moves through the fields. The dock (LND-020) hides while the sheet is open (`CSS:431-434`).
+  - **Close:** Back (`popstate`), Escape, the cross, a tap on the backdrop, or the viewport growing past 760 px. A
+    close other than Back calls `history.back()` when the current history state is the sheet's. The focus returns to
+    the element that opened it.
+  - *Evidence:* `LJS:2466-2496`; parity `vit-sheet-phone`.
+- **BR-LND-028** · `CONFIRMED` — Hero count (*since `67b3942a8340`, landing intake*).
+  - **Data:** `live.json`, requested at once when the script starts, not when the block comes near.
+  - **Rule:** BR-LND-007 — `day ≥ 100` → «N новых квартир за сутки»; else `week ≥ 100` → «… за неделю»; else the
+    count part stays hidden and «Бесплатно» stands alone. It counts up over 1.2 s, except under reduced motion.
+  - **Language:** re-rendered on every language application.
+  - *Evidence:* `LJS:2236-2245`, `LJS:2066-2096`, `LJS:2627`.
+- **BR-LND-029** · `CONFIRMED` — Language hint bar (*since `d9bbbc696337`, landing intake*).
+  - **Shows** when `pickLang` falls through `?lang=`, the path and a valid stored choice, and
+    `langFromBrowser(navigator.languages || [navigator.language])` is not `ru`: the first of `uz`, `ru` or a
+    neighbour (`kk`, `ky`, `tg`, `tk`, `be`, counted as ru) in the list decides; `en` gives en only when none of them
+    appears.
+  - **Never shows** on `/uz/`, `/en/`, with a valid `?lang=` (also `ru`) or with a valid stored choice.
+  - **Hides** on a language choice in the menu or the footer; nothing else hides it.
+  - **Links:** plain `uz/` and `en/`, without the current query or hash (LB-LND-019); following one stores nothing.
+  - *Evidence:* `LJS:2527-2557`, `LJS:2656-2661`; `IDX:58`; `SCN:156-164`.
+  - HOMI: DEC-96.
 
 ### 3.2 SEO pages and calculations — `BR-SEO`
 
@@ -1262,7 +1681,9 @@ already captured a rule, the matching `BR-API` item is named.
     the kh sound): `yunusobod`, `shayxontohur`, `chilonzor-19`, `qiyot`, `abdulla-qodiriy`, `toshkent-tumani`,
     `buyuk-ipak-yoli`.
   - **Mapping from data codes:** the landing data uses underscores (`mirzo_ulugbek`) where the slug has a hyphen
-    (`mirzo-ulugbek`) (`CONFIRMED`: `FIX/pins-rent.json` vs `IDX:384`).
+    (`mirzo-ulugbek`) (`CONFIRMED`: `FIX/pins-rent.json` vs `IDX:451`; the showcase holds both side by side,
+    `data-code="mirzo_ulugbek"` on the link `arenda/tashkent/mirzo-ulugbek/` at `IDX:266`, and converts with
+    `LJS:2432`).
   - *Evidence:* `SEO:103-113`.
 - **BR-SEO-003** · `DOCUMENTED_ONLY` — Rooms slugs and ranges.
   - **Slugs:** `N-komnatnye` / `N-xonali` / `N-room`.
@@ -1543,7 +1964,13 @@ already captured a rule, the matching `BR-API` item is named.
       - `img/snap` photos.
   - **On `/uz/` and `/en/`:** `<base href="../">` hides the problem, but switching there still leaves uz-slug footer
     links under English labels.
-  - *Evidence:* `REC:81-84`; `LJS:2410-2454`; `IDX:367-408`.
+  - (*Since `67b3942a8340`, landing intake:*) **Partly repaired on the server.** Prod now answers every
+    `/uz/<…>/<file>` and `/en/<…>/<file>` with a `301` to the unprefixed file (LND-038), so images, the favicon, lazy
+    images, `img/snap` photos, later data fetches and `/en/privacy.html?lang=en` load again, each with one extra
+    request. Links without a file name are not covered: the footer's SEO and «О сервисе» links (`/en/arenda/…`, now
+    27: 21 `arenda`, 4 `prodazha`, 1 `novostrojki`, 1 `o-servise`, `IDX:436-483`) and the logo link `/en/en/` still lead under the prefix (presumably a `404`, not observed). The
+    showcase's links are built from the site root by the script and are not affected.
+  - *Evidence:* `REC:100-106`; `LJS:2614-2661`; `IDX:432-488`; `RPT:67b3942a8340:43-47`.
   - **Proposed fix:**
     - Use root-relative or absolute URLs everywhere.
     - A language switch is a real navigation to the server-rendered `/`, `/uz/`, `/en/` (Next.js locale routes). Each
@@ -1557,7 +1984,12 @@ already captured a rule, the matching `BR-API` item is named.
     with an English locale gets English content on the ru URL, and `/?lang=uz` serves uz content under a canonical of
     `/`.
   - **Risk:** search engines see mixed-language duplicates of `/` and `/en/`.
-  - *Evidence:* `LJS:2328-2337`, `LJS:2374-2400`, `LJS:2477`; parity `browser-en`. *Check:* Q-LND-003.
+  - (*Since `d9bbbc696337`, landing intake:*) **Partly fixed by legacy.** The browser-language step is gone: an
+    English browser or crawler now gets the ru page with the hint bar (LND-067). `/?lang=uz|en` and a stored choice
+    still translate `/` in the page under the ru canonical, so the defect remains for those two cases. The legacy code
+    names the same reason as this item (`LJS:2536-2538`).
+  - *Evidence:* `LJS:2527-2542`, `LJS:2578-2604`, `LJS:2684`; parity `browser-en`, `query-lang-en`, `stored-lang-uz`.
+    *Check:* Q-LND-003.
   - **Proposed fix:**
     - Render `/` always in ru on the server.
     - Answer `/?lang=uz|en` with a `301` to `/uz/` or `/en/`, keeping the other parameters such as `s` and
@@ -1566,22 +1998,26 @@ already captured a rule, the matching `BR-API` item is named.
       `navigator.languages`, with no automatic rewrite. The stored choice only drives that suggestion.
   - **URL/SEO impact:** `/?lang=…` links keep working through redirects, and the canonical stops carrying foreign
     content. DEV, `PROPOSED`.
+  - HOMI: DEC-96 — the fix is the default (DEV-038, no flag): `/` in ru, the hint bar for uz and en browsers,
+    `?lang=` and the stored choice redirected to `/uz/`, `/en/`.
 - **LB-LND-003** · `decision` · `CONFIRMED` — **`/uz/` and `/en/` are produced by text substitution.** They are built
   from the ru HTML plus `landing-i18n.js`, with a `<base href="../">` workaround. That couples the server to the
-  client's i18n file format (JSON without comments). *Evidence:* `REC:26`, `REC:29`; `UZ:5`.
+  client's i18n file format (JSON without comments). *Evidence:* `REC:27`, `REC:30`; `UZ:5`.
   - **Proposed fix:** one locale-aware route in `frontend/landing` with message files per locale. Use absolute paths
     and no `<base>`.
   - **URL/SEO impact:** none. The URLs stay `/`, `/uz/`, `/en/` with the same hreflang set.
 - **LB-LND-004** · `bug` · `CONFIRMED` (code + prod data snapshot) — **The savings block lists point medians as
   districts.**
-  - **Cause:** the prod `pins-rent.json` `medians` has 2 069 entries: 36 district medians and 2 033 point medians with
-    codes `pt:<lat>:<lng>` or `pt:<lat>:<lng>:near`, mostly `n = 12`. `setPriceData` keeps every entry with
-    `rooms ∈ 1..3` and `median_usd > 0`, and `renderSave` turns each one into a district button labelled with
-    `tx("d." + code) || code`.
+  - **Cause:** the prod `pins-rent.json` `medians` of 2026-11-08 had 2 069 entries: 36 district medians and 2 033
+    point medians with codes `pt:<lat>:<lng>` or `pt:<lat>:<lng>:near`, mostly `n = 12`. `setPriceData` keeps every
+    entry with `rooms ∈ 1..3` and `median_usd > 0`, and `renderSave` turns each one into a district button labelled
+    with `tx("d." + code) || code`.
   - **Effect:** after the 12 real districts, the row shows hundreds of buttons named `pt:41.2011:69.1883`. The point
     entries also bloat the file.
   - **Parity blind spot:** the parity tests compare identical behaviour on both sides, so they cannot catch this.
-  - *Evidence:* `LJS:2252-2299`, `LJS:2302-2306`, `LJS:1951-1953`; `FIX/pins-rent.json`.
+  - (*Landing intake:*) the fixture of 2026-11-12 has the 36 district medians and no `pt:` entry, and `setPriceData`
+    and `renderSave` are unchanged; the defect is latent until the next feed with point medians.
+  - *Evidence:* `LJS:2267-2314`, `LJS:2317-2321`, `LJS:1955-1957`; `FIX/pins-rent.json` of 2026-11-08 (replaced).
   - **Proposed fix:**
     - Split the contract into `district_medians` (district code, rooms, median, n) and `point_medians`, or drop point
       medians from the landing feed.
@@ -1593,7 +2029,11 @@ already captured a rule, the matching `BR-API` item is named.
     old and get no cache-busting.
   - **Dead data and stale comments:** `dots` (1 310 entries) is shipped and unused. HTML comments still point to
     `/api/landing/live` and `/api/landing/pins`.
-  - *Evidence:* `LJS:58-72`; `REC:68-70`; `IDX:67`, `IDX:195`, `IDX:295`, `IDX:340`; `FIX/pins-rent.json`.
+  - (*Landing intake:*) `dots` has 1 311 entries in the 2026-11-12 fixture and is still unused. The HTML comments were
+    removed in `d9bbbc696337`; `DATA_V` and its JS comment remain. The showcase's ages add a second clock problem
+    (LB-LND-018).
+  - *Evidence:* `LJS:61-75`; `REC:87-90`; `DIFF:d9bbbc696337/index.html:58`, `:119`, `:153`, `:181` (the removed
+    comments); `FIX/pins-rent.json`.
   - **Proposed fix:** render the numbers server-side (ISR) from a data snapshot that carries `generated_at`. If client
     loading remains, version the URL with the snapshot hash and drop unused fields.
   - **URL/SEO impact:** none. Numbers become crawlable.
@@ -1606,7 +2046,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **Text mismatch:** the markup and the JS texts disagree. The markup has «Мы сравниваем с этой ценой каждую
     квартиру…» and «дешевле рынка»; JS has «сравниваем с похожими рядом и в районе…» and «дешевле обычной цены».
     Crawlers and no-JS users see the markup.
-  - *Evidence:* `IDX:300-309`, `IDX:214-217`, `IDX:165-166`; `LJS:2246-2250`; `LI18N pc.what`, `pc.weekRest`.
+  - *Evidence:* `IDX:379-388`, `IDX:298-300`, `IDX:157-158`; `LJS:2261-2265`; `LI18N pc.what`, `pc.weekRest`.
   - **Proposed fix:** server-render from the same snapshot. Hide numeric claims when data is missing, or label example
     content. Keep one source text per key.
   - **URL/SEO impact:** the indexed text becomes truthful and consistent.
@@ -1618,7 +2058,12 @@ already captured a rule, the matching `BR-API` item is named.
   3. Only `s` or `utm_source` survives; `utm_campaign` and `utm_medium` are dropped.
   4. `stats.js` silently truncates payloads to 49 characters.
 
-  *Evidence:* QR decode (LND-016); `FIX/live.json`; `LJS:26-37`; `STJ:18-21`.
+  (*Landing intake:* since `67b3942a8340` a tag with other characters is sanitised rather than dropped, which closes
+  the ChatGPT case (`chatgpt.com` → `chatgpt-com`, BR-LND-001); items 1, 3 and 4 stand. The showcase's cards and
+  search leave for site pages, where the tag is not carried either (URL-063, URL-064). Since `d9bbbc696337` the hint
+  bar drops the tag on its way to `/uz/` and `/en/` (LB-LND-019).)
+
+  *Evidence:* QR decode (LND-016); `FIX/live.json`; `LJS:26-41`; `STJ:18-21`.
   - **Proposed fix:**
     - Generate the QR with `?start=s_web_qr` (static), or render it per visit with the tagged link.
     - Add a short tag to `startapp` where it fits, e.g. `l_<id>-web-<tag>`. The Mini App parser must stay tolerant:
@@ -1631,7 +2076,10 @@ already captured a rule, the matching `BR-API` item is named.
     language.
   - **Home link:** uz/en home links go to `/?lang=<lang>`, which triggers LB-LND-002.
   - **Duplication:** the bot's `/privacy` text is a separate copy.
-  - *Evidence:* `PRV:1-30`, `PRV:150-177`.
+  - (*Since `d9bbbc696337`, landing intake:*) the home links go to `uz/` and `en/`, and the browser language no longer
+    picks the text (BR-LND-020); the "Home link" gap is closed. The other gaps stand: one URL, the uz/en texts hidden,
+    no canonical or hreflang.
+  - *Evidence:* `PRV:1-33`, `PRV:166-186`.
   - **Proposed fix:**
     - Serve `/privacy.html` (ru), `/uz/privacy.html` and `/en/privacy.html`, or locale routes with an `.html`-less
       alias, each server-rendered with hreflang.
@@ -1642,7 +2090,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **Fragility:** any byte change blocks a script.
   - **Looseness:** `style-src 'unsafe-inline'` and `img-src … https:` (any HTTPS image).
   - **Reports:** go to `/api/csp-report` (endpoint behaviour unknown; see `08-api-inventory.md`).
-  - *Evidence:* `REL csp`; `REC:56-57`.
+  - *Evidence:* `REL csp`; `REC:65-66`.
   - **Proposed fix:**
     - Use nonce-based CSP from Next.js middleware, or hashes computed at build.
     - Narrow `img-src` to `'self'`, the media host and `data:`.
@@ -1650,7 +2098,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **URL/SEO impact:** none.
 - **LB-LND-010** · `decision` · `CONFIRMED` — **Monolithic, unminified assets.** The landing ships `landing.js` (145 KB),
   `landing.css` (102 KB), `miniapp.css` (74 KB) and the two i18n files (43 KB), all unminified and loaded on every
-  view. *Evidence:* §1.1.
+  view. (*Landing intake:* now 158 KB, 120 KB, 74 KB and 50 KB.) *Evidence:* §1.1.
   - **Proposed fix:**
     - Component split in `frontend/landing` with minification.
     - Load the interactive phone demo lazily.
@@ -1665,16 +2113,17 @@ already captured a rule, the matching `BR-API` item is named.
   - **URL/SEO impact:** none on URLs; consistent anchor texts.
 - **LB-LND-012** · `decision` · `CONFIRMED` — **Unsigned photo copies outside the media policy.**
   - **What:** `img/snap/<id>.webp` holds unsigned copies of channel photos (316 in the snapshot), outside the signed
-    `/media` policy and outside the privacy promise («копии фото — до 30 дней», removal on takedown).
+    `/media` policy and outside the privacy promise («копии фото — до 30 дней», removal on takedown). (*Landing
+    intake:* 300 in the fixture of 2026-11-12; since `67b3942a8340` the showcase shows them as card photos too.)
   - **Partial cover:** robots blocks them, but they stay publicly fetchable.
-  - *Evidence:* `FIX/pins-*.json`; `$KVADRO_ROOT/demo/landing/site/robots.txt:6-8`; `PRV:66`. Related: LB-API-054 in
+  - *Evidence:* `FIX/pins-*.json`; `$KVADRO_ROOT/demo/landing/site/robots.txt:6-8`; `PRV:72`. Related: LB-API-054 in
     `02-legacy-backend-audit.md`.
   - **Proposed fix:** serve landing photos through the media pipeline: signed or short-lived URLs, purged on takedown
     and withdrawal. Regenerate the snapshot without withdrawn listings.
   - **URL/SEO impact:** `/img/snap/*` disappears; nothing indexable depends on it.
 - **LB-LND-013** · `decision` · `UNVERIFIED` — **Unknown paths answer with JSON.** Per the local server that mirrors
   prod, an unknown path on the landing host answers `404` with the JSON body `{"detail":"Not Found"}` rather than an
-  HTML page. *Evidence:* `SRV:1-3`, `SRV:62-66`. *Check:* Q-LND-006.
+  HTML page. *Evidence:* `SRV:1-4`, `SRV:82-85`. *Check:* Q-LND-006.
   - **Proposed fix:** a localised HTML 404 with `noindex` (the same component as LND-055) for every unknown path; JSON
     only under `/api/`.
   - **URL/SEO impact:** soft-error handling improves; no URL change.
@@ -1689,10 +2138,58 @@ already captured a rule, the matching `BR-API` item is named.
   - **URL/SEO impact:** none; these URLs are canonicalised to the page anyway.
 - **LB-LND-016** · `decision` · `DOCUMENTED_ONLY` — **The page depends on Cloudflare Email Obfuscation** for the
   `mailto:` links of `privacy.html` and the methodology page. Cloudflare injects a script and `/cdn-cgi/` links, which
-  differs from the origin markup and only works behind Cloudflare. *Evidence:* `REC:85-87`; `SEO:378`.
+  differs from the origin markup and only works behind Cloudflare. *Evidence:* `REC:107-109`; `SEO:378`.
   - **Proposed fix:** render a plain contact link (support bot first, mailbox second) and do not rely on edge
     rewriting.
   - **URL/SEO impact:** `/cdn-cgi/l/email-protection#…` URLs disappear; nothing depends on them.
+- **LB-LND-017** · `bug` · `CONFIRMED` (code) / `UNVERIFIED` (data) — **Cards show four and more rooms as «4‑комн.»,
+  and the showcase card puts data into `innerHTML`** (*since `67b3942a8340`, landing intake*).
+  - **Rooms:** the showcase card fills `rooms.short` («{n}‑комн.», «{n} xonali», «{n}‑room») with
+    `Math.min(p.rooms, 4)`, so a flat of 5 or more rooms reads «4‑комн.». The demo phone does the same with
+    `title.<min(rooms, 4)>`, whose `title.4` is «4-комн. квартира» (BR-LND-013). The search form offers «4 и
+    больше», so on input 4 means "4 or more", on output plain 4. The fixture's maximum is 4 rooms (2026-11-12: 7 rent
+    and 12 sale pins with 4), so whether the producer caps `rooms` at 4 or sends 5 and more is unknown (Q-LND-013).
+  - **`innerHTML`:** `vitCard` builds the card by string concatenation with `p.photo` inside `src="…"`, and sets the
+    facts line, which holds `p.floor` and `p.floors_total` from the data unescaped, through `innerHTML`. That breaks
+    the file's own rule that data goes in only as text or attributes (`LJS:1-2`, LND-028): a photo path or a floor
+    value with markup in it would be parsed as HTML. The producer is the legacy backend, and no such value is in the
+    fixture.
+  - *Evidence:* `LJS:2383-2397`, `LJS:596`; `LI18N rooms.short`; `MI18N title.4`; `FIX/pins-rent.json`,
+    `FIX/pins-sale.json`.
+  - **Proposed fix:**
+    - A «4+» label per language for `rooms ≥ 4` on every card (showcase, feed, map), with the producer sending the
+      real room count.
+    - Render cards through components that set text and attributes (React escapes by default), and accept only
+      same-origin media paths as photo URLs.
+  - **URL/SEO impact:** none.
+- **LB-LND-018** · `decision` · `CONFIRMED` (code) / `DOCUMENTED_ONLY` (file schedules) — **Showcase ages mix two
+  files and the visitor's clock** (*since `67b3942a8340`, landing intake*).
+  - **What:** a card's age is `age_min` (minutes before the pins snapshot) plus the minutes from `live.json → now` to
+    `Date.now()` on the visitor's device; before `live.json` arrives it is `age_min` alone.
+  - **Problems:**
+    1. A wrong device clock shifts every age: one behind the snapshot freezes the ages at `age_min` (the extra minutes
+       are clamped at 0); one ahead makes every listing older.
+    2. `age_min` counts from the pins file, the extra minutes from `live.json`. The two files are written on their own
+       schedules (2026-11-08: `live.json` at 02:02, the pins at 15:00), so every age is off by the gap between them.
+    3. The blocks disagree. The pushes show ages as at the snapshot, plus the time spent on the page, measured from
+       the snapshot's own `now` (BR-LND-014). The showcase shows them at the visitor's clock. One listing can read «5
+       мин назад» in a push and «14 ч назад» in the row of the same page.
+  - *Evidence:* `LJS:2372-2377`, `LJS:1989-1991`, `LJS:2104`; `REC:87`.
+  - **Proposed fix:** the data carries absolute times (when each listing was first seen) and one `generated_at` per
+    snapshot. Every block computes ages against one clock: the server's at render time (ISR), or the snapshot's
+    `generated_at` plus the time since load.
+  - **URL/SEO impact:** none; server-rendered ages become crawlable and consistent.
+- **LB-LND-019** · `bug` · `CONFIRMED` — **The hint bar's links drop the visitor's source tag** (*since
+  `d9bbbc696337`, landing intake*).
+  - **What:** the links are static `uz/` and `en/`. A visitor who lands on `/?utm_source=chatgpt.com` (the code calls
+    ChatGPT the site's main source since 06.11) or `/?s=<tag>` and follows the bar reaches `/uz/` or `/en/` without
+    the query. The bot buttons there then carry `s_web` without the tag (BR-LND-001), and the visit's source is lost.
+    A language chosen in the menu keeps the query (`langUrl`, BR-LND-005); the bar does not.
+  - *Evidence:* `IDX:58`; `LJS:30-41`, `LJS:2649-2655`.
+  - **Proposed fix:** the bar's links carry the current query (without `lang`) and the hash, built like the menu's
+    addresses, or rendered by the server with the query.
+  - **URL/SEO impact:** none; `/uz/?s=…` and `/en/?utm_source=…` keep their canonical.
+  - HOMI: DEC-96 adopts the bar (WP-61).
 
 ### 4.2 SEO pages — `LB-SEO`
 
@@ -1770,7 +2267,8 @@ already captured a rule, the matching `BR-API` item is named.
   - **Coverage:** on 2026-11-05 only 94 of about 450 site pages were indexed; 349 were «обнаружена, не
     проиндексирована».
   - **Thin pages:** they stay reachable as `200 noindex,follow`, and the interlinking may still point to them.
-  - *Evidence:* `IDX:379-380`; `SEO:123`, `SEO:144-145`. *Check:* Q-SEO-017.
+  - *Evidence:* `DIFF:67b3942a8340/index.html:292-293` (the HTML comment that recorded it, removed in that release);
+    `SEO:123`, `SEO:144-145`. *Check:* Q-SEO-017.
   - **Proposed fix:**
     - Review Search Console before cut-over.
     - Link only to indexable slices.
@@ -1784,23 +2282,26 @@ already captured a rule, the matching `BR-API` item is named.
 
 | ID | Question | Check that closes it |
 | -- | -------- | -------------------- |
-| Q-LND-001 | Who stamps `?v=` on JS/CSS in prod (deploy or server), and is anything else derived from file hashes (`REC:58-59`, `REC:95`)? | Ask the legacy team; otherwise irrelevant once the new build owns hashing. |
-| Q-LND-002 | Schedule and generator of `data/*.json` and `img/snap/*` (`scripts/landing_snapshot.py`, `app/api/landing.py`); do `/api/landing/live` and `/api/landing/pins` exist? (also `08-api-inventory.md`, `GET /api/landing/live`) | Legacy team; or watch `Last-Modified` of the three data files on prod for 48 h (team action, not from this repo). |
-| Q-LND-003 | Does a JS-rendering crawler (Google) see English content on `/` (LB-LND-002)? | Search Console URL Inspection → rendered HTML of `/`; the language of the Google snippet for `kvadro.app`. |
+| Q-LND-001 | Who stamps `?v=` on JS/CSS in prod (deploy or server), and is anything else derived from file hashes (`REC:67-68`, `REC:117-118`)? | Ask the legacy team; otherwise irrelevant once the new build owns hashing. |
+| Q-LND-002 | Schedule and generator of `data/*.json` and `img/snap/*` (`scripts/landing_snapshot.py`, `app/api/landing.py`); do `/api/landing/live` and `/api/landing/pins` exist? (also `08-api-inventory.md`, `GET /api/landing/live`). (*Landing intake:* the HTML comments that named those endpoints are gone since `d9bbbc696337`, `DIFF:d9bbbc696337/index.html:58`; the question stands. The schedule also decides the age error of LB-LND-018.) | Legacy team; or watch `Last-Modified` of the three data files on prod for 48 h (team action, not from this repo). |
+| Q-LND-003 | Does a JS-rendering crawler (Google) see English content on `/` (LB-LND-002)? (*Landing intake:* since `d9bbbc696337` the browser language no longer translates `/`, so only `/?lang=uz\|en` and a stored choice can still show a crawler foreign text under the ru canonical; the question narrows to those.) | Search Console URL Inspection → rendered HTML of `/`; the language of the Google snippet for `kvadro.app`. |
 | Q-LND-004 | How the bot stores and uses `s_web[_<tag>]` and `--v<visit>` (and `s_seo_*`). Where is `docs/analytics.md`, which `landing.js:27` cites but our material lacks? | Legacy team; a `start` payload export or attribution report from the bot DB / PostHog. |
 | Q-LND-005 | Which `?s=` / `utm_source` tags are in circulation (ads, Instagram bio, partner posts)? | PostHog: distinct `$current_url` query values on `kvadro.app`; bot attribution table. |
-| Q-LND-006 | Prod response for unknown landing paths (JSON `404` or HTML) and for `/favicon.ico` (not among the 35 mirrored files). | `curl -sI https://kvadro.app/does-not-exist`, `…/favicon.ico` (team action). |
+| Q-LND-006 | Prod response for unknown landing paths (JSON `404` or HTML) and for `/favicon.ico` (not among the 35 mirrored files). (*Landing intake:* `favicon.ico` is a mirrored file since `67b3942a8340`, so only the unknown paths remain open; they also decide what a missing owners' page answers, LND-068.) | `curl -sI https://kvadro.app/does-not-exist`, `…/favicon.ico` (team action). |
 | Q-LND-007 | Full landing response headers: HTML `Cache-Control`, HSTS, `Referrer-Policy`; static assets and data `max-age` (1 800 observed for data). | `curl -sI` on `/`, `/landing.js?v=…`, `/data/live.json` (team action). |
 | Q-LND-008 | PostHog continuity: which project, dashboards and insights depend on `site`, `visit`, `env` and on landing autocapture selectors (`data-l` keys, classes)? | PostHog project review with the owner before the new landing changes markup. |
 | Q-LND-009 | Format of the `web_app` button URLs in already-sent bot messages (`BOT:657` 🔶 «URL с id объявления») and whether they survive a domain change of `app.kvadro.app` (redirect plus `#tgWebAppData` fragment). | Legacy team; inspect a sent card's `reply_markup` in a test chat; test a `301` with a staging Mini App. |
 | Q-LND-010 | One definition of «below market» for HOMI: landing «≥ 20 %» (`bargains_week`, savings) vs tone `good` at ≥ 10 % (BR-SEO-014); HOMI's own brief says «about 20 %». | Product decision; record it in `07-business-rules.md`. |
 | Q-LND-011 | Is `?v=1` / `?v=2` (or any debug parameter) used in shared links or ads? | PostHog `$current_url` query scan. |
+| Q-LND-012 | The owners' page «Сдать квартиру» (LND-068): does `/sdat-kvartiru/` (uz `/uz/kvartira-ijaraga-berish/`, en `/en/list-your-apartment/`) exist on prod, who renders it, what it says, and what `?s=tenant` does there (DEC-97)? Legacy's own checklist still lists it as not done (`APID:1411-1412`). | Legacy team or the developer; a read-only `curl -sI` of the three paths (team action); the legacy checklist when it is ticked. Due before WP-61 starts. |
+| Q-LND-013 | `live.json → showcase` (LND-065): who produces it, what a district count counts (active listings of the deal? the same as the SEO page counters?), what `total` and `owners` mean (the code ignores them), and when it is refreshed. Also: does the pins producer cap `rooms` at 4 (LB-LND-017), and when is each pins file written relative to `live.json` (LB-LND-018)? | Legacy team; compare `showcase.rent.districts` with the counters of the district pages on the same day (team action). |
+| Q-LND-014 | «О сервисе» `o-servise/` (LND-069): content, producer, languages (`uz/haqida/`, `en/about/`), indexing and sitemap entry. | The Q-SEO-001 crawl; legacy team. |
 
 ### 5.2 SEO pages — `Q-SEO`
 
 | ID | Question | Check that closes it |
 | -- | -------- | -------------------- |
-| Q-SEO-001 | Full content of all pages. Only 25 of 1 008 were sampled; `area.css`, the SVGs and the uz/en texts are not mirrored. The sitemap count also needs re-checking (1 012 vs `REC:62` «около 1020»). | Crawl every URL in `sitemap.xml` plus the two CSVs, `area.css` and `og-*.jpg` before cut-over. Store them as the parity baseline (read-only GETs at a polite rate; team action). |
+| Q-SEO-001 | Full content of all pages. Only 25 of 1 008 were sampled; `area.css`, the SVGs and the uz/en texts are not mirrored. The sitemap count also needs re-checking (1 012 vs `REC:77` «около 1020»). | Crawl every URL in `sitemap.xml` plus the two CSVs, `area.css` and `og-*.jpg` before cut-over. Store them as the parity baseline (read-only GETs at a polite rate; team action). |
 | Q-SEO-002 | Exact noindex threshold: is a page with exactly 10 listings indexed? (BR-SEO-035) | Find a slice with 10 listings in the crawl, or ask the legacy team. |
 | Q-SEO-003 | How sitemap `lastmod` is computed (BR-SEO-034). | Compare `lastmod` with the newest card age across crawled pages; legacy team. |
 | Q-SEO-004 | uz and en `<title>` / `description` templates and block texts for every page type (verified on 4 pages only). | From the Q-SEO-001 crawl: extract the head of each type × language. |
@@ -1821,6 +2322,7 @@ already captured a rule, the matching `BR-API` item is named.
 | Q-SEO-019 | Are channels read via `t.me/s/<channel>` (BR-SEO-037)? Also `about.md` §11 item 3. | Legacy team. |
 | Q-SEO-020 | Template of the Tashkent region city page. Are `chirchiq`, `olmaliq`, `zangiota`, `qibray`, `toshkent-tumani` districts or towns in the place model? (tag `s_seo_tashkent-region_chirchiq`) | From the crawl; legacy team. |
 | Q-SEO-021 | Which numbers in the methodology are dynamic («217 каналов», dates)? | From the crawl at two dates. |
+| Q-SEO-022 | The pages the showcase links to (Wave 3). (1) The filter query of the SEO area pages, `?rooms=&max=&owners=1` (`area_pages.SearchFilter`, `REC:79-80`): what `rooms=4` does on rent pages (rooms 1–3 only, BR-SEO-003), whether `max` is inclusive, whether a filtered page is `noindex` and keeps the canonical without the query (BR-SEO-004 says other parameters are ignored), and whether the no-JS form's `d=` is read. (2) The listing pages `obyavlenie/<id>/` (`uz/elon/`, `en/listing/`): existence, content, indexing, the answer for a withdrawn listing. (3) The sale by-owner pages the footer now links (`prodazha/tashkent/bez-posrednikov/` and its uz/en variants), absent from §2.1. | The Q-SEO-001 crawl plus GETs of one filtered page, one listing page and the sale by-owner page (team action); legacy team. |
 
 ## 6. Public URL contract
 
@@ -1849,26 +2351,26 @@ domain changes. "Must keep" means the pattern has to keep resolving after cut-ov
 
 | ID | Pattern | Example | Kind | Lang | Count | Owner | Redirect | SEO risk | Must keep | Status |
 | -- | ------- | ------- | ---- | ---- | ----: | ----- | -------- | -------- | :-------: | ------ |
-| URL-001 | `/` | `https://kvadro.app/` | landing | ru | 1 | landing app | 301 | high (home, x-default) | yes | CONFIRMED |
-| URL-002 | `/uz/` | `https://kvadro.app/uz/` | landing | uz | 1 | landing app | 301 | high | yes | CONFIRMED |
-| URL-003 | `/en/` | `https://kvadro.app/en/` | landing | en | 1 | landing app | 301 | high | yes | CONFIRMED |
-| URL-004 | `/uz`, `/en` → `308` | `/uz` → `/uz/` | landing | uz, en | 2 | landing app | 301 | low | yes | DOCUMENTED_ONLY |
+| URL-001 | `/` (*since `d9bbbc696337`* not translated by the browser language; a uz or en browser gets the hint bar, LND-067) | `https://kvadro.app/` | landing | ru | 1 | landing app | 301 | high (home, x-default) | yes | CONFIRMED |
+| URL-002 | `/uz/` (*since `67b3942a8340`* `/uz/<…>/<file>` → `301` to the unprefixed file, LND-038) | `https://kvadro.app/uz/` | landing | uz | 1 | landing app | 301 | high | yes | CONFIRMED |
+| URL-003 | `/en/` (*since `67b3942a8340`* `/en/<…>/<file>` → `301` to the unprefixed file, LND-038) | `https://kvadro.app/en/` | landing | en | 1 | landing app | 301 | high | yes | CONFIRMED |
+| URL-004 | `/uz`, `/en` → `308` (*since `67b3942a8340`* the general rule: any path without a trailing slash and without a dot in its last segment → `308` with the slash, query kept, LND-038) | `/uz` → `/uz/` | landing | uz, en | 2 | landing app | 301 | low | yes | DOCUMENTED_ONLY |
 | URL-005 | `/index.html` → `301 /` | `/index.html?s=x` → `/?s=x` | landing | ru | 1 | landing app | 301 | low | yes | DOCUMENTED_ONLY |
 | URL-006 | landing `?s=<tag>` / `?utm_source=<tag>` | `/?s=insta_1` | landing | all | open set | landing app | 301 with query | none (canonical) | yes | CONFIRMED |
-| URL-007 | landing `?lang=ru\|uz\|en` | `/?lang=uz` | landing | all | 3 | landing app | 301 → `/uz/` (LB-LND-002) | medium (duplicate today) | yes | CONFIRMED |
+| URL-007 | landing `?lang=ru\|uz\|en` (*since `d9bbbc696337`* with the stored choice the only ways to translate `/` in the page) | `/?lang=uz` | landing | all | 3 | landing app | 301 → `/uz/` (LB-LND-002) | medium (duplicate today) | yes | CONFIRMED |
 | URL-008 | landing `?v=1\|2` | `/?v=2` | landing | all | 2 | landing app | 301 with query | none | no | CONFIRMED |
 | URL-009 | landing debug parameters (`motion`, `touch`, `glass`, `anim`, `bench`, `off`, `debug`) | `/?bench=1&off=anim` | landing | all | 7 | landing app | 301 with query | none | no | CONFIRMED |
-| URL-010 | `/privacy.html[?lang=uz\|en]` | `/privacy.html?lang=uz` | landing | ru, uz, en | 1 (+2 variants) | landing app | 301 | low | yes | CONFIRMED |
+| URL-010 | `/privacy.html[?lang=uz\|en]` (*since `d9bbbc696337`* language from `?lang=` or the stored choice, else ru; home links `uz/`, `en/`, BR-LND-020) | `/privacy.html?lang=uz` | landing | ru, uz, en | 1 (+2 variants) | landing app | 301 | low | yes | CONFIRMED |
 | URL-011 | `/robots.txt` | `/robots.txt` | other | — | 1 | landing app | 301 (new file on the new host) | high | yes | CONFIRMED |
 | URL-012 | `/sitemap.xml` | `/sitemap.xml` | seo | — | 1 (1 012 entries) | landing app (data from backend) | 301 + change of address | high | yes | DOCUMENTED_ONLY |
 | URL-013 | `/site.webmanifest` | — | asset | — | 1 | landing app | 301 | none | no | CONFIRMED |
-| URL-014 | icons `/logo.svg`, `/favicon-32.png`, `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png` | `/icon-512.png` (JSON-LD logo) | asset | — | 5 | landing app | 301 | low | yes | CONFIRMED |
-| URL-015 | `/favicon.ico` | — | asset | — | 1 | landing app | 301 | none | no | UNVERIFIED |
-| URL-016 | `/og-ru.jpg`, `/og-uz.jpg`, `/og-en.jpg` | `/og-uz.jpg` | asset | per file | 3 | landing app | 301 | low (cached link previews) | yes | CONFIRMED |
-| URL-017 | landing JS/CSS with `?v=<10 hex>` | `/landing.js?v=7385730cf1` | asset | — | 6 | landing app | none (replaced) | none | no | CONFIRMED |
+| URL-014 | icons `/logo.svg`, `/favicon-32.png`, `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`; (*since `65998117d6ec`*) `/favicon-48.png`, `/favicon-96.png` | `/icon-512.png` (JSON-LD logo) | asset | — | 7 | landing app | 301 | low | yes | CONFIRMED |
+| URL-015 | `/favicon.ico` (a mirrored file since `67b3942a8340`; no page links it) | — | asset | — | 1 | landing app | 301 | none | no | CONFIRMED |
+| URL-016 | `/og-ru.jpg`, `/og-uz.jpg`, `/og-en.jpg` (linked with `?v=20261109` since `67b3942a8340`) | `/og-uz.jpg` | asset | per file | 3 | landing app | 301 | low (cached link previews) | yes | CONFIRMED |
+| URL-017 | landing JS/CSS with `?v=<10 hex>` | `/landing.js?v=949ee9159b` | asset | — | 6 | landing app | none (replaced) | none | no | CONFIRMED |
 | URL-018 | landing static images (`/map-tashkent.webp`, `/img/*.webp\|svg`) | `/img/qr-bot.svg` | asset | — | 15 | landing app | none (replaced) | none | no | CONFIRMED |
 | URL-019 | `/data/{live,pins-rent,pins-sale}.json?v=<DATA_V>` | `/data/live.json?v=202610171944` | asset | — | 3 | backend → landing app | none | none | no | CONFIRMED |
-| URL-020 | `/img/snap/<listing_id>.webp` | `/img/snap/<id>.webp` | media | — | ≈ 316 (rotating) | backend (media) | none (dropped, LB-LND-012) | none (disallowed) | no | CONFIRMED |
+| URL-020 | `/img/snap/<listing_id>.webp` | `/img/snap/<id>.webp` | media | — | ≈ 300 (rotating; 316 on 2026-11-08) | backend (media) | none (dropped, LB-LND-012) | none (disallowed) | no | CONFIRMED |
 | URL-021 | `POST /api/csp-report` | — | other | — | 1 | backend | none | none | no (until legacy pages stop) | DOCUMENTED_ONLY |
 | URL-022 | `/cdn-cgi/l/email-protection#<hex>` | — | other | — | 2 pages | external (Cloudflare) | none | none | no | DOCUMENTED_ONLY |
 | URL-023 | section hub `/{arenda\|prodazha\|novostrojki}/` | `/uz/sotuv/`, `/en/new-builds/` | seo | ru, uz, en | 9 | landing app | 301 | high | yes | DOCUMENTED_ONLY |
@@ -1879,7 +2381,7 @@ domain changes. "Must keep" means the pattern has to keep resolving after cut-ov
 | URL-028 | quarter `/{rent}/tashkent/{district}/{quarter}/` | `/arenda/tashkent/yunusobod/minor/` | seo | ru, uz, en | 135 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
 | URL-029 | metro hub `/{rent}/tashkent/metro/` | `/arenda/tashkent/metro/` | seo | ru, uz, en | 3 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
 | URL-030 | metro station `/{rent}/tashkent/metro/{station}/` | `/arenda/tashkent/metro/abdulla-qodiriy/` | seo | ru, uz, en | 105 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
-| URL-031 | by owner, city `/{rent}/tashkent/{bez-posrednikov\|maklersiz\|by-owner}/` | `/en/rent/tashkent/by-owner/` | seo | ru, uz, en | 3 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
+| URL-031 | by owner, city `/{rent}/tashkent/{bez-posrednikov\|maklersiz\|by-owner}/` (*since `67b3942a8340`* linked from the footer, which also links the sale variant `/{sale}/tashkent/{bez-posrednikov\|maklersiz\|by-owner}/`, unknown to §2.1, Q-SEO-022) | `/en/rent/tashkent/by-owner/` | seo | ru, uz, en | 3 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
 | URL-032 | by owner, district `/{rent}/tashkent/{district}/{by-owner}/` | `/arenda/tashkent/sergeli/bez-posrednikov/` | seo | ru, uz, en | 6 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
 | URL-033 | rent index `/{arenda\|uz/ijara}/indeks/`, `/en/rent/index/` | `/arenda/indeks/` | seo | ru, uz, en | 3 | landing app | 301 | high (citations) | yes | DOCUMENTED_ONLY |
 | URL-034 | methodology `/{arenda\|uz/ijara}/metodika/`, `/en/rent/methodology/` | `/arenda/metodika/` | seo | ru, uz, en | 3 | landing app | 301 | medium | yes | DOCUMENTED_ONLY |
@@ -1911,9 +2413,19 @@ domain changes. "Must keep" means the pattern has to keep resolving after cut-ov
 | URL-060 | `https://www.instagram.com/kvadro.app/` | landing and SEO footers | other | — | 1 | external | n/a | none | no | CONFIRMED |
 | URL-061 | `mailto:` project mailbox | privacy, methodology, JSON-LD | other | — | 1 | external | n/a | none | no | CONFIRMED |
 | URL-062 | `https://www.openstreetmap.org/copyright` | landing footer «Карта: © OpenStreetMap» | other | — | 1 | external | n/a | none | yes (licence attribution) | CONFIRMED |
+| URL-063 | `/obyavlenie/<id>/`, `/uz/elon/<id>/`, `/en/listing/<id>/` (backend listing pages; *since `67b3942a8340`* linked from the showcase cards, LND-065) | `/obyavlenie/<id>/` | seo | ru, uz, en | per listing (10 per deal on the page) | landing app (data from backend) | 301 | unknown (Q-SEO-022) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
+| URL-064 | `<section>/tashkent/[<district>/]?rooms=<1–4>&max=<USD>&owners=1`, sections `arenda`, `uz/ijara`, `en/rent`, `prodazha`, `uz/sotuv`, `en/sale` (*since `67b3942a8340`* the showcase search, BR-LND-026) | `/arenda/tashkent/yunusobod/?rooms=2&max=700&owners=1` | seo | ru, uz, en | 6 sections × 13 places × filters | landing app | 301 with query | low (filtered variants of URL-024, URL-026; Q-SEO-022) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
+| URL-065 | `/o-servise/`, `/uz/haqida/`, `/en/about/` (*since `67b3942a8340`* the footer's «О сервисе», LND-069) | `/o-servise/` | landing | ru, uz, en | 3 | landing app | 301 | low (Q-LND-014) | yes | CONFIRMED (emitted) / UNVERIFIED (target) |
+| URL-066 | `/sdat-kvartiru/?s=tenant`, `/uz/kvartira-ijaraga-berish/?s=tenant`, `/en/list-your-apartment/?s=tenant` (emitted by the Mini App's «Нашли жильё?» survey into chats, not by the landing; LND-068, Q-LND-012) | `https://kvadro.app/sdat-kvartiru/?s=tenant` | landing | ru, uz, en | 3 | landing app | 301 with query | low | yes (the links sit in chats) | CONFIRMED (emitted) / UNVERIFIED (target) |
 
 Sources per row are in `data/public-urls.json`. The SEO counts add up per language to 3 + 18 + 58 + 46 + 124 + 45 + 1 +
-35 + 1 + 2 + 1 + 1 + 1 = 336 (URL-023 – URL-035).
+35 + 1 + 2 + 1 + 1 + 1 = 336 (URL-023 – URL-035). (*Landing intake:* URL-063 – URL-066 are added here;
+`data/public-urls.json` needs the same rows and the changes to URL-014, URL-015, URL-016, URL-020 and URL-031.
+Evidence: URL-063 `LJS:2339`, `LJS:2381`; URL-064 `LJS:2338`, `LJS:2457-2465`, `SCN:147-153`; URL-065
+`IDX:483`, `UZ` and `EN` footers; URL-066 `FND:79-92`, `APID:1198-1203`.)
+
+HOMI: DEC-95 sends the showcase's cards, search and districts into HOMI's Mini App, so HOMI's landing emits neither
+URL-063 nor URL-064 before Wave 3; DEC-97 decides the page behind URL-066.
 
 ### 6.3 Deep-link grammar in one place
 
@@ -1944,23 +2456,28 @@ Support https://t.me/KvadroSupportBot[?start=l_<id>]
 
 | Kind | Total | CONFIRMED | DOCUMENTED_ONLY | UNVERIFIED | DEPRECATED_CANDIDATE |
 | ---- | ----: | --------: | --------------: | ---------: | -------------------: |
-| `LND` landing (001–039) | 39 | 37 | 2 | 0 | 0 |
+| `LND` landing (001–039, 065–069) | 44 | 40 | 2 | 2 | 0 |
 | `LND` SEO (040–064) | 25 | 0 | 24 | 1 | 0 |
 | — of which SEO page types (042–055) | 14 | 0 | 14 | 0 | 0 |
-| `BR-LND` | 23 | 23 | 0 | 0 | 0 |
+| `BR-LND` | 29 | 29 | 0 | 0 | 0 |
 | `BR-SEO` | 38 | 0 | 32 | 6 | 0 |
-| `LB-LND` (bug 3, decision 13) | 16 | 14 | 1 | 1 | 0 |
+| `LB-LND` (bug 5, decision 14) | 19 | 17 | 1 | 1 | 0 |
 | `LB-SEO` (bug 6, decision 6) | 12 | 0 | 11 | 1 | 0 |
-| `Q-LND` | 11 | — | — | — | — |
-| `Q-SEO` | 21 | — | — | — | — |
-| `URL` | 62 | 31 | 29 | 2 | 0 |
+| `Q-LND` | 14 | — | — | — | — |
+| `Q-SEO` | 22 | — | — | — | — |
+| `URL` | 66 | 36 | 29 | 1 | 0 |
+
+An item with two labels («CONFIRMED (client) / DOCUMENTED_ONLY (producer)») is counted under its first. (*Landing
+intake:* LND-065 – LND-069, BR-LND-024 – BR-LND-029, LB-LND-017 – LB-LND-019, Q-LND-012 – Q-LND-014, Q-SEO-022 and
+URL-063 – URL-066 are new (URL-066 counted under CONFIRMED, its first label); URL-015 moved from UNVERIFIED to
+CONFIRMED.)
 
 The `URL` rows by kind are:
 
 | Kind | URLs |
 | ---- | ---: |
-| landing | 10 |
-| seo | 18 |
+| landing | 12 |
+| seo | 20 |
 | csv | 2 |
 | asset | 7 |
 | media | 3 |
@@ -1970,18 +2487,19 @@ The `URL` rows by kind are:
 | share | 1 |
 | other | 7 |
 
-`must_keep: true` applies to 49 of the 62.
+`must_keep: true` applies to 53 of the 66.
 
 ### 7.2 Source totals vs this document
 
 | Source item | Counted in source | Here |
 | ----------- | ----------------- | ---- |
-| Files in `site/` | 35 (`REC:91`, `REL fileCount`) | all mapped in §1.1; served paths in URL-001 – URL-020 |
-| `index.html` sections + chrome | 6 `<section>` + header + footer row + 4 footer navs + QR aside + dock | LND-004 – LND-020 (blocks), LND-001 (page) |
-| `landing.js` sections (`REC:38-50`) | 9 | LND-008 – LND-032 and BR-LND-001 – BR-LND-023 (every section has at least one item) |
-| Landing text keys | 106 × 3 (`LI18N`), 188 × 3 (`MI18N`) | LND-028; texts quoted where they carry rules |
-| Parity scenarios | 40 (`SCN`) | §1.6, all 40 grouped |
-| Landing data files | 3 JSON + 316 photos (fixture 319) | §1.5, URL-019, URL-020 |
+| Files in `site/` | 38 (`REL fileCount`; `REC:113` still says 35 of 36) | all mapped in §1.1; served paths in URL-001 – URL-020 |
+| `index.html` sections + chrome | 7 `<section>` (with the showcase) + header with the hint bar + footer bar + 4 footer columns with 5 `<nav>` + QR aside + dock | LND-004 – LND-020, LND-065 – LND-067 (blocks), LND-001 (page) |
+| `landing.js` sections (`REC:41-53`) | 11 (the showcase and the hero count are new) | LND-008 – LND-032, LND-065 – LND-067 and BR-LND-001 – BR-LND-029 (every section has at least one item) |
+| Landing text keys | 146 × 3 (`LI18N`, parsed as text), 188 × 3 (`MI18N`) | LND-028; texts quoted where they carry rules |
+| Parity scenarios | 47 (`SCN`) | §1.6, all 47 grouped |
+| Landing data files | 3 JSON + 300 photos (fixture 303 of 2026-11-12); prod 310 at the last fetch | §1.5, URL-019, URL-020 |
+| Backend pages the landing links (*landing intake*) | listing pages, filtered SEO addresses, `o-servise/`; the owners' page from the Mini App | LND-068, LND-069, URL-063 – URL-066, Q-LND-012, Q-LND-014, Q-SEO-022 |
 | `RECOVERY.md` §5 quirks | 2 | LB-LND-001, LB-LND-016 |
 | SEO page types (`SEO:189-205` template rows) | 13 + 404 page | LND-042 – LND-055 (14) |
 | SEO pages | 336 per language, 1 008 total; sitemap 1 012 | §2.1; URL-023 – URL-035 sum to 336 per language |

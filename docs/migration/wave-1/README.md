@@ -66,8 +66,10 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
    here, and update the session handoff.
 6. **If something in a specification is wrong or missing,** fix the specification in the same PR and say so in the
    PR description. Do not work around it silently.
-7. **A new legacy release** (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`) becomes a row at the top of the remaining
-   queue: update the audit, the affected specifications, the stub fixtures and the legacy translator (`25` §8).
+7. **A new legacy release** (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md`, and for the landing
+   `$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md`) becomes a row at the top of the remaining queue: update the audit,
+   the affected specifications, the stub fixtures and the legacy translator (`25` §8). The app and the landing have
+   separate pins (`baseline.md`); check both changelogs.
 
 Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `DONE`. A package number is a name;
 its row is its place in the queue.
@@ -112,9 +114,9 @@ its row is its place in the queue.
 | [WP-34](WP-34-catch-up-feedback-flags-reports.md) | Catch-up: failure feedback, flags and reports | intake `index-CIa0Ldj2`, WP-30 | WAITING (merged in #92 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-35](WP-35-catch-up-card-filters-price.md) | Catch-up: card, facts, filters and price input | WP-34 | WAITING (merged in #93 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | [WP-36](WP-36-catch-up-listing-gates-shell.md) | Catch-up: listing states, gates and the Telegram shell | WP-35 | WAITING (merged in #94 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
-| [Intake `index-YX9bFVws`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 20 Nov 2026 — motion and small UX on built screens, two entry points into the owner cabinet, the survey's «Поздравляем!» step and the owners' landing link — audit, the developer's decisions DEC-89 … DEC-94, specifications, the `legacy` catalogue; no stub or contract change. It defines the catch-up package WP-39 ([`baseline.md`](baseline.md#built-code-behind-the-pin), rows 44 – 54) | intake `index-CIa0Ldj2`, WP-36 | REVIEW (#95) |
+| [Intake `index-YX9bFVws`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 20 Nov 2026 — motion and small UX on built screens, two entry points into the owner cabinet, the survey's «Поздравляем!» step and the owners' landing link — audit, the developer's decisions DEC-89 … DEC-94, specifications, the `legacy` catalogue; no stub or contract change. It defines the catch-up package WP-39 ([`baseline.md`](baseline.md#built-code-behind-the-pin), rows 44 – 54) | intake `index-CIa0Ldj2`, WP-36 | DONE (merged in #95 on 2026-11-20; docs and the `legacy` catalogue only, nothing for the production track) |
 | [WP-37](WP-37-catch-up-map.md) | Catch-up: map | intake `index-CIa0Ldj2`, WP-28 | TODO |
-| Intake of the legacy landing | The legacy landing releases of 19 Nov 2026 (`$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md`: `b1b9a919ecc4`, `d9bbbc696337`) and the owners' page that DEC-91 needs — `03b`, WP-61; its own docs PR (the developer's answer 7 of 2026-11-20). The owners' page is described after a landing sync of the legacy checkout | intake `index-YX9bFVws` | TODO |
+| [Intake of the legacy landing](baseline.md#the-landing-pin) | Legacy landing release intake (rule 7): the four landing releases since the audit's `c63da0e3476a` (`67b3942a8340`, `65998117d6ec`, `b1b9a919ecc4`, `d9bbbc696337`; the queue row first named only the last two) — `03b` and the registers, the developer's decisions DEC-95 … DEC-97 (the showcase into the Mini App, the language of `/`, the owners' page), WP-60, WP-61, the new WP-62, the landing pin; the contract on stubs (`showcase` of `GET /landing/live`, a nullable pin `floor`; the developer's answer 3 of 2026-11-20) | intake `index-YX9bFVws` | REVIEW (#96) |
 | [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | TODO |
 | [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | TODO |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | TODO |
@@ -165,7 +167,8 @@ its row is its place in the queue.
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
 | [WP-60](WP-60-landing-data.md) | Landing data | WP-41 | TODO |
-| [WP-61](WP-61-landing-pages.md) | Landing pages | WP-60, WP-20 | TODO |
+| [WP-62](WP-62-launch-with-filter.md) | Mini App launch with a search filter (the landing showcase's links, DEC-95) | WP-25, WP-36 | TODO |
+| [WP-61](WP-61-landing-pages.md) | Landing pages | WP-60, WP-20, WP-62 | TODO |
 
 ## Stage F — Launch
 

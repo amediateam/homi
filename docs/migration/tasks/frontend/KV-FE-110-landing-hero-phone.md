@@ -29,8 +29,11 @@ from the new Mini App components and catalogues instead of the generated `miniap
   LND-009 (demo finger ~5 s cycle; v2 tap cursor), LND-010 (`try` hint and `cue`), LND-011 (v1 lock-screen phase:
   `LOCK_SCENE` conditions, scene 9 200 px, `LOCK_DWELL` 250 px, up to 4 pushes at 12 % then every 17 %), LND-036.
 - Rules: BR-LND-013 (demo card formatting), BR-LND-014 (pushes), BR-LND-007 (counter in the left column).
-- Source: `$KVADRO_ROOT/demo/landing/site/index.html:65-189`; `$KVADRO_ROOT/demo/landing/site/landing.js:537-575`,
-  `:752-800`, `:1430-1530`, `:2145-2211`; parity scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`.
+- *Since landing release `67b3942a8340` (landing intake):* the H1 `hero.kicker` reads «Аренда и продажа квартир в Ташкенте», and under
+  the first-screen button «Бесплатно · N новых квартир за сутки» (`#hero-count`, `index.html:105`) reads `live.json`
+  at load (`03b` LND-066, BR-LND-028).
+- Source: `$KVADRO_ROOT/demo/landing/site/index.html:62-181`; `$KVADRO_ROOT/demo/landing/site/landing.js:540-578`,
+  `:755-803`, `:1433-1533`, `:2149-2215`; parity scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`.
 
 ## Implementation
 

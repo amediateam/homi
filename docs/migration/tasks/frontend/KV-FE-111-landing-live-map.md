@@ -25,7 +25,9 @@ listing tap opening the listing in the Mini App, every other tap leading to the 
   live map emits none: URL-052 (share) and URL-055 (campaigns) come from the Mini App and ads, URL-054 from the SEO cards
   (KV-FE-115), URL-056 only exists for parser tolerance; with DEV-040 the backend may extend URL-053 to
   `l_<id>-web-<tag>`.
-- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:537-1350`, `:591-661` (formatting, tones, filters), `:656-735`
+- *Since 2026-11-19 (backend data, landing intake):* pins' `district`, `district_code` and `floor` may be `null`: the
+  facts drop the floor, the place keeps the landmark `point`, and the district filter drops such pins (`08` RES-011).
+- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:540-1353`, `:594-664` (formatting, tones, filters), `:659-738`
   (declutter), `:1028-1031`, `:1049-1170`, `:1196-1240`, `:1834-1918`; data shapes `03b` §1.5.
 
 ## Implementation

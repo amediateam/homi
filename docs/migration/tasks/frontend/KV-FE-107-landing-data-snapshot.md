@@ -24,13 +24,17 @@ change.
   `pins-sale.json` preloaded on live entry or first «Продажа»; files rewritten several times a day, `max-age=1800`),
   LND-036 (generated files and their replacements), `03b` §1.5 (data contract), RES-010, RES-011, RES-012, RES-013,
   URL-019, URL-020.
+- *Since landing release `67b3942a8340` (landing intake):* `live.json` is also read at load for the hero count and by the showcase
+  (`showcase.<deal>.districts`, `now`), which reads the pins' card fields (`photo`, `age_min`, `floor`, …); since
+  2026-11-19 pins' `district`, `district_code` and `floor` may be `null` and `latest[]` has no `area: null`
+  (`08` RES-010 … RES-012).
 - Defects and deviations: LB-LND-004 (point medians shown as districts, fix `APPROVED`), LB-LND-005 (versioning,
   `APPROVED`), LB-LND-006 → DEV-039 (placeholder numbers), LB-LND-012 → DEV-012 (unsigned snapshots).
 - Rules: BR-LND-007 (counters), BR-LND-008 (savings), BR-LND-009 (weekly bargains), BR-LND-010…BR-LND-016 (consumers in
   KV-FE-111, KV-FE-112).
-- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:58-72`; fixtures
+- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:61-75`; fixtures
   `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/{live,pins-rent,pins-sale}.json` (prod snapshot of 2026-11-08,
-  read for shapes only — no listing data is copied into the repository).
+  replaced by that of 2026-11-12 with `showcase` since `67b3942a8340`; read for shapes only — no listing data is copied into the repository).
 
 ## Implementation
 
@@ -55,7 +59,8 @@ change.
 6. DEV-012 flag `dev012MediaPipelineSnapshots` (default off): the frontend accepts both the legacy relative
    `img/snap/<id>.webp` and absolute media-pipeline URLs in `photo`, and never builds photo URLs itself; on → only
    media-pipeline URLs are expected (the backend switch of KV-BE-156) and `img-src` of KV-FE-104 gains that host.
-7. Dropped: `dots` (unused), the stale `DATA_V` constant, the comments naming `/api/landing/*` (RES-016).
+7. Dropped: `dots` (unused), the stale `DATA_V` constant, the comments naming `/api/landing/*` (RES-016; legacy
+   removed them itself in `d9bbbc696337`).
 
 ## States and texts
 

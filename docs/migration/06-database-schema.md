@@ -243,7 +243,7 @@ Common field-table columns: **Field** (logical name; wire name in backticks when
 | user | → ENT-001 | no | | | U |
 | raw_payload | `varchar(64)` | no | Full `/start` payload ≤ 64 chars (Telegram limit); legacy builders produce ≤ 62. | 04 §6.1 | C (grammar) |
 | source | `text` | no | `web`, `seo`, `friend`, `share`, campaign `fb\|tg\|ig` + 1–4 digits, others (`s_<source>`). | BR-API-119; BR-API-120 | C (grammar) / D (storage) |
-| tag | `varchar(40)` | yes | `[a-z0-9_-]{1,40}` from landing `?s=` / `?utm_source=`. | BR-BOT-096; `landing.js:33-37` | C |
+| tag | `varchar(40)` | yes | `[a-z0-9_-]{1,40}` from landing `?s=` / `?utm_source=`. | BR-BOT-096; `landing.js:33-40` | C |
 | seo_lang, seo_slice | `text` | yes | From `s_seo[_<lang>][_<slice>]`. | BOT-030; SEO:353-369 | D |
 | visit_id | `char(10)` | yes | `[a-z0-9]{10}` from `--v<visit>`. | BOT-029; `stats.js:18-20` | C (format) |
 | listing_ref | `bigint` | yes | `--l<id>` suffix (no-access hand-off). | BOT-031; BR-API-015 | C (format) |

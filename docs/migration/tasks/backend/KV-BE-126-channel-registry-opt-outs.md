@@ -18,7 +18,7 @@ listings from every public surface — and they never come back.
 ## Legacy reference
 
 - BR-API-042 (217 channels), BR-API-043 (a channel admin can ask that nothing is taken —
-  `$KVADRO_ROOT/demo/landing/site/privacy.html:67`), BR-DATA-022 (taken-down listings and opted-out channels never
+  `$KVADRO_ROOT/demo/landing/site/privacy.html:73`), BR-DATA-022 (taken-down listings and opted-out channels never
   reappear in feed, map, site or radars), BR-API-046 / BR-SEO-010 (owner hashtags `#хозяин`, `#собственник` per
   channel), BR-SEO-016 (new build «так сказано в объявлении или в канале»).
 - ENT-040 (`06` §2.5), `06` §4.2 `source_channels` row; Q-API-017, Q-DATA-033; GAP-001, GAP-023 (operations without ARM).

@@ -32,8 +32,11 @@ point medians); and the eight-question FAQ — all server-rendered from the same
   the snapshot `now`, clock and date in `Asia/Tashkent`, Uzbek date by hand «seshanba, 13-oktabr»).
 - Defects and deviations: LB-LND-004 (point medians as districts, fix `APPROVED`), LB-LND-006 → DEV-039 (placeholder
   numbers), Q-LND-010 (20 % «bargain» vs the 10 % tone).
-- Source: `$KVADRO_ROOT/demo/landing/site/index.html:194-331`; `$KVADRO_ROOT/demo/landing/site/landing.js:78-125`,
-  `:1939-2140`, `:2241-2318`, `:2396-2400`.
+- *Since landing release `67b3942a8340` (landing intake):* the FAQ has ten questions, `faq.q0` … `faq.q9` (new: `faq.q0` «Есть ли
+  Telegram-бот для поиска квартир в Ташкенте?», first and open, and `faq.q9` «Видно, если цена снизилась?»;
+  `index.html:393-411`).
+- Source: `$KVADRO_ROOT/demo/landing/site/index.html:282-411`; `$KVADRO_ROOT/demo/landing/site/landing.js:81-128`,
+  `:1943-2144`, `:2256-2333`, `:2600-2604`.
 
 ## Implementation
 

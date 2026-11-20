@@ -798,6 +798,10 @@ export interface components {
                     per_day: number;
                 };
             };
+            showcase: {
+                rent: components["schemas"]["LandingShowcaseDistrictResource"][];
+                sale: components["schemas"]["LandingShowcaseDistrictResource"][];
+            };
         };
         /** LandingMedianResource */
         LandingMedianResource: {
@@ -816,7 +820,7 @@ export interface components {
             delta_pct: number | null;
             tone: string | null;
             area: number | null;
-            floor: number;
+            floor: number | null;
             floors_total: number;
             district: {
                 code: string;
@@ -836,6 +840,11 @@ export interface components {
             bargains_week: number | null;
             pins: components["schemas"]["LandingPinResource"][];
             medians: components["schemas"]["LandingMedianResource"][];
+        };
+        /** LandingShowcaseDistrictResource */
+        LandingShowcaseDistrictResource: {
+            district_code: string;
+            count: number;
         };
         /** ListingDetailsResource */
         ListingDetailsResource: {

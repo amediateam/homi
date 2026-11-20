@@ -11,12 +11,12 @@
 
 ## Goal
 
-The re-implemented landing passes the 40 legacy landing scenarios (or maps each difference to an `LB-LND` decision or a
+The re-implemented landing passes the 47 legacy landing scenarios (40 at the audit; landing intake) (or maps each difference to an `LB-LND` decision or a
 landing DEV) and meets the landing performance budget, so it can replace the mirrored legacy files at S4.
 
 ## Legacy reference
 
-- 40 scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`, groups in `03b` §1.6 (full scene, v2, live
+- 47 scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`, groups in `03b` §1.6 (full scene, v2, live
   prototype, blocks, static, language, attribution, privacy); harness compares DOM with origins stripped, `<html class>`,
   `lang`, title, description, localStorage, CSP violations and same-origin requests
   (`$KVADRO_ROOT/demo/landing/tools/parity/parity.mjs:26-83`).
@@ -66,7 +66,7 @@ BR-LND-001…BR-LND-023 as asserted by the scenarios.
 
 ## Acceptance criteria
 
-- 40 of 40 scenarios identical or mapped; no CSP violation; no request to a removed asset path.
+- 47 of 47 scenarios identical or mapped; no CSP violation; no request to a removed asset path.
 - Performance numbers within budget on all four pages.
 
 ## Tests

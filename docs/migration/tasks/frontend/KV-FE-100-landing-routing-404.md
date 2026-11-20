@@ -24,6 +24,9 @@ Every later landing and SEO task mounts its pages under this skeleton.
   (language order, path step).
 - Defects and deviations: LB-LND-013 (JSON 404 → HTML 404, `APPROVED` policy), LB-LND-002 → DEV-038, LB-LND-003
   (`<base href="../">` text substitution → one locale route, `APPROVED` policy).
+- *Since landing release `67b3942a8340` (landing intake):* legacy also answers `/uz/<…>/<file>` and `/en/<…>/<file>` (a dot in the
+  last segment) with `301` to the path without the prefix, even for a missing file, and any slashless path without a
+  dot with `308` (`server.mjs:49-65`; `03b` URL-002 … URL-004).
 - Evidence: `$KVADRO_ROOT/demo/landing/tools/lib/server.mjs:1-3`, `:39-66`; `$KVADRO_ROOT/docs/seo-pages.md:115-129`;
   `10` §5.3 (route table), §5.13 (trailing slash and 404 rules); `17` §3.2 (which paths nginx sends to Next at S2).
 
@@ -50,6 +53,10 @@ Every later landing and SEO task mounts its pages under this skeleton.
    page (KV-FE-108 applies BR-LND-004 on `/` client-side, legacy parity). On: `/?lang=uz|en` → `301 /uz/` or `/en/`
    keeping every other parameter (`s`, `utm_*`) and the hash; `?lang=ru` or an unknown value → `301` to the same path
    without `lang`.
+   *Since landing release `d9bbbc696337` (landing intake):* DEV-038 is approved without a flag (DEC-96):
+   `/?lang=uz|en` → `/uz/` or `/en/` is the default and `dev038RootAlwaysRu` is not built; `?lang=ru` serves ru
+   without a redirect and hides the hint bar, an unknown value is ignored (WP-61 "Routes"); `/` itself stays ru with
+   the hint bar of KV-FE-108.
 7. **[PT]** Record in KV-INF-016 which paths nginx sends to Next on the legacy host at S2 (SEO sections, sitemap,
    robots, unknown paths) and at S4 (everything except `/api`, `/media`, `/data`, `/img/snap`, `/call`).
 
@@ -99,7 +106,8 @@ n/a for this task (the SEO catch-all calls `GET /api/v1/public/seo/resolve` of K
 - Kept: BR-SEO-004 (trailing slash `308`, other case `404`, unknown slug `404`, missing type `404`, foreign slug `404`,
   ignored parameters), BR-SEO-032 (404 page), the LND-038 routes, BR-LND-004 step 2 (path decides the language).
 - Defect fixes `APPROVED`: LB-LND-013 (HTML 404 everywhere except `/api/`), LB-LND-003 (one locale route, no `<base>`).
-- DEV-038 `PROPOSED` behind `dev038RootAlwaysRu` (test `todo('DEV-038 PROPOSED')`). DEV-047/DEV-048 redirects belong to
+- DEV-038 `APPROVED` without a flag since the landing intake (DEC-96); the former `todo('DEV-038 PROPOSED')` is a
+  plain test of the redirects of step 6. DEV-047/DEV-048 redirects belong to
   KV-FE-101.
 
 ## Acceptance criteria

@@ -5367,6 +5367,27 @@
                             "all",
                             "demo"
                         ]
+                    },
+                    "showcase": {
+                        "type": "object",
+                        "properties": {
+                            "rent": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/LandingShowcaseDistrictResource"
+                                }
+                            },
+                            "sale": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/LandingShowcaseDistrictResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "rent",
+                            "sale"
+                        ]
                     }
                 },
                 "required": [
@@ -5375,7 +5396,8 @@
                     "day",
                     "week",
                     "latest",
-                    "sheet"
+                    "sheet",
+                    "showcase"
                 ],
                 "title": "LandingLiveResource"
             },
@@ -5440,7 +5462,10 @@
                         ]
                     },
                     "floor": {
-                        "type": "integer"
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
                     },
                     "floors_total": {
                         "type": "integer"
@@ -5548,6 +5573,22 @@
                     "medians"
                 ],
                 "title": "LandingPinsResource"
+            },
+            "LandingShowcaseDistrictResource": {
+                "type": "object",
+                "properties": {
+                    "district_code": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "district_code",
+                    "count"
+                ],
+                "title": "LandingShowcaseDistrictResource"
             },
             "ListingDetailsResource": {
                 "type": "object",

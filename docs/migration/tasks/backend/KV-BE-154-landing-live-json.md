@@ -16,12 +16,17 @@ atomically to public storage and removed of any listing the moment it is withdra
 
 ## Legacy reference
 
-- RES-010 (`08` lines 1353-1369); landing contract `03b` §1.5 (lines 674-685); LND-032 (loader, `max-age=1800`,
+- RES-010 (`08` lines 2488-2515); landing contract `03b` §1.5 (lines 982-1001); LND-032 (loader, `max-age=1800`,
   rewrite observed 02:02); ENT-054.
 - Fixture `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/live.json`; reader
-  `$KVADRO_ROOT/demo/landing/site/landing.js:58-72`, `:1112`, `:2098`, `:2161`, `:2225`;
-  producer named in `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, `:66-77` (`scripts/landing_snapshot.py`,
+  `$KVADRO_ROOT/demo/landing/site/landing.js:61-75`, `:1115`, `:2102`, `:2165`, `:2229`, `:2243`, `:2508`;
+  producer named in `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:69-70`, `:85-96` (`scripts/landing_snapshot.py`,
   `app/api/landing.py` — not available).
+- *Since landing release `67b3942a8340` (landing intake):* legacy's file also carries `showcase: {rent, sale}`, each
+  `{districts: {<code>: int}, total, owners}` (the code reads only `districts`), read by the showcase with `now`, and
+  the file is read at load for the hero count (`08` RES-010); while the legacy landing reads this file the block is
+  part of its shape. HOMI's v1 `GET /landing/live` carries it as `{district_code, count}` lists. Since 2026-11-19
+  `latest[]` has no `area: null` (backend data).
 - Rules: BR-API-133 (job, schedule, `max-age=1800`), BR-LND-007 (counter shows `day` if ≥ 100, else `week` if ≥ 100,
   else hidden — client-side, `COUNT_MIN = 100`), BR-LND-012 (tones), BR-LND-014 (≤ 4 pushes from `latest`),
   BR-LND-015 and BR-LND-016 (`sheet.all`, `sheet.demo`: «≈N в день» if `per_day ≥ 1`, else `per_day × 7` a week).

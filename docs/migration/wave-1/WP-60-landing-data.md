@@ -22,13 +22,17 @@ In:
 - `LegacyLandingSource`, the `legacy` driver of `LandingSource`, with its file client, cache, last-good copy,
   translators and the scheduled refresh.
 - The photo address rewrite for landing snapshots and the request for the proxy location.
-- Golden fixtures of the three files and the contract tests; the fixture server entries for local and CI.
+- Golden fixtures of the three files and the contract tests; the fixture server entries for local and CI. The fixtures
+  are recorded from a release with `showcase` (legacy landing `67b3942a8340` or later) and include a pin with
+  `floor: null` (*added by the landing intake*).
 - Switching the two features from `stub` to `legacy` on staging and production.
 
 Out:
 
 - The contract itself, the stub driver, the routes, requests, resources and OpenAPI entries — WP-13. This package
-  changes the contract only by response headers.
+  changes the contract only by response headers. The landing intake (2026-11-20, the developer's answer 3 of
+  `decisions/2026-11-20-landing-answers.md`) added `live.showcase` and a nullable pin `floor` on stubs; this package
+  translates them (*added by the landing intake*).
 - A `native` driver that builds the data from HOMI's own listings (the design of KV-BE-154 … KV-BE-156) — Wave 2.
 - The statistics surface for SEO pages (KV-BE-159) — Wave 3.
 - Rendering — WP-61.
@@ -117,6 +121,7 @@ ignored; a missing required key is a `LegacyContractError`.
 | `latest[].district`, `district_code` | `district: {code, name}` | name in the request language, see below |
 | `latest[].link` | `link` | rebuilt: `https://t.me/<bot username>?startapp=l_<number>-web` from `telegram.bot.username` (the legacy value names the legacy bot) |
 | `sheet.all`, `sheet.demo` | same | `{count: int, per_day: float}`; `demo.count` clamped to `all.count` |
+| `showcase.rent.districts`, `showcase.sale.districts` (a map `<district code>` → count; since legacy landing release `67b3942a8340`) | `showcase.rent`, `showcase.sale`: lists of `{district_code, count}` | one entry per code with a count above 0, codes normalised as the district names below; a missing `showcase` or deal → `[]` (legacy then shows the districts without numbers). `showcase.<deal>.total` and `.owners` are dropped: legacy's code does not read them (*added by the landing intake*) |
 
 `pins-<deal>.json` → `LandingPins`:
 
@@ -126,9 +131,9 @@ ignored; a missing required key is a `LegacyContractError`.
 | `bargains_week` | `bargains_week` | integer, or `null` (always `null` for `sale`) (BR-LND-009) |
 | `pins[].id` | `number` | |
 | `pins[].x`, `y` | `x`, `y` | per cent on the landing's static map image; a pin outside 0 … 100 is dropped |
-| `rooms`, `price_usd`, `area`, `floor`, `floors_total`, `age_min`, `in_all`, `in_rooms` | same names | types as the contract (BR-LND-010, BR-LND-011) |
+| `rooms`, `price_usd`, `area`, `floor`, `floors_total`, `age_min`, `in_all`, `in_rooms` | same names | types as the contract (BR-LND-010, BR-LND-011); `floor` may be `null` (legacy data since 2026-11-19; the contract allows it since the landing intake) |
 | `delta`, `tone` | `delta_pct`, `tone` | as for `latest` |
-| `district`, `district_code` | `district: {code, name}` | |
+| `district`, `district_code` | `district: {code, name}` | either may be `null` (legacy data since 2026-11-19) → `district: null`; the pin is kept (it keeps its `point`) |
 | `point` | `point` | landmark name as legacy gives it (Russian); passed through for every language |
 | `photo` (`img/snap/<id>.webp`) | `photo_url` | `<media_public_url>/<id>.webp`; see "Photos" |
 | `link` | `link` | rebuilt as above |
@@ -273,8 +278,8 @@ Edge cases:
 
 | # | Layer | Test | Cases |
 | - | ----- | ---- | ----- |
-| 1 | Unit | `LandingLiveTranslatorTest` | field-by-field mapping of the fixture; `since` absent; `link` names HOMI's bot and never the legacy one; unknown tone → `null`; `day` above `week` clamped; a missing `latest` key → `LegacyContractError`; no value of the answer matches the phone pattern |
-| 2 | Unit | `LandingPinsTranslatorTest` | mapping; `pt:` medians dropped; `dots` absent; pin outside 0 … 100 dropped; `photo_url` built from the prefix, `null` without it; `is_owner` tri-state; sale → `bargains_week` null and `medians` empty; an item with a phone-like string dropped with a warning |
+| 1 | Unit | `LandingLiveTranslatorTest` | field-by-field mapping of the fixture; `since` absent; `link` names HOMI's bot and never the legacy one; unknown tone → `null`; `day` above `week` clamped; a missing `latest` key → `LegacyContractError`; no value of the answer matches the phone pattern; `showcase` map → lists by code, a count of 0 dropped, no `showcase` → `[]`, `total` and `owners` absent |
+| 2 | Unit | `LandingPinsTranslatorTest` | mapping; `pt:` medians dropped; `dots` absent; pin outside 0 … 100 dropped; `photo_url` built from the prefix, `null` without it; `is_owner` tri-state; sale → `bargains_week` null and `medians` empty; an item with a phone-like string dropped with a warning; a pin with `floor: null` and one with `district_code: null` kept |
 | 3 | Feature | `LegacyLandingFilesTest` | sends no service key header; `If-None-Match` and `304`; timeout and one retry; breaker `landing` opens without touching the listing breaker; the fake server serves the fixtures |
 | 4 | Feature | `LegacyLandingSourceTest` | fresh copy → no request; old copy → one refresh under the lock, concurrent callers served the stored copy; fetch fails → last good copy and one warning; no copy → `SourceUnavailable`; HTML body → previous copy kept; uz and en district names from the reference data, unknown code keeps the legacy name; a number with `gone_at` or a takedown mark is absent |
 | 5 | Contract | `LandingDriversContractTest` | stub and legacy answers validate against the same schema for `live`, `pins?deal=rent`, `pins?deal=sale` |

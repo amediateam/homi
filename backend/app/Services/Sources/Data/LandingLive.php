@@ -4,11 +4,16 @@ namespace App\Services\Sources\Data;
 
 /**
  * The landing's live numbers (WP-13, `GET /landing/live`, RES-010): listings today and this week, the newest
- * listings and the counts of the sheet.
+ * listings, the counts of the sheet and, since the landing intake of `d9bbbc696337`, the district counts of the
+ * showcase per deal (an empty list: the showcase shows its districts without numbers).
  */
 final readonly class LandingLive
 {
-    /** @param  list<LandingLatest>  $latest */
+    /**
+     * @param  list<LandingLatest>  $latest
+     * @param  list<LandingShowcaseDistrict>  $showcaseRent
+     * @param  list<LandingShowcaseDistrict>  $showcaseSale
+     */
     public function __construct(
         public string $now,
         public string $generatedAt,
@@ -19,6 +24,8 @@ final readonly class LandingLive
         public float $allPerDay,
         public int $demoCount,
         public float $demoPerDay,
+        public array $showcaseRent,
+        public array $showcaseSale,
     ) {}
 
     /** @param  array<array-key, mixed>  $data */
@@ -27,6 +34,7 @@ final readonly class LandingLive
         $sheet = Fields::object($data, 'sheet');
         $all = Fields::object($sheet, 'all');
         $demo = Fields::object($sheet, 'demo');
+        $showcase = Fields::object($data, 'showcase');
 
         return new self(
             now: Fields::string($data, 'now'),
@@ -38,6 +46,8 @@ final readonly class LandingLive
             allPerDay: Fields::float($all, 'per_day'),
             demoCount: Fields::count($demo, 'count'),
             demoPerDay: Fields::float($demo, 'per_day'),
+            showcaseRent: array_map(LandingShowcaseDistrict::fromArray(...), Fields::objects($showcase, 'rent')),
+            showcaseSale: array_map(LandingShowcaseDistrict::fromArray(...), Fields::objects($showcase, 'sale')),
         );
     }
 }

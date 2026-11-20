@@ -43,7 +43,7 @@ Counted mechanically from `data/ids.csv`, `data/features.csv` and `data/tasks.cs
 | Mini App screens, sheets, modals, overlays, states | 45 | [03](03-legacy-frontend-audit.md) |
 | Telegram WebApp integration points | 45 (39 used, 6 confirmed unused) | [05](05-telegram-miniapp-audit.md) |
 | Bot commands and scenario steps / buttons / texts and toasts | 84 / 76 / 88 | [04](04-telegram-bot-audit.md) |
-| Landing items and SEO page types | 64 (39 landing, 25 SEO) | [03b](03b-legacy-landing-seo-audit.md) |
+| Landing items and SEO page types | 69 (44 landing, 25 SEO; 64 with 39 landing at the audit, landing intake) | [03b](03b-legacy-landing-seo-audit.md) |
 | Public URL patterns (49 must keep working) | 62 | [03b](03b-legacy-landing-seo-audit.md), `data/public-urls.json` |
 | Logical entities | 59 | [06](06-database-schema.md) |
 | Business rules | 430 | [07](07-business-rules.md) |

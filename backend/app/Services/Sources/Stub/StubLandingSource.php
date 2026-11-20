@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Config;
 /**
  * The stub driver of the landing capability (WP-13): `landing/live.json`, `landing/pins.rent.json` and
  * `landing/pins.sale.json`. The fixtures name districts by code (`district_code`); the stub adds the name in the
- * context's locale from the reference data, and `{media}` becomes `config('media.public_url')`.
+ * context's locale from the reference data, and `{media}` becomes `config('media.public_url')`. The showcase counts
+ * keep the bare code: the landing names those districts from its own texts.
  */
 final class StubLandingSource implements LandingSource
 {

@@ -32,7 +32,7 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | Telegram integration points | 48, of which 43 in use (TMA-001 … TMA-048) | `05` |
 | API methods the client uses | 55 (API-001 … API-055) | `08` §2 |
 | Bot handlers, buttons, texts | 91, 76, 88 | `04`, `data/bot-handlers.json` |
-| Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
+| Landing items | 44 of the 69 `LND` items at landing release `d9bbbc696337` (39 of 64 at the audit); the other 25 are SEO pages (Wave 3) | `03b` |
 | Texts | 597 keys per locale at the baseline `index-YX9bFVws.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
 The audit describes legacy release `index-YX9bFVws.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-20
@@ -132,7 +132,8 @@ owner's own listing (SCR-059, a state of SCR-018), the request signals (SCR-060)
   (TMA-023). The helper that knows each address's parent is defined once (WP-20) and used everywhere.
 - **Launch.** The bot opens `/`; `proxy.ts` redirects to the locale. A `start_param` of the form `l_<number>` or a
   `?listing=` query redirects to the listing; `?news=pets` opens the filters on the pets section
-  (TMA-010 … TMA-012). `owner_new`, `owner-new` and `?owner=new` open `/owner/new` (TMA-046); HOMI's own `o_<id>`
+  (TMA-010 … TMA-012); HOMI's own `f_<deal>-c<city>[…]` opens the feed with that search, the target of the landing
+  showcase's links (DEC-95, WP-62). `owner_new`, `owner-new` and `?owner=new` open `/owner/new` (TMA-046); HOMI's own `o_<id>`
   opens a draft on its phone step (fix of LB-APP-060) and `c_<number>` the request sheet of a listing (the bot's
   request button).
 
@@ -507,10 +508,13 @@ listing a change of an active listing's photos or description (to their private 
 ## 7. The landing (`frontend/landing`)
 
 The full legacy landing on `homi.uz` in three languages: frame, hero with the phone demo, the live map in the phone,
-live pushes, the owner and agent switch, the savings block, the FAQ and the privacy pages (KV-FE-100,
-KV-FE-102 … KV-FE-113). Its live data comes from `GET /landing/*`; the legacy driver reads the public data files of
-the legacy landing (RES-010 … RES-013), which need no key. SEO pages, sitemap entries for them and interlinking are
-Wave 3. The privacy page is where the answer to Q-SEC-021 lands. It also covers the cabinet: the owner's number, the
+live pushes, the owner and agent switch, the savings block, the showcase «Квартиры прямо сейчас», the FAQ and the
+privacy pages (KV-FE-100, KV-FE-102 … KV-FE-113), at the landing release pinned in `wave-1/baseline.md`
+(`d9bbbc696337` since the landing intake of 2026-11-20). Its live data comes from `GET /landing/*`; the legacy driver
+reads the public data files of the legacy landing (RES-010 … RES-013), which need no key. SEO pages, sitemap entries
+for them and interlinking are Wave 3; the showcase, whose legacy links lead to SEO pages, leads into the Mini App
+instead (DEC-95, WP-62). `/` is Russian unless a language was asked for or chosen, with a hint bar for browsers in
+Uzbek or English (DEC-96). The privacy page is where the answer to Q-SEC-021 lands. It also covers the cabinet: the owner's number, the
 photos and the requests with the seeker's first name, and the relay to the operator.
 
 ## 8. Legacy baseline and release intake
@@ -529,7 +533,10 @@ photos and the requests with the seeker's first name, and the relay to the opera
    `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-88;
    WP-80 … WP-89). Then `index-YX9bFVws.js` on 2026-11-20 (the release of 20 Nov 2026: motion and small UX on built
    screens, the cabinet's invitations and the survey's landlord link; six decisions DEC-89 … DEC-94, the catch-up
-   package WP-39, no contract change; `wave-1/baseline.md`).
+   package WP-39, no contract change; `wave-1/baseline.md`). The legacy landing has its own changelog and pin: its
+   intake on 2026-11-20 read four landing releases (`67b3942a8340` … `d9bbbc696337`; three decisions DEC-95 …
+   DEC-97, the package WP-62, the `showcase` counts and a nullable pin `floor` on stubs; `wave-1/baseline.md`, "The
+   landing pin").
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
@@ -611,7 +618,7 @@ needs from that track, and a migration reaches production only with that track's
 
 ## 12. The queue in outline
 
-Sixty work packages in seven stages (0, A … F), worked strictly in order by whoever holds the relay (DEC-45). The
+Sixty-two work packages in seven stages (0, A … F), worked strictly in order by whoever holds the relay (DEC-45). The
 table of record with statuses is `wave-1/README.md`.
 
 | Stage | Packages | Content |
@@ -621,7 +628,7 @@ table of record with statuses is `wave-1/README.md`.
 | B Mini App on stubs | WP-20 … WP-39, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-39 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
 | C API | WP-40 … WP-48, WP-84 … WP-87 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off; owner listings, contact requests, the mixed feed, the relay |
 | D Bot | WP-50 … WP-59, WP-88, WP-89 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot; the owner's phone, requests and answers, the cabinet's switch-on |
-| E Landing | WP-60, WP-61 | Landing data, landing pages |
+| E Landing | WP-60 … WP-62 | Landing data, landing pages, the Mini App launch with a search filter |
 | F Launch | WP-70, WP-71 | Hardening, launch and watch |
 
 Three places where a package needs something a later package builds are bridged inside the specifications by a

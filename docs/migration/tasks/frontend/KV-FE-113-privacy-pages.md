@@ -25,8 +25,13 @@ real behaviour before the switch, and the page and the bot's `/privacy` text com
 - URL-010 (`/privacy.html[?lang=uz|en]`), URL-022 (`/cdn-cgi/l/email-protection#…`), URL-061 (the project mailbox).
 - Rules: BR-LND-020 (language: `?lang=`, then `localStorage` `kv-landing-lang`, then browser languages as BR-LND-004,
   no path step; uz/en home links → `./?lang=<lang>`).
+- *Since landing release `d9bbbc696337` (landing intake):* no browser step (`?lang=`, the stored choice, else ru) and the uz/en home
+  links are `uz/`, `en/`. The text changed since the audit: «Обновлено» 9 November 2026 (`67b3942a8340`, the waiting list
+  «если вход в бот временно закрыт или мест нет»), 15 November 2026 (`b1b9a919ecc4`: what is kept for an owner who lists a
+  flat, the paragraph «Отклики», the mark «Проверенный хозяин · номер подтверждён», «Имя бот не хранит»), and the
+  sentence on a user blocked in the support bot (`d9bbbc696337`); step 2 reviews the current text.
 - Defects and deviations: LB-LND-008 → DEV-041, LB-LND-016 → DEV-044.
-- Source: `$KVADRO_ROOT/demo/landing/site/privacy.html:1-180` (inline script `:150-177`); promises summarised in
+- Source: `$KVADRO_ROOT/demo/landing/site/privacy.html:1-189` (inline script `:166-186`); promises summarised in
   `03b` LND-003 and `$KVADRO_ROOT/docs/about.md:264-275`.
 
 ## Implementation
@@ -111,7 +116,8 @@ n/a — static content (the mailbox address and the support bot username from co
 
 ## Edge cases
 
-- `?lang=xx`: ignored, the resolver continues with stored and browser languages.
+- `?lang=xx`: ignored, the resolver continues with the stored choice, then ru (no browser language since landing release
+  `d9bbbc696337`, landing intake).
 - Both `?lang=uz` and a stored `en`: `?lang` wins (BR-LND-020 order).
 - The bot profile links to `/privacy.html` (DEV-041 compatibility: the old URL keeps working).
 
