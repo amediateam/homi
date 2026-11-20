@@ -20,7 +20,7 @@ intake — operated by commands now and by ARM later.
 - BR-API-068 / BR-BOT-092 (on an author's request — support bot or e-mail — the listing leaves feed, map, site and
   alerts; sent cards are edited), BR-DATA-022 (taken-down listings never reappear), BR-API-043 (channel opt-outs —
   KV-BE-126), LB-API-054 / LB-DATA-016 (landing snapshots must be reached too), ENT-037,
-  `$KVADRO_ROOT/docs/about.md:184-185`, `$KVADRO_ROOT/demo/landing/site/privacy.html:67`.
+  `$KVADRO_ROOT/docs/about.md:184-185`, `$KVADRO_ROOT/demo/landing/site/privacy.html:73`.
 - SEC-REQ-040 (takedown by post link or phone through support and ARM; removal from feed, map, SEO, landing data,
   alerts, photos and snapshots within an SLA; phone opt-out list (HMAC) stops re-ingestion; E2E acceptance), Q-SEC-007
   (SLA and legal basis), GAP-023, GAP-026 (support bot out of scope until DEC-21).

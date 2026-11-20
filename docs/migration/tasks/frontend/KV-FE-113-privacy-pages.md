@@ -26,7 +26,7 @@ real behaviour before the switch, and the page and the bot's `/privacy` text com
 - Rules: BR-LND-020 (language: `?lang=`, then `localStorage` `kv-landing-lang`, then browser languages as BR-LND-004,
   no path step; uz/en home links → `./?lang=<lang>`).
 - Defects and deviations: LB-LND-008 → DEV-041, LB-LND-016 → DEV-044.
-- Source: `$KVADRO_ROOT/demo/landing/site/privacy.html:1-180` (inline script `:150-177`); promises summarised in
+- Source: `$KVADRO_ROOT/demo/landing/site/privacy.html:1-189` (inline script `:166-186`); promises summarised in
   `03b` LND-003 and `$KVADRO_ROOT/docs/about.md:264-275`.
 
 ## Implementation

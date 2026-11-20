@@ -981,8 +981,8 @@
     "access": "public",
     "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61, :68-69",
     "client_call_sites": [
-      "$KVADRO_ROOT/demo/landing/site/landing.js:63-72",
-      "$KVADRO_ROOT/demo/landing/site/landing.js:1112"
+      "$KVADRO_ROOT/demo/landing/site/landing.js:66-75",
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1115"
     ],
     "status": "CONFIRMED",
     "notes": "Backend job output; max-age=1800; shape {now, day, week, since, latest[], sheet{all,demo}}. LB-API-017; Q-API-051."
@@ -995,8 +995,8 @@
     "access": "public",
     "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61",
     "client_call_sites": [
-      "$KVADRO_ROOT/demo/landing/site/landing.js:1040",
-      "$KVADRO_ROOT/demo/landing/site/landing.js:2242"
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1043",
+      "$KVADRO_ROOT/demo/landing/site/landing.js:2257"
     ],
     "status": "CONFIRMED",
     "notes": "{pins[], dots[], medians[], bargains_week}; x/y are % of the static map image. Q-API-051."
@@ -1009,7 +1009,7 @@
     "access": "public",
     "doc_ref": "$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61",
     "client_call_sites": [
-      "$KVADRO_ROOT/demo/landing/site/landing.js:1040"
+      "$KVADRO_ROOT/demo/landing/site/landing.js:1043"
     ],
     "status": "CONFIRMED",
     "notes": "Same shape as pins-rent; dots/medians empty, bargains_week null in fixture."
@@ -1053,7 +1053,7 @@
     "path": "/api/landing/live, /api/landing/pins",
     "auth": "unknown",
     "access": "unknown",
-    "doc_ref": "$KVADRO_ROOT/demo/landing/site/index.html:67, :195, :295, :340 (comments only)",
+    "doc_ref": "$KVADRO_ROOT/demo/landing/site/index.html:62, :195, :295, :340 (comments only)",
     "client_call_sites": [],
     "status": "UNVERIFIED",
     "notes": "Referenced in HTML comments, never requested by the page; possibly obsolete (DEPRECATED_CANDIDATE). Q-API-049."

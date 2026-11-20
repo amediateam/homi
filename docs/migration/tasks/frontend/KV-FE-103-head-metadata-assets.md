@@ -27,7 +27,7 @@ pages). The static assets that external caches and the JSON-LD point to — icon
   `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`), URL-015 (`/favicon.ico`, UNVERIFIED, Q-LND-006),
   URL-016 (`/og-ru.jpg`, `/og-uz.jpg`, `/og-en.jpg`).
 - Rules: BR-SEO-007 (head of every page), BR-SEO-009 (title templates, via KV-FE-102).
-- Evidence: `$KVADRO_ROOT/demo/landing/site/index.html:5-36`, `$KVADRO_ROOT/demo/landing/site/uz/index.html:1-30`,
+- Evidence: `$KVADRO_ROOT/demo/landing/site/index.html:5-36`, `$KVADRO_ROOT/demo/landing/site/uz/index.html:1-27`,
   `$KVADRO_ROOT/demo/landing/site/site.webmanifest`; `$KVADRO_ROOT/docs/seo-pages.md:139-170`.
 - Deviation: LB-LND-014 → DEV-042 (per-locale manifest).
 

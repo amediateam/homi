@@ -11,7 +11,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:1-434; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:1-526; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25"
   },
   {
     "id": "URL-002",
@@ -25,7 +25,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/uz/index.html:1-30; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
+    "source": "$KVADRO_ROOT/demo/landing/site/uz/index.html:1-27; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
   },
   {
     "id": "URL-003",
@@ -39,7 +39,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/en/index.html:1-30; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
+    "source": "$KVADRO_ROOT/demo/landing/site/en/index.html:1-27; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:26"
   },
   {
     "id": "URL-004",
@@ -84,7 +84,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-44; $KVADRO_ROOT/docs/about.md:258"
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-47; $KVADRO_ROOT/docs/about.md:258"
   },
   {
     "id": "URL-007",
@@ -100,7 +100,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:2328-2337; $KVADRO_ROOT/demo/landing/site/privacy.html:172-175"
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:2527-2536; $KVADRO_ROOT/demo/landing/site/privacy.html:180-184"
   },
   {
     "id": "URL-008",
@@ -116,7 +116,7 @@
     "owner_after_migration": "landing app",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:39-46"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:38-43"
   },
   {
     "id": "URL-009",
@@ -132,7 +132,7 @@
     "owner_after_migration": "landing app",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:132,364,368,387-462,1419"
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:135,367,371,390-465,1422"
   },
   {
     "id": "URL-010",
@@ -148,7 +148,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:1-180; $KVADRO_ROOT/demo/landing/site/landing.js:2432"
+    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:1-189; $KVADRO_ROOT/demo/landing/site/landing.js:2638"
   },
   {
     "id": "URL-011",
@@ -196,7 +196,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:29,33-35"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:26,30-35"
   },
   {
     "id": "URL-015",
@@ -224,7 +224,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:14; $KVADRO_ROOT/docs/seo-pages.md:139-140"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:11; $KVADRO_ROOT/docs/seo-pages.md:139-140"
   },
   {
     "id": "URL-017",
@@ -236,7 +236,7 @@
     "owner_after_migration": "landing app",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:47-48,429-432; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:58-59"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:44-45,521-523; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:58-59"
   },
   {
     "id": "URL-018",
@@ -248,7 +248,7 @@
     "owner_after_migration": "landing app",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/img/; $KVADRO_ROOT/demo/landing/site/index.html:155,245-290,349,416"
+    "source": "$KVADRO_ROOT/demo/landing/site/img/; $KVADRO_ROOT/demo/landing/site/index.html:147,326-371,424,508"
   },
   {
     "id": "URL-019",
@@ -260,7 +260,7 @@
     "owner_after_migration": "backend",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:58-72; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61,66-77"
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:61-75; $KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61,66-77"
   },
   {
     "id": "URL-020",
@@ -472,7 +472,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "DOCUMENTED_ONLY",
-    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,99; $KVADRO_ROOT/demo/landing/site/en/index.html:406"
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,99; $KVADRO_ROOT/demo/landing/site/en/index.html:504"
   },
   {
     "id": "URL-034",
@@ -504,7 +504,7 @@
     "owner_after_migration": "landing app",
     "must_keep": true,
     "status": "DOCUMENTED_ONLY",
-    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,101; $KVADRO_ROOT/demo/landing/site/en/index.html:407"
+    "source": "$KVADRO_ROOT/docs/seo-pages.md:59,86,101; $KVADRO_ROOT/demo/landing/site/en/index.html:504"
   },
   {
     "id": "URL-036",
@@ -644,7 +644,7 @@
     "owner_after_migration": "bot",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:29,109,343,423; $KVADRO_ROOT/demo/landing/site/img/qr-bot.svg (decoded); $KVADRO_ROOT/demo/app/src/lib/chatAccess.js:51"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:26,101,418,515; $KVADRO_ROOT/demo/landing/site/img/qr-bot.svg (decoded); $KVADRO_ROOT/demo/app/src/lib/chatAccess.js:51"
   },
   {
     "id": "URL-046",
@@ -656,7 +656,7 @@
     "owner_after_migration": "bot",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-44; $KVADRO_ROOT/demo/landing/site/stats.js:15-24; $KVADRO_ROOT/docs/telegram-bot.md:1004-1006"
+    "source": "$KVADRO_ROOT/demo/landing/site/landing.js:26-47; $KVADRO_ROOT/demo/landing/site/stats.js:15-24; $KVADRO_ROOT/docs/telegram-bot.md:1004-1006"
   },
   {
     "id": "URL-047",
@@ -708,7 +708,7 @@
     "owner_after_migration": "external",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365; $KVADRO_ROOT/demo/landing/site/privacy.html:68-70; $KVADRO_ROOT/docs/seo-pages.md:184"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:463; $KVADRO_ROOT/demo/landing/site/privacy.html:74-76; $KVADRO_ROOT/docs/seo-pages.md:184"
   },
   {
     "id": "URL-051",
@@ -828,7 +828,7 @@
     "owner_after_migration": "external",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365; $KVADRO_ROOT/docs/seo-pages.md:184"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:463; $KVADRO_ROOT/docs/seo-pages.md:184"
   },
   {
     "id": "URL-061",
@@ -840,7 +840,7 @@
     "owner_after_migration": "external",
     "must_keep": false,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:68-70; $KVADRO_ROOT/demo/landing/site/index.html:29"
+    "source": "$KVADRO_ROOT/demo/landing/site/privacy.html:74-76; $KVADRO_ROOT/demo/landing/site/index.html:26"
   },
   {
     "id": "URL-062",
@@ -852,6 +852,6 @@
     "owner_after_migration": "external",
     "must_keep": true,
     "status": "CONFIRMED",
-    "source": "$KVADRO_ROOT/demo/landing/site/index.html:365"
+    "source": "$KVADRO_ROOT/demo/landing/site/index.html:463"
   }
 ]

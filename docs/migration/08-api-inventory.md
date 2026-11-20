@@ -2478,7 +2478,7 @@ resources.
 ### RES-010 — Landing data: `data/live.json`
 
 - **Method / URL:** `GET /data/live.json?v=202610171944` (constant `DATA_V`), `Accept: application/json`
-  (`$KVADRO_ROOT/demo/landing/site/landing.js:63-72`). Relative URL: on `/uz/`, `/en/` it resolves through
+  (`$KVADRO_ROOT/demo/landing/site/landing.js:66-75`). Relative URL: on `/uz/`, `/en/` it resolves through
   `<base href="../">`.
 - **Auth:** none. **Producer:** backend job (`scripts/landing_snapshot.py`, `live.json` ← `app/api/landing.py`);
   observed rewrite 02:02; `max-age=1800` (`$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, `:68-69`).
@@ -2486,8 +2486,8 @@ resources.
   day: int, week: int, since: null, latest: {id: int, rooms: int, price_usd: int, delta: int, tone: string,
   district: string, district_code: string, area: number|null, seen_at: ISO string, link: string
   ("https://t.me/KvadroAppBot?startapp=l_<id>-web")}[], sheet: {all: {count: int, per_day: float}, demo: {count: int,
-  per_day: float}}}`. Read at `landing.js:1112`, `:2098`, `:2161`, `:2225`.
-- **Errors:** fetch failure → retried on the next use (`landing.js:69`); the block keeps its static text.
+  per_day: float}}}`. Read at `landing.js:1115`, `:2102`, `:2165`, `:2229`.
+- **Errors:** fetch failure → retried on the next use (`landing.js:72`); the block keeps its static text.
 - **Migration Target:** same path and shape for the legacy landing; generator TBD (`10-target-architecture.md`).
 - **Tests:** schema snapshot; `latest[].link` uses `-web` source; no phone numbers or texts in the file.
 - **Status:** `CONFIRMED` (shape from fixture, client reads) / schedule `DOCUMENTED_ONLY`. Related: LB-API-017;
@@ -2495,19 +2495,19 @@ resources.
 
 ### RES-011 — Landing data: `data/pins-rent.json`
 
-- **Method / URL:** `GET /data/pins-rent.json?v=202610171944` (`landing.js:1040`).
+- **Method / URL:** `GET /data/pins-rent.json?v=202610171944` (`landing.js:1043`).
 - **Producer:** backend job; observed rewrite 15:00; `max-age=1800`.
 - **Response shape** (fixture): `{pins: {id: int, x: float (% of the static map image), y: float, rooms: int,
   price_usd: int, delta: int, tone: "good"|"high"|"mixed"|"same"|…, area: number|null, floor: int, floors_total: int,
   district: string, district_code: string, point: string (landmark), photo: "img/snap/<id>.webp", link: string,
   age_min: int, is_owner: bool|null, in_all: bool, in_rooms: bool}[], dots: [float, float, float][],
   medians: {district_code: string, rooms: int, median_usd: int, n: int}[], bargains_week: int}`. `medians` and
-  `bargains_week` drive «Хорошая ли цена» (`landing.js:2242`).
+  `bargains_week` drive «Хорошая ли цена» (`landing.js:2257`).
 - **Migration Target / Tests / Status:** as RES-010. `CONFIRMED` / schedule `DOCUMENTED_ONLY`.
 
 ### RES-012 — Landing data: `data/pins-sale.json`
 
-- **Method / URL:** `GET /data/pins-sale.json?v=202610171944` (`landing.js:1040`).
+- **Method / URL:** `GET /data/pins-sale.json?v=202610171944` (`landing.js:1043`).
 - **Response shape:** as RES-011, with `area: float`, `is_owner: bool`; `dots: []`, `medians: []`,
   `bargains_week: null` in the fixture.
 - **Migration Target / Tests / Status:** as RES-010. `CONFIRMED` / schedule `DOCUMENTED_ONLY`.
@@ -2546,8 +2546,8 @@ resources.
 ### RES-016 — `/api/landing/live`, `/api/landing/pins` (referenced only in comments)
 
 - **Method / URL:** `GET /api/landing/live`, `GET /api/landing/pins` — named in HTML comments of the landing
-  (`$KVADRO_ROOT/demo/landing/site/index.html:67`, `:195`, `:295`, `:340`). The page itself reads `data/*.json` and
-  «к API страница не обращается» (`landing.js:61-62`; `RECOVERY.md:61`).
+  (`$KVADRO_ROOT/demo/landing/site/index.html:62`, `:282`, `:375`, `:416`). The page itself reads `data/*.json` and
+  «к API страница не обращается» (`landing.js:64-65`; `RECOVERY.md:61`).
 - **Status:** `UNVERIFIED` — possibly the live sources that the snapshot job copies, or obsolete
   (`DEPRECATED_CANDIDATE`). Related: Q-API-049.
 
@@ -2699,7 +2699,7 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 | Lazy chunks `/assets/*` (`posthog-js`, `pmtiles`) | `src/lib/analytics.js:129-133`, `engine.js:55` | `demo/app/docs/RECOVERY.md:39-40` | documented as bundle, not in Doc (RES-008) |
 | `/favicon.svg`, `/favicon.ico` | `index.html:8` | — | undocumented static asset (RES-008) |
 | `GET /api/__probe/<method>?n=<n>` | `tools/parity/mocks.mjs:30-34` (test harness) | `tools/parity/README.md:30-32` | **test-only**, never sent by production code — do not implement |
-| Landing `data/live.json`, `data/pins-rent.json`, `data/pins-sale.json` | `demo/landing/site/landing.js:63-72` | `demo/landing/docs/RECOVERY.md:60-61`, `about.md:331-332` | documented outside Doc (RES-010 … RES-012) |
+| Landing `data/live.json`, `data/pins-rent.json`, `data/pins-sale.json` | `demo/landing/site/landing.js:66-75` | `demo/landing/docs/RECOVERY.md:60-61`, `about.md:331-332` | documented outside Doc (RES-010 … RES-012) |
 | Landing `img/snap/<id>.webp` | `pins[].photo` | `RECOVERY.md:60` | documented outside Doc (RES-013) |
 | Landing `stats.js` + PostHog EU | `site/stats.js` | `RECOVERY.md:33`, `:64` | documented outside Doc (RES-014, RES-006) |
 | Browser CSP reports to `/api/csp-report` | CSP header | `RECOVERY.md:56-57`, `about.md:304` | documented outside Doc (RES-015) |
@@ -2717,7 +2717,7 @@ legacy servers; they are inventoried as `URL-NNN` in `03b` and `TMA-NNN` in `05`
 | 3 | Phone exposure | «номера телефонов открываются только через временные ссылки звонка» (`about.md:349`) | `ListingDetails.phone` is plain `+998…` (Doc:316) and dialled as `tel:${phone}` on Android (`src/lib/telegram/links.js:28`) | the raw number reaches every client (LB-API-030) |
 | 4 | Quiet/digest presets | examples `off, 23-08, 22-09` / `09, 09,21, 21` (Doc:846-847, mock) | bot presets `off, 22-08, 23-08, 00-09, 23-07` / `09, 09,19, 12,20, 19` (`telegram-bot.md:990`) | unknown — Q-API-029 |
 | 5 | `median_metric` values | `m2 \| person \| string` (Doc:325) | mock uses `unit` (`tools/parity/mocks.mjs:98`); client treats others as per month | compatible |
-| 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:60-62`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:68-70`) | data is live (LB-API-017) |
+| 6 | Landing data | «зафиксированные один раз; к API страница не обращается» (`landing.js:63-65`) | files rewritten on a schedule while `DATA_V` stays `202610171944` (`RECOVERY.md:68-70`) | data is live (LB-API-017) |
 | 7 | `useMapTilePrefetch` JSDoc | `tiles` "object" (`src/app/useMapTilePrefetch.js:12`) | `meta.tiles` is a string (Doc:443) | string |
 | 8 | `entry` JSDoc (release `index-DY_DH7h-.js`) | `'filters' \| 'few' \| 'prompt' \| 'empty'` (`src/app/subscriptionActions.js:92`, `src/lib/api/subscriptions.js:10`) | the app also sends `feed` and `return` (`App.jsx:635`, `:752` at the pin); current Doc:789 lists all six | six values |
 | 9 | Undo of «Уже сдано» (release `index-CIa0Ldj2.js`) | the toast action reads «Отменить» (Doc r35:854; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:21` at r36) | `toast.undo` = «Вернуть» / «Undo» / «Qaytarish» (`src/app/useListingActions.js:36-50`, `src/i18n/locales/ru.js:241` at r33) | code text: «Вернуть» |

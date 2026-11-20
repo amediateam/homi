@@ -19,7 +19,7 @@ outputs). Every M6 task that writes code points at these ADRs instead of re-deci
 
 - Acquisition: 217 open channels read through their public pages without subscribing (BR-API-042,
   `$KVADRO_ROOT/docs/about.md:117`, `:169`; `$KVADRO_ROOT/docs/seo-pages.md:244-247`), probably `t.me/s/<channel>`
-  (BR-SEO-037, Q-SEO-019); channel opt-outs (BR-API-043, `$KVADRO_ROOT/demo/landing/site/privacy.html:67`); public
+  (BR-SEO-037, Q-SEO-019); channel opt-outs (BR-API-043, `$KVADRO_ROOT/demo/landing/site/privacy.html:73`); public
   methodology claims that must stay true (BR-SEO-029).
 - LLM: Gemini named as the processor in the public privacy text (`$KVADRO_ROOT/docs/about.md` §5.11); masking of
   phones and `@handles` before the LLM (BR-API-045, BR-BOT-088); «без догадок» (BR-API-044); prompts, model and

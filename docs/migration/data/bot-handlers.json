@@ -319,7 +319,7 @@
     "id": "BOT-027",
     "kind": "deep-link",
     "trigger": "`/start s_web`",
-    "summary": "From every landing button. Expected: ordinary welcome; source stored for attribution (inferred from /privacy). Link format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:30-37`).",
+    "summary": "From every landing button. Expected: ordinary welcome; source stored for attribution (inferred from /privacy). Link format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:30-40`).",
     "buttons": [
       "BTN-001",
       "BTN-002",
@@ -335,7 +335,7 @@
     "id": "BOT-028",
     "kind": "deep-link",
     "trigger": "`/start s_web_<tag>`",
-    "summary": "Landing opened with `?s=<tag>` or `?utm_source=<tag>`; tag lower-cased, `[a-z0-9_-]{1,40}`. Expected as BOT-027. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:33-37`).",
+    "summary": "Landing opened with `?s=<tag>` or `?utm_source=<tag>`; tag lower-cased, `[a-z0-9_-]{1,40}`. Expected as BOT-027. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/landing.js:33-40`).",
     "buttons": [
       "BTN-001",
       "BTN-002",
@@ -351,7 +351,7 @@
     "id": "BOT-029",
     "kind": "deep-link",
     "trigger": "Suffix `--v<visit>` on any `s_…` payload",
-    "summary": "10-char `[a-z0-9]` visit id appended on click by `stats.js`; the part before it is cut to 49 chars. Expected: joins the site visit (PostHog) to the bot user. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/stats.js:18-20`, `$KVADRO_ROOT/demo/landing/site/landing.js:36`).",
+    "summary": "10-char `[a-z0-9]` visit id appended on click by `stats.js`; the part before it is cut to 49 chars. Expected: joins the site visit (PostHog) to the bot user. Format CONFIRMED (`$KVADRO_ROOT/demo/landing/site/stats.js:18-20`, `$KVADRO_ROOT/demo/landing/site/landing.js:39`).",
     "buttons": [],
     "backend_effects": [
       "Visit id stored and linked to the user (inferred)"

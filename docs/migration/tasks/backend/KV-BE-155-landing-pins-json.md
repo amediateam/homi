@@ -20,7 +20,7 @@ photo exists.
 - RES-011, RES-012 (`08` lines 1371-1388); landing contract `03b` §1.5; LND-008, LND-012, LND-014; ENT-054
   (2026-11-08 snapshot: 167 rent pins, 149 sale pins, 1 310 dots, 2 069 median rows = 36 district + 2 033 point).
 - Fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/pins-rent.json`, `…/pins-sale.json`; reader
-  `$KVADRO_ROOT/demo/landing/site/landing.js:1038-1080`, `:2242`, `:2252-2309`.
+  `$KVADRO_ROOT/demo/landing/site/landing.js:1041-1083`, `:2257`, `:2267-2324`.
 - Rules: BR-API-134 (`x`/`y` in % of the static Tashkent map image, `img/snap/<id>.webp`, `startapp=l_<id>-web`,
   medians by district × rooms), BR-LND-008 (savings block uses medians with `rooms ∈ 1..3`, `median_usd > 0`),
   BR-LND-009 (bargains line shown when `bargains_week ≥ 100`; server definition «на 20% и больше дешевле»),

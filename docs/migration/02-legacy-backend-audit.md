@@ -373,7 +373,7 @@ follow the processing order.
 - **BR-API-042** · `DOCUMENTED_ONLY` — Sources are 217 open Telegram channels read through their public pages without
   subscribing; 🔶 most likely the web preview `t.me/s/<channel>`. *Evidence:* About:117, :169; SEO:244-247.
 - **BR-API-043** · `DOCUMENTED_ONLY` — A channel admin can ask that listings from the channel are not taken at all.
-  *Evidence:* `$KVADRO_ROOT/demo/landing/site/privacy.html:67`.
+  *Evidence:* `$KVADRO_ROOT/demo/landing/site/privacy.html:73`.
 - **Q-API-017** — Which 217 channels, how often each is polled, how blocking/rate limits are handled, and whether
   closed channels are ever read? *Check:* owner interview; legacy channel table export (`14-data-migration-plan.md`).
 
@@ -466,7 +466,7 @@ follow the processing order.
 - **BR-API-067** · `CONFIRMED` — A deleted source post sets `post_deleted: true` (no «Открыть пост»; video opens the
   gallery). *Evidence:* Doc:314; `demo/app/docs/CHANGELOG.md:12`, :17-18.
 - **BR-API-068** · `DOCUMENTED_ONLY` — On an author's request (support bot or e-mail) a listing is removed from feed,
-  map, site and alerts, and sent cards are edited. *Evidence:* About:184-185; `demo/landing/site/privacy.html:67`.
+  map, site and alerts, and sent cards are edited. *Evidence:* About:184-185; `demo/landing/site/privacy.html:73`.
 - **BR-API-069** · `CONFIRMED` — `status_text` is a server-provided state label shown on cards (mock: «Сдана»).
   *Evidence:* Doc:259; `tools/parity/mocks.mjs:81`.
 - **Q-API-023** — What does `GET /api/listings/:id` return for a withdrawn listing within 90 days and after the PII
@@ -996,7 +996,7 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
 - **BR-API-120** · `CONFIRMED` — Bot deep links produced by the legacy clients: `s_web[_<tag>][--v<visit>]` (landing;
   tag `[a-z0-9_-]{1,40}` from `?s=`/`?utm_source=`, visit `[a-z0-9]{10}`), `s_<source>--l<id>` (no-access screen),
   `s_friend` (survey «Рассказать друзьям»), `s_seo[_<lang>][_<slice>]` (SEO pages). *Evidence:*
-  `$KVADRO_ROOT/demo/landing/site/landing.js:26-43`; `NoAccessScreen.jsx:66`;
+  `$KVADRO_ROOT/demo/landing/site/landing.js:26-46`; `NoAccessScreen.jsx:66`;
   `src/features/radar/FoundSheet.jsx:119`; SEO:356-369.
 - **BR-API-121** · `DOCUMENTED_ONLY` — The bot stores the acquisition source from `/start` and joins the website visit
   number with the bot user in PostHog. *Evidence:* About:258; Bot:1004-1006.
@@ -1059,10 +1059,10 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   `max-age=1800`. *Evidence:* `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, :68-69.
 - **BR-API-134** · `CONFIRMED` — Landing pins carry `x`/`y` as percentages of the static Tashkent map image, a photo
   `img/snap/<id>.webp`, a Mini App link `startapp=l_<id>-web`, and medians by district × rooms (rent). *Evidence:*
-  fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/*.json`; `landing.js:1040`, :2242.
+  fixtures `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/*.json`; `landing.js:1043`, :2242.
 - **BR-API-135** · `DOCUMENTED_ONLY` — `/uz/` and `/en/` landing pages are produced by the backend
   (`app/api/landing_pages.py`) from `index.html` + `landing-i18n.js`; the same module rewrites SEO links (`arenda/` →
-  `uz/ijara/`, `en/rent/`). *Evidence:* `RECOVERY.md:26`; `$KVADRO_ROOT/demo/landing/site/index.html:367-368`.
+  `uz/ijara/`, `en/rent/`). *Evidence:* `RECOVERY.md:26`; `$KVADRO_ROOT/demo/landing/site/index.html:503-503`.
 - **BR-API-136** · `DOCUMENTED_ONLY` — SEO pages are rendered by the backend from the database
   (`app/api/area_pages.py`), CDN-cached 5 minutes; pages with ≤ 9 listings are `noindex,follow` and excluded from the
   dynamic sitemap (threshold ~10 🔶). *Evidence:* About:524-527; SEO:131-140, :375.
@@ -1081,7 +1081,7 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   `pins` (age, area, tones). *Check:* poll the files' `Last-Modified` for a week; owner interview.
 - **LB-API-017** · `bug` · `CONFIRMED` — The landing appends a constant `?v=202610171944` (`DATA_V`) to data files
   that change daily, so the version key never busts caches; freshness depends only on `max-age=1800`, and the code
-  comment claims the data is fixed. *Evidence:* `landing.js:60-72`; `RECOVERY.md:68-70`.
+  comment claims the data is fixed. *Evidence:* `landing.js:63-75`; `RECOVERY.md:68-70`.
   - **Proposed fix:** version data URLs by content hash or generation timestamp published with the page (or drop the
     key and rely on `ETag` + short `max-age`).
   - **Old-client impact:** none for the Mini App; the legacy landing keeps working with the constant key as long as

@@ -93,7 +93,7 @@ sequential.
    sale-price history is published as CSV and may be cited. A new backend that recomputes from migrated data may not
    reproduce them. Archive the CSVs and migrate the series (Q-SEO-013).
 8. **Search Console context.** An HTML comment of 2026-11-05 records that of about 450 site pages, 94 were indexed and
-   349 were "обнаружена, не проиндексирована" (`IDX:379-380`). The SEO equity at stake is real but modest, and the
+   349 were "обнаружена, не проиндексирована" (`IDX:503-503`). The SEO equity at stake is real but modest, and the
    thin-page policy deserves a review (LB-SEO-012).
 
 ## 1. Landing
@@ -137,10 +137,10 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Head:** `<title>` «Аренда квартир в Ташкенте — все объявления из Telegram | kvadro²», description, og/twitter,
   canonical, hreflang, JSON-LD, icons, manifest, `theme-color` (LND-033).
 - **Scripts:** one inline script in `<head>` (LND-021), then `stats.js`, `miniapp-i18n.js`, `landing-i18n.js`,
-  `landing.js`, all `defer` and in that order (`IDX:429-432`).
+  `landing.js`, all `defer` and in that order (`IDX:521-523`).
 - **Without JS:** the markup carries complete ru texts and example numbers. Bot buttons point to the bare
-  `https://t.me/KvadroAppBot` (`IDX:109`, `:343`, `:423`).
-- **Evidence:** `IDX:1-434`; `REC:3-5`, `REC:25`.
+  `https://t.me/KvadroAppBot` (`IDX:101`, `:343`, `:423`).
+- **Evidence:** `IDX:1-526`; `REC:3-5`, `REC:25`.
 
 #### LND-002 — Landing, uz and en (`/uz/`, `/en/`) · CONFIRMED (output) / DOCUMENTED_ONLY (generator)
 
@@ -158,8 +158,8 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - uz: «Toshkentda ijaraga kvartira (arenda) — Telegramdagi barcha eʼlonlar | kvadro²»;
   - en: «Apartments for rent in Tashkent — every Telegram listing | kvadro²» (`LI18N meta.title`).
 - **Client side:** `landing.js` leaves server-translated text alone when the document language already matches
-  (`LJS:2370-2378`).
-- **Evidence:** `UZ:1-30`, `EN:1-30`, `EN:370-408`; `REC:26`, `REC:54-55`; `ABT:328-333`. The generator
+  (`LJS:2574-2582`).
+- **Evidence:** `UZ:1-27`, `EN:1-27`, `EN:504-504`; `REC:26`, `REC:54-55`; `ABT:328-333`. The generator
   `app/api/landing_pages.py` is known only by name.
 
 #### LND-003 — Privacy policy (`/privacy.html`) · CONFIRMED
@@ -171,7 +171,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
     объявлений», «Вопросы»; then «← На главную».
   - **Head:** `<meta name="theme-color" content="#ffffff">`, `landing.css` plus an inline `<style>`. There is no
     canonical, hreflang, og or JSON-LD.
-- **Language selection:** an inline script (`PRV:150-177`) picks the language in this order:
+- **Language selection:** an inline script (`PRV:166-186`) picks the language in this order:
   1. `?lang=`;
   2. `localStorage kv-landing-lang`;
   3. browser languages, by the same rule as the landing (BR-LND-020).
@@ -188,22 +188,22 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Deletion:** via `/privacy` → «Удалить мои данные»; backups expire in about two weeks.
   - **Listing authors:** photo copies kept for up to 30 days; withdrawn listings kept for 90 days, then text, phone and
     photo erased; takedowns via `@KvadroSupportBot` or the project mailbox.
-- **Analytics:** `stats.js` (`PRV:178`).
-- **Evidence:** `PRV:1-180`; `ABT:264-275`.
+- **Analytics:** `stats.js` (`PRV:187`).
+- **Evidence:** `PRV:1-189`; `ABT:264-275`.
 
 ### 1.3 Blocks, in page order
 
 #### LND-004 — Header: logo and language menu · CONFIRMED
 
 - **Logo:** `a.brand` with `logo.svg` and «kvadro²», `href="./"`. After a language switch it becomes `uz/` or `en/`
-  (`LJS:2433`).
+  (`LJS:2639`).
 - **Language menu:**
   - **Button:** `#lang-btn` shows a globe icon and the code (`RU`); `aria-label` «RU — Язык: Русский».
   - **Menu:** `#lang-menu` (`role=menu`) holds three `menuitemradio` buttons with `data-lang` ru/uz/en, labelled
     «Русский», «Oʻzbekcha», «English».
-  - **Closing:** an outside click or Escape closes it, and Escape returns focus to the button (`LJS:2456-2476`).
+  - **Closing:** an outside click or Escape closes it, and Escape returns focus to the button (`LJS:2663-2683`).
 - **Theme:** `body.hero-dark` makes the first screen dark (the comment cites an owner decision of 13.10).
-- **Evidence:** `IDX:50-63`.
+- **Evidence:** `IDX:47-60`.
 
 #### LND-005 — First scene: posts become one card (hero) · CONFIRMED
 
@@ -219,7 +219,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **CTA:** «Открыть в Telegram» (`data-bot-link`).
   - **Caption:** «Семь постов — одна карточка».
 - **`s-front` layer:** the phone and the steps (LND-006, LND-007).
-- **Evidence:** `IDX:65-116`.
+- **Evidence:** `IDX:62-109`.
 
 #### LND-006 — Phone with the Mini App demo · CONFIRMED
 
@@ -241,7 +241,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Chrome:** a lock-screen wall, an iOS status bar and Telegram header buttons.
 - **Styles and texts:** `miniapp.css` (generated); texts come from `miniapp-i18n.js` through `data-t` / `data-tp`.
   Every control has `tabindex="-1"` and is inert until live mode (LND-008).
-- **Evidence:** `IDX:137-175`; `REC:31`, `REC:45`; `LJS:537-575`.
+- **Evidence:** `IDX:129-167`; `REC:31`, `REC:45`; `LJS:540-578`.
 
 #### LND-007 — «Как приложение. Прямо в Telegram.» steps · CONFIRMED
 
@@ -251,7 +251,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - «Карта» — «Цены на карте — видно, что сдаётся рядом.»
 - **Narrow screens:** a segmented progress bar `.st-bar` («Лента · Фильтры · Карта») under the phone. It is
   `aria-hidden`; the list stays available to screen readers.
-- **Evidence:** `IDX:119-127`, `IDX:177-180`.
+- **Evidence:** `IDX:112-120`, `IDX:169-171`.
 
 #### LND-008 — Live price map in the phone · CONFIRMED
 
@@ -271,7 +271,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **Listing:** `p.link` = `https://t.me/KvadroAppBot?startapp=l_<id>-web`, opened with
     `window.open(…, "_blank", "noopener")`.
   - **Fallback:** the bot link with the `s_web` tag (BR-LND-017).
-- **Evidence:** `LJS:537-1350`, `LJS:1834-1918`; `FIX/pins-rent.json`.
+- **Evidence:** `LJS:540-1353`, `LJS:1838-1922`; `FIX/pins-rent.json`.
 
 #### LND-009 — Interaction hints: demo finger and tap cursor · CONFIRMED
 
@@ -279,7 +279,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   the card, then drags the map. It stops for good after any user touch or when live mode ends.
 - **v2 show:** a single «кружок» cursor glides between buttons during the scripted feed → filters → map steps and
   presses them slightly early. It fades before live mode.
-- **Evidence:** `LJS:752-800`, `LJS:1430-1530`.
+- **Evidence:** `LJS:755-803`, `LJS:1433-1533`.
 
 #### LND-010 — «Попробуйте сами» hint and «Листайте дальше» cue · CONFIRMED
 
@@ -287,34 +287,34 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   карту.», the short one «Нажмите на цену или потяните карту», and there is an arrow.
 - **Cue:** `#scroll-cue` «Листайте дальше». A tap scrolls to the lock-screen phase (LND-011), or past the scene when
   that phase is absent. This matters on phones, where a finger on the map drags the map instead of the page.
-- **Evidence:** `IDX:181-189`; `LJS:2177-2192`.
+- **Evidence:** `IDX:172-178`; `LJS:2181-2196`.
 
 #### LND-011 — Lock-screen phase at the end of scene 1 (v1 only) · CONFIRMED
 
 - **When:** only if v1 is active, `timeline-scope` and `animation-timeline: view()` are supported, and reduced motion
-  is off (`LOCK_SCENE`, `LJS:2152`). Scene 1 is then 9 200 px tall (`CSS:1006-1011`).
+  is off (`LOCK_SCENE`, `LJS:2156`). Scene 1 is then 9 200 px tall (`CSS:1235-1240`).
 - **Sequence:** after 250 px of dwell on the live map (`LOCK_DWELL`), the phone moves right and dims to a lock screen.
   Up to 4 pushes about the latest real rentals (`data/live.json`) arrive with scrolling: the first at 12 % of the
   phase, then every 17 %. They leave again when scrolling back.
 - **Left column:** «Узнавайте первым», the lead «Больше не нужно листать каналы: подходящие квартиры сами придут в
   Telegram, как только появятся.» and the counter (BR-LND-007).
-- **Evidence:** `LJS:2145-2211`; `IDX:128-136`, `IDX:164-169`.
+- **Evidence:** `LJS:2149-2215`; `IDX:121-128`, `IDX:156-161`.
 
 #### LND-012 — «Узнавайте первым» section (`#live`) · CONFIRMED
 
 - **What:** a standalone grey block with the same heading and lead, a lock-screen phone (390 × 844 points, scaled) and
   the counter `#live-count`.
   - **When shown:** CSS hides it where the lock phase of LND-011 runs, so it serves v2, reduced motion and browsers
-    without scroll timelines (`CSS:1010`).
+    without scroll timelines (`CSS:1239`).
   - **v2:** the phone is bigger and cropped from the top (`lcrop`). The dark scene above slides away with a parallax
-    of up to 260 px (`LJS:1810-1830`).
+    of up to 260 px (`LJS:1813-1834`).
 - **Behaviour:**
   - **Clock and date:** set to `Asia/Tashkent`.
   - **Pushes:** they drip one per second while the block is at least 35 % visible.
   - **Ages:** relative to the snapshot time and refreshed every 30 s.
   - **Without JS:** one example push stays: «kvadro² · только что · 2-комн. квартира · Мирабад · $600/мес · −23% к
     рынку» (BR-LND-014).
-- **Evidence:** `IDX:194-231`; `LJS:1939-2140`.
+- **Evidence:** `IDX:282-314`; `LJS:1943-2144`.
 
 #### LND-013 — «Хозяин ◐ Риелтор» switch · CONFIRMED
 
@@ -334,7 +334,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   On phones each set scrolls sideways.
 - **Data:** static cards and photos (`img/own-*.webp`, `img/ag-*.webp`). Card parameters are re-rendered per language
   from `data-params` (`2,60,1,7` → «2‑комн. · 60 м² · 1/7 эт.»).
-- **Evidence:** `IDX:234-291`; `LJS:78-125`, `LJS:2396-2400`.
+- **Evidence:** `IDX:317-372`; `LJS:81-128`, `LJS:2600-2604`.
 
 #### LND-014 — «Сразу видно, где дешевле рынка» savings block · CONFIRMED
 
@@ -349,7 +349,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Data:** `medians` and `bargains_week` of `data/pins-rent.json`. Until the data arrives, hard-coded fallback
   medians are used (BR-LND-008, BR-LND-009).
 - **Bug:** current prod data makes it render point medians as districts (LB-LND-004).
-- **Evidence:** `IDX:294-311`; `LJS:2241-2318`; `LI18N pc.*`.
+- **Evidence:** `IDX:375-390`; `LJS:2256-2333`; `LI18N pc.*`.
 
 #### LND-015 — FAQ «Вопросы» · CONFIRMED
 
@@ -365,7 +365,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   7. «Нужно что-то устанавливать?»
   8. «Вы видите мои данные?» (`/privacy` in the bot)
 - **No `FAQPage` JSON-LD.**
-- **Evidence:** `IDX:314-331`; `LI18N faq.*`.
+- **Evidence:** `IDX:393-410`; `LI18N faq.*`.
 
 #### LND-016 — Final block · CONFIRMED
 
@@ -378,7 +378,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   error correction M, byte mode. **Decoded content: `https://t.me/KvadroAppBot`**: no `start` payload
   (LB-LND-007).
 - **Phone:** no QR, button only.
-- **Evidence:** `IDX:334-353`; `LJS:2212-2240`; decode of `$KVADRO_ROOT/demo/landing/site/img/qr-bot.svg`.
+- **Evidence:** `IDX:413-428`; `LJS:2216-2255`; decode of `$KVADRO_ROOT/demo/landing/site/img/qr-bot.svg`.
 
 #### LND-017 — Footer row · CONFIRMED
 
@@ -389,7 +389,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
     «Конфиденциальность» (`privacy.html`, becomes `privacy.html?lang=<uz|en>` after a switch);
   - «Карта: © OpenStreetMap» linking to `openstreetmap.org/copyright`.
 - **Wordmark:** a large «kvadro²» at the bottom (`aria-hidden`).
-- **Evidence:** `IDX:356-366` (OpenStreetMap link `IDX:365`), `IDX:409`; `LJS:2432`.
+- **Evidence:** `IDX:431-502` (OpenStreetMap link `IDX:463`), `IDX:503`; `LJS:2638`.
 
 #### LND-018 — Footer SEO link blocks · CONFIRMED
 
@@ -407,7 +407,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Relative links:** the hrefs are relative. On `/uz/` and `/en/` they resolve through `<base href="../">`. On `/`
   after a client-side language switch they break (LB-LND-001).
 - **Counts in the prod fingerprint:** `arenda` 20, `prodazha` 3, `novostrojki` 1, `uz` 24, `en` 24 (`REL outLinks`).
-- **Evidence:** `IDX:367-408`; `UZ` and `EN` footers.
+- **Evidence:** `IDX:503-503`; `UZ` and `EN` footers.
 
 #### LND-019 — Floating QR (desktop) · CONFIRMED
 
@@ -417,7 +417,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Morph:** when the final block is more than half visible, the card expands into the final block's QR panel. Text
   fades in after it, and the card collapses back when the block leaves. It is computed per frame, with a timer
   fallback for background tabs. Closing hides it for the rest of the page view.
-- **Evidence:** `IDX:412-420`; `LJS:245-330`.
+- **Evidence:** `IDX:506-512`; `LJS:248-333`.
 
 #### LND-020 — Dock (sticky bottom CTA) · CONFIRMED
 
@@ -428,7 +428,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - when the final block (its own CTA or QR) is visible.
 - **v2:** shown only after the first-screen button has scrolled away and nothing of the phone is underneath.
 - **Height:** measured from the real button height, because of iOS toolbar behaviour.
-- **Evidence:** `IDX:421-427`; `LJS:193-245`.
+- **Evidence:** `IDX:513-519`; `LJS:196-248`.
 
 ### 1.4 Behaviours
 
@@ -439,7 +439,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - **v1** (mouse): the scene is driven by scrolling.
   - **v2** (touch): the scenes play by time.
 - **CSP:** the script is allowed by its sha256 (LND-034).
-- **Evidence:** `IDX:39-46`; `ABT:510-512`.
+- **Evidence:** `IDX:38-43`; `ABT:510-512`.
 
 #### LND-022 — v1 scroll-driven scene and smoothing · CONFIRMED
 
@@ -451,7 +451,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Phone chrome:** the phone's own top and bottom bars collapse in the 42–58 % range, imitating Mini App
   `useMiniChrome`. On touch devices they slide away instead.
 - **Map preload:** the map image is warmed up 600 ms after `load`.
-- **Evidence:** `LJS:126-536`; `CSS` (`animation-timeline: --cloud` used 27 times).
+- **Evidence:** `LJS:129-539`; `CSS` (`animation-timeline: --cloud` used 27 times).
 
 #### LND-023 — v2 time-driven show and simple version · CONFIRMED
 
@@ -464,7 +464,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   Web Animations / IntersectionObserver, or a janky intro below about 30 fps. It skips the intro and the steps and
   shows the live map straight away. Override with `?anim=on|off` (BR-LND-019).
 - **Phone movement:** sizes change through FLIP transforms (`morphPhoneV2`).
-- **Evidence:** `LJS:1351-1938`.
+- **Evidence:** `LJS:1354-1942`.
 
 #### LND-024 — Static layout (reduced motion / no scroll timelines) · CONFIRMED
 
@@ -487,13 +487,13 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Touch:**
   - lighter graphics (no glass blur) on touch in v1 and on weak Android in v2;
   - `?touch=1` and `?glass=off` force these for testing.
-- **Evidence:** `CSS` media queries; `LJS:364-383`, `LJS:460-530`, `LJS:1300-1350`.
+- **Evidence:** `CSS` media queries; `LJS:367-386`, `LJS:463-533`, `LJS:1303-1353`.
 
 #### LND-026 — Browser theme colour · CONFIRMED
 
 - **What:** `meta[name=theme-color]` is `#0e0e10` while the dark first scene is under the browser toolbar and
   `#ffffff` afterwards.
-- **Evidence:** `IDX:37-38`; `LJS:240`.
+- **Evidence:** `IDX:37-37`; `LJS:243`.
 
 #### LND-027 — Language selection and switching · CONFIRMED
 
@@ -507,7 +507,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   - the privacy link becomes `privacy.html?lang=<lang>` and the logo link `<lang>/`;
   - the language button code and the `aria-checked` / `aria-pressed` states update.
 - **Defects:** LB-LND-001, LB-LND-002.
-- **Evidence:** `LJS:2321-2477`; parity scenarios `browser-uz`, `browser-en`, `browser-kk`, `query-lang-en`,
+- **Evidence:** `LJS:2520-2684`; parity scenarios `browser-uz`, `browser-en`, `browser-kk`, `query-lang-en`,
   `stored-lang-uz`, `menu-lang-uz`, `menu-lang-en-from-uz` (`SCN:104-114`).
 
 #### LND-028 — Client-side texts, plurals and numbers · CONFIRMED
@@ -521,7 +521,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Fallback:** a missing landing key falls back to ru.
 - **Plurals and numbers:** see BR-LND-006.
 - **Text sets:** 106 landing keys and 188 Mini App keys, complete in all three languages (no missing keys).
-- **Evidence:** `LJS:6-24`, `LJS:46-56`, `LJS:2356-2400`; `LI18N`; `MI18N`.
+- **Evidence:** `LJS:6-24`, `LJS:49-59`, `LJS:2560-2604`; `LI18N`; `MI18N`.
 
 #### LND-029 — Server-side localisation of `/uz/` and `/en/` · CONFIRMED (output) / DOCUMENTED_ONLY (mechanism)
 
@@ -539,7 +539,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Listing links:** Mini App deep links inside the demo come from the data (`startapp=l_<id>-web`) and are not
   tagged.
 - **QR code:** carries no tag (LND-016).
-- **Evidence:** `LJS:26-44`; `STJ:15-24`; `ABT:254-262`; `BOT:997-1017`; parity scenario `source-tag` (`/?s=Insta_1`).
+- **Evidence:** `LJS:26-47`; `STJ:15-24`; `ABT:254-262`; `BOT:997-1017`; parity scenario `source-tag` (`/?s=Insta_1`).
 
 #### LND-031 — Analytics: `stats.js` and PostHog without cookies · CONFIRMED
 
@@ -557,7 +557,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
 - **Events:** the landing sends no custom events (no `posthog.capture` in `landing.js`). Every event comes from
   PostHog: `$pageview`, `$pageleave`, `$autocapture`, `$rageclick`, web vitals, heatmaps.
 - **Errors:** errors are not posted to `/api/events`; that is Mini App behaviour only.
-- **Evidence:** `STJ:1-55`; `REC:33`, `REC:64`; `PRV:42`.
+- **Evidence:** `STJ:1-55`; `REC:33`, `REC:64`; `PRV:43`.
 
 #### LND-032 — Landing data snapshot loading · CONFIRMED (client) / DOCUMENTED_ONLY (producer, schedule)
 
@@ -574,7 +574,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
   HTML comments still name `/api/landing/live` and `/api/landing/pins`; whether those endpoints exist is open (see
   `08-api-inventory.md`, `GET /api/landing/live`).
 - **Contract:** §1.5.
-- **Evidence:** `LJS:58-72`; `REC:60-61`, `REC:66-77`; `FIX/*.json`.
+- **Evidence:** `LJS:61-75`; `REC:60-61`, `REC:66-77`; `FIX/*.json`.
 
 #### LND-033 — Landing head metadata and structured data · CONFIRMED
 
@@ -590,7 +590,7 @@ Evidence: `REC:21-50`, `REC:52-77`; `$KVADRO_ROOT/demo/landing/README.md:35-41`;
     `sameAs` `https://t.me/KvadroAppBot`;
   - `WebSite` (`#site`): `inLanguage` ru/uz/en.
 - **Icons and manifest:** `logo.svg`, `favicon-32.png`, `apple-touch-icon.png`, `site.webmanifest`.
-- **Evidence:** `IDX:5-36`; `UZ:1-30`; `EN:1-30`.
+- **Evidence:** `IDX:5-36`; `UZ:1-27`; `EN:1-27`.
 
 #### LND-034 — CSP, inline-script hashes and `?v=` stamps · CONFIRMED
 
@@ -643,13 +643,13 @@ Evidence: `REC:26-34`; `$KVADRO_ROOT/demo/landing/README.md:38-40`; `$KVADRO_ROO
 
 | Parameter | Effect | Evidence |
 | --------- | ------ | -------- |
-| `?v=1` / `?v=2` | force scroll-driven or time-driven display | `IDX:41-46` |
-| `?motion=raw` | no scroll smoothing (used by parity) | `LJS:132` |
-| `?touch=1` | behave as a touch device | `LJS:364` |
-| `?glass=off` | v2 without glass blur | `LJS:368` |
-| `?anim=on` / `?anim=off` | force the full or simple v2 | `LJS:1419` |
-| `?bench=1[&off=anim,phone,sb]` | self-scrolling frame-rate benchmark | `LJS:387-460` |
-| `?debug=vh` | viewport diagnostics (comment) | `LJS:460-470` |
+| `?v=1` / `?v=2` | force scroll-driven or time-driven display | `IDX:38-43` |
+| `?motion=raw` | no scroll smoothing (used by parity) | `LJS:135` |
+| `?touch=1` | behave as a touch device | `LJS:367` |
+| `?glass=off` | v2 without glass blur | `LJS:371` |
+| `?anim=on` / `?anim=off` | force the full or simple v2 | `LJS:1422` |
+| `?bench=1[&off=anim,phone,sb]` | self-scrolling frame-rate benchmark | `LJS:390-463` |
+| `?debug=vh` | viewport diagnostics (comment) | `LJS:463-473` |
 
 These parameters are public on prod (LB-LND-015).
 
@@ -681,8 +681,8 @@ These parameters are public on prod (LB-LND-015).
 | `img/snap/<id>.webp` | — | pin photos, feed cards, radar collage | 316 files. Unsigned copies of channel photos (LB-LND-012). |
 
 District codes in the data use underscores (`mirzo_ulugbek`), while URL slugs use hyphens (`mirzo-ulugbek`)
-(BR-SEO-002). Evidence: `FIX/live.json`, `FIX/pins-rent.json`, `FIX/pins-sale.json`; `LJS:1038-1080`, `LJS:1112`,
-`LJS:2098`, `LJS:2161`, `LJS:2225`, `LJS:2302-2309`.
+(BR-SEO-002). Evidence: `FIX/live.json`, `FIX/pins-rent.json`, `FIX/pins-sale.json`; `LJS:1041-1083`, `LJS:1115`,
+`LJS:2102`, `LJS:2165`, `LJS:2229`, `LJS:2317-2324`.
 
 ### 1.6 Parity scenarios as an acceptance checklist
 
@@ -1098,7 +1098,7 @@ All `CONFIRMED` from the production files.
   - **Tag:** the lowercased `?s=`, or `?utm_source=` when `s` is absent. An invalid tag is dropped silently.
   - **Applied to:** every `[data-bot-link]` anchor at script start, as `href = href.split("?")[0] + "?start=" + START`.
   - **Length:** at most 59 characters, within Telegram's 64.
-  - *Evidence:* `LJS:26-44`.
+  - *Evidence:* `LJS:26-47`.
 - **BR-LND-002** · `CONFIRMED` — Visit id.
   - **Generation:** 10 characters from `[a-z0-9]`, from `crypto.getRandomValues` (fallback `Math.random`) with
     `byte % 36`.
@@ -1118,14 +1118,14 @@ All `CONFIRMED` from the production files.
   4. browser languages in order: `uz` or `ru` → that language; `kk`, `ky`, `tg`, `tk`, `be` → `ru`; `en` only if none
      of those appears anywhere in the list; otherwise `ru`.
 
-  The path takes priority over a stored choice. *Evidence:* `LJS:2326-2353`.
+  The path takes priority over a stored choice. *Evidence:* `LJS:2525-2557`.
 - **BR-LND-005** · `CONFIRMED` — Language switch.
   - **Texts:** applies them, unless the document was already server-translated into that language.
   - **Address:** rewrites it to `root + (lang === "ru" ? "" : lang + "/")`, keeping other query parameters and the hash
     and dropping `lang`.
   - **Storage:** stores the choice.
   - **Links:** sets the privacy link `privacy.html[?lang=…]` and the logo link `./` or `<lang>/`.
-  - *Evidence:* `LJS:2410-2454`.
+  - *Evidence:* `LJS:2614-2661`.
 - **BR-LND-006** · `CONFIRMED` — Plurals and numbers.
   - **Plurals:**
     - ru: three forms (`n%10==1 && n%100!=11` → one; `2..4` except `12..14` → few; otherwise many);
@@ -1134,13 +1134,13 @@ All `CONFIRMED` from the production files.
   - **Numbers:** `Intl.NumberFormat("en-GB")` for en (`2,880`); `ru-RU` for ru and uz (`2 880`), because Chrome has no
     Uzbek locale data.
   - **Money:** `$` + number.
-  - *Evidence:* `LJS:6-24`, `LJS:51-56`.
+  - *Evidence:* `LJS:6-24`, `LJS:54-59`.
 - **BR-LND-007** · `CONFIRMED` — Counters («N новых квартир за сутки / за неделю»).
   - **Rule:** show `day` if `day ≥ 100`; else show `week` with «за неделю» if `week ≥ 100`; else hide the counter
     (`COUNT_MIN = 100`, «сервис не должен выглядеть маленьким»).
   - **Animation:** counts up over 1.2 s, ease-out cubic.
   - **Used by:** the lock screen, `#live` and the final block.
-  - *Evidence:* `LJS:2062-2092`, `LJS:2216-2240`.
+  - *Evidence:* `LJS:2066-2096`, `LJS:2220-2255`.
 - **BR-LND-008** · `CONFIRMED` — Savings block.
   - **Formula:** `cheap = round10(median × 0.8)`; yearly saving = `(median − cheap) × 12`.
   - **Defaults:** 2 rooms, `chilonzor`.
@@ -1148,13 +1148,13 @@ All `CONFIRMED` from the production files.
   - **District buttons:** every entry for the chosen rooms, ordered by the sum of `n` over all rooms, descending. If
     the selected district has no median for those rooms, the first entry is selected.
   - **Before data:** `PC_FALLBACK` medians (Chilonzor $500 / $600 / $650; Mirobod, Yunusobod, Mirzo-Ulugbek 2-room).
-  - *Evidence:* `LJS:2246-2309`.
+  - *Evidence:* `LJS:2261-2324`.
 - **BR-LND-009** · `CONFIRMED` — Weekly bargains line.
   - **Rule:** shown only when `bargains_week ≥ 100`, as `num(n) + plural("квартира") + " на 20% и больше дешевле
     обычной цены нашли за неделю в Ташкенте"`.
   - **Server definition:** the server defines «bargain» as 20 % or more below the usual price (comment). That is a
     different bar from the ≥ 10 % «ниже рынка» tone (Q-LND-010).
-  - *Evidence:* `LJS:2241-2244`, `LJS:2310-2316`.
+  - *Evidence:* `LJS:2256-2259`, `LJS:2325-2331`.
 - **BR-LND-010** · `CONFIRMED` — Live-map pins.
   - **Activation:** v1 enters live mode at scene progress > 0.9256 and leaves at ≤ 0.9008.
   - **Which pins:**
@@ -1164,7 +1164,7 @@ All `CONFIRMED` from the production files.
     - all filtered by BR-LND-011.
   - **Declutter:** label boxes `(len(price) × 7.4 + 18) / 2 + 3` points must not overlap; the selected pin and the
     story pin take precedence.
-  - *Evidence:* `LJS:656-735`, `LJS:1905-1918`.
+  - *Evidence:* `LJS:659-738`, `LJS:1909-1922`.
 - **BR-LND-011** · `CONFIRMED` — Demo filter semantics.
   - **Rooms:** `rooms ≥ rmin`; `rooms ≤ rmax` unless `rmax ≥ 4`.
   - **Price:** `price_usd ≤ price`, with presets of $300 – 1 500 for rent and $40 000 – 200 000 for sale.
@@ -1173,7 +1173,7 @@ All `CONFIRMED` from the production files.
   - **Deal switch:** switching between rent and sale resets the price.
   - **Display-only:** sale, zones, metro, housing, term and tenants.
   - **Rooms chips:** one value is exact, a second value gives a range, repeating a value or «Любые» resets.
-  - *Evidence:* `LJS:645-661`, `LJS:1049-1170`; `IDX:152-154`.
+  - *Evidence:* `LJS:648-664`, `LJS:1052-1173`; `IDX:144-146`.
 - **BR-LND-012** · `CONFIRMED` — Price tone on pins, cards and pushes. The server sends `delta` (%) and `tone`.
   - **No tone:** `null` or missing → no market line.
   - **`same` or `mixed`:** «≈ рынок».
@@ -1182,13 +1182,13 @@ All `CONFIRMED` from the production files.
   - **`high`:** «+N% к рынку».
   - **Tag priority:** below market, then «Хозяин» (`is_owner`).
   - **Pushes:** the mark is shown only when the tone is not `same`.
-  - *Evidence:* `LJS:609-624`, `LJS:2007-2021`.
+  - *Evidence:* `LJS:612-627`, `LJS:2011-2025`.
 - **BR-LND-013** · `CONFIRMED` — Demo card formatting.
   - **Facts:** `title.<min(rooms,4)>` · `{area} м²` · `{floor}/{total} эт.` or `{floor} эт.`.
   - **Age:** `< 1` min «только что», `< 60` «N мин назад», `< 1440` «N ч назад» (floor), else «N дн. назад».
   - **Where:** the translated district name · `point`.
   - **Period:** «/мес» for rent and nothing for sale.
-  - *Evidence:* `LJS:591-633`.
+  - *Evidence:* `LJS:594-636`.
 - **BR-LND-014** · `CONFIRMED` — Lock-screen pushes.
   - **Set:** at most 4 (`LIVE_MAX`), taken from `latest` and shown oldest first, so the newest arrives last at the
     bottom.
@@ -1196,28 +1196,28 @@ All `CONFIRMED` from the production files.
   - **Ages:** relative to the snapshot time `now` (no drift), re-rendered every 30 s.
   - **Clock and date:** in `Asia/Tashkent`. The Uzbek date is formatted by hand («seshanba, 13-oktabr»).
   - **Link:** each push links to `item.link`.
-  - *Evidence:* `LJS:1939-2060`.
+  - *Evidence:* `LJS:1943-2064`.
 - **BR-LND-015** · `CONFIRMED` — Filter-sheet footer.
   - **No conditions:** `sheet.all` numbers.
   - **Demo filter** (2 rooms, Chilonzor + Mirobod, «Без риелторов»): `sheet.demo` numbers.
   - **Text:** «📡 Радар: ≈N в день» if `per_day ≥ 1`, else «≈N в неделю» (`per_day × 7`), plus «Показать N».
   - **Other combinations or sale:** «Показать» without a number and no radar line.
-  - *Evidence:* `LJS:1081-1112`.
+  - *Evidence:* `LJS:1084-1115`.
 - **BR-LND-016** · `CONFIRMED` — Radar tile in the demo.
   - **Filter:** `DEMO_FILTERS` = 2 rooms, `chilonzor` + `mirobod`, `no_agents`.
   - **Collage:** up to 4 photos of matching pins.
   - **State line:** «≈N в день / в неделю» from `sheet.demo`.
   - **Controls:** the switch pauses, the tile opens the feed with that filter, and «+» / `m-bot` opens the bot link.
-  - *Evidence:* `LJS:1196-1240`, `LJS:1028-1031`.
+  - *Evidence:* `LJS:1199-1243`, `LJS:1031-1034`.
 - **BR-LND-017** · `CONFIRMED` — Click targets.
   - **Listing elements:** pins, the selected card, feed cards and pushes open `p.link` in a new window.
   - **Otherwise:** the first `[data-bot-link]` URL (tagged).
   - **When:** only while the map is live.
-  - *Evidence:* `LJS:634-644`, `LJS:928`, `LJS:950`.
+  - *Evidence:* `LJS:637-647`, `LJS:931`, `LJS:953`.
 - **BR-LND-018** · `CONFIRMED` — Display version.
   - **Rule:** v2 if `?v=2`, or if `(pointer: coarse)` and not `?v=1`; otherwise v1.
   - **When decided:** before first paint.
-  - *Evidence:* `IDX:41-46`.
+  - *Evidence:* `IDX:38-43`.
 - **BR-LND-019** · `CONFIRMED` — The simple v2 is used when any of these holds:
   - reduced motion;
   - Android with `hardwareConcurrency ≤ 4` or `deviceMemory ≤ 2`;
@@ -1226,25 +1226,25 @@ All `CONFIRMED` from the production files.
   - no IntersectionObserver;
   - the measured intro runs below about 30 fps.
 
-  Force with `?anim=on|off`. *Evidence:* `LJS:1399-1430`.
+  Force with `?anim=on|off`. *Evidence:* `LJS:1402-1433`.
 - **BR-LND-020** · `CONFIRMED` — Privacy language.
   - **Order:** `?lang=`, then `kv-landing-lang`, then browser languages as in BR-LND-004, with no path step.
   - **Home links:** uz/en rewrite them to `./?lang=<lang>`.
-  - *Evidence:* `PRV:150-177`.
+  - *Evidence:* `PRV:166-186`.
 - **BR-LND-021** · `CONFIRMED` — Browser theme colour.
   - **Rule:** `#0e0e10` while the dark first scene is under the toolbar, `#ffffff` afterwards.
-  - *Evidence:* `LJS:236-241`.
+  - *Evidence:* `LJS:239-244`.
 - **BR-LND-022** · `CONFIRMED` — Dock visibility.
   - **Shown:** after the first-screen CTA has gone.
   - **Hidden:** on the «Как приложение» step, while the phone is full-screen (live), and when the final block shows.
   - **v2:** shown only once the hero button has scrolled away and the phone is not underneath.
-  - *Evidence:* `LJS:193-235`.
+  - *Evidence:* `LJS:196-238`.
 - **BR-LND-023** · `CONFIRMED` — Floating QR.
   - **Where:** only at `min-width: 1200px` with hover and a fine pointer, after the first scene.
   - **Morph:** expands when the final block is more than half visible and collapses when it has almost left (with
     hysteresis).
   - **Close:** hides it for the page view.
-  - *Evidence:* `LJS:245-330`.
+  - *Evidence:* `LJS:248-333`.
 
 ### 3.2 SEO pages and calculations — `BR-SEO`
 
@@ -1262,7 +1262,7 @@ already captured a rule, the matching `BR-API` item is named.
     the kh sound): `yunusobod`, `shayxontohur`, `chilonzor-19`, `qiyot`, `abdulla-qodiriy`, `toshkent-tumani`,
     `buyuk-ipak-yoli`.
   - **Mapping from data codes:** the landing data uses underscores (`mirzo_ulugbek`) where the slug has a hyphen
-    (`mirzo-ulugbek`) (`CONFIRMED`: `FIX/pins-rent.json` vs `IDX:384`).
+    (`mirzo-ulugbek`) (`CONFIRMED`: `FIX/pins-rent.json` vs `IDX:503`).
   - *Evidence:* `SEO:103-113`.
 - **BR-SEO-003** · `DOCUMENTED_ONLY` — Rooms slugs and ranges.
   - **Slugs:** `N-komnatnye` / `N-xonali` / `N-room`.
@@ -1543,7 +1543,7 @@ already captured a rule, the matching `BR-API` item is named.
       - `img/snap` photos.
   - **On `/uz/` and `/en/`:** `<base href="../">` hides the problem, but switching there still leaves uz-slug footer
     links under English labels.
-  - *Evidence:* `REC:81-84`; `LJS:2410-2454`; `IDX:367-408`.
+  - *Evidence:* `REC:81-84`; `LJS:2614-2661`; `IDX:503-503`.
   - **Proposed fix:**
     - Use root-relative or absolute URLs everywhere.
     - A language switch is a real navigation to the server-rendered `/`, `/uz/`, `/en/` (Next.js locale routes). Each
@@ -1557,7 +1557,7 @@ already captured a rule, the matching `BR-API` item is named.
     with an English locale gets English content on the ru URL, and `/?lang=uz` serves uz content under a canonical of
     `/`.
   - **Risk:** search engines see mixed-language duplicates of `/` and `/en/`.
-  - *Evidence:* `LJS:2328-2337`, `LJS:2374-2400`, `LJS:2477`; parity `browser-en`. *Check:* Q-LND-003.
+  - *Evidence:* `LJS:2527-2536`, `LJS:2578-2604`, `LJS:2684`; parity `browser-en`. *Check:* Q-LND-003.
   - **Proposed fix:**
     - Render `/` always in ru on the server.
     - Answer `/?lang=uz|en` with a `301` to `/uz/` or `/en/`, keeping the other parameters such as `s` and
@@ -1581,7 +1581,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **Effect:** after the 12 real districts, the row shows hundreds of buttons named `pt:41.2011:69.1883`. The point
     entries also bloat the file.
   - **Parity blind spot:** the parity tests compare identical behaviour on both sides, so they cannot catch this.
-  - *Evidence:* `LJS:2252-2299`, `LJS:2302-2306`, `LJS:1951-1953`; `FIX/pins-rent.json`.
+  - *Evidence:* `LJS:2267-2314`, `LJS:2317-2321`, `LJS:1955-1957`; `FIX/pins-rent.json`.
   - **Proposed fix:**
     - Split the contract into `district_medians` (district code, rooms, median, n) and `point_medians`, or drop point
       medians from the landing feed.
@@ -1593,7 +1593,7 @@ already captured a rule, the matching `BR-API` item is named.
     old and get no cache-busting.
   - **Dead data and stale comments:** `dots` (1 310 entries) is shipped and unused. HTML comments still point to
     `/api/landing/live` and `/api/landing/pins`.
-  - *Evidence:* `LJS:58-72`; `REC:68-70`; `IDX:67`, `IDX:195`, `IDX:295`, `IDX:340`; `FIX/pins-rent.json`.
+  - *Evidence:* `LJS:61-75`; `REC:68-70`; `IDX:62`, `IDX:282`, `IDX:375`, `IDX:416`; `FIX/pins-rent.json`.
   - **Proposed fix:** render the numbers server-side (ISR) from a data snapshot that carries `generated_at`. If client
     loading remains, version the URL with the snapshot hash and drop unused fields.
   - **URL/SEO impact:** none. Numbers become crawlable.
@@ -1606,7 +1606,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **Text mismatch:** the markup and the JS texts disagree. The markup has «Мы сравниваем с этой ценой каждую
     квартиру…» and «дешевле рынка»; JS has «сравниваем с похожими рядом и в районе…» and «дешевле обычной цены».
     Crawlers and no-JS users see the markup.
-  - *Evidence:* `IDX:300-309`, `IDX:214-217`, `IDX:165-166`; `LJS:2246-2250`; `LI18N pc.what`, `pc.weekRest`.
+  - *Evidence:* `IDX:379-388`, `IDX:298-300`, `IDX:157-158`; `LJS:2261-2265`; `LI18N pc.what`, `pc.weekRest`.
   - **Proposed fix:** server-render from the same snapshot. Hide numeric claims when data is missing, or label example
     content. Keep one source text per key.
   - **URL/SEO impact:** the indexed text becomes truthful and consistent.
@@ -1618,7 +1618,7 @@ already captured a rule, the matching `BR-API` item is named.
   3. Only `s` or `utm_source` survives; `utm_campaign` and `utm_medium` are dropped.
   4. `stats.js` silently truncates payloads to 49 characters.
 
-  *Evidence:* QR decode (LND-016); `FIX/live.json`; `LJS:26-37`; `STJ:18-21`.
+  *Evidence:* QR decode (LND-016); `FIX/live.json`; `LJS:26-40`; `STJ:18-21`.
   - **Proposed fix:**
     - Generate the QR with `?start=s_web_qr` (static), or render it per visit with the tagged link.
     - Add a short tag to `startapp` where it fits, e.g. `l_<id>-web-<tag>`. The Mini App parser must stay tolerant:
@@ -1631,7 +1631,7 @@ already captured a rule, the matching `BR-API` item is named.
     language.
   - **Home link:** uz/en home links go to `/?lang=<lang>`, which triggers LB-LND-002.
   - **Duplication:** the bot's `/privacy` text is a separate copy.
-  - *Evidence:* `PRV:1-30`, `PRV:150-177`.
+  - *Evidence:* `PRV:1-33`, `PRV:166-186`.
   - **Proposed fix:**
     - Serve `/privacy.html` (ru), `/uz/privacy.html` and `/en/privacy.html`, or locale routes with an `.html`-less
       alias, each server-rendered with hreflang.
@@ -1667,7 +1667,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **What:** `img/snap/<id>.webp` holds unsigned copies of channel photos (316 in the snapshot), outside the signed
     `/media` policy and outside the privacy promise («копии фото — до 30 дней», removal on takedown).
   - **Partial cover:** robots blocks them, but they stay publicly fetchable.
-  - *Evidence:* `FIX/pins-*.json`; `$KVADRO_ROOT/demo/landing/site/robots.txt:6-8`; `PRV:66`. Related: LB-API-054 in
+  - *Evidence:* `FIX/pins-*.json`; `$KVADRO_ROOT/demo/landing/site/robots.txt:6-8`; `PRV:72`. Related: LB-API-054 in
     `02-legacy-backend-audit.md`.
   - **Proposed fix:** serve landing photos through the media pipeline: signed or short-lived URLs, purged on takedown
     and withdrawal. Regenerate the snapshot without withdrawn listings.
@@ -1770,7 +1770,7 @@ already captured a rule, the matching `BR-API` item is named.
   - **Coverage:** on 2026-11-05 only 94 of about 450 site pages were indexed; 349 were «обнаружена, не
     проиндексирована».
   - **Thin pages:** they stay reachable as `200 noindex,follow`, and the interlinking may still point to them.
-  - *Evidence:* `IDX:379-380`; `SEO:123`, `SEO:144-145`. *Check:* Q-SEO-017.
+  - *Evidence:* `IDX:503-503`; `SEO:123`, `SEO:144-145`. *Check:* Q-SEO-017.
   - **Proposed fix:**
     - Review Search Console before cut-over.
     - Link only to indexable slices.

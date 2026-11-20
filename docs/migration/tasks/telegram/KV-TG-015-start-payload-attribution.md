@@ -18,7 +18,7 @@ malformed or unknown payloads included.
 
 - Payload table `04` §6.1: BOT-027 `s_web`, BOT-028 `s_web_<tag>`, BOT-029 `--v<visit>`, BOT-030 `s_seo[_<lang>][_<slice>]`,
   BOT-031 `s_<source>--l<id>` (hand-off message in KV-TG-016), BOT-032 `s_friend`, BOT-033 `l_<id>`, BOT-034 unknown.
-- Grammar CONFIRMED in client code: `$KVADRO_ROOT/demo/landing/site/landing.js:30-42`,
+- Grammar CONFIRMED in client code: `$KVADRO_ROOT/demo/landing/site/landing.js:30-45`,
   `$KVADRO_ROOT/demo/landing/site/stats.js:18-20`, `$KVADRO_ROOT/demo/app/src/features/onboarding/NoAccessScreen.jsx:26-27`,
   `:66`, `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:32-42`, `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:119`;
   SEO slices `$KVADRO_ROOT/docs/seo-pages.md` §9.

@@ -28,7 +28,7 @@ characters at generation time, with the attribution improvements of DEV-040 and 
   dropped silently; `--v` + visit if `^[a-z0-9]{10}$`; at most 59 characters; applied as
   `href.split("?")[0] + "?start=" + START`), BR-SEO-025 (CTA grammar and slice tags), BR-SEO-026 (card deep link and the
   Mini App parser regexes), BR-LND-017 (click targets in the live map).
-- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:26-44`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:2-54`.
+- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:26-47`; `$KVADRO_ROOT/demo/app/src/lib/telegram/startParam.js:2-54`.
 - Deviations: LB-LND-007 → DEV-040 (QR with `s_web_qr`, tags in `startapp`), LB-SEO-011 → DEV-049 (formal `s_seo`
   grammar).
 

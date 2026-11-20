@@ -30,7 +30,7 @@ sticky dock — with language switching as a real navigation (LB-LND-001 fix) an
   visibility), BR-LND-023 (floating QR).
 - Defects and deviations: LB-LND-001 (relative URLs break after a switch, fix `APPROVED`), LB-LND-003 (`APPROVED`),
   LB-LND-002 → DEV-038, LB-LND-007 → DEV-040 (QR payload), LB-LND-008 → DEV-041 (privacy link target).
-- Source: `$KVADRO_ROOT/demo/landing/site/index.html:50-63`, `:334-427`; `$KVADRO_ROOT/demo/landing/site/landing.js:193-330`,
+- Source: `$KVADRO_ROOT/demo/landing/site/index.html:47-60`, `:413-519`; `$KVADRO_ROOT/demo/landing/site/landing.js:196-333`,
   `:2321-2477`; parity scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`.
 - S1–S3: these URLs are served from the legacy files by nginx (infrastructure); this task is the S4 replacement.
 

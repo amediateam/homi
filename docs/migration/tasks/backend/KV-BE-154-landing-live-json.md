@@ -19,7 +19,7 @@ atomically to public storage and removed of any listing the moment it is withdra
 - RES-010 (`08` lines 1353-1369); landing contract `03b` §1.5 (lines 674-685); LND-032 (loader, `max-age=1800`,
   rewrite observed 02:02); ENT-054.
 - Fixture `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/live.json`; reader
-  `$KVADRO_ROOT/demo/landing/site/landing.js:58-72`, `:1112`, `:2098`, `:2161`, `:2225`;
+  `$KVADRO_ROOT/demo/landing/site/landing.js:61-75`, `:1115`, `:2102`, `:2165`, `:2229`;
   producer named in `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:60-61`, `:66-77` (`scripts/landing_snapshot.py`,
   `app/api/landing.py` — not available).
 - Rules: BR-API-133 (job, schedule, `max-age=1800`), BR-LND-007 (counter shows `day` if ≥ 100, else `week` if ≥ 100,

@@ -29,7 +29,7 @@ from the new Mini App components and catalogues instead of the generated `miniap
   LND-009 (demo finger ~5 s cycle; v2 tap cursor), LND-010 (`try` hint and `cue`), LND-011 (v1 lock-screen phase:
   `LOCK_SCENE` conditions, scene 9 200 px, `LOCK_DWELL` 250 px, up to 4 pushes at 12 % then every 17 %), LND-036.
 - Rules: BR-LND-013 (demo card formatting), BR-LND-014 (pushes), BR-LND-007 (counter in the left column).
-- Source: `$KVADRO_ROOT/demo/landing/site/index.html:65-189`; `$KVADRO_ROOT/demo/landing/site/landing.js:537-575`,
+- Source: `$KVADRO_ROOT/demo/landing/site/index.html:62-178`; `$KVADRO_ROOT/demo/landing/site/landing.js:540-578`,
   `:752-800`, `:1430-1530`, `:2145-2211`; parity scenarios `$KVADRO_ROOT/demo/landing/tools/parity/scenarios.mjs`.
 
 ## Implementation

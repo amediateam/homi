@@ -28,7 +28,7 @@ change.
   `APPROVED`), LB-LND-006 → DEV-039 (placeholder numbers), LB-LND-012 → DEV-012 (unsigned snapshots).
 - Rules: BR-LND-007 (counters), BR-LND-008 (savings), BR-LND-009 (weekly bargains), BR-LND-010…BR-LND-016 (consumers in
   KV-FE-111, KV-FE-112).
-- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:58-72`; fixtures
+- Source: `$KVADRO_ROOT/demo/landing/site/landing.js:61-75`; fixtures
   `$KVADRO_ROOT/demo/landing/tools/parity/fixtures/data/{live,pins-rent,pins-sale}.json` (prod snapshot of 2026-11-08,
   read for shapes only — no listing data is copied into the repository).
 
