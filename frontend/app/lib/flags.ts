@@ -15,6 +15,7 @@ export type DevFlagName =
   | "dev014TashkentDates"
   | "dev016ErrorToastOnFailure"
   | "dev016SuccessToastOnDestructive"
+  | "dev017PetsLongRentOnly"
   | "dev017TenantPetsDailyRule"
   | "dev018ResetKeepsDaily"
   | "dev019OneDistanceFormatter"
@@ -46,7 +47,9 @@ export const devFlags = {
   dev016ErrorToastOnFailure: true,
   /** DEV-016: the success toast of a destructive action, «Радар удалён» (legacy does not show it). */
   dev016SuccessToastOnDestructive: false,
-  /** DEV-017: one rule for tenant and pets on daily rent. */
+  /** DEV-017: the pets section only for long-term rent (legacy since `index-CIa0Ldj2.js`). */
+  dev017PetsLongRentOnly: true,
+  /** DEV-017: the tenant section hidden for daily rent too; it governs the tenant section only. */
   dev017TenantPetsDailyRule: false,
   /** DEV-018: «Сбросить» keeps daily rent. */
   dev018ResetKeepsDaily: false,

@@ -77,10 +77,32 @@ describe("KeyFacts (SCR-018 block 4)", () => {
     expect(document.querySelector('[data-fact="floor"] b')?.textContent).toBe("3");
   });
 
-  it("leaves unknown and zero values out", () => {
-    facts({ rooms: null, area_total: 0, floor: 0 });
+  it("leaves unknown and zero values out; only a floor of `null` leaves its tile out", () => {
+    facts({ rooms: null, area_total: 0, floor: null });
 
     expect(tiles().map(([fact]) => fact)).toEqual(["building"]);
+  });
+
+  it.each([
+    [0, 9, "ru", "Цокольный этаж"],
+    [0, null, "ru", "Цокольный этаж"],
+    [-1, 9, "ru", "Подвал"],
+    [-2, null, "uz", "Yertoʻla"],
+    [0, 9, "en", "Semi-basement floor"],
+  ] as const)("BR-APP-110: floor %s of %s is the word tile (%s) with an empty caption", (floor, floors_total, locale, word) => {
+    facts({ floor, floors_total }, { locale });
+
+    expect(document.querySelector('[data-fact="floor"] b')?.textContent).toBe(word);
+    expect(document.querySelector('[data-fact="floor"] span')?.textContent).toBe("");
+  });
+
+  it("a value wraps, hyphenated where it can, and is never cut off with an ellipsis", () => {
+    facts({ floor: 0 });
+
+    for (const value of document.querySelectorAll("[data-key-facts] b")) {
+      expect(value.className.split(" ")).toEqual(expect.arrayContaining(["break-words", "hyphens-auto"]));
+      expect(value.className.split(" ")).not.toContain("truncate");
+    }
   });
 
   it("nothing when all four are absent", () => {

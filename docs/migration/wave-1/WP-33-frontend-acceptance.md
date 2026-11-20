@@ -354,7 +354,7 @@ The numbers in the headings below are unchanged (*added by the intake of `index-
 | 3 | BR-APP-064 … BR-APP-066 | WP-22 | summary and title snapshots in three locales |
 | 4 | BR-APP-050 | WP-21 | `launch.spec.ts`, journey 1 |
 | 5 | BR-APP-054 … BR-APP-056, BR-APP-058 | WP-23 | `gates.spec.ts`, `shell.spec.ts`, nearest-city unit test |
-| 6 | BR-APP-024 … BR-APP-027, BR-APP-030, BR-APP-039, BR-APP-040, BR-APP-059 | WP-24 | `feed.spec.ts`; badge, verdict and photo unit tests; the badge kinds of BR-APP-026 in the badge and card tests (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 1)) |
+| 6 | BR-APP-024 … BR-APP-027, BR-APP-030, BR-APP-039, BR-APP-040, BR-APP-059 | WP-24 | `feed.spec.ts`; badge, verdict and photo unit tests; the badge kinds of BR-APP-026 in the badge and card tests (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `badges.ts` and `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 1); WP-35 closed it) |
 | 7 | BR-APP-057 | WP-25 | journey 2 |
 | 8 | BR-APP-028, BR-APP-032 … BR-APP-038, BR-APP-068, BR-APP-069 | WP-26 | the four listing specs, journey 4 |
 | 9 | BR-APP-062 | WP-27 | `map.spec.ts` |
@@ -546,7 +546,7 @@ ticked there and re-read here. Texts must be the legacy ones with HOMI in place 
 | 10 | SCR-010 | Pull-to-refresh | WP-23 | gesture on lists and the radar tab | arms at 72 px with a haptic; spinner at least 0.7 s; off on map, settings and under layers |
 | 11 | SCR-011 | Search map | WP-27 | `/map` | clusters, stacks, pins with tones; camera; the "N of M" note; locate ok, denied, failed; loading, empty and error states; both engines |
 | 12 | SCR-012 | Area drawing | WP-28 | `/map` with `draw=1` | hints; draw; too small; applied area and its pill; cancel, Back; hand-off from filters |
-| 13 | SCR-013 | Map selection card | WP-27 | pin tap on `/map` | single; stack with its counter; failed slot with retry; × and background close; the shield after the price for a verified owner (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2)) |
+| 13 | SCR-013 | Map selection card | WP-27 | pin tap on `/map` | single; stack with its counter; failed slot with retry; × and background close; the shield after the price for a verified owner (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ListingCard` for a later package (`wave-1/baseline.md`, built code behind the pin, row 2); WP-35 closed it) |
 | 14 | SCR-014 | Filters | WP-25 | `/filters` | every section with its visibility rule; live count and flow; relax chips; reset; «Показать N» and «Ничего нет»; radar button states; pets tip |
 | 15 | SCR-015 | Quick filter | WP-25 | `/filters/rooms`, `/price`, `/owner` | three bodies; own reset; live count |
 | 16 | SCR-016 | Sort | WP-25 | `/sort` | six options with their availability; a pick closes and scrolls up |

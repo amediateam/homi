@@ -567,6 +567,29 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(visible(page, "[data-retry]")).toHaveCount(0);
     });
 
+    test("the cards show the age computed from `posted.at` after hydration, and a new minute changes it (BR-APP-109)", async ({ page }) => {
+      // The device clock 5 min 20 s after the stub 100001 was posted (06:40 UTC); time flows on from there.
+      await page.clock.install({ time: new Date("2026-11-14T06:45:20Z") });
+      await open(page, mode);
+      const age = card(page, 100001).locator("[data-age]");
+      await expect(age).toHaveText("5 мин назад");
+      // Every card computes its own: none keeps the server's «сегодня» or «вчера».
+      await expect(cards(page).first()).toBeVisible();
+      await expect(visible(page, "[data-age]").filter({ hasText: /^(сегодня|вчера)$/ })).toHaveCount(0);
+      await expect(visible(page, "[data-age]").filter({ hasText: /^\d+ (мин|ч|дн\.) назад$/ }).first()).toBeVisible();
+
+      await page.clock.fastForward("01:00");
+      await expect(age).toHaveText("6 мин назад");
+    });
+
+    test("a ground floor reads «цокольный этаж» and a basement «подвал» on its card (BR-APP-110)", async ({ page }) => {
+      await open(page, mode, "/?city=tashkent_region");
+      await expect(card(page, 100022).locator("[data-facts]")).toContainText("· цокольный этаж");
+      await expect(card(page, 100022).locator("[data-facts]")).not.toContainText("/5");
+      await expect(card(page, 100023).locator("[data-facts]")).toContainText("· подвал");
+      await expect(card(page, 100023).locator("[data-facts]")).not.toContainText("/9");
+    });
+
     test("pull-to-refresh asks for page one again and starts the list from it", async ({ page }) => {
       await open(page, mode);
       await expect(cards(page)).toHaveCount(20);

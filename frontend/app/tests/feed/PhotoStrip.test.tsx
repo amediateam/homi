@@ -359,6 +359,31 @@ describe("Photo (BR-APP-059)", () => {
 
     expect(document.querySelector('[data-photo="placeholder"]')).not.toBeNull();
   });
+
+  it("a failed photo given a new address tries the new one (WP-35)", () => {
+    const { rerender } = render(<Photo src={PHOTOS[0]} sizes={PHOTO_SIZES} />);
+    fireEvent.error(document.querySelector("img")!);
+    expect(document.querySelector('[data-photo="placeholder"]')).not.toBeNull();
+
+    rerender(<Photo src={PHOTOS[1]} sizes={PHOTO_SIZES} />);
+
+    expect(document.querySelector('[data-photo="placeholder"]')).toBeNull();
+    expect(document.querySelector("img")?.getAttribute("src")).toBe(PHOTOS[1]);
+  });
+
+  it("a loaded photo given a new address fades in again once the new one loads; an eager one stays visible", () => {
+    const { rerender } = render(<Photo src={PHOTOS[0]} sizes={PHOTO_SIZES} />);
+    fireEvent.load(document.querySelector("img")!);
+    expect(document.querySelector("img")?.className).toContain("opacity-100");
+
+    rerender(<Photo src={PHOTOS[1]} sizes={PHOTO_SIZES} />);
+    expect(document.querySelector("img")?.className.split(" ")).not.toContain("opacity-100");
+    fireEvent.load(document.querySelector("img")!);
+    expect(document.querySelector("img")?.className).toContain("opacity-100");
+
+    rerender(<Photo src={PHOTOS[2]} sizes={PHOTO_SIZES} eager />);
+    expect(document.querySelector("img")?.className).toContain("opacity-100");
+  });
 });
 
 describe("Photo: the server render and hydration (BR-APP-059)", () => {

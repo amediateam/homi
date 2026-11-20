@@ -262,6 +262,29 @@ describe("FiltersForm: sections", () => {
       "furniture",
       "renovation",
       "floor",
+      "area",
+      "appliances",
+      "posted",
+    ]);
+  });
+
+  it("daily rent: the tenant section stays, the pets section goes (DEC-58), the area stays (DEC-62)", () => {
+    form({}, { deal: "rent_daily" });
+
+    expect(sectionNames()).toEqual([
+      "deal",
+      "city",
+      "housing",
+      "rentTerm",
+      "rooms",
+      "price",
+      "where",
+      "owner",
+      "tenant",
+      "furniture",
+      "renovation",
+      "floor",
+      "area",
       "appliances",
       "posted",
     ]);

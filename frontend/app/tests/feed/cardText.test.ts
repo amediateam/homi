@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ageText, factsLine, locationLine, priceKindLabel, priceLine } from "@/features/feed/cardText";
+import { ageLabel, ageText, factsLine, locationLine, priceKindLabel, priceLine } from "@/features/feed/cardText";
 
 import { previewOf, translator } from "../helpers/listing";
 
@@ -64,7 +64,19 @@ describe("the facts line", () => {
     expect(factsLine(previewOf({ ...base, floors_total: null }), "ru", tRu)).toBe("2-комн. квартира · 54 м² · 3 эт.");
     expect(factsLine(previewOf({ ...base, floors_total: null }), "uz", tUz)).toBe("2-комн. квартира · 54 m² · 3-qavat");
     expect(factsLine(previewOf({ ...base, area_total: null, floor: null }), "ru", tRu)).toBe("2-комн. квартира");
-    expect(factsLine(previewOf({ ...base, floor: 0, area_total: 0 }), "ru", tRu)).toBe("2-комн. квартира");
+    expect(factsLine(previewOf({ ...base, floor: null, area_total: 0 }), "ru", tRu)).toBe("2-комн. квартира");
+  });
+
+  it("BR-APP-110: floor 0 is «цокольный этаж» and a negative floor «подвал», without the total", () => {
+    expect(factsLine(previewOf({ ...base, floor: 0 }), "ru", tRu)).toBe("2-комн. квартира · 54 м² · цокольный этаж");
+    expect(factsLine(previewOf({ ...base, floor: -1 }), "ru", tRu)).toBe("2-комн. квартира · 54 м² · подвал");
+    expect(factsLine(previewOf({ ...base, floor: -2, floors_total: null }), "uz", tUz)).toBe("2-комн. квартира · 54 m² · yertoʻla");
+    expect(factsLine(previewOf({ ...base, floor: 0, floors_total: null }), "en", tEn)).toBe(
+      "2-комн. квартира · 54 m² · semi-basement floor",
+    );
+    expect(factsLine(previewOf({ ...base, floor: null }), "ru", tRu)).toBe("2-комн. квартира · 54 м²");
+    expect(factsLine(previewOf({ ...base, floor: 3 }), "ru", tRu)).toBe("2-комн. квартира · 54 м² · 3/9 эт.");
+    expect(factsLine(previewOf({ ...base, floor: 3, floors_total: null }), "ru", tRu)).toBe("2-комн. квартира · 54 м² · 3 эт.");
   });
 
   it("rounds the area", () => {
@@ -81,6 +93,49 @@ describe("the age", () => {
   it("falls back to posted.label without a when, and is null without either", () => {
     expect(ageText(previewOf({ posted: { label: "вчера", when: "", at: null } }))).toBe("вчера");
     expect(ageText(previewOf({ posted: { label: "", when: "", at: null } }))).toBeNull();
+  });
+});
+
+describe("BR-APP-109: the computed age", () => {
+  const AT = "2026-11-14T06:40:00+00:00";
+  const at = Date.parse(AT);
+  const posted = (value: string | null) => previewOf({ posted: { label: "Опубликовано", when: "сегодня", at: value } });
+  const after = (ms: number, t = tRu) => ageLabel(posted(AT), at + ms, t);
+  const MIN = 60_000;
+
+  it("reads the values of legacy's parity scenario feed-age: 20 s, 5 min, 3 h, 50 h", () => {
+    expect(after(20_000)).toBe("только что");
+    expect(after(5 * MIN)).toBe("5 мин назад");
+    expect(after(3 * 60 * MIN)).toBe("3 ч назад");
+    expect(after(50 * 60 * MIN)).toBe("2 дн. назад");
+  });
+
+  it("changes form at 1, 60 and 1 440 minutes, and has no week or month", () => {
+    expect(after(MIN - 1)).toBe("только что");
+    expect(after(MIN)).toBe("1 мин назад");
+    expect(after(59 * MIN)).toBe("59 мин назад");
+    expect(after(60 * MIN)).toBe("1 ч назад");
+    expect(after(1_439 * MIN)).toBe("23 ч назад");
+    expect(after(1_440 * MIN)).toBe("1 дн. назад");
+    expect(after(400 * 1_440 * MIN)).toBe("400 дн. назад");
+  });
+
+  it("is in the locale of `t`", () => {
+    expect(after(5 * MIN, tUz)).toBe("5 daqiqa oldin");
+    expect(after(5 * MIN, tEn)).toBe("5 min ago");
+    expect(after(50 * 60 * MIN, tEn)).toBe("2 d ago");
+  });
+
+  it("reads a `posted.at` in the future as «только что»", () => {
+    expect(after(-3 * 60 * MIN)).toBe("только что");
+  });
+
+  it("is the server's string without a parsable `at`, and while the clock is unknown (`now === null`)", () => {
+    expect(ageLabel(posted(null), at, tRu)).toBe("сегодня");
+    expect(ageLabel(posted(""), at, tRu)).toBe("сегодня");
+    expect(ageLabel(posted("вчера"), at, tRu)).toBe("сегодня");
+    expect(ageLabel(posted(AT), null, tRu)).toBe("сегодня");
+    expect(ageLabel(previewOf({ posted: { label: "", when: "", at: null } }), at, tRu)).toBeNull();
   });
 });
 

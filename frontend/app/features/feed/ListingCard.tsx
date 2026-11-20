@@ -2,7 +2,7 @@
 
 import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
-import { cn, Eye } from "@homi/ui";
+import { cn, Eye, ShieldCheck } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { memo } from "react";
 
@@ -11,8 +11,9 @@ import { setPreview } from "@/lib/data/previewCache";
 import { markSeen } from "@/lib/data/sessionMaps";
 import { routes } from "@/lib/navigation/routes";
 
-import { cardBadge } from "./badges";
-import { ageText, factsLine, locationLine, priceLine } from "./cardText";
+import { type BadgeTone, cardBadge } from "./badges";
+import { CardAge } from "./CardAge";
+import { factsLine, locationLine, priceLine } from "./cardText";
 import { FavButton } from "./FavButton";
 import { COMPACT_PHOTO_SIZES, PHOTO_SIZES } from "./images";
 import { PhotoStrip } from "./PhotoStrip";
@@ -25,7 +26,10 @@ export interface ListingCardProps {
   favorite?: boolean;
   /** The «viewed» eye (BR-APP-040): `seen` or the server's flag; history passes `false`. Never on a compact card. */
   viewed?: boolean;
-  /** One photo beside the text, the short verdict only; no badge, eye, dots or age (the map card, WP-27). */
+  /**
+   * One photo beside the text, the short verdict only; no badge, eye, dots or age, but a shield after the price for a
+   * verified owner (the map card, WP-27).
+   */
   compact?: boolean;
   /** The first photo loads at once with high priority (the first two cards of a list). */
   eager?: boolean;
@@ -41,12 +45,18 @@ export interface ListingCardProps {
 
 /**
  * The text over a photo: legacy's frosted light tag, which has no colour role. Lite graphics make it solid. The
- * pinned release draws only two kinds, `warn` and the plain one (`ListingCard.jsx`, no `.tag.good`), so «Ниже
- * рынка» is plain too.
+ * kinds of the pinned release (`listing-card.css`): `warn` orange, `verified` with a green shield, `quiet` grey and
+ * lighter; «Ниже рынка» is the plain tag (no `.tag.good`).
  */
 const TAG =
   "absolute left-[12px] z-2 rounded-pill bg-[#ffffffb8] px-[10px] py-[5px] text-[13px] font-semibold text-[#111] shadow-[0_1px_6px_#0000001f] backdrop-blur-[14px] backdrop-saturate-180 [html.lite_&]:bg-[#fff] [html.lite_&]:backdrop-filter-none";
 const TAG_WARN = "bg-[#fff4e6f5] text-[#9a4a00]";
+const TAG_TONE: Record<BadgeTone, string | undefined> = {
+  warn: TAG_WARN,
+  verified: "inline-flex items-center gap-[5px] pl-[8px]",
+  quiet: "font-medium text-[#4b4f57]",
+  plain: undefined,
+};
 
 /** The market chip (`03` §3.6 verdict tones); an unknown tone is drawn neutral (LB-APP-039). */
 const DELTA =
@@ -95,7 +105,6 @@ export const ListingCard = memo(function ListingCard({
   const price = priceLine(item, translate);
   const verdict = marketVerdict(item, locale, translate);
   const badge = compact ? null : cardBadge(item);
-  const age = compact ? null : ageText(item);
   const location = locationLine(item, locale, translate);
 
   const open = () => {
@@ -139,7 +148,10 @@ export const ListingCard = memo(function ListingCard({
             serverSmallOnly={serverSmallOnly}
           />
           {badge ? (
-            <span data-badge={badge.kind} className={cn(TAG, "top-[12px]", badge.tone === "warn" && TAG_WARN)}>
+            <span data-badge={badge.kind} data-badge-tone={badge.tone} className={cn(TAG, "top-[12px]", TAG_TONE[badge.tone])}>
+              {badge.tone === "verified" ? (
+                <ShieldCheck size={15} strokeWidth={2.4} aria-hidden className="flex-none text-[#16a34a]" />
+              ) : null}
               {t(badge.key)}
             </span>
           ) : null}
@@ -178,13 +190,24 @@ export const ListingCard = memo(function ListingCard({
                 {compact ? verdict.short : marketChipText(verdict, translate)}
               </span>
             ) : null}
+            {compact && item.owner_verified ? (
+              <span
+                role="img"
+                data-verified=""
+                aria-label={t("card.ownerVerified")}
+                title={t("card.ownerVerified")}
+                className="ml-[4px] inline-grid flex-none self-center text-good"
+              >
+                <ShieldCheck size={16} strokeWidth={2.4} aria-hidden />
+              </span>
+            ) : null}
           </div>
           <div
             data-facts=""
             className={cn("mt-[4px] flex items-baseline gap-[8px] font-medium", compact ? "text-[14px]" : "text-[15px]")}
           >
             <span className={cn("min-w-0 flex-1", compact && "line-clamp-2")}>{factsLine(item, locale, translate)}</span>
-            {age ? <span className="flex-none text-[13px] font-normal text-hint">{age}</span> : null}
+            {compact ? null : <CardAge item={item} />}
           </div>
           {location ? (
             <p data-location="" className={cn("truncate text-hint", compact ? "text-[13px]" : "text-[14px]")}>

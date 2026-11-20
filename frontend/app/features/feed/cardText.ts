@@ -49,8 +49,9 @@ export function priceLine(item: Pick<ListingPreview, "price">, t: Translate): Pr
 }
 
 /**
- * «title · {area} м² · {floor}/{total} эт. · market · 🐾 можно с животными»: each part only when known; area and
- * floor are left out at zero, as legacy.
+ * «title · {area} м² · {floor}/{total} эт. · market · 🐾 можно с животными»: each part only when known; the area is
+ * left out at zero, as legacy. Floor `0` reads «цокольный этаж» and a negative floor «подвал», both without the total
+ * (BR-APP-110, legacy since `index-CIa0Ldj2.js`); `null` leaves the floor out.
  */
 export function factsLine(
   item: Pick<ListingPreview, "title" | "area_total" | "floor" | "floors_total" | "market" | "pets_ok">,
@@ -61,7 +62,9 @@ export function factsLine(
   if (item.area_total) {
     parts.push(t("fmt.area", { area: formatNumber(item.area_total, locale) }));
   }
-  if (item.floor && item.floors_total) {
+  if (typeof item.floor === "number" && item.floor <= 0) {
+    parts.push(t(item.floor === 0 ? "fmt.floorGround" : "fmt.floorBasement"));
+  } else if (item.floor && item.floors_total) {
     parts.push(t("fmt.floorOf", { floor: String(item.floor), total: String(item.floors_total) }));
   } else if (item.floor) {
     parts.push(t("fmt.floor", { floor: String(item.floor) }));
@@ -76,11 +79,36 @@ export function factsLine(
 }
 
 /**
- * The age on the card: the part after « · » of the legacy string (BR-API-072), which the contract sends as
- * `posted.when`; `posted.label` only when `when` is empty (legacy showed the whole string without a separator).
+ * The server's age: the part after « · » of the legacy string (BR-API-072), which the contract sends as
+ * `posted.when`; `posted.label` only when `when` is empty (legacy showed the whole string without a separator). The
+ * listing's author section prints it, and the card while its own clock is unknown.
  */
 export function ageText(item: Pick<ListingPreview, "posted">): string | null {
   return item.posted.when || item.posted.label || null;
+}
+
+/**
+ * The age on a card and in a radar's strip (BR-APP-109, legacy `ageLabel` since `index-CIa0Ldj2.js`), computed from
+ * `posted.at` and the device clock `now` (LB-APP-083, kept): «только что» under a minute (a future `at` too),
+ * «N мин назад», «N ч назад», then «N дн. назад» without end. A missing or unparsable `at`, or `now === null` (the
+ * server and the hydration render), gives the server's `ageText`.
+ */
+export function ageLabel(item: Pick<ListingPreview, "posted">, now: number | null, t: Translate): string | null {
+  const at = item.posted.at ? Date.parse(item.posted.at) : Number.NaN;
+  if (now === null || Number.isNaN(at)) {
+    return ageText(item);
+  }
+  const minutes = Math.max(0, Math.floor((now - at) / 60_000));
+  if (minutes < 1) {
+    return t("card.ageNow");
+  }
+  if (minutes < 60) {
+    return t("card.ageMin", { n: minutes });
+  }
+  if (minutes < 1_440) {
+    return t("card.ageHours", { n: Math.floor(minutes / 60) });
+  }
+  return t("card.ageDays", { n: Math.floor(minutes / 1_440) });
 }
 
 /**

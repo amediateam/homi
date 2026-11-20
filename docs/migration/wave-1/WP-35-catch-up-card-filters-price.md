@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#93) |
 | Depends on | WP-34 (`lib/flags.ts` with the defaults of the pinned release) |
 | Size | about 420 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-006, SCR-007, SCR-013, SCR-018), §3.5 (price input), §3.6 (tokens), §4 (BR-APP-007, BR-APP-019, BR-APP-020, BR-APP-026, BR-APP-059, BR-APP-064, BR-APP-109, BR-APP-110), §5 (LB-APP-011, LB-APP-029), §5b (LB-APP-083); `02` (BR-API-195, BR-API-196); `09` §4.2 (DEV-017); `wave-1/baseline.md`, built code behind the pin, rows 1, 2, 11, 12, 20, 26, 31, 32, 38, 39, 40, 41, 42 |
@@ -136,23 +136,57 @@ The doc comment drops the D-SH-3 sentence and cites DEC-66.
 - Row 12: `frontend/packages/ui/src/components/Button.tsx:12`: the `primary` variant has opacity 0.5 when disabled
   (`03` §3.6); the other variants keep theirs.
 
+As built *(rule 6)*:
+
+- **The clock.** The store's snapshot is the minute read from the device clock itself (`currentMinute()`), not a
+  value that only the interval refreshes: React reads the snapshot before it subscribes, and the strip never
+  subscribes, so both get the minute of their render. The listeners hear of a new minute only; the first listener
+  records the minute it came in. The label is computed with the device clock at render (`clockNow()`, legacy
+  `ageLabel(item, Date.now())`); the minute only decides when the card's label renders again. `CardAge.tsx` holds
+  the hook `useAgeLabel(item, live)` beside the card's leaf `CardAge`; the strip renders its sub-line as a leaf of its
+  own (`SubLine` in `RadarStrip.tsx`) that calls the hook without `live`.
+- **The badge.** `CardBadge.kind` stays HOMI's name of the badge (`ownerVerified`, `owner`, …, the `data-badge`
+  attribute); the legacy kind is its `tone`, now `warn | verified | quiet | plain` (`plain` for «Ниже рынка», which
+  has no legacy kind), written as `data-badge-tone` (`data-tone` is the market chip's). The tag's shield is legacy's
+  fixed `#16a34a`; the compact card's is `--good`, as legacy's `.lc-verified`.
+- **The tab tint** is a rule of `styles/shell.css`, not a class of `TabBar.tsx`: `[data-tab]:not([aria-current])`
+  takes `color-mix(in srgb, var(--text) 55%, transparent)`, and `@supports not (color: color-mix(…))` gives the
+  text colour with opacity 0.55 (and 0.8 while pressed), as legacy's `chrome.css` and `fallbacks.css`.
+- **The button.** `primary` carries `disabled:opacity-50`; `cn` (tailwind-merge) drops the base `disabled:opacity-40`.
+- **The floor tile.** A tile's value used to be cut off with an ellipsis in its quarter of the row, which made
+  «Цокольный этаж» read «Цоко…» (and «Вторичка» was cut already). It now wraps, hyphenated where the browser can
+  (`break-words hyphens-auto`), as legacy's `.fact b` wraps. The columns stay equal: legacy's tiles have no padding,
+  and sizing HOMI's padded tiles by their longest word would push the row past a 375 px screen. A row with a ground
+  floor can therefore be three or four lines tall.
+- **The tab's transition** lists `color 0.2s` again, now that the tint is a colour (legacy `.tabbtn`).
+- **The collapsed title of daily rent** reads «Ташкент · Посуточно» and, with rooms, «Ташкент · Посуточно · 1-комн.»:
+  `filtersSummary` names the day rate right after the place.
+
 ## Files
 
 New, under `frontend/app/`: `features/feed/minuteClock.ts`, `features/feed/CardAge.tsx`,
-`tests/feed/minuteClock.test.ts`, `tests/feed/Photo.test.tsx`; `tests/listing/AuthorSection.test.tsx` (existing).
+`tests/feed/minuteClock.test.ts`. As built *(rule 6)*: the photo cases joined `Photo`'s own tests in
+`tests/feed/PhotoStrip.test.tsx` instead of a new `tests/feed/Photo.test.tsx`; `tests/listing/AuthorSection.test.tsx`
+existed and gained its case.
 
 Changed, under `frontend/app/`:
 
 - `features/feed/{cardText.ts,ListingCard.tsx,Photo.tsx,badges.ts}`, `features/radars/RadarStrip.tsx`,
   `features/listing/KeyFacts.tsx`, `features/shell/{MiniTitle.tsx,TabBar.tsx}`, `features/filters/RoomsPicker.tsx`,
-  `features/gallery/UiGallery.tsx`, `lib/flags.ts`, `lib/search/rules.ts`
-- tests: `tests/feed/{cardText,ListingCard,badges}.test.ts(x)`, `tests/listing/KeyFacts.test.tsx`,
-  `tests/radars/RadarSheet.test.tsx`, `tests/shell/{MiniTitle,TabBar}.test.tsx`, `tests/filters/RoomsPicker.test.tsx`
-- end to end: `e2e/feed.spec.ts`, `e2e/listing-open.spec.ts`, `e2e/filters.spec.ts`, `e2e/map.spec.ts`
+  `features/gallery/UiGallery.tsx`, `lib/flags.ts`, `lib/search/rules.ts`; as built also `styles/shell.css` (the tab
+  tint)
+- tests: `tests/feed/{cardText,ListingCard,badges,PhotoStrip}.test.ts(x)`, `tests/listing/{KeyFacts,AuthorSection}.test.tsx`,
+  `tests/radars/RadarSheet.test.tsx`, `tests/shell/{MiniTitle,TabBar}.test.tsx`, `tests/filters/RoomsPicker.test.tsx`;
+  as built also `tests/filters/{FiltersForm,PreferenceSections}.test.tsx` (the section order and visibility over both
+  rule keys), `tests/search/useSearchState.test.tsx` (`searchRules` maps the new key) and `tests/shell/facades.test.ts`
+  (20 flags, five on)
+- end to end: `e2e/feed.spec.ts`, `e2e/listing-open.spec.ts`, `e2e/filters.spec.ts`, `e2e/map.spec.ts`; as built
+  also `e2e/radars.spec.ts` (both radar sheets show «Площадь, м²»; it runs with radars on, so in CI)
 
 Changed in `frontend/packages/`: `search/src/{availability,rooms,types,defaults}.ts`,
-`search/tests/{availability,rooms}.test.ts`, `i18n/src/format/money.ts`, `i18n/tests/format/money.test.ts`,
-`ui/src/icons/index.ts`, `ui/src/components/Button.tsx`, `ui/tests/{controls,components}.test.tsx`.
+`search/tests/{availability,rooms,defaults,transitions}.test.ts`, `i18n/src/format/money.ts`,
+`i18n/tests/format/money.test.ts`, `ui/src/icons/index.ts`, `ui/src/components/Button.tsx`,
+`ui/tests/{controls,components}.test.tsx`.
 
 In `docs/migration/wave-1/baseline.md`, built code behind the pin: rows 1, 2, 11, 12, 20, 26, 31, 32 and 38 – 42 are
 marked closed.
@@ -231,17 +265,20 @@ Unit (Vitest):
 Component (Vitest + Testing Library):
 
 - `tests/feed/ListingCard.test.tsx`: the server render prints `posted.when`; after hydration the computed label;
-  a new minute changes the label and does not re-render the card (a render counter on the card's body); the
-  verified badge with its shield and the quiet owner badge; the compact card's shield for `owner_verified`.
+  a new minute changes the label and does not re-render the card (a render counter on the card's body; as built the
+  calls of `factsLine`, which runs once per render of the body); the verified badge with its shield and the quiet
+  owner badge; the compact card's shield for `owner_verified`.
 - `tests/feed/badges.test.ts`: the kind of each badge.
 - `tests/radars/RadarSheet.test.tsx`: the strip's label is computed at render and does not change with the minute.
 - `tests/listing/KeyFacts.test.tsx`: the two floor tiles with an empty caption; `null` leaves the tile out.
 - `tests/listing/AuthorSection.test.tsx`: the author's age is the server's `posted.when`, also with a `posted.at`.
-- `tests/feed/Photo.test.tsx`: a failed photo given a new `src` is no longer failed; a loaded one starts loading.
+- `tests/feed/Photo.test.tsx` (as built `tests/feed/PhotoStrip.test.tsx`, beside `Photo`'s other tests): a failed
+  photo given a new `src` is no longer failed; a loaded one starts loading.
 - `tests/shell/MiniTitle.test.tsx` (`:69-72`): «Ташкент · Посуточно»; the other deals unchanged.
 - `tests/filters/RoomsPicker.test.tsx`: «до 2» from a radar's filters highlights 1 and 2 and not «Любые».
 - `tests/shell/TabBar.test.tsx` and `frontend/packages/ui/tests/components.test.tsx`: the tint class of an inactive
-  tab; the disabled opacity of `primary`.
+  tab (as built: no `opacity-55`, and the rule and its fallback in `styles/shell.css`); the disabled opacity of
+  `primary`.
 
 End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 
@@ -284,4 +321,21 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 
 ## Handoff
 
-Empty.
+- **Done** on `wp-35-catch-up-card-filters-price` (from `main` = `5949365`, after #92) by the main session. Steps 1 –
+  7 as written; step 8's end-to-end cases in both session modes; the checklist on staging waits for the production
+  track.
+- **Departures recorded under rule 6** (in Design, Files and Tests above): the clock's snapshot read from the device
+  clock and the label computed at render; the badge's legacy kind as `tone` (`data-badge-tone`); the tab tint in
+  `styles/shell.css`; the photo cases in `PhotoStrip.test.tsx`; the radar sheets' area case in `radars.spec.ts`.
+- **Review.** One independent review subagent read `61fd4bf`. Its findings, fixed in `93cdf16`: the floor word was cut
+  off in its tile (now it wraps; the end-to-end case checks nothing is cut); the tab's tint no longer faded (the
+  transition lists the colour). Left as legacy: an address with `deal=rent_daily&pets=1` keeps `pets`, whose section
+  daily rent no longer shows; only «Сбросить» clears it, as in legacy.
+- **Checks.** `pnpm test` (every project): app 216 files, 3 553 tests passed after the review fixes; `pnpm -r lint` and `pnpm -r typecheck`
+  exit 0. Mutation checks: the card's age without `live`, the card's body following the clock, `Photo` without its
+  reset and `isRoomPicked` without the upper-bound rule each fail their new tests.
+- **Local end-to-end runs**, each spec alone (KI-32), cookie and header mode: `feed.spec.ts` 23, `listing-open.spec.ts`
+  18, `filters.spec.ts` 22, `map.spec.ts` 18 and `shell.spec.ts` 16 passed. `radars.spec.ts` cannot pass on this
+  machine, whose backend has radars off (AM-99, KI-65); its two new cases run in CI.
+- **Left for the production track:** the regular deploy, then the acceptance checklist inside Telegram on staging on
+  iOS, Android, Desktop and Web.

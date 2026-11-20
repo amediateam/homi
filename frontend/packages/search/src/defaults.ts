@@ -4,9 +4,10 @@ export const DEFAULT_CITY = "tashkent";
 export const DEFAULT_DEAL: Deal = "rent_long";
 export const DEFAULT_SORT: ListingSort = "new";
 
-/** Every flagged branch off: the legacy behaviour (DEC-36). */
+/** The behaviour of the pinned legacy release (DEC-58, amending DEC-36): only what legacy has adopted is on. */
 export const DEFAULT_RULES: SearchRules = Object.freeze({
   dev017TenantPetsDailyRule: false,
+  dev017PetsLongRentOnly: true,
   dev018ResetKeepsDaily: false,
   dev025ValidateRanges: false,
   dev052UnifiedBelowMedianRule: false,

@@ -65,6 +65,12 @@ describe("RoomsPicker (BR-APP-007)", () => {
     expect(range()).toEqual([null, null]);
   });
 
+  it("«до 2» from a radar's filters (only `rooms_max`) presses 1 and 2, not «Любые» (since index-CIa0Ldj2.js)", () => {
+    picker({ ...defaultFilters(), rooms_min: null, rooms_max: 2 });
+
+    expect(pressed()).toEqual(["1", "2"]);
+  });
+
   it("a tap on 2 picks 2–2; then 4 makes «2 and up»", () => {
     picker();
 

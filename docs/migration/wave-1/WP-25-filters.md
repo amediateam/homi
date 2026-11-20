@@ -44,7 +44,7 @@ filters button (WP-27); lasso drawing (WP-28); mounting the radar modes, the sub
 - Defects and flags (DEC-36): defects without a `DEV` row are fixed; the rest sit behind `devFlags`, all off — except,
   since the intake of `index-CIa0Ldj2.js`, the pets rule `dev017PetsLongRentOnly`, which legacy adopted and which is
   on by default (DEC-58; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` and
-  `lib/flags.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39)). The
+  `lib/flags.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39); WP-35 closed it). The
   rules are WP-22's; this package passes the flags into them and must show both branches in its tests. Wherever
   this text writes `devFlags` as an argument of a `@homi/search` function (`sectionsFor`, `belowMedianAvailable`,
   `resetAll`, `fixRanges`), the value passed is `searchRules(devFlags)` of WP-22 (`lib/search/rules.ts`): the
@@ -286,16 +286,16 @@ Header: × (aria `common.close`), title `sheet.title` «Фильтры», `sheet
 | 2 | City | more than one city (`CitySection` renders nothing with `cities.length <= 1`) | field `sheet.city` «Город» + city name (empty for an unknown code) + chevron; the heading is read, not shown | a tap plays a light impact and opens the nested picker (once: a tap while it is open or opening is ignored); the pick changes the draft only (BR-APP-009); the row's light impact is `CityList`'s |
 | 3 | Housing | always | `sheet.housing` «Жильё»; chips per deal: rent `type.apartment` «Квартира», `type.house` «Дом», `type.room` «Комната», `type.commercial` «Помещение»; daily without «Помещение»; sale «Квартира», «Дом», «Помещение», `type.land` «Участок» | multi-select; the last selected type cannot be removed; `below_median` survives only for exactly `['apartment']` (BR-APP-005) |
 | 4 | Rent term | base deal is rent and (daily is selected or the city has daily listings) (BR-APP-004) | `sheet.rentTerm` «Срок аренды»; `rent.long` «Надолго» / `deal.rent_daily` «Посуточно» | `switchRentTerm`: keeps allowed types (else `['apartment']`), clears `price_min`, `price_max`, `below_median`; to daily also `tenant`, `pets`, `pets_only` (BR-APP-003) |
-| 5 | Rooms | not every selected type is room, commercial or land (BR-APP-006) | `sheet.rooms` «Комнаты» + muted `sheet.roomsHint` «— два числа задают диапазон»; `sheet.roomsAny` «Любые», «1», «2», «3», «4+» | `pickRooms` (BR-APP-007): one tap picks a value; a second tap on another value makes a range; «4+» means no upper bound; «Любые» clears; light haptic. A range with only an upper bound, «до N» — it comes from a radar or the bot, not from this picker — highlights 1 … N, and «Любые» is pressed only when both bounds are `null` (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `rooms.ts` and `RoomsPicker` for a later package (`wave-1/baseline.md`, built code behind the pin, row 40)) |
+| 5 | Rooms | not every selected type is room, commercial or land (BR-APP-006) | `sheet.rooms` «Комнаты» + muted `sheet.roomsHint` «— два числа задают диапазон»; `sheet.roomsAny` «Любые», «1», «2», «3», «4+» | `pickRooms` (BR-APP-007): one tap picks a value; a second tap on another value makes a range; «4+» means no upper bound; «Любые» clears; light haptic. A range with only an upper bound, «до N» — it comes from a radar or the bot, not from this picker — highlights 1 … N, and «Любые» is pressed only when both bounds are `null` (legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `rooms.ts` and `RoomsPicker` for a later package (`wave-1/baseline.md`, built code behind the pin, row 40); WP-35 closed it) |
 | 6 | Price | always | title `sheet.priceMonth` «Цена в месяц, {cur}» / `sheet.priceDay` «Цена за сутки, {cur}» / `sheet.price` «Цена, {cur}» with `{cur}` = «$» or `money.unitMln` «млн сум»; inputs `sheet.from` «от», `sheet.to` «до», placeholders «0» and `sheet.anyPrice` «любая»; chips `sheet.upto` «до {amount}»; hint `sheet.unitPriceHint` «Цена за сотку или м² — умножаем на площадь из объявления»; typical line `sheet.typicalRent` «{city}: половина квартир — до {price} в месяц» / `sheet.typicalDaily` / `sheet.typicalSale`; chip `sheet.belowMedian` «📊 Не дороже рынка» with hint `sheet.belowMedianHintRent` / `sheet.belowMedianHintSale` while on | see "Price section" below |
 | 7 | Where | always (rows as below) | `sheet.where` «Где искать»; `sheet.drawArea` «Обвести на карте» / `sheet.drawAreaOn` «Своя область на карте»; `sheet.zone.center` «🏛 Центр», `sheet.zone.near_center` «🏙 Ближе к центру»; `sheet.nearMetro` «🚇 Рядом с метро»; caption `sheet.orDistricts` «Или районы:» / `sheet.districts` «Районы:» / `sheet.districtsRegion` «Районы области (необязательно):»; district chips with server names | see "Where section" below |
 | 8 | Who posts | always | `sheet.who` «Кто размещает»; segmented `owner.any` «Все» / `owner.no_agents` «Без риелторов» / `owner.owners` «Только хозяева» | sets `owner` |
 | 9 | Tenant | base deal is rent, daily included (BR-APP-019); `dev017TenantPetsDailyRule`, off, governs this section alone since the pets rule has its own key (row 10) | `sheet.tenant` «Кто будет жить»; `tenant.family` «Семья», `tenant.men` «Парни», `tenant.women` «Девушки» | single choice; tapping the selected chip clears it |
-| 10 | Pets | long-term rent only: the rule key `dev017PetsLongRentOnly`, on by default since the intake of `index-CIa0Ldj2.js` (DEC-58; legacy shows the section only for long-term rent since that release). With the key off: base deal is rent, daily included, as legacy up to `index-CBlEKxdL.js` (BR-APP-019; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39)) | `sheet.petsTitle` «Животные» + pill `sheet.new` «Новое»; segmented `sheet.any` «Не важно» / `sheet.pets` «Не запрещены» / `sheet.petsOnly` «Разрешены»; the section is marked `data-focus="pets"` | «Не важно» `{ pets: false, pets_only: false }`, «Не запрещены» `{ pets: true, pets_only: false }`, «Разрешены» `{ pets: false, pets_only: true }`; any tap sets `homi-new-pets` (the segmented control ignores a tap on the selected option, so an `onClick` on its root marks it, `onValueChange` covers the keyboard); a new non-neutral choice shows a tip toast inside the sheet: `sheet.petsTip` «🐾 Скроем объявления, где животных прямо запрещают. Где разрешают — покажем первыми.» or `sheet.petsOnlyTip` «🐾 Покажем только объявления, где прямо написано «можно с животными». Таких пока немного.»; «Не важно» clears the tip |
+| 10 | Pets | long-term rent only: the rule key `dev017PetsLongRentOnly`, on by default since the intake of `index-CIa0Ldj2.js` (DEC-58; legacy shows the section only for long-term rent since that release). With the key off: base deal is rent, daily included, as legacy up to `index-CBlEKxdL.js` (BR-APP-019; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39); WP-35 closed it) | `sheet.petsTitle` «Животные» + pill `sheet.new` «Новое»; segmented `sheet.any` «Не важно» / `sheet.pets` «Не запрещены» / `sheet.petsOnly` «Разрешены»; the section is marked `data-focus="pets"` | «Не важно» `{ pets: false, pets_only: false }`, «Не запрещены» `{ pets: true, pets_only: false }`, «Разрешены» `{ pets: false, pets_only: true }`; any tap sets `homi-new-pets` (the segmented control ignores a tap on the selected option, so an `onClick` on its root marks it, `onValueChange` covers the keyboard); a new non-neutral choice shows a tip toast inside the sheet: `sheet.petsTip` «🐾 Скроем объявления, где животных прямо запрещают. Где разрешают — покажем первыми.» or `sheet.petsOnlyTip` «🐾 Покажем только объявления, где прямо написано «можно с животными». Таких пока немного.»; «Не важно» clears the tip |
 | 11 | Furniture | always | `sheet.furniture` «Мебель»; segmented `sheet.any` «Не важно» / `sheet.furnished` «С мебелью» / `sheet.unfurnished` «Без мебели» | `furnished` = `null` / `true` / `false` |
 | 12 | Renovation | always | `sheet.renovation` «Ремонт»; chips from `renovations[deal]` of the reference data for the draft's deal (server names) | multi-select |
 | 13 | Floor | always | `sheet.floor` «Этаж»; `sheet.notFirst` «Не первый», `sheet.notLast` «Не последний» | two independent toggles |
-| 14 | Area and market | area: every deal (DEC-62; legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 38)); market: sale only (BR-APP-020) | `sheet.area` «Площадь, м²» with `sheet.from` / `sheet.to`, placeholders «0» and `sheet.anyArea` «любая»; `sheet.market._` «Дом»: `sheet.any` / `sheet.market.new` «Новостройка» / `sheet.market.secondary` «Вторичка» | `IntInput`: non-digits stripped, 0 → no filter, capped at 10 000 |
+| 14 | Area and market | area: every deal (DEC-62; legacy since `index-CIa0Ldj2.js`; *added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 38); WP-35 closed it); market: sale only (BR-APP-020) | `sheet.area` «Площадь, м²» with `sheet.from` / `sheet.to`, placeholders «0» and `sheet.anyArea` «любая»; `sheet.market._` «Дом»: `sheet.any` / `sheet.market.new` «Новостройка» / `sheet.market.secondary` «Вторичка» | `IntInput`: non-digits stripped, 0 → no filter, capped at 10 000 |
 | 15 | Appliances | rent only, daily included (BR-APP-020) | `sheet.appliances` «Техника»; chips from the reference list (server names): one list for every deal (`ReferenceResource.appliances`) | multi-select |
 | 16 | Posted | search mode only (BR-APP-021) | `sheet.posted._` «Опубликовано»; `sheet.posted.1` «За сутки», `sheet.posted.3` «За 3 дня», `sheet.posted.7` «За неделю»; hint `sheet.postedHint` «Только для ленты: в чат и так приходят лишь новые.» while a value is set | single choice; tapping the selected chip clears it |
 
@@ -306,9 +306,9 @@ Price section (also the body of the price quick sheet):
   decimal mark). `inputMode` is `decimal` for UZS and `numeric` for USD; `enterKeyHint="done"`. Since legacy release
   `index-CIa0Ldj2.js` (`03` §3.5) a `$` typed or pasted with the amount is accepted in dollars — «$1 200» is 1200
   (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `money.ts` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 41)) —, and the сум field shows its value without a thousands
+  (`wave-1/baseline.md`, built code behind the pin, row 41); WP-35 closed it) —, and the сум field shows its value without a thousands
   separator (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `money.ts` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 42)).
+  (`wave-1/baseline.md`, built code behind the pin, row 42); WP-35 closed it).
 - The field keeps the typed text and re-syncs only when the outside value no longer equals the parsed text. Text that
   does not parse means "no filter"; the text stays as typed.
 - Presets (BR-APP-014, BR-APP-015): `presetSource(deal, stats, reference.price_presets)` of `@homi/search` picks the
@@ -358,7 +358,7 @@ on, the pets section shows only when `deal === "rent_long"`; off, for both rents
 `dev017TenantPetsDailyRule` stays off and governs the tenant section only, which legacy still shows for both rents.
 Both keys keep both branches tested (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `availability.ts`,
 `lib/search/rules.ts` and `lib/flags.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row
-39)).
+39); WP-35 closed it).
 
 Reset (BR-APP-022, LB-APP-030): «Сбросить» calls `replace(resetAll(draft, draft.city, rules))`. Flag
 `dev018ResetKeepsDaily` off: defaults of the base deal and the current city, so daily rent becomes long-term rent.
@@ -639,12 +639,12 @@ Full filters sheet:
 - [ ] Rooms: single value, range by a second tap, «4+», «Любые»; hidden for room, commercial or land only.
 - [ ] Rooms «до 2» that came from a radar highlights 1 and 2, and «Любые» is not pressed (*added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `rooms.ts` and `RoomsPicker` for a later package (`wave-1/baseline.md`,
-      built code behind the pin, row 40)).
+      built code behind the pin, row 40); WP-35 closed it).
 - [ ] Price title follows deal and currency; inputs accept `1,2` and `1.000.000` in UZS; preset chip sets the upper
       bound, clears the lower one, and toggles off on a second tap.
 - [ ] «$1 200» typed into the dollar field is 1200; a сум value of 1 500 млн shows without a thousands separator and
       parses back (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `money.ts` for a later package
-      (`wave-1/baseline.md`, built code behind the pin, row 41 and row 42)).
+      (`wave-1/baseline.md`, built code behind the pin, row 41 and row 42); WP-35 closed it).
 - [ ] Unit hint appears for sale with land or house; the typical line appears only for apartment-only searches.
 - [ ] «Не дороже рынка» is absent for daily rent, for mixed types and in a city without medians; turning it on shows
       the rent or the sale hint.
@@ -661,13 +661,13 @@ Full filters sheet:
       the flag on follows `sectionsFor`. As built the same flag also governs pets.
 - [ ] «Животные» is visible only for long-term rent (`dev017PetsLongRentOnly`, on by default, DEC-58). Test: the key
       off shows it for daily rent too (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of
-      `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39)).
+      `availability.ts` for a later package (`wave-1/baseline.md`, built code behind the pin, row 39); WP-35 closed it).
 - [ ] Pets: pill «Новое» until the first tap, gone after relaunch; each new non-neutral choice shows its tip inside
       the sheet for 4 s.
 - [ ] Every deal shows area (DEC-62); sale also shows market and no appliances; rent and daily show appliances; area
       accepts digits only, 0 means empty, maximum 10 000 (the area for rent and daily rent: *added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `availability.ts` for a later package (`wave-1/baseline.md`, built code
-      behind the pin, row 38)).
+      behind the pin, row 38); WP-35 closed it).
 - [ ] «Опубликовано» exists only in search mode; a choice shows the hint; a second tap clears it.
 - [ ] «Сбросить» returns the defaults of the base deal and current city; from daily rent it lands on long-term rent
       (flag off). Test: `dev018ResetKeepsDaily` on keeps daily.

@@ -24,10 +24,14 @@ export function pickRooms(filters: SearchFilters, rooms: number | null): SearchF
   return normalizeFilters({ ...filters, rooms_min: rooms, rooms_max: rooms >= OPEN_FROM ? null : rooms });
 }
 
-/** The room button `rooms` lies inside the picked range. */
+/**
+ * The room button `rooms` lies inside the picked range. Only an upper bound («до N», a radar's or a flow option's
+ * filters) counts from 1 (BR-APP-007, legacy since `index-CIa0Ldj2.js`).
+ */
 export function isRoomPicked(filters: Pick<SearchFilters, "rooms_min" | "rooms_max">, rooms: number): boolean {
-  if (filters.rooms_min === null) {
+  const min = filters.rooms_min ?? (filters.rooms_max !== null ? 1 : null);
+  if (min === null) {
     return false;
   }
-  return rooms >= filters.rooms_min && rooms <= (filters.rooms_max ?? Number.POSITIVE_INFINITY);
+  return rooms >= min && rooms <= (filters.rooms_max ?? Number.POSITIVE_INFINITY);
 }

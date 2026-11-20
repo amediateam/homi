@@ -1,6 +1,6 @@
 import type { Locale } from "@homi/config";
 import { getMessages } from "@homi/i18n";
-import { fakeTelegram, type FakeTelegram } from "@homi/testing";
+import { fakeTelegram, type FakeTelegram, freezeClock } from "@homi/testing";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { type ComponentProps, type ReactNode, useState } from "react";
@@ -96,6 +96,17 @@ describe("AuthorSection (03 SCR-018, block 10; DEC-52)", () => {
     expect(root.querySelector("h2")?.textContent).toBe("Кто размещает");
     expect(root.textContent).toContain("Хозяин");
     expect(text("[data-offer]")).toBe("Торг");
+    expect(text("[data-published]")).toBe("Опубликовано сегодня");
+  });
+
+  it("keeps the server's string with a `posted.at`: the author section has no computed age (WP-35)", () => {
+    const restore = freezeClock("2026-11-14T06:45:00Z");
+    try {
+      author({ posted: { label: "Опубликовано", when: "сегодня", at: "2026-11-14T06:40:00+00:00" } });
+    } finally {
+      restore();
+    }
+
     expect(text("[data-published]")).toBe("Опубликовано сегодня");
   });
 

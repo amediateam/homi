@@ -211,11 +211,13 @@ describe("searchRules (WP-22)", () => {
   it("is the one place where app flags become the rules of @homi/search", () => {
     expect(searchRules(devFlags)).toEqual({
       dev017TenantPetsDailyRule: false,
+      dev017PetsLongRentOnly: true,
       dev018ResetKeepsDaily: false,
       dev025ValidateRanges: false,
       dev052UnifiedBelowMedianRule: false,
       dev005RadarDropsPostedDays: false,
     });
     expect(searchRules({ ...devFlags, dev018ResetKeepsDaily: true }).dev018ResetKeepsDaily).toBe(true);
+    expect(searchRules({ ...devFlags, dev017PetsLongRentOnly: false }).dev017PetsLongRentOnly).toBe(false);
   });
 });

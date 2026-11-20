@@ -56,6 +56,7 @@ export {
   Send,
   Settings,
   Share,
+  ShieldCheck,
   ShoppingBag,
   Signpost,
   SlidersHorizontal,

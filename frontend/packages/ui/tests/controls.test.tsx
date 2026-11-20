@@ -270,6 +270,7 @@ describe("icons", () => {
       "RotateCw",
       "Search",
       "Settings",
+      "ShieldCheck",
       "ShoppingBag",
       "Signpost",
       "SlidersHorizontal",

@@ -651,7 +651,7 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
   front: «… · Посуточно» (legacy since `index-CIa0Ldj2.js`, `03` BR-APP-064). DEC-66 amends D-SH-3 for it: as built,
   daily rent reads «Аренда · … · Посуточно», chosen when legacy printed «Посуточно» twice (`t('deal.'+deal)` plus the
   summary) (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package
-  (`wave-1/baseline.md`, built code behind the pin, row 32)). Before the reference data it is the deal alone.
+  (`wave-1/baseline.md`, built code behind the pin, row 32); WP-35 closed it). Before the reference data it is the deal alone.
 - Before reference data arrives: deal tabs render, nothing city-dependent does, no `undefined` text.
 - Layout: one phone column, content limited to 608 px, no width breakpoints; paddings from `--top-inset`,
   `--bottom-inset`, `--tabbar-h`; `html.fullscreen` puts the mini title into Telegram's header row; `html.lite`
@@ -814,7 +814,7 @@ Component (Vitest + Testing Library):
   the intake of `index-CIa0Ldj2.js`*; a parity item of `TopBar` for a later package (`wave-1/baseline.md`, built code
   behind the pin, row 13)). `MiniTitle`: daily rent prints the summary alone (*added by the intake of
   `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package (`wave-1/baseline.md`, built code behind the
-  pin, row 32)).
+  pin, row 32); WP-35 closed it).
 - `useMiniChrome`: 24 px hysteresis, 60 px top zone, `expandChrome()` result, cleanup removes the class.
 - `PullToRefresh`: no start at `scrollY > 0`; no start with each body class; one haptic at 72 px; 700 ms minimum
   with a resolved promise; no handler → no listeners; off on `/map`, `/settings` and with a layer parameter.
@@ -939,7 +939,7 @@ Shell
       (`wave-1/baseline.md`, built code behind the pin, row 13)).
 - [ ] The collapsed title of daily rent has no «Аренда» in front (DEC-66; *added by the intake of
       `index-CIa0Ldj2.js`*; a parity item of `MiniTitle` for a later package (`wave-1/baseline.md`, built code behind
-      the pin, row 32)).
+      the pin, row 32); WP-35 closed it).
 - [ ] «Карта» / «Список» switch the view and keep the filters; the button is hidden while drawing.
 - [ ] Scrolling the list down collapses the chrome to the one-line title; scrolling up or reaching the top
       expands it; the first tap on a collapsed tab bar, toggle or title only expands.

@@ -42,7 +42,8 @@ const TABS: readonly { key: ShellTab; label: MessageKey; Icon: LucideIcon; href:
 
 /**
  * The tab bar (WP-23, SCR-006, legacy `nav.tabbar.glass`): four tabs with their icons at 24 px over a glass pill, the
- * lens under the active one placed by `--tab` (its index; `styles/shell.css` moves it). A press on collapsed chrome
+ * lens under the active one placed by `--tab` (its index; `styles/shell.css` moves it and tints an inactive tab with
+ * the text colour at 55 %). A press on collapsed chrome
  * only expands it (`expandChrome`). Otherwise a press is a light impact (TMA-025), a replace to the tab's address that
  * clears the history stack (`nav.tab`) — search returns to the last list or map with its filters, saved to the last of
  * favourites and history — and a scroll to the top; on the active tab it only scrolls. The replace is a transition
@@ -112,7 +113,7 @@ export function TabBar({ active }: { active: ShellTab }) {
               onClick={() => press(key, href)}
               className={cn(
                 "relative z-1 flex min-w-0 flex-col items-center justify-center gap-px text-[11px] text-text active:scale-92",
-                current ? "font-bold" : "font-semibold opacity-55 active:opacity-80",
+                current ? "font-bold" : "font-semibold active:opacity-80",
               )}
             >
               <Icon size={24} strokeWidth={current ? 2.2 : 1.7} />

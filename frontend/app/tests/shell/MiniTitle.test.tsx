@@ -66,9 +66,18 @@ describe("MiniTitle (SCR-006, BR-APP-064)", () => {
     expect(title().textContent).toBe("Аренда · Ташкент · Юнусабад · 2-комн. · от хозяев");
   });
 
-  it("daily rent reads as rent, the summary names the day rate once", () => {
+  it.each([
+    ["city=tashkent&deal=rent_daily", "Ташкент · Посуточно"],
+    ["city=tashkent&deal=rent_daily&rooms_min=1&rooms_max=1", "Ташкент · Посуточно · 1-комн."],
+  ])("daily rent prints the summary alone, which names the day rate (DEC-66): %s", (search, expected) => {
+    state.search = search;
+    expect(title().textContent).toBe(expected);
+  });
+
+  it("daily rent before the reference data arrives is the base deal alone", () => {
+    state.loaded = false;
     state.search = "city=tashkent&deal=rent_daily";
-    expect(title().textContent).toBe("Аренда · Ташкент · Посуточно");
+    expect(title().textContent).toBe("Аренда");
   });
 
   it.each([

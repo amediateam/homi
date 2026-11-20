@@ -6,6 +6,7 @@ import { type DevFlags, devFlags } from "@/lib/flags";
 export function searchRules(flags: DevFlags = devFlags): SearchRules {
   return {
     dev017TenantPetsDailyRule: flags.dev017TenantPetsDailyRule,
+    dev017PetsLongRentOnly: flags.dev017PetsLongRentOnly,
     dev018ResetKeepsDaily: flags.dev018ResetKeepsDaily,
     dev025ValidateRanges: flags.dev025ValidateRanges,
     dev052UnifiedBelowMedianRule: flags.dev052UnifiedBelowMedianRule,

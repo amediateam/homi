@@ -95,41 +95,43 @@ afterEach(() => {
 
 describe("visibility of sections 9–16 per deal and mode (sectionsFor, BR-APP-019 … BR-APP-021)", () => {
   type Visible = Pick<ReturnType<typeof sectionsFor>, "tenant" | "pets" | "area" | "market" | "appliances">;
-  const expected = (dev017: boolean): Record<(typeof DEALS)[number], Visible> => ({
-    rent_long: { tenant: true, pets: true, area: false, market: false, appliances: true },
-    rent_daily: { tenant: !dev017, pets: !dev017, area: false, market: false, appliances: true },
+  const expected = (petsLongOnly: boolean, tenantDaily: boolean): Record<(typeof DEALS)[number], Visible> => ({
+    rent_long: { tenant: true, pets: true, area: true, market: false, appliances: true },
+    rent_daily: { tenant: !tenantDaily, pets: !petsLongOnly, area: true, market: false, appliances: true },
     sale: { tenant: false, pets: false, area: true, market: true, appliances: false },
   });
 
-  for (const dev017 of [false, true]) {
-    for (const deal of DEALS) {
-      for (const mode of MODES) {
-        it(`${deal}, ${mode}, dev017TenantPetsDailyRule ${dev017 ? "on" : "off"}`, () => {
-          const sections = sectionsFor(
-            defaultFilters(deal, "tashkent"),
-            CITY,
-            mode,
-            resolveRules({ dev017TenantPetsDailyRule: dev017 }),
-          );
+  for (const petsLongOnly of [true, false]) {
+    for (const tenantDaily of [false, true]) {
+      for (const deal of DEALS) {
+        for (const mode of MODES) {
+          it(`${deal}, ${mode}, dev017PetsLongRentOnly ${petsLongOnly ? "on" : "off"}, dev017TenantPetsDailyRule ${tenantDaily ? "on" : "off"}`, () => {
+            const sections = sectionsFor(
+              defaultFilters(deal, "tashkent"),
+              CITY,
+              mode,
+              resolveRules({ dev017PetsLongRentOnly: petsLongOnly, dev017TenantPetsDailyRule: tenantDaily }),
+            );
 
-          expect({
-            tenant: sections.tenant,
-            pets: sections.pets,
-            area: sections.area,
-            market: sections.market,
-            appliances: sections.appliances,
-          }).toEqual(expected(dev017)[deal]);
-          expect(sections.posted).toBe(mode === "search");
-        });
+            expect({
+              tenant: sections.tenant,
+              pets: sections.pets,
+              area: sections.area,
+              market: sections.market,
+              appliances: sections.appliances,
+            }).toEqual(expected(petsLongOnly, tenantDaily)[deal]);
+            expect(sections.posted).toBe(mode === "search");
+          });
+        }
       }
     }
   }
 
-  it("flag off: tenant and pets stay offered for daily rent although the term switch cleared them (LB-APP-029)", () => {
+  it("default rules: the tenant section stays offered for daily rent although the term switch cleared it, the pets one goes (LB-APP-029, DEC-58)", () => {
     const daily = switchRentTerm(normalizeFilters({ ...defaultFilters(), tenant: "family", pets_only: true }), "rent_daily");
 
     expect(daily).toMatchObject({ tenant: null, pets: false, pets_only: false });
-    expect(sectionsFor(daily, CITY, "search", DEFAULT_RULES)).toMatchObject({ tenant: true, pets: true });
+    expect(sectionsFor(daily, CITY, "search", DEFAULT_RULES)).toMatchObject({ tenant: true, pets: false });
   });
 });
 

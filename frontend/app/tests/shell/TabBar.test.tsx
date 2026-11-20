@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { Locale } from "@homi/config";
 import { getMessages, type Messages } from "@homi/i18n";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
@@ -65,6 +69,20 @@ describe("TabBar (SCR-006)", () => {
     expect(button("search").hasAttribute("aria-current")).toBe(false);
     expect(nav.style.getPropertyValue("--tab")).toBe("2");
     expect(button("radars").querySelector("svg")?.getAttribute("width")).toBe("24");
+  });
+
+  it("tints an inactive tab with the text colour at 55 %, opacity 0.55 only without color-mix() (SCR-006, §3.6)", () => {
+    renderBar("radars");
+
+    expect(button("search").className.split(" ")).not.toContain("opacity-55");
+    expect(button("search").className.split(" ")).toContain("active:opacity-80");
+    const shell = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../styles/shell.css"), "utf8");
+    expect(shell).toMatch(/\[data-tab\]:not\(\[aria-current\]\) \{\s*color: color-mix\(in srgb, var\(--text\) 55%, transparent\);\s*\}/);
+    expect(shell).toMatch(
+      /@supports not \(color: color-mix\(in srgb, red 50%, blue\)\) \{\s*\[data-tab\]:not\(\[aria-current\]\) \{\s*color: var\(--text\);\s*opacity: 0\.55;\s*\}\s*\[data-tab\]:not\(\[aria-current\]\):active \{\s*opacity: 0\.8;/,
+    );
+    // The tint fades on a tab switch, as legacy's `transition: color 0.2s`.
+    expect(shell).toMatch(/\[data-tab\] \{\s*transition:\s*color 0\.2s,/);
   });
 
   it.each<Locale>(["ru", "uz", "en"])("gives the long class to labels longer than 13 characters only (%s)", (locale) => {

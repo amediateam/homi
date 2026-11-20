@@ -366,6 +366,30 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(route(page, "map")).toBeVisible();
     });
 
+    test("«Площадь, м²» shows for every deal (DEC-62); «Животные» only for long-term rent, «Кто будет жить» for both rents (DEC-58)", async ({ page }) => {
+      await open(page, mode);
+      await expect(cards(page).first()).toBeVisible();
+      await chip(page, "filters").click();
+      const filters = sheet(page, "filters");
+      await expect(filters).toBeVisible();
+      const section = (name: string) => filters.locator(`[data-section="${name}"]`);
+
+      await expect(section("area").getByRole("heading")).toHaveText("Площадь, м²");
+      await expect(section("pets")).toHaveCount(1);
+      await expect(section("tenant")).toHaveCount(1);
+
+      await section("rentTerm").getByRole("radio", { name: "Посуточно" }).click();
+      await expect(section("pets")).toHaveCount(0);
+      await expect(section("tenant")).toHaveCount(1);
+      await expect(section("area")).toHaveCount(1);
+
+      await section("deal").getByRole("radio", { name: "Продажа" }).click();
+      await expect(section("area")).toHaveCount(1);
+      await expect(section("market")).toHaveCount(1);
+      await expect(section("pets")).toHaveCount(0);
+      await expect(section("tenant")).toHaveCount(0);
+    });
+
     test("a launch with news=pets opens the sheet scrolled to «Животные»", async ({ page }) => {
       await open(page, mode, "/?news=pets");
       await expect(page).toHaveURL(/\/ru\/filters\?focus=pets$/);

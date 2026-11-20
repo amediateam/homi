@@ -56,40 +56,38 @@ describe("sectionsFor", () => {
     expect(hint("rent_long", ["house"])).toBe(false);
   });
 
-  it("BR-APP-019 tenant and pets show whenever the base deal is rent, daily included", () => {
+  it("BR-APP-019 with the default rules: tenant for both rents, pets for long-term rent only (DEC-58)", () => {
     for (const mode of modes) {
       expect(sectionsFor(f("rent_long"), tashkent(), mode)).toMatchObject({ tenant: true, pets: true });
-      expect(sectionsFor(f("rent_daily"), tashkent(), mode)).toMatchObject({ tenant: true, pets: true });
+      expect(sectionsFor(f("rent_daily"), tashkent(), mode)).toMatchObject({ tenant: true, pets: false });
       expect(sectionsFor(f("sale"), tashkent(), mode)).toMatchObject({ tenant: false, pets: false });
     }
   });
 
-  it("LB-APP-029 dev017TenantPetsDailyRule off (legacy): tenant and pets stay visible for daily rent", () => {
-    expect(sectionsFor(f("rent_daily"), tashkent(), "search", { dev017TenantPetsDailyRule: false })).toMatchObject({
-      tenant: true,
-      pets: true,
-    });
-  });
+  it.each([
+    // [dev017PetsLongRentOnly, dev017TenantPetsDailyRule, daily rent's tenant, daily rent's pets]
+    [true, false, true, false],
+    [false, false, true, true],
+    [true, true, false, false],
+    [false, true, false, true],
+  ])(
+    "BR-APP-019, LB-APP-029 pets rule %s, tenant rule %s: daily rent has tenant %s and pets %s; long rent both, sale none",
+    (dev017PetsLongRentOnly, dev017TenantPetsDailyRule, tenant, pets) => {
+      const rules = { dev017PetsLongRentOnly, dev017TenantPetsDailyRule };
+      for (const mode of modes) {
+        expect(sectionsFor(f("rent_daily"), tashkent(), mode, rules)).toMatchObject({ tenant, pets });
+        expect(sectionsFor(f("rent_long"), tashkent(), mode, rules)).toMatchObject({ tenant: true, pets: true });
+        expect(sectionsFor(f("sale"), tashkent(), mode, rules)).toMatchObject({ tenant: false, pets: false });
+      }
+    },
+  );
 
-  it("LB-APP-029 dev017TenantPetsDailyRule on: tenant and pets are hidden for daily rent only", () => {
-    const rules = { dev017TenantPetsDailyRule: true };
-    expect(sectionsFor(f("rent_daily"), tashkent(), "search", rules)).toMatchObject({ tenant: false, pets: false });
-    expect(sectionsFor(f("rent_long"), tashkent(), "search", rules)).toMatchObject({ tenant: true, pets: true });
-    expect(sectionsFor(f("sale"), tashkent(), "search", rules)).toMatchObject({ tenant: false, pets: false });
-  });
-
-  it("BR-APP-020 area and market for sale only, appliances for rent only", () => {
-    expect(sectionsFor(f("sale"), tashkent(), "search")).toMatchObject({ area: true, market: true, appliances: false });
-    expect(sectionsFor(f("rent_long"), tashkent(), "search")).toMatchObject({
-      area: false,
-      market: false,
-      appliances: true,
-    });
-    expect(sectionsFor(f("rent_daily"), tashkent(), "search")).toMatchObject({
-      area: false,
-      market: false,
-      appliances: true,
-    });
+  it("BR-APP-020 area for every deal (DEC-62), market for sale only, appliances for rent only", () => {
+    for (const mode of modes) {
+      expect(sectionsFor(f("sale"), tashkent(), mode)).toMatchObject({ area: true, market: true, appliances: false });
+      expect(sectionsFor(f("rent_long"), tashkent(), mode)).toMatchObject({ area: true, market: false, appliances: true });
+      expect(sectionsFor(f("rent_daily"), tashkent(), mode)).toMatchObject({ area: true, market: false, appliances: true });
+    }
   });
 
   it("BR-APP-021 posted days exist only in search mode", () => {

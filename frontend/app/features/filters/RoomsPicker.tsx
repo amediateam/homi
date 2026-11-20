@@ -19,8 +19,8 @@ export interface RoomsPickerProps {
 /**
  * The room buttons of the full and the quick filters sheets (WP-25, legacy `RoomsPicker.jsx`): «Любые», 1, 2, 3, «4+».
  * A tap plays a light impact and goes through `pickRooms` (BR-APP-007): one value, then a range with a second value,
- * «4+» without an upper bound, «Любые» clears. A button is pressed while its value lies in the range; «Любые» while
- * nothing is picked.
+ * «4+» without an upper bound, «Любые» clears. A button is pressed while its value lies in the range (only «до N» counts
+ * from 1); «Любые» only while neither bound is set.
  */
 export function RoomsPicker({ filters, update }: RoomsPickerProps) {
   const t = useTranslations();
@@ -31,7 +31,7 @@ export function RoomsPicker({ filters, update }: RoomsPickerProps) {
 
   return (
     <ChipRow>
-      <FilterChip data-rooms="any" pressed={filters.rooms_min === null} onClick={() => pick(null)} className="px-[14px]">
+      <FilterChip data-rooms="any" pressed={filters.rooms_min === null && filters.rooms_max === null} onClick={() => pick(null)} className="px-[14px]">
         {t("sheet.roomsAny")}
       </FilterChip>
       {ROOM_OPTIONS.map((rooms) => (
