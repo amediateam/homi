@@ -178,8 +178,8 @@ describe("the legacy layer", () => {
   const layers = { ru: legacyRu, uz: legacyUz, en: legacyEn } as Record<string, Tree>;
 
   it("matches the key list of the pinned release, which keeps the legacy names", () => {
-    expect(keyList.release).toBe("index-CIa0Ldj2.js");
-    expect(keyList.keys).toHaveLength(581);
+    expect(keyList.release).toBe("index-YX9bFVws.js");
+    expect(keyList.keys).toHaveLength(591);
     for (const layer of Object.values(layers)) {
       expect(Object.keys(flatten(layer)).map(legacyName).sort()).toEqual([...keyList.keys].sort());
     }

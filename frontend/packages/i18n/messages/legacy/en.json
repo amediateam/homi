@@ -273,7 +273,8 @@
     "otherCity": "Another city",
     "nothing": "Nothing found",
     "nothingHint": "Try loosening the filters",
-    "resetFilters": "Reset filters"
+    "resetFilters": "Reset filters",
+    "end": "That’s everything for your search"
   },
   "city": {
     "title": "City",
@@ -633,7 +634,13 @@
     "congratsText": "Thanks for telling us. If kvadro² helped, tell your friends — they’ll find it useful too.",
     "share": "Tell friends",
     "shareText": "Found my new place through kvadro² 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. agents and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free.",
-    "done": "Done"
+    "done": "Done",
+    "landlordTitle": "Moving out of your old place?",
+    "landlordText": "Your landlord will need a new tenant. Send them a link — they can list the apartment for free, without an agent.",
+    "landlordSend": "Send to landlord",
+    "landlordShare": "Hi! I’m moving out. You can find a new tenant for free and without an agent here: {url}",
+    "movedTitle": "Congrats!",
+    "movedText": "Thanks for telling us — it helps us get better."
   },
   "notify": {
     "quiet": "Quiet hours",
@@ -662,6 +669,9 @@
     "limitValue": "{n} of {max}",
     "limitSheetTitle": "{n} of {max} flats listed",
     "limitSheetText": "That’s the most for one number. Mark one flat “Rented” or remove it — then you can add a new one.",
+    "entryAsk": "Renting out an apartment?",
+    "entryAskToo": "Renting out an apartment too?",
+    "entryCta": "List it for free",
     "mine": "My listings",
     "pendingShort": "waiting: {n}",
     "reqTip": {
