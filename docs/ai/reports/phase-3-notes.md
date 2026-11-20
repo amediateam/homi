@@ -1742,3 +1742,41 @@ subagent's report that the audit contradicts (legacy's bot offers «Это ри�
 answer matches legacy, so the draft row DEV-064 was dropped and the decisions file says so. On `461e4f2`:
 `collect_ids.py --check` → exit 0, 2 518 ids; `task_graph.py --check` → exit 0; 284 questions; 1 195 line references
 valid.
+
+## AF. Development track, 2026-11-20 — intake of `index-YX9bFVws`, the fourth release
+
+**Why.** WP-36 was merged as #94 (`d03a34f`); the developer then asked whether the plan needed correcting after new
+legacy production updates. One Mini App release past the pin was in the legacy tree: `index-YX9bFVws.js` (production
+`Last-Modified` 20 Nov 2026 01:05:43 GMT by the legacy documents; SVN r38 source, r39 documents; 45 source files).
+It is motion and small UX on built screens, two entry points into the owner cabinet, a survey step and a link to an
+owners' landing page; one field on the listing card, two events, no new endpoint. The legacy landing also had two
+releases of 19 Nov that the plan does not reflect. The comparison with the built code and the plan was read only.
+
+**The developer's answers** (2026-11-20, asked one at a time with options after «задай все свои вопросы по одному и с
+вариантами ответа»): nine answers and one clarification, recorded as DEC-89 … DEC-94
+(`docs/migration/decisions/2026-11-20-developer-answers.md`, `24` §8.1). Five are not the recommended option: the end
+line of the search feed always (DEC-90, a deviation), «Оба» → two buttons in the survey's landlord block (DEC-91), the
+landing changes as a separate PR now, the `owner_entry` rule decided now (DEC-94), and «Пока не начинать», followed by
+«первый — приём приложения» and «Начинать сейчас».
+
+**The intake** (branch `feat/intake-index-YX9bFVws` on `main` = `d03a34f`): `41b291c` (the catalogue: 591 names, 10
+new, no changed value, no brand word), `b3ac399` (the decisions, the new catch-up package WP-39, the pin, the queue,
+rows 44 – 55 of the built code behind the pin, about 25 specifications), `a15ad09` (the audit and the registers),
+`7abd3cc`, `8075488` (the intake-log row) and `122781d` (review fixes). No stub, fixture or contract change:
+`owner.entry` is WP-80's. It ran as plain subagents: two writers on disjoint audit files from an id map fixed
+beforehand (03 / 07 / `screens.json`; 02 / 05 / 08 / 09 / 20 / `api-inventory.json` / `features.csv`), which also moved
+the line references into the changed documents by id (07, 09, `features.csv`, 24, 11 backend task files; one of
+them, in KV-BE-040, was wrong at HEAD); then two reviewers: one checked 104 audit claims against the legacy source
+(100 agreed, four imprecise or mislabelled, none wrong; reported, not re-run beyond three claims read in the main
+session: the leave's timings, the survey's `moved` step, the end-of-feed condition), one read the decisions against
+the specifications (22 findings: stale counts and the old pin in `25` §1, WP-81's upload text against DEC-92, WP-88's
+open link, unlabelled defaults of the integrator, a missing queue row for the landing intake). All were fixed in
+`122781d`.
+
+Verification, run in the main session: `pnpm --filter @homi/i18n test` → 116 passed (`41b291c`); `make ci-frontend` →
+exit 0 on the tree of `8075488` (app 217 files / 3 629 tests, i18n 116, ui 142, search 245 + 1 todo, testing 95,
+api-client 16, utils 2; only documents and memory changed after it); `python3 scripts/migration/collect_ids.py
+--check` → exit 0 on the final tree (2 549 ids); the reference refreshers report no change on a second run.
+
+Not done here: the landing intake (`03b`, WP-61, the owners' page after a landing sync of the legacy checkout), its own
+PR before WP-38; then WP-38, WP-39 and WP-31.

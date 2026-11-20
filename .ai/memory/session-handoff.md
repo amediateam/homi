@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-20 (WP-35 merged as #93 `989d041`; WP-36, the third catch-up package, in review as #94; next: WP-38 (WP-37 any time), then WP-31)
+updated: 2026-11-20 (WP-36 merged as #94 `d03a34f`; the intake of legacy release `index-YX9bFVws` in review on branch `feat/intake-index-YX9bFVws`, docs and the `legacy` catalogue only; next: the landing intake, then WP-38)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -9,38 +9,32 @@ Written for whoever continues the **development track**. The production track's 
 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-18 (verbatim in the earlier handoffs and `docs/migration/decisions/2026-11-14-developer-answers.md`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; each PR merged on its own «сливай #N».
-- 2026-11-19, the order of work: «По релизам, код до WP-31» — intake `index-CBlEKxdL` (#89) → intake `index-CIa0Ldj2` (#90) → the owner-cabinet plan (#91) → the catch-up packages WP-34 … WP-38 → WP-31.
-- 2026-11-20: «Дальше по очереди WP-34»; «Продолжим по плану»; «сливай #92»; «Продолжим» (WP-36); «запустил nginx» (the developer started nginx by hand for the e2e runs).
+- 2026-11-19: «По релизам, код до WP-31». 2026-11-20: «сливай #94».
+- 2026-11-20, asked whether the plan needs correcting after the new legacy updates: «задай все свои вопросы по одному и с вариантами ответа»; nine answers (verbatim in `docs/migration/decisions/2026-11-20-developer-answers.md`, DEC-89 … DEC-94); «Приём, WP-38, WP-39, WP-31 (рекомендую)»; the landing «Отдельным PR сейчас»; «первый — приём приложения»; «Начинать сейчас».
 
 ## State at handoff
-- `main` = `989d041` (#93). Open: #94, branch `wp-36-catch-up-listing-gates-shell`: `006cb5a` code and tests, `5ef3961` review fixes, `c9ecd02` docs and memory, `028a144` the leave after a slid-back swipe and the animations read in the browser, then the final docs commit.
-- Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`. Ignored Playwright output in `frontend/test-results/` and `frontend/playwright-report/`.
-- Verify: `make ci-frontend` (exit 0 on `028a144`, app 217 files, 3 629 tests); e2e each spec alone, e.g. `pnpm exec playwright test --project=miniapp app/e2e/listing-open.spec.ts` (nginx must be up: `sudo nginx`, by hand).
+- `main` = `d03a34f` (#94). Branch `feat/intake-index-YX9bFVws`: `41b291c` catalogue, `b3ac399` decisions + WP-39 + specifications, `a15ad09` audit + registers, `7abd3cc`, `8075488` intake-log row, `122781d` review fixes, then the notes and memory commit; pushed with a PR (its number is in the queue row and the relay memory).
+- Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
+- The intake drafts (legacy delta, HOMI map, plan state, id map, answers) are kept outside the repository, in the user-level Claude project folder; the relay memory names them.
+- Verify: `python3 scripts/migration/collect_ids.py --check` (exit 0, 2 549 ids, final tree); `make ci-frontend` (exit 0 on the tree of `8075488`; only docs changed after).
 
 ## Done this session
-- **WP-36** (#94): the "gone" and day-limit states (`ApiError.reason`, `ApiFailure.reason: "daily"`); one close of the listing layer (`ListingLayer`'s `close`, `takeOverBack`, the leave by insets, the overlay copy's entrance); `FallbackClose`; the mini chrome under a listing over the feed; `paused`; `s_seo_en` / `s_seo_uz`; the launch mark in `sessionStorage`; `tg` in `app_launch`; `body.subpage-open`; the spot map's boxes `isolate`. Baseline rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 closed; the parity notes of WP-21 … WP-28 and WP-33 say "WP-36 closed it"; WP-35's row is WAITING.
-  - Row 10 checked on Leaflet with red tiles: the panes (z-index 400) covered the controls and the mini map covered the fullscreen map; `isolate` fixes it; the e2e case fails without it (checked).
-  - Review subagent of `006cb5a`: the direct-load «Скрыть» regression, the leave's transform moving the CTA bar, the depth-0 leave flash, the slow-replace settle, the i18n tables — fixed in `5ef3961`. Running the tests also showed `cn` kept both animation classes; fixed. The swipe's own jump is KI-67.
-  - Checks: `make ci-frontend` exit 0 on `028a144`; e2e on `028a144`: `listing-open` 21 (with `listing-in` / `listing-out` read in the browser), `shell` 19, `listing-actions` 22, `spot-map` 14, `back` 11; `pnpm -r lint`, `pnpm -r typecheck` exit 0; six mutation checks fail their tests; e2e on `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed; 12 more specs green on `006cb5a` (WP-36 Handoff lists them).
-  - Not green here: `foundation` (its radar case), `feed-radar`, `follow-nudge`, `return-nudge` need radars on (KI-65); `radar-forms`, `radar-subscribe`, `radars` not run.
+- **The intake of `index-YX9bFVws.js`** (prod 20 Nov by the legacy documents; SVN r38 source, r39 docs): no contract or stub change; the `legacy` catalogue re-imported (591 names, 10 new; `pnpm --filter @homi/i18n test` → 116 passed); DEC-89 … DEC-94; the catch-up package **WP-39** (motion and small UX, rows 44 – 54 of `baseline.md`, about 2 100 lines); the cabinet's specifications take the invitations, the landlord block (two buttons, DEC-91), the upload progress (Q-APP-031, recommended an XHR to an allow-listed `/bff` write) and `owner.entry` (DEC-94; WP-80, WP-42, WP-86); WP-11 / WP-32 two events; WP-23 … WP-30 notes; WP-33 the 17 parity scenarios; WP-36 WAITING; the landing intake's row in the queue; the pin moved; `docs/ai/reports/phase-3-notes.md` §AF.
+  - Audit by two subagent writers on disjoint files from a fixed id map; references refreshed by id. Reviews: 104 audit claims against the legacy source, 100 agreed (reported, not re-run; three re-read in the main session); decisions against specifications, 22 findings. All fixed in `122781d`.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **CI of #94**, then **«сливай #94»**.
-2. **Then WP-38** (feed continuity; depends on WP-36's close path and launch module), WP-37 any time, then **WP-31**; the cabinet's code (WP-80 …) after WP-32.
-3. **The operator texts** (WP-02 Part A and the addendum, `docs/migration/decisions/2026-11-14-operator-request.md`) — handed over by the developer, never sent from the connected Gmail.
-4. **Production track:** WP-27/28 need `CSP_TILE_HOSTS=https://tile.openstreetmap.org` before the deploy; WP-29, WP-30, #88, #89, #90, WP-34, WP-35 and WP-36 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51); the checklists of WP-34 … WP-36 inside Telegram on staging (WP-36: a reload inside one launch, a client on Leaflet).
+1. **CI of the intake PR**, then «сливай #N».
+2. **Then the landing intake** (legacy landing releases `b1b9a919ecc4`, `d9bbbc696337` of 19 Nov; `03b`, WP-61; the owners' page needs a legacy landing sync first), its own docs PR; then **WP-38**, **WP-39**, **WP-31** (WP-37 any time).
+3. **The operator texts** (WP-02 Part A and the addendum) — handed over by the developer, never sent from the connected Gmail.
+4. **Production track:** WP-27/28 need `CSP_TILE_HOSTS`; WP-29, WP-30, #88 … #90, WP-34 … WP-36 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51); the Telegram checklists of WP-34 … WP-36 on staging.
 5. **Dependabot #5, #57 … #60**: only with the first developer.
-6. **Reviewer questions of #94:** `isolate` instead of legacy's z-index 1000; the leave by insets (layout per frame for 200 ms, none in lite); `closeListing` without a leave on a directly loaded listing; the layer taking no taps while it leaves (legacy).
+6. **Reviewer questions of the intake PR:** lite follows legacy (LB-APP-086 not adopted); WP-39's skip rule for a route hidden by `<Activity>`, the radar sheet's no-leave close, the ring keyed by the toast id; `owner.entry` nested and counting every tier; WP-82's texts and two fallbacks, LB-APP-090 not adopted; WP-81's `/bff` write (amends `25` §3.5); DEC-90 keeping "not with the few-results note".
 
 ## Gotchas learned this session
-- `position: fixed` creates a stacking context, `relative` without a z-index does not: Leaflet's pane z-indices escape a `relative` box up to the nearest fixed layer. Leaflet's OSM tiles render translucent here, so a "hide it and compare pixels" check passes even when covered; read the stacking chain.
-- `getByRole` no longer finds an element once it is `visibility: hidden`: keep an `elementHandle()` across such a toggle.
-- `cn` (tailwind-merge) does not drop `animate-listing-in` when `animate-listing-out` is added; never rely on it for custom animation utilities.
-- A transform on a layer that scrolls itself moves its `fixed` children by the scroll offset; animate insets instead.
-- `sessionStorage` survives `vi.resetModules()`: clear it in `afterEach` of tests that touch the launch mark. A new Playwright page has a fresh `sessionStorage`.
-- One `next build` per e2e batch: `next start -p 3001` with `API_URL`, `CSP_TILE_HOSTS`, `NODE_EXTRA_CA_CERTS=$(mkcert -CAROOT)/rootCA.pem`; Playwright reuses the server (`reuseExistingServer`); a 40 s pause between specs kept the stub user under its limit (KI-32).
-- The local build has no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the inlined value is empty): bot-link e2e cases take their no-bot branch.
-- Next numbers: AM-102, KI-68, ADR 0021; ids unchanged from the last handoff (DEC-89, DEV-064, RK-40, SCR-064, BR-APP-112, …).
+- `collect_ids.py` has no `--help`: any argument other than `--check` runs it and rewrites `ids.csv`. Run it once, after every audit edit; `20-open-questions.md` has a generated block (`build_open_questions.py`).
+- Parallel audit writers: fix the ids first (an id map), give each writer disjoint files, refresh line references by id definition (not by offset) only after the target document is final, and re-run the refresh after any later edit.
+- A shell redirect to a bad path gives `$?` 1 without running the command; read a check's exit code from a plain run.
+- Next numbers: AM-102, KI-68, ADR 0021; DEC-95, BR-APP-122, LB-APP-092, Q-APP-032, TMA-049, DEV-067, F-OWNER-012, baseline row 56; free WP numbers 49, 62–69, 72–79, 90–99.
 
 ## Active subagent work at handoff
 - None running.
