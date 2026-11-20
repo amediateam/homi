@@ -1780,3 +1780,49 @@ api-client 16, utils 2; only documents and memory changed after it); `python3 sc
 
 Not done here: the landing intake (`03b`, WP-61, the owners' page after a landing sync of the legacy checkout), its own
 PR before WP-38; then WP-38, WP-39 and WP-31.
+
+## AG. Development track, 2026-11-20 — intake of the legacy landing
+
+**Why.** After #95 (`3f9baa0`) the developer answered «Следующий по очереди» to starting the landing intake. Reading
+the legacy landing (read only) showed that `03b` (2026-11-09) describes landing release `c63da0e3476a` of
+2026-11-08: four landing releases were behind it, not the two the queue row named — `67b3942a8340` (12 Nov: the
+showcase «Квартиры прямо сейчас», the count under the first button, footer link columns, «аренда и продажа»),
+`65998117d6ec` (14 Nov: icons, link underline), `b1b9a919ecc4` and `d9bbbc696337` (19 Nov: privacy, the language of
+`/` with a hint bar). The landing has its own changelog, which queue rule 7 did not name; it does now. It also showed
+that the legacy landing sync downloads no backend-rendered page (`tools/sync/fetch.mjs:6-8`), so the statement of
+the intake of `index-YX9bFVws` that a sync would bring the owners' page was wrong (corrected in DEC-91's note, WP-61,
+the queue row).
+
+**The developer's answers** (2026-11-20, one at a time with options; `docs/migration/decisions/2026-11-20-landing-answers.md`):
+DEC-95 the whole showcase, its search and district links into the Mini App («Всю витрину, поиск в Mini App», not the
+recommended option); DEC-96 the language of `/` as legacy now (recommended); the contract changed in this PR on stubs
+(«Поменять контракт в этом PR», not the recommended option); DEC-97 the owners' page waits for legacy until WP-61
+(recommended).
+
+**The intake** (branch `feat/intake-landing-d9bbbc696337` on `main` = `3f9baa0`): `78b7a4d` the contract on stubs
+(`GET /landing/live` → `showcase.{rent,sale}` lists of `{district_code, count}`; `GET /landing/pins` → nullable
+`floor`; fixtures, shapes, tests, OpenAPI, generated types); `f3ea168` the landing line references moved
+mechanically to `d9bbbc696337` (old-to-new maps from the hunk headers of the four release diffs; 133 of 138 short
+references in `03b` and the long-form references in 25 files; those inside a changed hunk re-read by hand later);
+`7bb94a6` the decisions, the new package WP-62 (the Mini App launch with a search filter, `f_<deal>-c<city>[…]`),
+WP-60/61 and notes in WP-13/52/59/70/82, the landing pin in `baseline.md`, the queue, `25`, `24`, `CLAUDE.md`;
+`5abcc94` the audit and the registers (two subagent writers on disjoint files from a fixed id map: `03b`; 02, 04,
+07, 08, 09, `features.csv`, `public-urls.json`, `api-inventory.json`, `bot-handlers.json`, the landing task files);
+`c1c544e` and `2e3e57b` the review fixes. Two read-only reviewers: 03b against the legacy source (about 285 claims,
+280 agreed, one wrong — the footer's link count —, three imprecise, one mislabelled; reported, not re-run beyond the
+footer count re-counted in the main session) and the decisions against the specifications (WP-62's gate and pending
+rules did not match the code — `launchPending` compares the path only, the mark takes a listing number, the city
+picker is only delayed for a listing launch —, WP-61's owners' page missing from the routes, sitemap and checklist,
+`form-action` for the no-JavaScript search, stale counts in older plan files). All fixed.
+
+A choice of the integrator, not an ADR: the landing line maps are computed from the hunk headers of the legacy
+release diffs (`@@ -a,b +c,d @@` and the line markers), so no legacy code is copied and no `svn cat` is run.
+
+Verification, run in the main session: `composer ci:check` → `vp check`, `tsc`, pint, phpstan, Pest 792 passed / 4
+skipped on the contract change; `composer openapi:check` → exit 0 once the export was staged (it diffs against the
+index); `pnpm types:check` → exit 0; `make ci-frontend` → exit 0 (app 217 files / 3 629 tests, i18n 116, ui 142,
+search 245 + 1 todo, testing 95, api-client 16, utils 2) on the code of `78b7a4d` — only documents changed after it;
+`python3 scripts/migration/collect_ids.py --check` → exit 0, 2 577 ids, on the final tree; the 03b reference
+refresher reports no change on the final tree.
+
+AM: none. Not done here: WP-38, then WP-39 and WP-31 (WP-37 any time); WP-62 and WP-61 at stage E.
