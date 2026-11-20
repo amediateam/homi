@@ -5,8 +5,9 @@ import type { Page } from "@playwright/test";
  * The shell of WP-23 (SCR-006, SCR-010, `03` §1.2) over the feed of WP-24, the placeholder routes and the API on
  * stubs: the tab bar and its memory, the collapsing chrome, the list / map switch and the map bar, the deal switch,
  * pull-to-refresh on the feed, and a sheet route closed four ways, in cookie mode and (the tests that navigate, pull
- * and open a sheet) in header mode. The last block keeps the browser proof of the part B wrappers on the dev gallery
- * (`/dev/ui`): the toast host, `RouteSheet`, `SubPage` and `RouteOverlay`.
+ * and open a sheet) in header mode; without the Telegram SDK the app's own close cross on the listing and on a
+ * sub-page, and the page under a sub-page that does not scroll (WP-36). The last block keeps the browser proof of the
+ * part B wrappers on the dev gallery (`/dev/ui`): the toast host, `RouteSheet`, `SubPage` and `RouteOverlay`.
  */
 
 interface Fake {
@@ -401,6 +402,78 @@ test.describe("shell", () => {
   });
 });
 
+
+/**
+ * Without the Telegram SDK (WP-36, TMA-047): the SDK tag is aborted, the session signs in from the launch fragment,
+ * and Telegram's BackButton cannot be shown, so the listing layer and every sub-page carry the app's own cross.
+ */
+test.describe("without the Telegram SDK", () => {
+  const cross = (page: Page) => visible(page, "[data-fallback-close]");
+  const softNavigate = (page: Page, href: string) =>
+    page.evaluate((target) => (window as unknown as { next: { router: { push(href: string): void } } }).next.router.push(target), href);
+
+  test("the listing carries the cross «Закрыть» in its skeleton, content and error states; each closes it", async ({ page }) => {
+    // Header mode: the server render has no session, so the listing reads through `/bff`, held here for the skeleton.
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route("**/bff/listings/100001", async (route) => {
+      await held;
+      await route.fallback();
+    });
+    await launchApp(page, { sdk: false, mode: "header", path: "/listing/100001" });
+    await expect(html(page)).toHaveAttribute("data-session", "ready");
+    const state = visible(page, '[data-route="listing"] [data-listing-state]');
+
+    await expect(state).toHaveAttribute("data-listing-state", "skeleton");
+    await expect(cross(page)).toHaveAttribute("aria-label", "Закрыть");
+    release();
+    await expect(state).toHaveAttribute("data-listing-state", "loaded");
+    await expect(cross(page)).toBeVisible();
+    // A direct load: the cross plays the leave and replaces the address with the feed.
+    await cross(page).click();
+    await expect(page).toHaveURL(/\/ru$/);
+    await expect(route(page, "feed")).toBeVisible();
+    await expect(visible(page, '[data-route="listing"]')).toHaveCount(0);
+
+    await softNavigate(page, "/ru/listing/999503");
+    await expect(visible(page, '[data-route="listing"] [data-slot="error-state"]')).toBeVisible();
+    await expect(cross(page)).toBeVisible();
+    await cross(page).click();
+    await expect(page).toHaveURL(/\/ru$/);
+    await expect(visible(page, '[data-route="listing"]')).toHaveCount(0);
+  });
+
+  test("a sub-page carries the cross, which closes it, and the page under it does not scroll while it is open", async ({ page }) => {
+    await launchApp(page, { sdk: false, path: "/settings" });
+    await expect(html(page)).toHaveAttribute("data-session", "ready");
+    await expect(route(page, "settings")).toBeVisible();
+    // Make the settings page taller than the screen, so a scroll that reached it would move the window.
+    await page.evaluate(() => document.body.style.setProperty("min-height", "3000px"));
+
+    await softNavigate(page, "/ru/settings/theme");
+    const sub = page.getByRole("region", { name: "Тема" });
+    await expect(sub).toBeVisible();
+    await settled(page, '[data-slot="subpage"]');
+    await expect(page.locator("body")).toHaveClass(/(^|\s)subpage-open(\s|$)/);
+    await page.mouse.move(195, 500);
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    await expect(cross(page)).toHaveAttribute("aria-label", "Закрыть");
+    await cross(page).click();
+    await expect(page).toHaveURL(/\/ru\/settings$/);
+    await expect(sub).toHaveCount(0);
+    await expect(page.locator("body")).not.toHaveClass(/(^|\s)subpage-open(\s|$)/);
+  });
+
+  test("with the SDK there is no cross on the listing", async ({ page }) => {
+    await launchApp(page, { path: "/listing/100001" });
+    await expect(html(page)).toHaveAttribute("data-session", "ready");
+    await expect(visible(page, '[data-route="listing"] [data-listing-state="loaded"]')).toBeVisible();
+    await expect(cross(page)).toHaveCount(0);
+  });
+});
 
 test.describe("part B wrappers on the dev gallery", () => {
   const gallery = (page: Page) => route(page, "dev/ui");

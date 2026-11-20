@@ -269,6 +269,7 @@ describe("icons", () => {
       "Plus",
       "RotateCw",
       "Search",
+      "SearchX",
       "Settings",
       "ShieldCheck",
       "ShoppingBag",

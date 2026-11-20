@@ -1,7 +1,7 @@
 /*
  * Lite graphics (`03` §1.7, WP-20): everything under `html.lite`, applied by rule, not per component. The class is
  * set by WP-21. No blur, solid glass, simpler shadows, translate-only chrome collapse, no mini title,
- * `content-visibility: auto` on cards, no radar animation.
+ * `content-visibility: auto` on cards, no radar animation, no entrance or leave of the listing layer.
  */
 html.lite {
   --shadow-float: 0 1px 3px rgba(0, 0, 0, 0.12);
@@ -29,5 +29,10 @@ html.lite [data-card] {
 
 /* The radar art (WP-30): the wedge and every blip carry the mark and stand still, as under reduced motion. */
 html.lite [data-radar-animation] {
+  animation: none;
+}
+
+/* The listing layer's entrance and leave (WP-36): none in lite graphics; the app closes the layer at once. */
+html.lite [data-layer-motion] {
   animation: none;
 }

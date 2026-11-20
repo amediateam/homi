@@ -81,11 +81,16 @@ export function SpotMap({ number, spot }: { number: number; spot: Spot }) {
       >
         {/* The map's own background beats the library's grey (`.leaflet-container`), and the theme's at the first paint.
             The box positions and the container is sized by it: both libraries' CSS give the container `position:
-            relative` (`.maplibregl-map`, `.leaflet-container`), which would beat insets on the container itself. */}
-        <div className="pointer-events-none absolute inset-0">
+            relative` (`.maplibregl-map`, `.leaflet-container`), which would beat insets on the container itself. The
+            box is a stacking context (`isolate`, WP-36): Leaflet's panes carry z-indices of 200 … 700, which would
+            otherwise paint over the expand chip, the listing's CTA bar and the fullscreen map opened over it. */}
+        <div data-spot-map-frame="" className="pointer-events-none absolute inset-0 isolate">
           <div ref={container} data-spot-map-view="" aria-hidden className="size-full" style={{ backgroundColor: "var(--bg2)" }} />
         </div>
-        <span className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)">
+        <span
+          data-spot-expand=""
+          className="glass absolute top-[8px] right-[8px] grid size-[32px] place-items-center rounded-pill text-text shadow-(--shadow-float)"
+        >
           <Maximize2 size={16} strokeWidth={2.25} aria-hidden />
         </span>
       </button>

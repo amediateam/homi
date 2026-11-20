@@ -493,6 +493,61 @@ for (const engine of ENGINES) {
   });
 }
 
+/**
+ * The nearest stacking context around the Leaflet map pane inside `host`, described by its `data-*` names: the element
+ * whose z-order Leaflet's panes (z-index 200 … 700) take part in.
+ */
+function paneContext(host: Locator): Promise<string> {
+  return host.locator(".leaflet-map-pane").evaluate((pane) => {
+    for (let node = pane.parentElement; node !== null; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      const positioned = style.position !== "static";
+      const creates =
+        style.position === "fixed" ||
+        style.position === "sticky" ||
+        (positioned && style.zIndex !== "auto") ||
+        style.isolation === "isolate" ||
+        Number(style.opacity) < 1 ||
+        style.transform !== "none" ||
+        style.filter !== "none" ||
+        style.backdropFilter !== "none" ||
+        /paint|layout|strict|content/.test(style.contain);
+      if (creates) {
+        return Object.keys(node.dataset).join(" ") || node.tagName.toLowerCase();
+      }
+    }
+    return "root";
+  });
+}
+
+/**
+ * Row 10 of the built code behind the pin (WP-36): Leaflet's panes carry z-indices of their own (the map pane 400), so
+ * without a stacking context around the map they paint over what follows it — the mini map's expand chip, the
+ * listing's CTA bar, and the whole fullscreen map (z-index 100) opened inside the same listing layer; on the
+ * fullscreen map over its ×, «Где я», attribution and card. A tap still reached the controls (the map's box takes no
+ * pointer events), so the earlier tests passed. Each map's box is now that stacking context (`data-spot-map-frame`).
+ */
+test.describe("spot map on leaflet: the controls above the panes", () => {
+  const leaflet = ENGINES.find((engine) => engine.name === "leaflet")!;
+
+  test("each map's panes stay inside its own box; the expand chip opens the fullscreen map", async ({ page }) => {
+    await openOverFeed(page, leaflet);
+    await miniReady(page, leaflet);
+    const box = mini(page, LISTING);
+    expect(await paneContext(box)).toBe("spotMapFrame");
+
+    await box.locator("[data-spot-expand]").click();
+    await expect(page).toHaveURL(new RegExp(`/ru/listing/${LISTING}/location$`));
+    await fullscreenReady(page, leaflet);
+    expect(await paneContext(fullscreen(page))).toBe("spotMapFrame");
+    // The mini map's panes, still in the listing layer under the fullscreen map, stay inside the mini map's box.
+    expect(await paneContext(box)).toBe("spotMapFrame");
+
+    await fullscreen(page).getByRole("button", { name: "Закрыть" }).click();
+    await onListing(page, LISTING);
+  });
+});
+
 test.describe("spot map (cookie mode)", () => {
   /** S "Locate denied"; acceptance "Locate on the fullscreen map: denied text". Engine-independent: GL, the default. */
   test("«Где я» without access shows «Нет доступа к геопозиции…» on the card", async ({ page }) => {

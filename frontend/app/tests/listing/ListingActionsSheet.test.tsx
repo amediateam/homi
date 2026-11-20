@@ -19,7 +19,9 @@ const state = vi.hoisted(() => ({
   unblockAuthor: vi.fn<Call>(),
   reportListing: vi.fn<Call>(),
   closeActions: vi.fn<(number: number, step: string | null) => Promise<void>>(),
-  closeListing: vi.fn<(step: string | null) => Promise<void>>(),
+  closeListing: vi.fn<(step: string | null, close: () => void) => Promise<void>>(),
+  /** The listing layer's own close (WP-36), which `closeListing` receives. */
+  closeLayer: vi.fn(),
 }));
 /** The router's view of the address follows the document's, as the App Router's does. */
 vi.mock("next/navigation", async () => {
@@ -149,6 +151,7 @@ beforeEach(() => {
   }
   state.closeActions.mockReset().mockResolvedValue(undefined);
   state.closeListing.mockReset().mockResolvedValue(undefined);
+  state.closeLayer.mockReset();
   fake = fakeTelegram({ version: "8.0" });
 });
 
@@ -340,7 +343,7 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
     feedReference({ reference: { bot: { username: "homi_bot", support_username: "homi_help" } } });
     return render(
       withIntl(
-        <ListingLayerContext value={{ number: 100001, scrollToTop: () => {}, reportView: () => {}, view: null }}>
+        <ListingLayerContext value={{ number: 100001, scrollToTop: () => {}, reportView: () => {}, view: null, close: state.closeLayer }}>
           <Suspense fallback={null}>
             <ListingActionsRoute />
           </Suspense>
@@ -492,7 +495,7 @@ describe("ListingActionsRoute: the sheet over the listing's resource", () => {
   it("renders nothing for a layer without a valid number", () => {
     render(
       withIntl(
-        <ListingLayerContext value={{ number: null, scrollToTop: () => {}, reportView: () => {}, view: null }}>
+        <ListingLayerContext value={{ number: null, scrollToTop: () => {}, reportView: () => {}, view: null, close: state.closeLayer }}>
           <ListingActionsRoute />
         </ListingLayerContext>,
       ),

@@ -28,6 +28,39 @@ test.describe("launch", () => {
     await expect(route(page, "feed")).toBeVisible();
   });
 
+  test("a listing link opens its listing once per launch: a reload inside the launch shows the feed, a new launch opens it again (WP-36)", async ({
+    page,
+  }) => {
+    const app = await launchApp(page, { startParam: "l_42-web" });
+    await ready(page);
+    await expect(page).toHaveURL(/\/ru\/listing\/42$/);
+    await back(page);
+    await expect(page).toHaveURL(/\/ru$/);
+
+    // The mark holds a digest of the launch and the number, no launch data in the clear (SEC-REQ-007).
+    const hash = new URLSearchParams(app.initData).get("hash") ?? "";
+    const mark = await page.evaluate(() => window.sessionStorage.getItem("homi-launch-done"));
+    expect(mark).toMatch(/^[0-9a-z]+:42$/);
+    expect(mark).not.toContain(hash);
+    expect(await page.evaluate(() => window.localStorage.getItem("homi-launch-done"))).toBeNull();
+
+    // A reload at the feed inside the same launch (a reload at the listing's own address shows it by its address).
+    await page.reload();
+    await ready(page);
+    await expect(route(page, "feed")).toBeVisible();
+    await expect(page).toHaveURL(/\/ru$/);
+    await expect(route(page, "listing")).toHaveCount(0);
+
+    // A new launch is a new webview with new launch data: it opens the listing again.
+    const next = await page.context().newPage();
+    const data = new URLSearchParams(app.initData);
+    data.set("hash", "f".repeat(64));
+    await launchApp(next, { initData: data.toString() });
+    await ready(next);
+    await expect(next).toHaveURL(/\/ru\/listing\/42$/);
+    await next.close();
+  });
+
   test("?listing=7 opens the listing, and Back lands on the feed without the parameter", async ({ page }) => {
     await launchApp(page, { path: "/?listing=7" });
     await ready(page);

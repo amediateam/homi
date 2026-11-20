@@ -37,6 +37,8 @@ export interface ApiFailure {
   code: string;
   /** Laravel validation errors: field → messages (HTTP 422). */
   errors?: Record<string, string[]>;
+  /** Why the request was refused: the access gate's reason of `403 access_denied`, `daily` on a `429` (docs/api/README.md). */
+  reason?: string;
 }
 
 export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;

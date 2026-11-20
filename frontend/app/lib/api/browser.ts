@@ -113,8 +113,10 @@ async function readOnce<T>(path: string, options: BffOptions): Promise<ApiResult
     return { ok: true, data: null as T, meta: {} };
   }
   if (!response.ok || body === null || body.success !== true) {
-    const code = body !== null && body.success === false && typeof body.code === "string" ? body.code : undefined;
-    return failureOf(where, { status: response.status, ...(code === undefined ? {} : { code }) });
+    const failure = body !== null && body.success === false ? body : null;
+    const code = typeof failure?.code === "string" ? failure.code : undefined;
+    const reason = typeof failure?.reason === "string" ? failure.reason : undefined;
+    return failureOf(where, { status: response.status, ...(code === undefined ? {} : { code }), ...(reason === undefined ? {} : { reason }) });
   }
   const meta = body.meta ?? {};
   if (meta.source !== undefined) {

@@ -65,6 +65,9 @@
   --animate-rise-in: rise-in var(--dur-base) var(--ease-ios) both;
   /* No fill mode: after the entrance a swipe back moves the sub-page by its inline transform (WP-23). */
   --animate-subpage-in: subpage-in var(--dur-fast) var(--ease-ios);
+  /* The listing layer (WP-36): the entrance without a fill mode, the leave held at its end until the layer goes. */
+  --animate-listing-in: listing-in var(--dur-fast) var(--ease-ios);
+  --animate-listing-out: listing-out 0.2s ease-in forwards;
   /* The radar art (WP-30): the wedge and the blips; a blip's delay is set per blip. */
   --animate-radar-turn: radar-turn 3.2s linear infinite;
   --animate-radar-blip: radar-blip 3.2s ease-out infinite;

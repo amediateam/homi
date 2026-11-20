@@ -108,7 +108,12 @@ Out:
   Back, the swipe, the fallback cross, the "gone" button or `closeListing` — goes back and then replaces the feed's
   address with the sale defaults of the feed's city (`defaultFilters("sale", city)`, `toSearchParams`), as
   `applyFilters` does (back, then replace). The mark goes with it. Write the design note of every close path into
-  the PR first.
+  the PR first. *As built by WP-36 (rule 6):* the one close is `close` of `ListingLayerContext`, owned by
+  `features/listing/ListingLayer.tsx`; every path that closes through it ends in `leaveListingRoute()` of
+  `closeListing.ts` — the swipe at once (`close("swipe")`), the others after the leave — so the switch belongs in
+  that route change (back, then the replace) or in `close`. One path bypasses it: `closeListing()` on a directly
+  loaded listing (the app's history holds no page below) moves back over the sheet and the listing in one step and
+  replaces the address with the feed; that replace must carry the sale defaults too.
 
 ### Radar sheet
 

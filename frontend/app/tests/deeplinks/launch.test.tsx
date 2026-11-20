@@ -36,6 +36,8 @@ afterEach(() => {
   state.push.mockReset();
   state.replace.mockClear();
   window.history.replaceState(null, "", "/");
+  // The launch mark of WP-36 lives in `sessionStorage`, which outlives `vi.resetModules()`.
+  window.sessionStorage.clear();
 });
 
 describe("LaunchRedirector (TMA-010 … TMA-012)", () => {
@@ -276,6 +278,123 @@ describe("launchPending (WP-23, D-S-8, BR-APP-055)", () => {
         returnTo: null,
       }),
     ).toEqual({ href: "/welcome/city", locale: "uz" });
+  });
+});
+
+/** A launch's data with another `hash`: a new launch of the same link (Q-APP-029). */
+function withHash(initData: string, hash: string): string {
+  const params = new URLSearchParams(initData);
+  params.set("hash", hash);
+  return params.toString();
+}
+
+describe("the launch mark (WP-36, BR-APP-106, TMA-010)", () => {
+  /** A fresh evaluation of the module (a document reload) inside the launch of `initData`. */
+  async function reloadIn(address: string, initData: string) {
+    window.history.replaceState(null, "", address);
+    fake?.uninstall();
+    fake = fakeTelegram({ initData });
+    vi.resetModules();
+    return {
+      launch: await import("@/lib/deeplinks/launch"),
+      storage: await import("@/lib/storage"),
+    };
+  }
+
+  /** The launch opens its listing: consumed, then the address shows the target. */
+  function open(launch: typeof import("@/lib/deeplinks/launch"), number: number): void {
+    launch.consumeLaunch();
+    window.history.pushState(null, "", `/ru/listing/${number}`);
+    launch.launchPending();
+  }
+
+  const initData = syntheticInitData({}, { startParam: "l_42-web" });
+
+  it("is written once the address has shown the listing, not before; it holds a digest and the number, never the hash", async () => {
+    const { launch, storage } = await reloadIn("/ru", initData);
+    launch.consumeLaunch();
+    expect(storage.storageGet("homi-launch-done")).toBeNull();
+
+    window.history.pushState(null, "", "/ru/listing/43");
+    launch.launchPending();
+    expect(storage.storageGet("homi-launch-done")).toBeNull();
+
+    window.history.pushState(null, "", "/ru/listing/42");
+    launch.launchPending();
+    const mark = storage.storageGet("homi-launch-done");
+    const hash = new URLSearchParams(initData).get("hash")!;
+
+    expect(mark).toMatch(/^[0-9a-z]+:42$/);
+    expect(mark).not.toContain(hash);
+    expect(mark).not.toMatch(/hash=|auth_date=|query_id=|user=/);
+    expect(storage.looksSecret(mark!)).toBe(false);
+    expect(window.sessionStorage.getItem("homi-launch-done")).toBe(mark);
+    expect(window.localStorage.getItem("homi-launch-done")).toBeNull();
+  });
+
+  it("a reload inside the same launch opens nothing: no target, not pending, no push", async () => {
+    const first = await reloadIn("/ru", initData);
+    open(first.launch, 42);
+
+    const { launch } = await reloadIn("/ru", initData);
+    const { parseLaunch } = await import("@/lib/deeplinks/parse");
+
+    expect(launch.launchTarget(parseLaunch(initData, ""))).toBeNull();
+    expect(launch.launchPending()).toBe(false);
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(false);
+  });
+
+  it("LaunchRedirector pushes nothing after the reload", async () => {
+    const first = await reloadIn("/ru", initData);
+    open(first.launch, 42);
+    window.history.replaceState(null, "", "/ru");
+    fake?.uninstall();
+    fake = null;
+
+    state.status = "ready";
+    await mount("/ru", "l_42-web");
+
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("a new launch (another hash) opens the listing again, and so does another number", async () => {
+    const first = await reloadIn("/ru", initData);
+    open(first.launch, 42);
+
+    const other = await reloadIn("/ru", withHash(initData, "f".repeat(64)));
+    other.launch.consumeLaunch();
+    expect(other.launch.launchPending()).toBe(true);
+
+    const { launch } = await reloadIn("/ru", syntheticInitData({}, { startParam: "l_43-web" }));
+    launch.consumeLaunch();
+    expect(launch.launchPending()).toBe(true);
+  });
+
+  it("?news=pets is not marked", async () => {
+    const pets = await reloadIn("/ru?news=pets", syntheticInitData({}));
+    pets.launch.consumeLaunch();
+    window.history.pushState(null, "", "/ru/filters?focus=pets");
+    pets.launch.launchPending();
+
+    expect(pets.storage.storageGet("homi-launch-done")).toBeNull();
+  });
+
+  it("a sessionStorage that throws reads as not opened yet", async () => {
+    const first = await reloadIn("/ru", initData);
+    open(first.launch, 42);
+    const blocked = vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    try {
+      const { launch } = await reloadIn("/ru", initData);
+      launch.consumeLaunch();
+      expect(launch.launchPending()).toBe(true);
+      window.history.pushState(null, "", "/ru/listing/42");
+      expect(launch.launchPending()).toBe(false);
+    } finally {
+      blocked.mockRestore();
+    }
   });
 });
 

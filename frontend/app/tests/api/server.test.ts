@@ -74,6 +74,14 @@ describe("serverApi (WP-22)", () => {
     expect(result).toEqual({ ok: false, error: "not_found", status: 404, code: "not_found", method: "GET", path: "listings/:number" });
   });
 
+  it("passes the day limit's reason on from the error body (WP-36, DEC-59)", async () => {
+    answer = () => Response.json({ success: false, message: "Too many today", code: "rate_limited", reason: "daily" }, { status: 429 });
+
+    const result = await (await serverApi()).listing(42);
+
+    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", method: "GET", path: "listings/:number" });
+  });
+
   it("a failure holds no header, query string, body or token (SEC-REQ-047)", async () => {
     jar.set("homi_session", "secret-token");
     answer = () => Response.json({ success: false, message: "Boom", code: "server_error" }, { status: 500 });

@@ -15,6 +15,9 @@ const state = vi.hoisted(() => ({
   depth: 1,
   back: vi.fn(),
   push: vi.fn(),
+  /** The route change of the layer's close (`leaveListingRoute`): one step back at depth > 0, else the replace. */
+  navBack: vi.fn(),
+  navReplace: vi.fn(),
 }));
 vi.mock("@/lib/api/browser", () => ({ bffFetch: () => new Promise(() => {}) }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready" }) }));
@@ -29,10 +32,13 @@ vi.mock("next/navigation", () => ({ usePathname: () => `/ru${state.pathname}` })
 vi.mock("@/lib/navigation/history", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/navigation/history")>()),
   useDepth: () => state.depth,
+  depth: () => state.depth,
 }));
+vi.mock("@/lib/navigation/nav", () => ({ nav: { back: state.navBack, replace: state.navReplace, push: vi.fn() } }));
 
 import { resetPendingFavorites } from "@/features/feed/FavButton";
-import { ListingLayer, type ListingLayerProps } from "@/features/listing/ListingLayer";
+import { LISTING_LEAVE_MS } from "@/features/listing/closeListing";
+import { LISTING_CLOSE_SETTLE_MS, ListingLayer, type ListingLayerProps } from "@/features/listing/ListingLayer";
 import { ListingScreen } from "@/features/listing/ListingScreen";
 import { ListingLayerContext, useListingNumber } from "@/features/listing/useListing";
 import { heroIndexOf, rememberHeroIndex, resetViewStates } from "@/features/listing/viewState";
@@ -40,6 +46,7 @@ import { resetPreviews, setPreview } from "@/lib/data/previewCache";
 import { resetSessionMaps } from "@/lib/data/sessionMaps";
 import { resetSources } from "@/lib/data/sources";
 import { resetResources } from "@/lib/data/useResource";
+import { backHandler } from "@/lib/navigation/backHandler";
 
 import { detailsOf } from "../helpers/details";
 import { swipeRight } from "../helpers/gestures";
@@ -139,6 +146,8 @@ beforeEach(() => {
   state.depth = 1;
   state.back.mockReset();
   state.push.mockReset();
+  state.navBack.mockReset();
+  state.navReplace.mockReset();
   fake = fakeTelegram({ version: "8.0" });
   vi.stubGlobal("innerWidth", 300);
 });
@@ -333,12 +342,13 @@ describe("ListingLayer (WP-26, D-20)", () => {
       act(() => vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS));
     };
 
-    it("on while the details are shown at the listing's own address", async () => {
+    it("on while the details are shown at the listing's own address: the route changes at once, without the leave (WP-36)", async () => {
       await mount();
 
       swipe();
 
-      expect(state.back).toHaveBeenCalledTimes(1);
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+      expect(overlay().hasAttribute("data-leaving")).toBe(false);
     });
 
     it("on while the preview is shown", async () => {
@@ -347,7 +357,8 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       swipe();
 
-      expect(state.back).toHaveBeenCalledTimes(1);
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+      expect(overlay().hasAttribute("data-leaving")).toBe(false);
     });
 
     it("off with the skeleton", async () => {
@@ -355,6 +366,7 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       swipe();
 
+      expect(state.navBack).not.toHaveBeenCalled();
       expect(state.back).not.toHaveBeenCalled();
     });
 
@@ -365,6 +377,7 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       swipe();
 
+      expect(state.navBack).not.toHaveBeenCalled();
       expect(state.back).not.toHaveBeenCalled();
     });
 
@@ -374,6 +387,7 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       swipe();
 
+      expect(state.navBack).not.toHaveBeenCalled();
       expect(state.back).not.toHaveBeenCalled();
     });
 
@@ -385,7 +399,213 @@ describe("ListingLayer (WP-26, D-20)", () => {
 
       swipe();
 
+      expect(state.navBack).not.toHaveBeenCalled();
       expect(state.back).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the close (WP-36, row 5)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    /** Telegram's BackButton as `TelegramButtons` calls it: the handler the layer registered. */
+    const telegramBack = () => act(() => backHandler()?.());
+    const leaving = () => overlay().hasAttribute("data-leaving");
+    const cross = () => document.querySelector<HTMLButtonElement>("[data-fallback-close]");
+    const withoutSdk = () => {
+      fake?.uninstall();
+      fake = null;
+    };
+    const NOT_FOUND: ApiFailure = { ok: false, error: "not_found", status: 404, method: "GET", path: "listings/:number" };
+    const DAY_LIMIT: ApiFailure = { ...SERVER_FAILURE, error: "rate_limited", status: 429, reason: "daily" };
+
+    it("the overlay copy enters with its animation; the standalone copy does not", async () => {
+      const { unmount } = await mount();
+      expect(overlay().className).toContain("animate-listing-in");
+      expect(overlay().hasAttribute("data-layer-motion")).toBe(true);
+      unmount();
+
+      await mount({ presentation: "standalone" });
+      expect(overlay().className).not.toContain("animate-listing-in");
+      expect(overlay().hasAttribute("data-layer-motion")).toBe(false);
+    });
+
+    it("Telegram's Back plays the leave, then changes the route once; a second Back during the leave does nothing", async () => {
+      await mount();
+
+      telegramBack();
+      expect(leaving()).toBe(true);
+      expect(overlay().className).toContain("animate-listing-out");
+      expect(overlay().className).not.toContain("animate-listing-in");
+      expect(overlay().className).toContain("pointer-events-none");
+      expect(state.navBack).not.toHaveBeenCalled();
+
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS - 1));
+      expect(state.navBack).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+      expect(state.back).not.toHaveBeenCalled();
+
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+    });
+
+    it("a listing loaded directly (depth 0) leaves to the feed by a replace", async () => {
+      state.depth = 0;
+      await mount({ presentation: "standalone" });
+
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navReplace.mock.calls).toEqual([["/"]]);
+      expect(state.navBack).not.toHaveBeenCalled();
+    });
+
+    it("an overlay copy at depth 0 (over a standalone copy) changes the route at once, without the leave", async () => {
+      state.depth = 0;
+      await mount();
+
+      telegramBack();
+
+      expect(leaving()).toBe(false);
+      expect(state.navReplace.mock.calls).toEqual([["/"]]);
+    });
+
+    it("takes Telegram's Back only at its own address: not while a child route is open", async () => {
+      state.pathname = "/listing/100001/photos";
+      await mount();
+      expect(backHandler()).toBeNull();
+    });
+
+    it("lets go of Telegram's Back when it hides", async () => {
+      const view = await mount();
+      expect(backHandler()).not.toBeNull();
+
+      await view.rerender({ mode: "hidden" });
+
+      expect(backHandler()).toBeNull();
+    });
+
+    it.each([
+      ["lite graphics", () => document.documentElement.classList.add("lite")],
+      ["reduced motion", () => vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce") }) as MediaQueryList)],
+    ])("in %s the route changes at once, without the leave", async (_case, arrange) => {
+      arrange();
+      try {
+        await mount();
+        telegramBack();
+
+        expect(leaving()).toBe(false);
+        expect(state.navBack).toHaveBeenCalledTimes(1);
+      } finally {
+        document.documentElement.classList.remove("lite");
+      }
+    });
+
+    it("a new opening during the leave cancels it: no route change, and the new listing shows at once", async () => {
+      const view = await mount();
+      telegramBack();
+      expect(leaving()).toBe(true);
+
+      state.pathname = "/listing/100002";
+      await view.rerender({ number: "100002", screen: <ListingScreen number={100002} initial={initialOk(detailsOf({ number: 100002 }))} /> });
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navBack).not.toHaveBeenCalled();
+      expect(layer().getAttribute("data-listing-number")).toBe("100002");
+      expect(leaving()).toBe(false);
+    });
+
+    it("an address that moved during the leave (another navigation) cancels the route change and shows the layer again", async () => {
+      await mount();
+      telegramBack();
+
+      window.history.pushState(null, "", "/ru/listing/100001?x=1");
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navBack).not.toHaveBeenCalled();
+      expect(leaving()).toBe(false);
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("a route change that never removed the layer lets it take Back again after the settle", async () => {
+      await mount();
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+
+      act(() => vi.advanceTimersByTime(LISTING_CLOSE_SETTLE_MS));
+      expect(leaving()).toBe(false);
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navBack).toHaveBeenCalledTimes(2);
+    });
+
+    it("a replace (depth 0) is never released: the layer stays faded and latched while the feed loads", async () => {
+      state.depth = 0;
+      await mount({ presentation: "standalone" });
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navReplace).toHaveBeenCalledTimes(1);
+
+      act(() => vi.advanceTimersByTime(LISTING_CLOSE_SETTLE_MS * 3));
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(leaving()).toBe(true);
+      expect(state.navReplace).toHaveBeenCalledTimes(1);
+    });
+
+    it("a step back whose address changed is not released, however long the page takes", async () => {
+      await mount();
+      telegramBack();
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+      window.history.pushState(null, "", "/ru?landed=1");
+
+      act(() => vi.advanceTimersByTime(LISTING_CLOSE_SETTLE_MS));
+
+      expect(leaving()).toBe(true);
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("«Смотреть свежие» of a missing listing closes through the same path, once", async () => {
+      await mount({ screen: <ListingScreen number={100001} initial={NOT_FOUND} /> });
+
+      const fresh = Array.from(document.querySelectorAll("button")).find((button) => button.textContent === "Смотреть свежие")!;
+      act(() => fresh.click());
+      act(() => fresh.click());
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["skeleton", () => <Streaming />],
+      ["loaded", () => <ListingScreen number={100001} initial={initialOk()} />],
+      ["not_found", () => <ListingScreen number={100001} initial={NOT_FOUND} />],
+      ["day_limit", () => <ListingScreen number={100001} initial={DAY_LIMIT} />],
+      ["server", () => <ListingScreen number={100001} initial={SERVER_FAILURE} />],
+    ])("without the SDK the %s state carries the cross «Закрыть», which closes with the leave (TMA-047)", async (stateName, screen) => {
+      withoutSdk();
+      await mount({ screen: screen() });
+      expect(layer().querySelector(`[data-listing-state="${stateName}"]`)).not.toBeNull();
+
+      expect(cross()?.getAttribute("aria-label")).toBe("Закрыть");
+      act(() => cross()!.click());
+      expect(leaving()).toBe(true);
+      act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+      expect(state.navBack).toHaveBeenCalledTimes(1);
+    });
+
+    it("with the SDK there is no cross", async () => {
+      await mount();
+      expect(cross()).toBeNull();
     });
   });
 });

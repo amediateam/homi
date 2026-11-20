@@ -1,6 +1,9 @@
 import { SWIPE_BACK_SETTLE_MS } from "@homi/ui";
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { getMessages } from "@homi/i18n";
+import { act, cleanup, render as renderPage, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ back: vi.fn() }));
@@ -10,6 +13,17 @@ import { SubPage } from "@/features/shell/SubPage";
 import { toastPlacement } from "@/lib/ui/shellState";
 
 import { ANDROID_USER_AGENT, swipeRight } from "../helpers/gestures";
+
+/** The fallback cross (WP-36) names itself from the catalogue. */
+function Intl({ children }: { children: ReactNode }) {
+  return (
+    <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+      {children}
+    </NextIntlClientProvider>
+  );
+}
+
+const render = (ui: ReactNode) => renderPage(ui, { wrapper: Intl });
 
 let fake: FakeTelegram | null = null;
 const haptics = () =>
@@ -78,5 +92,22 @@ describe("SubPage", () => {
     expect(page().style.transform).toBe("");
     expect(state.back).not.toHaveBeenCalled();
     expect(haptics()).toEqual([]);
+  });
+
+  it("carries no cross of its own while the Telegram SDK is there (its BackButton closes it)", () => {
+    render(<SubPage title="Тема" />);
+    expect(document.querySelector("[data-fallback-close]")).toBeNull();
+  });
+
+  it("without the SDK the header carries the cross «Закрыть», which closes it as Back does (WP-36, TMA-047)", () => {
+    fake?.uninstall();
+    fake = null;
+    render(<SubPage title="Тема" />);
+
+    const cross = screen.getByRole("button", { name: "Закрыть" });
+    expect(cross.closest('[data-slot="subpage-header"]')).not.toBeNull();
+    act(() => cross.click());
+
+    expect(state.back).toHaveBeenCalledTimes(1);
   });
 });

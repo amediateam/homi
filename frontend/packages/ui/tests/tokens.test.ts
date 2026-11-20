@@ -196,6 +196,22 @@ describe("rules of the stylesheet", () => {
     // Reduced motion needs no rule of its own: the global one stops every keyframe animation (the test above).
   });
 
+  it("moves the listing layer as legacy: in from 24 % over 0.25 s, out over 0.2 s ease-in and held; none under lite (WP-36)", () => {
+    const motion = css["motion.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(motion).toMatch(/@keyframes listing-in\s*\{\s*from\s*\{\s*opacity: 0;\s*transform: translateX\(24%\);\s*\}\s*\}/);
+    // The leave moves the insets: a transform would make the scrolling layer the containing block of its fixed bar.
+    expect(motion).toMatch(/@keyframes listing-out\s*\{\s*to\s*\{\s*opacity: 0;\s*left: 24%;\s*right: -24%;\s*\}\s*\}/);
+    const theme = css["theme.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(theme).toMatch(/--animate-listing-in: listing-in var\(--dur-fast\) var\(--ease-ios\);/);
+    expect(theme).toMatch(/--animate-listing-out: listing-out 0\.2s ease-in forwards;/);
+    expect(declarations("lite.css", "html.lite [data-layer-motion]")).toEqual({ animation: "none" });
+  });
+
+  it("locks the page under a sheet, a full sheet and a sub-page (WP-36: subpage-open)", () => {
+    const layout = css["layout.css"].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(layout).toMatch(/body\.sheet-open,\s*body\.locked,\s*body\.subpage-open\s*\{\s*overflow: hidden;\s*overscroll-behavior: none;\s*\}/);
+  });
+
   it("declares the hooks WP-23 fills", () => {
     expect(css["layout.css"]).toMatch(/html\.fullscreen\s*\{/);
     expect(css["layout.css"]).toMatch(/html\.chrome-mini\s*\{/);

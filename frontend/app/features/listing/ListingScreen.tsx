@@ -2,7 +2,7 @@
 
 import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
-import { cn, ErrorState } from "@homi/ui";
+import { Button, ErrorState, SearchX } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { useContext, useLayoutEffect } from "react";
 
@@ -11,6 +11,7 @@ import { SourceReporter } from "@/features/shell/SourceReporter";
 import { useRouter } from "@/i18n/navigation";
 import { devFlags } from "@/lib/flags";
 import { routes } from "@/lib/navigation/routes";
+import { tg } from "@/lib/telegram";
 
 import { ListingCtaBar } from "./cta/ListingCtaBar";
 import { type ListingContactView, useListingContact } from "./cta/useContact";
@@ -83,8 +84,21 @@ function ListingContent({ number, initial }: { number: number; initial?: Listing
       content = <ListingSkeleton />;
       break;
     case "not_found":
+      content = <ListingGone />;
+      break;
+    case "day_limit":
       content = (
-        <p className={cn(CLEAR_HEADER, "px-[16px] text-center text-[15px] text-hint")}>{t("listing.loadFailed")}</p>
+        <div className={CLEAR_HEADER}>
+          <ErrorState
+            tall
+            kind="server"
+            data-reason="day_limit"
+            title={t("error.dayLimit")}
+            text={t("error.dayLimitText")}
+            retryLabel={t("error.retry")}
+            onRetry={view.retry}
+          />
+        </div>
       );
       break;
     case "offline":
@@ -114,6 +128,41 @@ function ListingContent({ number, initial }: { number: number; initial?: Listing
     <div data-listing-state={view.state}>
       {content}
       {initial !== undefined && view.state === "loaded" ? <SourceReporter source={view.source} /> : null}
+    </div>
+  );
+}
+
+/**
+ * A listing that is gone (`404`, SCR-019, legacy since `index-CIa0Ldj2.js`): `SearchX`, «Этого объявления уже нет —
+ * квартиру, похоже, сдали или продали» and «Смотреть свежие», which gives a light impact and closes the listing through
+ * the layer's close — to the page below, or to the feed on a direct load; the feed is not read again. No retry. Laid
+ * out as the tall `ErrorState` beside it (the same classes), which takes no icon of the caller's.
+ */
+function ListingGone() {
+  const t = useTranslations();
+  const { close } = useContext(ListingLayerContext);
+  return (
+    <div
+      role="alert"
+      data-listing-gone=""
+      className={CLEAR_HEADER}
+    >
+      <div className="flex flex-col items-center gap-2.5 px-6 py-16 pt-24 text-center text-hint">
+        <span className="mb-1.5 grid size-16 place-items-center rounded-pill bg-fill text-text">
+          <SearchX size={28} aria-hidden />
+        </span>
+        <p className="max-w-[300px] text-[17px] font-bold text-text">{t("listing.gone")}</p>
+        <Button
+          variant="secondary"
+          className="mt-2.5 px-4 text-[15px]"
+        onClick={() => {
+          tg.haptic.impact("light");
+          close();
+        }}
+      >
+          {t("listing.goneFresh")}
+        </Button>
+      </div>
     </div>
   );
 }

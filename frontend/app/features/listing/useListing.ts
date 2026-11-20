@@ -15,7 +15,7 @@ import { matchRoute, routes } from "@/lib/navigation/routes";
 import { onForbidden } from "@/lib/session/bootstrap";
 import { useSession } from "@/lib/session/SessionProvider";
 
-import { stepLayersOf } from "./closeListing";
+import { type ListingCloseKind, stepLayersOf } from "./closeListing";
 import {
   type ListingDetails,
   type ListingInitial,
@@ -31,6 +31,7 @@ export type ListingView =
   | { state: "preview"; preview: ListingPreview }
   | { state: "loaded"; details: ListingDetails; source: DataSource | undefined }
   | { state: "not_found" }
+  | { state: "day_limit"; retry: () => void }
   | { state: "offline"; retry: () => void }
   | { state: "server"; retry: () => void };
 
@@ -47,10 +48,21 @@ export interface ListingLayerValue {
    * it for a failure the resource never holds: the server's read (cookie mode) stays in the screen's `initial`.
    */
   view: ListingView["state"] | null;
+  /**
+   * The one close of the layer (WP-36): its leave, then the route change. Telegram's Back at the listing's own
+   * address, the fallback cross, «Смотреть свежие» and `closeListing()` call it; the swipe passes `swipe`.
+   */
+  close: (kind?: ListingCloseKind) => void;
 }
 
 /** Provided by `ListingLayer` only. */
-export const ListingLayerContext = createContext<ListingLayerValue>({ number: null, scrollToTop: () => {}, reportView: () => {}, view: null });
+export const ListingLayerContext = createContext<ListingLayerValue>({
+  number: null,
+  scrollToTop: () => {},
+  reportView: () => {},
+  view: null,
+  close: () => {},
+});
 
 export function useListingNumber(): number | null {
   return useContext(ListingLayerContext).number;
@@ -77,7 +89,10 @@ function entriesAboveListing(): number {
   return route.route === "listing" && route.child !== null ? 1 + steps : steps;
 }
 
-/** The error states of SCR-019; an `unauthorized` that survived the re-sign-in is the session's expired screen. */
+/**
+ * The error states of SCR-019; an `unauthorized` that survived the re-sign-in is the session's expired screen. The
+ * day limit is a `rate_limited` whose body said `reason: "daily"` (SCR-008, DEC-59); any other `429` is `server`.
+ */
 function errorView(error: ApiFailure, retry: () => void): ListingView {
   switch (error.error) {
     case "not_found":
@@ -85,6 +100,8 @@ function errorView(error: ApiFailure, retry: () => void): ListingView {
     case "offline":
     case "timeout":
       return { state: "offline", retry };
+    case "rate_limited":
+      return error.reason === "daily" ? { state: "day_limit", retry } : { state: "server", retry };
     default:
       return { state: "server", retry };
   }

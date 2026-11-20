@@ -1,3 +1,5 @@
+import type { Locale } from "@homi/config";
+
 import { brand } from "@/lib/brand";
 
 /**
@@ -37,12 +39,17 @@ export function botStartAppUrl(number: number): string | null {
   return base !== null && isPositive(number) ? `${base}?startapp=l_${number}` : null;
 }
 
-/** «Перейти в бота» of the no-access screen: `?start=s_<source>[--l<number>]`. */
-export function noAccessStartUrl(source: string, number?: number): string | null {
+/**
+ * «Перейти в бота» of the no-access screen: `?start=s_<source>[--l<number>]`. The source `seo` carries the interface
+ * language — `seo_en` in `en`, `seo_uz` in `uz`, `seo` in `ru` — so the bot can tell the SEO pages apart (BR-API-194,
+ * legacy since `index-CIa0Ldj2.js`); other sources are passed as they are.
+ */
+export function noAccessStartUrl(source: string, number?: number, locale?: Locale): string | null {
   if (number !== undefined && !isPositive(number)) {
     return null;
   }
-  return botStartUrl(`s_${source}${number !== undefined ? `--l${number}` : ""}`);
+  const tagged = source === "seo" && (locale === "en" || locale === "uz") ? `seo_${locale}` : source;
+  return botStartUrl(`s_${tagged}${number !== undefined ? `--l${number}` : ""}`);
 }
 
 export function supportUrl(username: string, number?: number): string | null {

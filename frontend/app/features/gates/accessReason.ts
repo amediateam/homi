@@ -1,3 +1,5 @@
+import type { Locale } from "@homi/config";
+
 import { noAccessStartUrl, supportUrl } from "@/lib/deeplinks/build";
 import type { Launch } from "@/lib/deeplinks/parse";
 import { accessReason, type AccessReason } from "@/lib/session/types";
@@ -16,7 +18,7 @@ export type NoAccessRow =
   | { action: "support"; url: string };
 
 export interface NoAccessInput {
-  /** The session's refusal; anything but the five reasons reads as `private`. */
+  /** The session's refusal; anything but the six reasons reads as `private`. */
   reason: unknown;
   /** An automatic re-check is scheduled or running (`useBootRetryState().checking`). */
   checking: boolean;
@@ -24,6 +26,8 @@ export interface NoAccessInput {
   launch: Pick<Launch, "source" | "listingNumber" | "postUrl">;
   /** The support account of the reference data; `null` while it is unknown. */
   supportUsername: string | null;
+  /** The address's locale: the SEO source of the bot link carries it (`noAccessStartUrl`). */
+  locale: Locale;
 }
 
 export interface NoAccessView {
@@ -33,13 +37,20 @@ export interface NoAccessView {
   rows: NoAccessRow[];
 }
 
+/** The refusals whose bot link passes no source: the user cannot get in through the bot either. */
+const NO_SOURCE: readonly AccessReason[] = ["blocked", "paused"];
+
 /**
  * The main button: «Перейти в бота» with `?start=s_<source>[--l<number>]` when the launch is a listing link (an `l_…`
  * start parameter: the parser sets `source` for no other), the bot is known (`brand.botUsername`, which
- * `noAccessStartUrl` reads) and the reason is not `blocked`; otherwise «Вернуться в бот», which closes the app.
+ * `noAccessStartUrl` reads) and the reason is neither `blocked` nor `paused`; otherwise «Вернуться в бот», which
+ * closes the app.
  */
-export function mainRow(reason: AccessReason, launch: NoAccessInput["launch"]): NoAccessRow {
-  const url = reason !== "blocked" && launch.source !== null ? noAccessStartUrl(launch.source, launch.listingNumber ?? undefined) : null;
+export function mainRow(reason: AccessReason, launch: NoAccessInput["launch"], locale: Locale): NoAccessRow {
+  const url =
+    !NO_SOURCE.includes(reason) && launch.source !== null
+      ? noAccessStartUrl(launch.source, launch.listingNumber ?? undefined, locale)
+      : null;
   return url === null ? { action: "back" } : { action: "toBot", url };
 }
 
@@ -48,13 +59,13 @@ export function mainRow(reason: AccessReason, launch: NoAccessInput["launch"]): 
  * (`l_<id>-[seo-]<channel>-<post>`, TMA-011), the main button, then «Написать в поддержку» only when the reference
  * data knows a support account — while it does not the row is absent, and nothing waits for it.
  */
-export function noAccessView({ reason, checking, launch, supportUsername }: NoAccessInput): NoAccessView {
+export function noAccessView({ reason, checking, launch, supportUsername, locale }: NoAccessInput): NoAccessView {
   const kind = accessReason(reason);
   const rows: NoAccessRow[] = [];
   if (launch.postUrl !== null) {
     rows.push({ action: "post", url: launch.postUrl });
   }
-  rows.push(mainRow(kind, launch));
+  rows.push(mainRow(kind, launch, locale));
   const support = supportUsername === null ? null : supportUrl(supportUsername);
   if (support !== null) {
     rows.push({ action: "support", url: support });

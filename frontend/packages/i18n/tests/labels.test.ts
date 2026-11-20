@@ -39,8 +39,8 @@ describe("labelFor", () => {
       "suspicious",
       "check",
     ]);
-    expect(Object.keys(labelTables.noAccessTitle)).toEqual(["private", "invite", "full", "blocked", "join"]);
-    expect(Object.keys(labelTables.noAccessText)).toEqual(["private", "invite", "full", "blocked", "join"]);
+    expect(Object.keys(labelTables.noAccessTitle)).toEqual(["private", "invite", "full", "blocked", "join", "paused"]);
+    expect(Object.keys(labelTables.noAccessText)).toEqual(["private", "invite", "full", "blocked", "join", "paused"]);
   });
 
   it("gives fallback.other for an unknown value and reports it once", () => {

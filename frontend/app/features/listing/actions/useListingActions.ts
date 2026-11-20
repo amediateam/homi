@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 
 import { closeActions, closeListing } from "@/features/listing/closeListing";
 import type { ListingAuthor, ReportDetail } from "@/features/listing/listingData";
+import { ListingLayerContext } from "@/features/listing/useListing";
 import { blockAuthor, hideListing, unblockAuthor, unhideListing } from "@/lib/actions/hidden";
 import { reportListing, unreportListing } from "@/lib/actions/reports";
 import { useAction } from "@/lib/actions/useAction";
@@ -73,6 +74,8 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
   const blockAction = useAction(blockAuthor);
   const unblockAction = useAction(unblockAuthor);
   const reportAction = useAction(reportListing);
+  /** The listing layer's close (WP-36): its leave, then the route change. */
+  const { close: closeLayer } = useContext(ListingLayerContext);
   const [busy, setBusy] = useState(false);
   /** The request in flight (its id), and whether the sheet is on its way out. */
   const sending = useRef<number | null>(null);
@@ -92,7 +95,7 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
 
   const leave = (here: boolean, what: "listing" | "sheet", n: number) => {
     if (here) {
-      void (what === "listing" ? closeListing(stepInAddress()) : closeActions(n, stepInAddress()));
+      void (what === "listing" ? closeListing(stepInAddress(), closeLayer) : closeActions(n, stepInAddress()));
     }
   };
 

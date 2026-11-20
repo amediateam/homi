@@ -3,8 +3,9 @@ import { deviceStorage } from "@/lib/telegram/deviceStorage";
 /**
  * The Mini App's client storage (WP-21). One table of keys with their policy: `synced` keys are mirrored to
  * Telegram's DeviceStorage and restored from it on a new device or after a cleared webview; `local` keys stay in
- * `localStorage`. A key is mirrored only if it is also restored (fix of LB-APP-012). There is no locale key: the
- * locale is the address segment plus next-intl's cookie.
+ * `localStorage`; `session` keys live in `sessionStorage`, for this webview only, and are never mirrored (WP-36: the
+ * launch mark of `lib/deeplinks/launch.ts`). A key is mirrored only if it is also restored (fix of LB-APP-012). There
+ * is no locale key: the locale is the address segment plus next-intl's cookie.
  */
 
 /** `homi-new-<feature>` markers in use. */
@@ -18,7 +19,8 @@ export type LocalKey =
   | "homi-graphics-measured"
   | "homi-map-engine"
   | `homi-map-fit:${number},${number}`;
-export type StorageKey = SyncedKey | LocalKey;
+export type SessionKey = "homi-launch-done";
+export type StorageKey = SyncedKey | LocalKey | SessionKey;
 
 export const STORAGE_POLICY = {
   "homi-city": "synced",
@@ -30,7 +32,8 @@ export const STORAGE_POLICY = {
   "homi-graphics": "local",
   "homi-graphics-measured": "local",
   "homi-map-engine": "local",
-} as const satisfies Record<SyncedKey | Exclude<LocalKey, `homi-map-fit:${string}`>, "synced" | "local">;
+  "homi-launch-done": "session",
+} as const satisfies Record<SyncedKey | Exclude<LocalKey, `homi-map-fit:${string}`> | SessionKey, "synced" | "local" | "session">;
 
 const SYNCED_KEYS = (Object.keys(STORAGE_POLICY) as (keyof typeof STORAGE_POLICY)[]).filter(
   (key): key is SyncedKey => STORAGE_POLICY[key] === "synced",
@@ -42,7 +45,7 @@ export const RESTORE_TIMEOUT_MS = 1500;
 /** Launch data (`hash=`, `auth_date=`, `query_id=`) or a bearer token never goes into a store (SEC-REQ-007). */
 const SECRET_SHAPES = [/(^|[?&#])(hash|auth_date|query_id)=/, /tgWebAppData/, /\bbearer\s+\S/i, /^\d+\|[A-Za-z0-9]{40,}/];
 
-function looksSecret(value: string): boolean {
+export function looksSecret(value: string): boolean {
   return SECRET_SHAPES.some((shape) => shape.test(value));
 }
 
@@ -52,6 +55,19 @@ function local(): Storage | null {
   } catch {
     return null;
   }
+}
+
+function session(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** The store of a key: `sessionStorage` for the `session` policy, else `localStorage`. */
+function storeOf(key: StorageKey): Storage | null {
+  return (STORAGE_POLICY as Record<string, string>)[key] === "session" ? session() : local();
 }
 
 function isSynced(key: StorageKey): key is SyncedKey {
@@ -77,7 +93,7 @@ function notify(): void {
 
 export function storageGet(key: StorageKey): string | null {
   try {
-    return local()?.getItem(key) ?? null;
+    return storeOf(key)?.getItem(key) ?? null;
   } catch {
     return null;
   }
@@ -90,9 +106,9 @@ export function storageSet(key: StorageKey, value: string | null): void {
   }
   try {
     if (value === null) {
-      local()?.removeItem(key);
+      storeOf(key)?.removeItem(key);
     } else {
-      local()?.setItem(key, value);
+      storeOf(key)?.setItem(key, value);
     }
   } catch {
     // Storage disabled or full: the value lives for this launch only.

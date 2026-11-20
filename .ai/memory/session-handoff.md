@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-20 (WP-34 merged as #92 `5949365`; WP-35, the second catch-up package, in review as #93; next: WP-36, WP-38 (WP-37 any time), then WP-31)
+updated: 2026-11-20 (WP-35 merged as #93 `989d041`; WP-36, the third catch-up package, in review as #94; next: WP-38 (WP-37 any time), then WP-31)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -10,35 +10,37 @@ Written for whoever continues the **development track**. The production track's 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-18 (verbatim in the earlier handoffs and `docs/migration/decisions/2026-11-14-developer-answers.md`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; each PR merged on its own «сливай #N».
 - 2026-11-19, the order of work: «По релизам, код до WP-31» — intake `index-CBlEKxdL` (#89) → intake `index-CIa0Ldj2` (#90) → the owner-cabinet plan (#91) → the catch-up packages WP-34 … WP-38 → WP-31.
-- 2026-11-20: «Дальше по очереди WP-34»; «Продолжим по плану»; «сливай #92».
+- 2026-11-20: «Дальше по очереди WP-34»; «Продолжим по плану»; «сливай #92»; «Продолжим» (WP-36); «запустил nginx» (the developer started nginx by hand for the e2e runs).
 
 ## State at handoff
-- `main` = `5949365` (#92). Open: #93, branch `wp-35-catch-up-card-filters-price`: `61fd4bf` code and tests, `93cdf16` review fixes, then the docs and memory commit.
-- Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
-- Verify: `make ci-frontend` (exit 0 on `61fd4bf`; app 216 files, 3 553 tests after `93cdf16`); e2e each spec alone, e.g. `cd frontend && pnpm exec playwright test --project=miniapp app/e2e/feed.spec.ts`.
+- `main` = `989d041` (#93). Open: #94, branch `wp-36-catch-up-listing-gates-shell`: `006cb5a` code and tests, `5ef3961` review fixes, `c9ecd02` docs and memory, `028a144` the leave after a slid-back swipe and the animations read in the browser, then the final docs commit.
+- Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`. Ignored Playwright output in `frontend/test-results/` and `frontend/playwright-report/`.
+- Verify: `make ci-frontend` (exit 0 on `028a144`, app 217 files, 3 629 tests); e2e each spec alone, e.g. `pnpm exec playwright test --project=miniapp app/e2e/listing-open.spec.ts` (nginx must be up: `sudo nginx`, by hand).
 
 ## Done this session
-- **#92 merged** on «сливай #92» (`5949365`, merge commit, CI green on `25133c4`); WP-34 is WAITING (spec and queue row say so in #93).
-- **WP-35** (#93): the card's and the radar strip's age from `posted.at` (`minuteClock.ts`, `CardAge.tsx`); the floor words; the badge kinds and the compact shield (`ShieldCheck` in `@homi/ui`); `Photo` resets on a new `src`; the daily-rent mini title (DEC-66); area for every deal (DEC-62), pets for long-term rent only (`dev017PetsLongRentOnly`, on, DEC-58), rooms «до N»; the `$` of the dollar field and the сум field without grouping; the tab tint and the disabled primary button. Baseline rows 1, 2, 11, 12, 20, 26, 31, 32, 38 – 42 marked closed; the parity notes in WP-22 … WP-27, WP-30 and WP-33 say "WP-35 closed it".
-  - Review subagent of `61fd4bf`: the floor word was cut off in its tile, the tab tint no longer faded — both fixed in `93cdf16` (the value wraps, hyphenated; `color 0.2s`).
-  - Checks: `pnpm test` → every project green (app 216 files, 3 553 tests); `pnpm -r lint`, `pnpm -r typecheck` exit 0; `make ci-frontend` exit 0; e2e alone `feed` 23, `listing-open` 18, `filters` 22, `map` 18, `shell` 16 passed (cookie and header); four mutation checks fail their new tests.
-  - Not run green here: `radars.spec.ts` (radars off here, KI-65); its two new cases run in CI.
+- **WP-36** (#94): the "gone" and day-limit states (`ApiError.reason`, `ApiFailure.reason: "daily"`); one close of the listing layer (`ListingLayer`'s `close`, `takeOverBack`, the leave by insets, the overlay copy's entrance); `FallbackClose`; the mini chrome under a listing over the feed; `paused`; `s_seo_en` / `s_seo_uz`; the launch mark in `sessionStorage`; `tg` in `app_launch`; `body.subpage-open`; the spot map's boxes `isolate`. Baseline rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 closed; the parity notes of WP-21 … WP-28 and WP-33 say "WP-36 closed it"; WP-35's row is WAITING.
+  - Row 10 checked on Leaflet with red tiles: the panes (z-index 400) covered the controls and the mini map covered the fullscreen map; `isolate` fixes it; the e2e case fails without it (checked).
+  - Review subagent of `006cb5a`: the direct-load «Скрыть» regression, the leave's transform moving the CTA bar, the depth-0 leave flash, the slow-replace settle, the i18n tables — fixed in `5ef3961`. Running the tests also showed `cn` kept both animation classes; fixed. The swipe's own jump is KI-67.
+  - Checks: `make ci-frontend` exit 0 on `028a144`; e2e on `028a144`: `listing-open` 21 (with `listing-in` / `listing-out` read in the browser), `shell` 19, `listing-actions` 22, `spot-map` 14, `back` 11; `pnpm -r lint`, `pnpm -r typecheck` exit 0; six mutation checks fail their tests; e2e on `5ef3961`: `listing-open` 21, `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6, `map` 18 passed; 12 more specs green on `006cb5a` (WP-36 Handoff lists them).
+  - Not green here: `foundation` (its radar case), `feed-radar`, `follow-nudge`, `return-nudge` need radars on (KI-65); `radar-forms`, `radar-subscribe`, `radars` not run.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **CI of #93**, then **«сливай #93»**.
-2. **Then WP-36** (listing states, gates and the Telegram shell; depends on WP-35), WP-38 (WP-37 any time), then **WP-31**; the cabinet's code (WP-80 …) after WP-32.
-3. **The operator texts**: the first request (WP-02 Part A, points 1 … 13) and the addendum (points 14 … 28, `docs/migration/decisions/2026-11-14-operator-request.md`) — handed over by the developer, never sent from the connected Gmail.
-4. **Production track:** WP-27/28 need `CSP_TILE_HOSTS=https://tile.openstreetmap.org` before the deploy; WP-29, WP-30, #88, #89, #90, WP-34 and WP-35 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51); the checklists of WP-34 and WP-35 inside Telegram on staging. For the cabinet later: PostGIS on the production DB, `TELESCOPE_RECORD_ALL`, the CDN purge of `owner/`, upload limits, a private app–DB link, the backup contradiction of DEC-72.
+1. **CI of #94**, then **«сливай #94»**.
+2. **Then WP-38** (feed continuity; depends on WP-36's close path and launch module), WP-37 any time, then **WP-31**; the cabinet's code (WP-80 …) after WP-32.
+3. **The operator texts** (WP-02 Part A and the addendum, `docs/migration/decisions/2026-11-14-operator-request.md`) — handed over by the developer, never sent from the connected Gmail.
+4. **Production track:** WP-27/28 need `CSP_TILE_HOSTS=https://tile.openstreetmap.org` before the deploy; WP-29, WP-30, #88, #89, #90, WP-34, WP-35 and WP-36 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51); the checklists of WP-34 … WP-36 inside Telegram on staging (WP-36: a reload inside one launch, a client on Leaflet).
 5. **Dependabot #5, #57 … #60**: only with the first developer.
-6. **Reviewer questions:** #93's choices (the clock's snapshot read from the device clock, the badge's legacy kind as `tone`, the tint in `styles/shell.css`, the key-fact values wrapping in equal columns); #92's (the bottom marks, the drag frame); earlier ones in their PRs.
+6. **Reviewer questions of #94:** `isolate` instead of legacy's z-index 1000; the leave by insets (layout per frame for 200 ms, none in lite); `closeListing` without a leave on a directly loaded listing; the layer taking no taps while it leaves (legacy).
 
 ## Gotchas learned this session
-- `useSyncExternalStore` reads the snapshot before it subscribes: a store whose snapshot only an interval refreshes shows a stale value to the first render and to readers that never subscribe; read the source (the clock) in the snapshot.
-- `data-tone` is the market chip's attribute in the card tests and specs; a second element with it (the badge) broke `querySelector("[data-tone]")` — the badge writes `data-badge-tone`.
-- `filtersSummary` puts «Посуточно» right after the place, not at the end.
-- `Bash` blocks a leading `sleep`; between e2e specs (KI-32) the next spec's build takes long enough.
-- Playwright's `page.clock.install({ time })` before the launch lets time flow from there; `fastForward` fires the 15 s check once.
-- Next numbers: AM-102, KI-67, ADR 0021; ids: DEC-89, DEV-064, RK-40, SCR-064, BR-APP-112, LB-APP-084, TMA-048, API-056, BOT-092, BR-API-198, LB-API-058, Q-APP-031, Q-API-091, Q-BOT-052, Q-DATA-052, Q-SEC-022, F-OWNER-010, F-CONTACT-004, F-FEED-005, F-RADAR-012, ENT-064, SEC-041, SEC-REQ-054, KV-BE-052.
+- `position: fixed` creates a stacking context, `relative` without a z-index does not: Leaflet's pane z-indices escape a `relative` box up to the nearest fixed layer. Leaflet's OSM tiles render translucent here, so a "hide it and compare pixels" check passes even when covered; read the stacking chain.
+- `getByRole` no longer finds an element once it is `visibility: hidden`: keep an `elementHandle()` across such a toggle.
+- `cn` (tailwind-merge) does not drop `animate-listing-in` when `animate-listing-out` is added; never rely on it for custom animation utilities.
+- A transform on a layer that scrolls itself moves its `fixed` children by the scroll offset; animate insets instead.
+- `sessionStorage` survives `vi.resetModules()`: clear it in `afterEach` of tests that touch the launch mark. A new Playwright page has a fresh `sessionStorage`.
+- One `next build` per e2e batch: `next start -p 3001` with `API_URL`, `CSP_TILE_HOSTS`, `NODE_EXTRA_CA_CERTS=$(mkcert -CAROOT)/rootCA.pem`; Playwright reuses the server (`reuseExistingServer`); a 40 s pause between specs kept the stub user under its limit (KI-32).
+- The local build has no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the inlined value is empty): bot-link e2e cases take their no-bot branch.
+- Next numbers: AM-102, KI-68, ADR 0021; ids unchanged from the last handoff (DEC-89, DEV-064, RK-40, SCR-064, BR-APP-112, …).
 
 ## Active subagent work at handoff
 - None running.

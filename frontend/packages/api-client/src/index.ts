@@ -12,13 +12,16 @@ export class ApiError extends Error {
   /** The envelope's `code`; `unknown` when the answer had no envelope (an nginx 502 page, a network proxy). */
   readonly code: string;
   readonly errors?: Record<string, string[]>;
+  /** The envelope's `reason` when it is a string: the access gate's reason, `daily` on the day limit's `429`. */
+  readonly reason?: string;
 
-  constructor(message: string, status: number, code = "unknown", errors?: Record<string, string[]>) {
+  constructor(message: string, status: number, code = "unknown", errors?: Record<string, string[]>, reason?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.errors = errors;
+    this.reason = reason;
   }
 
   get isUnauthorized(): boolean {
@@ -115,6 +118,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         response.status,
         failure?.code,
         failure?.errors,
+        typeof failure?.reason === "string" ? failure.reason : undefined,
       );
     }
 

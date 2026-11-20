@@ -1,7 +1,8 @@
 "use client";
 
 import { Button, Lock } from "@homi/ui";
-import { useTranslations } from "next-intl";
+import type { Locale } from "@homi/config";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
 import { parseLaunch } from "@/lib/deeplinks/parse";
@@ -45,6 +46,7 @@ function press(row: NoAccessRow): void {
  */
 export function NoAccessScreen() {
   const t = useTranslations();
+  const locale = useLocale() as Locale;
   const { status, reason } = useSession();
   const { checking } = useBootRetryState();
   const { supportUsername } = useReference();
@@ -61,7 +63,7 @@ export function NoAccessScreen() {
     return <GateWait />;
   }
 
-  const view = noAccessView({ reason, checking, supportUsername, launch: parseLaunch(tg.initData(), window.location.search) });
+  const view = noAccessView({ reason, checking, supportUsername, locale, launch: parseLaunch(tg.initData(), window.location.search) });
   return (
     <section
       data-screen="no-access"

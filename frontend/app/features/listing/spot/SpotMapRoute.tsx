@@ -17,7 +17,7 @@ const neverRead = () => Promise.reject(new Error("the spot map never reads the l
 
 /** The listing screen's error states (SCR-019): its read failed. */
 function failedView(view: ListingView["state"] | null): boolean {
-  return view === "not_found" || view === "offline" || view === "server";
+  return view === "not_found" || view === "day_limit" || view === "offline" || view === "server";
 }
 
 /**

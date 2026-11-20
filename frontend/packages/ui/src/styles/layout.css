@@ -48,10 +48,12 @@ body {
 
 /*
  * The page under a sheet (WP-23, `03` §1.2): no scroll and no rubber band while any sheet is open (`sheet-open`,
- * counted across stacked sheets) or a full sheet holds the page (`locked`). Pull-to-refresh reads both classes.
+ * counted across stacked sheets), a full sheet holds the page (`locked`) or a sub-page lies over it (`subpage-open`,
+ * WP-36, legacy since `index-BnFvC-Ft.js`). Pull-to-refresh reads `sheet-open` and `locked`.
  */
 body.sheet-open,
-body.locked {
+body.locked,
+body.subpage-open {
   overflow: hidden;
   overscroll-behavior: none;
 }
