@@ -13,6 +13,7 @@ vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ me: null 
 
 import type { ShellVariant } from "@/features/shell/shellVariant";
 import { ViewToggle } from "@/features/shell/ViewToggle";
+import { toastPlacement } from "@/lib/ui/shellState";
 
 function tree(variant: ShellVariant, locale: Locale = "ru", onIntent?: () => void) {
   return (
@@ -51,6 +52,20 @@ afterEach(() => {
 });
 
 describe("ViewToggle (SCR-006)", () => {
+  it.each<[ShellVariant, string]>([
+    ["search-list", "toggle"],
+    ["map", "toggle"],
+    ["map-drawing", "tabbar"],
+    ["saved", "tabbar"],
+    ["radars", "tabbar"],
+    ["none", "tabbar"],
+  ])("on %s the app's toast sits by it: %s (SCR-042)", (variant, placement) => {
+    toggle(variant);
+    expect(toastPlacement()).toBe(placement);
+    cleanup();
+    expect(toastPlacement()).toBe("tabbar");
+  });
+
   it.each([
     ["ru", "Карта", "Список"],
     ["uz", "Xarita", "Roʻyxat"],

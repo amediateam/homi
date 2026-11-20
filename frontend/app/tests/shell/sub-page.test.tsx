@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({ back: vi.fn() }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
 
 import { SubPage } from "@/features/shell/SubPage";
+import { toastPlacement } from "@/lib/ui/shellState";
 
 import { ANDROID_USER_AGENT, swipeRight } from "../helpers/gestures";
 
@@ -31,6 +32,14 @@ afterEach(() => {
 const page = () => document.querySelector<HTMLElement>('[data-slot="subpage"]')!;
 
 describe("SubPage", () => {
+  it("puts the app's toast 16 px above the bottom inset while it is mounted (SCR-042)", () => {
+    expect(toastPlacement()).toBe("tabbar");
+    const { unmount } = render(<SubPage title="Тема" />);
+    expect(toastPlacement()).toBe("subpage");
+    unmount();
+    expect(toastPlacement()).toBe("tabbar");
+  });
+
   it("passes the title, the hint and bare through to the frame", () => {
     const { rerender } = render(
       <SubPage title="Тема" hint="Как в Telegram">

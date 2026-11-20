@@ -179,6 +179,7 @@ describe("ToastHost (SCR-042)", () => {
     ["the listing's CTA bar", ["cta"], /bottom-\[calc\(var\(--bottom-inset\)\+88px\)\]/, "cta"],
     ["a sub-page over the toggle", ["toggle", "subpage"], /bottom-\[calc\(var\(--bottom-inset\)\+16px\)\]/, "subpage"],
     ["the CTA bar over the toggle", ["toggle", "cta"], /bottom-\[calc\(var\(--bottom-inset\)\+88px\)\]/, "cta"],
+    ["the CTA bar over a sub-page", ["subpage", "cta"], /bottom-\[calc\(var\(--bottom-inset\)\+88px\)\]/, "cta"],
   ])("the app's toast sits by what is below it: %s", (_, marks, bottom, placement) => {
     render(
       <>
@@ -247,6 +248,20 @@ describe("ToastHost (SCR-042)", () => {
     drag(-80, { lift: false });
     expect(dragFrame()?.style.transform).toBe("");
     fireEvent.touchEnd(toastElement() as Element, { touches: [] });
+    expect(currentToast()).not.toBeNull();
+  });
+
+  it("a cancelled touch returns the toast, however far it was dragged", () => {
+    host();
+    act(() => showToast("Готово"));
+
+    drag(80, { lift: false });
+    fireEvent.touchCancel(toastElement() as Element, { touches: [] });
+    expect(toastElement()).not.toBeNull();
+    expect(dragFrame()?.style.transform).toBe("");
+
+    // The next drag starts afresh: a short one past the cancel does not close it.
+    drag(20);
     expect(currentToast()).not.toBeNull();
   });
 

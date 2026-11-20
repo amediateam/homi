@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe("devFlags", () => {
-  it("has the 19 DEV flags; the five halves legacy adopted by index-CIa0Ldj2.js are on (DEC-58), the rest off", () => {
+  it("has the 19 DEV flags; the four halves legacy adopted by index-CIa0Ldj2.js are on (DEC-58), the rest off", () => {
     expect(Object.keys(devFlags)).toHaveLength(19);
     const on = Object.entries(devFlags)
       .filter(([, value]) => value)

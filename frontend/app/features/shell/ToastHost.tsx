@@ -35,6 +35,17 @@ function useToastDrag(close: () => void) {
   const startY = useRef<number | null>(null);
   const lastY = useRef(0);
 
+  /** The finger is gone: the toast returns to its place, or, `dismiss`ed, closes. */
+  const release = (dismiss: boolean) => {
+    startY.current = null;
+    lastY.current = 0;
+    if (dismiss) {
+      close();
+    } else {
+      setDragY(0);
+    }
+  };
+
   const handlers = {
     onTouchStart: (event: TouchEvent) => {
       startY.current = event.touches[0]?.clientY ?? null;
@@ -47,19 +58,13 @@ function useToastDrag(close: () => void) {
         setDragY(lastY.current);
       }
     },
-    onTouchEnd: () => {
-      startY.current = null;
-      if (lastY.current > TOAST_DISMISS_DRAG_PX) {
-        close();
-      } else {
-        lastY.current = 0;
-        setDragY(0);
-      }
-    },
+    onTouchEnd: () => release(lastY.current > TOAST_DISMISS_DRAG_PX),
+    // The system took the touch (a Telegram or OS gesture): not a release, so the toast returns.
+    onTouchCancel: () => release(false),
   };
   const style: CSSProperties | undefined =
     dragY > 0 ? { transform: `translateY(${dragY}px)`, opacity: Math.max(0.2, 1 - dragY / 120), transition: "none" } : undefined;
-  return { handlers: { ...handlers, onTouchCancel: handlers.onTouchEnd }, style };
+  return { handlers, style };
 }
 
 /**
