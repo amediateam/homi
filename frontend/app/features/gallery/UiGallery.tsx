@@ -490,7 +490,9 @@ function Confirm({ onEvent, events }: { onEvent: (event: string) => void; events
 function Feedback({ onEvent }: { onEvent: (event: string) => void }) {
   return (
     <Entry id="feedback" title="failed() и saved()">
-      <p className="text-[13px] text-hint">Вибрация Telegram; с DEV-016 failed() добавляет тост «Не получилось сохранить».</p>
+      <p className="text-[13px] text-hint">
+        Вибрация Telegram и тост «Не получилось сохранить»; toast: false и DEV-016 выключенный — только вибрация.
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button
           size="md"
@@ -506,13 +508,24 @@ function Feedback({ onEvent }: { onEvent: (event: string) => void }) {
         <Button
           size="md"
           variant="secondary"
-          data-testid="gallery-feedback-failed-dev016"
+          data-testid="gallery-feedback-failed-silent"
           onClick={() => {
-            failed({ flags: { ...devFlags, dev016ErrorToastOnFailure: true } });
-            onEvent("failed, DEV-016");
+            failed({ toast: false });
+            onEvent("failed, toast: false");
           }}
         >
-          failed() с DEV-016
+          failed() без тоста
+        </Button>
+        <Button
+          size="md"
+          variant="secondary"
+          data-testid="gallery-feedback-failed-dev016-off"
+          onClick={() => {
+            failed({ flags: { ...devFlags, dev016ErrorToastOnFailure: false } });
+            onEvent("failed, DEV-016 off");
+          }}
+        >
+          failed() без DEV-016
         </Button>
         <Button
           size="md"

@@ -19,6 +19,7 @@ import { AuthorSection } from "@/features/listing/sections/AuthorSection";
 import { OriginalText } from "@/features/listing/sections/OriginalText";
 import { clearTracked, recentTracked } from "@/lib/analytics/events";
 import { LINK_DEBOUNCE_MS, TEL_DETECTION_MS } from "@/lib/telegram";
+import { currentToast, dismissToast } from "@/lib/ui/toast";
 
 import { contactOf, detailsOf } from "../helpers/details";
 
@@ -140,6 +141,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  dismissToast("app");
   vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -218,6 +220,8 @@ describe("useListingContact: the phone control", () => {
     expect(haptics()).toEqual(["medium", "error"]);
     expect(result.current.phone).toMatchObject({ display: null, tail: null });
     expect(events()).toEqual([]);
+    // Legacy shows no text for a contact failure, also since `index-CIa0Ldj2.js`.
+    expect(currentToast()).toBeNull();
   });
 });
 
@@ -256,6 +260,8 @@ describe("useListingContact: «Позвонить»", () => {
     expect(opened()).toEqual([]);
     expect(dialled).toEqual([]);
     expect(events()).toEqual([]);
+    // Legacy shows no text for a contact failure, also since `index-CIa0Ldj2.js`.
+    expect(currentToast()).toBeNull();
   });
 
   it("a call page the link list refuses: the error haptic and no event", async () => {
@@ -267,6 +273,8 @@ describe("useListingContact: «Позвонить»", () => {
     expect(haptics()).toEqual(["medium", "error"]);
     expect(opened()).toEqual([]);
     expect(events()).toEqual([]);
+    // Legacy shows no text for a contact failure, also since `index-CIa0Ldj2.js`.
+    expect(currentToast()).toBeNull();
   });
 
   it("Android: tel: first, and leaving the app logs via tel without opening the call page", async () => {
@@ -397,6 +405,8 @@ describe("useListingContact: «Написать» and «Открыть пост�
     expect(haptics()).toEqual(["medium", "error"]);
     expect(opened()).toEqual([]);
     expect(events()).toEqual([]);
+    // Legacy shows no text for a contact failure, also since `index-CIa0Ldj2.js`.
+    expect(currentToast()).toBeNull();
   });
 
   it("«Открыть пост»: medium haptic and the post, logged as original_opened from the button", async () => {

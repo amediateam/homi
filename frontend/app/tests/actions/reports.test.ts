@@ -7,7 +7,7 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/root-params", () => ({ locale: async () => "ru" }));
 
-const { reportListing } = await import("@/lib/actions/reports");
+const { reportListing, unreportListing } = await import("@/lib/actions/reports");
 
 type Sent = { url: string; method: string; headers: Record<string, string>; body: unknown };
 let sent: Sent[] = [];
@@ -151,6 +151,61 @@ describe("reportListing (WP-26, BR-API-101)", () => {
     jar.clear();
 
     await expect(reportListing({ number: 100001, reason: "rented" })).resolves.toMatchObject({ ok: false, error: "unauthorized", status: 401 });
+    expect(sent).toEqual([]);
+  });
+});
+
+describe("unreportListing (DEC-68, API-055)", () => {
+  it("DELETE /listings/{number}/reports with the cookie token; the 204 is a success with null data", async () => {
+    vi.mocked(fetch).mockImplementationOnce(async (url, init) => {
+      sent.push({ url: String(url), method: String(init?.method), headers: init?.headers as Record<string, string>, body: init?.body });
+      return new Response(null, { status: 204 });
+    });
+
+    await expect(unreportListing({ number: 100001 }, undefined, "uz")).resolves.toEqual({ ok: true, data: null, meta: {} });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ url: "https://api.test/api/v1/listings/100001/reports", method: "DELETE", body: undefined });
+    expect(sent[0].headers.Authorization).toBe("Bearer cookie-token");
+    expect(sent[0].headers["Accept-Language"]).toBe("uz");
+  });
+
+  it("header mode: the token of the argument", async () => {
+    jar.clear();
+    vi.mocked(fetch).mockImplementationOnce(async (url, init) => {
+      sent.push({ url: String(url), method: String(init?.method), headers: init?.headers as Record<string, string>, body: init?.body });
+      return new Response(null, { status: 204 });
+    });
+
+    await unreportListing({ number: 100001 }, { token: "header-token" });
+
+    expect(sent[0].headers.Authorization).toBe("Bearer header-token");
+  });
+
+  it("a refusal of the API comes back as its UiError", async () => {
+    vi.mocked(fetch).mockImplementationOnce(async () => Response.json({ success: false, message: "Unavailable", code: "source_unavailable" }, { status: 503 }));
+
+    await expect(unreportListing({ number: 100001 })).resolves.toEqual({
+      ok: false,
+      error: "source_unavailable",
+      status: 503,
+      code: "source_unavailable",
+      method: "DELETE",
+      path: "listings/:number/reports",
+    });
+  });
+
+  it("an input that fails its check makes no request", async () => {
+    for (const input of [null, 42, [], {}, { number: 0 }, { number: 1.5 }, { number: "100001" }, { number: -3 }]) {
+      await expect(unreportListing(input as never), JSON.stringify(input)).resolves.toEqual({
+        ok: false,
+        error: "validation",
+        status: 422,
+        code: "validation_failed",
+        method: "DELETE",
+        path: "listings/:number/reports",
+      });
+    }
     expect(sent).toEqual([]);
   });
 });

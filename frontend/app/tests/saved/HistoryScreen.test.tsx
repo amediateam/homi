@@ -413,6 +413,18 @@ describe("HistoryScreen: «Очистить» (BR-APP-067, TMA-025, TMA-026)", (
     expect(currentToast()?.message ?? null).toEqual(toast);
   });
 
+  it("a failed clear shows «Не получилось сохранить» with the default flags (DEC-58)", async () => {
+    state.clearHistory.mockResolvedValueOnce(NOT_CLEARED);
+    screen(adopted(page([1, 2])));
+
+    fireEvent.click(clearButton()!);
+    await settle();
+
+    expect(cards()).toEqual([1, 2]);
+    expect(haptics()).toEqual([ERROR]);
+    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+  });
+
   it("the next key brings the list back: a pull after a clear asks for page one once and shows its cards", async () => {
     state.clearHistory.mockResolvedValueOnce(CLEARED);
     screen(adopted(page([1, 2])));

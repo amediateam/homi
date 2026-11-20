@@ -72,7 +72,8 @@ export function useRadarText(flags: DevFlags = devFlags): RadarText {
  * switched off on the server since the reference data was cached → «Радар скоро заработает» (DEC-51); `no_chat` (only
  * switching on asks for the chat) → «Радар не включён — боту нужно разрешение…»; an unknown radar (deleted in the bot)
  * → the lists are read again and `gone` runs (the sheet gives way to the tab), with `failed()`; anything else →
- * `failed()`: the error haptic, and «Не получилось сохранить» only with `dev016ErrorToastOnFailure` (legacy vibrated).
+ * `failed()`: the error haptic and «Не получилось сохранить», as legacy since `index-CIa0Ldj2.js` — a `409` limit answer
+ * of the switch too (LB-APP-081, reproduced).
  */
 export function radarActionFailed(result: ApiFailure, { flags = devFlags, gone }: { flags?: DevFlags; gone?: () => void } = {}): void {
   if (result.error === "radars_disabled") {

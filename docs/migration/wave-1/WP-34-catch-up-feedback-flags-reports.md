@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#92) |
 | Depends on | intake `index-CIa0Ldj2` (the method `DELETE /listings/{number}/reports`, the field `agent_marked` of the report answer, the texts `toast.showForMe` and `toast.reportedAgentNoted`), WP-30 |
 | Size | about 430 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-004, SCR-023, SCR-042), §4 (BR-APP-036, BR-APP-039, BR-APP-048, BR-APP-067, BR-APP-069), §5 (LB-APP-025, LB-APP-027), §5b (LB-APP-081); `02` (BR-API-190, BR-API-191); `08` (API-055); `09` §4.2 (DEV-010, DEV-014, DEV-016, DEV-051); `wave-1/baseline.md`, built code behind the pin, rows 4, 21, 22, 23, 24, 25, 27, 30 |
@@ -92,12 +92,12 @@ Tests that relied on "every flag is off" set their flag through `withDevFlags` (
 
 | Caller | After this package |
 | ------ | ------------------ |
-| `features/feed/FavButton.tsx` (save and rollback at `:35-41,58-66`) | rolls back, then `failed()`; today it rolls back silently |
+| `features/feed/FavButton.tsx` (save and rollback at `:35-41,58-66`) | rolls back, then `failed()`; today it rolls back silently. It takes a `flags` prop (default `devFlags`), as the other callers do, so a test can turn the toast off *(rule 6)* |
 | `features/saved/ClearHistoryButton.tsx:51` | unchanged; now toasts by default |
 | `radarActionFailed` (`features/radars/RadarTiles.tsx:77-93`: switch, mode, unhide, delete) | unchanged; now toasts by default. `radars_disabled` and `no_chat` keep their own toasts |
 | `features/gates/LanguagePicker.tsx:156` | `failed({ flags, toast: false })` and the line below |
 | `features/listing/cta/useContact.ts:150,160,171,182` | `failed({ toast: false })` |
-| `features/gallery/UiGallery.tsx` (entry `feedback`) | shows the default, `toast: false`, and the flag off |
+| `features/gallery/UiGallery.tsx` (entry `feedback`) | shows the default, `toast: false`, and the flag off: three buttons, `gallery-feedback-failed`, `-failed-silent`, `-failed-dev016-off` |
 
 `features/radars/RadarSheet.tsx:215` reads `dev016SuccessToastOnDestructive` instead of `dev016ErrorToastOnFailure`
 for «Радар удалён»; its doc comment (`:83`) says so.
@@ -147,20 +147,38 @@ the offsets by context exactly as WP-23 "Toast (SCR-042) and confirm (SCR-043)" 
 `index-CBlEKxdL.js`. The host reads what is below it from the shell state (view toggle shown, sub-page, the listing's
 CTA bar); the scope `sheet` keeps its offset. Reduced motion: no rise; the drag still works.
 
+As built *(rule 6)*:
+
+- `lib/ui/shellState.ts` holds the marks: `useBottomMark("toggle" | "subpage" | "cta", on?)` counts a mark while its
+  component is mounted (a layout effect, so a route hidden by `cacheComponents` takes its mark along), and
+  `useToastPlacement()` gives the app's host its placement in legacy's order of rules (`feedback.css:77-88`): CTA bar
+  over sub-page over toggle over the bare tab bar. `ViewToggle` marks `toggle` while it is shown, `SubPage` marks
+  `subpage`, `ListingCtaBar` marks `cta`. The host writes the placement as `data-placement`.
+- The drag is touch only, as legacy's `Toast.jsx` (`onTouchStart` / `Move` / `End`; a cancel returns the toast). It
+  moves a frame around the toast (`data-toast-drag`, which carries `touch-action: none`), not the toast itself: the
+  toast's `rise-in` fills `both` and holds `transform: none` after it ran, which would win over an inline transform.
+
 ## Files
 
 Changed, under `frontend/app/`:
 
-- `lib/flags.ts`, `lib/ui/feedback.ts`, `lib/api/server.ts`, `lib/actions/reports.ts`
+- `lib/flags.ts`, `lib/ui/feedback.ts`, `lib/ui/shellState.ts`, `lib/api/server.ts`, `lib/actions/reports.ts`
 - `features/feed/FavButton.tsx`, `features/gates/LanguagePicker.tsx`, `features/listing/cta/useContact.ts`,
   `features/radars/RadarSheet.tsx`, `features/gallery/UiGallery.tsx`, `features/shell/ToastHost.tsx`
-- `features/listing/actions/{useListingActions.ts,ListingActionsSheet.tsx}`
+- `features/shell/{ViewToggle,SubPage}.tsx`, `features/listing/cta/ListingCtaBar.tsx` (the bottom marks, *rule 6*)
+- `features/listing/actions/{useListingActions.ts,ListingActionsSheet.tsx}`; comments only in
+  `features/radars/RadarTiles.tsx`
 - tests: `tests/ui/feedback.test.ts`, `tests/ui/toast-host.test.tsx`, `tests/feed/FavButton.test.tsx`,
-  `tests/saved/HistoryScreen.test.tsx`, `tests/radars/RadarSheet.test.tsx`, `tests/radars/RadarTiles.test.tsx`,
+  `tests/saved/HistoryScreen.test.tsx`, `tests/radars/RadarSheet.test.tsx`, `tests/radars/RadarSoon.test.tsx`,
   `tests/gates/LanguagePicker.test.tsx`, `tests/listing/{useListingActions,ListingActionsSheet}.test.tsx`,
-  `tests/listing/{HistorySection,useContact}.test.tsx`, `tests/actions/reports.test.ts`, and every test that read a
-  flag's old default
-- end to end: `e2e/feed.spec.ts`, `e2e/listing-actions.spec.ts`, `e2e/radars.spec.ts` (a comment only)
+  `tests/listing/useListingContact.test.tsx`, `tests/actions/reports.test.ts`, and every test that read a flag's old
+  default (`tests/shell/facades.test.ts`, `tests/gallery/page.test.tsx`) or mocks the reports actions
+  (`tests/listing/ListingScreen.wiring.test.tsx`). *Rule 6:* the radar switch flows are tested in
+  `RadarSoon.test.tsx` (`RadarTiles.test.tsx` renders the tiles only); the contact flows in
+  `useListingContact.test.tsx`; `HistorySection.test.tsx` already covered both branches of `dev014TashkentDates`
+  (an event at 20:30 UTC: «15 нояб» and 01:30 in Tashkent) and is unchanged
+- end to end: `e2e/feed.spec.ts`, `e2e/listing-actions.spec.ts`, `e2e/radars.spec.ts` (a comment only),
+  `e2e/shell.spec.ts` (the gallery's toast offset, 140 px → 82 px; *rule 6*: the specification missed it)
 
 Changed in `frontend/packages/i18n/`: `messages/homi/{ru,uz,en}.json`, `tests/catalogue.test.ts`.
 
@@ -255,7 +273,9 @@ End to end (Playwright, fake Telegram, stubs; cookie mode and header mode):
 - `e2e/feed.spec.ts`: the case "a failed save returns it" also expects the error haptic and «Не получилось
   сохранить».
 - `e2e/listing-actions.spec.ts`: «Уже сдано» → «Вернуть» → one `DELETE /listings/{number}/reports` reaches the API
-  and the card is back in the feed; the same with that request failing → the card stays hidden and the toast says
+  and the card is back in the feed (*rule 6:* the browser sees the Server Action, not the server's request to the API;
+  the spec checks one more Server Action, carrying the number alone and a different action than the report's, and
+  the unit tests prove that `unreportListing` sends that `DELETE` and that the undo calls it); the same with that request failing → the card stays hidden and the toast says
   «Не получилось сохранить»; the `fraud` case (`:181`) expects «Показывать у меня»; «Это риелтор, а не хозяин»
   shows «Спасибо, учёл вашу отметку», and with the stub scenario `agent_marked` (cookie `homi_stub_scenario`)
   «Отметили номер как риелторский».
@@ -296,4 +316,24 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 
 ## Handoff
 
-Empty.
+- **Done** on `wp-34-catch-up-feedback-flags-reports` (from `main` = `bcc7aa0`, after #91) in `08c07e9` (code and
+  tests), `68d6ada` (review fixes) and the docs commit, by the main session, with one independent review subagent of
+  the code commit. Its findings: a touch cancel ran the release (now it returns the toast); the marks of the real
+  components and the pair CTA bar over sub-page were untested (now tested; removing a mark fails them); no bug a user
+  would hit.
+  Steps 1 – 7 as written; step 8's end-to-end cases in both session modes; the checklist on staging waits for the
+  production track.
+- **Departures recorded under rule 6** (in Design, Files and Tests above): the bottom marks of the shell state and
+  the drag frame of the toast; `FavButton` takes `flags`; the gallery entry has three buttons; the radar switch and
+  contact cases live in `RadarSoon.test.tsx` and `useListingContact.test.tsx`; the end-to-end rented undo checks the
+  Server Action, and the unit tests the `DELETE` it sends.
+- **Local end-to-end runs:** `listing-actions.spec.ts` alone 20 passed and `feed.spec.ts` alone 19 passed, cookie
+  and header mode. Run together they fail at the sign-in (`data-session` stays `booting`): the local API limiter of
+  KI-32. `radars.spec.ts` cannot pass on this machine, whose backend has radars off (AM-99, KI-65); it changes one
+  comment here, and CI runs it.
+- **CI's first end-to-end run** (`frontend-e2e` 44656571365, 355 passed, 1 failed) caught `shell.spec.ts`, which
+  pinned the gallery's toast at the old 140 px; it now expects 82 px and `data-placement="tabbar"`, and the feed's
+  heart case checks 140 px with `toggle` over the real view toggle.
+- **Left for the production track:** the regular deploy, then the acceptance checklist inside Telegram on staging
+  (the toast's drag and offsets, the language picker's line, the rented undo, Tashkent dates with the device in another
+  zone) on iOS, Android, Desktop and Web.

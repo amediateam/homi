@@ -65,6 +65,8 @@ const button = (code: string) => document.querySelector<HTMLButtonElement>(`butt
 /** Disabled for the user: `aria-disabled`, while the element keeps its focus (`disabled` would drop it). */
 const disabled = (element: HTMLButtonElement) => element.getAttribute("aria-disabled") === "true" && !element.disabled;
 const enabled = (element: HTMLButtonElement) => element.getAttribute("aria-disabled") === "false" && !element.disabled;
+/** The failure line under the list (LB-APP-027 fixed in `index-CIa0Ldj2.js`). */
+const alertLine = () => document.querySelector<HTMLElement>('[data-slot="save-failed"][role="alert"]');
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -241,9 +243,10 @@ describe("LanguagePicker tap (D-S-6)", () => {
     expect(state.error).not.toHaveBeenCalled();
   });
 
-  it("on failure enables the buttons again with the error haptic only (DEV-016 off)", async () => {
+  it("on failure enables the buttons again with the error haptic and «Не получилось сохранить» under the list, no toast", async () => {
     state.updateSettings.mockResolvedValue(REFUSED);
     picker();
+    expect(alertLine()).toBeNull();
 
     await act(async () => {
       fireEvent.click(button("uz"));
@@ -253,27 +256,38 @@ describe("LanguagePicker tap (D-S-6)", () => {
     expect(document.querySelector('[role="group"]')?.hasAttribute("aria-busy")).toBe(false);
     expect(state.error).toHaveBeenCalledTimes(1);
     expect(currentToast()).toBeNull();
+    expect(alertLine()?.textContent).toBe("Не получилось сохранить");
+    expect(document.querySelector('[role="group"]')?.nextElementSibling).toBe(alertLine());
     expect(gateState.localePicked).toBe(false);
     expect(state.patchMe).not.toHaveBeenCalled();
 
-    state.updateSettings.mockResolvedValue(SAVED);
+    // The next tap clears the line before it saves; a success leaves none.
+    const answer = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValue(answer.promise);
     await act(async () => {
       fireEvent.click(button("uz"));
     });
+    expect(alertLine()).toBeNull();
+    await act(async () => answer.resolve(SAVED));
     expect(state.updateSettings).toHaveBeenCalledTimes(2);
     expect(state.patchMe).toHaveBeenCalledExactlyOnceWith({ locale: "uz", locale_chosen: true });
+    expect(alertLine()).toBeNull();
   });
 
-  it("on failure with DEV-016 also shows «Не получилось сохранить»", async () => {
+  it("a second failure shows the line again; dev016ErrorToastOnFailure changes nothing here", async () => {
     state.updateSettings.mockResolvedValue(REFUSED);
-    withDevFlags({ dev016ErrorToastOnFailure: true }, (flags) => picker({ flags }));
+    withDevFlags({ dev016ErrorToastOnFailure: false }, (flags) => picker({ flags }));
 
     await act(async () => {
       fireEvent.click(button("ru"));
     });
+    await act(async () => {
+      fireEvent.click(button("ru"));
+    });
 
-    expect(state.error).toHaveBeenCalledTimes(1);
-    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+    expect(state.error).toHaveBeenCalledTimes(2);
+    expect(currentToast()).toBeNull();
+    expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1);
     expect(buttons().every(enabled)).toBe(true);
   });
 

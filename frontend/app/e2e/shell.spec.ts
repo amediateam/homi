@@ -443,12 +443,14 @@ test.describe("part B wrappers on the dev gallery", () => {
     await expect(toast).toContainText("Второй тост");
     await expect(toast).toHaveCount(1);
 
-    // Tab bar 62 px + no bottom inset + 78 px (legacy `.toast`), at the toast level of the z ladder.
+    // Tab bar 62 px + no bottom inset + 20 px (legacy `.toast` with no view toggle, sub-page or CTA bar below it, WP-34),
+    // at the toast level of the z ladder.
     expect(await page.locator("[data-toast-host]").count()).toBe(1);
     expect(await host.evaluate((element) => ({ bottom: getComputedStyle(element).bottom, zIndex: getComputedStyle(element).zIndex }))).toEqual({
-      bottom: "140px",
+      bottom: "82px",
       zIndex: "60",
     });
+    await expect(host).toHaveAttribute("data-placement", "tabbar");
   });
 
   test("RouteSheet: the gallery's /filters closes by BackButton, backdrop, × and drag", async ({ page }) => {

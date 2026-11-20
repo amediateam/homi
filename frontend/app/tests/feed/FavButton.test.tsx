@@ -18,7 +18,9 @@ vi.mock("@/lib/actions/favorites", () => ({ setFavorite: state.setFavorite }));
 
 import { FavButton, type FavButtonProps, resetPendingFavorites } from "@/features/feed/FavButton";
 import { isFavorite, resetSessionMaps, setFav } from "@/lib/data/sessionMaps";
-import { currentToast } from "@/lib/ui/toast";
+import { currentToast, dismissToast } from "@/lib/ui/toast";
+
+import { withDevFlags } from "../helpers/flags";
 
 const SAVED_ON: Saved = { ok: true, data: { favorite: true }, meta: { source: "stub" } };
 const SAVED_OFF: Saved = { ok: true, data: { favorite: false }, meta: { source: "stub" } };
@@ -58,6 +60,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  dismissToast("app");
   resetSessionMaps();
   resetPendingFavorites();
   fake?.uninstall();
@@ -117,7 +120,7 @@ describe("FavButton (BR-APP-039)", () => {
     ["adding", false, UNAVAILABLE],
     ["removing", true, { ...UNAVAILABLE, method: "DELETE" } as Saved],
     ["adding, offline", false, { ok: false, error: "offline", method: "ACTION", path: "setFavorite" } as Saved],
-  ])("%s: a failure returns the heart to the state before the tap, with no text and no error haptic", async (_name, before, failure) => {
+  ])("%s: a failure returns the heart to the state before the tap, with the error haptic and «Не получилось сохранить»", async (_name, before, failure) => {
     const save = deferred<Saved>();
     state.setFavorite.mockReturnValueOnce(save.promise);
     const onChange = vi.fn();
@@ -131,7 +134,20 @@ describe("FavButton (BR-APP-039)", () => {
     expect(pressed()).toBe(String(before));
     expect(isFavorite(42, !before)).toBe(before);
     expect(onChange.mock.calls).toEqual([[!before], [before]]);
-    expect(haptics()).toEqual([`HapticFeedback.impactOccurred(${before ? "light" : "medium"})`]);
+    expect(haptics()).toEqual([`HapticFeedback.impactOccurred(${before ? "light" : "medium"})`, "HapticFeedback.notificationOccurred(error)"]);
+    expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
+  });
+
+  it("with dev016ErrorToastOnFailure off a failure returns the heart with the error haptic and no text", async () => {
+    state.setFavorite.mockResolvedValueOnce(UNAVAILABLE);
+    withDevFlags({ dev016ErrorToastOnFailure: false }, (flags) => heart({ flags }));
+
+    await act(async () => {
+      fireEvent.click(button());
+    });
+
+    expect(pressed()).toBe("false");
+    expect(haptics()).toEqual(["HapticFeedback.impactOccurred(medium)", "HapticFeedback.notificationOccurred(error)"]);
     expect(currentToast()).toBeNull();
   });
 

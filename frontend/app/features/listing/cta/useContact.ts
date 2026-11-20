@@ -123,7 +123,8 @@ function tailOf(phone: string): string | null {
 /**
  * The contact flows of the listing screen (WP-26 "Contact"): «Позвонить», «Показать номер», the revealed number and
  * a masked number of the original text, «Написать» / «Номер платный» and «Открыть пост». Each tap plays the medium
- * haptic; every contact failure plays the error one (`failed()`) and logs nothing. `contact_call` is sent only when
+ * haptic; every contact failure plays the error one (`failed({ toast: false })`: legacy shows no text there) and logs
+ * nothing. `contact_call` is sent only when
  * something opened, with `src` `author` from the author row, `text` from the original text and none from the CTA
  * (legacy). Each control ignores a tap while its previous one runs and for `LINK_DEBOUNCE_MS` after it — no haptic,
  * no request, no event — so a double tap is one open and one event, and `openLink` never refuses a repeat that would
@@ -147,7 +148,7 @@ export function useListingContact(number: number, details: ListingDetails | null
   const dial = async (found: ContactInfo, src?: CallSource): Promise<void> => {
     const via = await tg.call(found.phone ?? "", found.url);
     if (via === null) {
-      failed();
+      failed({ toast: false });
       return;
     }
     track("contact_call", { listing_id: number, via, ...(src && { src }) });
@@ -157,7 +158,7 @@ export function useListingContact(number: number, details: ListingDetails | null
     tg.haptic.impact("medium");
     const found = await reveal();
     if (found === null) {
-      failed();
+      failed({ toast: false });
       return;
     }
     await dial(found, src);
@@ -168,7 +169,7 @@ export function useListingContact(number: number, details: ListingDetails | null
     tg.haptic.impact("medium");
     const found = await reveal();
     if (found === null) {
-      failed();
+      failed({ toast: false });
     } else if (found.phone === null) {
       await dial(found, src);
     }
@@ -179,7 +180,7 @@ export function useListingContact(number: number, details: ListingDetails | null
     if (url && tg.openLink(url)) {
       track("contact_write", { listing_id: number });
     } else {
-      failed();
+      failed({ toast: false });
     }
   };
 

@@ -105,7 +105,7 @@ describe("the merged catalogues", () => {
     expect(merged.ru["feed.retry"]).toBe("{error} — повторить");
   });
 
-  it("carry the five keys of WP-26 next to the legacy keys of their namespaces", () => {
+  it("carry the four keys of WP-26 next to the legacy keys of their namespaces; WP-34 removed `toast.reportedAgentReview`", () => {
     const values = (key: string) => locales.map((locale) => merged[locale][key]);
     expect(values("listing.showPhone")).toEqual(["Показать номер", "Raqamni koʻrsatish", "Show number"]);
     expect(values("market.v3.rooms0")).toEqual(["тоже студии", "ham studiya", "also studios"]);
@@ -115,7 +115,7 @@ describe("the merged catalogues", () => {
       "Raqamni tekshiramiz — rieltor boʻlsa, belgilaymiz",
       "We’ll check the number and mark it if it’s an agent",
     ]);
-    expect(values("toast.reportedAgentReview")).toEqual(["Спасибо, проверим", "Rahmat, tekshiramiz", "Thanks, we’ll check"]);
+    expect(values("toast.reportedAgentReview")).toEqual([undefined, undefined, undefined]);
     expect(merged.ru["listing.call"]).toBe(legacyRu.listing.call);
     expect(merged.ru["market.v3.rooms1"]).toBe(legacyRu.market.v3.rooms1);
     expect(merged.ru["report.agentHint"]).toBe("Отметим номер как риелторский");

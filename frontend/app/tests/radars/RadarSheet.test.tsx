@@ -204,6 +204,18 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(readResource<Radar[]>(RADARS_PREVIEWS_KEY)?.[0].preview?.count).toBe(3);
   });
 
+  it("a failed unhide keeps the row, with the error haptic and «Не получилось сохранить»", async () => {
+    seed(radar(A, { hidden: 3 }));
+    renderSheet();
+    await settle();
+    state.patchRadar.mockResolvedValue(failure("server", 500));
+
+    await act(async () => fireEvent.click(sheet().querySelector("[data-radar-unhide]")!));
+    expect(sheet().querySelector("[data-radar-unhide]")).not.toBeNull();
+    expect(haptics()).toContain("HapticFeedback.notificationOccurred(error)");
+    expect(currentToast("app")?.message).toEqual({ key: "common.saveFailed" });
+  });
+
   it("the strip: three ghosts while the preview is not there, «Пока ничего…» without finds", async () => {
     seed(normalizeRadar(plain(A))!);
     const view = renderSheet();
@@ -407,6 +419,7 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     await act(async () => answer(failure("server", 500)));
     expect(document.querySelector('[data-radar-mode="instant"]')?.getAttribute("aria-checked")).toBe("true");
     expect(haptics()).toContain("HapticFeedback.notificationOccurred(error)");
+    expect(currentToast("app")?.message).toEqual({ key: "common.saveFailed" });
   });
 
   it("delete: Cancel sends nothing", async () => {
@@ -422,7 +435,7 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(state.back).not.toHaveBeenCalled();
   });
 
-  it("delete: OK removes the radar from both lists, the success haptic, then back(); no toast with the flags off", async () => {
+  it("delete: OK removes the radar from both lists, the success haptic, then back(); no toast with the default flags", async () => {
     seed(radar(A), radar(B));
     seedResource(RADARS_KEY, [radar(A), radar(B)]);
     state.deleteRadar.mockResolvedValue(ok({ ask_found: false }));
@@ -463,10 +476,10 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     },
   );
 
-  it("delete with ask_found replaces the sheet with the survey; dev016 shows «Радар удалён»", async () => {
+  it("delete with ask_found replaces the sheet with the survey; dev016SuccessToastOnDestructive shows «Радар удалён»", async () => {
     seed(radar(A));
     state.deleteRadar.mockResolvedValue(ok({ ask_found: true }));
-    withDevFlags({ dev016ErrorToastOnFailure: true }, (flags) => renderSheet({ flags }));
+    withDevFlags({ dev016SuccessToastOnDestructive: true }, (flags) => renderSheet({ flags }));
     await settle();
 
     await act(async () => fireEvent.click(sheet().querySelector("[data-radar-delete]")!));
@@ -475,16 +488,30 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(currentToast("app")?.message).toEqual({ key: "toast.subDeleted" });
   });
 
-  it("a failed delete keeps the radar: failed() — the error haptic, and the toast only with dev016", async () => {
+  it("dev016ErrorToastOnFailure alone no longer shows «Радар удалён»", async () => {
+    seed(radar(A));
+    state.deleteRadar.mockResolvedValue(ok({ ask_found: false }));
+    withDevFlags({ dev016ErrorToastOnFailure: true, dev016SuccessToastOnDestructive: false }, (flags) => renderSheet({ flags }));
+    await settle();
+
+    await act(async () => fireEvent.click(sheet().querySelector("[data-radar-delete]")!));
+    expect(state.back).toHaveBeenCalledTimes(1);
+    expect(currentToast("app")).toBeNull();
+  });
+
+  it.each([
+    [true, { key: "common.saveFailed" }],
+    [false, null],
+  ] as const)("a failed delete keeps the radar: the error haptic; dev016ErrorToastOnFailure %s, toast %j", async (on, toast) => {
     seed(radar(A));
     state.deleteRadar.mockResolvedValue(failure("server", 500));
-    renderSheet();
+    withDevFlags({ dev016ErrorToastOnFailure: on }, (flags) => renderSheet({ flags }));
     await settle();
 
     await act(async () => fireEvent.click(sheet().querySelector("[data-radar-delete]")!));
     expect(readResource<Radar[]>(RADARS_PREVIEWS_KEY)?.map((item) => item.id)).toEqual([A]);
     expect(haptics()).toContain("HapticFeedback.notificationOccurred(error)");
-    expect(currentToast("app")).toBeNull();
+    expect(currentToast("app")?.message ?? null).toEqual(toast);
     expect(state.back).not.toHaveBeenCalled();
   });
 

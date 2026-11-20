@@ -12,9 +12,12 @@ afterEach(() => {
 });
 
 describe("devFlags", () => {
-  it("has the 17 DEV flags, every one off", () => {
-    expect(Object.keys(devFlags)).toHaveLength(17);
-    expect(Object.values(devFlags).every((value) => value === false)).toBe(true);
+  it("has the 19 DEV flags; the four halves legacy adopted by index-CIa0Ldj2.js are on (DEC-58), the rest off", () => {
+    expect(Object.keys(devFlags)).toHaveLength(19);
+    const on = Object.entries(devFlags)
+      .filter(([, value]) => value)
+      .map(([name]) => name);
+    expect(on).toEqual(["dev010AgentMarkedToast", "dev014TashkentDates", "dev016ErrorToastOnFailure", "dev051RentedUndo"]);
   });
 
   it("withDevFlags hands the overrides to the code under test and changes nothing global", () => {

@@ -2,6 +2,7 @@
 
 import type { ReportDetail, ReportReason, ReportResult } from "@/features/listing/listingData";
 
+import type { ListingInput } from "./listing";
 import { runAction, type ActionAuth, type ActionResult } from "./run";
 import { listingNumber, oneOf } from "./validate";
 
@@ -40,6 +41,14 @@ function inputOf(input: unknown): ReportInput | null {
   return { number: checkedNumber, reason: checkedReason, detail: checkedDetail };
 }
 
+/** The checked listing number of «Вернуть»; `null` unless the input is an object with a positive integer `number`. */
+function numberOf(input: unknown): number | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return null;
+  }
+  return listingNumber((input as Record<string, unknown>).number);
+}
+
 /**
  * `POST /listings/{number}/reports` (WP-26, BR-API-101): the body is `{ reason }` or `{ reason, detail }`, never a
  * `detail: null`. The answer says whether the report hid the listing and, for an `agent` report, whether the author
@@ -59,4 +68,17 @@ export async function reportListing(input: ReportInput, auth?: ActionAuth, local
   // A 204 or an empty 200 reaches here with `data: null` (`@homi/api-client`), whatever the generated type says.
   const data = result.data as ReportResult | null;
   return { ...result, data: { hidden: data?.hidden === true, agent_marked: data?.agent_marked === true } };
+}
+
+/**
+ * `DELETE /listings/{number}/reports` (DEC-68, API-055): «Вернуть» of «Отметили: уже сдано» withdraws the caller's
+ * `rented` report and the hidden row it made, nothing else; a repeat is also a `204`, so the data is `null`. An input
+ * that fails its check makes no request.
+ */
+export async function unreportListing(input: ListingInput, auth?: ActionAuth, locale?: string): Promise<ActionResult<null>> {
+  const number = numberOf(input);
+  if (number === null) {
+    return runAction.invalid("DELETE", "listings/:number/reports");
+  }
+  return runAction(auth, locale, (api) => api.unreport(number));
 }

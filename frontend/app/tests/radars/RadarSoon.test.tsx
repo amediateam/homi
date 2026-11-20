@@ -324,7 +324,17 @@ describe("the radar tab's states and actions (SCR-026)", () => {
     expect(currentToast("app")?.message).toEqual({ key: "toast.noChat" });
   });
 
-  it("any other failure reverts with the error haptic and no toast (legacy); a second press while one runs is ignored", async () => {
+  it("a 409 radar_limit on switching on: reverted, «Не получилось сохранить» (LB-APP-081, reproduced)", async () => {
+    render(tab({ initial: [normalizeRadar(raw(A, { active: false }))!] }));
+    state.patchRadar.mockResolvedValue({ ok: false, error: "conflict", status: 409, code: "radar_limit", method: "PATCH", path: "radars/:id" });
+
+    await act(async () => fireEvent.click(screen.getByRole("switch")));
+    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
+    expect(currentToast("app")?.message).toEqual({ key: "common.saveFailed" });
+    expect(fake?.calls.some((call) => call.member === "HapticFeedback.notificationOccurred" && call.args[0] === "error")).toBe(true);
+  });
+
+  it("any other failure reverts with the error haptic and «Не получилось сохранить»; a second press while one runs is ignored", async () => {
     render(tab({ initial: [normalizeRadar(raw(A))!] }));
     let settle: (value: ApiResult<unknown>) => void = () => undefined;
     state.patchRadar.mockImplementation(() => new Promise((resolve) => (settle = resolve)));
@@ -335,7 +345,7 @@ describe("the radar tab's states and actions (SCR-026)", () => {
     await act(async () => settle({ ok: false, error: "source_unavailable", status: 503, code: "source_unavailable", method: "PATCH", path: "radars/:id" }));
 
     expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
-    expect(currentToast("app")).toBeNull();
+    expect(currentToast("app")?.message).toEqual({ key: "common.saveFailed" });
     expect(fake?.calls.some((call) => call.member === "HapticFeedback.notificationOccurred" && call.args[0] === "error")).toBe(true);
   });
 });

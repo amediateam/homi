@@ -27,7 +27,7 @@ vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate
 vi.mock("@/lib/actions/favorites", () => ({ setFavorite: vi.fn(() => new Promise(() => {})) }));
 vi.mock("@/lib/actions/listing", () => ({ getContact: state.getContact, translate: state.translate, prepareShare: state.prepareShare }));
 vi.mock("@/lib/actions/hidden", () => ({ hideListing: vi.fn(), unhideListing: vi.fn(), blockAuthor: vi.fn(), unblockAuthor: vi.fn() }));
-vi.mock("@/lib/actions/reports", () => ({ reportListing: vi.fn() }));
+vi.mock("@/lib/actions/reports", () => ({ reportListing: vi.fn(), unreportListing: vi.fn() }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ canGoBack: true, back: state.back }) }));
 vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname, useRouter: () => ({ push: state.push, replace: vi.fn() }) }));
 /** The child routes read the document's address (`?i=`, `?step=`). */

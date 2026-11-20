@@ -17,6 +17,7 @@ const state = vi.hoisted(() => ({
   blockAuthor: vi.fn<Call<{ number: number }>>(),
   unblockAuthor: vi.fn<Call<{ number: number }>>(),
   reportListing: vi.fn<Call<unknown>>(),
+  unreportListing: vi.fn<Call<{ number: number }>>(),
   closeActions: vi.fn<(number: number, step: string | null) => Promise<void>>(),
   closeListing: vi.fn<(step: string | null) => Promise<void>>(),
 }));
@@ -26,7 +27,7 @@ vi.mock("@/lib/actions/hidden", () => ({
   blockAuthor: state.blockAuthor,
   unblockAuthor: state.unblockAuthor,
 }));
-vi.mock("@/lib/actions/reports", () => ({ reportListing: state.reportListing }));
+vi.mock("@/lib/actions/reports", () => ({ reportListing: state.reportListing, unreportListing: state.unreportListing }));
 vi.mock("@/features/listing/closeListing", () => ({ closeActions: state.closeActions, closeListing: state.closeListing }));
 
 import { type UseListingActionsOptions, useListingActions } from "@/features/listing/actions/useListingActions";
@@ -46,7 +47,11 @@ const BLOCKED: ActionResult<BlockedAuthorResult> = {
   data: { id: "01JD0000000000000000000013", kind: "phone", label: "+998 ** *** ** 67", count: 3, listing_numbers: [100001, 101001, 101005] },
   meta: { source: "stub" },
 };
-const reported = (hidden: boolean): ActionResult<ReportResult> => ({ ok: true, data: { hidden, agent_marked: false }, meta: { source: "stub" } });
+const reported = (hidden: boolean, agentMarked = false): ActionResult<ReportResult> => ({
+  ok: true,
+  data: { hidden, agent_marked: agentMarked },
+  meta: { source: "stub" },
+});
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -97,7 +102,7 @@ function undoOf(message: ToastMessage | null): () => Promise<unknown> {
 beforeEach(() => {
   mode = "visible";
   window.history.replaceState(null, "", "/ru/listing/100001/actions");
-  for (const mock of [state.hideListing, state.unhideListing, state.blockAuthor, state.unblockAuthor, state.reportListing]) {
+  for (const mock of [state.hideListing, state.unhideListing, state.blockAuthor, state.unblockAuthor, state.reportListing, state.unreportListing]) {
     mock.mockReset();
   }
   state.closeActions.mockReset().mockResolvedValue(undefined);
@@ -208,7 +213,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     expect(appToast()).toMatchObject({ text: "Автор stub_channel_c заблокирован" });
   });
 
-  it("fraud that hid the listing: as hide, with «Спасибо, посмотрим. Это объявление у вас скрыли» + «Вернуть» → unhideListing", async () => {
+  it("fraud that hid the listing: as hide, with «Спасибо, посмотрим. Это объявление у вас скрыли» + «Показывать у меня» → unhideListing", async () => {
     state.reportListing.mockResolvedValueOnce(reported(true));
     const { result } = hook();
 
@@ -217,11 +222,12 @@ describe("useListingActions: the results table (SCR-023)", () => {
 
     expect(isHidden(100001)).toBe(true);
     expect(state.closeListing.mock.calls).toEqual([[null]]);
-    expect(appToast()).toMatchObject({ text: "Спасибо, посмотрим. Это объявление у вас скрыли", action: "Вернуть" });
+    expect(appToast()).toMatchObject({ text: "Спасибо, посмотрим. Это объявление у вас скрыли", action: "Показывать у меня" });
 
     state.unhideListing.mockResolvedValueOnce(DONE);
     await act(() => undoOf(appToast())());
     expect(state.unhideListing.mock.calls).toEqual([[{ number: 100001 }, undefined, "ru"]]);
+    expect(state.unreportListing).not.toHaveBeenCalled();
     expect(isHidden(100001)).toBe(false);
   });
 
@@ -238,7 +244,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     expect(appToast()).toEqual({ key: "toast.reported" });
   });
 
-  it("rented, dev051RentedUndo off (legacy): into hidden, the listing closes, «Отметили: уже сдано» without an action", async () => {
+  it("rented, dev051RentedUndo off: into hidden, the listing closes, «Отметили: уже сдано» without an action", async () => {
     state.reportListing.mockResolvedValueOnce(reported(false));
     const { result } = withDevFlags({ dev051RentedUndo: false }, (flags) => hook({ flags }));
 
@@ -250,27 +256,51 @@ describe("useListingActions: the results table (SCR-023)", () => {
     expect(appToast()).toEqual({ key: "toast.reportedRented" });
   });
 
-  it("rented, dev051RentedUndo on: the toast gets «Вернуть», which unhides", async () => {
+  it("rented with the default flags (dev051RentedUndo on): «Вернуть» shows the listing at once and withdraws the report", async () => {
     state.reportListing.mockResolvedValueOnce(reported(true));
-    const { result } = withDevFlags({ dev051RentedUndo: true }, (flags) => hook({ flags }));
+    const { result } = hook();
 
     act(() => result.current.report("rented"));
     await settle();
+    expect(isHidden(100001)).toBe(true);
     expect(appToast()).toMatchObject({ text: "Отметили: уже сдано", action: "Вернуть" });
 
-    state.unhideListing.mockResolvedValueOnce(DONE);
-    await act(() => undoOf(appToast())());
-    expect(state.unhideListing.mock.calls).toEqual([[{ number: 100001 }, undefined, "ru"]]);
+    const withdrawn = deferred<ActionResult<null>>();
+    state.unreportListing.mockReturnValueOnce(withdrawn.promise);
+    const undone = undoOf(appToast())();
     expect(isHidden(100001)).toBe(false);
+    await act(async () => {
+      withdrawn.resolve(DONE);
+      await undone;
+    });
+    expect(state.unreportListing.mock.calls).toEqual([[{ number: 100001 }, undefined, "ru"]]);
+    expect(state.unhideListing).not.toHaveBeenCalled();
+    expect(isHidden(100001)).toBe(false);
+    expect(appToast()).toMatchObject({ text: "Отметили: уже сдано" });
   });
 
-  it.todo("dev051RentedUndo: «Вернуть» also withdraws the rented vote — needs a v1 method that 25 §4.2 does not list");
+  it("a failed withdrawal hides the listing again, with the error haptic and «Не получилось сохранить»", async () => {
+    state.reportListing.mockResolvedValueOnce(reported(true));
+    const { result } = hook();
+    act(() => result.current.report("rented"));
+    await settle();
 
-  it.each<[Partial<DevFlags>, string]>([
-    [{ dev010RealtorVoteWording: false }, "toast.reportedAgent"],
-    [{ dev010RealtorVoteWording: true }, "toast.reportedAgentReview"],
-  ])("agent with %o: the sheet closes, the toast %s, nothing hidden", async (overrides, key) => {
-    state.reportListing.mockResolvedValueOnce(reported(false));
+    state.unreportListing.mockResolvedValueOnce({ ...FAILED, method: "DELETE", path: "listings/:number/reports" });
+    await act(() => undoOf(appToast())());
+    expect(isHidden(100001)).toBe(true);
+    expect(haptics()).toEqual([LIGHT, SUCCESS, ERROR]);
+    expect(appToast()).toEqual({ key: "common.saveFailed" });
+  });
+
+  it.each<[Partial<DevFlags>, boolean, string]>([
+    [{ dev010AgentMarkedToast: true }, true, "toast.reportedAgent"],
+    [{ dev010AgentMarkedToast: true }, false, "toast.reportedAgentNoted"],
+    [{ dev010AgentMarkedToast: false }, true, "toast.reportedAgent"],
+    [{ dev010AgentMarkedToast: false }, false, "toast.reportedAgent"],
+    [{ dev010AgentMarkedToast: true, dev010RealtorVoteWording: true }, false, "toast.reportedAgentNoted"],
+    [{ dev010AgentMarkedToast: false, dev010RealtorVoteWording: true }, false, "toast.reportedAgent"],
+  ])("agent with %o and agent_marked %s: the sheet closes, the toast %s, nothing hidden", async (overrides, agentMarked, key) => {
+    state.reportListing.mockResolvedValueOnce(reported(false, agentMarked));
     const { result } = withDevFlags(overrides, (flags) => hook({ flags }));
 
     act(() => result.current.report("agent"));

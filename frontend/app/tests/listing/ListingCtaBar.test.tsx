@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type CtaAction, ctaActionOf, ListingCtaBar } from "@/features/listing/cta/ListingCtaBar";
+import { toastPlacement } from "@/lib/ui/shellState";
 import type { ListingContactView } from "@/features/listing/cta/useContact";
 import type { ListingDetails, ListingPreview } from "@/features/listing/listingData";
 
@@ -72,6 +73,14 @@ describe("ctaActionOf (BR-APP-032)", () => {
 });
 
 describe("ListingCtaBar (SCR-018, block 14)", () => {
+  it("puts the app's toast over itself while it is mounted (SCR-042)", () => {
+    expect(toastPlacement()).toBe("tabbar");
+    bar({ details: detailsOf() });
+    expect(toastPlacement()).toBe("cta");
+    cleanup();
+    expect(toastPlacement()).toBe("tabbar");
+  });
+
   it("is the bar fixed at --z-cta, with the action as a descendant of [data-cta]", () => {
     bar({ details: detailsOf() });
 

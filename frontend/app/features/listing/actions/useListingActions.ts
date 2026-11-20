@@ -6,7 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { closeActions, closeListing } from "@/features/listing/closeListing";
 import type { ListingAuthor, ReportDetail } from "@/features/listing/listingData";
 import { blockAuthor, hideListing, unblockAuthor, unhideListing } from "@/lib/actions/hidden";
-import { reportListing } from "@/lib/actions/reports";
+import { reportListing, unreportListing } from "@/lib/actions/reports";
 import { useAction } from "@/lib/actions/useAction";
 import type { ApiResult } from "@/lib/api/types";
 import { hide as hideNumbers, unhide as unhideNumbers } from "@/lib/data/sessionMaps";
@@ -20,7 +20,7 @@ export interface UseListingActionsOptions {
   number: number;
   /** The listing's author (details only); its label stands in when the block answer carries none. */
   author: ListingAuthor | null;
-  /** `dev051RentedUndo`, `dev010RealtorVoteWording`; from the route (`withDevFlags` in tests). */
+  /** `dev051RentedUndo`, `dev010AgentMarkedToast`; from the route (`withDevFlags` in tests). */
   flags: DevFlags;
 }
 
@@ -56,7 +56,12 @@ function stepInAddress(): string | null {
  *   and close the sheet and the listing together (`closeListing`); the other reports close the sheet only
  *   (`closeActions`). The success toast goes to the app's host, which stays when the sheet's host leaves with it.
  * - «Вернуть» takes the numbers out of `hidden` at once and asks the server; a failed undo hides them again, with the
- *   error haptic and «Не получилось сохранить».
+ *   error haptic and «Не получилось сохранить». Hide is undone by `DELETE /hidden/listings/{number}`, block by
+ *   `DELETE /listings/{number}/blocked-author`, `rented` (with `dev051RentedUndo`) by
+ *   `DELETE /listings/{number}/reports`, which withdraws the vote (DEC-68); the undo of `fraud` reads «Показывать у
+ *   меня» and only un-hides.
+ * - The realtor report reads «Отметили номер как риелторский» when the answer has `agent_marked`, else «Спасибо, учёл
+ *   вашу отметку» (`dev010AgentMarkedToast`; off: always the first).
  * - A sheet that was closed or left while its request ran (×, Telegram's Back) is not navigated again: the result
  *   still applies to its listing and shows its toast in the app's host.
  */
@@ -64,6 +69,7 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
   const t = useTranslations();
   const hideAction = useAction(hideListing);
   const unhideAction = useAction(unhideListing);
+  const unreportAction = useAction(unreportListing);
   const blockAction = useAction(blockAuthor);
   const unblockAction = useAction(unblockAuthor);
   const reportAction = useAction(reportListing);
@@ -90,9 +96,14 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
     }
   };
 
-  const undoToast = (text: string, numbers: readonly number[], revert: () => Promise<ApiResult<unknown>>): ToastMessage => ({
+  const undoToast = (
+    text: string,
+    numbers: readonly number[],
+    revert: () => Promise<ApiResult<unknown>>,
+    label: string = t("toast.undo"),
+  ): ToastMessage => ({
     text,
-    action: t("toast.undo"),
+    action: label,
     run: () => {
       unhideNumbers(numbers);
       return revert().then((result) => {
@@ -165,17 +176,18 @@ export function useListingActions({ number, author, flags }: UseListingActionsOp
           if (reason === "rented" || (reason === "fraud" && data.hidden)) {
             hideNumbers([n]);
             leave(here, "listing", n);
-            const unhide = () => unhideAction({ number: n });
             if (reason === "fraud") {
-              showToast(undoToast(t("toast.reportedFraud"), [n], unhide));
+              showToast(undoToast(t("toast.reportedFraud"), [n], () => unhideAction({ number: n }), t("toast.showForMe")));
+            } else if (flags.dev051RentedUndo) {
+              showToast(undoToast(t("toast.reportedRented"), [n], () => unreportAction({ number: n })));
             } else {
-              showToast(flags.dev051RentedUndo ? undoToast(t("toast.reportedRented"), [n], unhide) : { key: "toast.reportedRented" });
+              showToast({ key: "toast.reportedRented" });
             }
             return;
           }
           leave(here, "sheet", n);
           if (reason === "agent") {
-            showToast({ key: flags.dev010RealtorVoteWording ? "toast.reportedAgentReview" : "toast.reportedAgent" });
+            showToast({ key: !flags.dev010AgentMarkedToast || data.agent_marked ? "toast.reportedAgent" : "toast.reportedAgentNoted" });
           } else {
             showToast({ key: "toast.reported" });
           }

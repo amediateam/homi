@@ -2,6 +2,7 @@
 
 import { isLocale, type Locale, locales } from "@homi/config";
 import { Button, Globe, Skeleton } from "@homi/ui";
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { updateSettings } from "@/lib/actions/settings";
@@ -88,31 +89,36 @@ function LanguageSkeleton() {
  * A tap (medium haptic, as legacy) disables every button and saves the locale (`useAction`, so header mode passes the
  * token). On success the gate memory and `me` are updated — `patchMe`, not a re-read: on stubs `GET /me` keeps the old
  * locale — and the picker stays disabled: `GateRedirector` (row 7) replaces the address once, with the return address
- * in the chosen locale, without a reload (D-S-6). A failure enables the buttons again with `failed()`: the error
- * haptic, and the toast «Не получилось сохранить» only with DEV-016 (LB-APP-027). A second tap while saving and a
- * result after the page was left change nothing. No Back: the gates hide it.
+ * in the chosen locale, without a reload (D-S-6). A failure enables the buttons again with the error haptic
+ * (`failed({ toast: false })`) and shows «Не получилось сохранить» as a line under the list with `role="alert"`, as
+ * legacy since `index-CIa0Ldj2.js` (LB-APP-027): no toast on this screen. The next tap clears the line before it
+ * saves. A second tap while saving and a result after the page was left change nothing. No Back: the gates hide it.
  *
  * The buttons are a group named by the heading, which takes the focus when the picker shows (the page replaces the
  * route that may have held it, and Next.js moves none). They are disabled with `aria-disabled`, not `disabled`: a
  * disabled button drops the focus of the tap, which would then be gone when a failure enables the picker again.
  */
 export function LanguagePicker({ flags = devFlags }: { flags?: DevFlags }) {
+  const t = useTranslations();
   const { status, patchMe } = useSession();
   const { reference } = useReference();
   const save = useAction(updateSettings);
   const [saving, setSaving] = useState(false);
+  const [failedSave, setFailedSave] = useState(false);
   const busy = useRef(false);
   const attempt = useRef(0);
   const heading = useRef<HTMLHeadingElement>(null);
   const headingId = useId();
   const ready = status === "ready";
 
-  // Leaving (unmount, or the route hidden by `cacheComponents`) drops a save on its way and enables the buttons.
+  // Leaving (unmount, or the route hidden by `cacheComponents`) drops a save on its way, enables the buttons and clears
+  // the failure line.
   useLayoutEffect(
     () => () => {
       attempt.current += 1;
       busy.current = false;
       setSaving(false);
+      setFailedSave(false);
     },
     [],
   );
@@ -141,6 +147,7 @@ export function LanguagePicker({ flags = devFlags }: { flags?: DevFlags }) {
     busy.current = true;
     const id = attempt.current;
     setSaving(true);
+    setFailedSave(false);
     tg.haptic.impact("medium");
     const result = await save({ locale });
     if (attempt.current !== id) {
@@ -153,7 +160,8 @@ export function LanguagePicker({ flags = devFlags }: { flags?: DevFlags }) {
     }
     busy.current = false;
     setSaving(false);
-    failed({ flags });
+    setFailedSave(true);
+    failed({ flags, toast: false });
   };
 
   return (
@@ -200,6 +208,11 @@ export function LanguagePicker({ flags = devFlags }: { flags?: DevFlags }) {
           </Button>
         ))}
       </div>
+      {failedSave ? (
+        <p data-slot="save-failed" role="alert" className="text-hint">
+          {t("common.saveFailed")}
+        </p>
+      ) : null}
     </div>
   );
 }

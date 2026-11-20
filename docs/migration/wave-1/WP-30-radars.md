@@ -694,7 +694,7 @@ without the few-results note. It is not a nudge: it scrolls with the list and ne
 New key (`homi` layer), used as built only with `dev016ErrorToastOnFailure`: `toast.subDeleted` — ru «Радар удалён», uz
 «Radar oʻchirildi», en «Radar deleted». Since the intake of `index-CIa0Ldj2.js` its flag is
 `dev016SuccessToastOnDestructive`, off (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `RadarSheet`
-for a later package (`wave-1/baseline.md`, built code behind the pin, row 21)).
+for a later package (`wave-1/baseline.md`, built code behind the pin, row 21); WP-34 closed it).
 
 New keys of the switched-off state (`homi` layer; uz and en are proposals for the reviewer):
 

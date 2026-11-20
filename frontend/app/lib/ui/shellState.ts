@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 
 import { matchRoute, routes, searchKeysOf } from "@/lib/navigation/routes";
 
@@ -147,4 +147,64 @@ export function consumeDrawRequest(): boolean {
   const at = drawRequestedAt;
   drawRequestedAt = null;
   return at !== null && Date.now() - at < DRAW_REQUEST_MS;
+}
+
+/**
+ * What lies at the bottom of the screen, which moves the app's toast (SCR-042, legacy `feedback.css:77-88`): the
+ * list/map toggle, a sub-page, the listing's CTA bar. Each is marked while its component is mounted.
+ */
+export type BottomMark = "toggle" | "subpage" | "cta";
+
+/** Where the app's toast sits: above the tab bar by default, or above what a mark says is below it. */
+export type ToastPlacement = BottomMark | "tabbar";
+
+const bottomMarks = new Map<BottomMark, number>();
+const bottomListeners = new Set<() => void>();
+
+/**
+ * Marks `mark` while the calling component is mounted (and `on`). A layout effect, so the toast moves before the
+ * paint; a route hidden by `cacheComponents` runs the cleanup and takes its mark along, as legacy's `:has()` lost it
+ * once the element left the document.
+ */
+export function useBottomMark(mark: BottomMark, on = true): void {
+  useLayoutEffect(() => {
+    if (!on) {
+      return;
+    }
+    bottomMarks.set(mark, (bottomMarks.get(mark) ?? 0) + 1);
+    notify(bottomListeners);
+    return () => {
+      const count = (bottomMarks.get(mark) ?? 1) - 1;
+      if (count > 0) {
+        bottomMarks.set(mark, count);
+      } else {
+        bottomMarks.delete(mark);
+      }
+      notify(bottomListeners);
+    };
+  }, [mark, on]);
+}
+
+/**
+ * The placement of the app's toast now, in legacy's order of its rules: the listing's CTA bar wins over a sub-page,
+ * a sub-page over the toggle, and the toggle over the bare tab bar.
+ */
+export function toastPlacement(): ToastPlacement {
+  if (bottomMarks.has("cta")) {
+    return "cta";
+  }
+  if (bottomMarks.has("subpage")) {
+    return "subpage";
+  }
+  return bottomMarks.has("toggle") ? "toggle" : "tabbar";
+}
+
+function subscribeBottom(listener: () => void): () => void {
+  bottomListeners.add(listener);
+  return () => bottomListeners.delete(listener);
+}
+
+/** `toastPlacement()` for the toast host; the server renders the tab bar's. */
+export function useToastPlacement(): ToastPlacement {
+  return useSyncExternalStore(subscribeBottom, toastPlacement, () => "tabbar");
 }

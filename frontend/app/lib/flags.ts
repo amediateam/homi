@@ -1,16 +1,20 @@
 /**
- * Switches for the `DEV` rows of `09-feature-parity-matrix.md` §4.2 (DEC-36, WP-20): each is a deliberate departure
- * from legacy behaviour that stays off until the product owner turns it on. Every flag is `false`, so the app
- * reproduces legacy. Workspace packages never import this file; they take a rules argument
- * (`searchRules(devFlags)`, WP-22). Tests use `withDevFlags` of `tests/helpers/flags.ts`.
+ * Switches for the `DEV` rows of `09-feature-parity-matrix.md` §4.2 (DEC-36, WP-20). A flag's default is the
+ * behaviour of the pinned legacy release (DEC-58, amending DEC-36): a departure that legacy has since adopted is on,
+ * the rest stay off until the product owner turns them on. The flag stays either way, so both branches can be
+ * tested, and a half of a row that legacy did not adopt has a flag of its own, off. Workspace packages never import
+ * this file; they take a rules argument (`searchRules(devFlags)`, WP-22). Tests use `withDevFlags` of
+ * `tests/helpers/flags.ts`.
  */
 export type DevFlagName =
   | "dev001AnyForbiddenShowsAccess"
   | "dev005RadarDropsPostedDays"
+  | "dev010AgentMarkedToast"
   | "dev010RealtorVoteWording"
   | "dev013BackClosesMapCard"
   | "dev014TashkentDates"
   | "dev016ErrorToastOnFailure"
+  | "dev016SuccessToastOnDestructive"
   | "dev017TenantPetsDailyRule"
   | "dev018ResetKeepsDaily"
   | "dev019OneDistanceFormatter"
@@ -30,14 +34,18 @@ export const devFlags = {
   dev001AnyForbiddenShowsAccess: false,
   /** DEV-005: radars do not store `posted_days`. */
   dev005RadarDropsPostedDays: false,
-  /** DEV-010: realtor vote with a weighted threshold, undo and honest wording. */
+  /** DEV-010: the realtor toast follows `agent_marked` (legacy since `index-CIa0Ldj2.js`). */
+  dev010AgentMarkedToast: true,
+  /** DEV-010: the review wording of the hint under the realtor reason («Проверим номер…»). */
   dev010RealtorVoteWording: false,
   /** DEV-013: Back closes the map selection card. */
   dev013BackClosesMapCard: false,
-  /** DEV-014: product dates and times in Asia/Tashkent instead of the device time zone. */
-  dev014TashkentDates: false,
-  /** DEV-016: an error toast for failures that only vibrated. */
-  dev016ErrorToastOnFailure: false,
+  /** DEV-014: price history dates and times in Tashkent, not the device zone (legacy since `index-CIa0Ldj2.js`). */
+  dev014TashkentDates: true,
+  /** DEV-016: «Не получилось сохранить» for failures that only vibrated (legacy since `index-CIa0Ldj2.js`). */
+  dev016ErrorToastOnFailure: true,
+  /** DEV-016: the success toast of a destructive action, «Радар удалён» (legacy does not show it). */
+  dev016SuccessToastOnDestructive: false,
   /** DEV-017: one rule for tenant and pets on daily rent. */
   dev017TenantPetsDailyRule: false,
   /** DEV-018: «Сбросить» keeps daily rent. */
@@ -56,8 +64,8 @@ export const devFlags = {
   dev024ResetOnlyWithActiveFilters: false,
   /** DEV-025: validate min ≤ max for price and area. */
   dev025ValidateRanges: false,
-  /** DEV-051: undo for «rented» in the Mini App. */
-  dev051RentedUndo: false,
+  /** DEV-051: «Вернуть» on «Отметили: уже сдано» withdraws the report (legacy since `index-CIa0Ldj2.js`). */
+  dev051RentedUndo: true,
   /** DEV-052: one availability rule for «Не дороже рынка». */
   dev052UnifiedBelowMedianRule: false,
 } as const satisfies DevFlags;

@@ -46,7 +46,6 @@
     "agentHintReview": "Проверим номер — если это риелтор, отметим его"
   },
   "toast": {
-    "reportedAgentReview": "Спасибо, проверим",
     "subDeleted": "Радар удалён"
   },
   "radar": {
