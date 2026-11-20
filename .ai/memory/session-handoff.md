@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-21 (the landing intake merged as #96 `efa4f9b`; WP-38 in review as PR #97 on `wp-38-catch-up-feed-continuity`; next: WP-39)
+updated: 2026-11-21 (WP-38 merged as #97 `a0a618d`; the queue now runs without waiting for a word; tooling on `chore/pipeline-speed`; next: WP-39)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -8,43 +8,36 @@ source-of-truth: this session; overwritten every session — owned by the develo
 Written for whoever continues the **development track**. The production track's state is in `docs/ai/reports/production-notes.md`.
 
 ## Developer's standing instruction
-- 2026-11-09 … 2026-11-18 (verbatim in the earlier handoffs and `docs/migration/decisions/2026-11-14-developer-answers.md`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; each PR merged on its own «сливай #N».
-- 2026-11-19: «По релизам, код до WP-31». 2026-11-20: «задай все свои вопросы по одному и с вариантами ответа»; «Приём, WP-38, WP-39, WP-31 (рекомендую)»; «Следующий по очереди» (the landing intake; answers in `docs/migration/decisions/2026-11-20-landing-answers.md`); «сливай #96».
-- 2026-11-21: «Следующий по очереди WP-38».
+- 2026-11-09 … 2026-11-20 (verbatim in the earlier handoffs and `docs/migration/decisions/`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; «По релизам, код до WP-31»; «задай все свои вопросы по одному и с вариантами ответа».
+- 2026-11-21: «Следующий по очереди WP-38»; «сливай #97».
+- 2026-11-21, **new — replaces "the next package only on the developer's word" and "merge only on «сливай #N»"**: «Настрой все граомтно! Чтобы ускорилас разработка без потери качеста»; asked whether the agent may work one package ahead: «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!». It is rule 8 of `docs/migration/wave-1/README.md`.
 
 ## State at handoff
-- `main` = `efa4f9b` (#96). Branch `wp-38-catch-up-feed-continuity`: `7856eb9` code and tests, `460a7cd` spec as built + baseline rows 13, 14, 16, 37 closed + the landing intake row WAITING, `3f2da7c` advisor follow-ups (`coversSearch`, the e2e spec on expanded chrome), `861a5ee` memory, `3172445` + `95289e3` + `1330323` fixes from CI and the review, then this memory; pushed, **PR #97** (open; CI green on `1330323`: `ci` 44809560859, `e2e` 44809560801 — 392 passed + `@radars-off` 14; MERGEABLE CLEAN).
+- `main` = `a0a618d` (#97). Branch `chore/pipeline-speed` (from `main`): the commit of this handoff, pushed, PR open against `main`. It changes scripts, docs and memory only, so no workflow runs on it.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
-- Verify: `make ci-frontend` (exit 0 on `95289e3`: app 220 files, 3 704 tests); after `1330323` the radar suites (287) and `tsc` green.
+- Verify: `scripts/dev/e2e-local.sh app/e2e/smoke.spec.ts app/e2e/session.spec.ts` (9 passed, 25 s, with the shared local API answering `500`); `python3 scripts/audit/session_audit.py --hours 24`.
 
 ## Done this session
-- **#96 merged** (`efa4f9b`, «сливай #96»); its queue row is WAITING on the WP-38 branch.
-- **WP-38 (feed continuity)**, frontend only:
-  - the feed epoch as one more pull of the search shown (another search still adopts its server page one);
-  - the long return through the visit tracker's `onLongReturn` and `features/feed/fresh.ts`; the fresh pill `FreshPill`;
-  - the scroll memory per `FeedScreen` instance and list key (`feedScroll.ts`), the tab bar's arrival decided at the press;
-  - the sale switch of a launch listing on close (DEC-65, `saleSwitch.ts`, `leaveListingRoute(number)`, `closeThen`);
-  - the radar sheet's body and strip scrolls (DEC-64).
-  - Mutation checks (each fails its tests): a global epoch in the key, `window.scrollY` read at the leave, no `feedBelow()`, no once-per-listing latch.
-  - One advisor pass before the push; one independent read-only review of the diff (reported, not re-run). Fixed from it: the sale mark kept under a pushed page (`listingInStack`), the launch listing settled on its first close, the e2e radar click and same-second `since`. Left as nits in the spec: a one-frame flash of a feed bumped while hidden on the map; a merged launch number never switches.
-  - CI found two e2e faults of the new spec, fixed: Playwright's click scrolled the strip; the sheet's padding (`useSheetChrome`, a passive effect) clamped the first restore of its body (now held over up to 10 frames).
+- **#97 merged** (`a0a618d`); the WP-38 queue row is WAITING on this branch.
+- **`/doctor`** health check: findings reported, nothing applied (the developer declined the cleanup and the auto permission mode).
+- **Audit of the 24 hours to 2026-11-21 03:15 local** (`session_audit.py`, run on that window; one uncued subagent read the raw numbers and ranked the causes the same way): of 23 h of HOMI session time the model and the tools took 5:38, waiting for the developer 8:55, for CI 4:11, for subagents 1:59, for local background commands 1:54. Seven PRs merged (#91 … #97); 11 e2e runs of about 21 min, 4 failed. Request latency did not grow with context size (median 6–7 s) and no API error was recorded.
+- **Tooling for the pipeline** (this branch): `scripts/dev/e2e-local.sh`; `scripts/audit/session_audit.py`; rule 8 of the queue README; rows in `docs/infrastructure/local-development.md`; the way around KI-32.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **«сливай #97»** (CI green on `1330323`; the docs-only commit after it re-runs CI).
-2. **Then WP-39**, then **WP-31** (WP-37 any time). WP-62 and WP-61 stay at stage E.
-3. **The owners' page** (DEC-97): when WP-61 starts, legacy's page if it is known, else HOMI's own text.
-4. **The operator texts** (WP-02 Part A and the addendum) — handed over by the developer, never sent from the connected Gmail.
-5. **Production track:** #96 and WP-38 the regular deploy; WP-27/28 need `CSP_TILE_HOSTS`; WP-29, WP-30, #88 … #90, WP-34 … WP-36 the regular deploy; `RADAR_CREATION_ENABLED` stays unset (DEC-51). WP-38's staging checks: a real six-hour return, and the Q-APP-030 measurement of the four tabs and the map.
+1. **Nothing blocks the queue** (rule 8): WP-39, then WP-31 (WP-37 any time) are taken without a word, on stacked branches. WP-62 and WP-61 stay at stage E.
+2. **The click on the permission prompt of `gh pr merge`** (an `ask` rule of the shared `.claude/settings.json`); nothing goes around it.
+3. **An explicit yes is still needed for:** e2e shards in CI (the repository is private on the free plan: more billed Actions minutes); taking `gh pr merge` out of `ask` (shared file, the first developer reviews); the `/doctor` cleanup.
+4. **The owners' page** (DEC-97); **the operator texts** (WP-02 Part A and the addendum), never sent from the connected Gmail.
+5. **Production track:** #96, WP-38 and the earlier WAITING rows — the regular deploy; WP-27/28 need `CSP_TILE_HOSTS`; `RADAR_CREATION_ENABLED` stays unset (DEC-51). WP-38's staging checks: a real six-hour return, the Q-APP-030 measurement.
 6. **Dependabot #5, #57 … #60**: only with the first developer.
-7. **Reviewer questions of #97:** the choices listed in the PR body (the epoch in the pull version, the instance key of the memory, the opaque pill, `pin` not covering, the radar sheet's `closest()`).
 
 ## Gotchas learned this session
-- The local API answered `500` on 2026-11-21: `backend/.env` points the database at a LAN host that was unreachable (`No route to host`). `e2e/feed-continuity.spec.ts` has run only in CI. Not a repo issue; `.env` was not touched.
-- A module that keeps `Date.now` as a reference (`deps.now ?? Date.now`) misses a clock installed later (Vitest fake timers, Playwright `page.clock`); read it through `Date` on each call.
-- Layout effects run in tree order: the page's (`FeedScreen`) before `ShellBottom`'s (`TabBar`) in the same commit; decide a bar's arrival scroll at the press, not in its effect.
-- Collapsed chrome clips the tab bar and the view toggle: an e2e press there must expand first (press the active tab).
-- `newCount` lives in `features/nudges/newCount.ts`: importing `returnRules.ts` pulls the radar hooks and, in Vitest, the router.
+- A push to a PR that touches `frontend/**` re-runs the whole e2e job (about 21 min) even when the push holds only docs: the path filter looks at the PR, not at the push. Put CI run ids into the PR description.
+- The shared local API answers `500` when the database host of `backend/.env` is unreachable; `scripts/dev/e2e-local.sh` does not need it. Port 3001 must be free for it (`make dev-stop`).
+- The guard hook denies a whole Bash call that pipes `grep -o '^[A-Z_]*=' backend/.env` into another command: run that grep alone, or not at all.
+- `gh pr merge` waits for the developer's click (13 s … 11 min on 2026-11-20): keep it off the critical path, work on the stack meanwhile.
+- A subagent launch and a background `gh` watch return at once; their cost is the idle time after them. Start the review with the CI run.
 - Next numbers: AM-102, KI-68, ADR 0021; DEC-98, LND-070, BR-LND-030, LB-LND-020, Q-LND-015, Q-SEO-023, URL-067, DEV-068, F-LANDING-014, BR-APP-122, LB-APP-092, Q-APP-032, TMA-049, F-OWNER-012, baseline row 56; free WP numbers 49, 63–69, 72–79, 90–99.
 
 ## Active subagent work at handoff
-- None running (the review of the WP-38 diff has finished; its findings are fixed or recorded in the spec).
+- None running.

@@ -70,6 +70,20 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
    `$KVADRO_ROOT/demo/landing/docs/CHANGELOG.md`) becomes a row at the top of the remaining queue: update the audit,
    the affected specifications, the stub fixtures and the legacy translator (`25` §8). The app and the landing have
    separate pins (`baseline.md`); check both changelogs.
+8. **Keep the pipeline moving.** On the developer's word of 2026-11-21 the queue is worked without waiting for an
+   approval and stops only for a real question (asked one at a time, with options). The measurements behind it: in
+   the 24 hours to 2026-11-21 the agent worked a quarter of the session time, 39 % went to waiting for the developer
+   and 18 % to waiting for CI (`python3 scripts/audit/session_audit.py --gh`).
+   - When a package's PR is pushed, take the next package at once, on a branch from that PR's branch, and open its PR
+     against that branch: GitHub moves it to `main` when the earlier branch is merged and deleted. PRs are merged in
+     queue order. A red earlier PR, or a change the developer asks for in it, comes first.
+   - A PR is merged when its checks are green and its independent review is clean. `gh pr merge` stays behind the
+     permission prompt of `.claude/settings.json`; nothing goes around it.
+   - Nothing is pushed after a green run only to record it: CI run ids go into the PR description, and the session
+     memory rides in the last code commit or in the next PR.
+   - A new or changed end-to-end spec runs locally before the push (`scripts/dev/e2e-local.sh <spec>`: the CI job's
+     API on a developer machine, no nginx and no database of `backend/.env`); the whole suite stays in CI.
+   - The independent review starts together with the CI run, not before the push.
 
 Statuses: `TODO`, `IN_PROGRESS (<branch>)`, `WAITING (<what for>)`, `REVIEW`, `DONE`. A package number is a name;
 its row is its place in the queue.
@@ -117,7 +131,7 @@ its row is its place in the queue.
 | [Intake `index-YX9bFVws`](baseline.md#intake-log) | Legacy release intake (rule 7): the release of 20 Nov 2026 — motion and small UX on built screens, two entry points into the owner cabinet, the survey's «Поздравляем!» step and the owners' landing link — audit, the developer's decisions DEC-89 … DEC-94, specifications, the `legacy` catalogue; no stub or contract change. It defines the catch-up package WP-39 ([`baseline.md`](baseline.md#built-code-behind-the-pin), rows 44 – 54) | intake `index-CIa0Ldj2`, WP-36 | DONE (merged in #95 on 2026-11-20; docs and the `legacy` catalogue only, nothing for the production track) |
 | [WP-37](WP-37-catch-up-map.md) | Catch-up: map | intake `index-CIa0Ldj2`, WP-28 | TODO |
 | [Intake of the legacy landing](baseline.md#the-landing-pin) | Legacy landing release intake (rule 7): the four landing releases since the audit's `c63da0e3476a` (`67b3942a8340`, `65998117d6ec`, `b1b9a919ecc4`, `d9bbbc696337`; the queue row first named only the last two) — `03b` and the registers, the developer's decisions DEC-95 … DEC-97 (the showcase into the Mini App, the language of `/`, the owners' page), WP-60, WP-61, the new WP-62, the landing pin; the contract on stubs (`showcase` of `GET /landing/live`, a nullable pin `floor`; the developer's answer 3 of 2026-11-20) | intake `index-YX9bFVws` | WAITING (merged in #96 on 2026-11-20; production track: the regular deploy — landing stubs only, no environment key, no migration) |
-| [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | REVIEW (#97) |
+| [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | WAITING (merged in #97 on 2026-11-21; production track: the regular deploy, then inside Telegram on staging a real return after six hours and the Q-APP-030 measurement of the four tabs and the map) |
 | [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | TODO |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | TODO |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
