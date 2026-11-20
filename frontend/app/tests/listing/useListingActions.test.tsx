@@ -145,7 +145,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
 
     expect(haptics()).toEqual([LIGHT, SUCCESS]);
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer, 100001]]);
     expect(state.closeActions).not.toHaveBeenCalled();
     expect(appToast()).toMatchObject({ text: "Объявление скрыто", action: "Вернуть" });
     expect(sheetToast()).toBeNull();
@@ -190,7 +190,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
 
     expect(state.blockAuthor.mock.calls).toEqual([[{ number: 100001 }, undefined, "ru"]]);
     expect([100001, 101001, 101005].map(isHidden)).toEqual([true, true, true]);
-    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer, 100001]]);
     expect(appToast()).toMatchObject({ text: "Автор +998 ** *** ** 67 заблокирован", action: "Вернуть" });
     expect(haptics()).toEqual([LIGHT, SUCCESS]);
 
@@ -229,7 +229,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     await settle();
 
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer, 100001]]);
     expect(appToast()).toMatchObject({ text: "Спасибо, посмотрим. Это объявление у вас скрыли", action: "Показывать у меня" });
 
     state.unhideListing.mockResolvedValueOnce(DONE);
@@ -260,7 +260,7 @@ describe("useListingActions: the results table (SCR-023)", () => {
     await settle();
 
     expect(isHidden(100001)).toBe(true);
-    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer]]);
+    expect(state.closeListing.mock.calls).toEqual([[null, state.closeLayer, 100001]]);
     expect(appToast()).toEqual({ key: "toast.reportedRented" });
   });
 

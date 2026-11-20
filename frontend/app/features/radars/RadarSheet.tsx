@@ -6,8 +6,9 @@ import type { Translate } from "@homi/i18n/format";
 import { findCity } from "@homi/search";
 import { Button, Check, ChevronRight, cn, Switch } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useLayoutEffect, useRef, useState } from "react";
 
+import { forgetFeedScroll } from "@/features/feed/feedScroll";
 import type { ListingPreview } from "@/features/feed/types";
 import { digestHours, formatDigestHours, useSettings } from "@/features/settings/useSettings";
 import { RouteSheet, type RoutePresentation } from "@/features/shell/RouteSheet";
@@ -27,7 +28,7 @@ import { lastSearchHref } from "@/lib/ui/shellState";
 import { showToast } from "@/lib/ui/toast";
 
 import { normalizePatch, type Radar, type RadarMode } from "./normalize";
-import { radarFeedHref, rememberRadarReturn } from "./radarReturn";
+import { type RadarPlace, radarFeedHref, rememberRadarReturn } from "./radarReturn";
 import { RadarStrip } from "./RadarStrip";
 import { radarActionFailed, useRadarSwitch, useRadarText } from "./RadarTiles";
 import { radarFinds } from "./useRadarPreviews";
@@ -49,6 +50,8 @@ export interface RadarSheetProps {
   presentation: RoutePresentation;
   /** This opening shows the sheet without the rise (the return from the radar's feed or a find). */
   instant?: boolean;
+  /** The return this opening came with: the sheet's body and the strip go back to its scrolls (WP-38). */
+  restore?: Pick<RadarPlace, "stripX" | "sheetY"> | null;
   /** The sheet is about to leave by itself (deleted, or gone on the server): the route stops its unknown-radar rule. */
   onLeave: () => void;
   /** The app's flags; tests pass overrides (`withDevFlags`). */
@@ -91,7 +94,7 @@ export interface RadarSheetProps {
  * (`not_found`) gives way to the tab. While the radar is not known yet the sheet shows its title «Радар» and the
  * strip's ghosts.
  */
-export function RadarSheet({ id, radar, presentation, instant = false, onLeave, flags = devFlags, children }: RadarSheetProps) {
+export function RadarSheet({ id, radar, presentation, instant = false, restore = null, onLeave, flags = devFlags, children }: RadarSheetProps) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
   const translate: Translate = (key, values) => t(key as never, values as never);
@@ -102,6 +105,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
   const { settings } = useSettings({ enabled: radar?.active === true });
   const sendId = useId();
   const modeRows = useRef<(HTMLButtonElement | null)[]>([]);
+  const content = useRef<HTMLDivElement>(null);
   const running = useRef(false);
   const [busy, setBusy] = useState(false);
 
@@ -132,13 +136,47 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     }
   };
 
+  /** The sheet's body and the strip of finds, inside the dialog of `RouteSheet` (`BottomSheet`'s scroll body). */
+  const scrollers = () => {
+    const root = content.current;
+    return {
+      body: root?.closest<HTMLElement>('[data-slot="bottom-sheet-body"]') ?? null,
+      strip: root?.querySelector<HTMLElement>('[data-radar-strip="finds"]') ?? null,
+    };
+  };
+  const place = (via: RadarPlace["via"]): RadarPlace => {
+    const { body, strip } = scrollers();
+    return { via, stripX: strip?.scrollLeft ?? 0, sheetY: body?.scrollTop ?? 0 };
+  };
+
+  // The return's scrolls, each once per opening: the body's once the radar renders its rows, the strip's once the
+  // finds replace the ghosts (a ghost strip would clamp it).
+  const restored = useRef({ body: false, strip: false });
+  const findsShown = finds.finds !== null && finds.finds.length > 0;
+  useLayoutEffect(() => {
+    if (restore === null) {
+      return;
+    }
+    const { body, strip } = scrollers();
+    if (!restored.current.body && radar !== undefined && body !== null) {
+      restored.current.body = true;
+      body.scrollTop = restore.sheetY;
+    }
+    if (!restored.current.strip && findsShown && strip !== null) {
+      restored.current.strip = true;
+      strip.scrollLeft = restore.stripX;
+    }
+  });
+
   const openFeed = () => {
     if (radar === undefined) {
       return;
     }
     tg.haptic.impact();
-    // The tab's position first (Back restores it), then the top for the feed.
-    rememberRadarReturn(radar.id, window.scrollY);
+    // The tab's position first (Back restores it), then the top for the feed; the search list's own position is
+    // dropped (BR-APP-105).
+    rememberRadarReturn(radar.id, window.scrollY, place("feed"));
+    forgetFeedScroll();
     window.scrollTo(0, 0);
     nav.push(radarFeedHref(radar, lastSearchHref(), findCity(cities, radar.filters.city)));
   };
@@ -146,7 +184,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
   const openListing = (item: ListingPreview) => {
     markSeen(item.number);
     setPreview(item.number, item);
-    rememberRadarReturn(id, window.scrollY);
+    rememberRadarReturn(id, window.scrollY, place("listing"));
     nav.push(routes.listing(item.number));
   };
 
@@ -259,6 +297,7 @@ export function RadarSheet({ id, radar, presentation, instant = false, onLeave, 
     <>
       <RouteSheet presentation={presentation} instant={instant} title={title} header={header} footer={footer} closeLabel={t("common.close")}>
       <div
+        ref={content}
         data-route="radar"
         data-layer={presentation === "layer" ? "sheet" : undefined}
         data-radar-id={id}

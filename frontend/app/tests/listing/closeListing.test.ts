@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { defaultFilters, toSearchParams } from "@homi/search";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** A router that moves `window.history` the way the App Router does, with the locale prefix. */
 const router = {
@@ -105,7 +106,7 @@ describe("leaveListingRoute (WP-36)", () => {
     nav.push("/listing/100001");
     const landed = popped();
 
-    expect(leaveListingRoute()).toBe("back");
+    expect(leaveListingRoute(100001)).toBe("back");
     await landed;
 
     expect(router.back).toHaveBeenCalledTimes(1);
@@ -116,7 +117,7 @@ describe("leaveListingRoute (WP-36)", () => {
   it("replaces a listing loaded directly (depth 0) with the feed", async () => {
     const { leaveListingRoute } = await fresh("/ru/listing/100001");
 
-    expect(leaveListingRoute()).toBe("replace");
+    expect(leaveListingRoute(100001)).toBe("replace");
 
     expect(router.back).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
@@ -164,7 +165,7 @@ describe("closeListing", () => {
     const close = vi.fn(() => {
       expect(here()).toBe("/ru/listing/100001");
       window.addEventListener("popstate", () => land(), { once: true });
-      loaded.leaveListingRoute();
+      loaded.leaveListingRoute(100001);
     });
     return { close, landed };
   }
@@ -177,7 +178,7 @@ describe("closeListing", () => {
     const length = window.history.length;
     const { close, landed } = layerClose(loaded);
 
-    await closeListing(null, close);
+    await closeListing(null, close, 100001);
     await landed;
 
     expect(close).toHaveBeenCalledTimes(1);
@@ -195,7 +196,7 @@ describe("closeListing", () => {
     openStep(history, "report");
     const { close, landed } = layerClose(loaded);
 
-    await closeListing("report", close);
+    await closeListing("report", close, 100001);
     await landed;
 
     expect(close).toHaveBeenCalledTimes(1);
@@ -212,7 +213,7 @@ describe("closeListing", () => {
     openStep(history, "detail");
     const { close, landed } = layerClose(loaded);
 
-    await closeListing("detail", close);
+    await closeListing("detail", close, 100001);
     await landed;
 
     expect(close).toHaveBeenCalledTimes(1);
@@ -227,7 +228,7 @@ describe("closeListing", () => {
     loaded.nav.push("/listing/100001/actions");
     const { close } = layerClose(loaded);
 
-    await loaded.closeListing(null, close);
+    await loaded.closeListing(null, close, 100001);
 
     expect(close).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
@@ -240,7 +241,7 @@ describe("closeListing", () => {
     openStep(loaded.history, "report");
     const { close } = layerClose(loaded);
 
-    await loaded.closeListing("report", close);
+    await loaded.closeListing("report", close, 100001);
 
     expect(close).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
@@ -252,11 +253,82 @@ describe("closeListing", () => {
     const loaded = await fresh("/ru/listing/100001/actions");
     const { close } = layerClose(loaded);
 
-    await loaded.closeListing(null, close);
+    await loaded.closeListing(null, close, 100001);
 
     expect(go).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
     expect(here()).toBe("/ru");
+  });
+});
+
+describe("the sale switch of a launch listing (WP-38, BR-APP-108)", () => {
+  /** A launch whose link opened listing 100001, marked as a sale over the rent feed of Samarkand. */
+  async function marked(address: string, { sale = true }: { sale?: boolean } = {}) {
+    vi.doMock("@/lib/deeplinks/launch", () => ({ launchListing: () => 100001 }));
+    const loaded = await fresh(address);
+    const switcher = await import("@/features/listing/saleSwitch");
+    switcher.saleSwitchRecord(100001, sale ? "sale" : "rent_daily", defaultFilters("rent_long", "samarkand"), null);
+    return { ...loaded, switcher };
+  }
+  const saleFeed = `/?${toSearchParams(defaultFilters("sale", "samarkand")).toString()}`;
+
+  afterEach(() => {
+    vi.doUnmock("@/lib/deeplinks/launch");
+  });
+
+  it("over the feed: one step back, then the replace with the sale defaults of the feed's city", async () => {
+    const { nav, history, leaveListingRoute, switcher } = await marked("/ru");
+    nav.push("/listing/100001");
+    const length = window.history.length;
+
+    expect(leaveListingRoute(100001)).toBe("back");
+    await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith(saleFeed, { scroll: false }));
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(window.location.search).toBe(saleFeed.slice(1));
+    expect(history.depth()).toBe(0);
+    expect(window.history.length).toBe(length);
+    expect(switcher.takeSaleSwitch(100001)).toBeNull();
+  });
+
+  it("over another page than the feed: only the step back, and the mark goes", async () => {
+    const { nav, leaveListingRoute, switcher } = await marked("/ru/saved");
+    nav.push("/listing/100001");
+    const landed = popped();
+
+    expect(leaveListingRoute(100001)).toBe("back");
+    await landed;
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(here()).toBe("/ru/saved");
+    expect(switcher.takeSaleSwitch(100001)).toBeNull();
+  });
+
+  it("loaded directly (depth 0): the replace carries the sale feed", async () => {
+    const { leaveListingRoute } = await marked("/ru/listing/100001");
+
+    expect(leaveListingRoute(100001)).toBe("replace");
+
+    expect(router.replace).toHaveBeenCalledWith(saleFeed, { scroll: false });
+  });
+
+  it("the direct-load branch of closeListing replaces with the sale feed too", async () => {
+    const loaded = await marked("/ru/listing/100001");
+    loaded.nav.push("/listing/100001/actions");
+
+    await loaded.closeListing(null, vi.fn(), 100001);
+
+    expect(router.replace).toHaveBeenCalledWith(saleFeed, { scroll: false });
+  });
+
+  it("another listing's close and a daily-rent launch listing change nothing", async () => {
+    const other = await marked("/ru/listing/100002");
+    expect(other.leaveListingRoute(100002)).toBe("replace");
+    expect(router.replace).toHaveBeenLastCalledWith("/", { scroll: false });
+
+    const daily = await marked("/ru/listing/100001", { sale: false });
+    expect(daily.leaveListingRoute(100001)).toBe("replace");
+    expect(router.replace).toHaveBeenLastCalledWith("/", { scroll: false });
   });
 });

@@ -13,6 +13,7 @@ import { isListingNumber, matchRoute } from "@/lib/navigation/routes";
 import { LISTING_LEAVE_MS, type ListingCloseKind, leaveListingRoute, listingLeavePlays } from "./closeListing";
 import { ListingScreen } from "./ListingScreen";
 import { ListingLayerContext, type ListingLayerValue, type ListingView } from "./useListing";
+import { forgetSaleSwitch } from "./saleSwitch";
 import { forgetView } from "./viewState";
 
 export interface ListingLayerProps {
@@ -78,7 +79,8 @@ export const LISTING_CLOSE_SETTLE_MS = 1000;
  * already slid the layer out, it changes the route at once, and so does an overlay copy at the app's depth 0, which
  * lies over a standalone copy rather than over the page Back reveals. When the address or the app's history moved
  * during the leave (a new opening, a browser Back), the leave is cancelled and the route is left alone; a hidden or
- * unmounted layer drops a pending leave. The overlay copy enters with `animate-listing-in`; a direct load does not.
+ * unmounted layer drops a pending leave, and the sale switch's mark of its number (WP-38). The overlay copy enters
+ * with `animate-listing-in`; a direct load does not.
  */
 export function ListingLayer({ params, presentation, screen, children }: ListingLayerProps) {
   const raw = use(params).number;
@@ -110,7 +112,7 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
 
   const changeRoute = useCallback(() => {
     const from = window.location.href;
-    if (leaveListingRoute() !== "back") {
+    if (leaveListingRoute(number) !== "back") {
       return;
     }
     settleTimer.current = setTimeout(() => {
@@ -120,7 +122,7 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
         setLeaving(false);
       }
     }, LISTING_CLOSE_SETTLE_MS);
-  }, []);
+  }, [number]);
 
   const close = useCallback(
     (kind: ListingCloseKind = "leave") => {
@@ -175,6 +177,7 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
     () => () => {
       if (number !== null) {
         forgetView(number);
+        forgetSaleSwitch(number);
       }
       clearTimers();
       closing.current = false;

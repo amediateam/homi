@@ -345,6 +345,30 @@ describe("the launch mark (WP-36, BR-APP-106, TMA-010)", () => {
     expect(launch.launchPending()).toBe(false);
   });
 
+  it("launchListing (WP-38) names the opened listing after consumeLaunch and after the address showed it", async () => {
+    const { launch } = await reloadIn("/ru", initData);
+    expect(launch.launchListing()).toBeNull();
+
+    open(launch, 42);
+
+    expect(launch.launchPending()).toBe(false);
+    expect(launch.launchListing()).toBe(42);
+  });
+
+  it("launchListing is null after a reload inside the launch, for ?news=pets and for a plain launch", async () => {
+    const first = await reloadIn("/ru", initData);
+    open(first.launch, 42);
+    const reloaded = await reloadIn("/ru", initData);
+    reloaded.launch.consumeLaunch();
+    expect(reloaded.launch.launchListing()).toBeNull();
+
+    for (const address of ["/ru?news=pets", "/ru"]) {
+      const { launch } = await reloadIn(address, syntheticInitData({}, {}));
+      launch.consumeLaunch();
+      expect(launch.launchListing()).toBeNull();
+    }
+  });
+
   it("LaunchRedirector pushes nothing after the reload", async () => {
     const first = await reloadIn("/ru", initData);
     open(first.launch, 42);

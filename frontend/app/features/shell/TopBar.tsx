@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { FeedHeader } from "@/features/feed/FeedHeader";
+import { FreshPill } from "@/features/feed/FreshPill";
 import { useRadarsEnabled } from "@/features/radars/capability";
 import { Link, usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
@@ -136,6 +137,7 @@ function useDealTabs(): readonly TitleTab<BaseDeal>[] {
 /**
  * Search list: the deal as title tabs, and the `chips` region with `FeedHeader` (WP-24). Both read the feed's own
  * search state (`useScreenSearchState`, KI-43), so the bar kept under a listing or a sheet shows the list below it.
+ * The fresh pill hangs under the bar after a long return (`FreshPill`, WP-38).
  */
 function SearchListBar() {
   const tabs = useDealTabs();
@@ -146,6 +148,7 @@ function SearchListBar() {
       <div data-topbar-chips="">
         <FeedHeader />
       </div>
+      <FreshPill />
     </>
   );
 }

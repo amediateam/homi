@@ -2,6 +2,7 @@
 
 import {
   ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   BottomSheet,
   Button,
@@ -679,6 +680,7 @@ const ICONS: [string, LucideIcon][] = [
   ["ChevronLeft", ChevronLeft],
   ["ChevronRight", ChevronRight],
   ["ArrowDown", ArrowDown],
+  ["ArrowUp", ArrowUp],
   ["Trash", Trash],
   ["PartyPopper", PartyPopper],
   ["ShoppingBag", ShoppingBag],

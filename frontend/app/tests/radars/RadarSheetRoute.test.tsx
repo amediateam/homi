@@ -21,12 +21,25 @@ vi.mock("@/features/radars/useRadars", () => ({
 }));
 /** The sheet itself is tested in `tests/radars/RadarSheet.test.tsx`; here it shows what the route hands it. */
 vi.mock("@/features/radars/RadarSheet", () => ({
-  RadarSheet: ({ radar, presentation, instant, children }: { radar?: Radar; presentation: string; instant?: boolean; children?: ReactNode }) => (
+  RadarSheet: ({
+    radar,
+    presentation,
+    instant,
+    restore,
+    children,
+  }: {
+    radar?: Radar;
+    presentation: string;
+    instant?: boolean;
+    restore?: { stripX: number; sheetY: number } | null;
+    children?: ReactNode;
+  }) => (
     <>
       <div
         data-route="radar"
         data-layer={presentation === "layer" ? "sheet" : undefined}
         data-instant={instant ? "" : undefined}
+        data-restore={restore ? `${restore.stripX},${restore.sheetY}` : undefined}
         data-radar={radar === undefined ? "" : `${radar.id}:${radar.active ? "on" : "paused"}`}
       />
       {children}
@@ -34,6 +47,7 @@ vi.mock("@/features/radars/RadarSheet", () => ({
   ),
 }));
 
+import { forgetFeedScroll, hasFeedScroll, rememberFeedScroll } from "@/features/feed/feedScroll";
 import { normalizeRadar } from "@/features/radars/normalize";
 import { clearRadarReturn, peekRadarReturn, rememberRadarReturn } from "@/features/radars/radarReturn";
 import { RadarSheetRoute } from "@/features/radars/RadarSheetRoute";
@@ -132,6 +146,41 @@ describe("RadarSheetRoute: the layer copy shows only on its own address (K1)", (
     expect(scrollTo).toHaveBeenCalledWith(0, 480);
     expect(peekRadarReturn(A)).toBeNull();
     expect(state.replace).not.toHaveBeenCalled();
+  });
+
+  it("the return hands its scrolls to the sheet (WP-38, DEC-64); a find keeps the search list's scroll memory", async () => {
+    rememberFeedScroll("r1#city=tashkent|0", 900);
+    const view = render(tree({ layer: {} }));
+    await settle();
+    rememberRadarReturn(A, 480, { via: "listing", stripX: 150, sheetY: 220 });
+    state.pathname = "/listing/100012";
+    view.rerender(tree({ layer: {} }));
+    await settle();
+
+    state.pathname = `/radars/${A}`;
+    view.rerender(tree({ layer: {} }));
+    await settle();
+
+    expect(visibleSheets()[0].getAttribute("data-restore")).toBe("150,220");
+    expect(hasFeedScroll()).toBe(true);
+    forgetFeedScroll();
+  });
+
+  it("the Back from a radar's feed drops the search list's scroll memory (BR-APP-105)", async () => {
+    const view = render(tree({ layer: {} }));
+    await settle();
+    rememberRadarReturn(A, 300, { via: "feed", stripX: 0, sheetY: 40 });
+    state.pathname = "/";
+    view.rerender(tree({ layer: {} }));
+    await settle();
+    rememberFeedScroll("r1#city=tashkent&rooms_min=2|0", 700);
+
+    state.pathname = `/radars/${A}`;
+    view.rerender(tree({ layer: {} }));
+    await settle();
+
+    expect(visibleSheets()[0].getAttribute("data-restore")).toBe("0,40");
+    expect(hasFeedScroll()).toBe(false);
   });
 
   it("the editor's address is the sheet's own: the sheet stays under its editor", async () => {

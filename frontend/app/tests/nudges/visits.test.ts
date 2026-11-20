@@ -99,15 +99,17 @@ describe("recordVisit (BR-APP-070)", () => {
 describe("useSearchVisits: when a visit is recorded (BR-APP-070, TMA-040)", () => {
   const onVisit = vi.fn<(visit: SearchVisit) => void>();
   const onSession = vi.fn<() => void>();
+  const onLongReturn = vi.fn<() => void>();
 
   function track(input: VisitInput) {
-    return renderHook((props: VisitInput) => useSearchVisits(props, { onVisit, onSession }), { initialProps: input });
+    return renderHook((props: VisitInput) => useSearchVisits(props, { onVisit, onSession, onLongReturn }), { initialProps: input });
   }
 
   const visits = () => onVisit.mock.calls.map(([visit]) => visit);
 
   beforeEach(() => {
     onVisit.mockReset();
+    onLongReturn.mockReset();
     onSession.mockReset();
   });
 
@@ -180,6 +182,29 @@ describe("useSearchVisits: when a visit is recorded (BR-APP-070, TMA-040)", () =
 
     setVisibility("visible");
     expect(onSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("the long return of the search feed (WP-38) follows the new session and its visit, only after 6 h hidden", () => {
+    const order: string[] = [];
+    onSession.mockImplementation(() => order.push("session"));
+    onVisit.mockImplementation(() => order.push("visit"));
+    onLongReturn.mockImplementation(() => order.push("long"));
+    localStorage.setItem("homi-visits", JSON.stringify({ [filtersHash(CUSTOM)]: NOW - 30 * HOUR }));
+    track({ searchTab: true, filters: CUSTOM, ready: true });
+    order.length = 0;
+
+    setVisibility("hidden");
+    vi.setSystemTime(NOW + 6 * HOUR - MINUTE);
+    setVisibility("visible");
+    expect(onLongReturn).not.toHaveBeenCalled();
+
+    setVisibility("hidden");
+    vi.setSystemTime(NOW + 12 * HOUR);
+    setVisibility("visible");
+    expect(order).toEqual(["session", "visit", "long"]);
+
+    setVisibility("visible");
+    expect(onLongReturn).toHaveBeenCalledTimes(1);
   });
 
   it("a new session off the search tab re-reads the radars and records nothing", () => {

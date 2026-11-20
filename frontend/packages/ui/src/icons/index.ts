@@ -5,6 +5,7 @@
  */
 export {
   ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   Ban,
   BedDouble,

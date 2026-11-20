@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, useLayoutEffect, useRef } from "react";
 
+import { forgetFeedScroll, hasFeedScroll } from "@/features/feed/feedScroll";
 import { clearRadarReturn } from "@/features/radars/radarReturn";
 import { usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
@@ -46,9 +47,11 @@ const TABS: readonly { key: ShellTab; label: MessageKey; Icon: LucideIcon; href:
  * the text colour at 55 %). A press on collapsed chrome
  * only expands it (`expandChrome`). Otherwise a press is a light impact (TMA-025), a replace to the tab's address that
  * clears the history stack (`nav.tab`) — search returns to the last list or map with its filters, saved to the last of
- * favourites and history — and a scroll to the top; on the active tab it only scrolls. The replace is a transition
- * that keeps the old tab on screen until the new one arrives, so the scroll waits for the new tab: it runs in the
- * commit that makes it active, before the paint, and the old tab never jumps to its top. Collapsed
+ * favourites and history — and a scroll to the top; on the active tab it only scrolls, and forgets the search list's
+ * scroll memory (WP-38, BR-APP-105). The replace is a transition that keeps the old tab on screen until the new one
+ * arrives, so the scroll waits for the new tab: it runs in the commit that makes it active, before the paint, and the
+ * old tab never jumps to its top. On arrival at the search tab with a remembered list position the scroll is the
+ * list's own (`FeedScreen` restores it, or goes to the top for another list). Collapsed
  * (`html.chrome-mini`), the bar shrinks to a circle around the active tab's icon; under lite graphics it slides away
  * instead.
  *
@@ -80,6 +83,7 @@ export function TabBar({ active }: { active: ShellTab }) {
       if (radarFeed !== null) {
         nav.tab(radarFeed);
       }
+      forgetFeedScroll();
       window.scrollTo(0, 0);
       return;
     }
@@ -87,7 +91,9 @@ export function TabBar({ active }: { active: ShellTab }) {
       const [path, query = ""] = radarFeed.split("?");
       rememberHref(path, query);
     }
-    scrollOnArrival.current = true;
+    // Decided at the press: the list's own layout effect runs before this bar's in the arrival commit and takes the
+    // memory, so the bar must not scroll over the position it restores.
+    scrollOnArrival.current = !(key === "search" && hasFeedScroll());
     nav.tab(href());
   };
 

@@ -45,6 +45,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname }));
 
 import { normalizeRadar, type Radar } from "@/features/radars/normalize";
+import { hasFeedScroll, rememberFeedScroll } from "@/features/feed/feedScroll";
 import { clearRadarReturn, peekRadarReturn, radarFeedHref, rememberRadarReturn } from "@/features/radars/radarReturn";
 import { RadarSheetRoute } from "@/features/radars/RadarSheetRoute";
 import { resetRadarSwitches } from "@/features/radars/RadarTiles";
@@ -351,7 +352,7 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     expect(params.get("sort")).toBe("cheap");
     expect(params.get("price_max")).toBe("600");
     // K3: the tab's position stored for Back, then the feed starts at its top, mounted before or not.
-    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 340 });
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 340, via: "feed", stripX: 0, sheetY: 0 });
     expect(scrollTo).toHaveBeenCalledExactlyOnceWith(0, 0);
     expect(window.scrollY).toBe(0);
     Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
@@ -366,7 +367,7 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
 
     fireEvent.click(strip().querySelector("[data-radar-all]")!);
     expect(new URL(state.push.mock.lastCall?.[0] as string, "https://app.homi.loc").searchParams.get("from")).toBe("radar");
-    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145 });
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145, via: "feed", stripX: 0, sheetY: 0 });
     expect(window.scrollY).toBe(0);
     Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
   });
@@ -378,9 +379,60 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
     await settle();
 
     fireEvent.click(strip().querySelector("[data-radar-find]")!);
-    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145 });
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 145, via: "listing", stripX: 0, sheetY: 0 });
     expect(scrollTo).not.toHaveBeenCalled();
     Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("a find stores the strip's sideways scroll and the sheet's own scroll with the return (WP-38, DEC-64)", async () => {
+    seed(radar(A, { preview: { items: [previewOf({ number: 100001 }), previewOf({ number: 100002 })], count: 2, flow: null } }));
+    renderSheet();
+    await settle();
+    const body = strip().closest<HTMLElement>('[data-slot="bottom-sheet-body"]')!;
+    Object.defineProperty(strip(), "scrollLeft", { configurable: true, value: 120 });
+    Object.defineProperty(body, "scrollTop", { configurable: true, value: 260 });
+
+    fireEvent.click(strip().querySelector("[data-radar-find]")!);
+
+    expect(peekRadarReturn(A)).toEqual({ id: A, scrollY: 0, via: "listing", stripX: 120, sheetY: 260 });
+  });
+
+  it("an opening with a return puts the sheet's body and the strip back, each once, the strip once its finds show", async () => {
+    const tops: number[] = [];
+    const lefts: number[] = [];
+    vi.spyOn(Element.prototype, "scrollTop", "set").mockImplementation(function (this: Element, value: number) {
+      if (this.matches('[data-slot="bottom-sheet-body"]')) {
+        tops.push(value);
+      }
+    });
+    vi.spyOn(Element.prototype, "scrollLeft", "set").mockImplementation(function (this: Element, value: number) {
+      if (this.matches('[data-radar-strip="finds"]')) {
+        lefts.push(value);
+      }
+    });
+    try {
+      seed(radar(A, { preview: { items: [previewOf({ number: 100001 }), previewOf({ number: 100002 })], count: 2, flow: null } }));
+      rememberRadarReturn(A, 0, { via: "listing", stripX: 150, sheetY: 220 });
+      renderSheet();
+      await settle();
+      await settle();
+
+      expect(tops).toEqual([220]);
+      expect(lefts).toEqual([150]);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("«Смотреть найденное» drops the search list's scroll memory (BR-APP-105)", async () => {
+    rememberFeedScroll("r1#feed", 900);
+    seed(radar(A));
+    renderSheet();
+    await settle();
+
+    fireEvent.click(footer()!.querySelector("[data-radar-feed]")!);
+
+    expect(hasFeedScroll()).toBe(false);
   });
 
   it("a sort the radar's search does not offer falls back to new", () => {

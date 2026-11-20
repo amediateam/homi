@@ -50,6 +50,8 @@ vi.mock("@/features/radars/subscribe", () => ({
   useSubscribe: () => ({ subscribe: (...args: unknown[]) => state.subscribe(...args), saveEdit: vi.fn(), relax: vi.fn() }),
 }));
 
+import { bumpFeedEpoch, feedEpoch } from "@/features/feed/feedQuery";
+import { freshFeed } from "@/features/feed/fresh";
 import { CLOSE_QUIET_MS, FOLLOW_DELAY_MS, RETURN_DELAY_MS, RETURN_SHOW_MS } from "@/features/nudges/constants";
 import { NudgeHost } from "@/features/nudges/NudgeHost";
 import { ReturnNudge } from "@/features/nudges/ReturnNudge";
@@ -504,6 +506,46 @@ describe("NudgeHost: the return banner (SCR-046, BR-APP-070, BR-APP-071)", () =>
     expect(new URLSearchParams(newRequests()[0].query as URLSearchParams).get("since")).toBe(String(Math.floor(hiddenAt / 1000)));
     await answer({ count: 12 });
     expect(card()?.querySelector("b")?.textContent).toBe("С вашего прошлого захода — 12 новых");
+  });
+
+  it("a bump of the feed epoch (the silent reload of WP-38) keeps the banner: the filters stay, only the list moves", async () => {
+    await showFor(CUSTOM);
+    expect(card()).not.toBeNull();
+
+    act(() => bumpFeedEpoch());
+    view.rerender(host());
+
+    expect(card()?.querySelector("b")?.textContent).toBe("С вашего прошлого захода — 12 новых");
+  });
+
+  it("the long return goes on to the search feed (WP-38): on the list at the top a silent reload, under a listing the count", async () => {
+    visited(CUSTOM, NOW - HOUR);
+    launch(CUSTOM);
+    freshFeed.show("host#feed", CUSTOM);
+    const createdAt = Date.now();
+    await wait(10 * RETURN_DELAY_MS);
+    const away = async (hours: number) => {
+      Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      vi.setSystemTime(Date.now() + hours * HOUR);
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    };
+
+    const epoch = feedEpoch();
+    await away(7);
+    expect(feedEpoch()).toBe(epoch + 1);
+
+    go("/listing/42");
+    const before = newRequests().length;
+    await away(7);
+    expect(feedEpoch()).toBe(epoch + 1);
+    const fresh = newRequests().slice(before);
+    expect(fresh).toHaveLength(1);
+    expect(new URLSearchParams(fresh[0].query as URLSearchParams).get("since")).toBe(String(Math.floor(createdAt / 1000)));
+    freshFeed.dismiss();
   });
 });
 

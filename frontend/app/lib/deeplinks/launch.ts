@@ -101,6 +101,11 @@ let consumed = false;
 let target: string | null = null;
 /** The listing of `target`, marked once the address has shown it; `null` for `?news=pets`. */
 let targetNumber: number | null = null;
+/**
+ * The listing the consumed launch opens, kept after `targetNumber` is forgotten (`launchListing`); `null` when the launch
+ * opens none, or its listing was already shown in this launch.
+ */
+let launchedNumber: number | null = null;
 /** The query the Mini App was opened with, read when the module loads: on a gate route the address has none. */
 const launchSearch = typeof window === "undefined" ? "" : window.location.search;
 
@@ -164,6 +169,7 @@ export function consumeLaunch(): boolean {
   const launch = typeof window === "undefined" ? null : parseLaunch(tg.initData(), window.location.search);
   target = launch === null ? null : launchTarget(launch);
   targetNumber = target !== null && launch !== null ? launch.listingNumber : null;
+  launchedNumber = targetNumber;
   if (target !== null) {
     clearPendingTimer();
     pendingTimer = setTimeout(dropTarget, LAUNCH_PENDING_MS);
@@ -198,4 +204,13 @@ export function launchPending(): boolean {
     clearPendingTimer();
   }
   return target !== null;
+}
+
+/**
+ * The number of the listing the consumed launch opened (WP-38, BR-APP-108: the sale switch of
+ * `features/listing/saleSwitch.ts`), else `null` — before `consumeLaunch()`, for a launch without a listing, and for one
+ * whose listing this launch had already shown (a reload).
+ */
+export function launchListing(): number | null {
+  return launchedNumber;
 }
