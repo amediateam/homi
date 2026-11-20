@@ -262,6 +262,21 @@ describe("closeListing", () => {
   });
 });
 
+describe("listingInStack (WP-38)", () => {
+  it("holds while a page is pushed over the listing or its child, and not once the listing is left", async () => {
+    const { nav, history, listingInStack } = await fresh("/ru");
+    expect(listingInStack(100001)).toBe(false);
+    nav.push("/listing/100001/photos");
+    nav.push("/settings");
+    expect(listingInStack(100001)).toBe(true);
+    expect(listingInStack(100002)).toBe(false);
+
+    nav.tab("/saved");
+    expect(history.depth()).toBe(0);
+    expect(listingInStack(100001)).toBe(false);
+  });
+});
+
 describe("the sale switch of a launch listing (WP-38, BR-APP-108)", () => {
   /** A launch whose link opened listing 100001, marked as a sale over the rent feed of Samarkand. */
   async function marked(address: string, { sale = true }: { sale?: boolean } = {}) {

@@ -93,4 +93,24 @@ describe("saleSwitch (WP-38, BR-APP-108)", () => {
     hidden.forgetSaleSwitch(100001);
     expect(hidden.takeSaleSwitch(100001)).toBeNull();
   });
+
+  it("a launch listing closed or left before its record came is done with: the same listing opened later from a list switches nothing", async () => {
+    const closed = await launched(100001);
+    expect(closed.takeSaleSwitch(100001)).toBeNull();
+    closed.saleSwitchRecord(100001, "sale", rentFeed, null);
+    expect(closed.takeSaleSwitch(100001)).toBeNull();
+
+    const left = await launched(100001);
+    left.forgetSaleSwitch(100001);
+    left.saleSwitchRecord(100001, "sale", rentFeed, null);
+    expect(left.takeSaleSwitch(100001)).toBeNull();
+  });
+
+  it("another listing's close or hide does not end the launch listing's check", async () => {
+    const sale = await launched(100001);
+    sale.takeSaleSwitch(100002);
+    sale.forgetSaleSwitch(100002);
+    sale.saleSwitchRecord(100001, "sale", rentFeed, null);
+    expect(sale.takeSaleSwitch(100001)).toBe(saleHref);
+  });
 });

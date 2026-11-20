@@ -5,6 +5,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { Activity, type ReactNode, Suspense, use, useContext } from "react";
 import { createPortal } from "react-dom";
+import { defaultFilters } from "@homi/search";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ListingDetails, ListingInitial } from "@/features/listing/listingData";
@@ -18,6 +19,12 @@ const state = vi.hoisted(() => ({
   /** The route change of the layer's close (`leaveListingRoute`): one step back at depth > 0, else the replace. */
   navBack: vi.fn(),
   navReplace: vi.fn(),
+  /** The listing the launch link opened (`launchListing`, WP-38). */
+  launch: null as number | null,
+}));
+vi.mock("@/lib/deeplinks/launch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/deeplinks/launch")>()),
+  launchListing: () => state.launch,
 }));
 vi.mock("@/lib/api/browser", () => ({ bffFetch: () => new Promise(() => {}) }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready" }) }));
@@ -38,6 +45,8 @@ vi.mock("@/lib/navigation/nav", () => ({ nav: { back: state.navBack, replace: st
 
 import { resetPendingFavorites } from "@/features/feed/FavButton";
 import { LISTING_LEAVE_MS } from "@/features/listing/closeListing";
+import { saleSwitchRecord, takeSaleSwitch } from "@/features/listing/saleSwitch";
+import { pushEntry, resetDepth } from "@/lib/navigation/history";
 import { LISTING_CLOSE_SETTLE_MS, ListingLayer, type ListingLayerProps } from "@/features/listing/ListingLayer";
 import { ListingScreen } from "@/features/listing/ListingScreen";
 import { ListingLayerContext, useListingNumber } from "@/features/listing/useListing";
@@ -451,6 +460,46 @@ describe("ListingLayer (WP-26, D-20)", () => {
       telegramBack();
       act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
       expect(state.navBack).toHaveBeenCalledTimes(1);
+    });
+
+    it("a sale launch listing loaded directly leaves the sale feed behind it: the layer hands its number to the route change (WP-38)", async () => {
+      state.depth = 0;
+      state.launch = 100001;
+      try {
+        // The first full record is a sale over a rent feed (the mounted copy's own record, a rent one, comes second).
+        saleSwitchRecord(100001, "sale", defaultFilters("rent_long", "samarkand"), null);
+        await mount({ presentation: "standalone" });
+
+        telegramBack();
+        act(() => vi.advanceTimersByTime(LISTING_LEAVE_MS));
+
+        expect(state.navReplace.mock.calls).toEqual([["/?city=samarkand&deal=sale"]]);
+      } finally {
+        state.launch = null;
+      }
+    });
+
+    it("hidden under a page pushed over it the mark stays; left for good it goes (WP-38)", async () => {
+      state.launch = 100002;
+      try {
+        saleSwitchRecord(100002, "sale", defaultFilters("rent_long", "samarkand"), null);
+        resetDepth("/");
+        pushEntry("/listing/100002");
+        pushEntry("/settings");
+        const pushed = await mount({ number: "100002" });
+        pushed.unmount();
+        expect(takeSaleSwitch(100002)).toBe("/?city=samarkand&deal=sale");
+
+        state.launch = 100003;
+        saleSwitchRecord(100003, "sale", defaultFilters("rent_long", "samarkand"), null);
+        resetDepth("/saved");
+        const left = await mount({ number: "100003" });
+        left.unmount();
+        expect(takeSaleSwitch(100003)).toBeNull();
+      } finally {
+        state.launch = null;
+        resetDepth("/");
+      }
     });
 
     it("a listing loaded directly (depth 0) leaves to the feed by a replace", async () => {

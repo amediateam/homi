@@ -158,7 +158,13 @@ the key would have kept every later search from adopting it. `feedListKey` keeps
   `closeThen(sale)`: back, then the replace. It does not use `applyFilters`, which would tell the apply listeners and
   arm the follow nudge. At depth 0 it is the replace alone; another page below only goes back.
 - `closeListing(step, close, number)` takes the mark before its await in the direct-load branch.
-- The layer's hide drops the mark of its number (a Back of the browser), and so does opening another listing.
+- The layer's hide drops the mark of its number only once the app's stack no longer holds the listing (a Back of the
+  browser, a tab press); a page pushed over it (Telegram's Settings button) keeps it. Opening another listing drops it
+  too.
+- The first close or final hide of the launch listing ends its check, so the same listing opened later from a list
+  switches nothing, even when it closed before its record came (BR-APP-108: the reference is cleared on close).
+- Not handled: a launch link to a merged number. The record names the merged number, not the launch's, so it switches
+  nothing.
 
 ### Radar sheet
 
@@ -311,7 +317,17 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
   - `closeListing()` reaches it through `close`, except on a directly loaded listing, whose single move replaces with
     the taken mark.
   - A Back of the browser hides the layer, which drops the mark.
+- **Review.**
+  - One independent read-only review subagent read the frontend diff.
+  - Fixed: the e2e radar case's click, which scrolled the strip, and its sheet half, which could pass without a scroll;
+    the same-second `since` in the e2e count case; the mark dropped under a page pushed over the listing; a launch
+    listing closed before its record still able to switch later. The radar case now runs in both session modes.
+  - Left as nits: a feed hidden on the map shows its old cards for one frame before the bumped list re-keys; the merged
+    launch number above.
 - **Checks.** `make ci-frontend` exit 0 (generated types, lint, typecheck, the three builds; app 220 files, 3 698 tests).
+- **CI e2e on `861a5ee`:** 389 passed. Every case of `feed-continuity.spec.ts` passed in both modes except the radar
+  case (the click above). `radars.spec.ts:509` in header mode ended with a route callback still in flight
+  (`route.fetch: Test ended`); WP-38 does not touch that spec.
 - **End to end.** `e2e/feed-continuity.spec.ts` was not run locally: this machine's API answered `500`, because its
   database host was unreachable (`No route to host`). The spec runs in CI. Its radar case needs radars on, which CI
   has.

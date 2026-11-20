@@ -10,7 +10,7 @@ import { takeOverBack } from "@/lib/navigation/backHandler";
 import { depth as historyDepth, useDepth } from "@/lib/navigation/history";
 import { isListingNumber, matchRoute } from "@/lib/navigation/routes";
 
-import { LISTING_LEAVE_MS, type ListingCloseKind, leaveListingRoute, listingLeavePlays } from "./closeListing";
+import { LISTING_LEAVE_MS, type ListingCloseKind, leaveListingRoute, listingInStack, listingLeavePlays } from "./closeListing";
 import { ListingScreen } from "./ListingScreen";
 import { ListingLayerContext, type ListingLayerValue, type ListingView } from "./useListing";
 import { forgetSaleSwitch } from "./saleSwitch";
@@ -79,7 +79,8 @@ export const LISTING_CLOSE_SETTLE_MS = 1000;
  * already slid the layer out, it changes the route at once, and so does an overlay copy at the app's depth 0, which
  * lies over a standalone copy rather than over the page Back reveals. When the address or the app's history moved
  * during the leave (a new opening, a browser Back), the leave is cancelled and the route is left alone; a hidden or
- * unmounted layer drops a pending leave, and the sale switch's mark of its number (WP-38). The overlay copy enters
+ * unmounted layer drops a pending leave, and — once the app's stack no longer holds the listing — the sale switch's
+ * mark of its number (WP-38). The overlay copy enters
  * with `animate-listing-in`; a direct load does not.
  */
 export function ListingLayer({ params, presentation, screen, children }: ListingLayerProps) {
@@ -177,7 +178,10 @@ export function ListingLayer({ params, presentation, screen, children }: Listing
     () => () => {
       if (number !== null) {
         forgetView(number);
-        forgetSaleSwitch(number);
+        // Hidden under a page pushed over it (Telegram's Settings button), the listing comes back: its mark stays.
+        if (!listingInStack(number)) {
+          forgetSaleSwitch(number);
+        }
       }
       clearTimers();
       closing.current = false;

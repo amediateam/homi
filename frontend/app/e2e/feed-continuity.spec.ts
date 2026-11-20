@@ -82,9 +82,11 @@ async function open(
 
 /**
  * The app hidden for `hours` and shown again; says when it went away (page clock, seconds). The timers of those hours
- * do not run: only the clock moves on.
+ * do not run: only the clock moves on. The clock first moves on 2 s, so the moment the list was created and the moment
+ * the app went away are never the same second.
  */
 async function away(page: Page, hours: number): Promise<number> {
+  await page.clock.setSystemTime((await page.evaluate(() => Date.now())) + 2_000);
   const hiddenAt = await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     document.dispatchEvent(new Event("visibilitychange"));
@@ -273,9 +275,12 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("feed continuity: the radar sheet (radars on)", () => {
+for (const mode of ["cookie", "header"] as const) {
+  test.describe(`feed continuity: the radar sheet (radars on, ${mode} mode)`, () => {
   test("a find opened from the strip and closed leaves the strip and the sheet where they were", async ({ page }) => {
-    await open(page, "cookie", { path: "/radars" });
+    // A short screen, so the sheet's body has something to scroll.
+    await page.setViewportSize({ width: 390, height: 560 });
+    await open(page, mode, { path: "/radars" });
     const tile = visible(page, "[data-radar-tile] [data-radar-open]").first();
     await expect(tile).toBeVisible({ timeout: API_MS });
     await tile.click();
@@ -290,6 +295,7 @@ test.describe("feed continuity: the radar sheet (radars on)", () => {
       return { x: row.scrollLeft, y: scroller.scrollTop };
     });
     expect(place.x).toBeGreaterThan(0);
+    expect(place.y).toBeGreaterThan(0);
 
     // A tap on a find already in view: Playwright's own click would first scroll the first find into view and move
     // the strip, so the find in view is clicked in the page.
@@ -307,3 +313,4 @@ test.describe("feed continuity: the radar sheet (radars on)", () => {
     await expect.poll(() => body.evaluate((node) => node.scrollTop)).toBe(place.y);
   });
 });
+}

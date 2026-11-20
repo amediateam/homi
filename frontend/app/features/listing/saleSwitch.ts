@@ -10,11 +10,12 @@ import { routes } from "@/lib/navigation/routes";
  * city behind it (`takeSaleSwitch`, read by the one close of the listing layer). Legacy switches the filters while the
  * card is open; HOMI cannot change the address of the page under an intercepted overlay while it shows, so the switch
  * comes with the close (DEC-65). Only that listing and only its first full record count: a later load changes nothing,
- * daily rent switches nothing, the sort is not checked, and opening another listing or hiding the layer drops the mark.
- * Module memory of this launch.
+ * daily rent switches nothing, the sort is not checked, and opening another listing or leaving the listing for good drops
+ * the mark. The first close or final hide of the launch listing ends its check, so the same listing opened later from
+ * a list switches nothing, even when it was closed before its record arrived. Module memory of this launch.
  */
 
-/** The launch listing whose first full record was looked at. */
+/** The launch listing whose first full record was looked at, or that was closed or left before it came. */
 let checked: number | null = null;
 /** The marked listing and the address of the sale feed its close leaves behind. */
 let mark: { number: number; href: string } | null = null;
@@ -42,8 +43,16 @@ export function saleSwitchRecord(number: number, deal: Deal | null, feed: Search
   }
 }
 
+/** The launch listing's reference is cleared: it closed, or its layer was left for good. */
+function settled(number: number): void {
+  if (launchListing() === number) {
+    checked = number;
+  }
+}
+
 /** The close of `number` to the feed: the sale feed's address when it is marked, else `null`. The mark goes. */
 export function takeSaleSwitch(number: number): string | null {
+  settled(number);
   if (mark === null || mark.number !== number) {
     return null;
   }
@@ -52,8 +61,12 @@ export function takeSaleSwitch(number: number): string | null {
   return href;
 }
 
-/** The layer of `number` hid or unmounted without its close (a Back of the browser): its mark goes. */
+/**
+ * The layer of `number` hid or unmounted without its close, and the app's stack no longer holds the listing (a Back of
+ * the browser, a tab press): its mark goes. A page pushed over the listing (Telegram's Settings button) keeps it.
+ */
 export function forgetSaleSwitch(number: number): void {
+  settled(number);
   if (mark !== null && mark.number === number) {
     mark = null;
   }

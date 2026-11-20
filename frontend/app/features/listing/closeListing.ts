@@ -22,6 +22,14 @@ export function listingLeavePlays(): boolean {
   return !(typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
+/** The app's stack still holds an entry of listing `number`, its own address or a child (a page was pushed over it). */
+export function listingInStack(number: number): boolean {
+  return stack().some((entry) => {
+    const match = matchRoute(entry.split("?")[0]);
+    return match.route === "listing" && match.number === String(number);
+  });
+}
+
 /** The page one step below the top of the app's stack is the search list (`/`, any search). */
 function feedBelow(): boolean {
   const entries = stack();
