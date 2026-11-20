@@ -8,8 +8,10 @@ Evidence comes from the recovered code `$KVADRO_ROOT/demo/app/…`. Nothing was 
 absences: they were checked by grep over `$KVADRO_ROOT/demo/app/src` and `index.html` for the API name. Server-side
 claims (signature checks, prepared messages) are `DOCUMENTED_ONLY`, because the legacy backend source is not
 available. Text added for a later release names it. The audit is brought up to `index-CBlEKxdL.js` (SVN r31), whose
-intake cites files "at r31", and to the pinned release `index-CIa0Ldj2.js` (source at SVN r33; `wave-1/baseline.md`);
-text of that intake cites the source "at r33", the state the release was read in, and the changelog at r36.
+intake cites files "at r31", to `index-CIa0Ldj2.js` (source at SVN r33, the previous pin), whose intake cites the
+source "at r33", the state the release was read in, and the changelog at r36, and to the pinned release
+`index-YX9bFVws.js` (source at SVN r38; `wave-1/baseline.md`). Text of that intake cites the source and
+`$KVADRO_ROOT/docs/api.md` "at r38" and the changelog at r39.
 
 Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defects are tracked as `LB-APP-NNN` in
 `03-legacy-frontend-audit.md` §5 and §5b.
@@ -89,6 +91,9 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
   - `prefetch` is skipped without initData (`client.js:35-38`).
   - `GET /api/bot` is a plain `fetch` without the header (`$KVADRO_ROOT/demo/app/src/lib/api/meta.js:15-23`).
   - `app_error` can be sent with an empty `tma ` value (`$KVADRO_ROOT/docs/api.md` §11).
+  - Since release `index-YX9bFVws.js` the owner's photo upload goes past `apiFetch` through its own
+    `XMLHttpRequest` and sets the same header itself (`$KVADRO_ROOT/demo/app/src/lib/api/owner.js:61-90` at r38; `08`
+    API-041).
 - **Server:** verifies the signature per `$KVADRO_ROOT/CLAUDE.md` "Architecture" and `$KVADRO_ROOT/docs/api.md` §1.
 - **Gaps:** expiry handling (`auth_date`) is not visible in the client, and there is no 401 handling in the client at
   all. An expired initData surfaces as silent meta retries and generic «Не загрузилось» errors (LB-APP-047).
@@ -373,10 +378,38 @@ Policy (HOMI, 2026-11-09): legacy bugs are fixed, not reproduced. Mini App defec
 - **In Telegram:** `openTelegramLink('https://t.me/share/url?url=…&text=…')`.
 - **Outside Telegram:** `navigator.share`, else a new tab (`share.js:56-70`).
 - **Uses:** listing share fallback and the survey's «Рассказать друзьям».
+- **Since release `index-YX9bFVws.js`:** `shareUrl` is unchanged (`share.js:85-99` at r38). A second function beside
+  it, `shareText`, shares a text that carries its link inside (TMA-048).
 
 #### TMA-032 — `switchInlineQuery`, `shareToStory`, `sendData`, `downloadFile`, `openInvoice` (CONFIRMED absence)
 
 - **Not used.**
+
+#### TMA-048 — `shareText`: a text with its link inside, through `t.me/share/url` (CONFIRMED)
+
+- **Since:** release `index-YX9bFVws.js` (`$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-36` at r39).
+- **Link:** `shareText(text)` builds `https://t.me/share/url?url=<encodeURIComponent(text)>`. The whole text, its link
+  included, goes into the `url` parameter, and no `text` parameter is sent
+  (`$KVADRO_ROOT/demo/app/src/lib/telegram/share.js:101-119` at r38).
+- **Branches:** while the module's `webApp` binding is set, `webApp.openTelegramLink(<that link>)`. Otherwise, when
+  `navigator.share` exists, `navigator.share({text})`, with every rejection swallowed. Otherwise
+  `window.open(<that link>, '_blank', 'noopener')` (`share.js:107-118` at r38).
+- **Like `shareUrl`:** it calls the SDK directly, not the debounced link helper of TMA-028, and has no version gate
+  (`share.js:85-99`, `:106-119` at r38).
+- **Use:** the only caller is «Отправить хозяину» in the landlord block of the «Нашли жильё?» survey (`03` SCR-031,
+  BR-APP-116). It shares `found.landlordShare` with `{url}` = `https://kvadro.app` + the page «Сдать квартиру» of the
+  interface language (`/sdat-kvartiru/`, `/uz/kvartira-ijaraga-berish/`, `/en/list-your-apartment/`; any other
+  locale gets the `ru` page) + `?s=tenant`
+  (`$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:79-101` at r38). Every tap first plays a light haptic
+  impact and sends `landlord_share {src: kvadro|elsewhere}` (`FoundSheet.jsx:145-151` at r38; `08` API-034).
+- **The page:** legacy's contract asks the landing to serve the three pages and accept `?s=tenant`
+  (`$KVADRO_ROOT/docs/api.md:1411-1412` at r38). None of them is in the checkout's landing mirror
+  (`$KVADRO_ROOT/demo/landing/site` on 2026-11-20).
+- **Legacy decision:** the whole message in `url` is LB-APP-090 (`03` §5b); its proposed fix sends the link in `url`
+  and the message in `text`.
+- **Beside:** TMA-031 (`shareUrl`, link and text apart), TMA-043 (outside Telegram).
+- **Parity scenarios:** `found-moved-landlord` and `found-kvadro-landlord-uz`, with the probe `linkProbe`, which
+  records every `openTelegramLink` URL (`$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:58-60`, `:628-630` at r38).
 
 ### 1.8 Permissions, device and storage
 
@@ -557,7 +590,7 @@ a WebView authorised by `initData`. The bot is a chat interface driven by Bot AP
 | **Deliver** radar results (instant / digest, quiet hours) | no; only settings and status | **yes**: messages in the chat (§5.3) |
 | Settings: language, currency, theme, quiet hours, digest time | **yes** (SCR-032 to SCR-038); language and currency also apply to the bot (`notify.languageHint`, `notify.currencyHint`); since release `index-BnFvC-Ft.js` also the style of the bot's listing cards (`classic` / `rich`) and «Прислать пример в чат» (SCR-048) | `setMyCommands` localisation follows the language (§6.3); sends the listing cards in the chosen style and the sample card (`POST /api/settings/card-sample`, `04` BOT-085, §3.10) |
 | Owner phone verification (`owner_verified`) | no for `/owner`; since release `index-CBlEKxdL.js` the owner cabinet confirms a phone with `requestContact` (TMA-034), and the listing screen shows «Проверенный хозяин» with an info sheet (SCR-062) | **yes**: `/owner` with `request_contact` (§5.6) |
-| List a flat for rent («Сдать квартиру»: form, photos, place, contact mode, publish, «Мои объявления», requests) | **yes** since release `index-CBlEKxdL.js` (SCR-049 to SCR-060) | receives the owner's contact, delivers the requests and the answers (`04` BOT-086 to BOT-091); whether it has an entry of its own is unknown (`04` Q-BOT-049) |
+| List a flat for rent («Сдать квартиру»: form, photos, place, contact mode, publish, «Мои объявления», requests) | **yes** since release `index-CBlEKxdL.js` (SCR-049 to SCR-060); since release `index-YX9bFVws.js` also invitations into the form under the search feed and on the listing card (`03` BR-APP-115), and the «Нашли жильё?» survey shares the landing page «Сдать квартиру» with the user's landlord (TMA-048) | receives the owner's contact, delivers the requests and the answers (`04` BOT-086 to BOT-091); whether it has an entry of its own is unknown (`04` Q-BOT-049) |
 | Ask an owner who hides the number for it | **yes** since release `index-CBlEKxdL.js` (SCR-061, `POST /api/listings/:id/contact`) | delivers the request and the answer (`04` BOT-087 to BOT-090) |
 | Privacy policy, «Удалить мои данные» | no (SCR-032) | **yes**: `/privacy` (§5.11) |
 | Support conversation | only a link to the support account | a separate support account; the main bot handles the conversation per §5.11 🔶 |
@@ -675,7 +708,7 @@ How it works:
 | Window, viewport, safe areas, theme | TMA-014 to TMA-021 | CONFIRMED (TMA-018 is an absence) |
 | Buttons | TMA-022 to TMA-024, TMA-047 | CONFIRMED (TMA-024 is an absence) |
 | Feedback and dialogs | TMA-025 to TMA-027 | CONFIRMED (TMA-027 is an absence) |
-| Links, calls, sharing | TMA-028 to TMA-032 | CONFIRMED (TMA-030 server side DOCUMENTED_ONLY; TMA-032 is an absence) |
+| Links, calls, sharing | TMA-028 to TMA-032, TMA-048 | CONFIRMED (TMA-030 server side DOCUMENTED_ONLY; TMA-032 is an absence) |
 | Permissions, device, storage | TMA-033 to TMA-040 | CONFIRMED (TMA-038 is an absence; TMA-034 was one up to `index-BnFvC-Ft.js`, its bot side is DOCUMENTED_ONLY) |
 | Platform, gates, outside Telegram, dev tooling | TMA-041 to TMA-045 | CONFIRMED |
-| **Total** | **47** (42 used integration points, 5 confirmed absences) | — |
+| **Total** | **48** (43 used integration points, 5 confirmed absences) | — |

@@ -13,20 +13,24 @@ stable, so it takes the next free number while the legacy registry renumbered th
 #27, after API-025. API-037 … API-054 (the owner cabinet and the contact request, added in release
 `index-CBlEKxdL.js`) stand at their registry positions #37 – #54. API-055 (`DELETE /api/listings/:id/report`, added in
 release `index-CIa0Ldj2.js`) stands at its registry position #18, after API-016; the legacy registry moved every later
-method down by one, so the positions named above are #28 and #38 – #55 since that release.
+method down by one, so the positions named above are #28 and #38 – #55 since that release. Release
+`index-YX9bFVws.js` adds no method: the registry still holds 55 (`$KVADRO_ROOT/docs/api.md:12`, `:114-168` at r38).
 
 - **Audit date:** 2026-11-09. **Legacy state:** Mini App release `index-plF_TOcT.js` at the audit, brought up to
   `index-DY_DH7h-.js` (SVN r27, the pin of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js` (SVN r29;
   `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:46`), to `index-CBlEKxdL.js` (SVN r31, the previous pin;
-  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31) and to the pinned release `index-CIa0Ldj2.js` (source at SVN
-  r33; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r36; `wave-1/baseline.md`). Text changed for a later release
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r31), to `index-CIa0Ldj2.js` (source at SVN r33, the previous pin;
+  `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5` at r36) and, by the intake of 2026-11-20, to the pinned release
+  `index-YX9bFVws.js` (source at SVN r38; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:5-36` at r39;
+  `wave-1/baseline.md`). Text changed for a later release
   names it; "Doc:" line numbers are those of the audited tree, "current Doc:" and "at the pin" those of SVN r27.
   "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, the state of release `index-CBlEKxdL.js`. The intake of
   `index-BnFvC-Ft.js` cites the same state, because `api.md` of r29 cannot be read, and client files at r29 when they
   have not changed since. Text of the intake of `index-CBlEKxdL.js` cites client files "at r31", the state the release
   was read in; the checkout has moved since (`wave-1/baseline.md`). "Doc r35:" cites `$KVADRO_ROOT/docs/api.md` at
-  r35, the pinned release's own state. Text of the intake of `index-CIa0Ldj2.js` cites client files "at r33", the
-  state that release was read in.
+  r35, the state of release `index-CIa0Ldj2.js`. Text of the intake of `index-CIa0Ldj2.js` cites client files "at
+  r33", the state that release was read in. "Doc r38:" cites `$KVADRO_ROOT/docs/api.md` at r38, the pinned release's
+  own state, and text of the intake of `index-YX9bFVws.js` cites client files "at r38".
 - **Evidence base:** the legacy backend source and database are not available. The Mini App source is decompiled from
   the production bundle; the landing is a 1:1 production mirror. Nothing was run: `RUNTIME_VERIFIED` is not used.
 - **Status per endpoint** carries two labels: **Contract** (method, path, request construction, the response fields
@@ -60,6 +64,9 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
   `initData`. — `CONFIRMED`
 - Exceptions: `GET /api/bot` is called with plain `fetch`/`XMLHttpRequest` without `Authorization`
   (`src/lib/api/meta.js:15-23`, `index.html:94-102`). — `CONFIRMED`
+- Since release `index-YX9bFVws.js` the photo upload of the owner cabinet (API-041) goes past `apiFetch` through an
+  `XMLHttpRequest` of its own, which sets the same `Authorization: tma <initData>` and no other header
+  (`src/lib/api/owner.js:61-90` at r38; Doc r38:45-46). — `CONFIRMED`
 - Without `initData` the React app still installs global error handlers before any check and can send `app_error` with
   the header `Authorization: tma ` (empty value) — `src/lib/errors.js:101-122`, `client.js:78`,
   `webApp.js:111-117`; the server must reject it silently (`$KVADRO_ROOT/docs/api.md:1012-1013`). — `CONFIRMED`
@@ -77,6 +84,11 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
 - Since release `index-CBlEKxdL.js` `apiFetch` also takes a `FormData` body. Only the photo upload of the owner
   cabinet uses it (API-041): `multipart/form-data` with one field `file`, sent without the JSON `Content-Type`
   (`src/lib/api/owner.js:57-70` at r31; `$KVADRO_ROOT/demo/app/docs/CHANGELOG.md:14` at r31). — `CONFIRMED`
+- Since release `index-YX9bFVws.js` that body goes through the upload's own `XMLHttpRequest` whenever the caller
+  passes a progress callback, and the owner form always passes one; the browser sets the multipart boundary. The
+  `apiFetch` branch stays in the wrapper for a call without the callback, and no call site makes one
+  (`src/lib/api/owner.js:61-100`, `src/features/owner/OwnerForm.jsx:578` at r38; Doc r38:45-46, :53-55). —
+  `CONFIRMED`
 - Body keys whose value is `undefined` are dropped by `JSON.stringify` (for example `relaxed` in
   `src/lib/api/subscriptions.js:16-20` when no relax option was picked). — `CONFIRMED`
 - Path ids are interpolated without encoding: `` `/api/listings/${id}` `` (`listings.js:10`). Listing ids come from
@@ -91,6 +103,10 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
   (`client.js:87-102`; `$KVADRO_ROOT/docs/api.md:44-50`). — `CONFIRMED`
 - Lists must be arrays, never `null`; keys the client compares strictly must always be present
   (`$KVADRO_ROOT/docs/api.md:1083-1086`). Per-endpoint strict fields are listed in §2. — `CONFIRMED`
+- Since release `index-YX9bFVws.js` the XHR photo upload (API-041) is stricter than `apiFetch`: it resolves only on a
+  `2xx` whose body parses to a truthy JSON value, so a `204`, an empty body or a non-JSON `2xx` rejects with
+  `ApiError(<status>, null)`, which the form shows as a failed upload (`src/lib/api/owner.js:75-85`,
+  `src/features/owner/OwnerForm.jsx:601-609` at r38; Doc r38:1408-1410). — `CONFIRMED`
 
 ### 1.5 Errors
 
@@ -126,6 +142,12 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
 - Network failure or the 15 s timeout → `ApiError(status 0, detail 'network' | 'timeout')`; the generic error state
   shows «Нет связи» / «Сервер не ответил. Попробуйте ещё раз через минуту.» (`client.js:103-106`,
   `src/components/ErrorState.jsx:14`, `ru.js:14-16`). — `CONFIRMED`
+- Since release `index-YX9bFVws.js` the XHR photo upload (API-041) maps its own failures the same way: `onerror` →
+  `ApiError(0, 'network')`, `ontimeout` → `ApiError(0, 'timeout')`, and any other answer → `ApiError(<HTTP status>,
+  <detail if it is a string, else null>)` (`src/lib/api/owner.js:83-87` at r38; Doc r38:1580-1584). The form shows
+  `photo:not_image` and `photo:too_big` with their own texts, stops the batch on `photo:too_many`, and shows every
+  other failure as «Не удалось загрузить фото» (`own.photoFailed`; `src/features/owner/OwnerForm.jsx:591-609` at
+  r38). — `CONFIRMED`
 - Since release `index-CBlEKxdL.js` the owner methods (API-037 … API-053) report refusals as `detail` strings that the
   client parses: `invalid:<fields>` (`422`), `missing:<fields>`, `status:…` (`409`), `rejected:<reason>` and
   `photo:too_many`, `photo:not_image`, `photo:too_big` (`02` BR-API-160; Doc r31:1286-1288, :1439-1442, :1450-1454;
@@ -144,6 +166,10 @@ method down by one, so the positions named above are #28 and #38 – #55 since t
   pass an `AbortSignal`: a new request, 400 ms after the map stops or 500 ms after a change of the form, aborts the
   previous one (API-051, API-053; `src/features/owner/PlacePicker.jsx:24`, `:63-83`,
   `src/features/owner/OwnerForm.jsx:107`, `:347-369` at r31). — `CONFIRMED`
+- Since release `index-YX9bFVws.js` the form's photo uploads get their 90 s from `xhr.timeout = UPLOAD_TIMEOUT_MS`
+  instead (`src/lib/api/client.js:35`, `src/lib/api/owner.js:69` at r38; Doc r38:60). The XHR takes no
+  `AbortSignal` and is never aborted by the client; the progress callback fires only when the browser reports a
+  computable length (`owner.js:61-90` at r38). — `CONFIRMED`
 - Prefetch before React mounts (`src/main.jsx:24-39`): `GET /api/meta`; the first feed page for
   `defaultFilters('rent_long', <saved city>)` with `limit=20`; `GET /api/listings/<id>` when opened from a listing
   link. Prefetch is skipped without `initData` (`client.js:35-43`). The first `apiFetch(url)` **without options**
@@ -295,6 +321,14 @@ Since release `index-CIa0Ldj2.js` the client reads two keys of `ListingDetails` 
 r35:315-316). `author.kind`: unless it is `"phone"`, the report reason `agent` is not offered, and `author: null`
 counts as not a phone (API-016; Doc r35:337-341). The answer of `GET /api/map` gains `with_point?: number` (API-007;
 Doc r35:671; `02` BR-API-192).
+
+Since release `index-YX9bFVws.js` `ListingDetails` has one more optional key, `owner_entry?: boolean` (Doc
+r38:368-369). The client reads it with a truthy check: the card then ends with the line «Тоже сдаёте квартиру?
+Разместите бесплатно ›» after the sources, and a tap reads `GET /api/owner/listings` (API-037;
+`src/features/listing/ListingScreen.jsx:347` at r38; `03` BR-APP-115). The line is not under the `owner_self`
+condition that hides the sources (`ListingScreen.jsx:247`, `:335-347` at r38). When the server sends `true` is not
+documented: legacy's contract asks it as its question 19 and its checklist says only "where the invitation fits"
+(Doc r38:1406-1407, :1453-1454). — `DOCUMENTED_ONLY`. HOMI's rule is DEC-94.
 
 **`FeedPage`** (`$KVADRO_ROOT/docs/api.md:355-366`): `{items: ListingPreview[], next_cursor: string|null!}` —
 `next_cursor === null` is the only end-of-list signal (`src/features/feed/useInfiniteFeed.js:41-42`).
@@ -715,7 +749,9 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   owner keys of §1.8 (`owner_self`, `owner_mine`, `owner_listing_id`, `contact_mode`, `my_request`,
   `response_minutes`, `owner_description`). `owner_mine` and `my_request` depend on the caller, and the card of a gate
   listing has `phone` only after the caller's request is `given` (Doc r31:343-350, :386-391; `02` BR-API-186 …
-  BR-API-188). — DOCUMENTED_ONLY
+  BR-API-188). — DOCUMENTED_ONLY. Since release `index-YX9bFVws.js` the card may also carry `owner_entry` (§1.8);
+  which listings get `true` is not documented, the contract asks it itself (Doc r38:1406-1407, :1453-1454, question
+  19). — DOCUMENTED_ONLY
 - **DB Changes:** probably records view history (`viewed`, `GET /api/history`); which variant (full, preview) records
   it is unknown (Q-API-035). — UNVERIFIED
 - **Side Effects:** probably increments `stats.views` (Q-API-035). — UNVERIFIED
@@ -730,7 +766,10 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   first full load, switches the feed under it to the sale defaults; daily rent switches nothing
   (`src/features/listing/ListingScreen.jsx:142-146`, `src/app/App.jsx:244-264` at r33; Doc r35:315-316; `03`
   BR-APP-108). `author.kind`: unless it is `"phone"`, the report reason `agent` is not offered (API-016; Doc
-  r35:337-341). `floor` and `posted_at` follow §1.8 (`02` BR-API-195, BR-API-196).
+  r35:337-341). `floor` and `posted_at` follow §1.8 (`02` BR-API-195, BR-API-196). Since release `index-YX9bFVws.js`
+  the client also reads `owner_entry?: boolean` with a truthy check: the owner invitation «Тоже сдаёте квартиру?
+  Разместите бесплатно ›» as the last line of the card, on every tab (§1.8;
+  `src/features/listing/ListingScreen.jsx:347`, `src/app/App.jsx:970` at r38; Doc r38:368-369; `03` BR-APP-115).
 - **Errors:** `404` → up to `index-CBlEKxdL.js` «Объявление не загрузилось» (no retry button)
   (`ListingScreen.jsx:115-116`). Since release `index-CIa0Ldj2.js` the screen «Этого объявления уже нет — квартиру,
   похоже, сдали или продали» with the button «Смотреть свежие», which closes the screen and does not reload the feed.
@@ -752,7 +791,10 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   `src/features/listing/ListingScreen.jsx:142-146`, `:175-201`, `src/lib/api/client.js:29-30`,
   `src/components/ErrorState.jsx:14-25`, `src/features/map/MapSelectionCard.jsx:22-54` (at r33); mocks
   `tools/parity/mocks.mjs:345`, `:348`; parity scenarios `listing-gone`, `listing-gone-fresh`, `listing-day-limit`,
-  `feed-floor`, `listing-floor-ground`, `listing-floor-basement`.
+  `feed-floor`, `listing-floor-ground`, `listing-floor-basement`. Release `index-YX9bFVws.js`: Doc r38:368-369,
+  :1406-1407, :1453-1454; client `src/features/listing/ListingScreen.jsx:247`, `:335-347`, `src/app/App.jsx:970` (at
+  r38); mocks `tools/parity/mocks.mjs:357-360`; parity scenarios `listing-owner-entry`, `listing-owner-entry-open`,
+  `listing-owner-entry-limit`.
 - **Migration Target:** legacy `GET /api/listings/:id` and `GET /api/listings/:id?preview=1` byte-compatible
   (numeric ids). Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — rent, daily, sale × apartment/house/room/commercial/land fixtures each return every strict key
@@ -767,11 +809,14 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   author's own listing has `owner_mine` and `owner_listing_id`, and the same listing read by another user has neither;
   since release `index-CIa0Ldj2.js` — a listing that is gone → `404`; the daily cap → `429 {"detail": "too many
   today"}` (threshold per Q-API-080); `floor: 0`, `floor: -1` and an unknown floor as `null`, never `0`; `posted_at`
-  as an ISO time, with `age` still present.
+  as an ISO time, with `age` still present; since release `index-YX9bFVws.js` — `owner_entry`, when present, is a
+  JSON boolean; which listings legacy marks is recorded per its question 19 (Doc r38:1453-1454); HOMI's rule is
+  DEC-94.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-009, LB-API-010, LB-API-011,
   LB-API-012, LB-API-029, LB-API-030, LB-API-031; Q-API-019, Q-API-021 … Q-API-024, Q-API-035; since release
   `index-CBlEKxdL.js` `02` BR-API-186 … BR-API-189, Q-API-076, Q-API-078; since release `index-CIa0Ldj2.js`
-  API-016, `02` BR-API-193, BR-API-195, BR-API-196, Q-API-080; `03` SCR-019, BR-APP-106, BR-APP-108.
+  API-016, `02` BR-API-193, BR-API-195, BR-API-196, Q-API-080; `03` SCR-019, BR-APP-106, BR-APP-108; since release
+  `index-YX9bFVws.js` API-037, `03` BR-APP-115, LB-APP-084, DEC-94.
 
 ### API-009 — `GET /api/listings/:id/call`
 
@@ -1571,7 +1616,13 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
 - **Side Effects:** none.
 - **Response:** ignored; recommended `204`.
 - **Errors:** none shown.
-- **Legacy Source:** Doc:136, Doc:960-968; client `src/lib/api/found.js:22-28`, `src/features/radar/FoundSheet.jsx:112`.
+- **Since release `index-YX9bFVws.js`:** the request is unchanged, but the sheet no longer closes with a toast after
+  it: it shows the step «Поздравляем!» with the landlord block, whose «Отправить хозяину» shares the landing page
+  «Сдать квартиру» (`src/features/radar/FoundSheet.jsx:139-151` at r38; Doc r38:1198-1203; `03` BR-APP-116; `05`
+  TMA-048). The contract names no new request for it (Doc r38:1203); the tap sends only the event `landlord_share`
+  (API-034).
+- **Legacy Source:** Doc:136, Doc:960-968; client `src/lib/api/found.js:22-28`, `src/features/radar/FoundSheet.jsx:112`
+  (`:141` at r38).
 - **Migration Target:** legacy `POST /api/found/where` byte-compatible. Handler: TBD (`10-target-architecture.md`).
 - **Tests:** positive — each value stored and linked to the latest `elsewhere` answer of the user; negative — unknown
   value → `422`; auth.
@@ -1618,7 +1669,12 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   (`src/features/owner/OwnerPanel.jsx:247-251`) — all at r33; Doc r35:1256-1261, :1278-1286. Since the same release
   `app_error` has one more form: `kind: "error"`, `source: "i18n"`, `message: "i18n: no key <key> (<locale>)"`, sent
   once per missing dictionary key and counted within the 5 distinct errors per session
-  (`src/i18n/index.js:110-125`, `:180-193` at r33; Doc r35:1287-1289).
+  (`src/i18n/index.js:110-125`, `:180-193` at r33; Doc r35:1287-1289). Since release `index-YX9bFVws.js` two more
+  events: `owner_entry {src: feed_end|empty|listing}`, sent on a tap on an owner invitation before
+  `GET /api/owner/listings` and also when that request fails, with no guard against a second tap
+  (`src/app/App.jsx:169-186` at r38; `03` BR-APP-115, LB-APP-084), and `landlord_share {src: kvadro|elsewhere}`, sent
+  on every tap on «Отправить хозяину» before the share (`src/features/radar/FoundSheet.jsx:145-151` at r38; `03`
+  BR-APP-116); Doc r38:1276-1277, :1303-1305.
 - **Validation:** must accept unknown extra fields without hard failure (Doc:1044). Size limits unknown (Q-API-045).
 - **Business Logic:** writes the action log (180 days, no texts) and forwards product events to PostHog under the
   user's random id (`$KVADRO_ROOT/docs/about.md:268`, `:375-376`, `:431`). — DOCUMENTED_ONLY
@@ -1636,7 +1692,8 @@ Changes → Side Effects → Response → Errors → Legacy Source → Migration
   negative — non-JSON body, 1 MB body → bounded rejection (target limit per Q-API-045); privacy — `source` with
   `#tgWebAppData=` never stored (client strips it, server re-checks).
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: LB-API-001, LB-API-047; Q-API-045,
-  Q-API-046; since release `index-CIa0Ldj2.js` `02` BR-API-123.
+  Q-API-046; since release `index-CIa0Ldj2.js` `02` BR-API-123; since release `index-YX9bFVws.js` `03` BR-APP-115,
+  BR-APP-116.
 
 ### API-037 — `GET /api/owner/listings`
 
@@ -1674,17 +1731,27 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Side Effects:** none.
 - **Response:** `200 OwnerListingsResponse` (§1.8): `{items, max, can_add, past?}`.
 - **Errors:** the settings screen ignores every error silently; «Мои объявления» shows an error state with a retry.
+- **Since release `index-YX9bFVws.js`:** a fourth reader, the owner invitations «Сдаёте квартиру? Разместите
+  бесплатно» under the search feed loaded to its end, under the empty search feed and on a listing card with
+  `owner_entry` (API-008). A tap sends the event `owner_entry` (API-034), then reads this method: `can_add: true` opens
+  a new form (API-038), `false` closes the listing and opens «Мои объявления» on the settings tab, and a failed
+  request also opens a new form. There is no guard against a second tap (`src/app/App.jsx:169-186` at r38; Doc
+  r38:1562-1567; `03` BR-APP-115, LB-APP-084). The contract's checklist asks for a fast answer that always carries
+  `can_add` (Doc r38:1406-1407).
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1406-1411, :1430-1433; client
   `src/lib/api/owner.js`, `src/features/settings/SettingsScreen.jsx:101-107` (on mount, on `ownerVersion`, on opening
   and closing «Мои объявления»), `src/features/owner/OwnerListings.jsx:307-320`, `:352` (on open, on `version`, on
   retry, after every status change and after closing «Отклики»), `src/features/owner/OwnerForm.jsx:214-219` (a new
-  form, for «С возвращением!»).
+  form, for «С возвращением!»). Release `index-YX9bFVws.js`: Doc r38:1406-1407, :1562-1567; client
+  `src/lib/api/owner.js:23`, `src/app/App.jsx:169-186`, `:913`, `:970` (at r38); parity scenarios
+  `listing-owner-entry-open`, `listing-owner-entry-limit`, `feed-owner-entry`, `feed-empty-owner-entry-open`.
 - **Migration Target:** `GET /api/v1/owner/listings` (native, WP-80 on stubs, WP-84; DEC-70); the pending count moves to
   `GET /me`.
 - **Tests:** positive — a user with no listings gets `items: []` and `can_add: true`; a user at `max` gets
-  `can_add: false`; `past` counts only finished listings; isolation — another user's listings never appear; auth.
+  `can_add: false`; `past` counts only finished listings; isolation — another user's listings never appear; auth;
+  since release `index-YX9bFVws.js` — every answer carries a boolean `can_add`, also for a user who has never listed.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-162; `03` SCR-032, SCR-049,
-  SCR-057, BR-APP-089, BR-APP-095; Q-API-068.
+  SCR-057, BR-APP-089, BR-APP-095; Q-API-068; since release `index-YX9bFVws.js` `03` BR-APP-115, LB-APP-084.
 
 ### API-038 — `POST /api/owner/listings`
 
@@ -1801,15 +1868,36 @@ server logic of every method is `DOCUMENTED_ONLY`, and a part that only the Mini
 - **Errors:** `detail` `photo:too_many` (the client stops the batch), `photo:not_image` and `photo:too_big` (a
   message, and the batch goes on); any other error → a generic message. The client never sends an 11th photo (`03`
   BR-APP-082).
+- **Transport since release `index-YX9bFVws.js`:** the same URL and body, sent by an `XMLHttpRequest` of the wrapper
+  instead of `apiFetch`, so that the form can draw the upload progress (§1.2 – §1.6;
+  `src/lib/api/owner.js:51-90` at r38; Doc r38:45-46, :60, :1580-1584).
+  - Header: `Authorization: tma <initData>` only; the browser sets the multipart `Content-Type`.
+  - Timeout: `xhr.timeout` = 90 s; no `AbortSignal`.
+  - Progress: `upload.onprogress` reports `loaded / total` while the length is computable; the form draws a ring with
+    the percent per tile and, from 99.5 %, a pulsing ring while it waits for the answer (`03` BR-APP-119).
+  - Answer: success is a `2xx` with a JSON body. Every other answer, a `2xx` without JSON included, rejects with
+    `ApiError(<status>, <detail if a string, else null>)`. A network error rejects with `ApiError(0, 'network')`, a
+    timeout with `ApiError(0, 'timeout')`; both show the generic message.
+  - Photo ids: the form marks as new every `photos[].id` of the answer that was not in the listing before the upload,
+    and shows a tick on it for 1.5 s, so the ids must stay stable between answers
+    (`src/features/owner/OwnerForm.jsx:572-590` at r38; Doc r38:1583-1584).
+  - The contract's checklist asks for JSON on success (`OwnerListing`) and on error (`{detail}`), and for no
+    buffering of the answer beyond the usual: the progress shows the body being sent, and after 100 % the ring waits
+    for the answer (Doc r38:1408-1410). — DOCUMENTED_ONLY (server side)
 - **Legacy Source:** Doc r31:142-158 (registry #37 – #53), Doc r31:1443-1445, :1230-1231; client
   `src/lib/api/owner.js:57-70`, `src/features/owner/OwnerForm.jsx:435-524`, `src/features/owner/shrinkPhoto.js:3-26`.
+  Release `index-YX9bFVws.js`: Doc r38:45-46, :53-55, :60, :1408-1410, :1577-1584; client `src/lib/api/owner.js:51-100`,
+  `src/lib/api/client.js:34-35`, `src/features/owner/OwnerForm.jsx:572-609` (at r38); mocks
+  `tools/parity/mocks.mjs:381-385`; parity scenario `owner-form-photo-upload`.
 - **Migration Target:** `POST /api/v1/owner/listings/{id}/photos` (native, `HashedUploader`: re-encoded, no
   metadata).
 - **Tests:** an 11th photo → `photo:too_many`; a non-image → `photo:not_image`; an oversize file → `photo:too_big`;
   an original with EXIF and GPS data, and a HEIC or PNG sent as `photo.jpg` → record what legacy stores and serves
-  (`03` LB-APP-061; Q-API-073); auth.
+  (`03` LB-APP-061; Q-API-073); auth; since release `index-YX9bFVws.js` — every answer, success or refusal, is JSON
+  (`OwnerListing` or `{detail}`), never an empty `2xx`; a photo keeps its `id` across later answers of the same
+  listing.
 - **Status:** Contract `CONFIRMED`; server logic `DOCUMENTED_ONLY`. Related: `02` BR-API-166; `03` SCR-052,
-  BR-APP-082, LB-APP-061; Q-API-073.
+  BR-APP-082, LB-APP-061; Q-API-073; since release `index-YX9bFVws.js` `03` BR-APP-119, Q-APP-031; DEC-92.
 
 ### API-042 — `DELETE /api/owner/listings/:id/photos/:photoId`
 
@@ -2375,6 +2463,12 @@ resources.
 - **Behaviour:** `/uz/` and `/en/` are **generated by the backend** (`app/api/landing_pages.py`) from `index.html` +
   `landing-i18n.js` with their own `<head>` (og, hreflang) and `<base href="../">`; CSP `script-src 'self'
   'sha256-…' 'sha256-…' https://eu-assets.i.posthog.com; report-uri /api/csp-report`.
+- **Since release `index-YX9bFVws.js`:** the Mini App's survey links three pages «Сдать квартиру» with the mark
+  `?s=tenant`: `/sdat-kvartiru/`, `/uz/kvartira-ijaraga-berish/` and `/en/list-your-apartment/` on `kvadro.app`
+  (`$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:79-92` at r38; `05` TMA-048). The contract's checklist
+  asks the landing to serve them and accept the mark, and its question 19 asks whether the mark is attributed
+  anywhere (Doc r38:1411-1412, :1453-1454). None of the three is in the landing mirror
+  (`$KVADRO_ROOT/demo/landing/site` on 2026-11-20). — DOCUMENTED_ONLY
 - **Legacy Source:** `$KVADRO_ROOT/demo/landing/docs/RECOVERY.md:25-34`, `:52-59`; `$KVADRO_ROOT/docs/about.md:330-333`.
 - **Migration Target:** ownership in `03b-legacy-landing-seo-audit.md` (`LND-`, `URL-`); server part TBD
   (`10-target-architecture.md`).
@@ -2508,7 +2602,8 @@ resources.
 
 ### 4.1 Registry → client code
 
-All 55 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:109-163` at r35; 54 at `index-CBlEKxdL.js`,
+All 55 registry methods of the pinned release (`$KVADRO_ROOT/docs/api.md:114-168` at r38; the same 55 at
+`index-CIa0Ldj2.js`, `:109-163` at r35; 54 at `index-CBlEKxdL.js`,
 `:106-159` at r31; 36 at `index-BnFvC-Ft.js`, `:106-141` at r31; 35 at `index-DY_DH7h-.js`, `:102-138` at r27; 34 at
 the audit, `:102-137`) are called by the client. None is documented-but-unused. "Doc #" is the registry number of the
 pinned release: since release `index-DY_DH7h-.js` `/api/feed/new` is #7, since `index-BnFvC-Ft.js`
@@ -2519,7 +2614,8 @@ r31) and #38 – #55 now. The registry at r35 lists the owner methods in the ord
 the contact request after them (`:163`). Rows 38 – 55 cite client files at r31; `OwnerForm.jsx`, `OwnerListings.jsx`,
 `OwnerPanel.jsx` and `PlacePicker.jsx` are under `src/features/owner/`, and the wrapper file is written in full
 because a second `owner.js`, the cabinet's dictionary, lies in that folder. Row 18 and the additions of release
-`index-CIa0Ldj2.js` to other rows cite client files at r33.
+`index-CIa0Ldj2.js` to other rows cite client files at r33, the additions of release `index-YX9bFVws.js` (rows 36, 37,
+38 and 42) client files at r38.
 
 | Doc # | Method | Path | ID | In client | Wrapper | Call sites |
 | ----: | ------ | ---- | -- | --------- | ------- | ---------- |
@@ -2558,13 +2654,13 @@ because a second `owner.js`, the cabinet's dictionary, lies in that folder. Row 
 | 33 | GET | `/api/history` | API-030 | yes | `user.js:26` | `useInfiniteFeed.js:35` |
 | 34 | DELETE | `/api/history` | API-031 | yes | `user.js:29` | `ListingFeed.jsx:96` |
 | 35 | POST | `/api/found` | API-032 | yes | `found.js:9` | `FoundSheet.jsx:95` |
-| 36 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` |
-| 37 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin, one more since release `index-CBlEKxdL.js` (the owner chip, `OwnerChip.jsx:54-62` at r31), and the sites of the six owner events since release `index-CIa0Ldj2.js` (§2 API-034) |
-| 38 | GET | `/api/owner/listings` | API-037 | yes | `src/lib/api/owner.js` | `SettingsScreen.jsx:101-107`, `OwnerListings.jsx:307-320`, `:352`, `OwnerForm.jsx:214-219` |
+| 36 | POST | `/api/found/where` | API-033 | yes | `found.js:22` | `FoundSheet.jsx:112` (`:141` at r38) |
+| 37 | POST | `/api/events` | API-034 | yes | `events.js:9`, `:25` | `index.html:77`, `errors.js:80`, 15 `trackEvent` sites at the audit, 20 at the pin, one more since release `index-CBlEKxdL.js` (the owner chip, `OwnerChip.jsx:54-62` at r31), and the sites of the six owner events since release `index-CIa0Ldj2.js` (§2 API-034); since release `index-YX9bFVws.js` also `owner_entry` (`App.jsx:171`) and `landlord_share` (`FoundSheet.jsx:147`) |
+| 38 | GET | `/api/owner/listings` | API-037 | yes | `src/lib/api/owner.js` (`:23` at r38) | `SettingsScreen.jsx:101-107`, `OwnerListings.jsx:307-320`, `:352`, `OwnerForm.jsx:214-219`; since release `index-YX9bFVws.js` also the owner invitations, `App.jsx:169-186` |
 | 39 | POST | `/api/owner/listings` | API-038 | yes | `src/lib/api/owner.js:30-34` | `OwnerForm.jsx:183-238` |
 | 40 | GET | `/api/owner/listings/:id` | API-039 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:183-238`, `:708-721`, `:1484-1620`, `OwnerPanel.jsx` |
 | 41 | PATCH | `/api/owner/listings/:id` | API-040 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:245-337` |
-| 42 | POST | `/api/owner/listings/:id/photos` | API-041 | yes | `src/lib/api/owner.js:57-70` | `OwnerForm.jsx:435-524` |
+| 42 | POST | `/api/owner/listings/:id/photos` | API-041 | yes | `src/lib/api/owner.js:57-70`; since release `index-YX9bFVws.js` `:61-100`, an `XMLHttpRequest` with progress | `OwnerForm.jsx:435-524`; `:578` at r38 |
 | 43 | DELETE | `/api/owner/listings/:id/photos/:photoId` | API-042 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:511-524` |
 | 44 | POST | `/api/owner/listings/:id/photos/order` | API-043 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:492-510` |
 | 45 | POST | `/api/owner/listings/:id/contact_mode` | API-044 | yes | `src/lib/api/owner.js` | `OwnerForm.jsx:644-667` |
@@ -2587,7 +2683,8 @@ Search performed over `$KVADRO_ROOT/demo/app/src` and `index.html` for `apiFetch
 
 | Client request | Where | Documented in | Result |
 | -------------- | ----- | ------------- | ------ |
-| 55 `apiFetch` methods at the pinned release (54 at `index-CBlEKxdL.js`, 36 at `index-BnFvC-Ft.js`, 35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-055) |
+| 55 methods at the pinned release, 54 of them only through `apiFetch` (55 through `apiFetch` at `index-CIa0Ldj2.js`, 54 at `index-CBlEKxdL.js`, 36 at `index-BnFvC-Ft.js`, 35 at `index-DY_DH7h-.js`, 34 at the audit) | `src/lib/api/*.js` | Doc §2 | documented (API-001 … API-055) |
+| `XMLHttpRequest POST /api/owner/listings/:id/photos` with upload progress (since `index-YX9bFVws.js`; its `apiFetch` branch has no caller) | `src/lib/api/owner.js:61-90`, `src/features/owner/OwnerForm.jsx:578` (at r38) | Doc r38:45-46, :60, :1580-1584 | documented (API-041) |
 | Prefetch of meta, first feed page, deep-link listing | `src/main.jsx:24-39` | Doc:87-98 | documented |
 | `XMLHttpRequest POST /api/events` (boot errors) | `index.html:76-88` | Doc:974-975, Doc:1007 | documented |
 | `XMLHttpRequest GET /api/bot` (boot fallback) | `index.html:94-102` | Doc:38-39, Doc:500-501 | documented |

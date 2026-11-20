@@ -90,7 +90,8 @@
       "$KVADRO_ROOT/demo/app/src/features/city/CityPicker.jsx",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx",
       "$KVADRO_ROOT/demo/app/src/lib/city.js",
-      "$KVADRO_ROOT/demo/app/src/lib/geo/location.js"
+      "$KVADRO_ROOT/demo/app/src/lib/geo/location.js",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js"
     ],
     "apis": [
       "PUT /api/settings",
@@ -118,7 +119,9 @@
       "$KVADRO_ROOT/demo/app/src/hooks/useMiniChrome.js",
       "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
       "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js",
-      "$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js"
+      "$KVADRO_ROOT/demo/app/src/app/useTelegramButtons.js",
+      "$KVADRO_ROOT/demo/app/src/styles/chrome.css",
+      "$KVADRO_ROOT/demo/app/src/styles/tokens.css"
     ],
     "apis": [
       "GET /api/subscriptions",
@@ -151,17 +154,22 @@
       "$KVADRO_ROOT/demo/app/src/components/Photo.jsx",
       "$KVADRO_ROOT/demo/app/src/components/FavButton.jsx",
       "$KVADRO_ROOT/demo/app/src/lib/api/feed.js",
-      "$KVADRO_ROOT/demo/app/src/main.jsx"
+      "$KVADRO_ROOT/demo/app/src/main.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/feed/OwnerEntry.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/found.css",
+      "$KVADRO_ROOT/demo/app/src/styles/listing-card.css"
     ],
     "apis": [
       "GET /api/feed",
-      "POST /api/listings/:id/favorite"
+      "POST /api/listings/:id/favorite",
+      "GET /api/owner/listings"
     ],
     "storage_keys": [
       "kv-city"
     ],
     "analytics_events": [
-      "$pageview"
+      "$pageview",
+      "owner_entry"
     ],
     "status": "CONFIRMED"
   },
@@ -199,15 +207,20 @@
       "$KVADRO_ROOT/demo/app/src/features/feed/ListingFeed.jsx",
       "$KVADRO_ROOT/demo/app/src/app/FewResultsNote.jsx",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx",
-      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js"
+      "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/OwnerEntry.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/found.css"
     ],
     "apis": [
       "GET /api/subscriptions",
       "POST /api/subscriptions",
-      "PATCH /api/subscriptions/:id"
+      "PATCH /api/subscriptions/:id",
+      "GET /api/owner/listings"
     ],
     "storage_keys": [],
-    "analytics_events": [],
+    "analytics_events": [
+      "owner_entry"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -332,7 +345,9 @@
       "$KVADRO_ROOT/demo/app/src/features/filters/PriceSection.jsx",
       "$KVADRO_ROOT/demo/app/src/features/filters/RoomsPicker.jsx",
       "$KVADRO_ROOT/demo/app/src/features/filters/model.js",
-      "$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js"
+      "$KVADRO_ROOT/demo/app/src/features/filters/useLiveFeedStats.js",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/SaveState.jsx"
     ],
     "apis": [
       "GET /api/feed/count",
@@ -364,7 +379,8 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/filters/QuickFilterSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/filters/PriceSection.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/filters/RoomsPicker.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/filters/RoomsPicker.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx"
     ],
     "apis": [
       "GET /api/feed/count"
@@ -453,7 +469,10 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/ContactRequestSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx",
       "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/listing/minuteClock.js"
+      "$KVADRO_ROOT/demo/app/src/features/listing/minuteClock.js",
+      "$KVADRO_ROOT/demo/app/src/features/feed/OwnerEntry.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js",
+      "$KVADRO_ROOT/demo/app/src/styles/listing.css"
     ],
     "apis": [
       "GET /api/listings/:id",
@@ -461,7 +480,8 @@
       "POST /api/listings/:id/translate",
       "POST /api/listings/:id/favorite",
       "POST /api/listings/:id/share",
-      "POST /api/listings/:id/contact"
+      "POST /api/listings/:id/contact",
+      "GET /api/owner/listings"
     ],
     "storage_keys": [
       "kv-owner-tip",
@@ -474,7 +494,8 @@
       "original_copied",
       "contact_call",
       "contact_write",
-      "owner_info_opened"
+      "owner_info_opened",
+      "owner_entry"
     ],
     "status": "CONFIRMED"
   },
@@ -542,7 +563,8 @@
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/listing/MarketSheet.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/listing/sections/MarketBlock.jsx",
+      "$KVADRO_ROOT/demo/app/src/styles/listing.css"
     ],
     "apis": [],
     "storage_keys": [],
@@ -673,7 +695,8 @@
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarStrip.jsx",
       "$KVADRO_ROOT/demo/app/src/features/radar/RadarScreen.jsx",
-      "$KVADRO_ROOT/demo/app/src/styles/radar.css"
+      "$KVADRO_ROOT/demo/app/src/styles/radar.css",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js"
     ],
     "apis": [
       "GET /api/settings",
@@ -694,7 +717,10 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
-      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js"
+      "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/SheetFooter.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/SaveState.jsx"
     ],
     "apis": [
       "PUT /api/subscriptions/:id",
@@ -724,7 +750,10 @@
       "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/app/subscriptionActions.js",
       "$KVADRO_ROOT/demo/app/src/lib/chatAccess.js",
-      "$KVADRO_ROOT/demo/app/src/app/App.jsx"
+      "$KVADRO_ROOT/demo/app/src/app/App.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/filters/sheet/SheetFooter.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/SaveState.jsx"
     ],
     "apis": [
       "GET /api/subscriptions",
@@ -752,14 +781,19 @@
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx",
-      "$KVADRO_ROOT/demo/app/src/lib/api/found.js"
+      "$KVADRO_ROOT/demo/app/src/lib/api/found.js",
+      "$KVADRO_ROOT/demo/app/src/lib/telegram/share.js",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js",
+      "$KVADRO_ROOT/demo/app/src/styles/found.css"
     ],
     "apis": [
       "POST /api/found",
       "POST /api/found/where"
     ],
     "storage_keys": [],
-    "analytics_events": [],
+    "analytics_events": [
+      "landlord_share"
+    ],
     "status": "CONFIRMED"
   },
   {
@@ -776,7 +810,9 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsGroup.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/SettingsRow.jsx",
       "$KVADRO_ROOT/demo/app/src/features/settings/useHomeScreenStatus.js",
-      "$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/settings/OwnerLimitSheet.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js"
     ],
     "apis": [
       "GET /api/settings",
@@ -999,7 +1035,8 @@
       "$KVADRO_ROOT/demo/app/src/components/Toast.jsx",
       "$KVADRO_ROOT/demo/app/src/app/App.jsx",
       "$KVADRO_ROOT/demo/app/src/features/filters/FiltersSheet.jsx",
-      "$KVADRO_ROOT/demo/app/src/styles/feedback.css"
+      "$KVADRO_ROOT/demo/app/src/styles/feedback.css",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js"
     ],
     "apis": [],
     "storage_keys": [],
@@ -1193,7 +1230,8 @@
     "kind": "screen",
     "entry_points": [
       "Сдать квартиру row of the group «Сдаю квартиру» in settings; «Продолжить» or «Изменить» on an owner listing (since index-CBlEKxdL.js)",
-      "start_param owner_new or ?owner=new (since index-CBlEKxdL.js)"
+      "start_param owner_new or ?owner=new (since index-CBlEKxdL.js)",
+      "owner invitation at the end of the search feed, under an empty search or on a listing with owner_entry, when GET /api/owner/listings gives can_add or fails (since index-YX9bFVws.js)"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
@@ -1251,7 +1289,11 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
       "$KVADRO_ROOT/demo/app/src/features/owner/NumberField.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js"
+      "$KVADRO_ROOT/demo/app/src/features/owner/shrinkPhoto.js",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/api/owner.js",
+      "$KVADRO_ROOT/demo/app/src/lib/api/client.js",
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.css"
     ],
     "apis": [
       "PATCH /api/owner/listings/:id",
@@ -1314,7 +1356,8 @@
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/owner/owner.js"
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.js",
+      "$KVADRO_ROOT/demo/app/src/components/SaveState.jsx"
     ],
     "apis": [
       "POST /api/owner/listings/:id/contact_mode",
@@ -1333,7 +1376,8 @@
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerForm.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/owner/DoneMascot.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/owner/DoneMascot.jsx",
+      "$KVADRO_ROOT/demo/app/src/features/owner/owner.css"
     ],
     "apis": [],
     "storage_keys": [],
@@ -1348,7 +1392,8 @@
     "kind": "screen",
     "entry_points": [
       "Мои объявления row of the group «Сдаю квартиру» in settings (since index-CBlEKxdL.js)",
-      "Мои объявления button of the limit sheet, the owner form and the limit rejection (since index-CBlEKxdL.js)"
+      "Мои объявления button of the limit sheet, the owner form and the limit rejection (since index-CBlEKxdL.js)",
+      "owner invitation when GET /api/owner/listings answers can_add: false (since index-YX9bFVws.js)"
     ],
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
@@ -1356,7 +1401,8 @@
       "$KVADRO_ROOT/demo/app/src/features/settings/SubPage.jsx",
       "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx",
       "$KVADRO_ROOT/demo/app/src/components/ReqTip.jsx",
-      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx"
+      "$KVADRO_ROOT/demo/app/src/components/FallbackClose.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js"
     ],
     "apis": [
       "GET /api/owner/listings",
@@ -1408,7 +1454,8 @@
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingTitleRow.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/ListingCtaBar.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/sections/OwnerPriceSection.jsx",
-      "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx"
+      "$KVADRO_ROOT/demo/app/src/components/LazyPage.jsx",
+      "$KVADRO_ROOT/demo/app/src/components/RollNumber.jsx"
     ],
     "apis": [
       "GET /api/listings/:id",
@@ -1442,7 +1489,9 @@
       "$KVADRO_ROOT/demo/app/src/lib/ownerPending.js",
       "$KVADRO_ROOT/demo/app/src/styles/red-dot.css",
       "$KVADRO_ROOT/demo/app/src/features/owner/OwnerListings.jsx",
-      "$KVADRO_ROOT/demo/app/src/lib/ownerAttention.js"
+      "$KVADRO_ROOT/demo/app/src/lib/ownerAttention.js",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js",
+      "$KVADRO_ROOT/demo/app/src/app/useHomeScreenOffer.js"
     ],
     "apis": [
       "GET /api/owner/pending"
@@ -1489,7 +1538,9 @@
     "source_files": [
       "$KVADRO_ROOT/demo/app/src/features/listing/OwnerInfoSheet.jsx",
       "$KVADRO_ROOT/demo/app/src/features/listing/OwnerChip.jsx",
-      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx"
+      "$KVADRO_ROOT/demo/app/src/features/listing/ListingScreen.jsx",
+      "$KVADRO_ROOT/demo/app/src/lib/leave.js",
+      "$KVADRO_ROOT/demo/app/src/styles/owner-shared.css"
     ],
     "apis": [],
     "storage_keys": [
