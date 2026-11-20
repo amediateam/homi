@@ -19,7 +19,7 @@ v1 later call it; the data migration uses the ledger to replay legacy erasures.
 
 - Promise: `$KVADRO_ROOT/docs/about.md:264-275` («Удалить мои данные» deletes from the database immediately, from
   backups in about two weeks, plus PostHog deletion); bot `/privacy` and BTN-076 (`04` §3.16).
-- Rules: `02-legacy-backend-audit.md:1031-1042` (§16: BR-API-128, BR-API-129, Q-API-048), BR-DATA-021, BR-DATA-031,
+- Rules: `02-legacy-backend-audit.md:1042-1053` (§16: BR-API-128, BR-API-129, Q-API-048), BR-DATA-021, BR-DATA-031,
   ENT-007 (`06` §2.1); `14` §7.9 and KV-DB-027 (erasure replay during the window).
 - Security: SEC-REQ-039 (`16-security-review.md:932-940`), SEC-REQ-037, SEC-REQ-004 (tokens revoked), SEC-REQ-047;
   Q-SEC-016 (votes of deleted users); `10` §4.9 ("Erasure: database deletion in one transaction; external effects as

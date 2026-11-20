@@ -249,10 +249,15 @@ products; `listing_id` carries the listing number. Catalogue:
 | `owner_place_set` | `source` (`map`, `locate`, `manual`) |
 | `owner_place_autofill` | `result` (`applied`, `reverted`) |
 | `owner_hint_opened` | `field` (`photos`, `area_m2`, `floor`, `renovation`, `description`) |
+| `owner_entry` | `src` (`feed_end`, `empty`, `listing`) (since legacy release `index-YX9bFVws.js`) |
+| `landlord_share` | `src` (`homi`, `elsewhere`), `to` (`page`, `bot`) (since legacy release `index-YX9bFVws.js`) |
 
 The seven `owner_*` rows are the owner cabinet's events, with the names and properties of `03` §3.3; the first since
 `index-CBlEKxdL.js`, the other six since `index-CIa0Ldj2.js`. The catalogue already accepts unknown names with `204`;
-the rows document them for WP-81 … WP-83 (*added by the owner-cabinet plan*).
+the rows document them for WP-81 … WP-83 (*added by the owner-cabinet plan*). `owner_entry` and `landlord_share`
+are the invitations' and the survey's landlord block's (`03` §3.3, BR-APP-115, BR-APP-116), sent by WP-82; legacy's
+`src` value `kvadro` is HOMI's `homi`, as the survey's answer code is, and `to` names which of DEC-91's two buttons
+was tapped (HOMI's own property) (*added by the intake of `index-YX9bFVws.js`*).
 
 `custom` says whether the filters of the nudge differ from the defaults of their deal and city (BR-APP-013). The
 five `return_prompt_*` and `feed_radar_*` names belong to the return banner and the radar card in the feed, added by

@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Stage | B |
 | Status | TODO |
-| Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract); WP-34 (the failure toast), WP-36 (the fallback close of sub-pages), WP-38 (the feed epoch and the scroll memory) |
+| Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract); WP-34 (the failure toast), WP-36 (the fallback close of sub-pages), WP-38 (the feed epoch and the scroll memory), WP-39 (the leave of `SubPageFrame`, *added by the intake of `index-YX9bFVws.js`*) |
 | Size | ≈ 2 300 changed lines, M; ≈ 2 800 with the card style of the intake of `index-BnFvC-Ft.js` |
 | Behaviour reference | `03` §2 (SCR-032 … SCR-039, SCR-041, SCR-048), §1.7 (lite mode), §3.2 (storage), §3.3 (events), §3.4 (constants), §3.5 (time zone), §4, §5, §5b; `05` TMA-019 … TMA-021, TMA-036; task files KV-FE-081, KV-FE-082, KV-FE-083, KV-FE-084, KV-FE-085, KV-FE-086, KV-FE-026, KV-FE-027 |
 | Needs from the production track | nothing |

@@ -9,11 +9,14 @@ mocks, the landing mirror (`$KVADRO_ROOT/demo/landing`), and the product, bot an
 contract is in `08-api-inventory.md` (`API-NNN`, `RES-NNN`).
 
 - **Audit date:** 2026-11-09; legacy Mini App release `index-plF_TOcT.js`, brought up to `index-DY_DH7h-.js` (the pin
-  of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js`, to `index-CBlEKxdL.js` (SVN r31) and to the
-  pinned release `index-CIa0Ldj2.js` (source at SVN r33; `wave-1/baseline.md`). Items changed for a later release
-  name it. "current Doc:" and "at the pin" cite SVN r27; "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, and the
-  client files of §12a are cited at r31 too. "Doc r35:" cites `$KVADRO_ROOT/docs/api.md` at r35, the pinned release's
-  own state; the client files in text of the intake of `index-CIa0Ldj2.js` are cited at r33. Nothing was run
+  of WP-02) and, by the intakes of 2026-11-19, to `index-BnFvC-Ft.js`, to `index-CBlEKxdL.js` (SVN r31) and to
+  `index-CIa0Ldj2.js` (source at SVN r33, the previous pin), and by the intake of 2026-11-20 to the pinned release
+  `index-YX9bFVws.js` (source at SVN r38; `wave-1/baseline.md`). Items changed for a later release name it. "current
+  Doc:" and "at the pin" cite SVN r27; "Doc r31:" cites `$KVADRO_ROOT/docs/api.md` at r31, and the client files of
+  §12a are cited at r31 too. "Doc r35:" cites `$KVADRO_ROOT/docs/api.md` at r35, the state of release
+  `index-CIa0Ldj2.js`; the client files in text of the intake of `index-CIa0Ldj2.js` are cited at r33. "Doc r38:" cites
+  `$KVADRO_ROOT/docs/api.md` at r38, the pinned release's own state, and the client files in text of the intake of
+  `index-YX9bFVws.js` are cited at r38. Nothing was run
   (`RUNTIME_VERIFIED` is not used).
 - **Labels:** `CONFIRMED` — visible in client code or in a contract the code agrees with (for a server rule this means
   the client depends on it or produces it); `DOCUMENTED_ONLY` — stated as fact (✅) in legacy docs, no implementation
@@ -781,7 +784,12 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
   *Evidence:* Doc r31:1390; `src/features/owner/owner.js:73`.
 - **BR-API-166** · `DOCUMENTED_ONLY` — Photos are uploaded one per call as the multipart field `file`, at most 10 per
   listing. The first is the cover, `photos/order` takes the full list of ids, and every photo URL has a `.s.jpg`
-  thumbnail. *Evidence:* Doc r31:1230-1231, :1443-1447; `src/lib/api/owner.js:57-85`.
+  thumbnail. Since release `index-YX9bFVws.js` the form sends the upload by `XMLHttpRequest` (same header, 90 s
+  timeout) to draw its progress. It takes only a `2xx` with a JSON body as success, and it finds the new photos by
+  the `photos[].id` that were not in the listing before, so the server must answer JSON on success and on error and
+  keep photo ids stable between answers (`08` API-041). *Evidence:* Doc r31:1230-1231, :1443-1447;
+  `src/lib/api/owner.js:57-85`; Doc r38:1408-1410, :1580-1584; `src/lib/api/owner.js:61-90`,
+  `src/features/owner/OwnerForm.jsx:572-590` (at r38).
 - **BR-API-167** · `DOCUMENTED_ONLY` — Seekers never see the exact point of a cabinet listing: the server serves
   `shown_point {lat, lon, radius_m}`, a circle of about 500 m. *Evidence:* Doc r31:1355-1371;
   `src/features/owner/OwnerForm.jsx:980-989`, :1010-1016. (Q-API-074)
@@ -867,8 +875,11 @@ recovery's parity runs checked the client on mocks that its authors inferred, no
 - **BR-API-188** · `DOCUMENTED_ONLY` — The card of a listing placed through the cabinet has `owner_self: true`,
   `contact_mode`, `response_minutes` and `owner_description`, no channel source and one history entry without a
   channel; for its author it also has `owner_mine` and `owner_listing_id`. `owner_mine` and `my_request` depend on the
-  caller. *Evidence:* Doc r31:343-350, :396-397; `src/features/listing/ListingScreen.jsx:205-211`, :285-303.
-  (Q-API-076, Q-API-078)
+  caller. Since release `index-YX9bFVws.js` any card may also carry `owner_entry?: boolean`, read with a truthy
+  check, which ends the card with an invitation into the cabinet (`08` API-008; `03` BR-APP-115); when the server
+  sets it is not documented, and legacy's contract asks it itself (its open question 19). *Evidence:* Doc
+  r31:343-350, :396-397; `src/features/listing/ListingScreen.jsx:205-211`, :285-303; Doc r38:368-369, :1406-1407,
+  :1453-1454; `src/features/listing/ListingScreen.jsx:347` (at r38). (Q-API-076, Q-API-078)
 - **BR-API-189** · `UNVERIFIED` — The server writes the owner tier into the `owner` label: «Проверенный хозяин…» for a
   verified or self-placed listing, «Хозяин — со слов объявления» for a claimed one; the client hides such a label by
   comparing it with its own texts. This is inferred from the parity mock. *Evidence:* Doc r31:392-395;

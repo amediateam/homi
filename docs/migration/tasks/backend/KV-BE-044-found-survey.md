@@ -16,12 +16,12 @@ answer. The decision *when* to ask (`ask_found` on radar pause/delete) and the b
 
 ## Legacy reference
 
-- API-032 and API-033 (`08-api-inventory.md:1538-1578`); client `$KVADRO_ROOT/demo/app/src/lib/api/found.js:9-16`,
+- API-032 and API-033 (`08-api-inventory.md:1583-1629`); client `$KVADRO_ROOT/demo/app/src/lib/api/found.js:9-16`,
   `:22-28`; `$KVADRO_ROOT/demo/app/src/features/radar/FoundSheet.jsx:28-46`, `:47-76`, `:95`, `:112` (errors hidden);
   `$KVADRO_ROOT/docs/api.md:949-968`; `$KVADRO_ROOT/docs/about.md:210-211`; mock
   `$KVADRO_ROOT/demo/app/tools/parity/mocks.mjs:154`.
 - Rules: BR-DATA-032 (`06` ENT-020), BR-API-090 and C-20 (`07` §3, `ask_found` on `PATCH`/`DELETE`), Q-API-030
-  (suppression of further prompts) in `02-legacy-backend-audit.md:547-632` (§9).
+  (suppression of further prompts) in `02-legacy-backend-audit.md:550-635` (§9).
 - Bot: the poll after the first radar (BOT-069) writes through the same service in M4/M5.
 
 ## Implementation

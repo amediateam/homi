@@ -273,7 +273,8 @@
     "otherCity": "Boshqa shahar",
     "nothing": "Hech narsa topilmadi",
     "nothingHint": "Filtrlarni kamaytirib koʻring",
-    "resetFilters": "Filtrlarni tiklash"
+    "resetFilters": "Filtrlarni tiklash",
+    "end": "Qidiruvingiz boʻyicha hammasi shu"
   },
   "city": {
     "title": "Shahar",
@@ -633,7 +634,13 @@
     "congratsText": "Aytganingiz uchun rahmat. kvadro² yordam bergan boʻlsa — doʻstlaringizga ham ayting, ularga ham asqatadi.",
     "share": "Doʻstlarga ulashish",
     "shareText": "Kvartira kvadro² orqali topildi 🎉 Bot Telegram-kanallardagi eʼlonlarni bitta lentaga yigʻadi, takrorlarni olib tashlaydi, uy egasi va maklerni ajratadi va filtrlaringizga mos yangilarini oʻzi yuboradi. Uy qidirayotgan boʻlsangiz — sinab koʻring, bu bepul.",
-    "done": "Tayyor"
+    "done": "Tayyor",
+    "landlordTitle": "Eski kvartiradan koʻchyapsizmi?",
+    "landlordText": "Uy egasiga yangi ijarachi kerak boʻladi. Unga havolani yuboring — kvartirasini bepul va maklersiz joylaydi.",
+    "landlordSend": "Uy egasiga yuborish",
+    "landlordShare": "Assalomu alaykum! Men koʻchib ketyapman. Yangi ijarachini bepul va maklersiz shu yerda topish mumkin: {url}",
+    "movedTitle": "Tabriklaymiz!",
+    "movedText": "Aytganingiz uchun rahmat — bu bizga yaxshilanishga yordam beradi."
   },
   "notify": {
     "quiet": "Sokin soatlar",
@@ -662,6 +669,9 @@
     "limitValue": "{n} / {max}",
     "limitSheetTitle": "{n} / {max} kvartira ijarada",
     "limitSheetText": "Bu bitta raqam uchun eng koʻpi. Bitta kvartirani «Band» deb belgilang yoki olib tashlang — keyin yangisini qoʻsha olasiz.",
+    "entryAsk": "Kvartira ijaraga berasizmi?",
+    "entryAskToo": "Siz ham kvartira ijaraga berasizmi?",
+    "entryCta": "Bepul joylang",
     "mine": "Mening eʼlonlarim",
     "pendingShort": "javob kutmoqda: {n}",
     "reqTip": {

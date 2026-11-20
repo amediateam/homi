@@ -27,16 +27,16 @@ The legacy product is the description of the behaviour, not a source of code (DE
 | Surface | Inventory | Where it is described |
 | ------- | --------- | --------------------- |
 | Mini App screens, sheets, overlays, states | 63 (SCR-001 … SCR-063) | `03` §2, `data/screens.json` |
-| Client business rules | 111 (`BR-APP`) | `03` §4 |
-| Client defects to fix | 83 (`LB-APP`) | `03` §5, §5b |
-| Telegram integration points | 47, of which 42 in use (TMA-001 … TMA-047) | `05` |
+| Client business rules | 121 (`BR-APP`) | `03` §4 |
+| Client defects to fix | 91 (`LB-APP`) | `03` §5, §5b |
+| Telegram integration points | 48, of which 43 in use (TMA-001 … TMA-048) | `05` |
 | API methods the client uses | 55 (API-001 … API-055) | `08` §2 |
 | Bot handlers, buttons, texts | 91, 76, 88 | `04`, `data/bot-handlers.json` |
 | Landing items | 39 of the 64 `LND` items; the other 25 are SEO pages (Wave 3) | `03b` |
-| Texts | 587 keys per locale at the baseline `index-CIa0Ldj2.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
+| Texts | 597 keys per locale at the baseline `index-YX9bFVws.js` (`03` §3.1); the bot catalogue of `04` | `$KVADRO_ROOT/demo/app/src/i18n/locales/` |
 
-The audit describes legacy release `index-CIa0Ldj2.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-19
-(before it `index-CBlEKxdL.js` and `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024).
+The audit describes legacy release `index-YX9bFVws.js`, pinned in `wave-1/baseline.md` by its intake of 2026-11-20
+(before it `index-CIa0Ldj2.js`, `index-CBlEKxdL.js` and `index-BnFvC-Ft.js`; the pin of WP-02, `index-DY_DH7h-.js`, answered Q-APP-024).
 Each later release is read into the audit as described in section 8.
 
 The owner cabinet «Сдать квартиру» and the contact request to an owner arrived with `index-CBlEKxdL.js`: SCR-049 …
@@ -527,7 +527,9 @@ photos and the requests with the seeker's first name, and the relay to the opera
    `wave-1/baseline.md`); then `index-CIa0Ldj2.js` (the release of 18 Nov 2026: built screens change, seven contract
    points on stubs, eleven decisions DEC-58 … DEC-68, and the catch-up packages WP-34 … WP-38;
    `wave-1/baseline.md`). The owner cabinet of `index-CBlEKxdL.js` was planned afterwards (DEC-69 … DEC-88;
-   WP-80 … WP-89).
+   WP-80 … WP-89). Then `index-YX9bFVws.js` on 2026-11-20 (the release of 20 Nov 2026: motion and small UX on built
+   screens, the cabinet's invitations and the survey's landlord link; six decisions DEC-89 … DEC-94, the catch-up
+   package WP-39, no contract change; `wave-1/baseline.md`).
 3. **End.** Intake stops for a surface when HOMI no longer reads it from legacy.
 
 ## 9. Acceptance and tests
@@ -616,7 +618,7 @@ table of record with statuses is `wave-1/README.md`.
 | ----- | -------- | ------- |
 | 0 Start | WP-00 … WP-03 | Media ownership fix; ADRs and shared files; operator request and baseline pin; dependencies and test tooling |
 | A Contract | WP-10 … WP-13 | Source drivers, flags, stubs, OpenAPI, generated types; the stub contract of every method |
-| B Mini App on stubs | WP-20 … WP-38, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-38 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
+| B Mini App on stubs | WP-20 … WP-39, WP-80 … WP-83 | Foundation, Telegram layer and session, data layer, gates and shell, feed, filters, listing, both map engines, saved, radars, settings, analytics, acceptance on stubs; the legacy intakes and the catch-up packages WP-34 … WP-39 that bring merged screens up to the pin; the owner cabinet on stubs: contract, owner form, owner lists and signals, seeker side |
 | C API | WP-40 … WP-48, WP-84 … WP-87 | Sign-in and users, legacy driver, listings, contact and share, personal lists, radars, matching, action log, stubs off; owner listings, contact requests, the mixed feed, the relay |
 | D Bot | WP-50 … WP-59, WP-88, WP-89 | Webhook and client, router and texts, commands, cards, wizard, radar screens, settings and privacy, sending, profile and tests, the support bot; the owner's phone, requests and answers, the cabinet's switch-on |
 | E Landing | WP-60, WP-61 | Landing data, landing pages |

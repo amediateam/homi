@@ -410,7 +410,9 @@ after an unrecoverable `no_chat` is `chat.restart` «Бот не может пи
 Callers: the filters footer shows ✓ «Радар включён» instead of the button when an active radar with the same
 filters exists, and disables the button while submitting; the sheet closes on `ok` only while the user is still on
 it (`currentAddress()` read at the tap and with the answer), so a sheet left meanwhile (×, Back, «Показать») is not
-stepped back once more. The few-results note hides its radar button when such a radar exists.
+stepped back once more. The few-results note hides its radar button when such a radar exists. Since legacy release
+`index-YX9bFVws.js` «Сохранить» and «Включить радар» go spinner → tick (900 ms) → close with the toast, except for an already
+active radar and on an error (`03` BR-APP-114; *added by the intake of `index-YX9bFVws.js`*; row 48, WP-39).
 
 ### Radar tab (SCR-026, SCR-027)
 
@@ -548,7 +550,7 @@ it).
 | Step | Texts | Actions |
 | ---- | ----- | ------- |
 | `ask` | `found.title` «Нашли жильё?»; `found.text` | «Да, через HOMI» (`found.kvadro`) → success haptic, step 3; «Да, в другом месте» (`found.elsewhere`) → step 2; «Ещё ищу» (`found.searching`) → close + toast `found.thanksSearching` «Удачи в поиске! Радар можно снова включить в любой момент»; «Больше не ищу» (`found.stopped`) → close + toast `found.thanksStopped` «Понятно, спасибо! Радар можно снова включить в любой момент» |
-| `where` | `found.whereTitle` «Где нашли?»; `found.whereText` | «Другой Telegram-канал», «OLX», «Другой сайт (Uybor, Uysot…)», «Через риелтора», «Знакомые подсказали», «Объявление на доме или на улице», «Другое» (`found.where.*`) → close + toast `found.thanksYes` «Поздравляем! 🎉 Спасибо, что рассказали» |
+| `where` | `found.whereTitle` «Где нашли?»; `found.whereText` | «Другой Telegram-канал», «OLX», «Другой сайт (Uybor, Uysot…)», «Через риелтора», «Знакомые подсказали», «Объявление на доме или на улице», «Другое» (`found.where.*`) → close + toast `found.thanksYes` «Поздравляем! 🎉 Спасибо, что рассказали». Since legacy release `index-YX9bFVws.js`: the step `moved`, «Поздравляем!» (`found.movedTitle`) and `found.movedText` with «Готово», no toast (`03` BR-APP-116; *added by the intake of `index-YX9bFVws.js`*; row 53, WP-39); the landlord block on it and on the congratulations is WP-82's (DEC-89) |
 | congratulations | image `brand.assets.hooray` 132 px; `found.congrats` «Поздравляем с новосельем!»; `found.congratsText` | «Рассказать друзьям» (`found.share`, only when `brand.botUsername` is set) → `tg.shareUrl(botStartUrl('s_friend'), t('found.shareText'))`, then close; «Готово» (`found.done`) → close |
 
 Every answer of step 1 calls `sendFound({ answer, trigger })`, every row of step 2 `sendFoundWhere({ where })`,

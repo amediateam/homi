@@ -163,6 +163,9 @@ request states, and
 for a `request`-mode listing `contact.has_phone` only with a `given` request), on legacy and native items alike; the
 card cache never holds them. A realtor mark of step 4 also sets `owner.tier` to `null`, so HOMI's mark wins over a
 legacy «Проверенный хозяин» (an integrator default of that plan; reports are still not passed to legacy, DEC-48).
+The overlay also writes `owner.entry` (DEC-94; WP-80): true while the cabinet is on, for a card with `is_owner` that
+is not `owner.mine`; legacy's own `owner_entry` of the card (`$KVADRO_ROOT/docs/api.md` §3, r38) is not read, since
+its rule is legacy's and open (`api.md` §14, question 19) (*added by the intake of `index-YX9bFVws.js`*).
 
 The controllers apply the overlay and the view recorder to the answer of every driver, `stub` included: the stub's
 own `favorite` and `viewed` values are overwritten like legacy's, so a favourite saved by real code shows on a stub

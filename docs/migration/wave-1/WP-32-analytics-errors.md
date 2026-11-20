@@ -307,7 +307,10 @@ banner and the radar card are never shown, so these five are not sent.
 The owner cabinet adds the seven owner events of WP-11's catalogue: `owner_place_set`, `owner_place_autofill` and
 `owner_mascot_tap` (WP-81), `owner_attention`, `owner_limit_sheet` and `owner_hint_opened` (WP-82), and
 `owner_info_opened` (WP-83), with the names and properties of `03` §3.3; each package adds its rows to
-`lib/analytics/events.ts` (*added by the owner-cabinet plan*).
+`lib/analytics/events.ts` (*added by the owner-cabinet plan*). Since legacy release `index-YX9bFVws.js` two more
+come with WP-82: `owner_entry` (`src`: `feed_end`, `empty`, `listing`; once per opening, before the request,
+LB-APP-084) and `landlord_share` (`src`: `homi`, `elsewhere`; `to`: `page`, `bot`); neither is sent while the cabinet
+is off (DEC-89) (*added by the intake of `index-YX9bFVws.js`*).
 
 Rules: fire-and-forget; survives the app closing (`keepalive`); never read, never retried; nothing is sent
 without a session (legacy sent an empty credential that the server rejected); the UI never waits for it.

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#94) |
+| Status | WAITING (merged in #94 on 2026-11-20; production track: the regular deploy; then the manual checks inside Telegram on staging) |
 | Depends on | WP-35 (and through it WP-34: `failed()` and `lib/flags.ts`) |
 | Size | about 565 changed lines with tests, M – L |
 | Behaviour reference | `03` §1.2, §2 (SCR-003, SCR-006, SCR-008, SCR-018, SCR-019, SCR-033), §3.3 (`app_launch`), §4 (BR-APP-054, BR-APP-106), §5 (LB-APP-080); `05` (TMA-010, TMA-022, TMA-047); `02` (BR-API-193, BR-API-194); `16` SEC-REQ-007; `wave-1/baseline.md`, built code behind the pin, rows 5, 6, 8, 9, 10, 15, 17, 18, 19, 28, 29 |
