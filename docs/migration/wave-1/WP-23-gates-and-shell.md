@@ -706,7 +706,8 @@ Part D — gates and error screens (two commits: D1 steps 12, 13, 18, 19 and `cr
 
 - A plain toast closes on tap or after 4 s; a toast with an action shows a button, runs it once and closes, or closes
   after 6 s. A new toast replaces the visible one. A toast follows a downward drag and fades (`max(0.2, 1 − dy/120)`);
-  released past 36 px it closes, otherwise it returns; the host has `touch-action: none`. Its offset depends on what
+  released past 36 px it closes, otherwise it returns; the host has `touch-action: none` (built by WP-34 on the frame
+  around the toast, which follows the drag). Its offset depends on what
   is below it (legacy `feedback.css:23-29,77-88` at r31): 20 px above the tab bar and the bottom inset; 78 px above
   them while the view toggle is shown; 16 px above the bottom inset over a sub-page; 88 px above the bottom inset over
   the listing's CTA bar; and inside the filters sheet (scope `sheet`) at `--fsheet-foot` + 10 px, as legacy
@@ -825,7 +826,7 @@ Component (Vitest + Testing Library):
   the focus kept; failure: the line under the list and no toast with the flag on and off, cleared by the next pick
   (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `LanguagePicker` for a later package
   (`wave-1/baseline.md`, built code behind the pin, row 30); as built: the haptic only with the flag off, the toast
-  with it on); the heading's focus.
+  with it on; WP-34 closed it); the heading's focus.
 - `NoAccessScreen`: each reason in each locale — `paused` among them (*added by the intake of `index-CIa0Ldj2.js`*; a
   parity item of `accessReason` for a later package (`wave-1/baseline.md`, built code behind the pin, row 28)) —, with
   the texts of the pinned release (no value contains «бета» or, ignoring case, «beta»); support row absent without an
@@ -963,7 +964,7 @@ Feedback and errors
       the tab bar and the bottom inset; 78 px above them while the view toggle is shown; 16 px above the bottom inset
       over a sub-page; 88 px above the bottom inset over the listing's CTA bar
       (*added by the intake of `index-CBlEKxdL.js`*; a parity item of `ToastHost` for a later package
-      (`wave-1/baseline.md`, built code behind the pin, row 4)).
+      (`wave-1/baseline.md`, built code behind the pin, row 4); WP-34 closed it).
 - [ ] The confirm helper opens Telegram's native dialog (the browser's outside Telegram).
 - [ ] A forced render error shows «Что-то пошло не так» with «Обновить», which reloads; one error report is queued.
 - [ ] An unknown address inside the app shows «Такой страницы нет» with the way back to search.
@@ -971,7 +972,7 @@ Feedback and errors
       intake of `index-CIa0Ldj2.js` (DEC-58) and `dev016SuccessToastOnDestructive` is off; both branches of each are
       covered by tests (*added by the intake of `index-CIa0Ldj2.js`*; a parity item of `lib/flags.ts` and `failed()`
       for a later package (`wave-1/baseline.md`, built code behind the pin, row 21); as built both flags of this
-      package are off).
+      package are off; WP-34 closed it).
 
 ## Handoff
 
