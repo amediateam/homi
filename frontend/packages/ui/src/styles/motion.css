@@ -67,6 +67,35 @@
  * would then jump by the scroll offset; the entrance starts at the top, where that cannot show. Lite graphics stop
  * both (lite.css), as reduced motion does (below); the app then closes at once.
  */
+/* The confetti of the owner form's done step (WP-81, SCR-056): four paths out of the mascot, falling and fading. */
+@keyframes confetti-0 {
+  to {
+    transform: translate(-110px, 140px) rotate(320deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-1 {
+  to {
+    transform: translate(-40px, 170px) rotate(-260deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-2 {
+  to {
+    transform: translate(50px, 160px) rotate(280deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-3 {
+  to {
+    transform: translate(120px, 130px) rotate(-340deg);
+    opacity: 0;
+  }
+}
+
 @keyframes listing-in {
   from {
     opacity: 0;

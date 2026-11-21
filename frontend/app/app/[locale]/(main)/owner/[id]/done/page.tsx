@@ -1,4 +1,6 @@
-/** The owner form's `done` step (WP-81); its screen is built in a later step of the package. */
+import { DoneStep } from "@/features/owner/steps/DoneStep";
+
+/** The owner form's done step (WP-81), over the questionnaire. */
 export default function Page() {
-  return null;
+  return <DoneStep />;
 }

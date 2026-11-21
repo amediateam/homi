@@ -23,7 +23,7 @@ describe("the journal's call sites (WP-32, 03 §3.3)", () => {
   const called = new Set([...code.matchAll(/\btrack\(\s*"([a-z_]+)"/g)].map((match) => match[1]));
 
   it("each of the 21 legacy events and the owner form's (WP-81) is tracked somewhere outside the tests", () => {
-    expect(JOURNAL_EVENTS).toHaveLength(23);
+    expect(JOURNAL_EVENTS).toHaveLength(24);
     expect(JOURNAL_EVENTS.filter((name) => !called.has(name))).toEqual([]);
   });
 

@@ -61,6 +61,7 @@ describe("track", () => {
         "contact_write",
         "owner_place_set",
         "owner_place_autofill",
+        "owner_mascot_tap",
       ].sort(),
     );
   });

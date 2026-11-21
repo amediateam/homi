@@ -51,6 +51,8 @@ export type JournalEvents = {
   owner_place_set: { source: "map" | "locate" | "manual" };
   /** The fill after «Готово» changed a field, or «Вернуть» undid it. */
   owner_place_autofill: { result: "applied" | "reverted" };
+  /** A tap on the mascot of the done step, at most once per 30 s (`features/owner/events.ts`). */
+  owner_mascot_tap: Empty;
 };
 
 export type JournalEventName = keyof JournalEvents;
@@ -79,6 +81,7 @@ export const JOURNAL_EVENTS = [
   "contact_write",
   "owner_place_set",
   "owner_place_autofill",
+  "owner_mascot_tap",
 ] as const satisfies readonly JournalEventName[];
 
 export type TrackedEvent = { [N in JournalEventName]: { name: N; props: JournalEvents[N] } }[JournalEventName];

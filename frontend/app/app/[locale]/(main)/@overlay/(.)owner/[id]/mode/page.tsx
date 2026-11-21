@@ -1,4 +1,6 @@
-/** The owner form's `mode` step (WP-81); its screen is built in a later step of the package. */
+import { ModeStep } from "@/features/owner/steps/ModeStep";
+
+/** The owner form's mode step (WP-81), over the questionnaire. */
 export default function Page() {
-  return null;
+  return <ModeStep />;
 }
