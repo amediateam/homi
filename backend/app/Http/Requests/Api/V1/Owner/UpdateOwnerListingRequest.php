@@ -48,7 +48,11 @@ class UpdateOwnerListingRequest extends FormRequest
         ];
     }
 
-    /** `floor` above `floors_total` (both sent) names `floor`. */
+    /**
+     * `floor` above `floors_total` (both sent) names `floor`.
+     *
+     * @return list<callable(Validator): void>
+     */
     public function after(): array
     {
         return [function (Validator $validator): void {

@@ -130,7 +130,7 @@ import { areaTooSmall, consumeDrawRequest, requestDraw, setAreaTooSmall } from "
 import { cityOf, feedReference } from "../helpers/reference";
 
 function point(number: number, lat = 41.3111, lon = 69.2797, usd = 500): MapPoint {
-  return { number, lat, lon, label: `$${usd}`, tone: null, priced: true, usd };
+  return { number, origin: "legacy", lat, lon, label: `$${usd}`, tone: null, priced: true, usd };
 }
 
 function answered(points: MapPoint[], total?: number): Answer {

@@ -266,7 +266,7 @@ describe("useFeedRadar: when the list carries the card", () => {
     expect(offered(CUSTOM).current).toBe(false);
     feedReference({ reference: null });
     expect(offered(CUSTOM).current).toBe(false);
-    feedReference({ reference: { radars_enabled: true, limits: { radars: 1 } } });
+    feedReference({ reference: { radars_enabled: true, limits: { radars: 1, owner_listings: 2, owner_photos: 10, requests: { day: 10, week: 30, pause_minutes: 10 } } } });
     state.radars = undefined;
     expect(offered(CUSTOM).current).toBe(false);
     state.radars = [radar(SALE)];

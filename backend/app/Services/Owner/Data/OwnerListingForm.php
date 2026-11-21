@@ -56,7 +56,7 @@ final readonly class OwnerListingForm
             currency: Currency::tryFrom(Fields::string($data, 'currency')) ?? throw new \InvalidArgumentException('The field "currency" must be USD or UZS.'),
             renovation: Fields::nullableString($data, 'renovation'),
             furniture: Fields::nullableBool($data, 'furniture'),
-            tenants: array_values(array_map(fn (string $tenant): string => in_array($tenant, self::TENANTS, true) ? $tenant : throw new \InvalidArgumentException('Unknown tenant "'.$tenant.'".'), Fields::strings($data, 'tenants'))),
+            tenants: array_map(fn (string $tenant): string => in_array($tenant, self::TENANTS, true) ? $tenant : throw new \InvalidArgumentException('Unknown tenant "'.$tenant.'".'), Fields::strings($data, 'tenants')),
             pets: Fields::nullableBool($data, 'pets'),
             description: Fields::nullableString($data, 'description'),
         );

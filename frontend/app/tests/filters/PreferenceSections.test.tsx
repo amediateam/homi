@@ -313,6 +313,7 @@ describe("the other sections", () => {
           ],
           rent_daily: [],
           sale: [{ code: "none", name: "Без ремонта" }],
+          owner: [],
         },
       },
     });
@@ -329,7 +330,7 @@ describe("the other sections", () => {
   });
 
   it("RenovationSection: a deal without a list shows the heading over an empty row", () => {
-    feedReference({ reference: { renovations: { rent_long: [{ code: "euro", name: "Евроремонт" }], rent_daily: [], sale: [] } } });
+    feedReference({ reference: { renovations: { rent_long: [{ code: "euro", name: "Евроремонт" }], rent_daily: [], sale: [], owner: [] } } });
     const { container } = show(RenovationSection, { deal: "rent_daily" });
 
     expect(container.querySelector("h2")?.textContent).toBe("Ремонт");

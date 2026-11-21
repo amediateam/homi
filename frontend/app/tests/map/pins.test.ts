@@ -13,7 +13,7 @@ import type { MapGroup, MapPoint } from "@/features/map/types";
 const NONE: ReadonlySet<number> = new Set();
 
 function point(number: number, usd: number | null, lat = 41.3111, lon = 69.2797): MapPoint {
-  return { number, lat, lon, label: usd === null ? "Договорная" : `$${usd}`, tone: null, priced: usd !== null, usd };
+  return { number, origin: "legacy", lat, lon, label: usd === null ? "Договорная" : `$${usd}`, tone: null, priced: usd !== null, usd };
 }
 
 function stackOf(size: number): MapGroup {

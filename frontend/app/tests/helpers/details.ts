@@ -53,7 +53,8 @@ export function detailsOf(overrides: Partial<ListingDetails> = {}): ListingDetai
     geo_radius_m: 500,
     author: { kind: "phone", label: "+998 ** *** ** 67", count: 3 },
     owner_label: "Хозяин",
-    contact: { has_phone: true, contact_url: "https://t.me/stub_author_6", contact_paid: false },
+    owner: { tier: "claimed", mine: false, listing_id: null, entry: false, response_minutes: null, description: null },
+    contact: { has_phone: true, contact_url: "https://t.me/stub_author_6", contact_paid: false, mode: null, request: null },
     summary: "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 ** *** ** 67",
     offers: [{ text: "Торг", url: null }],
     original: {

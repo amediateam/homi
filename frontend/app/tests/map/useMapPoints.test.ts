@@ -43,7 +43,7 @@ const { useMapPoints } = await import("@/features/map/useMapPoints");
 const TASHKENT = defaultFilters("rent_long", "tashkent");
 
 function point(number: number, lat: number, lon: number, usd: number | null, tone: string | null = null): MapPoint {
-  return { number, lat, lon, label: usd === null ? "Договорная" : `$${usd}`, tone, priced: usd !== null, usd };
+  return { number, origin: "legacy", lat, lon, label: usd === null ? "Договорная" : `$${usd}`, tone, priced: usd !== null, usd };
 }
 
 /** Two listings at one address (the dearer first, as the server may send them) and one alone. */

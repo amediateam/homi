@@ -9,6 +9,7 @@ import type { ListingPreview } from "@/features/feed/types";
 export function previewOf(overrides: Partial<ListingPreview> = {}): ListingPreview {
   return {
     number: 100001,
+    origin: "legacy",
     deal: "rent_long",
     type: "apartment",
     title: "2-комн. квартира, 54 м²",
