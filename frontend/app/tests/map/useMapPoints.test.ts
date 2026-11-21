@@ -152,6 +152,25 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(result.current).toMatchObject({ status: "ready", shown: 1, responseId: 1 });
   });
 
+  it("a bump before the first answer, or after a failed first read, still gives the first answer a new response id", async () => {
+    const { bumpFeedEpoch } = await import("@/features/feed/feedQuery");
+    const pending = points();
+    act(() => bumpFeedEpoch());
+    expect(sent).toHaveLength(2);
+    expect(sent[0]?.signal.aborted).toBe(true);
+    await answer(1, answered(POINTS, 3));
+    // The camera fits the first answer of a mount: it needs a new id.
+    expect(pending.result.current).toMatchObject({ status: "ready", responseId: 1 });
+    pending.unmount();
+
+    const failing = points();
+    await answer(2, failed("network", 0));
+    expect(failing.result.current.status).toBe("error");
+    act(() => bumpFeedEpoch());
+    await answer(3, answered(POINTS, 3));
+    expect(failing.result.current).toMatchObject({ status: "ready", responseId: 1 });
+  });
+
   it("the same search in a new object sends nothing; a posted_days change does (not filtersKey)", async () => {
     const { rerender } = points();
     await answer(0, answered(POINTS, 3));

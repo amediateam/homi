@@ -50,8 +50,10 @@ export interface MapPoints {
   retry: () => void;
 }
 
-/** A request sent: a new object per send, so an answer is matched to its request. */
-/** One request of the effect; `keepView`: the same search asked again after a feed-epoch bump. */
+/**
+ * A request sent: a new object per send, so an answer is matched to its request. `keepView`: the same search asked
+ * again after a feed-epoch bump while its points are shown.
+ */
 type Request = { keepView?: true };
 
 interface State {
@@ -132,8 +134,9 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
     setState(state);
   } else if (stored.epoch !== epoch) {
     // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
-    // same search is asked again when the map shows, and its points stay until the answer.
-    state = { ...stored, epoch, error: null, request: { keepView: true } };
+    // same search is asked again when the map shows, and its points stay until the answer. Only points already shown
+    // keep the view: before the first answer (pending, aborted or failed) the answer is a first one and must fit.
+    state = { ...stored, epoch, error: null, request: stored.loaded ? { keepView: true } : {} };
     setState(state);
   }
 
