@@ -112,7 +112,7 @@ describe("bffFetch (WP-22)", () => {
     answers.push(status(429, { success: false, message: "Too many today", code: "rate_limited", reason: "daily" }));
     const result = await bffFetch("listings/100001");
 
-    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", method: "GET", path: "listings/:number" });
+    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", detail: { reason: "daily" }, method: "GET", path: "listings/:number" });
   });
 
   it("offline when the request never completes, timeout after 15 s", async () => {

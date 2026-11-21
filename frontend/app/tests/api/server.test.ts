@@ -74,12 +74,24 @@ describe("serverApi (WP-22)", () => {
     expect(result).toEqual({ ok: false, error: "not_found", status: 404, code: "not_found", method: "GET", path: "listings/:number" });
   });
 
+  it("passes the owner form's detail on: the limit, its size and the failing field names, never a message (WP-81)", async () => {
+    answer = () => Response.json({ success: false, message: "Limit", code: "owner_limit", limit: "account", max: 2 }, { status: 409 });
+    const api = await serverApi();
+    expect(await api.listing(5)).toMatchObject({ code: "owner_limit", detail: { limit: "account", max: 2 } });
+
+    answer = () =>
+      Response.json({ success: false, message: "Invalid", code: "validation_failed", errors: { price: ["The price is too low."] } }, { status: 422 });
+    const result = await api.listing(5);
+    expect(result).toMatchObject({ detail: { fields: ["price"] } });
+    expect(JSON.stringify(result)).not.toContain("too low");
+  });
+
   it("passes the day limit's reason on from the error body (WP-36, DEC-59)", async () => {
     answer = () => Response.json({ success: false, message: "Too many today", code: "rate_limited", reason: "daily" }, { status: 429 });
 
     const result = await (await serverApi()).listing(42);
 
-    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", method: "GET", path: "listings/:number" });
+    expect(result).toEqual({ ok: false, error: "rate_limited", status: 429, code: "rate_limited", reason: "daily", detail: { reason: "daily" }, method: "GET", path: "listings/:number" });
   });
 
   it("a failure holds no header, query string, body or token (SEC-REQ-047)", async () => {

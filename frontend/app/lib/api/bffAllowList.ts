@@ -19,20 +19,35 @@ export const BFF_READS = [
   "history",
   "hidden",
   "radars",
+  // The owner form's reads (WP-81).
+  "owner/listings",
+  "owner/listings/:id",
+  "owner/place",
+  "owner/demand",
 ] as const;
 
 export type BffRead = (typeof BFF_READS)[number];
 
 const POSITIVE_INTEGER = /^[1-9]\d{0,9}$/;
+/** An owner listing id: a ULID (the WP-80 contract). */
+const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 
-/** The allow-list entry a concrete path matches (`listings/42` → `listings/:number`), or `null`. */
+/**
+ * The allow-list entry a concrete path matches (`listings/42` → `listings/:number`, `owner/listings/<ULID>` →
+ * `owner/listings/:id`), or `null`.
+ */
 export function readTemplate(path: string): BffRead | null {
   const exact = BFF_READS.find((read) => read === path);
   if (exact !== undefined) {
     return exact;
   }
-  const [first, second, ...rest] = path.split("/");
-  return first === "listings" && second !== undefined && rest.length === 0 && POSITIVE_INTEGER.test(second) ? "listings/:number" : null;
+  const [first, second, third, ...rest] = path.split("/");
+  if (first === "listings" && second !== undefined && third === undefined && POSITIVE_INTEGER.test(second)) {
+    return "listings/:number";
+  }
+  return first === "owner" && second === "listings" && third !== undefined && rest.length === 0 && ULID.test(third)
+    ? "owner/listings/:id"
+    : null;
 }
 
 /** The writes of `/bff/*`: the journal only (WP-32, `journal.ts`). */

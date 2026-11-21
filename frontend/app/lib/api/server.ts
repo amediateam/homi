@@ -99,6 +99,9 @@ export function createServerApi(config: ServerApiConfig) {
           status: error.status,
           ...(error.code === "unknown" ? {} : { code: error.code }),
           ...(error.reason === undefined ? {} : { reason: error.reason }),
+          ...(error.limit === undefined ? {} : { limit: error.limit }),
+          ...(error.max === undefined ? {} : { max: error.max }),
+          ...(error.errors === undefined ? {} : { fields: Object.keys(error.errors) }),
         });
       }
       if (options.signal?.aborted) {
@@ -155,6 +158,22 @@ export function createServerApi(config: ServerApiConfig) {
     relaxRadar: (value: string, body: Body<"/radars/{id}/relax", "post">) =>
       call("post", "/radars/{id}/relax", { params: id(value), body }),
     events: (body: Body<"/events", "post">) => call("post", "/events", { body }),
+    // The owner cabinet (WP-80 contract; the form of WP-81). The photo upload has a transport of its own (DEC-92).
+    ownerListings: () => call("get", "/owner/listings"),
+    ownerListing: (value: string) => call("get", "/owner/listings/{id}", { params: id(value) }),
+    ownerPlace: (query: Query) => call("get", "/owner/place", { query }),
+    ownerDemand: (query: Query) => call("get", "/owner/demand", { query }),
+    createOwnerListing: () => call("post", "/owner/listings"),
+    updateOwnerListing: (value: string, body: Body<"/owner/listings/{id}", "patch">) =>
+      call("patch", "/owner/listings/{id}", { params: id(value), body }),
+    deleteOwnerPhoto: (value: string, photo: string) =>
+      call("delete", "/owner/listings/{id}/photos/{photo}", { params: { id: value, photo } }),
+    orderOwnerPhotos: (value: string, body: Body<"/owner/listings/{id}/photos/order", "put">) =>
+      call("put", "/owner/listings/{id}/photos/order", { params: id(value), body }),
+    setContactMode: (value: string, body: Body<"/owner/listings/{id}/contact-mode", "put">) =>
+      call("put", "/owner/listings/{id}/contact-mode", { params: id(value), body }),
+    requestOwnerPhone: (value: string) => call("post", "/owner/listings/{id}/phone-request", { params: id(value) }),
+    publishOwnerListing: (value: string) => call("post", "/owner/listings/{id}/publish", { params: id(value) }),
     landingLive: () => call("get", "/landing/live"),
     landingPins: () => call("get", "/landing/pins"),
   };

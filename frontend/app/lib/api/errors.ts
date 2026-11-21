@@ -19,7 +19,22 @@ export type UiError =
  * What went wrong: the request never completed, it timed out, or the API answered with a status (and a code, and the
  * envelope's `reason` when it is a string).
  */
-export type Failure = "offline" | "timeout" | { status: number; code?: string; reason?: string };
+export type Failure =
+  | "offline"
+  | "timeout"
+  | { status: number; code?: string; reason?: string; limit?: string; max?: number; fields?: readonly string[] };
+
+/**
+ * What a few screens read beyond the code (WP-81, the owner form, `409 owner_rejected`, `409 owner_limit`,
+ * `422 validation_failed`): the envelope's `reason` whatever it is, the limit and its size, and the names of the
+ * fields that failed — names only, never a message or a value (SEC-REQ-047).
+ */
+export interface FailureDetail {
+  reason?: string;
+  limit?: string;
+  max?: number;
+  fields?: string[];
+}
 
 /** The day limit of opened listings (`03` SCR-008, DEC-59): a `429` whose body says `reason: "daily"`. */
 export type FailureReason = "daily";
@@ -38,6 +53,8 @@ export interface ApiFailure {
    * `error` (`rate_limited`), and the listing reads this to tell «Лимит на сегодня» from the generic error (WP-36).
    */
   reason?: FailureReason;
+  /** Set when the answer held any of its parts (`FailureDetail`). */
+  detail?: FailureDetail;
   method: string;
   path: string;
 }
@@ -67,12 +84,28 @@ export function failureOf(call: { method: string; path: string }, failure: Failu
   const status = typeof failure === "string" ? 0 : failure.status;
   const code = typeof failure === "string" ? undefined : failure.code;
   const daily = typeof failure !== "string" && status === 429 && failure.reason === "daily";
+  const detail: FailureDetail = {};
+  if (typeof failure !== "string") {
+    if (failure.reason !== undefined) {
+      detail.reason = failure.reason;
+    }
+    if (failure.limit !== undefined) {
+      detail.limit = failure.limit;
+    }
+    if (failure.max !== undefined) {
+      detail.max = failure.max;
+    }
+    if (failure.fields !== undefined && failure.fields.length > 0) {
+      detail.fields = [...failure.fields];
+    }
+  }
   return {
     ok: false,
     error: toUiError(failure),
     status,
     ...(code === undefined ? {} : { code }),
     ...(daily ? { reason: "daily" as const } : {}),
+    ...(Object.keys(detail).length > 0 ? { detail } : {}),
     method: call.method,
     path: call.path,
   };

@@ -14,14 +14,26 @@ export class ApiError extends Error {
   readonly errors?: Record<string, string[]>;
   /** The envelope's `reason` when it is a string: the access gate's reason, `daily` on the day limit's `429`. */
   readonly reason?: string;
+  /** `409 owner_limit` (WP-80): `limit` (`account` or `phone`) when a string, `max` when a number. */
+  readonly limit?: string;
+  readonly max?: number;
 
-  constructor(message: string, status: number, code = "unknown", errors?: Record<string, string[]>, reason?: string) {
+  constructor(
+    message: string,
+    status: number,
+    code = "unknown",
+    errors?: Record<string, string[]>,
+    reason?: string,
+    limits: { limit?: string; max?: number } = {},
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.errors = errors;
     this.reason = reason;
+    this.limit = limits.limit;
+    this.max = limits.max;
   }
 
   get isUnauthorized(): boolean {
@@ -119,6 +131,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         failure?.code,
         failure?.errors,
         typeof failure?.reason === "string" ? failure.reason : undefined,
+        {
+          ...(typeof failure?.limit === "string" ? { limit: failure.limit } : {}),
+          ...(typeof failure?.max === "number" ? { max: failure.max } : {}),
+        },
       );
     }
 
