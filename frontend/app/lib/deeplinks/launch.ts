@@ -124,6 +124,24 @@ let launchedNumber: number | null = null;
 /** The query the Mini App was opened with, read when the module loads: on a gate route the address has none. */
 const launchSearch = typeof window === "undefined" ? "" : window.location.search;
 
+/**
+ * The query the launch was opened with, joined with the address's own (WP-81: `?owner=new` waits behind the pickers,
+ * and the city pick replaces the address, so the query it came with is read from here).
+ */
+export function launchQuery(): string {
+  if (typeof window === "undefined") {
+    return launchSearch;
+  }
+  const now = new URLSearchParams(window.location.search);
+  for (const [name, value] of new URLSearchParams(launchSearch)) {
+    if (!now.has(name)) {
+      now.append(name, value);
+    }
+  }
+  const text = now.toString();
+  return text === "" ? "" : `?${text}`;
+}
+
 export interface LaunchMapOptions {
   override: MapOverride | null;
   /** `?mapdebug`, never in a production build. */
@@ -182,7 +200,10 @@ export function consumeLaunch(): boolean {
   }
   consumed = true;
   // What the redirect opens now, from the address it reads (`LaunchRedirector`).
-  const launch = typeof window === "undefined" ? null : parseLaunch(tg.initData(), window.location.search);
+  // An owner launch keeps the query it was opened with (the city pick drops the address's, WP-81); any other launch
+  // reads the address as it is now, so one whose query got lost opens nothing.
+  const opened = typeof window === "undefined" ? null : parseLaunch(tg.initData(), launchQuery());
+  const launch = opened !== null && ownerLaunch(opened) ? opened : typeof window === "undefined" ? null : parseLaunch(tg.initData(), window.location.search);
   target = launch === null ? null : launchTarget(launch);
   targetNumber = target !== null && launch !== null ? launch.listingNumber : null;
   targetIsOwner = target !== null && launch !== null && ownerLaunch(launch);

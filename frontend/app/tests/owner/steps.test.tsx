@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   back: vi.fn(),
   closeThen: vi.fn(async () => undefined),
   flush: vi.fn(async () => ({ ok: true as const })),
+  reportInvalid: vi.fn(),
 }));
 vi.mock("@/lib/api/browser", () => ({ bffFetch: () => new Promise(() => undefined) }));
 vi.mock("@/lib/session/bootstrap", () => ({ refresh: vi.fn(async () => undefined), reauthenticate: vi.fn() }));
@@ -56,7 +57,7 @@ let fake: FakeTelegram | null = null;
 const button = (action: string) => document.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!;
 
 function inForm(listing: OwnerListingView, children: React.ReactNode) {
-  const value: OwnerFormValue = { listing, form: listing.form, edit: vi.fn(), restore: vi.fn(), flush: state.flush, current: () => listing.form };
+  const value: OwnerFormValue = { listing, form: listing.form, edit: vi.fn(), restore: vi.fn(), flush: state.flush, current: () => listing.form, reportInvalid: state.reportInvalid };
   return withIntl(<OwnerFormContext value={value}>{children}</OwnerFormContext>);
 }
 
@@ -120,6 +121,15 @@ describe("ModeStep (WP-81, SCR-055, BR-APP-086, BR-APP-087)", () => {
     render(inForm(normalizeOwnerListing(raw())!, <ModeStep />));
     await act(async () => fireEvent.click(button("publish")));
     expect(state.replace).toHaveBeenCalledWith(`/owner/${ID}/phone`);
+  });
+
+  it("a 422 on publish goes back to the questionnaire with the parts the server named (second review)", async () => {
+    state.publish.mockResolvedValueOnce({ ok: false, error: "validation", status: 422, code: "validation_failed", detail: { fields: ["price", "photos"] }, method: "POST", path: "p" } as never);
+    render(inForm(normalizeOwnerListing(raw())!, <ModeStep />));
+    await act(async () => fireEvent.click(button("publish")));
+
+    expect(state.reportInvalid).toHaveBeenCalledWith(["price", "photos"]);
+    expect(state.back).toHaveBeenCalled();
   });
 
   it("an edit says «Готово», sends no publish and shows the done step", async () => {

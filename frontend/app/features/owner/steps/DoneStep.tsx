@@ -42,7 +42,7 @@ export function DoneStep() {
 
   if (kind === "held") {
     return (
-      <StepFrame step="done" title={t("own.review.title")} footer={footer}>
+      <StepFrame onClose={() => void closeOwnerForm()} step="done" title={t("own.review.title")} footer={footer}>
         <p data-done="held" className="text-[15px] leading-[1.45] text-text">
           {t("own.review.text")}
         </p>
@@ -51,7 +51,7 @@ export function DoneStep() {
   }
   if (kind === "edit") {
     return (
-      <StepFrame step="done" title={t("own.savedTitle")} footer={footer}>
+      <StepFrame onClose={() => void closeOwnerForm()} step="done" title={t("own.savedTitle")} footer={footer}>
         <Celebration auto={false} />
         <p data-done="edit" className="text-center text-[15px] leading-[1.45] text-text">
           {t("own.savedText")}
@@ -60,7 +60,7 @@ export function DoneStep() {
     );
   }
   return (
-    <StepFrame step="done" title={t("own.doneTitle")} footer={footer}>
+    <StepFrame onClose={() => void closeOwnerForm()} step="done" title={t("own.doneTitle")} footer={footer}>
       <Celebration auto />
       <p data-done="new" className="text-center text-[15px] leading-[1.45] text-text">
         {radars ? t("own.doneText") : t("own.doneTextNoRadar")}

@@ -7,10 +7,11 @@ import { EMPTY_REFERENCE } from "@/lib/reference/empty";
 
 const state = vi.hoisted(() => ({
   status: "ready",
+  me: { locale_chosen: true, city_chosen: true } as { locale_chosen: boolean; city_chosen: boolean } | null,
   push: vi.fn((href: string) => window.history.pushState(null, "", `/ru${href}`)),
   replace: vi.fn((href: string) => window.history.replaceState(null, "", `/ru${href.replace(/^\/(?=\?|$)/, "")}`)),
 }));
-vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: state.status }) }));
+vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: state.status, me: state.me }) }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: state.push, replace: state.replace } }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(window.location.search), usePathname: () => window.location.pathname }));
 
@@ -87,6 +88,20 @@ describe("owner launch links (WP-81, TMA-046, LB-APP-060)", () => {
     expect(state.replace).not.toHaveBeenCalled();
     expect(state.push).not.toHaveBeenCalled();
     expect(window.location.search).toBe("?owner=owners&deal=rent_long");
+  });
+
+  it("an owner launch waits until the city is chosen, and keeps ?owner=new through the city pick (second review)", async () => {
+    state.me = { locale_chosen: true, city_chosen: false };
+    const { rerender } = await mount("/ru?owner=new", undefined, { owner_enabled: true });
+    rerender();
+    expect(state.push).not.toHaveBeenCalled();
+
+    // The city page replaced the address; the pick lands on the feed without the query.
+    window.history.replaceState(null, "", "/ru");
+    state.me = { locale_chosen: true, city_chosen: true };
+    rerender();
+    expect(state.push.mock.calls).toEqual([["/owner/new"]]);
+    state.me = { locale_chosen: true, city_chosen: true };
   });
 
   it("an owner launch is never pending: the first-launch pickers come first (default (c))", async () => {

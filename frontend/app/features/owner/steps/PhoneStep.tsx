@@ -99,7 +99,7 @@ export function PhoneStep() {
   const late = attempt === "old" || (poll.polling && poll.late) || (attempt === "waiting" && !poll.polling);
 
   return (
-    <StepFrame
+    <StepFrame onClose={() => nav.back()}
       step="phone"
       title={t("own.phoneTitle")}
       footer={

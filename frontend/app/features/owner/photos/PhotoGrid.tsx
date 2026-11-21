@@ -2,9 +2,10 @@
 
 import { Camera, Check, ImagePlus, prefersReducedMotion } from "@homi/ui";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { thumbUrl } from "@/features/feed/images";
+import { takeOverBack } from "@/lib/navigation/backHandler";
 
 import type { OwnerPhoto } from "../normalize";
 import type { PhotoError, UploadTile } from "./usePhotos";
@@ -116,6 +117,8 @@ export function PhotoGrid({
   const t = useTranslations();
   const input = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState<string | null>(null);
+  // With the menu open, Telegram's Back closes the menu first (SCR-050).
+  useLayoutEffect(() => (menu === null ? undefined : takeOverBack(() => setMenu(null))), [menu]);
   const full = photos.length + tiles.length >= limit;
 
   return (

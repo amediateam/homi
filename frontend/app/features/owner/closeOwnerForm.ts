@@ -38,7 +38,22 @@ function onFormAddress(): boolean {
  * loaded directly) and the browser still shows a form address, it is replaced by `/settings`, the parent of every
  * address of the form that closes it (`parentOf`). Every close gives a light haptic.
  */
+let closing = false;
+
 export async function closeOwnerForm(): Promise<void> {
+  // A second Back before the first close has landed is the same close.
+  if (closing) {
+    return;
+  }
+  closing = true;
+  try {
+    await close();
+  } finally {
+    closing = false;
+  }
+}
+
+async function close(): Promise<void> {
   tg.haptic.impact("light");
   const wanted = below === null ? 0 : depth() - below;
   forgetOwnerForm();
@@ -56,5 +71,18 @@ export async function closeOwnerForm(): Promise<void> {
 export async function openMyListings(): Promise<void> {
   await closeOwnerForm();
   nav.tab(routes.settings());
+  // Two history changes in one tick collapse into one: the list is pushed once the settings address shows.
+  await new Promise<void>((resolve) => {
+    const started = Date.now();
+    const wait = () => {
+      const route = matchRoute(window.location.pathname.replace(LOCALE_PREFIX, "") || "/").route;
+      if (route === "settings" || Date.now() - started > 500) {
+        resolve();
+      } else {
+        setTimeout(wait, 16);
+      }
+    };
+    wait();
+  });
   nav.push(routes.ownerListings());
 }

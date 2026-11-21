@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { consumeLaunch, launchGate, launchTarget, useLaunchGate } from "@/lib/deeplinks/launch";
+import { consumeLaunch, launchGate, launchQuery, launchTarget, useLaunchGate } from "@/lib/deeplinks/launch";
 import { parseLaunch } from "@/lib/deeplinks/parse";
 import { normaliseAddress } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
@@ -34,7 +34,8 @@ function isLaunchParam(params: Pick<URLSearchParams, "get" | "has"> | null | und
  * both work.
  */
 export function LaunchRedirector(): null {
-  const { status } = useSession();
+  const { status, me } = useSession();
+  const pickersDone = me !== null && me !== undefined && me.locale_chosen && me.city_chosen;
   const gateVersion = useLaunchGate();
   const { loaded, ownerEnabled } = useReference();
   const searchParams = useSearchParams();
@@ -46,9 +47,12 @@ export function LaunchRedirector(): null {
     if (status !== "ready" || !launchGate()) {
       return;
     }
-    const launch = parseLaunch(tg.initData(), window.location.search);
-    const owner = launch.listingNumber === null && launch.owner !== null;
-    if (owner && !loaded) {
+    // An owner launch is read with the query the app was opened with (the city pick drops the address's), and waits
+    // until the first-launch pickers are done and the reference data says whether the cabinet is on.
+    const launchedWith = parseLaunch(tg.initData(), launchQuery());
+    const owner = launchedWith.listingNumber === null && launchedWith.owner !== null;
+    const launch = owner ? launchedWith : parseLaunch(tg.initData(), window.location.search);
+    if (owner && (!loaded || !pickersDone)) {
       return;
     }
     if (!consumeLaunch()) {
@@ -76,7 +80,7 @@ export function LaunchRedirector(): null {
     const cleaned = normaliseAddress(url.pathname + url.search);
     pending.current = chain(cleaned.split("?")[0]!);
     nav.replace(cleaned);
-  }, [status, gateVersion, loaded, ownerEnabled]);
+  }, [status, gateVersion, loaded, ownerEnabled, pickersDone]);
 
   useEffect(() => {
     const next = pending.current[0];

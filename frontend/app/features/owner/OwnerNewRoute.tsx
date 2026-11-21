@@ -11,7 +11,9 @@ import { useAction } from "@/lib/actions/useAction";
 import type { ApiFailure } from "@/lib/api/errors";
 import { takeOverBack } from "@/lib/navigation/backHandler";
 import { nav } from "@/lib/navigation/nav";
-import { routes } from "@/lib/navigation/routes";
+import { currentAddress } from "@/lib/navigation/address";
+import { matchRoute, routes } from "@/lib/navigation/routes";
+import { usePathname } from "@/i18n/navigation";
 import { useReference } from "@/lib/reference/useReference";
 import { showToast } from "@/lib/ui/toast";
 
@@ -41,11 +43,16 @@ export function OwnerNewRoute({ presentation }: { presentation: RoutePresentatio
 
   useLayoutEffect(() => markOwnerFormOpened(), []);
   const close = useCallback(() => void closeOwnerForm(), []);
-  useLayoutEffect(() => takeOverBack(close), [close]);
+  // Loaded directly, this page stays below the form's overlay copy: it owns Back only at its own address.
+  const atNew = matchRoute(usePathname()).route === "ownerNew";
+  useLayoutEffect(() => (atNew ? takeOverBack(close) : undefined), [atNew, close]);
 
   const run = useCallback(async () => {
     setState({ kind: "creating" });
+    const from = currentAddress();
     const result = await create({});
+    // Back closed the form meanwhile: the draft is kept, nothing is navigated over the page the user went to.
+    const left = currentAddress() !== from;
     if (result.ok) {
       const listing = normalizeOwnerListing(result.data);
       if (listing === null) {
@@ -54,6 +61,9 @@ export function OwnerNewRoute({ presentation }: { presentation: RoutePresentatio
       }
       putOwnerListing(result.data);
       invalidateOwner();
+      if (left) {
+        return;
+      }
       const placed = listing.form.lat !== null && listing.form.lon !== null;
       nav.replace(placed || listing.status !== "draft" ? routes.ownerForm(listing.id) : routes.ownerPlace(listing.id, { first: 1 }));
       return;

@@ -7,6 +7,8 @@ import { useState } from "react";
 import { publishOwnerListing, setContactMode, type ContactMode } from "@/lib/actions/owner";
 import { useAction } from "@/lib/actions/useAction";
 import { bffFetch } from "@/lib/api/browser";
+import { readResource } from "@/lib/data/useResource";
+import { currentAddress } from "@/lib/navigation/address";
 import { closeThen } from "@/lib/navigation/closeThen";
 import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
@@ -17,7 +19,7 @@ import { showToast } from "@/lib/ui/toast";
 import { closeOwnerForm, openMyListings } from "../closeOwnerForm";
 import { useOwnerForm } from "../form/context";
 import { normalizeOwnerListing } from "../normalize";
-import { invalidateOwner, type OwnerListingBody, putOwnerListing } from "../store";
+import { invalidateOwner, type OwnerListingBody, ownerListingKey, putOwnerListing } from "../store";
 import { recordDone } from "./doneKind";
 import { ListingPreview } from "./ListingPreview";
 import { StepFrame } from "./StepFrame";
@@ -76,8 +78,10 @@ export function ModeStep() {
 
   const rejectHere = async (reason: string | undefined) => {
     const reread = await bffFetch<OwnerListingBody>(`owner/listings/${id}`);
-    if (reread.ok) {
-      putOwnerListing(reread.data.status === "rejected" ? reread.data : { ...reread.data, status: "rejected", reject_reason: reason === "limit" ? "limit" : "denied" });
+    // The server's rejected copy, else the copy at hand marked rejected with the answer's reason.
+    const base = reread.ok ? reread.data : readResource<OwnerListingBody>(ownerListingKey(id));
+    if (base !== undefined) {
+      putOwnerListing(base.status === "rejected" ? base : { ...base, status: "rejected", reject_reason: reason === "limit" ? "limit" : "denied" });
     }
     nav.replace(routes.ownerPhone(id));
   };
@@ -89,6 +93,9 @@ export function ModeStep() {
     setBusy(true);
     setPhase("busy");
     setError(null);
+    const from = currentAddress();
+    // Back left the mode step while it saved or published: the answer is kept, nothing is navigated.
+    const left = () => currentAddress() !== from;
     const flushed = await owner.flush();
     if (!flushed.ok) {
       setPhase("idle");
@@ -102,7 +109,9 @@ export function ModeStep() {
       tg.haptic.success();
       await confirm();
       recordDone(id, "edit");
-      void closeThen(routes.ownerDone(id));
+      if (!left()) {
+        void closeThen(routes.ownerDone(id));
+      }
       return;
     }
     const result = await publish({ id });
@@ -110,7 +119,9 @@ export function ModeStep() {
       putOwnerListing(result.data);
       invalidateOwner();
       recordDone(id, normalizeOwnerListing(result.data)?.held === true ? "held" : "new");
-      void closeThen(routes.ownerDone(id));
+      if (!left()) {
+        void closeThen(routes.ownerDone(id));
+      }
       return;
     }
     setPhase("idle");
@@ -135,7 +146,11 @@ export function ModeStep() {
         return;
     }
     if (result.error === "validation") {
-      nav.back();
+      // Back to the questionnaire with the parts the server named highlighted (or the save-failed text).
+      owner.reportInvalid(result.detail?.fields ?? []);
+      if (!left()) {
+        nav.back();
+      }
       return;
     }
     setError({ text: result.error === "offline" || result.error === "timeout" ? t("own.publishOffline") : t("own.publishFailed"), mine: false });
@@ -159,7 +174,7 @@ export function ModeStep() {
   );
 
   return (
-    <StepFrame
+    <StepFrame onClose={() => nav.back()}
       step="mode"
       title={t("own.modeTitle")}
       footer={

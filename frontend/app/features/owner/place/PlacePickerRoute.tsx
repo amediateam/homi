@@ -10,6 +10,7 @@ import { useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
 import { showToast } from "@/lib/ui/toast";
 
+import { closeOwnerForm } from "../closeOwnerForm";
 import { useOwnerForm } from "../form/context";
 import { placeFill } from "./applyPlace";
 import { PLACE_ZOOM, PlacePicker } from "./PlacePicker";
@@ -92,6 +93,7 @@ export function PlacePickerRoute() {
         tg.haptic.impact("light");
         leave();
       }}
+      onSwipe={() => (first ? void closeOwnerForm() : leave())}
     />
   );
 }

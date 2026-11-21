@@ -37,12 +37,15 @@ export function PlacePicker({
   onDone,
   onManual,
   onCancel,
+  onSwipe,
 }: {
   start: PickStart;
   first: boolean;
   onDone: (point: GeoPoint, located: boolean) => void;
   onManual: () => void;
   onCancel: () => void;
+  /** The edge swipe: `closeOwnerForm` at step «where», else `onCancel`. */
+  onSwipe: () => void;
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -55,7 +58,9 @@ export function PlacePicker({
   const [note, setNote] = useState<PickerNote | null>(null);
   const located = useRef(false);
 
-  useSwipeBack(layer, onCancel, { edgeOnly: true, onCommit: () => tg.haptic.impact() });
+  // The swipe is the picker's Back: step «where» closes the form, from the questionnaire it cancels; never on Android
+  // (TMA-041), as the other layers.
+  useSwipeBack(layer, onSwipe, { edgeOnly: true, enabled: !tg.isAndroid(), onCommit: () => tg.haptic.impact() });
 
   const onLocateFailure = useCallback((failure: "denied" | "fail") => {
     tg.haptic.warning();

@@ -16,6 +16,8 @@ export interface OwnerFormValue {
   flush: () => Promise<FlushResult>;
   /** The form as it is now (after an await). */
   current: () => OwnerForm;
+  /** A publish refused with `422`: the questionnaire highlights the parts it names (or shows the save-failed text). */
+  reportInvalid: (fields: readonly string[]) => void;
 }
 
 export const OwnerFormContext = createContext<OwnerFormValue | null>(null);

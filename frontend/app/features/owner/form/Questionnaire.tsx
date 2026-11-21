@@ -7,6 +7,7 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { updateOwnerListing } from "@/lib/actions/owner";
 import { useAction } from "@/lib/actions/useAction";
 import { usePathname } from "@/i18n/navigation";
+import { currentAddress } from "@/lib/navigation/address";
 import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
 import { useSession } from "@/lib/session/SessionProvider";
@@ -93,17 +94,26 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const focus = searchParams.get("focus");
+  // The highlight lasts its 1.6 s although the replace below drops the parameter at once; only an unmount ends it early.
+  const focusUndo = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
     if (!isFocusToken(focus) || root.current === null) {
       return;
     }
-    const undo = focusField(root.current, focus);
+    focusUndo.current?.();
+    focusUndo.current = focusField(root.current, focus);
     nav.replace(pathname);
-    return undo;
   }, [focus, pathname]);
+  useEffect(() => () => focusUndo.current?.(), []);
 
   const [needs, setNeeds] = useState<Need[]>([]);
   const [failedNext, setFailedNext] = useState(false);
+  /** A publish refused with `422` (the mode step): the parts it names are highlighted, else the save-failed text. */
+  const reportInvalid = useCallback((fields: readonly string[]) => {
+    const named = (["city", "place", "rooms", "price", "photos"] as const).filter((need) => fields.includes(need));
+    setNeeds(named);
+    setFailedNext(named.length === 0);
+  }, []);
   const highlighted = new Set([...invalid, ...needs.flatMap((need) => NEED_FIELDS[need])]);
   const floorBad = floorAboveFloors(form);
 
@@ -126,6 +136,7 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
       tg.haptic.warning();
       return;
     }
+    const from = currentAddress();
     await photos.flushDeletes();
     const result = await flush();
     if (!result.ok) {
@@ -134,7 +145,10 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
       return;
     }
     setFailedNext(false);
-    nav.push(listing.phoneSet ? routes.ownerMode(listing.id) : routes.ownerPhone(listing.id));
+    // Back closed the form while it saved: nothing is pushed over the page the user went to.
+    if (currentAddress() === from) {
+      nav.push(listing.phoneSet ? routes.ownerMode(listing.id) : routes.ownerPhone(listing.id));
+    }
   };
 
   const demand = useDemand(form);
@@ -170,6 +184,7 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
           return flush();
         },
         current,
+        reportInvalid,
       }}
     >
     <div ref={root} data-owner-questionnaire="">

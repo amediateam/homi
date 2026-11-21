@@ -116,6 +116,10 @@ function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerF
   const rejected = listing?.status === "rejected";
   const sentToPhone = useRef(false);
   useEffect(() => {
+    // Once the phone step was shown (a push here, or the user there when the rejection arrived), Back from it stays.
+    if (step === "phone") {
+      sentToPhone.current = true;
+    }
     if (rejected && step === null && !sentToPhone.current) {
       sentToPhone.current = true;
       nav.push(routes.ownerPhone(id));

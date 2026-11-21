@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { supportUrl } from "@/lib/deeplinks/build";
 import { useReference } from "@/lib/reference/useReference";
+import { nav } from "@/lib/navigation/nav";
 import { tg } from "@/lib/telegram";
 
 import { openMyListings } from "../closeOwnerForm";
@@ -24,7 +25,7 @@ export function RejectionState({ listing }: { listing: OwnerListingView }) {
   const reason = listing.rejectReason ?? "denied";
   const support = supportUsername === null ? null : supportUrl(supportUsername);
   return (
-    <StepFrame step="rejected" title={t("own.rejectedTitle")}>
+    <StepFrame onClose={() => nav.back()} step="rejected" title={t("own.rejectedTitle")}>
       <p data-reject-reason={reason} className="text-[15px] leading-[1.45] text-text">
         {t(labelFor("ownerReject", reason), { max: ownerListingsLimit })}
       </p>
