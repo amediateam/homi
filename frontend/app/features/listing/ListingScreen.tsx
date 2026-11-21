@@ -14,6 +14,11 @@ import { devFlags } from "@/lib/flags";
 import { routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
 
+import { MineBar } from "@/features/owner/panel/MineBar";
+import { OwnerPanel } from "@/features/owner/panel/OwnerPanel";
+import { OwnerPanelFooter } from "@/features/owner/panel/OwnerPanelFooter";
+import { OwnerPriceSection } from "@/features/owner/panel/OwnerPriceSection";
+
 import { ListingCtaBar } from "./cta/ListingCtaBar";
 import { type ListingContactView, useListingContact } from "./cta/useContact";
 import { KeyFacts } from "./KeyFacts";
@@ -80,11 +85,13 @@ function ListingContent({ number, initial }: { number: number; initial?: Listing
   useReportView(view.state);
   // The listing's pageview waits for its record or its failure (WP-32).
   const known = view.state !== "skeleton" && view.state !== "preview";
+  // The user's own listing is named `owner/listing` (legacy since `index-CIa0Ldj2.js`, WP-82).
+  const mine = view.state === "loaded" && view.details.owner?.mine === true;
   useEffect(() => {
     if (known) {
-      listingKnown(number);
+      listingKnown(number, { mine });
     }
-  }, [known, number]);
+  }, [known, mine, number]);
 
   let content;
   switch (view.state) {
@@ -189,6 +196,9 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
   const translation = useTranslation(number);
   const { share, shareable } = useShareListing(number, item);
   const videoUrl = details && details.has_video && !details.original.deleted ? details.original.url : null;
+  // The user's own listing (WP-82, BR-APP-103): its owner panel and footer when the card names the owner listing.
+  const mine = details?.owner?.mine === true;
+  const ownerId = mine ? (details?.owner?.listing_id ?? null) : null;
 
   return (
     <div className="pb-[calc(88px+var(--bottom-inset))]">
@@ -219,8 +229,10 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
             favorite={item.favorite}
             onShare={shareable ? share : undefined}
             onMenu={() => router.push(routes.listingActions(number))}
+            mine={mine}
           />
           <KeyFacts item={item} marketCode={details?.market.code} />
+          {ownerId === null ? null : <OwnerPanel listingId={ownerId} number={number} />}
           {details ? null : (
             <>
               <SectionSkeleton lines={3} />
@@ -228,9 +240,15 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
             </>
           )}
         </div>
-        {details ? <ListingSections number={number} details={details} phone={contact.phone} translation={translation} /> : null}
+        {details ? <ListingSections number={number} details={details} phone={contact.phone} translation={translation} mine={mine} ownerId={ownerId} /> : null}
       </div>
-      <ListingCtaBar item={item} details={details} cta={contact.cta} />
+      {!mine ? (
+        <ListingCtaBar item={item} details={details} cta={contact.cta} />
+      ) : ownerId === null ? (
+        <MineBar />
+      ) : (
+        <OwnerPanelFooter listingId={ownerId} number={number} />
+      )}
     </div>
   );
 }
@@ -245,11 +263,16 @@ function ListingSections({
   details,
   phone,
   translation,
+  mine = false,
+  ownerId = null,
 }: {
   number: number;
   details: ListingDetails;
   phone: ListingContactView["phone"];
   translation: TranslationControl | null;
+  /** The user's own listing (WP-82): «Цена» after the facts with the market block under it, and no «Источник». */
+  mine?: boolean;
+  ownerId?: string | null;
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -257,16 +280,24 @@ function ListingSections({
 
   return (
     <div data-slot="listing-sections" className="flex flex-col pt-[4px]">
-      <MarketBlock number={number} details={details} verdict={marketVerdict(details, locale, translate)} />
+      {mine ? null : <MarketBlock number={number} details={details} verdict={marketVerdict(details, locale, translate)} />}
       <FactsSection facts={details.facts} />
+      {mine ? (
+        <>
+          <OwnerPriceSection details={details} ownerId={ownerId} />
+          <MarketBlock number={number} details={details} verdict={marketVerdict(details, locale, translate)} />
+        </>
+      ) : null}
       <StatsSection stats={details.stats} />
       <HistorySection number={number} history={details.price_history} tashkentDates={devFlags.dev014TashkentDates} />
       <LocationSection number={number} details={details} place={placeLine(details)} />
       <AuthorSection number={number} ownerLabel={details.owner_label} offers={details.offers} posted={details.posted} phone={phone} />
       <DescriptionSection summary={details.summary} />
-      <SourcesSection number={number} sources={details.sources} originalText={details.original.text}>
-        <OriginalText number={number} text={details.original.text ?? ""} phone={phone} translation={translation} />
-      </SourcesSection>
+      {mine ? null : (
+        <SourcesSection number={number} sources={details.sources} originalText={details.original.text}>
+          <OriginalText number={number} text={details.original.text ?? ""} phone={phone} translation={translation} />
+        </SourcesSection>
+      )}
     </div>
   );
 }

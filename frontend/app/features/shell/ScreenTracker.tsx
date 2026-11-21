@@ -11,16 +11,25 @@ import { matchRoute, screenNameOf } from "@/lib/navigation/routes";
 /** The listing whose pageview waits for its record or its failure, and the last listing whose screen knew either. */
 let awaited: number | null = null;
 let known: number | null = null;
+/** The listings known to be the user's own: their pageview is named `owner/listing` (WP-82). */
+const own = new Set<number>();
+
+const listingScreen = (number: number) => (own.has(number) ? "owner/listing" : "listing");
 
 /**
  * The listing screen knows its record or its failure (`ListingScreen`): its pageview goes now if the address is still
  * that listing's. Legacy since `index-CIa0Ldj2.js`: a card closed before that sends none.
  */
-export function listingKnown(number: number): void {
+export function listingKnown(number: number, options: { mine?: boolean } = {}): void {
   known = number;
+  if (options.mine === true) {
+    own.add(number);
+  } else {
+    own.delete(number);
+  }
   if (awaited === number) {
     awaited = null;
-    trackScreen("listing", { listing_id: number });
+    trackScreen(listingScreen(number), { listing_id: number });
   }
 }
 
@@ -42,7 +51,7 @@ export function ScreenTracker(): null {
     awaited = null;
     if (name === "listing" && listing !== null) {
       if (known === listing) {
-        trackScreen(name, { listing_id: listing });
+        trackScreen(listingScreen(listing), { listing_id: listing });
       } else {
         awaited = listing;
       }
@@ -59,4 +68,5 @@ export function ScreenTracker(): null {
 export function resetScreenTracker(): void {
   awaited = null;
   known = null;
+  own.clear();
 }

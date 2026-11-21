@@ -77,6 +77,27 @@ describe("ScreenTracker (WP-32, LB-APP-037)", () => {
   });
 });
 
+describe("ScreenTracker and the user's own listing (WP-82)", () => {
+  it("names the pageview owner/listing, with listing_id, once the record says owner.mine", () => {
+    at("/listing/10000008");
+    render(<ScreenTracker />);
+    act(() => listingKnown(10000008, { mine: true }));
+    expect(state.tracked).toEqual([{ screen: "owner/listing", props: { listing_id: 10000008 } }]);
+  });
+
+  it("«Отклики» over it is owner/requests", () => {
+    act(() => listingKnown(10000008, { mine: true }));
+    at("/listing/10000008");
+    const view = render(<ScreenTracker />);
+    at("/listing/10000008/requests");
+    view.rerender(<ScreenTracker />);
+    expect(state.tracked).toEqual([
+      { screen: "owner/listing", props: { listing_id: 10000008 } },
+      { screen: "owner/requests", props: { listing_id: 10000008 } },
+    ]);
+  });
+});
+
 describe("ScreenTracker and a layer on top (review of WP-32)", () => {
   it("an address change under the map's card sends the card, not the map", () => {
     at("/map");
