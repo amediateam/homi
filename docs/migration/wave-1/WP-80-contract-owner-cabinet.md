@@ -808,9 +808,9 @@ The package is built as designed, with these points decided in the code (rule 6)
   answer a shown point beside it. Publish starts from the listing with the phone scenarios applied (`phone_set`
   publishes the complete draft); a hold or a refusal (`held_check`, `rejected_*`) is what publish answers, not a state
   it starts from; a rejected listing answers `409 owner_rejected` with its reason. A first publish takes `10000013`.
-- **The native entries stand two at each of the four addresses of the default search** (`10000001`, `10000002` with
-  `100001`; `10000003`, `10000004` with `100012`; `10000005`, `10000006` with `100013`; `10000007`, `10000008` with
-  `100014`), taking that address's district: with 32 repeats the map still answers four stacks of eleven, as the map
+- **The native entries stand two at each of the four addresses of the default search** (`10000001` and `10000008`
+  — the stub user's own, at the point of its owner listing — with `100001`; `10000002`, `10000003` with `100012`;
+  `10000004`, `10000005` with `100013`; `10000006`, `10000007` with `100014`), taking that address's district: with 32 repeats the map still answers four stacks of eleven, as the map
   specs expect (each spot of their own split the stacks, and 40 end-to-end cases failed on CI run 44899906288).
   `frontend/app/e2e/listing-open.spec.ts` opens the first legacy card from the fourth on, since a native card's CTA is
   WP-83's.
