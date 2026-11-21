@@ -38,20 +38,24 @@ function phones(text: string): string {
   return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
 }
 
-/**
- * `value` with launch data, tokens, the session cookie, phone numbers, e-mail addresses and the queries of addresses
- * masked. The order matters: numbers first (one written with spaces after `?tel=` would lose its `+998` with the
- * query), then the queries of addresses while they are still one word (`%20` decoded first would leave a query's
- * parts behind as words), then the percent-encoded separators decoded and the numbers again.
- */
-export function scrubText(value: string): string {
-  const withoutQueries = phones(value).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
-  return phones(withoutQueries.replace(ENCODED, (code) => decodeURIComponent(code)))
+function secrets(text: string): string {
+  return text
     .replace(LAUNCH_DATA, "tgWebAppData=***")
     .replace(LAUNCH_FIELDS, "$1=***")
     .replace(BEARER, "Bearer ***")
-    .replace(SESSION, "homi_session=***")
-    .replace(EMAIL, "***@***");
+    .replace(SESSION, "homi_session=***");
+}
+
+/**
+ * `value` with launch data, tokens, the session cookie, phone numbers, e-mail addresses and the queries of addresses
+ * masked. The order matters: launch data, tokens and the cookie first, on the raw text (a decoded `%20` would end a
+ * launch field's value early), then numbers (one written with spaces after `?tel=` would lose its `+998` with the
+ * query), then the queries of addresses while they are still one word (`%20` decoded first would leave a query's parts
+ * behind as words), then the percent-encoded separators decoded, and numbers and secrets again.
+ */
+export function scrubText(value: string): string {
+  const withoutQueries = phones(secrets(value)).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
+  return secrets(phones(withoutQueries.replace(ENCODED, (code) => decodeURIComponent(code)))).replace(EMAIL, "***@***");
 }
 
 /**

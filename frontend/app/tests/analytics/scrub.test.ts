@@ -74,6 +74,12 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     }
   });
 
+  it("masks an encoded launch-data field whole, a space inside it included (fifth review)", () => {
+    const text = scrubText("init user=%7B%22first_name%22%3A%22Ali%20Vali%22%2C%22username%22%3A%22alivali%22%7D&hash=abc done");
+
+    expect(text).toBe("init user=***&hash=*** done");
+  });
+
   it("masks decoded launch data field by field", () => {
     expect(scrubText('query_id=AAH1&user={"id":42,"first_name":"Ali"}&auth_date=1700000000&hash=abc123&signature=xyz')).toBe(
       "query_id=***&user=***&auth_date=***&hash=***&signature=***",
