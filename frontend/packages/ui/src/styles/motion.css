@@ -188,6 +188,11 @@
   pointer-events: none !important;
 }
 
+/* With no animation the save tick would stand undrawn: on a copy it stands drawn, as it was when the sheet went. */
+.leave .save-ok path {
+  stroke-dashoffset: 0;
+}
+
 /*
  * Reduced motion: no keyframe animation and no transition anywhere. Legacy stopped the shimmer, the spinner and
  * transitions; WP-23 (D-UI-7) adds the entrances — the sheet's rise, the rise-in of dialogs and toasts, the

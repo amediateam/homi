@@ -66,7 +66,12 @@ type StyledData = Map<string, Set<string> | true>;
 /** An attribute selector on a `data-*` name; the first group is a backslash when the bracket is an escaped class name. */
 const DATA_SELECTOR = /(\\)?\[(data-[\w-]+)(?:\s*([~|^$*]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\]\s]+)))?[^\]]*\]/g;
 
-let styledCache: { sheets: number; styled: StyledData | null } | null = null;
+/**
+ * What each stylesheet reads, scanned once per sheet object: a sheet that comes and goes (Radix's scroll-lock `<style>`
+ * while a sheet is open, a lazy CSS chunk) is scanned alone, never the 70 KB of the app's main sheet again. A sheet
+ * that cannot be read (served from another origin) maps to `null`.
+ */
+const perSheet = new WeakMap<CSSStyleSheet, StyledData | null>();
 
 function collectStyled(rules: CSSRuleList, styled: StyledData): void {
   for (const rule of Array.from(rules)) {
@@ -93,26 +98,61 @@ function collectStyled(rules: CSSRuleList, styled: StyledData): void {
   }
 }
 
+function scanSheet(sheet: CSSStyleSheet): StyledData | null {
+  if (perSheet.has(sheet)) {
+    return perSheet.get(sheet) ?? null;
+  }
+  let styled: StyledData | null = new Map();
+  try {
+    collectStyled(sheet.cssRules, styled);
+  } catch {
+    styled = null;
+  }
+  perSheet.set(sheet, styled);
+  return styled;
+}
+
 /**
- * Which `data-*` attributes the document's stylesheets read, scanned once per set of stylesheets. `null` when one of
- * them cannot be read (served from another origin): a copy then keeps its attributes, as legacy's does.
+ * Which `data-*` attributes the document's stylesheets read, merged from the per-sheet scans. `null` when one of them
+ * cannot be read: a copy then keeps its attributes, as legacy's does (not the production path: the app serves its CSS
+ * from its own origin, and its CSP allows no other).
  */
 function styledData(): StyledData | null {
-  const sheets = Array.from(document.styleSheets);
-  if (styledCache && styledCache.sheets === sheets.length) {
-    return styledCache.styled;
-  }
-  const styled: StyledData = new Map();
-  let readable = true;
-  for (const sheet of sheets) {
-    try {
-      collectStyled(sheet.cssRules, styled);
-    } catch {
-      readable = false;
+  const merged: StyledData = new Map();
+  for (const sheet of Array.from(document.styleSheets)) {
+    const styled = scanSheet(sheet);
+    if (styled === null) {
+      return null;
+    }
+    for (const [name, values] of styled) {
+      const known = merged.get(name);
+      if (values === true || known === true) {
+        merged.set(name, true);
+      } else {
+        merged.set(name, new Set([...(known ?? []), ...values]));
+      }
     }
   }
-  styledCache = { sheets: sheets.length, styled: readable ? styled : null };
-  return styledCache.styled;
+  return merged;
+}
+
+let warmed = false;
+
+/** Scans the stylesheets while the page is idle, so the first leave does not pay for it in its frame. */
+function warmStyled(): void {
+  if (warmed || typeof window === "undefined") {
+    return;
+  }
+  warmed = true;
+  const idle = (window as Window & { requestIdleCallback?: (run: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
+  const run = () => {
+    styledData();
+  };
+  if (typeof idle === "function") {
+    idle(run, { timeout: 3000 });
+  } else {
+    window.setTimeout(run, 1000);
+  }
 }
 
 const LAYER = "data-leave-layer";
@@ -299,6 +339,7 @@ export function useLeave(
       return undefined;
     }
     node.removeAttribute("data-gone");
+    warmStyled();
     const backdrop = backdropRef?.current ?? null;
     return () => playLeave(node, kind, { backdrop, selector });
   }, [ref, kind, closest, backdropRef, selector]);

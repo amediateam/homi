@@ -132,6 +132,8 @@ describe("SaveState", () => {
     expect(motion).toMatch(/\[data-save\]\[data-phase="busy"\]:disabled,\s*\[data-save\]\[data-phase="done"\]:disabled \{\s*opacity: 1;/);
     // Reduced motion: no shrink, and the tick stands drawn.
     expect(motion).toMatch(/reduce\) \{[\s\S]*\[data-save\]\[data-phase="busy"\] \{\s*clip-path: inset\(-4px round 999px\);[\s\S]*\.save-ok path \{\s*stroke-dashoffset: 0;/);
+    // A leaving copy plays no animation: its tick stands drawn.
+    expect(motion).toMatch(/\.leave \.save-ok path \{\s*stroke-dashoffset: 0;/);
     // At rest the clip lies outside the button, so its focus ring shows.
     expect(motion).toMatch(/\[data-save\] \{\s*clip-path: inset\(-4px round 999px\);/);
   });
