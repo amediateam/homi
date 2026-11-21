@@ -8,7 +8,9 @@
             "display": "$600",
             "period": "/мес",
             "alt": "≈ 7,7 млн сум",
-            "notes": ["депозит $600"],
+            "notes": [
+                "депозит $600"
+            ],
             "usd": 600,
             "kind": null
         },
@@ -144,7 +146,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_6",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 00 000 00 67",
         "offers": [
@@ -184,6 +188,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000067"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -319,7 +331,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_0",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "4-комн. дом, 180 м². Тихий район.",
         "offers": [
@@ -359,6 +373,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000002"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -493,7 +515,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_1",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. комната, 16 м². Рядом метро Чиланзар.",
         "offers": [
@@ -517,6 +541,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000003"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": null,
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -652,7 +684,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_2",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "Помещение, 120 м². Тихий район.",
         "offers": [
@@ -676,6 +710,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000004"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": null,
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -819,7 +861,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_3",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. квартира, 38 м². Рядом метро Ойбек.",
         "offers": [],
@@ -838,6 +882,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000005"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -973,7 +1025,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_4",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "3-комн. дом, 120 м². Тихий район.",
         "offers": [],
@@ -992,6 +1046,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": "+998000000006"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1129,7 +1191,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_5",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. комната, 14 м². Тихий район.",
         "offers": [],
@@ -1148,6 +1212,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000007"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1159,7 +1231,9 @@
             "display": "$85 000",
             "period": null,
             "alt": "≈ 1,1 млрд сум",
-            "notes": ["рассрочка 24 мес."],
+            "notes": [
+                "рассрочка 24 мес."
+            ],
             "usd": 85000,
             "kind": "down_payment"
         },
@@ -1291,7 +1365,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_6",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "3-комн. квартира, 78 м². Рядом метро Юнусабад.",
         "offers": [
@@ -1331,6 +1407,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000008"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1466,7 +1550,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_0",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "5-комн. дом, 240 м². Тихий район.",
         "offers": [
@@ -1506,6 +1592,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": "+998000000009"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1641,7 +1735,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_1",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "Помещение, 160 м². Тихий район.",
         "offers": [
@@ -1665,6 +1761,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000010"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": null,
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1792,7 +1896,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_2",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "Участок, 600 м². Тихий район.",
         "offers": [
@@ -1816,6 +1922,14 @@
         "stub": {
             "city": "andijan",
             "phone": "+998000000011"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -1827,7 +1941,9 @@
             "display": "$600",
             "period": "/мес",
             "alt": "≈ 7,7 млн сум",
-            "notes": ["депозит $600"],
+            "notes": [
+                "депозит $600"
+            ],
             "usd": 600,
             "kind": null
         },
@@ -1963,7 +2079,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_3",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "Светлая квартира рядом с метро.",
         "offers": [
@@ -2003,6 +2121,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000012"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2014,7 +2140,9 @@
             "display": "$350",
             "period": "/мес",
             "alt": "≈ 4,5 млн сум",
-            "notes": ["депозит $350"],
+            "notes": [
+                "депозит $350"
+            ],
             "usd": 350,
             "kind": null
         },
@@ -2146,7 +2274,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_4",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "2-комн. квартира, 48 м². Рядом метро Новза. Тел. +998 00 000 00 41",
         "offers": [
@@ -2186,6 +2316,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000041"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2197,7 +2335,9 @@
             "display": "$900",
             "period": "/мес",
             "alt": "≈ 11,5 млн сум",
-            "notes": ["депозит $900"],
+            "notes": [
+                "депозит $900"
+            ],
             "usd": 900,
             "kind": null
         },
@@ -2329,7 +2469,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_5",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "3-комн. квартира, 82 м². Рядом метро Ойбек.",
         "offers": [
@@ -2369,6 +2511,14 @@
         "stub": {
             "city": "tashkent",
             "phone": "+998000000014"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "verified",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2380,7 +2530,9 @@
             "display": "$300",
             "period": "/мес",
             "alt": "≈ 3,8 млн сум",
-            "notes": ["депозит $300"],
+            "notes": [
+                "депозит $300"
+            ],
             "usd": 300,
             "kind": null
         },
@@ -2509,7 +2661,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": null,
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. квартира, 36 м². Тихий район.",
         "offers": [
@@ -2533,6 +2687,14 @@
         "stub": {
             "city": "tashkent",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2544,7 +2706,9 @@
             "display": "$250",
             "period": "/мес",
             "alt": "≈ 3,2 млн сум",
-            "notes": ["депозит $250"],
+            "notes": [
+                "депозит $250"
+            ],
             "usd": 250,
             "kind": null
         },
@@ -2670,7 +2834,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_1",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "2-комн. квартира, 50 м². Тихий район.",
         "offers": [
@@ -2694,6 +2860,14 @@
         "stub": {
             "city": "andijan",
             "phone": "+998000000017"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2705,7 +2879,9 @@
             "display": "$400",
             "period": "/мес",
             "alt": "≈ 5,1 млн сум",
-            "notes": ["депозит $400"],
+            "notes": [
+                "депозит $400"
+            ],
             "usd": 400,
             "kind": null
         },
@@ -2825,7 +3001,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": "https://t.me/stub_author_7",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. квартира, 38 м². Пишите в Telegram.",
         "offers": [
@@ -2849,6 +3027,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -2860,7 +3046,9 @@
             "display": "$711",
             "period": "/мес",
             "alt": "≈ 9,1 млн сум",
-            "notes": ["депозит $711"],
+            "notes": [
+                "депозит $711"
+            ],
             "usd": 711,
             "kind": null
         },
@@ -2998,7 +3186,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": "https://t.me/stub_author_8",
-            "contact_paid": true
+            "contact_paid": true,
+            "mode": null,
+            "request": null
         },
         "summary": "2-комн. квартира, 60 м² в ЖК. Новый ремонт.",
         "offers": [],
@@ -3033,6 +3223,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -3044,7 +3242,9 @@
             "display": "$480",
             "period": "/мес",
             "alt": "≈ 6,1 млн сум",
-            "notes": ["депозит $480"],
+            "notes": [
+                "депозит $480"
+            ],
             "usd": 480,
             "kind": null
         },
@@ -3173,7 +3373,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": null,
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "2-комн. квартира, 52 м². Рядом парк.",
         "offers": [],
@@ -3208,6 +3410,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -3219,7 +3429,9 @@
             "display": "$550",
             "period": "/мес",
             "alt": "≈ 7,0 млн сум",
-            "notes": ["депозит $550"],
+            "notes": [
+                "депозит $550"
+            ],
             "usd": 550,
             "kind": null
         },
@@ -3348,7 +3560,9 @@
         "contact": {
             "has_phone": true,
             "contact_url": "https://t.me/stub_author_9",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "Квартира с видео. Тел. +998 00 000 00 21",
         "offers": [
@@ -3372,6 +3586,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": "+998000000021"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -3383,7 +3605,9 @@
             "display": "$280",
             "period": "/мес",
             "alt": "≈ 3,6 млн сум",
-            "notes": ["депозит $280"],
+            "notes": [
+                "депозит $280"
+            ],
             "usd": 280,
             "kind": null
         },
@@ -3512,7 +3736,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": "https://t.me/stub_author_10",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. квартира, 34 м², цокольный этаж. Отдельный вход.",
         "offers": [],
@@ -3531,6 +3757,14 @@
         "stub": {
             "city": "tashkent_region",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     },
     {
@@ -3542,7 +3776,9 @@
             "display": "$220",
             "period": "/мес",
             "alt": "≈ 2,8 млн сум",
-            "notes": ["депозит $220"],
+            "notes": [
+                "депозит $220"
+            ],
             "usd": 220,
             "kind": null
         },
@@ -3671,7 +3907,9 @@
         "contact": {
             "has_phone": false,
             "contact_url": "https://t.me/stub_author_11",
-            "contact_paid": false
+            "contact_paid": false,
+            "mode": null,
+            "request": null
         },
         "summary": "1-комн. квартира, 30 м², в подвале дома. После ремонта.",
         "offers": [],
@@ -3690,6 +3928,1652 @@
         "stub": {
             "city": "tashkent_region",
             "phone": null
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
+        }
+    },
+    {
+        "number": 10000001,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 56 м²",
+        "price": {
+            "display": "$620",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 620,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.36912,
+            "lon": 69.28131
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000001/1.jpg?e=0&s=stub",
+                "{media}/stub/10000001/2.jpg?e=0&s=stub",
+                "{media}/stub/10000001/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000001/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000001/1.jpg?e=0&s=stub",
+                "{media}/stub/10000001/2.jpg?e=0&s=stub",
+                "{media}/stub/10000001/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "сегодня",
+            "at": "2026-11-14T09:00:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-14T09:00:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 620,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": null
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": {
+            "value": 672,
+            "own": 600,
+            "n": 14,
+            "metric": "month",
+            "scope": "district",
+            "rooms": 2,
+            "near_class": null,
+            "radius_km": null,
+            "district": "Юнусабад",
+            "place_value": null,
+            "note": null,
+            "updated": "2026-11-12",
+            "has_reason": false,
+            "price_usd": 600,
+            "price_per_m2": null
+        },
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": 15,
+            "description": "Светлая квартира у метро, хозяин. Звоните +998 90 123 45 67 после 18:00."
+        }
+    },
+    {
+        "number": 10000002,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "1-комн. квартира, 38 м²",
+        "price": {
+            "display": "$540",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 540,
+            "kind": null
+        },
+        "rooms": 1,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.37312,
+            "lon": 69.27831
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000002/1.jpg?e=0&s=stub",
+                "{media}/stub/10000002/2.jpg?e=0&s=stub",
+                "{media}/stub/10000002/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000002/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000002/1.jpg?e=0&s=stub",
+                "{media}/stub/10000002/2.jpg?e=0&s=stub",
+                "{media}/stub/10000002/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T11:00:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T11:00:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 540,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": {
+                "status": "pending",
+                "sent_at": "2026-11-19T07:00:00+00:00"
+            }
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": 30,
+            "description": null
+        }
+    },
+    {
+        "number": 10000003,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "3-комн. квартира, 78 м²",
+        "price": {
+            "display": "$700",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 700,
+            "kind": null
+        },
+        "rooms": 3,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.37712,
+            "lon": 69.27531
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000003/1.jpg?e=0&s=stub",
+                "{media}/stub/10000003/2.jpg?e=0&s=stub",
+                "{media}/stub/10000003/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000003/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000003/1.jpg?e=0&s=stub",
+                "{media}/stub/10000003/2.jpg?e=0&s=stub",
+                "{media}/stub/10000003/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T10:40:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T10:40:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 700,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": true,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": {
+                "status": "given",
+                "sent_at": "2026-11-18T09:30:00+00:00"
+            }
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent",
+            "phone": "+998000000083"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": 20,
+            "description": null
+        }
+    },
+    {
+        "number": 10000004,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "1-комн. квартира, 34 м²",
+        "price": {
+            "display": "$480",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 480,
+            "kind": null
+        },
+        "rooms": 1,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.38112,
+            "lon": 69.27231
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000004/1.jpg?e=0&s=stub",
+                "{media}/stub/10000004/2.jpg?e=0&s=stub",
+                "{media}/stub/10000004/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000004/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000004/1.jpg?e=0&s=stub",
+                "{media}/stub/10000004/2.jpg?e=0&s=stub",
+                "{media}/stub/10000004/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T10:20:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T10:20:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 480,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": {
+                "status": "declined",
+                "sent_at": "2026-11-17T12:00:00+00:00"
+            }
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
+        }
+    },
+    {
+        "number": 10000005,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 60 м²",
+        "price": {
+            "display": "$650",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 650,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.38512,
+            "lon": 69.26931
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000005/1.jpg?e=0&s=stub",
+                "{media}/stub/10000005/2.jpg?e=0&s=stub",
+                "{media}/stub/10000005/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000005/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000005/1.jpg?e=0&s=stub",
+                "{media}/stub/10000005/2.jpg?e=0&s=stub",
+                "{media}/stub/10000005/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T10:00:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T10:00:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 650,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": {
+                "status": "expired",
+                "sent_at": "2026-11-12T08:00:00+00:00"
+            }
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
+        }
+    },
+    {
+        "number": 10000006,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 52 м²",
+        "price": {
+            "display": "$590",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 590,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.38912,
+            "lon": 69.26631
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000006/1.jpg?e=0&s=stub",
+                "{media}/stub/10000006/2.jpg?e=0&s=stub",
+                "{media}/stub/10000006/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000006/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000006/1.jpg?e=0&s=stub",
+                "{media}/stub/10000006/2.jpg?e=0&s=stub",
+                "{media}/stub/10000006/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T09:40:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T09:40:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 590,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": {
+                "status": "cancelled",
+                "sent_at": "2026-11-16T15:00:00+00:00"
+            }
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
+        }
+    },
+    {
+        "number": 10000007,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 49 м²",
+        "price": {
+            "display": "$560",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 560,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.39312,
+            "lon": 69.26331
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000007/1.jpg?e=0&s=stub",
+                "{media}/stub/10000007/2.jpg?e=0&s=stub",
+                "{media}/stub/10000007/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000007/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000007/1.jpg?e=0&s=stub",
+                "{media}/stub/10000007/2.jpg?e=0&s=stub",
+                "{media}/stub/10000007/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T09:20:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T09:20:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 560,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": true,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "phone",
+            "request": null
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent",
+            "phone": "+998000000087"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": 10,
+            "description": null
+        }
+    },
+    {
+        "number": 10000008,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 54 м²",
+        "price": {
+            "display": "$600",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 600,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.39712,
+            "lon": 69.26031
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/10000008/1.jpg?e=0&s=stub",
+                "{media}/stub/10000008/2.jpg?e=0&s=stub",
+                "{media}/stub/10000008/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/10000008/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/10000008/1.jpg?e=0&s=stub",
+                "{media}/stub/10000008/2.jpg?e=0&s=stub",
+                "{media}/stub/10000008/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "вчера",
+            "at": "2026-11-13T09:00:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 2,
+            "publications": 1,
+            "channels": 0,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T09:00:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 600,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "request",
+            "request": null
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": null,
+        "stub": {
+            "city": "tashkent"
+        },
+        "origin": "native",
+        "owner": {
+            "tier": "self",
+            "mine": true,
+            "listing_id": "01JF0000000000000000000003",
+            "response_minutes": 15,
+            "description": "Светлая, тихий двор."
+        }
+    },
+    {
+        "number": 100024,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "2-комн. квартира, 47 м²",
+        "price": {
+            "display": "$520",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 520,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.36512,
+            "lon": 69.28431
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100024/1.jpg?e=0&s=stub",
+                "{media}/stub/100024/2.jpg?e=0&s=stub",
+                "{media}/stub/100024/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/100024/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/100024/1.jpg?e=0&s=stub",
+                "{media}/stub/100024/2.jpg?e=0&s=stub",
+                "{media}/stub/100024/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": true,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "на днях",
+            "at": "2026-11-13T08:10:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": null,
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 3,
+            "publications": 2,
+            "channels": 2,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-13T08:10:00+00:00",
+                "channel": null,
+                "url": null,
+                "text": null,
+                "kind": "published",
+                "price_usd": 520,
+                "change_pct": null
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "Хозяин",
+            "count": 1
+        },
+        "owner_label": null,
+        "contact": {
+            "has_phone": false,
+            "contact_url": null,
+            "contact_paid": false,
+            "mode": "hidden",
+            "request": null
+        },
+        "summary": null,
+        "offers": [],
+        "original": {
+            "text": null,
+            "url": null,
+            "deleted": false
+        },
+        "sources": [],
+        "comparison": {
+            "value": 672,
+            "own": 600,
+            "n": 14,
+            "metric": "month",
+            "scope": "district",
+            "rooms": 2,
+            "near_class": null,
+            "radius_km": null,
+            "district": "Юнусабад",
+            "place_value": null,
+            "note": null,
+            "updated": "2026-11-12",
+            "has_reason": false,
+            "price_usd": 600,
+            "price_per_m2": null
+        },
+        "stub": {
+            "city": "tashkent_region"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "self",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
+        }
+    },
+    {
+        "number": 100025,
+        "deal": "rent_long",
+        "type": "apartment",
+        "title": "1-комн. квартира, 40 м²",
+        "price": {
+            "display": "$450",
+            "period": "/мес",
+            "alt": "≈ 7,7 млн сум",
+            "notes": [
+                "депозит $600"
+            ],
+            "usd": 450,
+            "kind": null
+        },
+        "rooms": 2,
+        "area_total": 54,
+        "floor": 3,
+        "floors_total": 9,
+        "district": {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        },
+        "place": null,
+        "landmark": "Мегапланет",
+        "metro": {
+            "name": "Минор",
+            "km": 0.7
+        },
+        "center_km": 4.2,
+        "location": {
+            "lat": 41.36512,
+            "lon": 69.28431
+        },
+        "photos": {
+            "preview": [
+                "{media}/stub/100025/1.jpg?e=0&s=stub",
+                "{media}/stub/100025/2.jpg?e=0&s=stub",
+                "{media}/stub/100025/3.jpg?e=0&s=stub"
+            ],
+            "count": 3,
+            "cover": "{media}/stub/100025/1.jpg?e=0&s=stub",
+            "items": [
+                "{media}/stub/100025/1.jpg?e=0&s=stub",
+                "{media}/stub/100025/2.jpg?e=0&s=stub",
+                "{media}/stub/100025/3.jpg?e=0&s=stub"
+            ]
+        },
+        "has_video": false,
+        "pets_ok": false,
+        "is_owner": true,
+        "owner_verified": false,
+        "posted": {
+            "label": "Опубликовано",
+            "when": "на днях",
+            "at": "2026-11-13T08:10:00+00:00"
+        },
+        "status_text": null,
+        "market": {
+            "label": "Вторичка",
+            "code": "secondary",
+            "median_delta": -0.12,
+            "tone": "good"
+        },
+        "favorite": false,
+        "viewed": false,
+        "source_ref": {
+            "channel": "stub_channel_a",
+            "post_id": 4001
+        },
+        "facts": [
+            {
+                "key": "type",
+                "label": "Тип",
+                "value": "Квартира"
+            },
+            {
+                "key": "rooms",
+                "label": "Комнат",
+                "value": "2"
+            },
+            {
+                "key": "area",
+                "label": "Площадь",
+                "value": "54 м²"
+            },
+            {
+                "key": "floor",
+                "label": "Этаж",
+                "value": "3 из 9"
+            }
+        ],
+        "nearby": [
+            {
+                "kind": "park",
+                "name": "Парк",
+                "km": 0.4,
+                "note": null
+            },
+            {
+                "kind": "school",
+                "name": "Школа",
+                "km": 0.9,
+                "note": null
+            }
+        ],
+        "stats": {
+            "days_listed": 3,
+            "publications": 2,
+            "channels": 2,
+            "views": 41
+        },
+        "price_history": [
+            {
+                "at": "2026-11-10T07:00:00+00:00",
+                "channel": "stub_channel_a",
+                "url": "https://t.me/stub_channel_a/3979",
+                "text": null,
+                "kind": "published",
+                "price_usd": 648,
+                "change_pct": null
+            },
+            {
+                "at": "2026-11-14T06:40:00+00:00",
+                "channel": "stub_channel_a",
+                "url": "https://t.me/stub_channel_a/4001",
+                "text": null,
+                "kind": "price_down",
+                "price_usd": 600,
+                "change_pct": -7.4
+            }
+        ],
+        "geo_radius_m": 500,
+        "author": {
+            "kind": "phone",
+            "label": "+998 ** *** ** 67",
+            "count": 3
+        },
+        "owner_label": "Хозяин",
+        "contact": {
+            "has_phone": true,
+            "contact_url": "https://t.me/stub_author_6",
+            "contact_paid": false,
+            "mode": null,
+            "request": null
+        },
+        "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 00 000 00 67",
+        "offers": [
+            {
+                "text": "Торг",
+                "url": null
+            }
+        ],
+        "original": {
+            "text": "Сдаётся 2-комн. квартира, 54 м². Чисто, уютно. Звоните: +998 00 000 00 67",
+            "url": "https://t.me/stub_channel_a/4001",
+            "deleted": false
+        },
+        "sources": [
+            {
+                "handle": "stub_channel_a",
+                "url": "https://t.me/stub_channel_a/4001"
+            }
+        ],
+        "comparison": {
+            "value": 672,
+            "own": 600,
+            "n": 14,
+            "metric": "month",
+            "scope": "district",
+            "rooms": 2,
+            "near_class": null,
+            "radius_km": null,
+            "district": "Юнусабад",
+            "place_value": null,
+            "note": null,
+            "updated": "2026-11-12",
+            "has_reason": false,
+            "price_usd": 600,
+            "price_per_m2": null
+        },
+        "stub": {
+            "city": "tashkent_region",
+            "phone": "+998000000025"
+        },
+        "origin": "legacy",
+        "owner": {
+            "tier": "claimed",
+            "mine": false,
+            "listing_id": null,
+            "response_minutes": null,
+            "description": null
         }
     }
 ]

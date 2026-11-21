@@ -2,6 +2,7 @@
 
 namespace App\Services\Sources\Data;
 
+use App\Enums\ContactMode;
 use App\Services\Listings\PhoneMasker;
 
 /**
@@ -9,8 +10,9 @@ use App\Services\Listings\PhoneMasker;
  * of the author (DEC-52): `hasPhone` says whether `POST …/contact` can give one; `ListingContact` is the only object
  * with a number.
  *
- * `fromArray()` is the one way a driver builds it; it masks `summary`, `original.text`, `offers[].text` and
- * `price_history[].text` (and, through `ListingSummary`, `title`).
+ * `fromArray()` is the one way a driver builds it; it masks `summary`, `original.text`, `offers[].text`,
+ * `price_history[].text` and `owner.description` (and, through `ListingSummary`, `title`). Since WP-80 it carries the
+ * owner part (`owner`) and the two contact keys of a self-placed listing (`contactMode`, `contactRequest`).
  */
 final readonly class ListingDetails
 {
@@ -48,6 +50,9 @@ final readonly class ListingDetails
         public bool $originalDeleted,
         public array $sources,
         public ?MarketComparison $comparison,
+        public ListingOwner $owner,
+        public ?ContactMode $contactMode,
+        public ?ContactRequestState $contactRequest,
     ) {}
 
     /** @param  array<array-key, mixed>  $data */
@@ -60,6 +65,8 @@ final readonly class ListingDetails
         $comparison = Fields::nullableObject($data, 'comparison');
         $summary = Fields::nullableString($data, 'summary');
         $originalText = Fields::nullableString($original, 'text');
+        $mode = Fields::nullableString($contact, 'mode');
+        $request = Fields::nullableObject($contact, 'request');
 
         return new self(
             preview: ListingSummary::fromArray($data),
@@ -87,6 +94,15 @@ final readonly class ListingDetails
             originalDeleted: Fields::bool($original, 'deleted'),
             sources: array_map(ListingSourceLink::fromArray(...), Fields::objects($data, 'sources')),
             comparison: $comparison === null ? null : MarketComparison::fromArray($comparison),
+            owner: ListingOwner::fromArray(Fields::object($data, 'owner')),
+            contactMode: $mode === null ? null : (ContactMode::tryFrom($mode) ?? throw new \InvalidArgumentException('The field "contact.mode" must be a contact mode or null.')),
+            contactRequest: $request === null ? null : ContactRequestState::fromArray($request),
         );
+    }
+
+    /** The same card with the invitation of DEC-94 decided by the source (`owner.entry`). */
+    public function withOwnerEntry(bool $entry): self
+    {
+        return clone ($this, ['owner' => $this->owner->withEntry($entry)]);
     }
 }

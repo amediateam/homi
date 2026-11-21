@@ -74,7 +74,7 @@ final class ContractShapes
 
     /** A listing preview (WP-12): an item of every listing list and `data` of `GET /listings/{number}?preview=1`. */
     public const array LISTING_PREVIEW = [
-        'number' => 'int', 'deal' => 'string', 'type' => 'string', 'title' => 'string',
+        'number' => 'int', 'origin' => 'string', 'deal' => 'string', 'type' => 'string', 'title' => 'string',
         'price' => ['display' => 'string', 'period' => 'string', 'alt' => 'string', 'notes' => ['*' => 'string'], 'usd' => 'int', 'kind' => 'string'],
         'rooms' => 'int', 'area_total' => 'float|int', 'floor' => 'int', 'floors_total' => 'int',
         'district' => ['code' => 'string', 'name' => 'string'], 'place' => 'string', 'landmark' => 'string',
@@ -99,7 +99,11 @@ final class ContractShapes
         'geo_radius_m' => 'int',
         'author' => ['kind' => 'string', 'label' => 'string', 'count' => 'int'],
         'owner_label' => 'string',
-        'contact' => ['has_phone' => 'bool', 'contact_url' => 'string', 'contact_paid' => 'bool'],
+        'owner' => ['tier' => 'string', 'mine' => 'bool', 'listing_id' => 'string', 'entry' => 'bool', 'response_minutes' => 'int', 'description' => 'string'],
+        'contact' => [
+            'has_phone' => 'bool', 'contact_url' => 'string', 'contact_paid' => 'bool', 'mode' => 'string',
+            'request' => ['status' => 'string', 'sent_at' => 'string'],
+        ],
         'summary' => 'string',
         'offers' => ['*' => ['text' => 'string', 'url' => 'string']],
         'original' => ['text' => 'string', 'url' => 'string', 'deleted' => 'bool'],
@@ -129,7 +133,7 @@ final class ContractShapes
 
     /** `data` of `GET /listings/map` (WP-12); `with_point` since legacy release `index-CIa0Ldj2.js`. */
     public const array MAP = [
-        'points' => ['*' => ['number' => 'int', 'lat' => 'float|int', 'lon' => 'float|int', 'label' => 'string', 'tone' => 'string', 'priced' => 'bool', 'usd' => 'int']],
+        'points' => ['*' => ['number' => 'int', 'origin' => 'string', 'lat' => 'float|int', 'lon' => 'float|int', 'label' => 'string', 'tone' => 'string', 'priced' => 'bool', 'usd' => 'int']],
         'total' => 'int',
         'with_point' => 'int',
     ];

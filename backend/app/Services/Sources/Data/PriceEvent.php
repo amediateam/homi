@@ -12,7 +12,7 @@ final readonly class PriceEvent
 {
     public function __construct(
         public string $at,
-        public string $channel,
+        public ?string $channel,
         public ?string $url,
         public ?string $text,
         public ?string $kind,
@@ -27,7 +27,7 @@ final readonly class PriceEvent
 
         return new self(
             at: Fields::string($data, 'at'),
-            channel: ltrim(Fields::string($data, 'channel'), '@'),
+            channel: ($channel = Fields::nullableString($data, 'channel')) === null ? null : ltrim($channel, '@'),
             url: Fields::nullableString($data, 'url'),
             text: $text === null ? null : PhoneMasker::mask($text),
             kind: Fields::nullableString($data, 'kind'),
