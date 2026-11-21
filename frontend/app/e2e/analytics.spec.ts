@@ -132,7 +132,11 @@ test.describe("analytics @analytics", () => {
     page.on("response", async (response) => {
       const url = new URL(response.url());
       if (url.pathname.startsWith("/_next/static/chunks/") && url.pathname.endsWith(".js")) {
-        recorder ||= (await response.text().catch(() => "")).includes(RECORDER_MARK);
+        // Await the body first and only ever set the flag: a later chunk's body must not write `false` over it.
+        const body = await response.text().catch(() => "");
+        if (body.includes(RECORDER_MARK)) {
+          recorder = true;
+        }
       }
     });
     // The stub profile sampled for replay (`me/replay.json`): the sign-in, the server's render after it and every `/me`
@@ -143,6 +147,8 @@ test.describe("analytics @analytics", () => {
     await launchApp(page, { path: "/" });
     await expect(page.locator("article[data-listing]").first()).toBeVisible();
     await expect.poll(() => ph.requests.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    // The recorder loads only outside lite mode: a failure below then names its cause.
+    expect(await page.evaluate(() => document.documentElement.classList.contains("lite"))).toBe(false);
 
     await expect.poll(() => recorder, { timeout: 10_000 }).toBe(true);
   });
@@ -152,7 +158,11 @@ test.describe("analytics @analytics", () => {
     page.on("response", async (response) => {
       const url = new URL(response.url());
       if (url.pathname.startsWith("/_next/static/chunks/") && url.pathname.endsWith(".js")) {
-        recorder ||= (await response.text().catch(() => "")).includes(RECORDER_MARK);
+        // Await the body first and only ever set the flag: a later chunk's body must not write `false` over it.
+        const body = await response.text().catch(() => "");
+        if (body.includes(RECORDER_MARK)) {
+          recorder = true;
+        }
       }
     });
     await stubMedia(page);
