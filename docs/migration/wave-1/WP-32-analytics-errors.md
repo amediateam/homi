@@ -512,8 +512,12 @@ The package is built as designed, with these points decided in the code (rule 6)
   before them, dashes of any kind, other international numbers of ten digits or more and decoded launch-data fields,
   and take the query and hash off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or
   international number is masked also next to a letter; nine local digits next to a letter are taken for an id's hex
-  and left. A price such as «950 000 000», a version, a coordinate or an id is left alone. Every element marked `ph-mask` (phones,
-  author labels, the original text) is also `ph-no-capture`, so autocapture never takes its text.
+  and left. A price such as «950 000 000», a version, a coordinate or an id is left alone. Launch data, tokens and the
+  session cookie are masked on the raw text first; then numbers, then the queries of addresses (still one word), then
+  the encoded separators (`%20`, `%2B`, brackets, dash, dot) are decoded and numbers and secrets masked again. Left
+  open on purpose (low, from the reviews): double encoding, encoded no-break spaces or dashes, full-width digits and
+  `/` or `,` as separators. Every element marked `ph-mask` (phones, author labels, the original text) is also
+  `ph-no-capture`, so autocapture never takes its text.
 - **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
   changes under it), and a layer that leaves lets the same layer count again.
 - **PostHog.** Every option name was checked in the types of the installed `posthog-js` 1.434.15. The web vitals
