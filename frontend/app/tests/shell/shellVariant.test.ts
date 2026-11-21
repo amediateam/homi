@@ -7,6 +7,7 @@ import { activeTabOf, isLayerAddress, type ShellVariant, shellVariantOf } from "
 import { matchRoute, routes, SETTINGS_PAGES } from "@/lib/navigation/routes";
 
 const RADAR = "01JD7K3QZ8V6R3M2N4P5Q6R7S8";
+const OWNER = "01JF0000000000000000000004";
 const params = (query = "") => new URLSearchParams(query);
 
 /** Every route of `25` §3.2 (and its search-sheet and map layer cases) with the variant the shell draws. */
@@ -44,6 +45,13 @@ const ROUTES: [pathname: string, query: string, variant: ShellVariant][] = [
   [routes.radarFound({ trigger: "pause" }).split("?")[0], "trigger=pause", "radars"],
   [routes.settings(), "", "settings"],
   ...SETTINGS_PAGES.map((page): [string, string, ShellVariant] => [routes.settingsPage(page), "", "settings"]),
+  [routes.ownerListings(), "", "settings"],
+  [routes.ownerNew(), "", "none"],
+  [routes.ownerForm(OWNER), "", "none"],
+  [routes.ownerPlace(OWNER), "first=1", "none"],
+  [routes.ownerPhone(OWNER), "", "none"],
+  [routes.ownerMode(OWNER), "", "none"],
+  [routes.ownerDone(OWNER), "", "none"],
   [routes.welcomeLanguage(), "", "none"],
   [routes.welcomeCity(), "", "none"],
   [routes.noAccess(), "reason=full", "none"],
@@ -75,6 +83,9 @@ describe("shellVariantOf (D-SH-1)", () => {
         "history",
         "listing",
         "map",
+        "owner",
+        "ownerListings",
+        "ownerNew",
         "quickFilter",
         "radar",
         "radarFound",
@@ -106,6 +117,12 @@ describe("isLayerAddress", () => {
       routes.radarFound({ trigger: "delete" }).split("?")[0],
       routes.radar(RADAR),
       routes.radarEdit(RADAR),
+      routes.ownerNew(),
+      routes.ownerForm(OWNER),
+      routes.ownerPlace(OWNER),
+      routes.ownerPhone(OWNER),
+      routes.ownerMode(OWNER),
+      routes.ownerDone(OWNER),
     ]) {
       expect(isLayerAddress(pathname), pathname).toBe(true);
     }
@@ -120,6 +137,7 @@ describe("isLayerAddress", () => {
       routes.radars(),
       routes.settings(),
       ...SETTINGS_PAGES.map((page) => routes.settingsPage(page)),
+      routes.ownerListings(),
       routes.welcomeLanguage(),
       routes.welcomeCity(),
       routes.noAccess(),
