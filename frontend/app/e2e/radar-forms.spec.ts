@@ -1,4 +1,4 @@
-import { expect as baseExpect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect as baseExpect, launchApp, stubMedia, test as base, type LaunchedApp, shownText } from "@homi/testing/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -209,7 +209,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(sheet.locator('[data-section="rooms"]')).toBeVisible();
       await expect(visible(page, '[data-slot="bottom-sheet"] [data-action="apply"]')).toHaveCount(0);
       const count = ((await (await counted).json()) as { data: { count: number } }).data.count;
-      await expect(matchingNow(page)).toHaveText(`Сейчас подходит: ${count}`);
+      await expect.poll(() => shownText(matchingNow(page)), { timeout: 20_000 }).toBe(`Сейчас подходит: ${count}`);
       await expect(action(page, "subscribe")).toHaveText("Включить радар");
 
       const actions = recordRequests(page, isServerAction);
@@ -243,7 +243,7 @@ for (const mode of ["cookie", "header"] as const) {
       const editor = form(page, "radar/edit");
       await expect(roomButton(editor.locator('[data-section="rooms"]'), "2")).toHaveAttribute("aria-pressed", "true");
       await expect(editor.locator('[data-section="posted"]')).toHaveCount(0);
-      await expect(matchingNow(page)).toHaveText(/^Сейчас подходит: \d+$/);
+      await expect.poll(() => shownText(matchingNow(page)), { timeout: 20_000 }).toMatch(/^Сейчас подходит: \d+$/);
       await expect(action(page, "save")).toHaveText("Сохранить");
       await expect(visible(page, '[data-slot="bottom-sheet"] [data-action="subscribe"]')).toHaveCount(0);
       // The editor is portalled next to the radar sheet, which stays mounted under it.
@@ -331,7 +331,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(actions).toHaveLength(sent);
     });
 
-    test("«Да, в другом месте» → «Где нашли?»: each of the seven places closes with «Поздравляем! 🎉 Спасибо, что рассказали»", async ({ page }) => {
+    test("«Да, в другом месте» → «Где нашли?»: each of the seven places shows «Поздравляем!» without a toast; «Готово» closes to the tab (WP-39)", async ({ page }) => {
       // Seven rounds of pause, survey and answer.
       test.setTimeout(120_000);
       await open(page, mode);
@@ -357,7 +357,14 @@ for (const mode of ["cookie", "header"] as const) {
         await expect(survey(page).locator("[data-where]")).toHaveCount(7);
         await expect(survey(page).locator(`[data-where="${code}"]`)).toHaveText(label);
         await survey(page).locator(`[data-where="${code}"]`).click();
-        await closedWith(page, "Поздравляем! 🎉 Спасибо, что рассказали", actions, `{"where":"${code}"}`);
+        await expect(survey(page)).toHaveAttribute("data-step", "moved");
+        await expect(page.getByRole("dialog", { name: "Поздравляем!" })).toBeVisible();
+        await expect(survey(page)).toContainText("Спасибо, что рассказали — это помогает нам стать лучше.");
+        await expect.poll(() => actions.at(-1)?.postData() ?? "").toContain(`{"where":"${code}"}`);
+        await expect(appToast(page)).toHaveCount(0);
+        await survey(page).locator('[data-action="done"]').click();
+        await onTab(page);
+        await expect(appToast(page)).toHaveCount(0);
       }
     });
 

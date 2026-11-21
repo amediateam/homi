@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#100) |
 | Depends on | intake `index-YX9bFVws`; WP-38 (the queue's order of 2026-11-20, `decisions/2026-11-20-developer-answers.md`; both edit `RadarSheetRoute`) |
 | Size | about 2 100 changed lines with tests, L (the integrator's estimate; if the PR passes 3 000 lines, split it at the line between "Leave" and the rest, and give the second half the next free number) |
 | Behaviour reference | `03` §1.2, §2 (SCR-007, SCR-014, SCR-015, SCR-022, SCR-028 … SCR-031, SCR-032, SCR-042), §2.1, §3.4, §3.6, §4 (BR-APP-112 … BR-APP-118, BR-APP-121), §5 / §5b (LB-APP-085, LB-APP-086, LB-APP-087, LB-APP-089, LB-APP-091); `wave-1/baseline.md`, built code behind the pin, rows 44 – 54 |
@@ -173,12 +173,13 @@ invitation row to it, which then shows under the note too, as legacy's row does.
 ## Files
 
 New: `frontend/packages/ui/src/lib/leave.ts`, `frontend/packages/ui/src/components/{RollNumber,SaveState}.tsx`, their
-tests `frontend/packages/ui/tests/{leave,RollNumber,SaveState}.test.tsx`, `frontend/app/lib/ui/rollText.ts` with
-`tests/ui/rollText.test.ts`, and `frontend/app/e2e/motion.spec.ts`.
+tests `frontend/packages/ui/tests/{leave,RollNumber,SaveState}.test.tsx`, `frontend/app/lib/ui/rollText.tsx` with
+`tests/ui/rollText.test.tsx`, `frontend/app/styles/motion.css`, the test helper `frontend/app/tests/helpers/shown.ts`, and
+`frontend/app/e2e/motion.spec.ts`.
 
 Changed in `frontend/packages/`: `ui/src/components/{BottomSheet,SubPageFrame,SegmentedControl}.tsx`,
-`ui/src/hooks/{useSheetDrag,useSwipeBack}.ts` (the `data-gone` mark), `ui/src/styles/{theme,motion}.css`,
-`ui/src/index.ts`, `i18n/src/format/flow.ts` (`flowParts`), their tests (`ui/tests/{BottomSheet,SubPageFrame,controls}
+`ui/src/hooks/{useSheetDrag,useSwipeBack}.ts` (the `data-gone` mark), `ui/src/styles/{theme,motion,layout}.css`,
+`ui/src/index.ts`, `i18n/src/format/flow.ts` (`flowParts`), `testing/src/playwright.ts` (`shownText`), their tests (`ui/tests/{BottomSheet,SubPageFrame,controls}
 .test.tsx`, `ui/tests/tokens.test.ts`, `i18n/tests/format/flow.test.ts`).
 
 Changed under `frontend/app/`:
@@ -288,6 +289,57 @@ Run in ru, uz and en, light and dark, in Telegram on staging.
 - [ ] Rows 44 – 54 of `baseline.md` (built code behind the pin) are marked closed.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6); the first two came out of the
+browser check the design left open.
+
+- **Where the copy goes.** Always into one leave layer at the end of `body` (`display: contents`, so a copy stacks by
+  its own `z-index`), at the node's box, never into the node's parent. In the browser a sheet whose route is hidden
+  stays in `body` with `display: none`; its copy plays beside it.
+- **How the sheet names itself.** `useLeave` runs in the sheet's frame, a child of the sheet's element, and a layout
+  effect runs before a parent element's ref is attached: with the sheet's own ref the leave was never armed. The
+  frame names the sheet through its header (`closest`). The backdrop, a sibling of the sheet in HOMI, is read when the
+  effect runs and copied (without children) with the sheet's leave; legacy's "other children of the backdrop fade in
+  160 ms" has no counterpart, HOMI's backdrop has none.
+- **A copy does not answer to the live node's names.** Legacy's copy keeps every attribute. HOMI's keeps its classes
+  and only the `data-*` attributes a stylesheet rule reads — the name, or the name with the value read
+  (`styledData` scans the document's stylesheets once per set of them) — loses every `id`, and its `data-slot` gets
+  the suffix `-leave`; `layout.css` gives `bottom-sheet-leave` the sheet's two colour variables. So for the length of
+  a leave neither the app nor a spec's selector meets two of anything: the whole local e2e suite found the first
+  version's copy answering to `[data-slot="bottom-sheet-close"]` beside a newly opened sheet. When a stylesheet
+  cannot be read (another origin), the copy keeps its attributes, except the route and toast markers.
+- **"What holds it went" also means "was hidden".** A toast inside a sheet whose route is hidden does not leave on its
+  own (the sheet's copy carries it). A sheet rendered in place (`portal={false}`, a sheet address loaded directly)
+  whose route is hidden plays no leave either: its holder is hidden with it. Listed for the reviewer.
+- **A stale mark.** `useLeave` drops `data-gone` when the node is shown, so a node Next shows again after
+  `skipLeave` (the radar sheet after a find) leaves on its next close.
+- **Rolling numbers.** `rollText` is a `.tsx` file (it returns elements) and stands a private-use character in for
+  the number instead of legacy's NUL. A rolling number's `textContent` holds its strips of digits, so `toHaveText`
+  no longer reads «Показать 33»: the unit tests read the shown text through `tests/helpers/shown.ts`, the specs
+  through `shownText` of `@homi/testing/playwright` (new), and the button's accessible name comes from the number's
+  label. `filters.spec.ts`, `radar-forms.spec.ts` and `return-nudge.spec.ts` changed for it; `radar-forms.spec.ts`
+  also follows the survey's new step.
+- **Save phases.** The button carries `data-save` and `data-phase` (`saveButtonProps`) instead of legacy's classes.
+  `confirm` travels in the options of `subscribe` and `saveEdit`, beside `scope`, not as a fourth argument. Each
+  owner's `confirm` skips the tick when its sheet was left before the answer, so a flow the user walked away from
+  shows its toast at once.
+- **The favourite.** The heart and the burst are siblings and carry different keys (legacy's `b${taps}`): with one
+  key the old heart stayed beside the new one. A failed save takes the burst away and does not replay the heart.
+- **The thumb.** An element with its width and `translateX` set inline, not legacy's `:has()` rule, so it needs no
+  fallback. Under reduced motion the one rule of `motion.css` stops its slide; the design said HOMI adds no rule,
+  and none was added, but the thumb does not slide there.
+- **Curves.** Tailwind's `ease-out` utility reads the same variable as the new token, so the keyword is written
+  `ease-[ease-out]` where legacy means the keyword (the label of the market sheet's demonstration).
+  `data-market-marker` is now the wrapper that moves.
+- **The end of the feed.** The block is rendered only with its line; WP-82 renders it for its row.
+- **End-to-end.** The toast's leave and the save tick are one case, as the toast is the one the subscribe shows. The
+  `tip` kind has no caller and no browser case; its keyframe is unit-tested.
+
+Not done here: the acceptance checklist inside Telegram on staging, and the deploy (production track).
+
 ## Handoff
 
-Empty.
+Finished: every step of the package, with its unit, component and end-to-end tests; rows 44 – 54 of `baseline.md`
+are marked closed. The checks run and the CI runs are in the description of PR #100. Nothing is half-done. Next: the
+production track's deploy and the acceptance checklist on staging.

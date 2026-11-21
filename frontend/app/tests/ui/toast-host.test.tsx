@@ -289,6 +289,9 @@ describe("ToastHost: the countdown ring and the leave (WP-39, BR-APP-118, BR-APP
 
     const button = screen.getByRole("button", { name: "Отменить" });
     expect(button.contains(ring())).toBe(true);
+    // Legacy's order: the ring, then the label, 7 px apart.
+    expect(button.firstElementChild).toBe(ring());
+    expect(button.className).toMatch(/gap-\[7px\]/);
     expect(ring()?.getAttribute("aria-hidden")).toBe("true");
     const [track, left] = [...ring()!.querySelectorAll<SVGCircleElement>("circle")];
     expect(track!.getAttribute("r")).toBe("8");

@@ -621,5 +621,23 @@ describe("RadarForms: the save phases of the button (WP-39, BR-APP-114)", () => 
 
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(tick("subscribe")).toBeNull();
+    // No tick was awaited: the button is still busy as the sheet goes, and idle when the sheet is shown again (below).
+    expect(phase("subscribe")).toBe("busy");
+  });
+
+  it("a sheet hidden with its route after a save starts idle when it is shown again", async () => {
+    const flow = confirming(state.subscribe);
+    const view = render(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+    fireEvent.click(action("subscribe"));
+    await flow.answer();
+    await act(() => vi.advanceTimersByTimeAsync(900));
+    expect(phase("subscribe")).toBe("done");
+
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), true));
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+
+    expect(phase("subscribe")).toBe("idle");
+    expect(tick("subscribe")).toBeNull();
+    expect(action("subscribe").disabled).toBe(false);
   });
 });

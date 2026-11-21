@@ -399,3 +399,74 @@ describe("FiltersSheetRoute: the flags", () => {
     expect(await apply()).toBe(href);
   });
 });
+
+describe("FiltersSheetRoute: the save phases of «Включить радар» (WP-39, BR-APP-114)", () => {
+  const phase = () => button("subscribe").getAttribute("data-phase");
+  const tick = () => button("subscribe").querySelector('[data-slot="save-tick"]');
+
+  /** The flow as `useSubscribe` runs it: the answer, then the button's tick, then the result. */
+  function confirming() {
+    let answer: () => void = () => undefined;
+    const arrived = new Promise<void>((done) => (answer = done));
+    state.subscribe.mockImplementation(async (_filters, _entry, _relaxed, options) => {
+      await arrived;
+      await options?.confirm?.();
+      return { ok: true };
+    });
+    return { answer: () => act(async () => answer()) };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("idle → the spinner while the request runs → the tick for 900 ms → the sheet closes", async () => {
+    const flow = confirming();
+    route();
+    expect(phase()).toBe("idle");
+
+    fireEvent.click(button("subscribe"));
+    expect(phase()).toBe("busy");
+    expect(button("subscribe").querySelector('[data-slot="save-spinner"]')).not.toBeNull();
+
+    await flow.answer();
+    expect(phase()).toBe("done");
+    expect(tick()).not.toBeNull();
+    expect(state.back).not.toHaveBeenCalled();
+
+    await act(() => vi.advanceTimersByTimeAsync(899));
+    expect(state.back).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(state.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("a sheet the user already left draws no tick: the flow goes on at once and nothing steps back", async () => {
+    const flow = confirming();
+    route();
+
+    fireEvent.click(button("subscribe"));
+    window.history.pushState(null, "", "/ru?city=tashkent&rooms_min=2");
+    await flow.answer();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(tick()).toBeNull();
+    expect(phase()).toBe("idle");
+    expect(state.back).not.toHaveBeenCalled();
+  });
+
+  it("a failure gives the button back", async () => {
+    state.subscribe.mockResolvedValue({ ok: false });
+    route();
+
+    fireEvent.click(button("subscribe"));
+    expect(phase()).toBe("busy");
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(phase()).toBe("idle");
+    expect(button("subscribe").disabled).toBe(false);
+  });
+});

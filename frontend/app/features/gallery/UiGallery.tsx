@@ -31,7 +31,10 @@ import {
   PartyPopper,
   Plus,
   RadarIcon,
+  RollNumber,
   RotateCw,
+  saveButtonProps,
+  SaveState,
   Search,
   SegmentedControl,
   Settings,
@@ -42,6 +45,7 @@ import {
   SubPageFrame,
   Trash,
   Users,
+  useSavePhase,
   WifiOff,
   X,
 } from "@homi/ui";
@@ -104,6 +108,7 @@ export function UiGallery() {
       <HeaderChips />
       <FilterChips />
       <SegmentedControls />
+      <MotionPieces />
       <Choices />
       <ErrorStates />
       <EmptyStates />
@@ -285,6 +290,36 @@ function FilterChips() {
           </FilterChip>
         ))}
       </div>
+    </Entry>
+  );
+}
+
+/** The rolling number and the save button's phases (WP-39): a tap changes the number; the button runs busy → done → idle. */
+function MotionPieces() {
+  const [count, setCount] = useState(128);
+  const save = useSavePhase();
+  const run = () => {
+    save.setPhase("busy");
+    window.setTimeout(() => {
+      void save.confirm().then(() => save.setPhase("idle"));
+    }, 800);
+  };
+  return (
+    <Entry id="motion" title="RollNumber, SaveState">
+      <div className="flex items-center gap-3">
+        <Button variant="secondary" data-testid="gallery-roll-less" onClick={() => setCount((n) => Math.max(0, n - 37))}>
+          −37
+        </Button>
+        <span data-testid="gallery-roll" className="text-[20px] font-bold">
+          <RollNumber value={count} />
+        </span>
+        <Button variant="secondary" data-testid="gallery-roll-more" onClick={() => setCount((n) => n + 37)}>
+          +37
+        </Button>
+      </div>
+      <Button data-testid="gallery-save" className="h-[48px] w-full" disabled={save.phase !== "idle"} onClick={run} {...saveButtonProps(save.phase)}>
+        <SaveState phase={save.phase}>Сохранить</SaveState>
+      </Button>
     </Entry>
   );
 }

@@ -465,6 +465,33 @@ describe("FiltersForm: the footer", () => {
     expect(footer().querySelector('[data-state="radar-on"]')?.textContent).toBe("Радар включён");
     expect(actions()).toEqual(["apply"]);
   });
+
+  it("while its save shows, the radar button stays although the radar is already in the list (WP-39)", () => {
+    state.active = true;
+    form({ submitting: true, phase: "done" });
+
+    expect(footer().querySelector('[data-state="radar-on"]')).toBeNull();
+    expect(actions()).toEqual(["subscribe", "apply"]);
+    expect(action("subscribe")?.getAttribute("data-phase")).toBe("done");
+    expect(action("subscribe")?.querySelector('[data-slot="save-tick"]')).not.toBeNull();
+  });
+
+  it("the three numbers of the footer are rolling numbers (WP-39, BR-APP-113)", () => {
+    const rolls = (slot: string) => [...footer().querySelectorAll(`${slot} [data-slot="roll-number"]`)].map((roll) => roll.getAttribute("aria-label"));
+    state.live = { count: 12, flow: normalizeFlow({ week: 21, days: 7 }) };
+    const view = form();
+    expect(rolls('[data-action="apply"]')).toEqual(["12"]);
+    expect(rolls('[data-slot="flow-line"]')).toEqual(["3"]);
+    // The button is named by what it shows, not by the strips of digits.
+    expect(within(footer()).getByRole("button", { name: "Показать 12" })).toBeTruthy();
+    view.unmount();
+
+    state.live = { count: 0, flow: normalizeFlow({ week: 0, days: 7 }) };
+    form({ mode: "radar-new" });
+    // To and from 0 the count line rolls; «none this week» has no number.
+    expect(rolls('[data-slot="matching-now"]')).toEqual(["0"]);
+    expect(rolls('[data-slot="flow-line"]')).toEqual([]);
+  });
 });
 
 describe("FiltersForm: the nested city picker", () => {

@@ -75,13 +75,16 @@ describe("playLeave: the copy", () => {
     expect(copy!.getAttribute("aria-hidden")).toBe("true");
     expect(copy!.hasAttribute("inert")).toBe(true);
     expect(copy!.getAttribute("data-leave")).toBe("sheet");
-    // It does not answer to the names of the live node: no id, no route marker, another slot name.
+    // It does not answer to the names of the live node: no id, no route marker, another slot name, and inside it
+    // no `data-*` attribute that no stylesheet reads.
     expect(copy!.getAttribute("data-slot")).toBe("bottom-sheet-leave");
     expect(copy!.hasAttribute("id")).toBe(false);
     expect(copy!.hasAttribute("data-route")).toBe(false);
-    const body = copy!.querySelector('[data-slot="bottom-sheet-body"]')!;
-    expect(body.hasAttribute("id")).toBe(false);
-    expect(body.hasAttribute("data-probe")).toBe(false);
+    expect(copy!.classList.contains("z")).toBe(true);
+    const body = copy!.firstElementChild!;
+    expect(body.getAttributeNames()).toEqual([]);
+    expect(body.textContent).toBe("text");
+    expect(document.querySelectorAll('[data-slot="bottom-sheet"], [data-slot="bottom-sheet-body"], [data-probe], #b1')).toHaveLength(0);
     expect(body.scrollTop).toBe(40);
     expect(body.scrollLeft).toBe(7);
     expect(copy!.style.position).toBe("fixed");
@@ -103,6 +106,28 @@ describe("playLeave: the copy", () => {
     expect(played).toHaveLength(1);
     expect(played[0]!.frames).toEqual([frame]);
     expect(played[0]!.timing).toEqual({ duration, easing, fill: "forwards" });
+  });
+
+  it("the copy stands at the node's box, at the level the node painted at", async () => {
+    const host = node('<div style="z-index: 60"><div><div data-toast-drag="">toast</div></div></div>');
+    const toast = host.querySelector<HTMLElement>("[data-toast-drag]")!;
+    toast.getBoundingClientRect = () => ({ left: 16, top: 500, width: 358, height: 44, right: 374, bottom: 544, x: 16, y: 500, toJSON: () => ({}) });
+
+    await leaveByRemoval(toast, "toast");
+
+    const { style } = copies()[0]!;
+    expect([style.position, style.left, style.top, style.width, style.height]).toEqual(["fixed", "16px", "500px", "358px", "44px"]);
+    expect([style.margin, style.maxWidth, style.maxHeight]).toEqual(["0px", "none", "none"]);
+    // The toast has no level of its own: its host's is taken.
+    expect(style.zIndex).toBe("60");
+  });
+
+  it("a node with its own level keeps it, whatever its ancestors say", async () => {
+    const host = node('<div style="z-index: 60"><div data-slot="bottom-sheet" style="z-index: 50">sheet</div></div>');
+
+    await leaveByRemoval(host.firstElementChild as HTMLElement, "sheet");
+
+    expect(copies()[0]!.style.zIndex).toBe("50");
   });
 
   it("a sheet's backdrop leaves beside it: its colour to transparent over the same 280 ms", async () => {
@@ -157,6 +182,77 @@ describe("playLeave: the copy", () => {
     await leaveByRemoval(node("<div>x</div>"), "toast");
 
     expect(copies()).toHaveLength(0);
+  });
+});
+
+describe("playLeave: what a copy keeps of the node's `data-*` attributes", () => {
+  function styles(css: string): HTMLStyleElement {
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+    return style;
+  }
+
+  afterEach(() => {
+    document.head.querySelectorAll("style").forEach((style) => style.remove());
+  });
+
+  it("only what a stylesheet rule reads: a name for any value, or a name with the value read", async () => {
+    styles(`
+      [data-scrolled] .header { border-color: red; }
+      .data-\\[state\\=open\\]\\:animate-rise[data-state="open"] { animation: none; }
+      @media (min-width: 1px) { [data-save][data-phase="done"] { background: green; } }
+      .\\[\\&_\\[data-escaped\\=x\\]\\]\\:opacity-45 [data-strip=finds] { opacity: 0.45; }
+      [data-size^="comp"] { height: 36px; }
+    `);
+    const sheet = node(
+      '<div data-slot="bottom-sheet" data-scrolled="" data-state="open" data-variant="full">' +
+        '<button data-slot="bottom-sheet-close" data-action="apply" data-save="" data-phase="done" data-state="closed">ok</button>' +
+        '<i data-strip="finds" data-escaped="x" data-size="compact" data-phase="busy" data-testid="t"></i>' +
+        "</div>",
+    );
+
+    await leaveByRemoval(sheet, "sheet");
+
+    const [copy] = copies();
+    const names = (element: Element) => element.getAttributeNames().filter((name) => name.startsWith("data-")).sort();
+    // `data-variant` is read by no rule; `data-leave` and the renamed slot are the copy's own.
+    expect(names(copy!)).toEqual(["data-leave", "data-scrolled", "data-slot", "data-state"]);
+    // The button: its slot and its test hook go; `data-state="closed"` is a value no rule reads.
+    expect(names(copy!.children[0]!)).toEqual(["data-phase", "data-save"]);
+    // An escaped bracket inside a class name is not an attribute selector; `^=` counts for any value.
+    expect(names(copy!.children[1]!)).toEqual(["data-size", "data-strip"]);
+  });
+
+  it("a stylesheet added later is read too", async () => {
+    await leaveByRemoval(node('<div><b data-late="1">x</b></div>'), "toast");
+    expect(copies()[0]!.firstElementChild!.hasAttribute("data-late")).toBe(false);
+    vi.advanceTimersByTime(LEAVE_MAX_MS);
+
+    styles("[data-late] { color: red; }");
+    await leaveByRemoval(node('<div><b data-late="1">x</b></div>'), "toast");
+    expect(copies()[0]!.firstElementChild!.hasAttribute("data-late")).toBe(true);
+  });
+
+  it("when a stylesheet cannot be read, the copy keeps its attributes but never the node's names", async () => {
+    const style = styles("[data-x] { color: red; }");
+    Object.defineProperty(style.sheet, "cssRules", {
+      configurable: true,
+      get: () => {
+        throw new DOMException("cross-origin", "SecurityError");
+      },
+    });
+    const second = styles("b { color: blue; }");
+
+    await leaveByRemoval(node('<div data-slot="bottom-sheet" data-route="filters"><b id="x" data-anything="1" data-toast="">x</b></div>'), "sheet");
+
+    const inner = copies()[0]!.firstElementChild!;
+    expect(inner.getAttribute("data-anything")).toBe("1");
+    expect(inner.hasAttribute("id")).toBe(false);
+    expect(inner.hasAttribute("data-toast")).toBe(false);
+    expect(copies()[0]!.hasAttribute("data-route")).toBe(false);
+    expect(copies()[0]!.getAttribute("data-slot")).toBe("bottom-sheet-leave");
+    void second;
   });
 });
 

@@ -120,9 +120,10 @@
  * The save button (WP-39, BR-APP-114, legacy `.save-btn`; `SaveState.tsx`). Busy clips it to a 48 px pill around the
  * spinner, over 0.66 s on the spring; done paints it `--good` at full width and draws the tick in 0.4 s after 0.15 s.
  * A busy or done button is disabled and still not dimmed. Under reduced motion it does not shrink and the tick stands.
+ * At rest the clip lies 4 px outside the button (legacy: at its edge), so the focus ring around it is not cut off.
  */
 [data-save] {
-  clip-path: inset(0 round 999px);
+  clip-path: inset(-4px round 999px);
   transition:
     clip-path 0.66s var(--ease-spring),
     background-color 0.25s ease-out,
@@ -206,7 +207,7 @@
   }
 
   [data-save][data-phase="busy"] {
-    clip-path: inset(0 round 999px);
+    clip-path: inset(-4px round 999px);
   }
 
   .save-ok path {

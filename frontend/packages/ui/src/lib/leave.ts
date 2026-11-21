@@ -17,6 +17,10 @@ import { prefersReducedMotion } from "../hooks/prefersReducedMotion";
  * layer at the end of `body` with the node's box, since the node's own parent may be hidden with it; the layer has
  * `display: contents`, so a copy stacks by its own `z-index` like the node did.
  *
+ * A copy looks like the node and answers to none of its names: it keeps its classes and only the `data-*` attributes
+ * a stylesheet rule reads (`styledData`), loses every `id`, and its `data-slot` gets the suffix `-leave`. So for the
+ * length of a leave neither the app nor a test's selector meets two of anything.
+ *
  * No leave: under reduced motion; in lite graphics (`html.lite`); when a gesture took the node away (`data-gone`,
  * or an inline transform on it or on a child); when the node still shows after the commit; when what holds it went
  * or was hidden with it; when another node of its kind shows that did not before (a sheet replaced by a sheet, a
@@ -53,8 +57,63 @@ const SELECTORS: Partial<Record<LeaveKind, string>> = {
   subpage: '[data-slot="subpage"]',
 };
 
-/** What names the live node to the app and its tests; a copy must not answer to them. */
+/** What names the live node to the app and its tests; a copy never answers to them, whatever the stylesheets say. */
 const IDENTITY = ["id", "data-route", "data-layer", "data-probe", "data-toast", "data-toast-drag"];
+
+/** The `data-*` attributes stylesheet rules read: a name with the values read, or `true` when any value counts. */
+type StyledData = Map<string, Set<string> | true>;
+
+/** An attribute selector on a `data-*` name; the first group is a backslash when the bracket is an escaped class name. */
+const DATA_SELECTOR = /(\\)?\[(data-[\w-]+)(?:\s*([~|^$*]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\]\s]+)))?[^\]]*\]/g;
+
+let styledCache: { sheets: number; styled: StyledData | null } | null = null;
+
+function collectStyled(rules: CSSRuleList, styled: StyledData): void {
+  for (const rule of Array.from(rules)) {
+    const { selectorText, cssRules } = rule as CSSRule & { selectorText?: unknown; cssRules?: CSSRuleList };
+    if (typeof selectorText === "string") {
+      for (const match of selectorText.matchAll(DATA_SELECTOR)) {
+        const [, escaped, name, operator, double, single, bare] = match;
+        if (escaped || name === undefined) {
+          continue;
+        }
+        const value = double ?? single ?? bare;
+        const known = styled.get(name);
+        if (operator !== "=" || value === undefined) {
+          styled.set(name, true);
+        } else if (known !== true) {
+          styled.set(name, (known ?? new Set<string>()).add(value));
+        }
+      }
+    }
+    // Grouping rules (`@media`, `@layer`, `@supports`) and nested style rules.
+    if (cssRules && cssRules.length > 0) {
+      collectStyled(cssRules, styled);
+    }
+  }
+}
+
+/**
+ * Which `data-*` attributes the document's stylesheets read, scanned once per set of stylesheets. `null` when one of
+ * them cannot be read (served from another origin): a copy then keeps its attributes, as legacy's does.
+ */
+function styledData(): StyledData | null {
+  const sheets = Array.from(document.styleSheets);
+  if (styledCache && styledCache.sheets === sheets.length) {
+    return styledCache.styled;
+  }
+  const styled: StyledData = new Map();
+  let readable = true;
+  for (const sheet of sheets) {
+    try {
+      collectStyled(sheet.cssRules, styled);
+    } catch {
+      readable = false;
+    }
+  }
+  styledCache = { sheets: sheets.length, styled: readable ? styled : null };
+  return styledCache.styled;
+}
 
 const LAYER = "data-leave-layer";
 
@@ -107,12 +166,20 @@ function leaveLayer(): HTMLElement {
 }
 
 function lifeless(copy: HTMLElement, kind: string): void {
+  const styled = styledData();
+  const slot = copy.getAttribute("data-slot");
   for (const element of [copy, ...Array.from(copy.querySelectorAll("*"))]) {
-    for (const name of IDENTITY) {
-      element.removeAttribute(name);
+    for (const name of element.getAttributeNames()) {
+      if (IDENTITY.includes(name)) {
+        element.removeAttribute(name);
+      } else if (name.startsWith("data-") && styled !== null) {
+        const values = styled.get(name);
+        if (values === undefined || (values !== true && !values.has(element.getAttribute(name) ?? ""))) {
+          element.removeAttribute(name);
+        }
+      }
     }
   }
-  const slot = copy.getAttribute("data-slot");
   if (slot) {
     copy.setAttribute("data-slot", `${slot}-leave`);
   }

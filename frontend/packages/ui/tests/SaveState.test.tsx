@@ -1,4 +1,5 @@
 import { act, cleanup, render, renderHook } from "@testing-library/react";
+import { Activity } from "react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,6 +61,30 @@ describe("useSavePhase (BR-APP-114)", () => {
     expect(SAVE_DONE_REDUCED_MS).toBe(250);
   });
 
+  it("starts over when its owner is hidden with its route or unmounted: a sheet opened again shows no old tick", async () => {
+    function Owner() {
+      const save = useSavePhase();
+      return (
+        <button type="button" data-phase={save.phase} onClick={() => void save.confirm()}>
+          save
+        </button>
+      );
+    }
+    const shown = (hidden: boolean) => (
+      <Activity mode={hidden ? "hidden" : "visible"}>
+        <Owner />
+      </Activity>
+    );
+    const view = render(shown(false));
+    const button = () => document.querySelector("button")!;
+    act(() => button().click());
+    expect(button().getAttribute("data-phase")).toBe("done");
+
+    view.rerender(shown(true));
+    view.rerender(shown(false));
+    expect(button().getAttribute("data-phase")).toBe("idle");
+  });
+
   it("confirm keeps its identity across renders", () => {
     const { result, rerender } = renderHook(() => useSavePhase());
     const first = result.current.confirm;
@@ -106,6 +131,8 @@ describe("SaveState", () => {
     // A busy or done button is disabled and not dimmed.
     expect(motion).toMatch(/\[data-save\]\[data-phase="busy"\]:disabled,\s*\[data-save\]\[data-phase="done"\]:disabled \{\s*opacity: 1;/);
     // Reduced motion: no shrink, and the tick stands drawn.
-    expect(motion).toMatch(/reduce\) \{[\s\S]*\[data-save\]\[data-phase="busy"\] \{\s*clip-path: inset\(0 round 999px\);[\s\S]*\.save-ok path \{\s*stroke-dashoffset: 0;/);
+    expect(motion).toMatch(/reduce\) \{[\s\S]*\[data-save\]\[data-phase="busy"\] \{\s*clip-path: inset\(-4px round 999px\);[\s\S]*\.save-ok path \{\s*stroke-dashoffset: 0;/);
+    // At rest the clip lies outside the button, so its focus ring shows.
+    expect(motion).toMatch(/\[data-save\] \{\s*clip-path: inset\(-4px round 999px\);/);
   });
 });

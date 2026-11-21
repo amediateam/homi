@@ -2,7 +2,7 @@
 
 import { cn, Heart } from "@homi/ui";
 import { useTranslations } from "next-intl";
-import { type CSSProperties, type MouseEvent, useState } from "react";
+import { type CSSProperties, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { setFavorite } from "@/lib/actions/favorites";
 import { useAction } from "@/lib/actions/useAction";
@@ -65,6 +65,20 @@ export function FavButton({ number, favorite, variant = "overlay", size = "full"
   const save = useAction(setFavorite);
   const on = useSessionMap("favs").get(number) ?? favorite;
   const [tap, setTap] = useState<Tap | null>(null);
+  const icon = useRef<SVGSVGElement>(null);
+  // A hidden route shown again restarts the CSS animations of what it holds: the last tap is forgotten when the
+  // heart is hidden, and when its animation ended, so nothing replays without a tap.
+  useLayoutEffect(() => () => setTap(null), []);
+  useEffect(() => {
+    const node = icon.current;
+    if (tap === null || node === null) {
+      return undefined;
+    }
+    // The heart's own animation only: the sparks' `animationend` does not reach the heart.
+    const ended = () => setTap(null);
+    node.addEventListener("animationend", ended);
+    return () => node.removeEventListener("animationend", ended);
+  }, [tap]);
 
   const press = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -114,6 +128,7 @@ export function FavButton({ number, favorite, variant = "overlay", size = "full"
     >
       <Heart
         key={`heart-${tap?.count ?? 0}`}
+        ref={icon}
         data-fav-heart={tap === null ? undefined : tap.added ? "like" : "dip"}
         size={overlay ? ICON_PX[size] : ICON_PX.plain}
         strokeWidth={2}

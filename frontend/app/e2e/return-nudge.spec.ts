@@ -1,5 +1,5 @@
 import { filtersHash, fromSearchParams, type SearchFilters } from "@homi/search";
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, stubMedia, test as base, type LaunchedApp, shownText } from "@homi/testing/playwright";
 import type { Page, Request, Response } from "@playwright/test";
 
 /**
@@ -234,7 +234,9 @@ for (const mode of ["cookie", "header"] as const) {
       const asked = new URL(counts[0].url()).searchParams;
       expect([asked.get("city"), asked.get("deal"), asked.has("rooms_min")]).toEqual(["tashkent", "rent_long", false]);
       const total = ((await (await counts[0].response())?.json()) as { data: { count: number } }).data.count;
-      await expect(visible(page, '[data-slot="bottom-sheet"] [data-slot="matching-now"]')).toHaveText(`Сейчас подходит: ${total}`, { timeout: API_MS });
+      await expect
+        .poll(() => shownText(visible(page, '[data-slot="bottom-sheet"] [data-slot="matching-now"]')), { timeout: API_MS })
+        .toBe(`Сейчас подходит: ${total}`);
     });
 
     test("custom filters, last visit 7 h ago: «Включить» turns a radar on with `entry: return` and the success toast", async ({ page }) => {

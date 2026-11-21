@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useLayoutEffect, useState } from "react";
 
 import { prefersReducedMotion } from "../hooks/prefersReducedMotion";
 
@@ -15,9 +15,14 @@ export const SAVE_DONE_REDUCED_MS = 250;
  * The phase of a save button (WP-39, BR-APP-114; legacy `SaveState.jsx` since `index-YX9bFVws.js`). `confirm()` sets
  * `done` and resolves once the tick has been drawn — `SAVE_DONE_MS`, or `SAVE_DONE_REDUCED_MS` under reduced motion
  * (lite graphics still show the tick, as legacy) — so the owner closes its sheet after it.
+ *
+ * The phase starts over when the owner is hidden or unmounted (legacy's `finally { setPhase('idle') }`): Next keeps a
+ * hidden route's state, and a sheet opened again must not show the last save's tick or spinner. The reset is a layout
+ * effect's cleanup, so the leaving copy of the sheet, taken in the same commit, still shows the tick.
  */
 export function useSavePhase(): { phase: SavePhase; setPhase: (phase: SavePhase) => void; confirm: () => Promise<void> } {
   const [phase, setPhase] = useState<SavePhase>("idle");
+  useLayoutEffect(() => () => setPhase("idle"), []);
   const confirm = useCallback(() => {
     setPhase("done");
     return new Promise<void>((resolve) => {

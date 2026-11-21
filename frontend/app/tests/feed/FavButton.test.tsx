@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ReactNode } from "react";
+import { Activity, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionResult } from "@/lib/actions/run";
@@ -382,5 +382,38 @@ describe("FavButton: the heart and the burst (WP-39, BR-APP-117)", () => {
     expect(css).toMatch(/i:nth-child\(2n\) \{\s*background: var\(--accent\);\s*--r: 29px;/);
     expect(css).toMatch(/translate\(8px\) scale\(1\);[\s\S]*?60% \{\s*opacity: 0\.64;/);
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{\s*\[data-fav-burst\] \{\s*display: none;/);
+  });
+});
+
+describe("FavButton: nothing replays without a tap (WP-39)", () => {
+  const icon = () => button().querySelector<SVGElement>("svg")!;
+  const burst = () => button().querySelector<HTMLElement>("[data-fav-burst]");
+  const shown = (hidden: boolean) => withIntl(<Activity mode={hidden ? "hidden" : "visible"}>{<FavButton number={42} favorite={false} />}</Activity>);
+
+  it("a route hidden and shown again holds a still heart: no mark and no burst to restart", async () => {
+    state.setFavorite.mockResolvedValueOnce(SAVED_ON);
+    const view = render(shown(false));
+    await act(async () => fireEvent.click(button()));
+    expect(icon().getAttribute("data-fav-heart")).toBe("like");
+    expect(burst()).not.toBeNull();
+
+    view.rerender(shown(true));
+    view.rerender(shown(false));
+
+    expect(pressed()).toBe("true");
+    expect(icon().hasAttribute("data-fav-heart")).toBe(false);
+    expect(burst()).toBeNull();
+  });
+
+  it("when the heart's animation ended the mark and the burst go", async () => {
+    state.setFavorite.mockResolvedValueOnce(SAVED_ON);
+    heart();
+    await act(async () => fireEvent.click(button()));
+
+    fireEvent.animationEnd(icon());
+
+    expect(icon().hasAttribute("data-fav-heart")).toBe(false);
+    expect(burst()).toBeNull();
+    expect(pressed()).toBe("true");
   });
 });

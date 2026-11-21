@@ -111,12 +111,12 @@ function ToastView({ scope, toast }: { scope: ToastScope; toast: ShownToast }) {
       <DragFrame drag={drag}>
         <div data-toast="" className={cn(SURFACE, "flex items-center gap-3 py-1.5 pr-1.5 pl-4")}>
           <span className="line-clamp-3 min-w-0 flex-1 wrap-break-word">{text}</span>
-          <button type="button" onClick={act} className="inline-flex shrink-0 items-center gap-[6px] rounded-[10px] px-3 py-2 font-bold active:bg-bg/15">
-            {message.action}
+          <button type="button" onClick={act} className="inline-flex shrink-0 items-center gap-[7px] rounded-[10px] px-3 py-2 font-bold active:bg-bg/15">
             <svg data-toast-ring="" viewBox="0 0 20 20" aria-hidden>
               <circle cx="10" cy="10" r="8" />
               <circle cx="10" cy="10" r="8" pathLength={1} style={{ animationDuration: `${TOAST_ACTION_MS}ms` }} />
             </svg>
+            {message.action}
           </button>
         </div>
       </DragFrame>

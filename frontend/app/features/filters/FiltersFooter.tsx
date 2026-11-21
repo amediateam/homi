@@ -101,7 +101,8 @@ export function FiltersFooter({
       {mode === "search" ? (
         <div className="flex gap-[10px]">
           {radarsEnabled ? (
-            radarOn ? (
+            // The list is read again before the tick was drawn: the button stays until its save is over.
+            radarOn && phase === "idle" ? (
               <span
                 data-state="radar-on"
                 className="inline-flex h-[48px] min-w-0 flex-1 items-center justify-center gap-[6px] text-[15px] font-semibold text-good"

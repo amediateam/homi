@@ -210,6 +210,8 @@ describe("QuickFilterForm (SCR-015)", () => {
       expect(state.sent).toEqual([]);
       await wait(1);
       expect(shownText(apply())).toBe("Показать 42");
+      // The count is a rolling number (WP-39): its label is what the button is named by.
+      expect(apply().querySelector('[data-slot="roll-number"]')?.getAttribute("aria-label")).toBe("42");
       await wait(1_000);
       expect(state.sent.map((request) => request.path)).toEqual(["listings/count"]);
     });
