@@ -168,7 +168,8 @@ DEC-58 … DEC-68 on 2026-11-19, in the round of the intake of `index-CIa0Ldj2.j
 plan (same file); DEC-89 … DEC-94 on 2026-11-20, in the round of the intake of `index-YX9bFVws.js`
 (`decisions/2026-11-20-developer-answers.md`); DEC-95 … DEC-97 on 2026-11-20, in the round of the intake of the
 legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 and DEC-99 on 2026-11-21, asked by WP-32 and
-WP-81 (`decisions/2026-11-21-developer-answers.md`).
+WP-81 (`decisions/2026-11-21-developer-answers.md`); DEC-100 and DEC-101 on 2026-11-22, asked by WP-33
+(`decisions/2026-11-22-developer-answers.md`).
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -241,6 +242,8 @@ WP-81 (`decisions/2026-11-21-developer-answers.md`).
 | DEC-97 | Where the owners' page «Сдать квартиру» comes from (2026-11-20) | It waits for legacy until WP-61 starts. Legacy's Mini App links `/sdat-kvartiru/` (uz `/uz/kvartira-ijaraga-berish/`, en `/en/list-your-apartment/`) with `?s=tenant`, but legacy's own backend checklist lists the page as not done and its landing sync never downloads a backend-rendered page. When WP-61 starts: if legacy's page is known (its documents, or the developer brings it), WP-61 describes the page from it; otherwise WP-61 writes HOMI's own page. Until the page exists the survey's landlord block has one button with the bot link (DEC-91) | Landing intake, Q-LND-012 | `03b` LND-068, URL-066, Q-LND-012; `09` F-LANDING-013; WP-61, WP-82 |
 | DEC-98 | How the `@analytics` end-to-end run of WP-32 runs in CI (2026-11-21) | As a further step of the existing e2e job, like the `@radars-off` run: the web server builds the app again with a fake PostHog key and an unroutable host the specs answer themselves; no job of its own (Actions minutes). «Внутри текущей e2e (Рекомендуется)» | — | WP-32 |
 | DEC-99 | How WP-81, about 8 000 changed lines, is shipped (2026-11-21) | One pull request; the specification's rule that the upload progress goes into a pull request of its own above 3 000 lines is not followed and the deviation is written in its "As built": since DEC-92 the progress transport is the only upload path of the photos. «Один PR, отклонение записать (Рекомендуется)» | — | WP-81 |
+| DEC-100 | When the extra end-to-end runs of WP-33 start (2026-11-22) | Only by hand, through `workflow_dispatch` of `frontend-e2e.yml`, with no schedule: the projects of other clients (WebKit/iOS, desktop, Telegram 6.0, the uz/en render, the dark theme) and the performance run. Every PR gets only the cheap checks — the bundle check and the chunk rules of the performance budget (rows 3–6) — as steps of the existing e2e job. «По запросу, без расписания (Рекомендуется)» | — | WP-33 |
+| DEC-101 | How header mode runs in CI (2026-11-22) | In every PR, as WP-33's specification asks: the project `miniapp-header` runs every test that does not name its mode (a spec that loops over the two modes names it in the title and runs both in `miniapp-cookie`). Asked twice: the first answer («Полный — вручную, в PR — подмножество») rested on a wrong estimate of the cost, which is about 2 minutes, not a doubling. «Весь набор в каждом PR (Рекомендуется)» | — | WP-33 |
 
 ### 8.2 Questions
 
