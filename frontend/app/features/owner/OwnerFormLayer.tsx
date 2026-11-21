@@ -14,7 +14,8 @@ import { isOwnerId, matchRoute } from "@/lib/navigation/routes";
 import { showToast } from "@/lib/ui/toast";
 
 import { closeOwnerForm, forgetOwnerForm, markOwnerFormOpened } from "./closeOwnerForm";
-import { normalizeOwnerListing, type OwnerListingView } from "./normalize";
+import { normalizeOwnerListing } from "./normalize";
+import { Questionnaire } from "./form/Questionnaire";
 import { OwnerFrame } from "./OwnerFrame";
 import { type OwnerListingBody, useOwnerListing } from "./store";
 import { useOwnerOffRedirect } from "./useOwnerOffRedirect";
@@ -93,7 +94,7 @@ function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerF
   if (listing !== null) {
     content = (
       <>
-        <OwnerQuestionnaireSlot listing={listing} />
+        <Questionnaire key={listing.id} listing={listing} />
         {children}
       </>
     );
@@ -133,10 +134,4 @@ function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerF
       </div>
     </RouteOverlay>
   );
-}
-
-/** The questionnaire's place (WP-81 step 7): the frame with the form's title until the sections are built. */
-function OwnerQuestionnaireSlot({ listing }: { listing: OwnerListingView }) {
-  const t = useTranslations();
-  return <OwnerFrame title={listing.status === "draft" ? t("own.title") : t("own.editTitle")} subtitle={t("own.subtitle")} data-state="form" />;
 }
