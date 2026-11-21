@@ -7,6 +7,7 @@ import { useRef } from "react";
 import { updateSettings } from "@/lib/actions/settings";
 import { type DevFlags, devFlags } from "@/lib/flags";
 import { useAction } from "@/lib/actions/useAction";
+import { patchMe } from "@/lib/session/bootstrap";
 import { tg } from "@/lib/telegram";
 import type { ThemePreference } from "@/lib/telegram/theme";
 import { failed } from "@/lib/ui/feedback";
@@ -25,28 +26,38 @@ export function ThemePage({ flags = devFlags }: { flags?: DevFlags } = {}) {
   const t = useTranslations();
   const theme = useThemePreference();
   const save = useAction(updateSettings);
-  const accepted = useRef<ThemePreference | null>(null);
+  /** The theme before the first of the pending picks. */
+  const before = useRef<ThemePreference | null>(null);
   const latest = useRef(0);
 
   const pick = (next: ThemePreference) => {
     if (next === theme) {
       return;
     }
-    accepted.current ??= theme;
+    before.current ??= theme;
     tg.haptic.impact("light");
     chooseTheme(next);
     const request = ++latest.current;
+    const settle = (ok: boolean) => {
+      // Only the latest pick decides; an earlier answer changes nothing.
+      if (request !== latest.current) {
+        return;
+      }
+      const back = before.current ?? "auto";
+      before.current = null;
+      if (ok) {
+        // A re-authentication between the pick and its repeat applies the profile's old theme again: the success puts
+        // the pick back, and the session's profile takes it.
+        chooseTheme(next);
+        patchMe({ theme: next });
+      } else {
+        chooseTheme(back);
+        failed({ flags });
+      }
+    };
     void save({ theme: next }).then(
-      (result) => {
-        if (result.ok) {
-          // The answers arrive in the order the server took the writes (`usePresetSave`): the last success is its theme.
-          accepted.current = next;
-        } else if (request === latest.current) {
-          chooseTheme(accepted.current ?? "auto");
-          failed({ flags });
-        }
-      },
-      () => undefined,
+      (result) => settle(result.ok),
+      () => settle(false),
     );
   };
 
