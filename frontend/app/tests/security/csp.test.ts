@@ -72,6 +72,14 @@ describe("cspFromEnv", () => {
     expect(reportOnly).toBe(false);
   });
 
+  it("CSP_PRIVATE_MEDIA_HOSTS joins img-src only: a draft's photos from the private disk (WP-81)", () => {
+    vi.stubEnv("CSP_PRIVATE_MEDIA_HOSTS", "https://s3.staging.homi.uz, https://api.homi.loc");
+    const policy = directives(cspFromEnv("n").header);
+    expect(policy["img-src"]).toEqual(expect.arrayContaining(["https://s3.staging.homi.uz", "https://api.homi.loc"]));
+    expect(policy["connect-src"]).not.toContain("https://s3.staging.homi.uz");
+    expect(policy["script-src"]).not.toContain("https://s3.staging.homi.uz");
+  });
+
   it("CSP_REPORT_ONLY=1 sends the policy as report-only", () => {
     vi.stubEnv("CSP_REPORT_ONLY", "1");
     expect(cspFromEnv("n").reportOnly).toBe(true);
