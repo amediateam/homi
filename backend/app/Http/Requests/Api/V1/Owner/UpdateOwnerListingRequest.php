@@ -29,8 +29,9 @@ class UpdateOwnerListingRequest extends FormRequest
             'city' => ['sometimes', 'nullable', 'string', 'max:64'],
             'district_code' => ['sometimes', 'nullable', 'string', 'max:64'],
             'landmark' => ['sometimes', 'nullable', 'string', 'max:120'],
-            'lat' => ['sometimes', 'nullable', 'numeric', 'between:-90,90', 'required_with:lon'],
-            'lon' => ['sometimes', 'nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
+            // Not `sometimes`: a point comes whole, so one coordinate without the other is refused.
+            'lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:lon'],
+            'lon' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
             'room' => ['sometimes', 'nullable', 'boolean'],
             'rooms' => ['sometimes', 'nullable', 'integer', 'between:1,5', 'prohibited_if_accepted:room'],
             'area_m2' => ['sometimes', 'nullable', 'numeric', 'between:5,1000', 'decimal:0,1'],

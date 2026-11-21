@@ -185,6 +185,32 @@ final class ContractShapes
         'showcase' => ['rent' => ['*' => ['district_code' => 'string', 'count' => 'int']], 'sale' => ['*' => ['district_code' => 'string', 'count' => 'int']]],
     ];
 
+    /** The form of an owner listing (WP-80): every key present; the list's items leave `lat` and `lon` out. */
+    public const array OWNER_FORM = [
+        'city' => 'string', 'district_code' => 'string', 'landmark' => 'string', 'lat' => 'float|int', 'lon' => 'float|int',
+        'room' => 'bool', 'rooms' => 'int', 'area_m2' => 'float|int', 'floor' => 'int', 'floors_total' => 'int', 'price' => 'int',
+        'currency' => 'string', 'renovation' => 'string', 'furniture' => 'bool', 'tenants' => ['*' => 'string'], 'pets' => 'bool',
+        'description' => 'string',
+    ];
+
+    /** The owner listing object (WP-80): the show answer and the owner's writes. */
+    public const array OWNER_LISTING = [
+        'id' => 'string', 'number' => 'int', 'status' => 'string', 'withdrawn' => 'bool', 'held' => 'bool', 'hold_reason' => 'string',
+        'published_at' => 'string', 'photos' => ['*' => ['id' => 'string', 'url' => 'string']], 'form' => self::OWNER_FORM,
+        'stats' => [
+            'pending' => 'int', 'requests' => 'int', 'given' => 'int', 'sent' => 'int', 'opened' => 'int', 'favorites' => 'int',
+            'days_listed' => 'int', 'daily' => ['*' => 'int'], 'price_delta' => 'float|int', 'price_tone' => 'string',
+        ],
+        'contact_mode' => 'string', 'phone_set' => 'bool', 'phone_display' => 'string', 'phone_error' => 'string',
+        'reject_reason' => 'string', 'shown_point' => ['lat' => 'float|int', 'lon' => 'float|int', 'radius_m' => 'int'],
+    ];
+
+    /** An owner request (WP-80): the answer flags always present. */
+    public const array OWNER_REQUEST = [
+        'id' => 'string', 'name' => 'string', 'who' => 'string', 'people' => 'int', 'move_in' => 'string', 'message' => 'string',
+        'status' => 'string', 'agent_marked' => 'bool', 'can_reason' => 'bool', 'can_undo' => 'bool', 'can_late' => 'bool',
+    ];
+
     /** `data` of `GET /landing/pins` (WP-13): `bargains_week` is null and `medians` empty for sale. */
     public const array LANDING_PINS = [
         'generated_at' => 'string', 'bargains_week' => 'int',

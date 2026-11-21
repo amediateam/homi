@@ -185,7 +185,12 @@ final class StubOwner
     /** `POST …/publish`: refusals in the order of WP-84, else the listing active with its number. */
     public function publish(string $id, SourceContext $context): OwnerListing
     {
-        $entry = $this->unlocked($id, $context);
+        // The listing as it is before publish: the show scenarios (a hold, a refusal) are what publish answers.
+        $entry = $this->entry($id);
+
+        if ($context->scenario === 'listing_locked' || OwnerListing::fromArray($entry)->locked()) {
+            throw new OwnerListingLocked;
+        }
         $listing = OwnerListing::fromArray($entry);
 
         if ($listing->status === OwnerListingStatus::Active) {

@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\V1;
 
 use App\Services\Sources\Data\NamedCode;
 use App\Services\Sources\Data\ReferenceData;
+use App\Services\Sources\SourceContext;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Config;
@@ -70,7 +71,7 @@ class ReferenceResource extends JsonResource
      */
     private static function ownerRenovations(Request $request): array
     {
-        $locale = app()->getLocale();
+        $locale = SourceContext::fromRequest($request)->locale;
         $items = [];
 
         foreach (Config::array('owner.renovations') as $renovation) {
