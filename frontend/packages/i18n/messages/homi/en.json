@@ -69,11 +69,14 @@
   "owner": {
     "info": {
       "self": "Listed the flat themselves.",
-      "verified": "The owner confirmed the number from this listing themselves."
+      "verified": "The owner confirmed the number from this listing themselves.",
+      "selfHomi": "Listed the flat on HOMI themselves.",
+      "checked": "We checked the number: it has no more than two flats, it isn’t among the agents’ numbers HOMI has seen, and users haven’t marked it as an agent’s."
     }
   },
   "details": {
-    "historySelf": "The owner listed it on {date}. No price changes yet."
+    "historySelf": "The owner listed it on {date}. No price changes yet.",
+    "historySelfHomi": "The owner listed the flat on HOMI {date}. The price hasn’t changed yet."
   },
   "own": {
     "phoneHow": "We confirm it with Telegram’s “Share phone number” button — so we know the number is yours. It goes to the HOMI bot only.",
@@ -116,6 +119,19 @@
     },
     "toast": {
       "deleted": "Listing deleted"
+    }
+  },
+  "contact": {
+    "hiddenBar": "The owner hid the number — you can’t contact them through HOMI yet",
+    "leadTime": "The owner will get your request and answer in the bot — usually within {time}.",
+    "usuallyTime": "Usually answers within {time}",
+    "noteLimit": "The owner will see your Telegram first name and these answers, but not your number. You can send up to {day} requests a day.",
+    "noteRelay": "The request is passed on to the service where the flat is listed.",
+    "err": {
+      "noChatRestart": "The bot can’t write to you — it looks stopped. Open the chat with the bot? Tap “Restart” there and send the request again.",
+      "requestsFast": "Several requests in a row — you can send the next one in {minutes} min.",
+      "requestsDay": "You have sent {day} requests today. You can send more tomorrow.",
+      "requestsWeek": "{week} requests in a week is the limit. You can send new ones in a few days."
     }
   }
 }

@@ -67,6 +67,7 @@ describe("track", () => {
         "owner_hint_opened",
         "owner_entry",
         "landlord_share",
+        "owner_info_opened",
       ].sort(),
     );
   });

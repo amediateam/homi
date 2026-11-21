@@ -63,6 +63,7 @@
   --animate-fade: fade var(--dur-base) var(--ease-ios) both;
   --animate-rise: rise var(--dur-slow) var(--ease-ios) both;
   --animate-rise-in: rise-in var(--dur-base) var(--ease-ios) both;
+  --animate-shield-in: shield-in 0.7s var(--ease-out, ease-out) 0.25s both;
   /* No fill mode: after the entrance a swipe back moves the sub-page by its inline transform (WP-23). */
   --animate-subpage-in: subpage-in var(--dur-fast) var(--ease-ios);
   /* The listing layer (WP-36): the entrance without a fill mode, the leave held at its end until the layer goes. */

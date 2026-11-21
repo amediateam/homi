@@ -36,6 +36,7 @@ describe("storage policy", () => {
       "homi-visits": "synced",
       "homi-home": "synced",
       "homi-req-tip": "synced",
+      "homi-owner-tip": "synced",
       "homi-new-pets": "synced",
       "homi-theme": "local",
       "homi-graphics": "local",
@@ -149,7 +150,7 @@ describe("restoreFromDeviceStorage (fix of LB-APP-021)", () => {
     expect(storageGet("homi-visits")).toBe('{"h":5}');
     expect(storageGet("homi-city")).toBe("tashkent");
     expect(deviceCalls(fake).filter((call) => call.startsWith("DeviceStorage.getItem")).sort()).toEqual(
-      ["homi-home", "homi-new-pets", "homi-nudge", "homi-req-tip", "homi-visits"].map((key) => `DeviceStorage.getItem ${key}`).sort(),
+      ["homi-home", "homi-new-pets", "homi-nudge", "homi-owner-tip", "homi-req-tip", "homi-visits"].map((key) => `DeviceStorage.getItem ${key}`).sort(),
     );
   });
 

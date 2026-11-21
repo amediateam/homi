@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { rereadListing } from "../contact/requestState";
 import { getContact } from "@/lib/actions/listing";
 import { useAction } from "@/lib/actions/useAction";
 import { track } from "@/lib/analytics/events";
@@ -83,6 +84,10 @@ export function useContact(number: number, options?: { now?: () => number }): Us
       .then(
         (result) => {
           if (!result.ok) {
+            // A `given` request whose number is no longer there (WP-83): the card is read again in the background.
+            if (result.code === "contact_unavailable") {
+              rereadListing(number);
+            }
             return old;
           }
           const next = { number, contact: contactInfo(result.data, now()) };

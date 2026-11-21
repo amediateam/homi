@@ -30,3 +30,17 @@ export function formatKm(km: number, locale: Locale): string {
 export function formatCount(n: number, pluralKey: MessageKey, locale: Locale, t: Translate): string {
   return `${formatNumber(n, locale)} ${t(pluralKey, { n })}`;
 }
+
+/**
+ * An owner's usual response time (WP-83, fix of LB-APP-076): below 60 the minutes, below 1 440 the hours, else the
+ * days, each rounded and through `Intl.NumberFormat` with the unit style `short` («15 мин», «3 ч», «2 дн.»).
+ */
+export function formatResponseTime(minutes: number, locale: Locale): string | null {
+  // No time to show: nothing, never «0 мин» or «NaN».
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return null;
+  }
+  const value = Math.max(1, Math.round(minutes));
+  const [amount, unit] = value < 60 ? [value, "minute"] : value < 1440 ? [Math.round(value / 60), "hour"] : [Math.round(value / 1440), "day"];
+  return new Intl.NumberFormat(locale, { style: "unit", unit, unitDisplay: "short" }).format(amount);
+}

@@ -70,6 +70,17 @@ describe("owner launch links (WP-81, TMA-046, LB-APP-060)", () => {
     expect(state.push.mock.calls).toEqual([["/owner/new"]]);
   });
 
+  it("c_<number> (WP-83) opens the listing, then its request sheet; it is a link launch", async () => {
+    const data = syntheticInitData({}, { startParam: "c_10000001" });
+    expect(parseLaunch(data, "")).toMatchObject({ listingNumber: 10000001, contact: true, entry: "link", source: null, postUrl: null });
+    expect(parseLaunch(syntheticInitData({}, { startParam: "l_10000001" }), "").contact).toBe(false);
+    expect(parseLaunch(syntheticInitData({}, { startParam: "c_x" }), "").listingNumber).toBeNull();
+
+    const { rerender } = await mount("/ru", "c_10000001", { owner_enabled: true });
+    rerender();
+    expect(state.push.mock.calls).toEqual([["/listing/10000001"], ["/listing/10000001/contact"]]);
+  });
+
   it("o_<id> opens the questionnaire, then its phone step", async () => {
     const { rerender } = await mount("/ru", `o_${ID}`, { owner_enabled: true });
     rerender();

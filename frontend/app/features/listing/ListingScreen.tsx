@@ -6,7 +6,7 @@ import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Button, ErrorState, SearchX } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { useContext, useEffect, useLayoutEffect } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
 import { marketVerdict } from "@/features/feed/verdict";
 import { listingKnown } from "@/features/shell/ScreenTracker";
@@ -22,7 +22,13 @@ import { OwnerPanel } from "@/features/owner/panel/OwnerPanel";
 import { OwnerPanelFooterSkeleton } from "@/features/owner/panel/MineBar";
 import { OwnerPriceSection } from "@/features/owner/panel/OwnerPriceSection";
 
+import { formatResponseTime } from "@homi/i18n/format";
+
 import { ListingCtaBar } from "./cta/ListingCtaBar";
+import { isRequestMode, requestStatusOf } from "./cta/owner";
+import { ClaimedOwnerSection } from "./owner/ClaimedOwnerSection";
+import { OwnerChip } from "./owner/OwnerChip";
+import { chipShown } from "./owner/ownerTier";
 
 /** The owner panel's footer brings the cabinet's actions: loaded only on the user's own listing (WP-82). */
 const OwnerPanelFooter = dynamic(() => import("@/features/owner/panel/OwnerPanelFooter").then((module) => module.OwnerPanelFooter), {
@@ -205,6 +211,19 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
   const translation = useTranslation(number);
   const { share, shareable } = useShareListing(number, item);
   const videoUrl = details && details.has_video && !details.original.deleted ? details.original.url : null;
+  // «Связаться с хозяином» (WP-83): one push per tap.
+  const requesting = useRef(false);
+  const openRequest = () => {
+    if (requesting.current) {
+      return;
+    }
+    requesting.current = true;
+    setTimeout(() => {
+      requesting.current = false;
+    }, 800);
+    tg.haptic.impact("light");
+    router.push(routes.listingContact(number));
+  };
   // The user's own listing (WP-82, BR-APP-103): its owner panel and footer when the card names the owner listing.
   const mine = details?.owner?.mine === true;
   const ownerId = mine ? (details?.owner?.listing_id ?? null) : null;
@@ -240,6 +259,9 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
             onMenu={() => router.push(routes.listingActions(number))}
             mine={mine}
           />
+          {chipShown({ is_owner: item.is_owner, owner_verified: (item as { owner_verified?: boolean }).owner_verified, owner: details?.owner }) ? (
+            <OwnerChip number={number} loaded={details !== null} />
+          ) : null}
           <KeyFacts item={item} marketCode={details?.market.code} />
           {ownerId === null ? null : <OwnerPanel listingId={ownerId} number={number} />}
           {details ? null : (
@@ -252,7 +274,7 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
         {details ? <ListingSections number={number} details={details} phone={contact.phone} translation={translation} mine={mine} ownerId={ownerId} /> : null}
       </div>
       {!mine ? (
-        <ListingCtaBar item={item} details={details} cta={contact.cta} />
+        <ListingCtaBar item={item} details={details} cta={contact.cta} onRequest={openRequest} />
       ) : ownerId === null ? (
         <MineBar />
       ) : (
@@ -286,6 +308,12 @@ function ListingSections({
   const t = useTranslations();
   const locale = useLocale() as Locale;
   const translate: Translate = (key, values) => t(key as never, values as never);
+  // The owner tiers (WP-83, BR-APP-100, BR-APP-102): no section compares a server string with a text (LB-APP-075).
+  const tier = details.owner?.tier ?? null;
+  const self = tier === "self";
+  const minutes = details.owner?.response_minutes ?? null;
+  const responseTime = self && !mine ? formatResponseTime(minutes ?? Number.NaN, locale) : null;
+  const pending = isRequestMode(details) && requestStatusOf(details) === "pending";
 
   return (
     <div data-slot="listing-sections" className="flex flex-col pt-[4px]">
@@ -298,11 +326,25 @@ function ListingSections({
         </>
       ) : null}
       <StatsSection stats={details.stats} />
-      <HistorySection number={number} history={details.price_history} tashkentDates={devFlags.dev014TashkentDates} />
+      <HistorySection
+        number={number}
+        history={details.price_history}
+        tashkentDates={devFlags.dev014TashkentDates}
+        selfPlaced={self ? (details.origin === "native" ? "native" : "legacy") : null}
+      />
       <LocationSection number={number} details={details} place={placeLine(details)} />
-      <AuthorSection number={number} ownerLabel={details.owner_label} offers={details.offers} posted={details.posted} phone={phone} />
-      <DescriptionSection summary={details.summary} />
-      {mine ? null : (
+      {tier === "claimed" ? <ClaimedOwnerSection /> : null}
+      <AuthorSection
+        number={number}
+        ownerLabel={details.owner_label}
+        offers={details.offers}
+        posted={details.posted}
+        phone={phone}
+        responseTime={responseTime}
+        pendingNote={self && pending}
+      />
+      <DescriptionSection summary={details.summary} ownerText={self ? (details.owner?.description ?? null) : null} />
+      {mine || self ? null : (
         <SourcesSection number={number} sources={details.sources} originalText={details.original.text}>
           <OriginalText number={number} text={details.original.text ?? ""} phone={phone} translation={translation} />
         </SourcesSection>

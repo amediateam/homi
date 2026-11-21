@@ -71,6 +71,8 @@ describe("builders", () => {
     [routes.ownerLimit({ where: "settings" }), "/owner/limit?where=settings"],
     [routes.ownerRequests(OWNER), `/settings/owner/${OWNER}/requests`],
     [routes.listingRequests(10000008), "/listing/10000008/requests"],
+    [routes.listingContact(10000001), "/listing/10000001/contact"],
+    [routes.listingOwner(10000001), "/listing/10000001/owner"],
   ])("%s", (built, expected) => {
     expect(built).toBe(expected);
   });
@@ -240,6 +242,8 @@ describe("parentOf", () => {
     ["/owner/limit", "where=mine", "/settings"],
     [`/settings/owner/${OWNER}/requests`, "", "/settings/owner"],
     ["/listing/10000008/requests", "", "/listing/10000008"],
+    ["/listing/10000001/contact", "", "/listing/10000001"],
+    ["/listing/10000001/owner", "", "/listing/10000001"],
   ])("%s?%s → %s", (pathname, query, expected) => {
     expect(parentOf(pathname, params(query))).toBe(expected);
   });
@@ -294,6 +298,8 @@ describe("screenNameOf", () => {
     ["/owner/limit", "where=settings", "owner/limit"],
     [`/settings/owner/${OWNER}/requests`, "", "owner/requests"],
     ["/listing/10000008/requests", "", "owner/requests"],
+    ["/listing/10000001/contact", "", "listing/contact"],
+    ["/listing/10000001/owner", "", "listing/owner"],
   ])("%s?%s → %s (the new names, WP-32, LB-APP-037)", (pathname, query, expected) => {
     expect(screenNameOf(pathname, params(query))).toBe(expected);
   });

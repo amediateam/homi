@@ -38,10 +38,13 @@ export function HistorySection({
   number,
   history,
   tashkentDates,
+  selfPlaced = null,
 }: {
   number: number;
   history: readonly PriceEvent[];
   tashkentDates: boolean;
+  /** A self-placed listing's single entry (WP-83, BR-APP-102): HOMI's sentence for a native one, the neutral one else. */
+  selfPlaced?: "native" | "legacy" | null;
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -55,6 +58,19 @@ export function HistorySection({
     tg.haptic.impact("light");
     openOriginal(number, url, "price_history");
   };
+
+  if (history.length === 1 && selfPlaced !== null) {
+    const [event] = history;
+    const pieces = t(selfPlaced === "native" ? "details.historySelfHomi" : "details.historySelf", { date: DATE_SLOT }).split(SLOTS);
+    return (
+      <section data-section="history" data-history="self" className="flex flex-col gap-[10px] px-(--gutter) py-[12px]">
+        <h2 className="text-[17px] font-bold">{t("details.history")}</h2>
+        <p className="leading-snug">
+          {pieces.map((piece, index) => (piece === DATE_SLOT ? <HistoryDate key={index} at={event!.at} part="date" tashkentDates={tashkentDates} /> : piece))}
+        </p>
+      </section>
+    );
+  }
 
   if (history.length === 1) {
     const [event] = history;

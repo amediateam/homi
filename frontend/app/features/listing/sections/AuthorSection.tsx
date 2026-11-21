@@ -23,16 +23,22 @@ export function AuthorSection({
   offers,
   posted,
   phone,
+  responseTime = null,
+  pendingNote = false,
 }: {
   number: number;
   ownerLabel: string | null;
   offers: readonly ListingOffer[];
   posted: ListingDetails["posted"];
   phone: PhoneControl | null;
+  /** A self-placed listing's usual response time (WP-83, LB-APP-076), already formatted. */
+  responseTime?: string | null;
+  /** «Отклик отправлен — ответ придёт в бот.» while the seeker's request is pending. */
+  pendingNote?: boolean;
 }) {
   const t = useTranslations();
   const when = ageText({ posted });
-  if (!ownerLabel && offers.length === 0 && phone === null && when === null) {
+  if (!ownerLabel && offers.length === 0 && phone === null && when === null && responseTime === null && !pendingNote) {
     return null;
   }
 
@@ -79,6 +85,16 @@ export function AuthorSection({
             {phone.display}
           </button>
         )
+      ) : null}
+      {responseTime === null ? null : (
+        <p data-response-time="" className="text-[14px] text-hint">
+          {t("contact.usuallyTime", { time: responseTime })}
+        </p>
+      )}
+      {pendingNote ? (
+        <p data-pending-note="" className="text-[14px] text-text">
+          {t("contact.pendingNote")}
+        </p>
       ) : null}
       {when !== null ? (
         <p data-published="" className="text-[13px] text-hint">

@@ -36,3 +36,9 @@ html.lite [data-radar-animation] {
 html.lite [data-layer-motion] {
   animation: none;
 }
+
+/* The owner chip's pulse and the info sheet's shield (WP-83): still in lite graphics, as under reduced motion. */
+html.lite [data-owner-chip] *,
+html.lite [data-route="listing/owner"] * {
+  animation: none;
+}
