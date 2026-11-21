@@ -108,6 +108,7 @@ export function useSheetDrag(
       sheet.style.willChange = "";
       sheet.removeAttribute("data-dragging");
       sheet.removeAttribute("data-closing");
+      sheet.removeAttribute("data-gone");
       const dim = backdrop();
       if (dim) {
         dim.style.transition = "";
@@ -132,6 +133,8 @@ export function useSheetDrag(
       phase = "settling";
       sheet.removeAttribute("data-dragging");
       sheet.setAttribute("data-closing", "");
+      // The drag is the sheet's way out: no leave plays on top of it (`lib/leave.ts`).
+      sheet.setAttribute("data-gone", "");
       callbacks.current.onCommit?.();
       const height = sheet.offsetHeight;
       const done = () => {

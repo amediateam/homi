@@ -122,6 +122,8 @@ describe("useSheetDrag", () => {
     drag(handle(), HEIGHT * SHEET_DRAG_CLOSE_SHARE + 1, 1000);
     expect(onCommit).toHaveBeenCalledTimes(1);
     expect(sheet().hasAttribute("data-closing")).toBe(true);
+    // The drag is the sheet's way out: the mark tells the leave to play nothing on top of it (WP-39).
+    expect(sheet().hasAttribute("data-gone")).toBe(true);
     expect(sheet().style.transform).toBe(`translateY(${HEIGHT}px)`);
     expect(backdrop().style.opacity).toBe("0");
 

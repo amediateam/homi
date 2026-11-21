@@ -5,6 +5,7 @@ import { type ComponentProps, type ReactNode, type RefObject, useEffect, useId, 
 import { cn } from "../cn";
 import { useBodyClass } from "../hooks/useBodyClass";
 import { useSwipeBack } from "../hooks/useSwipeBack";
+import { useLeave } from "../lib/leave";
 
 export interface SubPageFrameProps extends Omit<ComponentProps<"section">, "title" | "ref"> {
   /** The page title. */
@@ -58,7 +59,8 @@ function useScrolled(rootRef: RefObject<HTMLElement | null>, sentinelRef: RefObj
  * Full-screen sub-page (WP-23, SCR-033 to SCR-039): a fixed layer at the sub-page level that slides in from 24 %,
  * scrolls itself, and keeps a glass header whose separator appears once the content is scrolled. The content sits in
  * a card unless `bare`; `hint` is the paragraph under it. A swipe back moves the whole layer (`useSwipeBack`). While
- * mounted it holds the body class `subpage-open`, so the page under it does not scroll (WP-36, layout.css).
+ * mounted it holds the body class `subpage-open`, so the page under it does not scroll (WP-36, layout.css). When it
+ * goes, a copy of it leaves to the right (`lib/leave.ts`, WP-39), unless the swipe took it away.
  */
 export function SubPageFrame({
   title,
@@ -79,6 +81,7 @@ export function SubPageFrame({
   const scrolled = useScrolled(pageRef, sentinelRef);
   useSwipeBack(pageRef, onBack, { enabled: swipeBack, onSwipeStart, onCommit: onSwipeCommit });
   useBodyClass("subpage-open");
+  useLeave(pageRef, "subpage");
 
   return (
     <section

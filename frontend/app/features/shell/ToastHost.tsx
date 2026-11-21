@@ -1,12 +1,12 @@
 "use client";
 
-import { cn } from "@homi/ui";
+import { cn, leaveRef } from "@homi/ui";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, type ReactNode, type TouchEvent, useLayoutEffect, useRef, useState } from "react";
 
 import { reportError } from "@/lib/errors/report";
 import { type ToastPlacement, useToastPlacement } from "@/lib/ui/shellState";
-import { dismissToast, type ShownToast, type ToastScope, useToast } from "@/lib/ui/toast";
+import { dismissToast, type ShownToast, TOAST_ACTION_MS, type ToastScope, useToast } from "@/lib/ui/toast";
 
 /**
  * The legacy offsets by what is below the toast (`feedback.css:23-29,77-88`; literals there, so no token here): 20 px
@@ -74,12 +74,18 @@ function useToastDrag(close: () => void) {
 const SURFACE = "animate-rise-in rounded-[14px] bg-text/92 text-[14px] font-medium text-bg shadow-(--shadow-float)";
 
 /**
+ * The toast's leave (WP-39, BR-APP-112): a copy sinks 10 px and fades over 180 ms. None when a drag took the toast away
+ * (the frame's inline transform), when another toast replaced it in the same commit, or when its host went with it.
+ */
+const toastLeave = leaveRef("toast", { selector: "[data-toast-drag]" });
+
+/**
  * The element that follows the drag. Not the surface itself: its rise-in fills `both` and holds `transform: none`
  * after it ran, which would win over the drag's inline transform.
  */
 function DragFrame({ drag, children }: { drag: ReturnType<typeof useToastDrag>; children: ReactNode }) {
   return (
-    <div data-toast-drag="" {...drag.handlers} style={drag.style} className="pointer-events-auto touch-none">
+    <div ref={toastLeave} data-toast-drag="" {...drag.handlers} style={drag.style} className="pointer-events-auto touch-none">
       {children}
     </div>
   );
@@ -105,7 +111,11 @@ function ToastView({ scope, toast }: { scope: ToastScope; toast: ShownToast }) {
       <DragFrame drag={drag}>
         <div data-toast="" className={cn(SURFACE, "flex items-center gap-3 py-1.5 pr-1.5 pl-4")}>
           <span className="line-clamp-3 min-w-0 flex-1 wrap-break-word">{text}</span>
-          <button type="button" onClick={act} className="shrink-0 rounded-[10px] px-3 py-2 font-bold active:bg-bg/15">
+          <button type="button" onClick={act} className="inline-flex shrink-0 items-center gap-[7px] rounded-[10px] px-3 py-2 font-bold active:bg-bg/15">
+            <svg data-toast-ring="" viewBox="0 0 20 20" aria-hidden>
+              <circle cx="10" cy="10" r="8" />
+              <circle cx="10" cy="10" r="8" pathLength={1} style={{ animationDuration: `${TOAST_ACTION_MS}ms` }} />
+            </svg>
             {message.action}
           </button>
         </div>
@@ -129,7 +139,10 @@ function ToastView({ scope, toast }: { scope: ToastScope; toast: ShownToast }) {
  * the drag never scrolls the page. The app's host sits by what is below it (`useToastPlacement` of the shell state); the `sheet`
  * scope above its sheet's footer. Under reduced motion the toast does not rise in and still follows a drag. The text is
  * clamped to three lines; the button is not. Not the Radix Toast of `@homi/ui`: it pauses on
- * blur, pointer and focus, while SCR-042 keeps strict times (`lib/ui/toast.ts` owns them). The toast closes when its
+ * blur, pointer and focus, while SCR-042 keeps strict times (`lib/ui/toast.ts` owns them). An action toast shows its
+ * countdown on the button: a 16 px ring whose dash runs out over `TOAST_ACTION_MS` (WP-39, BR-APP-118); the toast is
+ * remounted per id, so a replacement restarts the ring with the timer (the fix of LB-APP-085), and under reduced
+ * motion the ring stays full. The toast closes when its
  * host is hidden or unmounted, as a closed filters sheet takes its tip along in legacy.
  */
 export function ToastHost({ scope = "app" }: { scope?: ToastScope }) {

@@ -1,7 +1,7 @@
 import type { Locale } from "@homi/config";
 import { describe, expect, it } from "vitest";
 
-import { type FlowSurface, flowRate, formatFlow } from "../../src/format/index";
+import { flowParts, type FlowSurface, flowRate, formatFlow } from "../../src/format/index";
 import { translator } from "./translate";
 
 describe("BR-APP-044: flowRate", () => {
@@ -98,6 +98,36 @@ describe("LB-APP-033: dev021OneFlowVocabulary", () => {
       expect(flows.map((flow) => formatFlow(flowRate(flow), surface, t, { oneVocabulary: true }))).toEqual(
         legacy[locale].sheet,
       );
+    }
+  });
+});
+
+describe("flowParts (WP-39, BR-APP-113): the flow line as a message and its number", () => {
+  const surfaces: readonly FlowSurface[] = ["sheet", "tile", "nudge"];
+
+  it("null without a rate and for none this week, whose line has no number", () => {
+    expect(flowParts(null, "sheet")).toBeNull();
+    expect(flowParts(flowRate({ week: 0, days: 7 }), "sheet")).toBeNull();
+    expect(flowParts(flowRate({ week: 3 }), "sheet")).toBeNull();
+  });
+
+  it("the sheet's keys and the numbers of flowRate: a day rate rounded, a week rate as it is", () => {
+    expect(flowParts(flowRate({ week: 21, days: 7 }), "sheet")).toEqual({ key: "sheet.flowDay", n: 3 });
+    expect(flowParts(flowRate({ week: 4, days: 7 }), "sheet")).toEqual({ key: "sheet.flowWeek", n: 4 });
+    expect(flowParts(flowRate({ week: 18, days: 7 }), "sheet")).toEqual({ key: "sheet.flowDay", n: 3 });
+  });
+
+  it.each(["ru", "uz", "en"] as const)("formatted with its number it equals formatFlow on every surface (%s)", (locale) => {
+    const t = translator(locale);
+    for (const oneVocabulary of [false, true]) {
+      for (const surface of surfaces) {
+        for (const flow of [{ week: 21, days: 7 }, { week: 4, days: 7 }, { week: 1, days: 30 }, { week: 700, days: 7 }]) {
+          const rate = flowRate(flow);
+          const parts = flowParts(rate, surface, { oneVocabulary });
+          expect(parts).not.toBeNull();
+          expect(t(parts!.key, { n: parts!.n })).toBe(formatFlow(rate, surface, t, { oneVocabulary }));
+        }
+      }
     }
   });
 });

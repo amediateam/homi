@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-21 (WP-38 merged as #97 `a0a618d`; on branch `chore/pipeline-speed`: the local e2e runner, the session audit script and rule 8 of the queue)
+updated: 2026-11-21 (WP-38 merged as #97 `a0a618d`; three open PRs on stacked branches: #98 pipeline tooling, #99 the KI-63 spec fix, #100 WP-39)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -338,6 +338,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     `listing-actions` 22, `spot-map` 14, `shell` 19, `back` 11, `saved` 10, `gates` 11, `launch` 6, `photo-viewer` 6,
     `map` 18 passed (the other specs on `006cb5a`; the radar ones need radars on, KI-65).
 - **WP-38 (merged in #97 `a0a618d` on 2026-11-21):** rows 13, 14, 16 and 37 of `baseline.md`.
+- **On branch `wp-39-catch-up-motion` (WP-39, PR #100, not merged; stacked on #99, which is stacked on #98):** rows 44 – 54 of `baseline.md` — the leave of sheets, sub-pages and toasts on a lifeless copy (`@homi/ui` `lib/leave.ts`: `playLeave`, `useLeave`, `leaveRef`, `skipLeave`; a leave layer at the end of `body`), `RollNumber` and the app's `rollText` in the filter footers (`flowParts` of `@homi/i18n/format`), the save phases of «Сохранить» and «Включить радар» (`SaveState`, `useSavePhase`, the `confirm` option of `subscribe` and `saveEdit`), the favourite's heart and burst and the countdown ring of an action toast (`app/styles/motion.css`), the thumb of `SegmentedControl`, the release's curves (`--ease-out`, `--ease-spring`, `--ease-pop`; the chrome's springs; the market marker by transform), the survey's `moved` step and «Это всё по вашему поиску» at the end of the search feed. `e2e/motion.spec.ts` reads the copies and their animations in the browser.
   - The feed epoch (`bumpFeedEpoch`, `features/feed/feedQuery.ts`) counts as one more pull of the search shown.
   - The long return (`features/feed/fresh.ts`, the visit tracker's `onLongReturn`): another tab re-creates the feed and
     drops its scroll memory; uncovered within 60 px of the top a silent reload; otherwise `GET /bff/listings/new` and

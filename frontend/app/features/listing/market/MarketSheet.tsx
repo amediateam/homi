@@ -54,7 +54,7 @@ function DemoScale({ position, label, revealed, motion }: { position: number; la
         data-market-demo-dot=""
         className={cn(
           "absolute bottom-[2px] flex -translate-x-1/2 flex-col items-center gap-[4px]",
-          motion && "transition-[left] delay-200 duration-1000 ease-[cubic-bezier(.22,1,.36,1)]",
+          motion && "transition-[left] delay-200 duration-1000 ease-(--ease-out)",
         )}
         style={{ left: `${revealed ? position : 50}%` }}
       >
@@ -63,7 +63,7 @@ function DemoScale({ position, label, revealed, motion }: { position: number; la
             data-market-demo-tag=""
             className={cn(
               "rounded-pill bg-text px-[8px] py-[2px] text-[13px] font-semibold whitespace-nowrap text-bg",
-              motion && "transition-opacity delay-1000 duration-300 ease-out",
+              motion && "transition-opacity delay-1000 duration-300 ease-[ease-out]",
               revealed ? "opacity-100" : "opacity-0",
             )}
           >

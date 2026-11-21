@@ -90,6 +90,7 @@ export function useSwipeBack(
       layer.style.transform = "";
       layer.style.willChange = "";
       layer.removeAttribute("data-swiping");
+      layer.removeAttribute("data-gone");
     };
     const settleBack = () => {
       const done = () => {
@@ -106,6 +107,8 @@ export function useSwipeBack(
     };
     const close = () => {
       phase = "settling";
+      // The swipe is the layer's way out: no leave plays on top of it (`lib/leave.ts`).
+      layer.setAttribute("data-gone", "");
       callbacks.current.onCommit?.();
       const done = () => {
         phase = "closed";

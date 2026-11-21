@@ -182,16 +182,29 @@ describe("FoundSheet: the question (SCR-031)", () => {
 
 describe("FoundSheet: where it was found", () => {
   it.each(["telegram", "olx", "site", "agent", "friends", "street", "other"] as const)(
-    "«%s»: sends the code, closes, «Поздравляем! 🎉 Спасибо, что рассказали»",
+    "«%s»: sends the code once and shows «Поздравляем!» without closing and without a toast; «Готово» closes (WP-39)",
     (where) => {
       render(survey());
       tap("found", "elsewhere");
+      const body = content().closest<HTMLElement>('[data-slot="bottom-sheet-body"]')!;
+      body.scrollTop = 120;
 
       tap("where", where);
       expect(state.sendFoundWhere).toHaveBeenCalledExactlyOnceWith({ where });
-      expect(state.back).toHaveBeenCalledTimes(1);
-      expect(toastKey()).toBe("found.thanksYes");
+      expect(step()).toBe("moved");
+      expect(body.scrollTop).toBe(0);
+      expect(state.back).not.toHaveBeenCalled();
+      expect(toastKey()).toBeNull();
       expect(haptics()).toEqual(["impactOccurred:light", "impactOccurred:light"]);
+      expect(within(content()).getByText("Поздравляем!")).toBeTruthy();
+      expect(within(content()).getByText("Спасибо, что рассказали — это помогает нам стать лучше.")).toBeTruthy();
+      // The header shows on `ask` and `where` only: here the heading is the dialog's hidden name.
+      expect(screen.getByRole("dialog", { name: "Поздравляем!" })).toBeTruthy();
+
+      fireEvent.click(within(content()).getByRole("button", { name: "Готово" }));
+      expect(state.back).toHaveBeenCalledTimes(1);
+      expect(toastKey()).toBeNull();
+      expect(state.sendFoundWhere).toHaveBeenCalledTimes(1);
     },
   );
 });
@@ -208,8 +221,9 @@ describe("FoundSheet: fire and forget", () => {
 
     tap("where", "olx");
     await act(async () => undefined);
-    expect(state.back).toHaveBeenCalledTimes(1);
-    expect(toastKey()).toBe("found.thanksYes");
+    expect(step()).toBe("moved");
+    expect(state.back).not.toHaveBeenCalled();
+    expect(toastKey()).toBeNull();
   });
 
   it("two taps on a final answer step back once", () => {

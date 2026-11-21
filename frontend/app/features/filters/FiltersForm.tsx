@@ -2,7 +2,7 @@
 
 import type { MessageKey } from "@homi/i18n";
 import { resetAll, type SearchFilters, type SearchMode, type SearchRules, sectionsFor } from "@homi/search";
-import { Button } from "@homi/ui";
+import { Button, type SavePhase } from "@homi/ui";
 import { useTranslations } from "next-intl";
 import { type RefObject, useEffect, useRef } from "react";
 
@@ -68,6 +68,8 @@ export interface FiltersFormProps {
   onDraw?: (cleared: SearchFilters) => void;
   /** A subscribe or save is on its way. */
   submitting: boolean;
+  /** The save phase of the subscribe or save button (WP-39); `idle` without one. */
+  phase?: SavePhase;
 }
 
 /**
@@ -127,6 +129,7 @@ export function FiltersForm({
   onSave,
   onDraw,
   submitting,
+  phase,
 }: FiltersFormProps) {
   const t = useTranslations();
   const { draft, update, replace, relaxed, setRelaxed } = useDraft(initial);
@@ -167,6 +170,7 @@ export function FiltersForm({
           flow={flow}
           oneVocabulary={oneVocabulary}
           submitting={submitting}
+          phase={phase}
           onApply={() => onApply(draft)}
           onSubscribe={() => onSubscribe(draft, relaxed)}
           onSave={() => onSave(draft, relaxed)}

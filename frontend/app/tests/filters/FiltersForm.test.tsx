@@ -102,6 +102,7 @@ import { resetReference } from "@/lib/reference/useReference";
 import { currentToast, dismissToast } from "@/lib/ui/toast";
 
 import { cityOf, feedReference } from "../helpers/reference";
+import { shownText } from "../helpers/shown";
 
 const TASHKENT = cityOf({
   zones: [{ code: "center", name: "Центр" }],
@@ -151,7 +152,7 @@ const sectionNames = () => [...content().querySelectorAll(":scope > [data-sectio
 const footer = () => sheet().querySelector<HTMLElement>('[data-slot="filters-footer"]')!;
 const actions = () => [...footer().querySelectorAll("[data-action]")].map((node) => node.getAttribute("data-action"));
 const action = (name: string) => footer().querySelector<HTMLButtonElement>(`[data-action="${name}"]`);
-const flowLine = () => footer().querySelector('[data-slot="flow-line"]')!.textContent;
+const flowLine = () => shownText(footer().querySelector('[data-slot="flow-line"]'));
 const tapReset = () => fireEvent.click(sheet().querySelector('[data-action="reset"]')!);
 /** The draft as «Показать» hands it over. */
 function applied(): SearchFilters {
@@ -213,13 +214,13 @@ describe("FiltersForm: the three modes", () => {
 
   it("radar modes: «Сейчас подходит: {n}», empty until the first count; the button disabled while submitting", () => {
     form({ mode: "radar-new", submitting: true });
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe("");
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe("");
     expect(action("subscribe")?.disabled).toBe(true);
     cleanup();
 
     state.live = { count: 14, flow: null };
     form({ mode: "radar-edit" });
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe("Сейчас подходит: 14");
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe("Сейчас подходит: 14");
     fireEvent.click(action("save")!);
     expect(handlers.onSave).toHaveBeenCalledWith(expect.objectContaining({ city: "tashkent" }), null);
   });
@@ -387,7 +388,7 @@ describe("FiltersForm: the footer", () => {
     state.live = { count, flow: null };
     form({}, { rooms_min: 2 });
 
-    expect(action("apply")?.textContent).toBe(label);
+    expect(shownText(action("apply"))).toBe(label);
     expect(applied()).toMatchObject({ rooms_min: 2 });
   });
 
@@ -463,6 +464,33 @@ describe("FiltersForm: the footer", () => {
 
     expect(footer().querySelector('[data-state="radar-on"]')?.textContent).toBe("Радар включён");
     expect(actions()).toEqual(["apply"]);
+  });
+
+  it("while its save shows, the radar button stays although the radar is already in the list (WP-39)", () => {
+    state.active = true;
+    form({ submitting: true, phase: "done" });
+
+    expect(footer().querySelector('[data-state="radar-on"]')).toBeNull();
+    expect(actions()).toEqual(["subscribe", "apply"]);
+    expect(action("subscribe")?.getAttribute("data-phase")).toBe("done");
+    expect(action("subscribe")?.querySelector('[data-slot="save-tick"]')).not.toBeNull();
+  });
+
+  it("the three numbers of the footer are rolling numbers (WP-39, BR-APP-113)", () => {
+    const rolls = (slot: string) => [...footer().querySelectorAll(`${slot} [data-slot="roll-number"]`)].map((roll) => roll.getAttribute("aria-label"));
+    state.live = { count: 12, flow: normalizeFlow({ week: 21, days: 7 }) };
+    const view = form();
+    expect(rolls('[data-action="apply"]')).toEqual(["12"]);
+    expect(rolls('[data-slot="flow-line"]')).toEqual(["3"]);
+    // The button is named by what it shows, not by the strips of digits.
+    expect(within(footer()).getByRole("button", { name: "Показать 12" })).toBeTruthy();
+    view.unmount();
+
+    state.live = { count: 0, flow: normalizeFlow({ week: 0, days: 7 }) };
+    form({ mode: "radar-new" });
+    // To and from 0 the count line rolls; «none this week» has no number.
+    expect(rolls('[data-slot="matching-now"]')).toEqual(["0"]);
+    expect(rolls('[data-slot="flow-line"]')).toEqual([]);
   });
 });
 

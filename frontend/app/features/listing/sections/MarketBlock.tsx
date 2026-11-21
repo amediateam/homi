@@ -116,16 +116,17 @@ export function MarketBlock({ number, details, verdict }: { number: number; deta
         <div aria-hidden className="h-[6px] rounded-pill bg-[linear-gradient(90deg,var(--good),var(--fill)_50%,var(--high))]" />
         <span aria-hidden className="absolute bottom-[-3px] left-1/2 h-[12px] w-[2px] -translate-x-1/2 rounded-pill bg-hint" />
         {own !== null ? (
+          // A wrapper as wide as the scale carries the marker (legacy `.marker-run`): its `translateX` in per cent of
+          // its own width is the place on the scale, so the move needs no layout per frame.
           <span
             data-market-marker=""
-            className={cn(
-              "absolute bottom-[-4px] flex -translate-x-1/2 flex-col items-center gap-[4px]",
-              !lite && "transition-[left] duration-700 ease-[cubic-bezier(.22,1,.36,1)]",
-            )}
-            style={{ left: `${revealed ? markerPosition(delta) : 50}%` }}
+            className={cn("pointer-events-none absolute inset-y-0 left-[-100%] w-full", !lite && "transition-transform duration-700 ease-(--ease-out)")}
+            style={{ transform: `translateX(${revealed ? markerPosition(delta) : 50}%)` }}
           >
-            <span className="rounded-pill bg-text px-[8px] py-[2px] text-[13px] font-semibold whitespace-nowrap text-bg">{money.format(own)}</span>
-            <span aria-hidden className="size-[14px] rounded-pill border-2 border-bg bg-text" />
+            <span className="absolute right-0 bottom-[-4px] flex translate-x-1/2 flex-col items-center gap-[4px]">
+              <span className="rounded-pill bg-text px-[8px] py-[2px] text-[13px] font-semibold whitespace-nowrap text-bg">{money.format(own)}</span>
+              <span aria-hidden className="size-[14px] rounded-pill border-2 border-bg bg-text" />
+            </span>
           </span>
         ) : null}
       </div>

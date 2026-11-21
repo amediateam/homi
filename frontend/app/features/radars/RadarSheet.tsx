@@ -4,7 +4,7 @@ import type { Locale } from "@homi/config";
 import { labelFor } from "@homi/i18n";
 import type { Translate } from "@homi/i18n/format";
 import { findCity } from "@homi/search";
-import { Button, Check, ChevronRight, cn, Switch } from "@homi/ui";
+import { Button, Check, ChevronRight, cn, skipLeave, Switch } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { type KeyboardEvent, type ReactNode, useId, useLayoutEffect, useRef, useState } from "react";
 
@@ -200,6 +200,9 @@ export function RadarSheet({ id, radar, presentation, instant = false, restore =
     markSeen(item.number);
     setPreview(item.number, item);
     rememberRadarReturn(id, window.scrollY, place("listing"));
+    // The sheet gives way to the listing without a leave (WP-39): legacy parks its sheet under the card and plays
+    // none, and HOMI re-opens the sheet on the way back (DEC-64).
+    skipLeave(content.current);
     nav.push(routes.listing(item.number));
   };
 

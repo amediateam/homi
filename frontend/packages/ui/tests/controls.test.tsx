@@ -113,7 +113,8 @@ describe("SegmentedControl", () => {
     expect(group.getAttribute("data-size")).toBe("compact");
     expect(group.className).toMatch(/\bglass\b/);
     expect(group.className).not.toMatch(/\bbg-fill\b/);
-    expect(screen.getByRole("radio", { name: "Аренда" }).className).toMatch(/data-\[state=checked\]:bg-text/);
+    expect(screen.getByRole("radio", { name: "Аренда" }).className).toMatch(/data-\[state=checked\]:text-bg/);
+    expect(document.querySelector('[data-slot="segmented-control-thumb"]')?.className).toMatch(/\bbg-text\b/);
   });
 
   it("skips a disabled option", () => {
@@ -285,5 +286,69 @@ describe("icons", () => {
 
     expect(names.filter((name) => exported[name] === undefined)).toEqual([]);
     expect(ui.MapIcon).toBe(ui.Map);
+  });
+});
+
+describe("SegmentedControl: the thumb (WP-39, BR-APP-121)", () => {
+  const thumb = () => document.querySelector<HTMLElement>('[data-slot="segmented-control-thumb"]')!;
+  /** A declaration as the engine keeps it: jsdom rewrites a `calc()`, so both sides go through the same style. */
+  const kept = (property: "width" | "transform", value: string) => {
+    const probe = document.createElement("div");
+    probe.style[property] = value;
+    return probe.style[property];
+  };
+  const THREE = [
+    { value: "a", label: "Все" },
+    { value: "b", label: "Хозяин" },
+    { value: "c", label: "Риелтор" },
+  ] as const;
+
+  it.each([
+    ["a", 0],
+    ["b", 1],
+    ["c", 2],
+  ] as const)("three options, «%s» checked: one third of the track wide, moved %i steps", (value, steps) => {
+    render(<SegmentedControl aria-label="Кто" options={THREE} value={value} onValueChange={() => {}} />);
+
+    expect(thumb().getAttribute("aria-hidden")).toBe("true");
+    expect(thumb().style.width).toBe(kept("width", "calc((100% - 6px - 6px) / 3)"));
+    expect(thumb().style.transform).toBe(kept("transform", `translateX(calc(${steps} * (100% + 3px)))`));
+    expect(thumb().style.left).toBe("3px");
+    expect(thumb().style.top).toBe("3px");
+    expect(thumb().style.bottom).toBe("3px");
+    expect(thumb().className).not.toContain("opacity-0");
+    // The three places differ, so the thumb does move.
+    expect(new Set([0, 1, 2].map((k) => kept("transform", `translateX(calc(${k} * (100% + 3px)))`))).size).toBe(3);
+  });
+
+  it("two options: half of the track between the paddings; the compact control takes its own 4 px", () => {
+    const view = render(<SegmentedControl aria-label="Сделка" options={THREE.slice(0, 2)} value="b" onValueChange={() => {}} />);
+    expect(thumb().style.width).toBe(kept("width", "calc((100% - 6px - 3px) / 2)"));
+    expect(thumb().style.transform).toBe(kept("transform", "translateX(calc(1 * (100% + 3px)))"));
+
+    view.rerender(<SegmentedControl aria-label="Сделка" size="compact" options={THREE.slice(0, 2)} value="b" onValueChange={() => {}} />);
+    expect(thumb().style.width).toBe(kept("width", "calc((100% - 8px - 4px) / 2)"));
+    expect(thumb().style.transform).toBe(kept("transform", "translateX(calc(1 * (100% + 4px)))"));
+    expect(thumb().style.left).toBe("4px");
+  });
+
+  it("slides over 0.42 s on the release's spring, behind the options, whose checked one has no background of its own", () => {
+    render(<SegmentedControl aria-label="Кто" options={THREE} value="b" onValueChange={() => {}} />);
+
+    expect(thumb().className).toMatch(/duration-\[420ms\]/);
+    expect(thumb().className).toMatch(/ease-\(--ease-spring\)/);
+    expect(thumb().className).toMatch(/pointer-events-none/);
+    const checked = screen.getByRole("radio", { name: "Хозяин" });
+    expect(checked.className).toMatch(/\bz-1\b/);
+    expect(checked.className).not.toMatch(/data-\[state=checked\]:bg-/);
+    // The thumb is not an option: the group still holds exactly its radios.
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+  });
+
+  it("transparent while no option is checked", () => {
+    render(<SegmentedControl aria-label="Кто" options={THREE} value={"none" as "a"} onValueChange={() => {}} />);
+
+    expect(thumb().className).toContain("opacity-0");
+    expect(thumb().style.transform).toBe(kept("transform", "translateX(calc(0 * (100% + 3px)))"));
   });
 });

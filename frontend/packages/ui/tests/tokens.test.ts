@@ -138,7 +138,10 @@ describe("tokens of 03 §3.6", () => {
   it("the z-index ladder and motion as named tokens", () => {
     expect(declarations("theme.css", ":root")).toMatchObject({
       ...LADDER,
-      "--ease-ios": "cubic-bezier(0.2, 0.9, 0.3, 1)",
+      "--ease-out": "cubic-bezier(0.2, 0.9, 0.3, 1)",
+      "--ease-ios": "var(--ease-out)",
+      "--ease-spring": "cubic-bezier(0.3, 1.2, 0.45, 1)",
+      "--ease-pop": "cubic-bezier(0.34, 1.56, 0.64, 1)",
       "--dur-fast": "0.25s",
       "--dur-base": "0.3s",
       "--dur-slow": "0.35s",

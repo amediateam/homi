@@ -39,7 +39,7 @@ type Answer = FoundInput["answer"];
 type Where = FoundWhereInput["where"];
 
 /** The survey's steps (SCR-031): component state, never history entries — Back closes the whole survey. */
-export type FoundStep = "ask" | "where" | "done";
+export type FoundStep = "ask" | "where" | "done" | "moved";
 
 /** The row icons of legacy `FoundSheet.jsx` (lucide, 20 px, through `@homi/ui`). */
 const ICONS: Readonly<Record<Answer | Where, LucideIcon>> = {
@@ -67,12 +67,12 @@ const ANSWERS: readonly { answer: Answer; label: MessageKey }[] = [
 /** Step 2, in the order of the spec's rows; the codes are the enum of `POST /surveys/found/where` (WP-13). */
 const WHERE: readonly Where[] = ["telegram", "olx", "site", "agent", "friends", "street", "other"];
 
-const TITLES: Readonly<Record<Exclude<FoundStep, "done">, MessageKey>> = {
+const TITLES: Readonly<Record<Exclude<FoundStep, "done" | "moved">, MessageKey>> = {
   ask: "found.title",
   where: "found.whereTitle",
 };
 
-const TEXTS: Readonly<Record<Exclude<FoundStep, "done">, MessageKey>> = {
+const TEXTS: Readonly<Record<Exclude<FoundStep, "done" | "moved">, MessageKey>> = {
   ask: "found.text",
   where: "found.whereText",
 };
@@ -109,7 +109,10 @@ function FoundRow({ mark, icon: Icon, label, onSelect }: FoundRowProps) {
  *
  * - `ask`: «Да, через HOMI» → success haptic and the congratulations; «Да, в другом месте» → `where`, the body
  *   scrolled to the top; «Ещё ищу» and «Больше не ищу» close with their thank-you toast.
- * - `where`: seven rows, each closes with «Поздравляем! 🎉 Спасибо, что рассказали».
+ * - `where`: seven rows; each sends its answer and shows `moved`, the body scrolled to the top (WP-39, BR-APP-116).
+ * - `moved`: «Поздравляем!», «Спасибо, что рассказали — это помогает нам стать лучше.» and «Готово», which closes.
+ *   No header, as `done`, and no toast: `found.thanksYes` is no longer shown (LB-APP-091). The landlord block of
+ *   legacy's step is the cabinet's (WP-82, DEC-89).
  * - `done`: the 132 px `brand.assets.hooray`, «Поздравляем с новосельем!», its text, «Рассказать друзьям» — only
  *   when HOMI's bot is known (`botStartUrl("s_friend")`): `tg.shareUrl` of the bot link, then close — and «Готово».
  *   Legacy has no header on this step; the dialog keeps the heading as its hidden name.
@@ -158,10 +161,7 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
       tg.haptic.success();
       setStep("done");
     } else if (value === "elsewhere") {
-      const body = content.current?.closest('[data-slot="bottom-sheet-body"]');
-      if (body) {
-        body.scrollTop = 0;
-      }
+      toTop();
       setStep("where");
     } else {
       close();
@@ -169,11 +169,18 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
     }
   };
 
+  const toTop = () => {
+    const body = content.current?.closest('[data-slot="bottom-sheet-body"]');
+    if (body) {
+      body.scrollTop = 0;
+    }
+  };
+
   const where = (value: Where) => {
     tg.haptic.impact("light");
     void invokeAction(sendFoundWhere, { where: value }, locale).catch(() => undefined);
-    close();
-    showToast({ key: "found.thanksYes" });
+    toTop();
+    setStep("moved");
   };
 
   const share = (url: string) => {
@@ -182,7 +189,15 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
     close();
   };
 
-  const title = step === "done" ? <span className="sr-only">{t("found.congrats")}</span> : t(TITLES[step]);
+  // Only `ask` and `where` show a header, as legacy; the two closing steps keep their heading as the hidden name.
+  const title =
+    step === "done" ? (
+      <span className="sr-only">{t("found.congrats")}</span>
+    ) : step === "moved" ? (
+      <span className="sr-only">{t("found.movedTitle")}</span>
+    ) : (
+      t(TITLES[step])
+    );
 
   return (
     <RouteSheet presentation={presentation} variant="compact" title={title} onClose={close}>
@@ -201,6 +216,16 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
                 {t("found.share")}
               </Button>
             ) : null}
+            <Button variant="text" data-action="done" className="px-[16px] pt-[12px] pb-[4px] text-[15px] text-text" onClick={close}>
+              {t("found.done")}
+            </Button>
+          </div>
+        ) : step === "moved" ? (
+          <div className="flex flex-col items-center gap-[8px] px-[24px] pt-[8px] pb-[4px] text-center">
+            <h2 aria-hidden className="text-[24px] font-bold tracking-[-0.03em] text-text">
+              {t("found.movedTitle")}
+            </h2>
+            <p className="mb-[10px] max-w-[320px] text-[15px] leading-[1.4] text-hint">{t("found.movedText")}</p>
             <Button variant="text" data-action="done" className="px-[16px] pt-[12px] pb-[4px] text-[15px] text-text" onClick={close}>
               {t("found.done")}
             </Button>

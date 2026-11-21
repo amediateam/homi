@@ -1,7 +1,7 @@
 "use client";
 
 import { normalizeFilters, type SearchFilters } from "@homi/search";
-import { ErrorState, Spinner } from "@homi/ui";
+import { ErrorState, Spinner, useSavePhase } from "@homi/ui";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -145,6 +145,7 @@ function RadarEditor({ radar, presentation, flags }: { radar: Radar; presentatio
   const { saveEdit } = useSubscribe({ flags });
   const [submitting, setSubmitting] = useState(false);
   const start = useSheetRequest(setSubmitting);
+  const savePhase = useSavePhase();
 
   const save = (draft: SearchFilters, relaxed: string | null) => {
     if (submitting) {
@@ -152,17 +153,23 @@ function RadarEditor({ radar, presentation, flags }: { radar: Radar; presentatio
     }
     tg.haptic.impact("medium");
     setSubmitting(true);
+    savePhase.setPhase("busy");
     const { here, settle } = start();
-    void saveEdit(radar.id, draft, relaxed, { scope: () => (here() ? "sheet" : "app") }).then(
+    // The tick only while the sheet still shows: a sheet the user already left has no button to draw it on.
+    const confirm = () => (here() ? savePhase.confirm() : Promise.resolve());
+    void saveEdit(radar.id, draft, relaxed, { scope: () => (here() ? "sheet" : "app"), confirm }).then(
       (result) => {
         const stay = here();
         settle();
         if (result.ok && stay) {
           back();
+        } else {
+          savePhase.setPhase("idle");
         }
       },
       (failure: unknown) => {
         settle();
+        savePhase.setPhase("idle");
         reportError(failure, { kind: "error", where: "saveEdit" });
       },
     );
@@ -181,6 +188,7 @@ function RadarEditor({ radar, presentation, flags }: { radar: Radar; presentatio
       onSubscribe={nothing}
       onSave={save}
       submitting={submitting}
+      phase={savePhase.phase}
     />
   );
 }

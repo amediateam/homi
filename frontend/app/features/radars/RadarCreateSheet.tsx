@@ -1,5 +1,6 @@
 "use client";
 
+import { useSavePhase } from "@homi/ui";
 import type { SearchFilters } from "@homi/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLayoutEffect, useState, useSyncExternalStore } from "react";
@@ -85,6 +86,7 @@ export function RadarCreateSheet({ presentation, flags = devFlags }: { presentat
   const { subscribe } = useSubscribe({ flags });
   const [submitting, setSubmitting] = useState(false);
   const start = useSheetRequest(setSubmitting);
+  const savePhase = useSavePhase();
   const rules = searchRules(flags);
   const rawEntry = params.get("entry");
   const entry: RadarEntry = isRadarNewEntry(rawEntry) ? rawEntry : "empty";
@@ -108,17 +110,23 @@ export function RadarCreateSheet({ presentation, flags = devFlags }: { presentat
     }
     tg.haptic.impact("medium");
     setSubmitting(true);
+    savePhase.setPhase("busy");
     const { here, settle } = start();
-    void subscribe(draft, entry, relaxed, { scope: () => (here() ? "sheet" : "app") }).then(
+    // The tick only while the sheet still shows: a sheet the user already left has no button to draw it on.
+    const confirm = () => (here() ? savePhase.confirm() : Promise.resolve());
+    void subscribe(draft, entry, relaxed, { scope: () => (here() ? "sheet" : "app"), confirm }).then(
       (result) => {
         const stay = here();
         settle();
         if (result.ok && stay) {
           back();
+        } else {
+          savePhase.setPhase("idle");
         }
       },
       (error: unknown) => {
         settle();
+        savePhase.setPhase("idle");
         reportError(error, { kind: "error", where: "subscribe" });
       },
     );
@@ -137,6 +145,7 @@ export function RadarCreateSheet({ presentation, flags = devFlags }: { presentat
       onSubscribe={create}
       onSave={nothing}
       submitting={submitting}
+      phase={savePhase.phase}
     />
   );
 }

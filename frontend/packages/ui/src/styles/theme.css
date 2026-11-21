@@ -94,7 +94,12 @@
   --z-toast: 60;
   --z-viewer: 100;
   --z-pin: 1000;
-  --ease-ios: cubic-bezier(0.2, 0.9, 0.3, 1);
+  /* The curves of the pinned release (legacy `tokens.css`, WP-39). `--ease-ios` is the earlier name of `--ease-out`;
+     Tailwind's `ease-out` utility reads the same variable, so the keyword is written `ease-[ease-out]`. */
+  --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --ease-ios: var(--ease-out);
+  --ease-spring: cubic-bezier(0.3, 1.2, 0.45, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-fast: 0.25s;
   --dur-base: 0.3s;
   --dur-slow: 0.35s;

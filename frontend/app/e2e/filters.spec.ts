@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, stubMedia, test as base, type LaunchedApp, shownText } from "@homi/testing/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -158,7 +158,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       const counts = watchCounts(page, "2", "2");
       await roomButton(rooms, "2").click();
-      await expect(action(page, "apply")).toHaveText(applyLabel(await counts.answer));
+      await expect.poll(async () => shownText(action(page, "apply"))).toBe(applyLabel(await counts.answer));
       expect(counts.carrying()).toBe(1);
 
       const feedAsked = watchFeed(page, mode, "2", "2");
@@ -260,7 +260,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       const counts = watchCounts(page, "2", "2");
       await roomButton(filters.locator('[data-section="rooms"]'), "2").click();
-      await expect(action(page, "apply")).toHaveText(applyLabel(await counts.answer));
+      await expect.poll(async () => shownText(action(page, "apply"))).toBe(applyLabel(await counts.answer));
       expect(counts.carrying()).toBe(1);
 
       const feedAsked = watchFeed(page, mode, "2", "2");
@@ -338,7 +338,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       const counts = watchCounts(page, "2", "2");
       await roomButton(direct.locator('[data-section="rooms"]'), "2").click();
-      await expect(action(page, "apply")).toHaveText(applyLabel(await counts.answer));
+      await expect.poll(async () => shownText(action(page, "apply"))).toBe(applyLabel(await counts.answer));
       await action(page, "apply").click();
 
       await landed(page, "/ru", { city: "tashkent", rooms_min: "2", rooms_max: "2" });

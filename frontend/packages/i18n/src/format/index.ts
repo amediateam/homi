@@ -6,7 +6,7 @@
  */
 export { type DateInput, dateTimeZone, formatAgo, formatShortDate, formatTime, tashkentDayKey, type ZoneOptions } from "./date";
 export { type DistanceOptions, formatCenter, formatDistance, formatMetroLabel, type MetroOptions } from "./distance";
-export { type FlowOptions, type FlowRate, flowRate, type FlowSurface, formatFlow } from "./flow";
+export { type FlowOptions, flowParts, type FlowRate, flowRate, type FlowSurface, formatFlow } from "./flow";
 export {
   createMoney,
   type Money,

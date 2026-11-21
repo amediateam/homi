@@ -120,6 +120,8 @@ describe("useSwipeBack", () => {
     // 100 px in 2 s: 0.05 px/ms, so only the distance (more than 99 px) closes it.
     swipe(layer, 100, 2000);
     expect(onCommit).toHaveBeenCalledTimes(1);
+    // The swipe is the layer's way out: the mark tells the leave to play nothing on top of it (WP-39).
+    expect(layer.hasAttribute("data-gone")).toBe(true);
     expect(layer.style.transform).toBe(`translateX(${WIDTH}px)`);
     expect(layer.style.transition).toContain(`${SWIPE_BACK_SETTLE_MS}ms`);
     vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS - 1);
@@ -165,6 +167,7 @@ describe("useSwipeBack", () => {
     expect(layer.style.transform).toBe("");
     expect(layer.style.transition).toBe("");
     expect(layer.hasAttribute("data-swiping")).toBe(false);
+    expect(layer.hasAttribute("data-gone")).toBe(false);
     expect(onBack).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
 
@@ -438,5 +441,53 @@ describe("SubPageFrame", () => {
     swipe(screen.getByText("Светлая"), 150, 1000);
     vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS);
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SubPageFrame: the leave (WP-39, BR-APP-112)", () => {
+  const copies = () => [...document.querySelectorAll<HTMLElement>('[data-leave="subpage"]')];
+  let played: Array<{ frames: Keyframe[]; timing: KeyframeAnimationOptions }> = [];
+
+  beforeEach(() => {
+    played = [];
+    Element.prototype.animate = function animate(frames: Keyframe[], timing: KeyframeAnimationOptions) {
+      played.push({ frames, timing });
+      return { finished: new Promise<void>(() => undefined) } as unknown as Animation;
+    } as unknown as typeof Element.prototype.animate;
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "animate");
+    document.querySelector("[data-leave-layer]")?.remove();
+  });
+
+  it("a page that goes leaves a copy to the right: 24 %, faded, 200 ms; the copy is no sub-page", async () => {
+    const { unmount } = render(<SubPageFrame title="Тема" onBack={vi.fn()} />);
+    unmount();
+    await act(async () => undefined);
+
+    expect(copies()).toHaveLength(1);
+    expect(copies()[0]!.getAttribute("data-slot")).toBe("subpage-leave");
+    expect(copies()[0]!.hasAttribute("inert")).toBe(true);
+    expect(document.querySelector('[data-slot="subpage"]')).toBeNull();
+    expect(played).toEqual([
+      { frames: [{ transform: "translateX(24%)", opacity: 0 }], timing: { duration: 200, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" } },
+    ]);
+  });
+
+  it("a page its swipe took away leaves none", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: WIDTH });
+    const onBack = vi.fn();
+    const { unmount } = render(<SubPageFrame title="Тема" onBack={onBack} />);
+    const page = document.querySelector<HTMLElement>('[data-slot="subpage"]')!;
+
+    swipe(page, 200, 2000);
+    vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS);
+    expect(onBack).toHaveBeenCalledTimes(1);
+    unmount();
+    await act(async () => undefined);
+
+    expect(copies()).toHaveLength(0);
   });
 });

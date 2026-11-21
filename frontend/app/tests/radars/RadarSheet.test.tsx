@@ -287,6 +287,8 @@ describe("RadarSheet (SCR-028, BR-APP-047)", () => {
 
     fireEvent.click(strip().querySelector("[data-radar-find]")!);
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/listing/100001");
+    // The sheet gives way to the listing without a leave (WP-39): legacy's parked sheet plays none (DEC-64).
+    expect(document.querySelector('[data-slot="bottom-sheet"]')?.hasAttribute("data-gone")).toBe(true);
     expect(getPreview(100001)?.number).toBe(100001);
     expect(peekRadarReturn(A)).not.toBeNull();
     // Opened in this launch: no longer «новое».

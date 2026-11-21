@@ -70,6 +70,7 @@ import { resetReference } from "@/lib/reference/useReference";
 import { rememberHref } from "@/lib/ui/shellState";
 
 import { cityOf, feedReference } from "../helpers/reference";
+import { shownText } from "../helpers/shown";
 
 const ID = "01JD0000000000000000000001";
 const OTHER = "01JD0000000000000000000002";
@@ -228,7 +229,7 @@ describe("RadarForms: titles and buttons per mode (SCR-029, SCR-030)", () => {
       await edit();
     }
 
-    expect(footer().querySelector('[data-slot="matching-now"]')?.textContent).toBe(text);
+    expect(shownText(footer().querySelector('[data-slot="matching-now"]'))).toBe(text);
   });
 });
 
@@ -374,7 +375,7 @@ describe("RadarForms: the editor", () => {
     expect(impacts()).toEqual(["medium"]);
     expect(scopeOf(state.saveEdit.mock.calls[0][3])).toBe("sheet");
     await settle();
-    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: expect.any(Function) });
+    expect(state.saveEdit).toHaveBeenCalledExactlyOnceWith(ID, radarOf().filters, null, { scope: expect.any(Function), confirm: expect.any(Function) });
     expect(state.back).toHaveBeenCalledTimes(1);
     expect(state.listOptions[0]).toEqual(expect.objectContaining({ previews: true }));
   });
@@ -519,5 +520,124 @@ describe("RadarForms: radars switched off (DEC-51)", () => {
     await edit();
     expect(document.querySelector('[data-route="radar/edit"]')).toBeTruthy();
     expect(state.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("RadarForms: the save phases of the button (WP-39, BR-APP-114)", () => {
+  const phase = (name: string) => action(name).getAttribute("data-phase");
+  const spinner = (name: string) => action(name).querySelector('[data-slot="save-spinner"]');
+  const tick = (name: string) => action(name).querySelector('[data-slot="save-tick"]');
+
+  /** The flow as `useSubscribe` runs it: the answer, then the button's tick, then the result. */
+  function confirming(spy: typeof state.subscribe | typeof state.saveEdit) {
+    let answer: () => void = () => undefined;
+    const arrived = new Promise<void>((done) => (answer = done));
+    spy.mockImplementation(async (...args: unknown[]) => {
+      await arrived;
+      await (args.at(-1) as SubscribeOptions).confirm?.();
+      return { ok: true };
+    });
+    return { answer: () => act(async () => answer()) };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("new radar: idle → the spinner while the request runs → the tick for 900 ms → the sheet closes", async () => {
+    const flow = confirming(state.subscribe);
+    create();
+    expect(phase("subscribe")).toBe("idle");
+    expect(action("subscribe").hasAttribute("data-save")).toBe(true);
+
+    fireEvent.click(action("subscribe"));
+    expect(phase("subscribe")).toBe("busy");
+    expect(spinner("subscribe")).not.toBeNull();
+    expect(action("subscribe").disabled).toBe(true);
+    // The label still holds the button's width.
+    expect(action("subscribe").textContent).toBe("Включить радар");
+
+    await flow.answer();
+    expect(phase("subscribe")).toBe("done");
+    expect(tick("subscribe")).not.toBeNull();
+    expect(spinner("subscribe")).toBeNull();
+    expect(state.back).not.toHaveBeenCalled();
+
+    await act(() => vi.advanceTimersByTimeAsync(899));
+    expect(state.back).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(state.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("the editor: «Сохранить» goes the same way", async () => {
+    const flow = confirming(state.saveEdit);
+    await edit();
+
+    fireEvent.click(action("save"));
+    expect(phase("save")).toBe("busy");
+    await flow.answer();
+    expect(phase("save")).toBe("done");
+    expect(tick("save")).not.toBeNull();
+
+    await act(() => vi.advanceTimersByTimeAsync(900));
+    expect(state.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failure gives the button back: idle, enabled, no tick, the sheet open", async () => {
+    state.subscribe.mockResolvedValue({ ok: false });
+    create();
+
+    fireEvent.click(action("subscribe"));
+    expect(phase("subscribe")).toBe("busy");
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(phase("subscribe")).toBe("idle");
+    expect(tick("subscribe")).toBeNull();
+    expect(action("subscribe").disabled).toBe(false);
+    expect(state.back).not.toHaveBeenCalled();
+  });
+
+  it("a rejected request gives the button back too", async () => {
+    state.saveEdit.mockRejectedValue(new Error("network"));
+    await edit();
+
+    fireEvent.click(action("save"));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(phase("save")).toBe("idle");
+    expect(action("save").disabled).toBe(false);
+  });
+
+  it("a radar that was already on closes at once: the flow awaits no tick", async () => {
+    state.subscribe.mockResolvedValue({ ok: true });
+    create();
+
+    fireEvent.click(action("subscribe"));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    expect(state.back).toHaveBeenCalledTimes(1);
+    expect(tick("subscribe")).toBeNull();
+    // No tick was awaited: the button is still busy as the sheet goes, and idle when the sheet is shown again (below).
+    expect(phase("subscribe")).toBe("busy");
+  });
+
+  it("a sheet hidden with its route after a save starts idle when it is shown again", async () => {
+    const flow = confirming(state.subscribe);
+    const view = render(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+    fireEvent.click(action("subscribe"));
+    await flow.answer();
+    await act(() => vi.advanceTimersByTimeAsync(900));
+    expect(phase("subscribe")).toBe("done");
+
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), true));
+    view.rerender(cached(intl(<RadarCreateSheet presentation="layer" />), false));
+
+    expect(phase("subscribe")).toBe("idle");
+    expect(tick("subscribe")).toBeNull();
+    expect(action("subscribe").disabled).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { renderToString } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BottomSheet, type BottomSheetProps, SHEET_DRAG_SETTLE_MS } from "../src/index";
 
@@ -467,5 +467,104 @@ describe("BottomSheet, an instant opening (WP-30)", () => {
     expect(html).not.toContain("animate-rise");
     expect(html).not.toContain("animate-fade");
     expect(renderToString(<Sheet portal={false} />)).toContain("animate-rise");
+  });
+});
+
+describe("BottomSheet: the leave (WP-39, BR-APP-112)", () => {
+  const copies = (kind: string) => [...document.querySelectorAll<HTMLElement>(`[data-leave="${kind}"]`)];
+  const settle = () => act(async () => undefined);
+  let played: Array<{ kind: string | null; frames: Keyframe[]; timing: KeyframeAnimationOptions }> = [];
+
+  beforeEach(() => {
+    played = [];
+    Element.prototype.animate = function animate(this: HTMLElement, frames: Keyframe[], timing: KeyframeAnimationOptions) {
+      played.push({ kind: this.getAttribute("data-leave"), frames, timing });
+      return { finished: new Promise<void>(() => undefined) } as unknown as Animation;
+    } as unknown as typeof Element.prototype.animate;
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "animate");
+    document.querySelector("[data-leave-layer]")?.remove();
+  });
+
+  it("a sheet that closes leaves a copy sliding down over a copy of the backdrop fading; neither is a sheet", async () => {
+    const view = render(<Sheet closeLabel="Close" footer={<button type="button">Apply</button>} />);
+    view.rerender(<Sheet open={false} closeLabel="Close" />);
+    await settle();
+
+    expect(sheets()).toHaveLength(0);
+    expect(overlays()).toHaveLength(0);
+    expect(copies("sheet")).toHaveLength(1);
+    expect(copies("backdrop")).toHaveLength(1);
+    const sheet = copies("sheet")[0]!;
+    expect(sheet.getAttribute("data-slot")).toBe("bottom-sheet-leave");
+    expect(sheet.getAttribute("aria-hidden")).toBe("true");
+    expect(sheet.hasAttribute("inert")).toBe(true);
+    expect(sheet.classList.contains("leave")).toBe(true);
+    expect(sheet.textContent).toContain("Body");
+    // The backdrop's copy lies under the sheet's.
+    expect(copies("backdrop")[0]!.compareDocumentPosition(sheet) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(played).toEqual([
+      { kind: "backdrop", frames: [{ backgroundColor: "transparent" }], timing: { duration: 280, easing: "ease-out", fill: "forwards" } },
+      { kind: "sheet", frames: [{ transform: "translateY(100%)" }], timing: { duration: 280, easing: "cubic-bezier(0.3, 0, 0.2, 1)", fill: "forwards" } },
+    ]);
+  });
+
+  it("an unmounted sheet leaves too", async () => {
+    const view = render(<Sheet />);
+    view.unmount();
+    await settle();
+
+    expect(copies("sheet")).toHaveLength(1);
+  });
+
+  it("a sheet its drag took away leaves none", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(400);
+    function Closing() {
+      const [open, setOpen] = useState(true);
+      return <Sheet open={open} onClose={() => setOpen(false)} />;
+    }
+    render(<Closing />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    dragDown(part(sheets()[0]!, "header"), 300);
+    expect(sheets()[0]!.hasAttribute("data-gone")).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(SHEET_DRAG_SETTLE_MS));
+    await settle();
+
+    expect(sheets()).toHaveLength(0);
+    expect(copies("sheet")).toHaveLength(0);
+    expect(copies("backdrop")).toHaveLength(0);
+  });
+
+  it("a sheet replaced by another in the same commit leaves none", async () => {
+    const view = render(<Sheet key="one" title="One" />);
+    view.rerender(<Sheet key="two" title="Two" />);
+    await settle();
+
+    expect(sheets()).toHaveLength(1);
+    expect(copies("sheet")).toHaveLength(0);
+  });
+
+  it("closing the upper of two stacked sheets leaves it, though a sheet still shows below", async () => {
+    const view = render(
+      <>
+        <Sheet title="Filters" />
+        <Sheet title="City" stacked />
+      </>,
+    );
+    view.rerender(
+      <>
+        <Sheet title="Filters" />
+        <Sheet title="City" stacked open={false} />
+      </>,
+    );
+    await settle();
+
+    expect(sheets()).toHaveLength(1);
+    expect(copies("sheet")).toHaveLength(1);
+    expect(copies("sheet")[0]!.textContent).toContain("City");
   });
 });

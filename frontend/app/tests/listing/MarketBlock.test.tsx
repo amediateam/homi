@@ -122,8 +122,8 @@ describe("MarketBlock (WP-26, BR-APP-028)", () => {
 
     expect(marker()?.textContent).toBe("$600");
     expect(marker()?.textContent).not.toContain(t("unit.month"));
-    expect(marker()?.style.left).toBe(`${markerPosition(-0.12)}%`);
-    expect(marker()?.style.left).toBe("35%");
+    expect(marker()?.style.transform).toBe(`translateX(${markerPosition(-0.12)}%)`);
+    expect(marker()?.style.transform).toBe("translateX(35%)");
   });
 
   it("the own value falls back to the price of the metric; no marker without one (never «$NaN»)", () => {
@@ -161,18 +161,18 @@ describe("MarketBlock (WP-26, BR-APP-028)", () => {
   it("the first show of a number starts the marker at the centre and moves it after two frames; the verdict fades in", () => {
     render(block());
 
-    expect(marker()?.style.left).toBe("50%");
+    expect(marker()?.style.transform).toBe("translateX(50%)");
     expect(verdictText().className).toContain("opacity-0");
     act(() => {
       vi.advanceTimersToNextFrame();
     });
-    expect(marker()?.style.left).toBe("50%");
+    expect(marker()?.style.transform).toBe("translateX(50%)");
     act(() => {
       vi.advanceTimersToNextFrame();
     });
-    expect(marker()?.style.left).toBe("35%");
+    expect(marker()?.style.transform).toBe("translateX(35%)");
     expect(verdictText().className).toContain("opacity-100");
-    expect(marker()?.className).toContain("transition-[left]");
+    expect(marker()?.className).toContain("transition-transform");
     expect(marker()?.className).toContain("duration-700");
     expect(verdictText().className).toContain("delay-450");
   });
@@ -183,12 +183,12 @@ describe("MarketBlock (WP-26, BR-APP-028)", () => {
     unmount();
 
     render(block());
-    expect(marker()?.style.left).toBe("35%");
+    expect(marker()?.style.transform).toBe("translateX(35%)");
     expect(verdictText().className).toContain("opacity-100");
     cleanup();
 
     render(block(BASE, 100002));
-    expect(marker()?.style.left).toBe("50%");
+    expect(marker()?.style.transform).toBe("translateX(50%)");
   });
 
   it("only a render with a median counts as the first show", () => {
@@ -197,9 +197,9 @@ describe("MarketBlock (WP-26, BR-APP-028)", () => {
     unmount();
 
     render(block());
-    expect(marker()?.style.left).toBe("50%");
+    expect(marker()?.style.transform).toBe("translateX(50%)");
     twoFrames();
-    expect(marker()?.style.left).toBe("35%");
+    expect(marker()?.style.transform).toBe("translateX(35%)");
   });
 
   it("lite graphics: no transitions on the marker or the verdict", () => {
@@ -209,6 +209,6 @@ describe("MarketBlock (WP-26, BR-APP-028)", () => {
     expect(marker()?.className).not.toContain("transition");
     expect(verdictText().className).not.toContain("transition");
     twoFrames();
-    expect(marker()?.style.left).toBe("35%");
+    expect(marker()?.style.transform).toBe("translateX(35%)");
   });
 });
