@@ -136,6 +136,21 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(result.current).toMatchObject({ status: "ready", responseId: 2 });
   });
 
+  it("a bump of the feed epoch asks the same search again and keeps the points until the answer (WP-31)", async () => {
+    const { bumpFeedEpoch } = await import("@/features/feed/feedQuery");
+    const { result } = points();
+    await answer(0, answered(POINTS, 3));
+    const shown = result.current.shown;
+
+    act(() => bumpFeedEpoch());
+    expect(sent).toHaveLength(2);
+    expect(sent[1]?.query).toBe(sent[0]?.query);
+    expect(result.current.shown).toBe(shown);
+
+    await answer(1, answered([point(9, 41.2, 69.2, 400)], 1));
+    expect(result.current).toMatchObject({ status: "ready", shown: 1, responseId: 2 });
+  });
+
   it("the same search in a new object sends nothing; a posted_days change does (not filtersKey)", async () => {
     const { rerender } = points();
     await answer(0, answered(POINTS, 3));

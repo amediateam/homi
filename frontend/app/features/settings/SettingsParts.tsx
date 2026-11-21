@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 
 /**
  * A group of the settings screen (legacy `SettingsGroup`, `settings.css` `.set-group`): a 13 px title, the rows on a
- * card of the fill colour with 16 px corners, and an optional footer line.
+ * card of the fill colour with 16 px corners, and an optional footer line. The section has no accessible name, so
+ * the groups are not landmarks: the screen and each open page are the only regions.
  */
 export function SettingsGroup({ id, title, footer, children }: { id: string; title: string; footer?: string; children: ReactNode }) {
   return (
-    <section data-settings-group={id} aria-label={title}>
+    <section data-settings-group={id}>
       <h3 className="mx-[4px] mb-[8px] text-[13px] font-semibold text-hint">{title}</h3>
       <div className="overflow-hidden rounded-[16px] bg-fill">{children}</div>
       {footer ? <p className="mx-[4px] mt-[8px] text-[13px] leading-[1.4] text-hint">{footer}</p> : null}

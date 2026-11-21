@@ -2,7 +2,9 @@
 
 import { type SearchFilters, toApiQuery } from "@homi/search";
 import type { components } from "@homi/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+
+import { feedEpoch, subscribeFeedEpoch } from "@/features/feed/feedQuery";
 
 import { bffFetch } from "@/lib/api/browser";
 import { type ApiFailure, failureOf, type UiError } from "@/lib/api/errors";
@@ -63,10 +65,12 @@ interface State {
   request: Request | null;
   responseId: number;
   source: DataSource | undefined;
+  /** The feed epoch these points were asked under (WP-38): a bump asks again, the points shown kept meanwhile. */
+  epoch: number;
 }
 
-function start(key: string, responseId: number): State {
-  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined };
+function start(key: string, responseId: number, epoch: number): State {
+  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined, epoch };
 }
 
 function settle(state: State, result: ApiResult<MapAnswer>): State {
@@ -105,6 +109,9 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
  * (`useCursorFeed`'s guards). Listings hidden in this launch (`useSessionMap('hidden')`) are left out when grouping:
  * a change of that set regroups and recounts without a new `responseId`, so the camera stays.
  *
+ * A bump of the feed epoch (`bumpFeedEpoch`, WP-38; WP-31 bumps it when hidden listings return or the language or
+ * currency changes) asks the same search again, keeping the points shown until the answer.
+ *
  * The request lives in an effect and is aborted by its cleanup, on unmount and while the route is hidden by
  * `cacheComponents`; a pending one is sent again when shown. A failure is a status, never an empty map (LB-APP-008),
  * and nothing retries by itself. `bffFetch` reports each answer's `meta.source` to the demo marker once; the hook
@@ -114,10 +121,16 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
 export function useMapPoints(filters: SearchFilters, options: MapPointsOptions = {}): MapPoints {
   const { enabled = true, flags = devFlags } = options;
   const key = toApiQuery(filters, { rules: searchRules(flags) }).toString();
-  const [stored, setState] = useState<State>(() => start(key, 0));
+  const epoch = useSyncExternalStore(subscribeFeedEpoch, feedEpoch, () => 0);
+  const [stored, setState] = useState<State>(() => start(key, 0, epoch));
   let state = stored;
   if (stored.key !== key) {
-    state = start(key, stored.responseId);
+    state = start(key, stored.responseId, epoch);
+    setState(state);
+  } else if (stored.epoch !== epoch) {
+    // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
+    // same search is asked again when the map shows, and its points stay until the answer.
+    state = { ...stored, epoch, error: null, request: {} };
     setState(state);
   }
 

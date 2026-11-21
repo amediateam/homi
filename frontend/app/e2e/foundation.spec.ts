@@ -38,7 +38,7 @@ const ADDRESSES: [string, string[]][] = [
   [`/radars/${RADAR}/edit`, ["radar", "radar/edit"]],
   ["/radars/found", ["radars/found"]],
   ["/settings", ["settings"]],
-  ...["theme", "graphics", "language", "currency", "quiet-hours", "digest", "hidden"].map(
+  ...["theme", "graphics", "language", "currency", "quiet-hours", "digest", "cards", "hidden"].map(
     (name): [string, string[]] => [`/settings/${name}`, ["settings", `settings/${name}`]],
   ),
   ["/welcome/language", ["welcome/language"]],
@@ -277,14 +277,17 @@ test.describe("layers", () => {
   });
 });
 
-/** On a placeholder route: its glass sample and its primary button (WP-20); the feed of WP-24 has neither. */
+/**
+ * On the development gallery: its glass sample and a primary button. Until WP-31 these were the settings placeholder's
+ * (WP-20); the settings screen has neither, and no placeholder route is left.
+ */
 test.describe("themes and lite", () => {
   const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const glassFilter = (page: Page) =>
     page.locator("[data-glass-sample]").first().evaluate((element) => getComputedStyle(element).backdropFilter);
 
   test("the three theme states and the lite class change the computed styles", async ({ page }) => {
-    await launchSigningIn(page, "/ru/settings");
+    await launchSigningIn(page, "/ru/dev/ui");
     await expect(page.locator("html")).toHaveAttribute("data-scheme", "light");
     expect(await background(page)).toBe("rgb(255, 255, 255)");
     expect(await glassFilter(page)).toContain("blur(22px)");
@@ -306,9 +309,9 @@ test.describe("themes and lite", () => {
   });
 
   test("the accent is the brand yellow in every state", async ({ page }) => {
-    await launchSigningIn(page, "/ru/settings");
+    await launchSigningIn(page, "/ru/dev/ui");
     const accent = () =>
-      page.evaluate(() => getComputedStyle(document.querySelector('[data-slot="button"]') as Element).backgroundColor);
+      page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="gallery-glass-button"]') as Element).backgroundColor);
 
     expect(await accent()).toBe("rgb(255, 210, 63)");
     await page.evaluate(() => document.documentElement.setAttribute("data-scheme", "dark"));
