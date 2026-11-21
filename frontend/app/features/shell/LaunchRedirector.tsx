@@ -65,9 +65,17 @@ export function LaunchRedirector(): null {
       return;
     }
     const found = owner && !ownerEnabled ? null : launchTarget(launch);
-    // `o_<id>`: the questionnaire first, then its phone step.
+    // `o_<id>`: the questionnaire first, then its phone step; `c_<number>` (WP-83): the listing, then its request
+    // sheet, so Back closes the sheet, then the listing.
     const route = found === null ? null : matchRoute(found);
-    const pushes = found === null ? [] : route?.route === "owner" && route.step === "phone" ? [routes.ownerForm(route.id), found] : [found];
+    const pushes =
+      found === null
+        ? []
+        : route?.route === "owner" && route.step === "phone"
+          ? [routes.ownerForm(route.id), found]
+          : launch.contact && route?.route === "listing"
+            ? [found, routes.listingContact(Number(route.number))]
+            : [found];
     const url = new URL(window.location.href);
     const chain = (start: string) => pushes.map((href, index) => ({ href, after: index === 0 ? start : pushes[index - 1]!.split("?")[0]! }));
     if (!LAUNCH_PARAMS.some((name) => isLaunchParam(url.searchParams, name))) {

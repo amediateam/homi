@@ -23,6 +23,11 @@ export interface Launch {
    * listing link wins over both; `entry` stays `menu` (the launch source of LB-APP-058 is reproduced, not fixed).
    */
   owner: { kind: "new" } | { kind: "phone"; id: string } | null;
+  /**
+   * `c_<number>` (WP-83): the listing opens first, as for `l_<number>`, then its request sheet «Отклик хозяину». The
+   * bot's button that sends the link is WP-89's.
+   */
+  contact: boolean;
 }
 
 const OWNER_ID = /^o_([0-7][0-9A-HJKMNP-TV-Z]{25})$/i;
@@ -70,7 +75,8 @@ function read(initData: string, search: string): Launch {
     query = new URLSearchParams();
   }
   const fromStart = positiveNumber(/^l_(\d+)/.exec(startParam)?.[1]);
-  const listingNumber = fromStart ?? positiveNumber(query.get("listing"));
+  const fromContact = positiveNumber(/^c_(\d+)$/.exec(startParam)?.[1]);
+  const listingNumber = fromStart ?? fromContact ?? positiveNumber(query.get("listing"));
   const newsParam = query.get("news");
   const news = newsParam !== null && /^[a-z_]{1,32}$/.test(newsParam) ? newsParam : null;
   const mapParam = query.get("map");
@@ -93,6 +99,7 @@ function read(initData: string, search: string): Launch {
     mapDebug: query.has("mapdebug"),
     entry: listingNumber !== null ? "link" : news !== null ? "news" : "menu",
     owner,
+    contact: fromStart === null && fromContact !== null,
   };
 }
 
