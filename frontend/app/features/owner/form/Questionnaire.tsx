@@ -177,6 +177,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
           <PlaceSection
             form={form}
             shownPoint={listing.shownPoint}
+            saved={{ lat: listing.form.lat, lon: listing.form.lon }}
             invalid={highlighted.has("landmark") || highlighted.has("lat")}
             pointRefused={invalid.has("lat")}
             onLandmark={(landmark) => edit({ landmark })}

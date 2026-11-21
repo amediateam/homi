@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 
 import { MapAttribution } from "@/features/map/MapAttribution";
 import { attributionOf } from "@/features/map/tiles";
+import { useDocumentLook } from "@/features/map/useDocumentLook";
 import { useLocate } from "@/features/map/useLocate";
 import { useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
@@ -48,8 +49,7 @@ export function PlacePicker({
   const { reference } = useReference();
   const container = useRef<HTMLDivElement>(null);
   const layer = useRef<HTMLDivElement>(null);
-  const lite = typeof document !== "undefined" && document.documentElement.classList.contains("lite");
-  const scheme = typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light";
+  const { scheme, lite } = useDocumentLook();
   const map = usePickerMap(container, start, { tiles: reference.map?.tiles_url, scheme, locale, lite });
   const label = usePlaceLabel(map.center, map.moving);
   const [note, setNote] = useState<PickerNote | null>(null);
