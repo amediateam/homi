@@ -10,7 +10,8 @@ import type { RoutePresentation } from "@/features/shell/RouteSheet";
 import { usePathname } from "@/i18n/navigation";
 import { takeOverBack } from "@/lib/navigation/backHandler";
 import { useDepth } from "@/lib/navigation/history";
-import { isOwnerId, matchRoute } from "@/lib/navigation/routes";
+import { nav } from "@/lib/navigation/nav";
+import { isOwnerId, matchRoute, routes } from "@/lib/navigation/routes";
 import { showToast } from "@/lib/ui/toast";
 
 import { closeOwnerForm, forgetOwnerForm, markOwnerFormOpened } from "./closeOwnerForm";
@@ -75,6 +76,16 @@ function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerF
 
   const close = useCallback(() => void closeOwnerForm(), []);
   useLayoutEffect(() => (closesForm ? takeOverBack(close) : undefined), [closesForm, close]);
+
+  // A rejected listing opens on the phone step in its rejection state (BR-APP-085); Back returns to the questionnaire.
+  const rejected = listing?.status === "rejected";
+  const sentToPhone = useRef(false);
+  useEffect(() => {
+    if (rejected && step === null && !sentToPhone.current) {
+      sentToPhone.current = true;
+      nav.push(routes.ownerPhone(id));
+    }
+  }, [rejected, step, id]);
 
   const disabled = resource.error?.code === "owner_disabled";
   const told = useRef(false);
