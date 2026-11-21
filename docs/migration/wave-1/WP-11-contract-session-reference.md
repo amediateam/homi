@@ -99,7 +99,7 @@ stays here; `uz_Latn` became `uz`; the gate reason moved from the body `detail` 
 replaces legacy's separate pending call (*added by the owner-cabinet plan*).
 
 Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: false`), `no_city`
-(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
+(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), `en` (locale `en`; *added by WP-33, the render pass in English*), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
 
 ### `GET /settings`, `PATCH /settings` — bearer `app:read` / `app:write`; legacy: API-024, API-025
 

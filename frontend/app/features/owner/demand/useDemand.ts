@@ -59,7 +59,8 @@ export function useDemand(form: OwnerForm): Demand | null {
               }
             : null,
         });
-      });
+        // A read this effect aborted rejects (`bffFetch` rethrows the caller's abort): nothing waits for it (WP-33).
+      }, () => undefined);
     }, DEMAND_WAIT_MS);
     return () => {
       clearTimeout(timer);

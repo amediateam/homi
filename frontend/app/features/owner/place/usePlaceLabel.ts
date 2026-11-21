@@ -28,6 +28,12 @@ export async function readPlace(point: GeoPoint, signal?: AbortSignal): Promise<
 export type PlaceLabel = { kind: "reading" } | { kind: "none" } | { kind: "place"; text: string };
 
 /**
+ * A read the effect aborted rejects (`bffFetch` rethrows the caller's abort); the effect has moved on, so the rejection
+ * is dropped instead of reaching the global error report (WP-33: "signal is aborted without reason").
+ */
+function ignoreAbort(): void {}
+
+/**
  * The label under the pin (WP-81, BR-APP-077, DEC-79): `GET /owner/place` 400 ms after each stop of the map, the
  * previous read aborted, only inside the rectangle of Uzbekistan (outside it `none` at once); «…» while it runs; then
  * the district and the city by their reference names, else the city, else `none`. A failed read is `none`.
@@ -53,7 +59,7 @@ export function usePlaceLabel(center: GeoPoint, moving: boolean): PlaceLabel {
         const district = city?.districts.find((item) => item.code === place?.district_code);
         const text = city === null ? null : district === undefined ? city.name : `${district.name} · ${city.name}`;
         setAnswer({ for: key, label: text === null ? { kind: "none" } : { kind: "place", text } });
-      });
+      }, ignoreAbort);
     }, LABEL_WAIT_MS);
     return () => {
       clearTimeout(timer);
