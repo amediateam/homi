@@ -65,6 +65,8 @@ describe("track", () => {
         "owner_attention",
         "owner_limit_sheet",
         "owner_hint_opened",
+        "owner_entry",
+        "landlord_share",
       ].sort(),
     );
   });

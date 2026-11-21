@@ -21,6 +21,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { LandlordBlock } from "@/features/owner/entry/LandlordBlock";
 import { type RoutePresentation, RouteSheet } from "@/features/shell/RouteSheet";
 import { sendFound, sendFoundWhere, type FoundInput, type FoundWhereInput } from "@/lib/actions/surveys";
 import { invokeAction } from "@/lib/actions/useAction";
@@ -216,6 +217,7 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
                 {t("found.share")}
               </Button>
             ) : null}
+            <LandlordBlock src="homi" />
             <Button variant="text" data-action="done" className="px-[16px] pt-[12px] pb-[4px] text-[15px] text-text" onClick={close}>
               {t("found.done")}
             </Button>
@@ -226,6 +228,7 @@ function FoundSurvey({ presentation, trigger }: { presentation: RoutePresentatio
               {t("found.movedTitle")}
             </h2>
             <p className="mb-[10px] max-w-[320px] text-[15px] leading-[1.4] text-hint">{t("found.movedText")}</p>
+            <LandlordBlock src="elsewhere" />
             <Button variant="text" data-action="done" className="px-[16px] pt-[12px] pb-[4px] text-[15px] text-text" onClick={close}>
               {t("found.done")}
             </Button>

@@ -11,7 +11,9 @@
     "text": "Bitta tugma bilan ayting — HOMI qidiruvda yordam berayotganini bilamiz.",
     "kvadro": "Ha, HOMI orqali",
     "congratsText": "Aytganingiz uchun rahmat. HOMI yordam bergan boʻlsa — doʻstlaringizga ham ayting, ularga ham asqatadi.",
-    "shareText": "Kvartira HOMI orqali topildi 🎉 Bot Telegram-kanallardagi eʼlonlarni bitta lentaga yigʻadi, takrorlarni olib tashlaydi, uy egasi va maklerni ajratadi va filtrlaringizga mos yangilarini oʻzi yuboradi. Uy qidirayotgan boʻlsangiz — sinab koʻring, bu bepul."
+    "shareText": "Kvartira HOMI orqali topildi 🎉 Bot Telegram-kanallardagi eʼlonlarni bitta lentaga yigʻadi, takrorlarni olib tashlaydi, uy egasi va maklerni ajratadi va filtrlaringizga mos yangilarini oʻzi yuboradi. Uy qidirayotgan boʻlsangiz — sinab koʻring, bu bepul.",
+    "landlordSendBot": "Bot havolasini yuborish",
+    "landlordShareBot": "Assalomu alaykum! Men koʻchib ketyapman. Yangi ijarachini bepul va maklersiz Telegram-bot orqali topish mumkin: {url}"
   },
   "demo": {
     "label": "Demo maʼlumotlar",

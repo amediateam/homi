@@ -16,6 +16,7 @@ import { devFlags } from "@/lib/flags";
 import { routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
 
+import { OwnerEntryLine } from "@/features/owner/entry/OwnerEntry";
 import { MineBar } from "@/features/owner/panel/MineBar";
 import { OwnerPanel } from "@/features/owner/panel/OwnerPanel";
 import { OwnerPanelFooterSkeleton } from "@/features/owner/panel/MineBar";
@@ -306,6 +307,8 @@ function ListingSections({
           <OriginalText number={number} text={details.original.text ?? ""} phone={phone} translation={translation} />
         </SourcesSection>
       )}
+      {/* «Тоже сдаёте квартиру?» (WP-82, BR-APP-115, DEC-94): the card's `owner.entry`, which leaves out the user's own. */}
+      {details.owner?.entry === true ? <OwnerEntryLine src="listing" /> : null}
     </div>
   );
 }

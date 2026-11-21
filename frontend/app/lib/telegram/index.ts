@@ -13,7 +13,7 @@ import { openLink } from "./links";
 import { getLocation, locationAvailable } from "./location";
 import { call } from "./phone";
 import { attempt, hasInitData, initData, platform, safeCallback, version, webApp } from "./sdk";
-import { shareMessage, shareUrl } from "./share";
+import { shareMessage, shareText, shareUrl } from "./share";
 
 function onVisibility(state: DocumentVisibilityState, callback: () => void): () => void {
   if (typeof document === "undefined") {
@@ -53,6 +53,7 @@ export const tg = {
   call,
   shareMessage,
   shareUrl,
+  shareText,
   requestWriteAccess,
   requestContact,
   location: { available: locationAvailable, get: getLocation },

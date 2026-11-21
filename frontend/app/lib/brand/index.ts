@@ -18,6 +18,8 @@ export const brand = {
     methodology: { ru: null, uz: null, en: null } satisfies LocaleLink as LocaleLink,
     instagram: { ru: null, uz: null, en: null } satisfies LocaleLink as LocaleLink,
     privacy: { ru: null, uz: null, en: null } satisfies LocaleLink as LocaleLink,
+    /** The owners' landing page (WP-61; its content DEC-97): `null` until it is built, so the landlord block offers the bot link only (DEC-91). */
+    owners: { ru: null, uz: null, en: null } satisfies LocaleLink as LocaleLink,
   },
   /**
    * Neutral placeholders of the legacy sizes (mascots 120 px, `hooray` 132 px); the final artwork is a product-owner

@@ -59,6 +59,10 @@ export type JournalEvents = {
   owner_limit_sheet: { where: "settings" | "mine" };
   /** A fill hint of the owner panel opened the form on its field (WP-82, BR-APP-093). */
   owner_hint_opened: { field: "photos" | "area_m2" | "floor" | "renovation" | "description" };
+  /** An invitation into the cabinet tapped (WP-82, BR-APP-115), once per opening. */
+  owner_entry: { src: "feed_end" | "empty" | "listing" };
+  /** A share of the survey's landlord block (WP-82, BR-APP-116, DEC-91). */
+  landlord_share: { src: "homi" | "elsewhere"; to: "page" | "bot" };
 };
 
 export type JournalEventName = keyof JournalEvents;
@@ -91,6 +95,8 @@ export const JOURNAL_EVENTS = [
   "owner_attention",
   "owner_limit_sheet",
   "owner_hint_opened",
+  "owner_entry",
+  "landlord_share",
 ] as const satisfies readonly JournalEventName[];
 
 export type TrackedEvent = { [N in JournalEventName]: { name: N; props: JournalEvents[N] } }[JournalEventName];

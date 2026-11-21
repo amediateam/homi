@@ -63,3 +63,28 @@ export async function shareUrl(url: string, text: string): Promise<void> {
     // Nothing else to try.
   }
 }
+
+/**
+ * Shares a ready message (WP-82, TMA-048: the landlord block): inside Telegram `t.me/share/url` with the whole text in
+ * `url`, as legacy — LB-APP-090 is not adopted, since legacy's message carries its link inside the text, which a
+ * separate `text` would repeat; else `navigator.share({ text })` with its errors swallowed; else a new tab.
+ */
+export async function shareText(text: string): Promise<void> {
+  const target = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
+  if (insideTelegram() !== null && openLink(target)) {
+    return;
+  }
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      await navigator.share({ text });
+    } catch {
+      // Cancelled by the user.
+    }
+    return;
+  }
+  try {
+    window.open(target, "_blank", "noopener");
+  } catch {
+    // Nothing else to try.
+  }
+}
