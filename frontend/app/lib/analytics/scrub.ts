@@ -28,7 +28,8 @@ const TOKEN_MARKS = [
   /(?<![a-z])bearer[\s+:=]*["']?[^\s*"'<>,;]/i,
   /homi_session["']?\s*[=:]\s*["']?[^\s;&*"']/i,
   // A Sanctum token on its own, without `Bearer`: its id, `|` and the secret, the servers' prefix included (`12|homi_…`).
-  /(?<![\w|])\d+\|[\w-]{16,}/,
+  // Sanctum's secret is letters, digits and the prefix's underscore, never a dash: `3|<uuid>` and slugs stay.
+  /(?<![\w|])\d+\|\w{16,}/,
 ];
 // Longer texts are cut first: nothing that leaves the app is longer (the journal's bodies are 8 KB), and an unbounded
 // text could exhaust a pattern's backtracking.

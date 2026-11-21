@@ -109,6 +109,8 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
       "1+1=2 and snake_case_ids_123456789",
       "0f8e2a4c-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
       "+998 ** *** ** 67",
+      "3|0f8e2a4c-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
+      "2|listing-card-rendered",
     ]) {
       expect(scrubText(text)).toBe(text);
     }
