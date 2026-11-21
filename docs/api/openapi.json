@@ -8493,8 +8493,7 @@
                         "items": {
                             "type": "string"
                         },
-                        "minItems": 1,
-                        "uniqueItems": true
+                        "minItems": 1
                     }
                 },
                 "required": [
@@ -10047,8 +10046,7 @@
                         "maxLength": 500
                     },
                     "init_data": {
-                        "type": "string",
-                        "maxLength": 4096
+                        "type": "string"
                     }
                 },
                 "required": [

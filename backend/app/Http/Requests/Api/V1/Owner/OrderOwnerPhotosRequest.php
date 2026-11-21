@@ -34,9 +34,9 @@ class OrderOwnerPhotosRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            $ids = (array) $this->input('ids', []);
+            $ids = array_filter((array) $this->input('ids', []), is_string(...));
 
-            if (count($ids) !== count(array_unique(array_map(strval(...), $ids)))) {
+            if (count($ids) !== count(array_unique($ids))) {
                 $validator->errors()->add('ids', 'Each photo id comes once.');
             }
         }];

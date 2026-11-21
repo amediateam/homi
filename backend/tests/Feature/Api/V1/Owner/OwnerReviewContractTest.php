@@ -40,7 +40,7 @@ it('status: active or paused to rented or removed; nothing leaves them', functio
 
 it('an unknown id answers 404 before any scenario; an unknown request too', function (): void {
     $this->postJson('/api/v1/owner/listings/01JF0000000000000000000099/publish', [], ['X-Stub-Scenario' => 'owner_limit'])->assertNotFound();
-    $this->postJson('/api/v1/owner/requests/01JF0000000000000000000299/answer', ['action' => 'give'])->assertNotFound();
+    $this->postJson('/api/v1/owner/requests/01JF0000000000000000000299/answer', ['action' => 'give'], ['X-Stub-Scenario' => 'request_answer_closed'])->assertNotFound();
     $this->postJson('/api/v1/listings/999404/contact-request', ['who' => 'one', 'people' => 1, 'init_data' => 'x'], ['X-Stub-Scenario' => 'no_chat'])->assertNotFound();
 });
 
@@ -75,12 +75,24 @@ it('the feed: page one opens with 10000001, and every repeated entry stays below
         ->and($native)->toBe(range(10000001, 10000008));
 });
 
-it('with the switch off demand, the request list and the seeker request stay open; without a token every owner method is 401', function (): void {
+it('with the switch off demand, the request list and the seeker request stay open', function (): void {
     config(['owner.enabled' => false]);
 
     $this->getJson('/api/v1/owner/demand?city=tashkent')->assertOk();
     $this->getJson('/api/v1/owner/listings/01JF0000000000000000000003/requests')->assertOk();
     $this->postJson('/api/v1/listings/10000001/contact-request', ['who' => 'one', 'people' => 1, 'init_data' => 'x'])->assertCreated();
+});
+
+it('a body that is not what the rules expect is a 422, never a 500', function (): void {
+    $this->putJson('/api/v1/owner/listings/01JF0000000000000000000002/photos/order', ['ids' => [['x']]])->assertStatus(422);
+    $this->patchJson('/api/v1/owner/listings/01JF0000000000000000000004', ['tenants' => ['a' => 'family']])->assertStatus(422)->assertJsonValidationErrors(['tenants']);
+    $this->patchJson('/api/v1/owner/listings/01JF0000000000000000000004', ['room' => null])->assertOk()->assertJsonPath('data.form.room', false);
+});
+
+it('an owner request\'s message and move-in are masked', function (): void {
+    $requests = $this->getJson('/api/v1/owner/listings/01JF0000000000000000000003/requests?limit=50')->assertOk()->json('data');
+
+    expect(json_encode($requests))->not->toMatch('/\\d{2} \\d{3} \\d{2} \\d{2}/');
 });
 
 it('publish and the phone request are limited to 10 an hour each', function (): void {

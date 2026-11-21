@@ -189,7 +189,8 @@ final class StubOwner
     {
         // The listing as it is before publish: the phone scenarios apply, while a hold or a refusal is what publish
         // answers, not the state it starts from.
-        $outcome = in_array($context->scenario, ['held_check', 'rejected_denied', 'rejected_limit'], true);
+        // (`rejected_*` and `owner_limit` are answered by the controller's scenario errors before this point.)
+        $outcome = $context->scenario === 'held_check';
         $entry = $outcome ? $this->entry($id) : $this->entry($id, $context);
 
         if ($context->scenario === 'listing_locked' || OwnerListing::fromArray($entry)->locked()) {

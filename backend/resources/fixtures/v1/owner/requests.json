@@ -19,7 +19,7 @@
             "who": "family",
             "people": 3,
             "move_in": null,
-            "message": "Есть ли парковка?",
+            "message": "Есть ли парковка? Мой номер 90 123 45 67",
             "status": "pending",
             "agent_marked": false,
             "can_reason": false,

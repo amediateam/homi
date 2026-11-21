@@ -41,7 +41,7 @@ class UpdateOwnerListingRequest extends FormRequest
             'currency' => ['sometimes', 'nullable', Rule::in(['USD', 'UZS'])],
             'renovation' => ['sometimes', 'nullable', 'string', Rule::in(array_column(Config::array('owner.renovations'), 'code'))],
             'furniture' => ['sometimes', 'nullable', 'boolean'],
-            'tenants' => ['sometimes', 'nullable', 'array'],
+            'tenants' => ['sometimes', 'nullable', 'list'],
             'tenants.*' => ['string', 'distinct', Rule::in(OwnerListingForm::TENANTS)],
             'pets' => ['sometimes', 'nullable', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string', 'max:600'],
