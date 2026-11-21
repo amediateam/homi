@@ -3,9 +3,12 @@
  * Importer of the legacy Mini App catalogues into the `legacy` layer of @homi/i18n (WP-20).
  *
  * Input: a directory holding a *copy* of the three locale files of the pinned legacy release (`ru.js`,
- * `uz_Latn.js`, `en.js`). Nothing is run inside the legacy tree and the copied files are not executed either: each
- * file is read as text and its object literal is parsed by the small reader below, which accepts only string values
- * and plural objects of strings.
+ * `uz_Latn.js`, `en.js`) and, with `--owner`, a copy of the owner cabinet's dictionary
+ * (`demo/app/src/features/owner/owner.js`, WP-81), whose three objects `ru`, `en` and `uz_Latn` are not exported and
+ * are followed by code. Nothing is run inside the legacy tree and the copied files are not executed either: each file
+ * is read as text and its object literals are parsed by the small reader below, which accepts only string values and
+ * plural objects of strings. The owner keys join the main ones; a key the main dictionary holds with another value
+ * stops the import.
  *
  * Output (`messages/legacy/`): `ru.json`, `uz.json`, `en.json`, `keys.json` (the legacy key names of the release, for
  * the next release diff) and `leaf-and-prefix.json`. Rules (WP-20 "Importer"):
@@ -17,7 +20,8 @@
  * 5. The six dead keys of the audit are dropped.
  * 6. Values are otherwise byte-identical.
  *
- * Usage: `node scripts/import-legacy.mjs --from <dir> --release <bundle name> [--to <dir>] [--report <file.md>]`.
+ * Usage: `node scripts/import-legacy.mjs --from <dir> --release <bundle name> [--owner <owner.js>] [--to <dir>]
+ * [--report <file.md>]`.
  * Node built-ins only.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -60,13 +64,57 @@ const PLURAL_FORMS = ["zero", "one", "two", "few", "many", "other"];
 
 /**
  * Parses `export const <name> = { … };` — keys are quoted strings or identifiers, values are strings or one level of
- * `{ <form>: string }`. Comments are skipped. Anything else (calls, spreads, template substitutions) throws.
+ * `{ <form>: string }`. Comments are skipped. Anything else (calls, spreads, template substitutions) throws, and so
+ * does anything after the object.
  *
  * @param {string} source
  * @returns {LegacyCatalogue}
  */
 export function parseLocaleModule(source) {
-  let i = 0;
+  const start = /export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*/.exec(source);
+  if (!start) throw new Error("No `export const <name> = {` found");
+  const { catalogue, end } = readCatalogue(source, start.index + start[0].length);
+  if (end < source.length) {
+    throw new Error(`Unexpected content after the catalogue at line ${source.slice(0, end).split("\n").length}`);
+  }
+  return catalogue;
+}
+
+/** The objects of the owner dictionary: its constant → HOMI locale. */
+export const OWNER_CONSTS = /** @type {const} */ ([
+  ["ru", "ru"],
+  ["uz_Latn", "uz"],
+  ["en", "en"],
+]);
+
+/**
+ * Parses the owner dictionary (`const ru = { … }`, `const en = { … }`, `const uz_Latn = { … }`, not exported, code
+ * after them): the first declaration of each name is read with the same rules; the code around them is never read.
+ *
+ * @param {string} source
+ * @returns {Record<string, LegacyCatalogue>} HOMI locale → flat catalogue
+ */
+export function parseOwnerModule(source) {
+  /** @type {Record<string, LegacyCatalogue>} */
+  const out = {};
+  for (const [name, locale] of OWNER_CONSTS) {
+    const start = new RegExp(`(?:^|\\n)\\s*const\\s+${name}\\s*=\\s*(?=\\{)`).exec(source);
+    if (!start) throw new Error(`No \`const ${name} = {\` found in the owner dictionary`);
+    out[locale] = readCatalogue(source, start.index + start[0].length).catalogue;
+  }
+  return out;
+}
+
+/**
+ * Reads the object literal that starts at `from` (after an optional `;` and comments, `end` is where the next content
+ * starts).
+ *
+ * @param {string} source
+ * @param {number} from
+ * @returns {{ catalogue: LegacyCatalogue, end: number }}
+ */
+function readCatalogue(source, from) {
+  let i = from;
 
   const fail = (/** @type {string} */ message) => {
     const line = source.slice(0, i).split("\n").length;
@@ -173,15 +221,11 @@ export function parseLocaleModule(source) {
     }
   };
 
-  const start = /export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*/.exec(source);
-  if (!start) throw new Error("No `export const <name> = {` found");
-  i = start.index + start[0].length;
   const catalogue = /** @type {LegacyCatalogue} */ (readObject(false));
   skip();
   if (source[i] === ";") i++;
   skip();
-  if (i < source.length) fail("Unexpected content after the catalogue");
-  return catalogue;
+  return { catalogue, end: i };
 }
 
 const PLACEHOLDER = /^\{[A-Za-z_][A-Za-z0-9_]*\}/;
@@ -291,16 +335,28 @@ export function buildLayer(flat, locale) {
 }
 
 /**
- * Reads the three copied locale files from `from` and writes the `legacy` layer into `to`.
+ * Reads the three copied locale files from `from` (and the owner dictionary from `owner`) and writes the `legacy`
+ * layer into `to`.
  *
- * @param {{ from: string, to: string, release: string }} options
+ * @param {{ from: string, to: string, release: string, owner?: string }} options
  */
-export function importLegacy({ from, to, release }) {
-  const locales = LOCALE_FILES.map(([file, locale]) => ({
-    locale,
-    file,
-    layer: buildLayer(parseLocaleModule(readFileSync(join(from, file), "utf8")), locale),
-  }));
+export function importLegacy({ from, to, release, owner }) {
+  const owners = owner === undefined ? null : parseOwnerModule(readFileSync(owner, "utf8"));
+  const locales = LOCALE_FILES.map(([file, locale]) => {
+    const main = parseLocaleModule(readFileSync(join(from, file), "utf8"));
+    const extra = owners?.[locale] ?? {};
+    for (const [key, value] of Object.entries(extra)) {
+      if (Object.hasOwn(main, key) && JSON.stringify(main[key]) !== JSON.stringify(value)) {
+        throw new Error(`${locale}: the owner key "${key}" is in the main dictionary with another value`);
+      }
+    }
+    return {
+      locale,
+      file,
+      ownerKeys: Object.keys(extra).filter((key) => !DEAD_KEYS.has(key)),
+      layer: buildLayer({ ...main, ...extra }, locale),
+    };
+  });
 
   const reference = locales[0].layer;
   for (const { locale, layer } of locales.slice(1)) {
@@ -320,11 +376,18 @@ export function importLegacy({ from, to, release }) {
   for (const { locale, layer } of locales) {
     write(`${locale}.json`, layer.messages);
   }
-  write("keys.json", { release, keys: reference.keys, dropped: reference.dropped });
+  const ownerKeys = locales[0].ownerKeys;
+  write("keys.json", {
+    release,
+    keys: reference.keys,
+    dropped: reference.dropped,
+    ...(owners === null ? {} : { owner: { file: "demo/app/src/features/owner/owner.js", keys: ownerKeys } }),
+  });
   write("leaf-and-prefix.json", reference.leafAndPrefix);
 
   return {
     release,
+    owner: owners === null ? null : { keys: ownerKeys, brand: brandMatches(locales.map(({ locale, ownerKeys: keys, layer }) => ({ locale, keys, layer }))) },
     locales: locales.map(({ locale, file, layer }) => ({
       locale,
       file,
@@ -337,9 +400,40 @@ export function importLegacy({ from, to, release }) {
   };
 }
 
+/**
+ * The owner keys whose value matches a pattern of `brand-words.json`, per locale: each needs a `homi` override.
+ *
+ * @param {{ locale: string, keys: string[], layer: Layer }[]} entries
+ * @returns {Record<string, string[]>}
+ */
+function brandMatches(entries) {
+  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const { patterns } = /** @type {{ patterns: string[] }} */ (JSON.parse(readFileSync(join(packageRoot, "brand-words.json"), "utf8")));
+  const brand = patterns.map((pattern) => new RegExp(pattern, "i"));
+  /** @type {Record<string, string[]>} */
+  const out = {};
+  for (const { locale, keys, layer } of entries) {
+    out[locale] = keys.filter((key) => {
+      const path = layer.leafAndPrefix.includes(key) ? [...key.split("."), "_"] : key.split(".");
+      /** @type {unknown} */
+      let node = layer.messages;
+      for (const segment of path) node = /** @type {Record<string, unknown>} */ (node)[segment];
+      return typeof node === "string" && brand.some((pattern) => pattern.test(node));
+    });
+  }
+  return out;
+}
+
 /** @param {ReturnType<typeof importLegacy>} report */
 export function formatReport(report) {
   const lines = [`# Legacy catalogue import — ${report.release}`, ""];
+  if (report.owner !== null) {
+    lines.push(`## Owner dictionary`, "", `- keys: ${report.owner.keys.length}`);
+    for (const [locale, keys] of Object.entries(report.owner.brand)) {
+      lines.push(`- brand words, ${locale} (${keys.length}, each needs a \`homi\` override): ${keys.join(", ")}`);
+    }
+    lines.push("");
+  }
   for (const entry of report.locales) {
     lines.push(`## ${entry.locale} (from ${entry.file})`, "");
     lines.push(`- keys: ${entry.keys}`);
@@ -364,12 +458,13 @@ function main() {
   const from = option("from");
   const release = option("release");
   if (!from || !release) {
-    console.error("Usage: node scripts/import-legacy.mjs --from <dir> --release <bundle> [--to <dir>] [--report <file.md>]");
+    console.error("Usage: node scripts/import-legacy.mjs --from <dir> --release <bundle> [--owner <owner.js>] [--to <dir>] [--report <file.md>]");
     process.exit(2);
   }
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const to = resolve(option("to") ?? join(packageRoot, "messages/legacy"));
-  const report = importLegacy({ from: resolve(from), to, release });
+  const ownerFile = option("owner");
+  const report = importLegacy({ from: resolve(from), to, release, ...(ownerFile ? { owner: resolve(ownerFile) } : {}) });
   const text = formatReport(report);
   const reportFile = option("report");
   if (reportFile) writeFileSync(resolve(reportFile), `${text}\n`);

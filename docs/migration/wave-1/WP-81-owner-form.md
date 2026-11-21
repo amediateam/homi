@@ -286,8 +286,10 @@ changes for the other callers. The rule that a touch inside a nested sub-page is
   file's shape (one object per locale, plural entries as in the main dictionary) and stops on a key that the main
   dictionary already holds with another value; the import report lists the keys and the brand matches.
 - `homi` overrides, ru/uz/en, for every owner text that carries the brand (the catalogue test of `brand-words.json`
-  refuses the rest): at least `own.mode.gate` «Через HOMI», `own.subtitle`, `own.phoneHow`, `own.doneText`,
-  `own.verified` «Проверенный хозяин · разместил сам в HOMI», `own.mineEmpty`; the import report names the full list.
+  refuses the rest): the import of the pin names six keys per locale — `own.mode.gate` «Через HOMI», `own.phoneHow`,
+  `own.doneText`, `own.verified` «Проверенный хозяин · разместил сам в HOMI», `own.mineEmpty` and `own.listedDays`
+  «В HOMI {days}» (*as built: `own.subtitle` «Бесплатно. Риелторы ваш номер не увидят.» carries no brand word and
+  keeps the legacy text*).
 - New `homi` texts, for the product owner to approve: `own.doneTextNoRadar` «Квартира в ленте HOMI.» (radars off),
   `own.photoDeleted` «Фото удалили» (DEV-057), `own.cityChanged` «Район и точку сбросили» (DEV-058),
   `own.disabled` «Сдать квартиру пока нельзя» (DEC-81), `own.photoUnreadable` «Это фото не открылось — выберите
@@ -427,7 +429,7 @@ Changed:
 
 ### Questionnaire (SCR-052, BR-APP-079 … BR-APP-081, DEV-058)
 
-- Title «Сдать квартиру» or «Изменить объявление»; subtitle `own.subtitle` (`homi` override).
+- Title «Сдать квартиру» or «Изменить объявление»; subtitle `own.subtitle` (the legacy text, no brand word).
 - Sections in this order: the welcome line; the place (the spot preview with the circle of `shown_point` when the
   form's point equals the saved one, with `own.mapNote`; the field «Адрес или ориентир», at most 120 characters,
   with the hint `own.landmarkHint` «Видно всем — без номера дома и квартиры» (default (g)) and «Карта» when there is

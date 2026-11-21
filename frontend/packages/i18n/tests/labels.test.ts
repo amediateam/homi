@@ -41,6 +41,10 @@ describe("labelFor", () => {
     ]);
     expect(Object.keys(labelTables.noAccessTitle)).toEqual(["private", "invite", "full", "blocked", "join", "paused"]);
     expect(Object.keys(labelTables.noAccessText)).toEqual(["private", "invite", "full", "blocked", "join", "paused"]);
+    // WP-80's owner contract: publish's missing parts, `reject_reason`, `phone_error`.
+    expect(Object.keys(labelTables.ownerNeed)).toEqual(["city", "place", "rooms", "price", "photos"]);
+    expect(Object.keys(labelTables.ownerReject)).toEqual(["denied", "limit"]);
+    expect(Object.keys(labelTables.phoneError)).toEqual(["not_uz", "not_own"]);
   });
 
   it("gives fallback.other for an unknown value and reports it once", () => {
