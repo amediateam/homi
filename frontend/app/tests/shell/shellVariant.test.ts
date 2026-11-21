@@ -155,7 +155,7 @@ describe("isLayerAddress", () => {
     const intercepted = ["@sheet", "@overlay"].flatMap((slot) =>
       readdirSync(join(root, slot)).filter((name) => name.startsWith("(.)")).map((name) => name.slice(3)),
     );
-    expect(intercepted.sort()).toEqual(["city", "filters", "listing", "radars", "sort"]);
+    expect(intercepted.sort()).toEqual(["city", "filters", "listing", "owner", "radars", "sort"]);
   });
 });
 

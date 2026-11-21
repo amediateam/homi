@@ -97,6 +97,11 @@
     },
     "phoneKept": "HOMI keeps the number and shows it only the way you choose in the next step.",
     "landmarkHint": "Everyone who views the listing sees the landmark.",
-    "demandFew": "A few people with a radar are looking for one like this now"
+    "demandFew": "A few people with a radar are looking for one like this now",
+    "limitTitle": "{max, plural, one {# flat already} other {# flats already}}",
+    "limitText": "You can rent out up to {max, plural, one {# flat} other {# flats}} at once. Mark one “Rented” or remove it, then add a new one.",
+    "rejected": {
+      "limit": "{max, plural, one {# flat is} other {# flats are}} already listed with this number. Mark one “Rented” or remove it in “My listings”, then add a new one."
+    }
   }
 }

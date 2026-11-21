@@ -97,6 +97,11 @@
     },
     "phoneKept": "HOMI raqamni saqlaydi va uni faqat keyingi qadamda tanlaganingizdek koʻrsatadi.",
     "landmarkHint": "Moʻljalni eʼlonni koʻrgan hamma koʻradi.",
-    "demandFew": "Hozir bunday kvartirani radari bor bir necha kishi qidirmoqda"
+    "demandFew": "Hozir bunday kvartirani radari bor bir necha kishi qidirmoqda",
+    "limitTitle": "Allaqachon {max} ta kvartira",
+    "limitText": "Bir vaqtda {max} tagacha kvartirani ijaraga berish mumkin. Bittasini «Ijaraga berildi» deb belgilang yoki olib tashlang — keyin yangisini qoʻshing.",
+    "rejected": {
+      "limit": "Bu raqam bilan allaqachon {max} ta kvartira ijaraga berilmoqda. Bittasini «Ijaraga berildi» deb belgilang yoki «Mening eʼlonlarim»da olib tashlang — keyin yangisini qoʻshing."
+    }
   }
 }

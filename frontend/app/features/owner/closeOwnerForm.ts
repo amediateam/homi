@@ -47,3 +47,14 @@ export async function closeOwnerForm(): Promise<void> {
     nav.replace(routes.settings());
   }
 }
+
+/**
+ * «Мои объявления» inside the form (the limit state, a locked listing, the `limit` rejection, the done step; legacy
+ * `App.jsx:815-820`): the form closes, the settings tab is pressed (nothing behind it any more), then the list opens
+ * over it.
+ */
+export async function openMyListings(): Promise<void> {
+  await closeOwnerForm();
+  nav.tab(routes.settings());
+  nav.push(routes.ownerListings());
+}
