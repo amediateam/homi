@@ -13,7 +13,9 @@ class MeController extends ApiController
 {
     /**
      * The stub scenarios of the user object; sign-in answers the same user. `replay` is a profile sampled for replay
-     * (`analytics.replay: true`, `replay_rate: 1`) for WP-32's analytics specs.
+     * (`analytics.replay: true`, `replay_rate: 1`) for WP-32's analytics specs. Every profile has requests waiting for
+     * none (`owner.pending: 0`), so the owner signals of WP-82 stay quiet; `owner_pending` has two, as the stub list's
+     * listing `01JF…03`.
      */
     public const array SCENARIOS = [
         'first_launch' => 'me/first_launch',
@@ -22,6 +24,7 @@ class MeController extends ApiController
         'owner_empty' => 'me/owner_empty',
         'owner_waitlisted' => 'me/owner_waitlisted',
         'replay' => 'me/replay',
+        'owner_pending' => 'me/owner_pending',
     ];
 
     public function __invoke(Request $request, StubResponder $stubs): JsonResponse

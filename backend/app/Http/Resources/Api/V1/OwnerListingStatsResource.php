@@ -20,7 +20,7 @@ class OwnerListingStatsResource extends JsonResource
         $daily = [];
 
         foreach ($this->stats->daily as $count) {
-            $daily[] = $count;
+            $daily[] = (int) $count;
         }
 
         return [

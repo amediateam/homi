@@ -13,7 +13,7 @@
         "replay_rate": 1
     },
     "owner": {
-        "pending": 2,
+        "pending": 0,
         "has_listings": true,
         "waitlisted": false
     }

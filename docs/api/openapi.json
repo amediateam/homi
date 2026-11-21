@@ -9041,7 +9041,7 @@
                     "daily": {
                         "type": "array",
                         "items": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     },
                     "price_delta": {

@@ -1528,7 +1528,7 @@ export interface components {
             opened: number;
             favorites: number;
             days_listed: number | null;
-            daily: string[];
+            daily: number[];
             price_delta: number | null;
             price_tone: string | null;
         };

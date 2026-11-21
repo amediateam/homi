@@ -68,6 +68,9 @@ describe("builders", () => {
     [routes.ownerMode(OWNER), `/owner/${OWNER}/mode`],
     [routes.ownerDone(OWNER), `/owner/${OWNER}/done`],
     [routes.ownerListings(), "/settings/owner"],
+    [routes.ownerLimit({ where: "settings" }), "/owner/limit?where=settings"],
+    [routes.ownerRequests(OWNER), `/settings/owner/${OWNER}/requests`],
+    [routes.listingRequests(10000008), "/listing/10000008/requests"],
   ])("%s", (built, expected) => {
     expect(built).toBe(expected);
   });
@@ -107,7 +110,14 @@ describe("parameter checks", () => {
       expect(matchRoute(`/owner/${OWNER}/${step}`)).toEqual({ route: "owner", id: OWNER, step });
     }
     expect(matchRoute("/settings/owner")).toEqual({ route: "ownerListings" });
-    for (const pathname of ["/owner", "/owner/limit", `/owner/${OWNER}/other`, `/owner/${OWNER}/place/x`, "/owner/new/place"]) {
+    // WP-82: the limit sheet, «Отклики» under the list and over the user's own listing.
+    expect(matchRoute("/owner/limit")).toEqual({ route: "ownerLimit" });
+    expect(matchRoute(`/settings/owner/${OWNER}/requests`)).toEqual({ route: "ownerRequests", id: OWNER });
+    expect(matchRoute("/listing/10000008/requests")).toEqual({ route: "listing", number: "10000008", child: "requests" });
+    for (const pathname of ["/settings/owner/abc/requests", `/settings/owner/${OWNER}`, `/settings/owner/${OWNER}/requests/x`, "/owner/limit/x"]) {
+      expect(matchRoute(pathname).route, pathname).toBe("unknown");
+    }
+    for (const pathname of ["/owner", `/owner/${OWNER}/other`, `/owner/${OWNER}/place/x`, "/owner/new/place"]) {
       expect(matchRoute(pathname).route, pathname).toBe("unknown");
     }
   });
@@ -227,6 +237,9 @@ describe("parentOf", () => {
     [`/owner/${OWNER}/phone`, "", `/owner/${OWNER}`],
     [`/owner/${OWNER}/mode`, "", `/owner/${OWNER}`],
     ["/settings/owner", "", "/settings"],
+    ["/owner/limit", "where=mine", "/settings"],
+    [`/settings/owner/${OWNER}/requests`, "", "/settings/owner"],
+    ["/listing/10000008/requests", "", "/listing/10000008"],
   ])("%s?%s → %s", (pathname, query, expected) => {
     expect(parentOf(pathname, params(query))).toBe(expected);
   });
@@ -278,6 +291,9 @@ describe("screenNameOf", () => {
     [`/owner/${OWNER}/mode`, "", "owner/form"],
     [`/owner/${OWNER}/done`, "", "owner/form"],
     ["/settings/owner", "", "owner/mine"],
+    ["/owner/limit", "where=settings", "owner/limit"],
+    [`/settings/owner/${OWNER}/requests`, "", "owner/requests"],
+    ["/listing/10000008/requests", "", "owner/requests"],
   ])("%s?%s → %s (the new names, WP-32, LB-APP-037)", (pathname, query, expected) => {
     expect(screenNameOf(pathname, params(query))).toBe(expected);
   });

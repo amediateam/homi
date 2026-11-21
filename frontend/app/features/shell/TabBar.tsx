@@ -4,9 +4,11 @@ import type { MessageKey } from "@homi/i18n";
 import { cn, Heart, type LucideIcon, RadarIcon, Search, Settings } from "@homi/ui";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type CSSProperties, useLayoutEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useRef } from "react";
 
 import { forgetFeedScroll, hasFeedScroll } from "@/features/feed/feedScroll";
+import { useOwnerPending } from "@/features/owner/pending";
+import { trackAttention } from "@/features/owner/signals/attention";
 import { clearRadarReturn } from "@/features/radars/radarReturn";
 import { usePathname } from "@/i18n/navigation";
 import { nav } from "@/lib/navigation/nav";
@@ -15,6 +17,7 @@ import { tg } from "@/lib/telegram";
 import { lastSavedHref, lastSearchHref, rememberHref } from "@/lib/ui/shellState";
 
 import type { ShellTab } from "./shellVariant";
+
 import { expandChrome } from "./useMiniChrome";
 
 /** Legacy shrinks a label longer than this (some uz and en texts) with the `long` class. */
@@ -63,6 +66,13 @@ const TABS: readonly { key: ShellTab; label: MessageKey; Icon: LucideIcon; href:
  */
 export function TabBar({ active }: { active: ShellTab }) {
   const t = useTranslations();
+  // The red dot of the Settings tab while requests wait (WP-82, SCR-060), and its `owner_attention` pair.
+  const { pending } = useOwnerPending();
+  useEffect(() => {
+    if (pending > 0) {
+      trackAttention("dot", "shown");
+    }
+  }, [pending]);
   const scrollOnArrival = useRef(false);
   const radarFeed = radarFeedAsSearch(usePathname(), useSearchParams()?.toString() ?? "");
 
@@ -76,6 +86,9 @@ export function TabBar({ active }: { active: ShellTab }) {
   const press = (key: ShellTab, href: () => string) => {
     if (expandChrome()) {
       return;
+    }
+    if (key === "settings" && pending > 0) {
+      trackAttention("dot", "clicked");
     }
     tg.haptic.impact();
     clearRadarReturn();
@@ -123,6 +136,12 @@ export function TabBar({ active }: { active: ShellTab }) {
               )}
             >
               <Icon size={24} strokeWidth={current ? 2.2 : 1.7} />
+              {key === "settings" && pending > 0 ? (
+                <>
+                  <span data-tab-dot={pending} aria-hidden className="absolute top-[6px] left-[calc(50%+6px)] size-[9px] rounded-full bg-danger ring-2 ring-bg" />
+                  <span className="sr-only">{t("own.pendingShort", { n: pending })}</span>
+                </>
+              ) : null}
               <span className={text.length > LONG_LABEL_CHARS ? "long" : undefined}>{text}</span>
             </button>
           );

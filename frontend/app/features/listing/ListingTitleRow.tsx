@@ -16,6 +16,8 @@ export interface ListingTitleRowProps {
   /** Set only when a share link can be built (a bot name is known); the share hook plays its own haptic. */
   onShare?: () => void;
   onMenu: () => void;
+  /** The user's own listing (WP-82, BR-APP-103): only «Поделиться» — no heart, no «⋯». */
+  mine?: boolean;
 }
 
 const ROUND = "grid size-[44px] shrink-0 place-items-center rounded-pill bg-fill text-text outline-none select-none transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.88]";
@@ -24,7 +26,7 @@ const ROUND = "grid size-[44px] shrink-0 place-items-center rounded-pill bg-fill
  * The title row (SCR-018 block 3): the title and «district · landmark», then share, the heart and «⋯» in legacy's
  * order. «⋯» plays the light haptic and opens the actions sheet.
  */
-export function ListingTitleRow({ number, title, place, favorite, onShare, onMenu }: ListingTitleRowProps) {
+export function ListingTitleRow({ number, title, place, favorite, onShare, onMenu, mine = false }: ListingTitleRowProps) {
   const t = useTranslations();
   return (
     <div data-title-row="" className="flex items-start gap-[12px]">
@@ -46,7 +48,8 @@ export function ListingTitleRow({ number, title, place, favorite, onShare, onMen
             <Share size={20} strokeWidth={2} aria-hidden />
           </button>
         ) : null}
-        <FavButton variant="plain" number={number} favorite={favorite} />
+        {mine ? null : <FavButton variant="plain" number={number} favorite={favorite} />}
+        {mine ? null : (
         <button
           type="button"
           data-action="menu"
@@ -59,6 +62,7 @@ export function ListingTitleRow({ number, title, place, favorite, onShare, onMen
         >
           <Ellipsis size={22} strokeWidth={2} aria-hidden />
         </button>
+        )}
       </div>
     </div>
   );

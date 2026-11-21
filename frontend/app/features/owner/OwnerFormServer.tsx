@@ -31,7 +31,12 @@ export async function OwnerFormServer({
   presentation: RoutePresentation;
   children: ReactNode;
 }) {
-  const initial = await readOwnerListing((await params).id);
+  const { id } = await params;
+  // `/owner/limit` (WP-82) is a sheet: the overlay slot's `(.)owner/[id]` matches it too and must draw nothing.
+  if (id === "limit") {
+    return null;
+  }
+  const initial = await readOwnerListing(id);
   return (
     <OwnerFormLayer params={params} presentation={presentation} {...(initial === undefined ? {} : { initial })}>
       {children}

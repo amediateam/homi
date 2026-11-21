@@ -174,8 +174,10 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
         await route.fulfill({ response, headers });
       } catch (error) {
         // A test that ends with the exchange in flight closes the page under it ("route.fetch: Test ended"), and the
-        // rejection would fail the next test. Only that end is forgiven; anything else still fails the test.
-        const ended = page.isClosed() || /Test ended|has been closed/.test(error instanceof Error ? error.message : String(error));
+        // rejection would fail the next test. An answer Playwright disposed before it was fulfilled ("Fetch response has
+        // been disposed", WP-82: a re-read of `GET /me` under a fast run of taps) is one the page no longer waits for —
+        // a page still waiting would fail on its own. Only these ends are forgiven; anything else still fails the test.
+        const ended = page.isClosed() || /Test ended|has been closed|response has been disposed/.test(error instanceof Error ? error.message : String(error));
         if (!ended) {
           throw error;
         }

@@ -177,3 +177,42 @@ export async function publishOwnerListing(input: { id: string }, auth?: ActionAu
   }
   return runAction(auth, locale, (api) => api.publishOwnerListing(id));
 }
+
+export type OwnerStatusChange = Schemas["UpdateOwnerStatusRequest"]["status"];
+export type OwnerRequestAction = Schemas["OwnerRequestAction"];
+export type OwnerRequestBody = Schemas["OwnerRequestResource"];
+
+const STATUS_CHANGES: readonly OwnerStatusChange[] = ["active", "paused", "rented", "removed"];
+const REQUEST_ACTIONS: readonly OwnerRequestAction[] = ["give", "decline", "reason_found", "reason_agent", "undo", "late"];
+
+/**
+ * `PUT /owner/listings/{id}/status` (WP-82, BR-APP-088): «Пауза», «Вернуть», «Сдано», «Снять». `active` is refused
+ * with `403 owner_disabled` while the cabinet is off (DEC-81); the others always work.
+ */
+export async function setOwnerStatus(input: { id: string; status: OwnerStatusChange }, auth?: ActionAuth, locale?: string): Promise<ActionResult<OwnerListingBody>> {
+  const id = ulid(isRecord(input) ? input.id : undefined);
+  const status = oneOf(isRecord(input) ? input.status : undefined, STATUS_CHANGES);
+  if (id === null || status === null) {
+    return runAction.invalid("PUT", "owner/listings/:id/status");
+  }
+  return runAction(auth, locale, (api) => api.setOwnerStatus(id, { status }));
+}
+
+/** `DELETE /owner/listings/{id}` (WP-82): «Удалить» of a draft or a rejected listing. */
+export async function deleteOwnerListing(input: { id: string }, auth?: ActionAuth, locale?: string): Promise<ActionResult<null>> {
+  const id = ulid(isRecord(input) ? input.id : undefined);
+  if (id === null) {
+    return runAction.invalid("DELETE", "owner/listings/:id");
+  }
+  return runAction(auth, locale, (api) => api.deleteOwnerListing(id));
+}
+
+/** `POST /owner/requests/{id}/answer` (WP-82, SCR-058): one answer to one request; the request as it is now. */
+export async function answerRequest(input: { id: string; action: OwnerRequestAction }, auth?: ActionAuth, locale?: string): Promise<ActionResult<OwnerRequestBody>> {
+  const id = ulid(isRecord(input) ? input.id : undefined);
+  const action = oneOf(isRecord(input) ? input.action : undefined, REQUEST_ACTIONS);
+  if (id === null || action === null) {
+    return runAction.invalid("POST", "owner/requests/:id/answer");
+  }
+  return runAction(auth, locale, (api) => api.answerOwnerRequest(id, { action }));
+}

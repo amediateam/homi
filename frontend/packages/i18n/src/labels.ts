@@ -12,7 +12,10 @@ import { type I18nReporter, reportOnce } from "./report";
  * - `noAccessTitle`, `noAccessText`: the reasons of the no-access screen (`03` SCR-003).
  * - `ownerNeed`, `ownerReject`, `phoneError` (WP-81, fix of LB-APP-064): the missing parts of an owner listing that
  *   publish names, the rejection reasons (an unknown reason is read as `denied` before the lookup) and the phone
- *   step's errors. WP-82 adds the owner statuses and the requests.
+ *   step's errors.
+ * - `ownerStatus`, `requestStatus`, `requestWho`, `ownerAnswer`, `rejectedReason` (WP-82): the status chip of an owner
+ *   listing (`active`, withdrawn and held have texts of their own), a request's status line (`given` with
+ *   `agent_marked` has its own), who will live there, the toast of an answer, and the reason line of a rejected card.
  */
 export const labelTables = {
   type: {
@@ -84,6 +87,39 @@ export const labelTables = {
   phoneError: {
     not_uz: "own.phoneNotUz",
     not_own: "own.phoneNotOwn",
+  },
+  ownerStatus: {
+    draft: "own.status.draft",
+    paused: "own.status.paused",
+    rented: "own.status.rented",
+    removed: "own.status.removed",
+    rejected: "own.status.rejected",
+  },
+  requestStatus: {
+    given: "own.req.given",
+    declined: "own.req.declined",
+    agent: "own.req.agent",
+    expired: "own.req.expired",
+    cancelled: "own.req.cancelled",
+  },
+  requestWho: {
+    one: "contact.who.one",
+    couple: "contact.who.couple",
+    family: "contact.who.family",
+    students: "contact.who.students",
+    friends: "contact.who.friends",
+  },
+  ownerAnswer: {
+    give: "own.answered.give",
+    decline: "own.answered.decline",
+    reason_found: "own.answered.reason_found",
+    reason_agent: "own.answered.reason_agent",
+    undo: "own.answered.undo",
+    late: "own.answered.late",
+  },
+  rejectedReason: {
+    denied: "own.rejectedReason.denied",
+    limit: "own.rejectedReason.limit",
   },
 } as const satisfies Record<string, Record<string, MessageKey>>;
 

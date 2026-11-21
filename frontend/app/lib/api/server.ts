@@ -174,6 +174,13 @@ export function createServerApi(config: ServerApiConfig) {
       call("put", "/owner/listings/{id}/contact-mode", { params: id(value), body }),
     requestOwnerPhone: (value: string) => call("post", "/owner/listings/{id}/phone-request", { params: id(value) }),
     publishOwnerListing: (value: string) => call("post", "/owner/listings/{id}/publish", { params: id(value) }),
+    // WP-82: the lists' and the panel's writes and the requests of a listing.
+    setOwnerStatus: (value: string, body: Body<"/owner/listings/{id}/status", "put">) =>
+      call("put", "/owner/listings/{id}/status", { params: id(value), body }),
+    deleteOwnerListing: (value: string) => call("delete", "/owner/listings/{id}", { params: id(value) }),
+    ownerListingRequests: (value: string, query?: Query) => call("get", "/owner/listings/{id}/requests", { params: id(value), ...(query === undefined ? {} : { query }) }),
+    answerOwnerRequest: (value: string, body: Body<"/owner/requests/{id}/answer", "post">) =>
+      call("post", "/owner/requests/{id}/answer", { params: id(value), body }),
     landingLive: () => call("get", "/landing/live"),
     landingPins: () => call("get", "/landing/pins"),
   };

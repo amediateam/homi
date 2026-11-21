@@ -42,6 +42,7 @@ export {
   Layers,
   LifeBuoy,
   List,
+  ListChecks,
   LocateFixed,
   Lock,
   type LucideIcon,

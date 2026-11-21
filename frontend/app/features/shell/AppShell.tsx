@@ -8,6 +8,7 @@ import { type ReactNode, Suspense, useEffect, useState } from "react";
 import { useBootRetryState } from "@/features/gates/bootRetryStore";
 import { warmMap } from "@/features/map/engine";
 import { NudgeHost } from "@/features/nudges/NudgeHost";
+import { OwnerSignals } from "@/features/owner/signals/OwnerSignals";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, parentOf } from "@/lib/navigation/routes";
 import { rememberHref } from "@/lib/ui/shellState";
@@ -91,6 +92,7 @@ function ShellBottom() {
       ) : null}
       <PullToRefresh />
       <NudgeHost searchTab={tab === "search"} />
+      <OwnerSignals settingsTab={tab === "settings"} tabBar={tab !== null} pathname={pathname} />
       {tab ? <TabBar active={tab} /> : null}
       <div aria-hidden className={tab ? "h-(--bottom-chrome)" : "h-(--bottom-inset)"} />
     </>

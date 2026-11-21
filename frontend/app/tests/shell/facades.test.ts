@@ -62,6 +62,9 @@ describe("track", () => {
         "owner_place_set",
         "owner_place_autofill",
         "owner_mascot_tap",
+        "owner_attention",
+        "owner_limit_sheet",
+        "owner_hint_opened",
       ].sort(),
     );
   });

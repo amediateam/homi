@@ -55,6 +55,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext value={session}>{children}</SessionContext>;
 }
 
+/** The session, or `null` outside `SessionProvider` (the chrome's owner signals of WP-82, which a test may render alone). */
+export function useOptionalSession(): Session | null {
+  return useContext(SessionContext);
+}
+
 export function useSession(): Session {
   const session = useContext(SessionContext);
   if (session === null) {

@@ -67,8 +67,16 @@ async function close(): Promise<void> {
  */
 export async function openMyListings(): Promise<void> {
   await closeOwnerForm();
+  await openSettingsThen(routes.ownerListings());
+}
+
+/**
+ * A press of the Settings tab, then a push of `href` once the settings address shows (WP-82: «Мои объявления» from
+ * the form, the tab tip of DEV-059 and the invitations): two history changes in one tick collapse into one, so the
+ * push waits for the tab's address (at most 500 ms).
+ */
+export async function openSettingsThen(href: string): Promise<void> {
   nav.tab(routes.settings());
-  // Two history changes in one tick collapse into one: the list is pushed once the settings address shows.
   await new Promise<void>((resolve) => {
     const started = Date.now();
     const wait = () => {
@@ -81,5 +89,5 @@ export async function openMyListings(): Promise<void> {
     };
     wait();
   });
-  nav.push(routes.ownerListings());
+  nav.push(href);
 }

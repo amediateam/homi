@@ -253,7 +253,8 @@ The owner cabinet on stubs (WP-80): the stub listing catalogue has HOMI's own li
 mode; the stub user's own listing), a legacy self-placed listing in `gate` mode `100024` (`contact.mode: hidden`) and a
 «claimed» owner `100025`. Every number at or above `10000000` is native (`ListingNumber`). Owner scenarios:
 `owner_empty`, `owner_returning` (list, create, `GET /me`), `owner_limit`, `owner_disabled`, `owner_waitlisted`
-(`GET /me`), `demand_few`, `phone_set`, `phone_not_uz`, `phone_not_own`, `rejected_denied`, `rejected_limit`,
+(`GET /me`), `owner_pending` (`GET /me` with `owner.pending: 2`, the requests of the list's listing `01JF…03`; every
+other profile has `pending: 0`, so the owner signals of WP-82 stay quiet), `demand_few`, `phone_set`, `phone_not_uz`, `phone_not_own`, `rejected_denied`, `rejected_limit`,
 `held_check`, `publish_missing`, `listing_locked`, `request_answer_closed`. The request method answers by number
 (`10000001`, `10000005` → `201 pending`; `10000002` … `10000004` → `200` with their status; `10000006` →
 `request_closed`; `10000007` → `contact_open`; `10000008` → `own_listing`; any other → `request_closed`) and knows

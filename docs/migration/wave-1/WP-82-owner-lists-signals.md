@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (part 1: the lists, «Отклики», the panel and the signals; part 2, the invitations and the landlord block, follows in a pull request of its own) |
 | Depends on | WP-81, WP-31, WP-26, WP-39 (the end block of the search feed, the survey's `moved` step, `RollNumber`, the leave helper; *added by the intake of `index-YX9bFVws.js`*) |
 | Size | about 3 050 changed lines with tests, L (about 450 of them for the invitations and the landlord block of legacy release `index-YX9bFVws.js`; if the PR passes 3 000 lines, they go into a PR of their own after it) |
 | Behaviour reference | `03` SCR-032 (the group «Сдаю квартиру»), SCR-049, SCR-057 … SCR-060, §3.3 (`owner_attention`, `owner_limit_sheet`, `owner_hint_opened`, `owner/mine`, `owner/listing`), BR-APP-088 … BR-APP-095, BR-APP-103, LB-APP-057, LB-APP-059, LB-APP-062, LB-APP-064, LB-APP-065 (the card), LB-APP-066, LB-APP-069, LB-APP-070; `05` TMA-037 (`kv-req-tip`); `09` DEV-056 (the card), DEV-059; since `index-YX9bFVws.js`: BR-APP-092 (changed), BR-APP-112, BR-APP-113, BR-APP-115, BR-APP-116, LB-APP-084, LB-APP-088, LB-APP-090, TMA-048, DEC-89, DEC-91, DEC-94 |
@@ -516,6 +516,49 @@ cabinet on there (DEC-88).
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web once the
       cabinet is on there.
 
+## As built (part 1)
+
+- **Split by the Size rule.** Part 1 passed 3 000 changed lines before the invitations, so the invitations into the
+  cabinet, the survey's landlord block, `tg.shareText`, `owner_entry`, `landlord_share` and `e2e/owner-entry.spec.ts`
+  follow in a pull request of their own; their checklist lines stay open until then.
+- **The seams (step 1).** WP-31's settings screen had only a comment for the owner slot: `SettingsScreen` now takes
+  `ownerGroup`, passed by `settings/layout.tsx` through `SettingsServer`. `SettingsRow` documented a `count` it did not
+  have: it now draws the red counter, named by its value. WP-80's `stats.daily` was typed `string[]` by Scramble; the
+  resource casts each value, the contract says `number[]`.
+- **The stub profiles are quiet.** Every `GET /me` fixture now has `owner.pending: 0`, so no other end-to-end spec
+  meets the red dot or the tab tip; the scenario `owner_pending` has the two requests of the stub listing `01JF…03`
+  (`docs/api/README.md`, WP-80's scenario note).
+- **WP-81's kept `/owner/new`.** A second push of `/owner/new` in one launch showed the kept copy with its create sent;
+  `OwnerNewRoute` keys each opening on `useRouter().bfcacheId` (`owner-lists.spec.ts` opens it twice).
+- **The pending count** is `useOwnerPending()` (`features/owner/pending.ts`) over `useOptionalSession()`, so the tab bar
+  reads it also where a test renders it alone; `refresh()` of the session now shares one request between concurrent
+  re-reads.
+- **«Отклики»** live under the key `owner-requests/<id>`, outside `OWNER_PREFIX`: `invalidateOwner()` after an answer
+  does not read page one again over the pages below it; the answer replaces its card and a `409` reloads. Without an
+  `IntersectionObserver` the next page loads at once.
+- **Texts (for the product owner, three locales):** `own.status.withdrawn` «Снято с публикации», `own.withdrawnNote`
+  without the complaints (default 26), `own.confirmDeleteRejected`, `own.rejectedReason.denied` and `.limit`,
+  `own.toast.deleted` «Объявление удалили» for a deleted rejected listing. The label tables `ownerStatus`,
+  `requestStatus`, `requestWho`, `ownerAnswer` and `rejectedReason` replace any key built from a server value.
+- **Days in Tashkent.** «Сдаётся · N дней» counts calendar days in Asia/Tashkent (UTC+5, no daylight saving) from
+  `published_at`; «с сегодня» on the day of publication.
+- **The panel's footer** draws its first action across the bar and the others side by side under it; with nothing to
+  offer it is `MineBar`, so it is never empty. The market delta is shown as «−12 %» in the tone of `price_tone`.
+- **The tip store** is `features/owner/signals/tipState.ts` (a file `requestTip.ts` beside `RequestTip.tsx` clashes on a
+  case-insensitive disk). The tips leave with WP-39's `tip` leave.
+- **The swipe.** `useSwipeBack` ignores a touch inside another `[data-slot="subpage"]`. `SWIPE_BACK_RESET_MS` (300 ms)
+  after a closing swipe it removes its inline styles only if the layer is no longer shown; a layer still shown then (a
+  navigation that takes longer) stays out until its cleanup, so it never snaps back (review).
+- **After the review.** Each fresh opening of «Мои объявления» is keyed on `bfcacheId` (Back from «Отклики» keeps the
+  tab); a handled `?focus=` is forgotten once it leaves the address. The request cards carry `ph-no-capture`. A later
+  page of «Отклики» that fails stops the paging until «Повторить». A `refresh()` during a read in flight queues one
+  more read after it. «Мои объявления» and the limit sheet read no owner list off-cabinet for a user without
+  listings.
+- **The e2e harness** forgives «Fetch response has been disposed» on the header mode's `/bff/session` route, as it
+  forgave «Test ended»: a disposed answer is one the page no longer waits for.
+
 ## Handoff
 
-Empty.
+- Production track: the regular deploy; `OWNER_CABINET_ENABLED` stays unset on the servers (DEC-81), so the group shows
+  only for a user with listings, which none has there yet.
+- The checklist inside Telegram on staging waits for WP-89 (DEC-88).

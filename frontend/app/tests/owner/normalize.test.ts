@@ -61,7 +61,15 @@ describe("normalizeOwnerListing (WP-81, LB-APP-064)", () => {
       rejectReason: null,
       shownPoint: LISTING.shown_point,
       locked: false,
+      // An empty counters object reads as zeros, seven days of them (WP-82).
+      stats: { pending: 0, requests: 0, given: 0, sent: 0, opened: 0, favorites: 0, daysListed: null, daily: [0, 0, 0, 0, 0, 0, 0], priceDelta: null, priceTone: null },
     });
+  });
+
+  it("reads the counters: the last seven days, padded on the left; no counters for a draft (WP-82)", () => {
+    const stats = normalizeOwnerListing({ ...LISTING, stats: { pending: 2, requests: 5, given: 1, sent: 40, opened: 12, favorites: -1, days_listed: 9, daily: [9, 1, 2, 3], price_delta: -12, price_tone: "good" } })?.stats;
+    expect(stats).toEqual({ pending: 2, requests: 5, given: 1, sent: 40, opened: 12, favorites: 0, daysListed: 9, daily: [0, 0, 0, 9, 1, 2, 3], priceDelta: -12, priceTone: "good" });
+    expect(normalizeOwnerListing({ ...LISTING, stats: null })?.stats).toBeNull();
   });
 
   it("reads an unknown status as unknown, an unknown reason or error as null, a rejected listing's unknown reason as denied", () => {

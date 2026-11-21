@@ -53,8 +53,10 @@ for (const mode of ["cookie", "header"] as const) {
     test("the groups and values of the stub; every row opens its page and Back returns to the list", async ({ page }) => {
       await open(page, mode);
 
-      // The stub hides listings and blocks authors (`hidden/default.json`), so «Лента» shows as the fifth group.
-      await expect(visible(page, "[data-settings-group]")).toHaveCount(6);
+      // The stub hides listings and blocks authors (`hidden/default.json`), so «Лента» shows; and the stub user has
+      // listings with the cabinet on, so «Сдаю квартиру» (WP-82) is the first group.
+      await expect(visible(page, "[data-settings-group]")).toHaveCount(7);
+      await expect(visible(page, "[data-settings-group]").first()).toHaveAttribute("data-settings-group", "owner");
       await expect(value(page, "hidden")).toHaveText(/^\d+$/);
       await expect(value(page, "theme")).toHaveText("Как в Telegram");
       await expect(value(page, "language")).toHaveText("Русский");

@@ -22,6 +22,8 @@ export const BFF_READS = [
   // The owner form's reads (WP-81).
   "owner/listings",
   "owner/listings/:id",
+  // «Отклики» (WP-82), paged by `cursor`.
+  "owner/listings/:id/requests",
   "owner/place",
   "owner/demand",
 ] as const;
@@ -45,9 +47,13 @@ export function readTemplate(path: string): BffRead | null {
   if (first === "listings" && second !== undefined && third === undefined && POSITIVE_INTEGER.test(second)) {
     return "listings/:number";
   }
-  return first === "owner" && second === "listings" && third !== undefined && rest.length === 0 && ULID.test(third)
-    ? "owner/listings/:id"
-    : null;
+  if (first !== "owner" || second !== "listings" || third === undefined || !ULID.test(third)) {
+    return null;
+  }
+  if (rest.length === 0) {
+    return "owner/listings/:id";
+  }
+  return rest.length === 1 && rest[0] === "requests" ? "owner/listings/:id/requests" : null;
 }
 
 /** The writes of `/bff/*`: the journal only (WP-32, `journal.ts`). */

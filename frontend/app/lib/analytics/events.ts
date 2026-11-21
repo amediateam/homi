@@ -53,6 +53,12 @@ export type JournalEvents = {
   owner_place_autofill: { result: "applied" | "reverted" };
   /** A tap on the mascot of the done step, at most once per 30 s (`features/owner/events.ts`). */
   owner_mascot_tap: Empty;
+  /** The owner signals (WP-82, SCR-059, SCR-060): each pair at most once per launch (`features/owner/signals`). */
+  owner_attention: { what: "dot" | "coach" | "banner"; action: "shown" | "clicked" };
+  /** The limit sheet mounted (WP-82, SCR-049). */
+  owner_limit_sheet: { where: "settings" | "mine" };
+  /** A fill hint of the owner panel opened the form on its field (WP-82, BR-APP-093). */
+  owner_hint_opened: { field: "photos" | "area_m2" | "floor" | "renovation" | "description" };
 };
 
 export type JournalEventName = keyof JournalEvents;
@@ -82,6 +88,9 @@ export const JOURNAL_EVENTS = [
   "owner_place_set",
   "owner_place_autofill",
   "owner_mascot_tap",
+  "owner_attention",
+  "owner_limit_sheet",
+  "owner_hint_opened",
 ] as const satisfies readonly JournalEventName[];
 
 export type TrackedEvent = { [N in JournalEventName]: { name: N; props: JournalEvents[N] } }[JournalEventName];

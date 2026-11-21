@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { serverApi } from "@/lib/api/server";
 import { getSessionToken } from "@/lib/session/server";
 
@@ -12,10 +13,10 @@ import type { Settings } from "./useSettings";
  * never writes over an optimistic change. Without the cookie (header mode, the first request of a launch), or for an
  * answer that failed, the browser reads them through `/bff` once the session is ready. Nothing here is cached.
  */
-export async function SettingsServer() {
+export async function SettingsServer({ ownerGroup }: { ownerGroup?: ReactNode } = {}) {
   const token = await getSessionToken();
   if (token === null) {
-    return <SettingsScreen />;
+    return <SettingsScreen ownerGroup={ownerGroup} />;
   }
   const api = await serverApi();
   const [settings, hidden] = await Promise.all([api.settings(), api.hidden()]);
@@ -23,6 +24,7 @@ export async function SettingsServer() {
     <SettingsScreen
       initialSettings={settings.ok ? (settings.data as Settings) : undefined}
       initialHidden={hidden.ok ? (hidden.data as Hidden) : undefined}
+      ownerGroup={ownerGroup}
     />
   );
 }
