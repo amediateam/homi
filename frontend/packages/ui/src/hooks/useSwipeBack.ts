@@ -12,6 +12,11 @@ export const SWIPE_BACK_CLOSE_SHARE = 0.33;
 export const SWIPE_BACK_CLOSE_VELOCITY = 0.5;
 /** The slide out (closing) or back (staying) after the release, in ms. */
 export const SWIPE_BACK_SETTLE_MS = 180;
+/**
+ * After a closing swipe the inline styles go this long after `onBack` (legacy since `index-CBlEKxdL.js`, WP-82): a
+ * layer the router keeps mounted (`<Activity>`) is not left translated off-screen for its next showing.
+ */
+export const SWIPE_BACK_RESET_MS = 300;
 /** A swipe is ours only when its sideways travel is at least this many times its vertical travel. */
 export const SWIPE_BACK_HORIZONTAL_RATIO = 1.5;
 /**
@@ -122,6 +127,10 @@ export function useSwipeBack(
         phase = "closed";
         layer.style.willChange = "";
         callbacks.current.onBack();
+        timer = setTimeout(() => {
+          reset();
+          phase = "idle";
+        }, SWIPE_BACK_RESET_MS);
       };
       if (prefersReducedMotion()) {
         moveTo(window.innerWidth, 0);
@@ -142,6 +151,12 @@ export function useSwipeBack(
         return;
       }
       const target = event.target;
+      // Nested sub-pages (WP-82): a touch inside another sub-page is that one's swipe, never also this layer's.
+      const page = target instanceof Element ? target.closest('[data-slot="subpage"]') : null;
+      if (page !== null && page !== layer) {
+        phase = "ignored";
+        return;
+      }
       const fromEdge = edgeOnly && event.touches.length === 1 && event.touches[0]!.clientX - layer.getBoundingClientRect().left <= SWIPE_BACK_EDGE_PX;
       if (event.touches.length !== 1 || (edgeOnly ? !fromEdge : target instanceof Element && target.closest(SWIPE_BACK_EXCLUDED))) {
         phase = "ignored";

@@ -6,6 +6,7 @@ import {
   SubPageFrame,
   SWIPE_BACK_CLOSE_SHARE,
   SWIPE_BACK_CLOSE_VELOCITY,
+  SWIPE_BACK_RESET_MS,
   SWIPE_BACK_SETTLE_MS,
   SWIPE_BACK_START_PX,
   type SwipeBackOptions,
@@ -129,11 +130,32 @@ describe("useSwipeBack", () => {
     vi.advanceTimersByTime(1);
     expect(onBack).toHaveBeenCalledTimes(1);
 
-    // The layer stays out until it unmounts, and ignores further touches.
-    swipe(layer, 150, 2000);
+    // The layer stays out for 300 ms and ignores touches meanwhile (WP-82)…
+    swipe(layer, 150, 50);
     vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS);
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(layer.style.transform).toBe(`translateX(${WIDTH}px)`);
+    // …then its inline styles go, so a layer kept mounted (`<Activity>`) shows in place next time.
+    vi.advanceTimersByTime(SWIPE_BACK_RESET_MS - 50 - SWIPE_BACK_SETTLE_MS);
+    expect(layer.style.transform).toBe("");
+    expect(layer.style.transition).toBe("");
+    expect(layer.hasAttribute("data-gone")).toBe(false);
+  });
+
+  it("a touch inside a nested sub-page is that page's swipe, never this layer's (WP-82)", () => {
+    const onBack = vi.fn();
+    render(
+      <Layer onBack={onBack}>
+        <div data-slot="subpage" data-testid="nested">
+          <p>requests</p>
+        </div>
+      </Layer>,
+    );
+    swipe(screen.getByTestId("nested"), 150, 2000);
+    vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS);
+    expect(onBack).not.toHaveBeenCalled();
+    expect(screen.getByTestId("layer").style.transform).toBe("");
   });
 
   it("a fast short swipe closes by its speed; the same swipe slower does not", () => {
