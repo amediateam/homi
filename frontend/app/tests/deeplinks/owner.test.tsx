@@ -80,6 +80,15 @@ describe("owner launch links (WP-81, TMA-046, LB-APP-060)", () => {
     expect(state.push).not.toHaveBeenCalled();
   });
 
+  it("the search filter owner=owners is not a launch parameter and stays in the address", async () => {
+    const { rerender } = await mount("/ru?owner=owners&deal=rent_long", undefined, { owner_enabled: true });
+    rerender();
+
+    expect(state.replace).not.toHaveBeenCalled();
+    expect(state.push).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?owner=owners&deal=rent_long");
+  });
+
   it("an owner launch is never pending: the first-launch pickers come first (default (c))", async () => {
     const { launch } = await mount("/ru", "owner_new", null);
 

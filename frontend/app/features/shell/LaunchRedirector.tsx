@@ -15,6 +15,14 @@ import { tg } from "@/lib/telegram";
 const LAUNCH_PARAMS = ["listing", "news", "owner"];
 
 /**
+ * Whether `name` is a launch parameter of `params`: `listing` and `news` always; `owner` only as `owner=new`, since
+ * `owner` is also a filter key of the search (`owner=owners`, `@homi/search`) that must stay in the address.
+ */
+function isLaunchParam(params: Pick<URLSearchParams, "get" | "has"> | null | undefined, name: string): boolean {
+  return name === "owner" ? params?.get("owner") === "new" : params?.has(name) === true;
+}
+
+/**
  * Opens the target of the launch link once the session is ready and the gate of WP-23 allows it (`25` §3.2,
  * TMA-010 … TMA-012): a listing (`start_param` `l_<n>` or `?listing=`) is pushed over the feed, so Back returns to
  * the feed; `?news=pets` without a listing opens the filters on the pets section. An owner launch (WP-81, TMA-046:
@@ -52,7 +60,7 @@ export function LaunchRedirector(): null {
     const pushes = found === null ? [] : route?.route === "owner" && route.step === "phone" ? [routes.ownerForm(route.id), found] : [found];
     const url = new URL(window.location.href);
     const chain = (start: string) => pushes.map((href, index) => ({ href, after: index === 0 ? start : pushes[index - 1]!.split("?")[0]! }));
-    if (!LAUNCH_PARAMS.some((name) => url.searchParams.has(name))) {
+    if (!LAUNCH_PARAMS.some((name) => isLaunchParam(url.searchParams, name))) {
       const [first, ...rest] = chain("");
       pending.current = rest;
       if (first !== undefined) {
@@ -61,7 +69,9 @@ export function LaunchRedirector(): null {
       return;
     }
     for (const name of LAUNCH_PARAMS) {
-      url.searchParams.delete(name);
+      if (isLaunchParam(url.searchParams, name)) {
+        url.searchParams.delete(name);
+      }
     }
     const cleaned = normaliseAddress(url.pathname + url.search);
     pending.current = chain(cleaned.split("?")[0]!);
@@ -70,7 +80,7 @@ export function LaunchRedirector(): null {
 
   useEffect(() => {
     const next = pending.current[0];
-    if (next === undefined || LAUNCH_PARAMS.some((name) => searchParams?.has(name)) || normaliseAddress(pathname ?? "/") !== next.after) {
+    if (next === undefined || LAUNCH_PARAMS.some((name) => isLaunchParam(searchParams, name)) || normaliseAddress(pathname ?? "/") !== next.after) {
       return;
     }
     pending.current = pending.current.slice(1);
