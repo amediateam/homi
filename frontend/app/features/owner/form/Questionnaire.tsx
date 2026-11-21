@@ -22,6 +22,7 @@ import { OwnerFrame } from "../OwnerFrame";
 import { PhotoGrid } from "../photos/PhotoGrid";
 import { usePhotos } from "../photos/usePhotos";
 import { invalidateOwner, type OwnerListingBody, putOwnerListing, useOwnerListings } from "../store";
+import { OwnerFormContext } from "./context";
 import { DescriptionSection } from "./DescriptionSection";
 import { focusField, isFocusToken } from "./focus";
 import { FormFooter } from "./FormFooter";
@@ -39,7 +40,7 @@ import { WhereSection } from "./WhereSection";
  * the autosave, the welcome line of a returning owner, the footer and «Дальше». It is the layout of the `[id]`
  * segment, so it stays mounted under the picker, the phone and the mode steps and Back finds it as it was.
  */
-export function Questionnaire({ listing, usual }: { listing: OwnerListingView; usual?: ReactNode }) {
+export function Questionnaire({ listing, usual, children }: { listing: OwnerListingView; usual?: ReactNode; children?: ReactNode }) {
   const t = useTranslations();
   const { me } = useSession();
   const update = useAction(updateOwnerListing);
@@ -150,6 +151,7 @@ export function Questionnaire({ listing, usual }: { listing: OwnerListingView; u
                 : null;
 
   return (
+    <OwnerFormContext value={{ listing, form, edit, restore: editRaw, flush }}>
     <div ref={root} data-owner-questionnaire="">
       <OwnerFrame
         title={listing.status === "draft" ? t("own.title") : t("own.editTitle")}
@@ -200,5 +202,7 @@ export function Questionnaire({ listing, usual }: { listing: OwnerListingView; u
         </div>
       </OwnerFrame>
     </div>
+    {children}
+    </OwnerFormContext>
   );
 }

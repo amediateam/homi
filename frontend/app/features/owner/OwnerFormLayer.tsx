@@ -94,8 +94,9 @@ function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerF
   if (listing !== null) {
     content = (
       <>
-        <Questionnaire key={listing.id} listing={listing} />
-        {children}
+        <Questionnaire key={listing.id} listing={listing}>
+          {children}
+        </Questionnaire>
       </>
     );
   } else if (resource.error !== null && !disabled) {
