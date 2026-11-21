@@ -177,6 +177,8 @@ describe("ListingScreen wiring (WP-26, SCR-018)", () => {
       "history",
       "location",
       "nearby",
+      // The fixture's owner is claimed (`tests/helpers/details.ts`): its section stands before «Кто размещает» (WP-83).
+      "claimed-owner",
       "author",
       "description",
       "sources",

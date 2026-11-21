@@ -63,6 +63,8 @@ export type JournalEvents = {
   owner_entry: { src: "feed_end" | "empty" | "listing" };
   /** A share of the survey's landlord block (WP-82, BR-APP-116, DEC-91). */
   landlord_share: { src: "homi" | "elsewhere"; to: "page" | "bot" };
+  /** «Проверенный хозяин» opened from its chip (WP-83, SCR-062). */
+  owner_info_opened: { listing_id: number };
 };
 
 export type JournalEventName = keyof JournalEvents;
@@ -97,6 +99,7 @@ export const JOURNAL_EVENTS = [
   "owner_hint_opened",
   "owner_entry",
   "landlord_share",
+  "owner_info_opened",
 ] as const satisfies readonly JournalEventName[];
 
 export type TrackedEvent = { [N in JournalEventName]: { name: N; props: JournalEvents[N] } }[JournalEventName];
