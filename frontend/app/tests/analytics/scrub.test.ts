@@ -192,6 +192,8 @@ const SECRETS: { name: string; forms: string[]; pieces: string[] }[] = [
       `Authorization:\\nBearer ${TOKEN}`,
       JSON.stringify({ token: TOKEN }),
       `Authorization: ${TOKEN}`,
+      // With the servers' prefix (`SANCTUM_TOKEN_PREFIX=homi_`), which Sanctum puts after the `|`.
+      `token ${TOKEN.replace("|", "|homi_")}`,
     ],
     pieces: ["AbCdEf123456", "GhIjKl7890"],
   },
