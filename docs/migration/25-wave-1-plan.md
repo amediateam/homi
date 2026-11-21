@@ -181,7 +181,7 @@ Telegram in a desktop browser; it is never part of a production bundle.
 | ----- | ---- |
 | `lib/api/server.ts` (server only) | Typed calls to `/api/v1` with the session token from the cookie; maps API errors to typed results |
 | `app/bff/[...path]/route.ts` | Pass-through to `/api/v1` for reads that happen in the browser: live count while a filter changes, feed pages, map points, and everything in header mode. Allow-list of paths; the token comes from the cookie or the header |
-| `lib/actions/*.ts` | Server Actions for every mutation |
+| `lib/actions/*.ts` | Server Actions for every mutation, except two writes of `/bff`: the journal (`POST /bff/events`, WP-32) and the owner form's photo upload (`POST /bff/owner/listings/{id}/photos`, WP-81, DEC-92), whose upload progress only an `XMLHttpRequest` reports |
 | `lib/data/useResource.ts` | Small client hook: `initial` data, refetch, abort, cache per key. No query library is added |
 | `@homi/types` | Types generated from OpenAPI (section 4.6) |
 | `@homi/api-client` | The existing envelope client; gains the generated path types |
