@@ -1,8 +1,11 @@
 /**
  * The action log of the Mini App (WP-20): the 21 journal events of `03` §3.3 with their legacy names and properties
- * (16 at the release first audited, five more since `index-DY_DH7h-.js`). `track` is a no-op that keeps the last 20
- * calls in memory for tests until WP-32 sends them to `POST /api/v1/events`.
+ * (16 at the release first audited, five more since `index-DY_DH7h-.js`). `track` hands each one to the journal
+ * (`journal.ts`, WP-32: `POST /bff/events` → `POST /api/v1/events`, queued until the session is ready) and keeps the last
+ * 20 calls in memory for tests.
  */
+
+import { enqueue } from "./journal";
 
 type Entry = "link" | "news" | "menu";
 type Empty = Record<string, never>;
@@ -82,10 +85,12 @@ export function track<N extends JournalEventName>(
   name: N,
   ...props: JournalEvents[N] extends Empty ? [props?: JournalEvents[N]] : [props: JournalEvents[N]]
 ): void {
-  recent.push({ name, props: props[0] ?? {} } as TrackedEvent);
+  const value = (props[0] ?? {}) as Record<string, unknown>;
+  recent.push({ name, props: value } as TrackedEvent);
   if (recent.length > LIMIT) {
     recent.shift();
   }
+  enqueue(name, value);
 }
 
 /** The last 20 calls, oldest first; tests only. */
