@@ -151,8 +151,9 @@ export type CameraEngine = "gl" | "leaflet";
  * What one mounted view did with the camera memory of the launch (WP-37, BR-APP-111), shared by its instance hook
  * (which reads the memory for the first camera and writes it in its cleanup) and its camera hook (which skips the
  * first fit for the restored search). `restored`: the search whose remembered camera the current map opened at,
- * until its first answer; `placed`: the search the camera was last fitted or restored for — what the cleanup saves it
- * under, so a search applied and left before its answer is never saved with the camera of the one before.
+ * until its first answer; `placed`: the search the camera was last fitted or restored for. The cleanup saves the
+ * camera only while `placed` is the search shown, so a search applied and left before it was fitted saves nothing,
+ * neither under itself nor under the search before.
  */
 export type CameraMemory = { restored: string | null; placed: string | null };
 

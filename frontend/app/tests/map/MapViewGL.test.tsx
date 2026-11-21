@@ -917,7 +917,7 @@ describe("MapViewGL: the camera memory of the launch (WP-37, BR-APP-111)", () =>
     expect(changed.map.moves).toHaveLength(1);
   });
 
-  it("nothing is remembered before the first fit; a search left before its answer is saved under the search before", async () => {
+  it("nothing is remembered before the first fit; a search left before it was fitted saves nothing, under itself or the one before", async () => {
     const unfitted = await mount({ groups: [], responseId: 0 });
     unfitted.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
     unfitted.unmount();
@@ -933,7 +933,32 @@ describe("MapViewGL: the camera memory of the launch (WP-37, BR-APP-111)", () =>
     const applied = await mount({ cameraKey: "city=tashkent&deal=sale" });
     expect(applied.map.options).not.toMatchObject({ center: [69.2, 41.2] });
     applied.unmount();
-    const before = await mount();
-    expect(before.map.options).toMatchObject({ center: [69.2, 41.2], zoom: 12.5 });
+    // The camera moved for the sale search (a city jump, an empty answer) is not the first search's either.
+    const before = await mount({ groups: GROUPS, responseId: 1 });
+    expect(before.map.options).not.toMatchObject({ center: [69.2, 41.2] });
+    expect(before.map.moves).toHaveLength(1);
+  });
+
+  it("a restored camera stays when the city view becomes known after the restore (no stand-in jump)", async () => {
+    const first = await mount({ groups: GROUPS, responseId: 1 });
+    first.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
+    first.unmount();
+
+    const second = await mount({ cityKnown: false });
+    expect(second.map.options).toMatchObject({ center: [69.31, 41.33], zoom: 13.5 });
+    await second.update({ cityKnown: true });
+    expect(second.map.moves).toEqual([]);
+  });
+
+  it("a restore keeps the city's fit memory of the first fit: a later fit of another search does not replace it", async () => {
+    const first = await mount({ groups: GROUPS, responseId: 1 });
+    const memory = readFit(DEFAULT_CITY_VIEW.center);
+    first.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
+    first.unmount();
+
+    const second = await mount({ groups: GROUPS, responseId: 1 });
+    await second.update({ groups: [PIN_B], responseId: 2, cameraKey: "city=tashkent&rooms=2" });
+    expect(second.map.moves).toHaveLength(1);
+    expect(readFit(DEFAULT_CITY_VIEW.center)).toEqual(memory);
   });
 });

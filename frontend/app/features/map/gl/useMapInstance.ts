@@ -99,8 +99,9 @@ export type MapInstanceInput = {
  * no world copies and no built-in attribution (`MapAttribution` draws it); the first camera is the one the route had
  * when it was hidden, else the one this engine's map was left at for the same search in this launch (WP-37,
  * `recallCamera`), else the known city's fit memory, else the city view (the Tashkent stand-in until a city view is
- * known, WP-27 "Camera"). The cleanup saves the camera for the search it was last fitted or restored for
- * (`rememberCamera`). `?mapdebug` exposes the map as `window.homiMap` outside production (TMA-012).
+ * known, WP-27 "Camera"). The cleanup saves the camera for the search it was last fitted or restored for, only while
+ * that is the search shown (`rememberCamera`). `?mapdebug` exposes the map as `window.homiMap` outside production
+ * (TMA-012).
  */
 export function useMapInstance(container: RefObject<HTMLElement | null>, input: MapInstanceInput): MapHandle {
   const { style, cityView, cityKnown, lite, onFail, onBackground, onVectorError, cameraKey, memoryRef } = input;
@@ -121,9 +122,11 @@ export function useMapInstance(container: RefObject<HTMLElement | null>, input: 
       pixelRatio: pixelRatioOf(lite),
     };
   });
+  // Saved only while the camera belongs to the search shown: once another search came (a city jump, an answer
+  // without points, one still pending), the camera is neither that search's nor the one before.
   const save = useEffectEvent((view: CityView) => {
     const { placed } = memoryRef.current;
-    if (placed !== null) {
+    if (placed !== null && placed === cameraKey) {
       rememberCamera("gl", placed, view);
     }
   });
@@ -332,6 +335,10 @@ export function useMapCamera(
       return false;
     }
     animate.current = true;
+    // The city's fit memory stays the first fit's: a later fit of another search does not replace it.
+    if (city !== null) {
+      savedCity.current = city;
+    }
     return true;
   });
 

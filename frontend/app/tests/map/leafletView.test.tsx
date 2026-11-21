@@ -214,6 +214,32 @@ describe("MapViewLeaflet: the camera memory of the launch (WP-37, BR-APP-111)", 
     expect(document.querySelector(`.${RASTER_CLASS}`)).not.toBeNull();
   });
 
+  it("a search changed after the restore fits; a search applied and left before it was fitted saves nothing", async () => {
+    const all = made();
+    const first = render(<MapViewLeaflet {...viewProps({ groups: GROUPS, responseId: 1 })} />);
+    await flush();
+    all()[0]!.setView([41.33, 69.31], 15, { animate: false });
+    first.unmount();
+
+    const props = viewProps({ groups: [], responseId: 0 });
+    const changed = render(<MapViewLeaflet {...props} />);
+    await flush();
+    const map = all()[1]!;
+    expect(map.getZoom()).toBe(15);
+    changed.rerender(<MapViewLeaflet {...props} groups={GROUPS} responseId={1} cameraKey="city=tashkent&rooms=2" />);
+    await flush();
+    expect(map.getZoom()).not.toBe(15);
+
+    // Applied on the mounted map, left before its answer: the next mount of either search opens without a memory.
+    changed.rerender(<MapViewLeaflet {...props} groups={GROUPS} responseId={1} cameraKey="city=tashkent&deal=sale" />);
+    await flush();
+    map.setView([41.2, 69.2], 16, { animate: false });
+    changed.unmount();
+    render(<MapViewLeaflet {...viewProps({ cameraKey: "city=tashkent&deal=sale" })} />);
+    await flush();
+    expect(all()[2]!.getZoom()).not.toBe(16);
+  });
+
   it("another search fits; nothing is remembered before the basemap went on", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const all = made();

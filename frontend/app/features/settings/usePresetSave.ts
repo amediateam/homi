@@ -11,54 +11,55 @@ import { type Settings, useSettings } from "./useSettings";
 
 /**
  * The save of a preset page (WP-31, BR-APP-051: quiet hours, digest hours, card style): the change shows at once
- * (`patch`), then `PATCH /settings`, and the answer replaces the settings shown. Of several saves the latest one
- * wins: an earlier answer that arrives after a later pick does not replace it, and only a failure of the latest save
- * puts back, with `failed()`, the answer of the newest save that succeeded — else the settings before the saves. The
- * server takes the saves in their order (Next sends Server Actions one at a time), so the newest success is what it
- * holds: a success of an earlier save that arrives after the latest one failed is shown, and one that arrives after a
- * later success is dropped. A failed earlier request never undoes anything.
+ * (`patch`), then `PATCH /settings`, and the answer replaces the settings shown. Next sends Server Actions one at a time,
+ * each after the answer of the one before — a save repeated after a re-authentication (`invokeAction`) joins the
+ * queue again — so the answers arrive in the order the server took the writes, and the last success to arrive is what
+ * it holds. While the latest pick waits, the earlier answers change nothing on screen; the latest one's success is
+ * shown, its failure puts back, with `failed()`, the last success that arrived meanwhile, else the settings before the
+ * saves. A success that arrives after the latest pick settled is shown: the server took it last. A failed earlier
+ * request never undoes anything.
  */
 export function usePresetSave(): { settings: Settings | undefined; save: (change: SettingsInput & Partial<Settings>) => Promise<boolean> } {
   const view = useSettings();
   const send = useAction(updateSettings);
   const latest = useRef(0);
-  /** The number of the newest save that succeeded. */
-  const newestSuccess = useRef(0);
-  /** What a failure of the latest save puts back while saves are pending; `undefined` once the latest settled. */
-  const restore = useRef<Settings | undefined>(undefined);
+  /** The settings before the first pending save; `undefined` once the latest pick settled. */
+  const base = useRef<Settings | undefined>(undefined);
+  /** The last success that arrived while the latest pick waited. */
+  const arrived = useRef<Settings | undefined>(undefined);
 
   const save = async (change: SettingsInput & Partial<Settings>): Promise<boolean> => {
     tg.haptic.impact("light");
     const request = ++latest.current;
     const before = view.patch(change as Partial<Settings>);
-    restore.current ??= before;
-    const result = await send(change).catch(() => null);
-    const newest = result?.ok === true && request > newestSuccess.current;
-    if (newest) {
-      newestSuccess.current = request;
+    if (base.current === undefined) {
+      base.current = before;
+      arrived.current = undefined;
     }
+    const result = await send(change).catch(() => null);
+    const ok = result?.ok === true;
     if (request !== latest.current) {
-      if (newest) {
-        if (restore.current !== undefined) {
-          restore.current = result.data;
+      if (ok) {
+        if (base.current !== undefined) {
+          arrived.current = result.data;
         } else {
-          // The latest save settled and failed (a success of it would be newer): the server holds this one.
           view.replace(result.data);
         }
       }
-      return result?.ok === true;
+      return ok;
     }
-    if (result?.ok) {
-      restore.current = undefined;
+    if (ok) {
       view.replace(result.data);
-      return true;
+    } else {
+      const back = arrived.current ?? base.current;
+      if (back !== undefined) {
+        view.replace(back);
+      }
+      failed();
     }
-    if (restore.current !== undefined) {
-      view.replace(restore.current);
-    }
-    restore.current = undefined;
-    failed();
-    return false;
+    base.current = undefined;
+    arrived.current = undefined;
+    return ok;
   };
 
   return { settings: view.settings, save };

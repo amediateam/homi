@@ -130,7 +130,7 @@ describe("ThemePage (WP-31, SCR-033)", () => {
 });
 
 describe("ThemePage: answers out of order (review of WP-31)", () => {
-  it("an older success after a newer one is not the theme a later failure restores", async () => {
+  it("the last success to arrive is the theme a later failure restores, whatever the order of the picks", async () => {
     const first = deferred<ActionResult<unknown>>();
     const second = deferred<ActionResult<unknown>>();
     const third = deferred<ActionResult<unknown>>();
@@ -144,7 +144,7 @@ describe("ThemePage: answers out of order (review of WP-31)", () => {
     await act(async () => first.resolve(ok(settingsOf({ theme: "light" }))));
     await act(async () => third.resolve(FAILED));
 
-    expect(checked()).toEqual(["Тёмная"]);
+    expect(checked()).toEqual(["Светлая"]);
   });
 });
 
@@ -297,7 +297,7 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
     expect(currentToast("app")).toBeNull();
   });
 
-  it("an earlier success that arrives after the latest save settled is not what a later failure restores", async () => {
+  it("an earlier success that arrives after the latest save settled is shown, and a later failure restores it (the server took it last)", async () => {
     const first = deferred<ActionResult<unknown>>();
     const second = deferred<ActionResult<unknown>>();
     state.updateSettings.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockResolvedValueOnce(FAILED);
@@ -310,10 +310,10 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
     pick("19");
     await settle();
 
-    expect(checked()).toEqual(["12 и 20"]);
+    expect(checked()).toEqual(["9"]);
   });
 
-  it("the newest success is what a failure restores, also one that arrives after the latest failed (the server takes saves in order)", async () => {
+  it("the last success to arrive is what a failure restores, also one that arrives after the latest failed (the answers come in the server's order)", async () => {
     const first = deferred<ActionResult<unknown>>();
     const third = deferred<ActionResult<unknown>>();
     state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED).mockReturnValueOnce(third.promise);

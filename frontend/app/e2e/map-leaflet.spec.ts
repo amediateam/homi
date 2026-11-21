@@ -317,13 +317,29 @@ const markMapScreen = (page: Page) => page.locator("[data-map-screen]").evaluate
 async function leaveMapForGood(page: Page): Promise<void> {
   await visible(page, "[data-view-toggle]").click();
   await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+  await throughTabs(page);
+  await toMap(page);
+}
+
+/** From the list through the saved, radar and settings tabs and back to the list with the search tab. */
+async function throughTabs(page: Page): Promise<void> {
   for (const tab of ["saved", "radars", "settings"]) {
     await visible(page, `[data-tab="${tab}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/ru/${tab}(?:[/?]|$)`));
   }
   await visible(page, '[data-tab="search"]').click();
   await expect(visible(page, "article[data-listing]").first()).toBeVisible();
-  await toMap(page);
+}
+
+/** Applies «2» in the quick rooms sheet of the list: a changed search (`filters.spec.ts`). */
+async function applyTwoRooms(page: Page): Promise<void> {
+  await visible(page, '[data-topbar="search-list"] [data-chip="rooms"]').click();
+  const rooms = visible(page, '[data-slot="bottom-sheet"] [data-route="filters/rooms"][data-layer="sheet"]');
+  await expect(rooms).toBeVisible();
+  await rooms.getByRole("button", { name: "2", exact: true }).click();
+  await visible(page, '[data-slot="bottom-sheet"] [data-action="apply"]').click();
+  await expect(page).toHaveURL(/rooms_min=2/);
+  await expect(visible(page, "[data-layer]")).toHaveCount(0);
 }
 
 for (const mode of ["cookie", "header"] as const) {
@@ -344,7 +360,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
 
     /** WP-37 E2E on Leaflet; acceptance "Leaving the map and returning with the same search keeps the camera on both engines". */
-    test("the map's route dropped and the same search back: the camera is where it was left, no fit follows, the basemap is on", async ({ page }) => {
+    test("the map's route dropped and the same search back: the camera is where it was left and no fit follows; a changed search fits", async ({ page }) => {
       await openFeed(page, mode, LEAFLET_DEBUG);
       await toMap(page);
       await stacksDrawn(page);
@@ -371,8 +387,23 @@ for (const mode of ["cookie", "header"] as const) {
       expect(back.lat).toBeCloseTo(left.lat, 5);
       expect(back.lon).toBeCloseTo(left.lon, 5);
       expect(back.zoom).toBe(left.zoom);
-      // The restored camera counts as the first fit: the raster basemap is on without the 1.2 s wait.
+      // The basemap is on (that a restore puts it on without the 1.2 s wait is the unit test's, with fake timers).
       await expect(view(page).locator(".leaflet-tile-pane img").first()).toBeAttached({ timeout: BASEMAP_DELAY_MS });
+
+      // The changed search on a fresh map: the memory holds the first search's camera, which the second does not take.
+      await markMapScreen(page);
+      await visible(page, "[data-view-toggle]").click();
+      await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+      await applyTwoRooms(page);
+      await throughTabs(page);
+      await toMap(page);
+      await expect(page.locator("[data-map-screen][data-e2e-left]"), "Next re-rendered the map's route fresh").toHaveCount(0);
+      await expect
+        .poll(async () => {
+          const now = (await camera(page))!;
+          return Math.abs(now.zoom - left.zoom) + Math.abs(now.lat - left.lat) + Math.abs(now.lon - left.lon);
+        })
+        .toBeGreaterThan(1e-4);
     });
 
     /**

@@ -232,6 +232,23 @@ describe("HiddenPage: two returns that fail one after the other (review of WP-31
     expect(document.activeElement).toBe(document.querySelector("[data-hidden-page]"));
   });
 
+  it("a return that fails before «Показать всё снова» succeeds: the row comes back, then goes with the success", async () => {
+    const single = deferred<ActionResult<null>>();
+    const all = deferred<ActionResult<null>>();
+    state.unblockAuthorById.mockReturnValueOnce(single.promise);
+    state.unhideAll.mockReturnValueOnce(all.promise);
+    page({ authors: [PHONE, CHANNEL] });
+
+    fireEvent.click(returnOf(`[data-hidden-author="${PHONE.id}"]`));
+    fireEvent.click(document.querySelector("[data-hidden-all]")!);
+    await settle();
+    await act(async () => single.resolve(FAILED));
+    expect(authors()).toEqual([PHONE.id]);
+
+    await act(async () => all.resolve(OK));
+    expect(authors()).toEqual([]);
+  });
+
   it("a return that fails after «Показать всё снова» succeeded puts nothing back: the server returned that row too", async () => {
     const single = deferred<ActionResult<null>>();
     state.unblockAuthorById.mockReturnValueOnce(single.promise);

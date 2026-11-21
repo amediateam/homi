@@ -272,13 +272,18 @@ const markMapScreen = (page: Page) => page.locator("[data-map-screen]").evaluate
 async function leaveMapForGood(page: Page, back: (page: Page) => Promise<void>): Promise<void> {
   await visible(page, "[data-view-toggle]").click();
   await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+  await throughTabs(page);
+  await back(page);
+}
+
+/** From the list through the saved, radar and settings tabs and back to the list with the search tab. */
+async function throughTabs(page: Page): Promise<void> {
   for (const tab of ["saved", "radars", "settings"]) {
     await visible(page, `[data-tab="${tab}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/ru/${tab}(?:[/?]|$)`));
   }
   await visible(page, '[data-tab="search"]').click();
   await expect(visible(page, "article[data-listing]").first()).toBeVisible();
-  await back(page);
 }
 
 /** Applies «2» in the quick rooms sheet of the list: a changed search (`filters.spec.ts`). */
@@ -337,10 +342,14 @@ for (const mode of ["cookie", "header"] as const) {
       expect(back.lon).toBeCloseTo(left.lon, 5);
       expect(back.zoom).toBeCloseTo(left.zoom, 5);
 
+      // The changed search on a fresh map: the memory holds the first search's camera, which the second does not take.
+      await markMapScreen(page);
       await visible(page, "[data-view-toggle]").click();
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
       await applyTwoRooms(page);
+      await throughTabs(page);
       await toMap(page);
+      await expect(page.locator("[data-map-screen][data-e2e-left]"), "Next re-rendered the map's route fresh").toHaveCount(0);
       await expect
         .poll(async () => {
           const now = (await camera(page))!;
