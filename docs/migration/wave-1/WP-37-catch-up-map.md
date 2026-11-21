@@ -176,8 +176,8 @@ The package is built as designed, with these points decided in the code (rule 6)
   slot, before the Leaflet failure's and the points' pills, and closes the selection card, a drawing and the locate
   button with the view. The drawing closes from an effect: the boundary reports before the screen's layout effects
   run. Known and left: the top bar's lasso still opens a drawing while the view has failed, and it closes at once;
-  a second failure before the first close has reached the address could close twice. Its «Повторить» plays the light haptic and remounts the
-  boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
+  a second failure before the first close has reached the address could close twice. The pill's «Повторить» plays
+  the light haptic and remounts the boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
   Leaflet retry: those never throw (`MapScreen.chunk` tests unchanged).
 - **The camera memory.** `rememberCamera` / `recallCamera` keep one camera per engine, for one search. Each view
   holds a `CameraMemory` ref shared by its instance hook and its camera hook: `restored` is the search the map opened

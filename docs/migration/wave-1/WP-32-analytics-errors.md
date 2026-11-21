@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#103) |
 | Depends on | WP-23 |
 | Size | ≈ 1 700 changed lines, M |
 | Behaviour reference | `03` §1.1 (screen-name precedence), §1.6 (error layers), §1.7 (no replay in lite mode), §1.9 (lazy chunks), §3.3 (journal events and PostHog), §3.4 (constants), defect LB-APP-037; `05` TMA-003, TMA-009, TMA-041, TMA-044; `08` API-034, RES-006; `16` SEC-021, SEC-REQ-022, SEC-REQ-036, SEC-REQ-047; task files KV-FE-034, KV-FE-035, KV-FE-036 (reporting parts) — behaviour, constants, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
@@ -55,6 +55,7 @@ leaves the browser through either channel.
 | Logging without personal data | SEC-REQ-047, SEC-REQ-022, TMA-009 | Every payload is scrubbed in the browser and again in the route handler; bodies stay under 8 KB |
 | Security headers | `25` §3.10, SEC-REQ-031 | The PostHog host is allowed through `CSP_ANALYTICS_HOSTS`, read by `proxy.ts` (WP-21); SDK code is bundled, so no script host is added |
 | Rendering | `25` §3.1 | Nothing here reads cookies during render; all of it is client code plus two route handlers |
+| The `@analytics` run in CI | DEC-98 (2026-11-21) | A further step of the existing e2e job (`E2E_ANALYTICS=1`), not a job of its own |
 
 ## Design
 
@@ -377,7 +378,7 @@ filters/<kind> > sort > city > map/draw > tab`) follows from the address: the to
 | 21 | `/radars/<id>/edit` | `radar/edit` | legacy |
 | 22 | `/radars/found` | `radar/found` | new |
 | 23 | `/settings` | `settings` | legacy |
-| 24 | `/settings/theme`, `/graphics`, `/language`, `/currency`, `/quiet-hours`, `/digest`, `/hidden` | `settings/<page>` (seven names, the address segment) | new |
+| 24 | `/settings/theme`, `/graphics`, `/language`, `/currency`, `/quiet-hours`, `/digest`, `/cards`, `/hidden` | `settings/<page>` (eight names, the address segment; `cards` came with WP-31) | new |
 | 25 | `/welcome/language` | `welcome/language` | new |
 | 26 | `/welcome/city` | `welcome/city` | new |
 | 27 | `/no-access`, `/outside` | `no-access`, `outside` — used in error reports only; no pageview, because PostHog is never initialised without a user | new |
@@ -475,6 +476,44 @@ pageview when the record has `owner.mine`. The cabinet's layers get new names of
       PostHog in `script-src`; the browser console shows no CSP violation during a launch.
 - [ ] `pnpm test`, `pnpm test:e2e` (both projects) and `make ci-frontend` are green; the queue row is updated.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6).
+
+- **No React before hydration.** `lib/analytics/screens.ts` is a plain store (`currentScreen`, `setScreen`,
+  `pushScreenLayer`); the hook `useScreenLayer` lives in `features/shell/useScreenLayer.ts`, because the global
+  handlers (`instrumentation-client.ts` → `lib/errors/global.ts` → `report.ts`) import the store before hydration.
+- **`map/card`** is pushed by `MapScreen`, not by `MapSelectionCard`: the name counts only while the card shows on
+  the map's own address (`selection !== null && own`), so a listing opened from the card is not reported as the card.
+  Showing the card sends its pageview; closing it sends none (the next address change does).
+- **The listing's pageview** waits for its record or failure through `listingKnown(number)`, which `ListingScreen`
+  calls; a record known before the tracker's effect (a server read) sends at once.
+- **`BUILD_VERSION`** (`lib/analytics/buildVersion.ts`, `NEXT_PUBLIC_BUILD_VERSION`, `dev` when unset) also gives
+  `app_launch` its `v`; WP-21 read `NEXT_PUBLIC_APP_VERSION`, which nothing set.
+- **The journal's write** is the one write of the `/bff` catch-all (`BFF_WRITES = ["events"]`, `POST`): same origin
+  with an `Origin`, at most 8 KB, `{name, props}` checked, the properties scrubbed again, forwarded with the token of
+  the cookie or the bearer header; it answers the API's status, `204` for a success. `boot-error` and `session` are
+  reserved names the catch-all refuses.
+- **The report body** is built from a whitelist: the context's other keys (`where`, `componentStack` of the map's
+  boundary) stay in the browser. The map boundary's `render` reports reach PostHog's exception capture like any.
+- **The boot guard's hand-over**: `installGlobalErrorHandlers()` sets `__homiBoot.watching` itself (the handlers
+  exist before React mounts); `boot.js` then stops posting `/bff/boot-error` but still shows «Обновите Telegram»
+  until `ok`. A boot-error without the cookie writes one `console.info` line (`event`, `v`, `name`, `tg`,
+  `platform`).
+- **PostHog.** Every option name was checked in the types of the installed `posthog-js` 1.434.15. The web vitals
+  extension the SDK asks for is `web-vitals-with-attribution`; with external loading disabled it is imported from
+  the package. `rageclick`, `capture_dead_clicks` and `enable_heatmaps` follow `analytics.autocapture`. Next's
+  control-flow throws are ignored by their `digest` if they ever reach the window listeners.
+- **The `@analytics` run (DEC-98).** PostHog sends nothing for what it takes for a bot — headless Chrome's user agent,
+  its client hints and `navigator.webdriver` — so the specs give the browser a phone's user agent and hide both; the
+  app itself keeps PostHog's filter. The specs answer the host's remote config with recording allowed. A replay
+  could not be made to record against the fake host, so the run checks that a profile sampled for replay loads the
+  recorder's code and one with replay off does not; that a recording shows no readable text stays on the staging
+  checklist, and the options that mask everything are asserted by the unit test.
+
 ## Handoff
 
-Empty.
+Finished: every step but 14 (the deploy and the checks on staging with real keys, the production track's), with unit,
+component and end-to-end tests; the checks run are in the description of PR #103. Needs from the production track:
+`NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, the same host in `CSP_ANALYTICS_HOSTS`, and
+`NEXT_PUBLIC_BUILD_VERSION` from the deploy.
