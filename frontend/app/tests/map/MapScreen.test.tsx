@@ -312,6 +312,18 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
     expect(document.querySelector('[data-map-status="error"]')).toBeNull();
   });
 
+  it("a render error while drawing closes the drawing layer once", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    at("/map", "city=tashkent&draw=1");
+    await mount();
+
+    state.viewThrows = true;
+    act(() => hide([99]));
+
+    expect(pill()?.dataset.mapStatus).toBe("error");
+    expect(vi.mocked(nav.replace).mock.calls.length + vi.mocked(nav.back).mock.calls.length).toBe(1);
+  });
+
   it("a render error closes the card and hides the locate button with the view", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     await mount();
@@ -433,6 +445,16 @@ describe("MapScreen: the note (BR-APP-062, KV-FE-031)", () => {
     await mount();
     await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 9, with_point: 6 }, meta: { source: "stub" } });
 
+    expect(note()).toBeNull();
+  });
+
+  it("another search drops a «N из M» note at once, before its answer", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 5, with_point: 2 }, meta: { source: "stub" } });
+    expect(note()).not.toBeNull();
+
+    at("/map", "city=tashkent&rooms_min=2&rooms_max=2");
+    act(() => hide([99]));
     expect(note()).toBeNull();
   });
 

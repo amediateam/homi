@@ -238,6 +238,29 @@ describe("MapViewLeaflet: the camera memory of the launch (WP-37, BR-APP-111)", 
     render(<MapViewLeaflet {...viewProps({ cameraKey: "city=tashkent&deal=sale" })} />);
     await flush();
     expect(all()[2]!.getZoom()).not.toBe(16);
+    cleanup();
+    // Nor under the search before (rooms=2, the last one fitted): the camera moved for the sale search.
+    render(<MapViewLeaflet {...viewProps({ cameraKey: "city=tashkent&rooms=2" })} />);
+    await flush();
+    expect(all()[3]!.getZoom()).not.toBe(16);
+  });
+
+  it("a restore keeps the city's fit memory of the first fit: a later fit of another search does not replace it", async () => {
+    const all = made();
+    const first = render(<MapViewLeaflet {...viewProps({ groups: GROUPS, responseId: 1 })} />);
+    await flush();
+    const memory = readFit(DEFAULT_CITY_VIEW.center);
+    all()[0]!.setView([41.33, 69.31], 15, { animate: false });
+    first.unmount();
+
+    const props = viewProps({ groups: GROUPS, responseId: 1 });
+    const second = render(<MapViewLeaflet {...props} />);
+    await flush();
+    second.rerender(<MapViewLeaflet {...props} groups={[group(41.36, 69.33, [7])]} responseId={2} cameraKey="city=tashkent&rooms=2" />);
+    await flush();
+
+    expect(all()[1]!.getZoom()).not.toBe(15);
+    expect(readFit(DEFAULT_CITY_VIEW.center)).toEqual(memory);
   });
 
   it("another search fits; nothing is remembered before the basemap went on", async () => {
