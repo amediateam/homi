@@ -10,12 +10,13 @@ import { marketChipText, marketVerdict, type VerdictTone } from "@/features/feed
 import { useBottomMark } from "@/lib/ui/shellState";
 
 import type { ListingDetails, ListingPreview } from "../listingData";
+import { ownerCtaOf } from "./owner";
 import type { ListingContactView } from "./useContact";
 
 /** The right side of the bar (BR-APP-032): the shimmer while the answer is pending, a button, or nothing. */
-export type CtaAction = "pending" | "call" | "write" | "writePaid" | "openPost" | "none";
+export type CtaAction = "pending" | "call" | "write" | "writePaid" | "openPost" | "none" | "hidden" | "request" | "requestSent" | "given" | "closed";
 
-type ButtonAction = Exclude<CtaAction, "pending" | "none">;
+type ButtonAction = Exclude<CtaAction, "pending" | "none" | "hidden" | "request" | "requestSent" | "closed">;
 
 /** «Номер платный» has no icon (legacy). */
 const BUTTONS: Record<ButtonAction, { label: MessageKey; Icon: LucideIcon | null; run: keyof ListingContactView["cta"] }> = {
@@ -23,6 +24,8 @@ const BUTTONS: Record<ButtonAction, { label: MessageKey; Icon: LucideIcon | null
   write: { label: "listing.write", Icon: MessageCircle, run: "onWrite" },
   writePaid: { label: "listing.writePaid", Icon: null, run: "onWrite" },
   openPost: { label: "listing.openPost", Icon: Send, run: "onOpenPost" },
+  // A `given` request (WP-83): the counted contact method gives the number (DEC-52, fix of LB-APP-074).
+  given: { label: "listing.call", Icon: Phone, run: "onCall" },
 };
 
 /** The verdict's text colour under the price; an unknown tone reads neutral (LB-APP-039). */
@@ -48,6 +51,11 @@ export function ctaActionOf(details: ListingDetails | null): CtaAction {
   if (details === null) {
     return "pending";
   }
+  // An owner listing (WP-83): `hidden`, then the request states; the user's own listing never reaches here (WP-82).
+  const owner = ownerCtaOf(details);
+  if (owner !== null) {
+    return owner.action;
+  }
   if (details.contact.has_phone) {
     return "call";
   }
@@ -72,10 +80,13 @@ export function ListingCtaBar({
   item,
   details,
   cta,
+  onRequest,
 }: {
   item: Pick<ListingPreview, "price" | "market">;
   details: ListingDetails | null;
   cta: ListingContactView["cta"];
+  /** «Связаться с хозяином» (WP-83): opens the request sheet `/listing/<number>/contact`. */
+  onRequest?: () => void;
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -85,7 +96,26 @@ export function ListingCtaBar({
   const notes = item.price?.notes.join(SEPARATOR) ?? "";
   const lead = notes ? (verdict?.short ?? null) : verdict ? marketChipText(verdict, translate) : null;
   const action = ctaActionOf(details);
-  const primary = action === "pending" || action === "none" ? null : BUTTONS[action];
+  const owner = details === null ? null : ownerCtaOf(details);
+  const primary = action === "call" || action === "write" || action === "writePaid" || action === "openPost" || action === "given" ? BUTTONS[action] : null;
+
+  // DEC-75 and the closed requests (BR-APP-098): a line in place of the bar's content, no contact action.
+  if (action === "hidden" || action === "closed") {
+    return (
+      <div data-cta="" data-cta-action={action} className="fixed inset-x-0 bottom-0 z-(--z-cta) border-t border-sep bg-bg pb-[calc(12px+var(--bottom-inset))]">
+        <div className="mx-auto flex min-h-[48px] max-w-[608px] flex-col justify-center gap-[2px] px-[16px] pt-[12px]">
+          {action === "hidden" ? (
+            <p className="text-[15px] leading-[1.35] text-hint">{t("contact.hiddenBar")}</p>
+          ) : (
+            <>
+              <p className="text-[16px] font-bold text-text">{t(owner?.closed === "cancelled" ? "contact.cancelledBar" : "contact.closedBar")}</p>
+              <p className="text-[13px] text-hint">{t("contact.similarHint")}</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
