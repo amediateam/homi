@@ -118,6 +118,7 @@ export function createServerApi(config: ServerApiConfig) {
     me: () => call("get", "/me"),
     settings: () => call("get", "/settings"),
     updateSettings: (body: Body<"/settings", "patch">) => call("patch", "/settings", { body }),
+    cardSample: () => call("post", "/settings/card-sample"),
     reference: () => call("get", "/reference"),
     cities: () => call("get", "/cities"),
     listings: (query: Query) => call("get", "/listings", { query }),

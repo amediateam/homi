@@ -10,7 +10,7 @@ export type Query = URLSearchParams | Readonly<Record<string, QueryValue>>;
 export const QUICK_FILTER_KINDS = ["rooms", "price", "owner"] as const;
 export type QuickFilterKind = (typeof QUICK_FILTER_KINDS)[number];
 
-export const SETTINGS_PAGES = ["theme", "graphics", "language", "currency", "quiet-hours", "digest", "hidden"] as const;
+export const SETTINGS_PAGES = ["theme", "graphics", "language", "currency", "quiet-hours", "digest", "cards", "hidden"] as const;
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 /**

@@ -78,8 +78,11 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
    the 24 hours to 2026-11-21 the agent worked a quarter of the session time, 39 % went to waiting for the developer
    and 18 % to waiting for CI (`python3 scripts/audit/session_audit.py --gh`).
    - When a package's PR is pushed, take the next package at once, on a branch from that PR's branch, and open its PR
-     against that branch: GitHub moves it to `main` when the earlier branch is merged and deleted. PRs are merged in
-     queue order. A red earlier PR, or a change the developer asks for in it, comes first.
+     against that branch. PRs are merged in queue order. A red earlier PR, or a change the developer asks for in it,
+     comes first.
+   - Merge a stacked PR without deleting its branch (`gh pr merge N --merge`), retarget the next PR to `main`
+     (`gh pr edit M --base main`), and only then delete the merged branch. Deleting a branch closes every PR whose
+     base it is; GitHub does not retarget them (#99 was closed so on 2026-11-21 and reopened).
    - A PR is merged when its checks are green and its independent review is clean. `gh pr merge` stays behind the
      permission prompt of `.claude/settings.json`; nothing goes around it.
    - Nothing is pushed after a green run only to record it: CI run ids go into the PR description, and the session
