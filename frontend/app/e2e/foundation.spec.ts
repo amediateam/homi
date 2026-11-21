@@ -209,7 +209,11 @@ test.describe("layers", () => {
     await page.goForward();
     await expect(page.locator('[data-route="filters"][data-layer="sheet"]')).toBeVisible();
     await page.reload();
-    await expect(page.locator('[data-route="filters"]:not([data-layer])')).toBeVisible();
+    // The form is keyed on the city (KI-54): this address has none that counts, so the form is mounted anew when the
+    // profile's city arrives. For the length of the exit there are two copies, the leaving one `aria-hidden` under
+    // the new one; a strict locator met both in CI (KI-63). The check is on the copy that stays.
+    await expect(page.locator('[data-route="filters"]:not([data-layer]):not([aria-hidden="true"])').last()).toBeVisible();
+    await expect(page.locator('[data-route="filters"]:not([data-layer])')).toHaveCount(1);
     await expect(page.locator('[data-route="feed"]')).toHaveCount(0);
   });
 
