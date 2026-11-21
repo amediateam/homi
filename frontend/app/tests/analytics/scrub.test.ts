@@ -3,9 +3,26 @@ import { describe, expect, it } from "vitest";
 import { canonical, isAppAddress, REDACTED, scrubDeep, scrubText, stripUrl } from "@/lib/analytics/scrub";
 
 describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
-  it("an address in a text loses its query and hash, launch data in them included; the text stays", () => {
-    expect(scrubText("https://app.homi.uz/ru?tgWebAppData=query_id%3DAA&x=1")).toBe("https://app.homi.uz/ru");
-    expect(scrubText("at https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D now")).toBe("at https://app.homi.uz/ru now");
+  it("an address in a text loses its query and hash; a text that names one with launch data is redacted", () => {
+    expect(scrubText("at https://app.homi.uz/ru/map?area=1,2#x now")).toBe("at https://app.homi.uz/ru/map now");
+    expect(scrubText("at https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D now")).toBe(REDACTED);
+    // An address alone keeps its origin and path, launch data or not (the pageview's `$current_url`).
+    expect(stripUrl("https://app.homi.uz/ru#tgWebAppData=query_id%3DAA%26user%3D%257B%257D")).toBe("https://app.homi.uz/ru");
+  });
+
+  it("ninth review: a key parted from its value by a raw quote, a broken escape run, a combining mark, escapes in an address", () => {
+    expect(scrubText('https://x.com/?a=1\\nquery_id=\\"AAHdF6IQ\\"')).not.toContain("AAHdF6IQ");
+    expect(scrubText('?a=1%20hash="abc123def"')).not.toContain("abc123def");
+    expect(digits(reveal(scrubText("+998%FF%C2%A0901234567")))).not.toContain("1234567");
+    expect(scrubText("write to jose\u0301.maria@mail.com")).not.toContain("jos");
+    expect(stripUrl("https://x.com/a\\nBearer:abc123")).not.toContain("abc123");
+    expect(digits(stripUrl("https://x.com/a\\n901234567"))).not.toContain("1234567");
+  });
+
+  it("judges 16 KB of text without an @ quickly", () => {
+    const started = performance.now();
+    scrubText("a".repeat(16_384));
+    expect(performance.now() - started).toBeLessThan(250);
   });
 
   it("a text that holds launch data, a bearer token or the session cookie outside an address is replaced whole", () => {

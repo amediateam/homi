@@ -39,7 +39,8 @@ const ENTRY = {
   error: {
     kind: "error",
     name: "ChunkLoadError",
-    message: "failed to load https://app.test/_next/static/a.js?tgWebAppData=x for +998901234567",
+    // A query of its own is cut and the number masked; a message that names launch data is redacted whole (scrub.test.ts).
+    message: "failed to load https://app.test/_next/static/a.js?dpl=x for +998901234567",
     source: "https://app.test/_next/static/a.js?v=1#tgWebAppData=x:3:4",
     stage: "app",
     screen: "search/list",

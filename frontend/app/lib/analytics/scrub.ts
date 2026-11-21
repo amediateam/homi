@@ -4,8 +4,7 @@
  *
  * The property they keep: a text is judged on its canonical form — percent escapes decoded, up to three passes, one
  * run of escapes at a time and never throwing. A text is replaced whole by `[redacted]` when its canonical form holds
- * a bearer token or the session cookie with a value, or, once the queries and hashes of its addresses are cut,
- * Telegram's launch data (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` … with a value, or the
+ * a bearer token or the session cookie with a value, or Telegram's launch data (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` … with a value, or the
  * user object's own keys; quoted, JSON-escaped or bare). Phone numbers — Uzbek ones with `+998`, `998` or `00998`, the nine local digits of a
  * code written as a phone is, `8` before them, any separators (masked to `+998***`), other international numbers (`+`
  * and ten or more digits, masked to `+***`) — and e-mail addresses are masked in place; a text whose canonical form
@@ -22,13 +21,14 @@ const LAUNCH_MARKS = [
   /(?<![a-z0-9])["']?(?:tgWebAppData|query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)["']?\s*[=:]\s*["']?[^\s&#*"']/i,
   /(?<![a-z0-9])["']?(?:first_name|last_name|username|photo_url|allows_write_to_pm|language_code)["']?\s*[=:]/i,
 ];
-// On the whole text, queries included: cutting a query at a space could part a token from its name, and no address of
-// the app carries either.
+// Like the launch marks, seen on the whole text, queries included: cutting a query at a raw quote or space could part a
+// value from its key. A text that only names an address with launch data is therefore redacted; `stripUrl` keeps an
+// address's origin and path.
 const TOKEN_MARKS = [/(?<![a-z])bearer[\s+:=]*["']?[^\s*"'<>,;]/i, /homi_session["']?\s*[=:]\s*["']?[^\s;&*"']/i];
 // Longer texts are cut first: nothing that leaves the app is longer (the journal's bodies are 8 KB), and an unbounded
 // text could exhaust a pattern's backtracking.
 const TEXT_MAX = 16_384;
-const SEPARATOR = "[\\s().+_\\u200b\\u2212\\u2010-\\u2015-]*";
+const SEPARATOR = "[\\s().+_\\u200b\\u2212\\ufffd\\u2010-\\u2015-]*";
 // The percent-encoded separators and plus of an address's query (`%2B998%2090…`), decoded before the phone patterns.
 const ENCODED = /%2[0BbDdEe89]/g;
 // `+998`, `998` or `00998` and nine more digits, each optionally after a separator (a space, a dot, a bracket, a dash
@@ -49,22 +49,52 @@ const INTERNATIONAL = new RegExp(`(?<!\\d)\\+\\d(?:${SEPARATOR}\\d){9,14}(?!\\d)
 // apostrophe belongs to a query (`encodeURIComponent` leaves it, and Uzbek names hold one: O'tkir).
 const ADDRESS_QUERY = /((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"<>]*/gi;
 const PATH_QUERY = /((?:^|\s)\/[\w./-]+)\?[^\s"<>]*/g;
-const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/gu;
+// The local part starts where its run starts (the lookbehind), so a long text without `@` is read once, not once per
+// letter; combining marks belong to a letter.
+const EMAIL = /(?<![\p{L}\p{M}\p{N}._%+-])[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+\.\p{L}[\p{L}\p{M}]+/gu;
 
 function phones(text: string): string {
   return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
 }
 
-function decodeRun(run: string): string {
-  try {
-    return decodeURIComponent(run);
-  } catch {
-    // A broken sequence: its ASCII escapes only.
-    return run.replace(/%([0-9A-Fa-f]{2})/g, (escape, hex: string) => {
-      const code = Number.parseInt(hex, 16);
-      return code < 0x80 ? String.fromCharCode(code) : escape;
-    });
+/** The length of the UTF-8 sequence that `lead` starts, or 0 for a byte that starts none. */
+function sequenceLength(lead: number): number {
+  if (lead < 0x80) {
+    return 1;
   }
+  if (lead >= 0xc2 && lead < 0xe0) {
+    return 2;
+  }
+  if (lead >= 0xe0 && lead < 0xf0) {
+    return 3;
+  }
+  return lead >= 0xf0 && lead < 0xf5 ? 4 : 0;
+}
+
+/**
+ * A run of percent escapes as UTF-8: every valid sequence decoded, a byte that is not part of one kept as its escape
+ * (`%FF%C2%A0` → `%FF` and a no-break space; `%Be` of `%Bearer` stays, so the word survives). Never throws.
+ */
+function decodeRun(run: string): string {
+  const escapes = run.match(/%[0-9A-Fa-f]{2}/g) ?? [];
+  const bytes = escapes.map((escape) => Number.parseInt(escape.slice(1), 16));
+  let out = "";
+  for (let index = 0; index < bytes.length; ) {
+    const size = sequenceLength(bytes[index] ?? 0);
+    const tail = bytes.slice(index + 1, index + size);
+    if (size > 0 && tail.length === size - 1 && tail.every((byte) => byte >= 0x80 && byte < 0xc0)) {
+      try {
+        out += decodeURIComponent(escapes.slice(index, index + size).join(""));
+        index += size;
+        continue;
+      } catch {
+        // An overlong form or a surrogate: kept as written.
+      }
+    }
+    out += escapes[index] ?? "";
+    index += 1;
+  }
+  return out;
 }
 
 // One escape of a JSON or JavaScript string: `\u{…}`, `\uXXXX`, `\xHH`, a control letter, or any other character.
@@ -120,14 +150,11 @@ export function scrubText(value: string): string {
 
 function scrubWithin(value: string): string {
   const whole = canonical(value);
-  if (TOKEN_MARKS.some((mark) => mark.test(whole))) {
+  if (TOKEN_MARKS.some((mark) => mark.test(whole)) || LAUNCH_MARKS.some((mark) => mark.test(whole))) {
     return REDACTED;
   }
   const cut = phones(value).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
   const view = canonical(cut);
-  if (LAUNCH_MARKS.some((mark) => mark.test(view))) {
-    return REDACTED;
-  }
   // A number or an address written through escapes cannot be masked in place: its raw form is not its canonical one.
   if (view !== cut && (phones(view) !== view || view.search(EMAIL) !== -1)) {
     return REDACTED;
@@ -173,15 +200,17 @@ export function scrubDeep(value: unknown, depth = 6): unknown {
  * and the hash, so they never leave with an address.
  */
 export function stripUrl(value: string): string {
-  // A space or a line break makes it a text that starts with an address, not an address.
-  if (/\s/.test(value)) {
+  // The query and hash go first, on the raw string; a space, a line break or a backslash before them makes it a text
+  // that starts with an address (`new URL` would turn `\n` into `/n` before it is judged).
+  const head = value.replace(/[?#][\s\S]*$/, "");
+  if (/[\s\\]/.test(head)) {
     return scrubText(value);
   }
-  if (value.startsWith("/")) {
-    return scrubText(value.replace(/[?#][\s\S]*$/, ""));
+  if (head.startsWith("/")) {
+    return scrubText(head);
   }
   try {
-    const url = new URL(value);
+    const url = new URL(head);
     if (url.protocol === "http:" || url.protocol === "https:") {
       return scrubText(`${url.origin}${url.pathname}`);
     }

@@ -513,22 +513,29 @@ The package is built as designed, with these points decided in the code (rule 6)
   off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or international number is masked
   also next to a letter; nine local digits next to a letter are taken for an id's hex and left. A price such as
   «950 000 000», a version, a coordinate or an id is left alone.
-- **The scrubbers' boundary (eight review rounds).** A text is judged on its **canonical form**: percent escapes and
-  the escapes of a JSON or JavaScript string (`\"`, `\n`, `\uXXXX`, `\u{…}`, `\xHH` …, each read in one pass from
-  left to right, so a twice-escaped `\\u00a0` unwraps level by level) undone, at most three passes
-  (`canonical()` in `lib/analytics/scrub.ts`). `scrubText` never throws (a text it cannot judge is
-  `[redacted]`) and judges at most 16 KB. A text is replaced whole by `[redacted]` when its canonical form holds a bearer token or the session cookie with a
-  value, or, once the queries and hashes of its addresses are cut, Telegram's launch data (`tgWebAppData`, `query_id`,
-  `user`, `auth_date`, `hash`, `signature` … with a value, or the user object's own keys; quoted, JSON-escaped or
-  bare). Numbers and e-mail addresses are masked in place when written plainly; one written through escapes, or a
-  text whose canonical form still shows one after masking, makes the whole text `[redacted]`. A string that starts with an address but holds a space or a line break is scrubbed as a text
-  (`stripUrl`), and an address keeps its origin and path scrubbed. Outside the boundary: HTML entities, full-width
-  digits, more than three levels of escaping. Over-redaction is accepted: an error message that names a token or
-  launch data loses its text. `tests/analytics/scrub.test.ts` crosses
-  every secret (launch data raw, decoded, encoded once and twice, `=` as `%3D` or `%253D`; a token; the cookie; an
-  e-mail address; a phone number) with every place it may sit (after `%20`, `%0A`, `%26`, a JSON-escaped line break
-  or tab or `\u0025`, in a sentence, in JSON, in an address's query or hash, after an address in `stripUrl`) and
-  asserts that none of its value survives.
+- **The scrubbers' boundary (nine review rounds).** A text is judged on its **canonical form** (`canonical()` in
+  `lib/analytics/scrub.ts`): percent escapes and the escapes of a JSON or JavaScript string (`\"`, `\n`, `\uXXXX`,
+  `\u{…}`, `\xHH` …, read in one pass from left to right, so a twice-escaped `\\u00a0` unwraps level by level) undone,
+  at most three passes; a run of percent escapes is read as UTF-8, and a byte outside a valid sequence is kept as
+  written. `scrubText` never throws (a text it cannot judge is `[redacted]`) and judges at most 16 KB.
+  - A text is replaced whole by `[redacted]` when its canonical form holds a bearer token, the session cookie or
+    Telegram's launch data with a value (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` …, or
+    the user object's own keys; quoted, JSON-escaped or bare) — anywhere, queries of addresses included, since cutting
+    a query at a raw quote could part a value from its key. A text that names an address with launch data is
+    therefore redacted.
+  - Numbers and e-mail addresses written plainly are masked in place; one seen only through escapes, or still seen in
+    the canonical form after masking, makes the whole text `[redacted]`. The e-mail pattern starts only where a run
+    starts, so 16 KB without `@` is read once.
+  - `stripUrl` drops the query and hash on the raw string first. When what is left holds a space, a line break or a
+    backslash, the string is a text and scrubbed as one; otherwise an address keeps its origin and path, scrubbed (the
+    pageview's `$current_url` of a launch keeps `https://app.homi.uz/ru`).
+  - Outside the boundary: HTML entities, full-width digits, more than three levels of escaping. Over-redaction is
+    accepted: an error message that names a token or launch data loses its text.
+  - `tests/analytics/scrub.test.ts` crosses every secret (launch data raw, decoded, encoded once and twice, `=` as
+    `%3D` or `%253D`; a token; the cookie; an e-mail address; a phone number) with every place it may sit (after `%20`,
+    `%0A`, `%26`, a JSON-escaped line break or tab, `\u0025`, a twice-escaped line break; in a sentence, in JSON, in an
+    address's query or hash; after an address in `stripUrl`) and asserts that none of its value survives; each
+    review's counter-examples are rows of it, and each round's rows fail on the scrubber before the round.
 - Every element marked `ph-mask` (phones, author labels, the original text) is also `ph-no-capture`, so autocapture
   never takes its text.
 - **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
