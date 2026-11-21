@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#100) |
+| Status | WAITING (merged in #100 on 2026-11-21; production track: the regular deploy, then the acceptance checklist on staging) |
 | Depends on | intake `index-YX9bFVws`; WP-38 (the queue's order of 2026-11-20, `decisions/2026-11-20-developer-answers.md`; both edit `RadarSheetRoute`) |
 | Size | about 2 100 changed lines with tests, L (the integrator's estimate; if the PR passes 3 000 lines, split it at the line between "Leave" and the rest, and give the second half the next free number) |
 | Behaviour reference | `03` §1.2, §2 (SCR-007, SCR-014, SCR-015, SCR-022, SCR-028 … SCR-031, SCR-032, SCR-042), §2.1, §3.4, §3.6, §4 (BR-APP-112 … BR-APP-118, BR-APP-121), §5 / §5b (LB-APP-085, LB-APP-086, LB-APP-087, LB-APP-089, LB-APP-091); `wave-1/baseline.md`, built code behind the pin, rows 44 – 54 |

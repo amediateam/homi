@@ -13,9 +13,8 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-21, **in force — replaces "the next package only on the developer's word" and "merge only on «сливай #N»"**: «Настрой все граомтно! Чтобы ускорилас разработка без потери качеста»; asked whether the agent may work one package ahead: «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!». It is rule 8 of `docs/migration/wave-1/README.md`.
 
 ## State at handoff
-- `main` = `53a4959` (#98 the pipeline tooling, #99 the KI-63 spec fix, both merged 2026-11-21).
-- **#100** `wp-39-catch-up-motion` → `main`: WP-39, two independent reviews fixed; CI green on `7640902`; the last commit `dc6b97b` (second review fixes) waits for its CI. Merge it at its head once green.
-- **WP-31** on `wp-31-settings` (from `wp-39-catch-up-motion`): every step done and tested; its PR goes against `wp-39-catch-up-motion` until #100 is merged, then `gh pr edit <n> --base main`.
+- `main` = `c180b0b`: #98 the pipeline tooling (`41cf7ea`), #99 the KI-63 spec fix (`53a4959`) and #100 WP-39 (`c180b0b`, CI green on `dc6b97b`: 402 + 14), all merged 2026-11-21.
+- **WP-31** on `wp-31-settings` (main merged in): every step done and tested; PR against `main`.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh app/e2e/settings.spec.ts app/e2e/settings-language.spec.ts app/e2e/settings-hidden.spec.ts app/e2e/home-nudge.spec.ts`.
 
