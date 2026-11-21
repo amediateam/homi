@@ -102,6 +102,18 @@
     "limitText": "Bir vaqtda {max} tagacha kvartirani ijaraga berish mumkin. Bittasini «Ijaraga berildi» deb belgilang yoki olib tashlang — keyin yangisini qoʻshing.",
     "rejected": {
       "limit": "Bu raqam bilan allaqachon {max} ta kvartira ijaraga berilmoqda. Bittasini «Ijaraga berildi» deb belgilang yoki «Mening eʼlonlarim»da olib tashlang — keyin yangisini qoʻshing."
+    },
+    "status": {
+      "withdrawn": "Nashrdan olindi"
+    },
+    "withdrawnNote": "Eʼlon nashrdan olindi. Xato boʻlsa, qoʻllab-quvvatlashga yozing.",
+    "confirmDeleteRejected": "Eʼlon oʻchirilsinmi?",
+    "rejectedReason": {
+      "denied": "Bu raqamni qabul qila olmaymiz.",
+      "limit": "Bu raqam bilan allaqachon {max} ta kvartira ijaraga berilmoqda."
+    },
+    "toast": {
+      "deleted": "Eʼlon oʻchirildi"
     }
   }
 }

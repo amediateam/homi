@@ -1,4 +1,4 @@
-import type { MessageKey } from "@homi/i18n";
+import { labelFor, type MessageKey } from "@homi/i18n";
 
 import type { OwnerListingView } from "./normalize";
 
@@ -60,14 +60,9 @@ export function statusLabel(listing: OwnerListingView, now: number): Label {
       const days = daysListed(listing.publishedAt, now);
       return days === null || days === 0 ? { key: "own.status.activeToday" } : { key: "own.status.active", values: { days } };
     }
-    case "draft":
-    case "paused":
-    case "rented":
-    case "removed":
-    case "rejected":
-      return { key: `own.status.${listing.status}` as MessageKey };
     default:
-      return { key: "fallback.other" };
+      // The table of `@homi/i18n` (never a key built from the server's value); an unknown status reads «Другое».
+      return { key: labelFor("ownerStatus", listing.status) };
   }
 }
 
