@@ -134,6 +134,12 @@ export const routes = {
   ownerMode: (id: string) => `/owner/${id}/mode`,
   ownerDone: (id: string) => `/owner/${id}/done`,
   ownerListings: (q?: Query) => withQuery("/settings/owner", q),
+  /** The limit sheet (WP-82, SCR-049): `where` says which button it has — «Мои объявления» from settings, «Понятно» from the list. */
+  ownerLimit: (q?: { where?: "settings" | "mine" }) => withQuery("/owner/limit", q),
+  /** «Отклики» of one owner listing under «Мои объявления» (WP-82, SCR-058). */
+  ownerRequests: (id: string) => `/settings/owner/${id}/requests`,
+  /** «Отклики» over the user's own listing, opened from its owner panel (WP-82, SCR-058). */
+  listingRequests: (number: number) => `/listing/${number}/requests`,
   welcomeLanguage: () => "/welcome/language",
   welcomeCity: () => "/welcome/city",
   noAccess: (reason?: string) => withQuery("/no-access", { reason }),
@@ -184,11 +190,12 @@ type Match =
   | { route: "feed" | "map" | "saved" | "history" | "radars" | "settings" }
   | { route: "filters" | "sort" | "city" }
   | { route: "quickFilter"; kind: QuickFilterKind }
-  | { route: "listing"; number: string; child: "photos" | "location" | "market" | "actions" | null }
+  | { route: "listing"; number: string; child: "photos" | "location" | "market" | "actions" | "requests" | null }
   | { route: "radarNew" | "radarFound" }
   | { route: "radar"; id: string; edit: boolean }
   | { route: "settingsPage" }
-  | { route: "ownerNew" | "ownerListings" }
+  | { route: "ownerNew" | "ownerListings" | "ownerLimit" }
+  | { route: "ownerRequests"; id: string }
   | { route: "owner"; id: string; step: OwnerStep | null }
   | { route: "gate"; gate: GateName }
   | { route: "unknown"; pattern: string };
@@ -196,7 +203,7 @@ type Match =
 /** The four gates (WP-23): `/welcome/language`, `/welcome/city`, `/no-access`, `/outside`. */
 export type GateName = "language" | "city" | "noAccess" | "outside";
 
-const LISTING_CHILDREN = ["photos", "location", "market", "actions"] as const;
+const LISTING_CHILDREN = ["photos", "location", "market", "actions", "requests"] as const;
 
 function match(pathname: string): Match {
   const s = segmentsOf(pathname);
@@ -254,6 +261,12 @@ function match(pathname: string): Match {
   }
   if (path === "/owner/new") {
     return { route: "ownerNew" };
+  }
+  if (path === "/owner/limit") {
+    return { route: "ownerLimit" };
+  }
+  if (s[0] === "settings" && s[1] === "owner" && isOwnerId(s[2] ?? "") && s[3] === "requests" && s.length === 4) {
+    return { route: "ownerRequests", id: s[2] };
   }
   if (s[0] === "owner" && isOwnerId(s[1] ?? "") && (s.length === 2 || (s.length === 3 && isOwnerStep(s[2])))) {
     return { route: "owner", id: s[1], step: s.length === 3 ? (s[2] as OwnerStep) : null };
@@ -334,7 +347,10 @@ export function parentOf(pathname: string, searchParams: URLSearchParams): strin
     case "settingsPage":
     case "ownerListings":
     case "ownerNew":
+    case "ownerLimit":
       return routes.settings();
+    case "ownerRequests":
+      return routes.ownerListings();
     case "owner":
       // A step returns to the questionnaire; the questionnaire, the done step and the first placing close the form.
       return matched.step === "done" || matched.step === null || (matched.step === "place" && searchParams.has("first"))
@@ -360,7 +376,8 @@ export function screenNameOf(pathname: string, searchParams: URLSearchParams): s
         const step = searchParams.get("step");
         return step === "report" ? "listing/report" : step === "detail" ? "listing/report/detail" : "listing/actions";
       }
-      return matched.child === null ? "listing" : `listing/${matched.child}`;
+      // «Отклики» over the user's own listing names the requests, as under «Мои объявления» (WP-82).
+      return matched.child === null ? "listing" : matched.child === "requests" ? "owner/requests" : `listing/${matched.child}`;
     }
     case "radar":
       return matched.edit ? "radar/edit" : "radar/sheet";
@@ -394,6 +411,10 @@ export function screenNameOf(pathname: string, searchParams: URLSearchParams): s
       return "owner/form";
     case "ownerListings":
       return "owner/mine";
+    case "ownerLimit":
+      return "owner/limit";
+    case "ownerRequests":
+      return "owner/requests";
     case "gate":
       return { language: "welcome/language", city: "welcome/city", noAccess: "no-access", outside: "outside" }[matched.gate];
     case "unknown":

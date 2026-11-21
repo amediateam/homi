@@ -44,6 +44,21 @@ export interface ShownPoint {
   radius_m: number;
 }
 
+/** The counters of a published listing (WP-80 `OwnerListingStatsResource`); `daily` is seven values, the last today. */
+export interface OwnerStats {
+  pending: number;
+  requests: number;
+  given: number;
+  sent: number;
+  opened: number;
+  favorites: number;
+  daysListed: number | null;
+  daily: number[];
+  /** The market delta in per cent where the server has a harvested median (DEC-78), else `null`. */
+  priceDelta: number | null;
+  priceTone: string | null;
+}
+
 export interface OwnerListingView {
   id: string;
   /** The public number once published, else `null`. */
@@ -64,6 +79,8 @@ export interface OwnerListingView {
   shownPoint: ShownPoint | null;
   /** Held, withdrawn, let or removed: the owner can no longer change it (WP-80's `locked()`). */
   locked: boolean;
+  /** The counters (WP-82), `null` for a draft or when the server sent none. */
+  stats: OwnerStats | null;
 }
 
 const TENANTS: readonly Tenant[] = ["family", "students", "girls", "boys", "foreigners"];
@@ -144,5 +161,31 @@ export function normalizeOwnerListing(value: unknown): OwnerListingView | null {
     rejectReason: status === "rejected" ? (reason ?? "denied") : reason,
     shownPoint: shownPointOf(value.shown_point),
     locked: held || withdrawn || status === "rented" || status === "removed",
+    stats: statsOf(value.stats),
+  };
+}
+
+const count = (value: unknown): number => {
+  const n = num(value);
+  return n !== null && n > 0 ? Math.floor(n) : 0;
+};
+
+function statsOf(value: unknown): OwnerStats | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const daily = Array.isArray(value.daily) ? value.daily.slice(-7).map(count) : [];
+  return {
+    pending: count(value.pending),
+    requests: count(value.requests),
+    given: count(value.given),
+    sent: count(value.sent),
+    opened: count(value.opened),
+    favorites: count(value.favorites),
+    daysListed: num(value.days_listed),
+    // Always seven, the last today: a shorter answer is padded with zeros on the left.
+    daily: [...Array<number>(Math.max(0, 7 - daily.length)).fill(0), ...daily],
+    priceDelta: num(value.price_delta),
+    priceTone: str(value.price_tone),
   };
 }

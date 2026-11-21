@@ -14,7 +14,8 @@ export type ShellTab = "search" | "saved" | "radars" | "settings";
  * The shell variant of a locale-less address on its own (WP-23, D-SH-1) — what a direct load draws. The search sheets
  * (`/filters…`, `/sort`, `/city`) take the variant of the view they belong to: the map when they came from it
  * (`from=map`), else the list. The map with the `draw=1` layer is drawing. Radar and settings screens below their tab
- * keep its variant. The owner form (WP-81) draws none on a direct load; its listings page belongs to settings.
+ * keep its variant. The owner form (WP-81) draws none on a direct load; its listings page, «Отклики» and the limit sheet
+ * (WP-82) belong to settings.
  */
 export function shellVariantOf(pathname: string, searchParams: Pick<URLSearchParams, "get">): ShellVariant {
   switch (matchRoute(pathname).route) {
@@ -38,6 +39,8 @@ export function shellVariantOf(pathname: string, searchParams: Pick<URLSearchPar
     case "settings":
     case "settingsPage":
     case "ownerListings":
+    case "ownerRequests":
+    case "ownerLimit":
       return "settings";
     case "listing":
     case "ownerNew":
@@ -66,6 +69,7 @@ export function isLayerAddress(pathname: string): boolean {
     case "radar":
     case "ownerNew":
     case "owner":
+    case "ownerLimit":
       return true;
     default:
       return false;

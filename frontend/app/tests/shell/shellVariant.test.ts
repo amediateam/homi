@@ -46,6 +46,8 @@ const ROUTES: [pathname: string, query: string, variant: ShellVariant][] = [
   [routes.settings(), "", "settings"],
   ...SETTINGS_PAGES.map((page): [string, string, ShellVariant] => [routes.settingsPage(page), "", "settings"]),
   [routes.ownerListings(), "", "settings"],
+  [routes.ownerRequests(OWNER), "", "settings"],
+  [routes.ownerLimit(), "", "settings"],
   [routes.ownerNew(), "", "none"],
   [routes.ownerForm(OWNER), "", "none"],
   [routes.ownerPlace(OWNER), "first=1", "none"],
@@ -84,8 +86,10 @@ describe("shellVariantOf (D-SH-1)", () => {
         "listing",
         "map",
         "owner",
+        "ownerLimit",
         "ownerListings",
         "ownerNew",
+        "ownerRequests",
         "quickFilter",
         "radar",
         "radarFound",
@@ -123,6 +127,8 @@ describe("isLayerAddress", () => {
       routes.ownerPhone(OWNER),
       routes.ownerMode(OWNER),
       routes.ownerDone(OWNER),
+      routes.ownerLimit(),
+      routes.listingRequests(42),
     ]) {
       expect(isLayerAddress(pathname), pathname).toBe(true);
     }
@@ -138,6 +144,7 @@ describe("isLayerAddress", () => {
       routes.settings(),
       ...SETTINGS_PAGES.map((page) => routes.settingsPage(page)),
       routes.ownerListings(),
+      routes.ownerRequests(OWNER),
       routes.welcomeLanguage(),
       routes.welcomeCity(),
       routes.noAccess(),
