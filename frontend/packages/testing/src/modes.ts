@@ -71,6 +71,22 @@ interface ModeRecord {
 /** The records of the running test; a worker runs one test at a time. */
 let records: ModeRecord[] = [];
 
+/**
+ * Header mode's exchanges still running (`./playwright`): `route.fetch` puts the refused cookie into the context
+ * before the handler takes it out again, so the checks read the cookies only after these have ended.
+ */
+const exchanges = new Set<Promise<unknown>>();
+
+/** Runs one exchange of header mode under the checks' eye. */
+export function trackExchange<T>(exchange: Promise<T>): Promise<T> {
+  exchanges.add(exchange);
+  void exchange.finally(() => exchanges.delete(exchange)).catch(() => undefined);
+  return exchange;
+}
+
+/** How long the checks wait for a request's headers at the end of a test. */
+const HEADERS_WAIT_MS = 3_000;
+
 /** The exchange and the boot guard: sent before (or without) a session, never with its bearer. */
 const NO_BEARER = /^\/bff\/(session|boot-error)$/;
 /** The page's own line for a CSP violation (`watchMode`), and Chromium's. */
@@ -193,7 +209,12 @@ export function resetModeRecords(): void {
 async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]> {
   const findings: string[] = [];
   await Promise.all(record.pending);
-  const requests = (await Promise.all(record.requests)).filter((request): request is BffRequest => request !== null);
+  await Promise.race([Promise.allSettled([...exchanges]), new Promise((resolve) => setTimeout(resolve, HEADERS_WAIT_MS))]);
+  // A request still held by a spec's route at the end has no headers to give: after the wait it counts as unknown.
+  const unknown = new Promise<null>((resolve) => setTimeout(() => resolve(null), HEADERS_WAIT_MS));
+  const requests = (await Promise.all(record.requests.map((request) => Promise.race([request, unknown])))).filter(
+    (request): request is BffRequest => request !== null,
+  );
   const cookies = await record.page
     .context()
     .cookies()
@@ -210,7 +231,9 @@ async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]>
       findings.push("cookie mode: signed in, but the context holds no homi_session cookie");
     }
     for (const cookie of sessions) {
-      if (!cookie.httpOnly || !cookie.secure || cookie.sameSite !== "None" || !cookie.partitionKey) {
+      // The partition key was verified on Chromium only (`http://localhost`); WebKit's is the manual run's to verify.
+      const partitioned = Boolean(cookie.partitionKey) || info.project.use.browserName !== "chromium";
+      if (!cookie.httpOnly || !cookie.secure || cookie.sameSite !== "None" || !partitioned) {
         findings.push(
           `cookie mode: homi_session is ${JSON.stringify({ httpOnly: cookie.httpOnly, secure: cookie.secure, sameSite: cookie.sameSite, partitionKey: cookie.partitionKey ?? null })}`,
         );

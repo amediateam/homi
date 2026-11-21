@@ -370,8 +370,7 @@ test.describe("feed (header mode only)", () => {
 
   /**
    * Header mode keeps the token in memory, so a refused read signs in again (WP-22). The refusals are registered after
-   * the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front of one registered
-   * before it.
+   * the launch, so the first sign-in goes through.
    */
   test("a page two refused mid-session and the new sign-in refused as too old show the expired screen; «Закрыть» closes", async ({ page }) => {
     const app = await open(page, "header", "/ru");

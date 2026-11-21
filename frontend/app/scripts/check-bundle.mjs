@@ -73,7 +73,7 @@ export function bundleRules(keys, values) {
     { row: 6, name: "a legacy key name", pattern: /LEGACY_|SERVICE_KEY/ },
     // The legacy catalogue's key `found.kvadro` keeps its legacy name (the importer's rule 6 and `keys.json`, WP-20):
     // a key path is never shown, its value is HOMI's. Rule 5 of `25` §2 is about what the interface shows.
-    { row: 7, name: "the legacy brand", pattern: /kvadro/i, ignore: /found\.kvadro|\bkvadro(?="?:)/g },
+    { row: 7, name: "the legacy brand", pattern: /kvadro/i, ignore: /found\.kvadro|(?<=[{,]\s*)"?kvadro"?(?=\s*:)/g },
   ];
 }
 
