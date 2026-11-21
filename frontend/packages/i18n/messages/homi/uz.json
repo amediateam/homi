@@ -69,11 +69,14 @@
   "owner": {
     "info": {
       "self": "Kvartirani oʻzi joylagan.",
-      "verified": "Uy egasi bu eʼlondagi raqamni oʻzi tasdiqlagan."
+      "verified": "Uy egasi bu eʼlondagi raqamni oʻzi tasdiqlagan.",
+      "selfHomi": "Kvartirani HOMIga oʻzi joylashtirgan.",
+      "checked": "Raqamni tekshirdik: unda ikkitadan ortiq kvartira yoʻq, u HOMI koʻrgan makler raqamlari orasida yoʻq va foydalanuvchilar uni makler raqami deb belgilamagan."
     }
   },
   "details": {
-    "historySelf": "Uy egasi {date} joyladi. Narx hali oʻzgarmagan."
+    "historySelf": "Uy egasi {date} joyladi. Narx hali oʻzgarmagan.",
+    "historySelfHomi": "Uy egasi kvartirani HOMIga {date} joylashtirgan. Narx hali oʻzgarmagan."
   },
   "own": {
     "phoneHow": "Telegramning «Raqamni ulashish» tugmasi bilan tasdiqlaymiz — shunda raqam sizniki ekanini bilamiz. Raqam faqat HOMI botiga boradi.",
@@ -116,6 +119,19 @@
     },
     "toast": {
       "deleted": "Eʼlon oʻchirildi"
+    }
+  },
+  "contact": {
+    "hiddenBar": "Uy egasi raqamni yashirgan — hozircha HOMI orqali bogʻlanib boʻlmaydi",
+    "leadTime": "Uy egasi taklifingizni oladi va botda javob beradi — odatda {time} ichida.",
+    "usuallyTime": "Odatda {time} ichida javob beradi",
+    "noteLimit": "Uy egasi Telegramdagi ismingizni va shu javoblarni koʻradi, raqamingizni emas. Kuniga {day} tagacha taklif yuborish mumkin.",
+    "noteRelay": "Taklif kvartira joylashtirilgan xizmatga yuboriladi.",
+    "err": {
+      "noChatRestart": "Bot sizga yoza olmayapti — u toʻxtatilganga oʻxshaydi. Bot bilan chatni ochasizmi? U yerda «Qayta ishga tushirish»ni bosing va taklifni yana yuboring.",
+      "requestsFast": "Ketma-ket bir nechta taklif — keyingisini {minutes} daqiqadan keyin yuborish mumkin.",
+      "requestsDay": "Bugun {day} ta taklif yubordingiz. Ertaga yana mumkin.",
+      "requestsWeek": "Bir haftada — {week} ta taklif, bu chegara. Yangilarini bir necha kundan keyin yuborish mumkin."
     }
   }
 }

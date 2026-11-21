@@ -134,7 +134,12 @@ export function ListingCtaBar({
               </>
             )}
           </p>
-          {lead || notes ? (
+          {owner?.note === "expired" ? (
+            // DEV-060: the owner did not answer in time; the seeker may ask once more.
+            <p data-cta-note="expired" className="truncate text-[13px] text-hint">
+              {t("contact.expiredBar")}
+            </p>
+          ) : lead || notes ? (
             <p data-cta-note="" className="truncate text-[13px] text-hint">
               {lead && verdict ? (
                 <span data-tone={verdict.tone} className={cn("font-semibold", TONE[verdict.tone])}>
@@ -150,6 +155,15 @@ export function ListingCtaBar({
           <div data-cta-action="pending" className="ml-auto w-[45%] flex-none">
             <Skeleton className="h-[48px] w-full rounded-large" />
           </div>
+        ) : action === "request" ? (
+          <Button data-cta-action="request" onClick={onRequest} className="ml-auto h-[48px] w-[45%] flex-none gap-[8px] px-[16px] text-[16px]">
+            <MessageCircle size={18} strokeWidth={2} aria-hidden />
+            <span className="truncate">{t("contact.cta")}</span>
+          </Button>
+        ) : action === "requestSent" ? (
+          <Button data-cta-action="requestSent" variant="secondary" disabled className="ml-auto h-[48px] w-[45%] flex-none px-[16px] text-[15px] text-hint opacity-100">
+            <span className="truncate">{t("contact.sent")}</span>
+          </Button>
         ) : primary === null ? (
           <div data-cta-action="none" aria-hidden className="ml-auto w-[45%] flex-none" />
         ) : (
