@@ -37,12 +37,13 @@ describe("the global handlers (WP-32, 03 §1.6; TMA-003, TMA-044)", () => {
     expect(reportsRejection(new Error("real"))).toBe(true);
   });
 
-  it("leave uncaught errors to the boot guard until React has mounted; report rejections from the start", () => {
+  it("report errors and rejections from the moment they listen, also before React has mounted (the journal holds them)", () => {
     installGlobalErrorHandlers();
     window.dispatchEvent(new ErrorEvent("error", { message: "early", error: new Error("early") }));
     window.dispatchEvent(Object.assign(new Event("unhandledrejection"), { reason: new Error("early rejection"), promise: Promise.resolve() }));
 
-    expect(reported().map((entry) => `${entry.kind}:${entry.message}`)).toEqual(["rejection:early rejection"]);
+    expect(reported().map((entry) => `${entry.kind}:${entry.message}`)).toEqual(["error:early", "rejection:early rejection"]);
+    // The boot guard keeps its own report until the mount.
     expect((window as unknown as { __homiBoot: Boot }).__homiBoot.watching).toBe(false);
   });
 

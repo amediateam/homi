@@ -66,7 +66,7 @@ describe("POST /bff/boot-error (WP-32, TMA-003)", () => {
         error: {
           kind: "boot",
           name: "ChunkLoadError",
-          message: "failed to load https://app.test/_next/static/a.js?tgWebAppData=*** for +998***",
+          message: "failed to load https://app.test/_next/static/a.js for +998***",
           source: "https://app.test/_next/static/a.js:3:4",
           stage: "boot",
           screen: "search/list",

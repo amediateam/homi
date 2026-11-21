@@ -4,8 +4,10 @@ import { isAppAddress, scrubDeep, scrubText, stripUrl } from "@/lib/analytics/sc
 
 describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
   it("masks Telegram's launch data in a query, in a hash and in the middle of a sentence, up to the next & or #", () => {
-    expect(scrubText("https://app.homi.uz/ru?tgWebAppData=query_id%3DAA&x=1")).toBe("https://app.homi.uz/ru?tgWebAppData=***&x=1");
-    expect(scrubText("https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D#rest")).toBe("https://app.homi.uz/ru#tgWebAppData=***#rest");
+    // An address loses its whole query and hash; outside an address the launch data is masked up to `&` or `#`.
+    expect(scrubText("https://app.homi.uz/ru?tgWebAppData=query_id%3DAA&x=1")).toBe("https://app.homi.uz/ru");
+    expect(scrubText("https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D#rest")).toBe("https://app.homi.uz/ru");
+    expect(scrubText("hash tgWebAppData=user%3D%7B%7D#rest")).toBe("hash tgWebAppData=***#rest");
     expect(scrubText("failed at tgWebAppData=abc while loading")).toBe("failed at tgWebAppData=*** while loading");
   });
 
@@ -31,6 +33,17 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     expect(scrubText("+7 912 345 67 89")).toBe("+***");
     // A price or a year is not a phone.
     expect(scrubText("$600 за 54 м², 2026 год")).toBe("$600 за 54 м², 2026 год");
+  });
+
+  it("leaves ids, prices, versions and coordinates alone; masks Tashkent landlines and the code 20 (second review)", () => {
+    expect(scrubText("c362c406-9360-4676-8a0b-1f2e3d4c5b6a")).toBe("c362c406-9360-4676-8a0b-1f2e3d4c5b6a");
+    expect(scrubText("950 000 000 сум, 1 950 000 000, +150 000 000")).toBe("950 000 000 сум, 1 950 000 000, +150 000 000");
+    expect(scrubText("Chrome/99.0.4844.88 at 41.33 69.24012")).toBe("Chrome/99.0.4844.88 at 41.33 69.24012");
+    expect(scrubText("тел. 71 123 45 67, 20 123 45 67, (90) 123-45-67")).toBe("тел. +998***, +998***, +998***");
+  });
+
+  it("takes the query and hash off an address inside a text", () => {
+    expect(scrubText("bad https://app.homi.uz/ru/map?area=1,2#x here")).toBe("bad https://app.homi.uz/ru/map here");
   });
 
   it("masks decoded launch data field by field", () => {

@@ -216,6 +216,16 @@ describe("the options and before_send", () => {
       $heatmap_data: { [`${origin}/ru/map`]: [{ x: 1, y: 2 }] },
       $web_vitals_LCP_event: { $current_url: `${origin}/ru`, value: 1200 },
     });
+    // Heatmap points of two addresses that differ only in the query are merged; PostHog's ids pass as they are.
+    const merged = beforeSend({
+      uuid: "m",
+      event: "$$heatmap",
+      properties: {
+        distinct_id: "c362c406-9360-4676-8a0b-1f2e3d4c5b6a",
+        $heatmap_data: { [`${origin}/ru/map?rooms=1`]: [{ x: 1 }], [`${origin}/ru/map?rooms=2`]: [{ x: 2 }] },
+      },
+    } as never);
+    expect(merged?.properties).toEqual({ distinct_id: "c362c406-9360-4676-8a0b-1f2e3d4c5b6a", $heatmap_data: { [`${origin}/ru/map`]: [{ x: 1 }, { x: 2 }] } });
     const snapshot = { uuid: "s", event: "$snapshot", properties: { $snapshot_data: [{ text: "+998901234567" }] } } as never;
     expect(beforeSend(snapshot)).toBe(snapshot);
   });

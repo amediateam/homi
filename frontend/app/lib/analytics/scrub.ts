@@ -15,16 +15,25 @@ const SESSION = /\bhomi_session=[^;&#\s]*/g;
 const SEPARATOR = "[\\s().\\u2010-\\u2015-]*";
 // `+998`, `998` or `00998` and nine more digits, each optionally after a separator (a space, a dot, a bracket, a dash
 // of any kind).
-const PHONE = new RegExp(`(?<!\\d)(?:\\+|00)?998(?:${SEPARATOR}\\d){9}(?!\\d)`, "g");
-// The nine local digits of an Uzbek mobile code (33, 50, 55, 77, 88, 90 … 99), with `8` before them or not.
-const LOCAL_PHONE = new RegExp(`(?<![\\d+])(?:8${SEPARATOR})?(?:33|50|55|77|88|9\\d)(?:${SEPARATOR}\\d){7}(?!\\d)`, "g");
-// Any other international number: `+` and nine or more digits.
-const INTERNATIONAL = new RegExp(`\\+\\d(?:${SEPARATOR}\\d){8,}(?!\\d)`, "g");
+const PHONE = new RegExp(`(?<![\\w+])(?:\\+|00)?998(?:${SEPARATOR}\\d){9}(?!\\w)`, "g");
+const GAP = "[\\s.\\u2010-\\u2015-]?";
+// The nine local digits of an Uzbek code (mobile 20, 33, 50, 55, 77, 88, 90 … 99; Tashkent's 71 and 78), written as a
+// phone is — code, three, two, two, with at most one separator between — with `8` or brackets or not. A price such as
+// «950 000 000» (three, three, three) and a part of an id (a letter next to it) are not phones.
+const LOCAL_PHONE = new RegExp(
+  `(?<![\\w+])(?:8${GAP})?\\(?(?:20|33|50|55|71|77|78|88|9\\d)\\)?${GAP}\\d{3}${GAP}\\d{2}${GAP}\\d{2}(?!\\w)`,
+  "g",
+);
+// Any other international number: `+` and ten or more digits.
+const INTERNATIONAL = new RegExp(`(?<!\\w)\\+\\d(?:${SEPARATOR}\\d){9,}(?!\\w)`, "g");
+// An address inside a text keeps no query or hash.
+const ADDRESS_QUERY = /(https?:\/\/[^\s?#]+)[?#][^\s]*/g;
 const EMAIL = /[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
 /** `value` with launch data, tokens, the session cookie, phone numbers and e-mail addresses masked. */
 export function scrubText(value: string): string {
   return value
+    .replace(ADDRESS_QUERY, "$1")
     .replace(LAUNCH_DATA, "tgWebAppData=***")
     .replace(LAUNCH_FIELDS, "$1=***")
     .replace(BEARER, "Bearer ***")

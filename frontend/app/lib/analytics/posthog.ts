@@ -75,6 +75,9 @@ export function replaySampled(me: AnalyticsMe, random: () => number = Math.rando
  * (heatmaps key their data by the page's address; web vitals carry their own `$current_url`), a path likewise, and
  * any other text is scrubbed (`scrubText`). Replay snapshots (`$snapshot…`) stay as the recorder masked them.
  */
+/** PostHog's own ids: passed as they are (a scrubber could take a run of digits in a UUID for a phone). */
+const ID_KEYS = new Set(["distinct_id", "$device_id", "$session_id", "$window_id", "$user_id", "$anon_distinct_id", "$insert_id", "token", "uuid"]);
+
 function cleanDeep(value: unknown, depth = 6): unknown {
   if (typeof value === "string") {
     return /^https?:\/\//.test(value) || (value.startsWith("/") && /[?#]/.test(value)) ? stripUrl(value) : scrubText(value);
@@ -90,7 +93,11 @@ function cleanDeep(value: unknown, depth = 6): unknown {
   }
   const out: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value)) {
-    out[/^https?:\/\//.test(key) ? stripUrl(key) : key] = key.startsWith("$snapshot") ? item : cleanDeep(item, depth - 1);
+    const cleaned = key.startsWith("$snapshot") || ID_KEYS.has(key) ? item : cleanDeep(item, depth - 1);
+    const name = /^https?:\/\//.test(key) ? stripUrl(key) : key;
+    // Two addresses that differ only in their query become one key: their lists (heatmap points) are merged.
+    const before = out[name];
+    out[name] = Array.isArray(before) && Array.isArray(cleaned) ? [...before, ...cleaned] : cleaned;
   }
   return out;
 }
