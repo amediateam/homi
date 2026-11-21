@@ -101,8 +101,13 @@ export function HiddenPage() {
     queueMicrotask(() => (target?.isConnected ? target : root.current)?.focus({ preventScroll: true }));
   };
 
-  const change = (after: Hidden, request: () => Promise<{ ok: boolean }>, all = false) => {
-    const before = hidden;
+  /**
+   * One optimistic change of the list shown now (`view.current()`, not this render's: a confirm may have waited while
+   * another change failed and put its row back).
+   */
+  const change = (next: (now: Hidden) => Hidden, request: () => Promise<{ ok: boolean }>, all = false) => {
+    const before = view.current();
+    const after = next(before);
     const startedAt = cleared.current;
     tg.haptic.impact("light");
     view.set(after);
@@ -112,6 +117,8 @@ export function HiddenPage() {
         if (result.ok) {
           if (all) {
             cleared.current += 1;
+            // The server holds nothing hidden now: a row another failed change put back goes too.
+            view.set({ authors: [], listings: [] });
           }
           tg.haptic.success();
           hiddenChanged();
@@ -160,7 +167,7 @@ export function HiddenPage() {
                     className={RETURN}
                     onClick={(event) => {
                       passFocus(event.currentTarget.closest("[data-hidden-author]"));
-                      change({ ...hidden, authors: hidden.authors.filter((item) => item.id !== author.id) }, () => returnAuthor({ id: author.id }));
+                      change((now) => ({ ...now, authors: now.authors.filter((item) => item.id !== author.id) }), () => returnAuthor({ id: author.id }));
                     }}
                   >
                     {t("hidden.return")}
@@ -201,7 +208,7 @@ export function HiddenPage() {
                     className={RETURN}
                     onClick={(event) => {
                       passFocus(event.currentTarget.closest("[data-hidden-listing]"));
-                      change({ ...hidden, listings: hidden.listings.filter((item) => item.number !== listing.number) }, () => returnListing({ number: listing.number }));
+                      change((now) => ({ ...now, listings: now.listings.filter((item) => item.number !== listing.number) }), () => returnListing({ number: listing.number }));
                     }}
                   >
                     {t("hidden.return")}
@@ -220,7 +227,7 @@ export function HiddenPage() {
           onClick={() => {
             void tg.confirm(t("hidden.confirmAll")).then((yes) => {
               if (yes) {
-                change({ authors: [], listings: [] }, () => returnAll(null), true);
+                change(() => ({ authors: [], listings: [] }), () => returnAll(null), true);
                 queueMicrotask(() => root.current?.focus({ preventScroll: true }));
               }
             });

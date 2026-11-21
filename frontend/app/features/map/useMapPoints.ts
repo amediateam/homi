@@ -134,10 +134,12 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
     setState(state);
   } else if (stored.epoch !== epoch) {
     // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
-    // same search is asked again when the map shows, and its points stay until the answer. Only an answer with points
-    // keeps the view: before the first answer (pending, aborted or failed), or after one without points, there was
-    // nothing to fit, so the new answer must fit. (An answer whose every point is hidden keeps it: a rare case.)
-    state = { ...stored, epoch, error: null, request: stored.loaded && stored.points.length > 0 ? { keepView: true } : {} };
+    // same search is asked again when the map shows, and its points stay until the answer. Only an answer the camera
+    // could fit keeps the view — one with points, or any answer for a drawn area (the camera fits the area): before the
+    // first answer (pending, aborted or failed), or after one without points, the new answer must fit. (An answer whose
+    // every point is hidden keeps it: a rare case.)
+    const fitted = stored.points.length > 0 || (filters.polygon !== null && filters.polygon.length > 0);
+    state = { ...stored, epoch, error: null, request: stored.loaded && fitted ? { keepView: true } : {} };
     setState(state);
   }
 
