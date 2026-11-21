@@ -27,7 +27,11 @@ class StoreContactRequestRequest extends FormRequest
             'people' => ['required', 'integer', 'between:1,20'],
             'move_in' => ['nullable', 'string', 'max:32'],
             'message' => ['nullable', 'string', 'max:500'],
-            'init_data' => ['required', 'string', 'max:4096'],
+            'init_data' => ['required', 'string', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (is_string($value) && strlen($value) > 4096) {
+                    $fail('The launch data is over 4 096 bytes.');
+                }
+            }],
         ];
     }
 }

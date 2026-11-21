@@ -9,7 +9,7 @@ use App\Services\Sources\Data\Fields;
 
 /**
  * A seeker's request as its owner sees it (WP-80, "The owner request object"): the seeker's Telegram first name of
- * the verified launch data (DEC-76), who and how many, when and the message — masked (DEC-52) — its owner-side status
+ * the verified launch data (DEC-76), who and how many, when and the message — both masked (DEC-52) — its owner-side status
  * and which answers the server still allows (BR-API-180).
  */
 final readonly class OwnerRequest
@@ -32,13 +32,14 @@ final readonly class OwnerRequest
     public static function fromArray(array $data): self
     {
         $message = Fields::nullableString($data, 'message');
+        $moveIn = Fields::nullableString($data, 'move_in');
 
         return new self(
             id: Fields::string($data, 'id'),
             name: Fields::nullableString($data, 'name'),
             who: RequestWho::tryFrom(Fields::string($data, 'who')) ?? throw new \InvalidArgumentException('Unknown "who".'),
             people: Fields::int($data, 'people'),
-            moveIn: Fields::nullableString($data, 'move_in'),
+            moveIn: $moveIn === null ? null : PhoneMasker::mask($moveIn),
             message: $message === null ? null : PhoneMasker::mask($message),
             status: ContactRequestStatus::tryFrom(Fields::string($data, 'status')) ?? throw new \InvalidArgumentException('Unknown request status.'),
             agentMarked: Fields::bool($data, 'agent_marked'),

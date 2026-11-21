@@ -13,6 +13,7 @@ use App\Exceptions\Requests\RequestsBlocked;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Listings\StoreContactRequestRequest;
 use App\Http\Resources\Api\V1\ContactRequestResultResource;
+use App\Services\Sources\SourceContext;
 use App\Services\Sources\Stub\StubListingSource;
 use App\Services\Sources\Stub\StubResponder;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,9 @@ class ListingContactRequestController extends ApiController
 
     public function __invoke(StoreContactRequestRequest $request, int $number, StubResponder $stubs, StubListingSource $listings): JsonResponse
     {
+        // An unknown number is `404 not_found`, before any scenario or other answer.
+        $listings->preview($number, SourceContext::fromRequest($request));
+
         $context = $stubs->check($request, [
             'no_chat' => fn (): NoChat => new NoChat,
             'request_limit_fast' => fn (): RequestLimitReached => new RequestLimitReached('requests_fast', 600),
@@ -49,9 +53,6 @@ class ListingContactRequestController extends ApiController
             'own_listing' => fn (): OwnListing => new OwnListing,
             'contact_open' => fn (): ContactOpen => new ContactOpen,
         ]);
-
-        // An unknown number is `404 not_found`, before any other answer.
-        $listings->preview($number, $context);
 
         $answer = $context->scenario === 'relay_on' && $number === StubListingSource::GATE ? 'created' : (self::BY_NUMBER[$number] ?? 'closed');
 

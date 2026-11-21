@@ -15,6 +15,8 @@ class OwnerContactModeController extends ApiController
 {
     public function __invoke(UpdateContactModeRequest $request, string $id, StubResponder $stubs, StubOwner $owner): JsonResponse
     {
+        // An unknown id answers `404` before any scenario.
+        $owner->entry($id);
         $context = $stubs->check($request, OwnerErrors::of(['owner_disabled']));
 
         return $this->sourced(new OwnerListingResource($owner->contactMode($id, $request->string('mode')->toString(), $context)), SourceDriver::Stub);

@@ -4,10 +4,12 @@ namespace App\Services\Sources\Stub;
 
 use App\Enums\ContactRequestStatus;
 use App\Enums\OwnerListingStatus;
+use App\Enums\OwnerRejectReason;
 use App\Enums\OwnerRequestAction;
 use App\Exceptions\Owner\OwnerListingLocked;
 use App\Exceptions\Owner\OwnerPhoneRequired;
 use App\Exceptions\Owner\OwnerPhotoLimit;
+use App\Exceptions\Owner\OwnerRejected;
 use App\Exceptions\Requests\RequestAnswerClosed;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Services\Owner\Data\OwnerDemand;
@@ -185,11 +187,19 @@ final class StubOwner
     /** `POST …/publish`: refusals in the order of WP-84, else the listing active with its number. */
     public function publish(string $id, SourceContext $context): OwnerListing
     {
-        // The listing as it is before publish: the show scenarios (a hold, a refusal) are what publish answers.
-        $entry = $this->entry($id);
+        // The listing as it is before publish: the phone scenarios apply, while a hold or a refusal is what publish
+        // answers, not the state it starts from.
+        $outcome = in_array($context->scenario, ['held_check', 'rejected_denied', 'rejected_limit'], true);
+        $entry = $outcome ? $this->entry($id) : $this->entry($id, $context);
 
         if ($context->scenario === 'listing_locked' || OwnerListing::fromArray($entry)->locked()) {
             throw new OwnerListingLocked;
+        }
+
+        $rejected = OwnerListing::fromArray($entry);
+
+        if ($rejected->status === OwnerListingStatus::Rejected) {
+            throw new OwnerRejected(($rejected->rejectReason ?? OwnerRejectReason::Denied)->value);
         }
         $listing = OwnerListing::fromArray($entry);
 
@@ -270,6 +280,18 @@ final class StubOwner
         return array_map(OwnerRequest::fromArray(...), Fields::objects($this->fixtures->get('owner/requests'), 'items'));
     }
 
+    /** The request `id` of `owner/requests.json`, else `404`. */
+    public function request(string $id): OwnerRequest
+    {
+        foreach (Fields::objects($this->fixtures->get('owner/requests'), 'items') as $item) {
+            if (($item['id'] ?? null) === $id) {
+                return OwnerRequest::fromArray($item);
+            }
+        }
+
+        throw new SourceNotFound('Request not found.');
+    }
+
     /** `POST /owner/requests/{id}/answer`: the request with the action applied, if its flags allow it. */
     public function answer(string $id, OwnerRequestAction $action): OwnerRequest
     {
@@ -317,10 +339,12 @@ final class StubOwner
     {
         $data = $this->fixtures->get('owner/demand');
         $few = $context->scenario === 'demand_few';
+        // No radar matches while radars are off (DEC-51): `count: 0`, never `few`.
+        $radars = Config::boolean('radar.creation_enabled');
 
         return new OwnerDemand(
-            count: $few ? null : Fields::nullableInt($data, 'count'),
-            few: $few || Fields::bool($data, 'few'),
+            count: ! $radars ? 0 : ($few ? null : Fields::nullableInt($data, 'count')),
+            few: $radars && ($few || Fields::bool($data, 'few')),
             usualLowUsd: Fields::nullableInt($data, 'usual_low_usd'),
             usualHighUsd: Fields::nullableInt($data, 'usual_high_usd'),
         );

@@ -29,6 +29,7 @@ class OwnerStatusController extends ApiController
             throw new OwnerCabinetDisabled;
         }
 
+        $owner->entry($id);
         $context = $stubs->check($request, $status === OwnerListingStatus::Active ? OwnerErrors::of(['owner_disabled']) : []);
 
         return $this->sourced(new OwnerListingResource($owner->status($id, $status, $context)), SourceDriver::Stub);

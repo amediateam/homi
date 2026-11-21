@@ -67,6 +67,7 @@ class OwnerListingController extends ApiController
     /** `PATCH /owner/listings/{id}`: the changed form keys; a published listing changes at once (DEC-80). */
     public function update(UpdateOwnerListingRequest $request, string $id): JsonResponse
     {
+        $this->owner->entry($id);
         $context = $this->stubs->check($request, OwnerErrors::of(['owner_disabled']));
 
         return $this->sourced(new OwnerListingResource($this->owner->update($id, $request->changes(), $context)), SourceDriver::Stub);

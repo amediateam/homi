@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\Owner;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 /**
  * `PUT /owner/listings/{id}/photos/order` (WP-80): exactly the listing's photo ids in the new order, the cover first.
@@ -21,8 +22,24 @@ class OrderOwnerPhotosRequest extends FormRequest
     {
         return [
             'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['string', 'ulid', 'distinct'],
+            'ids.*' => ['string', 'ulid'],
         ];
+    }
+
+    /**
+     * A repeated id names `ids`, as a missing or an extra one does (the stub compares the set).
+     *
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $ids = (array) $this->input('ids', []);
+
+            if (count($ids) !== count(array_unique(array_map(strval(...), $ids)))) {
+                $validator->errors()->add('ids', 'Each photo id comes once.');
+            }
+        }];
     }
 
     /** @return list<string> */

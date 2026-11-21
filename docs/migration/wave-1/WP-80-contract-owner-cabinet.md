@@ -805,9 +805,18 @@ The package is built as designed, with these points decided in the code (rule 6)
 - **The cabinet's tenants** are a vocabulary of their own (`OwnerListingForm::TENANTS`: `family`, `students`, `girls`,
   `boys`, `foreigners`), not the filter's `Tenant` enum (`family`, `men`, `women`).
 - **The stub writes** answer the entry with the change applied and store nothing. A point sent with `PATCH` gives the
-  answer a shown point beside it. Publish starts from the listing as it is: the show scenarios (`held_check`,
-  `rejected_*`) are what publish answers, not a state it starts from. A first publish takes the number `10000013`.
-- **`lat` and `lon`** have no `sometimes`, so one coordinate without the other is refused.
+  answer a shown point beside it. Publish starts from the listing with the phone scenarios applied (`phone_set`
+  publishes the complete draft); a hold or a refusal (`held_check`, `rejected_*`) is what publish answers, not a state
+  it starts from; a rejected listing answers `409 owner_rejected` with its reason. A first publish takes `10000013`.
+- **An unknown id or number answers `404`** before any scenario's error.
+- **`PATCH`** takes the values a form body sends (`"600"`, `1`, `"0"`) and answers them in their types. One coordinate
+  sent alone, `null` included, is refused naming the other.
+- **The photo method** makes the checks of `HashedUploader` (size, then the type by the file's bytes) and answers its
+  codes (`unsupported_mime`, `too_large`); the stub stores nothing. A repeated id of the order names `ids`.
+- **`init_data`** is limited to 4 096 bytes, not characters, and Telescope hides it with `_token` outside local
+  (`app/Providers/TelescopeServiceProvider.php`, beside the files of the specification; sign-in sends the same field).
+- **Demand** is `count: 0`, never `few`, while radars are off (DEC-51). An owner request's `move_in` is masked like its
+  message.
 - **`owner.entry`** is decided by the stub source when it builds the card (`ListingDetails::withOwnerEntry`, DEC-94),
   so a fixture never stores it.
 - **The renovations of `renovations.owner`** take the locale of the request's context (`SourceContext`), as every

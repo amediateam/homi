@@ -31,6 +31,7 @@ class OwnerRequestController extends ApiController
 
     public function answer(AnswerOwnerRequestRequest $request, string $id): JsonResponse
     {
+        $this->owner->request($id);
         $this->stubs->check($request, OwnerErrors::of(['request_answer_closed']));
         $action = $request->enum('action', OwnerRequestAction::class) ?? OwnerRequestAction::Give;
 

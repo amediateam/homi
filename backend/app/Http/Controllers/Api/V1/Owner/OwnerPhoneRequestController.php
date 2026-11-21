@@ -18,6 +18,8 @@ class OwnerPhoneRequestController extends ApiController
 {
     public function __invoke(Request $request, string $id, StubResponder $stubs, StubOwner $owner): JsonResponse
     {
+        // An unknown id answers `404` before any scenario.
+        $owner->entry($id);
         $context = $stubs->check($request, OwnerErrors::of(['owner_disabled']));
 
         return $this->sourced(new OwnerListingResource($owner->find($id, $context)), SourceDriver::Stub);

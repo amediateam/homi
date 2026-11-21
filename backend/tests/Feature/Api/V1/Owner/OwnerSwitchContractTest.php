@@ -47,3 +47,9 @@ it('with the switch on the reference says owner_enabled, the limits and the cabi
         ->assertJsonPath('data.renovations.owner.0', ['code' => 'euro', 'name' => 'Евроремонт']);
     $this->getJson('/api/v1/reference', ['Accept-Language' => 'en'])->assertJsonPath('data.renovations.owner.0.name', 'Euro-style renovation');
 });
+
+it('without a token the owner methods answer 401', function (): void {
+    $this->app['auth']->forgetGuards();
+
+    $this->withHeaders(['Authorization' => ''])->getJson('/api/v1/owner/listings')->assertUnauthorized();
+});

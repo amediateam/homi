@@ -62,6 +62,11 @@ class UpdateOwnerListingRequest extends FormRequest
             if (is_numeric($floor) && is_numeric($total) && (int) $floor > (int) $total) {
                 $validator->errors()->add('floor', 'The floor must not be above the floors of the building.');
             }
+
+            // A point comes whole: one coordinate sent alone, `null` included, is refused.
+            if ($this->has('lat') !== $this->has('lon')) {
+                $validator->errors()->add($this->has('lat') ? 'lon' : 'lat', 'The point needs both coordinates.');
+            }
         }];
     }
 
@@ -78,16 +83,23 @@ class UpdateOwnerListingRequest extends FormRequest
             $changes['currency'] = 'USD';
         }
 
-        foreach (['lat', 'lon'] as $key) {
-            if (isset($changes[$key]) && is_numeric($changes[$key])) {
-                $changes[$key] = round((float) $changes[$key], 5);
+        // The validated values in their types: a form body may send `"600"`, `1` or `"0"`.
+        foreach ($changes as $key => $value) {
+            if ($value === null) {
+                continue;
             }
+
+            $changes[$key] = match ($key) {
+                'lat', 'lon' => round((float) $value, 5),
+                'area_m2' => round((float) $value, 1),
+                'rooms', 'floor', 'floors_total', 'price' => (int) $value,
+                'room', 'furniture', 'pets' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+                default => $value,
+            };
         }
 
-        foreach (['room'] as $key) {
-            if (array_key_exists($key, $changes)) {
-                $changes[$key] = (bool) $changes[$key];
-            }
+        if (array_key_exists('room', $changes) && $changes['room'] === null) {
+            $changes['room'] = false;
         }
 
         return $changes;

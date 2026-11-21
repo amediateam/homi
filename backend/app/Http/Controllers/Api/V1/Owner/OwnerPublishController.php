@@ -20,6 +20,8 @@ class OwnerPublishController extends ApiController
 {
     public function __invoke(Request $request, string $id, StubResponder $stubs, StubOwner $owner): JsonResponse
     {
+        // An unknown id answers `404` before any scenario.
+        $owner->entry($id);
         $context = $stubs->check($request, OwnerErrors::of(['owner_disabled', 'owner_limit', 'rejected_denied', 'rejected_limit']));
 
         return $this->sourced(new OwnerListingResource($owner->publish($id, $context)), SourceDriver::Stub);
