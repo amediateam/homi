@@ -513,13 +513,13 @@ The package is built as designed, with these points decided in the code (rule 6)
   off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or international number is masked
   also next to a letter; nine local digits next to a letter are taken for an id's hex and left. A price such as
   «950 000 000», a version, a coordinate or an id is left alone.
-- **The scrubbers' boundary (nine review rounds).** A text is judged on its **canonical form** (`canonical()` in
+- **The scrubbers' boundary (ten review rounds).** A text is judged on its **canonical form** (`canonical()` in
   `lib/analytics/scrub.ts`): percent escapes and the escapes of a JSON or JavaScript string (`\"`, `\n`, `\uXXXX`,
   `\u{…}`, `\xHH` …, read in one pass from left to right, so a twice-escaped `\\u00a0` unwraps level by level) undone,
   at most three passes; a run of percent escapes is read as UTF-8, and a byte outside a valid sequence is kept as
   written. `scrubText` never throws (a text it cannot judge is `[redacted]`) and judges at most 16 KB.
-  - A text is replaced whole by `[redacted]` when its canonical form holds a bearer token, the session cookie or
-    Telegram's launch data with a value (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` …, or
+  - A text is replaced whole by `[redacted]` when its canonical form holds a bearer token (after `Bearer`, or a
+    Sanctum token `<id>|<secret>` on its own), the session cookie or Telegram's launch data with a value (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` …, or
     the user object's own keys; quoted, JSON-escaped or bare) — anywhere, queries of addresses included, since cutting
     a query at a raw quote could part a value from its key. A text that names an address with launch data is
     therefore redacted.

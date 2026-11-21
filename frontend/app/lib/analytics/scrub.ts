@@ -24,17 +24,27 @@ const LAUNCH_MARKS = [
 // Like the launch marks, seen on the whole text, queries included: cutting a query at a raw quote or space could part a
 // value from its key. A text that only names an address with launch data is therefore redacted; `stripUrl` keeps an
 // address's origin and path.
-const TOKEN_MARKS = [/(?<![a-z])bearer[\s+:=]*["']?[^\s*"'<>,;]/i, /homi_session["']?\s*[=:]\s*["']?[^\s;&*"']/i];
+const TOKEN_MARKS = [
+  /(?<![a-z])bearer[\s+:=]*["']?[^\s*"'<>,;]/i,
+  /homi_session["']?\s*[=:]\s*["']?[^\s;&*"']/i,
+  // A Sanctum token on its own, without `Bearer`: its id, `|` and the secret.
+  /(?<![\w|])\d+\|[A-Za-z0-9]{16,}/,
+];
 // Longer texts are cut first: nothing that leaves the app is longer (the journal's bodies are 8 KB), and an unbounded
 // text could exhaust a pattern's backtracking.
 const TEXT_MAX = 16_384;
-const SEPARATOR = "[\\s().+_\\u200b\\u2212\\ufffd\\u2010-\\u2015-]*";
+// Spaces, brackets, dots, plus, underscore, the dashes and minus, and the invisible joiners (zero-width space, non-joiner,
+// joiner, word joiner, soft hyphen).
+const INVISIBLE = "\\u200b-\\u200d\\u2060\\u00ad";
+const SEPARATOR = `[\\s().+_${INVISIBLE}\\u2212\\ufffd\\u2010-\\u2015-]*`;
 // The percent-encoded separators and plus of an address's query (`%2B998%2090…`), decoded before the phone patterns.
 const ENCODED = /%2[0BbDdEe89]/g;
 // `+998`, `998` or `00998` and nine more digits, each optionally after a separator (a space, a dot, a bracket, a dash
 // of any kind).
 const PHONE = new RegExp(`(?<!\\d)(?:\\+|00)?998(?:${SEPARATOR}\\d){9}(?!\\d)`, "g");
-const GAP = "[\\s.\\u2010-\\u2015-]?";
+// Between the groups of a local number: up to three of a space, a dot, a dash, the minus or an invisible joiner
+// (`90 - 123 - 45 - 67`).
+const GAP = `[\\s.${INVISIBLE}\\u2212\\u2010-\\u2015-]{0,3}`;
 // The nine local digits of an Uzbek code (mobile 20, 33, 50, 55, 77, 88, 90 … 99; Tashkent's 71 and 78), written as a
 // phone is — code, three, two, two, with at most one separator between — with `8` or brackets or not. A price such as
 // «950 000 000» (three, three, three) is not a phone, nor nine digits next to a letter, which are nearly always part of
@@ -51,7 +61,7 @@ const ADDRESS_QUERY = /((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"<>]*/gi;
 const PATH_QUERY = /((?:^|\s)\/[\w./-]+)\?[^\s"<>]*/g;
 // The local part starts where its run starts (the lookbehind), so a long text without `@` is read once, not once per
 // letter; combining marks belong to a letter.
-const EMAIL = /(?<![\p{L}\p{M}\p{N}._%+-])[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+\.\p{L}[\p{L}\p{M}]+/gu;
+const EMAIL = /(?<![\p{L}\p{M}\p{N}._%+'-])[\p{L}\p{M}\p{N}._%+'-]+@[\p{L}\p{M}\p{N}.-]+\.\p{L}[\p{L}\p{M}]+/gu;
 
 function phones(text: string): string {
   return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
