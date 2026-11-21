@@ -137,6 +137,15 @@ describe("the invitations into the cabinet (WP-82, BR-APP-115, DEC-89)", () => {
     expect(state.push).toHaveBeenCalledWith("/owner/new");
   });
 
+  it("a tap right after a fast opening opens nothing twice (review)", async () => {
+    mount(<OwnerEntryRow />);
+    const row = document.querySelector('[data-owner-entry="feed_end"]')!;
+    await act(async () => fireEvent.click(row));
+    await act(async () => fireEvent.click(row));
+    expect(state.push).toHaveBeenCalledTimes(1);
+    expect(state.track).toHaveBeenCalledTimes(1);
+  });
+
   it("a double tap opens once and sends one event (fix of LB-APP-084)", async () => {
     let release = () => undefined as void;
     state.hold = new Promise<void>((resolve) => (release = resolve));

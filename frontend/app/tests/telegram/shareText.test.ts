@@ -21,6 +21,20 @@ describe("shareText (WP-82, TMA-048)", () => {
     expect(fake.calls.find((entry) => entry.member === "openTelegramLink")?.args[0]).toBe(`https://t.me/share/url?url=${encodeURIComponent(MESSAGE)}`);
   });
 
+  it("a second tap inside Telegram, which the link debounce refuses, opens no browser share (review)", async () => {
+    fake = fakeTelegram();
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, share });
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    // A message of its own: the link debounce is module state shared with the other cases.
+    const twice = `${MESSAGE} (twice)`;
+    await shareText(twice);
+    await shareText(twice);
+    expect(fake.calls.filter((entry) => entry.member === "openTelegramLink")).toHaveLength(1);
+    expect(share).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("outside Telegram navigator.share with the text, its refusal swallowed; else a new tab", async () => {
     const share = vi.fn().mockRejectedValue(new DOMException("cancelled", "AbortError"));
     vi.stubGlobal("navigator", { ...navigator, share });

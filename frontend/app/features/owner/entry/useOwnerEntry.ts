@@ -14,6 +14,9 @@ import { OWNER_LISTINGS_KEY, type OwnerListingsBody } from "../store";
 
 export type EntrySource = "feed_end" | "empty" | "listing";
 
+/** How long a tap's opening holds after its navigation (a second tap meanwhile does nothing). */
+export const OPENING_MS = 800;
+
 /**
  * A tap on an invitation into the cabinet (WP-82, BR-APP-115, F-OWNER-010): a light haptic, `owner_entry {src}`, then
  * the owner list read through the store — `can_add` opens a new form; a full account presses the Settings tab and
@@ -30,17 +33,21 @@ export function useOwnerEntry(): (src: EntrySource) => Promise<void> {
     tg.haptic.impact("light");
     track("owner_entry", { src });
     try {
-      const list = await bffFetch<OwnerListingsBody>("owner/listings");
-      if (list.ok) {
-        seedResource(OWNER_LISTINGS_KEY, list.data);
+      const list = await bffFetch<OwnerListingsBody | null>("owner/listings");
+      const body = list.ok ? list.data : null;
+      if (body !== null && typeof body === "object") {
+        seedResource(OWNER_LISTINGS_KEY, body);
       }
-      if (!list.ok || list.data.can_add !== false) {
+      if (body === null || body.can_add !== false) {
         nav.push(routes.ownerNew());
         return;
       }
       await openSettingsThen(routes.ownerListings());
     } finally {
-      opening.current = false;
+      // The opening lasts until the pushed address has had time to show: a tap right after it opens nothing twice.
+      setTimeout(() => {
+        opening.current = false;
+      }, OPENING_MS);
     }
   }, []);
 }

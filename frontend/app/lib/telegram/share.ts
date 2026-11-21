@@ -46,7 +46,9 @@ export function shareMessage(preparedId: string): Promise<boolean> {
 /** Shares an address (TMA-031): `t.me/share/url` inside Telegram; outside `navigator.share`, else a new tab. */
 export async function shareUrl(url: string, text: string): Promise<void> {
   const target = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-  if (insideTelegram() !== null && openLink(target)) {
+  // Inside Telegram the share is Telegram's only: a second tap the link debounce refuses opens nothing else.
+  if (insideTelegram() !== null) {
+    openLink(target);
     return;
   }
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
@@ -71,7 +73,8 @@ export async function shareUrl(url: string, text: string): Promise<void> {
  */
 export async function shareText(text: string): Promise<void> {
   const target = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
-  if (insideTelegram() !== null && openLink(target)) {
+  if (insideTelegram() !== null) {
+    openLink(target);
     return;
   }
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
