@@ -2,7 +2,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/bff/[...path]/route";
+import { GET, POST } from "@/app/bff/[...path]/route";
 import { BFF_READS, readTemplate } from "@/lib/api/bffAllowList";
 
 const API = "https://api.test/api/v1";
@@ -168,5 +168,51 @@ describe("GET /bff/[...path]", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toMatchObject({ success: false, code: "bad_gateway" });
+  });
+});
+
+describe("the journal's write (WP-32): POST /bff/events", () => {
+  function write(path: string, body: string, headers: Record<string, string> = {}) {
+    const request = new NextRequest(`https://app.test/bff/${path}`, {
+      method: "POST",
+      body,
+      headers: { host: "app.test", origin: "https://app.test", "content-type": "application/json", ...headers },
+    });
+    return POST(request, { params: Promise.resolve({ path: path.split("/") }) });
+  }
+
+  it("forwards events with the bearer token and the properties scrubbed again; answers 204 with no body", async () => {
+    const fetch = apiAnswer(202, { success: true, data: null });
+    const response = await write("events", JSON.stringify({ name: "app_error", props: { error: { message: "call +998901234567" } } }), {
+      authorization: `Bearer ${TOKEN}`,
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe(`${API}/events`);
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(JSON.parse(String(init.body))).toEqual({ name: "app_error", props: { error: { message: "call +998***" } } });
+  });
+
+  it("takes the token from the cookie in cookie mode", async () => {
+    const fetch = apiAnswer(202);
+    await write("events", JSON.stringify({ name: "follow_prompt_shown" }), { cookie: `homi_session=${encodeURIComponent(TOKEN)}` });
+
+    expect((fetch.mock.calls[0]![1].headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("refuses another write, a foreign origin, a body over 8 KB, a malformed body and a request without a token", async () => {
+    const fetch = apiAnswer(202);
+    expect((await write("favorites", "{}", { authorization: `Bearer ${TOKEN}` })).status).toBe(404);
+    expect((await write("boot-error", "{}", { authorization: `Bearer ${TOKEN}` })).status).toBe(404);
+    expect((await write("events", "{}", { origin: "https://evil.test", authorization: `Bearer ${TOKEN}` })).status).toBe(403);
+    expect((await write("events", JSON.stringify({ name: "x", props: { a: "y".repeat(9000) } }), { authorization: `Bearer ${TOKEN}` })).status).toBe(413);
+    expect((await write("events", "not json", { authorization: `Bearer ${TOKEN}` })).status).toBe(422);
+    expect((await write("events", JSON.stringify({ name: 5 }), { authorization: `Bearer ${TOKEN}` })).status).toBe(422);
+    expect((await write("events", JSON.stringify({ name: "x", props: [] }), { authorization: `Bearer ${TOKEN}` })).status).toBe(422);
+    expect((await write("events", JSON.stringify({ name: "x" }))).status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

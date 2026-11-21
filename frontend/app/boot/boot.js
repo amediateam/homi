@@ -138,11 +138,11 @@
       platform: (app && app.platform) || fragment('tgWebAppPlatform')
     };
     boot.errors.push(entry);
-    if (!launchData()) {
+    /* Once the app's own handlers listen (WP-32, lib/errors/global.ts sets watching), they report: no second report. */
+    if (!launchData() || boot.watching) {
       return;
     }
     try {
-      /* The route arrives with WP-32; until then the request fails silently. */
       var request = new XMLHttpRequest();
       request.open('POST', '/bff/boot-error', true);
       request.setRequestHeader('Content-Type', 'application/json');

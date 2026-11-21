@@ -6,7 +6,8 @@ import { bootState } from "@/lib/telegram/sdk";
 
 /**
  * Ends the boot watchdog (TMA-003): once React has mounted, a failed chunk or an error no longer shows «Обновите
- * Telegram». `watching` is set by the global error handlers of WP-32 when they take over.
+ * Telegram». `watching` is set earlier, by the global error handlers of WP-32 (`lib/errors/global.ts`), when they
+ * take over the reports.
  */
 export function BootGuard(): null {
   useEffect(() => {
