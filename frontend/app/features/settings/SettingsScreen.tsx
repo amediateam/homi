@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Clock, Coins, ErrorState, EyeOff, GalleryHorizontal, Gauge, Globe, Moon, Palette, Spinner } from "@homi/ui";
@@ -25,6 +27,8 @@ export interface SettingsScreenProps {
   /** The layout's server read with the session cookie; `undefined` in header mode or when it failed. */
   initialSettings?: Settings;
   initialHidden?: Hidden;
+  /** The group «Сдаю квартиру» (WP-82, SCR-032), passed in by the layout and drawn before «Оформление». */
+  ownerGroup?: ReactNode;
 }
 
 /** Whether the graphics row shows: on Android, or once the mode was changed by hand (BR-APP-052). */
@@ -76,7 +80,7 @@ export function SettingsFallback() {
  * The hidden list and the support account fail silently: their rows are simply absent. A row plays a light impact
  * and pushes its page. No pull-to-refresh on this tab (WP-23). Every state keeps the root `data-route="settings"`.
  */
-export function SettingsScreen({ initialSettings, initialHidden }: SettingsScreenProps) {
+export function SettingsScreen({ initialSettings, initialHidden, ownerGroup }: SettingsScreenProps) {
   const t = useTranslations();
   const translate: Translate = (key, values) => t(key, values);
   const locale = useLocale() as Locale;
@@ -122,6 +126,7 @@ export function SettingsScreen({ initialSettings, initialHidden }: SettingsScree
     const currency = me?.currency ?? settings.currency;
     body = (
       <div className="flex flex-col gap-[22px]">
+        {ownerGroup}
         <SettingsGroup id="look" title={t("settings.group.look")}>
           <SettingsRow id="theme" icon={<Palette size={18} />} label={t("settings.theme._")} value={themeLabel(theme, translate)} onClick={() => open("theme")} />
           {showGraphics ? (

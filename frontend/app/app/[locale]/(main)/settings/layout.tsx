@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
+import { OwnerGroup } from "@/features/owner/settings/OwnerGroup";
 import { SettingsFallback } from "@/features/settings/SettingsScreen";
 import { SettingsServer } from "@/features/settings/server";
 
@@ -14,7 +15,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <Suspense fallback={<SettingsFallback />}>
-        <SettingsServer />
+        <SettingsServer ownerGroup={<OwnerGroup />} />
       </Suspense>
       {children}
     </>

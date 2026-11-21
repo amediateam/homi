@@ -1,3 +1,5 @@
+import type { MessageKey } from "@homi/i18n";
+
 import type { OwnerListingView } from "./normalize";
 
 /**
@@ -8,7 +10,7 @@ import type { OwnerListingView } from "./normalize";
 
 /** A translated text with its values: the components call `t(label.key, label.values)`. */
 export interface Label {
-  key: string;
+  key: MessageKey;
   values?: Record<string, number>;
 }
 
@@ -63,7 +65,7 @@ export function statusLabel(listing: OwnerListingView, now: number): Label {
     case "rented":
     case "removed":
     case "rejected":
-      return { key: `own.status.${listing.status}` };
+      return { key: `own.status.${listing.status}` as MessageKey };
     default:
       return { key: "fallback.other" };
   }

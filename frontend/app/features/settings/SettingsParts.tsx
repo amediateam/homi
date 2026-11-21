@@ -38,6 +38,7 @@ export function SettingsRow({
   icon,
   label,
   value,
+  count,
   onClick,
   className,
 }: {
@@ -45,9 +46,12 @@ export function SettingsRow({
   icon: ReactNode;
   label: string;
   value: string;
+  /** Above 0: a red counter in place of the value, which then names it for assistive technology (WP-82). */
+  count?: number;
   onClick: () => void;
   className?: string;
 }) {
+  const counted = count !== undefined && count > 0;
   return (
     <button
       type="button"
@@ -61,7 +65,15 @@ export function SettingsRow({
     >
       <SettingsIcon>{icon}</SettingsIcon>
       <span className="min-w-0 flex-1 text-[16px] text-text">{label}</span>
-      {value !== "" ? (
+      {counted ? (
+        <span
+          data-settings-count={count}
+          aria-label={value === "" ? undefined : value}
+          className="grid h-[20px] min-w-[20px] flex-none place-items-center rounded-full bg-danger px-[6px] text-[12px] leading-none font-semibold text-white"
+        >
+          {count}
+        </span>
+      ) : value !== "" ? (
         <span data-settings-value="" className="max-w-[45%] truncate text-[15px] text-hint">
           {value}
         </span>
