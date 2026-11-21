@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   isFoundTrigger,
   isListingNumber,
+  isOwnerId,
   isQuickFilterKind,
   isRadarId,
   isRadarNewEntry,
   isRootTab,
+  matchRoute,
   parentOf,
   RESERVED_PARAMS,
   routes,
@@ -17,6 +19,7 @@ import {
 } from "@/lib/navigation/routes";
 
 const RADAR = "01JD7K3QZ8V6R3M2N4P5Q6R7S8";
+const OWNER = "01JF0000000000000000000004";
 const params = (query = "") => new URLSearchParams(query);
 
 describe("builders", () => {
@@ -55,6 +58,16 @@ describe("builders", () => {
     [routes.noAccess(), "/no-access"],
     [routes.noAccess("invite"), "/no-access?reason=invite"],
     [routes.outside(), "/outside"],
+    // The owner form (WP-81).
+    [routes.ownerNew(), "/owner/new"],
+    [routes.ownerForm(OWNER), `/owner/${OWNER}`],
+    [routes.ownerForm(OWNER, { focus: "price" }), `/owner/${OWNER}?focus=price`],
+    [routes.ownerPlace(OWNER), `/owner/${OWNER}/place`],
+    [routes.ownerPlace(OWNER, { first: 1 }), `/owner/${OWNER}/place?first=1`],
+    [routes.ownerPhone(OWNER), `/owner/${OWNER}/phone`],
+    [routes.ownerMode(OWNER), `/owner/${OWNER}/mode`],
+    [routes.ownerDone(OWNER), `/owner/${OWNER}/done`],
+    [routes.ownerListings(), "/settings/owner"],
   ])("%s", (built, expected) => {
     expect(built).toBe(expected);
   });
@@ -80,6 +93,23 @@ describe("parameter checks", () => {
   it("accepts positive integers only as a listing number", () => {
     expect(["1", "5", "100016", "9007199254740991"].every(isListingNumber)).toBe(true);
     expect(["0", "-1", "01", "1.5", "abc", "", "9007199254740992", " 1"].some(isListingNumber)).toBe(false);
+  });
+
+  it("accepts a ULID only as an owner listing id", () => {
+    expect(isOwnerId(OWNER)).toBe(true);
+    expect(["new", "01JF000000000000000000000", "limit", `${OWNER}0`].some(isOwnerId)).toBe(false);
+  });
+
+  it("matches the owner form's addresses, a step only below an id and never a non-ULID", () => {
+    expect(matchRoute("/owner/new")).toEqual({ route: "ownerNew" });
+    expect(matchRoute(`/owner/${OWNER}`)).toEqual({ route: "owner", id: OWNER, step: null });
+    for (const step of ["place", "phone", "mode", "done"] as const) {
+      expect(matchRoute(`/owner/${OWNER}/${step}`)).toEqual({ route: "owner", id: OWNER, step });
+    }
+    expect(matchRoute("/settings/owner")).toEqual({ route: "ownerListings" });
+    for (const pathname of ["/owner", "/owner/limit", `/owner/${OWNER}/other`, `/owner/${OWNER}/place/x`, "/owner/new/place"]) {
+      expect(matchRoute(pathname).route, pathname).toBe("unknown");
+    }
   });
 
   it("accepts a ULID only as a radar id", () => {
@@ -124,7 +154,7 @@ describe("isRootTab", () => {
 
 describe("searchStateOf", () => {
   it("drops the reserved parameters and keeps the rest", () => {
-    expect([...RESERVED_PARAMS]).toEqual(["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger"]);
+    expect([...RESERVED_PARAMS]).toEqual(["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger", "first"]);
     expect(searchStateOf(params("city=x&from=map&focus=pets&i=2&sort=cheap&utm=1")).toString()).toBe(
       "city=x&sort=cheap&utm=1",
     );
@@ -187,6 +217,16 @@ describe("parentOf", () => {
     ["/settings/quiet-hours", "", "/settings"],
     ["/settings/digest", "", "/settings"],
     ["/settings/hidden", "", "/settings"],
+    // The owner form (WP-81): a step returns to the questionnaire; the form, its done step and the first placing close.
+    ["/owner/new", "", "/settings"],
+    [`/owner/${OWNER}`, "", "/settings"],
+    [`/owner/${OWNER}`, "focus=price", "/settings"],
+    [`/owner/${OWNER}/done`, "", "/settings"],
+    [`/owner/${OWNER}/place`, "first=1", "/settings"],
+    [`/owner/${OWNER}/place`, "", `/owner/${OWNER}`],
+    [`/owner/${OWNER}/phone`, "", `/owner/${OWNER}`],
+    [`/owner/${OWNER}/mode`, "", `/owner/${OWNER}`],
+    ["/settings/owner", "", "/settings"],
   ])("%s?%s → %s", (pathname, query, expected) => {
     expect(parentOf(pathname, params(query))).toBe(expected);
   });
@@ -230,6 +270,14 @@ describe("screenNameOf", () => {
     ["/dev/ui", "", "dev/ui"],
     ["/nowhere/at/all", "", "not-found"],
     ["/filters/unknown", "", "not-found"],
+    // The owner form (WP-81, fix of LB-APP-058): every address of the form, whatever lies below it.
+    ["/owner/new", "", "owner/form"],
+    [`/owner/${OWNER}`, "focus=price", "owner/form"],
+    [`/owner/${OWNER}/place`, "first=1", "owner/form"],
+    [`/owner/${OWNER}/phone`, "", "owner/form"],
+    [`/owner/${OWNER}/mode`, "", "owner/form"],
+    [`/owner/${OWNER}/done`, "", "owner/form"],
+    ["/settings/owner", "", "owner/mine"],
   ])("%s?%s → %s (the new names, WP-32, LB-APP-037)", (pathname, query, expected) => {
     expect(screenNameOf(pathname, params(query))).toBe(expected);
   });

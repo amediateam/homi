@@ -52,6 +52,7 @@ export {
 export { ToggleGroup, ToggleGroupItem, toggleVariants } from "./components/ToggleGroup";
 export { prefersReducedMotion } from "./hooks/prefersReducedMotion";
 export { useBodyClass } from "./hooks/useBodyClass";
+export { useScrolled } from "./hooks/useScrolled";
 export { useSheetChrome } from "./hooks/useSheetChrome";
 export {
   SHEET_DRAG_CLOSE_SHARE,
@@ -64,6 +65,7 @@ export {
 export {
   SWIPE_BACK_CLOSE_SHARE,
   SWIPE_BACK_CLOSE_VELOCITY,
+  SWIPE_BACK_EDGE_PX,
   SWIPE_BACK_EXCLUDED,
   SWIPE_BACK_HORIZONTAL_RATIO,
   SWIPE_BACK_SETTLE_MS,

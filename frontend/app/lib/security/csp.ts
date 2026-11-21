@@ -11,6 +11,8 @@ export interface CspConfig {
   mediaHost: string | null;
   tileHosts: string[];
   analyticsHosts: string[];
+  /** The origins of the private disk's temporary URLs: a draft's photos (WP-81; img-src only). */
+  privateMediaHosts?: string[];
   frameAncestors: string[];
 }
 
@@ -44,7 +46,7 @@ export function buildCsp(config: CspConfig): string {
     "default-src 'self'",
     `script-src ${list("'self'", `'nonce-${config.nonce}'`, "'strict-dynamic'", "https://telegram.org", config.development && "'unsafe-eval'")}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src ${list("'self'", "data:", "blob:", config.mediaHost, ...config.tileHosts)}`,
+    `img-src ${list("'self'", "data:", "blob:", config.mediaHost, ...config.tileHosts, ...(config.privateMediaHosts ?? []))}`,
     "font-src 'self' data:",
     `connect-src ${list("'self'", ...config.tileHosts, ...config.analyticsHosts)}`,
     "worker-src 'self' blob:",
@@ -80,6 +82,7 @@ export function cspFromEnv(nonce: string, env: Env = process.env): { header: str
     mediaHost: originOf(env.NEXT_PUBLIC_CDN_URL),
     tileHosts: parseHosts(env.CSP_TILE_HOSTS),
     analyticsHosts: parseHosts(env.CSP_ANALYTICS_HOSTS),
+    privateMediaHosts: parseHosts(env.CSP_PRIVATE_MEDIA_HOSTS),
     frameAncestors: frameAncestors.length > 0 ? frameAncestors : DEFAULT_FRAME_ANCESTORS,
   });
   return { header, reportOnly: reportOnlyIn(env) };

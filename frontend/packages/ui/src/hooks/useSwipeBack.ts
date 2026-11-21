@@ -30,6 +30,9 @@ export const SWIPE_BACK_EXCLUDED = [
   "[data-map]",
 ].join(", ");
 
+/** With `edgeOnly`, a swipe starts only this close to the layer's left edge (WP-81's place picker). */
+export const SWIPE_BACK_EDGE_PX = 24;
+
 export interface SwipeBackOptions {
   /** `false` attaches nothing: Android (TMA-041), or a layer open over this one. Default `true`. */
   enabled?: boolean;
@@ -37,6 +40,11 @@ export interface SwipeBackOptions {
   onSwipeStart?: () => void;
   /** The release closes the layer; legacy plays a light impact here (TMA-025). `onBack` follows after the slide. */
   onCommit?: () => void;
+  /**
+   * A swipe starts only within the left 24 px of the layer, even over an excluded area (a map takes every other
+   * touch); the layer is marked `data-edge-swipe`. Default `false`.
+   */
+  edgeOnly?: boolean;
 }
 
 /** `pending`: a finger is down, direction unknown; `ignored`: this touch is not ours; `closed`: the layer is out. */
@@ -60,7 +68,7 @@ type Phase = "idle" | "pending" | "ignored" | "dragging" | "settling" | "closed"
 export function useSwipeBack(
   ref: RefObject<HTMLElement | null>,
   onBack: () => void,
-  { enabled = true, onSwipeStart, onCommit }: SwipeBackOptions = {},
+  { enabled = true, onSwipeStart, onCommit, edgeOnly = false }: SwipeBackOptions = {},
 ): void {
   const callbacks = useRef({ onBack, onSwipeStart, onCommit });
   useEffect(() => {
@@ -134,7 +142,8 @@ export function useSwipeBack(
         return;
       }
       const target = event.target;
-      if (event.touches.length !== 1 || (target instanceof Element && target.closest(SWIPE_BACK_EXCLUDED))) {
+      const fromEdge = edgeOnly && event.touches.length === 1 && event.touches[0]!.clientX - layer.getBoundingClientRect().left <= SWIPE_BACK_EDGE_PX;
+      if (event.touches.length !== 1 || (edgeOnly ? !fromEdge : target instanceof Element && target.closest(SWIPE_BACK_EXCLUDED))) {
         phase = "ignored";
         return;
       }
@@ -197,6 +206,9 @@ export function useSwipeBack(
       }
     };
 
+    if (edgeOnly) {
+      layer.setAttribute("data-edge-swipe", "");
+    }
     layer.addEventListener("touchstart", onTouchStart, { passive: true });
     layer.addEventListener("touchmove", onTouchMove, { passive: false });
     layer.addEventListener("touchend", onTouchEnd);
@@ -208,6 +220,7 @@ export function useSwipeBack(
       layer.removeEventListener("touchcancel", onTouchCancel);
       reset();
       layer.style.animation = "";
+      layer.removeAttribute("data-edge-swipe");
     };
-  }, [ref, enabled]);
+  }, [ref, enabled, edgeOnly]);
 }

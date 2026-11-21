@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildLayer, DEAD_KEYS, escapeIcu, importLegacy, parseLocaleModule } from "../scripts/import-legacy.mjs";
+import { buildLayer, DEAD_KEYS, escapeIcu, formatReport, importLegacy, parseLocaleModule, parseOwnerModule } from "../scripts/import-legacy.mjs";
 
 /** The importer of the legacy catalogues (WP-20), on small hand-made inputs. */
 describe("parseLocaleModule", () => {
@@ -134,5 +134,73 @@ describe("importLegacy", () => {
     writeFileSync(join(from, "en.js"), "export const en = { a: 'A', b: 'B' };");
 
     expect(() => importLegacy({ from, to: mkdtempSync(join(tmpdir(), "homi-i18n-to-")), release: "x" })).toThrow(/uz/);
+  });
+});
+
+describe("the owner dictionary (WP-81)", () => {
+  const OWNER = `import { x } from "./y";
+
+const ru = { "own.a": "А", "own.n": { one: "{n} день", few: "{n} дня", many: "{n} дней", other: "{n} дня" } };
+
+const en = {
+  // a comment
+  "own.a": "A",
+  "own.n": { one: "{n} day", other: "{n} days" },
+};
+const uz_Latn = { "own.a": "A kvadro²", "own.n": { one: "{n} kun", other: "{n} kun" } };
+
+export const DICTIONARIES = { ru, en, uz_Latn };
+export function ownT(key) { return DICTIONARIES.ru[key] ?? key; }
+`;
+
+  const files = (owner: string) => {
+    const from = mkdtempSync(join(tmpdir(), "homi-i18n-from-"));
+    writeFileSync(join(from, "ru.js"), "export const ru = { 'a.b': 'А' };");
+    writeFileSync(join(from, "uz_Latn.js"), "export const uz_Latn = { 'a.b': 'A' };");
+    writeFileSync(join(from, "en.js"), "export const en = { 'a.b': 'A' };");
+    const file = join(from, "owner.js");
+    writeFileSync(file, owner);
+    return { from, owner: file };
+  };
+
+  it("reads the three objects that are not exported and ignores the code around them", () => {
+    const parsed = parseOwnerModule(OWNER);
+
+    expect(Object.keys(parsed)).toEqual(["ru", "uz", "en"]);
+    expect(parsed.en).toEqual({ "own.a": "A", "own.n": { one: "{n} day", other: "{n} days" } });
+  });
+
+  it("merges the owner keys, lists them in keys.json and reports the brand matches", () => {
+    const { from, owner } = files(OWNER);
+    const to = mkdtempSync(join(tmpdir(), "homi-i18n-to-"));
+
+    const report = importLegacy({ from, to, release: "index-test.js", owner });
+
+    expect(JSON.parse(readFileSync(join(to, "ru.json"), "utf8"))).toEqual({
+      a: { b: "А" },
+      own: { a: "А", n: "{n, plural, one {{n} день} few {{n} дня} many {{n} дней} other {{n} дня}}" },
+    });
+    expect(JSON.parse(readFileSync(join(to, "keys.json"), "utf8"))).toMatchObject({
+      keys: ["a.b", "own.a", "own.n"],
+      owner: { keys: ["own.a", "own.n"] },
+    });
+    expect(report.owner?.brand).toEqual({ ru: [], uz: ["own.a"], en: [] });
+    expect(formatReport(report)).toContain("brand words, uz (1, each needs a `homi` override): own.a");
+  });
+
+  it("stops on an owner key that the main dictionary holds with another value; the same value passes", () => {
+    const clash = files(OWNER.replace('"own.a": "А"', '"a.b": "Другое"'));
+    expect(() => importLegacy({ ...clash, to: mkdtempSync(join(tmpdir(), "homi-i18n-to-")), release: "x" })).toThrow(/a\.b/);
+
+    const same = files(OWNER.replace('"own.a": "А"', '"a.b": "А"').replace('"own.a": "A",', '"a.b": "A",').replace('"own.a": "A kvadro²"', '"a.b": "A"'));
+    expect(() => importLegacy({ ...same, to: mkdtempSync(join(tmpdir(), "homi-i18n-to-")), release: "x" })).not.toThrow();
+  });
+
+  it("without --owner the output has no owner entry", () => {
+    const { from } = files(OWNER);
+    const to = mkdtempSync(join(tmpdir(), "homi-i18n-to-"));
+
+    expect(importLegacy({ from, to, release: "x" }).owner).toBeNull();
+    expect(JSON.parse(readFileSync(join(to, "keys.json"), "utf8"))).not.toHaveProperty("owner");
   });
 });

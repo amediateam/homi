@@ -1,9 +1,10 @@
 "use client";
 
-import { type ComponentProps, type ReactNode, type RefObject, useEffect, useId, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useId, useRef } from "react";
 
 import { cn } from "../cn";
 import { useBodyClass } from "../hooks/useBodyClass";
+import { useScrolled } from "../hooks/useScrolled";
 import { useSwipeBack } from "../hooks/useSwipeBack";
 import { useLeave } from "../lib/leave";
 
@@ -24,35 +25,6 @@ export interface SubPageFrameProps extends Omit<ComponentProps<"section">, "titl
   onSwipeStart?: () => void;
   /** The swipe closes the page; `onBack` follows once it has slid out. */
   onSwipeCommit?: () => void;
-}
-
-/**
- * Whether the page is scrolled: a sentinel over the top 2 px of the scroll area has left the page's viewport.
- * Without IntersectionObserver the header stays flat.
- */
-function useScrolled(rootRef: RefObject<HTMLElement | null>, sentinelRef: RefObject<HTMLElement | null>): boolean {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel || typeof IntersectionObserver === "undefined") {
-      return undefined;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries.at(-1);
-        if (entry) {
-          setScrolled(!entry.isIntersecting);
-        }
-      },
-      { root },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [rootRef, sentinelRef]);
-
-  return scrolled;
 }
 
 /**

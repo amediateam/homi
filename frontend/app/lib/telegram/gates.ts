@@ -11,6 +11,7 @@ export const GATES = {
   /** Exact hex header and background colours. */
   exactColors: "6.9",
   writeAccess: "6.9",
+  requestContact: "6.9",
   settingsButton: "7.0",
   verticalSwipes: "7.7",
   /** `requestFullscreen` (on mobile only, `init.ts`). */

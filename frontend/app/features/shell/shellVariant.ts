@@ -14,7 +14,7 @@ export type ShellTab = "search" | "saved" | "radars" | "settings";
  * The shell variant of a locale-less address on its own (WP-23, D-SH-1) — what a direct load draws. The search sheets
  * (`/filters…`, `/sort`, `/city`) take the variant of the view they belong to: the map when they came from it
  * (`from=map`), else the list. The map with the `draw=1` layer is drawing. Radar and settings screens below their tab
- * keep its variant.
+ * keep its variant. The owner form (WP-81) draws none on a direct load; its listings page belongs to settings.
  */
 export function shellVariantOf(pathname: string, searchParams: Pick<URLSearchParams, "get">): ShellVariant {
   switch (matchRoute(pathname).route) {
@@ -37,8 +37,11 @@ export function shellVariantOf(pathname: string, searchParams: Pick<URLSearchPar
       return "radars";
     case "settings":
     case "settingsPage":
+    case "ownerListings":
       return "settings";
     case "listing":
+    case "ownerNew":
+    case "owner":
     case "gate":
     case "unknown":
       return "none";
@@ -47,9 +50,9 @@ export function shellVariantOf(pathname: string, searchParams: Pick<URLSearchPar
 
 /**
  * The addresses that the `@sheet` and `@overlay` slots of `(main)` intercept (`25` §3.2): the search sheets, the
- * listing with its children and the radar sheets. A soft navigation opens them as a layer over the page it came from,
- * which stays mounted below with its chrome (`AppShell` keeps that page's variant); a direct load renders them as the
- * page, and `shellVariantOf` gives the variant then.
+ * listing with its children, the radar sheets and the owner form with its steps (WP-81). A soft navigation opens them
+ * as a layer over the page it came from, which stays mounted below with its chrome (`AppShell` keeps that page's
+ * variant); a direct load renders them as the page, and `shellVariantOf` gives the variant then.
  */
 export function isLayerAddress(pathname: string): boolean {
   switch (matchRoute(pathname).route) {
@@ -61,6 +64,8 @@ export function isLayerAddress(pathname: string): boolean {
     case "radarNew":
     case "radarFound":
     case "radar":
+    case "ownerNew":
+    case "owner":
       return true;
     default:
       return false;

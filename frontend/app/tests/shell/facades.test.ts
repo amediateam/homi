@@ -35,7 +35,7 @@ describe("devFlags", () => {
 });
 
 describe("track", () => {
-  it("knows the 21 journal events of 03 §3.3", () => {
+  it("knows the 21 journal events of 03 §3.3 and the owner form's (WP-81)", () => {
     expect([...JOURNAL_EVENTS].sort()).toEqual(
       [
         "app_launch",
@@ -59,6 +59,9 @@ describe("track", () => {
         "original_copied",
         "contact_call",
         "contact_write",
+        "owner_place_set",
+        "owner_place_autofill",
+        "owner_mascot_tap",
       ].sort(),
     );
   });

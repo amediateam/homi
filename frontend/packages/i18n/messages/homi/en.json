@@ -72,5 +72,36 @@
   },
   "details": {
     "historySelf": "The owner listed it on {date}. No price changes yet."
+  },
+  "own": {
+    "phoneHow": "We confirm it with Telegram’s “Share phone number” button — so we know the number is yours. It goes to the HOMI bot only.",
+    "mode": {
+      "gate": "Through HOMI"
+    },
+    "verified": "Verified owner · listed it on HOMI themselves",
+    "doneText": "The flat is in the HOMI feed and is already going out to people whose radar is on.",
+    "mineEmpty": "Flats you rent out through HOMI will appear here.",
+    "listedDays": "On HOMI for {days}",
+    "doneTextNoRadar": "The flat is in the HOMI feed.",
+    "photoDeleted": "Photo deleted",
+    "cityChanged": "District and point cleared",
+    "disabled": "You can’t list a flat yet",
+    "photoUnreadable": "This photo didn’t open — pick another one",
+    "support": "Contact support",
+    "edit": {
+      "done": "Done"
+    },
+    "review": {
+      "title": "Under review",
+      "text": "We are checking the listing — it is not in the feed yet. Once checked, it will appear on its own."
+    },
+    "phoneKept": "HOMI keeps the number and shows it only the way you choose in the next step.",
+    "landmarkHint": "Everyone who views the listing sees the landmark.",
+    "demandFew": "A few people with a radar are looking for one like this now",
+    "limitTitle": "{max, plural, one {# flat already} other {# flats already}}",
+    "limitText": "You can rent out up to {max, plural, one {# flat} other {# flats}} at once. Mark one “Rented” or remove it, then add a new one.",
+    "rejected": {
+      "limit": "{max, plural, one {# flat is} other {# flats are}} already listed with this number. Mark one “Rented” or remove it in “My listings”, then add a new one."
+    }
   }
 }

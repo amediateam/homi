@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 describe("the read allow-list", () => {
-  it("is the complete list of WP-22", () => {
+  it("is the complete list of WP-22 with the owner form's reads (WP-81)", () => {
     expect(BFF_READS).toEqual([
       "me",
       "settings",
@@ -60,7 +60,25 @@ describe("the read allow-list", () => {
       "history",
       "hidden",
       "radars",
+      "owner/listings",
+      "owner/listings/:id",
+      "owner/place",
+      "owner/demand",
     ]);
+  });
+
+  it("matches an owner listing id only as a ULID, and nothing below it", () => {
+    expect(readTemplate("owner/listings/01JF0000000000000000000004")).toBe("owner/listings/:id");
+    for (const path of [
+      "owner/listings/42",
+      "owner/listings/new",
+      "owner/listings/01JF0000000000000000000004/requests",
+      "owner/listings/01JF0000000000000000000004/photos",
+      "owner/requests",
+      "owner/waitlist",
+    ]) {
+      expect(readTemplate(path), path).toBeNull();
+    }
   });
 
   it("matches a listing number only as a positive integer", () => {

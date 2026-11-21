@@ -18,6 +18,8 @@ export interface FakeTelegramAnswers {
   confirm: boolean;
   /** `requestWriteAccess` result (TMA-033). */
   writeAccess: boolean;
+  /** `requestContact` result (TMA-034): whether the user shares the phone number. */
+  contact: boolean;
   /**
    * `shareMessage` result (TMA-030). `"stuck"` never answers and keeps the share window open, as a real client
    * does after a lost callback: the next `shareMessage` throws `WebAppShareMessageOpened` until the SDK's
@@ -126,6 +128,7 @@ export interface FakeWebApp {
   openTelegramLink(url: string): void;
   shareMessage(messageId: string, callback?: Callback<[boolean]>): void;
   requestWriteAccess(callback?: Callback<[boolean]>): void;
+  requestContact(callback?: Callback<[boolean, unknown?]>): void;
   checkHomeScreenStatus(callback?: Callback<[HomeScreenStatus]>): void;
   addToHomeScreen(): void;
   readonly BackButton: FakeBottomButton;
@@ -230,6 +233,7 @@ export function resolveFakeTelegramConfig(options: FakeTelegramOptions = {}): Fa
     answers: {
       confirm: true,
       writeAccess: true,
+      contact: true,
       shareSent: true,
       homeScreenStatus: "missed",
       location: null,
@@ -261,6 +265,7 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
     showConfirm: "6.2",
     showAlert: "6.2",
     requestWriteAccess: "6.9",
+    requestContact: "6.9",
     SettingsButton: "7.0",
     disableVerticalSwipes: "7.7",
     enableVerticalSwipes: "7.7",
@@ -611,6 +616,15 @@ export function installFakeTelegram(config: FakeTelegramConfig): FakeTelegram {
         later(() => {
           emit("writeAccessRequested", { status: allowed ? "allowed" : "cancelled" });
           callback?.(allowed);
+        });
+      }),
+    requestContact: (callback) =>
+      record("requestContact", callback ? [callback] : [], () => {
+        const shared = answers.contact;
+        later(() => {
+          emit("contactRequested", { status: shared ? "sent" : "cancelled" });
+          // A real client passes the contact as the second argument; the app must never read it.
+          callback?.(shared, shared ? { status: "sent", responseUnsafe: { contact: { phone_number: "+998000000000" } } } : { status: "cancelled" });
         });
       }),
     checkHomeScreenStatus: (callback) =>

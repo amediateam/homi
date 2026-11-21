@@ -26,9 +26,14 @@ export type FoundTrigger = (typeof FOUND_TRIGGERS)[number];
 
 /**
  * Parameters that are never filter keys: where a sheet came from, the focused section, the layer parameters, the
- * entry of a new radar and the trigger of the survey.
+ * entry of a new radar, the trigger of the survey and the owner form's first placing (`first`, WP-81; not a layer
+ * parameter, so `parentOf` keeps it).
  */
-export const RESERVED_PARAMS = ["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger"] as const;
+export const RESERVED_PARAMS = ["from", "focus", "pick", "draw", "pin", "step", "i", "entry", "trigger", "first"] as const;
+
+/** The steps of the owner form that have an address of their own below `/owner/<id>` (WP-81). */
+export const OWNER_STEPS = ["place", "phone", "mode", "done"] as const;
+export type OwnerStep = (typeof OWNER_STEPS)[number];
 
 /** Parameters that open a layer over the address they are on; Back removes them first. */
 const LAYER_PARAMS = ["pick", "draw", "pin", "step"] as const;
@@ -122,6 +127,13 @@ export const routes = {
   radarFound: (q: { trigger: FoundTrigger }) => withQuery("/radars/found", q),
   settings: () => "/settings",
   settingsPage: (name: SettingsPage) => `/settings/${name}`,
+  ownerNew: () => "/owner/new",
+  ownerForm: (id: string, q?: { focus?: string }) => withQuery(`/owner/${id}`, q),
+  ownerPlace: (id: string, q?: { first?: 1 }) => withQuery(`/owner/${id}/place`, q),
+  ownerPhone: (id: string) => `/owner/${id}/phone`,
+  ownerMode: (id: string) => `/owner/${id}/mode`,
+  ownerDone: (id: string) => `/owner/${id}/done`,
+  ownerListings: (q?: Query) => withQuery("/settings/owner", q),
   welcomeLanguage: () => "/welcome/language",
   welcomeCity: () => "/welcome/city",
   noAccess: (reason?: string) => withQuery("/no-access", { reason }),
@@ -136,6 +148,15 @@ export function isListingNumber(value: string): boolean {
 /** A radar id: a ULID, 26 characters of Crockford base32 (the WP-13 contract). */
 export function isRadarId(value: string): boolean {
   return /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i.test(value);
+}
+
+/** An owner listing id: a ULID, as a radar id (the WP-80 contract). */
+export function isOwnerId(value: string): boolean {
+  return isRadarId(value);
+}
+
+function isOwnerStep(value: string | undefined): value is OwnerStep {
+  return (OWNER_STEPS as readonly string[]).includes(value ?? "");
 }
 
 export function isQuickFilterKind(value: string): value is QuickFilterKind {
@@ -167,6 +188,8 @@ type Match =
   | { route: "radarNew" | "radarFound" }
   | { route: "radar"; id: string; edit: boolean }
   | { route: "settingsPage" }
+  | { route: "ownerNew" | "ownerListings" }
+  | { route: "owner"; id: string; step: OwnerStep | null }
   | { route: "gate"; gate: GateName }
   | { route: "unknown"; pattern: string };
 
@@ -225,6 +248,15 @@ function match(pathname: string): Match {
   }
   if (s[0] === "settings" && s.length === 2 && isSettingsPage(s[1])) {
     return { route: "settingsPage" };
+  }
+  if (path === "/settings/owner") {
+    return { route: "ownerListings" };
+  }
+  if (path === "/owner/new") {
+    return { route: "ownerNew" };
+  }
+  if (s[0] === "owner" && isOwnerId(s[1] ?? "") && (s.length === 2 || (s.length === 3 && isOwnerStep(s[2])))) {
+    return { route: "owner", id: s[1], step: s.length === 3 ? (s[2] as OwnerStep) : null };
   }
   return { route: "unknown", pattern: path };
 }
@@ -300,7 +332,14 @@ export function parentOf(pathname: string, searchParams: URLSearchParams): strin
     case "radar":
       return matched.edit ? routes.radar(matched.id) : routes.radars();
     case "settingsPage":
+    case "ownerListings":
+    case "ownerNew":
       return routes.settings();
+    case "owner":
+      // A step returns to the questionnaire; the questionnaire, the done step and the first placing close the form.
+      return matched.step === "done" || matched.step === null || (matched.step === "place" && searchParams.has("first"))
+        ? routes.settings()
+        : routes.ownerForm(matched.id);
     default:
       return null;
   }
@@ -349,6 +388,12 @@ export function screenNameOf(pathname: string, searchParams: URLSearchParams): s
       return "settings";
     case "settingsPage":
       return `settings/${segmentsOf(pathname)[1]}`;
+    case "ownerNew":
+    case "owner":
+      // Every address of the form, so a form opened from the owner panel reports the form (fix of LB-APP-058).
+      return "owner/form";
+    case "ownerListings":
+      return "owner/mine";
     case "gate":
       return { language: "welcome/language", city: "welcome/city", noAccess: "no-access", outside: "outside" }[matched.gate];
     case "unknown":

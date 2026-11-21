@@ -72,5 +72,36 @@
   },
   "details": {
     "historySelf": "Uy egasi {date} joyladi. Narx hali oʻzgarmagan."
+  },
+  "own": {
+    "phoneHow": "Telegramning «Raqamni ulashish» tugmasi bilan tasdiqlaymiz — shunda raqam sizniki ekanini bilamiz. Raqam faqat HOMI botiga boradi.",
+    "mode": {
+      "gate": "HOMI orqali"
+    },
+    "verified": "Tasdiqlangan uy egasi · HOMIga oʻzi joylagan",
+    "doneText": "Kvartira HOMI lentasida va radari yoqilganlarga yuborilmoqda.",
+    "mineEmpty": "HOMI orqali ijaraga beradigan kvartiralaringiz shu yerda boʻladi.",
+    "listedDays": "HOMIda {days}",
+    "doneTextNoRadar": "Kvartira HOMI lentasida.",
+    "photoDeleted": "Rasm oʻchirildi",
+    "cityChanged": "Tuman va nuqta tozalandi",
+    "disabled": "Hozircha kvartirani ijaraga berib boʻlmaydi",
+    "photoUnreadable": "Bu rasm ochilmadi — boshqasini tanlang",
+    "support": "Qoʻllab-quvvatlashga yozish",
+    "edit": {
+      "done": "Tayyor"
+    },
+    "review": {
+      "title": "Tekshiruvda",
+      "text": "Eʼlonni tekshiryapmiz — hozircha u lentada koʻrinmaydi. Tekshirib boʻlgach, oʻzi paydo boʻladi."
+    },
+    "phoneKept": "HOMI raqamni saqlaydi va uni faqat keyingi qadamda tanlaganingizdek koʻrsatadi.",
+    "landmarkHint": "Moʻljalni eʼlonni koʻrgan hamma koʻradi.",
+    "demandFew": "Hozir bunday kvartirani radari bor bir necha kishi qidirmoqda",
+    "limitTitle": "Allaqachon {max} ta kvartira",
+    "limitText": "Bir vaqtda {max} tagacha kvartirani ijaraga berish mumkin. Bittasini «Ijaraga berildi» deb belgilang yoki olib tashlang — keyin yangisini qoʻshing.",
+    "rejected": {
+      "limit": "Bu raqam bilan allaqachon {max} ta kvartira ijaraga berilmoqda. Bittasini «Ijaraga berildi» deb belgilang yoki «Mening eʼlonlarim»da olib tashlang — keyin yangisini qoʻshing."
+    }
   }
 }

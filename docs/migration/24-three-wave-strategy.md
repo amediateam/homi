@@ -167,8 +167,8 @@ DEC-58 … DEC-68 on 2026-11-19, in the round of the intake of `index-CIa0Ldj2.j
 2026-11-19, DEC-81 on 2026-11-20 and DEC-82 … DEC-88 on 2026-11-20 after PR #91, in the rounds of the owner-cabinet
 plan (same file); DEC-89 … DEC-94 on 2026-11-20, in the round of the intake of `index-YX9bFVws.js`
 (`decisions/2026-11-20-developer-answers.md`); DEC-95 … DEC-97 on 2026-11-20, in the round of the intake of the
-legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 on 2026-11-21, asked by WP-32
-(`decisions/2026-11-21-developer-answers.md`).
+legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 and DEC-99 on 2026-11-21, asked by WP-32 and
+WP-81 (`decisions/2026-11-21-developer-answers.md`).
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -240,6 +240,7 @@ legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 on 2026-11-21
 | DEC-96 | The language of the landing's `/` (2026-11-20) | As legacy since landing release `d9bbbc696337`: `/` without `?lang=` and without a stored choice is Russian; a browser whose languages resolve to uz or en (BR-LND-004's rule) sees the hint bar «Oʻzbek tilida ochish · Open in English» with links to `/uz/` and `/en/`, hidden once a language is chosen in the menu. `?lang=` and a stored choice still lead to `/uz/` or `/en/` (HOMI redirects; legacy translates in the page). The redirect by the browser language is dropped; DEV-038 becomes the default and its flag is removed | — | `03b` LND-067, BR-LND-004, BR-LND-029; `09` DEV-038, F-LANDING-006; WP-61 |
 | DEC-97 | Where the owners' page «Сдать квартиру» comes from (2026-11-20) | It waits for legacy until WP-61 starts. Legacy's Mini App links `/sdat-kvartiru/` (uz `/uz/kvartira-ijaraga-berish/`, en `/en/list-your-apartment/`) with `?s=tenant`, but legacy's own backend checklist lists the page as not done and its landing sync never downloads a backend-rendered page. When WP-61 starts: if legacy's page is known (its documents, or the developer brings it), WP-61 describes the page from it; otherwise WP-61 writes HOMI's own page. Until the page exists the survey's landlord block has one button with the bot link (DEC-91) | Landing intake, Q-LND-012 | `03b` LND-068, URL-066, Q-LND-012; `09` F-LANDING-013; WP-61, WP-82 |
 | DEC-98 | How the `@analytics` end-to-end run of WP-32 runs in CI (2026-11-21) | As a further step of the existing e2e job, like the `@radars-off` run: the web server builds the app again with a fake PostHog key and an unroutable host the specs answer themselves; no job of its own (Actions minutes). «Внутри текущей e2e (Рекомендуется)» | — | WP-32 |
+| DEC-99 | How WP-81, about 8 000 changed lines, is shipped (2026-11-21) | One pull request; the specification's rule that the upload progress goes into a pull request of its own above 3 000 lines is not followed and the deviation is written in its "As built": since DEC-92 the progress transport is the only upload path of the photos. «Один PR, отклонение записать (Рекомендуется)» | — | WP-81 |
 
 ### 8.2 Questions
 

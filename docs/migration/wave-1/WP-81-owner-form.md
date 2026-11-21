@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#107) |
 | Depends on | WP-80, WP-28, WP-36, WP-39 (`RollNumber`, the save phase and the leave helper, *added by the intake of `index-YX9bFVws.js`*) |
 | Size | about 3 350 changed lines with tests, L (about 350 of them for legacy release `index-YX9bFVws.js`: the upload ring and its transport, the limit ring, the save phase; if the PR passes 3 000 lines, the upload progress goes into a PR of its own after it) |
 | Behaviour reference | `03` SCR-050 … SCR-056, §1.9 (lazy chunks), §3.3 (`owner_place_set`, `owner_place_autofill`, `owner_mascot_tap`), BR-APP-075 … BR-APP-087, BR-APP-113, BR-APP-114, BR-APP-119, BR-APP-120 (since `index-YX9bFVws.js`, with Q-APP-031), BR-APP-093, BR-APP-096, BR-APP-097, LB-APP-054 … LB-APP-058, LB-APP-060 … LB-APP-065, LB-APP-067, LB-APP-068, LB-APP-071; `05` TMA-034, TMA-035, TMA-046, TMA-047; `09` DEV-054 … DEV-058, DEV-061, DEV-062 |
@@ -286,8 +286,10 @@ changes for the other callers. The rule that a touch inside a nested sub-page is
   file's shape (one object per locale, plural entries as in the main dictionary) and stops on a key that the main
   dictionary already holds with another value; the import report lists the keys and the brand matches.
 - `homi` overrides, ru/uz/en, for every owner text that carries the brand (the catalogue test of `brand-words.json`
-  refuses the rest): at least `own.mode.gate` «Через HOMI», `own.subtitle`, `own.phoneHow`, `own.doneText`,
-  `own.verified` «Проверенный хозяин · разместил сам в HOMI», `own.mineEmpty`; the import report names the full list.
+  refuses the rest): the import of the pin names six keys per locale — `own.mode.gate` «Через HOMI», `own.phoneHow`,
+  `own.doneText`, `own.verified` «Проверенный хозяин · разместил сам в HOMI», `own.mineEmpty` and `own.listedDays`
+  «В HOMI {days}» (*as built: `own.subtitle` «Бесплатно. Риелторы ваш номер не увидят.» carries no brand word and
+  keeps the legacy text*).
 - New `homi` texts, for the product owner to approve: `own.doneTextNoRadar` «Квартира в ленте HOMI.» (radars off),
   `own.photoDeleted` «Фото удалили» (DEV-057), `own.cityChanged` «Район и точку сбросили» (DEV-058),
   `own.disabled` «Сдать квартиру пока нельзя» (DEC-81), `own.photoUnreadable` «Это фото не открылось — выберите
@@ -427,7 +429,7 @@ Changed:
 
 ### Questionnaire (SCR-052, BR-APP-079 … BR-APP-081, DEV-058)
 
-- Title «Сдать квартиру» or «Изменить объявление»; subtitle `own.subtitle` (`homi` override).
+- Title «Сдать квартиру» or «Изменить объявление»; subtitle `own.subtitle` (the legacy text, no brand word).
 - Sections in this order: the welcome line; the place (the spot preview with the circle of `shown_point` when the
   form's point equals the saved one, with `own.mapNote`; the field «Адрес или ориентир», at most 120 characters,
   with the hint `own.landmarkHint` «Видно всем — без номера дома и квартиры» (default (g)) and «Карта» when there is
@@ -717,6 +719,62 @@ WP-89 switches the cabinet on there with staff accounts (DEC-88).
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web once the
       cabinet is on there.
 
+## As built
+
+- **Size (DEC-99).** About 8 000 changed lines: 1 126 of the generated legacy catalogue, 1 707 of tests, about 5 200 of
+  code (route files and the `homi` texts included). The upload progress is not a pull request of its own: since DEC-92
+  it is the only upload path of the photos. The developer chose one pull request on 2026-11-21.
+- **Step 1, the seams.** The owner types of `@homi/types` after WP-80 hold every field the form reads; the per-method
+  responses type only 200/401/422/429, so the 403/409 owner codes are read by their `code` string. The owner
+  dictionary (`demo/app/src/features/owner/owner.js`, unchanged by the pin) is three objects that are not exported,
+  followed by code: `import-legacy.mjs --owner <file>` reads them with its own extractor (207 keys per locale, three
+  plurals, no collision with the main dictionary); `keys.json` lists them under `owner`. The brand words are in six keys
+  per locale — `own.subtitle` carries none, `own.listedDays` does (the list above is corrected). The picker follows
+  `useSpotMap` (`usePickerMap`, lazy `pickGL` / `pickLeaflet`).
+- **The limits in the texts** (LB-APP-057): `own.limitTitle`, `own.limitText` and `own.rejected.limit` have `homi`
+  overrides with `{max}` and plural forms; `max` comes from the answer or `limits.owner_listings`.
+- **The failure detail.** `ApiError` keeps `limit` and `max`; `ApiFailure.detail` holds the envelope's `reason` (any),
+  `limit`, `max` and the names of the fields of `422 errors` — names only, never a message (SEC-REQ-047). The day
+  limit's top-level `reason` is unchanged.
+- **The photo transport** is the integrator's recommendation of DEC-92: `XMLHttpRequest` to the route
+  `POST /bff/owner/listings/{id}/photos` (`app/bff/owner/listings/[id]/photos/route.ts`), same-origin, the token from
+  the cookie or the bearer header, at most 4 MB, 90 s, forwarded as `file` named `photo.jpg`; `25` §3.5's mutation row
+  is amended. `next.config.ts` keeps its `bodySizeLimit` (the photos never reach a Server Action).
+- **Controllers.** The autosave (`form/autosave.ts`, `AutosaveController`) and the phone poll (`steps/usePhonePoll.ts`,
+  `PhonePoll`) are plain classes with thin hooks, so their rules are tested on fake timers; the React Compiler refuses
+  a self-scheduling `useCallback`.
+- **The steps** reach the questionnaire's form and autosave through a context (`form/context.tsx`); each renders in
+  `steps/StepFrame.tsx`, fixed at z 48 inside the form's layer, above the questionnaire's footer bar.
+- **A form loaded directly** drops its steps once a step pushed from it shows the overlay copy (the latch of the
+  listing's standalone copy): the step lives in the overlay copy; both questionnaires stay mounted, the standalone
+  one below, as Back restores the direct load's entry. Known edge: an edit made in the overlay copy is not shown by
+  the standalone questionnaire after that Back until the form is opened again.
+- **The events** `owner_place_set`, `owner_place_autofill` and `owner_mascot_tap` (once per 30 s, `events.ts`) join the
+  journal: 24 events.
+- **The launch links** are never pending; their once-per-launch mark is the digest of the target address. An owner
+  launch is read with the query the app was opened with (`launchQuery()`: the city pick replaces the address, which
+  dropped `?owner=new`) and waits for the reference data and for the pickers the gates will show — `needsLanguage`
+  and `needsCity` of `features/gates/resolveGate.ts`, so one city or none means no wait (review, rounds 1 and 2).
+- **The form's bounds are the server's** (`form/rules.ts`, `FIELD_CHECKS` of `lib/actions/owner.ts`): area 5 … 1000,
+  floor −3 … 99, floors 1 … 99, rooms 1 … 5. A value outside them is not sent, so one field never blocks the others'
+  save (review).
+- **After an await** (the new draft, «Дальше», publish) nothing is navigated once `currentAddress()` changed: Back
+  closed the form meanwhile. Waiting photo deletes are sent before «Дальше» and before publish (`flushDeletes`), and
+  a publish `422` highlights the parts it names in the questionnaire (`reportInvalid`) (review).
+- **The e2e runs.** The default run's API has `OWNER_CABINET_ENABLED=true` (CI and `scripts/dev/e2e-local.sh`);
+  `@owner-off` runs with `@radars-off` against the API that leaves it unset. `e2e/owner-form.spec.ts` (both session
+  modes) and `e2e/owner-off.spec.ts`; the picker's and the phone's own specs are component tests
+  (`tests/owner/PlacePicker.test.tsx`, `phonePoll.test.ts`), since a map and Telegram's contact share are not driven
+  end to end on stubs.
+- **Left to later packages:** the settings group and «Мои объявления» (WP-82, `/settings/owner` is the WP-20
+  placeholder); `RollNumber` on «N из 10».
+
 ## Handoff
 
-Empty.
+- Production track: the regular deploy; `CSP_PRIVATE_MEDIA_HOSTS` in the app's env on staging and production (the
+  origin of the private disk's temporary URLs); `OWNER_CABINET_ENABLED` stays unset (DEC-81). Then the manual checks
+  inside Telegram with staff accounts (DEC-88): a draft's photos, the contact share below and above 6.9, the picker on
+  both engines.
+- Product owner: the new `homi` texts (`own.doneTextNoRadar`, `own.photoDeleted`, `own.cityChanged`, `own.disabled`,
+  `own.photoUnreadable`, `own.support`, `own.edit.done`, `own.review.*`, `own.landmarkHint`, `own.demandFew`);
+  `own.phoneKept` also with the lawyer (DEC-87, marked `data-legal-review="pending"`).

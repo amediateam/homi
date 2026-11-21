@@ -10,6 +10,9 @@ import { type I18nReporter, reportOnce } from "./report";
  *   by the delta where the wording depends on it (`check` above the market, «В N раза дороже» from +90 %, an unknown
  *   tone by its sign, LB-APP-039); this table is its lookup for the known tones.
  * - `noAccessTitle`, `noAccessText`: the reasons of the no-access screen (`03` SCR-003).
+ * - `ownerNeed`, `ownerReject`, `phoneError` (WP-81, fix of LB-APP-064): the missing parts of an owner listing that
+ *   publish names, the rejection reasons (an unknown reason is read as `denied` before the lookup) and the phone
+ *   step's errors. WP-82 adds the owner statuses and the requests.
  */
 export const labelTables = {
   type: {
@@ -66,6 +69,21 @@ export const labelTables = {
     blocked: "noAccess.text.blocked",
     join: "noAccess.text.join",
     paused: "noAccess.text.paused",
+  },
+  ownerNeed: {
+    city: "own.need.city",
+    place: "own.need.place",
+    rooms: "own.need.rooms",
+    price: "own.need.price",
+    photos: "own.need.photos",
+  },
+  ownerReject: {
+    denied: "own.rejected.fraud",
+    limit: "own.rejected.limit",
+  },
+  phoneError: {
+    not_uz: "own.phoneNotUz",
+    not_own: "own.phoneNotOwn",
   },
 } as const satisfies Record<string, Record<string, MessageKey>>;
 

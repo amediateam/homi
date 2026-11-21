@@ -64,6 +64,17 @@ describe("requestWriteAccess (TMA-033)", () => {
   });
 });
 
+describe("requestContact (TMA-034)", () => {
+  it("answers from 6.9 and is null below it or outside Telegram", async () => {
+    await expect(tg.requestContact()).resolves.toBeNull();
+    fake = fakeTelegram({ version: "6.2" });
+    await expect(tg.requestContact()).resolves.toBeNull();
+    fake.uninstall();
+    fake = fakeTelegram({ version: "6.9", answers: { contact: false } });
+    await expect(tg.requestContact()).resolves.toBe(false);
+  });
+});
+
 describe("home screen (TMA-036)", () => {
   it("reads the status from 8.0, unknown after 1.5 s, unsupported below", async () => {
     await expect(tg.homeScreen.status()).resolves.toBe("unsupported");
@@ -178,6 +189,7 @@ describe("outside Telegram (TMA-043)", () => {
     await expect(tg.shareMessage("x")).resolves.toBe(false);
     await expect(tg.homeScreen.status()).resolves.toBe("unsupported");
     await expect(tg.requestWriteAccess()).resolves.toBeNull();
+    await expect(tg.requestContact()).resolves.toBeNull();
   });
 });
 

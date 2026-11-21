@@ -5,7 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { bffFetch } from "@/lib/api/browser";
 
 import { cityStatsOf } from "./cityStats";
-import { DEFAULT_RADAR_LIMIT, EMPTY_REFERENCE } from "./empty";
+import { DEFAULT_OWNER_LISTINGS, DEFAULT_OWNER_PHOTOS, DEFAULT_RADAR_LIMIT, EMPTY_REFERENCE } from "./empty";
 import type { Cached, City, CityStats, Reference } from "./types";
 
 /**
@@ -83,6 +83,11 @@ export interface ReferenceView {
   findCity: (code: string | null | undefined) => City | null;
   radarsEnabled: boolean;
   radarLimit: number;
+  /** The owner cabinet's switch (DEC-81): `owner_enabled === true`; false while the reference data is missing. */
+  ownerEnabled: boolean;
+  /** Listings per account and per phone, photos per listing (WP-80; LB-APP-057: never a number in a text). */
+  ownerListingsLimit: number;
+  ownerPhotosLimit: number;
   botUsername: string | null;
   supportUsername: string | null;
   usdUzs: number;
@@ -93,13 +98,17 @@ export function useReference(): ReferenceView {
   const data = reference.data as Partial<Reference>;
   const cities = Array.isArray(data.cities) ? data.cities : [];
   const limit = data.limits?.radars;
+  const positive = (value: unknown, fallback: number) => (typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback);
   return {
     loaded: reference.loaded,
     reference: reference.data,
     cities,
     findCity: (code) => cities.find((city) => city.code === code) ?? null,
     radarsEnabled: data.radars_enabled === true,
-    radarLimit: typeof limit === "number" && Number.isInteger(limit) && limit > 0 ? limit : DEFAULT_RADAR_LIMIT,
+    radarLimit: positive(limit, DEFAULT_RADAR_LIMIT),
+    ownerEnabled: data.owner_enabled === true,
+    ownerListingsLimit: positive(data.limits?.owner_listings, DEFAULT_OWNER_LISTINGS),
+    ownerPhotosLimit: positive(data.limits?.owner_photos, DEFAULT_OWNER_PHOTOS),
     botUsername: data.bot?.username || null,
     supportUsername: data.bot?.support_username || null,
     usdUzs: typeof data.rates?.usd_uzs === "number" ? data.rates.usd_uzs : 0,

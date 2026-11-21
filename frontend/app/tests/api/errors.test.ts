@@ -55,9 +55,24 @@ describe("failureOf: the day limit (WP-36, DEC-59, SCR-008)", () => {
       status: 429,
       code: "rate_limited",
       reason: "daily",
+      detail: { reason: "daily" },
       method: "GET",
       path: "listings/:number",
     });
+  });
+
+  it("keeps the detail the owner form reads (WP-81): any reason, the limit and its size, the failing field names", () => {
+    expect(failureOf(call, { status: 409, code: "owner_rejected", reason: "denied" })).toMatchObject({
+      error: "conflict",
+      detail: { reason: "denied" },
+    });
+    expect(failureOf(call, { status: 409, code: "owner_limit", limit: "phone", max: 2 })).toMatchObject({ detail: { limit: "phone", max: 2 } });
+    expect(failureOf(call, { status: 422, code: "validation_failed", fields: ["price", "rooms"] })).toMatchObject({
+      error: "validation",
+      detail: { fields: ["price", "rooms"] },
+    });
+    expect(failureOf(call, { status: 500 })).not.toHaveProperty("detail");
+    expect(failureOf(call, "offline")).not.toHaveProperty("detail");
   });
 
   it("a 429 without it, or with another reason, has none", () => {

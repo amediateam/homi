@@ -40,6 +40,10 @@ const PLURALS = [
   "market.v3.city",
   "back.new",
   "app.freshShow",
+  // The owner dictionary (WP-81).
+  "own.panel.waiting",
+  "own.v.newRequests",
+  "own.days",
 ];
 
 describe("the merged catalogues", () => {
@@ -51,7 +55,7 @@ describe("the merged catalogues", () => {
     expect(Object.keys(merged.en).sort()).toEqual(ru);
   });
 
-  it("hold the 16 plural keys as ICU plurals on n with the forms of each locale", () => {
+  it("hold the 19 plural keys as ICU plurals on n with the forms of each locale", () => {
     for (const locale of locales) {
       const plurals = Object.entries(merged[locale])
         .filter(([, value]) => value.startsWith("{n, plural,"))
@@ -179,7 +183,10 @@ describe("the legacy layer", () => {
 
   it("matches the key list of the pinned release, which keeps the legacy names", () => {
     expect(keyList.release).toBe("index-YX9bFVws.js");
-    expect(keyList.keys).toHaveLength(591);
+    // 591 keys of the main dictionary and the 207 of the owner dictionary (WP-81), which keep their legacy names.
+    expect(keyList.keys).toHaveLength(798);
+    expect(keyList.owner?.keys).toHaveLength(207);
+    expect(keyList.owner?.keys.every((key) => key.startsWith("own.") && keyList.keys.includes(key))).toBe(true);
     for (const layer of Object.values(layers)) {
       expect(Object.keys(flatten(layer)).map(legacyName).sort()).toEqual([...keyList.keys].sort());
     }

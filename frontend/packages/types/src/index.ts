@@ -39,6 +39,9 @@ export interface ApiFailure {
   errors?: Record<string, string[]>;
   /** Why the request was refused: the access gate's reason of `403 access_denied`, `daily` on a `429` (docs/api/README.md). */
   reason?: string;
+  /** `409 owner_limit` (WP-80): which limit was reached (`account` or `phone`) and its size. */
+  limit?: string;
+  max?: number;
 }
 
 export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;

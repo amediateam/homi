@@ -47,6 +47,12 @@ export type JournalEvents = {
   /** `src`: none from the action bar (legacy), `author` from the author row (WP-26, HOMI), `text` from the original text. */
   contact_call: { listing_id: number; via: "tel" | "browser"; src?: "text" | "author" };
   contact_write: { listing_id: number };
+  /** The owner form's place (WP-81, `03` §3.3): by the map, by «Найти меня», or «Указать вручную». */
+  owner_place_set: { source: "map" | "locate" | "manual" };
+  /** The fill after «Готово» changed a field, or «Вернуть» undid it. */
+  owner_place_autofill: { result: "applied" | "reverted" };
+  /** A tap on the mascot of the done step, at most once per 30 s (`features/owner/events.ts`). */
+  owner_mascot_tap: Empty;
 };
 
 export type JournalEventName = keyof JournalEvents;
@@ -73,6 +79,9 @@ export const JOURNAL_EVENTS = [
   "original_copied",
   "contact_call",
   "contact_write",
+  "owner_place_set",
+  "owner_place_autofill",
+  "owner_mascot_tap",
 ] as const satisfies readonly JournalEventName[];
 
 export type TrackedEvent = { [N in JournalEventName]: { name: N; props: JournalEvents[N] } }[JournalEventName];

@@ -50,6 +50,8 @@ export interface TgWebApp {
   openTelegramLink?(url: string): void;
   shareMessage?(messageId: string, callback?: Callback<[boolean]>): void;
   requestWriteAccess?(callback?: Callback<[boolean]>): void;
+  /** Bot API 6.9: the native prompt for the user's phone; the second argument (the contact) is never read here. */
+  requestContact?(callback?: Callback<[boolean, unknown?]>): void;
   checkHomeScreenStatus?(callback?: Callback<[TgHomeScreenStatus]>): void;
   addToHomeScreen?(): void;
   BackButton?: TgButton;
