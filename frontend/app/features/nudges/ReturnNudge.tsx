@@ -14,7 +14,7 @@ import { routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
 
 import { RETURN_SHOW_MS } from "./constants";
-import { NudgeClose, NudgeFrame, NudgeGo } from "./FollowNudge";
+import { NudgeClose, NudgeFrame, NudgeGo } from "./NudgeFrame";
 import { useMarkShownOnRender } from "./shown";
 
 /** «С вашего прошлого захода — 12 новых»: the banner's title, which `NudgeHost` also announces. */

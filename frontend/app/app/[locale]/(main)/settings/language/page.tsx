@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Settings › Language (SCR-035); WP-31 replaces the placeholder. */
+import { SettingsSubPage } from "@/features/settings/SettingsSubPage";
+
+/** Settings › Language (SCR-035), WP-31: the page over the settings screen, which the layout keeps mounted. */
 export default function Page() {
-  return <RoutePlaceholder name="settings/language" />;
+  return (
+    <Suspense fallback={null}>
+      <SettingsSubPage name="language" />
+    </Suspense>
+  );
 }

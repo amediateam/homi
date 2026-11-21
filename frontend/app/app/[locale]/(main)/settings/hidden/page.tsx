@@ -1,6 +1,12 @@
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
+import { Suspense } from "react";
 
-/** Settings › Hidden «Скрытое» (SCR-039); WP-31 replaces the placeholder. */
+import { SettingsSubPage } from "@/features/settings/SettingsSubPage";
+
+/** Settings › Hidden «Скрытое» (SCR-039), WP-31: the page over the settings screen, which the layout keeps mounted. */
 export default function Page() {
-  return <RoutePlaceholder name="settings/hidden" />;
+  return (
+    <Suspense fallback={null}>
+      <SettingsSubPage name="hidden" />
+    </Suspense>
+  );
 }

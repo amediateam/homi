@@ -4,7 +4,7 @@ import type { components } from "@homi/types";
 import { useCallback, useMemo } from "react";
 
 import { bffFetch } from "@/lib/api/browser";
-import { type Fetcher, type ResourceStatus, seedResource, useResource } from "@/lib/data/useResource";
+import { type Fetcher, readResource, type ResourceStatus, seedResource, useResource } from "@/lib/data/useResource";
 import { useSession } from "@/lib/session/SessionProvider";
 
 /** `GET /hidden` (WP-13): the hidden listings as previews and the blocked authors with their entry ids. */
@@ -35,6 +35,8 @@ export interface HiddenView {
   count: number;
   /** Writes the lists shown (an optimistic removal or a rollback); the entry stays fresh. */
   set: (next: Hidden) => void;
+  /** The lists shown now, read outside a render (a rollback after other changes, legacy's functional update). */
+  current: () => Hidden;
   refetch: () => Promise<void>;
 }
 
@@ -44,6 +46,10 @@ export function useHidden({ initial }: { initial?: Hidden } = {}): HiddenView {
   const resource = useResource<Hidden>(HIDDEN_KEY, readHidden, { enabled: session.status === "ready", initial });
   const hidden = useMemo(() => (resource.data === undefined ? null : hiddenLists(resource.data)), [resource.data]);
   const set = useCallback((next: Hidden) => seedResource(HIDDEN_KEY, next), []);
+  const current = useCallback(() => hiddenLists(readResource<Hidden>(HIDDEN_KEY)), []);
   const count = hidden === null ? 0 : hidden.listings.length + hidden.authors.length;
-  return useMemo(() => ({ hidden, status: resource.status, count, set, refetch: resource.refetch }), [hidden, resource.status, count, set, resource.refetch]);
+  return useMemo(
+    () => ({ hidden, status: resource.status, count, set, current, refetch: resource.refetch }),
+    [hidden, resource.status, count, set, current, resource.refetch],
+  );
 }

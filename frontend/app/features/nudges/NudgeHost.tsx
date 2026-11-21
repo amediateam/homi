@@ -20,9 +20,11 @@ import { useSession } from "@/lib/session/SessionProvider";
 import { useToast } from "@/lib/ui/toast";
 
 import { FollowNudge } from "./FollowNudge";
+import { HomeScreenNudge } from "./HomeScreenNudge";
 import { ReturnNudge, returnTitle } from "./ReturnNudge";
 import { type NudgeEnv, useNudgeSlot } from "./store";
 import { useFollowNudge } from "./useFollowNudge";
+import { useHomeScreenOffer } from "./useHomeScreenOffer";
 import { useReturnNudge } from "./useReturnNudge";
 
 /**
@@ -81,8 +83,8 @@ export interface NudgeHostProps {
  * The return banner's hook comes first, so its effects — the search visits among them (`useSearchVisits`) — run before
  * the follow nudge's: a return check of the applied filters is pending before the follow nudge's wait could start
  * (BR-APP-046). The visit tracker also hands the long return to the search feed (`useFreshFeed`, WP-38), with the tab
- * and whether a layer covers the search (`coversSearch`); the fresh pill itself is the top bar's. Seam: the home offer of WP-31 renders last, while `useNudgeSlot().active === "home"`, and names its
- * title in the live line.
+ * and whether a layer covers the search (`coversSearch`); the fresh pill itself is the top bar's. The home offer of WP-31 (`useHomeScreenOffer`) renders last,
+ * while it holds the slot on the feed list with no toast, and names its title in the live line.
  *
  * The live line (`data-nudge-live`, visually hidden) is always in the document and holds the title of the nudge on
  * screen, empty while none is: a polite live region announces only a change inside it, and the card is inserted
@@ -100,6 +102,7 @@ export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
   });
   const back = useReturnNudge(env, { searchTab, flags, onLongReturn });
   const follow = useFollowNudge(env, { flags });
+  const home = useHomeScreenOffer(env);
 
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -137,6 +140,9 @@ export function NudgeHost({ searchTab, flags = devFlags }: NudgeHostProps) {
         flags={flags}
       />
     );
+  } else if (slot.active === "home" && home.visible && env.allowed && !env.toast) {
+    title = t("home.title");
+    nudge = <HomeScreenNudge onExpire={home.expire} onClose={home.close} onAdd={home.add} />;
   }
   return (
     <>

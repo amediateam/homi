@@ -4,7 +4,7 @@ import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Clock, Coins, ErrorState, EyeOff, GalleryHorizontal, Gauge, Globe, Moon, Palette, Spinner } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 import { getGraphicsMode, useGraphicsMode } from "@/lib/graphics";
 import { nav } from "@/lib/navigation/nav";
@@ -13,6 +13,8 @@ import { useSession } from "@/lib/session/SessionProvider";
 import { tg } from "@/lib/telegram";
 
 import { AboutGroup } from "./AboutGroup";
+import { useLanguageFollowUp } from "./applyProfileChange";
+import { setCardSample } from "./cardSample";
 import { cardStyleOf, digestLabel, graphicsLabel, optionName, quietLabel, themeLabel } from "./format";
 import { SettingsGroup, SettingsRow } from "./SettingsParts";
 import { useThemePreference } from "./themeChoice";
@@ -62,6 +64,9 @@ export function SettingsScreen({ initialSettings, initialHidden }: SettingsScree
   const homeStatus = useHomeScreenStatus();
   const [showGraphics] = useState(graphicsRowShown);
   const { settings } = view;
+  useLanguageFollowUp(locale);
+  // The sample card's result outlives its page, not the tab (LB-APP-053).
+  useLayoutEffect(() => () => setCardSample("idle"), []);
 
   const open = (page: SettingsPage) => {
     tg.haptic.impact("light");

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRef } from "react";
 
 import { updateSettings } from "@/lib/actions/settings";
+import { type DevFlags, devFlags } from "@/lib/flags";
 import { useAction } from "@/lib/actions/useAction";
 import { tg } from "@/lib/telegram";
 import type { ThemePreference } from "@/lib/telegram/theme";
@@ -20,7 +21,7 @@ const THEMES: readonly ThemePreference[] = ["auto", "light", "dark"];
  * back the last theme the server accepted, with `failed()`. Picking the current one sends nothing. Of two quick picks
  * the last one stands: only the failure of the latest save restores.
  */
-export function ThemePage() {
+export function ThemePage({ flags = devFlags }: { flags?: DevFlags } = {}) {
   const t = useTranslations();
   const theme = useThemePreference();
   const save = useAction(updateSettings);
@@ -41,7 +42,7 @@ export function ThemePage() {
           accepted.current = next;
         } else if (request === latest.current) {
           chooseTheme(accepted.current ?? "auto");
-          failed();
+          failed({ flags });
         }
       },
       () => undefined,

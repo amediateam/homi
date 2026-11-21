@@ -7,7 +7,7 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/root-params", () => ({ locale: async () => "ru" }));
 
-const { blockAuthor, hideListing, unblockAuthor, unhideListing } = await import("@/lib/actions/hidden");
+const { blockAuthor, hideListing, unblockAuthor, unblockAuthorById, unhideAll, unhideListing } = await import("@/lib/actions/hidden");
 
 type Sent = { url: string; method: string; headers: Record<string, string>; body: unknown };
 let sent: Sent[] = [];
@@ -112,5 +112,28 @@ describe("the input check of the four actions", () => {
 
     await expect(hideListing({ number: 100001 })).resolves.toMatchObject({ ok: false, error: "unauthorized", status: 401 });
     expect(sent).toEqual([]);
+  });
+});
+
+describe("unblockAuthorById and unhideAll (WP-31, «Скрытое»)", () => {
+  it("DELETE /hidden/authors/{id} by the entry id of the hidden list", async () => {
+    await expect(unblockAuthorById({ id: "01JD0000000000000000000011" })).resolves.toMatchObject({ ok: true, data: null });
+
+    expect(sent.map((call) => [call.method, call.url])).toEqual([["DELETE", "https://api.test/api/v1/hidden/authors/01JD0000000000000000000011"]]);
+  });
+
+  it("an id that is not a ULID makes no request", async () => {
+    for (const input of [{ id: "" }, { id: "../me" }, { id: "01JD000000000000000000001" }, { id: 7 }, null, {}]) {
+      await expect(unblockAuthorById(input as never), JSON.stringify(input)).resolves.toMatchObject({ ok: false, error: "validation" });
+    }
+    expect(sent).toEqual([]);
+  });
+
+  it("DELETE /hidden returns everything; header mode carries the token", async () => {
+    jar.clear();
+    await expect(unhideAll(null, { token: "header-token" })).resolves.toMatchObject({ ok: true, data: null });
+
+    expect(sent.map((call) => [call.method, call.url])).toEqual([["DELETE", "https://api.test/api/v1/hidden"]]);
+    expect(sent[0]?.headers.Authorization).toBe("Bearer header-token");
   });
 });
