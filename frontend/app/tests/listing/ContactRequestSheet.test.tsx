@@ -8,12 +8,14 @@ const state = vi.hoisted(() => ({
   send: vi.fn<(input: unknown) => Promise<ActionResult<unknown>>>(),
   back: vi.fn(),
   report: vi.fn(),
+  address: "/listing/10000001/contact",
 }));
 
 vi.mock("@/lib/actions/listing", () => ({ sendContactRequest: (input: unknown) => state.send(input) }));
 vi.mock("@/lib/actions/useAction", () => ({ useAction: (action: (input: unknown) => unknown) => (input: unknown) => action(input) }));
 vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ back: state.back, canGoBack: true }) }));
 vi.mock("@/lib/errors/report", () => ({ reportError: state.report }));
+vi.mock("@/lib/navigation/address", () => ({ currentAddress: () => state.address }));
 vi.mock("@/features/shell/RouteSheet", () => ({
   RouteSheet: ({ title, children, footer }: { title: string; children: React.ReactNode; footer: React.ReactNode }) => (
     <div data-sheet-title={title}>
@@ -54,9 +56,10 @@ function mount(card: ListingDetails = details()) {
 }
 
 beforeEach(() => {
-  for (const mock of Object.values(state)) {
+  for (const mock of [state.send, state.back, state.report]) {
     mock.mockReset();
   }
+  state.address = "/listing/10000001/contact";
   resetResources();
   resetRequestState();
   feedReference({ reference: { limits: { radars: 5, owner_listings: 2, owner_photos: 10, requests: { day: 12, week: 40, pause_minutes: 15 } } } as never });
@@ -113,6 +116,18 @@ describe("«Отклик хозяину» (WP-83, SCR-061)", () => {
     await act(async () => fireEvent.click(send()));
     expect(state.send).toHaveBeenCalledTimes(2);
     expect(state.back).toHaveBeenCalled();
+  });
+
+  it("a send that answers after the sheet was closed goes Back no more (review)", async () => {
+    state.send.mockImplementationOnce(async () => {
+      // The seeker closed the sheet while the request was out.
+      state.address = "/listing/10000001";
+      return { ok: true, data: { status: "pending" }, meta: { source: "stub" } } as never;
+    });
+    mount();
+    fireEvent.click(document.querySelector('[data-who="couple"]')!);
+    await act(async () => fireEvent.click(send()));
+    expect(state.back).not.toHaveBeenCalled();
   });
 
   it("request_closed: its line, and the bar stays closed for this number (DEC-85)", async () => {

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { sendContactRequest } from "@/lib/actions/listing";
 import { useAction } from "@/lib/actions/useAction";
+import { currentAddress } from "@/lib/navigation/address";
 import { reportError } from "@/lib/errors/report";
 import { useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
@@ -42,13 +43,20 @@ export function useContactRequest(details: ListingDetails, onDone: () => void) {
       setSending(true);
       setLine(null);
       tg.haptic.impact("medium");
+      // The sheet may be closed while the send runs (or during Telegram's write-access prompt): then no Back of ours.
+      const from = currentAddress();
+      const done = () => {
+        if (currentAddress() === from) {
+          onDone();
+        }
+      };
       try {
         const result = await withChatAccess(() => send({ number, ...body, init_data: tg.initData() }), { restartText: t("contact.err.noChatRestart") });
         if (result.ok) {
           tg.haptic.success();
           patchRequestStatus(number, result.data.status);
           rereadListing(number);
-          onDone();
+          done();
           return;
         }
         tg.haptic.error();
@@ -60,7 +68,7 @@ export function useContactRequest(details: ListingDetails, onDone: () => void) {
           rereadListing(number);
         }
         if (outcome.close) {
-          onDone();
+          done();
           return;
         }
         if (result.code === undefined || outcome.line?.key === "common.saveFailed") {

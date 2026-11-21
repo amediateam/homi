@@ -49,6 +49,7 @@ describe("requestOutcome (SCR-061)", () => {
     expect(requestOutcome(failure("rate_limited", "requests_fast"), limits).line).toEqual({ key: "contact.err.requestsFast", values: { minutes: 15 } });
     expect(requestOutcome(failure("rate_limited", "requests_day"), limits).line).toEqual({ key: "contact.err.requestsDay", values: { day: 10 } });
     expect(requestOutcome(failure("rate_limited", "requests_week"), limits).line).toEqual({ key: "contact.err.requestsWeek", values: { week: 30 } });
+    expect(requestOutcome(failure("rate_limited"), limits).line).toEqual({ key: "common.saveFailed" });
     expect(requestOutcome(failure("requests_blocked"), limits).line).toEqual({ key: "contact.err.blocked" });
     expect(requestOutcome(failure("request_closed"), limits)).toEqual({ line: { key: "contact.err.closed" }, reread: true, close: false, closeHere: true });
     expect(requestOutcome(failure("own_listing"), limits)).toEqual({ line: null, reread: true, close: true, closeHere: false });

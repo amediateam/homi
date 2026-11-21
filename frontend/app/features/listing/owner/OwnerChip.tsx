@@ -2,7 +2,7 @@
 
 import { Info, leaveRef, ShieldCheck, X } from "@homi/ui";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { track } from "@/lib/analytics/events";
 import { nav } from "@/lib/navigation/nav";
@@ -22,6 +22,8 @@ import { countOwnerTip, dismissOwnerTip, OWNER_TIP_DELAY_MS, OWNER_TIP_SHOWN_MS,
 export function OwnerChip({ number, loaded }: { number: number; loaded: boolean }) {
   const t = useTranslations();
   const [tip, setTip] = useState(false);
+  /** One opening per tap: a second tap while the sheet's push lands opens nothing and sends nothing. */
+  const opening = useRef(false);
 
   useEffect(() => {
     if (!ownerTipDue()) {
@@ -39,9 +41,13 @@ export function OwnerChip({ number, loaded }: { number: number; loaded: boolean 
   }, [number]);
 
   const open = () => {
-    if (!loaded) {
+    if (!loaded || opening.current) {
       return;
     }
+    opening.current = true;
+    setTimeout(() => {
+      opening.current = false;
+    }, 800);
     tg.haptic.impact("light");
     track("owner_info_opened", { listing_id: number });
     dismissOwnerTip();

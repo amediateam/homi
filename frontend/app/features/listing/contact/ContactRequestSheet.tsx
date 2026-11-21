@@ -32,7 +32,7 @@ export function ContactRequestSheet({ details, presentation }: { details: Listin
   const { requestLimits } = useReference();
   const [draft, setDraft] = useState(() => ({ ...EMPTY_DRAFT, message: t("contact.messageDefault") }));
   const { submit, sending, line } = useContactRequest(details, close);
-  const minutes = details.owner?.response_minutes ?? null;
+  const time = formatResponseTime(details.owner?.response_minutes ?? Number.NaN, locale);
   const relayed = details.origin === "legacy";
 
   return (
@@ -56,7 +56,7 @@ export function ContactRequestSheet({ details, presentation }: { details: Listin
     >
       <div data-route="listing/contact" className="flex flex-col gap-[16px] px-(--gutter) pb-[12px]">
         <p className="text-[15px] leading-[1.45] text-hint">
-          {minutes === null ? t("contact.leadNoTime") : t("contact.leadTime", { time: formatResponseTime(minutes, locale) })}
+          {time === null ? t("contact.leadNoTime") : t("contact.leadTime", { time })}
         </p>
 
         <fieldset className="flex flex-col gap-[8px]">

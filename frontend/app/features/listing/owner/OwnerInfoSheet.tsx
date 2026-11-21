@@ -27,7 +27,7 @@ export function OwnerInfoSheet({ details }: { details: ListingDetails }) {
   const { back } = useBack();
   const close = useCloseOnce(back);
   const minutes = details.owner?.response_minutes ?? null;
-  const { points, foot } = infoPoints(details, minutes === null ? null : formatResponseTime(minutes, locale));
+  const { points, foot } = infoPoints(details, formatResponseTime(minutes ?? Number.NaN, locale));
   return (
     <RouteSheet presentation="layer" variant="compact" title={t("owner.verified")} onClose={close}>
       <div data-route="listing/owner" className="flex flex-col gap-[12px] px-(--gutter) pb-[8px]">

@@ -40,7 +40,11 @@ export function requestOutcome(failure: ApiFailure, limits: RequestLimits): Requ
       if (reason === "requests_week") {
         return { ...none, line: { key: "contact.err.requestsWeek", values: { week: limits.week } } };
       }
-      return { ...none, line: { key: "contact.err.requestsDay", values: { day: limits.day } } };
+      if (reason === "requests_day") {
+        return { ...none, line: { key: "contact.err.requestsDay", values: { day: limits.day } } };
+      }
+      // A 429 without a request reason (the API's own throttle): no limit is named.
+      return { ...none, line: { key: "common.saveFailed" } };
     }
     case "requests_blocked":
       return { ...none, line: { key: "contact.err.blocked" } };

@@ -9,8 +9,9 @@ describe("formatResponseTime (WP-83, fix of LB-APP-076)", () => {
     expect(formatResponseTime(90, "en")).toBe("2 hr");
   });
 
-  it("never prints 0 or a negative time", () => {
-    expect(formatResponseTime(0, "ru")).toBe("1 мин");
-    expect(formatResponseTime(-5, "ru")).toBe("1 мин");
+  it("gives nothing for 0, a negative time or NaN", () => {
+    expect(formatResponseTime(0, "ru")).toBeNull();
+    expect(formatResponseTime(-5, "ru")).toBeNull();
+    expect(formatResponseTime(Number.NaN, "ru")).toBeNull();
   });
 });
