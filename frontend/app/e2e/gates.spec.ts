@@ -48,7 +48,7 @@ function recordRequests(page: Page, match: (request: Request) => boolean): Reque
 
 /**
  * Answers the sign-in (`POST /bff/session`) with a refusal of the app server, `times` times (all when omitted), and
- * passes the later ones through — to the header mode of `launchApp` when it is on, which registered its route first.
+ * passes the later ones through — to header mode's context route when it is on, which every page route runs before.
  */
 async function refuseSignIn(page: Page, reason: string, times = Infinity): Promise<() => number> {
   let refused = 0;
@@ -316,8 +316,7 @@ test.describe("session expired", () => {
 
   /**
    * Header mode keeps the token in memory, so its sign-in is repeated when a read is refused (WP-22). The refusal is
-   * registered after the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front
-   * of a route registered before it, and a sign-in refused at launch never reaches a session mode anyway. The read is
+   * registered after the launch, because a sign-in refused at launch never reaches a session mode. The read is
    * the map's points (`GET /listings/map` through `/bff`, WP-27), asked for again when the deal switch of the map's
    * top bar changes the search.
    */

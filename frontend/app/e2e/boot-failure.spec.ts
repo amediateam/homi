@@ -1,4 +1,4 @@
-import { expect, playwrightTelegram, test } from "@homi/testing/playwright";
+import { allowConsoleErrors, expect, playwrightTelegram, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /** The update screen of the boot script (SCR-001, TMA-003, WP-21). */
@@ -55,6 +55,7 @@ test.describe("boot failure", () => {
   });
 
   test("an error before React mounts shows the screen, and it stays after the app mounts", async ({ page }) => {
+    allowConsoleErrors(test.info(), /^uncaught: early crash$/);
     await playwrightTelegram(page);
     // Hold the app's chunks so that React cannot mount before the error.
     await page.route("**/_next/static/chunks/**", async (route) => {
