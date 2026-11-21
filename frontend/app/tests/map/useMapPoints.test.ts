@@ -12,7 +12,7 @@ import { hide, resetSessionMaps } from "@/lib/data/sessionMaps";
 
 import { withDevFlags } from "../helpers/flags";
 
-type Answer = ApiResult<{ points: MapPoint[]; total?: number }>;
+type Answer = ApiResult<{ points: MapPoint[]; total?: number; with_point?: number }>;
 
 /** One `bffFetch` the hook sent; the test answers it (or rejects it) when it wants. */
 interface Sent {
@@ -82,14 +82,14 @@ afterEach(() => {
 describe("useMapPoints (WP-27, SCR-011)", () => {
   it("asks listings/map once with the filters' v1 query and groups the answer, cheapest first", async () => {
     const { result } = points();
-    expect(result.current).toMatchObject({ status: "loading", groups: [], shown: 0, total: 0, missing: 0, responseId: 0, error: null });
+    expect(result.current).toMatchObject({ status: "loading", groups: [], shown: 0, cut: 0, missing: 0, responseId: 0, error: null });
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ path: "listings/map", query: toApiQuery(TASHKENT).toString() });
     expect(sent[0].query).not.toMatch(/sort=|limit=|cursor=/);
 
     await answer(0, answered(POINTS, 5));
 
-    expect(result.current).toMatchObject({ status: "ready", shown: 3, total: 5, missing: 2, responseId: 1, error: null });
+    expect(result.current).toMatchObject({ status: "ready", shown: 3, cut: 0, missing: 2, responseId: 1, error: null });
     expect(numbers(result.current)).toEqual([[2, 1], [3]]);
     expect(result.current.groups[0]).toMatchObject({ key: "41.31110,69.27970" });
     expect(sent).toHaveLength(1);
@@ -104,7 +104,7 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
   it("counts the points when the answer has no total", async () => {
     const { result } = points();
     await answer(0, answered(POINTS));
-    expect(result.current).toMatchObject({ status: "ready", shown: 3, total: 3, missing: 0 });
+    expect(result.current).toMatchObject({ status: "ready", shown: 3, cut: 0, missing: 0 });
   });
 
   it("a filters change aborts the request in flight and its late answer never reaches the state", async () => {
@@ -117,7 +117,7 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(sent[1].query).toBe(toApiQuery(next).toString());
 
     await answer(0, answered(POINTS, 3));
-    expect(result.current).toMatchObject({ status: "loading", groups: [], shown: 0, total: 0, responseId: 0 });
+    expect(result.current).toMatchObject({ status: "loading", groups: [], shown: 0, cut: 0, responseId: 0 });
 
     await answer(1, answered([point(9, 41.2, 69.2, 400)], 1));
     expect(numbers(result.current)).toEqual([[9]]);
@@ -171,6 +171,27 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(failing.result.current).toMatchObject({ status: "ready", responseId: 1 });
   });
 
+  it("keeps with_point: a cut answer counts the located listings left out; without one the points count (WP-37)", async () => {
+    const cut = points();
+    await answer(0, { ok: true, data: { points: POINTS, total: 10, with_point: 8 }, meta: { source: "stub" } });
+    expect(cut.result.current).toMatchObject({ status: "ready", shown: 3, cut: 5, missing: 2 });
+    expect(cut.result.current.queryKey).toBe(sent[0]?.query);
+    cut.unmount();
+
+    const older = points();
+    await answer(1, answered(POINTS, 5));
+    expect(older.result.current).toMatchObject({ shown: 3, cut: 0, missing: 2 });
+  });
+
+  it("a cut answer whose every point is hidden is empty; listings known only by district are not", async () => {
+    act(() => {
+      hide(POINTS.map((listing) => listing.number));
+    });
+    const cut = points();
+    await answer(0, { ok: true, data: { points: POINTS, total: 6, with_point: 6 }, meta: { source: "stub" } });
+    expect(cut.result.current).toMatchObject({ status: "empty", shown: 0, cut: 3, missing: 0 });
+  });
+
   it("a drawn area keeps the view on a bump also after an answer without points: the camera fitted the area", async () => {
     const { bumpFeedEpoch } = await import("@/features/feed/feedQuery");
     const area: SearchFilters = {
@@ -215,12 +236,12 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
   it("is empty only with no point and a total of 0; points without a location are ready with missing", async () => {
     const empty = points();
     await answer(0, answered([], 0));
-    expect(empty.result.current).toMatchObject({ status: "empty", groups: [], shown: 0, total: 0, missing: 0, responseId: 1 });
+    expect(empty.result.current).toMatchObject({ status: "empty", groups: [], shown: 0, cut: 0, missing: 0, responseId: 1 });
     empty.unmount();
 
     const unlocated = points();
     await answer(1, answered([], 4));
-    expect(unlocated.result.current).toMatchObject({ status: "ready", groups: [], shown: 0, total: 4, missing: 4 });
+    expect(unlocated.result.current).toMatchObject({ status: "ready", groups: [], shown: 0, cut: 0, missing: 4 });
   });
 
   it.each([
@@ -271,7 +292,7 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
 
     act(() => hide([2]));
     expect(numbers(result.current)).toEqual([[1], [3]]);
-    expect(result.current).toMatchObject({ status: "ready", shown: 2, total: 4, missing: 2, responseId: 1 });
+    expect(result.current).toMatchObject({ status: "ready", shown: 2, cut: 0, missing: 2, responseId: 1 });
     expect(result.current.groups).not.toBe(before);
     expect(sent).toHaveLength(1);
   });
@@ -299,7 +320,7 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     await answer(0, answered(POINTS, 3));
 
     act(() => hide([1, 2, 3]));
-    expect(result.current).toMatchObject({ status: "empty", groups: [], shown: 0, total: 0, responseId: 1 });
+    expect(result.current).toMatchObject({ status: "empty", groups: [], shown: 0, cut: 0, missing: 0, responseId: 1 });
   });
 
   it("a forbidden answer turns the session denied only with DEV-001 on (LB-APP-045)", async () => {

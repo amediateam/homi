@@ -59,25 +59,34 @@ describe("groupByLocation (SCR-011)", () => {
   });
 });
 
-describe("mapCounts (BR-APP-062)", () => {
+describe("mapCounts (BR-APP-062, BR-API-192, WP-37)", () => {
   const points = Array.from({ length: 300 }, (_, index) => point(100000 + index, 100 + index, 41 + index / 1000));
 
-  it("300 points of 320 with 5 of them hidden: 295 of 315, 20 known only by district", () => {
+  it("an uncut answer, 300 points of 320 with 5 hidden: 295 shown, 20 known only by district — the hidden lower shown only", () => {
     const hidden = new Set([100000, 100001, 100100, 100200, 100299]);
 
-    expect(mapCounts(points, 320, hidden)).toEqual({ shown: 295, total: 315, missing: 20 });
+    expect(mapCounts(points, 320, 300, hidden)).toEqual({ shown: 295, cut: 0, missing: 20 });
     expect(groupByLocation(points, hidden).flatMap((group) => group.items)).toHaveLength(295);
   });
 
-  it("a hidden listing that is not a point of the answer changes nothing", () => {
-    expect(mapCounts(points, 320, new Set([1, 2, 3]))).toEqual({ shown: 300, total: 320, missing: 20 });
+  it("a cut answer: 300 points of 600 located, 600 in all — 300 cut, nothing missing", () => {
+    expect(mapCounts(points, 600, 600, NONE)).toEqual({ shown: 300, cut: 300, missing: 0 });
   });
 
-  it("a missing total counts as the number of points; a total below the points has nothing missing", () => {
-    expect(mapCounts(points, undefined, new Set([100000]))).toEqual({ shown: 299, total: 299, missing: 0 });
-    expect(mapCounts(points, null, NONE)).toEqual({ shown: 300, total: 300, missing: 0 });
-    expect(mapCounts(points, 250, NONE)).toEqual({ shown: 300, total: 250, missing: 0 });
-    expect(mapCounts([], 0, NONE)).toEqual({ shown: 0, total: 0, missing: 0 });
+  it("both at once: 300 points of 500 located, 520 in all", () => {
+    expect(mapCounts(points, 520, 500, new Set([100000]))).toEqual({ shown: 299, cut: 200, missing: 20 });
+  });
+
+  it("no with_point (an older driver) counts the points; no total counts with_point", () => {
+    expect(mapCounts(points, 320, undefined, NONE)).toEqual({ shown: 300, cut: 0, missing: 20 });
+    expect(mapCounts(points, null, null, NONE)).toEqual({ shown: 300, cut: 0, missing: 0 });
+    expect(mapCounts(points, undefined, 400, NONE)).toEqual({ shown: 300, cut: 100, missing: 0 });
+  });
+
+  it("never negative: a with_point below the points, a total below with_point; a hidden number off the map changes nothing", () => {
+    expect(mapCounts(points, 250, 280, NONE)).toEqual({ shown: 300, cut: 0, missing: 0 });
+    expect(mapCounts(points, 320, 300, new Set([1, 2, 3]))).toEqual({ shown: 300, cut: 0, missing: 20 });
+    expect(mapCounts([], 0, 0, NONE)).toEqual({ shown: 0, cut: 0, missing: 0 });
   });
 });
 

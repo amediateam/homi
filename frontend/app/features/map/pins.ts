@@ -67,23 +67,32 @@ export function groupByLocation(points: readonly MapPoint[], hidden: ReadonlySet
   return result;
 }
 
-export type MapCounts = { shown: number; total: number; missing: number };
+export type MapCounts = { shown: number; cut: number; missing: number };
 
 /**
- * The numbers of the "N of M" note (BR-APP-062): `shown` = the points not hidden; `total` = the answer's `total` (the
- * number of points when it is missing) minus the hidden listings that are among the points; `missing` = the listings
- * known only by district, `max(0, total − shown)`. A hidden number that is not a point of the answer changes nothing.
+ * The numbers of the map's notes (BR-APP-062, BR-API-192; WP-37): `shown` = the points not hidden in this launch;
+ * `cut` = the located listings the source left out of the answer, `max(0, with_point − points)`; `missing` = the
+ * listings known only by district, `max(0, total − with_point)`. A missing `with_point` (an older driver) is the
+ * number of points, a missing `total` is `with_point`. A hidden listing lowers `shown` only.
  */
-export function mapCounts(points: readonly MapPoint[], total: number | null | undefined, hidden: ReadonlySet<number>): MapCounts {
+export function mapCounts(
+  points: readonly MapPoint[],
+  total: number | null | undefined,
+  withPoint: number | null | undefined,
+  hidden: ReadonlySet<number>,
+): MapCounts {
   let hiddenPoints = 0;
   for (const point of points) {
     if (hidden.has(point.number)) {
       hiddenPoints += 1;
     }
   }
-  const shown = points.length - hiddenPoints;
-  const counted = Math.max(0, (total ?? points.length) - hiddenPoints);
-  return { shown, total: counted, missing: Math.max(0, counted - shown) };
+  const located = withPoint ?? points.length;
+  return {
+    shown: points.length - hiddenPoints,
+    cut: Math.max(0, located - points.length),
+    missing: Math.max(0, (total ?? located) - located),
+  };
 }
 
 export type SpreadOffset = { dx: number; dy: number };

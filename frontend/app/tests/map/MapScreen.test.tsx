@@ -10,7 +10,7 @@ import type { BffOptions } from "@/lib/api/browser";
 import type { ApiResult } from "@/lib/api/types";
 import type { LocationResult } from "@/lib/telegram/location";
 
-type Answer = ApiResult<{ points: MapPoint[]; total?: number }>;
+type Answer = ApiResult<{ points: MapPoint[]; total?: number; with_point?: number }>;
 
 /** One `bffFetch` the screen sent; the test answers it when it wants. */
 interface Sent {
@@ -41,6 +41,8 @@ const state = vi.hoisted(() => ({
   view: { props: null as MapViewProps | null, mounts: 0 },
   /** The stub Leaflet view (WP-28). */
   leaflet: { props: null as MapViewProps | null, mounts: 0 },
+  /** The stub GL view throws while rendering (WP-37). */
+  viewThrows: false,
 }));
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: (path: string, options: BffOptions) =>
@@ -82,6 +84,9 @@ vi.mock("@/features/map/gl/MapViewGL", async () => {
   const { useEffect } = await import("react");
   return {
     default: function StubView(props: MapViewProps) {
+      if (state.viewThrows) {
+        throw new Error("view render");
+      }
       state.view.props = props;
       useEffect(() => {
         state.view.mounts += 1;
@@ -173,6 +178,7 @@ beforeEach(() => {
   state.webgl2 = true;
   state.view = { props: null, mounts: 0 };
   state.leaflet = { props: null, mounts: 0 };
+  state.viewThrows = false;
   at("/map", "city=tashkent");
   for (const mock of [
     state.reportError,
@@ -283,6 +289,59 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
     expect(screen.queryByText("Карта на этом устройстве пока недоступна")).toBeNull();
   });
 
+  it("a view that throws while rendering stays in the map: «Не загрузилось» with «Повторить», reported as `render`; «Повторить» remounts it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    state.viewThrows = true;
+    await mount();
+
+    expect(document.querySelector("[data-map-screen]")).not.toBeNull();
+    expect(document.querySelector("[data-map-view]")).toBeNull();
+    expect(document.querySelectorAll("[data-map-status]")).toHaveLength(1);
+    expect(pill()?.dataset.mapStatus).toBe("error");
+    expect(pill()?.textContent).toContain("Не загрузилось");
+    expect(state.reportError).toHaveBeenCalledTimes(1);
+    expect(state.reportError.mock.calls[0]?.[1]).toMatchObject({ kind: "render" });
+
+    state.viewThrows = false;
+    fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+    await act(() => vi.dynamicImportSettled());
+
+    expect(state.impact).toHaveBeenCalledWith("light");
+    expect(document.querySelector('[data-map-view="stub"]')).not.toBeNull();
+    expect(state.view.mounts).toBe(1);
+    expect(document.querySelector('[data-map-status="error"]')).toBeNull();
+  });
+
+  it("a render error while drawing closes the drawing layer once", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await mount();
+
+    // The drawing opens and the view throws in the same render: the boundary reports before the screen's layout
+    // effects, so only a close that reads this commit's state closes it.
+    at("/map", "city=tashkent&draw=1");
+    state.viewThrows = true;
+    act(() => hide([99]));
+
+    expect(pill()?.dataset.mapStatus).toBe("error");
+    expect(vi.mocked(nav.replace).mock.calls.length + vi.mocked(nav.back).mock.calls.length).toBe(1);
+  });
+
+  it("a render error closes the card and hides the locate button with the view", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await mount();
+    await answer(0, answered([point(1)], 1));
+    await select([1]);
+    expect(card()).not.toBeNull();
+
+    state.viewThrows = true;
+    // A hidden listing that is not the card's re-renders the screen and leaves the card open — until the view throws.
+    act(() => hide([99]));
+
+    expect(card()).toBeNull();
+    expect(locateButton()).toBeNull();
+    expect(pill()?.dataset.mapStatus).toBe("error");
+  });
+
   it("a Leaflet failure shows the error pill; «Повторить» mounts the view anew", async () => {
     state.webgl2 = false;
     await mount();
@@ -359,6 +418,64 @@ describe("MapScreen: the note (BR-APP-062, KV-FE-031)", () => {
     expect(note()).not.toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(note()).toBeNull();
+  });
+
+  it("a cut answer: «На карте — 2 самых свежих. Остальные — в списке» for 6 s; cut and missing at once give the cut note only", async () => {
+    await mount();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 9, with_point: 6 }, meta: { source: "stub" } });
+
+    expect(note()).toBe("На карте — 2 самых свежих. Остальные — в списке");
+    expect(document.querySelectorAll("[data-map-note]")).toHaveLength(1);
+    act(() => vi.advanceTimersByTime(NOTE_MS - 1));
+    expect(note()).not.toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(note()).toBeNull();
+  });
+
+  it("the cut note counts the points shown: a listing hidden in this launch lowers it; the props carry the search as the camera key", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 6, with_point: 6 }, meta: { source: "stub" } });
+    act(() => hide([2]));
+
+    expect(note()).toBe("На карте — 1 самых свежих. Остальные — в списке");
+    expect(props().cameraKey).toBe(String(state.sent[0]?.query));
+  });
+
+  it("a cut answer never says «N из M», also with listings without a point; a cut note whose points are all hidden says nothing", async () => {
+    act(() => hide([1, 2]));
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 9, with_point: 6 }, meta: { source: "stub" } });
+
+    expect(note()).toBeNull();
+  });
+
+  it("another search drops a «N из M» note at once, before its answer", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 5, with_point: 2 }, meta: { source: "stub" } });
+    expect(note()).not.toBeNull();
+
+    at("/map", "city=tashkent&rooms_min=2&rooms_max=2");
+    act(() => hide([99]));
+    expect(note()).toBeNull();
+  });
+
+  it("another search drops the counts note at once", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 6, with_point: 6 }, meta: { source: "stub" } });
+    expect(note()).not.toBeNull();
+
+    at("/map", "city=tashkent&rooms_min=2&rooms_max=2");
+    await act(async () => props().onBackground());
+    expect(note()).toBeNull();
+  });
+
+  it("«N из M» counts the listings without a point beside the points shown, not the hidden ones", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 5, with_point: 2 }, meta: { source: "stub" } });
+    act(() => hide([2]));
+
+    expect(note()).toBe("На карте 1 из 4 · у 3 объявлений известен только район");
   });
 
   it("no note when every listing of the search is on the map", async () => {

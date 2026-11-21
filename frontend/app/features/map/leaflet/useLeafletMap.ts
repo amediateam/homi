@@ -6,7 +6,19 @@ import { type RefObject, useEffect, useEffectEvent, useRef, useState } from "rea
 
 import { launchMapOptions } from "@/lib/deeplinks/launch";
 
-import { FIT_MAX_ZOOM, FIT_MS, FIT_PADDING, fitKey, polygonBounds, readFit, robustBounds, writeFit } from "../camera";
+import {
+  type CameraMemory,
+  FIT_MAX_ZOOM,
+  FIT_MS,
+  FIT_PADDING,
+  fitKey,
+  polygonBounds,
+  readFit,
+  recallCamera,
+  rememberCamera,
+  robustBounds,
+  writeFit,
+} from "../camera";
 import type { CityView, MapFailReason, MapGroup } from "../types";
 import { type LeafletLibrary, loadLeaflet, removeLeafletMap } from "./library";
 
@@ -33,6 +45,10 @@ export function reducedMotion(): boolean {
 }
 
 export type LeafletMapInput = {
+  /** The search of the points (`MapViewProps.cameraKey`): the first camera is the one remembered for it. */
+  cameraKey: string;
+  /** The view's camera memory, shared with `useLeafletCamera` (WP-37). */
+  memoryRef: RefObject<CameraMemory>;
   cityView: CityView;
   /** `cityView` is the city's own (`MapViewProps.cityKnown`); the stand-in opens without fit memory. */
   cityKnown: boolean;
@@ -45,16 +61,34 @@ export type LeafletMapInput = {
  * map failing to be made, is a `chunk` failure, reported once per map. A map `click` is a background tap: Leaflet
  * fires it only for the map itself, a marker's click does not bubble to it. Zoom buttons, the keyboard, the built-in
  * attribution (`MapAttribution` draws it) and world copies are off; the first camera is the one the route had when
- * it was hidden, else the known city's fit memory, else the city view. `?mapdebug` exposes the map as
- * `window.homiMap` outside production (TMA-012).
+ * it was hidden, else the one this engine's map was left at for the same search in this launch (WP-37,
+ * `recallCamera`), else the known city's fit memory, else the city view. The cleanup saves the camera for the search
+ * it was last fitted or restored for, only while that is the search shown (`rememberCamera`); the basemap's fallback
+ * after 1.2 s without a fit saves nothing. `?mapdebug` exposes the map as `window.homiMap` outside production
+ * (TMA-012).
  */
 export function useLeafletMap(container: RefObject<HTMLElement | null>, input: LeafletMapInput): LeafletHandle {
-  const { cityView, cityKnown, onFail, onBackground } = input;
+  const { cityView, cityKnown, onFail, onBackground, cameraKey, memoryRef } = input;
   const mapRef = useRef<LeafletInstance | null>(null);
   const kept = useRef<CityView | null>(null);
   const [generation, setGeneration] = useState(0);
 
-  const initial = useEffectEvent(() => kept.current ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView);
+  const initial = useEffectEvent(() => {
+    const recalled = kept.current === null ? recallCamera("leaflet", cameraKey) : null;
+    if (recalled !== null) {
+      memoryRef.current.restored = cameraKey;
+      memoryRef.current.placed = cameraKey;
+    }
+    return kept.current ?? recalled ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView;
+  });
+  // Saved only while the camera belongs to the search shown: once another search came (a city jump, an answer
+  // without points, one still pending), the camera is neither that search's nor the one before.
+  const save = useEffectEvent((view: CityView) => {
+    const { placed } = memoryRef.current;
+    if (placed !== null && placed === cameraKey) {
+      rememberCamera("leaflet", placed, view);
+    }
+  });
   const fail = useEffectEvent((reason: MapFailReason) => onFail(reason));
   const background = useEffectEvent(() => onBackground());
 
@@ -110,6 +144,7 @@ export function useLeafletMap(container: RefObject<HTMLElement | null>, input: L
       const map = created;
       const center = map.getCenter();
       kept.current = { center: [center.lat, center.lng], zoom: map.getZoom() };
+      save(kept.current);
       if ((window as DebugWindow).homiMap === map) {
         delete (window as DebugWindow).homiMap;
       }
@@ -123,6 +158,9 @@ export function useLeafletMap(container: RefObject<HTMLElement | null>, input: L
 
 export type LeafletCameraInput = {
   responseId: number;
+  /** The search of the points: a first answer for the restored search keeps the remembered camera (WP-37). */
+  cameraKey: string;
+  memoryRef: RefObject<CameraMemory>;
   groups: readonly MapGroup[];
   polygon: Polygon | null;
   cityView: CityView;
@@ -140,12 +178,14 @@ function pointsOf(groups: readonly MapGroup[]): MapGroup[] {
  * ones fly for 500 ms; a regrouping without a new answer does not move the camera; a new city jumps to its view; the
  * first fit for a city is its fit memory; the Tashkent stand-in keeps none and is replaced by the first known city
  * only while no fit has moved the camera. Leaflet snaps to whole zooms, so a fit's zoom is a whole one. Reduced
- * motion turns the flights into jumps. Answers whether the current map has had its first fit — also a map made again
- * after an Activity re-show once an earlier map was fitted, since it opens at that camera.
+ * motion turns the flights into jumps. A map that opened at the camera remembered for its search (WP-37) takes the
+ * first answer for that search without a fit, as if it had fitted it. Answers whether the current map has had its
+ * first fit — also a map made again after an Activity re-show once an earlier map was fitted, or one restored from the
+ * memory, since it opens at that camera.
  */
 export function useLeafletCamera(
   { mapRef, generation }: LeafletHandle,
-  { responseId, groups, polygon, cityView, cityKnown }: LeafletCameraInput,
+  { responseId, groups, polygon, cityView, cityKnown, cameraKey, memoryRef }: LeafletCameraInput,
 ): boolean {
   const fitted = useRef(0);
   // The first fit of the current map: the deferred basemap waits for it (WP-28 "Basemap").
@@ -187,9 +227,25 @@ export function useLeafletCamera(
       map.setView(center, zoom, { animate: false });
     }
     animate.current = true;
+    memoryRef.current.placed = cameraKey;
     if (city !== null && savedCity.current !== city) {
       savedCity.current = city;
       writeFit(cityView.center, { center: [center.lat, center.lng], zoom });
+    }
+    return true;
+  });
+
+  /** The first answer after a restore: `true` when it is for the restored search, which keeps the camera. */
+  const keepsRestored = useEffectEvent(() => {
+    const { restored } = memoryRef.current;
+    memoryRef.current.restored = null;
+    if (restored === null || restored !== cameraKey) {
+      return false;
+    }
+    animate.current = true;
+    // The city's fit memory stays the first fit's: a later fit of another search does not replace it.
+    if (city !== null) {
+      savedCity.current = city;
     }
     return true;
   });
@@ -207,12 +263,12 @@ export function useLeafletCamera(
     }
     if (shownCity.current !== null && shownCity.current !== city) {
       jumpToCity(instance.map, false);
-    } else if (shownCity.current === null && standIn.current && !animate.current) {
+    } else if (shownCity.current === null && standIn.current && !animate.current && memoryRef.current.restored === null) {
       jumpToCity(instance.map, true);
     }
     shownCity.current = city;
     standIn.current = false;
-  }, [mapRef, generation, city]);
+  }, [mapRef, generation, city, memoryRef]);
 
   useEffect(() => {
     const instance = mapRef.current;
@@ -227,7 +283,7 @@ export function useLeafletCamera(
       return;
     }
     fitted.current = responseId;
-    if (fit(instance)) {
+    if (keepsRestored() || fit(instance)) {
       setFirstFit(generation);
     }
   }, [mapRef, generation, responseId]);

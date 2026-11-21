@@ -37,10 +37,12 @@ export interface MapPoints {
   /** The points not hidden, one group per rounded location, cheapest first (`pins.ts`). */
   groups: MapGroup[];
   shown: number;
-  /** The answer's `total` minus the hidden points. */
-  total: number;
+  /** Located listings the source left out of the answer: the «N самых свежих» note (BR-APP-062, WP-37). */
+  cut: number;
   /** Listings of the search without a location: the "N of M" note (BR-APP-062). */
   missing: number;
+  /** The map's v1 query these points belong to: the key of the camera memory (WP-37). */
+  queryKey: string;
   /** Grows by one with each successful answer, never with a change of the hidden set: the view refits on it. */
   responseId: number;
   /** `meta.source` of the answer these points come from (`25` §4.4); `undefined` until it answered, or without one. */
@@ -62,6 +64,8 @@ interface State {
   points: readonly MapPoint[];
   /** `null` when the answer has none: `mapCounts` counts the points then. */
   answerTotal: number | null;
+  /** The answer's `with_point`; `null` without one (an older driver). */
+  withPoint: number | null;
   loaded: boolean;
   error: ApiFailure | null;
   /** The request the effect sends while `enabled`; `null` once answered. */
@@ -73,7 +77,7 @@ interface State {
 }
 
 function start(key: string, responseId: number, epoch: number): State {
-  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined, epoch };
+  return { key, points: [], answerTotal: null, withPoint: null, loaded: false, error: null, request: {}, responseId, source: undefined, epoch };
 }
 
 function settle(state: State, result: ApiResult<MapAnswer>): State {
@@ -82,10 +86,12 @@ function settle(state: State, result: ApiResult<MapAnswer>): State {
   }
   const points = Array.isArray(result.data?.points) ? result.data.points : [];
   const answerTotal = result.data?.total ?? null;
+  const withPoint = typeof result.data?.with_point === "number" ? result.data.with_point : null;
   return {
     ...state,
     points,
     answerTotal,
+    withPoint,
     loaded: true,
     error: null,
     request: null,
@@ -95,14 +101,18 @@ function settle(state: State, result: ApiResult<MapAnswer>): State {
   };
 }
 
-function statusOf(state: State, counts: { shown: number; total: number }): MapPointsStatus {
+/**
+ * `empty` = no point to show and no listing known only by district. A cut answer whose every point was hidden in this
+ * launch is empty too: the map has nothing to draw and no note to give.
+ */
+function statusOf(state: State, counts: { shown: number; missing: number }): MapPointsStatus {
   if (state.error !== null) {
     return "error";
   }
   if (!state.loaded) {
     return "loading";
   }
-  return counts.shown === 0 && counts.total === 0 ? "empty" : "ready";
+  return counts.shown === 0 && counts.missing === 0 ? "empty" : "ready";
 }
 
 /**
@@ -175,16 +185,17 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
   }, [key]);
 
   const hidden = useSessionMap("hidden");
-  const { points, answerTotal } = state;
+  const { points, answerTotal, withPoint } = state;
   const groups = useMemo(() => groupByLocation(points, hidden), [points, hidden]);
-  const counts = useMemo(() => mapCounts(points, answerTotal, hidden), [points, answerTotal, hidden]);
+  const counts = useMemo(() => mapCounts(points, answerTotal, withPoint, hidden), [points, answerTotal, withPoint, hidden]);
 
   return {
     status: statusOf(state, counts),
     groups,
     shown: counts.shown,
-    total: counts.total,
+    cut: counts.cut,
     missing: counts.missing,
+    queryKey: key,
     responseId: state.responseId,
     source: state.source,
     error: state.error?.error ?? null,

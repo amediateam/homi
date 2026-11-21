@@ -39,6 +39,11 @@ export type MapViewProps = {
   groups: MapGroup[];
   /** Changes only with a new answer of `listings/map`: the camera refits then, and only then. */
   responseId: number;
+  /**
+   * The map's v1 query, the search the points belong to (`useMapPoints` `queryKey`): the key of the camera memory of
+   * the launch (WP-37). A mount with the search the map was left at opens there and does not fit its first answer.
+   */
+  cameraKey: string;
   selection: Selection;
   /** A pin, a stack, a spread pin or a cluster at maximum zoom: the numbers to select and the index to show. */
   onSelect(numbers: number[], at?: number): void;

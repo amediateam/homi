@@ -1,20 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  cityViewOf,
   CLUSTER_MS,
   CLUSTER_PADDING,
-  cityViewOf,
   DEFAULT_CITY_VIEW,
   FIT_MAX_ZOOM,
   FIT_MS,
   FIT_PADDING,
   fitKey,
+  forgetCameras,
   fromGlZoom,
   GL_MAX_ZOOM,
   LOCATE_MS,
   LOCATE_ZOOM,
   polygonBounds,
   readFit,
+  recallCamera,
+  rememberCamera,
   robustBounds,
   toGlZoom,
   writeFit,
@@ -152,4 +155,37 @@ describe("fit memory (03 §3.2 kv-map-fit)", () => {
       expect(readFit(TASHKENT)).toBeNull();
     },
   );
+});
+
+describe("the camera memory of the launch (WP-37, BR-APP-111)", () => {
+  const LEFT = { center: [41.33, 69.31] as const, zoom: 14.5 };
+
+  beforeEach(() => {
+    forgetCameras();
+  });
+
+  it("recalls per engine and per search: another search or the other engine recalls nothing", () => {
+    rememberCamera("gl", "city=tashkent&deal=rent_long", LEFT);
+
+    expect(recallCamera("gl", "city=tashkent&deal=rent_long")).toEqual(LEFT);
+    expect(recallCamera("gl", "city=tashkent&deal=sale")).toBeNull();
+    expect(recallCamera("leaflet", "city=tashkent&deal=rent_long")).toBeNull();
+
+    rememberCamera("leaflet", "city=tashkent&deal=sale", { center: [41.2, 69.2], zoom: 11 });
+    expect(recallCamera("gl", "city=tashkent&deal=rent_long")).toEqual(LEFT);
+    // One search per engine: a new one replaces it.
+    rememberCamera("gl", "city=tashkent&deal=sale", { center: [41.2, 69.2], zoom: 11 });
+    expect(recallCamera("gl", "city=tashkent&deal=rent_long")).toBeNull();
+  });
+
+  it("a document reload (a new module instance) recalls no camera; the fit memory per city still gives the first view", async () => {
+    rememberCamera("gl", "city=tashkent", LEFT);
+    writeFit([41.2995, 69.2401], { center: [41.3, 69.25], zoom: 12 });
+
+    vi.resetModules();
+    const fresh = await import("@/features/map/camera");
+
+    expect(fresh.recallCamera("gl", "city=tashkent")).toBeNull();
+    expect(fresh.readFit([41.2995, 69.2401])).toEqual({ center: [41.3, 69.25], zoom: 12 });
+  });
 });
