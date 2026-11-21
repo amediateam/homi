@@ -356,13 +356,25 @@ export function reauthenticate(): Promise<boolean> {
   return reauthenticating;
 }
 
-/** Re-reads `me` after a settings change; the patches of this launch stay applied. */
-export async function refresh(): Promise<void> {
-  const auth = getAuth();
-  const read = await readSession(auth.mode === "header" ? auth.token : undefined);
-  if (read.kind === "session" && state.status === "ready") {
-    update({ me: { ...read.me, ...patches } });
-  }
+let refreshing: Promise<void> | null = null;
+
+/**
+ * Re-reads `me` after a settings change or a cabinet mutation (WP-82: the pending count); the patches of this launch
+ * stay applied. Concurrent re-reads share one request.
+ */
+export function refresh(): Promise<void> {
+  refreshing ??= (async () => {
+    try {
+      const auth = getAuth();
+      const read = await readSession(auth.mode === "header" ? auth.token : undefined);
+      if (read.kind === "session" && state.status === "ready") {
+        update({ me: { ...read.me, ...patches } });
+      }
+    } finally {
+      refreshing = null;
+    }
+  })();
+  return refreshing;
 }
 
 /**
