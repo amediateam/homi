@@ -23,6 +23,7 @@ export function requestStatusOf(details: Pick<ListingDetails, "contact">): strin
  */
 export function ownerCtaOf(
   details: Pick<ListingDetails, "contact">,
+  options: { closedHere?: boolean } = {},
 ): { action: "hidden" | "request" | "requestSent" | "given" | "closed"; note?: "expired"; closed?: "declined" | "cancelled" } | null {
   if (details.contact.mode === "hidden") {
     return { action: "hidden" };
@@ -36,12 +37,13 @@ export function ownerCtaOf(
     case "given":
       return { action: "given" };
     case "expired":
-      return { action: "request", note: "expired" };
+      return options.closedHere === true ? { action: "closed", closed: "declined" } : { action: "request", note: "expired" };
     case "declined":
       return { action: "closed", closed: "declined" };
     case "cancelled":
       return { action: "closed", closed: "cancelled" };
     default:
-      return { action: "request" };
+      // DEC-85: refused as closed in this launch although the card still offers a request — closed until the launch ends.
+      return options.closedHere === true ? { action: "closed", closed: "declined" } : { action: "request" };
   }
 }

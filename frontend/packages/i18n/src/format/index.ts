@@ -15,4 +15,4 @@ export {
   type PresetSources,
   type PricePreset,
 } from "./money";
-export { formatCount, formatDecimal, formatKm, formatNumber, type Translate } from "./number";
+export { formatCount, formatDecimal, formatKm, formatNumber, formatResponseTime, type Translate } from "./number";

@@ -14,7 +14,7 @@ let sent: Sent[] = [];
 let answer: () => Response;
 
 const API = "https://api.test/api/v1";
-const ok = () => Response.json({ success: true, data: { id: ID }, meta: { source: "stub" } });
+const ok = () => Response.json({ success: true, data: { status: "pending" }, meta: { source: "stub" } });
 
 const bodyOf = (call: Sent) => JSON.parse(String(call.body)) as Record<string, unknown>;
 

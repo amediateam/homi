@@ -10,6 +10,7 @@ import { marketChipText, marketVerdict, type VerdictTone } from "@/features/feed
 import { useBottomMark } from "@/lib/ui/shellState";
 
 import type { ListingDetails, ListingPreview } from "../listingData";
+import { useRequestClosedHere } from "../contact/requestState";
 import { ownerCtaOf } from "./owner";
 import type { ListingContactView } from "./useContact";
 
@@ -47,12 +48,12 @@ const SEPARATOR = " · ";
  * «Написать», or «Номер платный» when it is paid; a deleted post or one without an address → none (D-23); else
  * «Открыть пост».
  */
-export function ctaActionOf(details: ListingDetails | null): CtaAction {
+export function ctaActionOf(details: ListingDetails | null, options: { closedHere?: boolean } = {}): CtaAction {
   if (details === null) {
     return "pending";
   }
   // An owner listing (WP-83): `hidden`, then the request states; the user's own listing never reaches here (WP-82).
-  const owner = ownerCtaOf(details);
+  const owner = ownerCtaOf(details, options);
   if (owner !== null) {
     return owner.action;
   }
@@ -95,8 +96,9 @@ export function ListingCtaBar({
   const verdict = marketVerdict(item, locale, translate);
   const notes = item.price?.notes.join(SEPARATOR) ?? "";
   const lead = notes ? (verdict?.short ?? null) : verdict ? marketChipText(verdict, translate) : null;
-  const action = ctaActionOf(details);
-  const owner = details === null ? null : ownerCtaOf(details);
+  const closedHere = useRequestClosedHere(details?.number ?? null);
+  const action = ctaActionOf(details, { closedHere });
+  const owner = details === null ? null : ownerCtaOf(details, { closedHere });
   const primary = action === "call" || action === "write" || action === "writePaid" || action === "openPost" || action === "given" ? BUTTONS[action] : null;
 
   // DEC-75 and the closed requests (BR-APP-098): a line in place of the bar's content, no contact action.

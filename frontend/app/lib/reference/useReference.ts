@@ -88,6 +88,8 @@ export interface ReferenceView {
   /** Listings per account and per phone, photos per listing (WP-80; LB-APP-057: never a number in a text). */
   ownerListingsLimit: number;
   ownerPhotosLimit: number;
+  /** The seekers' request limits (WP-83, `limits.requests`, LB-APP-057): per day, per week, the pause after a burst. */
+  requestLimits: { day: number; week: number; pauseMinutes: number };
   botUsername: string | null;
   supportUsername: string | null;
   usdUzs: number;
@@ -109,6 +111,11 @@ export function useReference(): ReferenceView {
     ownerEnabled: data.owner_enabled === true,
     ownerListingsLimit: positive(data.limits?.owner_listings, DEFAULT_OWNER_LISTINGS),
     ownerPhotosLimit: positive(data.limits?.owner_photos, DEFAULT_OWNER_PHOTOS),
+    requestLimits: {
+      day: positive(data.limits?.requests?.day, 10),
+      week: positive(data.limits?.requests?.week, 30),
+      pauseMinutes: positive(data.limits?.requests?.pause_minutes, 10),
+    },
     botUsername: data.bot?.username || null,
     supportUsername: data.bot?.support_username || null,
     usdUzs: typeof data.rates?.usd_uzs === "number" ? data.rates.usd_uzs : 0,

@@ -252,7 +252,7 @@ function ListingBody({ number, item, details }: { number: number; item: ListingP
         {details ? <ListingSections number={number} details={details} phone={contact.phone} translation={translation} mine={mine} ownerId={ownerId} /> : null}
       </div>
       {!mine ? (
-        <ListingCtaBar item={item} details={details} cta={contact.cta} />
+        <ListingCtaBar item={item} details={details} cta={contact.cta} onRequest={() => router.push(routes.listingContact(number))} />
       ) : ownerId === null ? (
         <MineBar />
       ) : (

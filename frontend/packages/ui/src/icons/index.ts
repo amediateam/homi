@@ -53,6 +53,7 @@ export {
   Maximize2,
   Megaphone,
   MessageCircle,
+  Minus,
   Moon,
   PaintRoller,
   Palette,
