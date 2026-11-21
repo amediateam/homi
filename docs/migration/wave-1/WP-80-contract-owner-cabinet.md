@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#104) |
 | Depends on | Owner-cabinet plan, WP-13 |
 | Size | about 2 800 changed lines with tests and fixtures, L |
 | Behaviour reference | `08` §1.8 (`OwnerListing`, `OwnerRequest`), API-037 … API-054; `02` §12a (BR-API-159 … BR-API-189), LB-API-056; `03` SCR-049 … SCR-062, BR-APP-098 … BR-APP-103; `24` DEC-69 … DEC-81; `25` §4.2 |
@@ -797,6 +797,30 @@ items placed by HOMI's own owners carry `origin: native`.»
 - [ ] Deployed to staging and production; `sources:publish-stub-media` run there; with the key unset `POST
       /api/v1/owner/listings` answers `403 owner_disabled` and `GET /api/v1/reference` says `owner_enabled: false`.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6).
+
+- **Branch.** WP-80 is built from `main`, not stacked on the frontend packages: it is a backend and contract package.
+- **The cabinet's tenants** are a vocabulary of their own (`OwnerListingForm::TENANTS`: `family`, `students`, `girls`,
+  `boys`, `foreigners`), not the filter's `Tenant` enum (`family`, `men`, `women`).
+- **The stub writes** answer the entry with the change applied and store nothing. A point sent with `PATCH` gives the
+  answer a shown point beside it. Publish starts from the listing as it is: the show scenarios (`held_check`,
+  `rejected_*`) are what publish answers, not a state it starts from. A first publish takes the number `10000013`.
+- **`lat` and `lon`** have no `sometimes`, so one coordinate without the other is refused.
+- **`owner.entry`** is decided by the stub source when it builds the card (`ListingDetails::withOwnerEntry`, DEC-94),
+  so a fixture never stores it.
+- **The renovations of `renovations.owner`** take the locale of the request's context (`SourceContext`), as every
+  other directory of `GET /reference` does.
+- **The catalogue** was rewritten by a script: the existing entries gained their keys, and the file's indentation
+  is now JSON's, so its diff is larger than its change.
+- **PHP 8.6.** The developer machine runs PHP 8.6.0 since 2026-11-20 (Homebrew), without the `redis` extension, so
+  `php artisan test` (which boots the local `.env`) cannot start there. The suites ran through `vendor/bin/pest`,
+  PHPStan and the OpenAPI export with Telescope, the cache, the queue and the session in memory (KI-70).
+
 ## Handoff
 
-Empty.
+Finished: steps 1–9 with their tests. Step 10's shared-file PR for the three env keys follows this PR; `CLAUDE.md`'s
+count of pairs is updated after the merge. Needs from the production track: the regular deploy and
+`php artisan sources:publish-stub-media` again (the new stub numbers); `OWNER_CABINET_ENABLED` stays unset on the
+servers (DEC-81).

@@ -118,9 +118,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -173,9 +171,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -187,15 +183,7 @@
                 "opened": 41,
                 "favorites": 3,
                 "days_listed": 2,
-                "daily": [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    12,
-                    29
-                ],
+                "daily": [0, 0, 0, 0, 0, 12, 29],
                 "price_delta": -0.08,
                 "price_tone": "good"
             },
@@ -243,9 +231,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -257,15 +243,7 @@
                 "opened": 41,
                 "favorites": 3,
                 "days_listed": 2,
-                "daily": [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    12,
-                    29
-                ],
+                "daily": [0, 0, 0, 0, 0, 12, 29],
                 "price_delta": -0.08,
                 "price_tone": "good"
             },
@@ -313,9 +291,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -327,15 +303,7 @@
                 "opened": 41,
                 "favorites": 3,
                 "days_listed": 2,
-                "daily": [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    12,
-                    29
-                ],
+                "daily": [0, 0, 0, 0, 0, 12, 29],
                 "price_delta": -0.08,
                 "price_tone": "good"
             },
@@ -379,9 +347,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -393,15 +359,7 @@
                 "opened": 41,
                 "favorites": 3,
                 "days_listed": 2,
-                "daily": [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    12,
-                    29
-                ],
+                "daily": [0, 0, 0, 0, 0, 12, 29],
                 "price_delta": -0.08,
                 "price_tone": "good"
             },
@@ -449,9 +407,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
@@ -463,15 +419,7 @@
                 "opened": 41,
                 "favorites": 3,
                 "days_listed": 2,
-                "daily": [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    12,
-                    29
-                ],
+                "daily": [0, 0, 0, 0, 0, 12, 29],
                 "price_delta": -0.08,
                 "price_tone": "good"
             },
@@ -519,9 +467,7 @@
                 "currency": "USD",
                 "renovation": "euro",
                 "furniture": true,
-                "tenants": [
-                    "family"
-                ],
+                "tenants": ["family"],
                 "pets": null,
                 "description": "Светлая, тихий двор."
             },
