@@ -42,8 +42,17 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     expect(scrubText("тел. 71 123 45 67, 20 123 45 67, (90) 123-45-67")).toBe("тел. +998***, +998***, +998***");
   });
 
-  it("takes the query and hash off an address inside a text", () => {
+  it("takes the query and hash off an address inside a text, an absolute one or a path, without eating what follows", () => {
     expect(scrubText("bad https://app.homi.uz/ru/map?area=1,2#x here")).toBe("bad https://app.homi.uz/ru/map here");
+    expect(scrubText('{"url":"https://app.homi.uz/ru?city=x","n":1}')).toBe('{"url":"https://app.homi.uz/ru","n":1}');
+    expect(scrubText("GET /bff/listings?area=41.31,69.24 failed")).toBe("GET /bff/listings failed");
+    expect(scrubText("HTTPS://APP.HOMI.UZ/ru?x=1 and wss://h/s?token=abc")).toBe("HTTPS://APP.HOMI.UZ/ru and wss://h/s");
+  });
+
+  it("masks a +998 number next to letters, encoded or joined (third review)", () => {
+    for (const text of ["Tel+998901234567", "+998901234567ga", "998901234567ta", "phone_998901234567", "%2B998901234567"]) {
+      expect(scrubText(text)).not.toMatch(/\d{9}/);
+    }
   });
 
   it("masks decoded launch data field by field", () => {

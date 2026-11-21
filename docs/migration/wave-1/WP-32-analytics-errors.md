@@ -500,7 +500,8 @@ The package is built as designed, with these points decided in the code (rule 6)
   design says. The global listeners report from the moment they exist, into the journal, which keeps the full report
   until the session is ready; until the mount the guard also posts `/bff/boot-error`, which needs no session, so a
   bundle that never reaches one is still counted. An error before the mount can therefore arrive twice — `kind: boot`
-  from the guard, `kind: error` from the journal — and the two are joined by name and message. The guard's body carries `v` (the
+  from the guard, `kind: error` from the journal — joined by name and time (the guard's message may carry the
+  engine's «Uncaught» prefix); early errors count towards the cap of five. The guard's body carries `v` (the
   root layout gives the script `data-v`). A boot-error without the cookie writes one `console.info` line (`event`,
   `v`, `name`, `tg`, `platform`); both route handlers refuse a declared length over their limit before reading.
 - **Privacy (review of WP-32).** `before_send` cleans recursively, keys included: every absolute address keeps origin
@@ -509,8 +510,9 @@ The package is built as designed, with these points decided in the code (rule 6)
   addresses that differ only in their query are merged. The scrubbers also mask `00998`, the nine local digits of an
   Uzbek code written as a phone is (code, three, two, two; mobile codes, 20, and Tashkent's 71 and 78), `8` or brackets
   before them, dashes of any kind, other international numbers of ten digits or more and decoded launch-data fields,
-  and take the query and hash off an address inside a text. A price such as «950 000 000», a version, a coordinate or
-  an id is left alone. Every element marked `ph-mask` (phones,
+  and take the query and hash off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or
+  international number is masked also next to a letter; nine local digits next to a letter are taken for an id's hex
+  and left. A price such as «950 000 000», a version, a coordinate or an id is left alone. Every element marked `ph-mask` (phones,
   author labels, the original text) is also `ph-no-capture`, so autocapture never takes its text.
 - **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
   changes under it), and a layer that leaves lets the same layer count again.

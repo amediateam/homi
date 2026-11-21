@@ -13,7 +13,8 @@ import { reportError } from "./report";
  * ready; until React has mounted (`BootGuard` sets `__homiBoot.watching` with `ok`) the guard also posts
  * `/bff/boot-error`, which needs no session, so a bundle that never reaches a session is still counted. An error
  * before the mount can therefore arrive twice, as `kind: boot` from the guard and `kind: error` from here (joined by
- * name and message). The entries the guard collected before these listeners existed are not sent again. Errors thrown in
+ * name and time; the guard's message may carry the engine's «Uncaught» prefix). The entries the guard collected before
+ * these listeners existed are not sent again. Errors thrown in
  * Telegram callbacks are re-thrown asynchronously by `safeCallback` and arrive here once. Imports no React, no
  * catalogue and no PostHog: `instrumentation-client` must stay light.
  */

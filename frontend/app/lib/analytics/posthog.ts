@@ -76,7 +76,19 @@ export function replaySampled(me: AnalyticsMe, random: () => number = Math.rando
  * any other text is scrubbed (`scrubText`). Replay snapshots (`$snapshot…`) stay as the recorder masked them.
  */
 /** PostHog's own ids: passed as they are (a scrubber could take a run of digits in a UUID for a phone). */
-const ID_KEYS = new Set(["distinct_id", "$device_id", "$session_id", "$window_id", "$user_id", "$anon_distinct_id", "$insert_id", "token", "uuid"]);
+const ID_KEYS = new Set([
+  "distinct_id",
+  "$device_id",
+  "$session_id",
+  "$window_id",
+  "$pageview_id",
+  "$prev_pageview_id",
+  "$user_id",
+  "$anon_distinct_id",
+  "$insert_id",
+  "token",
+  "uuid",
+]);
 
 function cleanDeep(value: unknown, depth = 6): unknown {
   if (typeof value === "string") {
