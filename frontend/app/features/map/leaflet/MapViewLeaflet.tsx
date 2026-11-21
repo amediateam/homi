@@ -5,6 +5,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 
 import { useCallback, useRef, useState } from "react";
 
+import type { CameraMemory } from "../camera";
 import { LassoOverlay } from "../lasso/LassoOverlay";
 import { MapLoading } from "../MapLoading";
 import { paletteOf } from "../palette";
@@ -28,6 +29,7 @@ import { useSpiderfy } from "./useSpiderfy";
 export default function MapViewLeaflet({
   groups,
   responseId,
+  cameraKey,
   selection,
   onSelect,
   onBackground,
@@ -54,8 +56,9 @@ export default function MapViewLeaflet({
     },
     [onFail],
   );
-  const handle = useLeafletMap(container, { cityView, cityKnown, onFail: fail, onBackground });
-  const fitted = useLeafletCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
+  const memoryRef = useRef<CameraMemory>({ restored: null, placed: null });
+  const handle = useLeafletMap(container, { cityView, cityKnown, onFail: fail, onBackground, cameraKey, memoryRef });
+  const fitted = useLeafletCamera(handle, { responseId, groups, polygon, cityView, cityKnown, cameraKey, memoryRef });
   useDeferredBasemap(handle, { tiles, scheme, lite, locale, fitted, onBasemap });
   useLeafletMask(handle, polygon, scheme);
   useMyLocation(handle, me, scheme);

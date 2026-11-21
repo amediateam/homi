@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { CameraMemory } from "../camera";
 import { MapLoading } from "../MapLoading";
 import type { MapFailReason, MapViewProps } from "../types";
 import { GlLasso } from "./GlLasso";
@@ -26,6 +27,7 @@ import { useMeLayer } from "./useMeLayer";
 export default function MapViewGL({
   groups,
   responseId,
+  cameraKey,
   selection,
   onSelect,
   onBackground,
@@ -61,8 +63,19 @@ export default function MapViewGL({
     () => buildStyle({ basemap, scheme, lite, locale, mask, me }),
     [basemap, scheme, lite, locale, mask, me],
   );
-  const handle = useMapInstance(container, { style, cityView, cityKnown, lite, onFail: fail, onBackground, onVectorError: failVector });
-  useMapCamera(handle, { responseId, groups, polygon, cityView, cityKnown });
+  const memoryRef = useRef<CameraMemory>({ restored: null, placed: null });
+  const handle = useMapInstance(container, {
+    style,
+    cityView,
+    cityKnown,
+    lite,
+    onFail: fail,
+    onBackground,
+    onVectorError: failVector,
+    cameraKey,
+    memoryRef,
+  });
+  useMapCamera(handle, { responseId, groups, polygon, cityView, cityKnown, cameraKey, memoryRef });
   useMeLayer(handle, me);
 
   const spread = useMemo(() => spreadGroupOf(groups, selection), [groups, selection]);

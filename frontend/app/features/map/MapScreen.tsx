@@ -29,6 +29,7 @@ import { MapLoading } from "./MapLoading";
 import { MapNote } from "./MapNote";
 import { MapSelectionCard } from "./MapSelectionCard";
 import { MapStatusPill } from "./MapStatusPill";
+import { MapViewBoundary } from "./MapViewBoundary";
 import { attributionOf, type Basemap, basemapOf } from "./tiles";
 import type { CityView, MapFailReason, MapViewProps, Selection } from "./types";
 import { useCardLayer } from "./useCardLayer";
@@ -103,7 +104,8 @@ function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
   return a.length === b.length && a.every((number, index) => number === b[index]);
 }
 
-type Note = { kind: "points" } | { kind: LocateFailure };
+/** `cut`: the source cut the answer; `points`: listings known only by district (BR-APP-062, WP-37). */
+type Note = { kind: "cut" } | { kind: "points" } | { kind: LocateFailure };
 
 /**
  * The search map (SCR-011 … SCR-013, `03` §1.8, BR-APP-062): everything that is the same on both engines. The engine
@@ -121,8 +123,10 @@ type Note = { kind: "points" } | { kind: LocateFailure };
  * route is hidden (`preserving-ui-state.md`): the view re-creates the map when it is shown again, so no card survives
  * without its pin. Under a listing opened from the card the route stays shown, so Back finds the same card.
  *
- * Over the map, below the top bar: the points' pill and the note — «На карте {shown} из {total} · …» for 6 s after an
- * answer with listings that have no location, or a locate failure for 5 s in its place. The locate button shows when
+ * Over the map, below the top bar: the points' pill and the note for 6 s after an answer — «На карте — {n} самых
+ * свежих. Остальные — в списке» when the source cut it (`cut`), else «На карте {shown} из {total} · …» when listings
+ * have no location, never both (WP-37) — or a locate failure for 5 s in its place. A render error of the view stays in
+ * the map (`MapViewBoundary`): the pill says «Не загрузилось» with «Повторить», which remounts the view. The locate button shows when
  * the adapter can locate, no card is open and nothing is drawn; the position stays in this state (TMA-035). The map
  * sends no analytics events of its own.
  *
@@ -179,9 +183,11 @@ export function MapScreen() {
   const [noteFor, setNoteFor] = useState(points.responseId);
   if (noteFor !== points.responseId) {
     setNoteFor(points.responseId);
-    if (points.missing > 0) {
+    if (points.cut > 0 && points.shown > 0) {
+      setNote({ kind: "cut" });
+    } else if (points.missing > 0) {
       setNote({ kind: "points" });
-    } else if (note?.kind === "points") {
+    } else if (note?.kind === "points" || note?.kind === "cut") {
       setNote(null);
     }
   }
@@ -189,7 +195,7 @@ export function MapScreen() {
     if (note === null) {
       return undefined;
     }
-    const timer = setTimeout(() => setNote(null), note.kind === "points" ? NOTE_MS : LOCATE_NOTE_MS);
+    const timer = setTimeout(() => setNote(null), note.kind === "points" || note.kind === "cut" ? NOTE_MS : LOCATE_NOTE_MS);
     return () => clearTimeout(timer);
   }, [note]);
 
@@ -271,13 +277,29 @@ export function MapScreen() {
     setLeafletAttempt((attempt) => attempt + 1);
   }, []);
 
+  // A render error of either view (WP-37): the pill's «Повторить» remounts the boundary and the view.
+  const [viewFailed, setViewFailed] = useState(false);
+  const [viewAttempt, setViewAttempt] = useState(0);
+  const onViewError = useCallback(() => setViewFailed(true), []);
+  const retryView = useCallback(() => {
+    tg.haptic.impact("light");
+    setViewFailed(false);
+    setViewAttempt((attempt) => attempt + 1);
+  }, []);
+
   if (engine === null) {
     return <MapLoading />;
   }
 
   let noteText: string | null = null;
-  if (note?.kind === "points") {
-    noteText = t("map.note", { shown: points.shown, total: points.total, missing: t("map.missing", { n: points.missing }) });
+  if (note?.kind === "cut") {
+    noteText = t("map.cut", { n: points.shown });
+  } else if (note?.kind === "points") {
+    noteText = t("map.note", {
+      shown: points.shown,
+      total: points.shown + points.missing,
+      missing: t("map.missing", { n: points.missing }),
+    });
   } else if (note !== null) {
     noteText = t(note.kind === "denied" ? "map.locateDenied" : "map.locateFail");
   }
@@ -286,10 +308,12 @@ export function MapScreen() {
   return (
     <>
       <div data-map-screen="" className="fixed inset-0">
+        <MapViewBoundary key={viewAttempt} onError={onViewError}>
         <View
           key={engine === "gl" ? "gl" : `leaflet-${leafletAttempt}`}
           groups={points.groups}
           responseId={points.responseId}
+          cameraKey={points.queryKey}
           selection={selection}
           onSelect={onSelect}
           onBackground={close}
@@ -307,6 +331,7 @@ export function MapScreen() {
           onFail={engine === "gl" ? onGlFail : onLeafletFail}
           onBasemap={setDrawn}
         />
+        </MapViewBoundary>
       </div>
       <div
         className={cn(
@@ -315,7 +340,9 @@ export function MapScreen() {
           polygon === null ? "top-[calc(var(--top-inset)+70px)]" : "top-[calc(var(--top-inset)+114px)]",
         )}
       >
-        {engine === "leaflet" && leafletFailed ? (
+        {viewFailed ? (
+          <MapStatusPill status="error" error={null} onRetry={retryView} />
+        ) : engine === "leaflet" && leafletFailed ? (
           <MapStatusPill status="error" error={null} onRetry={retryLeaflet} />
         ) : (
           <MapStatusPill status={points.status} error={points.error} onRetry={points.retry} />

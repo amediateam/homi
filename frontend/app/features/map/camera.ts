@@ -143,3 +143,37 @@ export function readFit(center: LatLon): CityView | null {
 export function writeFit(center: LatLon, view: CityView): void {
   storageSet(fitKey(center), JSON.stringify([round(view.center[0]), round(view.center[1]), round(view.zoom)]));
 }
+
+/** The map engines, each with its own camera memory (`engine.ts` `Engine`). */
+export type CameraEngine = "gl" | "leaflet";
+
+/**
+ * What one mounted view did with the camera memory of the launch (WP-37, BR-APP-111), shared by its instance hook
+ * (which reads the memory for the first camera and writes it in its cleanup) and its camera hook (which skips the
+ * first fit for the restored search). `restored`: the search whose remembered camera the current map opened at,
+ * until its first answer; `placed`: the search the camera was last fitted or restored for — what the cleanup saves it
+ * under, so a search applied and left before its answer is never saved with the camera of the one before.
+ */
+export type CameraMemory = { restored: string | null; placed: string | null };
+
+const cameras = new Map<CameraEngine, { queryKey: string; view: CityView }>();
+
+/**
+ * Remembers where `engine`'s map was left for the search `queryKey` (the map's v1 query: the filters with
+ * `posted_days`, without the sort or the listings hidden in this launch). One per engine, in memory only: a reload
+ * forgets it, and the fit memory per city (`readFit`) gives the first view again.
+ */
+export function rememberCamera(engine: CameraEngine, queryKey: string, view: CityView): void {
+  cameras.set(engine, { queryKey, view: { center: [view.center[0], view.center[1]], zoom: view.zoom } });
+}
+
+/** The camera `engine`'s map was left at for the same search, else `null`. */
+export function recallCamera(engine: CameraEngine, queryKey: string): CityView | null {
+  const remembered = cameras.get(engine);
+  return remembered !== undefined && remembered.queryKey === queryKey ? remembered.view : null;
+}
+
+/** Tests only. */
+export function forgetCameras(): void {
+  cameras.clear();
+}

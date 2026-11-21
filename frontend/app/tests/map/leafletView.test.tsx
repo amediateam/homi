@@ -3,7 +3,7 @@ import type { Map as LMap } from "leaflet";
 import { Activity, type ActivityProps, createElement, StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_CITY_VIEW, FIT_MAX_ZOOM, LOCATE_ZOOM, readFit } from "@/features/map/camera";
+import { type CameraMemory, DEFAULT_CITY_VIEW, FIT_MAX_ZOOM, forgetCameras, LOCATE_ZOOM, readFit } from "@/features/map/camera";
 import { RASTER_CLASS } from "@/features/map/leaflet/basemap";
 import { type LeafletLibrary, loadLeaflet } from "@/features/map/leaflet/library";
 import MapViewLeaflet from "@/features/map/leaflet/MapViewLeaflet";
@@ -48,6 +48,7 @@ afterAll(() => {
 
 beforeEach(() => {
   resetBasemapForTests();
+  forgetCameras();
   window.localStorage.clear();
 });
 
@@ -60,6 +61,7 @@ function viewProps(overrides: Partial<MapViewProps> = {}): MapViewProps {
   return {
     groups: [],
     responseId: 0,
+    cameraKey: "city=tashkent",
     selection: null,
     onSelect: vi.fn(),
     onBackground: vi.fn(),
@@ -85,6 +87,11 @@ async function flush(): Promise<void> {
 }
 
 const maps = () => document.querySelectorAll(".leaflet-map-pane");
+
+/** A camera hook's search and memory, as `MapViewLeaflet` passes them. */
+function memoryOf(cameraKey = "city=tashkent"): { cameraKey: string; memoryRef: { current: CameraMemory } } {
+  return { cameraKey, memoryRef: { current: { restored: null, placed: null } } };
+}
 
 describe("MapViewLeaflet (WP-28 'Leaflet view')", () => {
   it("leaves one map after StrictMode's double effect, and none after unmount", async () => {
@@ -175,6 +182,61 @@ describe("MapViewLeaflet (WP-28 'Leaflet view')", () => {
   });
 });
 
+describe("MapViewLeaflet: the camera memory of the launch (WP-37, BR-APP-111)", () => {
+  /** The maps `L.map` made, oldest first. */
+  function made() {
+    const created = vi.spyOn(library.L, "map");
+    return () => created.mock.results.map((result) => result.value as LMap);
+  }
+
+  it("a new mount with the same search opens where the map was left, fits nothing, and puts the basemap on at once", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const all = made();
+    const first = render(<MapViewLeaflet {...viewProps({ groups: GROUPS, responseId: 1 })} />);
+    await flush();
+    all()[0]!.setView([41.33, 69.31], 15, { animate: false });
+    first.unmount();
+
+    const props = viewProps({ groups: [], responseId: 0 });
+    const second = render(<MapViewLeaflet {...props} />);
+    await flush();
+    const map = all()[1]!;
+    expect(map.getCenter().lat).toBeCloseTo(41.33, 4);
+    expect(map.getZoom()).toBe(15);
+    const setView = vi.spyOn(map, "setView");
+    const flyTo = vi.spyOn(map, "flyTo");
+
+    second.rerender(<MapViewLeaflet {...props} groups={GROUPS} responseId={1} />);
+    await flush();
+    expect(setView).not.toHaveBeenCalled();
+    expect(flyTo).not.toHaveBeenCalled();
+    // No 1.2 s wait: the restored camera counts as the first fit.
+    expect(document.querySelector(`.${RASTER_CLASS}`)).not.toBeNull();
+  });
+
+  it("another search fits; nothing is remembered before the basemap went on", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const all = made();
+    const unfitted = render(<MapViewLeaflet {...viewProps()} />);
+    await flush();
+    all()[0]!.setView([41.33, 69.31], 15, { animate: false });
+    unfitted.unmount();
+    render(<MapViewLeaflet {...viewProps()} />);
+    await flush();
+    expect(all()[1]!.getZoom()).not.toBe(15);
+    cleanup();
+
+    const fitted = render(<MapViewLeaflet {...viewProps({ groups: GROUPS, responseId: 1 })} />);
+    await flush();
+    all()[2]!.setView([41.33, 69.31], 15, { animate: false });
+    fitted.unmount();
+
+    render(<MapViewLeaflet {...viewProps({ groups: GROUPS, responseId: 1, cameraKey: "city=tashkent&deal=sale" })} />);
+    await flush();
+    expect(all()[3]!.getZoom()).not.toBe(15);
+  });
+});
+
 describe("useLeafletCamera (WP-28 'Camera')", () => {
   let map: LMap;
   let container: HTMLElement;
@@ -195,7 +257,7 @@ describe("useLeafletCamera (WP-28 'Camera')", () => {
   it("jumps to the points on the first answer up to zoom 14, saves the city's fit, and answers fitted", () => {
     const handle: LeafletHandle = { mapRef: instance(), generation: 1 };
     const { result } = renderHook(() =>
-      useLeafletCamera(handle, { responseId: 1, groups: [group(41.3111, 69.2797, [1])], polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true }),
+      useLeafletCamera(handle, { responseId: 1, groups: [group(41.3111, 69.2797, [1])], polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true, ...memoryOf() }),
     );
 
     expect(result.current).toBe(true);
@@ -205,7 +267,7 @@ describe("useLeafletCamera (WP-28 'Camera')", () => {
   });
 
   it("answers fitted for a map made again after a fit, without fitting it again", () => {
-    const input = { responseId: 1, groups: GROUPS, polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true };
+    const input = { responseId: 1, groups: GROUPS, polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true, ...memoryOf() };
     const first: LeafletHandle = { mapRef: instance(), generation: 1 };
     const { result, rerender } = renderHook(({ handle }) => useLeafletCamera(handle, input), { initialProps: { handle: first } });
     expect(result.current).toBe(true);
@@ -223,7 +285,7 @@ describe("useLeafletCamera (WP-28 'Camera')", () => {
   it("does not answer fitted for a map whose answer had nothing to fit", () => {
     const handle: LeafletHandle = { mapRef: instance(), generation: 1 };
     const { result } = renderHook(() =>
-      useLeafletCamera(handle, { responseId: 1, groups: [], polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true }),
+      useLeafletCamera(handle, { responseId: 1, groups: [], polygon: null, cityView: DEFAULT_CITY_VIEW, cityKnown: true, ...memoryOf() }),
     );
 
     expect(result.current).toBe(false);

@@ -3,7 +3,7 @@ import type { StyleSpecification } from "maplibre-gl";
 import { Activity, type ActivityProps, createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CLUSTER_PADDING, DEFAULT_CITY_VIEW, FIT_PADDING, GL_MAX_ZOOM, readFit, writeFit } from "@/features/map/camera";
+import { CLUSTER_PADDING, DEFAULT_CITY_VIEW, FIT_PADDING, forgetCameras, GL_MAX_ZOOM, readFit, writeFit } from "@/features/map/camera";
 import MapViewGL from "@/features/map/gl/MapViewGL";
 import type { MapLibreModule } from "@/features/map/gl/library";
 import { BASEMAP_SOURCE, MASK_SOURCE, ME_SOURCE, OSM_SOURCE } from "@/features/map/gl/style";
@@ -264,6 +264,7 @@ function viewProps(overrides: Partial<MapViewProps> = {}): MapViewProps {
   return {
     groups: [],
     responseId: 0,
+    cameraKey: "city=tashkent",
     selection: null,
     onSelect: vi.fn(),
     onBackground: vi.fn(),
@@ -321,6 +322,7 @@ function markerOf(element: HTMLElement): FakeMarker {
 
 beforeEach(() => {
   resetMapInstanceForTests();
+  forgetCameras();
   window.localStorage.clear();
   FakeMap.created = [];
   FakeMap.throwOnCreate = null;
@@ -878,5 +880,60 @@ describe("MapViewGL: the lasso (WP-28 'Lasso', SCR-012)", () => {
     expect(FakeMap.created).toEqual([map]);
     expect(lasso(container)).toBeNull();
     expect(gestures(map)).toEqual([true, true, true, true, true]);
+  });
+});
+
+describe("MapViewGL: the camera memory of the launch (WP-37, BR-APP-111)", () => {
+  it("a new mount with the same search opens where the map was left and does not fit its first answer; a later one fits", async () => {
+    const first = await mount({ groups: GROUPS, responseId: 1 });
+    first.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
+    first.unmount();
+
+    const second = await mount({ groups: [], responseId: 0 });
+    expect(second.map.options).toMatchObject({ center: [69.31, 41.33], zoom: 13.5 });
+    await second.update({ groups: GROUPS, responseId: 1 });
+    expect(second.map.moves).toEqual([]);
+
+    await second.update({ groups: [PIN_A, PIN_B], responseId: 2 });
+    expect(second.map.moves).toHaveLength(1);
+    expect(second.map.moves[0].kind).toBe("easeTo");
+  });
+
+  it("another search fits its first answer, also when the search changed after the restore", async () => {
+    const first = await mount({ groups: GROUPS, responseId: 1 });
+    first.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
+    first.unmount();
+
+    const other = await mount({ groups: GROUPS, responseId: 1, cameraKey: "city=tashkent&deal=sale" });
+    expect(other.map.options).not.toMatchObject({ center: [69.31, 41.33] });
+    expect(other.map.moves).toHaveLength(1);
+    other.map.moveTo({ lng: 69.22, lat: 41.27 }, 12.5);
+    other.unmount();
+
+    // One search per engine: the memory now holds the sale search, which a mount restores before its search changes.
+    const changed = await mount({ groups: [], responseId: 0, cameraKey: "city=tashkent&deal=sale" });
+    expect(changed.map.options).toMatchObject({ center: [69.22, 41.27], zoom: 12.5 });
+    await changed.update({ groups: GROUPS, responseId: 1, cameraKey: "city=tashkent&deal=sale&rooms=2" });
+    expect(changed.map.moves).toHaveLength(1);
+  });
+
+  it("nothing is remembered before the first fit; a search left before its answer is saved under the search before", async () => {
+    const unfitted = await mount({ groups: [], responseId: 0 });
+    unfitted.map.moveTo({ lng: 69.31, lat: 41.33 }, 13.5);
+    unfitted.unmount();
+    const again = await mount({ groups: [], responseId: 0 });
+    expect(again.map.options).not.toMatchObject({ center: [69.31, 41.33] });
+    again.unmount();
+
+    const fitted = await mount({ groups: GROUPS, responseId: 1 });
+    await fitted.update({ cameraKey: "city=tashkent&deal=sale" });
+    fitted.map.moveTo({ lng: 69.2, lat: 41.2 }, 12.5);
+    fitted.unmount();
+
+    const applied = await mount({ cameraKey: "city=tashkent&deal=sale" });
+    expect(applied.map.options).not.toMatchObject({ center: [69.2, 41.2] });
+    applied.unmount();
+    const before = await mount();
+    expect(before.map.options).toMatchObject({ center: [69.2, 41.2], zoom: 12.5 });
   });
 });

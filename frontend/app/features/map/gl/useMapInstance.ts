@@ -7,6 +7,7 @@ import { type RefObject, useEffect, useEffectEvent, useRef, useState } from "rea
 import { launchMapOptions } from "@/lib/deeplinks/launch";
 
 import {
+  type CameraMemory,
   FIT_MAX_ZOOM,
   FIT_MS,
   FIT_PADDING,
@@ -15,6 +16,8 @@ import {
   GL_MAX_ZOOM,
   polygonBounds,
   readFit,
+  recallCamera,
+  rememberCamera,
   robustBounds,
   toGlZoom,
   writeFit,
@@ -71,6 +74,10 @@ export function resetMapInstanceForTests(): void {
 }
 
 export type MapInstanceInput = {
+  /** The search of the points (`MapViewProps.cameraKey`): the first camera is the one remembered for it. */
+  cameraKey: string;
+  /** The view's camera memory, shared with `useMapCamera` (WP-37). */
+  memoryRef: RefObject<CameraMemory>;
   /** The style of the current inputs (`buildStyle`); a new object is applied with a diff, never a new map. */
   style: StyleSpecification;
   cityView: CityView;
@@ -90,21 +97,36 @@ export type MapInstanceInput = {
  * constructor → `style`; each reported once per map. A vector source error is not a failure (`onVectorError`). A
  * map `click` whose target is not a marker is a background tap. Rotation, pitch and the keyboard are off, there are
  * no world copies and no built-in attribution (`MapAttribution` draws it); the first camera is the one the route had
- * when it was hidden, else the known city's fit memory, else the city view (the Tashkent stand-in until a city view
- * is known, WP-27 "Camera"). `?mapdebug` exposes the map as `window.homiMap` outside production (TMA-012).
+ * when it was hidden, else the one this engine's map was left at for the same search in this launch (WP-37,
+ * `recallCamera`), else the known city's fit memory, else the city view (the Tashkent stand-in until a city view is
+ * known, WP-27 "Camera"). The cleanup saves the camera for the search it was last fitted or restored for
+ * (`rememberCamera`). `?mapdebug` exposes the map as `window.homiMap` outside production (TMA-012).
  */
 export function useMapInstance(container: RefObject<HTMLElement | null>, input: MapInstanceInput): MapHandle {
-  const { style, cityView, cityKnown, lite, onFail, onBackground, onVectorError } = input;
+  const { style, cityView, cityKnown, lite, onFail, onBackground, onVectorError, cameraKey, memoryRef } = input;
   const mapRef = useRef<MapInstance | null>(null);
   const kept = useRef<CityView | null>(null);
   const applied = useRef<StyleSpecification | null>(null);
   const [generation, setGeneration] = useState(0);
 
-  const initial = useEffectEvent(() => ({
-    style,
-    view: kept.current ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView,
-    pixelRatio: pixelRatioOf(lite),
-  }));
+  const initial = useEffectEvent(() => {
+    const recalled = kept.current === null ? recallCamera("gl", cameraKey) : null;
+    if (recalled !== null) {
+      memoryRef.current.restored = cameraKey;
+      memoryRef.current.placed = cameraKey;
+    }
+    return {
+      style,
+      view: kept.current ?? recalled ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView,
+      pixelRatio: pixelRatioOf(lite),
+    };
+  });
+  const save = useEffectEvent((view: CityView) => {
+    const { placed } = memoryRef.current;
+    if (placed !== null) {
+      rememberCamera("gl", placed, view);
+    }
+  });
   const fail = useEffectEvent((reason: MapFailReason) => onFail(reason));
   const background = useEffectEvent(() => onBackground());
   const vectorError = useEffectEvent(() => onVectorError());
@@ -195,6 +217,7 @@ export function useMapInstance(container: RefObject<HTMLElement | null>, input: 
       const { map, detach } = created;
       const center = map.getCenter();
       kept.current = { center: [center.lat, center.lng], zoom: fromGlZoom(map.getZoom()) };
+      save(kept.current);
       if ((window as DebugWindow).homiMap === map) {
         delete (window as DebugWindow).homiMap;
       }
@@ -227,6 +250,9 @@ export function useMapInstance(container: RefObject<HTMLElement | null>, input: 
 
 export type MapCameraInput = {
   responseId: number;
+  /** The search of the points: a first answer for the restored search keeps the remembered camera (WP-37). */
+  cameraKey: string;
+  memoryRef: RefObject<CameraMemory>;
   groups: readonly MapGroup[];
   polygon: Polygon | null;
   cityView: CityView;
@@ -245,12 +271,14 @@ function pointsOf(groups: readonly MapGroup[]): MapGroup[] {
  * to its view and the next answer fits; the first fit for a city is kept as its fit memory (`writeFit`). Until the
  * city's view is known the camera shows the Tashkent stand-in, which keeps no fit memory; its replacement by the
  * first known view is not a city change: the camera opens that city (fit memory, else its view) only when no fit has
- * moved it yet, so a fit to the points is never thrown away. An Activity re-show keeps the camera the route had.
- * Reduced motion turns the eases into jumps (MapLibre, non-essential).
+ * moved it yet, so a fit to the points is never thrown away. An Activity re-show keeps the camera the route had. A map
+ * that opened at the camera remembered for its search (WP-37) takes the first answer for that search without a fit, as
+ * if it had fitted it; an answer for another search fits. Reduced motion turns the eases into jumps (MapLibre,
+ * non-essential).
  */
 export function useMapCamera(
   { mapRef, generation }: MapHandle,
-  { responseId, groups, polygon, cityView, cityKnown }: MapCameraInput,
+  { responseId, groups, polygon, cityView, cityKnown, cameraKey, memoryRef }: MapCameraInput,
 ): void {
   const fitted = useRef(0);
   const animate = useRef(false);
@@ -289,10 +317,22 @@ export function useMapCamera(
       map.jumpTo({ center, zoom });
     }
     animate.current = true;
+    memoryRef.current.placed = cameraKey;
     if (city !== null && savedCity.current !== city) {
       savedCity.current = city;
       writeFit(cityView.center, { center: [center.lat, center.lng], zoom: fromGlZoom(zoom) });
     }
+  });
+
+  /** The first answer after a restore: `true` when it is for the restored search, which keeps the camera. */
+  const keepsRestored = useEffectEvent(() => {
+    const { restored } = memoryRef.current;
+    memoryRef.current.restored = null;
+    if (restored === null || restored !== cameraKey) {
+      return false;
+    }
+    animate.current = true;
+    return true;
   });
 
   useEffect(() => {
@@ -308,12 +348,12 @@ export function useMapCamera(
     }
     if (shownCity.current !== null && shownCity.current !== city) {
       jumpToCity(instance.map, false);
-    } else if (shownCity.current === null && standIn.current && !animate.current) {
+    } else if (shownCity.current === null && standIn.current && !animate.current && memoryRef.current.restored === null) {
       jumpToCity(instance.map, true);
     }
     shownCity.current = city;
     standIn.current = false;
-  }, [mapRef, generation, city]);
+  }, [mapRef, generation, city, memoryRef]);
 
   useEffect(() => {
     const instance = mapRef.current;
@@ -321,6 +361,8 @@ export function useMapCamera(
       return;
     }
     fitted.current = responseId;
-    fit(instance);
+    if (!keepsRestored()) {
+      fit(instance);
+    }
   }, [mapRef, generation, responseId]);
 }
