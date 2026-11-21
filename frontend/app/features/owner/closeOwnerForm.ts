@@ -38,19 +38,16 @@ function onFormAddress(): boolean {
  * loaded directly) and the browser still shows a form address, it is replaced by `/settings`, the parent of every
  * address of the form that closes it (`parentOf`). Every close gives a light haptic.
  */
-let closing = false;
+let closing: Promise<void> | null = null;
 
-export async function closeOwnerForm(): Promise<void> {
-  // A second Back before the first close has landed is the same close.
-  if (closing) {
-    return;
+export function closeOwnerForm(): Promise<void> {
+  // A second Back (or «Мои объявления») before the first close has landed is the same close, and waits for it.
+  if (closing === null) {
+    closing = close().finally(() => {
+      closing = null;
+    });
   }
-  closing = true;
-  try {
-    await close();
-  } finally {
-    closing = false;
-  }
+  return closing;
 }
 
 async function close(): Promise<void> {

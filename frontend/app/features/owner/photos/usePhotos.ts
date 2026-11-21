@@ -105,6 +105,8 @@ export function usePhotos({
         }
         const signal = alive.current?.signal;
         if (signal?.aborted) {
+          // Hidden (`<Activity>`) or gone: the batch stops and its tiles go, so a later show is not left busy.
+          setTiles([]);
           return;
         }
         const result = await uploadPhoto(
@@ -114,6 +116,7 @@ export function usePhotos({
           signal,
         );
         if (signal?.aborted) {
+          setTiles([]);
           return;
         }
         setTiles((list) => list.filter((tile) => tile.key !== key));
@@ -161,16 +164,23 @@ export function usePhotos({
     [all, hidden, order, listingId, accept],
   );
 
+  /** The deletes on their way: `flushDeletes` waits for them too. */
+  const sending = useRef(new Set<Promise<void>>());
   const send = useCallback(
-    async (photo: string) => {
+    (photo: string) => {
       pending.current.delete(photo);
-      const result = await remove({ id: listingId, photo });
-      if (result.ok) {
-        accept(result.data);
-      } else {
-        tg.haptic.error();
-        setHidden((set) => new Set([...set].filter((id) => id !== photo)));
-      }
+      const run = (async () => {
+        const result = await remove({ id: listingId, photo });
+        if (result.ok) {
+          accept(result.data);
+        } else {
+          tg.haptic.error();
+          setHidden((set) => new Set([...set].filter((id) => id !== photo)));
+        }
+      })();
+      sending.current.add(run);
+      void run.finally(() => sending.current.delete(run));
+      return run;
     },
     [remove, listingId, accept],
   );
@@ -201,7 +211,8 @@ export function usePhotos({
     for (const [, timer] of waiting) {
       clearTimeout(timer);
     }
-    await Promise.all(waiting.map(([photo]) => send(photo)));
+    waiting.forEach(([photo]) => void send(photo));
+    await Promise.all([...sending.current]);
   }, [send]);
 
   // The form unmounts: the deletes still waiting are sent now.

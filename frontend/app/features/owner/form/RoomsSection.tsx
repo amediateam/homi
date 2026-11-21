@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { OwnerForm } from "../normalize";
 import { NumberTextField } from "./NumberTextField";
 import { Chips, Field } from "./Field";
-import { FLOOR_FIELD_MAX, NUMBER_FIELD_MAX, parseArea, parseFloor } from "./rules";
+import { areaOutOfRange, FLOOR_FIELD_MAX, floorOutOfRange, NUMBER_FIELD_MAX, parseArea, parseFloor } from "./rules";
 
 const ROOMS = [1, 2, 3, 4, 5] as const;
 
@@ -39,7 +39,7 @@ export function RoomsSection({ form, invalid, edit }: { form: OwnerForm; invalid
         </Chips>
       </Field>
       <div className="grid grid-cols-3 gap-2">
-        <Field label={t("own.area")} focus="area_m2" invalid={invalid.has("area_m2")}>
+        <Field label={t("own.area")} focus="area_m2" invalid={invalid.has("area_m2") || areaOutOfRange(area)}>
           <NumberTextField
             data-field="area_m2"
             inputMode="decimal"
@@ -55,7 +55,7 @@ export function RoomsSection({ form, invalid, edit }: { form: OwnerForm; invalid
             }}
           />
         </Field>
-        <Field label={t("own.floor")} focus="floor" invalid={invalid.has("floor")}>
+        <Field label={t("own.floor")} focus="floor" invalid={invalid.has("floor") || floorOutOfRange(floor)}>
           <NumberTextField
             data-field="floor"
             inputMode="text"

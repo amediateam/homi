@@ -19,14 +19,18 @@ const ID = "01JF0000000000000000000004";
 let fake: FakeTelegram | null = null;
 
 /** Mounts the redirector with fresh modules; `reference` feeds their reference store (`null` leaves it missing). */
-async function mount(address: string, startParam: string | undefined, reference: { owner_enabled: boolean } | null) {
+async function mount(address: string, startParam: string | undefined, reference: { owner_enabled: boolean } | null, citiesCount = 0) {
   window.history.replaceState(null, "", address);
   fake = fakeTelegram({ initData: syntheticInitData({}, { startParam }) });
   vi.resetModules();
   const store = await import("@/lib/reference/useReference");
   const feed = (value: { owner_enabled: boolean } | null) =>
     store.setReference({
-      reference: value === null ? { loaded: false, data: EMPTY_REFERENCE } : { loaded: true, data: { ...EMPTY_REFERENCE, ...value } },
+      // `useReference().cities` (the gates' count) is the reference data's own list.
+      reference:
+        value === null
+          ? { loaded: false, data: EMPTY_REFERENCE }
+          : { loaded: true, data: { ...EMPTY_REFERENCE, ...value, cities: Array.from({ length: citiesCount }, (_, index) => ({ code: `c${index}` }) as never) } },
       cities: { loaded: false, data: [] },
     });
   feed(reference);
@@ -92,7 +96,7 @@ describe("owner launch links (WP-81, TMA-046, LB-APP-060)", () => {
 
   it("an owner launch waits until the city is chosen, and keeps ?owner=new through the city pick (second review)", async () => {
     state.me = { locale_chosen: true, city_chosen: false };
-    const { rerender } = await mount("/ru?owner=new", undefined, { owner_enabled: true });
+    const { rerender } = await mount("/ru?owner=new", undefined, { owner_enabled: true }, 2);
     rerender();
     expect(state.push).not.toHaveBeenCalled();
 
@@ -100,6 +104,14 @@ describe("owner launch links (WP-81, TMA-046, LB-APP-060)", () => {
     window.history.replaceState(null, "", "/ru");
     state.me = { locale_chosen: true, city_chosen: true };
     rerender();
+    expect(state.push.mock.calls).toEqual([["/owner/new"]]);
+    state.me = { locale_chosen: true, city_chosen: true };
+  });
+
+  it("with one city (no city page) an owner launch opens although the city is not chosen (round 2)", async () => {
+    state.me = { locale_chosen: true, city_chosen: false };
+    await mount("/ru", "owner_new", { owner_enabled: true }, 1);
+
     expect(state.push.mock.calls).toEqual([["/owner/new"]]);
     state.me = { locale_chosen: true, city_chosen: true };
   });

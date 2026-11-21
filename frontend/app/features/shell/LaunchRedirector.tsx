@@ -3,6 +3,8 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { gateState } from "@/features/gates/gateState";
+import { needsCity, needsLanguage } from "@/features/gates/resolveGate";
 import { consumeLaunch, launchGate, launchQuery, launchTarget, useLaunchGate } from "@/lib/deeplinks/launch";
 import { parseLaunch } from "@/lib/deeplinks/parse";
 import { normaliseAddress } from "@/lib/navigation/history";
@@ -35,9 +37,9 @@ function isLaunchParam(params: Pick<URLSearchParams, "get" | "has"> | null | und
  */
 export function LaunchRedirector(): null {
   const { status, me } = useSession();
-  const pickersDone = me !== null && me !== undefined && me.locale_chosen && me.city_chosen;
   const gateVersion = useLaunchGate();
-  const { loaded, ownerEnabled } = useReference();
+  const { loaded, ownerEnabled, cities } = useReference();
+  const citiesCount = cities.length;
   const searchParams = useSearchParams();
   const pathname = usePathname();
   /** The pushes still to make, in order; each waits until the path `after` shows. */
@@ -52,6 +54,10 @@ export function LaunchRedirector(): null {
     const launchedWith = parseLaunch(tg.initData(), launchQuery());
     const owner = launchedWith.listingNumber === null && launchedWith.owner !== null;
     const launch = owner ? launchedWith : parseLaunch(tg.initData(), window.location.search);
+    // The pickers that will show (the gates' own rules: no city page with one city or none), not `me`'s flags — a
+    // launch whose city page never shows would wait for ever.
+    const user = me ?? null;
+    const pickersDone = !needsLanguage(user, gateState.localePicked) && !needsCity(user, citiesCount, gateState.cityPicked);
     if (owner && (!loaded || !pickersDone)) {
       return;
     }
@@ -80,7 +86,7 @@ export function LaunchRedirector(): null {
     const cleaned = normaliseAddress(url.pathname + url.search);
     pending.current = chain(cleaned.split("?")[0]!);
     nav.replace(cleaned);
-  }, [status, gateVersion, loaded, ownerEnabled, pickersDone]);
+  }, [status, gateVersion, loaded, ownerEnabled, me, citiesCount]);
 
   useEffect(() => {
     const next = pending.current[0];

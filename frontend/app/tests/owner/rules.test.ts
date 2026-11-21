@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  areaOutOfRange,
   couple,
   defaultsFor,
   fieldsOfError,
   floorAboveFloors,
+  floorOutOfRange,
   inUzbekistanBox,
   missingParts,
   parseArea,
@@ -44,6 +46,13 @@ describe("owner form rules (WP-81, SCR-052)", () => {
       expect(parseFloor(text), text).toBeNull();
     }
     expect(parseFloor("-3")).toEqual({ floor: -3, floors: null });
+  });
+
+  it("marks a whole number outside the bounds, not a half-typed one (round 2)", () => {
+    expect(["3", "1500", "4,9"].map(areaOutOfRange)).toEqual([true, true, true]);
+    expect(["45,", "", "abc", "45"].map(areaOutOfRange)).toEqual([false, false, false, false]);
+    expect(["120", "5/100", "-4"].map(floorOutOfRange)).toEqual([true, true, true]);
+    expect(["5/", "", "5/9", "-3"].map(floorOutOfRange)).toEqual([false, false, false, false]);
   });
 
   it("knows a floor above the floors", () => {

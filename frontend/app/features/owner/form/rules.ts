@@ -39,6 +39,18 @@ export function parseArea(text: string): number | null {
  * «Этаж» as typed: a whole number, or «a/b», which also gives the number of floors (`03` SCR-052); a floor may be
  * zero or below (a ground floor, a basement), the floors are above 0. Anything else is `null`.
  */
+/**
+ * A whole number typed outside the server's bounds («3», «1500» m², floor «120»): the field is marked invalid, since
+ * the value is not sent and the saved one stays. A half-typed number («45,») is not.
+ */
+export function areaOutOfRange(text: string): boolean {
+  return /^\s*\d+(?:[.,]\d+)?\s*$/.test(text) && parseArea(text) === null;
+}
+
+export function floorOutOfRange(text: string): boolean {
+  return /^\s*-?\d{1,3}\s*(?:\/\s*\d{1,3})?\s*$/.test(text) && parseFloor(text) === null;
+}
+
 export function parseFloor(text: string): { floor: number; floors: number | null } | null {
   const match = /^\s*(-?\d{1,3})\s*(?:\/\s*(\d{1,3}))?\s*$/.exec(text);
   if (match === null) {

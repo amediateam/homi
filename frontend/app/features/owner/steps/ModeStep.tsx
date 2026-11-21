@@ -76,14 +76,16 @@ export function ModeStep() {
     setError({ text: result.error === "offline" ? t("own.actionOffline") : t("own.publishFailed"), mine: false });
   };
 
-  const rejectHere = async (reason: string | undefined) => {
+  const rejectHere = async (reason: string | undefined, left: () => boolean) => {
     const reread = await bffFetch<OwnerListingBody>(`owner/listings/${id}`);
     // The server's rejected copy, else the copy at hand marked rejected with the answer's reason.
     const base = reread.ok ? reread.data : readResource<OwnerListingBody>(ownerListingKey(id));
     if (base !== undefined) {
       putOwnerListing(base.status === "rejected" ? base : { ...base, status: "rejected", reject_reason: reason === "limit" ? "limit" : "denied" });
     }
-    nav.replace(routes.ownerPhone(id));
+    if (!left()) {
+      nav.replace(routes.ownerPhone(id));
+    }
   };
 
   const finish = async () => {
@@ -101,7 +103,10 @@ export function ModeStep() {
       setPhase("idle");
       setBusy(false);
       tg.haptic.error();
-      nav.back();
+      // A switched-off cabinet already closes the form (the autosave's own toast and close): no Back of ours.
+      if (flushed.error !== "disabled" && !left()) {
+        nav.back();
+      }
       return;
     }
     if (!draft) {
@@ -139,10 +144,12 @@ export function ModeStep() {
         setError({ text: t("own.notEditable"), mine: true });
         return;
       case "owner_rejected":
-        await rejectHere(result.detail?.reason);
+        await rejectHere(result.detail?.reason, left);
         return;
       case "owner_phone_required":
-        nav.replace(routes.ownerPhone(id));
+        if (!left()) {
+          nav.replace(routes.ownerPhone(id));
+        }
         return;
     }
     if (result.error === "validation") {

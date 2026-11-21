@@ -42,6 +42,20 @@ describe("closeOwnerForm (WP-81)", () => {
     expect(impact).toHaveBeenCalledWith("light");
   });
 
+  it("a second close before the first lands is the same close and waits for it (round 2)", async () => {
+    history.depth = 1;
+    markOwnerFormOpened();
+    history.depth = 2;
+    at(`/ru/owner/${ID}/place`);
+
+    const first = closeOwnerForm();
+    const second = closeOwnerForm();
+    await Promise.all([first, second]);
+
+    expect(backBy).toHaveBeenCalledTimes(1);
+    expect(impact).toHaveBeenCalledTimes(1);
+  });
+
   it("a later mount of the same opening keeps the first depth", async () => {
     history.depth = 2;
     markOwnerFormOpened();
