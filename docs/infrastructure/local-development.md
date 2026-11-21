@@ -32,6 +32,8 @@ Laravel  ─ Horizon (Redis :6379) · PostgreSQL :5432 · `public` disk = storag
 | `make dev-nginx-restart` | `nginx -t`, then stop the shared root nginx (graceful quit, fast shutdown after 10 s) and start a new master; run it from Terminal or iTerm (KI-31) | yes |
 | `make dev-reset` | **destructive, local only**: stop, clear run/logs, `migrate:fresh` after typing `reset` | no |
 | `make ci-backend`, `make ci-frontend` | the CI gates locally | no |
+| `scripts/dev/e2e-local.sh [playwright arguments]` | Playwright against an API of its own, as the CI job runs it: the API on stubs under `php -S` on SQLite with the array cache, for the run only (a temporary database outside the checkout). It needs neither nginx nor the database of `backend/.env`, and the `api` rate limit never accumulates (KI-32); port 3001 must be free. `E2E_RADARS_OFF=1` runs the `@radars-off` tests against an API with radars switched off | no |
+| `python3 scripts/audit/session_audit.py [--hours N] [--gh]` | where the wall clock of the Claude Code sessions went (model, tools, waiting for the developer, CI, subagents), read from the local transcripts; prompt text is printed for this project only, and `--gh` adds the merged pull requests and CI runs | no |
 | `make registry`, `make registry-check` | Composer package registry | no |
 
 `scripts/dev/setup.sh --no-sudo` runs everything that needs no privileges and prints the remaining manual steps. The sudo steps can be run one by one: `scripts/dev/certs.sh install`, `make dev-hosts`, `make dev-nginx`.
@@ -60,6 +62,7 @@ Version pins (`.node-version`, `packageManager`, composer platform, PHP extensio
 | `https://cdn.homi.loc/...` → 404 | file not under `backend/storage/app/public`; `make dev-storage` recreates the directory and `health.txt` |
 | Queued jobs never run | `.env` still has `QUEUE_CONNECTION=database`; Horizon consumes Redis only (ADR-0005) |
 | Next dev server port in use | `make dev-stop` frees the ports; otherwise `lsof -nP -iTCP:3001` |
+| A Playwright spec waits for `data-session="ready"`, or the local API answers `429` or `500` | the shared local API met its rate limit (KI-32) or cannot reach its database; run the spec with `scripts/dev/e2e-local.sh`, which starts its own API on SQLite |
 | HMR not working through nginx | the app host must be listed in `allowedDevOrigins` in that app's `next.config.ts` |
 | Telegram webhook tests | `.loc` is unreachable from Telegram; expose `hook.homi.loc` through an HTTPS tunnel and register the **dev** bot only |
 
