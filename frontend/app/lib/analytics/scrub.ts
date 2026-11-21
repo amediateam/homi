@@ -67,12 +67,25 @@ function decodeRun(run: string): string {
   }
 }
 
-/** The escapes of a JSON or JavaScript string undone: `\uXXXX`, `\n` and the like (a space), `\"`, `\'`, `\\`, `\/`. */
+// One escape of a JSON or JavaScript string: `\u{…}`, `\uXXXX`, `\xHH`, a control letter, or any other character.
+const STRING_ESCAPE = /\\(?:u\{([0-9A-Fa-f]{1,6})\}|u([0-9A-Fa-f]{4})|x([0-9A-Fa-f]{2})|([nrtbfv])|([\s\S]))/g;
+
+/**
+ * The escapes of a JSON or JavaScript string undone in one pass from left to right, so `\\u00a0` becomes `\u00a0` and
+ * the next pass a no-break space: a code point for `\u{…}`, `\uXXXX` and `\xHH`, a space for `\n` and the like, the
+ * character itself for any other (`\"`, `\\`, `\/`).
+ */
 function unescapeString(text: string): string {
-  return text
-    .replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
-    .replace(/\\[nrtbfv]/g, " ")
-    .replace(/\\(["'\\/])/g, "$1");
+  return text.replace(
+    STRING_ESCAPE,
+    (escape, point: string | undefined, unit: string | undefined, byte: string | undefined, control: string | undefined, other: string | undefined) => {
+      const code = Number.parseInt(point ?? unit ?? byte ?? "", 16);
+      if (!Number.isNaN(code)) {
+        return code <= 0x10ffff ? String.fromCodePoint(code) : escape;
+      }
+      return control !== undefined ? " " : (other ?? escape);
+    },
+  );
 }
 
 /**
@@ -113,6 +126,10 @@ function scrubWithin(value: string): string {
   const cut = phones(value).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
   const view = canonical(cut);
   if (LAUNCH_MARKS.some((mark) => mark.test(view))) {
+    return REDACTED;
+  }
+  // A number or an address written through escapes cannot be masked in place: its raw form is not its canonical one.
+  if (view !== cut && (phones(view) !== view || view.search(EMAIL) !== -1)) {
     return REDACTED;
   }
   const masked = phones(cut.replace(ENCODED, (code) => decodeURIComponent(code))).replace(EMAIL, "***@***");
