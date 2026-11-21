@@ -11,7 +11,8 @@ import { tg } from "@/lib/telegram";
 
 import { normalizeOwnerListing, type OwnerListingView } from "../normalize";
 import { mineRowValue } from "../status";
-import { useOwnerEnabled, useOwnerListings, useOwnerPending } from "../store";
+import { useOwnerPending } from "../pending";
+import { useOwnerEnabled, useOwnerListings } from "../store";
 
 /**
  * The group «Сдаю квартиру» of Settings (WP-82, SCR-032, DEC-81): «Сдать квартиру» while the cabinet is on —

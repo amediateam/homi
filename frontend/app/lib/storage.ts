@@ -12,7 +12,7 @@ import { deviceStorage } from "@/lib/telegram/deviceStorage";
 export const NEW_FEATURES = ["pets"] as const;
 type NewFeature = (typeof NEW_FEATURES)[number];
 
-export type SyncedKey = "homi-city" | "homi-nudge" | "homi-visits" | "homi-home" | `homi-new-${NewFeature}`;
+export type SyncedKey = "homi-city" | "homi-nudge" | "homi-visits" | "homi-home" | "homi-req-tip" | `homi-new-${NewFeature}`;
 export type LocalKey =
   | "homi-theme"
   | "homi-graphics"
@@ -27,6 +27,8 @@ export const STORAGE_POLICY = {
   "homi-nudge": "synced",
   "homi-visits": "synced",
   "homi-home": "synced",
+  // The request tips of the owner (WP-82, TMA-037): `done` once dismissed or once a requests page opened.
+  "homi-req-tip": "synced",
   "homi-new-pets": "synced",
   "homi-theme": "local",
   "homi-graphics": "local",
