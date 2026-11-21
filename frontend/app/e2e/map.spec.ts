@@ -250,8 +250,105 @@ const camera = (page: Page) =>
     return { lat, lon: lng, zoom: map.getZoom(), layers: map.getStyle().layers.map((layer) => layer.id) };
   });
 
+/** Moves the camera of `window.homiMap` without an animation, on GL's own zoom scale (as `camera` reads it). */
+const jumpTo = (page: Page, to: { lat: number; lon: number; zoom: number }) =>
+  page.evaluate(
+    (target) =>
+      (window as unknown as { homiMap: { jumpTo(options: { center: [number, number]; zoom: number }): void } }).homiMap.jumpTo({
+        center: [target.lon, target.lat],
+        zoom: target.zoom,
+      }),
+    to,
+  );
+
+/** Marks the map's screen: a route Next renders fresh has no mark, a route it kept (`<Activity>`) still has it. */
+const markMapScreen = (page: Page) => page.locator("[data-map-screen]").evaluate((node) => node.setAttribute("data-e2e-left", ""));
+
+/**
+ * Leaves the map for good and comes back to the same search (WP-37): the list, then the saved, radar and settings
+ * tabs — four routes after the map, so Next drops the map's route (it keeps up to three, `preserving-ui-state.md`) —
+ * then the search tab, which returns to the list, and the toggle.
+ */
+async function leaveMapForGood(page: Page, back: (page: Page) => Promise<void>): Promise<void> {
+  await visible(page, "[data-view-toggle]").click();
+  await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+  for (const tab of ["saved", "radars", "settings"]) {
+    await visible(page, `[data-tab="${tab}"]`).click();
+    await expect(page).toHaveURL(new RegExp(`/ru/${tab}(?:[/?]|$)`));
+  }
+  await visible(page, '[data-tab="search"]').click();
+  await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+  await back(page);
+}
+
+/** Applies «2» in the quick rooms sheet of the list: a changed search (`filters.spec.ts`). */
+async function applyTwoRooms(page: Page): Promise<void> {
+  await visible(page, '[data-topbar="search-list"] [data-chip="rooms"]').click();
+  const rooms = visible(page, '[data-slot="bottom-sheet"] [data-route="filters/rooms"][data-layer="sheet"]');
+  await expect(rooms).toBeVisible();
+  await rooms.getByRole("button", { name: "2", exact: true }).click();
+  await visible(page, '[data-slot="bottom-sheet"] [data-action="apply"]').click();
+  await expect(page).toHaveURL(/rooms_min=2/);
+  await expect(visible(page, "[data-layer]")).toHaveCount(0);
+}
+
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`map (${mode} mode)`, () => {
+    /** WP-37 E2E; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»" (BR-APP-062). */
+    test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
+      await stubScenario(page, "map_cut");
+      await openFeed(page, mode);
+      const read = page.waitForResponse((response) => isMapRead(new URL(response.url())));
+      await toMap(page);
+      const body = (await (await read).json()) as { data: { points: unknown[]; total: number; with_point: number } };
+      const shown = body.data.points.length;
+      expect(shown, "the stub cuts the answer to half of the located listings").toBeLessThan(body.data.with_point);
+
+      await expect(note(page)).toHaveText(`На карте — ${shown} самых свежих. Остальные — в списке`);
+      await expect(note(page)).toHaveCount(1);
+      await expect(note(page)).toHaveCount(0, { timeout: 8_000 });
+    });
+
+    /** WP-37 E2E; acceptance "Leaving the map and returning with the same search keeps the camera", "A changed search fits". */
+    test("the map's route dropped and the same search back: the camera is where it was left and no fit follows; a changed search fits", async ({ page }) => {
+      await launchApp(page, { mode, path: "/ru?mapdebug" });
+      await expect(html(page)).toHaveAttribute("data-session", "ready");
+      await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+      await toMap(page);
+      await stacksDrawn(page);
+      const fitted = (await camera(page))!;
+      expect(fitted, "?mapdebug exposes window.homiMap outside production").not.toBeNull();
+      const left = { lat: fitted.lat + 0.004, lon: fitted.lon - 0.006, zoom: fitted.zoom - 0.7 };
+      await jumpTo(page, left);
+      await expect.poll(async () => (await camera(page))?.zoom).toBeCloseTo(left.zoom, 5);
+      await markMapScreen(page);
+
+      const read = page.waitForResponse((response) => isMapRead(new URL(response.url())));
+      await leaveMapForGood(page, toMap);
+      await expect(page.locator("[data-map-screen][data-e2e-left]"), "Next re-rendered the map's route fresh").toHaveCount(0);
+      await read;
+      // The camera left is off the fit: some stacks may be out of sight; no pill is left.
+      await expect(visible(page, "[data-marker]").first()).toBeVisible({ timeout: 15_000 });
+      await expect(pill(page)).toHaveCount(0);
+      // Longer than a fit's ease: a fit after the answer would have moved the camera by now.
+      await page.waitForTimeout(800);
+      const back = (await camera(page))!;
+      expect(back.lat).toBeCloseTo(left.lat, 5);
+      expect(back.lon).toBeCloseTo(left.lon, 5);
+      expect(back.zoom).toBeCloseTo(left.zoom, 5);
+
+      await visible(page, "[data-view-toggle]").click();
+      await expect(visible(page, "article[data-listing]").first()).toBeVisible();
+      await applyTwoRooms(page);
+      await toMap(page);
+      await expect
+        .poll(async () => {
+          const now = (await camera(page))!;
+          return Math.abs(now.zoom - left.zoom) + Math.abs(now.lat - left.lat) + Math.abs(now.lon - left.lon);
+        })
+        .toBeGreaterThan(1e-4);
+    });
+
     /**
      * E1, E2; acceptance "The toggle opens the map", "Listings at one address form a stack …", "a tap opens the
      * listing and Back returns to the same card", "`tiles` empty: OSM raster with «© OpenStreetMap»".
