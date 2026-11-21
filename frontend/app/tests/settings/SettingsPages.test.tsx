@@ -34,7 +34,8 @@ import { GraphicsPage } from "@/features/settings/GraphicsPage";
 import { LanguagePage } from "@/features/settings/LanguagePage";
 import { QuietHoursPage } from "@/features/settings/QuietHoursPage";
 import { chooseTheme } from "@/features/settings/themeChoice";
-import { ThemePage } from "@/features/settings/ThemePage";
+import { resetPresetSaves } from "@/features/settings/usePresetSave";
+import { resetThemeSaves, ThemePage } from "@/features/settings/ThemePage";
 import { SETTINGS_KEY } from "@/features/settings/useSettings";
 import { readResource, resetResources, seedResource } from "@/lib/data/useResource";
 import { resetReference } from "@/lib/reference/useReference";
@@ -62,6 +63,8 @@ beforeEach(() => {
   state.refresh.mockReset();
   resetResources();
   resetProfileChange();
+  resetPresetSaves();
+  resetThemeSaves();
   window.localStorage.clear();
   document.documentElement.classList.remove("lite");
   fake = fakeTelegram({ version: "8.0" });
@@ -360,6 +363,54 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
 
     expect(state.sent).toEqual(["settings"]);
     expect(currentToast("app")).toBeNull();
+  });
+
+  it("a lone failure restores and reads the settings again; a success then a failure restores the success", async () => {
+    state.updateSettings.mockResolvedValueOnce(ok(settingsOf({ digest_hours: [9] }))).mockResolvedValueOnce(FAILED);
+    render(withIntl(<DigestPage />));
+    state.sent.length = 0;
+
+    pick("9");
+    await settle();
+    expect(state.sent).toEqual([]);
+    pick("12 и 20");
+    await settle();
+
+    expect(checked()).toEqual(["9"]);
+    expect(state.sent).toEqual(["settings"]);
+  });
+
+  it("a late answer of a page closed meanwhile does not undo a newer pick on another page (one sequence per launch)", async () => {
+    const digest = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(digest.promise).mockResolvedValueOnce(ok(settingsOf({ quiet_hours: { from: 22, to: 8 } })));
+    const first = render(withIntl(<DigestPage />));
+    pick("9");
+    first.unmount();
+
+    render(withIntl(<QuietHoursPage />));
+    pick("22–08");
+    await settle();
+    await act(async () => digest.resolve(ok(settingsOf({ digest_hours: [9] }))));
+
+    expect(checked()).toEqual(["22–08"]);
+  });
+
+  it("the theme: a late answer of a closed page changes nothing; a rejected save restores like a failure", async () => {
+    const old = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(old.promise).mockRejectedValueOnce(new Error("lost"));
+    const first = render(withIntl(<ThemePage />));
+    const start = checked();
+    pick("Тёмная");
+    first.unmount();
+
+    render(withIntl(<ThemePage />));
+    pick("Светлая");
+    await settle();
+    expect(checked()).toEqual(start);
+    await act(async () => old.resolve(ok(settingsOf({ theme: "dark" }))));
+
+    expect(checked()).toEqual(start);
+    expect(state.patchMe).not.toHaveBeenCalled();
   });
 
   it("saves answered in order read nothing again", async () => {

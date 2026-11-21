@@ -490,12 +490,15 @@ The package is built as designed. These points were decided in the code (rule 6)
   again, as legacy does. `ChoiceList` (Radix RadioGroup) reports no pick of the checked option, as for the theme,
   language and currency, so nothing is sent; the setting is unchanged either way.
 - **One save rule for the presets** (`usePresetSave`: quiet hours, digest, card style). The change shows at once.
-  Of several saves the latest pick decides: earlier answers change nothing, its success shows the answer, its failure
+  Of several saves — on any preset page of the launch, one sequence for all, since an answer replaces the whole
+  settings entry and a page closed meanwhile must not undo a newer pick on another — the latest pick decides: earlier
+  answers change nothing, its success shows the answer, its failure
   puts back the settings before the picks with `failed()`. The order in which the server took the writes is not
   always the order of the picks (Next lets a Back pass a pending action, a save is repeated after a
   re-authentication, a write can land after its request timed out), so after a failure, or when an earlier save was
   still out as the latest one settled, the settings are read again once every save has settled: the screen ends at
-  what the server holds, and saves answered in order read nothing again. The theme: the latest pick decides too; its
+  what the server holds, and saves answered in order read nothing again. The theme: the latest pick of the launch
+  decides too (its own sequence, shared by every mount of the page); its
   success applies the theme again and gives it to the session's profile (`patchMe`), since a re-authentication in
   between re-applies the profile's old theme; its failure restores the theme before the picks.
 - **Language and currency rows are disabled while a save runs**, so the second pick of the design ("waits for the

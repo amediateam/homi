@@ -19,6 +19,7 @@ vi.mock("@/lib/actions/useAction", () => ({ useAction: (action: (input: unknown)
 
 import { setCardSample } from "@/features/settings/cardSample";
 import { CardStylePage } from "@/features/settings/CardStylePage";
+import { resetPresetSaves } from "@/features/settings/usePresetSave";
 import { SETTINGS_KEY } from "@/features/settings/useSettings";
 import { resetResources, seedResource } from "@/lib/data/useResource";
 import { currentToast, dismissToast } from "@/lib/ui/toast";
@@ -39,6 +40,7 @@ beforeEach(() => {
   state.updateSettings.mockReset();
   state.sendCardSample.mockReset();
   resetResources();
+  resetPresetSaves();
   setCardSample("idle");
   seedResource(SETTINGS_KEY, settingsOf());
   fake = fakeTelegram({ version: "8.0" });
