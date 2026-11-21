@@ -14,7 +14,8 @@ Written for whoever continues the **development track**. The production track's 
 
 ## State at handoff
 - `main` = `c180b0b`: #98 the pipeline tooling (`41cf7ea`), #99 the KI-63 spec fix (`53a4959`) and #100 WP-39 (`c180b0b`, CI green on `dc6b97b`: 402 + 14), all merged 2026-11-21.
-- **WP-31** on `wp-31-settings` (main merged in): every step done and tested; PR against `main`.
+- **#101** `wp-31-settings` → `main` (WP-31): two independent reviews, their findings fixed; CI green on `e3ab1b3`; the head `198b931` (second review fixes) waits for its CI. Merge it at its head once green, without `--delete-branch`, then retarget #102 to `main`.
+- **#102** `wp-37-catch-up-map` → `wp-31-settings` (WP-37, stacked): every step done and tested; its review runs next.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
 - Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh app/e2e/settings.spec.ts app/e2e/settings-language.spec.ts app/e2e/settings-hidden.spec.ts app/e2e/home-nudge.spec.ts`.
 
@@ -23,11 +24,12 @@ Written for whoever continues the **development track**. The production track's 
 - **#98 pipeline tooling:** `scripts/dev/e2e-local.sh` (the CI job's API on a developer machine: `php -S`, SQLite, array cache, `CI=1`); `scripts/audit/session_audit.py`; rule 8; one independent review, its findings fixed in `b671c67`.
 - **#99 KI-63, the `foundation.spec.ts` case:** the cause is KI-54's remount of the filters form when the profile's city arrives (two copies for the length of the exit); the check takes the copy that stays. Not reproduced locally (40 + 30 repeats passed).
 - **#100 WP-39 (motion):** every step of its specification, rows 44 – 54 of `baseline.md` closed; the specification's "As built" lists the points decided in code.
-- **WP-31 (settings):** the tab, the eight sub-pages, «О приложении» and the home-screen offer; checked in the browser first that a locale switch renders in place (no document load, no new session). Unit and component tests (4 500+ app tests green), four new e2e specs (21 passed locally). KI-68 (the stub stores no setting).
+- **WP-31 (settings), #101:** the tab, the eight sub-pages, «О приложении» and the home-screen offer; checked in the browser first that a locale switch renders in place. Two reviews fixed (`e3ab1b3`, `198b931`). `make ci-frontend` exit 0 (app 3 852); the settings, map and nudge specs 45 passed locally. KI-68.
+- **WP-37 (map catch-up), #102:** the cut note, the view's error boundary, the camera memory per engine and search. The e2e camera case leaves the map through four routes so Next drops its route; with the memory off it fails (checked).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Nothing blocks the queue** (rule 8): after WP-31 comes **WP-37** (catch-up: map), then the next row of the queue, on stacked branches. WP-62 and WP-61 stay at stage E.
-2. **The click on the permission prompt of `gh pr merge`** for #100, then WP-31's PR (an `ask` rule of the shared `.claude/settings.json`); nothing goes around it. Merge a stacked PR without `--delete-branch`, retarget the next one to `main`, then delete the branch (rule 8; #99 was closed once by a deleted base).
+1. **Nothing blocks the queue** (rule 8): after WP-37 the next row of the queue that is `TODO`, on stacked branches. WP-62 and WP-61 stay at stage E.
+2. **The click on the permission prompt of `gh pr merge`** for #101, then #102 (an `ask` rule of the shared `.claude/settings.json`); nothing goes around it. Merge a stacked PR without `--delete-branch`, retarget the next one to `main`, then delete the branch (rule 8; #99 was closed once by a deleted base).
 3a. **`CLAUDE.md`** still says the settings tab renders the WP-20 placeholder: a small shared-file PR once WP-31 is merged.
 3. **An explicit yes is still needed for:** e2e shards in CI (private repository on the free plan: more billed Actions minutes); taking `gh pr merge` out of `ask` (shared file, the first developer reviews); the `/doctor` cleanup.
 4. **The owners' page** (DEC-97); **the operator texts** (WP-02 Part A and the addendum), never sent from the connected Gmail.
@@ -41,6 +43,9 @@ Written for whoever continues the **development track**. The production track's 
 - jsdom rewrites `calc()` in inline styles: compare through a probe element's style, not with the literal.
 - A push to a PR that touches `frontend/**` re-runs the whole e2e job (about 21 min) even for docs: CI run ids go into the PR description (`gh pr edit`).
 - The guard hook denies a whole Bash call that pipes `grep -o '^[A-Z_]*=' backend/.env` into another command.
+- Next keeps up to three routes mounted (`node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`): an e2e case that must prove a fresh mount goes through four other routes and checks that a DOM mark is gone.
+- The React Compiler lint knows a ref only by a name ending in `Ref`: a ref passed in an input object as `memory` is "a value that cannot be modified".
+- `open(p,'w').write(open(p).read())` empties the file (the write truncates first): it emptied `useMapInstance.ts` once; `git checkout --` restored it.
 - Deleting a merged branch closes the PRs whose base it is; GitHub does not retarget them. Retarget first (`gh pr edit N --base main`).
 - A layout effect cleanup also runs when a route is hidden under `<Activity>`: state that must not outlive a hidden screen (a save phase, a heart's last tap) resets there.
 - `scripts/dev/e2e-local.sh` needs port 3001 free and gives a spec's result in under a minute; the shared local API (`backend/.env`'s database) was unreachable all session and was not needed.

@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-21 (#98, #99, #100 merged, main c180b0b; WP-31 on branch wp-31-settings)
+updated: 2026-11-21 (#98, #99, #100 merged, main c180b0b; WP-31 open as #101; WP-37 on branch wp-37-catch-up-map, stacked on it)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -349,6 +349,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     sheet's body and strip scrolls (`RadarReturn.via`, `stripX`, `sheetY`).
   - Tests: `make ci-frontend` exit 0 on `95289e3` (app 220 files, 3 704 tests); `e2e/feed-continuity.spec.ts` not run
     here (the local API answered `500`: database host unreachable); CI on `1330323`: e2e 392 passed + `@radars-off` 14.
+- **On branch `wp-37-catch-up-map` (WP-37, stacked on WP-31, not merged):** the map's cut note («На карте — N самых свежих. Остальные — в списке», from `with_point`; `mapCounts` → `{ shown, cut, missing }`), `MapViewBoundary` (a render error of either view shows the error pill with «Повторить» inside the map, reported as `render`), and the camera memory of the launch (`rememberCamera` / `recallCamera` in `features/map/camera.ts`, one per engine and search; the views skip the first fit for the restored search). Baseline rows 33 – 35 closed.
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 
 ## Infrastructure

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#102) |
 | Depends on | intake `index-CIa0Ldj2` (`with_point` in the answer of `GET /listings/map`, the stub scenario `map_cut`, the text `map.cut`), WP-28 |
 | Size | about 245 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-011), §4 (BR-APP-062, BR-APP-111); `02` (BR-API-192); `wave-1/baseline.md`, built code behind the pin, rows 33, 34, 35 |
@@ -164,6 +164,32 @@ Run in ru, uz and en, light and dark, in Telegram on staging, on the GL engine a
 - [ ] Rows 33, 34 and 35 of `baseline.md` (built code behind the pin) are marked closed.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6).
+
+- **The counts.** `useMapPoints` gives `shown`, `cut`, `missing` and `queryKey` (the old `total` is gone; the
+  «N из M» note computes `shown + missing`). A cut answer whose every point was hidden in this launch is `empty`, and
+  the cut note needs at least one point shown: the map has nothing to draw then.
+- **The boundary** leaves the map's area empty and tells `MapScreen`, which shows the error pill in the one pill
+  slot, before the Leaflet failure's and the points' pills. Its «Повторить» plays the light haptic and remounts the
+  boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
+  Leaflet retry: those never throw (`MapScreen.chunk` tests unchanged).
+- **The camera memory.** `rememberCamera` / `recallCamera` keep one camera per engine, for one search. Each view
+  holds a `CameraMemory` ref shared by its instance hook and its camera hook: `restored` is the search the map opened
+  at, consumed by the first answer (kept only when that answer is for the same search, so a search changed in between
+  fits), and `placed` is the search last fitted or restored, which the cleanup saves under — a search applied and left
+  before its answer never takes the camera of the one before. A restore counts as a fit: the stand-in → city jump does
+  not overwrite it, the next answer eases, and on Leaflet the deferred basemap goes on at once.
+- **The end-to-end camera case** leaves the map through four routes (the list, the saved, radar and settings tabs) so
+  that Next drops the map's route, which it keeps for up to three (`preserving-ui-state.md`); the case checks that
+  the route was rendered fresh. With the memory switched off it fails (checked once by hand): while Next keeps the
+  route, `<Activity>` keeps the camera without it.
+- **WP-31's feed epoch** re-reads the map with the same `responseId` (no fit, no note); WP-37's notes follow only a
+  new `responseId`.
+
 ## Handoff
 
-Empty.
+Finished: every step, with unit, component and end-to-end tests; rows 33, 34 and 35 of `baseline.md` are marked
+closed. The checks and the CI runs are in the description of PR #102. Nothing is half-done. Next: the production
+track's deploy and the acceptance checklist on staging.
