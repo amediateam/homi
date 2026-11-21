@@ -546,8 +546,14 @@ cabinet on there (DEC-88).
   offer it is `MineBar`, so it is never empty. The market delta is shown as «−12 %» in the tone of `price_tone`.
 - **The tip store** is `features/owner/signals/tipState.ts` (a file `requestTip.ts` beside `RequestTip.tsx` clashes on a
   case-insensitive disk). The tips leave with WP-39's `tip` leave.
-- **The swipe.** `useSwipeBack` ignores a touch inside another `[data-slot="subpage"]` and removes its inline styles
-  `SWIPE_BACK_RESET_MS` (300 ms) after a closing swipe; within that time it ignores touches.
+- **The swipe.** `useSwipeBack` ignores a touch inside another `[data-slot="subpage"]`. `SWIPE_BACK_RESET_MS` (300 ms)
+  after a closing swipe it removes its inline styles only if the layer is no longer shown; a layer still shown then (a
+  navigation that takes longer) stays out until its cleanup, so it never snaps back (review).
+- **After the review.** Each fresh opening of «Мои объявления» is keyed on `bfcacheId` (Back from «Отклики» keeps the
+  tab); a handled `?focus=` is forgotten once it leaves the address. The request cards carry `ph-no-capture`. A later
+  page of «Отклики» that fails stops the paging until «Повторить». A `refresh()` during a read in flight queues one
+  more read after it. «Мои объявления» and the limit sheet read no owner list off-cabinet for a user without
+  listings.
 - **The e2e harness** forgives «Fetch response has been disposed» on the header mode's `/bff/session` route, as it
   forgave «Test ended»: a disposed answer is one the page no longer waits for.
 
