@@ -16,12 +16,15 @@ export function PlaceSection({
   form,
   shownPoint,
   invalid,
+  pointRefused = false,
   onLandmark,
   onMap,
 }: {
   form: OwnerForm;
   shownPoint: ShownPoint | null;
   invalid: boolean;
+  /** The server refused the point (`422` with `errors.point`, LB-APP-063): `own.pointOutside` under the field. */
+  pointRefused?: boolean;
   onLandmark: (text: string | null) => void;
   onMap: () => void;
 }) {
@@ -44,6 +47,11 @@ export function PlaceSection({
           {t("own.mapBtn")}
         </Button>
       </div>
+      {pointRefused ? (
+        <p data-point-refused role="alert" className="mt-1.5 text-[13px] text-danger">
+          {t("own.pointOutside")}
+        </p>
+      ) : null}
     </Field>
   );
 }

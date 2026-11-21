@@ -1,4 +1,6 @@
-/** The owner form's `place` step (WP-81); its screen is built in a later step of the package. */
+import { PlacePickerRoute } from "@/features/owner/place/PlacePickerRoute";
+
+/** The owner form's place picker (SCR-051), over the questionnaire its layout keeps mounted. */
 export default function Page() {
-  return null;
+  return <PlacePickerRoute />;
 }

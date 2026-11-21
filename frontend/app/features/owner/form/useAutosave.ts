@@ -17,6 +17,8 @@ export interface UseAutosaveOptions<T> {
 export interface Autosave extends AutosaveState {
   edit: (change: Partial<OwnerForm>) => void;
   flush: () => Promise<FlushResult>;
+  /** The form as it is now, for code that runs after an await (the place fill). */
+  current: () => OwnerForm;
 }
 
 /**
@@ -31,5 +33,5 @@ export function useAutosave<T>(options: UseAutosaveOptions<T>): Autosave {
   }, [controller, save, onSaved, onDisabled]);
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);
   useEffect(() => () => void controller.close(), [controller]);
-  return { ...state, edit: (change) => controller.edit(change), flush: () => controller.flush() };
+  return { ...state, edit: (change) => controller.edit(change), flush: () => controller.flush(), current: () => controller.getState().form };
 }

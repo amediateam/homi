@@ -62,7 +62,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
     onDisabled,
     texts: { deleted: t("own.photoDeleted"), undo: t("own.placeUndo") },
   });
-  const { form, invalid, error, saving, edit: editRaw, flush } = autosave;
+  const { form, invalid, error, saving, edit: editRaw, flush, current } = autosave;
   const edit = useCallback((change: Partial<OwnerForm>) => editRaw(couple(form, change)), [editRaw, form]);
 
   // A draft without a city takes the profile's (BR-APP-080), once.
@@ -151,7 +151,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
                 : null;
 
   return (
-    <OwnerFormContext value={{ listing, form, edit, restore: editRaw, flush }}>
+    <OwnerFormContext value={{ listing, form, edit, restore: editRaw, flush, current }}>
     <div ref={root} data-owner-questionnaire="">
       <OwnerFrame
         title={listing.status === "draft" ? t("own.title") : t("own.editTitle")}
@@ -178,6 +178,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
             form={form}
             shownPoint={listing.shownPoint}
             invalid={highlighted.has("landmark") || highlighted.has("lat")}
+            pointRefused={invalid.has("lat")}
             onLandmark={(landmark) => edit({ landmark })}
             onMap={() => nav.push(routes.ownerPlace(listing.id))}
           />

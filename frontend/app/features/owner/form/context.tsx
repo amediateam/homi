@@ -14,6 +14,8 @@ export interface OwnerFormValue {
   /** An edit as it is: an undo restores exactly what was there. */
   restore: (change: Partial<OwnerForm>) => void;
   flush: () => Promise<FlushResult>;
+  /** The form as it is now (after an await). */
+  current: () => OwnerForm;
 }
 
 export const OwnerFormContext = createContext<OwnerFormValue | null>(null);

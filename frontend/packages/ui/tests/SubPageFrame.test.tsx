@@ -197,6 +197,32 @@ describe("useSwipeBack", () => {
     expect(onBack).not.toHaveBeenCalled();
   });
 
+  it("edgeOnly (WP-81): a swipe starts only within the left 24 px, even over a map; the layer is marked", () => {
+    vi.useFakeTimers();
+    const onBack = vi.fn();
+    render(
+      <Layer onBack={onBack} edgeOnly>
+        <div data-map="" data-testid="map" />
+      </Layer>,
+    );
+    const layer = screen.getByTestId("layer");
+    const map = screen.getByTestId("map");
+    expect(layer.hasAttribute("data-edge-swipe")).toBe(true);
+
+    // From the middle of the map: the map's own gesture.
+    touch(map, "touchstart", 150);
+    touch(map, "touchmove", 150 + SWIPE_BACK_START_PX);
+    touch(map, "touchmove", 280);
+    touch(map, "touchend");
+    act(() => vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS));
+    expect(onBack).not.toHaveBeenCalled();
+
+    // From the edge, over the same map: the layer's.
+    swipe(map, 200, 100);
+    act(() => vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("enabled = false attaches nothing", () => {
     const onBack = vi.fn();
     render(<Layer onBack={onBack} enabled={false} />);
