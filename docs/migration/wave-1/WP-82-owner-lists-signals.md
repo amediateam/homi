@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (part 1 #108: the lists, «Отклики», the panel and the signals; part 2: the invitations and the landlord block, a pull request of its own) |
+| Status | WAITING (merged in #108, the lists, «Отклики», the panel and the signals, and #109, the invitations and the landlord block, on 2026-11-22) |
 | Depends on | WP-81, WP-31, WP-26, WP-39 (the end block of the search feed, the survey's `moved` step, `RollNumber`, the leave helper; *added by the intake of `index-YX9bFVws.js`*) |
 | Size | about 3 050 changed lines with tests, L (about 450 of them for the invitations and the landlord block of legacy release `index-YX9bFVws.js`; if the PR passes 3 000 lines, they go into a PR of their own after it) |
 | Behaviour reference | `03` SCR-032 (the group «Сдаю квартиру»), SCR-049, SCR-057 … SCR-060, §3.3 (`owner_attention`, `owner_limit_sheet`, `owner_hint_opened`, `owner/mine`, `owner/listing`), BR-APP-088 … BR-APP-095, BR-APP-103, LB-APP-057, LB-APP-059, LB-APP-062, LB-APP-064, LB-APP-065 (the card), LB-APP-066, LB-APP-069, LB-APP-070; `05` TMA-037 (`kv-req-tip`); `09` DEV-056 (the card), DEV-059; since `index-YX9bFVws.js`: BR-APP-092 (changed), BR-APP-112, BR-APP-113, BR-APP-115, BR-APP-116, LB-APP-084, LB-APP-088, LB-APP-090, TMA-048, DEC-89, DEC-91, DEC-94 |
