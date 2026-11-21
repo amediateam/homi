@@ -20,6 +20,7 @@ vi.mock("@/lib/api/browser", () => ({
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate: vi.fn(), patchMe: vi.fn() }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => state.session }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: (href: string) => state.push(href) } }));
+vi.mock("@/features/settings/server", () => ({ SettingsServer: () => null }));
 
 import { resetGraphicsRow, SettingsFallback, SettingsScreen } from "@/features/settings/SettingsScreen";
 import { resetResources } from "@/lib/data/useResource";
@@ -90,7 +91,11 @@ describe("SettingsScreen (WP-31, SCR-032): states", () => {
     expect(row("theme")).not.toBeNull();
   });
 
-  it("the layout's fallback is the frame and a spinner, with no reads of its own (so the server read is adopted)", () => {
+  it("the layout's fallback is the frame and a spinner, with no reads of its own (so the server read is adopted)", async () => {
+    const { default: SettingsLayout } = await import("@/app/[locale]/(main)/settings/layout");
+    const tree = SettingsLayout({ children: null }) as { props: { children: [{ props: { fallback: { type: unknown } } }, unknown] } };
+    expect(tree.props.children[0].props.fallback.type).toBe(SettingsFallback);
+
     render(withIntl(<SettingsFallback />));
 
     expect(document.querySelector('[data-route="settings"] [data-settings-state="loading"]')).not.toBeNull();

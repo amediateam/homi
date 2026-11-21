@@ -490,25 +490,32 @@ The package is built as designed. These points were decided in the code (rule 6)
   again, as legacy does. `ChoiceList` (Radix RadioGroup) reports no pick of the checked option, as for the theme,
   language and currency, so nothing is sent; the setting is unchanged either way.
 - **One save rule for the presets** (`usePresetSave`: quiet hours, digest, card style). The change shows at once. An
-  answer for an earlier pick that arrives after a later one is dropped, and only a failure of the latest save
-  restores the settings the server last confirmed. The theme follows the same rule.
+  answer for an earlier pick never replaces a later pick, and only a failure of the latest save puts settings back:
+  the answer of the newest save that succeeded, else the settings before the saves. Next sends Server Actions one at a
+  time, so the server takes the saves in order and holds the newest success; an earlier success that arrives after the
+  latest one failed is therefore shown, and one that arrives after a later success is dropped. The theme follows the
+  same rule for what a failure restores.
 - **Language and currency rows are disabled while a save runs**, so the second pick of the design ("waits for the
   first") cannot happen.
 - **The hidden list's follow-up.** The design names "the map points, the count and the radar previews":
   - the radar lists are invalidated (`invalidate("radars")`);
   - the map's points now follow the feed epoch (`useMapPoints`: a bump asks the same search again and keeps the points
     until the answer, whose `responseId` stays, so the camera and an open card stay), which also covers a language or
-    currency change and WP-38's long return;
+    currency change and WP-38's long return. Only an answer with points keeps the id: before the first answer, or
+    after one without points, the camera has nothing fitted yet, so the next answer fits;
   - the live count of the filter sheets is read anew whenever a sheet opens, so nothing keeps it.
   A failure puts back exactly the rows its change removed, among the rows shown now, in the list's order as first read.
   Legacy's `applyChange` filtered the rows of before the change, which lost a row that a second failure had put back
-  (two «Вернуть» that fail in turn); a row returned before a change began stays returned. When a row leaves, the
-  focus moves to the next row's «Вернуть», else to «Показать всё снова», else to the page.
+  (two «Вернуть» that fail in turn); a row returned before a change began stays returned, and a change that fails
+  after a «Показать всё снова» succeeded puts nothing back (the server returned its row too). When a row leaves, the
+  focus moves to the next row's «Вернуть», else to the previous one's, else to the page (the last row takes
+  «Показать всё снова» with it).
 - **The «Лента» count** is the sum of hidden listings and blocked authors (legacy's), shown as the row's value.
 - **«О приложении».** Without an Instagram icon in lucide the row has a camera icon; it shows only once the brand layer
   has HOMI's own link. The support row opens `t.me/<support>` through `tg.openLink`.
 - **The card-style mocks** follow legacy's `card-style.css` as Tailwind classes on the tokens. The two options are a
-  radio group with one Tab stop and the arrow keys. The sample result is a small store that the screen resets when the
+  radio group with one Tab stop and the arrow keys, locked (focus included) while a sample is on its way. The sample
+  result is a small store that the screen resets when the
   tab unmounts; an answer that arrives after a reset is dropped, as legacy's is with its screen. The result line is a
   polite live region.
 - **The home offer.** The card's frame, button and × moved from `FollowNudge.tsx` to `features/nudges/NudgeFrame.tsx`,
@@ -534,6 +541,7 @@ that still names the settings placeholder (a shared file: a separate small PR).
 
 ## Handoff
 
-Finished: every step, with unit, component and end-to-end tests; one independent review, its findings fixed; PR #101.
-Nothing is half-done. Next: the queue's next
+Finished: every step, with unit, component and end-to-end tests; two independent reviews, their findings fixed; PR #101.
+Nothing is half-done. Known and left: a direct load of a sub-page address may read the settings once more in the
+browser before the layout's server read arrives (the shown data is the same). Next: the queue's next
 package; the production track's deploy and the acceptance checklist on staging.

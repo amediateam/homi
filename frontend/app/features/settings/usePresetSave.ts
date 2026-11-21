@@ -12,41 +12,51 @@ import { type Settings, useSettings } from "./useSettings";
 /**
  * The save of a preset page (WP-31, BR-APP-051: quiet hours, digest hours, card style): the change shows at once
  * (`patch`), then `PATCH /settings`, and the answer replaces the settings shown. Of several saves the latest one
- * wins: an earlier answer that arrives after a later pick is dropped, and only a failure of the latest save puts back
- * the settings the server last confirmed, with `failed()`; a failed earlier request never undoes a later success.
+ * wins: an earlier answer that arrives after a later pick does not replace it, and only a failure of the latest save
+ * puts back, with `failed()`, the answer of the newest save that succeeded — else the settings before the saves. The
+ * server takes the saves in their order (Next sends Server Actions one at a time), so the newest success is what it
+ * holds: a success of an earlier save that arrives after the latest one failed is shown, and one that arrives after a
+ * later success is dropped. A failed earlier request never undoes anything.
  */
 export function usePresetSave(): { settings: Settings | undefined; save: (change: SettingsInput & Partial<Settings>) => Promise<boolean> } {
   const view = useSettings();
   const send = useAction(updateSettings);
   const latest = useRef(0);
-  const confirmed = useRef<Settings | undefined>(undefined);
-  const confirmedAt = useRef(0);
+  /** The number of the newest save that succeeded. */
+  const newestSuccess = useRef(0);
+  /** What a failure of the latest save puts back while saves are pending; `undefined` once the latest settled. */
+  const restore = useRef<Settings | undefined>(undefined);
 
   const save = async (change: SettingsInput & Partial<Settings>): Promise<boolean> => {
     tg.haptic.impact("light");
     const request = ++latest.current;
     const before = view.patch(change as Partial<Settings>);
-    confirmed.current ??= before;
+    restore.current ??= before;
     const result = await send(change).catch(() => null);
-    if (request !== latest.current) {
-      // An earlier save that succeeded is what a failure of the later one restores — only while that one is pending
-      // and no later success was confirmed already.
-      if (result?.ok && confirmed.current !== undefined && request > confirmedAt.current) {
-        confirmed.current = result.data;
-        confirmedAt.current = request;
-      }
-      return Boolean(result?.ok);
+    const newest = result?.ok === true && request > newestSuccess.current;
+    if (newest) {
+      newestSuccess.current = request;
     }
-    confirmedAt.current = request;
+    if (request !== latest.current) {
+      if (newest) {
+        if (restore.current !== undefined) {
+          restore.current = result.data;
+        } else {
+          // The latest save settled and failed (a success of it would be newer): the server holds this one.
+          view.replace(result.data);
+        }
+      }
+      return result?.ok === true;
+    }
     if (result?.ok) {
-      confirmed.current = undefined;
+      restore.current = undefined;
       view.replace(result.data);
       return true;
     }
-    if (confirmed.current !== undefined) {
-      view.replace(confirmed.current);
+    if (restore.current !== undefined) {
+      view.replace(restore.current);
     }
-    confirmed.current = undefined;
+    restore.current = undefined;
     failed();
     return false;
   };

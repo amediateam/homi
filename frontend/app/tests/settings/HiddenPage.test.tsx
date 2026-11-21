@@ -218,4 +218,33 @@ describe("HiddenPage: two returns that fail one after the other (review of WP-31
 
     expect(document.activeElement).toBe(returnOf(`[data-hidden-author="${CHANNEL.id}"]`));
   });
+
+  it("the last row's «Вернуть» gives the focus to the page: «Показать всё снова» leaves with it", async () => {
+    state.unblockAuthorById.mockReturnValue(new Promise(() => undefined));
+    page({ authors: [PHONE] });
+
+    const button = returnOf(`[data-hidden-author="${PHONE.id}"]`);
+    button.focus();
+    fireEvent.click(button);
+    await settle();
+
+    expect(document.querySelector("[data-hidden-all]")).toBeNull();
+    expect(document.activeElement).toBe(document.querySelector("[data-hidden-page]"));
+  });
+
+  it("a return that fails after «Показать всё снова» succeeded puts nothing back: the server returned that row too", async () => {
+    const single = deferred<ActionResult<null>>();
+    state.unblockAuthorById.mockReturnValueOnce(single.promise);
+    state.unhideAll.mockResolvedValueOnce(OK);
+    page({ authors: [PHONE, CHANNEL] });
+
+    fireEvent.click(returnOf(`[data-hidden-author="${PHONE.id}"]`));
+    fireEvent.click(document.querySelector("[data-hidden-all]")!);
+    await settle();
+    expect(authors()).toEqual([]);
+
+    await act(async () => single.resolve(FAILED));
+    expect(authors()).toEqual([]);
+    expect(notified("error")).toBe(0);
+  });
 });

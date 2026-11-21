@@ -144,9 +144,10 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
     setState(state);
   } else if (stored.epoch !== epoch) {
     // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
-    // same search is asked again when the map shows, and its points stay until the answer. Only points already shown
-    // keep the view: before the first answer (pending, aborted or failed) the answer is a first one and must fit.
-    state = { ...stored, epoch, error: null, request: stored.loaded ? { keepView: true } : {} };
+    // same search is asked again when the map shows, and its points stay until the answer. Only an answer with points
+    // keeps the view: before the first answer (pending, aborted or failed), or after one without points, there was
+    // nothing to fit, so the new answer must fit. (An answer whose every point is hidden keeps it: a rare case.)
+    state = { ...stored, epoch, error: null, request: stored.loaded && stored.points.length > 0 ? { keepView: true } : {} };
     setState(state);
   }
 

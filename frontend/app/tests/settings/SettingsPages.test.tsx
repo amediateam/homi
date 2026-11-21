@@ -129,6 +129,25 @@ describe("ThemePage (WP-31, SCR-033)", () => {
   });
 });
 
+describe("ThemePage: answers out of order (review of WP-31)", () => {
+  it("an older success after a newer one is not the theme a later failure restores", async () => {
+    const first = deferred<ActionResult<unknown>>();
+    const second = deferred<ActionResult<unknown>>();
+    const third = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockReturnValueOnce(third.promise);
+    render(withIntl(<ThemePage />));
+
+    pick("Светлая");
+    pick("Тёмная");
+    pick("Как в Telegram");
+    await act(async () => second.resolve(ok(settingsOf({ theme: "dark" }))));
+    await act(async () => first.resolve(ok(settingsOf({ theme: "light" }))));
+    await act(async () => third.resolve(FAILED));
+
+    expect(checked()).toEqual(["Тёмная"]);
+  });
+});
+
 describe("GraphicsPage (WP-31, SCR-034)", () => {
   it("each mode writes or clears the storage and switches html.lite at once, with no request", () => {
     render(withIntl(<GraphicsPage />));
@@ -292,6 +311,38 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
     await settle();
 
     expect(checked()).toEqual(["12 и 20"]);
+  });
+
+  it("the newest success is what a failure restores, also one that arrives after the latest failed (the server takes saves in order)", async () => {
+    const first = deferred<ActionResult<unknown>>();
+    const third = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED).mockReturnValueOnce(third.promise);
+    render(withIntl(<DigestPage />));
+    const start = checked();
+
+    pick("9");
+    pick("12 и 20");
+    await settle();
+    expect(checked()).toEqual(start);
+
+    pick("19");
+    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
+    expect(checked()).toEqual(["19"]);
+    await act(async () => third.resolve(FAILED));
+    expect(checked()).toEqual(["9"]);
+  });
+
+  it("an earlier success that arrives after the latest failed, with nothing pending, is shown", async () => {
+    const first = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED);
+    render(withIntl(<DigestPage />));
+
+    pick("9");
+    pick("12 и 20");
+    await settle();
+    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
+
+    expect(checked()).toEqual(["9"]);
   });
 
   it("an empty preset list renders nothing but the page's hint", () => {
