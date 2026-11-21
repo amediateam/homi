@@ -234,6 +234,41 @@ describe("playLeave: what a copy keeps of the node's `data-*` attributes", () =>
     expect(copies()[0]!.firstElementChild!.hasAttribute("data-late")).toBe(true);
   });
 
+  it("each sheet is scanned once: one that comes and goes is read alone, and one swapped for another at the same count is read", async () => {
+    const main = styles("[data-main] { color: red; }");
+    let reads = 0;
+    const rules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, "cssRules")!;
+    Object.defineProperty(main.sheet, "cssRules", {
+      configurable: true,
+      get() {
+        reads += 1;
+        return rules.get!.call(this);
+      },
+    });
+
+    await leaveByRemoval(node('<div><b data-main="">x</b></div>'), "toast");
+    vi.advanceTimersByTime(LEAVE_MAX_MS);
+    // A scroll-lock style that comes and goes, as Radix's while a sheet is open.
+    const lock = styles("body[data-scroll-locked] { overflow: hidden; }");
+    await leaveByRemoval(node('<div><b data-main="">x</b></div>'), "toast");
+    vi.advanceTimersByTime(LEAVE_MAX_MS);
+    lock.remove();
+    await leaveByRemoval(node('<div><b data-main="">x</b></div>'), "toast");
+    vi.advanceTimersByTime(LEAVE_MAX_MS);
+    expect(reads).toBe(1);
+
+    // Another sheet takes the place of the one that went: the count is the same, and the new one is still read.
+    const extra = styles("[data-extra] { color: blue; }");
+    void extra;
+    const late = styles("i { color: green; }");
+    late.remove();
+    styles("[data-swapped] { color: green; }");
+    await leaveByRemoval(node('<div><b data-swapped="1" data-main="">x</b></div>'), "toast");
+    const kept = copies()[0]!.firstElementChild!;
+    expect(kept.hasAttribute("data-swapped")).toBe(true);
+    expect(kept.hasAttribute("data-main")).toBe(true);
+  });
+
   it("when a stylesheet cannot be read, the copy keeps its attributes but never the node's names", async () => {
     const style = styles("[data-x] { color: red; }");
     Object.defineProperty(style.sheet, "cssRules", {

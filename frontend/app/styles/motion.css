@@ -167,6 +167,11 @@
   }
 }
 
+/* A leaving copy plays no animation (`@homi/ui` motion.css): its ring would refill; it stands spent instead. */
+.leave [data-toast-ring] circle:last-child {
+  stroke-dashoffset: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-fav-burst] {
     display: none;
