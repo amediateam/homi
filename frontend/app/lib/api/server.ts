@@ -131,6 +131,9 @@ export function createServerApi(config: ServerApiConfig) {
     listingsMap: (query: Query) => call("get", "/listings/map", { query }),
     listing: (value: number, query?: Query) => call("get", "/listings/{number}", { params: number(value), query }),
     contact: (value: number) => call("post", "/listings/{number}/contact", { params: number(value) }),
+    // WP-83: the request «Отклик хозяину»; `init_data` is passed through for the first name and never kept.
+    contactRequest: (value: number, body: Body<"/listings/{number}/contact-request", "post">) =>
+      call("post", "/listings/{number}/contact-request", { params: number(value), body }),
     translation: (value: number) => call("post", "/listings/{number}/translation", { params: number(value) }),
     share: (value: number) => call("post", "/listings/{number}/share", { params: number(value) }),
     favorites: (query?: Query) => call("get", "/favorites", { query }),

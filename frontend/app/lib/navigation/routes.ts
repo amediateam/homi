@@ -140,6 +140,10 @@ export const routes = {
   ownerRequests: (id: string) => `/settings/owner/${id}/requests`,
   /** «Отклики» over the user's own listing, opened from its owner panel (WP-82, SCR-058). */
   listingRequests: (number: number) => `/listing/${number}/requests`,
+  /** The request sheet «Отклик хозяину» over a listing (WP-83, SCR-061). */
+  listingContact: (number: number) => `/listing/${number}/contact`,
+  /** The info sheet «Проверенный хозяин» over a listing (WP-83, SCR-062). */
+  listingOwner: (number: number) => `/listing/${number}/owner`,
   welcomeLanguage: () => "/welcome/language",
   welcomeCity: () => "/welcome/city",
   noAccess: (reason?: string) => withQuery("/no-access", { reason }),
@@ -190,7 +194,7 @@ type Match =
   | { route: "feed" | "map" | "saved" | "history" | "radars" | "settings" }
   | { route: "filters" | "sort" | "city" }
   | { route: "quickFilter"; kind: QuickFilterKind }
-  | { route: "listing"; number: string; child: "photos" | "location" | "market" | "actions" | "requests" | null }
+  | { route: "listing"; number: string; child: "photos" | "location" | "market" | "actions" | "requests" | "contact" | "owner" | null }
   | { route: "radarNew" | "radarFound" }
   | { route: "radar"; id: string; edit: boolean }
   | { route: "settingsPage" }
@@ -203,7 +207,7 @@ type Match =
 /** The four gates (WP-23): `/welcome/language`, `/welcome/city`, `/no-access`, `/outside`. */
 export type GateName = "language" | "city" | "noAccess" | "outside";
 
-const LISTING_CHILDREN = ["photos", "location", "market", "actions", "requests"] as const;
+const LISTING_CHILDREN = ["photos", "location", "market", "actions", "requests", "contact", "owner"] as const;
 
 function match(pathname: string): Match {
   const s = segmentsOf(pathname);
