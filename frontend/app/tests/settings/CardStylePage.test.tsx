@@ -186,6 +186,19 @@ describe("CardStylePage: keyboard and a late answer (review of WP-31)", () => {
     expect(notified()).toEqual([]);
   });
 
+  it("while a sample is on its way an arrow changes nothing and keeps the focus on the checked option", () => {
+    state.sendCardSample.mockReturnValueOnce(new Promise(() => undefined));
+    render(withIntl(<CardStylePage />));
+    fireEvent.click(sendButton());
+    option("classic").focus();
+
+    fireEvent.keyDown(option("classic"), { key: "ArrowRight" });
+
+    expect(checked()).toEqual(["classic"]);
+    expect(document.activeElement).toBe(option("classic"));
+    expect(state.updateSettings).not.toHaveBeenCalled();
+  });
+
   it("the result line is in a live region", () => {
     render(withIntl(<CardStylePage />));
 

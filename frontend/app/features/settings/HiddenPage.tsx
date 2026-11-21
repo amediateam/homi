@@ -81,31 +81,44 @@ export function HiddenPage() {
   const root = useRef<HTMLDivElement>(null);
   /** The order of the list as it was first read: a rolled-back row takes its old place. */
   const order = useRef<(string | number)[] | null>(null);
+  /** Grows with each «Показать всё снова» that succeeded: a change started before it puts nothing back. */
+  const cleared = useRef(0);
   if (hidden === null) {
     return null;
   }
   order.current ??= [...hidden.authors.map(authorId), ...hidden.listings.map(listingNumber)];
   const ordered = order.current;
 
-  /** The row that leaves gives the focus to the next row's «Вернуть», else to «Показать всё снова», else to the page. */
+  /**
+   * The row that leaves gives the focus to the next row's «Вернуть», else to the previous one's, else to the page: the
+   * last row takes «Показать всё снова» with it, so that button is never the target.
+   */
   const passFocus = (row: Element | null) => {
     const rows = [...(root.current?.querySelectorAll("[data-hidden-author], [data-hidden-listing]") ?? [])];
     const at = row === null ? -1 : rows.indexOf(row);
     const next = rows.slice(at + 1).find((other) => other !== row) ?? rows.slice(0, Math.max(0, at)).reverse()[0];
-    const target = next?.querySelector<HTMLElement>("[data-hidden-return]") ?? root.current?.querySelector<HTMLElement>("[data-hidden-all]");
+    const target = next?.querySelector<HTMLElement>("[data-hidden-return]") ?? null;
     queueMicrotask(() => (target?.isConnected ? target : root.current)?.focus({ preventScroll: true }));
   };
 
-  const change = (after: Hidden, request: () => Promise<{ ok: boolean }>) => {
+  const change = (after: Hidden, request: () => Promise<{ ok: boolean }>, all = false) => {
     const before = hidden;
+    const startedAt = cleared.current;
     tg.haptic.impact("light");
     view.set(after);
     void request()
       .catch(() => ({ ok: false }))
       .then((result) => {
         if (result.ok) {
+          if (all) {
+            cleared.current += 1;
+          }
           tg.haptic.success();
           hiddenChanged();
+          return;
+        }
+        // «Показать всё снова» succeeded meanwhile: the server has returned this row too.
+        if (startedAt !== cleared.current) {
           return;
         }
         const now = view.current();
@@ -207,7 +220,7 @@ export function HiddenPage() {
           onClick={() => {
             void tg.confirm(t("hidden.confirmAll")).then((yes) => {
               if (yes) {
-                change({ authors: [], listings: [] }, () => returnAll(null));
+                change({ authors: [], listings: [] }, () => returnAll(null), true);
                 queueMicrotask(() => root.current?.focus({ preventScroll: true }));
               }
             });

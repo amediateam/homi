@@ -171,6 +171,17 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(failing.result.current).toMatchObject({ status: "ready", responseId: 1 });
   });
 
+  it("a bump after an answer without points gives the next answer a new response id: there was nothing to fit", async () => {
+    const { bumpFeedEpoch } = await import("@/features/feed/feedQuery");
+    const { result } = points();
+    await answer(0, answered([], 0));
+    expect(result.current).toMatchObject({ status: "empty", responseId: 1 });
+
+    act(() => bumpFeedEpoch());
+    await answer(1, answered(POINTS, 3));
+    expect(result.current).toMatchObject({ status: "ready", responseId: 2 });
+  });
+
   it("the same search in a new object sends nothing; a posted_days change does (not filtersKey)", async () => {
     const { rerender } = points();
     await answer(0, answered(POINTS, 3));

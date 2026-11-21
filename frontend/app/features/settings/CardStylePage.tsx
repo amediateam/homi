@@ -72,6 +72,10 @@ export function CardStylePage() {
             return;
           }
           event.preventDefault();
+          // While a sample is on its way the choice is locked, and the focus stays with the checked option.
+          if (sample === "sending") {
+            return;
+          }
           const other = current === "classic" ? "rich" : "classic";
           pick(other);
           event.currentTarget.querySelector<HTMLElement>(`[data-card-style-option="${other}"]`)?.focus();
