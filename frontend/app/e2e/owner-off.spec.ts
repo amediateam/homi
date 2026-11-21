@@ -28,11 +28,13 @@ test.describe("owner cabinet switched off @owner-off", () => {
     });
   }
 
-  test("no invitation on a short feed's end or on a listing card (WP-82, DEC-89); «Это всё» still ends a full feed", async ({ page }) => {
+  test("no invitation on a short feed's end or on a listing card (WP-82, DEC-89)", async ({ page }) => {
     await stubMedia(page);
     await page.context().addCookies([{ name: "homi_stub_scenario", value: "few", url: test.info().project.use.baseURL }]);
     await launchApp(page, { path: "/" });
     await expect(page.locator("article[data-listing]").first()).toBeVisible();
+    // Anchor: the short feed is loaded to its end (the sentinel has nothing more), so the check is not vacuous.
+    await expect.poll(() => page.locator("[data-feed-status]").textContent()).toBe("");
     await expect(page.locator("[data-owner-entry]")).toHaveCount(0);
 
     await page.context().clearCookies({ name: "homi_stub_scenario" });
