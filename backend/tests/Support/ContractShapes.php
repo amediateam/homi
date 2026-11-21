@@ -13,6 +13,7 @@ final class ContractShapes
         'locale' => 'string', 'locale_chosen' => 'bool', 'currency' => 'string', 'theme' => 'string',
         'city' => 'string', 'city_chosen' => 'bool', 'team' => 'bool',
         'analytics' => ['distinct_id' => 'string', 'autocapture' => 'bool', 'replay' => 'bool', 'replay_rate' => 'float|int'],
+        'owner' => ['pending' => 'int', 'has_listings' => 'bool', 'waitlisted' => 'bool'],
     ];
 
     /** The object of `GET /api/v1/settings` and of `PATCH /api/v1/settings` (WP-11). */
