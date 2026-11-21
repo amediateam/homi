@@ -174,7 +174,9 @@ The package is built as designed, with these points decided in the code (rule 6)
   even with listings known only by district, and another search drops the note at once.
 - **The boundary** leaves the map's area empty and tells `MapScreen`, which shows the error pill in the one pill
   slot, before the Leaflet failure's and the points' pills, and closes the selection card, a drawing and the locate
-  button with the view. Its «Повторить» plays the light haptic and remounts the
+  button with the view. The drawing closes from an effect: the boundary reports before the screen's layout effects
+  run. Known and left: the top bar's lasso still opens a drawing while the view has failed, and it closes at once;
+  a second failure before the first close has reached the address could close twice. Its «Повторить» plays the light haptic and remounts the
   boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
   Leaflet retry: those never throw (`MapScreen.chunk` tests unchanged).
 - **The camera memory.** `rememberCamera` / `recallCamera` keep one camera per engine, for one search. Each view
@@ -197,6 +199,7 @@ The package is built as designed, with these points decided in the code (rule 6)
 
 ## Handoff
 
-Finished: every step, with unit, component and end-to-end tests; one independent review, its findings fixed; rows
+Finished: every step, with unit, component and end-to-end tests; three independent review rounds, their findings at
+medium and above fixed; rows
 33, 34 and 35 of `baseline.md` are marked closed. The checks and the CI runs are in the description of PR #102. Nothing is half-done. Next: the production
 track's deploy and the acceptance checklist on staging.

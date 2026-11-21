@@ -314,9 +314,11 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
 
   it("a render error while drawing closes the drawing layer once", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    at("/map", "city=tashkent&draw=1");
     await mount();
 
+    // The drawing opens and the view throws in the same render: the boundary reports before the screen's layout
+    // effects, so only a close that reads this commit's state closes it.
+    at("/map", "city=tashkent&draw=1");
     state.viewThrows = true;
     act(() => hide([99]));
 
