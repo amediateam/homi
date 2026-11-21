@@ -4,7 +4,7 @@ import { ErrorState, Spinner } from "@homi/ui";
 import { useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
-import { dismissRequestTip } from "../signals/requestTip";
+import { dismissRequestTip } from "../signals/tipState";
 import { RequestCard } from "./RequestCard";
 import { useAnswer } from "./useAnswer";
 import { useOwnerRequests } from "./useOwnerRequests";

@@ -18,7 +18,10 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/session/bootstrap", () => ({ refresh: state.refresh, reauthenticate: vi.fn() }));
-vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready", me: { owner: { pending: 2, has_listings: true, waitlisted: false } } }) }));
+vi.mock("@/lib/session/SessionProvider", () => {
+  const session = () => ({ status: "ready", me: { owner: { pending: 2, has_listings: true, waitlisted: false } } });
+  return { useSession: session, useOptionalSession: session };
+});
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: async () => {
     state.reads += 1;

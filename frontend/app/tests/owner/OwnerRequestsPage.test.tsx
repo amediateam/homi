@@ -33,7 +33,7 @@ vi.mock("@/lib/errors/report", () => ({ reportError: state.report }));
 
 import { RequestList } from "@/features/owner/requests/RequestList";
 import { resetChosenReasons } from "@/features/owner/requests/useAnswer";
-import { requestTipDone } from "@/features/owner/signals/requestTip";
+import { requestTipDone } from "@/features/owner/signals/tipState";
 import { resetResources } from "@/lib/data/useResource";
 
 import { withIntl } from "../settings/harness";

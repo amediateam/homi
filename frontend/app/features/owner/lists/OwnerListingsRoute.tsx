@@ -1,8 +1,9 @@
 "use client";
 
+import { RequestCardTip } from "../signals/RequestTip";
 import { OwnerListingsPage } from "./OwnerListingsPage";
 
 /** The route's copy of «Мои объявления» (WP-82): the page with the card tip of the signals (SCR-060). */
 export function OwnerListingsRoute() {
-  return <OwnerListingsPage />;
+  return <OwnerListingsPage cardTip={(listing) => <RequestCardTip listingId={listing.id} />} />;
 }

@@ -14,7 +14,10 @@ const state = vi.hoisted(() => ({
   reads: 0,
 }));
 
-vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready", me: { owner: state.owner } }) }));
+vi.mock("@/lib/session/SessionProvider", () => {
+  const session = () => ({ status: "ready", me: { owner: state.owner } });
+  return { useSession: session, useOptionalSession: session };
+});
 vi.mock("@/lib/session/bootstrap", () => ({ refresh: vi.fn(async () => undefined), reauthenticate: vi.fn() }));
 vi.mock("@/lib/api/browser", () => ({
   bffFetch: async () => {
