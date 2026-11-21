@@ -163,7 +163,8 @@ export function initAnalytics(config: AnalyticsConfig): void {
     assertNoLaunchData();
     const [{ default: posthog }] = await Promise.all([
       import("posthog-js"),
-      import("posthog-js/dist/web-vitals"),
+      // The extension the SDK asks for (`web-vitals-with-attribution`); bundled, since nothing loads from PostHog.
+      import("posthog-js/dist/web-vitals-with-attribution"),
       import("posthog-js/dist/exception-autocapture"),
       autocapture ? import("posthog-js/dist/dead-clicks-autocapture") : null,
       replay ? import("posthog-js/dist/posthog-recorder") : null,

@@ -13,10 +13,17 @@ import { defineConfig } from "@playwright/test";
  * - Tests tagged `@radars-off` (WP-30, DEC-51) need an API with radars switched off (`RADAR_CREATION_ENABLED=false` in
  *   its env), unlike the default run's: they run only with `E2E_RADARS_OFF=1`, and then alone. The switch is an env
  *   value of this file because a CLI `--grep` filters in addition to the config's `grepInvert`, never instead of it.
+ * - Tests tagged `@analytics` (WP-32) need a build with a PostHog key: with `E2E_ANALYTICS=1` the app is built with a
+ *   fake key and the unroutable host `ANALYTICS_HOST`, which the specs answer themselves, and only those tests run.
+ *   Every other run has no key, so no PostHog code is loaded at all (developer's choice of 2026-11-21: a step of the
+ *   existing e2e job, not a job of its own).
  */
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3001";
 const ci = Boolean(process.env.CI);
 const radarsOff = process.env.E2E_RADARS_OFF === "1";
+const analytics = process.env.E2E_ANALYTICS === "1";
+/** The PostHog host of the `@analytics` build: never resolvable, answered by the specs (`e2e/analytics.spec.ts`). */
+const ANALYTICS_HOST = "https://posthog.e2e.invalid";
 
 /**
  * The app server signs in through the API (WP-21): CI starts the API on stubs and sets `API_URL`; on a developer
@@ -29,6 +36,11 @@ function serverEnv(): Record<string, string> {
     // `@homi/testing/playwright` or a spec's own route can answer them.
     CSP_TILE_HOSTS: process.env.CSP_TILE_HOSTS ?? "https://tile.openstreetmap.org",
   };
+  if (analytics) {
+    env.NEXT_PUBLIC_POSTHOG_KEY = "phc_e2e_fake_key";
+    env.NEXT_PUBLIC_POSTHOG_HOST = ANALYTICS_HOST;
+    env.CSP_ANALYTICS_HOSTS = ANALYTICS_HOST;
+  }
   if (!ci && process.env.NODE_EXTRA_CA_CERTS === undefined) {
     try {
       env.NODE_EXTRA_CA_CERTS = `${execFileSync("mkcert", ["-CAROOT"], { encoding: "utf8" }).trim()}/rootCA.pem`;
@@ -44,8 +56,8 @@ export default defineConfig({
   retries: 0,
   workers: ci ? 1 : undefined,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
-  grep: radarsOff ? /@radars-off/ : undefined,
-  grepInvert: radarsOff ? (ci ? /@flaky/ : undefined) : ci ? /@radars-off|@flaky/ : /@radars-off/,
+  grep: radarsOff ? /@radars-off/ : analytics ? /@analytics/ : undefined,
+  grepInvert: radarsOff || analytics ? (ci ? /@flaky/ : undefined) : ci ? /@radars-off|@analytics|@flaky/ : /@radars-off|@analytics/,
   use: {
     baseURL,
     trace: "retain-on-failure",

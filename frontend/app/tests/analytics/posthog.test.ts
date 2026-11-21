@@ -11,7 +11,7 @@ vi.mock("posthog-js", () => {
   state.loaded.push("posthog-js");
   return { default: { init: state.init, capture: state.capture, register: state.register, captureException: state.captureException } };
 });
-vi.mock("posthog-js/dist/web-vitals", () => (state.loaded.push("web-vitals"), {}));
+vi.mock("posthog-js/dist/web-vitals-with-attribution", () => (state.loaded.push("web-vitals"), {}));
 vi.mock("posthog-js/dist/exception-autocapture", () => (state.loaded.push("exception-autocapture"), {}));
 vi.mock("posthog-js/dist/dead-clicks-autocapture", () => (state.loaded.push("dead-clicks-autocapture"), {}));
 vi.mock("posthog-js/dist/posthog-recorder", () => (state.loaded.push("posthog-recorder"), {}));
