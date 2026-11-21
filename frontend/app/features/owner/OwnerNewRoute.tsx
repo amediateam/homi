@@ -2,6 +2,7 @@
 
 import { Button, ErrorState, Spinner } from "@homi/ui";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { RouteOverlay } from "@/features/shell/RouteOverlay";
@@ -34,6 +35,14 @@ type State = { kind: "creating" } | { kind: "limit"; max: number } | { kind: "er
  * failure a tall error whose «Повторить» posts again. Back and the swipe close the form.
  */
 export function OwnerNewRoute({ presentation }: { presentation: RoutePresentation }) {
+  // Next keeps a visited route alive (`<Activity>`): a second push of `/owner/new` in one launch (the settings row,
+  // «Сдать ещё одну», the invitations of WP-82) must start a new opening, not show the kept one with its create sent.
+  // `bfcacheId` changes on every push or replace and stays on Back/Forward.
+  const { bfcacheId } = useRouter();
+  return <OwnerNewOpening key={bfcacheId} presentation={presentation} />;
+}
+
+function OwnerNewOpening({ presentation }: { presentation: RoutePresentation }) {
   const t = useTranslations();
   const off = useOwnerOffRedirect();
   const { loaded, ownerEnabled, ownerListingsLimit } = useReference();

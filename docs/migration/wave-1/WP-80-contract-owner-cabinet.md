@@ -582,7 +582,8 @@ with a number when it has every part and a number, status sets
 the status, photo writes add, remove or order photos of the entry. The answer method answers the request of
 `requests.json` with the action applied; the place method answers `tashkent` / `yunusobod` for a point within 0.3°
 of the Tashkent centre of the reference data and both `null` elsewhere. Every owner method of a listing id that is
-not in `list.json` answers `404 not_found`. The `me` fixtures gain `owner` (`{2, true, false}`).
+not in `list.json` answers `404 not_found`. The `me` fixtures gain `owner` (`{2, true, false}`; since WP-82 `{0, true, false}`, with `owner_pending` for `{2, true,
+false}`, so the owner signals do not show in every end-to-end spec).
 
 #### Scenarios
 

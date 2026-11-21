@@ -35,3 +35,12 @@ it('the waitlist answers 204, also on a repeat; GET /me says waitlisted in its s
     $this->getJson('/api/v1/me', ['X-Stub-Scenario' => 'owner_waitlisted'])->assertOk()->assertJsonPath('data.owner.waitlisted', true);
     $this->getJson('/api/v1/me', ['X-Stub-Scenario' => 'owner_empty'])->assertJsonPath('data.owner', ['pending' => 0, 'has_listings' => false, 'waitlisted' => false]);
 });
+
+it('every profile waits for no request, so the owner signals stay quiet; owner_pending has the two of the list (WP-82)', function (string $scenario): void {
+    $this->getJson('/api/v1/me', ['X-Stub-Scenario' => $scenario])->assertOk()->assertJsonPath('data.owner.pending', 0);
+})->with(['default', 'no_city', 'uz', 'owner_waitlisted', 'replay']);
+
+it('owner_pending: two requests wait, as on the stub list\'s listing 01JF…03', function (): void {
+    $this->getJson('/api/v1/me', ['X-Stub-Scenario' => 'owner_pending'])->assertOk()->assertJsonPath('data.owner', ['pending' => 2, 'has_listings' => true, 'waitlisted' => false]);
+    $this->getJson('/api/v1/owner/listings')->assertOk()->assertJsonPath('data.items.3.id', '01JF0000000000000000000003')->assertJsonPath('data.items.3.stats.pending', 2);
+});
