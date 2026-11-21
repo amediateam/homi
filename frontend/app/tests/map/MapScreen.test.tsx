@@ -312,6 +312,22 @@ describe("MapScreen: the engine (`03` §1.8, LB-APP-019)", () => {
     expect(document.querySelector('[data-map-status="error"]')).toBeNull();
   });
 
+  it("a render error closes the card and hides the locate button with the view", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await mount();
+    await answer(0, answered([point(1)], 1));
+    await select([1]);
+    expect(card()).not.toBeNull();
+
+    state.viewThrows = true;
+    // A hidden listing that is not the card's re-renders the screen and leaves the card open — until the view throws.
+    act(() => hide([99]));
+
+    expect(card()).toBeNull();
+    expect(locateButton()).toBeNull();
+    expect(pill()?.dataset.mapStatus).toBe("error");
+  });
+
   it("a Leaflet failure shows the error pill; «Повторить» mounts the view anew", async () => {
     state.webgl2 = false;
     await mount();
@@ -410,6 +426,24 @@ describe("MapScreen: the note (BR-APP-062, KV-FE-031)", () => {
 
     expect(note()).toBe("На карте — 1 самых свежих. Остальные — в списке");
     expect(props().cameraKey).toBe(String(state.sent[0]?.query));
+  });
+
+  it("a cut answer never says «N из M», also with listings without a point; a cut note whose points are all hidden says nothing", async () => {
+    act(() => hide([1, 2]));
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 9, with_point: 6 }, meta: { source: "stub" } });
+
+    expect(note()).toBeNull();
+  });
+
+  it("another search drops the counts note at once", async () => {
+    await mount();
+    await answer(0, { ok: true, data: { points: [point(1), point(2, 41.32, 69.25)], total: 6, with_point: 6 }, meta: { source: "stub" } });
+    expect(note()).not.toBeNull();
+
+    at("/map", "city=tashkent&rooms_min=2&rooms_max=2");
+    await act(async () => props().onBackground());
+    expect(note()).toBeNull();
   });
 
   it("«N из M» counts the listings without a point beside the points shown, not the hidden ones", async () => {

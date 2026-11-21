@@ -181,13 +181,27 @@ export function MapScreen() {
 
   const [note, setNote] = useState<Note | null>(null);
   const [noteFor, setNoteFor] = useState(points.responseId);
+  const [noteSearch, setNoteSearch] = useState(points.queryKey);
+  const countNote = note?.kind === "points" || note?.kind === "cut";
+  if (noteSearch !== points.queryKey) {
+    // Another search: the counts of the old answer go with it.
+    setNoteSearch(points.queryKey);
+    if (countNote) {
+      setNote(null);
+    }
+  }
   if (noteFor !== points.responseId) {
     setNoteFor(points.responseId);
-    if (points.cut > 0 && points.shown > 0) {
-      setNote({ kind: "cut" });
+    // A cut answer never says «N из M»: its note is the cut one, or none when no point of it is shown.
+    if (points.cut > 0) {
+      if (points.shown > 0) {
+        setNote({ kind: "cut" });
+      } else if (countNote) {
+        setNote(null);
+      }
     } else if (points.missing > 0) {
       setNote({ kind: "points" });
-    } else if (note?.kind === "points" || note?.kind === "cut") {
+    } else if (countNote) {
       setNote(null);
     }
   }
@@ -280,7 +294,14 @@ export function MapScreen() {
   // A render error of either view (WP-37): the pill's «Повторить» remounts the boundary and the view.
   const [viewFailed, setViewFailed] = useState(false);
   const [viewAttempt, setViewAttempt] = useState(0);
-  const onViewError = useCallback(() => setViewFailed(true), []);
+  // The view is gone: its card, its drawing and the locate button go with it.
+  const onViewError = useCallback(() => {
+    setViewFailed(true);
+    setSelection(null);
+    if (latestDraw.current.drawing) {
+      latestDraw.current.closeDraw();
+    }
+  }, []);
   const retryView = useCallback(() => {
     tg.haptic.impact("light");
     setViewFailed(false);
@@ -293,7 +314,8 @@ export function MapScreen() {
 
   let noteText: string | null = null;
   if (note?.kind === "cut") {
-    noteText = t("map.cut", { n: points.shown });
+    // Every point hidden since: no «0 самых свежих».
+    noteText = points.shown > 0 ? t("map.cut", { n: points.shown }) : null;
   } else if (note?.kind === "points") {
     noteText = t("map.note", {
       shown: points.shown,
@@ -349,7 +371,7 @@ export function MapScreen() {
         )}
         <MapNote text={noteText} />
       </div>
-      {locate.available && selection === null && !drawing ? (
+      {locate.available && selection === null && !drawing && !viewFailed ? (
         <div className="fixed right-(--chrome-side) bottom-[calc(var(--tabbar-h)+var(--bottom-inset)+22px)] z-(--z-view-toggle)">
           <LocateButton busy={locate.busy} onLocate={locate.locate} />
         </div>

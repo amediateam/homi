@@ -63,8 +63,9 @@ export type LeafletMapInput = {
  * attribution (`MapAttribution` draws it) and world copies are off; the first camera is the one the route had when
  * it was hidden, else the one this engine's map was left at for the same search in this launch (WP-37,
  * `recallCamera`), else the known city's fit memory, else the city view. The cleanup saves the camera for the search
- * it was last fitted or restored for, which on Leaflet is also when its basemap went on (`rememberCamera`).
- * `?mapdebug` exposes the map as `window.homiMap` outside production (TMA-012).
+ * it was last fitted or restored for, only while that is the search shown (`rememberCamera`); the basemap's fallback
+ * after 1.2 s without a fit saves nothing. `?mapdebug` exposes the map as `window.homiMap` outside production
+ * (TMA-012).
  */
 export function useLeafletMap(container: RefObject<HTMLElement | null>, input: LeafletMapInput): LeafletHandle {
   const { cityView, cityKnown, onFail, onBackground, cameraKey, memoryRef } = input;
@@ -80,9 +81,11 @@ export function useLeafletMap(container: RefObject<HTMLElement | null>, input: L
     }
     return kept.current ?? recalled ?? (cityKnown ? readFit(cityView.center) : null) ?? cityView;
   });
+  // Saved only while the camera belongs to the search shown: once another search came (a city jump, an answer
+  // without points, one still pending), the camera is neither that search's nor the one before.
   const save = useEffectEvent((view: CityView) => {
     const { placed } = memoryRef.current;
-    if (placed !== null) {
+    if (placed !== null && placed === cameraKey) {
       rememberCamera("leaflet", placed, view);
     }
   });
@@ -240,6 +243,10 @@ export function useLeafletCamera(
       return false;
     }
     animate.current = true;
+    // The city's fit memory stays the first fit's: a later fit of another search does not replace it.
+    if (city !== null) {
+      savedCity.current = city;
+    }
     return true;
   });
 

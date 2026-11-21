@@ -170,26 +170,33 @@ The package is built as designed, with these points decided in the code (rule 6)
 
 - **The counts.** `useMapPoints` gives `shown`, `cut`, `missing` and `queryKey` (the old `total` is gone; the
   «N из M» note computes `shown + missing`). A cut answer whose every point was hidden in this launch is `empty`, and
-  the cut note needs at least one point shown: the map has nothing to draw then.
+  the cut note needs at least one point shown: the map has nothing to draw then. A cut answer never gives «N из M»,
+  even with listings known only by district, and another search drops the note at once.
 - **The boundary** leaves the map's area empty and tells `MapScreen`, which shows the error pill in the one pill
-  slot, before the Leaflet failure's and the points' pills. Its «Повторить» plays the light haptic and remounts the
+  slot, before the Leaflet failure's and the points' pills, and closes the selection card, a drawing and the locate
+  button with the view. Its «Повторить» plays the light haptic and remounts the
   boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
   Leaflet retry: those never throw (`MapScreen.chunk` tests unchanged).
 - **The camera memory.** `rememberCamera` / `recallCamera` keep one camera per engine, for one search. Each view
   holds a `CameraMemory` ref shared by its instance hook and its camera hook: `restored` is the search the map opened
   at, consumed by the first answer (kept only when that answer is for the same search, so a search changed in between
-  fits), and `placed` is the search last fitted or restored, which the cleanup saves under — a search applied and left
-  before its answer never takes the camera of the one before. A restore counts as a fit: the stand-in → city jump does
-  not overwrite it, the next answer eases, and on Leaflet the deferred basemap goes on at once.
+  fits), and `placed` is the search last fitted or restored. The cleanup saves the camera only while `placed` is the
+  search shown: a search applied and left before it was fitted — a city jump, an answer without points, one still
+  pending — saves nothing, neither under itself nor under the search before. A restore counts as a fit: the stand-in
+  → city jump does not overwrite it, the next answer eases, the city's fit memory stays the first fit's, and on
+  Leaflet the deferred basemap goes on at once. Leaflet saves by the same rule as GL, after a fit or a restore; the
+  specification's "only once its basemap is on" would also save after the basemap's 1.2 s fallback, which no fit
+  placed.
 - **The end-to-end camera case** leaves the map through four routes (the list, the saved, radar and settings tabs) so
   that Next drops the map's route, which it keeps for up to three (`preserving-ui-state.md`); the case checks that
   the route was rendered fresh. With the memory switched off it fails (checked once by hand): while Next keeps the
-  route, `<Activity>` keeps the camera without it.
+  route, `<Activity>` keeps the camera without it. Its changed search goes the same way, so the key check runs on a
+  fresh map too. That a restore puts Leaflet's basemap on at once is proven by the unit test with fake timers.
 - **WP-31's feed epoch** re-reads the map with the same `responseId` (no fit, no note); WP-37's notes follow only a
   new `responseId`.
 
 ## Handoff
 
-Finished: every step, with unit, component and end-to-end tests; rows 33, 34 and 35 of `baseline.md` are marked
-closed. The checks and the CI runs are in the description of PR #102. Nothing is half-done. Next: the production
+Finished: every step, with unit, component and end-to-end tests; one independent review, its findings fixed; rows
+33, 34 and 35 of `baseline.md` are marked closed. The checks and the CI runs are in the description of PR #102. Nothing is half-done. Next: the production
 track's deploy and the acceptance checklist on staging.
