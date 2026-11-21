@@ -2,6 +2,8 @@
 
 namespace App\Services\Sources\Data;
 
+use App\Enums\ListingOrigin;
+
 /**
  * A pin of `GET /listings/map` (WP-12). `label` is plain text: `<` and `&` are removed (fix of LB-APP-020); `tone` is
  * `good`, `high`, `check`, `suspicious` or null.
@@ -12,6 +14,7 @@ final readonly class MapPoint
 
     public function __construct(
         public int $number,
+        public ListingOrigin $origin,
         public float $lat,
         public float $lon,
         public string $label,
@@ -27,6 +30,7 @@ final readonly class MapPoint
 
         return new self(
             number: Fields::int($data, 'number'),
+            origin: ListingOrigin::tryFrom(Fields::string($data, 'origin')) ?? throw new \InvalidArgumentException('The field "origin" must be legacy or native.'),
             lat: Fields::float($data, 'lat'),
             lon: Fields::float($data, 'lon'),
             label: self::plainText(Fields::string($data, 'label')),

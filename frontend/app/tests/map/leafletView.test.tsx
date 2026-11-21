@@ -23,7 +23,7 @@ vi.mock("@/features/map/leaflet/lassoHandlers", () => ({ useLassoHost: () => nul
 vi.mock("@/features/map/lasso/LassoOverlay", () => ({ LassoOverlay: () => null }));
 
 function point(number: number): MapPoint {
-  return { number, lat: 0, lon: 0, label: `$${number}`, tone: null, priced: true, usd: number };
+  return { number, origin: "legacy", lat: 0, lon: 0, label: `$${number}`, tone: null, priced: true, usd: number };
 }
 
 function group(lat: number, lon: number, numbers: number[]): MapGroup {

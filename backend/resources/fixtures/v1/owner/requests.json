@@ -1,0 +1,95 @@
+{
+    "items": [
+        {
+            "id": "01JF0000000000000000000201",
+            "name": "Азиз",
+            "who": "couple",
+            "people": 2,
+            "move_in": "с 1 декабря",
+            "message": "Здравствуйте! Можно посмотреть в субботу?",
+            "status": "pending",
+            "agent_marked": false,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": false
+        },
+        {
+            "id": "01JF0000000000000000000202",
+            "name": "Мадина",
+            "who": "family",
+            "people": 3,
+            "move_in": null,
+            "message": "Есть ли парковка? Мой номер 90 123 45 67",
+            "status": "pending",
+            "agent_marked": false,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": false
+        },
+        {
+            "id": "01JF0000000000000000000203",
+            "name": "Тимур",
+            "who": "one",
+            "people": 1,
+            "move_in": null,
+            "message": null,
+            "status": "declined",
+            "agent_marked": false,
+            "can_reason": true,
+            "can_undo": true,
+            "can_late": false
+        },
+        {
+            "id": "01JF0000000000000000000204",
+            "name": null,
+            "who": "students",
+            "people": 2,
+            "move_in": "с 15 ноября",
+            "message": null,
+            "status": "given",
+            "agent_marked": false,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": true
+        },
+        {
+            "id": "01JF0000000000000000000205",
+            "name": "Олег",
+            "who": "friends",
+            "people": 3,
+            "move_in": null,
+            "message": null,
+            "status": "agent",
+            "agent_marked": true,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": false
+        },
+        {
+            "id": "01JF0000000000000000000206",
+            "name": "Нигора",
+            "who": "one",
+            "people": 1,
+            "move_in": null,
+            "message": null,
+            "status": "expired",
+            "agent_marked": false,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": false
+        },
+        {
+            "id": "01JF0000000000000000000207",
+            "name": "Санжар",
+            "who": "couple",
+            "people": 2,
+            "move_in": null,
+            "message": null,
+            "status": "cancelled",
+            "agent_marked": false,
+            "can_reason": false,
+            "can_undo": false,
+            "can_late": false
+        }
+    ]
+}

@@ -11,5 +11,10 @@
         "autocapture": true,
         "replay": false,
         "replay_rate": 0
+    },
+    "owner": {
+        "pending": 0,
+        "has_listings": false,
+        "waitlisted": false
     }
 }

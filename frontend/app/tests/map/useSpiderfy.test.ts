@@ -13,7 +13,7 @@ import type { MapGroup, MapPoint, Selection } from "@/features/map/types";
 vi.mock("@/lib/telegram", () => ({ tg: { haptic: { impact: () => undefined } } }));
 
 function point(number: number, lat: number, lon: number, label = `$${number}`): MapPoint {
-  return { number, lat, lon, label, tone: null, priced: true, usd: number };
+  return { number, origin: "legacy", lat, lon, label, tone: null, priced: true, usd: number };
 }
 
 function group(lat: number, lon: number, numbers: number[]): MapGroup {

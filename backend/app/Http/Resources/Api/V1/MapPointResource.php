@@ -23,6 +23,7 @@ class MapPointResource extends JsonResource
     {
         return [
             'number' => $this->point->number,
+            'origin' => $this->point->origin,
             'lat' => $this->point->lat,
             'lon' => $this->point->lon,
             'label' => $this->point->label,

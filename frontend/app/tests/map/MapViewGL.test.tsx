@@ -246,7 +246,7 @@ const maplibre = {
 } as unknown as MapLibreModule;
 
 function point(number: number, overrides: Partial<MapPoint> = {}): MapPoint {
-  return { number, lat: 41.3111, lon: 69.2797, label: `$${number}`, tone: null, priced: true, usd: number, ...overrides };
+  return { number, origin: "legacy", lat: 41.3111, lon: 69.2797, label: `$${number}`, tone: null, priced: true, usd: number, ...overrides };
 }
 
 function group(lat: number, lon: number, ...items: MapPoint[]): MapGroup {

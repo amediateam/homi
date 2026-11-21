@@ -13,6 +13,7 @@ final class ContractShapes
         'locale' => 'string', 'locale_chosen' => 'bool', 'currency' => 'string', 'theme' => 'string',
         'city' => 'string', 'city_chosen' => 'bool', 'team' => 'bool',
         'analytics' => ['distinct_id' => 'string', 'autocapture' => 'bool', 'replay' => 'bool', 'replay_rate' => 'float|int'],
+        'owner' => ['pending' => 'int', 'has_listings' => 'bool', 'waitlisted' => 'bool'],
     ];
 
     /** The object of `GET /api/v1/settings` and of `PATCH /api/v1/settings` (WP-11). */
@@ -37,8 +38,9 @@ final class ContractShapes
         'success' => 'bool',
         'data' => [
             'bot' => ['username' => 'string', 'support_username' => 'string'],
-            'limits' => ['radars' => 'int'],
+            'limits' => ['radars' => 'int', 'owner_listings' => 'int', 'owner_photos' => 'int', 'requests' => ['day' => 'int', 'week' => 'int', 'pause_minutes' => 'int']],
             'radars_enabled' => 'bool',
+            'owner_enabled' => 'bool',
             'rates' => ['usd_uzs' => 'float|int'],
             'map' => ['tiles_url' => 'null'],
             'features' => ['*' => 'string'],
@@ -53,6 +55,7 @@ final class ContractShapes
                 'rent_long' => ['*' => ['code' => 'string', 'name' => 'string']],
                 'rent_daily' => ['*' => ['code' => 'string', 'name' => 'string']],
                 'sale' => ['*' => ['code' => 'string', 'name' => 'string']],
+                'owner' => ['*' => ['code' => 'string', 'name' => 'string']],
             ],
             'appliances' => ['*' => ['code' => 'string', 'name' => 'string']],
             'price_presets' => ['rent_long' => ['*' => 'int'], 'rent_daily' => ['*' => 'int'], 'sale' => ['*' => 'int']],
@@ -74,7 +77,7 @@ final class ContractShapes
 
     /** A listing preview (WP-12): an item of every listing list and `data` of `GET /listings/{number}?preview=1`. */
     public const array LISTING_PREVIEW = [
-        'number' => 'int', 'deal' => 'string', 'type' => 'string', 'title' => 'string',
+        'number' => 'int', 'origin' => 'string', 'deal' => 'string', 'type' => 'string', 'title' => 'string',
         'price' => ['display' => 'string', 'period' => 'string', 'alt' => 'string', 'notes' => ['*' => 'string'], 'usd' => 'int', 'kind' => 'string'],
         'rooms' => 'int', 'area_total' => 'float|int', 'floor' => 'int', 'floors_total' => 'int',
         'district' => ['code' => 'string', 'name' => 'string'], 'place' => 'string', 'landmark' => 'string',
@@ -99,7 +102,11 @@ final class ContractShapes
         'geo_radius_m' => 'int',
         'author' => ['kind' => 'string', 'label' => 'string', 'count' => 'int'],
         'owner_label' => 'string',
-        'contact' => ['has_phone' => 'bool', 'contact_url' => 'string', 'contact_paid' => 'bool'],
+        'owner' => ['tier' => 'string', 'mine' => 'bool', 'listing_id' => 'string', 'entry' => 'bool', 'response_minutes' => 'int', 'description' => 'string'],
+        'contact' => [
+            'has_phone' => 'bool', 'contact_url' => 'string', 'contact_paid' => 'bool', 'mode' => 'string',
+            'request' => ['status' => 'string', 'sent_at' => 'string'],
+        ],
         'summary' => 'string',
         'offers' => ['*' => ['text' => 'string', 'url' => 'string']],
         'original' => ['text' => 'string', 'url' => 'string', 'deleted' => 'bool'],
@@ -129,7 +136,7 @@ final class ContractShapes
 
     /** `data` of `GET /listings/map` (WP-12); `with_point` since legacy release `index-CIa0Ldj2.js`. */
     public const array MAP = [
-        'points' => ['*' => ['number' => 'int', 'lat' => 'float|int', 'lon' => 'float|int', 'label' => 'string', 'tone' => 'string', 'priced' => 'bool', 'usd' => 'int']],
+        'points' => ['*' => ['number' => 'int', 'origin' => 'string', 'lat' => 'float|int', 'lon' => 'float|int', 'label' => 'string', 'tone' => 'string', 'priced' => 'bool', 'usd' => 'int']],
         'total' => 'int',
         'with_point' => 'int',
     ];
@@ -176,6 +183,32 @@ final class ContractShapes
         ]],
         'sheet' => ['all' => ['count' => 'int', 'per_day' => 'float|int'], 'demo' => ['count' => 'int', 'per_day' => 'float|int']],
         'showcase' => ['rent' => ['*' => ['district_code' => 'string', 'count' => 'int']], 'sale' => ['*' => ['district_code' => 'string', 'count' => 'int']]],
+    ];
+
+    /** The form of an owner listing (WP-80): every key present; the list's items leave `lat` and `lon` out. */
+    public const array OWNER_FORM = [
+        'city' => 'string', 'district_code' => 'string', 'landmark' => 'string', 'lat' => 'float|int', 'lon' => 'float|int',
+        'room' => 'bool', 'rooms' => 'int', 'area_m2' => 'float|int', 'floor' => 'int', 'floors_total' => 'int', 'price' => 'int',
+        'currency' => 'string', 'renovation' => 'string', 'furniture' => 'bool', 'tenants' => ['*' => 'string'], 'pets' => 'bool',
+        'description' => 'string',
+    ];
+
+    /** The owner listing object (WP-80): the show answer and the owner's writes. */
+    public const array OWNER_LISTING = [
+        'id' => 'string', 'number' => 'int', 'status' => 'string', 'withdrawn' => 'bool', 'held' => 'bool', 'hold_reason' => 'string',
+        'published_at' => 'string', 'photos' => ['*' => ['id' => 'string', 'url' => 'string']], 'form' => self::OWNER_FORM,
+        'stats' => [
+            'pending' => 'int', 'requests' => 'int', 'given' => 'int', 'sent' => 'int', 'opened' => 'int', 'favorites' => 'int',
+            'days_listed' => 'int', 'daily' => ['*' => 'int'], 'price_delta' => 'float|int', 'price_tone' => 'string',
+        ],
+        'contact_mode' => 'string', 'phone_set' => 'bool', 'phone_display' => 'string', 'phone_error' => 'string',
+        'reject_reason' => 'string', 'shown_point' => ['lat' => 'float|int', 'lon' => 'float|int', 'radius_m' => 'int'],
+    ];
+
+    /** An owner request (WP-80): the answer flags always present. */
+    public const array OWNER_REQUEST = [
+        'id' => 'string', 'name' => 'string', 'who' => 'string', 'people' => 'int', 'move_in' => 'string', 'message' => 'string',
+        'status' => 'string', 'agent_marked' => 'bool', 'can_reason' => 'bool', 'can_undo' => 'bool', 'can_late' => 'bool',
     ];
 
     /** `data` of `GET /landing/pins` (WP-13): `bargains_week` is null and `medians` empty for sale. */

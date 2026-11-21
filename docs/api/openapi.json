@@ -1661,6 +1661,122 @@
                 }
             }
         },
+        "/listings/{number}/contact-request": {
+            "post": {
+                "operationId": "v1.listings.contact-request.store",
+                "tags": [
+                    "ListingContactRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreContactRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactRequestResultResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactRequestResultResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/listings/count": {
             "get": {
                 "operationId": "v1.listings.count",
@@ -3628,6 +3744,1300 @@
                 }
             }
         },
+        "/owner/listings/{id}/contact-mode": {
+            "put": {
+                "operationId": "v1.owner.listings.contact-mode",
+                "tags": [
+                    "OwnerContactMode"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateContactModeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/demand": {
+            "get": {
+                "operationId": "v1.owner.demand",
+                "tags": [
+                    "OwnerDemand"
+                ],
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "district",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "rooms",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 5
+                        }
+                    },
+                    {
+                        "name": "room",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "currency",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "USD",
+                                "UZS",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerDemandResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings": {
+            "get": {
+                "operationId": "v1.owner.listings.index",
+                "summary": "`GET /owner/listings`: every listing of the caller, drafts and history included, newest first",
+                "tags": [
+                    "OwnerListing"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingsResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.owner.listings.store",
+                "summary": "`POST /owner/listings`: the caller's untouched draft (`200`, DEV-054) whatever the limit, else `409 owner_limit`\nat the limit, else a new draft (`201`)",
+                "tags": [
+                    "OwnerListing"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}": {
+            "get": {
+                "operationId": "v1.owner.listings.show",
+                "summary": "`GET /owner/listings/{id}`: also the phone poll; with the owner's writes the only answer with the true point",
+                "tags": [
+                    "OwnerListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.owner.listings.destroy",
+                "summary": "`DELETE /owner/listings/{id}`: a draft or a rejected listing (DEV-056); anything else is locked",
+                "tags": [
+                    "OwnerListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.owner.listings.update",
+                "summary": "`PATCH /owner/listings/{id}`: the changed form keys; a published listing changes at once (DEC-80)",
+                "tags": [
+                    "OwnerListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOwnerListingRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/phone-request": {
+            "post": {
+                "operationId": "v1.owner.listings.phone-request",
+                "tags": [
+                    "OwnerPhoneRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/photos": {
+            "post": {
+                "operationId": "v1.owner.listings.photos.store",
+                "tags": [
+                    "OwnerPhoto"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreOwnerPhotoRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/photos/{photo}": {
+            "delete": {
+                "operationId": "v1.owner.listings.photos.destroy",
+                "tags": [
+                    "OwnerPhoto"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "photo",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/photos/order": {
+            "put": {
+                "operationId": "v1.owner.listings.photos.order",
+                "tags": [
+                    "OwnerPhoto"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderOwnerPhotosRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/place": {
+            "get": {
+                "operationId": "v1.owner.place",
+                "tags": [
+                    "OwnerPlace"
+                ],
+                "parameters": [
+                    {
+                        "name": "lat",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                        }
+                    },
+                    {
+                        "name": "lon",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerPlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/publish": {
+            "post": {
+                "operationId": "v1.owner.listings.publish",
+                "tags": [
+                    "OwnerPublish"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/requests": {
+            "get": {
+                "operationId": "v1.owner.listings.requests.index",
+                "tags": [
+                    "OwnerRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 512
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/OwnerRequestResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "next_cursor",
+                                                "source"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/requests/{id}/answer": {
+            "post": {
+                "operationId": "v1.owner.requests.answer",
+                "tags": [
+                    "OwnerRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnswerOwnerRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerRequestResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/listings/{id}/status": {
+            "put": {
+                "operationId": "v1.owner.listings.status",
+                "tags": [
+                    "OwnerStatus"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOwnerStatusRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OwnerListingResource"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "source": {
+                                                    "$ref": "#/components/schemas/SourceDriver"
+                                                }
+                                            },
+                                            "required": [
+                                                "source"
+                                            ],
+                                            "additionalProperties": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/owner/waitlist": {
+            "put": {
+                "operationId": "v1.owner.waitlist.update",
+                "tags": [
+                    "OwnerWaitlist"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/media/presign": {
             "post": {
                 "operationId": "v1.media.presign",
@@ -4692,6 +6102,19 @@
     },
     "components": {
         "schemas": {
+            "AnswerOwnerRequestRequest": {
+                "type": "object",
+                "description": "`POST /owner/requests/{id}/answer` (WP-80, BR-API-180): one of the owner's answers.",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/OwnerRequestAction"
+                    }
+                },
+                "required": [
+                    "action"
+                ],
+                "title": "AnswerOwnerRequestRequest"
+            },
             "ApiError": {
                 "type": "object",
                 "properties": {
@@ -4935,6 +6358,60 @@
                     "typical_price"
                 ],
                 "title": "CityStatsResource"
+            },
+            "ContactMode": {
+                "type": "string",
+                "description": "How a self-placed listing is reached (WP-80, DEC-75): `phone` shows the number through the counted contact method, `request` hides it and takes requests, `hidden` shows neither (a legacy `gate` listing while the relay is off).\n",
+                "enum": [
+                    "phone",
+                    "request",
+                    "hidden"
+                ],
+                "title": "ContactMode"
+            },
+            "ContactRequestResultResource": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/ContactRequestStatus"
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "ContactRequestResultResource"
+            },
+            "ContactRequestStateResource": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/ContactRequestStatus"
+                    },
+                    "sent_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "status",
+                    "sent_at"
+                ],
+                "title": "ContactRequestStateResource"
+            },
+            "ContactRequestStatus": {
+                "type": "string",
+                "description": "The status of a seeker's request (WP-80): the owner side sees all six; the seeker never sees `agent`, which reads as `declined` for him (`forSeeker()`).\n",
+                "enum": [
+                    "pending",
+                    "given",
+                    "declined",
+                    "agent",
+                    "expired",
+                    "cancelled"
+                ],
+                "title": "ContactRequestStatus"
             },
             "ContactResource": {
                 "type": "object",
@@ -5596,6 +7073,9 @@
                     "number": {
                         "type": "integer"
                     },
+                    "origin": {
+                        "$ref": "#/components/schemas/ListingOrigin"
+                    },
                     "deal": {
                         "anyOf": [
                             {
@@ -5987,6 +7467,9 @@
                             "null"
                         ]
                     },
+                    "owner": {
+                        "$ref": "#/components/schemas/ListingOwnerResource"
+                    },
                     "contact": {
                         "type": "object",
                         "properties": {
@@ -6001,12 +7484,34 @@
                             },
                             "contact_paid": {
                                 "type": "boolean"
+                            },
+                            "mode": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/components/schemas/ContactMode"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "request": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/components/schemas/ContactRequestStateResource"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
                             }
                         },
                         "required": [
                             "has_phone",
                             "contact_url",
-                            "contact_paid"
+                            "contact_paid",
+                            "mode",
+                            "request"
                         ]
                     },
                     "summary": {
@@ -6164,6 +7669,7 @@
                 },
                 "required": [
                     "number",
+                    "origin",
                     "deal",
                     "type",
                     "title",
@@ -6196,6 +7702,7 @@
                     "geo_radius_m",
                     "author",
                     "owner_label",
+                    "owner",
                     "contact",
                     "summary",
                     "offers",
@@ -6271,11 +7778,71 @@
                 ],
                 "title": "ListingOfferResource"
             },
+            "ListingOrigin": {
+                "type": "string",
+                "description": "Who placed a listing (WP-80): `legacy`, harvested or placed in legacy; `native`, placed by its owner in HOMI.\n",
+                "enum": [
+                    "legacy",
+                    "native"
+                ],
+                "title": "ListingOrigin"
+            },
+            "ListingOwnerResource": {
+                "type": "object",
+                "properties": {
+                    "tier": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerTier"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "mine": {
+                        "type": "boolean"
+                    },
+                    "listing_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entry": {
+                        "type": "boolean"
+                    },
+                    "response_minutes": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "tier",
+                    "mine",
+                    "listing_id",
+                    "entry",
+                    "response_minutes",
+                    "description"
+                ],
+                "title": "ListingOwnerResource"
+            },
             "ListingPreviewResource": {
                 "type": "object",
                 "properties": {
                     "number": {
                         "type": "integer"
+                    },
+                    "origin": {
+                        "$ref": "#/components/schemas/ListingOrigin"
                     },
                     "deal": {
                         "anyOf": [
@@ -6579,6 +8146,7 @@
                 },
                 "required": [
                     "number",
+                    "origin",
                     "deal",
                     "type",
                     "title",
@@ -6652,6 +8220,9 @@
                     "number": {
                         "type": "integer"
                     },
+                    "origin": {
+                        "$ref": "#/components/schemas/ListingOrigin"
+                    },
                     "lat": {
                         "type": "number"
                     },
@@ -6679,6 +8250,7 @@
                 },
                 "required": [
                     "number",
+                    "origin",
                     "lat",
                     "lon",
                     "label",
@@ -6772,6 +8344,25 @@
                             "replay",
                             "replay_rate"
                         ]
+                    },
+                    "owner": {
+                        "type": "object",
+                        "properties": {
+                            "pending": {
+                                "type": "integer"
+                            },
+                            "has_listings": {
+                                "type": "boolean"
+                            },
+                            "waitlisted": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "pending",
+                            "has_listings",
+                            "waitlisted"
+                        ]
                     }
                 },
                 "required": [
@@ -6782,7 +8373,8 @@
                     "city",
                     "city_chosen",
                     "team",
-                    "analytics"
+                    "analytics",
+                    "owner"
                 ],
                 "title": "MeResource"
             },
@@ -6892,6 +8484,56 @@
                 ],
                 "title": "NamedCodeResource"
             },
+            "OrderOwnerPhotosRequest": {
+                "type": "object",
+                "description": "`PUT /owner/listings/{id}/photos/order` (WP-80): exactly the listing's photo ids in the new order, the cover first.",
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "ids"
+                ],
+                "title": "OrderOwnerPhotosRequest"
+            },
+            "OwnerDemandResource": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "few": {
+                        "type": "boolean"
+                    },
+                    "usual_low_usd": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "usual_high_usd": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "count",
+                    "few",
+                    "usual_low_usd",
+                    "usual_high_usd"
+                ],
+                "title": "OwnerDemandResource"
+            },
             "OwnerFilter": {
                 "type": "string",
                 "description": "The `owner` filter (BR-API-035): everything, without explicit realtors, or only explicit owners.\n",
@@ -6901,6 +8543,713 @@
                     "owners"
                 ],
                 "title": "OwnerFilter"
+            },
+            "OwnerHoldReason": {
+                "type": "string",
+                "description": "Why a listing is on hold (WP-80): the realtor check at publish, a vote threshold, or an operator. The client shows every hold as \u00ab\u041d\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0435\u00bb.\n",
+                "enum": [
+                    "check_agent",
+                    "votes_agent",
+                    "votes_fraud",
+                    "votes_rented",
+                    "moderator"
+                ],
+                "title": "OwnerHoldReason"
+            },
+            "OwnerListingFormResource": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "district_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "landmark": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "lat": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "lon": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "room": {
+                        "type": "boolean"
+                    },
+                    "rooms": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "area_m2": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "floor": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "floors_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "price": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "$ref": "#/components/schemas/Currency"
+                    },
+                    "renovation": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "furniture": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "tenants": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "pets": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "city",
+                    "district_code",
+                    "landmark",
+                    "lat",
+                    "lon",
+                    "room",
+                    "rooms",
+                    "area_m2",
+                    "floor",
+                    "floors_total",
+                    "price",
+                    "currency",
+                    "renovation",
+                    "furniture",
+                    "tenants",
+                    "pets",
+                    "description"
+                ],
+                "title": "OwnerListingFormResource"
+            },
+            "OwnerListingItemResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OwnerListingStatus"
+                    },
+                    "withdrawn": {
+                        "type": "boolean"
+                    },
+                    "held": {
+                        "type": "boolean"
+                    },
+                    "hold_reason": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerHoldReason"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OwnerPhotoResource"
+                        }
+                    },
+                    "form": {
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "district_code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "landmark": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "room": {
+                                "type": "boolean"
+                            },
+                            "rooms": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "area_m2": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "floor": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "floors_total": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "price": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "$ref": "#/components/schemas/Currency"
+                            },
+                            "renovation": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "furniture": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "tenants": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "pets": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "description": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "city",
+                            "district_code",
+                            "landmark",
+                            "room",
+                            "rooms",
+                            "area_m2",
+                            "floor",
+                            "floors_total",
+                            "price",
+                            "currency",
+                            "renovation",
+                            "furniture",
+                            "tenants",
+                            "pets",
+                            "description"
+                        ]
+                    },
+                    "stats": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerListingStatsResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "contact_mode": {
+                        "$ref": "#/components/schemas/ContactMode"
+                    },
+                    "phone_set": {
+                        "type": "boolean"
+                    },
+                    "phone_error": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerPhoneError"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "reject_reason": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerRejectReason"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "shown_point": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ShownPointResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "withdrawn",
+                    "held",
+                    "hold_reason",
+                    "published_at",
+                    "photos",
+                    "form",
+                    "stats",
+                    "contact_mode",
+                    "phone_set",
+                    "phone_error",
+                    "reject_reason",
+                    "shown_point"
+                ],
+                "title": "OwnerListingItemResource"
+            },
+            "OwnerListingResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OwnerListingStatus"
+                    },
+                    "withdrawn": {
+                        "type": "boolean"
+                    },
+                    "held": {
+                        "type": "boolean"
+                    },
+                    "hold_reason": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerHoldReason"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OwnerPhotoResource"
+                        }
+                    },
+                    "form": {
+                        "$ref": "#/components/schemas/OwnerListingFormResource"
+                    },
+                    "stats": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerListingStatsResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "contact_mode": {
+                        "$ref": "#/components/schemas/ContactMode"
+                    },
+                    "phone_set": {
+                        "type": "boolean"
+                    },
+                    "phone_display": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "phone_error": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerPhoneError"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "reject_reason": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/OwnerRejectReason"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "shown_point": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ShownPointResource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "withdrawn",
+                    "held",
+                    "hold_reason",
+                    "published_at",
+                    "photos",
+                    "form",
+                    "stats",
+                    "contact_mode",
+                    "phone_set",
+                    "phone_display",
+                    "phone_error",
+                    "reject_reason",
+                    "shown_point"
+                ],
+                "title": "OwnerListingResource"
+            },
+            "OwnerListingStatsResource": {
+                "type": "object",
+                "properties": {
+                    "pending": {
+                        "type": "integer"
+                    },
+                    "requests": {
+                        "type": "integer"
+                    },
+                    "given": {
+                        "type": "integer"
+                    },
+                    "sent": {
+                        "type": "integer"
+                    },
+                    "opened": {
+                        "type": "integer"
+                    },
+                    "favorites": {
+                        "type": "integer"
+                    },
+                    "days_listed": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "daily": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "price_delta": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "price_tone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "pending",
+                    "requests",
+                    "given",
+                    "sent",
+                    "opened",
+                    "favorites",
+                    "days_listed",
+                    "daily",
+                    "price_delta",
+                    "price_tone"
+                ],
+                "title": "OwnerListingStatsResource"
+            },
+            "OwnerListingStatus": {
+                "type": "string",
+                "description": "The status of an owner listing (WP-80).\n",
+                "enum": [
+                    "draft",
+                    "active",
+                    "paused",
+                    "rented",
+                    "removed",
+                    "rejected"
+                ],
+                "title": "OwnerListingStatus"
+            },
+            "OwnerListingsResource": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OwnerListingItemResource"
+                        }
+                    },
+                    "max": {
+                        "type": "integer"
+                    },
+                    "can_add": {
+                        "type": "boolean"
+                    },
+                    "past": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "items",
+                    "max",
+                    "can_add",
+                    "past"
+                ],
+                "title": "OwnerListingsResource"
+            },
+            "OwnerPhoneError": {
+                "type": "string",
+                "description": "Why the last shared contact was refused (WP-80, DEV-056).\n",
+                "enum": [
+                    "not_uz",
+                    "not_own"
+                ],
+                "title": "OwnerPhoneError"
+            },
+            "OwnerPhotoResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "url"
+                ],
+                "title": "OwnerPhotoResource"
+            },
+            "OwnerPlaceResource": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "district_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "city",
+                    "district_code"
+                ],
+                "title": "OwnerPlaceResource"
+            },
+            "OwnerRejectReason": {
+                "type": "string",
+                "description": "Why a listing is rejected (WP-80, DEV-056): `denied` the number is on the operators' deny list, `limit` the number had its listings at the confirmation.\n",
+                "enum": [
+                    "denied",
+                    "limit"
+                ],
+                "title": "OwnerRejectReason"
+            },
+            "OwnerRequestAction": {
+                "type": "string",
+                "description": "An owner's answer to a request (WP-80, BR-API-180).\n",
+                "enum": [
+                    "give",
+                    "decline",
+                    "reason_found",
+                    "reason_agent",
+                    "undo",
+                    "late"
+                ],
+                "title": "OwnerRequestAction"
+            },
+            "OwnerRequestResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "who": {
+                        "$ref": "#/components/schemas/RequestWho"
+                    },
+                    "people": {
+                        "type": "integer"
+                    },
+                    "move_in": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ContactRequestStatus"
+                    },
+                    "agent_marked": {
+                        "type": "boolean"
+                    },
+                    "can_reason": {
+                        "type": "boolean"
+                    },
+                    "can_undo": {
+                        "type": "boolean"
+                    },
+                    "can_late": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "who",
+                    "people",
+                    "move_in",
+                    "message",
+                    "status",
+                    "agent_marked",
+                    "can_reason",
+                    "can_undo",
+                    "can_late"
+                ],
+                "title": "OwnerRequestResource"
+            },
+            "OwnerTier": {
+                "type": "string",
+                "description": "The owner tier of a card (WP-80, fix of LB-APP-075): `self` placed by its owner (in HOMI or in legacy), `verified` a verified owner, `claimed` a post that says it is the owner's but is not verified.\n",
+                "enum": [
+                    "self",
+                    "verified",
+                    "claimed"
+                ],
+                "title": "OwnerTier"
             },
             "PatchRadarRequest": {
                 "type": "object",
@@ -6984,7 +9333,10 @@
                         "type": "string"
                     },
                     "channel": {
-                        "type": "string"
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "url": {
                         "type": [
@@ -7272,13 +9624,44 @@
                         "properties": {
                             "radars": {
                                 "type": "integer"
+                            },
+                            "owner_listings": {
+                                "type": "integer"
+                            },
+                            "owner_photos": {
+                                "type": "integer"
+                            },
+                            "requests": {
+                                "type": "object",
+                                "properties": {
+                                    "day": {
+                                        "type": "integer"
+                                    },
+                                    "week": {
+                                        "type": "integer"
+                                    },
+                                    "pause_minutes": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "day",
+                                    "week",
+                                    "pause_minutes"
+                                ]
                             }
                         },
                         "required": [
-                            "radars"
+                            "radars",
+                            "owner_listings",
+                            "owner_photos",
+                            "requests"
                         ]
                     },
                     "radars_enabled": {
+                        "type": "boolean"
+                    },
+                    "owner_enabled": {
                         "type": "boolean"
                     },
                     "rates": {
@@ -7344,12 +9727,19 @@
                                 "items": {
                                     "$ref": "#/components/schemas/NamedCodeResource"
                                 }
+                            },
+                            "owner": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/NamedCodeResource"
+                                }
                             }
                         },
                         "required": [
                             "rent_long",
                             "rent_daily",
-                            "sale"
+                            "sale",
+                            "owner"
                         ]
                     },
                     "appliances": {
@@ -7391,6 +9781,7 @@
                     "bot",
                     "limits",
                     "radars_enabled",
+                    "owner_enabled",
                     "rates",
                     "map",
                     "features",
@@ -7449,6 +9840,18 @@
                     "agent_marked"
                 ],
                 "title": "ReportResultResource"
+            },
+            "RequestWho": {
+                "type": "string",
+                "description": "Who asks for a flat in a request (WP-80).\n",
+                "enum": [
+                    "one",
+                    "couple",
+                    "family",
+                    "students",
+                    "friends"
+                ],
+                "title": "RequestWho"
             },
             "SessionResource": {
                 "type": "object",
@@ -7586,6 +9989,26 @@
                 ],
                 "title": "SettingsResource"
             },
+            "ShownPointResource": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number"
+                    },
+                    "lon": {
+                        "type": "number"
+                    },
+                    "radius_m": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon",
+                    "radius_m"
+                ],
+                "title": "ShownPointResource"
+            },
             "SourceDriver": {
                 "type": "string",
                 "description": "Which implementation of a capability answered (ADR-0017): fixtures, the legacy service, or HOMI's own code. Written to every `/api/v1` answer as `meta.source`; the client's \"demo data\" marker reads `stub`.\n",
@@ -7595,6 +10018,43 @@
                     "native"
                 ],
                 "title": "SourceDriver"
+            },
+            "StoreContactRequestRequest": {
+                "type": "object",
+                "description": "`POST /listings/{number}/contact-request` (WP-80): who asks and how many, when and a message, and the raw `initData`\nof the current launch (at most 4 096 bytes; never stored, logged or echoed \u2014 WP-85 verifies it).",
+                "properties": {
+                    "who": {
+                        "$ref": "#/components/schemas/RequestWho"
+                    },
+                    "people": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20
+                    },
+                    "move_in": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 32
+                    },
+                    "message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "init_data": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "who",
+                    "people",
+                    "init_data"
+                ],
+                "title": "StoreContactRequestRequest"
             },
             "StoreEventRequest": {
                 "type": "object",
@@ -7675,6 +10135,21 @@
                     "file"
                 ],
                 "title": "StoreMediaRequest"
+            },
+            "StoreOwnerPhotoRequest": {
+                "type": "object",
+                "description": "`POST /owner/listings/{id}/photos` (WP-80): `multipart/form-data` with one field `file`; the media codes come from the\nuploader (WP-84, `HashedUploader`).",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream"
+                    }
+                },
+                "required": [
+                    "file"
+                ],
+                "title": "StoreOwnerPhotoRequest"
             },
             "StoreRadarRequest": {
                 "type": "object",
@@ -7786,6 +10261,190 @@
                     "locale"
                 ],
                 "title": "TranslationResource"
+            },
+            "UpdateContactModeRequest": {
+                "type": "object",
+                "description": "`PUT /owner/listings/{id}/contact-mode` (WP-80): `request` hides the number and takes requests, `phone` shows it.",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "request",
+                            "phone"
+                        ]
+                    }
+                },
+                "required": [
+                    "mode"
+                ],
+                "title": "UpdateContactModeRequest"
+            },
+            "UpdateOwnerListingRequest": {
+                "type": "object",
+                "description": "`PATCH /owner/listings/{id}` (WP-80): any subset of the form's keys; `null` clears a key, an absent key stays,\nunknown keys are ignored. `lat` and `lon` come together; `room` excludes `rooms`; `floor` above `floors_total` is\nrefused naming `floor`. Whether the point lies in the country and the city is WP-84's check (`errors.point`).",
+                "properties": {
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    },
+                    "district_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    },
+                    "landmark": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "lat": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Not `sometimes`: a point comes whole, so one coordinate without the other is refused.",
+                        "minimum": -90,
+                        "maximum": 90
+                    },
+                    "lon": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": -180,
+                        "maximum": 180
+                    },
+                    "room": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "rooms": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 5
+                    },
+                    "area_m2": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "floor": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": -3,
+                        "maximum": 99
+                    },
+                    "floors_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 99
+                    },
+                    "price": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 999999999999
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "USD",
+                            "UZS",
+                            null
+                        ]
+                    },
+                    "renovation": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "euro",
+                            "cosmetic",
+                            "none",
+                            null
+                        ]
+                    },
+                    "furniture": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "tenants": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "family",
+                                "students",
+                                "girls",
+                                "boys",
+                                "foreigners"
+                            ]
+                        },
+                        "uniqueItems": true
+                    },
+                    "pets": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 600
+                    }
+                },
+                "title": "UpdateOwnerListingRequest"
+            },
+            "UpdateOwnerStatusRequest": {
+                "type": "object",
+                "description": "`PUT /owner/listings/{id}/status` (WP-80): `active`, `paused`, `rented` or `removed`.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused",
+                            "rented",
+                            "removed"
+                        ]
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "UpdateOwnerStatusRequest"
             },
             "UpdateRadarRequest": {
                 "type": "object",

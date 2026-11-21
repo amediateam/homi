@@ -57,7 +57,7 @@ function reply(overrides: Partial<ContactData> = {}): ActionResult<ContactData> 
 function listing(contact: Partial<ListingDetails["contact"]> = {}, original: Partial<ListingDetails["original"]> = {}): ListingDetails {
   const base = detailsOf();
   return detailsOf({
-    contact: { has_phone: true, contact_url: writeUrl, contact_paid: false, ...contact },
+    contact: { has_phone: true, contact_url: writeUrl, contact_paid: false, mode: null, request: null, ...contact },
     original: { ...base.original, url: postUrl, ...original },
   });
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\Landing\LandingLiveController;
 use App\Http\Controllers\Api\V1\Landing\LandingPinsController;
 use App\Http\Controllers\Api\V1\Listings\ListingContactController;
+use App\Http\Controllers\Api\V1\Listings\ListingContactRequestController;
 use App\Http\Controllers\Api\V1\Listings\ListingController;
 use App\Http\Controllers\Api\V1\Listings\ListingCountController;
 use App\Http\Controllers\Api\V1\Listings\ListingFlowController;
@@ -17,6 +18,16 @@ use App\Http\Controllers\Api\V1\Listings\ListingTranslationController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\Media\MediaController;
 use App\Http\Controllers\Api\V1\Media\PresignController;
+use App\Http\Controllers\Api\V1\Owner\OwnerContactModeController;
+use App\Http\Controllers\Api\V1\Owner\OwnerDemandController;
+use App\Http\Controllers\Api\V1\Owner\OwnerListingController;
+use App\Http\Controllers\Api\V1\Owner\OwnerPhoneRequestController;
+use App\Http\Controllers\Api\V1\Owner\OwnerPhotoController;
+use App\Http\Controllers\Api\V1\Owner\OwnerPlaceController;
+use App\Http\Controllers\Api\V1\Owner\OwnerPublishController;
+use App\Http\Controllers\Api\V1\Owner\OwnerRequestController;
+use App\Http\Controllers\Api\V1\Owner\OwnerStatusController;
+use App\Http\Controllers\Api\V1\Owner\OwnerWaitlistController;
 use App\Http\Controllers\Api\V1\Personal\BlockedAuthorController;
 use App\Http\Controllers\Api\V1\Personal\FavoriteController;
 use App\Http\Controllers\Api\V1\Personal\FoundSurveyController;
@@ -28,6 +39,7 @@ use App\Http\Controllers\Api\V1\Radars\RadarController;
 use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Support\Facades\Route;
@@ -98,6 +110,37 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
             Route::patch('radars/{id}', [RadarController::class, 'patch'])->whereUlid('id')->name('radars.patch');
             Route::post('radars/{id}/relax', RadarRelaxController::class)->whereUlid('id')->name('radars.relax');
         });
+
+        // The owner cabinet (WP-80): stubs until WP-84 and WP-85. The routes that change content or create or resume a
+        // listing sit behind the switch (DEC-81); reads, the ways down and the answers to requests stay open.
+        Route::prefix('owner')->name('owner.')->group(function (): void {
+            Route::get('listings', [OwnerListingController::class, 'index'])->middleware('ability:app:read')->name('listings.index');
+            Route::get('listings/{id}', [OwnerListingController::class, 'show'])->whereUlid('id')->middleware('ability:app:read')->name('listings.show');
+            Route::get('listings/{id}/requests', [OwnerRequestController::class, 'index'])->whereUlid('id')->middleware('ability:app:read')->name('listings.requests.index');
+            Route::get('place', OwnerPlaceController::class)->middleware(['ability:app:read', 'throttle:owner-place'])->name('place');
+            Route::get('demand', OwnerDemandController::class)->middleware(['ability:app:read', 'throttle:owner-demand'])->name('demand');
+
+            Route::middleware(['ability:app:write', 'throttle:owner-writes'])->group(function (): void {
+                Route::delete('listings/{id}', [OwnerListingController::class, 'destroy'])->whereUlid('id')->name('listings.destroy');
+                Route::put('listings/{id}/status', OwnerStatusController::class)->whereUlid('id')->name('listings.status');
+                Route::post('requests/{id}/answer', [OwnerRequestController::class, 'answer'])->whereUlid('id')->name('requests.answer');
+                Route::put('waitlist', OwnerWaitlistController::class)->name('waitlist.update');
+
+                Route::middleware(EnsureOwnerCabinetEnabled::class)->group(function (): void {
+                    Route::post('listings', [OwnerListingController::class, 'store'])->name('listings.store');
+                    Route::patch('listings/{id}', [OwnerListingController::class, 'update'])->whereUlid('id')->name('listings.update');
+                    Route::post('listings/{id}/photos', [OwnerPhotoController::class, 'store'])->whereUlid('id')->middleware('throttle:uploads')->name('listings.photos.store');
+                    Route::delete('listings/{id}/photos/{photo}', [OwnerPhotoController::class, 'destroy'])->whereUlid('id')->whereUlid('photo')->name('listings.photos.destroy');
+                    Route::put('listings/{id}/photos/order', [OwnerPhotoController::class, 'order'])->whereUlid('id')->name('listings.photos.order');
+                    Route::put('listings/{id}/contact-mode', OwnerContactModeController::class)->whereUlid('id')->name('listings.contact-mode');
+                    Route::post('listings/{id}/phone-request', OwnerPhoneRequestController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.phone-request');
+                    Route::post('listings/{id}/publish', OwnerPublishController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.publish');
+                });
+            });
+        });
+
+        // The seeker's request (WP-80, API-054): outside the `listings` group, whose middleware is `app:read`.
+        Route::post('listings/{number}/contact-request', ListingContactRequestController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.contact-request.store');
 
         // Media (master prompt §7); a malformed id answers 404 without a query.
         Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');

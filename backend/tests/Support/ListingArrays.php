@@ -12,7 +12,7 @@ final class ListingArrays
     public static function preview(array $overrides = []): array
     {
         return [
-            'number' => 100012, 'deal' => 'rent_long', 'type' => 'apartment', 'title' => '2-комн. квартира, 54 м²',
+            'number' => 100012, 'origin' => 'legacy', 'deal' => 'rent_long', 'type' => 'apartment', 'title' => '2-комн. квартира, 54 м²',
             'price' => ['display' => '$600', 'period' => '/мес', 'alt' => '≈ 7,7 млн сум', 'notes' => ['депозит $600'], 'usd' => 600, 'kind' => null],
             'rooms' => 2, 'area_total' => 54, 'floor' => 3, 'floors_total' => 9,
             'district' => ['code' => 'yunusobod', 'name' => 'Юнусабадский'], 'place' => null, 'landmark' => 'Мегапланет',
@@ -44,7 +44,8 @@ final class ListingArrays
             'price_history' => [['at' => '2026-11-10T07:00:00+00:00', 'channel' => 'stub_channel_a', 'url' => 'https://t.me/stub_channel_a/4790',
                 'text' => null, 'kind' => 'published', 'price_usd' => 650, 'change_pct' => null]],
             'geo_radius_m' => 500, 'author' => ['kind' => 'phone', 'label' => '+998 ** *** ** 67', 'count' => 3], 'owner_label' => 'Хозяин',
-            'contact' => ['has_phone' => true, 'contact_url' => null, 'contact_paid' => false],
+            'owner' => ['tier' => 'claimed', 'mine' => false, 'listing_id' => null, 'response_minutes' => null, 'description' => null],
+            'contact' => ['has_phone' => true, 'contact_url' => null, 'contact_paid' => false, 'mode' => null, 'request' => null],
             'summary' => 'Светлая квартира рядом с метро.', 'offers' => [['text' => 'Торг', 'url' => null]],
             'original' => ['text' => 'Сдаётся 2-комн. квартира', 'url' => 'https://t.me/stub_channel_a/4812', 'deleted' => false],
             'sources' => [['handle' => 'stub_channel_a', 'url' => 'https://t.me/stub_channel_a/4812']],

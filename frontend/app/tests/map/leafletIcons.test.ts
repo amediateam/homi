@@ -5,7 +5,7 @@ import { type LeafletModule, loadLeaflet } from "@/features/map/leaflet/library"
 import type { MapGroup, MapPoint } from "@/features/map/types";
 
 function point(number: number, overrides: Partial<MapPoint> = {}): MapPoint {
-  return { number, lat: 41.3111, lon: 69.2797, label: "$600", tone: null, priced: true, usd: 600, ...overrides };
+  return { number, origin: "legacy", lat: 41.3111, lon: 69.2797, label: "$600", tone: null, priced: true, usd: 600, ...overrides };
 }
 
 function group(items: MapPoint[]): MapGroup {

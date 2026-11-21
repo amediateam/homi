@@ -36,6 +36,24 @@ class MeResource extends JsonResource
             'city_chosen' => Fields::bool($this->me, 'city_chosen'),
             'team' => Fields::bool($this->me, 'team'),
             'analytics' => $this->analytics(),
+            'owner' => $this->owner(),
+        ];
+    }
+
+    /**
+     * The owner cabinet's part of the profile (WP-80), always present: pending requests on the caller's listings,
+     * whether he has any listing (drafts included), whether he joined the waitlist.
+     *
+     * @return array{pending: int, has_listings: bool, waitlisted: bool}
+     */
+    private function owner(): array
+    {
+        $owner = Fields::object($this->me, 'owner');
+
+        return [
+            'pending' => Fields::count($owner, 'pending'),
+            'has_listings' => Fields::bool($owner, 'has_listings'),
+            'waitlisted' => Fields::bool($owner, 'waitlisted'),
         ];
     }
 

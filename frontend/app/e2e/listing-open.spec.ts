@@ -148,8 +148,10 @@ for (const mode of ["cookie", "header"] as const) {
       const states = await recordStates(page);
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
-      // The fourth card 150 px below the top, clear of the top bar and the tab bar, so the tap does not scroll.
-      const fourth = cards(page).nth(3);
+      // The fourth card, or the first legacy one after it (a native listing's CTA is WP-83's), 150 px below the top,
+      // clear of the top bar and the tab bar, so the tap does not scroll.
+      const numbers = await cards(page).evaluateAll((list) => list.map((element) => Number(element.getAttribute("data-listing"))));
+      const fourth = cards(page).nth(numbers.findIndex((listing, index) => index >= 3 && listing < 10_000_000));
       const number = Number(await fourth.getAttribute("data-listing"));
       const top = await fourth.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
       await scrollTo(page, Math.round(top - 150));

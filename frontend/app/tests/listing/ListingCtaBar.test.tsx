@@ -19,7 +19,7 @@ const POST: Original = { text: "Сдаётся квартира", url: "https://
 
 function withContact(contact: Partial<Contact>, original: Partial<Original> = {}): ListingDetails {
   return detailsOf({
-    contact: { has_phone: false, contact_url: null, contact_paid: false, ...contact },
+    contact: { has_phone: false, contact_url: null, contact_paid: false, mode: null, request: null, ...contact },
     original: { ...POST, ...original },
   });
 }

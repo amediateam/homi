@@ -97,7 +97,7 @@ const PANNED: Box = [
 ];
 
 function point(number: number): MapPoint {
-  return { number, lat: 41.3, lon: 69.3, label: `$${number}`, tone: null, priced: true, usd: number };
+  return { number, origin: "legacy", lat: 41.3, lon: 69.3, label: `$${number}`, tone: null, priced: true, usd: number };
 }
 
 function group(lat: number, lon: number, item: MapPoint): MapGroup {

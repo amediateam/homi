@@ -38,6 +38,7 @@ class ListingPreviewResource extends JsonResource
 
         return [
             'number' => $listing->number,
+            'origin' => $listing->origin,
             'deal' => $listing->deal,
             'type' => $listing->type,
             'title' => $listing->title,

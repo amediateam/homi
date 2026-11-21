@@ -41,6 +41,7 @@ const photos = (listing: number, count = 3) => Array.from({ length: count }, (_,
 function card(number: number, overrides: Partial<ListingPreview> = {}): ListingPreview {
   return {
     number,
+    origin: "legacy",
     deal: "rent_long",
     type: "apartment",
     title: "2-комн. квартира, 54 м²",

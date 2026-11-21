@@ -16,7 +16,7 @@ import type { MapGroup, MapPoint } from "@/features/map/types";
 const WORLD: [number, number, number, number] = [-180, -85, 180, 85];
 
 function point(number: number, usd: number | null): MapPoint {
-  return { number, lat: 41.3, lon: 69.2, label: usd === null ? "Договорная" : `$${usd}`, tone: null, priced: usd !== null, usd };
+  return { number, origin: "legacy", lat: 41.3, lon: 69.2, label: usd === null ? "Договорная" : `$${usd}`, tone: null, priced: usd !== null, usd };
 }
 
 function group(lon: number, ...items: MapPoint[]): MapGroup {

@@ -3,6 +3,7 @@
 namespace App\Services\Sources\Data;
 
 use App\Enums\Deal;
+use App\Enums\ListingOrigin;
 use App\Enums\PropertyType;
 use App\Services\Listings\PhoneMasker;
 
@@ -18,6 +19,7 @@ final readonly class ListingSummary
     /** @param  list<string>  $photosPreview */
     public function __construct(
         public int $number,
+        public ListingOrigin $origin,
         public ?Deal $deal,
         public ?PropertyType $type,
         public string $title,
@@ -69,6 +71,7 @@ final readonly class ListingSummary
 
         return new self(
             number: Fields::int($data, 'number'),
+            origin: ListingOrigin::tryFrom(Fields::string($data, 'origin')) ?? throw new \InvalidArgumentException('The field "origin" must be legacy or native.'),
             deal: $deal === null ? null : (Deal::tryFrom($deal) ?? throw new \InvalidArgumentException('The field "deal" must be a deal or null.')),
             type: $type === null ? null : (PropertyType::tryFrom($type) ?? throw new \InvalidArgumentException('The field "type" must be a property type or null.')),
             title: PhoneMasker::mask(Fields::string($data, 'title')),
