@@ -73,7 +73,7 @@ export function AuthorSection({
             type="button"
             data-phone="number"
             onClick={() => phone.onCall("author")}
-            className="ph-mask inline-flex items-center gap-[8px] self-start rounded-pill bg-fill px-[14px] py-[8px] font-semibold text-accent outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="ph-mask ph-no-capture inline-flex items-center gap-[8px] self-start rounded-pill bg-fill px-[14px] py-[8px] font-semibold text-accent outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Phone size={17} strokeWidth={2} aria-hidden />
             {phone.display}

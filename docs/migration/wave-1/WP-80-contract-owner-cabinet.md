@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#104) |
+| Status | WAITING (merged in #104 on 2026-11-21; production track: the regular deploy with `OWNER_CABINET_ENABLED` unset on staging and production, DEC-81) |
 | Depends on | Owner-cabinet plan, WP-13 |
 | Size | about 2 800 changed lines with tests and fixtures, L |
 | Behaviour reference | `08` §1.8 (`OwnerListing`, `OwnerRequest`), API-037 … API-054; `02` §12a (BR-API-159 … BR-API-189), LB-API-056; `03` SCR-049 … SCR-062, BR-APP-098 … BR-APP-103; `24` DEC-69 … DEC-81; `25` §4.2 |

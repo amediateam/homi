@@ -1,3 +1,4 @@
+import { BUILD_VERSION } from "@/lib/analytics/buildVersion";
 import { track } from "@/lib/analytics/events";
 import { parseLaunch, type Launch } from "@/lib/deeplinks/parse";
 import { restoreFromDeviceStorage } from "@/lib/storage";
@@ -53,7 +54,6 @@ export interface SessionState {
 
 const REQUEST_TIMEOUT_MS = 15_000;
 /** `v` of `app_launch`: the app build; empty until WP-32 sets the build version. */
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false, renewed: false };
 let state: SessionState = initial;

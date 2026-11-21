@@ -4,9 +4,10 @@ import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Button, ErrorState, SearchX } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { useContext, useLayoutEffect } from "react";
+import { useContext, useEffect, useLayoutEffect } from "react";
 
 import { marketVerdict } from "@/features/feed/verdict";
+import { listingKnown } from "@/features/shell/ScreenTracker";
 import { SourceReporter } from "@/features/shell/SourceReporter";
 import { useRouter } from "@/i18n/navigation";
 import { devFlags } from "@/lib/flags";
@@ -77,6 +78,13 @@ function ListingContent({ number, initial }: { number: number; initial?: Listing
   const t = useTranslations();
   const view = useListing(number, { initial });
   useReportView(view.state);
+  // The listing's pageview waits for its record or its failure (WP-32).
+  const known = view.state !== "skeleton" && view.state !== "preview";
+  useEffect(() => {
+    if (known) {
+      listingKnown(number);
+    }
+  }, [known, number]);
 
   let content;
   switch (view.state) {

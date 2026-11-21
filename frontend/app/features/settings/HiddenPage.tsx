@@ -155,7 +155,7 @@ export function HiddenPage() {
                     {kind === "phone" ? <Phone size={18} /> : kind === "channel" ? <AtSign size={18} /> : <EyeOff size={18} />}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-[1px]">
-                    <b className={cn("truncate text-[16px] font-semibold text-text", phone && "ph-mask")}>{author.label}</b>
+                    <b className={cn("truncate text-[16px] font-semibold text-text", phone && "ph-mask ph-no-capture")}>{author.label}</b>
                     <span className="truncate text-[13px] text-hint">
                       {phone || channel ? `${t(phone ? "hidden.phone" : "hidden.channel")} · ` : ""}
                       {authorCount(author.count, translate)}

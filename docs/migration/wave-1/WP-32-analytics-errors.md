@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#103) |
 | Depends on | WP-23 |
 | Size | ≈ 1 700 changed lines, M |
 | Behaviour reference | `03` §1.1 (screen-name precedence), §1.6 (error layers), §1.7 (no replay in lite mode), §1.9 (lazy chunks), §3.3 (journal events and PostHog), §3.4 (constants), defect LB-APP-037; `05` TMA-003, TMA-009, TMA-041, TMA-044; `08` API-034, RES-006; `16` SEC-021, SEC-REQ-022, SEC-REQ-036, SEC-REQ-047; task files KV-FE-034, KV-FE-035, KV-FE-036 (reporting parts) — behaviour, constants, edge cases and test ideas only; their file layout, navigation stack, API paths and transport are not taken |
@@ -55,6 +55,7 @@ leaves the browser through either channel.
 | Logging without personal data | SEC-REQ-047, SEC-REQ-022, TMA-009 | Every payload is scrubbed in the browser and again in the route handler; bodies stay under 8 KB |
 | Security headers | `25` §3.10, SEC-REQ-031 | The PostHog host is allowed through `CSP_ANALYTICS_HOSTS`, read by `proxy.ts` (WP-21); SDK code is bundled, so no script host is added |
 | Rendering | `25` §3.1 | Nothing here reads cookies during render; all of it is client code plus two route handlers |
+| The `@analytics` run in CI | DEC-98 (2026-11-21) | A further step of the existing e2e job (`E2E_ANALYTICS=1`), not a job of its own |
 
 ## Design
 
@@ -377,7 +378,7 @@ filters/<kind> > sort > city > map/draw > tab`) follows from the address: the to
 | 21 | `/radars/<id>/edit` | `radar/edit` | legacy |
 | 22 | `/radars/found` | `radar/found` | new |
 | 23 | `/settings` | `settings` | legacy |
-| 24 | `/settings/theme`, `/graphics`, `/language`, `/currency`, `/quiet-hours`, `/digest`, `/hidden` | `settings/<page>` (seven names, the address segment) | new |
+| 24 | `/settings/theme`, `/graphics`, `/language`, `/currency`, `/quiet-hours`, `/digest`, `/cards`, `/hidden` | `settings/<page>` (eight names, the address segment; `cards` came with WP-31) | new |
 | 25 | `/welcome/language` | `welcome/language` | new |
 | 26 | `/welcome/city` | `welcome/city` | new |
 | 27 | `/no-access`, `/outside` | `no-access`, `outside` — used in error reports only; no pageview, because PostHog is never initialised without a user | new |
@@ -475,6 +476,89 @@ pageview when the record has `owner.mine`. The cabinet's layers get new names of
       PostHog in `script-src`; the browser console shows no CSP violation during a launch.
 - [ ] `pnpm test`, `pnpm test:e2e` (both projects) and `make ci-frontend` are green; the queue row is updated.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6).
+
+- **No React before hydration.** `lib/analytics/screens.ts` is a plain store (`currentScreen`, `setScreen`,
+  `pushScreenLayer`); the hook `useScreenLayer` lives in `features/shell/useScreenLayer.ts`, because the global
+  handlers (`instrumentation-client.ts` → `lib/errors/global.ts` → `report.ts`) import the store before hydration.
+- **`map/card`** is pushed by `MapScreen`, not by `MapSelectionCard`: the name counts only while the card shows on
+  the map's own address (`selection !== null && own`), so a listing opened from the card is not reported as the card.
+  Showing the card sends its pageview; closing it sends none (the next address change does).
+- **The listing's pageview** waits for its record or failure through `listingKnown(number)`, which `ListingScreen`
+  calls; a record known before the tracker's effect (a server read) sends at once.
+- **`BUILD_VERSION`** (`lib/analytics/buildVersion.ts`, `NEXT_PUBLIC_BUILD_VERSION`, `dev` when unset) also gives
+  `app_launch` its `v`; WP-21 read `NEXT_PUBLIC_APP_VERSION`, which nothing set.
+- **The journal's write** is the one write of the `/bff` catch-all (`BFF_WRITES = ["events"]`, `POST`): same origin
+  with an `Origin`, at most 8 KB, `{name, props}` checked, the properties scrubbed again, forwarded with the token of
+  the cookie or the bearer header; it answers the API's status, `204` for a success. `boot-error` and `session` are
+  reserved names the catch-all refuses.
+- **The report body** is built from a whitelist: the context's other keys (`where`, `componentStack` of the map's
+  boundary) stay in the browser. The map boundary's `render` reports reach PostHog's exception capture like any.
+- **The boot guard's hand-over**: `BootGuard` sets `__homiBoot.watching` with `ok` once React has mounted, as the
+  design says. The global listeners report from the moment they exist, into the journal, which keeps the full report
+  until the session is ready; until the mount the guard also posts `/bff/boot-error`, which needs no session, so a
+  bundle that never reaches one is still counted. An error before the mount can therefore arrive twice — `kind: boot`
+  from the guard, `kind: error` from the journal — joined by name and time (the guard's message may carry the
+  engine's «Uncaught» prefix); early errors count towards the cap of five. The guard's body carries `v` (the
+  root layout gives the script `data-v`). A boot-error without the cookie writes one `console.info` line (`event`,
+  `v`, `name`, `tg`, `platform`); both route handlers refuse a declared length over their limit before reading.
+- **Privacy (review of WP-32).** `before_send` cleans recursively, keys included: every absolute address keeps origin
+  and path (heatmaps key their data by the page's address; web vitals carry their own `$current_url`), every other
+  text is scrubbed; PostHog's own ids (`distinct_id`, `$session_id`, `token` …) pass as they are, and heatmap points of
+  addresses that differ only in their query are merged. The scrubbers also mask `00998`, the nine local digits of an
+  Uzbek code written as a phone is (code, three, two, two; mobile codes, 20, and Tashkent's 71 and 78), `8` or brackets
+  before them, dashes of any kind and other international numbers of ten digits or more, and take the query and hash
+  off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or international number is masked
+  also next to a letter; nine local digits next to a letter are taken for an id's hex and left. A price such as
+  «950 000 000», a version, a coordinate or an id is left alone.
+- **The replay case of the analytics run uses the stub scenario `replay`** (`me/replay.json`: `analytics.replay:
+  true`, `replay_rate: 1`; `GET /me` and sign-in): patching the answer of `/bff/session` left the profile of the
+  server's render after sign-in unpatched, and on CI (run 44910160495) the launch's one decision took that unsampled
+  profile.
+- **The scrubbers' boundary (ten review rounds).** A text is judged on its **canonical form** (`canonical()` in
+  `lib/analytics/scrub.ts`): percent escapes and the escapes of a JSON or JavaScript string (`\"`, `\n`, `\uXXXX`,
+  `\u{…}`, `\xHH` …, read in one pass from left to right, so a twice-escaped `\\u00a0` unwraps level by level) undone,
+  at most three passes; a run of percent escapes is read as UTF-8, and a byte outside a valid sequence is kept as
+  written. `scrubText` never throws (a text it cannot judge is `[redacted]`) and judges at most 16 KB.
+  - A text is replaced whole by `[redacted]` when its canonical form holds a bearer token (after `Bearer`, or a
+    Sanctum token `<id>|<secret>` on its own), the session cookie or Telegram's launch data with a value (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` …, or
+    the user object's own keys; quoted, JSON-escaped or bare) — anywhere, queries of addresses included, since cutting
+    a query at a raw quote could part a value from its key. A text that names an address with launch data is
+    therefore redacted.
+  - Numbers and e-mail addresses written plainly are masked in place; one seen only through escapes, or still seen in
+    the canonical form after masking, makes the whole text `[redacted]`. The e-mail pattern starts only where a run
+    starts, so 16 KB without `@` is read once.
+  - `stripUrl` drops the query and hash on the raw string first. When what is left holds a space, a line break or a
+    backslash, the string is a text and scrubbed as one; otherwise an address keeps its origin and path, scrubbed (the
+    pageview's `$current_url` of a launch keeps `https://app.homi.uz/ru`).
+  - Outside the boundary: HTML entities, full-width digits, more than three levels of escaping. Over-redaction is
+    accepted: an error message that names a token or launch data loses its text.
+  - `tests/analytics/scrub.test.ts` crosses every secret (launch data raw, decoded, encoded once and twice, `=` as
+    `%3D` or `%253D`; a token; the cookie; an e-mail address; a phone number) with every place it may sit (after `%20`,
+    `%0A`, `%26`, a JSON-escaped line break or tab, `\u0025`, a twice-escaped line break; in a sentence, in JSON, in an
+    address's query or hash; after an address in `stripUrl`) and asserts that none of its value survives; each
+    review's counter-examples are rows of it, and each round's rows fail on the scrubber before the round.
+- Every element marked `ph-mask` (phones, author labels, the original text) is also `ph-no-capture`, so autocapture
+  never takes its text.
+- **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
+  changes under it), and a layer that leaves lets the same layer count again.
+- **PostHog.** Every option name was checked in the types of the installed `posthog-js` 1.434.15. The web vitals
+  extension the SDK asks for is `web-vitals-with-attribution`; with external loading disabled it is imported from
+  the package. `rageclick`, `capture_dead_clicks` and `enable_heatmaps` follow `analytics.autocapture`. Next's
+  control-flow throws are ignored by their `digest` if they ever reach the window listeners.
+- **The `@analytics` run (DEC-98).** PostHog sends nothing for what it takes for a bot — headless Chrome's user agent,
+  its client hints and `navigator.webdriver` — so the specs give the browser a phone's user agent and hide both, and
+  set full graphics (lite mode never samples a replay, and a runner with few cores would be lite); the
+  app itself keeps PostHog's filter. The specs answer the host's remote config with recording allowed. A replay
+  could not be made to record against the fake host, so the run checks that a profile sampled for replay loads the
+  recorder's code and one with replay off does not; that a recording shows no readable text stays on the staging
+  checklist, and the options that mask everything are asserted by the unit test.
+
 ## Handoff
 
-Empty.
+Finished: every step but 14 (the deploy and the checks on staging with real keys, the production track's), with unit,
+component and end-to-end tests; the checks run are in the description of PR #103. Needs from the production track:
+`NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, the same host in `CSP_ANALYTICS_HOSTS`, and
+`NEXT_PUBLIC_BUILD_VERSION` from the deploy.

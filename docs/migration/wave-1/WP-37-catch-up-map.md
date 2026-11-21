@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#102) |
+| Status | WAITING (merged in #102 on 2026-11-21; production track: the regular deploy, then the acceptance checklist on staging) |
 | Depends on | intake `index-CIa0Ldj2` (`with_point` in the answer of `GET /listings/map`, the stub scenario `map_cut`, the text `map.cut`), WP-28 |
 | Size | about 245 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-011), §4 (BR-APP-062, BR-APP-111); `02` (BR-API-192); `wave-1/baseline.md`, built code behind the pin, rows 33, 34, 35 |
@@ -176,8 +176,8 @@ The package is built as designed, with these points decided in the code (rule 6)
   slot, before the Leaflet failure's and the points' pills, and closes the selection card, a drawing and the locate
   button with the view. The drawing closes from an effect: the boundary reports before the screen's layout effects
   run. Known and left: the top bar's lasso still opens a drawing while the view has failed, and it closes at once;
-  a second failure before the first close has reached the address could close twice. Its «Повторить» plays the light haptic and remounts the
-  boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
+  a second failure before the first close has reached the address could close twice. The pill's «Повторить» plays
+  the light haptic and remounts the boundary with a new key. The loaders of `next/dynamic` still turn a failed chunk into the GL fallback or the
   Leaflet retry: those never throw (`MapScreen.chunk` tests unchanged).
 - **The camera memory.** `rememberCamera` / `recallCamera` keep one camera per engine, for one search. Each view
   holds a `CameraMemory` ref shared by its instance hook and its camera hook: `restored` is the search the map opened

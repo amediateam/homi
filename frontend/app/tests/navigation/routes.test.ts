@@ -11,6 +11,7 @@ import {
   RESERVED_PARAMS,
   routes,
   screenNameOf,
+  SETTINGS_PAGES,
   SEARCH_KEYS,
   searchStateOf,
 } from "@/lib/navigation/routes";
@@ -214,24 +215,38 @@ describe("screenNameOf", () => {
   });
 
   it.each([
-    // listing > every layer over it
-    ["/listing/5/photos", "", "listing"],
-    ["/listing/5/actions", "step=detail", "listing"],
-    // filters and the other sheets > map/draw > the tab below
-    ["/filters", "from=map&draw=1", "filters"],
-    ["/sort", "from=map", "sort"],
-    ["/city", "from=map", "city"],
-    // sheets without a name of their own report the tab below
-    [`/radars/${RADAR}`, "", "subs"],
-    ["/radars/found", "", "subs"],
-    ["/settings/theme", "", "settings"],
-  ])("%s?%s → %s (precedence of 03 §1.1)", (pathname, query, expected) => {
+    ["/listing/5/photos", "i=2", "listing/photos"],
+    ["/listing/5/location", "", "listing/location"],
+    ["/listing/5/market", "", "listing/market"],
+    ["/listing/5/actions", "", "listing/actions"],
+    ["/listing/5/actions", "step=report", "listing/report"],
+    ["/listing/5/actions", "step=detail", "listing/report/detail"],
+    [`/radars/${RADAR}`, "", "radar/sheet"],
+    ["/radars/found", "", "radar/found"],
+    ["/welcome/language", "", "welcome/language"],
+    ["/welcome/city", "", "welcome/city"],
+    ["/no-access", "reason=full", "no-access"],
+    ["/outside", "", "outside"],
+    ["/dev/ui", "", "dev/ui"],
+    ["/nowhere/at/all", "", "not-found"],
+    ["/filters/unknown", "", "not-found"],
+  ])("%s?%s → %s (the new names, WP-32, LB-APP-037)", (pathname, query, expected) => {
     expect(screenNameOf(pathname, params(query))).toBe(expected);
   });
 
-  it("returns the route pattern of an address the legacy table does not name", () => {
-    expect(screenNameOf("/welcome/language", params())).toBe("/welcome/language");
-    expect(screenNameOf("/no-access", params("reason=full"))).toBe("/no-access");
-    expect(screenNameOf("/filters/unknown", params())).toBe("/filters/[kind]");
+  it.each(SETTINGS_PAGES)("/settings/%s → settings/%s (every page of SETTINGS_PAGES, `cards` included)", (page) => {
+    expect(screenNameOf(`/settings/${page}`, params())).toBe(`settings/${page}`);
+  });
+
+  it.each([
+    // the top layer's address owns the name; the reserved parameters never change it
+    ["/filters", "from=map&draw=1&pick=city&focus=pets", "filters"],
+    ["/sort", "from=map", "sort"],
+    ["/city", "from=map", "city"],
+    ["/map", "pin=3&from=radar", "search/map"],
+    ["/listing/5/photos", "i=4&from=radar", "listing/photos"],
+    ["/", "step=report&draw=1", "search/list"],
+  ])("%s?%s → %s (precedence of 03 §1.1; reserved parameters)", (pathname, query, expected) => {
+    expect(screenNameOf(pathname, params(query))).toBe(expected);
   });
 });

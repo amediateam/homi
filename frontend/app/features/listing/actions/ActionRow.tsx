@@ -12,7 +12,7 @@ export interface ActionRowProps {
   arrow?: boolean;
   /** While a request runs every row ignores taps (and looks it). */
   disabled?: boolean;
-  /** `ph-mask` on the hint: it holds a phone number (the block hint, DEC-52). */
+  /** `ph-mask ph-no-capture` on the hint: it holds a phone number (the block hint, DEC-52); neither replay nor autocapture takes it. */
   maskHint?: boolean;
   onSelect: () => void;
 }
@@ -31,7 +31,7 @@ export function ActionRow({ action, icon: Icon, title, hint, arrow = false, disa
       ) : null}
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="text-[17px] font-semibold tracking-[-0.01em] text-text">{title}</span>
-        {hint ? <span className={cn("text-[14px] leading-snug text-hint", maskHint && "ph-mask")}>{hint}</span> : null}
+        {hint ? <span className={cn("text-[14px] leading-snug text-hint", maskHint && "ph-mask ph-no-capture")}>{hint}</span> : null}
       </span>
       {arrow ? <ChevronRight size={20} strokeWidth={2} aria-hidden className="flex-none text-hint" /> : null}
     </button>

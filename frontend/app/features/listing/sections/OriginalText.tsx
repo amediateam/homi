@@ -63,7 +63,7 @@ export function OriginalText({
       <pre
         data-original-text=""
         onCopy={() => track("original_copied", { listing_id: number })}
-        className="ph-mask font-sans text-[15px] leading-normal break-words whitespace-pre-wrap"
+        className="ph-mask ph-no-capture font-sans text-[15px] leading-normal break-words whitespace-pre-wrap"
       >
         {splitMaskedPhones(translatedText ?? text).map((part, index) => {
           if (part.kind === "text") {

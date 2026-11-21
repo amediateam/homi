@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-21 (WP-38 merged as #97; the queue runs without waiting for a word; three PRs open on stacked branches: #98, #99, #100 (WP-39); next: WP-31)
+updated: 2026-11-21 (#101 WP-31 merged; #102 WP-37 open on main; WP-32 open as #103, stacked on it; next: WP-80)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -13,11 +13,11 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-21, **in force — replaces "the next package only on the developer's word" and "merge only on «сливай #N»"**: «Настрой все граомтно! Чтобы ускорилас разработка без потери качеста»; asked whether the agent may work one package ahead: «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!». It is rule 8 of `docs/migration/wave-1/README.md`.
 
 ## State at handoff
-- `main` = `c180b0b`: #98 the pipeline tooling (`41cf7ea`), #99 the KI-63 spec fix (`53a4959`) and #100 WP-39 (`c180b0b`, CI green on `dc6b97b`: 402 + 14), all merged 2026-11-21.
-- **#101** `wp-31-settings` → `main` (WP-31): two independent reviews, their findings fixed; CI green on `e3ab1b3`; the head `198b931` (second review fixes) waits for its CI. Merge it at its head once green, without `--delete-branch`, then retarget #102 to `main`.
-- **#102** `wp-37-catch-up-map` → `wp-31-settings` (WP-37, stacked): every step done and tested; its review runs next.
+- `main` = `8d5f9be`: #98, #99, #100 (WP-39) and #101 (WP-31, CI green on `6523df9`: 429 + 14) merged 2026-11-21.
+- **#102** `wp-37-catch-up-map` → `main` (WP-37): three review rounds fixed, the last clean; CI on `b09b9ce` running. Merge at its head when green, without `--delete-branch`, then retarget #103 to `main` and delete the branch.
+- **#103** `wp-32-analytics-errors` → `wp-37-catch-up-map` (WP-32): every step but 14 (production track); review running.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree; worktree `.claude/worktrees/deps-update`.
-- Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh app/e2e/settings.spec.ts app/e2e/settings-language.spec.ts app/e2e/settings-hidden.spec.ts app/e2e/home-nudge.spec.ts`.
+- Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh app/e2e/journal.spec.ts app/e2e/errors.spec.ts`; `E2E_ANALYTICS=1 scripts/dev/e2e-local.sh app/e2e/analytics.spec.ts`.
 
 ## Done this session
 - **#97 merged** (`a0a618d`). **`/doctor`**: findings reported, nothing applied (declined). **Audit of the 24 hours to 2026-11-21 03:15 local** (`scripts/audit/session_audit.py`): of 23 h of HOMI session time the model and the tools took 5:38, waiting for the developer 8:55, for CI 4:11.
@@ -28,8 +28,8 @@ Written for whoever continues the **development track**. The production track's 
 - **WP-37 (map catch-up), #102:** the cut note, the view's error boundary, the camera memory per engine and search. The e2e camera case leaves the map through four routes so Next drops its route; with the memory off it fails (checked).
 
 ## Waiting for the developer (do NOT start on your own)
-1. **Nothing blocks the queue** (rule 8): after WP-37 the next row of the queue that is `TODO`, on stacked branches. WP-62 and WP-61 stay at stage E.
-2. **The click on the permission prompt of `gh pr merge`** for #101, then #102 (an `ask` rule of the shared `.claude/settings.json`); nothing goes around it. Merge a stacked PR without `--delete-branch`, retarget the next one to `main`, then delete the branch (rule 8; #99 was closed once by a deleted base).
+1. **Nothing blocks the queue** (rule 8): after WP-32 the next `TODO` row is **WP-80** (contract: owner cabinet), then WP-81 … WP-83, WP-33. WP-62 and WP-61 stay at stage E.
+2. **The click on the permission prompt of `gh pr merge`** for #102, then #103 (an `ask` rule of the shared `.claude/settings.json`); nothing goes around it. Merge a stacked PR without `--delete-branch`, retarget the next one to `main`, then delete the branch (rule 8; #99 was closed once by a deleted base).
 3a. **`CLAUDE.md`** still says the settings tab renders the WP-20 placeholder: a small shared-file PR once WP-31 is merged.
 3. **An explicit yes is still needed for:** e2e shards in CI (private repository on the free plan: more billed Actions minutes); taking `gh pr merge` out of `ask` (shared file, the first developer reviews); the `/doctor` cleanup.
 4. **The owners' page** (DEC-97); **the operator texts** (WP-02 Part A and the addendum), never sent from the connected Gmail.
