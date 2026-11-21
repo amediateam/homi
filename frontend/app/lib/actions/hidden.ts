@@ -52,3 +52,23 @@ export async function unblockAuthor(input: ListingInput, auth?: ActionAuth, loca
   }
   return runAction(auth, locale, (api) => api.unblockAuthor(number));
 }
+
+/** A blocked author's entry id of `GET /hidden`: a ULID, as the API names it. */
+const AUTHOR_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+
+/**
+ * `DELETE /hidden/authors/{id}` (WP-31, «Вернуть» on «Скрытое»): the author by the entry id of the hidden list. Not
+ * `unblockAuthor`, which names the author by one of their listings (`DELETE /listings/{number}/blocked-author`).
+ */
+export async function unblockAuthorById(input: { id: string }, auth?: ActionAuth, locale?: string): Promise<ActionResult<null>> {
+  const id = typeof input === "object" && input !== null ? (input as { id?: unknown }).id : undefined;
+  if (typeof id !== "string" || !AUTHOR_ID.test(id)) {
+    return runAction.invalid("DELETE", "hidden/authors/:id");
+  }
+  return runAction(auth, locale, (api) => api.unblockAuthorById(id));
+}
+
+/** `DELETE /hidden` (WP-31, «Показать всё снова»): every hidden listing and every blocked author return. */
+export async function unhideAll(_input: null, auth?: ActionAuth, locale?: string): Promise<ActionResult<null>> {
+  return runAction(auth, locale, (api) => api.unhideAll());
+}

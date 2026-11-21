@@ -187,5 +187,5 @@ Not in the table:
 - What HOMI's design makes moot: the pace of the radar previews (HOMI reads them with the list); districts and
   zones printed together (HOMI's filters cannot hold both); «1.000.000» in сум (HOMI reads it as a million, its own
   fix of `03` LB-APP-011).
-- What is not built yet and is only specified: the hidden list's feed reload and rollback (WP-31), the timing of
+- What is not built yet and is only specified: the timing of
   the listing pageview (WP-32), the six owner events and the owner screen names (WP-81, WP-82).

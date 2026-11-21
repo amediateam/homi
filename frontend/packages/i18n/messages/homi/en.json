@@ -1,6 +1,7 @@
 {
   "settings": {
-    "about": "HOMI collects listings from public Telegram channels. Every card links to the original post."
+    "about": "HOMI collects listings from public Telegram channels. Every card links to the original post.",
+    "privacy": "Privacy policy"
   },
   "home": {
     "title": "HOMI on your home screen",

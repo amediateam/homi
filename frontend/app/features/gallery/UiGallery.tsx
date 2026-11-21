@@ -306,6 +306,11 @@ function MotionPieces() {
   };
   return (
     <Entry id="motion" title="RollNumber, SaveState">
+      {/* The glass material and a primary button: the theme and lite checks of foundation.spec.ts read them here. */}
+      <div className="glass flex items-center justify-between rounded-large p-3" data-glass-sample="">
+        <span>Glass</span>
+        <Button data-testid="gallery-glass-button">OK</Button>
+      </div>
       <div className="flex items-center gap-3">
         <Button variant="secondary" data-testid="gallery-roll-less" onClick={() => setCount((n) => Math.max(0, n - 37))}>
           −37

@@ -2,7 +2,9 @@
 
 import { type SearchFilters, toApiQuery } from "@homi/search";
 import type { components } from "@homi/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+
+import { feedEpoch, subscribeFeedEpoch } from "@/features/feed/feedQuery";
 
 import { bffFetch } from "@/lib/api/browser";
 import { type ApiFailure, failureOf, type UiError } from "@/lib/api/errors";
@@ -48,8 +50,11 @@ export interface MapPoints {
   retry: () => void;
 }
 
-/** A request sent: a new object per send, so an answer is matched to its request. */
-type Request = object;
+/**
+ * A request sent: a new object per send, so an answer is matched to its request. `keepView`: the same search asked
+ * again after a feed-epoch bump while its points are shown.
+ */
+type Request = { keepView?: true };
 
 interface State {
   /** The query of the filters these points belong to. */
@@ -63,10 +68,12 @@ interface State {
   request: Request | null;
   responseId: number;
   source: DataSource | undefined;
+  /** The feed epoch these points were asked under (WP-38): a bump asks again, the points shown kept meanwhile. */
+  epoch: number;
 }
 
-function start(key: string, responseId: number): State {
-  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined };
+function start(key: string, responseId: number, epoch: number): State {
+  return { key, points: [], answerTotal: null, loaded: false, error: null, request: {}, responseId, source: undefined, epoch };
 }
 
 function settle(state: State, result: ApiResult<MapAnswer>): State {
@@ -82,7 +89,8 @@ function settle(state: State, result: ApiResult<MapAnswer>): State {
     loaded: true,
     error: null,
     request: null,
-    responseId: state.responseId + 1,
+    // The same search read again (a feed-epoch bump) keeps the camera and an open card: no new response id.
+    responseId: state.request?.keepView ? state.responseId : state.responseId + 1,
     source: result.meta.source,
   };
 }
@@ -105,6 +113,10 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
  * (`useCursorFeed`'s guards). Listings hidden in this launch (`useSessionMap('hidden')`) are left out when grouping:
  * a change of that set regroups and recounts without a new `responseId`, so the camera stays.
  *
+ * A bump of the feed epoch (`bumpFeedEpoch`, WP-38; WP-31 bumps it when hidden listings return or the language or
+ * currency changes) asks the same search again, keeping the points shown until the answer, and its answer keeps the
+ * `responseId`, so the camera stays and an open card stays open.
+ *
  * The request lives in an effect and is aborted by its cleanup, on unmount and while the route is hidden by
  * `cacheComponents`; a pending one is sent again when shown. A failure is a status, never an empty map (LB-APP-008),
  * and nothing retries by itself. `bffFetch` reports each answer's `meta.source` to the demo marker once; the hook
@@ -114,10 +126,20 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
 export function useMapPoints(filters: SearchFilters, options: MapPointsOptions = {}): MapPoints {
   const { enabled = true, flags = devFlags } = options;
   const key = toApiQuery(filters, { rules: searchRules(flags) }).toString();
-  const [stored, setState] = useState<State>(() => start(key, 0));
+  const epoch = useSyncExternalStore(subscribeFeedEpoch, feedEpoch, () => 0);
+  const [stored, setState] = useState<State>(() => start(key, 0, epoch));
   let state = stored;
   if (stored.key !== key) {
-    state = start(key, stored.responseId);
+    state = start(key, stored.responseId, epoch);
+    setState(state);
+  } else if (stored.epoch !== epoch) {
+    // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
+    // same search is asked again when the map shows, and its points stay until the answer. Only an answer the camera
+    // could fit keeps the view — one with points, or any answer for a drawn area (the camera fits the area): before the
+    // first answer (pending, aborted or failed), or after one without points, the new answer must fit. (An answer whose
+    // every point is hidden keeps it: a rare case.)
+    const fitted = stored.points.length > 0 || (filters.polygon !== null && filters.polygon.length > 0);
+    state = { ...stored, epoch, error: null, request: stored.loaded && fitted ? { keepView: true } : {} };
     setState(state);
   }
 

@@ -13,4 +13,7 @@ export const haptic = {
   error(): void {
     attempt(() => webApp()?.HapticFeedback?.notificationOccurred?.("error"));
   },
+  warning(): void {
+    attempt(() => webApp()?.HapticFeedback?.notificationOccurred?.("warning"));
+  },
 };

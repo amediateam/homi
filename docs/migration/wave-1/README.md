@@ -78,8 +78,11 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
    the 24 hours to 2026-11-21 the agent worked a quarter of the session time, 39 % went to waiting for the developer
    and 18 % to waiting for CI (`python3 scripts/audit/session_audit.py --gh`).
    - When a package's PR is pushed, take the next package at once, on a branch from that PR's branch, and open its PR
-     against that branch: GitHub moves it to `main` when the earlier branch is merged and deleted. PRs are merged in
-     queue order. A red earlier PR, or a change the developer asks for in it, comes first.
+     against that branch. PRs are merged in queue order. A red earlier PR, or a change the developer asks for in it,
+     comes first.
+   - Merge a stacked PR without deleting its branch (`gh pr merge N --merge`), retarget the next PR to `main`
+     (`gh pr edit M --base main`), and only then delete the merged branch. Deleting a branch closes every PR whose
+     base it is; GitHub does not retarget them (#99 was closed so on 2026-11-21 and reopened).
    - A PR is merged when its checks are green and its independent review is clean. `gh pr merge` stays behind the
      permission prompt of `.claude/settings.json`; nothing goes around it.
    - Nothing is pushed after a green run only to record it: CI run ids go into the PR description, and the session
@@ -136,8 +139,8 @@ its row is its place in the queue.
 | [WP-37](WP-37-catch-up-map.md) | Catch-up: map | intake `index-CIa0Ldj2`, WP-28 | TODO |
 | [Intake of the legacy landing](baseline.md#the-landing-pin) | Legacy landing release intake (rule 7): the four landing releases since the audit's `c63da0e3476a` (`67b3942a8340`, `65998117d6ec`, `b1b9a919ecc4`, `d9bbbc696337`; the queue row first named only the last two) — `03b` and the registers, the developer's decisions DEC-95 … DEC-97 (the showcase into the Mini App, the language of `/`, the owners' page), WP-60, WP-61, the new WP-62, the landing pin; the contract on stubs (`showcase` of `GET /landing/live`, a nullable pin `floor`; the developer's answer 3 of 2026-11-20) | intake `index-YX9bFVws` | WAITING (merged in #96 on 2026-11-20; production track: the regular deploy — landing stubs only, no environment key, no migration) |
 | [WP-38](WP-38-catch-up-feed-continuity.md) | Catch-up: feed continuity | WP-36 | WAITING (merged in #97 on 2026-11-21; production track: the regular deploy, then inside Telegram on staging a real return after six hours and the Q-APP-030 measurement of the four tabs and the map) |
-| [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | REVIEW (#100) |
-| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | TODO |
+| [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | WAITING (merged in #100 on 2026-11-21; production track: the regular deploy, then the acceptance checklist inside Telegram on staging) |
+| [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | REVIEW (#101) |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | TODO |
 | [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | TODO |
 | [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36, WP-39 | TODO |

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW (#101) |
 | Depends on | WP-23; the intake of legacy release `index-BnFvC-Ft.js` (the card-style contract); WP-34 (the failure toast), WP-36 (the fallback close of sub-pages), WP-38 (the feed epoch and the scroll memory), WP-39 (the leave of `SubPageFrame`, *added by the intake of `index-YX9bFVws.js`*) |
 | Size | ≈ 2 300 changed lines, M; ≈ 2 800 with the card style of the intake of `index-BnFvC-Ft.js` |
 | Behaviour reference | `03` §2 (SCR-032 … SCR-039, SCR-041, SCR-048), §1.7 (lite mode), §3.2 (storage), §3.3 (events), §3.4 (constants), §3.5 (time zone), §4, §5, §5b; `05` TMA-019 … TMA-021, TMA-036; task files KV-FE-081, KV-FE-082, KV-FE-083, KV-FE-084, KV-FE-085, KV-FE-086, KV-FE-026, KV-FE-027 |
@@ -471,6 +471,86 @@ Run in ru, uz, en and in light and dark; cookie mode and header mode where a req
 - [ ] Without the SDK (`launchApp(page, { sdk: false })`) each of the eight sub-pages shows the fallback close, and
       it closes the sub-page (*added by the intake of `index-CIa0Ldj2.js`*).
 
+## As built
+
+The package is built as designed. These points were decided in the code (rule 6); they are listed for the reviewer.
+
+- **The language switch, checked in the browser first.** A replace of the address with another locale segment renders
+  in place under the one root layout. A marker on `window` survived, the session was not exchanged again, and the
+  body, the tab bar and the settings list stayed the same nodes. So `changeLanguage` only gives the profile the new
+  locale (`patchMe`). The locale guard of WP-21 (`LocaleGuard`), which follows `me.locale` on every navigation,
+  replaces the address, keeping the search, through next-intl's router, which writes its locale cookie. The same guard
+  sends Back from an entry with the old segment to the new one, so step 4 needed no change. The reads run again only
+  once the document's `lang` is the new locale (a `MutationObserver` on it, not an effect of a screen, so a tab switched
+  before the answer still gets its reads): `bffFetch` takes its `Accept-Language` from that attribute.
+- **What the rows read.** The language row reads the address's locale and the currency row the profile's currency
+  (`me.currency`), not the settings answer. On stubs `GET /settings` always answers the fixture (KI-68), so a saved
+  language or currency would otherwise read old after the reads that follow it.
+- **No request for the checked preset.** The design says a pick of the current quiet-hours or digest preset saves
+  again, as legacy does. `ChoiceList` (Radix RadioGroup) reports no pick of the checked option, as for the theme,
+  language and currency, so nothing is sent; the setting is unchanged either way.
+- **One save rule for the presets** (`usePresetSave`: quiet hours, digest, card style). The change shows at once.
+  Of several saves — on any preset page of the launch, one sequence for all, since an answer replaces the whole
+  settings entry and a page closed meanwhile must not undo a newer pick on another — the latest pick decides: earlier
+  answers change nothing, its success shows the answer, its failure
+  puts back the settings before the picks with `failed()`. The order in which the server took the writes is not
+  always the order of the picks (Next lets a Back pass a pending action, a save is repeated after a
+  re-authentication, a write can land after its request timed out), so after a failure, or when an earlier save was
+  still out as the latest one settled, the settings are read again once every save has settled: the screen ends at
+  what the server holds, and saves answered in order read nothing again. The theme: the latest pick of the launch
+  decides too (its own sequence, shared by every mount of the page); its
+  success applies the theme again and gives it to the session's profile (`patchMe`), since a re-authentication in
+  between re-applies the profile's old theme; its failure restores the theme before the picks.
+- **Language and currency rows are disabled while a save runs**, so the second pick of the design ("waits for the
+  first") cannot happen.
+- **The hidden list's follow-up.** The design names "the map points, the count and the radar previews":
+  - the radar lists are invalidated (`invalidate("radars")`);
+  - the map's points now follow the feed epoch (`useMapPoints`: a bump asks the same search again and keeps the points
+    until the answer, whose `responseId` stays, so the camera and an open card stay), which also covers a language or
+    currency change and WP-38's long return. Only an answer the camera could fit keeps the id — one with points, or
+    any answer for a drawn area: before the first answer, or after one without points, the next answer fits;
+  - the live count of the filter sheets is read anew whenever a sheet opens, so nothing keeps it.
+  A failure puts back exactly the rows its change removed, among the rows shown now, in the list's order as first read.
+  Legacy's `applyChange` filtered the rows of before the change, which lost a row that a second failure had put back
+  (two «Вернуть» that fail in turn); a row returned before a change began stays returned, a change that fails after a
+  «Показать всё снова» succeeded puts nothing back, and a successful «Показать всё снова» empties the list even of a
+  row another failure put back meanwhile (the server returned it too). Each change starts from the list shown at that
+  moment, so a confirm that waited sees a row put back meanwhile. When a row leaves, the
+  focus moves to the next row's «Вернуть», else to the previous one's, else to the page (the last row takes
+  «Показать всё снова» with it).
+- **The «Лента» count** is the sum of hidden listings and blocked authors (legacy's), shown as the row's value.
+- **«О приложении».** Without an Instagram icon in lucide the row has a camera icon; it shows only once the brand layer
+  has HOMI's own link. The support row opens `t.me/<support>` through `tg.openLink`.
+- **The card-style mocks** follow legacy's `card-style.css` as Tailwind classes on the tokens. The two options are a
+  radio group with one Tab stop and the arrow keys, locked (focus included) while a sample is on its way. The sample
+  result is a small store that the screen resets when the
+  tab unmounts; an answer that arrives after a reset is dropped, as legacy's is with its screen. The result line is a
+  polite live region.
+- **The home offer.** The card's frame, button and × moved from `FollowNudge.tsx` to `features/nudges/NudgeFrame.tsx`,
+  so the card does not pull the subscribe flow. `tg.haptic` gained `warning()` (the card sample's failure). The visit
+  day is recorded once per launch when the session is ready; `homi-home` is a synced key since WP-21.
+- **Graphics.** `lib/graphics.ts` gained `autoIsLite()`, what `auto` chooses on this device, for the label «Авто · …»
+  of the page; `isLiteGraphics` uses it.
+- **Theme.** `features/settings/themeChoice.ts` wraps `setThemePreference` with a listener set, so the settings
+  screen, which stays mounted under the theme page, follows a pick.
+- **Specs that used the settings placeholder.** The two theme checks of `foundation.spec.ts` read the glass sample and
+  a primary button on the development gallery now; no placeholder route is left. The route tree check gained
+  `/settings/cards`.
+- **Server read and hydration.** The layout's `<Suspense>` fallback is a static spinner with no reads: a fallback that
+  read would keep the server read from being adopted and read twice. The graphics row is decided once on the client
+  (`useSyncExternalStore` with a server snapshot of "hidden"), so the server render cannot mismatch it.
+- **Accessibility.** The screen's root is a `div` (the shell holds the `main`). The groups are sections without an
+  accessible name, so the screen and an open page are the only regions; a group is found by its heading.
+- **Size.** About 1 900 changed lines of code and 1 900 of tests and specs: above the estimate, by the tests. Steps 9
+  and 9a were not split off.
+
+Not done here: the acceptance checklist inside Telegram on staging (production track), and the sentence of `CLAUDE.md`
+that still names the settings placeholder (a shared file: a separate small PR).
+
 ## Handoff
 
-Empty.
+Finished: every step, with unit, component and end-to-end tests; three independent review rounds, their findings at
+medium and above fixed; PR #101.
+Nothing is half-done. Known and left: a direct load of a sub-page address may read the settings once more in the
+browser before the layout's server read arrives (the shown data is the same). Next: the queue's next
+package; the production track's deploy and the acceptance checklist on staging.

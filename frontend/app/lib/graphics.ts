@@ -24,6 +24,11 @@ export function isLiteGraphics(profile: DeviceProfile = currentProfile()): boole
   if (mode !== "auto") {
     return mode === "lite";
   }
+  return autoIsLite(profile);
+}
+
+/** What `auto` chooses on this device: lite once measured so, or on a weak device (the label «Авто · …», WP-31). */
+export function autoIsLite(profile: DeviceProfile = currentProfile()): boolean {
   return storageGet("homi-graphics-measured") === "lite" || isLowEndDevice(profile);
 }
 

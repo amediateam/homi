@@ -1,18 +1,12 @@
-import { useTranslations } from "next-intl";
 import { Suspense } from "react";
 
-import { RoutePlaceholder } from "@/features/shell/RoutePlaceholder";
-import { SubPage } from "@/features/shell/SubPage";
+import { SettingsSubPage } from "@/features/settings/SettingsSubPage";
 
-/** Settings › Theme (SCR-033); WP-31 replaces the placeholder inside the sub-page. */
+/** Settings › Theme (SCR-033), WP-31: the page over the settings screen, which the layout keeps mounted. */
 export default function Page() {
-  const t = useTranslations();
-
   return (
     <Suspense fallback={null}>
-      <SubPage title={t("settings.theme._")} bare>
-        <RoutePlaceholder name="settings/theme" />
-      </SubPage>
+      <SettingsSubPage name="theme" />
     </Suspense>
   );
 }
