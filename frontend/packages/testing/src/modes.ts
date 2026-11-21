@@ -133,8 +133,8 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
     const at = record.seq;
     const document = record.document;
     record.requests.push(
-      // A request still held by a spec's route at the end has no headers to give: it counts as unknown, not as a hang.
-      Promise.race([request.allHeaders(), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("no headers")), HEADERS_WAIT_MS))])
+      request
+        .allHeaders()
         .then((headers) => ({ path: url.pathname, method: request.method(), authorization: headers.authorization ?? null, at, document }))
         .catch(() => null),
     );
@@ -210,7 +210,11 @@ async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]>
   const findings: string[] = [];
   await Promise.all(record.pending);
   await Promise.race([Promise.allSettled([...exchanges]), new Promise((resolve) => setTimeout(resolve, HEADERS_WAIT_MS))]);
-  const requests = (await Promise.all(record.requests)).filter((request): request is BffRequest => request !== null);
+  // A request still held by a spec's route at the end has no headers to give: after the wait it counts as unknown.
+  const unknown = new Promise<null>((resolve) => setTimeout(() => resolve(null), HEADERS_WAIT_MS));
+  const requests = (await Promise.all(record.requests.map((request) => Promise.race([request, unknown])))).filter(
+    (request): request is BffRequest => request !== null,
+  );
   const cookies = await record.page
     .context()
     .cookies()
