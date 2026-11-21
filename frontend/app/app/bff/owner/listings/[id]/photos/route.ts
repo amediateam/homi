@@ -78,7 +78,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     return error instanceof DOMException && error.name === "TimeoutError" ? refuse(504, "gateway_timeout") : refuse(502, "bad_gateway");
   }
-  const response = new NextResponse(await api.text(), { status: api.status, headers: { "Content-Type": "application/json" } });
+  // A status without a body (204, 304) cannot carry one.
+  const empty = api.status === 204 || api.status === 304;
+  const response = new NextResponse(empty ? null : await api.text(), { status: api.status, ...(empty ? {} : { headers: { "Content-Type": "application/json" } }) });
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

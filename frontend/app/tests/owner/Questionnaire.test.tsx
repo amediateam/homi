@@ -1,5 +1,6 @@
 import { fakeTelegram, type FakeTelegram } from "@homi/testing";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionResult } from "@/lib/actions/run";
@@ -80,6 +81,18 @@ describe("Questionnaire (WP-81, SCR-052)", () => {
     expect(order.slice(0, 4)).toEqual(["landmark", "photos", "city", "district_code"]);
     expect(document.querySelector("[data-owner-title]")?.textContent).toBe("Сдать квартиру");
     expect(next().textContent).toBe("Дальше: подтвердить номер");
+  });
+
+  it("under StrictMode (the double run of effects) an edit still saves (first review)", async () => {
+    render(
+      <StrictMode>
+        {withIntl(<Questionnaire listing={listingOf()} />)}
+      </StrictMode>,
+    );
+    fireEvent.click(document.querySelector('[data-rooms="4"]')!);
+    await act(() => vi.advanceTimersByTimeAsync(600));
+
+    expect(state.update).toHaveBeenCalledWith({ id: ID, fields: { rooms: 4, room: false } });
   });
 
   it("an edit saves after 600 ms with the changed field only", async () => {

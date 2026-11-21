@@ -99,6 +99,16 @@ describe("PhonePoll (WP-81, BR-APP-084)", () => {
     expect(poll.getState().polling).toBe(true);
   });
 
+  it("a return after an answer ended the poll starts nothing (first review)", async () => {
+    answers = [listing({ status: "rejected" })];
+    poll.start(null);
+    await vi.advanceTimersByTimeAsync(0);
+    poll.visible();
+
+    expect(poll.getState().polling).toBe(false);
+    expect(ends).toHaveLength(1);
+  });
+
   it("does nothing on a return before any start", async () => {
     poll.visible();
     await vi.advanceTimersByTimeAsync(POLL_EVERY_MS);

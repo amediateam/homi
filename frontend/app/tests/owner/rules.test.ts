@@ -28,7 +28,7 @@ describe("owner form rules (WP-81, SCR-052)", () => {
     expect(parseArea("45,5")).toBe(45.5);
     expect(parseArea("54")).toBe(54);
     expect(parseArea(" 33.25 ")).toBe(33.3);
-    for (const text of ["", "0", "0,0", "abc", "4,5,6", "-3", "1e3"]) {
+    for (const text of ["", "0", "0,0", "abc", "4,5,6", "-3", "1e3", "4,9", "1000,1", "123456"]) {
       expect(parseArea(text), text).toBeNull();
     }
   });
@@ -39,9 +39,11 @@ describe("owner form rules (WP-81, SCR-052)", () => {
     expect(parseFloor(" 5 / 9 ")).toEqual({ floor: 5, floors: 9 });
     expect(parseFloor("0")).toEqual({ floor: 0, floors: null });
     expect(parseFloor("-1")).toEqual({ floor: -1, floors: null });
-    for (const text of ["", "a", "5/0", "5/", "/9", "1.5", "1234"]) {
+    // The server's bounds: a floor −3 … 99, the floors 1 … 99 (first review).
+    for (const text of ["", "a", "5/0", "5/", "/9", "1.5", "1234", "-4", "100", "5/100", "999/999"]) {
       expect(parseFloor(text), text).toBeNull();
     }
+    expect(parseFloor("-3")).toEqual({ floor: -3, floors: null });
   });
 
   it("knows a floor above the floors", () => {

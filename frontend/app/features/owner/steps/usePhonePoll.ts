@@ -33,6 +33,8 @@ export class PhonePoll {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private busy = false;
   private live = false;
+  /** The last poll ran out of its 90 s (not ended by an answer): the next return starts a new one. */
+  private ranOut = false;
 
   constructor(
     private readonly read: () => Promise<ApiResult<OwnerListingBody>>,
@@ -64,6 +66,7 @@ export class PhonePoll {
     this.startedAt = this.now();
     this.staleError = staleError;
     this.live = true;
+    this.ranOut = false;
     this.set({ polling: true, late: false });
     void this.tick();
   }
@@ -85,7 +88,9 @@ export class PhonePoll {
       return;
     }
     if (!this.live) {
-      this.start(this.staleError);
+      if (this.ranOut) {
+        this.start(this.staleError);
+      }
       return;
     }
     if (!this.busy) {
@@ -109,6 +114,7 @@ export class PhonePoll {
     const elapsed = this.now() - this.startedAt;
     if (elapsed >= POLL_FOR_MS) {
       this.stop();
+      this.ranOut = true;
       return;
     }
     if (elapsed >= POLL_LATE_MS && !this.state.late) {

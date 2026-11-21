@@ -109,6 +109,27 @@ describe("usePhotos (WP-81, BR-APP-082, DEV-057)", () => {
     expect(state.remove).not.toHaveBeenCalled();
   });
 
+  it("«Сделать обложкой» keeps a photo whose delete is still waiting, at the end of the order (first review)", async () => {
+    state.order.mockResolvedValue(listing([P3, P1, P2]));
+    const { result } = hook([P1, P2, P3]);
+    act(() => result.current.remove(P2.id));
+    await act(() => result.current.makeCover(P3.id));
+
+    expect(state.order).toHaveBeenCalledWith({ id: ID, ids: [P3.id, P1.id, P2.id] });
+  });
+
+  it("flushDeletes sends the waiting deletes at once (before «Дальше» and publish)", async () => {
+    state.remove.mockResolvedValue(listing([P1]));
+    const { result } = hook([P1, P2]);
+    act(() => result.current.remove(P2.id));
+    await act(() => result.current.flushDeletes());
+
+    expect(state.remove).toHaveBeenCalledWith({ id: ID, photo: P2.id });
+    state.remove.mockClear();
+    await act(() => vi.advanceTimersByTimeAsync(TOAST_ACTION_MS));
+    expect(state.remove).not.toHaveBeenCalled();
+  });
+
   it("a delete still waiting is sent when the form unmounts", async () => {
     state.remove.mockResolvedValue(listing([P1]));
     const { result, unmount } = hook([P1, P2]);

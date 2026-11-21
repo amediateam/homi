@@ -32,6 +32,8 @@ export interface Photos {
   add: (files: readonly File[]) => Promise<void>;
   makeCover: (id: string) => Promise<void>;
   remove: (id: string) => void;
+  /** Sends the deletes still inside their «Вернуть» window now (before «Дальше» and before publish). */
+  flushDeletes: () => Promise<void>;
 }
 
 /** How long a new photo carries its tick. */
@@ -67,6 +69,13 @@ export function usePhotos({
   const [error, setError] = useState<PhotoError | null>(null);
   const busy = tiles.length > 0;
   const pending = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  /** Aborted when the form unmounts: a batch on its way stops. */
+  const alive = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    alive.current = controller;
+    return () => controller.abort();
+  }, []);
 
   const accept = useCallback((data: OwnerListingBody) => {
     putOwnerListing(data);
@@ -94,9 +103,19 @@ export function usePhotos({
           setTiles((list) => list.filter((tile) => tile.key !== key));
           continue;
         }
-        const result = await uploadPhoto(listingId, photo, (share) =>
-          setTiles((list) => list.map((tile) => (tile.key === key ? { ...tile, progress: share } : tile))),
+        const signal = alive.current?.signal;
+        if (signal?.aborted) {
+          return;
+        }
+        const result = await uploadPhoto(
+          listingId,
+          photo,
+          (share) => setTiles((list) => list.map((tile) => (tile.key === key ? { ...tile, progress: share } : tile))),
+          signal,
         );
+        if (signal?.aborted) {
+          return;
+        }
         setTiles((list) => list.filter((tile) => tile.key !== key));
         if (result.ok) {
           const fresh = (result.data.photos ?? []).map((item) => item.id).filter((id) => !known.has(id));
@@ -127,8 +146,10 @@ export function usePhotos({
   const makeCover = useCallback(
     async (id: string) => {
       tg.haptic.impact("light");
+      // The full order the contract asks for: a photo hidden by a delete not sent yet stays, at the end.
       const visible = all.filter((photo) => !hidden.has(photo.id));
-      const ids = [id, ...visible.map((photo) => photo.id).filter((other) => other !== id)];
+      const waiting = all.filter((photo) => hidden.has(photo.id));
+      const ids = [id, ...visible.map((photo) => photo.id).filter((other) => other !== id), ...waiting.map((photo) => photo.id)];
       const result = await order({ id: listingId, ids });
       if (result.ok) {
         accept(result.data);
@@ -175,6 +196,14 @@ export function usePhotos({
     [send, texts.deleted, texts.undo],
   );
 
+  const flushDeletes = useCallback(async () => {
+    const waiting = [...pending.current.entries()];
+    for (const [, timer] of waiting) {
+      clearTimeout(timer);
+    }
+    await Promise.all(waiting.map(([photo]) => send(photo)));
+  }, [send]);
+
   // The form unmounts: the deletes still waiting are sent now.
   const sendRef = useRef(send);
   useEffect(() => {
@@ -191,5 +220,5 @@ export function usePhotos({
     };
   }, []);
 
-  return { photos: all.filter((photo) => !hidden.has(photo.id)), tiles, arrived, busy, error, add, makeCover, remove: removePhoto };
+  return { photos: all.filter((photo) => !hidden.has(photo.id)), tiles, arrived, busy, error, add, makeCover, remove: removePhoto, flushDeletes };
 }

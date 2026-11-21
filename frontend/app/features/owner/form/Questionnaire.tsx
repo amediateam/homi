@@ -126,6 +126,7 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
       tg.haptic.warning();
       return;
     }
+    await photos.flushDeletes();
     const result = await flush();
     if (!result.ok) {
       tg.haptic.error();
@@ -157,7 +158,20 @@ export function Questionnaire({ listing, children }: { listing: OwnerListingView
                 : demandNote;
 
   return (
-    <OwnerFormContext value={{ listing, form, edit, restore: editRaw, flush, current }}>
+    <OwnerFormContext
+      value={{
+        listing,
+        form,
+        edit,
+        restore: editRaw,
+        // Publish flushes the photo deletes still in their «Вернуть» window too: a deleted photo is never published.
+        flush: async () => {
+          await photos.flushDeletes();
+          return flush();
+        },
+        current,
+      }}
+    >
     <div ref={root} data-owner-questionnaire="">
       <OwnerFrame
         title={listing.status === "draft" ? t("own.title") : t("own.editTitle")}

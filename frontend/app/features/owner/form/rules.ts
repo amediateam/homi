@@ -18,14 +18,21 @@ export function inUzbekistanBox(lat: number, lon: number): boolean {
   return lat >= 37 && lat <= 46 && lon >= 55 && lon <= 74;
 }
 
-/** «Площадь» as typed: a decimal with a point or a comma, above 0, one decimal kept; anything else is `null`. */
+/** The bounds of the server's checks (WP-80 `UpdateOwnerListingRequest`): a value outside them is never sent. */
+export const AREA_MIN = 5;
+export const AREA_MAX = 1000;
+export const FLOOR_MIN = -3;
+export const FLOOR_MAX = 99;
+export const FLOORS_MAX = 99;
+
+/** «Площадь» as typed: a decimal with a point or a comma, 5 … 1000, one decimal kept; anything else is `null`. */
 export function parseArea(text: string): number | null {
   const value = text.trim().replace(",", ".");
   if (!/^\d+(?:\.\d+)?$/.test(value)) {
     return null;
   }
   const area = Math.round(Number(value) * 10) / 10;
-  return area > 0 ? area : null;
+  return area >= AREA_MIN && area <= AREA_MAX ? area : null;
 }
 
 /**
@@ -37,8 +44,12 @@ export function parseFloor(text: string): { floor: number; floors: number | null
   if (match === null) {
     return null;
   }
+  const floor = Number(match[1]);
   const floors = match[2] === undefined ? null : Number(match[2]);
-  return floors === 0 ? null : { floor: Number(match[1]), floors };
+  if (floor < FLOOR_MIN || floor > FLOOR_MAX || (floors !== null && (floors < 1 || floors > FLOORS_MAX))) {
+    return null;
+  }
+  return { floor, floors };
 }
 
 /** The floor is above the floors of the building: both are held back from a save, and «Дальше» refuses. */

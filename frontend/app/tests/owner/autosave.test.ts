@@ -129,6 +129,16 @@ describe("AutosaveController (WP-81, BR-APP-079)", () => {
     expect(sent).toEqual([{ price: 1 }]);
   });
 
+  it("open() after close() takes edits again (a remount, an Activity show; first review)", async () => {
+    const autosave = controller();
+    await autosave.close();
+    autosave.open();
+    autosave.edit({ price: 3 });
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_MS);
+
+    expect(sent).toEqual([{ price: 3 }]);
+  });
+
   it("nothing dirty: a flush sends nothing", async () => {
     await expect(controller().flush()).resolves.toEqual({ ok: true });
     expect(sent).toEqual([]);

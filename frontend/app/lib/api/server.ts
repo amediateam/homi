@@ -101,7 +101,7 @@ export function createServerApi(config: ServerApiConfig) {
           ...(error.reason === undefined ? {} : { reason: error.reason }),
           ...(error.limit === undefined ? {} : { limit: error.limit }),
           ...(error.max === undefined ? {} : { max: error.max }),
-          ...(error.errors === undefined ? {} : { fields: Object.keys(error.errors) }),
+          ...(typeof error.errors === "object" && error.errors !== null && !Array.isArray(error.errors) ? { fields: Object.keys(error.errors) } : {}),
         });
       }
       if (options.signal?.aborted) {

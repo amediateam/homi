@@ -32,6 +32,9 @@ export function useAutosave<T>(options: UseAutosaveOptions<T>): Autosave {
     controller.setHandlers({ save, onSaved, onDisabled });
   }, [controller, save, onSaved, onDisabled]);
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);
-  useEffect(() => () => void controller.close(), [controller]);
+  useEffect(() => {
+    controller.open();
+    return () => void controller.close();
+  }, [controller]);
   return { ...state, edit: (change) => controller.edit(change), flush: () => controller.flush(), current: () => controller.getState().form };
 }

@@ -123,11 +123,16 @@ export class AutosaveController<T> {
     }
   }
 
-  /** The form unmounts: one last flush, then nothing more is scheduled. */
+  /** The form unmounts or is hidden (`<Activity>`): one last flush, then nothing more is scheduled until `open()`. */
   close(): Promise<FlushResult> {
     const last = this.flush();
     this.closed = true;
     return last;
+  }
+
+  /** The form mounts or is shown again (also React's development double run of effects): edits are taken again. */
+  open(): void {
+    this.closed = false;
   }
 
   private body(): Partial<OwnerForm> {

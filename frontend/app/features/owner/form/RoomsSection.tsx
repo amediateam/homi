@@ -75,7 +75,7 @@ export function RoomsSection({ form, invalid, edit }: { form: OwnerForm; invalid
           />
         </Field>
         <Field label={t("own.floors")} focus="floors_total" invalid={invalid.has("floors_total")}>
-          <IntInput data-field="floors_total" value={form.floors_total} max={99} onValueChange={(floors) => edit({ floors_total: floors })} />
+          <IntInput data-field="floors_total" value={form.floors_total} max={99} onValueChange={(floors) => edit({ floors_total: floors === 0 ? null : floors })} />
         </Field>
       </div>
     </>
