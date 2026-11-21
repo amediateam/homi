@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "@homi/ui";
+import { ChevronRight, Skeleton } from "@homi/ui";
 import { useTranslations } from "next-intl";
 
 import { nav } from "@/lib/navigation/nav";
@@ -32,6 +32,17 @@ export function MineBar() {
         </span>
         <ChevronRight size={18} aria-hidden className="flex-none text-hint" />
       </button>
+    </div>
+  );
+}
+
+/** The footer while the owner listing loads (or its module): a skeleton of the bar's height. */
+export function OwnerPanelFooterSkeleton() {
+  return (
+    <div data-cta="" data-owner-footer="loading" className={FOOTER_FRAME}>
+      <div className="mx-auto max-w-[608px] px-[16px] pt-[12px]">
+        <Skeleton className="h-[48px] w-full rounded-large" />
+      </div>
     </div>
   );
 }

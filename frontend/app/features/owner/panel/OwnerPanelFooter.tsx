@@ -1,6 +1,5 @@
 "use client";
 
-import { Skeleton } from "@homi/ui";
 import { useMemo } from "react";
 
 import { nav } from "@/lib/navigation/nav";
@@ -10,7 +9,7 @@ import { OwnerActions, useVisibleActions } from "../lists/OwnerActions";
 import { useStatusAction } from "../lists/useStatusAction";
 import { normalizeOwnerListing, type OwnerListingView } from "../normalize";
 import { useOwnerListing } from "../store";
-import { FOOTER_FRAME, MineBar } from "./MineBar";
+import { FOOTER_FRAME, MineBar, OwnerPanelFooterSkeleton } from "./MineBar";
 
 /**
  * The footer of the user's own listing with its owner panel (WP-82, SCR-059), in place of the contact bar: the
@@ -32,13 +31,7 @@ export function OwnerPanelFooter({ listingId, number }: { listingId: string; num
     if (resource.error !== null) {
       return <MineBar />;
     }
-    return (
-      <div data-cta="" data-owner-footer="loading" className={FOOTER_FRAME}>
-        <div className="mx-auto max-w-[608px] px-[16px] pt-[12px]">
-          <Skeleton className="h-[48px] w-full rounded-large" />
-        </div>
-      </div>
-    );
+    return <OwnerPanelFooterSkeleton />;
   }
   // Nothing to offer (a let listing without requests while the cabinet is off): the footer is never empty (LB-APP-070).
   if (actions.length === 0) {

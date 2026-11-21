@@ -11,7 +11,7 @@ import { nav } from "@/lib/navigation/nav";
 import { routes } from "@/lib/navigation/routes";
 import { tg } from "@/lib/telegram";
 
-import { OwnerStatusChip, ownerNote } from "../lists/OwnerListingCard";
+import { OwnerStatusChip, ownerNote } from "../lists/parts";
 import { normalizeOwnerListing, type OwnerListingView, type OwnerStats } from "../normalize";
 import { trackAttention } from "../signals/attention";
 import { manageable } from "../status";

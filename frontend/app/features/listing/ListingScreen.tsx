@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Button, ErrorState, SearchX } from "@homi/ui";
@@ -16,10 +18,16 @@ import { tg } from "@/lib/telegram";
 
 import { MineBar } from "@/features/owner/panel/MineBar";
 import { OwnerPanel } from "@/features/owner/panel/OwnerPanel";
-import { OwnerPanelFooter } from "@/features/owner/panel/OwnerPanelFooter";
+import { OwnerPanelFooterSkeleton } from "@/features/owner/panel/MineBar";
 import { OwnerPriceSection } from "@/features/owner/panel/OwnerPriceSection";
 
 import { ListingCtaBar } from "./cta/ListingCtaBar";
+
+/** The owner panel's footer brings the cabinet's actions: loaded only on the user's own listing (WP-82). */
+const OwnerPanelFooter = dynamic(() => import("@/features/owner/panel/OwnerPanelFooter").then((module) => module.OwnerPanelFooter), {
+  ssr: false,
+  loading: () => <OwnerPanelFooterSkeleton />,
+});
 import { type ListingContactView, useListingContact } from "./cta/useContact";
 import { KeyFacts } from "./KeyFacts";
 import { ListingHero } from "./ListingHero";

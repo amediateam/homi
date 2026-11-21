@@ -5,7 +5,7 @@ import { useMemo } from "react";
 
 import type { ListingDetails } from "@/features/listing/listingData";
 
-import { PriceDelta } from "../lists/OwnerListingCard";
+import { PriceDelta } from "../lists/parts";
 import { normalizeOwnerListing } from "../normalize";
 import { useOwnerListing } from "../store";
 
