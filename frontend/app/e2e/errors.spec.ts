@@ -1,4 +1,4 @@
-import { expect, launchApp, playwrightTelegram, test } from "@homi/testing/playwright";
+import { allowConsoleErrors, expect, launchApp, playwrightTelegram, test } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -31,6 +31,7 @@ function reports(page: Page): () => AppError["props"]["error"][] {
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`error reports (${mode} mode)`, () => {
     test("a render error gives one app_error of kind render, from the screen it happened on, and the crash screen", async ({ page }) => {
+      allowConsoleErrors(test.info(), /UI gallery: a render error on purpose/);
       const reported = reports(page);
       await launchApp(page, { mode, path: "/ru/dev/ui" });
       await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
@@ -52,6 +53,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
 
     test("an uncaught error and an unhandled rejection give one app_error each; the same again gives none", async ({ page }) => {
+      allowConsoleErrors(test.info(), /^uncaught: e2e: (thrown|rejected) twice$/);
       const reported = reports(page);
       await launchApp(page, { mode, path: "/" });
       await expect(page.locator("html")).toHaveAttribute("data-session", "ready");

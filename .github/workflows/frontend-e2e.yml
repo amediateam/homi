@@ -4,7 +4,9 @@ name: frontend-e2e
 # Telegram of `@homi/testing`. Its guard fails a test that sends a request to an external host. The app signs in
 # through the API on stubs, started here on SQLite with PHP's built-in server (WP-21; CI only — developer machines
 # use the API behind nginx). A second run takes only the `@radars-off` tests, against a second API with radars switched
-# off (WP-30). The nightly run, WebKit and stub media come with WP-33.
+# off (WP-30). Every run has two projects (WP-33, `frontend/playwright.config.ts`): cookie mode over every spec and
+# header mode over every test that does not name its mode (DEC-101). The manual run (`workflow_dispatch` with `full`,
+# no schedule: DEC-100) adds WebKit, desktop, Telegram 6.0, the uz/en render and the dark theme.
 on:
   pull_request:
     paths:
@@ -12,6 +14,11 @@ on:
       - '.node-version'
       - '.github/workflows/frontend-e2e.yml'
   workflow_dispatch:
+    inputs:
+      full:
+        description: 'The manual run before a pass inside Telegram (DEC-100): the projects of other clients, the uz/en render and the dark theme'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -51,8 +58,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 
-      - name: Install Chromium and its system libraries
-        run: pnpm exec playwright install --with-deps chromium
+      # WebKit only for the manual run's `miniapp-ios` project.
+      - name: Install the browsers and their system libraries
+        env:
+          BROWSERS: ${{ inputs.full && 'chromium webkit' || 'chromium' }}
+        run: pnpm exec playwright install --with-deps $BROWSERS
 
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -93,6 +103,7 @@ jobs:
       - name: End-to-end tests
         run: pnpm test:e2e
         env:
+          E2E_FULL: ${{ inputs.full && '1' || '' }}
           API_URL: http://127.0.0.1:8080/api/v1
           # The stub media base of `backend/.env.example` (`MEDIA_PUBLIC_URL`): the CSP's `img-src` must allow the stub
           # photos, which the specs answer themselves (`stubMedia` of `@homi/testing/playwright`).
@@ -157,6 +168,25 @@ jobs:
           NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
           NEXT_PUBLIC_APP_ENV: ci
           NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
+
+      # The bundle check of WP-33 (DEC-100: a step of this job): a build with `NEXT_PUBLIC_APP_ENV=production` must hold no
+      # emulator, test double, gallery, scenario forwarding, server-only key or value, legacy key name, legacy brand or
+      # source map (`frontend/app/scripts/check-bundle.mjs`). It replaces the e2e build, so it runs last. The server-only
+      # keys get distinctive values, so the check also looks for the values.
+      - name: Bundle check of the production build
+        working-directory: frontend/app
+        env:
+          NEXT_PUBLIC_APP_ENV: production
+          NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
+          NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
+          API_URL: https://api.bundle-check.invalid/api/v1
+          CSP_TILE_HOSTS: https://tiles.bundle-check.invalid
+          CSP_PRIVATE_MEDIA_HOSTS: https://media.bundle-check.invalid
+          CSP_ANALYTICS_HOSTS: https://events.bundle-check.invalid
+          CSP_FRAME_ANCESTORS: https://frame.bundle-check.invalid
+        run: |
+          pnpm build
+          node scripts/check-bundle.mjs
 
       - name: Upload traces and report
         if: failure()

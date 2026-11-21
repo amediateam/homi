@@ -1,4 +1,4 @@
-import { expect as baseExpect, launchApp, stubMedia, test as base, type LaunchAppOptions, type LaunchedApp } from "@homi/testing/playwright";
+import { expect as baseExpect, launchApp, type LaunchAppOptions, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Locator, Page, Request, Route } from "@playwright/test";
 
 /**
@@ -141,11 +141,6 @@ async function holdActions(page: Page): Promise<() => void> {
   return slow.release;
 }
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 /** Answers a radar list read with `radars`, in the API's envelope, as a stub that stored them would. */
 const answerRadars = (route: Route, radars: unknown[]) =>
   route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: radars, meta: { source: "stub" } }) });
@@ -233,7 +228,7 @@ for (const mode of ["cookie", "header"] as const) {
       const before = address(page);
       await openFilters(page);
       await expect(subscribeButton(page)).toBeEnabled();
-      await stubScenario(page, "existing");
+      await setScenario(page, "existing");
       const actions = recordRequests(page, isServerAction);
       const success = await notifications(app, "success");
 
@@ -283,7 +278,7 @@ for (const mode of ["cookie", "header"] as const) {
       const app = await open(page, mode, OWN_SEARCH);
       await openFilters(page);
       await expect(subscribeButton(page)).toBeEnabled();
-      await stubScenario(page, "radar_limit");
+      await setScenario(page, "radar_limit");
       const error = await notifications(app, "error");
 
       await subscribeButton(page).click();
@@ -302,7 +297,7 @@ for (const mode of ["cookie", "header"] as const) {
       const app = await open(page, mode, OWN_SEARCH, { answers: { writeAccess: false } });
       await openFilters(page);
       await expect(subscribeButton(page)).toBeEnabled();
-      await stubScenario(page, "no_chat");
+      await setScenario(page, "no_chat");
       const actions = recordRequests(page, isServerAction);
 
       await subscribeButton(page).click();
@@ -319,12 +314,12 @@ for (const mode of ["cookie", "header"] as const) {
       const before = address(page);
       await openFilters(page);
       await expect(subscribeButton(page)).toBeEnabled();
-      await stubScenario(page, "no_chat");
+      await setScenario(page, "no_chat");
       // The bot may write once the user allowed it: the stub's `no_chat` is left out of every later Server Action.
       let sent = 0;
       await page.route("**/*", async (route) => {
         if (isServerAction(route.request()) && sent++ === 1) {
-          await page.context().clearCookies({ name: "homi_stub_scenario" });
+          await setScenario(page, null);
         }
         await route.fallback();
       });
@@ -343,7 +338,7 @@ for (const mode of ["cookie", "header"] as const) {
       const app = await open(page, mode, OWN_SEARCH, { version: "6.8" });
       await openFilters(page);
       await expect(subscribeButton(page)).toBeEnabled();
-      await stubScenario(page, "no_chat");
+      await setScenario(page, "no_chat");
       const actions = recordRequests(page, isServerAction);
 
       await subscribeButton(page).click();
@@ -358,7 +353,7 @@ for (const mode of ["cookie", "header"] as const) {
   test.describe(`few-results note (${mode} mode)`, () => {
     test("«Включить радар по этому поиску» creates the radar with the few toast; «Расширить» widens it; the button leaves once the radar exists", async ({ page }) => {
       // The stub's `few` feed has five listings of the default search: the note shows under them.
-      await stubScenario(page, "few");
+      await setScenario(page, "few");
       // A stub that stored the write: once the create was sent, the list holds the new radar of this search. Until
       // then the list is the stub's own, which has no radar for the default search.
       let stored = false;

@@ -1,4 +1,4 @@
-import { expect, launchApp, test } from "@homi/testing/playwright";
+import { allowConsoleErrors, expect, launchApp, setScenario, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
@@ -20,7 +20,7 @@ const gallery = (page: Page) => page.getByTestId("gallery-throw").filter({ visib
 /** Launches the gallery in `locale` (the user's saved locale follows the stub scenario) and waits for the session. */
 async function openGallery(page: Page, mode: "cookie" | "header", locale: keyof typeof TEXTS) {
   if (locale !== "ru") {
-    await page.context().addCookies([{ name: "homi_stub_scenario", value: locale, url: test.info().project.use.baseURL }]);
+    await setScenario(page, locale);
   }
   await launchApp(page, { mode, locale, path: `/${locale}/dev/ui` });
   await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
@@ -39,6 +39,7 @@ for (const [mode, locales] of [
   test.describe(`crash screen (${mode} mode)`, () => {
     for (const locale of locales) {
       test(`a render error shows the crash screen in ${locale}, and «${TEXTS[locale].reload}» reloads`, async ({ page }) => {
+        allowConsoleErrors(test.info(), /UI gallery: a render error on purpose/);
         const errors: string[] = [];
         page.on("pageerror", (error) => errors.push(error.message));
         await openGallery(page, mode, locale);

@@ -1,5 +1,5 @@
 import { defaultFilters, toSearchParams } from "@homi/search";
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -111,11 +111,6 @@ const noRadars = (page: Page) =>
     (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: [], meta: { source: "stub" } }) }),
   );
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 /** Launches the app as the bot does, in a session mode, and waits for the session and the first cards. */
 async function open(page: Page, mode: Mode, path = "/"): Promise<LaunchedApp> {
   const app = await launchApp(page, { mode, path });
@@ -195,7 +190,7 @@ for (const mode of ["cookie", "header"] as const) {
 
     test("the scenario few with custom filters: after the 5th card, «Включить радар» turns a radar on with entry feed", async ({ page }) => {
       await seedNudge(page, QUIET);
-      await stubScenario(page, "few");
+      await setScenario(page, "few");
       const app = await open(page, mode, "/?rooms_min=2&rooms_max=2");
 
       await expect(radarCard(page)).toHaveCount(1, { timeout: API_MS });
@@ -220,7 +215,7 @@ for (const mode of ["cookie", "header"] as const) {
       const body = actions[0].postData() ?? "";
       expect(body).toContain('"entry":"feed"');
       expect(body).toContain('"rooms_min":2');
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
     });
 
     test("a short custom sale list: after its last card, the sale title and «Включить радар»", async ({ page }) => {

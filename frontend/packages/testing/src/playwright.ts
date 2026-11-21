@@ -2,6 +2,7 @@ import { test as base, expect, type BrowserContext, type Locator, type Page } fr
 
 import { installFakeTelegram, resolveFakeTelegramConfig, type FakeTelegramCall, type FakeTelegramOptions, type FakeTelegramWindow } from "./fakeTelegram";
 import { syntheticInitData } from "./initData";
+import { modeFindings, projectProfile, projectSessionMode, resetModeRecords, watchMode, type SessionMode } from "./modes";
 
 /**
  * Playwright side of `@homi/testing` (WP-03). Specs import `test` and `expect` from here: every test then runs behind
@@ -95,9 +96,18 @@ async function guard(page: Page): Promise<GuardState> {
   return state;
 }
 
+/**
+ * The project's Telegram profile (`metadata.profile` of `frontend/playwright.config.ts`, WP-33) under the options of
+ * the spec: a spec that names a platform, version or scheme keeps it.
+ */
+function withProfile<T extends FakeTelegramOptions>(options: T): T {
+  const { platform, version, colorScheme } = projectProfile(test.info());
+  return { ...(platform && { platform }), ...(version && { version }), ...(colorScheme && { colorScheme }), ...options };
+}
+
 /** Installs the fake Telegram as an init script of `page` (before any page script) and the request guard. */
 export async function playwrightTelegram(page: Page, options: PlaywrightTelegramOptions = {}): Promise<PlaywrightTelegram> {
-  const { allowHosts = [], ...fakeOptions } = options;
+  const { allowHosts = [], ...fakeOptions } = withProfile(options);
   const state = await guard(page);
   for (const host of allowHosts) {
     state.allowHosts.add(host);
@@ -117,10 +127,11 @@ export async function playwrightTelegram(page: Page, options: PlaywrightTelegram
 
 export interface LaunchAppOptions extends Omit<PlaywrightTelegramOptions, "initData" | "startParam"> {
   /**
-   * `cookie` (default) or `header`: header mode strips `Set-Cookie` from the app's `/bff/session` answers, as the
-   * frame of a browser that refuses the cookie does (DEC-44, RK-30).
+   * `cookie` or `header`; default: the project's (`miniapp-cookie`, `miniapp-header`, WP-33). Header mode strips
+   * `Set-Cookie` from the app's `/bff/session` answers, as the frame of a browser that refuses the cookie does (DEC-44,
+   * RK-30). A spec names a mode only when the test is about that mode.
    */
-  mode?: "cookie" | "header";
+  mode?: SessionMode;
   /** The Telegram user's `language_code`; default `ru`. */
   locale?: string;
   startParam?: string;
@@ -147,7 +158,8 @@ export interface LaunchedApp extends PlaywrightTelegram {
  * parameters in the address fragment, where Telegram puts them.
  */
 export async function launchApp(page: Page, options: LaunchAppOptions = {}): Promise<LaunchedApp> {
-  const { mode = "cookie", locale = "ru", startParam, initData, path = "/", sdk = true, ...telegram } = options;
+  const { mode = projectSessionMode(test.info()), locale = "ru", startParam, initData, path = "/", sdk = true, ...rest } = options;
+  const telegram = withProfile(rest);
   const launchData = initData ?? syntheticInitData({ language_code: locale }, { startParam });
   let installed: PlaywrightTelegram;
   if (sdk) {
@@ -164,8 +176,11 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
     });
     installed = { blockedRequests: state.blocked, calls: async () => [] };
   }
+  await watchMode(page, mode, test.info().project.use.baseURL ?? "http://localhost:3001", sdk ? installed.calls : null);
   if (mode === "header") {
-    await page.route("**/bff/session", async (route) => {
+    // A context route runs after every page route, so a spec's own answer of the exchange (a refusal, a delay) wins
+    // whether it was registered before this launch or after; whatever the spec passes on reaches this handler.
+    await page.context().route("**/bff/session", async (route) => {
       try {
         const response = await route.fetch();
         // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
@@ -220,12 +235,24 @@ export async function stubMedia(page: Page): Promise<readonly string[]> {
   return answered;
 }
 
-export const test = base.extend<{ externalRequestGuard: void }>({
+export const test = base.extend<{ externalRequestGuard: void; sessionModeChecks: void }>({
   externalRequestGuard: [
     async ({ page }, use) => {
       const state = await guard(page);
       await use();
       expect(state.blocked, "requests to external hosts were sent by the page").toEqual([]);
+    },
+    { auto: true },
+  ],
+  // The checks of `./modes` after a test that launched the app and passed (WP-33): they belong to the suite, not to
+  // the spec author.
+  sessionModeChecks: [
+    async ({}, use, info) => {
+      resetModeRecords();
+      await use();
+      if (info.status === "passed") {
+        expect(await modeFindings(info), "the session mode and console checks after the test (@homi/testing modes.ts)").toEqual([]);
+      }
     },
     { auto: true },
   ],
@@ -250,3 +277,8 @@ export { expect };
 
 /** For specs that launch a second Telegram user (WP-21). */
 export { syntheticInitData };
+
+export { allowConsoleErrors, allowCspViolations, projectSessionMode, type SessionMode } from "./modes";
+/** For the checks' own spec (`app/e2e/modes.spec.ts`) only. */
+export { modeFindings, resetModeRecords } from "./modes";
+export { STUB_SCENARIO_COOKIE, setScenario, withScenario } from "./scenarios";

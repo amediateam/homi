@@ -1,6 +1,6 @@
 import { gunzipSync } from "node:zlib";
 
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { expect, launchApp, projectSessionMode, setScenario, stubMedia, test } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -105,7 +105,7 @@ test.describe("analytics @analytics", () => {
     expect(typeof listing.properties.listing_id).toBe("number");
     for (const event of ph.events()) {
       expect(String(event.properties.$current_url ?? "")).not.toMatch(/[?#]/);
-      expect(event.properties.session_mode).toBe("cookie");
+      expect(event.properties.session_mode).toBe(projectSessionMode(test.info()));
     }
     for (const text of ph.texts()) {
       expect(text).not.toMatch(/tgWebAppData|Bearer |homi_session=/);
@@ -141,7 +141,7 @@ test.describe("analytics @analytics", () => {
     });
     // The stub profile sampled for replay (`me/replay.json`): the sign-in, the server's render after it and every `/me`
     // read give the same profile, so the launch's one decision cannot see the unsampled default.
-    await page.context().addCookies([{ name: "homi_stub_scenario", value: "replay", url: test.info().project.use.baseURL }]);
+    await setScenario(page, "replay");
     await stubMedia(page);
     const ph = await posthog(page);
     await launchApp(page, { path: "/" });

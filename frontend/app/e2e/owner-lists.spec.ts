@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { expect, launchApp, setScenario, stubMedia, test } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -25,10 +25,6 @@ function actions(page: Page): Request[] {
     }
   });
   return sent;
-}
-
-async function useScenario(page: Page, scenario: string) {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
 }
 
 for (const mode of ["cookie", "header"] as const) {
@@ -84,7 +80,7 @@ for (const mode of ["cookie", "header"] as const) {
 
     test("a second «Сдать квартиру» in one launch sends a second create (WP-81's kept copy)", async ({ page }) => {
       await stubMedia(page);
-      await useScenario(page, "owner_empty");
+      await setScenario(page, "owner_empty");
       const sent = actions(page);
       await launchApp(page, { mode, path: "/settings" });
       const row = page.locator('[data-settings-row="owner-new"]');

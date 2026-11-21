@@ -23,7 +23,7 @@ test.describe("session", () => {
     expect(stored).not.toContain(token);
   });
 
-  test("a second launch with the cookie of the same user signs in no more", async ({ page, context }) => {
+  test("cookie mode: a second launch with the cookie of the same user signs in no more", async ({ page, context }) => {
     await launchApp(page);
     await expect(session(page)).toHaveAttribute("data-session", "ready");
 

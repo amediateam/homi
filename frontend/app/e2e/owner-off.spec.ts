@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { expect, launchApp, setScenario, stubMedia, test } from "@homi/testing/playwright";
 import type { Request } from "@playwright/test";
 
 /**
@@ -30,14 +30,14 @@ test.describe("owner cabinet switched off @owner-off", () => {
 
   test("no invitation on a short feed's end or on a listing card (WP-82, DEC-89)", async ({ page }) => {
     await stubMedia(page);
-    await page.context().addCookies([{ name: "homi_stub_scenario", value: "few", url: test.info().project.use.baseURL }]);
+    await setScenario(page, "few");
     await launchApp(page, { path: "/" });
     await expect(page.locator("article[data-listing]").first()).toBeVisible();
     // Anchor: the short feed is loaded to its end (the sentinel has nothing more), so the check is not vacuous.
     await expect.poll(() => page.locator("[data-feed-status]").textContent()).toBe("");
     await expect(page.locator("[data-owner-entry]")).toHaveCount(0);
 
-    await page.context().clearCookies({ name: "homi_stub_scenario" });
+    await setScenario(page, null);
     await page.goto("/ru/listing/10000001");
     await expect(page.locator("[data-listing-state='loaded']").first()).toBeVisible();
     await expect(page.locator("[data-owner-entry]")).toHaveCount(0);

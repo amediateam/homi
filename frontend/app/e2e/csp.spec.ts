@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { allowConsoleErrors, allowCspViolations, expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /** The nonce policy of `proxy.ts` (WP-21, ADR-0020, `25` §3.10) and the policy of MapLibre's worker (WP-27). */
@@ -50,6 +50,10 @@ test.describe("content security policy", () => {
   });
 
   test("an inline script injected into the document without the nonce is blocked", async ({ page }) => {
+    allowCspViolations(test.info());
+    allowConsoleErrors(test.info(), /^Executing inline script violates the following Content Security Policy directive/);
+    // The feed's photos: without an answer of their own they would go to the local CDN's host.
+    await stubMedia(page);
     const violations = await watchViolations(page);
     await page.route("**/ru", async (route) => {
       if (route.request().resourceType() !== "document") {

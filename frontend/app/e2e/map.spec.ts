@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request, Route } from "@playwright/test";
 
 /**
@@ -97,15 +97,6 @@ function gate(): { held: Promise<void>; release: () => void } {
     release = resolve;
   });
   return { held, release };
-}
-
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string | null): Promise<void> {
-  if (scenario === null) {
-    await page.context().clearCookies({ name: "homi_stub_scenario" });
-    return;
-  }
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
 }
 
 /** Launches the app on the feed as the bot does and waits for the session and the first card. */
@@ -301,7 +292,7 @@ for (const mode of ["cookie", "header"] as const) {
   test.describe(`map (${mode} mode)`, () => {
     /** WP-37 E2E; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»" (BR-APP-062). */
     test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
-      await stubScenario(page, "map_cut");
+      await setScenario(page, "map_cut");
       await openFeed(page, mode);
       const read = page.waitForResponse((response) => isMapRead(new URL(response.url())));
       await toMap(page);
@@ -597,14 +588,14 @@ test.describe("map (cookie mode)", () => {
   /** States "Error, server" for `source_unavailable` (fix of LB-APP-008). */
   test("a source failure shows the error pill; «Повторить» after it recovers draws the stacks", async ({ page }) => {
     await openFeed(page);
-    await stubScenario(page, "source_unavailable");
+    await setScenario(page, "source_unavailable");
     await toMap(page);
 
     await expect(pill(page)).toHaveAttribute("data-map-status", "error");
     await expect(pill(page)).toHaveAttribute("data-error", "source_unavailable");
     await expect(pill(page)).toContainText("Не загрузилось");
 
-    await stubScenario(page, null);
+    await setScenario(page, null);
     await pill(page).getByRole("button", { name: "Повторить" }).click();
     await stacksDrawn(page);
   });

@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { expect, launchApp, setScenario, stubMedia, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
@@ -12,22 +12,18 @@ import type { Page } from "@playwright/test";
 
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 
-async function useScenario(page: Page, scenario: string) {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`owner entry (${mode} mode)`, () => {
     test("a short feed's end row and an empty feed's line open «Мои объявления» for a full account", async ({ page }) => {
       await stubMedia(page);
-      await useScenario(page, "few");
+      await setScenario(page, "few");
       await launchApp(page, { mode, path: "/" });
       const row = visible(page, '[data-feed-end] [data-owner-entry="feed_end"]');
       await expect(row).toHaveText("Сдаёте квартиру? Разместите бесплатно");
       await row.click();
       await expect(page).toHaveURL(/\/ru\/settings\/owner$/);
 
-      await useScenario(page, "empty");
+      await setScenario(page, "empty");
       await page.goto("/ru");
       await expect(visible(page, '[data-owner-entry="empty"]')).toContainText("Разместите бесплатно ›");
     });

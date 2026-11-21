@@ -1,4 +1,4 @@
-import { expect, launchApp, test } from "@homi/testing/playwright";
+import { allowConsoleErrors, expect, launchApp, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
@@ -152,6 +152,9 @@ test.describe("addresses", () => {
   // `notFound()` under `<Suspense>` gets two identical tags: the server inserts one into the head and Next.js's
   // not-found boundary adds its own when the client renders the screen; no robots tag may say anything else.
   test("an unknown address and an unknown locale render the not-found screen with noindex", async ({ page }) => {
+    // The `notFound()` under `<Suspense>` (AM-57): when the boundary streams after the shell, React finishes it on the
+    // client and reports error 419 as recoverable (WP-33: about one launch in sixteen).
+    allowConsoleErrors(test.info(), /Minified React error #419/);
     const [first, ...others] = ["/ru/unknown", "/en/listing", "/uz/settings/nope", "/de/x"];
     await launchSigningIn(page, first);
     for (const path of [first, ...others]) {

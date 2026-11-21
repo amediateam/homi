@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request, Route } from "@playwright/test";
 
 /**
@@ -186,13 +186,6 @@ async function holdActions(page: Page, pathname: string): Promise<{ release: () 
   return { release: slow.release, held: () => held };
 }
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
-const clearScenario = (page: Page) => page.context().clearCookies({ name: "homi_stub_scenario" });
-
 /**
  * Launches the app as the bot does, in a session mode, and waits for the session. In cookie mode the sign-in then
  * refreshes the router once (WP-21): its render of the launch page has answered before the test goes on, so the
@@ -310,7 +303,7 @@ for (const mode of ["cookie", "header"] as const) {
 
       // The save fails on the API (`503 source_unavailable` of the stub's DELETE); held until the drop is seen.
       const kept = pageOne[1];
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       const slow = await holdActions(page, "/ru/saved");
       saved = page.waitForResponse((response) => isServerAction(response.request()));
       await card(page, kept).locator("[data-fav]").click();
@@ -323,7 +316,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(cards(page)).toHaveCount(24);
       await expect(card(page, kept).locator("[data-fav]")).toHaveAttribute("aria-pressed", "true");
       expect(actions).toHaveLength(2);
-      await clearScenario(page);
+      await setScenario(page, null);
       await page.unroute((url) => url.pathname === "/ru/saved");
 
       // The Heart tab entered again from search re-creates the list from page one: cookie mode adopts the new server
@@ -440,7 +433,7 @@ for (const mode of ["cookie", "header"] as const) {
       // A failed clear (`503 source_unavailable` of the stub's DELETE): disabled while it runs, then the list stays,
       // the error haptic plays and the button works again.
       await answerConfirm(page, true);
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       const slow = await holdActions(page, "/ru/saved/history");
       let cleared = page.waitForResponse((response) => isServerAction(response.request()));
       await clearButton(page).click();
@@ -449,7 +442,7 @@ for (const mode of ["cookie", "header"] as const) {
       slow.release();
       await cleared;
       await expect.poll(() => notifications(app, "error")).toBe(1);
-      await clearScenario(page);
+      await setScenario(page, null);
       await page.unroute((url) => url.pathname === "/ru/saved/history");
       expect(actions).toHaveLength(1);
       await expect(clearButton(page)).toBeEnabled();
@@ -543,7 +536,7 @@ for (const mode of ["cookie", "header"] as const) {
     test("the scenario `empty`: favourites show the mascot and «Здесь пока пусто», history «Вы ещё ничего не открывали» and no «Очистить»", async ({
       page,
     }) => {
-      await stubScenario(page, "empty");
+      await setScenario(page, "empty");
       await open(page, mode);
 
       await enterFavorites(page);
@@ -561,7 +554,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(cards(page)).toHaveCount(0);
       await expect(tools(page)).toHaveCount(0);
       await expect.poll(() => backVisible(page)).toBe(false);
-      await clearScenario(page);
+      await setScenario(page, null);
     });
   });
 }
