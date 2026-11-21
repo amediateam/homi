@@ -1,5 +1,7 @@
 import { getMessages } from "@homi/i18n";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,5 +116,29 @@ describe("DemoDataMarker", () => {
     );
 
     expect(screen.getByText("Демо-данные")).toBeDefined();
+  });
+  it("hydrates as the server rendered it although a report came first, then shows the pill (WP-33, React error 418)", async () => {
+    const tree = (
+      <NextIntlClientProvider locale="ru" messages={getMessages("ru")} timeZone="Asia/Tashkent">
+        <DemoDataMarker />
+      </NextIntlClientProvider>
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(tree);
+    document.body.append(container);
+    expect(container.querySelector("[data-demo-marker]")).toBeNull();
+
+    // The page's boundary hydrated first: its reporter's effect has run before the marker hydrates.
+    reportSource("stub", "/ru");
+    const recoverable = vi.fn();
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, tree, { onRecoverableError: recoverable });
+    });
+
+    expect(recoverable).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-demo-marker]")?.textContent).toContain("Демо-данные");
+    act(() => root?.unmount());
+    container.remove();
   });
 });
