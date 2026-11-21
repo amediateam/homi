@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | REVIEW |
 | Depends on | WP-80, WP-82, WP-26, WP-30, WP-36 |
 | Size | about 2 000 changed lines with tests, M |
 | Behaviour reference | `03` SCR-018 (owner variants), SCR-059 (seeker part), SCR-061, SCR-062, §3.3 (`owner_info_opened`, `chat_access_*`), BR-APP-026, BR-APP-098 … BR-APP-103, LB-APP-057, LB-APP-072 … LB-APP-078; `05` TMA-033, TMA-037 (`kv-owner-tip`); `02` BR-API-183 … BR-API-189; `09` DEV-060 |
@@ -431,6 +431,31 @@ Telegram on staging when WP-89 switches the cabinet on there (DEC-88).
 - [ ] `pnpm -r lint`, `pnpm -r typecheck`, `pnpm -r build`, the unit, component and end-to-end suites are green.
 - [ ] Deployed to staging and production and checked inside Telegram on iOS, Android, Desktop and Web once the
       cabinet is on there.
+
+## As built
+
+- **The bar** (`features/listing/cta/owner.ts`, `ListingCtaBar`): `ownerCtaOf` gives `hidden`, `request`, `requestSent`,
+  `given` and `closed` by the table of "Design", `isRequestMode` is the one predicate, the server's `agent` reads
+  `declined`; `ctaActionOf(details, { closedHere })` keeps the closed bar for a number refused as `request_closed` in
+  this launch (`contact/requestState.ts`, DEC-85). The request tap is a prop of the bar (`onRequest`), the listing
+  pushes `routes.listingContact`.
+- **The request sheet** (`features/listing/contact/`): `requestForm.ts` (chips, stepper, body), `requestErrors.ts`
+  (the outcome table), `useContactRequest.ts` (one send, `withChatAccess` with `contact.err.noChatRestart`, the patch of
+  `contact.request` and the background re-read), `ContactRequestSheet.tsx` and `ContactRequestRoute.tsx`. The note is
+  marked `data-legal-review="pending"` (DEC-87). `sendContactRequest` (`lib/actions/listing.ts`) keeps its bounds
+  private: a "use server" file exports async functions only; the form's bounds live in `requestForm.ts`.
+- **The limits** come from `useReference().requestLimits` (`limits.requests`, defaults 10 / 30 / 10 min).
+- **The chip and the info sheet** (`features/listing/owner/`): `chipShown` and `infoPoints` (`ownerTier.ts`), the tip
+  counter on the synced `homi-owner-tip` (`ownerTip.ts`), `OwnerChip` (rendered in its own row under the title row by
+  `ListingScreen`), `OwnerInfoSheet` with `OwnerInfoRoute`. The shield enters with `animate-shield-in` (scale and fade
+  over 0.7 s after 0.25 s) instead of legacy's stroke drawing; lite and reduced motion stop it.
+- **The sections:** `HistorySection` takes `selfPlaced` (native / legacy sentence), `DescriptionSection` the owner's
+  text, `AuthorSection` the response time and the pending note; `SourcesSection` is left out for tier `self`;
+  `ClaimedOwnerSection` stands before «Кто размещает». The shared test fixture is a claimed owner, so its section is
+  in the wiring test's order.
+- **`formatResponseTime`** in `@homi/i18n/format` («15 мин», «3 ч», «2 дн.»).
+- **`c_<number>`:** `Launch.contact`, the listing, then `/listing/<number>/contact` through the redirector's chain.
+- **Events:** `owner_info_opened {listing_id}` (30 in the journal).
 
 ## Handoff
 
