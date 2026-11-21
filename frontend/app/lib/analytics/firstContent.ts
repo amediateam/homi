@@ -1,7 +1,6 @@
 /**
- * "First content shown" (`03` SCR-007): the first feed photo that loads calls `markFirstContent()`. Legacy started
- * the PostHog loader on it (0.5 s later, or after 8 s at most); here it only resolves `firstContentShown()` once,
- * a no-op until WP-32 hangs the analytics loader on it.
+ * "First content shown" (`03` SCR-007): the first feed photo that loads calls `markFirstContent()`. The PostHog
+ * loader (WP-32, `posthog.ts`) waits for it through `whenFirstContent`, 8 s at most, as legacy did.
  */
 
 let resolveShown: () => void = () => {};
@@ -29,4 +28,9 @@ export function resetFirstContent(): void {
   shown = new Promise<void>((resolve) => {
     resolveShown = resolve;
   });
+}
+
+/** Resolves at the first content, or after `timeoutMs` without one. */
+export function whenFirstContent(timeoutMs: number): Promise<void> {
+  return Promise.race([shown, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]);
 }

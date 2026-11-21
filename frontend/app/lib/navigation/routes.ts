@@ -307,19 +307,28 @@ export function parentOf(pathname: string, searchParams: URLSearchParams): strin
 }
 
 /**
- * The legacy analytics screen name of an address (`03` §3.3, precedence of §1.1: listing > radar/edit > radar/new >
- * filters > filters/<kind> > sort > city > map/draw > tab screen). A layer without a name of its own reports the tab
- * below it; an address the legacy table does not name returns its route pattern until WP-32 completes the table.
+ * The analytics screen name of an address (WP-32, fix of LB-APP-037; `03` §3.3, §1.1): the 16 legacy names unchanged,
+ * and a name for every layer legacy never tracked, so every address reports one. The top layer's address decides, so
+ * the legacy precedence (listing > radar/edit > radar/new > filters > filters/<kind> > sort > city > map/draw > tab)
+ * follows from the address. Of the search parameters only `draw` and `step` count; `from`, `focus`, `pick`, `pin` and
+ * `i` never change a name. The map's selection card has no address: it pushes `map/card` (`useScreenLayer`).
  */
 export function screenNameOf(pathname: string, searchParams: URLSearchParams): string {
   const matched = match(pathname);
   switch (matched.route) {
-    case "listing":
-      return "listing";
+    case "listing": {
+      if (matched.child === "actions") {
+        const step = searchParams.get("step");
+        return step === "report" ? "listing/report" : step === "detail" ? "listing/report/detail" : "listing/actions";
+      }
+      return matched.child === null ? "listing" : `listing/${matched.child}`;
+    }
     case "radar":
-      return matched.edit ? "radar/edit" : "subs";
+      return matched.edit ? "radar/edit" : "radar/sheet";
     case "radarNew":
       return "radar/new";
+    case "radarFound":
+      return "radar/found";
     case "filters":
     case "sort":
     case "city":
@@ -335,14 +344,14 @@ export function screenNameOf(pathname: string, searchParams: URLSearchParams): s
     case "history":
       return "saved/history";
     case "radars":
-    case "radarFound":
       return "subs";
     case "settings":
-    case "settingsPage":
       return "settings";
+    case "settingsPage":
+      return `settings/${segmentsOf(pathname)[1]}`;
     case "gate":
-      return `/${segmentsOf(pathname).join("/")}`;
+      return { language: "welcome/language", city: "welcome/city", noAccess: "no-access", outside: "outside" }[matched.gate];
     case "unknown":
-      return matched.pattern;
+      return segmentsOf(pathname).join("/") === "dev/ui" ? "dev/ui" : "not-found";
   }
 }

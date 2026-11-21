@@ -9,6 +9,7 @@ import { type ComponentType, useCallback, useEffect, useEffectEvent, useLayoutEf
 
 import { applyFilters } from "@/features/filters/applyFilters";
 import { SourceReporter } from "@/features/shell/SourceReporter";
+import { useScreenLayer } from "@/features/shell/useScreenLayer";
 import { usePathname } from "@/i18n/navigation";
 import { useSessionMap } from "@/lib/data/sessionMaps";
 import { devFlags } from "@/lib/flags";
@@ -245,6 +246,8 @@ export function MapScreen() {
   }, []);
   const close = useCallback(() => setSelection(null), []);
   useCardLayer(selection, close);
+  // The card has no address: its screen name while it shows on the map's own address (WP-32).
+  useScreenLayer("map/card", selection !== null && own);
 
   // As the top bar's lasso button does; the card closes when the layer reaches the address (`closeKey`).
   const startDrawing = useEffectEvent(() => {

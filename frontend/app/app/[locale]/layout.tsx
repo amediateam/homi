@@ -8,11 +8,13 @@ import { Suspense } from "react";
 import { BOOT_SCRIPT, BOOT_STUBS } from "@/boot/inline.generated";
 import { GateRedirector } from "@/features/gates/GateRedirector";
 import { SessionExpired } from "@/features/gates/SessionExpired";
+import { AnalyticsBoot } from "@/features/shell/AnalyticsBoot";
 import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
 import { FragmentGuard } from "@/features/shell/FragmentGuard";
 import { LaunchRedirector } from "@/features/shell/LaunchRedirector";
 import { NavigationBinder } from "@/features/shell/NavigationBinder";
+import { ScreenTracker } from "@/features/shell/ScreenTracker";
 import { TelegramButtons } from "@/features/shell/TelegramButtons";
 import { ToastHost } from "@/features/shell/ToastHost";
 import { IntlClientProvider } from "@/i18n/IntlClientProvider";
@@ -97,6 +99,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
               <LaunchRedirector />
             </Suspense>
             <BootGuard />
+            <AnalyticsBoot />
+            {/* The one screen tracker (WP-32); it reads the search parameters. */}
+            <Suspense fallback={null}>
+              <ScreenTracker />
+            </Suspense>
             <ToastHost />
           </SessionProvider>
         </IntlClientProvider>
