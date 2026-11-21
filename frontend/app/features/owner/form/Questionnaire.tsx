@@ -17,6 +17,8 @@ import { labelFor } from "@homi/i18n";
 import { useReference } from "@/lib/reference/useReference";
 
 import { closeOwnerForm, openMyListings } from "../closeOwnerForm";
+import { demandLine, useDemand } from "../demand/useDemand";
+import { UsualPrice } from "../demand/UsualPrice";
 import type { OwnerForm, OwnerListingView } from "../normalize";
 import { OwnerFrame } from "../OwnerFrame";
 import { PhotoGrid } from "../photos/PhotoGrid";
@@ -40,7 +42,7 @@ import { WhereSection } from "./WhereSection";
  * the autosave, the welcome line of a returning owner, the footer and «Дальше». It is the layout of the `[id]`
  * segment, so it stays mounted under the picker, the phone and the mode steps and Back finds it as it was.
  */
-export function Questionnaire({ listing, usual, children }: { listing: OwnerListingView; usual?: ReactNode; children?: ReactNode }) {
+export function Questionnaire({ listing, children }: { listing: OwnerListingView; children?: ReactNode }) {
   const t = useTranslations();
   const { me } = useSession();
   const update = useAction(updateOwnerListing);
@@ -134,7 +136,11 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
     nav.push(listing.phoneSet ? routes.ownerMode(listing.id) : routes.ownerPhone(listing.id));
   };
 
+  const demand = useDemand(form);
+  const line = demandLine(demand);
   const what = needs.map((need) => t(labelFor("ownerNeed", need))).join(", ");
+  // The first note that applies; the demand line last (DEC-84).
+  const demandNote = line === null ? null : line.kind === "few" ? t("own.demandFew") : t("own.demand", { n: line.n });
   const note =
     needs.length > 0
       ? t("own.needs", { what })
@@ -148,7 +154,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
               ? t("own.saveFailed")
               : invalid.size > 0
                 ? t("own.fixFields")
-                : null;
+                : demandNote;
 
   return (
     <OwnerFormContext value={{ listing, form, edit, restore: editRaw, flush, current }}>
@@ -198,7 +204,7 @@ export function Questionnaire({ listing, usual, children }: { listing: OwnerList
           </PhotosSection>
           <WhereSection form={form} invalid={highlighted} onCity={onCity} onDistrict={(district_code) => edit({ district_code })} />
           <RoomsSection form={form} invalid={highlighted} edit={edit} />
-          <PriceSection form={form} invalid={highlighted} edit={edit} usual={usual} />
+          <PriceSection form={form} invalid={highlighted} edit={edit} usual={<UsualPrice demand={demand} form={form} />} />
           <TenantsSection form={form} edit={edit} />
           <DescriptionSection value={form.description} onChange={(description) => edit({ description })} />
         </div>
