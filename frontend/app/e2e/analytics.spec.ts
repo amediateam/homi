@@ -135,17 +135,9 @@ test.describe("analytics @analytics", () => {
         recorder ||= (await response.text().catch(() => "")).includes(RECORDER_MARK);
       }
     });
-    await page.route(
-      (url) => url.pathname === "/bff/session",
-      async (route) => {
-        const response = await route.fetch();
-        const body = (await response.json()) as { me?: { analytics?: unknown } };
-        if (body.me !== undefined) {
-          body.me.analytics = { distinct_id: "e2e-replay", autocapture: true, replay: true, replay_rate: 1 };
-        }
-        await route.fulfill({ response, json: body });
-      },
-    );
+    // The stub profile sampled for replay (`me/replay.json`): the sign-in, the server's render after it and every `/me`
+    // read give the same profile, so the launch's one decision cannot see the unsampled default.
+    await page.context().addCookies([{ name: "homi_stub_scenario", value: "replay", url: test.info().project.use.baseURL }]);
     await stubMedia(page);
     const ph = await posthog(page);
     await launchApp(page, { path: "/" });

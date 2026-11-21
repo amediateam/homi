@@ -513,6 +513,10 @@ The package is built as designed, with these points decided in the code (rule 6)
   off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or international number is masked
   also next to a letter; nine local digits next to a letter are taken for an id's hex and left. A price such as
   «950 000 000», a version, a coordinate or an id is left alone.
+- **The replay case of the analytics run uses the stub scenario `replay`** (`me/replay.json`: `analytics.replay:
+  true`, `replay_rate: 1`; `GET /me` and sign-in): patching the answer of `/bff/session` left the profile of the
+  server's render after sign-in unpatched, and on CI (run 44910160495) the launch's one decision took that unsampled
+  profile.
 - **The scrubbers' boundary (ten review rounds).** A text is judged on its **canonical form** (`canonical()` in
   `lib/analytics/scrub.ts`): percent escapes and the escapes of a JSON or JavaScript string (`\"`, `\n`, `\uXXXX`,
   `\u{…}`, `\xHH` …, read in one pass from left to right, so a twice-escaped `\\u00a0` unwraps level by level) undone,
