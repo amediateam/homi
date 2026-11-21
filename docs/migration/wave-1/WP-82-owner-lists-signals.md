@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (part 1: the lists, «Отклики», the panel and the signals; part 2, the invitations and the landlord block, follows in a pull request of its own) |
+| Status | REVIEW (part 1 #108: the lists, «Отклики», the panel and the signals; part 2: the invitations and the landlord block, a pull request of its own) |
 | Depends on | WP-81, WP-31, WP-26, WP-39 (the end block of the search feed, the survey's `moved` step, `RollNumber`, the leave helper; *added by the intake of `index-YX9bFVws.js`*) |
 | Size | about 3 050 changed lines with tests, L (about 450 of them for the invitations and the landlord block of legacy release `index-YX9bFVws.js`; if the PR passes 3 000 lines, they go into a PR of their own after it) |
 | Behaviour reference | `03` SCR-032 (the group «Сдаю квартиру»), SCR-049, SCR-057 … SCR-060, §3.3 (`owner_attention`, `owner_limit_sheet`, `owner_hint_opened`, `owner/mine`, `owner/listing`), BR-APP-088 … BR-APP-095, BR-APP-103, LB-APP-057, LB-APP-059, LB-APP-062, LB-APP-064, LB-APP-065 (the card), LB-APP-066, LB-APP-069, LB-APP-070; `05` TMA-037 (`kv-req-tip`); `09` DEV-056 (the card), DEV-059; since `index-YX9bFVws.js`: BR-APP-092 (changed), BR-APP-112, BR-APP-113, BR-APP-115, BR-APP-116, LB-APP-084, LB-APP-088, LB-APP-090, TMA-048, DEC-89, DEC-91, DEC-94 |
@@ -556,6 +556,23 @@ cabinet on there (DEC-88).
   listings.
 - **The e2e harness** forgives «Fetch response has been disposed» on the header mode's `/bff/session` route, as it
   forgave «Test ended»: a disposed answer is one the page no longer waits for.
+
+## As built (part 2)
+
+- **The invitations** (`features/owner/entry/`): `OwnerEntryRow` in the search feed's end block, `OwnerEntryLine` under
+  an empty feed (or under the few-results note with no card left) and as the last line of a listing whose card says
+  `owner.entry`. `ListingFeed` renders the end block when it holds the end line or, with the cabinet on, the row, so a
+  short feed with the note shows the row alone and nothing renders off-cabinet (DEC-89, DEC-90). `useOwnerEntry` reads
+  the owner list through the store's key, opens a new form unless `can_add` is `false` (then «Мои объявления» after a
+  press of Settings, `openSettingsThen`), and opens once at a time with one `owner_entry`.
+- **The landlord block** (`LandlordBlock`) on the survey's `done` (`src: homi`, under the share button) and `moved`
+  (`src: elsewhere`) steps. `brand.links.owners` is `{ ru: null, uz: null, en: null }` until WP-61, so today the block
+  has one «Отправить хозяину» with the bot message, and none in a build without a bot name (the e2e build). With the
+  page its link carries `?s=tenant`.
+- **`tg.shareText`** (`lib/telegram/share.ts`) puts the whole message in `url` of `t.me/share/url`, as legacy
+  (LB-APP-090 not adopted).
+- **Texts:** `found.landlordSendBot` and `found.landlordShareBot` in ru/uz/en as the specification words them.
+- **Events:** `owner_entry {src}` and `landlord_share {src, to}` (29 in the journal).
 
 ## Handoff
 
