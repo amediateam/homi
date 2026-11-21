@@ -22,6 +22,8 @@ const floorText = (value: number | null) => (value === null ? "" : String(value)
 export function RoomsSection({ form, invalid, edit }: { form: OwnerForm; invalid: ReadonlySet<string>; edit: (change: Partial<OwnerForm>) => void }) {
   const t = useTranslations();
   const [area, setArea] = useState(() => areaText(form.area_m2));
+  /** The area field was left since its last change: a number below the minimum is marked only then. */
+  const [areaLeft, setAreaLeft] = useState(false);
   const [floor, setFloor] = useState(() => floorText(form.floor));
 
   return (
@@ -39,14 +41,16 @@ export function RoomsSection({ form, invalid, edit }: { form: OwnerForm; invalid
         </Chips>
       </Field>
       <div className="grid grid-cols-3 gap-2">
-        <Field label={t("own.area")} focus="area_m2" invalid={invalid.has("area_m2") || areaOutOfRange(area)}>
+        <Field label={t("own.area")} focus="area_m2" invalid={invalid.has("area_m2") || areaOutOfRange(area, areaLeft)}>
           <NumberTextField
             data-field="area_m2"
             inputMode="decimal"
             maxLength={NUMBER_FIELD_MAX}
             value={area}
+            onBlur={() => setAreaLeft(true)}
             onValueChange={(text) => {
               setArea(text);
+              setAreaLeft(false);
               // A half-typed number («45,») keeps the saved value until it reads.
               const parsed = parseArea(text);
               if (text.trim() === "" || parsed !== null) {

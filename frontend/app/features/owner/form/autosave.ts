@@ -186,7 +186,11 @@ export class AutosaveController<T> {
       this.set({ invalid: new Set([...this.state.invalid, ...failed]) });
       const rest = Object.fromEntries(Object.entries(body).filter(([key]) => !failed.has(key))) as Partial<OwnerForm>;
       if (retryRest && Object.keys(rest).length > 0) {
-        await this.patch(rest, false);
+        const second = await this.patch(rest, false);
+        // The cabinet was switched off meanwhile: the form is closing, the caller must not navigate.
+        if (!second.ok && second.error === "disabled") {
+          return second;
+        }
       }
       return { ok: false, error: "invalid" };
     }

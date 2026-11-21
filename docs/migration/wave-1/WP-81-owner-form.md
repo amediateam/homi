@@ -753,7 +753,8 @@ WP-89 switches the cabinet on there with staff accounts (DEC-88).
   journal: 24 events.
 - **The launch links** are never pending; their once-per-launch mark is the digest of the target address. An owner
   launch is read with the query the app was opened with (`launchQuery()`: the city pick replaces the address, which
-  dropped `?owner=new`) and waits until `me.locale_chosen` and `me.city_chosen` and the reference data (review).
+  dropped `?owner=new`) and waits for the reference data and for the pickers the gates will show — `needsLanguage`
+  and `needsCity` of `features/gates/resolveGate.ts`, so one city or none means no wait (review, rounds 1 and 2).
 - **The form's bounds are the server's** (`form/rules.ts`, `FIELD_CHECKS` of `lib/actions/owner.ts`): area 5 … 1000,
   floor −3 … 99, floors 1 … 99, rooms 1 … 5. A value outside them is not sent, so one field never blocks the others'
   save (review).

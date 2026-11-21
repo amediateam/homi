@@ -97,6 +97,16 @@ describe("AutosaveController (WP-81, BR-APP-079)", () => {
     expect(autosave.getState().invalid.size).toBe(0);
   });
 
+  it("a switched-off cabinet on the re-send after a 422 answers disabled (round 3)", async () => {
+    answers = [fail("validation", "validation_failed", ["floor"]), fail("forbidden", "owner_disabled")];
+    const onDisabled = vi.fn();
+    const autosave = controller(onDisabled);
+    autosave.edit({ floor: 4, price: 700 });
+
+    await expect(autosave.flush()).resolves.toEqual({ ok: false, error: "disabled" });
+    expect(onDisabled).toHaveBeenCalledTimes(1);
+  });
+
   it("locked, offline and any other failure are kept as the error; the fields stay dirty", async () => {
     answers = [fail("conflict", "owner_listing_locked"), fail("offline"), fail("server")];
     const autosave = controller();

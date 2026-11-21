@@ -49,8 +49,10 @@ describe("owner form rules (WP-81, SCR-052)", () => {
   });
 
   it("marks a whole number outside the bounds, not a half-typed one (round 2)", () => {
-    expect(["3", "1500", "4,9"].map(areaOutOfRange)).toEqual([true, true, true]);
-    expect(["45,", "", "abc", "45"].map(areaOutOfRange)).toEqual([false, false, false, false]);
+    expect(["3", "1500", "4,9"].map((text) => areaOutOfRange(text, true))).toEqual([true, true, true]);
+    // While typing only a number above the maximum is marked: «4» may become «45».
+    expect(["4", "1500"].map((text) => areaOutOfRange(text, false))).toEqual([false, true]);
+    expect(["45,", "", "abc", "45"].map((text) => areaOutOfRange(text, true))).toEqual([false, false, false, false]);
     expect(["120", "5/100", "-4"].map(floorOutOfRange)).toEqual([true, true, true]);
     expect(["5/", "", "5/9", "-3"].map(floorOutOfRange)).toEqual([false, false, false, false]);
   });
