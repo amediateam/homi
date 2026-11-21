@@ -751,7 +751,15 @@ WP-89 switches the cabinet on there with staff accounts (DEC-88).
   the standalone questionnaire after that Back until the form is opened again.
 - **The events** `owner_place_set`, `owner_place_autofill` and `owner_mascot_tap` (once per 30 s, `events.ts`) join the
   journal: 24 events.
-- **The launch links** are never pending; their once-per-launch mark is the digest of the target address.
+- **The launch links** are never pending; their once-per-launch mark is the digest of the target address. An owner
+  launch is read with the query the app was opened with (`launchQuery()`: the city pick replaces the address, which
+  dropped `?owner=new`) and waits until `me.locale_chosen` and `me.city_chosen` and the reference data (review).
+- **The form's bounds are the server's** (`form/rules.ts`, `FIELD_CHECKS` of `lib/actions/owner.ts`): area 5 … 1000,
+  floor −3 … 99, floors 1 … 99, rooms 1 … 5. A value outside them is not sent, so one field never blocks the others'
+  save (review).
+- **After an await** (the new draft, «Дальше», publish) nothing is navigated once `currentAddress()` changed: Back
+  closed the form meanwhile. Waiting photo deletes are sent before «Дальше» and before publish (`flushDeletes`), and
+  a publish `422` highlights the parts it names in the questionnaire (`reportInvalid`) (review).
 - **The e2e runs.** The default run's API has `OWNER_CABINET_ENABLED=true` (CI and `scripts/dev/e2e-local.sh`);
   `@owner-off` runs with `@radars-off` against the API that leaves it unset. `e2e/owner-form.spec.ts` (both session
   modes) and `e2e/owner-off.spec.ts`; the picker's and the phone's own specs are component tests
