@@ -11,7 +11,9 @@
     "text": "Let us know with one tap — it tells us whether HOMI helps you search.",
     "kvadro": "Yes, through HOMI",
     "congratsText": "Thanks for telling us. If HOMI helped, tell your friends — they’ll find it useful too.",
-    "shareText": "Found my new place through HOMI 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. agents and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free."
+    "shareText": "Found my new place through HOMI 🎉 The bot gathers listings from Telegram channels into one feed, removes duplicates, marks owners vs. agents and sends new ones that match your filters. If you’re looking for a place, give it a try — it’s free.",
+    "landlordSendBot": "Send the bot link",
+    "landlordShareBot": "Hi! I’m moving out. You can find a new tenant for free and without an agent through this Telegram bot: {url}"
   },
   "demo": {
     "label": "Demo data",

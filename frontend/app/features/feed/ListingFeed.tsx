@@ -10,6 +10,8 @@ import type { UiError } from "@/lib/api/errors";
 import { useSessionMap } from "@/lib/data/sessionMaps";
 import type { DevFlags } from "@/lib/flags";
 import { matchRoute, type RouteMatch } from "@/lib/navigation/routes";
+import { OwnerEntryLine, OwnerEntryRow } from "@/features/owner/entry/OwnerEntry";
+import { useOwnerEnabled } from "@/features/owner/store";
 import { useSession } from "@/lib/session/SessionProvider";
 
 import { type FeedSource, type FewResultsContext, listEnd } from "./fewResults";
@@ -160,9 +162,14 @@ export function ListingFeed({
   const visible = visibleOf(feed.items, source, favs, hidden);
   const end = listEnd({ source, done: feed.done, error: feed.error !== null, visible: visible.length }, few?.context ?? null);
   const slot = source === "feed" ? inlineSlotIndex(visible.length, feed.done, end === "few") : null;
-  // «Это всё по вашему поиску» (WP-39, DEC-90): the search feed loaded to its end with cards, unless the few-results
-  // note already says so. WP-82 adds the owner invitation to this block, which then shows under the note too.
-  const feedEnd = source === "feed" && feed.done && feed.error === null && visible.length > 0 && end !== "few";
+  // The end block (WP-39, DEC-90): the search feed loaded to its end with cards. It holds «Это всё по вашему поиску»
+  // unless the few-results note already says so, and the owner invitation (WP-82, BR-APP-115), which then stands alone
+  // under the note. With no card left, the invitation is a line under the empty state or the note.
+  const loadedToEnd = source === "feed" && feed.done && feed.error === null;
+  const cabinetOn = useOwnerEnabled();
+  const endLine = loadedToEnd && visible.length > 0 && end !== "few";
+  const feedEnd = endLine || (loadedToEnd && visible.length > 0 && cabinetOn);
+  const emptyEntry = loadedToEnd && visible.length === 0 && (end === "empty" || end === "few");
 
   const answered = feed.status !== "loading";
   useEffect(() => {
@@ -224,10 +231,12 @@ export function ListingFeed({
       {end === "few" ? few?.render(visible.length) : null}
       {feedEnd ? (
         <div data-feed-end="" className="-mt-[8px] flex flex-col gap-[12px]">
-          <p className="text-center text-[13px] text-hint">{t("feed.end")}</p>
+          {endLine ? <p className="text-center text-[13px] text-hint">{t("feed.end")}</p> : null}
+          <OwnerEntryRow />
         </div>
       ) : null}
       {end === "empty" ? emptySlot : null}
+      {emptyEntry ? <OwnerEntryLine src="empty" /> : null}
       <div ref={sentinel} data-sentinel="" className="grid min-h-[48px] place-items-center">
         {feed.loadingMore ? <Spinner aria-hidden className="size-[22px] border-[2.5px] text-accent" /> : null}
       </div>
