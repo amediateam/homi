@@ -14,7 +14,11 @@ const state = vi.hoisted(() => ({
 vi.mock("@/lib/api/browser", () => ({ bffFetch: () => new Promise(() => undefined) }));
 vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate: vi.fn(), patchMe: vi.fn(), refresh: vi.fn(async () => undefined) }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: "ready", me: state.me }) }));
-vi.mock("@/lib/actions/owner", () => ({ updateOwnerListing: (input: { id: string; fields: Record<string, unknown> }) => state.update(input) }));
+vi.mock("@/lib/actions/owner", () => ({
+  updateOwnerListing: (input: { id: string; fields: Record<string, unknown> }) => state.update(input),
+  orderOwnerPhotos: vi.fn(),
+  deleteOwnerPhoto: vi.fn(),
+}));
 vi.mock("@/lib/actions/useAction", () => ({ useAction: (action: (input: unknown) => unknown) => (input: unknown) => action(input) }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: state.push, replace: state.replace, back: vi.fn(), tab: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.query) }));

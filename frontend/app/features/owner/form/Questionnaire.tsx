@@ -14,9 +14,13 @@ import { tg } from "@/lib/telegram";
 import { showToast } from "@/lib/ui/toast";
 import { labelFor } from "@homi/i18n";
 
+import { useReference } from "@/lib/reference/useReference";
+
 import { closeOwnerForm, openMyListings } from "../closeOwnerForm";
 import type { OwnerForm, OwnerListingView } from "../normalize";
 import { OwnerFrame } from "../OwnerFrame";
+import { PhotoGrid } from "../photos/PhotoGrid";
+import { usePhotos } from "../photos/usePhotos";
 import { invalidateOwner, type OwnerListingBody, putOwnerListing, useOwnerListings } from "../store";
 import { DescriptionSection } from "./DescriptionSection";
 import { focusField, isFocusToken } from "./focus";
@@ -35,7 +39,7 @@ import { WhereSection } from "./WhereSection";
  * the autosave, the welcome line of a returning owner, the footer and «Дальше». It is the layout of the `[id]`
  * segment, so it stays mounted under the picker, the phone and the mode steps and Back finds it as it was.
  */
-export function Questionnaire({ listing, photos, usual }: { listing: OwnerListingView; photos?: ReactNode; usual?: ReactNode }) {
+export function Questionnaire({ listing, usual }: { listing: OwnerListingView; usual?: ReactNode }) {
   const t = useTranslations();
   const { me } = useSession();
   const update = useAction(updateOwnerListing);
@@ -49,6 +53,14 @@ export function Questionnaire({ listing, photos, usual }: { listing: OwnerListin
     void closeOwnerForm();
   }, []);
   const autosave = useAutosave({ initial: listing.form, save, onSaved, onDisabled });
+  const { ownerPhotosLimit } = useReference();
+  const photos = usePhotos({
+    listingId: listing.id,
+    photos: listing.photos,
+    limit: ownerPhotosLimit,
+    onDisabled,
+    texts: { deleted: t("own.photoDeleted"), undo: t("own.placeUndo") },
+  });
   const { form, invalid, error, saving, edit: editRaw, flush } = autosave;
   const edit = useCallback((change: Partial<OwnerForm>) => editRaw(couple(form, change)), [editRaw, form]);
 
@@ -105,7 +117,7 @@ export function Questionnaire({ listing, photos, usual }: { listing: OwnerListin
 
   const onNext = async () => {
     tg.haptic.impact("medium");
-    const missing = missingParts(form, listing.photos);
+    const missing = missingParts(form, photos.photos);
     setNeeds(missing);
     if (missing.length > 0 || floorBad) {
       tg.haptic.warning();
@@ -148,7 +160,7 @@ export function Questionnaire({ listing, photos, usual }: { listing: OwnerListin
             note={note}
             locked={listing.locked || error === "locked"}
             phoneSet={listing.phoneSet}
-            busy={saving}
+            busy={saving || photos.busy}
             onNext={() => void onNext()}
             onMine={() => void openMyListings()}
           />
@@ -167,8 +179,18 @@ export function Questionnaire({ listing, photos, usual }: { listing: OwnerListin
             onLandmark={(landmark) => edit({ landmark })}
             onMap={() => nav.push(routes.ownerPlace(listing.id))}
           />
-          <PhotosSection photos={listing.photos} invalid={highlighted.has("photos")}>
-            {photos}
+          <PhotosSection photos={photos.photos} invalid={highlighted.has("photos")}>
+            <PhotoGrid
+              photos={photos.photos}
+              tiles={photos.tiles}
+              arrived={photos.arrived}
+              busy={photos.busy}
+              error={photos.error}
+              limit={ownerPhotosLimit}
+              onAdd={(files) => void photos.add(files)}
+              onCover={(id) => void photos.makeCover(id)}
+              onRemove={photos.remove}
+            />
           </PhotosSection>
           <WhereSection form={form} invalid={highlighted} onCity={onCity} onDistrict={(district_code) => edit({ district_code })} />
           <RoomsSection form={form} invalid={highlighted} edit={edit} />
