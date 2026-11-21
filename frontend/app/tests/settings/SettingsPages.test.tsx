@@ -33,6 +33,7 @@ import { DigestHint, DigestPage } from "@/features/settings/DigestPage";
 import { GraphicsPage } from "@/features/settings/GraphicsPage";
 import { LanguagePage } from "@/features/settings/LanguagePage";
 import { QuietHoursPage } from "@/features/settings/QuietHoursPage";
+import { chooseTheme } from "@/features/settings/themeChoice";
 import { ThemePage } from "@/features/settings/ThemePage";
 import { SETTINGS_KEY } from "@/features/settings/useSettings";
 import { readResource, resetResources, seedResource } from "@/lib/data/useResource";
@@ -129,22 +130,38 @@ describe("ThemePage (WP-31, SCR-033)", () => {
   });
 });
 
-describe("ThemePage: answers out of order (review of WP-31)", () => {
-  it("the last success to arrive is the theme a later failure restores, whatever the order of the picks", async () => {
+describe("ThemePage: answers out of order (reviews of WP-31)", () => {
+  it("only the latest pick decides: earlier successes change nothing, and its failure restores the theme before the picks", async () => {
     const first = deferred<ActionResult<unknown>>();
     const second = deferred<ActionResult<unknown>>();
     const third = deferred<ActionResult<unknown>>();
     state.updateSettings.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockReturnValueOnce(third.promise);
     render(withIntl(<ThemePage />));
+    const start = checked();
 
     pick("Светлая");
     pick("Тёмная");
-    pick("Как в Telegram");
+    pick("Светлая");
     await act(async () => second.resolve(ok(settingsOf({ theme: "dark" }))));
     await act(async () => first.resolve(ok(settingsOf({ theme: "light" }))));
     await act(async () => third.resolve(FAILED));
 
-    expect(checked()).toEqual(["Светлая"]);
+    expect(checked()).toEqual(start);
+    expect(state.patchMe).not.toHaveBeenCalled();
+  });
+
+  it("a success puts the pick back and gives it to the session's profile (a re-authentication re-applies the old theme)", async () => {
+    const save = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(save.promise);
+    render(withIntl(<ThemePage />));
+
+    pick("Тёмная");
+    // What the re-authentication's ready() does with the profile's theme meanwhile.
+    act(() => chooseTheme("light"));
+    await act(async () => save.resolve(ok(settingsOf({ theme: "dark" }))));
+
+    expect(checked()).toEqual(["Тёмная"]);
+    expect(state.patchMe).toHaveBeenCalledWith({ theme: "dark" });
   });
 });
 
@@ -297,52 +314,66 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
     expect(currentToast("app")).toBeNull();
   });
 
-  it("an earlier success that arrives after the latest save settled is shown, and a later failure restores it (the server took it last)", async () => {
+  it("only the latest pick decides: an earlier success that arrives later changes nothing", async () => {
     const first = deferred<ActionResult<unknown>>();
-    const second = deferred<ActionResult<unknown>>();
-    state.updateSettings.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockResolvedValueOnce(FAILED);
+    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(ok(settingsOf({ digest_hours: [12, 20] })));
     render(withIntl(<DigestPage />));
 
     pick("9");
     pick("12 и 20");
-    await act(async () => second.resolve(ok(settingsOf({ digest_hours: [12, 20] }))));
-    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
-    pick("19");
     await settle();
+    expect(checked()).toEqual(["12 и 20"]);
+    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
 
-    expect(checked()).toEqual(["9"]);
+    expect(checked()).toEqual(["12 и 20"]);
   });
 
-  it("the last success to arrive is what a failure restores, also one that arrives after the latest failed (the answers come in the server's order)", async () => {
+  it("a failure of the latest restores the settings before the picks, then reads them again once every save settled", async () => {
     const first = deferred<ActionResult<unknown>>();
-    const third = deferred<ActionResult<unknown>>();
-    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED).mockReturnValueOnce(third.promise);
+    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED);
     render(withIntl(<DigestPage />));
     const start = checked();
+    state.sent.length = 0;
 
     pick("9");
     pick("12 и 20");
     await settle();
     expect(checked()).toEqual(start);
+    // An earlier save is still out: the read waits until every save has settled.
+    expect(state.sent).toEqual([]);
 
-    pick("19");
     await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
-    expect(checked()).toEqual(["19"]);
-    await act(async () => third.resolve(FAILED));
-    expect(checked()).toEqual(["9"]);
+    expect(state.sent).toEqual(["settings"]);
   });
 
-  it("an earlier success that arrives after the latest failed, with nothing pending, is shown", async () => {
+  it("an earlier save still out when the latest succeeded: the settings are read again once it settles", async () => {
     const first = deferred<ActionResult<unknown>>();
-    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(FAILED);
+    state.updateSettings.mockReturnValueOnce(first.promise).mockResolvedValueOnce(ok(settingsOf({ digest_hours: [12, 20] })));
     render(withIntl(<DigestPage />));
+    state.sent.length = 0;
 
     pick("9");
     pick("12 и 20");
     await settle();
-    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
+    expect(state.sent).toEqual([]);
+    await act(async () => first.resolve(FAILED));
 
-    expect(checked()).toEqual(["9"]);
+    expect(state.sent).toEqual(["settings"]);
+    expect(currentToast("app")).toBeNull();
+  });
+
+  it("saves answered in order read nothing again", async () => {
+    state.updateSettings.mockResolvedValueOnce(ok(settingsOf({ digest_hours: [9] }))).mockResolvedValueOnce(ok(settingsOf({ digest_hours: [12, 20] })));
+    render(withIntl(<DigestPage />));
+    state.sent.length = 0;
+
+    pick("9");
+    await settle();
+    pick("12 и 20");
+    await settle();
+
+    expect(checked()).toEqual(["12 и 20"]);
+    expect(state.sent).toEqual([]);
   });
 
   it("an empty preset list renders nothing but the page's hint", () => {
