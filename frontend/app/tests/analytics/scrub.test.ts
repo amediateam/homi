@@ -49,8 +49,27 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     expect(scrubText("HTTPS://APP.HOMI.UZ/ru?x=1 and wss://h/s?token=abc")).toBe("HTTPS://APP.HOMI.UZ/ru and wss://h/s");
   });
 
-  it("masks a +998 number next to letters, encoded or joined (third review)", () => {
-    for (const text of ["Tel+998901234567", "+998901234567ga", "998901234567ta", "phone_998901234567", "%2B998901234567"]) {
+  it("an encoded query leaves no part of itself behind", () => {
+    expect(scrubText("see https://app.homi.uz/ru/map?polygon=41.3%2069.2%2041.4%2069.3 now")).toBe("see https://app.homi.uz/ru/map now");
+  });
+
+  it("a number in a query is masked before the address loses its query", () => {
+    expect(scrubText("x?tel=+998 901 234 567 end")).not.toMatch(/901 234 567/);
+  });
+
+  it("masks a +998 number next to letters, encoded or joined (third and fourth reviews)", () => {
+    for (const text of [
+      "Tel+998901234567",
+      "+998901234567ga",
+      "998901234567ta",
+      "phone_998901234567",
+      "%2B998901234567",
+      "%2B998%2090%20123%2045%2067",
+      "%20998901234567",
+      "%2B998+90+123+45+67",
+      "+998_90_123_45_67",
+      "+998\u200b90\u200b1234567",
+    ]) {
       expect(scrubText(text)).not.toMatch(/\d{9}/);
     }
   });

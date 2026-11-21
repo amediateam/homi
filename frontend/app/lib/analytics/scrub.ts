@@ -12,7 +12,9 @@ const LAUNCH_DATA = /tgWebAppData=[^&#\s]*/g;
 const LAUNCH_FIELDS = /\b(query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)=[^&#\s]*/g;
 const BEARER = /\bBearer\s+[\w.~+/=|-]+/gi;
 const SESSION = /\bhomi_session=[^;&#\s]*/g;
-const SEPARATOR = "[\\s().\\u2010-\\u2015-]*";
+const SEPARATOR = "[\\s().+_\\u200b\\u2212\\u2010-\\u2015-]*";
+// The percent-encoded separators and plus of an address's query (`%2B998%2090…`), decoded before the phone patterns.
+const ENCODED = /%2[0BbDdEe89]/g;
 // `+998`, `998` or `00998` and nine more digits, each optionally after a separator (a space, a dot, a bracket, a dash
 // of any kind).
 const PHONE = new RegExp(`(?<!\\d)(?:\\+|00)?998(?:${SEPARATOR}\\d){9}(?!\\d)`, "g");
@@ -32,18 +34,23 @@ const ADDRESS_QUERY = /((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/gi;
 const PATH_QUERY = /((?:^|\s)\/[\w./-]+)\?[^\s"'<>]*/g;
 const EMAIL = /[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
-/** `value` with launch data, tokens, the session cookie, phone numbers and e-mail addresses masked. */
+function phones(text: string): string {
+  return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
+}
+
+/**
+ * `value` with launch data, tokens, the session cookie, phone numbers, e-mail addresses and the queries of addresses
+ * masked. The order matters: numbers first (one written with spaces after `?tel=` would lose its `+998` with the
+ * query), then the queries of addresses while they are still one word (`%20` decoded first would leave a query's
+ * parts behind as words), then the percent-encoded separators decoded and the numbers again.
+ */
 export function scrubText(value: string): string {
-  return value
-    .replace(ADDRESS_QUERY, "$1")
-    .replace(PATH_QUERY, "$1")
+  const withoutQueries = phones(value).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
+  return phones(withoutQueries.replace(ENCODED, (code) => decodeURIComponent(code)))
     .replace(LAUNCH_DATA, "tgWebAppData=***")
     .replace(LAUNCH_FIELDS, "$1=***")
     .replace(BEARER, "Bearer ***")
     .replace(SESSION, "homi_session=***")
-    .replace(PHONE, "+998***")
-    .replace(INTERNATIONAL, "+***")
-    .replace(LOCAL_PHONE, "+998***")
     .replace(EMAIL, "***@***");
 }
 
