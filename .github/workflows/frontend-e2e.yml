@@ -73,6 +73,8 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          # The owner cabinet is on for the default run (WP-81); the second API keeps it unset for `@owner-off`.
+          OWNER_CABINET_ENABLED: 'true'
         run: |
           composer install --no-interaction --prefer-dist --no-progress
           cp .env.example .env

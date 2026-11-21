@@ -3,7 +3,7 @@
 import { ErrorState, Spinner, useBodyClass } from "@homi/ui";
 import { notFound, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ReactNode, use, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { type ReactNode, use, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { RouteOverlay } from "@/features/shell/RouteOverlay";
 import type { RoutePresentation } from "@/features/shell/RouteSheet";
@@ -48,11 +48,46 @@ export function OwnerFormLayer({ params, presentation, initial, children }: Owne
   if (!valid && presentation === "standalone") {
     notFound();
   }
+  // A form loaded directly drops its steps for good once a step pushed from it shows the overlay copy (the pattern of
+  // the listing's standalone copy, WP-26): the step lives in the overlay copy only; its questionnaire stays, as Back
+  // restores the direct load's entry, where the slot holds nothing.
+  const overlayShown = useSyncExternalStore(subscribeOverlayForms, overlayFormShown, () => false);
+  const [superseded, setSuperseded] = useState(false);
+  if (presentation === "standalone" && overlayShown && !superseded) {
+    setSuperseded(true);
+  }
+  useLayoutEffect(() => {
+    if (presentation !== "layer" || !valid) {
+      return;
+    }
+    countOverlayForm(1);
+    return () => countOverlayForm(-1);
+  }, [presentation, valid]);
   return valid ? (
     <OwnerFormLayerBody id={id} presentation={presentation} initial={initial}>
-      {children}
+      {superseded ? null : children}
     </OwnerFormLayerBody>
   ) : null;
+}
+
+/** The overlay copies of the form shown now, counted by each `layer` instance while it is visible. */
+let overlayForms = 0;
+const overlayListeners = new Set<() => void>();
+
+function countOverlayForm(change: 1 | -1): void {
+  overlayForms += change;
+  for (const listener of overlayListeners) {
+    listener();
+  }
+}
+
+function subscribeOverlayForms(listener: () => void): () => void {
+  overlayListeners.add(listener);
+  return () => overlayListeners.delete(listener);
+}
+
+function overlayFormShown(): boolean {
+  return overlayForms > 0;
 }
 
 function OwnerFormLayerBody({ id, presentation, initial, children }: Omit<OwnerFormLayerProps, "params"> & { id: string }) {
