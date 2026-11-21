@@ -51,7 +51,8 @@ export interface MapPoints {
 }
 
 /** A request sent: a new object per send, so an answer is matched to its request. */
-type Request = object;
+/** One request of the effect; `keepView`: the same search asked again after a feed-epoch bump. */
+type Request = { keepView?: true };
 
 interface State {
   /** The query of the filters these points belong to. */
@@ -86,7 +87,8 @@ function settle(state: State, result: ApiResult<MapAnswer>): State {
     loaded: true,
     error: null,
     request: null,
-    responseId: state.responseId + 1,
+    // The same search read again (a feed-epoch bump) keeps the camera and an open card: no new response id.
+    responseId: state.request?.keepView ? state.responseId : state.responseId + 1,
     source: result.meta.source,
   };
 }
@@ -110,7 +112,8 @@ function statusOf(state: State, counts: { shown: number; total: number }): MapPo
  * a change of that set regroups and recounts without a new `responseId`, so the camera stays.
  *
  * A bump of the feed epoch (`bumpFeedEpoch`, WP-38; WP-31 bumps it when hidden listings return or the language or
- * currency changes) asks the same search again, keeping the points shown until the answer.
+ * currency changes) asks the same search again, keeping the points shown until the answer, and its answer keeps the
+ * `responseId`, so the camera stays and an open card stays open.
  *
  * The request lives in an effect and is aborted by its cleanup, on unmount and while the route is hidden by
  * `cacheComponents`; a pending one is sent again when shown. A failure is a status, never an empty map (LB-APP-008),
@@ -130,7 +133,7 @@ export function useMapPoints(filters: SearchFilters, options: MapPointsOptions =
   } else if (stored.epoch !== epoch) {
     // Everything was read again elsewhere (a hidden listing returned, a language or currency saved — WP-31): the
     // same search is asked again when the map shows, and its points stay until the answer.
-    state = { ...stored, epoch, error: null, request: {} };
+    state = { ...stored, epoch, error: null, request: { keepView: true } };
     setState(state);
   }
 

@@ -83,20 +83,20 @@ export function useHomeScreenOffer(env: NudgeEnv): HomeOffer {
     });
   }, [supported, hide]);
 
-  // A higher nudge takes the slot from the card: hidden, no event, to be offered again later.
-  useEffect(() => {
-    if (ticket === null) {
-      return undefined;
-    }
-    return subscribeNudgeSlot(() => {
-      const { active } = getNudgeSlot();
-      if (active !== null && active !== "home") {
-        held.current = null;
-        setTicket(null);
-        setHomeOffered(false);
-      }
-    });
-  }, [ticket]);
+  // A higher nudge takes the slot from the card: hidden, no event, to be offered again later. One subscription for the
+  // hook's life, reading the held ticket, so a displacement right after the take is not missed.
+  useEffect(
+    () =>
+      subscribeNudgeSlot(() => {
+        const { active } = getNudgeSlot();
+        if (held.current !== null && active !== null && active !== "home") {
+          held.current = null;
+          setTicket(null);
+          setHomeOffered(false);
+        }
+      }),
+    [],
+  );
 
   const waiting = supported && status === "ready" && ticket === null && calm(env) && homeOfferDue();
   useEffect(() => {

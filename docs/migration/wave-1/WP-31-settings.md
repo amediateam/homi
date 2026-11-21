@@ -481,8 +481,8 @@ The package is built as designed. These points were decided in the code (rule 6)
   locale (`patchMe`). The locale guard of WP-21 (`LocaleGuard`), which follows `me.locale` on every navigation,
   replaces the address, keeping the search, through next-intl's router, which writes its locale cookie. The same guard
   sends Back from an entry with the old segment to the new one, so step 4 needed no change. The reads run again only
-  once the page carries the new locale (`useLanguageFollowUp`, mounted by the screen): `bffFetch` takes its
-  `Accept-Language` from the document's `lang`, which changes with the new segment.
+  once the document's `lang` is the new locale (a `MutationObserver` on it, not an effect of a screen, so a tab switched
+  before the answer still gets its reads): `bffFetch` takes its `Accept-Language` from that attribute.
 - **What the rows read.** The language row reads the address's locale and the currency row the profile's currency
   (`me.currency`), not the settings answer. On stubs `GET /settings` always answers the fixture (KI-68), so a saved
   language or currency would otherwise read old after the reads that follow it.
@@ -497,15 +497,20 @@ The package is built as designed. These points were decided in the code (rule 6)
 - **The hidden list's follow-up.** The design names "the map points, the count and the radar previews":
   - the radar lists are invalidated (`invalidate("radars")`);
   - the map's points now follow the feed epoch (`useMapPoints`: a bump asks the same search again and keeps the points
-    until the answer), which also covers a language or currency change;
+    until the answer, whose `responseId` stays, so the camera and an open card stay), which also covers a language or
+    currency change and WP-38's long return;
   - the live count of the filter sheets is read anew whenever a sheet opens, so nothing keeps it.
-  A failed «Показать всё снова» restores, as legacy's `applyChange`, every row it removed that was shown when it
-  started; a row returned before it began stays returned.
+  A failure puts back exactly the rows its change removed, among the rows shown now, in the list's order as first read.
+  Legacy's `applyChange` filtered the rows of before the change, which lost a row that a second failure had put back
+  (two «Вернуть» that fail in turn); a row returned before a change began stays returned. When a row leaves, the
+  focus moves to the next row's «Вернуть», else to «Показать всё снова», else to the page.
 - **The «Лента» count** is the sum of hidden listings and blocked authors (legacy's), shown as the row's value.
 - **«О приложении».** Without an Instagram icon in lucide the row has a camera icon; it shows only once the brand layer
   has HOMI's own link. The support row opens `t.me/<support>` through `tg.openLink`.
-- **The card-style mocks** follow legacy's `card-style.css` as Tailwind classes on the tokens. The sample result is a
-  small store that the screen resets when the tab unmounts.
+- **The card-style mocks** follow legacy's `card-style.css` as Tailwind classes on the tokens. The two options are a
+  radio group with one Tab stop and the arrow keys. The sample result is a small store that the screen resets when the
+  tab unmounts; an answer that arrives after a reset is dropped, as legacy's is with its screen. The result line is a
+  polite live region.
 - **The home offer.** The card's frame, button and × moved from `FollowNudge.tsx` to `features/nudges/NudgeFrame.tsx`,
   so the card does not pull the subscribe flow. `tg.haptic` gained `warning()` (the card sample's failure). The visit
   day is recorded once per launch when the session is ready; `homi-home` is a synced key since WP-21.
@@ -516,8 +521,11 @@ The package is built as designed. These points were decided in the code (rule 6)
 - **Specs that used the settings placeholder.** The two theme checks of `foundation.spec.ts` read the glass sample and
   a primary button on the development gallery now; no placeholder route is left. The route tree check gained
   `/settings/cards`.
-- **Accessibility.** The groups are sections without an accessible name, so the screen and an open page are the only
-  regions; a group is found by its heading.
+- **Server read and hydration.** The layout's `<Suspense>` fallback is a static spinner with no reads: a fallback that
+  read would keep the server read from being adopted and read twice. The graphics row is decided once on the client
+  (`useSyncExternalStore` with a server snapshot of "hidden"), so the server render cannot mismatch it.
+- **Accessibility.** The screen's root is a `div` (the shell holds the `main`). The groups are sections without an
+  accessible name, so the screen and an open page are the only regions; a group is found by its heading.
 - **Size.** About 1 900 changed lines of code and 1 900 of tests and specs: above the estimate, by the tests. Steps 9
   and 9a were not split off.
 
@@ -526,5 +534,6 @@ that still names the settings placeholder (a shared file: a separate small PR).
 
 ## Handoff
 
-Finished: every step, with unit, component and end-to-end tests; PR #101. Nothing is half-done. Next: the queue's next
+Finished: every step, with unit, component and end-to-end tests; one independent review, its findings fixed; PR #101.
+Nothing is half-done. Next: the queue's next
 package; the production track's deploy and the acceptance checklist on staging.

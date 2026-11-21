@@ -27,7 +27,7 @@ vi.mock("@/lib/actions/useAction", () => ({ useAction: (action: (input: unknown)
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ refresh: () => state.refresh(), push: vi.fn(), replace: vi.fn(), back: vi.fn() }) }));
 
 import { bumpFeedEpoch, feedEpoch } from "@/features/feed/feedQuery";
-import { resetProfileChange, useLanguageFollowUp } from "@/features/settings/applyProfileChange";
+import { resetProfileChange } from "@/features/settings/applyProfileChange";
 import { CurrencyPage } from "@/features/settings/CurrencyPage";
 import { DigestHint, DigestPage } from "@/features/settings/DigestPage";
 import { GraphicsPage } from "@/features/settings/GraphicsPage";
@@ -160,15 +160,11 @@ describe("GraphicsPage (WP-31, SCR-034)", () => {
 });
 
 describe("LanguagePage and CurrencyPage (WP-31, SCR-035, SCR-036)", () => {
-  function FollowUp({ locale }: { locale: string }) {
-    useLanguageFollowUp(locale);
-    return null;
-  }
-
   it("language: rows disabled while saving and the check stays; on success the profile takes it, and once the address carries it everything reads again", async () => {
     const save = deferred<ActionResult<unknown>>();
     state.updateSettings.mockReturnValueOnce(save.promise);
-    const view = render(withIntl(<LanguagePage />));
+    document.documentElement.lang = "ru";
+    render(withIntl(<LanguagePage />));
     expect(checked()).toEqual(["Русский"]);
 
     pick("English");
@@ -183,10 +179,13 @@ describe("LanguagePage and CurrencyPage (WP-31, SCR-035, SCR-036)", () => {
     expect(feedEpoch()).toBe(epoch);
     expect(readResource(SETTINGS_KEY)).toBeDefined();
 
-    view.rerender(withIntl(<FollowUp locale="en" />, "en"));
+    // The locale guard's navigation renders the new segment; the document's `lang` follows it.
+    await act(async () => {
+      document.documentElement.lang = "en";
+    });
     expect(feedEpoch()).toBe(epoch + 1);
-    expect(readResource(SETTINGS_KEY)).toBeDefined();
-    expect(state.sent).toEqual([]);
+    // The page still reads the settings: they are asked again, in the new language.
+    expect(state.sent).toEqual(["settings"]);
   });
 
   it("language: a failure changes nothing, with failed(); uz is sent as uz", async () => {
@@ -277,6 +276,22 @@ describe("QuietHoursPage and DigestPage (WP-31, SCR-037, SCR-038)", () => {
     await act(async () => first.resolve(FAILED));
     expect(checked()).toEqual(["12 и 20"]);
     expect(currentToast("app")).toBeNull();
+  });
+
+  it("an earlier success that arrives after the latest save settled is not what a later failure restores", async () => {
+    const first = deferred<ActionResult<unknown>>();
+    const second = deferred<ActionResult<unknown>>();
+    state.updateSettings.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockResolvedValueOnce(FAILED);
+    render(withIntl(<DigestPage />));
+
+    pick("9");
+    pick("12 и 20");
+    await act(async () => second.resolve(ok(settingsOf({ digest_hours: [12, 20] }))));
+    await act(async () => first.resolve(ok(settingsOf({ digest_hours: [9] }))));
+    pick("19");
+    await settle();
+
+    expect(checked()).toEqual(["12 и 20"]);
   });
 
   it("an empty preset list renders nothing but the page's hint", () => {

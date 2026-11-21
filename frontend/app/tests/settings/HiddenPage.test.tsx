@@ -86,6 +86,7 @@ describe("HiddenPage (WP-31, SCR-039): what it shows", () => {
     page({ authors: [{ ...CHANNEL, kind: "website", label: "example.uz" }] });
 
     expect(document.querySelector("[data-hidden-author]")?.textContent).toBe("example.uz3 объявленияВернуть");
+    expect(document.querySelector("[data-hidden-kind]")?.getAttribute("data-hidden-kind")).toBe("other");
   });
 
   it("listings only: price or «Цена договорная», title · district, a thumbnail; a tap opens the listing over the list", () => {
@@ -184,5 +185,37 @@ describe("HiddenPage: returning", () => {
     await act(async () => all.resolve(FAILED));
 
     expect(authors()).toEqual([PHONE.id, CHANNEL.id]);
+  });
+});
+
+describe("HiddenPage: two returns that fail one after the other (review of WP-31)", () => {
+  it("each failure puts back its own row, and the other's row, put back first, stays", async () => {
+    const first = deferred<ActionResult<null>>();
+    const second = deferred<ActionResult<null>>();
+    state.unblockAuthorById.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const third = { ...CHANNEL, id: "01JD0000000000000000000013", label: "@third" };
+    page({ authors: [PHONE, CHANNEL, third] });
+
+    fireEvent.click(returnOf(`[data-hidden-author="${PHONE.id}"]`));
+    fireEvent.click(returnOf(`[data-hidden-author="${CHANNEL.id}"]`));
+    expect(authors()).toEqual([third.id]);
+
+    await act(async () => first.resolve(FAILED));
+    expect(authors()).toEqual([PHONE.id, third.id]);
+    await act(async () => second.resolve(FAILED));
+    // The order is the list's as it was read.
+    expect(authors()).toEqual([PHONE.id, CHANNEL.id, third.id]);
+  });
+
+  it("the focus moves to the next row's «Вернуть», not to the body", async () => {
+    state.unblockAuthorById.mockReturnValue(new Promise(() => undefined));
+    page({ authors: [PHONE, CHANNEL] });
+
+    const button = returnOf(`[data-hidden-author="${PHONE.id}"]`);
+    button.focus();
+    fireEvent.click(button);
+    await settle();
+
+    expect(document.activeElement).toBe(returnOf(`[data-hidden-author="${CHANNEL.id}"]`));
   });
 });

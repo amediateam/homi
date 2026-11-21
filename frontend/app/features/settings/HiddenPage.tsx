@@ -1,8 +1,9 @@
 "use client";
 
 import type { Translate } from "@homi/i18n/format";
-import { AtSign, Button, Phone, cn } from "@homi/ui";
+import { AtSign, Button, cn, EyeOff, Phone } from "@homi/ui";
 import { useTranslations } from "next-intl";
+import { useRef } from "react";
 
 import { bumpFeedEpoch } from "@/features/feed/feedQuery";
 import { forgetFeedScroll } from "@/features/feed/feedScroll";
@@ -28,13 +29,18 @@ const authorId = (author: HiddenAuthor) => author.id;
 const listingNumber = (listing: HiddenListing) => listing.number;
 
 /**
- * The rows a failed change puts back (legacy `applyChange`): of the rows before the change, those still shown now
- * and those this change removed — never one another action returned meanwhile.
+ * The rows after a failed change: those shown now, and back among them the rows this change removed — never one that
+ * another action returned meanwhile, and never one another failed action put back (legacy's `applyChange` filtered the
+ * rows of before the change, which lost a row a second failure had restored). The order is the list's as it was read.
  */
-function restore<T>(before: readonly T[], after: readonly T[], now: readonly T[], id: (item: T) => string | number): T[] {
-  const removed = new Set(before.filter((item) => !after.some((next) => id(next) === id(item))).map(id));
-  const shown = new Set(now.map(id));
-  return before.filter((item) => shown.has(id(item)) || removed.has(id(item)));
+function restore<T>(before: readonly T[], after: readonly T[], now: readonly T[], id: (item: T) => string | number, order: readonly (string | number)[]): T[] {
+  const removed = before.filter((item) => !after.some((next) => id(next) === id(item)));
+  const merged = [...now.filter((item) => !removed.some((back) => id(back) === id(item))), ...removed];
+  const place = (item: T) => {
+    const at = order.indexOf(id(item));
+    return at < 0 ? order.length : at;
+  };
+  return merged.sort((left, right) => place(left) - place(right));
 }
 
 /** Everything that shows hidden items reads again once the list changed on the server. */
@@ -72,9 +78,23 @@ export function HiddenPage() {
   const returnListing = useAction(unhideListing);
   const returnAll = useAction(unhideAll);
   const hidden = view.hidden;
+  const root = useRef<HTMLDivElement>(null);
+  /** The order of the list as it was first read: a rolled-back row takes its old place. */
+  const order = useRef<(string | number)[] | null>(null);
   if (hidden === null) {
     return null;
   }
+  order.current ??= [...hidden.authors.map(authorId), ...hidden.listings.map(listingNumber)];
+  const ordered = order.current;
+
+  /** The row that leaves gives the focus to the next row's «Вернуть», else to «Показать всё снова», else to the page. */
+  const passFocus = (row: Element | null) => {
+    const rows = [...(root.current?.querySelectorAll("[data-hidden-author], [data-hidden-listing]") ?? [])];
+    const at = row === null ? -1 : rows.indexOf(row);
+    const next = rows.slice(at + 1).find((other) => other !== row) ?? rows.slice(0, Math.max(0, at)).reverse()[0];
+    const target = next?.querySelector<HTMLElement>("[data-hidden-return]") ?? root.current?.querySelector<HTMLElement>("[data-hidden-all]");
+    queueMicrotask(() => (target?.isConnected ? target : root.current)?.focus({ preventScroll: true }));
+  };
 
   const change = (after: Hidden, request: () => Promise<{ ok: boolean }>) => {
     const before = hidden;
@@ -90,8 +110,8 @@ export function HiddenPage() {
         }
         const now = view.current();
         view.set({
-          authors: restore(before.authors, after.authors, now.authors, authorId),
-          listings: restore(before.listings, after.listings, now.listings, listingNumber),
+          authors: restore(before.authors, after.authors, now.authors, authorId, ordered),
+          listings: restore(before.listings, after.listings, now.listings, listingNumber, ordered),
         });
         failed();
       });
@@ -99,7 +119,7 @@ export function HiddenPage() {
 
   const empty = hidden.authors.length + hidden.listings.length === 0;
   return (
-    <div data-hidden-page="">
+    <div ref={root} data-hidden-page="" tabIndex={-1} className="outline-none">
       <p className="mx-[4px] -mt-[4px] mb-[18px] text-[13px] leading-[1.4] text-hint">{t("hidden.intro")}</p>
       {empty ? <p className="px-[4px] py-[24px] text-center text-hint">{t("hidden.empty")}</p> : null}
       <div className="flex flex-col gap-[22px]">
@@ -108,10 +128,11 @@ export function HiddenPage() {
             {hidden.authors.map((author) => {
               const phone = author.kind === "phone";
               const channel = author.kind === "source" || author.kind === "channel";
+              const kind = phone ? "phone" : channel ? "channel" : "other";
               return (
                 <div key={author.id} data-hidden-author={author.id} className={cn(ROW, SEPARATOR, "not-first:before:left-[56px]")}>
-                  <span aria-hidden className="grid size-[30px] flex-none place-items-center rounded-[9px] bg-bg text-text">
-                    {phone ? <Phone size={18} /> : <AtSign size={18} />}
+                  <span aria-hidden data-hidden-kind={kind} className="grid size-[30px] flex-none place-items-center rounded-[9px] bg-bg text-text">
+                    {kind === "phone" ? <Phone size={18} /> : kind === "channel" ? <AtSign size={18} /> : <EyeOff size={18} />}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-[1px]">
                     <b className={cn("truncate text-[16px] font-semibold text-text", phone && "ph-mask")}>{author.label}</b>
@@ -124,7 +145,10 @@ export function HiddenPage() {
                     type="button"
                     data-hidden-return="author"
                     className={RETURN}
-                    onClick={() => change({ ...hidden, authors: hidden.authors.filter((item) => item.id !== author.id) }, () => returnAuthor({ id: author.id }))}
+                    onClick={(event) => {
+                      passFocus(event.currentTarget.closest("[data-hidden-author]"));
+                      change({ ...hidden, authors: hidden.authors.filter((item) => item.id !== author.id) }, () => returnAuthor({ id: author.id }));
+                    }}
                   >
                     {t("hidden.return")}
                   </button>
@@ -162,9 +186,10 @@ export function HiddenPage() {
                     type="button"
                     data-hidden-return="listing"
                     className={RETURN}
-                    onClick={() =>
-                      change({ ...hidden, listings: hidden.listings.filter((item) => item.number !== listing.number) }, () => returnListing({ number: listing.number }))
-                    }
+                    onClick={(event) => {
+                      passFocus(event.currentTarget.closest("[data-hidden-listing]"));
+                      change({ ...hidden, listings: hidden.listings.filter((item) => item.number !== listing.number) }, () => returnListing({ number: listing.number }));
+                    }}
                   >
                     {t("hidden.return")}
                   </button>
@@ -183,6 +208,7 @@ export function HiddenPage() {
             void tg.confirm(t("hidden.confirmAll")).then((yes) => {
               if (yes) {
                 change({ authors: [], listings: [] }, () => returnAll(null));
+                queueMicrotask(() => root.current?.focus({ preventScroll: true }));
               }
             });
           }}

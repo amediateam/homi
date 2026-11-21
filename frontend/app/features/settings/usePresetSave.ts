@@ -20,6 +20,7 @@ export function usePresetSave(): { settings: Settings | undefined; save: (change
   const send = useAction(updateSettings);
   const latest = useRef(0);
   const confirmed = useRef<Settings | undefined>(undefined);
+  const confirmedAt = useRef(0);
 
   const save = async (change: SettingsInput & Partial<Settings>): Promise<boolean> => {
     tg.haptic.impact("light");
@@ -28,11 +29,15 @@ export function usePresetSave(): { settings: Settings | undefined; save: (change
     confirmed.current ??= before;
     const result = await send(change).catch(() => null);
     if (request !== latest.current) {
-      if (result?.ok) {
+      // An earlier save that succeeded is what a failure of the later one restores — only while that one is pending
+      // and no later success was confirmed already.
+      if (result?.ok && confirmed.current !== undefined && request > confirmedAt.current) {
         confirmed.current = result.data;
+        confirmedAt.current = request;
       }
       return Boolean(result?.ok);
     }
+    confirmedAt.current = request;
     if (result?.ok) {
       confirmed.current = undefined;
       view.replace(result.data);

@@ -26,6 +26,7 @@ export function ThemePage({ flags = devFlags }: { flags?: DevFlags } = {}) {
   const theme = useThemePreference();
   const save = useAction(updateSettings);
   const accepted = useRef<ThemePreference | null>(null);
+  const acceptedAt = useRef(0);
   const latest = useRef(0);
 
   const pick = (next: ThemePreference) => {
@@ -39,7 +40,11 @@ export function ThemePage({ flags = devFlags }: { flags?: DevFlags } = {}) {
     void save({ theme: next }).then(
       (result) => {
         if (result.ok) {
-          accepted.current = next;
+          // An older success that arrives after a newer one does not become the theme a failure restores.
+          if (request > acceptedAt.current) {
+            accepted.current = next;
+            acceptedAt.current = request;
+          }
         } else if (request === latest.current) {
           chooseTheme(accepted.current ?? "auto");
           failed({ flags });

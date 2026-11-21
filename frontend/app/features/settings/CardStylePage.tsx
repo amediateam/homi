@@ -8,7 +8,7 @@ import { useAction } from "@/lib/actions/useAction";
 import { tg } from "@/lib/telegram";
 
 import { CardPreview } from "./CardPreview";
-import { setCardSample, useCardSample } from "./cardSample";
+import { setCardSample, startCardSample, useCardSample } from "./cardSample";
 import { cardStyleOf } from "./format";
 import { usePresetSave } from "./usePresetSave";
 
@@ -44,12 +44,14 @@ export function CardStylePage() {
 
   const askSample = () => {
     tg.haptic.impact("light");
-    setCardSample("sending");
+    const settle = startCardSample();
     void send(null)
       .catch(() => null)
       .then((result) => {
         const sent = result?.ok === true && result.data.sent;
-        setCardSample(sent ? "sent" : "failed");
+        if (!settle(sent ? "sent" : "failed")) {
+          return;
+        }
         if (sent) {
           tg.haptic.success();
         } else {
@@ -60,7 +62,21 @@ export function CardStylePage() {
 
   return (
     <div data-card-style="">
-      <div role="radiogroup" aria-label={t("settings.cards._")} className="grid grid-cols-2 gap-x-[10px]">
+      <div
+        role="radiogroup"
+        aria-label={t("settings.cards._")}
+        className="grid grid-cols-2 gap-x-[10px]"
+        onKeyDown={(event) => {
+          // The arrow keys move the choice, as in a radio group; only the checked option takes the Tab stop.
+          if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+            return;
+          }
+          event.preventDefault();
+          const other = current === "classic" ? "rich" : "classic";
+          pick(other);
+          event.currentTarget.querySelector<HTMLElement>(`[data-card-style-option="${other}"]`)?.focus();
+        }}
+      >
         {STYLES.map((style) => {
           const checked = style === current;
           return (
@@ -69,6 +85,7 @@ export function CardStylePage() {
               type="button"
               role="radio"
               aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
               data-card-style-option={style}
               onClick={() => pick(style)}
               className={cn(
@@ -86,6 +103,7 @@ export function CardStylePage() {
       <p className="mx-[4px] mt-[8px] mb-[130px] text-[13px] leading-[1.4] text-hint">{t("settings.cards.hint")}</p>
       <div className="glass fixed inset-x-0 bottom-0 z-3 border-t-[0.5px] border-sep px-(--gutter) pt-[12px] pb-[calc(12px+var(--bottom-inset))]">
         <div className="mx-auto flex max-w-(--feed-max) flex-col gap-[10px]">
+          <div role="status" aria-live="polite" className="contents">
           {sample === "sent" ? (
             <div data-card-sample="sent" className="mx-[4px] flex items-start gap-[6px] text-[13px] font-semibold text-text">
               <Check size={16} strokeWidth={2.5} aria-hidden className="mt-[1px] flex-none" />
@@ -100,6 +118,7 @@ export function CardStylePage() {
               {t("settings.cards.failed")}
             </p>
           ) : null}
+          </div>
           <Button data-action="card-sample" className="h-[48px] w-full gap-[8px] disabled:opacity-70" disabled={sample === "sending"} onClick={askSample}>
             {sample === "sending" ? <Spinner aria-hidden className="size-[16px] border-2" /> : null}
             {t(sample === "sending" ? "settings.cards.sending" : "settings.cards.send")}

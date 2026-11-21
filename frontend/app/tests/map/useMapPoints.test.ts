@@ -148,7 +148,8 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     expect(result.current.shown).toBe(shown);
 
     await answer(1, answered([point(9, 41.2, 69.2, 400)], 1));
-    expect(result.current).toMatchObject({ status: "ready", shown: 1, responseId: 2 });
+    // The camera and an open card stay: the response id is the old one.
+    expect(result.current).toMatchObject({ status: "ready", shown: 1, responseId: 1 });
   });
 
   it("the same search in a new object sends nothing; a posted_days change does (not filtersKey)", async () => {

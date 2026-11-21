@@ -21,7 +21,7 @@ vi.mock("@/lib/session/bootstrap", () => ({ onForbidden: vi.fn(), reauthenticate
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => state.session }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: (href: string) => state.push(href) } }));
 
-import { SettingsScreen } from "@/features/settings/SettingsScreen";
+import { resetGraphicsRow, SettingsFallback, SettingsScreen } from "@/features/settings/SettingsScreen";
 import { resetResources } from "@/lib/data/useResource";
 import { resetReference } from "@/lib/reference/useReference";
 
@@ -54,6 +54,7 @@ beforeEach(() => {
   state.session = { status: "ready", me: { currency: "USD" } };
   state.push.mockReset();
   resetResources();
+  resetGraphicsRow();
   window.localStorage.clear();
   fake = fakeTelegram({ version: "8.0", answers: { homeScreenStatus: "added" } });
   feedReference({ reference: {} });
@@ -89,11 +90,35 @@ describe("SettingsScreen (WP-31, SCR-032): states", () => {
     expect(row("theme")).not.toBeNull();
   });
 
+  it("the layout's fallback is the frame and a spinner, with no reads of its own (so the server read is adopted)", () => {
+    render(withIntl(<SettingsFallback />));
+
+    expect(document.querySelector('[data-route="settings"] [data-settings-state="loading"]')).not.toBeNull();
+    expect(state.sent).toEqual([]);
+  });
+
   it("a server failure says «Не загрузилось»", async () => {
     shown({ settings: { ok: false, error: "server", status: 500, method: "GET", path: "settings" } as ApiResult<unknown> });
     await settle();
 
     expect(screen.getByText("Не загрузилось")).toBeTruthy();
+  });
+
+  it("the server render hides the graphics row, so hydration matches; the client decides it once", async () => {
+    window.localStorage.setItem("homi-graphics", "lite");
+    const { renderToString } = await import("react-dom/server");
+    const markup = renderToString(withIntl(<SettingsScreen initialSettings={settingsOf()} initialHidden={{ listings: [], authors: [] }} />));
+    expect(markup).not.toContain('data-settings-row="graphics"');
+
+    shown();
+    await settle();
+    expect(row("graphics")).not.toBeNull();
+    // Decided once: the mode set back to auto does not take the row away in this launch.
+    window.localStorage.removeItem("homi-graphics");
+    cleanup();
+    shown();
+    await settle();
+    expect(row("graphics")).not.toBeNull();
   });
 
   it("the layout's server read shows at once, without a request", () => {
@@ -148,6 +173,7 @@ describe("SettingsScreen: groups, rows and values", () => {
     await settle();
     expect(row("graphics")).toBeNull();
     cleanup();
+    resetGraphicsRow();
 
     vi.stubGlobal("navigator", { ...navigator, userAgent: "Mozilla/5.0 (Linux; Android 14)" });
     shown();
@@ -155,6 +181,7 @@ describe("SettingsScreen: groups, rows and values", () => {
     expect(value("graphics")).toMatch(/^Авто · /);
     cleanup();
     vi.unstubAllGlobals();
+    resetGraphicsRow();
 
     window.localStorage.setItem("homi-graphics", "lite");
     shown();

@@ -4,7 +4,7 @@ import type { Locale } from "@homi/config";
 import type { Translate } from "@homi/i18n/format";
 import { Clock, Coins, ErrorState, EyeOff, GalleryHorizontal, Gauge, Globe, Moon, Palette, Spinner } from "@homi/ui";
 import { useLocale, useTranslations } from "next-intl";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 
 import { getGraphicsMode, useGraphicsMode } from "@/lib/graphics";
 import { nav } from "@/lib/navigation/nav";
@@ -13,7 +13,6 @@ import { useSession } from "@/lib/session/SessionProvider";
 import { tg } from "@/lib/telegram";
 
 import { AboutGroup } from "./AboutGroup";
-import { useLanguageFollowUp } from "./applyProfileChange";
 import { setCardSample } from "./cardSample";
 import { cardStyleOf, digestLabel, graphicsLabel, optionName, quietLabel, themeLabel } from "./format";
 import { SettingsGroup, SettingsRow } from "./SettingsParts";
@@ -31,6 +30,31 @@ export interface SettingsScreenProps {
 /** Whether the graphics row shows: on Android, or once the mode was changed by hand (BR-APP-052). */
 function graphicsRowShown(): boolean {
   return tg.isAndroid() || tg.platform() === "android" || getGraphicsMode() !== "auto";
+}
+
+/**
+ * Decided once in this launch, on the client: the server cannot know the device or the stored mode, so it renders the
+ * row hidden and the client shows it after hydration, without a mismatch.
+ */
+let graphicsRow: boolean | null = null;
+const noSubscription = () => () => undefined;
+const graphicsRowNow = () => (graphicsRow ??= graphicsRowShown());
+const graphicsRowOnServer = () => false;
+
+/** Tests only. */
+export function resetGraphicsRow(): void {
+  graphicsRow = null;
+}
+
+/** The screen's frame and its spinner, with no reads: the layout's fallback until the server part streams in. */
+export function SettingsFallback() {
+  return (
+    <div data-route="settings" className="px-(--gutter) pt-[6px] pb-(--bottom-chrome)">
+      <div data-settings-state="loading" className="grid min-h-[48px] place-items-center pt-[24px]">
+        <span aria-hidden className="size-[22px] animate-spin rounded-full border-[2.5px] border-accent border-t-transparent" />
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -62,9 +86,8 @@ export function SettingsScreen({ initialSettings, initialHidden }: SettingsScree
   const theme = useThemePreference();
   const graphics = useGraphicsMode();
   const homeStatus = useHomeScreenStatus();
-  const [showGraphics] = useState(graphicsRowShown);
+  const showGraphics = useSyncExternalStore(noSubscription, graphicsRowNow, graphicsRowOnServer);
   const { settings } = view;
-  useLanguageFollowUp(locale);
   // The sample card's result outlives its page, not the tab (LB-APP-053).
   useLayoutEffect(() => () => setCardSample("idle"), []);
 
@@ -139,8 +162,8 @@ export function SettingsScreen({ initialSettings, initialHidden }: SettingsScree
   }
 
   return (
-    <main data-route="settings" className="px-(--gutter) pt-[6px] pb-(--bottom-chrome)">
+    <div data-route="settings" className="px-(--gutter) pt-[6px] pb-(--bottom-chrome)">
       <div className="mx-auto max-w-(--feed-max)">{body}</div>
-    </main>
+    </div>
   );
 }

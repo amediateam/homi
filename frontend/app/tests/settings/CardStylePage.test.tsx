@@ -153,3 +153,42 @@ describe("CardStylePage (WP-31, SCR-048, BR-APP-074)", () => {
     expect(sampleLine()?.getAttribute("data-card-sample")).toBe("sent");
   });
 });
+
+describe("CardStylePage: keyboard and a late answer (review of WP-31)", () => {
+  it("the arrow keys move the choice; only the checked option takes the Tab stop", () => {
+    state.updateSettings.mockResolvedValue(ok(settingsOf({ card_style: "rich" })));
+    render(withIntl(<CardStylePage />));
+    expect(option("classic").tabIndex).toBe(0);
+    expect(option("rich").tabIndex).toBe(-1);
+
+    option("classic").focus();
+    fireEvent.keyDown(option("classic"), { key: "ArrowRight" });
+
+    expect(checked()).toEqual(["rich"]);
+    expect(document.activeElement).toBe(option("rich"));
+    expect(option("rich").tabIndex).toBe(0);
+    expect(state.updateSettings).toHaveBeenCalledWith({ card_style: "rich" });
+  });
+
+  it("an answer that arrives after the tab went is dropped: the next showing is idle and can ask again", async () => {
+    const send = deferred<ActionResult<{ sent: boolean }>>();
+    state.sendCardSample.mockReturnValueOnce(send.promise);
+    const view = render(withIntl(<CardStylePage />));
+    fireEvent.click(sendButton());
+    view.unmount();
+    // The settings tab unmounts: its screen resets the sample.
+    setCardSample("idle");
+
+    await act(async () => send.resolve(ok({ sent: true })));
+    render(withIntl(<CardStylePage />));
+    expect(sampleLine()).toBeNull();
+    expect(sendButton().disabled).toBe(false);
+    expect(notified()).toEqual([]);
+  });
+
+  it("the result line is in a live region", () => {
+    render(withIntl(<CardStylePage />));
+
+    expect(document.querySelector('[role="status"][aria-live="polite"]')).not.toBeNull();
+  });
+});

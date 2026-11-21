@@ -125,8 +125,16 @@ for (const mode of ["cookie", "header"] as const) {
       await onPage(page, "cards", "Вид карточек");
       await expect(radio(page, "Классический").or(page.locator('[data-card-style-option="classic"]'))).toHaveAttribute("aria-checked", "true");
 
+      const actions: string[] = [];
+      page.on("request", (request) => {
+        if (request.method() === "POST" && request.headers()["next-action"] !== undefined) {
+          actions.push(request.postData() ?? "");
+        }
+      });
       await page.locator('[data-card-style-option="rich"]').click();
       await expect(page.locator('[data-card-style-option="rich"]')).toHaveAttribute("aria-checked", "true");
+      // The settings Server Action carries the pick; the app server sends it as `PATCH /settings {card_style}`.
+      await expect.poll(() => actions.some((body) => body.includes('"card_style":"rich"'))).toBe(true);
       await page.locator('[data-action="card-sample"]').click();
       await expect(page.locator('[data-card-sample="sent"]')).toHaveText("Пример — в чате с ботомЧтобы посмотреть, сверните приложение — смахните его вниз");
 

@@ -1,15 +1,13 @@
 "use client";
 
 import type { Currency, Locale } from "@homi/config";
-import { useEffect } from "react";
-
 import { bumpFeedEpoch } from "@/features/feed/feedQuery";
 import { forgetFeedScroll } from "@/features/feed/feedScroll";
 import { invalidate } from "@/lib/data/useResource";
 import { patchMe } from "@/lib/session/bootstrap";
 
-/** The locale a saved language waits for: the follow-up runs once the address carries it. */
-let awaitedLocale: Locale | null = null;
+/** The watch of the page's `lang` while a saved language waits for its segment. */
+let watching: MutationObserver | null = null;
 
 /** Every client read again, the search feed included (its list key does not change: the epoch of WP-38 does). */
 function readEverythingAgain(): void {
@@ -24,25 +22,29 @@ function readEverythingAgain(): void {
  * replaces the address with the same route under the new segment, search parameters kept, through next-intl's router,
  * which also writes its locale cookie. The same guard sends Back from an entry below, which still carries the old
  * segment, to the new one. Checked in the browser: the switch renders in place, with no document load and no new
- * session exchange. Once the address carries the new locale (`useLanguageFollowUp`) every client read runs again,
- * with the document's new `lang` as its `Accept-Language`.
+ * session exchange. Once the document's `lang` is the new locale every client read runs again: `bffFetch` takes its
+ * `Accept-Language` from it. The watch is on the document, not on a screen, so a tab switched before the answer
+ * still gets its reads.
  */
 export function changeLanguage(locale: Locale): void {
-  awaitedLocale = locale;
+  watching?.disconnect();
+  watching = null;
   patchMe({ locale });
-}
-
-/**
- * Runs the follow-up of `changeLanguage` when the page's locale becomes the one saved. Mounted by the settings
- * screen, which stays mounted while a language page is open.
- */
-export function useLanguageFollowUp(locale: string): void {
-  useEffect(() => {
-    if (awaitedLocale !== null && awaitedLocale === locale) {
-      awaitedLocale = null;
-      readEverythingAgain();
+  const root = document.documentElement;
+  const arrived = () => {
+    if (root.lang !== locale) {
+      return false;
     }
-  }, [locale]);
+    watching?.disconnect();
+    watching = null;
+    readEverythingAgain();
+    return true;
+  };
+  if (arrived()) {
+    return;
+  }
+  watching = new MutationObserver(arrived);
+  watching.observe(root, { attributes: true, attributeFilter: ["lang"] });
 }
 
 /**
@@ -58,5 +60,6 @@ export function changeCurrency(currency: Currency, refresh: () => void): void {
 
 /** Tests only. */
 export function resetProfileChange(): void {
-  awaitedLocale = null;
+  watching?.disconnect();
+  watching = null;
 }

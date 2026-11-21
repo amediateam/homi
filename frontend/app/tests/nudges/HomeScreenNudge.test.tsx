@@ -214,3 +214,33 @@ describe("HomeScreenNudge (WP-31, SCR-041)", () => {
     expect(currentToast("app")?.message).toEqual({ key: "home.added" });
   });
 });
+
+describe("HomeScreenNudge: displacement (review of WP-31)", () => {
+  it("a follow nudge taking the slot hides the card too, without an event, and writes `offered: false`", async () => {
+    memory(THREE);
+    render(withIntl(<Host env={CALM} />));
+    await wait(HOME_OFFER_DELAY_MS);
+    expect(card()).not.toBeNull();
+    state.track.mockReset();
+
+    act(() => {
+      takeSlot("follow");
+    });
+    expect(card()).toBeNull();
+    expect(state.track).not.toHaveBeenCalled();
+    expect(readHomeMemory().offered).toBe(false);
+  });
+
+  it("a displacement in the same task as the take is not missed", async () => {
+    memory(THREE);
+    render(withIntl(<Host env={CALM} />));
+    // The status answers inside the 4 s timer; a return banner takes the slot right after, before any render.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(HOME_OFFER_DELAY_MS);
+      takeSlot("return");
+    });
+
+    expect(card()).toBeNull();
+    expect(readHomeMemory().offered).toBe(false);
+  });
+});
