@@ -3941,8 +3941,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.36912,
-            "lon": 69.28131
+            "lat": 41.36512,
+            "lon": 69.28431
         },
         "photos": {
             "preview": [
@@ -4110,8 +4110,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.37312,
-            "lon": 69.27831
+            "lat": 41.36512,
+            "lon": 69.28431
         },
         "photos": {
             "preview": [
@@ -4266,8 +4266,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.37712,
-            "lon": 69.27531
+            "lat": 41.35012,
+            "lon": 69.28431
         },
         "photos": {
             "preview": [
@@ -4423,8 +4423,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.38112,
-            "lon": 69.27231
+            "lat": 41.35012,
+            "lon": 69.28431
         },
         "photos": {
             "preview": [
@@ -4568,8 +4568,8 @@
         "floor": 3,
         "floors_total": 9,
         "district": {
-            "code": "yunusobod",
-            "name": "Юнусабад"
+            "code": "chilonzor",
+            "name": "Чиланзар"
         },
         "place": null,
         "landmark": "Мегапланет",
@@ -4579,8 +4579,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.38512,
-            "lon": 69.26931
+            "lat": 41.28501,
+            "lon": 69.21402
         },
         "photos": {
             "preview": [
@@ -4724,8 +4724,8 @@
         "floor": 3,
         "floors_total": 9,
         "district": {
-            "code": "yunusobod",
-            "name": "Юнусабад"
+            "code": "chilonzor",
+            "name": "Чиланзар"
         },
         "place": null,
         "landmark": "Мегапланет",
@@ -4735,8 +4735,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.38912,
-            "lon": 69.26631
+            "lat": 41.28501,
+            "lon": 69.21402
         },
         "photos": {
             "preview": [
@@ -4880,8 +4880,8 @@
         "floor": 3,
         "floors_total": 9,
         "district": {
-            "code": "yunusobod",
-            "name": "Юнусабад"
+            "code": "mirobod",
+            "name": "Мирабад"
         },
         "place": null,
         "landmark": "Мегапланет",
@@ -4891,8 +4891,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.39312,
-            "lon": 69.26331
+            "lat": 41.30552,
+            "lon": 69.27803
         },
         "photos": {
             "preview": [
@@ -5034,8 +5034,8 @@
         "floor": 3,
         "floors_total": 9,
         "district": {
-            "code": "yunusobod",
-            "name": "Юнусабад"
+            "code": "mirobod",
+            "name": "Мирабад"
         },
         "place": null,
         "landmark": "Мегапланет",
@@ -5045,8 +5045,8 @@
         },
         "center_km": 4.2,
         "location": {
-            "lat": 41.39712,
-            "lon": 69.26031
+            "lat": 41.30552,
+            "lon": 69.27803
         },
         "photos": {
             "preview": [
