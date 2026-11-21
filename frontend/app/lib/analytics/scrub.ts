@@ -16,15 +16,18 @@
 
 export const REDACTED = "[redacted]";
 
-// Seen on the canonical form, so an escape before a key or for `=` hides nothing. A key may be quoted, JSON-escaped
-// (`\"user\":`) or bare; a value that starts with `*` is a mask already.
+// Seen on the canonical form (JSON escapes such as `\"` and `\n` undone), so an escape before a key or for `=` hides
+// nothing. A key may be quoted or bare; a value that starts with `*` is a mask already.
 const LAUNCH_MARKS = [
-  /(?<![a-z0-9])\\?["']?(?:tgWebAppData|query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)\\?["']?\s*[=:]\s*\\?["']?[^\s&#*"'\\]/i,
-  /(?<![a-z0-9])\\?["']?(?:first_name|last_name|username|photo_url|allows_write_to_pm|language_code)\\?["']?\s*[=:]/i,
+  /(?<![a-z0-9])["']?(?:tgWebAppData|query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)["']?\s*[=:]\s*["']?[^\s&#*"']/i,
+  /(?<![a-z0-9])["']?(?:first_name|last_name|username|photo_url|allows_write_to_pm|language_code)["']?\s*[=:]/i,
 ];
 // On the whole text, queries included: cutting a query at a space could part a token from its name, and no address of
 // the app carries either.
-const TOKEN_MARKS = [/(?<![a-z])bearer[\s+:=]*[^\s*"'<>,;]/i, /homi_session\s*=\s*[^\s;&*]/i];
+const TOKEN_MARKS = [/(?<![a-z])bearer[\s+:=]*["']?[^\s*"'<>,;]/i, /homi_session["']?\s*[=:]\s*["']?[^\s;&*"']/i];
+// Longer texts are cut first: nothing that leaves the app is longer (the journal's bodies are 8 KB), and an unbounded
+// text could exhaust a pattern's backtracking.
+const TEXT_MAX = 16_384;
 const SEPARATOR = "[\\s().+_\\u200b\\u2212\\u2010-\\u2015-]*";
 // The percent-encoded separators and plus of an address's query (`%2B998%2090…`), decoded before the phone patterns.
 const ENCODED = /%2[0BbDdEe89]/g;
@@ -41,11 +44,12 @@ const LOCAL_PHONE = new RegExp(
   "g",
 );
 // Any other international number: `+` and ten or more digits.
-const INTERNATIONAL = new RegExp(`(?<!\\d)\\+\\d(?:${SEPARATOR}\\d){9,}(?!\\d)`, "g");
-// An address inside a text keeps no query or hash: absolute (any case, `ws` too) or a path after a space.
-const ADDRESS_QUERY = /((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/gi;
-const PATH_QUERY = /((?:^|\s)\/[\w./-]+)\?[^\s"'<>]*/g;
-const EMAIL = /[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const INTERNATIONAL = new RegExp(`(?<!\\d)\\+\\d(?:${SEPARATOR}\\d){9,14}(?!\\d)`, "g");
+// An address inside a text keeps no query or hash: absolute (any case, `ws` too) or a path after a space. An
+// apostrophe belongs to a query (`encodeURIComponent` leaves it, and Uzbek names hold one: O'tkir).
+const ADDRESS_QUERY = /((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"<>]*/gi;
+const PATH_QUERY = /((?:^|\s)\/[\w./-]+)\?[^\s"<>]*/g;
+const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/gu;
 
 function phones(text: string): string {
   return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
@@ -63,11 +67,22 @@ function decodeRun(run: string): string {
   }
 }
 
-/** `text` with its percent escapes decoded, up to three times (`%2520` → `%20` → ` `); for judging only. */
+/** The escapes of a JSON or JavaScript string undone: `\uXXXX`, `\n` and the like (a space), `\"`, `\'`, `\\`, `\/`. */
+function unescapeString(text: string): string {
+  return text
+    .replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+    .replace(/\\[nrtbfv]/g, " ")
+    .replace(/\\(["'\\/])/g, "$1");
+}
+
+/**
+ * `text` with its percent escapes and string escapes undone, up to three times (`%2520` → `%20` → ` `,
+ * `\u0025` → `%`); for judging only.
+ */
 export function canonical(text: string): string {
   let current = text;
   for (let pass = 0; pass < 3; pass += 1) {
-    const next = current.replace(/(?:%[0-9A-Fa-f]{2})+/g, decodeRun);
+    const next = unescapeString(current.replace(/(?:%[0-9A-Fa-f]{2})+/g, decodeRun));
     if (next === current) {
       break;
     }
@@ -82,6 +97,15 @@ export function canonical(text: string): string {
  * is judged for secrets; the encoded separators are decoded for a second pass over numbers, then e-mail addresses.
  */
 export function scrubText(value: string): string {
+  try {
+    return scrubWithin(value.length > TEXT_MAX ? value.slice(0, TEXT_MAX) : value);
+  } catch {
+    // Never throws: a text that cannot be judged does not leave.
+    return REDACTED;
+  }
+}
+
+function scrubWithin(value: string): string {
   const whole = canonical(value);
   if (TOKEN_MARKS.some((mark) => mark.test(whole))) {
     return REDACTED;
@@ -132,13 +156,17 @@ export function scrubDeep(value: unknown, depth = 6): unknown {
  * and the hash, so they never leave with an address.
  */
 export function stripUrl(value: string): string {
+  // A space or a line break makes it a text that starts with an address, not an address.
+  if (/\s/.test(value)) {
+    return scrubText(value);
+  }
   if (value.startsWith("/")) {
-    return value.replace(/[?#].*$/, "");
+    return scrubText(value.replace(/[?#][\s\S]*$/, ""));
   }
   try {
     const url = new URL(value);
     if (url.protocol === "http:" || url.protocol === "https:") {
-      return `${url.origin}${url.pathname}`;
+      return scrubText(`${url.origin}${url.pathname}`);
     }
   } catch {
     // Not an address.

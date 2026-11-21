@@ -140,7 +140,7 @@ function reveal(text: string): string {
 }
 
 const enc = encodeURIComponent;
-const USER = JSON.stringify({ id: 4242, first_name: "Ivan Петров", username: "alivali77", language_code: "ru" });
+const USER = JSON.stringify({ id: 4242, first_name: "O'tkir Петров", username: "alivali77", language_code: "ru" });
 const INIT_DATA = `query_id=AAHxyz1&user=${enc(USER)}&auth_date=1700000000&hash=c0ffee1234abcd5678&signature=SiGn4tur3`;
 const TOKEN = "7|AbCdEf123456GhIjKl7890";
 const COOKIE = "s3ss10nV4lueXyz";
@@ -160,22 +160,38 @@ const SECRETS: { name: string; forms: string[]; pieces: string[] }[] = [
       USER,
       JSON.stringify(JSON.parse(USER)).replace(/"/g, "'"),
     ],
-    pieces: ["Ivan", "Петров", "alivali77", "c0ffee1234abcd5678", "AAHxyz1", "SiGn4tur3"],
+    pieces: ["tkir", "Петров", "alivali77", "c0ffee1234abcd5678", "AAHxyz1", "SiGn4tur3"],
   },
   {
     name: "a bearer token",
-    forms: [`Bearer ${TOKEN}`, `Bearer+${TOKEN}`, `Bearer%20${enc(TOKEN)}`, `Bearer%2520${enc(enc(TOKEN))}`, `Bearer ${enc(TOKEN)}`, `bearer:${TOKEN}`],
+    forms: [
+      `Bearer ${TOKEN}`,
+      `Bearer+${TOKEN}`,
+      `Bearer%20${enc(TOKEN)}`,
+      `Bearer%2520${enc(enc(TOKEN))}`,
+      `Bearer ${enc(TOKEN)}`,
+      `bearer:${TOKEN}`,
+      `Bearer "${TOKEN}"`,
+      `Authorization:\\nBearer ${TOKEN}`,
+    ],
     pieces: ["AbCdEf123456", "GhIjKl7890"],
   },
   {
     name: "the session cookie",
-    forms: [`homi_session=${COOKIE}`, `homi_session%3D${COOKIE}`, `homi_session%253D${COOKIE}`, `Cookie: a=1; homi_session=${COOKIE}`, `HOMI_SESSION = ${COOKIE}`],
+    forms: [
+      `homi_session=${COOKIE}`,
+      `homi_session%3D${COOKIE}`,
+      `homi_session%253D${COOKIE}`,
+      `Cookie: a=1; homi_session=${COOKIE}`,
+      `HOMI_SESSION = ${COOKIE}`,
+      JSON.stringify({ homi_session: COOKIE }),
+    ],
     pieces: [COOKIE],
   },
   {
     name: "an e-mail address",
-    forms: ["owner.name@example.uz", "owner.name%40example.uz", "owner.name%2540example.uz"],
-    pieces: ["owner.name"],
+    forms: ["owner.name@example.uz", "owner.name%40example.uz", "owner.name%2540example.uz", "иван.owner.name@почта.уз"],
+    pieces: ["owner.name", "иван"],
   },
   {
     name: "a phone number",
@@ -199,6 +215,9 @@ const WRAPPERS: { name: string; wrap: (secret: string) => string }[] = [
   { name: "after %20", wrap: (secret) => `x%20${secret}` },
   { name: "after %0A", wrap: (secret) => `x%0A${secret}` },
   { name: "after %26", wrap: (secret) => `x%26${secret}` },
+  { name: "after a JSON-escaped line break", wrap: (secret) => `x\\n${secret}` },
+  { name: "after a JSON-escaped tab", wrap: (secret) => `x\\t${secret}` },
+  { name: "after a string escape of %", wrap: (secret) => `x\\u0025${secret.replace(/%/g, "\\u0025")}` },
   { name: "in a sentence", wrap: (secret) => `failed: ${secret} while loading` },
   { name: "on a new line", wrap: (secret) => `Error\n${secret}` },
   { name: "in JSON", wrap: (secret) => JSON.stringify({ message: secret }) },
@@ -211,7 +230,7 @@ const WRAPPERS: { name: string; wrap: (secret: string) => string }[] = [
 /** The digits of `text` only, so a number written with separators is found whole. */
 const digits = (text: string) => text.replace(/\D/g, "");
 
-describe("scrubText: no secret survives any form or place (sixth review; the canonical form)", () => {
+describe("scrubText: no secret survives any form or place (sixth and seventh reviews; the canonical form)", () => {
   for (const secret of SECRETS) {
     for (const wrapper of WRAPPERS) {
       it(`${secret.name}, ${wrapper.name}`, () => {
@@ -230,3 +249,29 @@ describe("scrubText: no secret survives any form or place (sixth review; the can
   }
 });
 
+describe("stripUrl: a text that starts with an address is scrubbed as a text (seventh review)", () => {
+  for (const secret of SECRETS) {
+    it(`${secret.name}`, () => {
+      for (const form of secret.forms) {
+        for (const text of [`https://api.homi.uz/v1 failed: ${form}`, `/ru/feed?q=${form}\nnext ${form}`, `/ru/feed\n${form}`]) {
+          const out = reveal(stripUrl(text));
+          for (const piece of secret.pieces) {
+            expect(secret.name === "a phone number" ? digits(out) : out, text).not.toContain(piece);
+          }
+        }
+      }
+    });
+  }
+
+  it("an address alone keeps its origin and path", () => {
+    expect(stripUrl("https://app.homi.uz/ru/listing/100018?x=1#y")).toBe("https://app.homi.uz/ru/listing/100018");
+    expect(stripUrl("/ru/map?area=1")).toBe("/ru/map");
+  });
+});
+
+describe("scrubText never throws", () => {
+  it("on a text far longer than anything that leaves the app, or on broken escapes", () => {
+    expect(() => scrubText(`+1${"2".repeat(3_000_000)}`)).not.toThrow();
+    expect(() => scrubText("%E0%A4%A \\uZZZZ %%%")).not.toThrow();
+  });
+});
