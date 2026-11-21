@@ -509,15 +509,23 @@ The package is built as designed, with these points decided in the code (rule 6)
   text is scrubbed; PostHog's own ids (`distinct_id`, `$session_id`, `token` …) pass as they are, and heatmap points of
   addresses that differ only in their query are merged. The scrubbers also mask `00998`, the nine local digits of an
   Uzbek code written as a phone is (code, three, two, two; mobile codes, 20, and Tashkent's 71 and 78), `8` or brackets
-  before them, dashes of any kind, other international numbers of ten digits or more and decoded launch-data fields,
-  and take the query and hash off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or
-  international number is masked also next to a letter; nine local digits next to a letter are taken for an id's hex
-  and left. A price such as «950 000 000», a version, a coordinate or an id is left alone. Launch data, tokens and the
-  session cookie are masked on the raw text first; then numbers, then the queries of addresses (still one word), then
-  the encoded separators (`%20`, `%2B`, brackets, dash, dot) are decoded and numbers and secrets masked again. Left
-  open on purpose (low, from the reviews): double encoding, encoded no-break spaces or dashes, full-width digits and
-  `/` or `,` as separators. Every element marked `ph-mask` (phones, author labels, the original text) is also
-  `ph-no-capture`, so autocapture never takes its text.
+  before them, dashes of any kind and other international numbers of ten digits or more, and take the query and hash
+  off an address inside a text (absolute, any case, `ws` too, or a path). A `+998` or international number is masked
+  also next to a letter; nine local digits next to a letter are taken for an id's hex and left. A price such as
+  «950 000 000», a version, a coordinate or an id is left alone.
+- **The scrubbers' boundary (six review rounds).** A text is judged on its **canonical form**: percent escapes decoded,
+  at most three passes, one run of escapes at a time, never throwing (`canonical()` in `lib/analytics/scrub.ts`). A
+  text is replaced whole by `[redacted]` when its canonical form holds a bearer token or the session cookie with a
+  value, or, once the queries and hashes of its addresses are cut, Telegram's launch data (`tgWebAppData`, `query_id`,
+  `user`, `auth_date`, `hash`, `signature` … with a value, or the user object's own keys; quoted, JSON-escaped or
+  bare). Numbers and e-mail addresses are masked in place, and a text whose canonical form still shows one is also
+  replaced whole. Outside the boundary: other encodings (`\u0025`, HTML entities, full-width digits). Over-redaction is
+  accepted: an error message that names a token or launch data loses its text. `tests/analytics/scrub.test.ts` crosses
+  every secret (launch data raw, decoded, encoded once and twice, `=` as `%3D` or `%253D`; a token; the cookie; an
+  e-mail address; a phone number) with every place it may sit (after `%20`, `%0A` or `%26`, in a sentence, in JSON,
+  in an address's query or hash) and asserts that none of its value survives.
+- Every element marked `ph-mask` (phones, author labels, the original text) is also `ph-no-capture`, so autocapture
+  never takes its text.
 - **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
   changes under it), and a layer that leaves lets the same layer count again.
 - **PostHog.** Every option name was checked in the types of the installed `posthog-js` 1.434.15. The web vitals

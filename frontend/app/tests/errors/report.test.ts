@@ -71,10 +71,10 @@ describe("reportError (WP-32, 03 §1.6, §3.4)", () => {
   });
 
   it("scrubs the message and takes the source from the stack without its query", () => {
-    const error = new Error("token Bearer 1|abc for x@y.uz");
+    const error = new Error("failed for x@y.uz at +998901234567");
     error.stack = "Error\n    at https://app.homi.uz/_next/static/a.js?v=1:3:4";
     reportError(error, { kind: "error" });
 
-    expect(errors()[0]).toMatchObject({ message: "token Bearer *** for ***@***", source: "https://app.homi.uz/_next/static/a.js:3:4" });
+    expect(errors()[0]).toMatchObject({ message: "failed for ***@*** at +998***", source: "https://app.homi.uz/_next/static/a.js:3:4" });
   });
 });

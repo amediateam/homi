@@ -1,19 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { isAppAddress, scrubDeep, scrubText, stripUrl } from "@/lib/analytics/scrub";
+import { canonical, isAppAddress, REDACTED, scrubDeep, scrubText, stripUrl } from "@/lib/analytics/scrub";
 
 describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
-  it("masks Telegram's launch data in a query, in a hash and in the middle of a sentence, up to the next & or #", () => {
-    // An address loses its whole query and hash; outside an address the launch data is masked up to `&` or `#`.
+  it("an address in a text loses its query and hash, launch data in them included; the text stays", () => {
     expect(scrubText("https://app.homi.uz/ru?tgWebAppData=query_id%3DAA&x=1")).toBe("https://app.homi.uz/ru");
-    expect(scrubText("https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D#rest")).toBe("https://app.homi.uz/ru");
-    expect(scrubText("hash tgWebAppData=user%3D%7B%7D#rest")).toBe("hash tgWebAppData=***#rest");
-    expect(scrubText("failed at tgWebAppData=abc while loading")).toBe("failed at tgWebAppData=*** while loading");
+    expect(scrubText("at https://app.homi.uz/ru#tgWebAppData=user%3D%7B%7D now")).toBe("at https://app.homi.uz/ru now");
   });
 
-  it("masks a bearer token and the session cookie pair", () => {
-    expect(scrubText("Authorization: Bearer 12|abcDEF.ghi-jkl_mno")).toBe("Authorization: Bearer ***");
-    expect(scrubText("cookie homi_session=eyJpdiI6; other=1")).toBe("cookie homi_session=***; other=1");
+  it("a text that holds launch data, a bearer token or the session cookie outside an address is replaced whole", () => {
+    expect(scrubText("hash tgWebAppData=user%3D%7B%7D#rest")).toBe(REDACTED);
+    expect(scrubText("failed at tgWebAppData=abc while loading")).toBe(REDACTED);
+    expect(scrubText("Authorization: Bearer 12|abcDEF.ghi-jkl_mno")).toBe(REDACTED);
+    expect(scrubText("cookie homi_session=eyJpdiI6; other=1")).toBe(REDACTED);
+    // Idempotent: the journal scrubs, the /bff proxy scrubs again.
+    expect(scrubText(REDACTED)).toBe(REDACTED);
   });
 
   it("masks +998 numbers with and without separators, and only those", () => {
@@ -74,16 +75,26 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     }
   });
 
-  it("masks an encoded launch-data field whole, a space inside it included (fifth review)", () => {
-    const text = scrubText("init user=%7B%22first_name%22%3A%22Ali%20Vali%22%2C%22username%22%3A%22alivali%22%7D&hash=abc done");
-
-    expect(text).toBe("init user=***&hash=*** done");
+  it("judges a text on its canonical form: escapes decoded up to three times, a broken sequence never throws", () => {
+    expect(canonical("a%2520b%253Dc")).toBe("a b=c");
+    expect(canonical("%E0%A4%A broken %ZZ %41")).toBe("%E0%A4%A broken %ZZ A");
+    // Three passes and no more: `%25` three times unwrapped leaves one `%25`.
+    expect(canonical("%25252525")).toBe("%25");
   });
 
-  it("masks decoded launch data field by field", () => {
-    expect(scrubText('query_id=AAH1&user={"id":42,"first_name":"Ali"}&auth_date=1700000000&hash=abc123&signature=xyz')).toBe(
-      "query_id=***&user=***&auth_date=***&hash=***&signature=***",
-    );
+  it("leaves ordinary texts as they are", () => {
+    for (const text of [
+      "Loading chunk 123 failed",
+      "Cannot read properties of undefined (reading 'user')",
+      "the user tapped the hash sign",
+      "price 950 000 000 sum, area 41.5 m2",
+      "listing 100018 at 41.311081, 69.240562",
+      "1+1=2 and snake_case_ids_123456789",
+      "0f8e2a4c-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
+      "+998 ** *** ** 67",
+    ]) {
+      expect(scrubText(text)).toBe(text);
+    }
   });
 
   it("masks e-mail addresses", () => {
@@ -122,3 +133,100 @@ describe("stripUrl and isAppAddress", () => {
     expect(isAppAddress("/ru", "https://app.homi.uz")).toBe(false);
   });
 });
+
+/** `text` with every escape it may still hold decoded, as a reader would. */
+function reveal(text: string): string {
+  return canonical(canonical(text));
+}
+
+const enc = encodeURIComponent;
+const USER = JSON.stringify({ id: 4242, first_name: "Ivan Петров", username: "alivali77", language_code: "ru" });
+const INIT_DATA = `query_id=AAHxyz1&user=${enc(USER)}&auth_date=1700000000&hash=c0ffee1234abcd5678&signature=SiGn4tur3`;
+const TOKEN = "7|AbCdEf123456GhIjKl7890";
+const COOKIE = "s3ss10nV4lueXyz";
+
+/** A secret, its forms (raw, decoded, encoded once and twice, `=` encoded) and the pieces that must never be seen. */
+const SECRETS: { name: string; forms: string[]; pieces: string[] }[] = [
+  {
+    name: "launch data",
+    forms: [
+      INIT_DATA,
+      decodeURIComponent(INIT_DATA),
+      enc(INIT_DATA),
+      enc(enc(INIT_DATA)),
+      INIT_DATA.replace(/=/g, "%3D"),
+      INIT_DATA.replace(/=/g, "%253D"),
+      `tgWebAppData=${enc(INIT_DATA)}`,
+      USER,
+      JSON.stringify(JSON.parse(USER)).replace(/"/g, "'"),
+    ],
+    pieces: ["Ivan", "Петров", "alivali77", "c0ffee1234abcd5678", "AAHxyz1", "SiGn4tur3"],
+  },
+  {
+    name: "a bearer token",
+    forms: [`Bearer ${TOKEN}`, `Bearer+${TOKEN}`, `Bearer%20${enc(TOKEN)}`, `Bearer%2520${enc(enc(TOKEN))}`, `Bearer ${enc(TOKEN)}`, `bearer:${TOKEN}`],
+    pieces: ["AbCdEf123456", "GhIjKl7890"],
+  },
+  {
+    name: "the session cookie",
+    forms: [`homi_session=${COOKIE}`, `homi_session%3D${COOKIE}`, `homi_session%253D${COOKIE}`, `Cookie: a=1; homi_session=${COOKIE}`, `HOMI_SESSION = ${COOKIE}`],
+    pieces: [COOKIE],
+  },
+  {
+    name: "an e-mail address",
+    forms: ["owner.name@example.uz", "owner.name%40example.uz", "owner.name%2540example.uz"],
+    pieces: ["owner.name"],
+  },
+  {
+    name: "a phone number",
+    forms: [
+      "+998 90 123 45 67",
+      "+998-90-123-45-67",
+      "(90) 123-45-67",
+      "998901234567",
+      "Tel+998901234567",
+      enc("+998 90 123 45 67"),
+      enc(enc("+998 90 123 45 67")),
+      "%2B998+90+123+45+67",
+    ],
+    pieces: ["1234567"],
+  },
+];
+
+/** Where a secret may sit in a text: alone, after an escape, in a sentence, in JSON, in an address's query or hash. */
+const WRAPPERS: { name: string; wrap: (secret: string) => string }[] = [
+  { name: "alone", wrap: (secret) => secret },
+  { name: "after %20", wrap: (secret) => `x%20${secret}` },
+  { name: "after %0A", wrap: (secret) => `x%0A${secret}` },
+  { name: "after %26", wrap: (secret) => `x%26${secret}` },
+  { name: "in a sentence", wrap: (secret) => `failed: ${secret} while loading` },
+  { name: "on a new line", wrap: (secret) => `Error\n${secret}` },
+  { name: "in JSON", wrap: (secret) => JSON.stringify({ message: secret }) },
+  { name: "quoted", wrap: (secret) => `"${secret}"` },
+  { name: "in a query", wrap: (secret) => `https://app.homi.uz/ru?x=${secret} after` },
+  { name: "in a hash", wrap: (secret) => `https://app.homi.uz/ru#tgWebAppData=${secret} after` },
+  { name: "in a path's query", wrap: (secret) => `GET /bff/x?q=${secret} failed` },
+];
+
+/** The digits of `text` only, so a number written with separators is found whole. */
+const digits = (text: string) => text.replace(/\D/g, "");
+
+describe("scrubText: no secret survives any form or place (sixth review; the canonical form)", () => {
+  for (const secret of SECRETS) {
+    for (const wrapper of WRAPPERS) {
+      it(`${secret.name}, ${wrapper.name}`, () => {
+        for (const form of secret.forms) {
+          const out = reveal(scrubText(wrapper.wrap(form)));
+          for (const piece of secret.pieces) {
+            if (secret.name === "a phone number") {
+              expect(digits(out), form).not.toContain(piece);
+            } else {
+              expect(out, form).not.toContain(piece);
+            }
+          }
+        }
+      });
+    }
+  }
+});
+

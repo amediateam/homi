@@ -1,17 +1,30 @@
 /**
  * The scrubbers of everything that leaves the browser (WP-32; SEC-REQ-022, SEC-REQ-047, TMA-009): the journal bodies,
- * the PostHog properties and, again on the server, the boot-error route. One implementation for all three. They mask
- * Telegram's launch data (`tgWebAppData=…` up to the next `&` or `#`, and its decoded fields `query_id`, `user`,
- * `auth_date`, `hash`, `signature`, `chat_instance`, `chat_type`, `start_param`), a bearer token, the session cookie
- * pair, phone numbers — Uzbek ones with `+998`, `998` or `00998`, the nine local digits of a mobile code, `8` before
- * them, any separators (masked to `+998***`), and other international numbers (`+` and nine or more digits, masked to
- * `+***`) — and e-mail addresses. Over-masking a number that is not a phone is accepted.
+ * the PostHog properties and, again on the server, the boot-error route. One implementation for all three.
+ *
+ * The property they keep: a text is judged on its canonical form — percent escapes decoded, up to three passes, one
+ * run of escapes at a time and never throwing. A text is replaced whole by `[redacted]` when its canonical form holds
+ * a bearer token or the session cookie with a value, or, once the queries and hashes of its addresses are cut,
+ * Telegram's launch data (`tgWebAppData`, `query_id`, `user`, `auth_date`, `hash`, `signature` … with a value, or the
+ * user object's own keys; quoted, JSON-escaped or bare). Phone numbers — Uzbek ones with `+998`, `998` or `00998`, the nine local digits of a
+ * code written as a phone is, `8` before them, any separators (masked to `+998***`), other international numbers (`+`
+ * and ten or more digits, masked to `+***`) — and e-mail addresses are masked in place; a text whose canonical form
+ * still shows one after that is also replaced whole. Other encodings (`\u0025`, HTML entities, full-width digits) are
+ * outside that form. Over-masking a number that is not a phone, or a text that only looks like launch data, is
+ * accepted.
  */
 
-const LAUNCH_DATA = /tgWebAppData=[^&#\s]*/g;
-const LAUNCH_FIELDS = /\b(query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)=[^&#\s]*/g;
-const BEARER = /\bBearer\s+[\w.~+/=|-]+/gi;
-const SESSION = /\bhomi_session=[^;&#\s]*/g;
+export const REDACTED = "[redacted]";
+
+// Seen on the canonical form, so an escape before a key or for `=` hides nothing. A key may be quoted, JSON-escaped
+// (`\"user\":`) or bare; a value that starts with `*` is a mask already.
+const LAUNCH_MARKS = [
+  /(?<![a-z0-9])\\?["']?(?:tgWebAppData|query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)\\?["']?\s*[=:]\s*\\?["']?[^\s&#*"'\\]/i,
+  /(?<![a-z0-9])\\?["']?(?:first_name|last_name|username|photo_url|allows_write_to_pm|language_code)\\?["']?\s*[=:]/i,
+];
+// On the whole text, queries included: cutting a query at a space could part a token from its name, and no address of
+// the app carries either.
+const TOKEN_MARKS = [/(?<![a-z])bearer[\s+:=]*[^\s*"'<>,;]/i, /homi_session\s*=\s*[^\s;&*]/i];
 const SEPARATOR = "[\\s().+_\\u200b\\u2212\\u2010-\\u2015-]*";
 // The percent-encoded separators and plus of an address's query (`%2B998%2090…`), decoded before the phone patterns.
 const ENCODED = /%2[0BbDdEe89]/g;
@@ -38,24 +51,49 @@ function phones(text: string): string {
   return text.replace(PHONE, "+998***").replace(INTERNATIONAL, "+***").replace(LOCAL_PHONE, "+998***");
 }
 
-function secrets(text: string): string {
-  return text
-    .replace(LAUNCH_DATA, "tgWebAppData=***")
-    .replace(LAUNCH_FIELDS, "$1=***")
-    .replace(BEARER, "Bearer ***")
-    .replace(SESSION, "homi_session=***");
+function decodeRun(run: string): string {
+  try {
+    return decodeURIComponent(run);
+  } catch {
+    // A broken sequence: its ASCII escapes only.
+    return run.replace(/%([0-9A-Fa-f]{2})/g, (escape, hex: string) => {
+      const code = Number.parseInt(hex, 16);
+      return code < 0x80 ? String.fromCharCode(code) : escape;
+    });
+  }
+}
+
+/** `text` with its percent escapes decoded, up to three times (`%2520` → `%20` → ` `); for judging only. */
+export function canonical(text: string): string {
+  let current = text;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = current.replace(/(?:%[0-9A-Fa-f]{2})+/g, decodeRun);
+    if (next === current) {
+      break;
+    }
+    current = next;
+  }
+  return current;
 }
 
 /**
- * `value` with launch data, tokens, the session cookie, phone numbers, e-mail addresses and the queries of addresses
- * masked. The order matters: launch data, tokens and the cookie first, on the raw text (a decoded `%20` would end a
- * launch field's value early), then numbers (one written with spaces after `?tel=` would lose its `+998` with the
- * query), then the queries of addresses while they are still one word (`%20` decoded first would leave a query's parts
- * behind as words), then the percent-encoded separators decoded, and numbers and secrets again.
+ * `value` scrubbed (see the top of this file). Numbers are masked first (one written with spaces after `?tel=` would
+ * lose its `+998` with the query), then the queries of addresses are cut while they are still one word, then the text
+ * is judged for secrets; the encoded separators are decoded for a second pass over numbers, then e-mail addresses.
  */
 export function scrubText(value: string): string {
-  const withoutQueries = phones(secrets(value)).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
-  return secrets(phones(withoutQueries.replace(ENCODED, (code) => decodeURIComponent(code)))).replace(EMAIL, "***@***");
+  const whole = canonical(value);
+  if (TOKEN_MARKS.some((mark) => mark.test(whole))) {
+    return REDACTED;
+  }
+  const cut = phones(value).replace(ADDRESS_QUERY, "$1").replace(PATH_QUERY, "$1");
+  const view = canonical(cut);
+  if (LAUNCH_MARKS.some((mark) => mark.test(view))) {
+    return REDACTED;
+  }
+  const masked = phones(cut.replace(ENCODED, (code) => decodeURIComponent(code))).replace(EMAIL, "***@***");
+  const after = canonical(masked);
+  return phones(after) === after && after.search(EMAIL) === -1 ? masked : REDACTED;
 }
 
 /**
