@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | TODO |
+| Status | IN PROGRESS (part 1 in review) |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -66,7 +66,8 @@ Server Components — server-rendered paths are proven here, in cookie mode), `0
 - CI (`.github/workflows/frontend-e2e.yml`): the API service — PHP dependencies, migration on SQLite, the API on
   a free local port with PHP's built-in server, the app built and started with `NEXT_PUBLIC_APP_ENV=ci` — exists
   since WP-21, whose specs already needed it. This package adds `php artisan sources:publish-stub-media` before
-  the build, WebKit, the nightly schedule and the check steps. The built-in server is for CI only; on a
+  the build, WebKit, the manual run (`workflow_dispatch`, no schedule: DEC-100) and the check steps. The built-in
+  server is for CI only; on a
   developer machine the suite runs against `https://app.homi.loc` through `E2E_BASE_URL` after `make dev-start`.
 - Whether each engine accepts a `Secure`, `Partitioned` cookie on `http://localhost` is **verify before use**; if
   one does not, CI terminates TLS with a throwaway certificate and the projects set `ignoreHTTPSErrors`.
@@ -90,10 +91,13 @@ The `miniapp` project of WP-03 is replaced by:
 | `miniapp-locales` | Chromium, 390 × 844 | cookie | `android`; addresses in `uz` and `en` | `@render` |
 | `miniapp-dark` | Chromium, 390 × 844, dark scheme | cookie | `android`, dark theme | `@render` |
 | `analytics` | Chromium (build with a fake PostHog key, WP-32) | both | `android` | `analytics.spec.ts` |
-| `perf` | Chromium, CPU × 4, slow 4G | cookie | `android` | `e2e/perf/*`, nightly and on demand |
+| `perf` | Chromium, CPU × 4, slow 4G | cookie | `android` | `e2e/perf/*`, in the manual run (DEC-100) |
 
-Pull requests run `miniapp-cookie`, `miniapp-header`, `miniapp-old` and the two render projects; the others run
-nightly and before the pass. The full cross product of locale, theme and mode is done by people, on the checklist.
+Pull requests run `miniapp-cookie` and `miniapp-header` (DEC-101). A test about the modes loops over both and names
+its mode in the title; both copies run in `miniapp-cookie`, and `miniapp-header` runs every test that names no mode.
+Every other project runs in the manual run before a pass (`workflow_dispatch` with `E2E_FULL=1`, no schedule:
+DEC-100). The full cross product of locale, theme and mode is done by people, on the checklist (*changed by DEC-100
+and DEC-101, 2026-11-22*).
 
 ### Session-mode fixture (`e2e/support/modes.ts`)
 
@@ -215,7 +219,8 @@ Numbers are proposals. The first measured value on the merged stage B is recorde
 | 10 | Second opening of the map | no map chunk requested again | network log |
 
 `frontend/app/scripts/check-budgets.mjs` compares the JSON written by the `perf` project with
-`perf-budgets.json`. Rows 3–6 run on every pull request (they need no throttling); rows 1, 2, 7–10 nightly.
+`perf-budgets.json`. Rows 3–6 run on every pull request (they need no throttling); rows 1, 2, 7–10 in the manual run
+(DEC-100).
 
 ### Bundle check (`frontend/app/scripts/check-bundle.mjs`)
 
@@ -295,7 +300,7 @@ Changed:
   annotations, scenarios instead of interception)
 - `frontend/app/lib/api/server.ts`, `frontend/app/app/bff/[...path]/route.ts`, `frontend/app/app/bff/session/route.ts`,
   `frontend/app/lib/actions/run.ts` — only where a path does not forward the scenario cookie of WP-22
-- `.github/workflows/frontend-e2e.yml` (stub media, WebKit, the nightly schedule, the check steps), `Makefile`
+- `.github/workflows/frontend-e2e.yml` (stub media, WebKit, the manual run of DEC-100, the check steps), `Makefile`
   (`e2e`, new `bundle-check`) — shared files: announce them in the PR as `docs/handoff/parallel-work.md` asks
 - `docs/testing/verification-log.md`, `docs/migration/wave-1/README.md` (status), the specifications of owning
   packages where the acceptance corrected them
@@ -319,7 +324,7 @@ Changed:
 11. De-flake: `--repeat-each=10` locally for every new or changed spec; no `test.fixme`, no retry above 1 in CI.
 12. `check-bundle.mjs` with the production-environment build; its CI step and `make bundle-check`.
 13. `perf` specs; first measurement on the merged branch; write `perf-budgets.json`; `check-budgets.mjs`; the
-    nightly job.
+    manual run (DEC-100).
 14. Merge and deploy with the production track. Tick the screen table on staging in ru, uz and en, light and
     dark, with screenshots in the PR.
 15. The pass inside Telegram on staging, then on production; fill the record and the verification log.
@@ -530,8 +535,10 @@ The suite is the deliverable; these are the tests of the suite and its tools.
 - `e2e-coverage.mjs`: removing the annotation of one screen makes it fail and name that screen.
 - `check-bundle.mjs`: a planted forbidden string in a client module fails the check; the clean build passes.
 - `check-budgets.mjs`: a planted oversize measurement fails; a missing measurement fails.
-- Stability: the pull-request projects pass five times in a row on `main` before the package is closed; the full
-  run stays under 15 minutes.
+- Stability: the pull-request projects pass five times in a row on `main` before the package is closed — run on the
+  local stack (`scripts/dev/e2e-local.sh`), not on Actions, to keep the minutes of DEC-100. The suite took 17.8 minutes
+  on CI before this package (#110), so the 15-minute ceiling is replaced by the measured time of the pull-request
+  projects, stated in the PR.
 
 ## Acceptance checklist
 
@@ -691,7 +698,8 @@ merged (*added by the intake of `index-YX9bFVws.js`*).
       rows 40, 46 and 47 a staging screenshot of the feed without them and local screenshots of each; all of them
       are ticked inside Telegram in WP-57 (DEC-51).
 - [ ] Every line of the acceptance checklists of WP-20 … WP-32 is ticked in its own PR or re-ticked here.
-- [ ] `miniapp-cookie` and `miniapp-header` run every spec; a spec cannot opt out of a mode.
+- [ ] Every spec runs in cookie mode and in header mode in every PR (DEC-101): `miniapp-header` runs every test that
+      does not name its mode, and a test that names it loops over both modes. A spec cannot opt out of a mode.
 - [ ] The mode assertions pass after every test: cookie attributes in cookie mode; bearer header and no stored
       token in header mode.
 - [ ] `e2e-coverage.mjs` reports no screen without a test; the tables of this file name every rule, defect and
@@ -719,12 +727,68 @@ merged (*added by the intake of `index-YX9bFVws.js`*).
       rules run in CI; map and PostHog code are absent from the feed's first load.
 - [ ] `check-bundle.mjs` passes on the production-environment build: no emulator, no test double, no gallery, no
       scenario forwarding, no server-only key, no legacy key name, no legacy brand word, no public source map.
-- [ ] The pull-request projects passed five times in a row on `main`; no test is skipped or marked to fix.
+- [ ] The pull-request projects passed five times in a row on `main` on the local stack (DEC-100); no test is skipped
+      or marked to fix.
 - [ ] `make ci-frontend`, `make e2e` and `make bundle-check` are green; the queue row is `DONE`; the session
       handoff names WP-40 as next.
 
 Exit to stage C: all statements above, plus every contract gap found during stage B written back into
 WP-11 … WP-13 with regenerated types, and no open defect that blocks a scenario of the checklist.
+
+## As built
+
+The package ships in parts, like WP-82: each part is one PR under the 3 000-line rule. **Part 1** (2026-11-22) is the
+suite's plumbing and the bundle check; part 2 the passes over all addresses with the screen annotations and
+`e2e-coverage.mjs`; part 3 the eight journeys; part 4 the performance specs and budgets. Steps 14–17 are the
+production track's and stay open after the parts merge.
+
+Part 1:
+
+- **Projects** (`frontend/playwright.config.ts`, DEC-100, DEC-101). Every launch takes the session mode and the
+  Telegram profile of its project from `metadata.profile`, unless the spec names its own. Every PR runs
+  `miniapp-cookie` and `miniapp-header` (`weba`). The other five projects exist only with `E2E_FULL=1`, the manual run
+  (`workflow_dispatch` input `full`, which also installs WebKit). The `perf` project comes with part 4.
+  - Deviation: `miniapp-cookie` keeps the fake's default profile (`ios`, version 9.0), not `android`. The specs were
+    written against it, and a test about Android names its platform.
+  - A test about the modes loops over both and names the mode in its title (`(cookie mode)`, `header mode:`). Both
+    copies run in `miniapp-cookie`, and `miniapp-header` leaves every test that names its mode out. So header mode
+    covers 80 more tests, for about 2 minutes. That number is what corrected the first answer of DEC-101.
+- **The mode checks** are in `@homi/testing` (`src/modes.ts`, run by the `test` fixture of `./playwright`), not in
+  `e2e/support/modes.ts`: `launchApp` and the `test` every spec imports live there. The rules:
+  - Cookie mode requires `HttpOnly`, `Secure`, `SameSite=None` and a partition key. Chromium reports the key for
+    `http://localhost`, verified on the whole suite.
+  - Header mode: once a request of a document carried the bearer, every later `/bff/` request of it must too. A
+    reload's reads before its own sign-in carry no token and are not findings.
+  - The token must not be in storage, in a Telegram storage call or in an address.
+  - Console errors, CSP violations and missing messages are findings. Chromium's lines about an answer's status do
+    not count.
+  - A test that provokes an error declares it (`allowConsoleErrors`, `allowCspViolations`): `crash`, `errors`, `csp`
+    and the not-found test of `foundation`.
+- The header mode's handler of `/bff/session` is a **context route**, so a spec's own answer of the exchange wins
+  whether it was registered before the launch or after. Two `gates` tests had been passing only in cookie mode.
+- **Scenarios**: `setScenario` and `withScenario` of `@homi/testing` (`src/scenarios.ts`) replace the 15 copies of
+  `stubScenario` and `useScenario` and the inline cookie calls. No `e2e/support/scenarios.ts` was needed.
+- **Found by the mode checks and fixed:** React error 418 on every direct load or reload with a session, 27 tests of
+  the survey. The demo marker's `useSyncExternalStore` used the live store as its server snapshot. A page's boundary
+  hydrated first and reported `stub`, so the marker's own boundary hydrated into a pill the server never rendered.
+  The server snapshot is now constant (`lib/data/sources.ts`), with a hydration test.
+- **Found and left (low):** React error 419 at an unknown address, about one launch in sixteen. It comes from the
+  `notFound()` under `<Suspense>` of AM-57: when the boundary streams after the shell, React finishes it on the client.
+  The global error listener may send it as an `app_error`.
+- **Bundle check** (`app/scripts/check-bundle.mjs`, `make bundle-check`, the last step of the e2e job). On its first
+  run it found three things, all fixed:
+  - Row 3: the gallery's client chunk. The page now imports the gallery only in the branch of the builds that show
+    it, which the bundler drops in production.
+  - Row 4: the scenario cookie's name in server code. The names are empty in a production build.
+  - Row 7: the raw `legacy` and `homi` catalogues of all three locales, about 150 KB, in a client chunk. The client's
+    `IntlClientProvider` imported `createIntlHandlers` from the module that imports the catalogue files. It is now in
+    `src/handlers.ts` of `@homi/i18n`, and the package is marked `"sideEffects": false`.
+- Row 7 does not count the legacy catalogue's key `found.kvadro`. The importer keeps legacy key names (its rule 6 and
+  `keys.json`), a key path is never shown, and rule 5 of `25` §2 is about what the interface shows. Server source
+  maps are not scanned: they are not served. The 404 of `/dev/ui` in production is the unit test
+  `tests/gallery/page.test.tsx`, not a request of the script.
+- `sources:publish-stub-media` is not a CI step. CI has no name for `cdn.homi.loc`, and the specs answer stub photos
+  themselves (`stubMedia`).
 
 ## Handoff
 
