@@ -17,7 +17,15 @@ export interface Launch {
   /** `?mapdebug` is present, with or without a value: the map view exposes its map object outside production. */
   mapDebug: boolean;
   entry: LaunchEntry;
+  /**
+   * An owner launch (WP-81, TMA-046, LB-APP-060): `new` for `start_param` `owner_new` or `owner-new` or the page query
+   * `owner=new`; `phone` with the draft's id for `o_<ULID>` (the way back from the bot's share keyboard below 6.9). A
+   * listing link wins over both; `entry` stays `menu` (the launch source of LB-APP-058 is reproduced, not fixed).
+   */
+  owner: { kind: "new" } | { kind: "phone"; id: string } | null;
 }
+
+const OWNER_ID = /^o_([0-7][0-9A-HJKMNP-TV-Z]{25})$/i;
 
 function positiveNumber(text: string | null | undefined): number | null {
   if (!text || !/^\d+$/.test(text)) {
@@ -67,6 +75,15 @@ function read(initData: string, search: string): Launch {
   const news = newsParam !== null && /^[a-z_]{1,32}$/.test(newsParam) ? newsParam : null;
   const mapParam = query.get("map");
   const mapOverride = mapParam === "gl" || mapParam === "leaflet" || mapParam === "auto" ? mapParam : null;
+  const ownerPhone = OWNER_ID.exec(startParam)?.[1];
+  const owner: Launch["owner"] =
+    listingNumber !== null
+      ? null
+      : startParam === "owner_new" || startParam === "owner-new" || query.get("owner") === "new"
+        ? { kind: "new" }
+        : ownerPhone !== undefined
+          ? { kind: "phone", id: ownerPhone }
+          : null;
   return {
     listingNumber,
     source: fromStart !== null ? sourceOf(startParam) : null,
@@ -75,6 +92,7 @@ function read(initData: string, search: string): Launch {
     mapOverride,
     mapDebug: query.has("mapdebug"),
     entry: listingNumber !== null ? "link" : news !== null ? "news" : "menu",
+    owner,
   };
 }
 

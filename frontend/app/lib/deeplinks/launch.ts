@@ -69,9 +69,12 @@ function digest(text: string): string {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
-/** The mark of this launch's listing: the digest of the launch data's `hash` (empty when absent) and the number. */
-function launchMark(number: number): string {
-  return `${digest(new URLSearchParams(tg.initData()).get("hash") ?? "")}:${number}`;
+/**
+ * The mark of this launch's target: the digest of the launch data's `hash` (empty when absent) and the listing's
+ * number, or the target's address for an owner launch (WP-81).
+ */
+function launchMark(key: number | string): string {
+  return `${digest(new URLSearchParams(tg.initData()).get("hash") ?? "")}:${key}`;
 }
 
 /**
@@ -93,7 +96,17 @@ export function launchTarget(launch: Launch): string | null {
   if (launch.listingNumber !== null) {
     return listingOpened(launch.listingNumber) ? null : routes.listing(launch.listingNumber);
   }
+  if (launch.owner !== null) {
+    // WP-81 (TMA-046, LB-APP-060): the form, or the phone step of the draft the bot's share keyboard came back from.
+    const address = launch.owner.kind === "new" ? routes.ownerNew() : routes.ownerPhone(launch.owner.id);
+    return storageGet("homi-launch-done") === launchMark(address) ? null : address;
+  }
   return launch.news === "pets" ? routes.filters({ focus: "pets" }) : null;
+}
+
+/** Whether a launch's target waits for the first-launch pickers (an owner launch, default (c)) rather than leads. */
+function ownerLaunch(launch: Launch): boolean {
+  return launch.listingNumber === null && launch.owner !== null;
 }
 
 let consumed = false;
@@ -101,6 +114,8 @@ let consumed = false;
 let target: string | null = null;
 /** The listing of `target`, marked once the address has shown it; `null` for `?news=pets`. */
 let targetNumber: number | null = null;
+/** `target` is an owner launch's: marked by its address, and never pending (it waits behind the pickers). */
+let targetIsOwner = false;
 /**
  * The listing the consumed launch opens, kept after `targetNumber` is forgotten (`launchListing`); `null` when the launch
  * opens none, or its listing was already shown in this launch.
@@ -156,6 +171,7 @@ function dropTarget(): void {
   }
   target = null;
   targetNumber = null;
+  targetIsOwner = false;
   changed();
 }
 
@@ -169,6 +185,7 @@ export function consumeLaunch(): boolean {
   const launch = typeof window === "undefined" ? null : parseLaunch(tg.initData(), window.location.search);
   target = launch === null ? null : launchTarget(launch);
   targetNumber = target !== null && launch !== null ? launch.listingNumber : null;
+  targetIsOwner = target !== null && launch !== null && ownerLaunch(launch);
   launchedNumber = targetNumber;
   if (target !== null) {
     clearPendingTimer();
@@ -193,17 +210,21 @@ export function launchPending(): boolean {
     return false;
   }
   if (!consumed) {
-    return launchTarget(parseLaunch(tg.initData(), launchSearch)) !== null;
+    const launch = parseLaunch(tg.initData(), launchSearch);
+    return !ownerLaunch(launch) && launchTarget(launch) !== null;
   }
   if (target !== null && normaliseAddress(window.location.pathname) === target.split("?")[0]) {
     if (targetNumber !== null) {
       storageSet("homi-launch-done", launchMark(targetNumber));
+    } else if (targetIsOwner) {
+      storageSet("homi-launch-done", launchMark(target));
     }
     target = null;
     targetNumber = null;
+    targetIsOwner = false;
     clearPendingTimer();
   }
-  return target !== null;
+  return target !== null && !targetIsOwner;
 }
 
 /**

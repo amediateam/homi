@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/session/SessionProvider", () => ({ useSession: () => ({ status: state.status }) }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: state.push, replace: state.replace } }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(window.location.search) }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(window.location.search), usePathname: () => window.location.pathname }));
 
 let fake: FakeTelegram | null = null;
 
