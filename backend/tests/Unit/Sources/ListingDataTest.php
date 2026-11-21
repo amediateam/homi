@@ -69,12 +69,12 @@ it('gives a call link with every phone of a contact', function (): void {
 });
 
 it('writes a map label as plain text', function (): void {
-    expect(MapPoint::fromArray(['number' => 1, 'lat' => 41.3, 'lon' => 69.2, 'label' => '<b>$600</b> & up', 'tone' => 'good', 'priced' => true, 'usd' => 600])->label)
+    expect(MapPoint::fromArray(['number' => 1, 'origin' => 'legacy', 'lat' => 41.3, 'lon' => 69.2, 'label' => '<b>$600</b> & up', 'tone' => 'good', 'priced' => true, 'usd' => 600])->label)
         ->toBe('b>$600/b> up');
 });
 
 it('refuses map counts out of order: points ≤ with_point ≤ total', function (int $points, int $total, int $withPoint): void {
-    $point = MapPoint::fromArray(['number' => 1, 'lat' => 41.3, 'lon' => 69.2, 'label' => '$600', 'tone' => null, 'priced' => true, 'usd' => 600]);
+    $point = MapPoint::fromArray(['number' => 1, 'origin' => 'legacy', 'lat' => 41.3, 'lon' => 69.2, 'label' => '$600', 'tone' => null, 'priced' => true, 'usd' => 600]);
 
     expect(fn () => new MapPoints(array_fill(0, $points, $point), $total, $withPoint))->toThrow(InvalidArgumentException::class);
 })->with([

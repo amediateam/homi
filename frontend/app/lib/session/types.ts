@@ -14,9 +14,11 @@ export interface Me {
   city_chosen: boolean;
   team: boolean;
   analytics: { distinct_id: string; autocapture: boolean; replay: boolean; replay_rate: number } | null;
+  /** The owner cabinet's part (WP-80): pending requests on the caller's listings, any listing, the waitlist. */
+  owner: { pending: number; has_listings: boolean; waitlisted: boolean };
 }
 
-export const ME_KEYS = ["locale", "locale_chosen", "currency", "theme", "city", "city_chosen", "team", "analytics"] as const satisfies readonly (keyof Me)[];
+export const ME_KEYS = ["locale", "locale_chosen", "currency", "theme", "city", "city_chosen", "team", "analytics", "owner"] as const satisfies readonly (keyof Me)[];
 
 /**
  * `reason` of `403 access_denied`; an unknown or missing one counts as `private` (`docs/api/README.md`). `paused`: the

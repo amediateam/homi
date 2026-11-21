@@ -9,14 +9,15 @@ export const DEFAULT_RADAR_LIMIT = 10;
  */
 export const EMPTY_REFERENCE: Reference = {
   bot: { username: null, support_username: null },
-  limits: { radars: DEFAULT_RADAR_LIMIT },
+  limits: { radars: DEFAULT_RADAR_LIMIT, owner_listings: 2, owner_photos: 10, requests: { day: 10, week: 30, pause_minutes: 10 } },
   radars_enabled: false,
+  owner_enabled: false,
   rates: { usd_uzs: 0 },
   map: { tiles_url: null },
   features: [],
   locales: [],
   cities: [],
-  renovations: { rent_long: [], rent_daily: [], sale: [] },
+  renovations: { rent_long: [], rent_daily: [], sale: [], owner: [] },
   appliances: [],
   price_presets: { rent_long: [], rent_daily: [], sale: [] },
 };

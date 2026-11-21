@@ -641,7 +641,7 @@ describe("useSubscribe(): the flow bound to the page", () => {
   }
 
   beforeEach(() => {
-    feedReference({ reference: { radars_enabled: true, limits: { radars: 4 } } });
+    feedReference({ reference: { radars_enabled: true, limits: { radars: 4, owner_listings: 2, owner_photos: 10, requests: { day: 10, week: 30, pause_minutes: 10 } } } });
   });
 
   it("ok: the success haptic, then the toast in the app's host — also when the caller passed the sheet", async () => {
@@ -731,7 +731,7 @@ describe("useSubscribe(): the flow bound to the page", () => {
   });
 
   it("radar_limit without a usable limits.radars in the reference says 10", async () => {
-    feedReference({ reference: { radars_enabled: true, limits: { radars: 0 } } });
+    feedReference({ reference: { radars_enabled: true, limits: { radars: 0, owner_listings: 2, owner_photos: 10, requests: { day: 10, week: 30, pause_minutes: 10 } } } });
     actions.createRadar.mockResolvedValueOnce(failed("conflict", 409, "radar_limit"));
     const result = subscriber();
 

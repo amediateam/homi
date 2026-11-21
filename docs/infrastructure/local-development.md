@@ -45,6 +45,7 @@ Version pins (`.node-version`, `packageManager`, composer platform, PHP extensio
 ## Environment files
 
 - `backend/.env.example` is the authoritative key list (ADR-0005/0006 defaults, `MEDIA_PUBLIC_URL`, blank `AWS_*` for staging/production, Telegram and CORS keys). Secrets never enter the repository.
+- The owner cabinet is off unless switched on: set `OWNER_CABINET_ENABLED=true` in the local `backend/.env` (the example leaves it blank because the servers' env files were built from it; `backend/phpunit.xml` sets it for the suites; WP-80, DEC-81).
 - `frontend/{landing,app,arm}/.env.example` → copy to `.env.local` (gitignored). Besides `NEXT_PUBLIC_*`, the app has server-only keys since WP-21 (`API_URL`, `CSP_*`). After pulling, a key added to a template shows up in `dev-check` as "keys missing"; copy it from the template with its default.
 - Machine-specific overrides for the scripts: `.ai/local.env` (template `.ai/local.env.example`): Next ports, `NGINX_ETC`, reference-project paths.
 

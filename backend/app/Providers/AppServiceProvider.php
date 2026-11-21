@@ -85,6 +85,13 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('uploads', fn (Request $request): Limit => Limit::perMinute(30)->by($this->actorKey($request)));
 
+        // The owner cabinet (WP-80, SEC-REQ-027): every owner write; publish and the phone request each, per route; the
+        // place and demand lookups of the form.
+        RateLimiter::for('owner-writes', fn (Request $request): Limit => Limit::perMinute(60)->by($this->actorKey($request)));
+        RateLimiter::for('owner-publish', fn (Request $request): Limit => Limit::perHour(10)->by($this->actorKey($request).'|'.$request->route()?->getName()));
+        RateLimiter::for('owner-place', fn (Request $request): Limit => Limit::perMinute(60)->by($this->actorKey($request)));
+        RateLimiter::for('owner-demand', fn (Request $request): Limit => Limit::perMinute(30)->by($this->actorKey($request)));
+
         // Collector pushes: generous per token, still bounded (ADR-0009 §2).
         RateLimiter::for('intake', fn (Request $request): Limit => Limit::perMinute(600)->by($this->actorKey($request)));
 

@@ -142,7 +142,7 @@ its row is its place in the queue.
 | [WP-39](WP-39-catch-up-motion.md) | Catch-up: motion and small UX | intake `index-YX9bFVws`, WP-38 | WAITING (merged in #100 on 2026-11-21; production track: the regular deploy, then the acceptance checklist inside Telegram on staging) |
 | [WP-31](WP-31-settings.md) | Settings and nudges | WP-23, intake `index-BnFvC-Ft`, WP-34, WP-36, WP-38, WP-39 | WAITING (merged in #101 on 2026-11-21; production track: the regular deploy, then the acceptance checklist inside Telegram on staging) |
 | [WP-32](WP-32-analytics-errors.md) | Analytics and error reporting | WP-23 | REVIEW (#103) |
-| [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | TODO |
+| [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | WAITING (merged in #104 on 2026-11-21; production track: the regular deploy with `OWNER_CABINET_ENABLED` unset on staging and production, DEC-81) |
 | [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36, WP-39 | TODO |
 | [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26, WP-39 | TODO |
 | [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | TODO |

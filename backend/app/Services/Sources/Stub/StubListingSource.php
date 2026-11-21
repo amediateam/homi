@@ -36,13 +36,22 @@ use InvalidArgumentException;
  * (`floor: 0`) and a basement (`floor: -1`). The Tashkent long-rent apartments are repeated with shifted numbers
  * (`101001` …) until the default filters find 45, so the feed has three pages.
  *
+ * HOMI's own listings (WP-80): `10000001` … `10000008`, native Tashkent long-rent apartments of the default set —
+ * `10000001` request mode with no request, the newest of the feed; `10000002` … `10000006` with a request pending,
+ * given (its contact answers), declined, expired and cancelled; `10000007` phone mode (its contact answers);
+ * `10000008` the stub user's own listing. `100024` is a legacy self-placed listing in `gate` mode (`contact.mode:
+ * hidden`, `request` with the scenario `relay_on`) and `100025` a «claimed» owner, both outside the default feed. A
+ * repeat never copies a native entry. `owner.entry` follows DEC-94: the cabinet on, an owner's listing, not the
+ * caller's own.
+ *
  * Filters applied in memory: city, deal, types, rooms (a maximum of 4 or more is open), price, area (for every
  * deal), districts, `near_metro` (metro within 1 km), `below_median` (a negative median delta) and owner; the others
  * are accepted and ignored. Count, map and new-since follow the same filter, so the same filters give the same set.
  *
  * Reserved numbers: `999404` → 404, `999503` → 503, `100016` answers with `100001` (a merged duplicate). Scenarios:
  * `empty`, `few` and `page2_error` (feed), `new_none` and `new_one` (new-since), `map_cut` (the map answers the first
- * half of its points, as a source that cut the answer by a limit), `contact_unavailable`, `translation_unavailable`.
+ * half of its points, as a source that cut the answer by a limit), `contact_unavailable`, `translation_unavailable`,
+ * `relay_on` (the gate listing `100024` takes requests).
  * A cursor the feed did not give ends the list quietly (`StubCursor`). `{media}` and `{api}` in the fixture become
  * `config('media.public_url')` and `config('app.url')`. The `stub` object of an entry (city, synthetic phone) is stub
  * data, never answered.
@@ -58,6 +67,9 @@ final class StubListingSource implements ListingSource
     public const int NOT_FOUND = 999404;
 
     public const int UNAVAILABLE = 999503;
+
+    /** The legacy self-placed listing in `gate` mode (WP-80): `contact.mode: hidden`, `request` with `relay_on`. */
+    public const int GATE = 100024;
 
     /** First number of the repeated entries. */
     private const int REPEAT_BASE = 101000;
@@ -140,6 +152,7 @@ final class StubListingSource implements ListingSource
 
             $points[] = MapPoint::fromArray([
                 'number' => $summary->number,
+                'origin' => $summary->origin->value,
                 'lat' => $summary->location->lat,
                 'lon' => $summary->location->lon,
                 'label' => $summary->price->display ?? '—',
@@ -162,7 +175,18 @@ final class StubListingSource implements ListingSource
 
     public function details(int $number, SourceContext $context): ListingDetails
     {
-        return ListingDetails::fromArray($this->entry($number, $context));
+        $entry = $this->entry($number, $context);
+
+        // The legacy gate listing takes requests while the relay is on (WP-87; the scenario `relay_on`).
+        if ($context->scenario === 'relay_on' && $entry['number'] === self::GATE && is_array($entry['contact'] ?? null)) {
+            $entry['contact']['mode'] = 'request';
+        }
+
+        $details = ListingDetails::fromArray($entry);
+
+        // DEC-94: the card invites the caller to place a listing of his own when the cabinet is on, the listing is an
+        // owner's and it is not the caller's.
+        return $details->withOwnerEntry(Config::boolean('owner.enabled') && $details->preview->isOwner === true && ! $details->owner->mine);
     }
 
     public function preview(int $number, SourceContext $context): ListingSummary
@@ -244,7 +268,8 @@ final class StubListingSource implements ListingSource
         }
 
         $defaults = array_values(array_filter($entries, fn (array $entry): bool => $this->isDefaultSet($entry)));
-        $bases = array_values(array_filter($defaults, fn (array $entry): bool => ($entry['status_text'] ?? null) === null));
+        // A repeat never copies a native entry, so every repeated number stays below the native floor.
+        $bases = array_values(array_filter($defaults, fn (array $entry): bool => ($entry['status_text'] ?? null) === null && ($entry['origin'] ?? null) === 'legacy'));
 
         for ($i = 1; $bases !== [] && count($defaults) + $i - 1 < self::DEFAULT_SET; $i++) {
             $copy = $this->repeat($bases[($i - 1) % count($bases)], $i);

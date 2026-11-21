@@ -16,6 +16,8 @@ class MeController extends ApiController
         'first_launch' => 'me/first_launch',
         'no_city' => 'me/no_city',
         'uz' => 'me/uz',
+        'owner_empty' => 'me/owner_empty',
+        'owner_waitlisted' => 'me/owner_waitlisted',
     ];
 
     public function __invoke(Request $request, StubResponder $stubs): JsonResponse

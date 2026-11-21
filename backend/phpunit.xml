@@ -36,6 +36,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!-- Radars on in the test suites, as in the local stack (WP-11); staging and production leave it unset. -->
         <env name="RADAR_CREATION_ENABLED" value="true"/>
+        <env name="OWNER_CABINET_ENABLED" value="true"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

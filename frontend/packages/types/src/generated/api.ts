@@ -300,6 +300,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{number}/contact-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.listings.contact-request.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/listings/count": {
         parameters: {
             query?: never;
@@ -449,6 +465,238 @@ export interface paths {
          *     same bytes again returns the existing media file and makes the caller one of its owners.
          */
         post: operations["v1.media.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/contact-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["v1.owner.listings.contact-mode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/demand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.owner.demand"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /owner/listings`: every listing of the caller, drafts and history included, newest first */
+        get: operations["v1.owner.listings.index"];
+        put?: never;
+        /**
+         * `POST /owner/listings`: the caller's untouched draft (`200`, DEV-054) whatever the limit, else `409 owner_limit`
+         *     at the limit, else a new draft (`201`)
+         */
+        post: operations["v1.owner.listings.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /owner/listings/{id}`: also the phone poll; with the owner's writes the only answer with the true point */
+        get: operations["v1.owner.listings.show"];
+        put?: never;
+        post?: never;
+        /** `DELETE /owner/listings/{id}`: a draft or a rejected listing (DEV-056); anything else is locked */
+        delete: operations["v1.owner.listings.destroy"];
+        options?: never;
+        head?: never;
+        /** `PATCH /owner/listings/{id}`: the changed form keys; a published listing changes at once (DEC-80) */
+        patch: operations["v1.owner.listings.update"];
+        trace?: never;
+    };
+    "/owner/listings/{id}/phone-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.owner.listings.phone-request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.owner.listings.photos.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/photos/{photo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["v1.owner.listings.photos.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/photos/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["v1.owner.listings.photos.order"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.owner.place"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.owner.listings.publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1.owner.listings.requests.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/requests/{id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1.owner.requests.answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/listings/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["v1.owner.listings.status"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/owner/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["v1.owner.waitlist.update"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -624,6 +872,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AnswerOwnerRequestRequest
+         * @description `POST /owner/requests/{id}/answer` (WP-80, BR-API-180): one of the owner's answers.
+         */
+        AnswerOwnerRequestRequest: {
+            action: components["schemas"]["OwnerRequestAction"];
+        };
         /** ApiError */
         ApiError: {
             /** @enum {boolean} */
@@ -696,6 +951,27 @@ export interface components {
                 sale?: number;
             };
         };
+        /**
+         * ContactMode
+         * @description How a self-placed listing is reached (WP-80, DEC-75): `phone` shows the number through the counted contact method, `request` hides it and takes requests, `hidden` shows neither (a legacy `gate` listing while the relay is off).
+         * @enum {string}
+         */
+        ContactMode: "phone" | "request" | "hidden";
+        /** ContactRequestResultResource */
+        ContactRequestResultResource: {
+            status: components["schemas"]["ContactRequestStatus"];
+        };
+        /** ContactRequestStateResource */
+        ContactRequestStateResource: {
+            status: components["schemas"]["ContactRequestStatus"];
+            sent_at: string | null;
+        };
+        /**
+         * ContactRequestStatus
+         * @description The status of a seeker's request (WP-80): the owner side sees all six; the seeker never sees `agent`, which reads as `declined` for him (`forSeeker()`).
+         * @enum {string}
+         */
+        ContactRequestStatus: "pending" | "given" | "declined" | "agent" | "expired" | "cancelled";
         /** ContactResource */
         ContactResource: {
             call_url: string;
@@ -849,6 +1125,7 @@ export interface components {
         /** ListingDetailsResource */
         ListingDetailsResource: {
             number: number;
+            origin: components["schemas"]["ListingOrigin"];
             deal: components["schemas"]["Deal"] | null;
             type: components["schemas"]["PropertyType"] | null;
             title: string;
@@ -924,10 +1201,13 @@ export interface components {
                 count: number;
             } | null;
             owner_label: string | null;
+            owner: components["schemas"]["ListingOwnerResource"];
             contact: {
                 has_phone: boolean;
                 contact_url: string | null;
                 contact_paid: boolean;
+                mode: components["schemas"]["ContactMode"] | null;
+                request: components["schemas"]["ContactRequestStateResource"] | null;
             };
             summary: string | null;
             offers: components["schemas"]["ListingOfferResource"][];
@@ -973,9 +1253,25 @@ export interface components {
             text: string;
             url: string | null;
         };
+        /**
+         * ListingOrigin
+         * @description Who placed a listing (WP-80): `legacy`, harvested or placed in legacy; `native`, placed by its owner in HOMI.
+         * @enum {string}
+         */
+        ListingOrigin: "legacy" | "native";
+        /** ListingOwnerResource */
+        ListingOwnerResource: {
+            tier: components["schemas"]["OwnerTier"] | null;
+            mine: boolean;
+            listing_id: string | null;
+            entry: boolean;
+            response_minutes: number | null;
+            description: string | null;
+        };
         /** ListingPreviewResource */
         ListingPreviewResource: {
             number: number;
+            origin: components["schemas"]["ListingOrigin"];
             deal: components["schemas"]["Deal"] | null;
             type: components["schemas"]["PropertyType"] | null;
             title: string;
@@ -1054,6 +1350,7 @@ export interface components {
         /** MapPointResource */
         MapPointResource: {
             number: number;
+            origin: components["schemas"]["ListingOrigin"];
             lat: number;
             lon: number;
             label: string;
@@ -1088,6 +1385,11 @@ export interface components {
                 replay: boolean;
                 replay_rate: number;
             } | null;
+            owner: {
+                pending: number;
+                has_listings: boolean;
+                waitlisted: boolean;
+            };
         };
         /** MediaFileResource */
         MediaFileResource: {
@@ -1119,11 +1421,178 @@ export interface components {
             name: string;
         };
         /**
+         * OrderOwnerPhotosRequest
+         * @description `PUT /owner/listings/{id}/photos/order` (WP-80): exactly the listing's photo ids in the new order, the cover first.
+         */
+        OrderOwnerPhotosRequest: {
+            ids: string[];
+        };
+        /** OwnerDemandResource */
+        OwnerDemandResource: {
+            count: number | null;
+            few: boolean;
+            usual_low_usd: number | null;
+            usual_high_usd: number | null;
+        };
+        /**
          * OwnerFilter
          * @description The `owner` filter (BR-API-035): everything, without explicit realtors, or only explicit owners.
          * @enum {string}
          */
         OwnerFilter: "any" | "no_agents" | "owners";
+        /**
+         * OwnerHoldReason
+         * @description Why a listing is on hold (WP-80): the realtor check at publish, a vote threshold, or an operator. The client shows every hold as «На проверке».
+         * @enum {string}
+         */
+        OwnerHoldReason: "check_agent" | "votes_agent" | "votes_fraud" | "votes_rented" | "moderator";
+        /** OwnerListingFormResource */
+        OwnerListingFormResource: {
+            city: string | null;
+            district_code: string | null;
+            landmark: string | null;
+            lat: number | null;
+            lon: number | null;
+            room: boolean;
+            rooms: number | null;
+            area_m2: number | null;
+            floor: number | null;
+            floors_total: number | null;
+            price: number | null;
+            currency: components["schemas"]["Currency"];
+            renovation: string | null;
+            furniture: boolean | null;
+            tenants: string[];
+            pets: boolean | null;
+            description: string | null;
+        };
+        /** OwnerListingItemResource */
+        OwnerListingItemResource: {
+            id: string;
+            number: number | null;
+            status: components["schemas"]["OwnerListingStatus"];
+            withdrawn: boolean;
+            held: boolean;
+            hold_reason: components["schemas"]["OwnerHoldReason"] | null;
+            published_at: string | null;
+            photos: components["schemas"]["OwnerPhotoResource"][];
+            form: {
+                city: string | null;
+                district_code: string | null;
+                landmark: string | null;
+                room: boolean;
+                rooms: number | null;
+                area_m2: number | null;
+                floor: number | null;
+                floors_total: number | null;
+                price: number | null;
+                currency: components["schemas"]["Currency"];
+                renovation: string | null;
+                furniture: boolean | null;
+                tenants: string[];
+                pets: boolean | null;
+                description: string | null;
+            };
+            stats: components["schemas"]["OwnerListingStatsResource"] | null;
+            contact_mode: components["schemas"]["ContactMode"];
+            phone_set: boolean;
+            phone_error: components["schemas"]["OwnerPhoneError"] | null;
+            reject_reason: components["schemas"]["OwnerRejectReason"] | null;
+            shown_point: components["schemas"]["ShownPointResource"] | null;
+        };
+        /** OwnerListingResource */
+        OwnerListingResource: {
+            id: string;
+            number: number | null;
+            status: components["schemas"]["OwnerListingStatus"];
+            withdrawn: boolean;
+            held: boolean;
+            hold_reason: components["schemas"]["OwnerHoldReason"] | null;
+            published_at: string | null;
+            photos: components["schemas"]["OwnerPhotoResource"][];
+            form: components["schemas"]["OwnerListingFormResource"];
+            stats: components["schemas"]["OwnerListingStatsResource"] | null;
+            contact_mode: components["schemas"]["ContactMode"];
+            phone_set: boolean;
+            phone_display: string | null;
+            phone_error: components["schemas"]["OwnerPhoneError"] | null;
+            reject_reason: components["schemas"]["OwnerRejectReason"] | null;
+            shown_point: components["schemas"]["ShownPointResource"] | null;
+        };
+        /** OwnerListingStatsResource */
+        OwnerListingStatsResource: {
+            pending: number;
+            requests: number;
+            given: number;
+            sent: number;
+            opened: number;
+            favorites: number;
+            days_listed: number | null;
+            daily: string[];
+            price_delta: number | null;
+            price_tone: string | null;
+        };
+        /**
+         * OwnerListingStatus
+         * @description The status of an owner listing (WP-80).
+         * @enum {string}
+         */
+        OwnerListingStatus: "draft" | "active" | "paused" | "rented" | "removed" | "rejected";
+        /** OwnerListingsResource */
+        OwnerListingsResource: {
+            items: components["schemas"]["OwnerListingItemResource"][];
+            max: number;
+            can_add: boolean;
+            past: number;
+        };
+        /**
+         * OwnerPhoneError
+         * @description Why the last shared contact was refused (WP-80, DEV-056).
+         * @enum {string}
+         */
+        OwnerPhoneError: "not_uz" | "not_own";
+        /** OwnerPhotoResource */
+        OwnerPhotoResource: {
+            id: string;
+            url: string;
+        };
+        /** OwnerPlaceResource */
+        OwnerPlaceResource: {
+            city: string | null;
+            district_code: string | null;
+        };
+        /**
+         * OwnerRejectReason
+         * @description Why a listing is rejected (WP-80, DEV-056): `denied` the number is on the operators' deny list, `limit` the number had its listings at the confirmation.
+         * @enum {string}
+         */
+        OwnerRejectReason: "denied" | "limit";
+        /**
+         * OwnerRequestAction
+         * @description An owner's answer to a request (WP-80, BR-API-180).
+         * @enum {string}
+         */
+        OwnerRequestAction: "give" | "decline" | "reason_found" | "reason_agent" | "undo" | "late";
+        /** OwnerRequestResource */
+        OwnerRequestResource: {
+            id: string;
+            name: string | null;
+            who: components["schemas"]["RequestWho"];
+            people: number;
+            move_in: string | null;
+            message: string | null;
+            status: components["schemas"]["ContactRequestStatus"];
+            agent_marked: boolean;
+            can_reason: boolean;
+            can_undo: boolean;
+            can_late: boolean;
+        };
+        /**
+         * OwnerTier
+         * @description The owner tier of a card (WP-80, fix of LB-APP-075): `self` placed by its owner (in HOMI or in legacy), `verified` a verified owner, `claimed` a post that says it is the owner's but is not verified.
+         * @enum {string}
+         */
+        OwnerTier: "self" | "verified" | "claimed";
         /**
          * PatchRadarRequest
          * @description `PATCH /radars/{id}` (WP-13): exactly one known change — `active` (switch on or pause), `mode` or `unhide: true`.
@@ -1154,7 +1623,7 @@ export interface components {
         /** PriceEventResource */
         PriceEventResource: {
             at: string;
-            channel: string;
+            channel: string | null;
             url: string | null;
             text: string | null;
             kind: string | null;
@@ -1237,8 +1706,16 @@ export interface components {
             };
             limits: {
                 radars: number;
+                owner_listings: number;
+                owner_photos: number;
+                requests: {
+                    day: number;
+                    week: number;
+                    pause_minutes: number;
+                };
             };
             radars_enabled: boolean;
+            owner_enabled: boolean;
             rates: {
                 usd_uzs: number;
             };
@@ -1252,6 +1729,7 @@ export interface components {
                 rent_long: components["schemas"]["NamedCodeResource"][];
                 rent_daily: components["schemas"]["NamedCodeResource"][];
                 sale: components["schemas"]["NamedCodeResource"][];
+                owner: components["schemas"]["NamedCodeResource"][];
             };
             appliances: components["schemas"]["NamedCodeResource"][];
             price_presets: {
@@ -1279,6 +1757,12 @@ export interface components {
             hidden: boolean;
             agent_marked: boolean;
         };
+        /**
+         * RequestWho
+         * @description Who asks for a flat in a request (WP-80).
+         * @enum {string}
+         */
+        RequestWho: "one" | "couple" | "family" | "students" | "friends";
         /** SessionResource */
         SessionResource: {
             token: string;
@@ -1309,12 +1793,30 @@ export interface components {
                 digest_hours: number[][];
             };
         };
+        /** ShownPointResource */
+        ShownPointResource: {
+            lat: number;
+            lon: number;
+            radius_m: number;
+        };
         /**
          * SourceDriver
          * @description Which implementation of a capability answered (ADR-0017): fixtures, the legacy service, or HOMI's own code. Written to every `/api/v1` answer as `meta.source`; the client's "demo data" marker reads `stub`.
          * @enum {string}
          */
         SourceDriver: "stub" | "legacy" | "native";
+        /**
+         * StoreContactRequestRequest
+         * @description `POST /listings/{number}/contact-request` (WP-80): who asks and how many, when and a message, and the raw `initData`
+         *     of the current launch (at most 4 096 bytes; never stored, logged or echoed — WP-85 verifies it).
+         */
+        StoreContactRequestRequest: {
+            who: components["schemas"]["RequestWho"];
+            people: number;
+            move_in?: string | null;
+            message?: string | null;
+            init_data: string;
+        };
         /**
          * StoreEventRequest
          * @description `POST /events` (WP-11): `{name, props?}`. A `422` only for a missing or non-string `name` or a `props` that is not an
@@ -1351,6 +1853,15 @@ export interface components {
              */
             file: string;
             visibility?: components["schemas"]["MediaVisibility"];
+        };
+        /**
+         * StoreOwnerPhotoRequest
+         * @description `POST /owner/listings/{id}/photos` (WP-80): `multipart/form-data` with one field `file`; the media codes come from the
+         *     uploader (WP-84, `HashedUploader`).
+         */
+        StoreOwnerPhotoRequest: {
+            /** Format: binary */
+            file: string;
         };
         /**
          * StoreRadarRequest
@@ -1397,6 +1908,50 @@ export interface components {
         TranslationResource: {
             text: string;
             locale: string;
+        };
+        /**
+         * UpdateContactModeRequest
+         * @description `PUT /owner/listings/{id}/contact-mode` (WP-80): `request` hides the number and takes requests, `phone` shows it.
+         */
+        UpdateContactModeRequest: {
+            /** @enum {string} */
+            mode: "request" | "phone";
+        };
+        /**
+         * UpdateOwnerListingRequest
+         * @description `PATCH /owner/listings/{id}` (WP-80): any subset of the form's keys; `null` clears a key, an absent key stays,
+         *     unknown keys are ignored. `lat` and `lon` come together; `room` excludes `rooms`; `floor` above `floors_total` is
+         *     refused naming `floor`. Whether the point lies in the country and the city is WP-84's check (`errors.point`).
+         */
+        UpdateOwnerListingRequest: {
+            city?: string | null;
+            district_code?: string | null;
+            landmark?: string | null;
+            /** @description Not `sometimes`: a point comes whole, so one coordinate without the other is refused. */
+            lat?: number | null;
+            lon?: number | null;
+            room?: boolean | null;
+            rooms?: number | null;
+            area_m2?: number | null;
+            floor?: number | null;
+            floors_total?: number | null;
+            price?: number | null;
+            /** @enum {string|null} */
+            currency?: "USD" | "UZS" | null;
+            /** @enum {string|null} */
+            renovation?: "euro" | "cosmetic" | "none" | null;
+            furniture?: boolean | null;
+            tenants?: ("family" | "students" | "girls" | "boys" | "foreigners")[] | null;
+            pets?: boolean | null;
+            description?: string | null;
+        };
+        /**
+         * UpdateOwnerStatusRequest
+         * @description `PUT /owner/listings/{id}/status` (WP-80): `active`, `paused`, `rented` or `removed`.
+         */
+        UpdateOwnerStatusRequest: {
+            /** @enum {string} */
+            status: "active" | "paused" | "rented" | "removed";
         };
         /**
          * UpdateRadarRequest
@@ -2277,6 +2832,66 @@ export interface operations {
             };
         };
     };
+    "v1.listings.contact-request.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreContactRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ContactRequestResultResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["ContactRequestResultResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "v1.listings.count": {
         parameters: {
             query: {
@@ -2748,6 +3363,703 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.contact-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContactModeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.demand": {
+        parameters: {
+            query: {
+                city: string;
+                district?: string | null;
+                rooms?: number | null;
+                room?: boolean | null;
+                price?: number | null;
+                currency?: "USD" | "UZS" | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerDemandResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingsResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateOwnerListingRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.phone-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.photos.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["StoreOwnerPhotoRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.photos.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                photo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.photos.order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderOwnerPhotosRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.place": {
+        parameters: {
+            query: {
+                lat: number;
+                lon: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerPlaceResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.requests.index": {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number | null;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerRequestResource"][];
+                        meta: {
+                            next_cursor: string | null;
+                            source: components["schemas"]["SourceDriver"];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.requests.answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerOwnerRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerRequestResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.listings.status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOwnerStatusRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data: components["schemas"]["OwnerListingResource"];
+                        meta: {
+                            source: components["schemas"]["SourceDriver"];
+                        } & {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "v1.owner.waitlist.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
             /** @description Too many requests */
             429: {
                 headers: {

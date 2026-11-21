@@ -36,14 +36,25 @@ only on `422` and maps each field to its messages.
 | 403 | `access_denied` | The access gate refuses the user; `reason` is `private`, `invite`, `full`, `blocked`, `join` or `paused` (show an unknown or missing reason as `private`) |
 | 403 | `forbidden` | Not allowed, or the token lacks the ability |
 | 403 | `radars_disabled` | Radars are switched off (`radars_enabled: false` of `GET /reference`): every radar create or change; `GET /radars` answers `[]` and `DELETE` works |
+| 403 | `owner_disabled` | The owner cabinet is switched off (`owner_enabled: false`, DEC-81) and the method changes content or creates or resumes a listing; or the caller is not on the allow-list when it is set (create, phone request, publish) |
+| 403 | `requests_blocked` | `POST /listings/{number}/contact-request`: requests of this user are closed |
 | 404 | `not_found` | Unknown route, or a resource or listing that does not exist |
-| 404 | `contact_unavailable` | `POST /listings/{number}/contact`: the listing has no phone, or the disclosure limit is reached |
+| 404 | `contact_unavailable` | `POST /listings/{number}/contact`: the listing has no phone, the disclosure limit is reached, or it is a `request`-mode listing without a `given` request of the caller |
 | 422 | `translation_not_needed` | `POST /listings/{number}/translation` with locale `ru`, the language of the originals |
-| 409 | `no_chat` | Radar writes: the bot cannot write to the user yet; nothing was changed |
+| 409 | `no_chat` | Radar writes and `POST /listings/{number}/contact-request`: the bot cannot write to the user yet; nothing was changed |
+| 409 | `owner_limit` | The account or the phone already has `max` listings that count; `limit` is `account` or `phone`, `max` the number |
+| 409 | `owner_listing_locked` | The owner listing cannot be changed in its state (held, withdrawn, let, removed) |
+| 409 | `owner_phone_required` | Publish without a confirmed number |
+| 409 | `owner_rejected` | The listing is rejected; `reason` is `denied` or `limit` |
+| 409 | `owner_photo_limit` | One photo more than `limits.owner_photos` |
+| 409 | `request_closed` | The listing takes no requests from the caller, or none more today |
+| 409 | `own_listing` | A request on the caller's own listing |
+| 409 | `contact_open` | The listing shows its number now; read the card again |
+| 409 | `request_answer_closed` | The owner's answer is no longer possible (the undo window passed, or the request changed) |
 | 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
 | 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
-| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is the request limiter |
+| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is the request limiter. The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week` |
 | 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
 | 503 | `source_unavailable` | The data source of the method cannot answer; show the "could not load" state |
 | 503 | `translation_unavailable` | `POST /listings/{number}/translation`: the translation service cannot answer |
@@ -65,7 +76,8 @@ Every answer of a source method says which driver produced `data`:
 | `native` | HOMI's own code |
 
 It always names the driver that actually answered. When a method falls back, `meta.source` names the driver it fell
-back to. The value is the operator's choice per method and environment. `php artisan sources:list` shows it,
+back to. In listing lists it names the driver of the shared part; items placed by HOMI's own owners carry
+`origin: native`. The value is the operator's choice per method and environment. `php artisan sources:list` shows it,
 `sources:set` changes it on the next request, and every change is logged (`config/sources.php`).
 
 ## Cursor lists
@@ -183,8 +195,8 @@ set, carry the floor variants: `100022` is on the ground-level floor (`floor: 0`
 
 ## Methods (Wave 1)
 
-The `/api/v1` surface built so far (the first table of `25` §4.2): 41 pairs of a method and a path; the owner
-cabinet adds 18 more with WP-80. "Public" methods need no token; the others need a bearer token with `app:read` for
+The `/api/v1` surface built so far (the first table of `25` §4.2 and the owner cabinet of WP-80): 59 pairs of a
+method and a path. "Public" methods need no token; the others need a bearer token with `app:read` for
 reads and `app:write` for writes. The driver is the Wave 1 target; until the legacy and native packages land every
 method answers from stubs (`meta.source = stub`), and `php artisan sources:list` shows the current driver of each
 source method.
@@ -217,12 +229,37 @@ source method.
 | `DELETE /radars/{id}` | `api.v1.radars.destroy` | `app:write` | native |
 | `POST /events` | `api.v1.events.store` | `app:write` | native |
 | `GET /landing/live`, `GET /landing/pins` | `api.v1.landing.live`, `.pins` | public, cacheable | legacy, cached (`source.landing.live`, `.pins`) |
+| `GET /owner/listings`, `GET /owner/listings/{id}` | `api.v1.owner.listings.index`, `.show` | `app:read` | native |
+| `POST /owner/listings`, `PATCH /owner/listings/{id}` | `api.v1.owner.listings.store`, `.update` | `app:write`, switch, `throttle:owner-writes` | native |
+| `DELETE /owner/listings/{id}` | `api.v1.owner.listings.destroy` | `app:write`, `throttle:owner-writes` | native |
+| `POST /owner/listings/{id}/photos`, `DELETE /owner/listings/{id}/photos/{photo}`, `PUT /owner/listings/{id}/photos/order` | `api.v1.owner.listings.photos.store`, `.destroy`, `.order` | `app:write`, switch, `throttle:owner-writes` (store also `throttle:uploads`) | native |
+| `PUT /owner/listings/{id}/contact-mode` | `api.v1.owner.listings.contact-mode` | `app:write`, switch, `throttle:owner-writes` | native |
+| `POST /owner/listings/{id}/phone-request`, `POST /owner/listings/{id}/publish` | `api.v1.owner.listings.phone-request`, `.publish` | `app:write`, switch, `throttle:owner-writes`, `throttle:owner-publish` | native |
+| `PUT /owner/listings/{id}/status` | `api.v1.owner.listings.status` | `app:write`, switch for `active`, `throttle:owner-writes` | native |
+| `GET /owner/listings/{id}/requests` | `api.v1.owner.listings.requests.index` | `app:read` | native |
+| `POST /owner/requests/{id}/answer` | `api.v1.owner.requests.answer` | `app:write`, `throttle:owner-writes` | native |
+| `PUT /owner/waitlist` | `api.v1.owner.waitlist.update` | `app:write`, `throttle:owner-writes` | native |
+| `GET /owner/place`, `GET /owner/demand` | `api.v1.owner.place`, `.demand` | `app:read`, `throttle:owner-place` / `throttle:owner-demand` | native |
+| `POST /listings/{number}/contact-request` | `api.v1.listings.contact-request.store` | `app:write` | native |
 
 `{number}` is a listing number (a positive integer); `{id}` is a ULID. A foreign id answers like an unknown one,
 `404 not_found`. Stub scenarios of the personal and radar methods: `empty` (favourites, history, hidden, radars);
 `no_chat`, `radar_limit`, `radar_duplicate` (radar writes); `existing`, `starter`, `few` (radar create); `ask_found`
 (radar pause and delete); `agent_marked` (report). Settings: `card_rich` (`GET` and `PATCH /settings` with
 `card_style: "rich"`) and `card_sample_unsent` (`POST /settings/card-sample` answers `sent: false`).
+
+The owner cabinet on stubs (WP-80): the stub listing catalogue has HOMI's own listings `10000001` … `10000008`
+(`origin: native`; request mode with no request, a request pending, given, declined, expired and cancelled; phone
+mode; the stub user's own listing), a legacy self-placed listing in `gate` mode `100024` (`contact.mode: hidden`) and a
+«claimed» owner `100025`. Every number at or above `10000000` is native (`ListingNumber`). Owner scenarios:
+`owner_empty`, `owner_returning` (list, create, `GET /me`), `owner_limit`, `owner_disabled`, `owner_waitlisted`
+(`GET /me`), `demand_few`, `phone_set`, `phone_not_uz`, `phone_not_own`, `rejected_denied`, `rejected_limit`,
+`held_check`, `publish_missing`, `listing_locked`, `request_answer_closed`. The request method answers by number
+(`10000001`, `10000005` → `201 pending`; `10000002` … `10000004` → `200` with their status; `10000006` →
+`request_closed`; `10000007` → `contact_open`; `10000008` → `own_listing`; any other → `request_closed`) and knows
+`no_chat`, `request_limit_fast`, `request_limit_day`, `request_limit_week` (with `Retry-After` 600, 3 600, 86 400),
+`requests_blocked`, `request_closed`, `own_listing`, `contact_open` and `relay_on` (the card of `100024` in
+`request` mode and its request `201`).
 
 `POST /listings/{number}/reports` answers `hidden` and `agent_marked`, both always present. `hidden` is `true` for
 the reasons `rented` and `fraud`. `agent_marked` is `true` only when the reason is `agent` and the author is marked

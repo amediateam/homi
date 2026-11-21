@@ -42,7 +42,8 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return;
         }
 
-        Telescope::hideRequestParameters(['_token']);
+        // The raw Telegram launch data of sign-in and of the request method (WP-80) is never kept.
+        Telescope::hideRequestParameters(['_token', 'init_data']);
 
         Telescope::hideRequestHeaders([
             'cookie',

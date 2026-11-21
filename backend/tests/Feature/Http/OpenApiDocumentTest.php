@@ -146,6 +146,13 @@ it('has every method of the Wave 1 table (25 §4.2) as a route and an OpenAPI pa
         'DELETE /hidden/authors/{id}', 'DELETE /hidden', 'POST /listings/{number}/reports', 'DELETE /listings/{number}/reports',
         'POST /surveys/found', 'POST /surveys/found/where', 'GET /radars', 'POST /radars', 'PUT /radars/{id}', 'PATCH /radars/{id}',
         'DELETE /radars/{id}', 'POST /radars/{id}/relax', 'POST /events', 'GET /landing/live', 'GET /landing/pins',
+        // The owner cabinet and the seeker's request (WP-80).
+        'GET /owner/listings', 'POST /owner/listings', 'GET /owner/listings/{id}', 'PATCH /owner/listings/{id}',
+        'DELETE /owner/listings/{id}', 'POST /owner/listings/{id}/photos', 'DELETE /owner/listings/{id}/photos/{photo}',
+        'PUT /owner/listings/{id}/photos/order', 'PUT /owner/listings/{id}/contact-mode', 'POST /owner/listings/{id}/phone-request',
+        'POST /owner/listings/{id}/publish', 'PUT /owner/listings/{id}/status', 'GET /owner/listings/{id}/requests',
+        'POST /owner/requests/{id}/answer', 'PUT /owner/waitlist', 'GET /owner/place', 'GET /owner/demand',
+        'POST /listings/{number}/contact-request',
     ];
     $routes = [];
 
@@ -166,7 +173,7 @@ it('has every method of the Wave 1 table (25 §4.2) as a route and an OpenAPI pa
     sort($expected);
     $paths = exportedOpenApi()['paths'];
 
-    expect($table)->toHaveCount(41)
+    expect($table)->toHaveCount(59)
         ->and($routes)->toBe($expected);
 
     foreach ($table as $pair) {
