@@ -65,7 +65,8 @@ export function RequestCard({ request, busy, onAnswer }: { request: OwnerRequest
   }
 
   return (
-    <article data-request={request.id} data-request-state={request.status} className="flex flex-col gap-[10px] rounded-[16px] bg-fill p-[14px]">
+    // `ph-no-capture`: autocapture never takes the seeker's texts (DEC-76, SEC-REQ-036); `ph-mask` hides them in replay.
+    <article data-request={request.id} data-request-state={request.status} className="ph-no-capture flex flex-col gap-[10px] rounded-[16px] bg-fill p-[14px]">
       <div className="flex flex-col gap-[2px]">
         <p className="ph-mask text-[16px] font-semibold text-text">{request.name ?? t("own.someone")}</p>
         <p className="text-[13px] text-hint">

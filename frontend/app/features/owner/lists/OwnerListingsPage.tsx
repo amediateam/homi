@@ -13,6 +13,7 @@ import { tg } from "@/lib/telegram";
 
 import { normalizeOwnerListing, type OwnerListingView } from "../normalize";
 import { firstPending, isPast, splitLists } from "../status";
+import { useOwnerPending } from "../pending";
 import { type OwnerListingsBody, useOwnerEnabled, useOwnerListings } from "../store";
 import { OwnerListingCard } from "./OwnerListingCard";
 import { useStatusAction } from "./useStatusAction";
@@ -32,7 +33,10 @@ const toView = (items: readonly unknown[]) => items.map(normalizeOwnerListing).f
 export function OwnerListingsPage({ cardTip }: { cardTip?: (listing: OwnerListingView) => ReactNode } = {}) {
   const t = useTranslations();
   const cabinetOn = useOwnerEnabled();
-  const list = useOwnerListings();
+  const { hasListings } = useOwnerPending();
+  // DEC-81: no owner list for a user without listings while the cabinet is off (the address is reachable anyway).
+  const reads = cabinetOn || hasListings;
+  const list = useOwnerListings({ enabled: reads });
   const now = (useMinute(true) ?? 0) * 60_000;
   const [tab, setTab] = useState<Tab>("current");
   const body = list.data;
@@ -55,7 +59,10 @@ export function OwnerListingsPage({ cardTip }: { cardTip?: (listing: OwnerListin
   const focus = useSearchParams()?.get("focus") ?? null;
   const [focused, setFocused] = useState<string | null>(null);
   const target = focus === null ? null : (items.find((item) => item.id === focus) ?? null);
-  if (focus !== null && focus !== focused && body !== undefined) {
+  if (focus === null && focused !== null) {
+    // The parameter left the address: the same listing may be focused again (the tab tip tapped twice).
+    setFocused(null);
+  } else if (focus !== null && focus !== focused && body !== undefined) {
     setFocused(focus);
     if (target !== null) {
       setTab(isPast(target) ? "past" : "current");
@@ -75,7 +82,13 @@ export function OwnerListingsPage({ cardTip }: { cardTip?: (listing: OwnerListin
   const dot = (part: readonly OwnerListingView[]) => part.some((item) => (item.stats?.pending ?? 0) > 0);
 
   let content: ReactNode;
-  if (body === undefined && list.error !== null) {
+  if (!reads) {
+    content = (
+      <p data-owner-list-empty="current" className="px-[4px] py-[24px] text-center text-[15px] leading-[1.45] text-hint">
+        {t("own.mineEmpty")}
+      </p>
+    );
+  } else if (body === undefined && list.error !== null) {
     const offline = list.error.error === "offline" || list.error.error === "timeout";
     content = (
       <ErrorState

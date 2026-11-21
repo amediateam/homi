@@ -13,8 +13,9 @@ export const SWIPE_BACK_CLOSE_VELOCITY = 0.5;
 /** The slide out (closing) or back (staying) after the release, in ms. */
 export const SWIPE_BACK_SETTLE_MS = 180;
 /**
- * After a closing swipe the inline styles go this long after `onBack` (legacy since `index-CBlEKxdL.js`, WP-82): a
- * layer the router keeps mounted (`<Activity>`) is not left translated off-screen for its next showing.
+ * After a closing swipe the inline styles go this long after `onBack` if the layer is no longer shown (legacy since
+ * `index-CBlEKxdL.js`, WP-82), so a layer kept in the document is not left translated off-screen for its next showing.
+ * A layer still shown then (a navigation that takes longer) stays out until its cleanup resets it: it never snaps back.
  */
 export const SWIPE_BACK_RESET_MS = 300;
 /** A swipe is ours only when its sideways travel is at least this many times its vertical travel. */
@@ -128,8 +129,11 @@ export function useSwipeBack(
         layer.style.willChange = "";
         callbacks.current.onBack();
         timer = setTimeout(() => {
-          reset();
-          phase = "idle";
+          const shown = layer.isConnected && layer.getClientRects().length > 0;
+          if (!shown) {
+            reset();
+            phase = "idle";
+          }
         }, SWIPE_BACK_RESET_MS);
       };
       if (prefersReducedMotion()) {

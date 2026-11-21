@@ -92,7 +92,7 @@ function ShellBottom() {
       ) : null}
       <PullToRefresh />
       <NudgeHost searchTab={tab === "search"} />
-      {tab ? <OwnerSignals settingsTab={tab === "settings"} pathname={pathname} /> : null}
+      <OwnerSignals settingsTab={tab === "settings"} tabBar={tab !== null} pathname={pathname} />
       {tab ? <TabBar active={tab} /> : null}
       <div aria-hidden className={tab ? "h-(--bottom-chrome)" : "h-(--bottom-inset)"} />
     </>

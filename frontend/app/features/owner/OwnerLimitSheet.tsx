@@ -9,10 +9,12 @@ import { RouteSheet, type RoutePresentation } from "@/features/shell/RouteSheet"
 import { track } from "@/lib/analytics/events";
 import { backBy } from "@/lib/navigation/history";
 import { nav } from "@/lib/navigation/nav";
+import { useBack } from "@/lib/navigation/useBack";
 import { routes } from "@/lib/navigation/routes";
 import { useReference } from "@/lib/reference/useReference";
 import { tg } from "@/lib/telegram";
 
+import { useOwnerPending } from "./pending";
 import { useOwnerListings } from "./store";
 
 /**
@@ -39,7 +41,9 @@ export function OwnerLimitSheet({ presentation }: { presentation: RoutePresentat
   const t = useTranslations();
   const where = useSearchParams()?.get("where") === "settings" ? "settings" : "mine";
   const { ownerListingsLimit } = useReference();
-  const max = useOwnerListings().data?.max ?? ownerListingsLimit;
+  const { back } = useBack();
+  const { hasListings } = useOwnerPending();
+  const max = useOwnerListings({ enabled: hasListings }).data?.max ?? ownerListingsLimit;
 
   useEffect(() => track("owner_limit_sheet", { where }), [where]);
 
@@ -62,7 +66,8 @@ export function OwnerLimitSheet({ presentation }: { presentation: RoutePresentat
             data-action="ok"
             onClick={() => {
               tg.haptic.impact("light");
-              nav.back();
+              // `useBack()`: on a direct load, with nothing behind the sheet, it goes to the parent.
+              back();
             }}
           >
             {t("owner.info.ok")}

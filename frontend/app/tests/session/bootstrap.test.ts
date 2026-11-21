@@ -481,6 +481,39 @@ describe("patchMe", () => {
   });
 });
 
+describe("refresh (WP-82)", () => {
+  it("a call during a read asks for one more read after it; every call meanwhile shares that one", async () => {
+    let pending = 0;
+    let release: (() => void) | null = null;
+    server({
+      get: async () => {
+        if (calls.get.length > 1) {
+          await new Promise<void>((resolve) => (release = resolve));
+        }
+        return [200, { mode: "cookie", me: { ...me, owner: { pending, has_listings: true, waitlisted: false } }, user: tag(USER) }];
+      },
+    });
+    const { session } = await load();
+    await session.startSession();
+    const reads = calls.get.length;
+
+    const first = session.refresh();
+    // The cabinet changed while the first read is out: its answer may be the old one.
+    pending = 3;
+    const second = session.refresh();
+    const third = session.refresh();
+    expect(second).toBe(third);
+    (release as (() => void) | null)?.();
+    await first;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    (release as (() => void) | null)?.();
+    await Promise.all([second, third]);
+
+    expect(calls.get.length - reads).toBe(2);
+    expect(session.getSession().me?.owner.pending).toBe(3);
+  });
+});
+
 describe("onForbidden (WP-22, LB-APP-045)", () => {
   it("turns a ready session denied with the reason; an unknown reason is private; a booting one is left alone", async () => {
     server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });

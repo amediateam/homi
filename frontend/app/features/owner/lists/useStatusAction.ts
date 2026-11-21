@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 import { deleteOwnerListing, setOwnerStatus, type OwnerStatusChange } from "@/lib/actions/owner";
 import { useAction } from "@/lib/actions/useAction";
 import type { ApiFailure } from "@/lib/api/errors";
+import { invalidate } from "@/lib/data/useResource";
 import { confirmText } from "@/lib/ui/confirm";
 import { showToast } from "@/lib/ui/toast";
 import { tg } from "@/lib/telegram";
@@ -110,6 +111,8 @@ export function useStatusAction(options: { onDone?: (done: StatusActionDone) => 
           onDone?.({ listing: result.data, id: listing.id });
         }
         invalidateOwner();
+        // «Сдано» or «Снять» close the listing's requests: a kept «Отклики» reads them again.
+        invalidate(`owner-requests/${listing.id}`);
       } finally {
         running.current = false;
         setBusy(null);

@@ -66,13 +66,16 @@ export function SettingsRow({
       <SettingsIcon>{icon}</SettingsIcon>
       <span className="min-w-0 flex-1 text-[16px] text-text">{label}</span>
       {counted ? (
-        <span
-          data-settings-count={count}
-          aria-label={value === "" ? undefined : value}
-          className="grid h-[20px] min-w-[20px] flex-none place-items-center rounded-full bg-danger px-[6px] text-[12px] leading-none font-semibold text-white"
-        >
-          {count}
-        </span>
+        <>
+          {value === "" ? null : <span className="sr-only">{value}</span>}
+          <span
+            data-settings-count={count}
+            aria-hidden={value === "" ? undefined : true}
+            className="grid h-[20px] min-w-[20px] flex-none place-items-center rounded-full bg-danger px-[6px] text-[12px] leading-none font-semibold text-white"
+          >
+            {count}
+          </span>
+        </>
       ) : value !== "" ? (
         <span data-settings-value="" className="max-w-[45%] truncate text-[15px] text-hint">
           {value}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { bffFetch } from "@/lib/api/browser";
 import type { ApiFailure } from "@/lib/api/errors";
@@ -81,6 +81,8 @@ export interface OwnerRequests {
   /** More pages exist (`meta.next_cursor`). */
   more: boolean;
   loadingMore: boolean;
+  /** A later page failed; it loads again only on `loadMore`. */
+  stalled: boolean;
   loadMore: () => Promise<void>;
   /** Page one again (a `409 request_answer_closed`, «Повторить»). */
   reload: () => Promise<void>;
@@ -93,34 +95,46 @@ export interface OwnerRequests {
  * once, and a page that repeats an id adds nothing for it.
  */
 export function useOwnerRequests(listingId: string | null): OwnerRequests {
+  const used = useRef(new Set<string>());
   const resource = useResource<Page>(listingId === null ? null : ownerRequestsKey(listingId), async (signal) => {
+    // Page one again (a reload, a kept copy read after its time): every cursor may be asked for again.
+    used.current.clear();
     const result = await readPage(listingId ?? "", null, signal);
     return result.ok ? { ...result, data: pageOf(result.data, result.meta.next_cursor) } : result;
   });
   const [loadingMore, setLoadingMore] = useState(false);
-  const used = useRef(new Set<string>());
+  /** A later page failed: nothing loads by itself until `loadMore` is asked for again («Повторить»). */
+  const [stalled, setStalled] = useState(false);
   const { data, mutate, refetch } = resource;
+  // `loadMore` stays the same function across renders (the observer is not rebuilt each time): it reads the latest
+  // cursor and `mutate` from refs, written in an effect.
+  const latest = useRef({ next: null as string | null, mutate });
+  useEffect(() => {
+    latest.current = { next: data?.next ?? null, mutate };
+  });
 
   const loadMore = useCallback(async () => {
-    const cursor = data?.next ?? null;
+    const cursor = latest.current.next;
     if (listingId === null || cursor === null || used.current.has(cursor)) {
       return;
     }
     used.current.add(cursor);
     setLoadingMore(true);
+    setStalled(false);
     const result = await readPage(listingId, cursor);
     setLoadingMore(false);
     if (!result.ok) {
-      // The cursor may be asked for again.
+      // The cursor may be asked for again, but only by a tap.
       used.current.delete(cursor);
+      setStalled(true);
       return;
     }
     const page = pageOf(result.data, result.meta.next_cursor);
-    mutate((current) => {
+    latest.current.mutate((current) => {
       const known = new Set((current?.items ?? []).map((item) => item.id));
       return { items: [...(current?.items ?? []), ...page.items.filter((item) => !known.has(item.id))], next: page.next };
     });
-  }, [data?.next, listingId, mutate]);
+  }, [listingId]);
 
   const reload = useCallback(async () => {
     used.current.clear();
@@ -142,6 +156,7 @@ export function useOwnerRequests(listingId: string | null): OwnerRequests {
     error: data === undefined ? resource.error : null,
     more: data?.next !== null && data?.next !== undefined,
     loadingMore,
+    stalled,
     loadMore,
     reload,
     replace,

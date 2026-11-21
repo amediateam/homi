@@ -143,6 +143,22 @@ describe("useSwipeBack", () => {
     expect(layer.hasAttribute("data-gone")).toBe(false);
   });
 
+  it("a layer still shown 300 ms after its closing swipe stays out: it never snaps back (review of WP-82)", () => {
+    const onBack = vi.fn();
+    render(<Layer onBack={onBack} />);
+    const layer = screen.getByTestId("layer");
+    // jsdom lays nothing out; a layer with boxes is a layer still on screen (a navigation that takes longer).
+    layer.getClientRects = () => [{}] as unknown as DOMRectList;
+    swipe(layer, 100, 2000);
+    vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS + SWIPE_BACK_RESET_MS);
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(layer.style.transform).toBe(`translateX(${WIDTH}px)`);
+    expect(layer.hasAttribute("data-gone")).toBe(true);
+    swipe(layer, 150, 2000);
+    vi.advanceTimersByTime(SWIPE_BACK_SETTLE_MS);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("a touch inside a nested sub-page is that page's swipe, never this layer's (WP-82)", () => {
     const onBack = vi.fn();
     render(

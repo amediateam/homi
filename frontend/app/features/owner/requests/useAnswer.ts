@@ -76,6 +76,7 @@ export function useAnswer(options: { onAnswered: (request: OwnerRequestView) => 
           tg.haptic.error();
           if (result.code === "request_answer_closed") {
             onClosed();
+            invalidateOwner();
             showToast({ key: action === "undo" ? "own.undoLate" : "common.saveFailed" });
             return;
           }

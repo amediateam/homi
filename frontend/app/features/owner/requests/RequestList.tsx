@@ -20,13 +20,13 @@ export function RequestList({ listingId }: { listingId: string }) {
   const requests = useOwnerRequests(listingId);
   const { busy, run } = useAnswer({ onAnswered: requests.replace, onClosed: () => void requests.reload() });
   const end = useRef<HTMLDivElement>(null);
-  const { more, loadMore, loadingMore } = requests;
+  const { more, loadMore, loadingMore, stalled } = requests;
 
   useLayoutEffect(() => dismissRequestTip(), []);
 
   useEffect(() => {
     const node = end.current;
-    if (!more || node === null) {
+    if (!more || stalled || node === null) {
       return;
     }
     if (typeof IntersectionObserver === "undefined") {
@@ -41,7 +41,7 @@ export function RequestList({ listingId }: { listingId: string }) {
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [more, loadMore]);
+  }, [more, stalled, loadMore]);
 
   if (!requests.loaded && requests.error !== null) {
     const offline = requests.error.error === "offline" || requests.error.error === "timeout";
@@ -74,7 +74,13 @@ export function RequestList({ listingId }: { listingId: string }) {
       )}
       {more ? (
         <div ref={end} className="grid place-items-center py-[8px]">
-          {loadingMore ? <Spinner aria-label={t("feed.loading")} className="size-[20px] border-[2.5px] text-accent" /> : null}
+          {loadingMore ? (
+            <Spinner aria-label={t("feed.loading")} className="size-[20px] border-[2.5px] text-accent" />
+          ) : stalled ? (
+            <button type="button" data-action="more-retry" onClick={() => void loadMore()} className="text-[14px] font-semibold text-accent">
+              {t("error.retry")}
+            </button>
+          ) : null}
         </div>
       ) : null}
       <p data-requests-foot="" className="px-[4px] text-[13px] leading-[1.4] text-hint">

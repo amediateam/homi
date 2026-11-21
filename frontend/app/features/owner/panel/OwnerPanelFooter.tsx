@@ -28,7 +28,8 @@ export function OwnerPanelFooter({ listingId, number }: { listingId: string; num
   const actions = useVisibleActions(listing ?? EMPTY, "panel");
 
   if (listing === null) {
-    if (resource.error !== null) {
+    // A failed read, or an answer that is not an owner listing: the footer is never empty, nor a skeleton for ever.
+    if (resource.error !== null || resource.data !== undefined) {
       return <MineBar />;
     }
     return <OwnerPanelFooterSkeleton />;

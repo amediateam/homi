@@ -22,7 +22,10 @@ vi.mock("@/lib/api/browser", () => ({
     if (state.failFirst) {
       return { ok: false, error: "server", status: 500, method: "GET", path };
     }
-    const page = cursor === null ? state.pages[0]! : state.pages[Number(cursor)]!;
+    const page = cursor === null ? state.pages[0] : state.pages[Number(cursor)];
+    if (page === undefined) {
+      return { ok: false, error: "offline", status: 0, method: "GET", path };
+    }
     return { ok: true, data: page.items, meta: { source: "stub", next_cursor: page.next } };
   },
 }));
@@ -153,6 +156,27 @@ describe("«Отклики» (WP-82, SCR-058, BR-APP-090)", () => {
     expect(error.message).toBe("owner request answer failed: server_error");
     expect(JSON.stringify([error.message, context])).not.toMatch(/Азиз|субботу|декабря/);
     expect(state.toast).toHaveBeenCalledWith({ key: "common.saveFailed" });
+  });
+
+  it("a failed later page stops the paging until «Повторить» (review: no request loop)", async () => {
+    state.pages = [
+      { items: [request(1)], next: "1" },
+      { items: [request(5)], next: null },
+    ];
+    const pages = state.pages;
+    let fail = true;
+    state.pages = new Proxy(pages, {
+      get: (target, key) => (key === "1" && fail ? undefined : Reflect.get(target, key)),
+    });
+    await mount();
+    await act(async () => undefined);
+    const tries = state.reads.filter((read) => read.endsWith("cursor=1")).length;
+    expect(tries).toBe(1);
+    expect(document.querySelector('[data-action="more-retry"]')).not.toBeNull();
+
+    fail = false;
+    await act(async () => fireEvent.click(document.querySelector('[data-action="more-retry"]')!));
+    expect(document.querySelectorAll("[data-request]")).toHaveLength(2);
   });
 
   it("an unknown who reads «Другое»; a later page by the cursor; an empty list; a failed first page", async () => {

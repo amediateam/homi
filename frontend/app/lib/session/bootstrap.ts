@@ -357,23 +357,32 @@ export function reauthenticate(): Promise<boolean> {
 }
 
 let refreshing: Promise<void> | null = null;
+let queued: Promise<void> | null = null;
+
+async function readMe(): Promise<void> {
+  const auth = getAuth();
+  const read = await readSession(auth.mode === "header" ? auth.token : undefined);
+  if (read.kind === "session" && state.status === "ready") {
+    update({ me: { ...read.me, ...patches } });
+  }
+}
 
 /**
  * Re-reads `me` after a settings change or a cabinet mutation (WP-82: the pending count); the patches of this launch
- * stay applied. Concurrent re-reads share one request.
+ * stay applied. A call while a read is in flight asks for one more read after it — that read may have started
+ * before the caller's change — and every call meanwhile shares that one.
  */
 export function refresh(): Promise<void> {
-  refreshing ??= (async () => {
-    try {
-      const auth = getAuth();
-      const read = await readSession(auth.mode === "header" ? auth.token : undefined);
-      if (read.kind === "session" && state.status === "ready") {
-        update({ me: { ...read.me, ...patches } });
-      }
-    } finally {
-      refreshing = null;
-    }
-  })();
+  if (refreshing !== null) {
+    queued ??= refreshing.then(() => {
+      queued = null;
+      return refresh();
+    });
+    return queued;
+  }
+  refreshing = (async () => readMe())().finally(() => {
+    refreshing = null;
+  });
   return refreshing;
 }
 

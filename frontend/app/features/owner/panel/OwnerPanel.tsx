@@ -41,7 +41,7 @@ export function OwnerPanel({ listingId, number }: { listingId: string; number: n
   }, [pending]);
 
   if (listing === null) {
-    if (resource.error !== null) {
+    if (resource.error !== null || resource.data !== undefined) {
       return (
         <section data-owner-panel="error" className="rounded-[16px] bg-fill p-[8px]">
           <ErrorState kind="server" title={t("common.loadFailed")} text={t("error.serverText")} retryLabel={t("error.retry")} onRetry={() => void resource.refetch()} />
