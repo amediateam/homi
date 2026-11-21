@@ -38,8 +38,9 @@ final class ContractShapes
         'success' => 'bool',
         'data' => [
             'bot' => ['username' => 'string', 'support_username' => 'string'],
-            'limits' => ['radars' => 'int'],
+            'limits' => ['radars' => 'int', 'owner_listings' => 'int', 'owner_photos' => 'int', 'requests' => ['day' => 'int', 'week' => 'int', 'pause_minutes' => 'int']],
             'radars_enabled' => 'bool',
+            'owner_enabled' => 'bool',
             'rates' => ['usd_uzs' => 'float|int'],
             'map' => ['tiles_url' => 'null'],
             'features' => ['*' => 'string'],
@@ -54,6 +55,7 @@ final class ContractShapes
                 'rent_long' => ['*' => ['code' => 'string', 'name' => 'string']],
                 'rent_daily' => ['*' => ['code' => 'string', 'name' => 'string']],
                 'sale' => ['*' => ['code' => 'string', 'name' => 'string']],
+                'owner' => ['*' => ['code' => 'string', 'name' => 'string']],
             ],
             'appliances' => ['*' => ['code' => 'string', 'name' => 'string']],
             'price_presets' => ['rent_long' => ['*' => 'int'], 'rent_daily' => ['*' => 'int'], 'sale' => ['*' => 'int']],
