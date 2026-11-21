@@ -23,6 +23,22 @@ describe("scrubText (WP-32, SEC-REQ-047, TMA-009)", () => {
     expect(scrubText("1998000000067")).toBe("1998000000067");
   });
 
+  it("masks the other ways a number is written (review of WP-32): 00998, the nine local digits, 8 before them, dashes of any kind, other countries", () => {
+    expect(scrubText("00998 90 123 45 67")).toBe("+998***");
+    expect(scrubText("звоните 90 123 45 67 вечером")).toBe("звоните +998*** вечером");
+    expect(scrubText("8 (90) 123-45-67")).toBe("+998***");
+    expect(scrubText("+998 90 123–45–67")).toBe("+998***");
+    expect(scrubText("+7 912 345 67 89")).toBe("+***");
+    // A price or a year is not a phone.
+    expect(scrubText("$600 за 54 м², 2026 год")).toBe("$600 за 54 м², 2026 год");
+  });
+
+  it("masks decoded launch data field by field", () => {
+    expect(scrubText('query_id=AAH1&user={"id":42,"first_name":"Ali"}&auth_date=1700000000&hash=abc123&signature=xyz')).toBe(
+      "query_id=***&user=***&auth_date=***&hash=***&signature=***",
+    );
+  });
+
   it("masks e-mail addresses", () => {
     expect(scrubText("from owner.name+tag@example.co.uz today")).toBe("from ***@*** today");
   });

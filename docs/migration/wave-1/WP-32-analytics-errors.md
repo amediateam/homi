@@ -496,16 +496,26 @@ The package is built as designed, with these points decided in the code (rule 6)
   reserved names the catch-all refuses.
 - **The report body** is built from a whitelist: the context's other keys (`where`, `componentStack` of the map's
   boundary) stay in the browser. The map boundary's `render` reports reach PostHog's exception capture like any.
-- **The boot guard's hand-over**: `installGlobalErrorHandlers()` sets `__homiBoot.watching` itself (the handlers
-  exist before React mounts); `boot.js` then stops posting `/bff/boot-error` but still shows «Обновите Telegram»
-  until `ok`. A boot-error without the cookie writes one `console.info` line (`event`, `v`, `name`, `tg`,
-  `platform`).
+- **The boot guard's hand-over**: `BootGuard` sets `__homiBoot.watching` with `ok` once React has mounted, as the
+  design says. Until then the global `error` listener leaves uncaught errors to the guard, which posts
+  `/bff/boot-error` without needing a session — so a bundle that never reaches one still reports, and nothing is sent
+  twice; rejections, which the guard does not watch, are reported from the start. The guard's body carries `v` (the
+  root layout gives the script `data-v`). A boot-error without the cookie writes one `console.info` line (`event`,
+  `v`, `name`, `tg`, `platform`); both route handlers refuse a declared length over their limit before reading.
+- **Privacy (review of WP-32).** `before_send` cleans recursively, keys included: every absolute address keeps origin
+  and path (heatmaps key their data by the page's address; web vitals carry their own `$current_url`), every other
+  text is scrubbed. The scrubbers also mask `00998`, the nine local digits of a mobile code, `8` before them, dashes of
+  any kind, other international numbers and decoded launch-data fields. Every element marked `ph-mask` (phones,
+  author labels, the original text) is also `ph-no-capture`, so autocapture never takes its text.
+- **Pageviews of a layer**: the tracker sends the top screen (the map's card stays the screen when the address
+  changes under it), and a layer that leaves lets the same layer count again.
 - **PostHog.** Every option name was checked in the types of the installed `posthog-js` 1.434.15. The web vitals
   extension the SDK asks for is `web-vitals-with-attribution`; with external loading disabled it is imported from
   the package. `rageclick`, `capture_dead_clicks` and `enable_heatmaps` follow `analytics.autocapture`. Next's
   control-flow throws are ignored by their `digest` if they ever reach the window listeners.
 - **The `@analytics` run (DEC-98).** PostHog sends nothing for what it takes for a bot — headless Chrome's user agent,
-  its client hints and `navigator.webdriver` — so the specs give the browser a phone's user agent and hide both; the
+  its client hints and `navigator.webdriver` — so the specs give the browser a phone's user agent and hide both, and
+  set full graphics (lite mode never samples a replay, and a runner with few cores would be lite); the
   app itself keeps PostHog's filter. The specs answer the host's remote config with recording allowed. A replay
   could not be made to record against the fake host, so the run checks that a profile sampled for replay loads the
   recorder's code and one with replay off does not; that a recording shows no readable text stays on the staging

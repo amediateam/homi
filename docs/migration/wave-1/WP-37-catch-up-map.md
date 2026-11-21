@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | REVIEW (#102) |
+| Status | WAITING (merged in #102 on 2026-11-21; production track: the regular deploy, then the acceptance checklist on staging) |
 | Depends on | intake `index-CIa0Ldj2` (`with_point` in the answer of `GET /listings/map`, the stub scenario `map_cut`, the text `map.cut`), WP-28 |
 | Size | about 245 changed lines with tests, M |
 | Behaviour reference | `03` §2 (SCR-011), §4 (BR-APP-062, BR-APP-111); `02` (BR-API-192); `wave-1/baseline.md`, built code behind the pin, rows 33, 34, 35 |

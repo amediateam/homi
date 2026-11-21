@@ -3,7 +3,7 @@ import type { CaptureResult, PostHog, PostHogConfig } from "posthog-js";
 import { reportError, setRenderHook } from "@/lib/errors/report";
 
 import { whenFirstContent } from "./firstContent";
-import { isAppAddress, scrubDeep, stripUrl } from "./scrub";
+import { scrubText, stripUrl } from "./scrub";
 
 /**
  * PostHog for the Mini App (WP-32, `03` §3.3, §1.7, §1.9; DEC-47, SEC-021, SEC-REQ-036): HOMI's own project per
@@ -39,8 +39,6 @@ type Connection = { saveData?: boolean; effectiveType?: string };
 export const FIRST_CONTENT_WAIT_MS = 8000;
 export const AFTER_CONTENT_MS = 500;
 
-const URL_KEYS = ["$current_url", "$referrer", "$initial_current_url", "$pathname", "$initial_referrer", "$initial_pathname"];
-
 let started = false;
 let instance: PostHog | null = null;
 let pending: { screen: string; props: Record<string, unknown> } | null = null;
@@ -72,31 +70,43 @@ export function replaySampled(me: AnalyticsMe, random: () => number = Math.rando
   return random() < (Number.isFinite(analytics.replay_rate) ? analytics.replay_rate : 1);
 }
 
-/** Keeps origin and path of every address in the event and scrubs everything but replay snapshots. */
+/**
+ * Every string and every key of `value`, down to six levels: an absolute `http(s)` address keeps its origin and path
+ * (heatmaps key their data by the page's address; web vitals carry their own `$current_url`), a path likewise, and
+ * any other text is scrubbed (`scrubText`). Replay snapshots (`$snapshot…`) stay as the recorder masked them.
+ */
+function cleanDeep(value: unknown, depth = 6): unknown {
+  if (typeof value === "string") {
+    return /^https?:\/\//.test(value) || (value.startsWith("/") && /[?#]/.test(value)) ? stripUrl(value) : scrubText(value);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (depth <= 0) {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => cleanDeep(item, depth - 1));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    out[/^https?:\/\//.test(key) ? stripUrl(key) : key] = key.startsWith("$snapshot") ? item : cleanDeep(item, depth - 1);
+  }
+  return out;
+}
+
+/** Keeps origin and path of every address in the event, nested ones and keys included, and scrubs every other text. */
 export function beforeSend(event: CaptureResult | null): CaptureResult | null {
   if (event === null || event.event === "$snapshot") {
     return event;
   }
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const clean = (properties: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
-    if (properties === undefined) {
-      return undefined;
-    }
-    const out: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(properties)) {
-      if (key.startsWith("$snapshot")) {
-        out[key] = value;
-      } else if (typeof value === "string" && (URL_KEYS.includes(key) || isAppAddress(value, origin))) {
-        out[key] = stripUrl(value);
-      } else if (key === "$set" || key === "$set_once") {
-        out[key] = clean(value as Record<string, unknown>);
-      } else {
-        out[key] = scrubDeep(value);
-      }
-    }
-    return out;
-  };
-  return { ...event, properties: clean(event.properties) ?? {}, ...(event.$set ? { $set: clean(event.$set) } : {}), ...(event.$set_once ? { $set_once: clean(event.$set_once) } : {}) } as CaptureResult;
+  const clean = (part: Record<string, unknown> | undefined) => (part === undefined ? undefined : (cleanDeep(part) as Record<string, unknown>));
+  return {
+    ...event,
+    properties: clean(event.properties) ?? {},
+    ...(event.$set ? { $set: clean(event.$set) } : {}),
+    ...(event.$set_once ? { $set_once: clean(event.$set_once) } : {}),
+  } as CaptureResult;
 }
 
 /** The options of `posthog.init`, as legacy (`03` §3.3) with the replay masking of SEC-REQ-036. */
@@ -200,6 +210,11 @@ export function trackScreen(screen: string, props: { listing_id?: number } = {})
     return;
   }
   send(screen, props);
+}
+
+/** A layer without an address left (`useScreenLayer`): its screen may be shown again and counts as a new pageview. */
+export function forgetLastScreen(): void {
+  lastScreen = null;
 }
 
 /** An event without properties sent once per launch (PostHog only): `session_expired`. */

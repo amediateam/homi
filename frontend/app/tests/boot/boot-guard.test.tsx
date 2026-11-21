@@ -17,7 +17,8 @@ describe("BootGuard (TMA-003)", () => {
     render(<BootGuard />);
 
     expect(host.__homiBoot.ok).toBe(true);
-    expect(host.__homiBoot.watching).toBe(false);
+    // WP-32: the global error handlers take over the reports from here.
+    expect(host.__homiBoot.watching).toBe(true);
   });
 
   it("does nothing without the boot script", () => {

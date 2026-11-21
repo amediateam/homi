@@ -1,24 +1,37 @@
 /**
  * The scrubbers of everything that leaves the browser (WP-32; SEC-REQ-022, SEC-REQ-047, TMA-009): the journal bodies,
  * the PostHog properties and, again on the server, the boot-error route. One implementation for all three. They mask
- * Telegram's launch data (`tgWebAppData=…` up to the next `&` or `#`), a bearer token, the session cookie pair, Uzbek
- * phone numbers (`+998` and nine digits, with or without separators, masked to `+998***`) and e-mail addresses.
+ * Telegram's launch data (`tgWebAppData=…` up to the next `&` or `#`, and its decoded fields `query_id`, `user`,
+ * `auth_date`, `hash`, `signature`, `chat_instance`, `chat_type`, `start_param`), a bearer token, the session cookie
+ * pair, phone numbers — Uzbek ones with `+998`, `998` or `00998`, the nine local digits of a mobile code, `8` before
+ * them, any separators (masked to `+998***`), and other international numbers (`+` and nine or more digits, masked to
+ * `+***`) — and e-mail addresses. Over-masking a number that is not a phone is accepted.
  */
 
 const LAUNCH_DATA = /tgWebAppData=[^&#\s]*/g;
+const LAUNCH_FIELDS = /\b(query_id|user|receiver|chat|auth_date|hash|signature|chat_instance|chat_type|start_param)=[^&#\s]*/g;
 const BEARER = /\bBearer\s+[\w.~+/=|-]+/gi;
 const SESSION = /\bhomi_session=[^;&#\s]*/g;
-// `+998` (or `998` alone) and nine more digits, each optionally after a space, a dot, a dash or a bracket.
-const PHONE = /(?<!\d)\+?998(?:[\s().-]*\d){9}(?!\d)/g;
+const SEPARATOR = "[\\s().\\u2010-\\u2015-]*";
+// `+998`, `998` or `00998` and nine more digits, each optionally after a separator (a space, a dot, a bracket, a dash
+// of any kind).
+const PHONE = new RegExp(`(?<!\\d)(?:\\+|00)?998(?:${SEPARATOR}\\d){9}(?!\\d)`, "g");
+// The nine local digits of an Uzbek mobile code (33, 50, 55, 77, 88, 90 … 99), with `8` before them or not.
+const LOCAL_PHONE = new RegExp(`(?<![\\d+])(?:8${SEPARATOR})?(?:33|50|55|77|88|9\\d)(?:${SEPARATOR}\\d){7}(?!\\d)`, "g");
+// Any other international number: `+` and nine or more digits.
+const INTERNATIONAL = new RegExp(`\\+\\d(?:${SEPARATOR}\\d){8,}(?!\\d)`, "g");
 const EMAIL = /[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
 /** `value` with launch data, tokens, the session cookie, phone numbers and e-mail addresses masked. */
 export function scrubText(value: string): string {
   return value
     .replace(LAUNCH_DATA, "tgWebAppData=***")
+    .replace(LAUNCH_FIELDS, "$1=***")
     .replace(BEARER, "Bearer ***")
     .replace(SESSION, "homi_session=***")
     .replace(PHONE, "+998***")
+    .replace(INTERNATIONAL, "+***")
+    .replace(LOCAL_PHONE, "+998***")
     .replace(EMAIL, "***@***");
 }
 

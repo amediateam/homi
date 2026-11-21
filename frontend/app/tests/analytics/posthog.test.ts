@@ -204,6 +204,18 @@ describe("the options and before_send", () => {
       nested: { phone: "+998***", list: ["***@***"] },
       $set_once: { $initial_current_url: `${origin}/ru` },
     });
+    const heatmap = beforeSend({
+      uuid: "h",
+      event: "$$heatmap",
+      properties: {
+        $heatmap_data: { [`${origin}/ru/map?polygon=1,2&city=x`]: [{ x: 1, y: 2 }] },
+        $web_vitals_LCP_event: { $current_url: `${origin}/ru?rooms_min=2#frag`, value: 1200 },
+      },
+    } as never);
+    expect(heatmap?.properties).toEqual({
+      $heatmap_data: { [`${origin}/ru/map`]: [{ x: 1, y: 2 }] },
+      $web_vitals_LCP_event: { $current_url: `${origin}/ru`, value: 1200 },
+    });
     const snapshot = { uuid: "s", event: "$snapshot", properties: { $snapshot_data: [{ text: "+998901234567" }] } } as never;
     expect(beforeSend(snapshot)).toBe(snapshot);
   });

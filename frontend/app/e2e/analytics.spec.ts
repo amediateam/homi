@@ -76,6 +76,12 @@ test.describe("analytics @analytics", () => {
       Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false, configurable: true });
       // Headless Chrome also names itself in the client hints.
       Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => undefined, configurable: true });
+      // Full graphics whatever the runner's cores: lite mode never samples a replay (and would mark an Android phone).
+      try {
+        window.localStorage.setItem("homi-graphics", "full");
+      } catch {
+        // No storage: the rule decides.
+      }
     });
   });
 

@@ -37,10 +37,20 @@ describe("the global handlers (WP-32, 03 §1.6; TMA-003, TMA-044)", () => {
     expect(reportsRejection(new Error("real"))).toBe(true);
   });
 
-  it("report an uncaught error with its file position and a rejection, once each; set the boot guard's watching", () => {
+  it("leave uncaught errors to the boot guard until React has mounted; report rejections from the start", () => {
+    installGlobalErrorHandlers();
+    window.dispatchEvent(new ErrorEvent("error", { message: "early", error: new Error("early") }));
+    window.dispatchEvent(Object.assign(new Event("unhandledrejection"), { reason: new Error("early rejection"), promise: Promise.resolve() }));
+
+    expect(reported().map((entry) => `${entry.kind}:${entry.message}`)).toEqual(["rejection:early rejection"]);
+    expect((window as unknown as { __homiBoot: Boot }).__homiBoot.watching).toBe(false);
+  });
+
+  it("report an uncaught error with its file position and a rejection, once each, after the hand-over", () => {
     installGlobalErrorHandlers();
     installGlobalErrorHandlers();
-    expect((window as unknown as { __homiBoot: Boot }).__homiBoot.watching).toBe(true);
+    // BootGuard's hand-over, once React has mounted.
+    (window as unknown as { __homiBoot: Boot }).__homiBoot.watching = true;
 
     const error = new Error("boom");
     window.dispatchEvent(new ErrorEvent("error", { message: "boom", error, filename: "https://app.homi.uz/a.js?x=1", lineno: 4, colno: 2 }));
@@ -56,6 +66,7 @@ describe("the global handlers (WP-32, 03 §1.6; TMA-003, TMA-044)", () => {
 
   it("an error re-thrown asynchronously (safeCallback) is reported once", () => {
     installGlobalErrorHandlers();
+    (window as unknown as { __homiBoot: Boot }).__homiBoot.watching = true;
     const error = new Error("in a Telegram callback");
     window.dispatchEvent(new ErrorEvent("error", { message: error.message, error }));
     window.dispatchEvent(new ErrorEvent("error", { message: error.message, error }));

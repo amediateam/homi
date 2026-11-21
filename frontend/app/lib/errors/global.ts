@@ -10,9 +10,11 @@ import { reportError } from "./report";
  * reported as `error` (not «Script error.», a cross-origin script's, and not one without text); an unhandled
  * rejection as `rejection`, except an `ApiError` of `@homi/api-client`, a result already mapped to a `UiError` (an
  * `ApiResult` failure) and an abort. Next's control-flow throws (`redirect()`, `notFound()`) are caught by its own
- * boundaries; any that reached here are ignored by their `digest`. The hand-over to the boot guard of WP-21: once these
- * listeners exist, `__homiBoot.watching` is set and the guard stops posting `/bff/boot-error` itself (it still shows
- * «Обновите Telegram» until React mounts); the entries it already collected are not sent again. Errors thrown in
+ * boundaries; any that reached here are ignored by their `digest`. The hand-over with the boot guard of WP-21: until
+ * React has mounted (`BootGuard` sets `__homiBoot.watching` with `ok`), uncaught errors stay the guard's — it posts
+ * `/bff/boot-error`, which needs no session, and shows «Обновите Telegram» — so a bundle that never reaches a session
+ * still reports them, and nothing is sent twice; rejections, which the guard does not watch, are reported here from the
+ * start. The entries the guard collected are not sent again. Errors thrown in
  * Telegram callbacks are re-thrown asynchronously by `safeCallback` and arrive here once. Imports no React, no
  * catalogue and no PostHog: `instrumentation-client` must stay light.
  */
@@ -47,7 +49,9 @@ export function reportsRejection(reason: unknown): boolean {
 let installed = false;
 
 function onError(event: ErrorEvent): void {
-  if (!reportsErrorEvent(event)) {
+  const boot = bootState();
+  // The boot guard reports until React has mounted.
+  if (!reportsErrorEvent(event) || (boot !== null && !boot.watching)) {
     return;
   }
   const source = event.filename ? `${event.filename}${event.lineno ? `:${event.lineno}${event.colno ? `:${event.colno}` : ""}` : ""}` : undefined;
@@ -60,7 +64,7 @@ function onRejection(event: PromiseRejectionEvent): void {
   }
 }
 
-/** Installs both listeners once per document and takes over from the boot guard. */
+/** Installs both listeners once per document. */
 export function installGlobalErrorHandlers(): void {
   if (installed || typeof window === "undefined") {
     return;
@@ -68,10 +72,6 @@ export function installGlobalErrorHandlers(): void {
   installed = true;
   window.addEventListener("error", onError);
   window.addEventListener("unhandledrejection", onRejection);
-  const boot = bootState();
-  if (boot !== null) {
-    boot.watching = true;
-  }
 }
 
 /** Tests only. */

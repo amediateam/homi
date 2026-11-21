@@ -9,6 +9,7 @@ import { BOOT_SCRIPT, BOOT_STUBS } from "@/boot/inline.generated";
 import { GateRedirector } from "@/features/gates/GateRedirector";
 import { SessionExpired } from "@/features/gates/SessionExpired";
 import { AnalyticsBoot } from "@/features/shell/AnalyticsBoot";
+import { BUILD_VERSION } from "@/lib/analytics/buildVersion";
 import { BootGuard } from "@/features/shell/BootGuard";
 import { DemoDataMarker } from "@/features/shell/DemoDataMarker";
 import { FragmentGuard } from "@/features/shell/FragmentGuard";
@@ -72,7 +73,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           // eslint-disable-next-line @next/next/no-sync-scripts -- development only: the emulator must run before the SDK.
           <script src="/__dev/telegram-emulator.js" nonce={nonce} />
         ) : null}
-        <script id="homi-boot" nonce={nonce} data-bot={brand.botUsername} dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+        <script id="homi-boot" nonce={nonce} data-bot={brand.botUsername} data-v={BUILD_VERSION} dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <link rel="preconnect" href="https://telegram.org" crossOrigin="anonymous" />
       </head>
       <body>

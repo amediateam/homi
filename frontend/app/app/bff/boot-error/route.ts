@@ -33,6 +33,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!sameOrigin(request, false) || !(request.headers.get("content-type") ?? "").startsWith("application/json")) {
     return done();
   }
+  // A declared length over the limit is refused before the body is read.
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) {
+    return done();
+  }
   const raw = await request.text();
   if (new TextEncoder().encode(raw).length > MAX_BYTES) {
     return done();

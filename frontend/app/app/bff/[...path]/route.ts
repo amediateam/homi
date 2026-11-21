@@ -38,6 +38,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!isWrite(path)) {
     return refuse(404, "not_found");
   }
+  // A declared length over the limit is refused before the body is read.
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_EVENT_BYTES) {
+    return refuse(413, "payload_too_large");
+  }
   const text = await request.text();
   if (new TextEncoder().encode(text).length > MAX_EVENT_BYTES) {
     return refuse(413, "payload_too_large");

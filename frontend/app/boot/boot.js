@@ -138,7 +138,7 @@
       platform: (app && app.platform) || fragment('tgWebAppPlatform')
     };
     boot.errors.push(entry);
-    /* Once the app's own handlers listen (WP-32, lib/errors/global.ts sets watching), they report: no second report. */
+    /* Once React has mounted, BootGuard sets watching and the app's own handlers report (WP-32): no second report. */
     if (!launchData() || boot.watching) {
       return;
     }
@@ -146,7 +146,7 @@
       var request = new XMLHttpRequest();
       request.open('POST', '/bff/boot-error', true);
       request.setRequestHeader('Content-Type', 'application/json');
-      request.send(JSON.stringify({ error: entry }));
+      request.send(JSON.stringify({ v: (tag && tag.getAttribute('data-v')) || '', error: entry }));
     } catch (e) {
       /* nothing to do */
     }

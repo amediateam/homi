@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 import { trackScreen } from "@/lib/analytics/posthog";
-import { setScreen } from "@/lib/analytics/screens";
+import { currentScreen, setScreen } from "@/lib/analytics/screens";
 import { usePathname } from "@/i18n/navigation";
 import { matchRoute, screenNameOf } from "@/lib/navigation/routes";
 
@@ -48,7 +48,9 @@ export function ScreenTracker(): null {
       }
       return;
     }
-    trackScreen(name, listing === null ? {} : { listing_id: listing });
+    // A layer without an address on top (the map's card) stays the screen: the pageview is the top's.
+    const top = currentScreen();
+    trackScreen(top, top !== name || listing === null ? {} : { listing_id: listing });
   }, [name, listing]);
   return null;
 }

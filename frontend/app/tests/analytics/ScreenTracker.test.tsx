@@ -10,6 +10,7 @@ vi.mock("@/i18n/navigation", () => ({ usePathname: () => state.pathname }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(state.search) }));
 vi.mock("@/lib/analytics/posthog", () => ({
   trackScreen: (screen: string, props: Record<string, unknown> = {}) => state.tracked.push({ screen, props }),
+  forgetLastScreen: () => undefined,
 }));
 
 import { listingKnown, resetScreenTracker, ScreenTracker } from "@/features/shell/ScreenTracker";
@@ -73,6 +74,20 @@ describe("ScreenTracker (WP-32, LB-APP-037)", () => {
       { screen: "listing", props: { listing_id: 7 } },
       { screen: "listing/photos", props: { listing_id: 7 } },
     ]);
+  });
+});
+
+describe("ScreenTracker and a layer on top (review of WP-32)", () => {
+  it("an address change under the map's card sends the card, not the map", () => {
+    at("/map");
+    const view = render(<ScreenTracker />);
+    renderHook(() => useScreenLayer("map/card"));
+    at("/map", "pin=4&from=radar");
+    view.rerender(<ScreenTracker />);
+    at("/map", "draw=1");
+    view.rerender(<ScreenTracker />);
+
+    expect(state.tracked.map((entry) => entry.screen)).toEqual(["search/map", "map/card", "map/card"]);
   });
 });
 

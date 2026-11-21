@@ -40,6 +40,9 @@ for (const mode of ["cookie", "header"] as const) {
 
       await expect(crash(page)).toBeVisible();
       await expect.poll(() => reported().filter((error) => error.kind === "render")).toHaveLength(1);
+      // A late duplicate would show by now.
+      await page.waitForTimeout(500);
+      expect(reported().filter((error) => error.kind === "render")).toHaveLength(1);
       expect(reported().find((error) => error.kind === "render")).toMatchObject({
         name: "Error",
         message: "UI gallery: a render error on purpose",
@@ -67,6 +70,9 @@ for (const mode of ["cookie", "header"] as const) {
         "error:e2e: thrown twice",
         "rejection:e2e: rejected twice",
       ]);
+      // A late duplicate would show by now.
+      await page.waitForTimeout(500);
+      expect(reported()).toHaveLength(2);
       expect(reported().every((error) => error.screen === "search/list" && error.stage === "app")).toBe(true);
     });
   });
