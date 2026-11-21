@@ -20,7 +20,7 @@ export function RequestList({ listingId }: { listingId: string }) {
   const requests = useOwnerRequests(listingId);
   const { busy, run } = useAnswer({ onAnswered: requests.replace, onClosed: () => void requests.reload() });
   const end = useRef<HTMLDivElement>(null);
-  const { more, loadMore, loadingMore, stalled } = requests;
+  const { more, next, loadMore, loadingMore, stalled } = requests;
 
   useLayoutEffect(() => dismissRequestTip(), []);
 
@@ -41,7 +41,9 @@ export function RequestList({ listingId }: { listingId: string }) {
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [more, stalled, loadMore]);
+    // `next`: a new observer for each page reports at once whether the end is still in view (an observer only reports
+    // changes), and without one the next page loads at once, until the cursor ends.
+  }, [more, next, stalled, loadMore]);
 
   if (!requests.loaded && requests.error !== null) {
     const offline = requests.error.error === "offline" || requests.error.error === "timeout";

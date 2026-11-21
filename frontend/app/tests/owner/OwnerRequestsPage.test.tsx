@@ -158,6 +158,18 @@ describe("«Отклики» (WP-82, SCR-058, BR-APP-090)", () => {
     expect(state.toast).toHaveBeenCalledWith({ key: "common.saveFailed" });
   });
 
+  it("without an observer every page loads, until the cursor ends (round 2)", async () => {
+    state.pages = [
+      { items: [request(1)], next: "1" },
+      { items: [request(5)], next: "2" },
+      { items: [request(6)], next: null },
+    ];
+    await mount();
+    await act(async () => undefined);
+    expect(document.querySelectorAll("[data-request]")).toHaveLength(3);
+    expect(state.reads.filter((read) => read.includes("cursor="))).toHaveLength(2);
+  });
+
   it("a failed later page stops the paging until «Повторить» (review: no request loop)", async () => {
     state.pages = [
       { items: [request(1)], next: "1" },

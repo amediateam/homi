@@ -374,7 +374,8 @@ async function readMe(): Promise<void> {
  */
 export function refresh(): Promise<void> {
   if (refreshing !== null) {
-    queued ??= refreshing.then(() => {
+    // A failed read in flight never leaves the queue rejected: the next read runs anyway.
+    queued ??= refreshing.catch(() => undefined).then(() => {
       queued = null;
       return refresh();
     });

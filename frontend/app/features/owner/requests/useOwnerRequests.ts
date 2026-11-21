@@ -80,6 +80,8 @@ export interface OwnerRequests {
   error: ApiFailure | null;
   /** More pages exist (`meta.next_cursor`). */
   more: boolean;
+  /** The cursor of the next page: the list's observer is set up again for each one. */
+  next: string | null;
   loadingMore: boolean;
   /** A later page failed; it loads again only on `loadMore`. */
   stalled: boolean;
@@ -95,16 +97,18 @@ export interface OwnerRequests {
  * once, and a page that repeats an id adds nothing for it.
  */
 export function useOwnerRequests(listingId: string | null): OwnerRequests {
+  /** A later page failed: nothing loads by itself until `loadMore` is asked for again («Повторить»). */
+  const [stalled, setStalled] = useState(false);
   const used = useRef(new Set<string>());
   const resource = useResource<Page>(listingId === null ? null : ownerRequestsKey(listingId), async (signal) => {
-    // Page one again (a reload, a kept copy read after its time): every cursor may be asked for again.
+    // Page one again (a reload, a kept copy read after its time): every cursor may be asked for again, and paging goes
+    // on by itself.
     used.current.clear();
+    setStalled(false);
     const result = await readPage(listingId ?? "", null, signal);
     return result.ok ? { ...result, data: pageOf(result.data, result.meta.next_cursor) } : result;
   });
   const [loadingMore, setLoadingMore] = useState(false);
-  /** A later page failed: nothing loads by itself until `loadMore` is asked for again («Повторить»). */
-  const [stalled, setStalled] = useState(false);
   const { data, mutate, refetch } = resource;
   // `loadMore` stays the same function across renders (the observer is not rebuilt each time): it reads the latest
   // cursor and `mutate` from refs, written in an effect.
@@ -155,6 +159,7 @@ export function useOwnerRequests(listingId: string | null): OwnerRequests {
     loaded: data !== undefined,
     error: data === undefined ? resource.error : null,
     more: data?.next !== null && data?.next !== undefined,
+    next: data?.next ?? null,
     loadingMore,
     stalled,
     loadMore,

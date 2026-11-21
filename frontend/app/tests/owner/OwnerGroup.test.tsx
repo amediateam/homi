@@ -27,6 +27,7 @@ vi.mock("@/lib/api/browser", () => ({
 }));
 vi.mock("@/lib/navigation/nav", () => ({ nav: { push: state.push, replace: state.replace, back: state.back, tab: vi.fn() } }));
 vi.mock("@/lib/navigation/history", () => ({ backBy: state.backBy }));
+vi.mock("@/lib/navigation/useBack", () => ({ useBack: () => ({ back: state.back, canGoBack: true }) }));
 vi.mock("@/lib/analytics/events", () => ({ track: state.track }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(`where=${state.where}`) }));
 vi.mock("@/features/shell/RouteSheet", () => ({
@@ -118,7 +119,9 @@ describe("OwnerGroup rows", () => {
     await mount(true);
     const counter = row("owner-mine")?.querySelector("[data-settings-count]");
     expect(counter?.textContent).toBe("3");
-    expect(counter?.getAttribute("aria-label")).toBe("ждут ответа: 3");
+    // The value names the counter for assistive technology (a hidden text); the number itself is hidden from it.
+    expect(row("owner-mine")?.querySelector(".sr-only")?.textContent).toBe("ждут ответа: 3");
+    expect(counter?.getAttribute("aria-hidden")).toBe("true");
     fireEvent.click(row("owner-mine")!);
     expect(state.push).toHaveBeenLastCalledWith("/settings/owner");
   });
