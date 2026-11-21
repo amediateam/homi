@@ -297,14 +297,18 @@ export function MapScreen() {
   // A render error of either view (WP-37): the pill's «Повторить» remounts the boundary and the view.
   const [viewFailed, setViewFailed] = useState(false);
   const [viewAttempt, setViewAttempt] = useState(0);
-  // The view is gone: its card, its drawing and the locate button go with it.
+  // The view is gone: its card and the locate button go with it, and a drawing is closed once the failure and the
+  // drawing state of the same commit are known (the boundary reports before this screen's layout effects run).
   const onViewError = useCallback(() => {
     setViewFailed(true);
     setSelection(null);
-    if (latestDraw.current.drawing) {
-      latestDraw.current.closeDraw();
-    }
   }, []);
+  const closeDrawing = useEffectEvent(() => draw.close());
+  useEffect(() => {
+    if (viewFailed && drawing) {
+      closeDrawing();
+    }
+  }, [viewFailed, drawing]);
   const retryView = useCallback(() => {
     tg.haptic.impact("light");
     setViewFailed(false);
