@@ -1,6 +1,7 @@
 import { performanceClassOf } from "@/lib/graphics";
 
 import { requestWriteAccess } from "./access";
+import { requestContact } from "./contact";
 import { backButton, settingsButton } from "./buttons";
 import { deviceStorage } from "./deviceStorage";
 import { confirm } from "./dialogs";
@@ -30,9 +31,9 @@ function onVisibility(state: DocumentVisibilityState, callback: () => void): () 
 /**
  * The Telegram adapter (DEC-44, `25` §3.3; the table of WP-21 "Design"): the only way components reach
  * Telegram. Outside Telegram every member is a no-op or answers `null` / `false` and never throws (TMA-043).
- * Members that do not exist on purpose (TMA-024, TMA-027, TMA-032, TMA-034, TMA-038): MainButton and the bottom
- * buttons, popups, alerts and QR, inline queries, stories, `sendData`, downloads, invoices, `requestContact`, Cloud
- * and Secure storage, biometrics and motion sensors — adding one is a product change.
+ * Members that do not exist on purpose (TMA-024, TMA-027, TMA-032, TMA-038): MainButton and the bottom buttons,
+ * popups, alerts and QR, inline queries, stories, `sendData`, downloads, invoices, Cloud and Secure storage, biometrics
+ * and motion sensors — adding one is a product change. `requestContact` (TMA-034) joined for the owner form (WP-81).
  */
 export const tg = {
   initData,
@@ -53,6 +54,7 @@ export const tg = {
   shareMessage,
   shareUrl,
   requestWriteAccess,
+  requestContact,
   location: { available: locationAvailable, get: getLocation },
   homeScreen,
   deviceStorage,
