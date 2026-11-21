@@ -489,25 +489,28 @@ The package is built as designed. These points were decided in the code (rule 6)
 - **No request for the checked preset.** The design says a pick of the current quiet-hours or digest preset saves
   again, as legacy does. `ChoiceList` (Radix RadioGroup) reports no pick of the checked option, as for the theme,
   language and currency, so nothing is sent; the setting is unchanged either way.
-- **One save rule for the presets** (`usePresetSave`: quiet hours, digest, card style). The change shows at once. An
-  answer for an earlier pick never replaces a later pick, and only a failure of the latest save puts settings back:
-  the answer of the newest save that succeeded, else the settings before the saves. Next sends Server Actions one at a
-  time, so the server takes the saves in order and holds the newest success; an earlier success that arrives after the
-  latest one failed is therefore shown, and one that arrives after a later success is dropped. The theme follows the
-  same rule for what a failure restores.
+- **One save rule for the presets** (`usePresetSave`: quiet hours, digest, card style). The change shows at once.
+  Next sends Server Actions one at a time, each after the answer of the one before (a save repeated after a
+  re-authentication joins the queue again), so the answers arrive in the order the server took the writes and the
+  last success to arrive is what it holds. While the latest pick waits, earlier answers change nothing on screen; the
+  latest one's success is shown, and its failure puts back the last success that arrived meanwhile, else the settings
+  before the saves. A success that arrives after the latest pick settled is shown. The theme restores by the same
+  rule.
 - **Language and currency rows are disabled while a save runs**, so the second pick of the design ("waits for the
   first") cannot happen.
 - **The hidden list's follow-up.** The design names "the map points, the count and the radar previews":
   - the radar lists are invalidated (`invalidate("radars")`);
   - the map's points now follow the feed epoch (`useMapPoints`: a bump asks the same search again and keeps the points
     until the answer, whose `responseId` stays, so the camera and an open card stay), which also covers a language or
-    currency change and WP-38's long return. Only an answer with points keeps the id: before the first answer, or
-    after one without points, the camera has nothing fitted yet, so the next answer fits;
+    currency change and WP-38's long return. Only an answer the camera could fit keeps the id — one with points, or
+    any answer for a drawn area: before the first answer, or after one without points, the next answer fits;
   - the live count of the filter sheets is read anew whenever a sheet opens, so nothing keeps it.
   A failure puts back exactly the rows its change removed, among the rows shown now, in the list's order as first read.
   Legacy's `applyChange` filtered the rows of before the change, which lost a row that a second failure had put back
-  (two «Вернуть» that fail in turn); a row returned before a change began stays returned, and a change that fails
-  after a «Показать всё снова» succeeded puts nothing back (the server returned its row too). When a row leaves, the
+  (two «Вернуть» that fail in turn); a row returned before a change began stays returned, a change that fails after a
+  «Показать всё снова» succeeded puts nothing back, and a successful «Показать всё снова» empties the list even of a
+  row another failure put back meanwhile (the server returned it too). Each change starts from the list shown at that
+  moment, so a confirm that waited sees a row put back meanwhile. When a row leaves, the
   focus moves to the next row's «Вернуть», else to the previous one's, else to the page (the last row takes
   «Показать всё снова» with it).
 - **The «Лента» count** is the sum of hidden listings and blocked authors (legacy's), shown as the row's value.
@@ -541,7 +544,8 @@ that still names the settings placeholder (a shared file: a separate small PR).
 
 ## Handoff
 
-Finished: every step, with unit, component and end-to-end tests; two independent reviews, their findings fixed; PR #101.
+Finished: every step, with unit, component and end-to-end tests; three independent review rounds, their findings at
+medium and above fixed; PR #101.
 Nothing is half-done. Known and left: a direct load of a sub-page address may read the settings once more in the
 browser before the layout's server read arrives (the shown data is the same). Next: the queue's next
 package; the production track's deploy and the acceptance checklist on staging.
