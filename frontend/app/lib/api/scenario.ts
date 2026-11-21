@@ -4,8 +4,14 @@
  * (WP-22). `NEXT_PUBLIC_APP_ENV` is inlined at build time, so a production build never forwards it. The cached
  * reference calls never forward it.
  */
-export const STUB_SCENARIO_COOKIE = "homi_stub_scenario";
-export const STUB_SCENARIO_HEADER = "X-Stub-Scenario";
+const FORWARDS = process.env.NEXT_PUBLIC_APP_ENV !== "production";
+
+/**
+ * The names are empty in a production build, so the minifier leaves neither in its output (WP-33 bundle check, row 4):
+ * an empty cookie name reads nothing.
+ */
+export const STUB_SCENARIO_COOKIE = FORWARDS ? "homi_stub_scenario" : "";
+export const STUB_SCENARIO_HEADER = FORWARDS ? "X-Stub-Scenario" : "";
 
 const SCENARIO = /^[a-z0-9_]{1,40}$/;
 

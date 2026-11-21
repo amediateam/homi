@@ -6,7 +6,6 @@ import homiUz from "../messages/homi/uz.json";
 import legacyEn from "../messages/legacy/en.json";
 import legacyRu from "../messages/legacy/ru.json";
 import legacyUz from "../messages/legacy/uz.json";
-import { type I18nReporter, reportOnce } from "./report";
 
 /**
  * The catalogue shape: the generated `legacy` layer with the hand-written `homi` layer over it, typed from `ru`
@@ -55,31 +54,4 @@ export function getMessages(locale: Locale): Messages {
   const merged = (locale === "ru" ? own("ru") : mergeMessages(own("ru"), own(locale))) as Messages;
   cache.set(locale, merged);
   return merged;
-}
-
-type IntlErrorLike = Error & { code: string };
-
-/** Error codes after which next-intl asks `getMessageFallback` for the text, which reports them by key. */
-const KEY_ERRORS = new Set(["MISSING_MESSAGE", "INSUFFICIENT_PATH", "INVALID_MESSAGE", "FORMATTING_ERROR"]);
-
-/**
- * The two next-intl hooks of the runtime rules (fix of LB-APP-002): a missing key, a missing argument or a malformed
- * message renders the key path — never a throw, never an empty string — and is reported once per key. next-intl calls
- * `onError` and then `getMessageFallback` for those (use-intl `createBaseTranslator`); other errors arrive at
- * `onError` alone and are reported once per message.
- */
-export function createIntlHandlers(report?: I18nReporter) {
-  return {
-    onError(error: IntlErrorLike): void {
-      if (KEY_ERRORS.has(error.code)) {
-        return;
-      }
-      reportOnce(report, `error:${error.message}`, error, { kind: "i18n", key: null, code: error.code });
-    },
-    getMessageFallback({ error, namespace, key }: { error: IntlErrorLike; namespace?: string; key: string }): string {
-      const path = namespace ? `${namespace}.${key}` : key;
-      reportOnce(report, `key:${path}`, error, { kind: "i18n", key: path, code: error.code });
-      return path;
-    },
-  };
 }
