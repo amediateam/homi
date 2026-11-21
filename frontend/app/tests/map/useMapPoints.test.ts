@@ -164,7 +164,7 @@ describe("useMapPoints (WP-27, SCR-011)", () => {
     pending.unmount();
 
     const failing = points();
-    await answer(2, failed("network", 0));
+    await answer(2, failed("offline", 0));
     expect(failing.result.current.status).toBe("error");
     act(() => bumpFeedEpoch());
     await answer(3, answered(POINTS, 3));
