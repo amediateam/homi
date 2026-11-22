@@ -34,8 +34,8 @@ Rules for working at the same time: [`docs/handoff/parallel-work.md`](docs/hando
    ```
    Then open `https://app.homi.loc` and `https://api.homi.loc/up`.
 4. **Read**, in this order: this file → `AGENTS.md` → `CLAUDE.md` → [`docs/handoff/project-context.md`](docs/handoff/project-context.md) → [`docs/handoff/parallel-work.md`](docs/handoff/parallel-work.md) → `.ai/memory/current-state.md` and `known-issues.md` → before each task, the files in its "read first" line.
-5. **Start with T0** — your setup is the project's first install on a clean machine; write down what breaks. Then **T1**.
-6. **Order:** T0 → T1 → T2 → T3 → T4 (closes Phase 3) → T5 → T6 → T7 / T8. Tooling tasks T9–T11 fit between features. Anything marked **gate** waits for the first developer's answer.
+5. **Start with T0** — set up your machine and write down what breaks. Then continue the Wave 1 queue (§4): `.ai/memory/session-handoff.md` names the package and the step to take.
+6. **Order:** T0, then the packages of `docs/migration/wave-1/README.md` in its order; §4 maps the tasks T1 … T8 onto them. Tooling tasks T9–T11 fit between features. Anything marked **gate** waits for the first developer's answer.
 
 ## 2. Where the project is (2026-11-09)
 
@@ -161,6 +161,6 @@ Paste this into the agent started at the repository root — Claude Code (e.g. F
 You are continuing development of HOMI (homi.uz) on a new machine; the previous sessions ran elsewhere and their context is in the repository, not in your memory.
 1. Read AGENTS.md (Codex) or CLAUDE.md (Claude Code), then HANDOFF.md, docs/handoff/setup.md, docs/handoff/project-context.md, docs/handoff/parallel-work.md and .ai/memory/{current-state,known-issues,session-handoff}.md.
 2. Do task T0 from HANDOFF.md §4: walk me through docs/handoff/setup.md from the first unfinished step. Steps that need sudo or a password (make dev-setup, nginx, /etc/hosts, mkcert, pecl) I run myself in a terminal and paste the output; you run the read-only checks and the gates (ask me for approval when a command needs network or writes outside the repository). Report each check with its command and output. Do not fix anything outside the plan without asking me.
-3. Then propose a test-first plan for T1 and wait for my OK before writing code.
+3. Then continue the Wave 1 queue: read docs/migration/wave-1/README.md (its rules 1–8) and "State at handoff" in .ai/memory/session-handoff.md, tell me which package and step you take, and wait for my OK before writing code.
 Rules: the "Hard rules" in AGENTS.md are binding; staging/production work is out of scope; talk to me in Russian, write repository artifacts in English; never claim a check you did not run.
 ```
