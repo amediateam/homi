@@ -119,7 +119,7 @@ async function onListing(page: Page, number: number): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`listing actions (${mode} mode)`, () => {
+  test.describe(`listing actions (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-023" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("hide: the toast offers «Вернуть»; the feed lacks the card and the history did not grow; «Вернуть» brings it back", async ({ page }) => {
       const app = await open(page, mode);
       await expect(card(page, LISTING)).toBeVisible();

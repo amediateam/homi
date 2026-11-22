@@ -34,7 +34,7 @@ async function open(page: Page, mode: "cookie" | "header", confirm = true): Prom
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`settings: hidden (${mode} mode)`, () => {
+  test.describe(`settings: hidden (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-039" }] }, () => {
     test("«Вернуть» on an author and on a listing removes the row; the count follows", async ({ page }) => {
       await open(page, mode);
       await expect(authors(page).first()).toContainText("Номер ·");

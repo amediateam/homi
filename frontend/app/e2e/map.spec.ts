@@ -289,7 +289,7 @@ async function applyTwoRooms(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`map (${mode} mode)`, () => {
+  test.describe(`map (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-011" }, { type: "screen", description: "SCR-013" }] }, () => {
     /** WP-37 E2E; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»" (BR-APP-062). */
     test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
       await setScenario(page, "map_cut");
@@ -393,7 +393,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("map (cookie mode)", () => {
+test.describe("map (cookie mode)", { annotation: [{ type: "screen", description: "SCR-011" }, { type: "screen", description: "SCR-013" }] }, () => {
   /**
    * E3 and the actions "Tap a stack", "Tap a spread pin", "Swipe the card track", "Tap the map background";
    * acceptance "tapping spreads it without overlaps", "A background tap … close the card", "A stack card shows

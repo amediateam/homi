@@ -13,7 +13,7 @@ import type { Page } from "@playwright/test";
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner entry (${mode} mode)`, () => {
+  test.describe(`owner entry (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-050" }] }, () => {
     test("a short feed's end row and an empty feed's line open «Мои объявления» for a full account", async ({ page }) => {
       await stubMedia(page);
       await setScenario(page, "few");

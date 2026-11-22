@@ -173,7 +173,7 @@ async function refuseAsTooOld(page: Page): Promise<void> {
   });
 }
 
-test.describe("feed (cookie mode only)", () => {
+test.describe("feed (cookie mode only)", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-008" }, { type: "screen", description: "SCR-009" }, { type: "screen", description: "SCR-010" }, { type: "screen", description: "SCR-042" }] }, () => {
   /**
    * The first launch has no cookie yet: the document shows skeletons, the sign-in sets the cookie and refreshes the
    * router once, and the browser reads page one through `/bff` (the refresh's server read is not adopted, WP-24). A
@@ -308,7 +308,7 @@ test.describe("feed (cookie mode only)", () => {
   });
 });
 
-test.describe("feed (header mode only)", () => {
+test.describe("feed (header mode only)", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-008" }, { type: "screen", description: "SCR-009" }, { type: "screen", description: "SCR-010" }, { type: "screen", description: "SCR-042" }] }, () => {
   test("page one is asked for through /bff/listings with the bearer token and no session cookie", async ({ page }) => {
     const firstPages = recordRequests(page, (request) => isPageOne(new URL(request.url())));
     await open(page, "header");
@@ -394,7 +394,7 @@ test.describe("feed (header mode only)", () => {
 });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`feed (${mode} mode)`, () => {
+  test.describe(`feed (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-008" }, { type: "screen", description: "SCR-009" }, { type: "screen", description: "SCR-010" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("scrolling loads the pages until the stub's last one; every listing shows once", async ({ page }) => {
       const pages = recordPages(page);
       const laterPages = recordRequests(page, (request) => isLaterPage(new URL(request.url())));

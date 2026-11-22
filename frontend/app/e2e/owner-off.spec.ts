@@ -10,7 +10,7 @@ import type { Request } from "@playwright/test";
 
 const isServerAction = (request: Request) => request.method() === "POST" && request.headers()["next-action"] !== undefined;
 
-test.describe("owner cabinet switched off @owner-off", () => {
+test.describe("owner cabinet switched off @owner-off", { annotation: [{ type: "screen", description: "SCR-032" }] }, () => {
   for (const path of ["/owner/new", "/owner/01JF0000000000000000000004"]) {
     test(`${path} gives way to the settings tab and sends nothing`, async ({ page }) => {
       await stubMedia(page);

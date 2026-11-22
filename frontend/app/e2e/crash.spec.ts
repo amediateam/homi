@@ -36,7 +36,7 @@ for (const [mode, locales] of [
   ["cookie", ["ru", "uz"]],
   ["header", ["ru", "uz"]],
 ] as const) {
-  test.describe(`crash screen (${mode} mode)`, () => {
+  test.describe(`crash screen (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-045" }] }, () => {
     for (const locale of locales) {
       test(`a render error shows the crash screen in ${locale}, and «${TEXTS[locale].reload}» reloads`, async ({ page }) => {
         allowConsoleErrors(test.info(), /UI gallery: a render error on purpose/);

@@ -171,7 +171,7 @@ const countOf = async (response: Response) => ((await response.json()) as { data
 const bannerTitle = (count: number) => `С вашего прошлого захода — ${count} ${new Intl.PluralRules("ru").select(count) === "one" ? "новое" : "новых"}`;
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`return banner (${mode} mode)`, () => {
+  test.describe(`return banner (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-046" }] }, () => {
     test("default filters, last visit 7 h ago: 1.8 s after the visit «… — N новых» with «Настроить» → «Новый радар» with the search", async ({ page }) => {
       const visited = Date.now() - 7 * HOUR_MS;
       // One close in a row before: «Настроить» starts the streak again.

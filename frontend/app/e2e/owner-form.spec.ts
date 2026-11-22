@@ -27,7 +27,7 @@ function actions(page: Page): Request[] {
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked"));
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner form (${mode} mode)`, () => {
+  test.describe(`owner form (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-050" }, { type: "screen", description: "SCR-051" }, { type: "screen", description: "SCR-052" }, { type: "screen", description: "SCR-053" }, { type: "screen", description: "SCR-055" }, { type: "screen", description: "SCR-056" }] }, () => {
     test("a new draft starts at step «where»; «Указать вручную» opens the questionnaire", async ({ page }) => {
       await stubMedia(page);
       const sent = actions(page);

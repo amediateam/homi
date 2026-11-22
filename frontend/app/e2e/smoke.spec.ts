@@ -1,7 +1,7 @@
 import { expect, playwrightTelegram, stubMedia, test } from "@homi/testing/playwright";
 
 /** First end-to-end test (WP-03): the runner, the fake Telegram and the external-request guard work. */
-test.describe("Mini App smoke @smoke", () => {
+test.describe("Mini App smoke @smoke", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
   test("renders / inside the fake Telegram without a console error", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (message) => {

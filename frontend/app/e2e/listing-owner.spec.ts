@@ -10,7 +10,7 @@ import type { Page } from "@playwright/test";
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`listing owner tiers (${mode} mode)`, () => {
+  test.describe(`listing owner tiers (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-062" }] }, () => {
     test("a self-placed listing: the chip opens the info sheet; no source section", async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/listing/10000001" });

@@ -14,7 +14,7 @@ const visible = (page: Page, selector: string) => page.locator(selector).filter(
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked"));
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner panel (${mode} mode)`, () => {
+  test.describe(`owner panel (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-059" }] }, () => {
     test("the own listing: no heart or «⋯», the panel, its footer, and «Отклики» over the listing", async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: `/listing/${NUMBER}` });

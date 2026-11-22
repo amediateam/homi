@@ -147,7 +147,7 @@ const landed = (page: Page, search: Record<string, string>) =>
     .toEqual({ pathname: "/ru", search });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`radar card in the search list (${mode} mode)`, () => {
+  test.describe(`radar card in the search list (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-047" }] }, () => {
     test("default feed without a radar: after the 8th card, the rent title, «Настроить радар» → «Новый радар» with entry=feed", async ({ page }) => {
       // One close in a row before: the card's button starts the nudges' streak again.
       await seedNudge(page, { ...QUIET, closed: 1 });

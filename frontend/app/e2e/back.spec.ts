@@ -29,7 +29,7 @@ async function ready(page: Page): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("data-session", "ready");
 }
 
-test.describe("Back and Settings", () => {
+test.describe("Back and Settings", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
   for (const path of ["/", "/map", "/saved", "/saved/history", "/radars", "/settings"]) {
     test(`BackButton is hidden on the root tab ${path}`, async ({ page }) => {
       await launchApp(page, { path });

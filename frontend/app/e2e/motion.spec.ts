@@ -118,7 +118,7 @@ async function dragSheetDown(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`motion (${mode} mode)`, () => {
+  test.describe(`motion (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-042" }] }, () => {
     test("a sheet closed by Back leaves a copy sliding down over a copy of its backdrop fading; both are gone within 600 ms", async ({ page }) => {
       await open(page, mode);
       await openSort(page);

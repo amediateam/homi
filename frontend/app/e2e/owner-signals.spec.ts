@@ -13,7 +13,7 @@ const ACTIVE = "01JF0000000000000000000003";
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner signals (${mode} mode)`, () => {
+  test.describe(`owner signals (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-060" }] }, () => {
     test("the dot and the tab tip; the tip opens the list with the card tip; the requests dismiss both", async ({ page }) => {
       await stubMedia(page);
       await setScenario(page, "owner_pending");

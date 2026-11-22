@@ -82,7 +82,7 @@ async function closes(app: LaunchedApp): Promise<number> {
   return (await app.calls()).filter((call) => call.member === "close").length;
 }
 
-test.describe("gates", () => {
+test.describe("gates", { annotation: [{ type: "screen", description: "SCR-002" }, { type: "screen", description: "SCR-003" }, { type: "screen", description: "SCR-004" }, { type: "screen", description: "SCR-005" }] }, () => {
   test("without Telegram: /outside with its one sentence, no button and no request to /bff", async ({ page }) => {
     const bff = recordRequests(page, isBff);
     await page.goto("/");
@@ -234,7 +234,7 @@ test.describe("gates", () => {
 
 /** The picks call the settings Server Action (`useAction`), which in header mode carries the token in memory. */
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`gates (${mode} mode)`, () => {
+  test.describe(`gates (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-002" }, { type: "screen", description: "SCR-003" }, { type: "screen", description: "SCR-004" }, { type: "screen", description: "SCR-005" }] }, () => {
     test("first launch: the language page greets in the Telegram language, «English» switches the address without a reload, the city picks the feed", async ({ page }) => {
       await setScenario(page, "first_launch");
       const actions = recordRequests(page, isServerAction);
@@ -305,7 +305,7 @@ async function refuseAsTooOld(page: Page): Promise<void> {
   });
 }
 
-test.describe("session expired", () => {
+test.describe("session expired", { annotation: [{ type: "screen", description: "SCR-002" }, { type: "screen", description: "SCR-003" }, { type: "screen", description: "SCR-004" }, { type: "screen", description: "SCR-005" }] }, () => {
   test("cookie mode: the sign-in at launch refused as too old shows the expired screen in place of the route; «Закрыть» closes", async ({ page }) => {
     await refuseAsTooOld(page);
     const app = await launchApp(page, { path: "/ru/saved" });

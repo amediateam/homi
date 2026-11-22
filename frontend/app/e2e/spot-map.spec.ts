@@ -250,8 +250,8 @@ async function onListing(page: Page, number: number): Promise<void> {
 }
 
 for (const engine of ENGINES) {
-  test.describe(`spot map on ${engine.name} (cookie mode)`, () => {
-    test.describe("on a 640 px screen", () => {
+  test.describe(`spot map on ${engine.name} (cookie mode)`, { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
+    test.describe("on a 640 px screen", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
       test.use({ viewport: { width: 390, height: 640 } });
 
       /**
@@ -527,7 +527,7 @@ function paneContext(host: Locator): Promise<string> {
  * fullscreen map over its ×, «Где я», attribution and card. A tap still reached the controls (the map's box takes no
  * pointer events), so the earlier tests passed. Each map's box is now that stacking context (`data-spot-map-frame`).
  */
-test.describe("spot map on leaflet: the controls above the panes", () => {
+test.describe("spot map on leaflet: the controls above the panes", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
   const leaflet = ENGINES.find((engine) => engine.name === "leaflet")!;
 
   test("each map's panes stay inside its own box; the expand chip opens the fullscreen map", async ({ page }) => {
@@ -548,7 +548,7 @@ test.describe("spot map on leaflet: the controls above the panes", () => {
   });
 });
 
-test.describe("spot map (cookie mode)", () => {
+test.describe("spot map (cookie mode)", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
   /** S "Locate denied"; acceptance "Locate on the fullscreen map: denied text". Engine-independent: GL, the default. */
   test("«Где я» without access shows «Нет доступа к геопозиции…» on the card", async ({ page }) => {
     const app = await open(page, ENGINES[0], `/ru/listing/${LISTING}/location`, { answers: { location: null } });
@@ -602,7 +602,7 @@ test.describe("spot map (cookie mode)", () => {
   });
 });
 
-test.describe("spot map (header mode)", () => {
+test.describe("spot map (header mode)", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
   /**
    * The core path in header mode, where every listing read is a browser read through `/bff`: a direct load of
    * `/location`, then four listings opened over the feed whose reads are answered with the radii 250, 1 500, 1 501

@@ -137,7 +137,7 @@ async function recordDials(page: Page): Promise<() => Promise<string[]>> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`listing contact (${mode} mode)`, () => {
+  test.describe(`listing contact (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-044" }] }, () => {
     test("a direct load holds no digits of the number in its answers or the page; the text shows it masked; nothing asks for the contact", async ({ page }) => {
       const actions = recordRequests(page, isServerAction);
       const answers = recordAnswers(page, LISTING);

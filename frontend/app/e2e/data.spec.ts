@@ -57,7 +57,7 @@ async function listReady(page: Page) {
   await expect(cards(page).first()).toBeVisible();
 }
 
-test.describe("data layer", () => {
+test.describe("data layer", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-011" }] }, () => {
   test("cookie mode: the parsed search reaches the map's read and its filters button, then the list's chips; the reference data and the demo marker", async ({ page }) => {
     const reads = recordRequests(page, isMapRead);
     await launchApp(page, { path: "/ru/map?rooms_min=2" });

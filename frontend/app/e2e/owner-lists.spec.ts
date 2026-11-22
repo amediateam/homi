@@ -28,7 +28,7 @@ function actions(page: Page): Request[] {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner lists (${mode} mode)`, () => {
+  test.describe(`owner lists (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-049" }, { type: "screen", description: "SCR-057" }, { type: "screen", description: "SCR-058" }] }, () => {
     test("at the limit «Сдать квартиру» opens the limit sheet; «Мои объявления» opens the list over Settings", async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/settings" });

@@ -22,7 +22,7 @@ async function watchViolations(page: Page): Promise<() => Promise<string[]>> {
   return () => page.evaluate(() => [...(window as unknown as { __violations: string[] }).__violations]);
 }
 
-test.describe("content security policy", () => {
+test.describe("content security policy", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
   test("launch, soft navigation and an image raise no violation", async ({ page }) => {
     const violations = await watchViolations(page);
     // The card photos come from the stub CDN, which CI cannot resolve: answered here, they load as on a developer machine.

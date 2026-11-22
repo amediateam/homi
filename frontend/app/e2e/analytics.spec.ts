@@ -67,7 +67,7 @@ async function posthog(page: Page): Promise<{ requests: Request[]; events: () =>
 
 const screens = (events: Captured[]) => events.filter((event) => event.event === "$pageview").map((event) => String(event.properties.screen));
 
-test.describe("analytics @analytics", () => {
+test.describe("analytics @analytics", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-007" }] }, () => {
   // PostHog sends nothing for a user agent it takes for a bot (headless Chrome's): the phone's own, as in Telegram.
   test.use({ userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 Telegram-Android/11.5.0" });
   test.beforeEach(async ({ page }) => {

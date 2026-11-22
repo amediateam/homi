@@ -117,7 +117,7 @@ async function open(page: Page, mode: "cookie" | "header", path: string): Promis
  * the tabs, pull and open a sheet therefore run in both modes; the others read nothing per session and run once.
  */
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`shell (${mode} mode)`, () => {
+  test.describe(`shell (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
     test("the tab bar: a round trip keeps the search state, the list or map view and the last saved list", async ({ page }) => {
       const app = await open(page, mode, "/?rooms_min=2&sort=cheap&utm_source=bot");
       await expect(route(page, "feed")).toBeVisible();
@@ -237,7 +237,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("shell", () => {
+test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
   test("the chrome collapses on scroll, expands on the way up, and the first tap only expands", async ({ page }) => {
     const app = await open(page, "cookie", "/");
     await expect(route(page, "feed")).toBeVisible();
@@ -407,7 +407,7 @@ test.describe("shell", () => {
  * Without the Telegram SDK (WP-36, TMA-047): the SDK tag is aborted, the session signs in from the launch fragment,
  * and Telegram's BackButton cannot be shown, so the listing layer and every sub-page carry the app's own cross.
  */
-test.describe("without the Telegram SDK", () => {
+test.describe("without the Telegram SDK", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
   const cross = (page: Page) => visible(page, "[data-fallback-close]");
   const softNavigate = (page: Page, href: string) =>
     page.evaluate((target) => (window as unknown as { next: { router: { push(href: string): void } } }).next.router.push(target), href);
@@ -475,7 +475,7 @@ test.describe("without the Telegram SDK", () => {
   });
 });
 
-test.describe("part B wrappers on the dev gallery", () => {
+test.describe("part B wrappers on the dev gallery", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
   const gallery = (page: Page) => route(page, "dev/ui");
 
   async function openGallery(page: Page): Promise<void> {
@@ -567,7 +567,7 @@ test.describe("part B wrappers on the dev gallery", () => {
   /** From the left edge across most of the 390 px screen: far past a third of the width. */
   const swipeBack = (page: Page) => touchDrag(page, { x: 30, y: 420 }, { x: 370, y: 422 }, 8);
 
-  test.describe("SubPage on iOS", () => {
+  test.describe("SubPage on iOS", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
     test.use({ userAgent: IOS_UA });
 
     test("the gallery's /settings/theme closes by BackButton and by swipe back", async ({ page }) => {
@@ -590,7 +590,7 @@ test.describe("part B wrappers on the dev gallery", () => {
     });
   });
 
-  test.describe("SubPage on Android", () => {
+  test.describe("SubPage on Android", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
     test.use({ userAgent: ANDROID_UA });
 
     test("the gallery's /settings/theme has no swipe back; BackButton still closes it", async ({ page }) => {

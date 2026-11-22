@@ -14,7 +14,7 @@ const bar = (page: Page) => visible(page, "[data-cta]");
 const isServerAction = (request: Request) => request.method() === "POST" && request.headers()["next-action"] !== undefined;
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`contact request (${mode} mode)`, () => {
+  test.describe(`contact request (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-061" }] }, () => {
     test("the bars of the request states", async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/listing/10000002" });

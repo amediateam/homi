@@ -201,7 +201,7 @@ async function scrollTheTab(page: Page, mode: Mode): Promise<number> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`radar tab (${mode} mode)`, () => {
+  test.describe(`radar tab (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-026" }, { type: "screen", description: "SCR-028" }] }, () => {
     test("the tab shows the three stub radars from one list read with the previews; no read per radar", async ({ page }) => {
       await open(page, mode, "/");
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
@@ -567,7 +567,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("radar tab (cookie mode only)", () => {
+test.describe("radar tab (cookie mode only)", { annotation: [{ type: "screen", description: "SCR-026" }, { type: "screen", description: "SCR-028" }] }, () => {
   /**
    * The feed's rule for a first launch (WP-24): the list is read once through `/bff`, and the refresh after the
    * sign-in renders with the new cookie. A reload carries the cookie: the server's read is in the document and the

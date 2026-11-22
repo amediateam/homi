@@ -34,7 +34,7 @@ async function open(page: Page, mode: "cookie" | "header", path = "/settings"): 
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`settings: language and currency (${mode} mode)`, () => {
+  test.describe(`settings: language and currency (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-035" }, { type: "screen", description: "SCR-036" }] }, () => {
     test("ru → en changes the segment and the texts in place; Back lands under the new segment", async ({ page }) => {
       const sessions: Request[] = [];
       page.on("request", (request) => {

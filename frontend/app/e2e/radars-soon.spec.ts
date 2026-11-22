@@ -122,7 +122,7 @@ async function showsSoon(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`radars switched off (${mode} mode) @radars-off`, () => {
+  test.describe(`radars switched off (${mode} mode) @radars-off`, { annotation: [{ type: "screen", description: "SCR-026" }] }, () => {
     test("the «Радар» tab shows «Радар скоро заработает» with its second line, no button and no «+»; a reload too", async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();

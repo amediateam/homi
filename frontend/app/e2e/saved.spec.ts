@@ -233,7 +233,7 @@ async function openAndBack(page: Page, number: number, back: RegExp): Promise<vo
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`saved (${mode} mode)`, () => {
+  test.describe(`saved (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-024" }, { type: "screen", description: "SCR-025" }, { type: "screen", description: "SCR-043" }] }, () => {
     test("the Heart tab shows 20 favourites, the end adds the last 5 with one request; an un-favourite drops a card, a failed one returns it; the tab entered again re-creates the list", async ({
       page,
     }) => {

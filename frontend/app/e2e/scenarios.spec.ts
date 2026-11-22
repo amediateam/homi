@@ -6,7 +6,7 @@ import { expect, launchApp, projectSessionMode, setScenario, stubMedia, test, wi
  * (`miniapp-cookie`: a reload reads page one on the server with the cookie) and in header mode (`miniapp-header`: the
  * same read goes through `/bff` with the bearer).
  */
-test.describe("stub scenarios", () => {
+test.describe("stub scenarios", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-009" }] }, () => {
   test("«empty» empties the feed of a reloaded document, and clearing it brings the cards back", async ({ page }) => {
     await stubMedia(page);
     await launchApp(page);

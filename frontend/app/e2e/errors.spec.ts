@@ -29,7 +29,7 @@ function reports(page: Page): () => AppError["props"]["error"][] {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`error reports (${mode} mode)`, () => {
+  test.describe(`error reports (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-045" }] }, () => {
     test("a render error gives one app_error of kind render, from the screen it happened on, and the crash screen", async ({ page }) => {
       allowConsoleErrors(test.info(), /UI gallery: a render error on purpose/);
       const reported = reports(page);
@@ -80,7 +80,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("error reports", () => {
+test.describe("error reports", { annotation: [{ type: "screen", description: "SCR-045" }] }, () => {
   test("a bundle that cannot start makes the boot guard post /bff/boot-error, without launch data", async ({ page }) => {
     await playwrightTelegram(page);
     const posted: Request[] = [];

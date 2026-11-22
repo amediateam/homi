@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS (part 1 in review) |
+| Status | IN PROGRESS (part 1 in #111, part 2 in review) |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -789,6 +789,35 @@ Part 1:
   `tests/gallery/page.test.tsx`, not a request of the script.
 - `sources:publish-stub-media` is not a CI step. CI has no name for `cdn.homi.loc`, and the specs answer stub photos
   themselves (`stubMedia`).
+
+Part 2:
+
+- **The address table** `e2e/support/pages.ts` lists 48 addresses. For each it holds the screens, the element that
+  proves it rendered, the parent of a direct load and the scenario its state needs. A probe of every address read
+  their `data-route` names first.
+- **`coverage/routes.spec.ts`:** every address loaded directly shows its content, and Back goes to its parent or is
+  hidden. Opening a layer over its base stays with the feature specs. A pushed page or a layer covers the tab bar, so a
+  tab press always starts from a tab, and "a tab press resets the depth" is `shell.spec.ts`'s round trip.
+- **`coverage/render.spec.ts` (`@render`):** every address, with no raw key path in the text, no legacy brand word,
+  and the bottom bar inside the viewport. `miniapp-cookie` and `miniapp-header` render `ru`. In the manual run,
+  `miniapp-locales` renders `uz` and `en`, and `miniapp-dark` the dark theme.
+  - The locale guard follows the stub profile's saved language, so `uz` and `en` need profiles of their own. The `en`
+    profile is new: the fixture `me/en.json`, `MeController::SCENARIOS` and WP-11's scenario list.
+  - An address whose state needs another scenario keeps the `ru` profile and is checked as rendered.
+- **`coverage/version-gates.spec.ts` (`@gates`):** at 6.0 the feed, a listing and settings call nothing above 6.0,
+  and a confirm falls back to the browser's dialog. The tests name the version themselves, so they run in every
+  project.
+  - The e2e build has no bot name, so the listing shows no share button. The share link's fallback at 6.0 is the
+    unit tests' of `useShareListing` and `lib/telegram/share.ts`.
+- **`coverage/brand.spec.ts`:** the document and every answer of the app's origin hold no pattern of
+  `brand-words.json`, in ru, uz and en.
+- **Found by the render pass and fixed:** an aborted read of the owner form rejected unhandled ("signal is aborted
+  without reason"), and the global error report would send it as an `app_error`. `bffFetch` rethrows the caller's
+  abort, and `usePlaceLabel` and `useDemand` did not catch it. Both now drop it, with a test that fails without the fix.
+- **Screen annotations:** every `test.describe` of the suite names the screens it proves. Describe-level annotations
+  reach each test in `playwright test --list --reporter=json`. `app/scripts/e2e-coverage.mjs` lists with
+  `E2E_LIST_ALL=1`, so the `@radars-off` and `@analytics` tests count, and fails on a screen without a test or on an
+  unknown identifier. It is a step of the e2e job and has a unit test.
 
 ## Handoff
 

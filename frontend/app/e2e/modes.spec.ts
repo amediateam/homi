@@ -15,7 +15,7 @@ async function signedIn(page: Page, mode: "cookie" | "header"): Promise<string> 
   return token;
 }
 
-test.describe("session-mode checks", () => {
+test.describe("session-mode checks", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
   test("header mode: a token planted in localStorage is a finding", async ({ page }) => {
     const token = await signedIn(page, "header");
     expect(await modeFindings(test.info())).toEqual([]);

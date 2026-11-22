@@ -42,7 +42,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`home-screen offer (${mode} mode)`, () => {
+  test.describe(`home-screen offer (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-041" }] }, () => {
     test("status missed: the card after 4 s of calm, offered: true", async ({ page }) => {
       await seed(page);
       await launchApp(page, { mode, version: "8.0", answers: { homeScreenStatus: "missed" } });

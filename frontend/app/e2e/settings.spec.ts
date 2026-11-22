@@ -45,7 +45,7 @@ async function onPage(page: Page, name: string, title: string): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`settings (${mode} mode)`, () => {
+  test.describe(`settings (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-033" }, { type: "screen", description: "SCR-037" }, { type: "screen", description: "SCR-038" }, { type: "screen", description: "SCR-048" }] }, () => {
     test("the groups and values of the stub; every row opens its page and Back returns to the list", async ({ page }) => {
       await open(page, mode);
 
@@ -157,7 +157,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("settings without the Telegram SDK", () => {
+test.describe("settings without the Telegram SDK", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-033" }, { type: "screen", description: "SCR-037" }, { type: "screen", description: "SCR-038" }, { type: "screen", description: "SCR-048" }] }, () => {
   test("each of the eight pages shows the fallback cross, which closes it to the list", async ({ page }) => {
     test.setTimeout(120_000);
     const pages = ["theme", "graphics", "language", "currency", "quiet-hours", "digest", "cards", "hidden"];

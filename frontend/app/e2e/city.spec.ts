@@ -110,7 +110,7 @@ async function openNestedPicker(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`city (${mode} mode)`, () => {
+  test.describe(`city (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-017" }] }, () => {
     test("header chip: a pick lands on the feed of that city, saves it once, and drops districts and the polygon", async ({ page }) => {
       const app = await open(page, mode, `/?districts=chilonzor&polygon=${POLYGON}&rooms_min=2`);
       await expect(chip(page, "city")).toHaveText("Ташкент");

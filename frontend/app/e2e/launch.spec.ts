@@ -7,7 +7,7 @@ const route = (page: Page, name: string) => page.locator(`[data-route="${name}"]
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked"));
 const ready = (page: Page) => expect(page.locator("html")).toHaveAttribute("data-session", "ready");
 
-test.describe("launch", () => {
+test.describe("launch", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-018" }] }, () => {
   test("a plain launch is ready on the feed and the launch fragment is gone from the address", async ({ page }) => {
     await launchApp(page);
     await ready(page);

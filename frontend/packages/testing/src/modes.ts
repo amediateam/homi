@@ -11,7 +11,7 @@ import type { TelegramColorScheme, TelegramPlatform } from "./fakeTelegram";
  * | Mode | Checked after the test |
  * | ---- | ---------------------- |
  * | cookie | the context holds `homi_session` `HttpOnly`, `Secure`, `SameSite=None`, partitioned, once a sign-in answered `200`; no request to `/bff/` carries `Authorization` |
- * | header | no `homi_session` cookie; once a request of a document carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
+ * | header | no `homi_session` cookie; once a read of a document (from its commit) carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
  * | both | no `securitypolicyviolation`, no console error, no missing catalogue message (`app_error` with `MissingMessage`) |
  *
  * The guard of `./playwright` already fails a request to an external host. The checks run only after a test that
@@ -120,10 +120,13 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
     seq: 0,
   };
   records.push(record);
+  // A new document starts without the session in memory: its reads before its own sign-in carry no token. It counts
+  // from its commit, not from its navigation request: the old document still sends requests in between (its leave's
+  // `/bff/events` beacon among them), and they are the old document's.
+  let loading = false;
   page.on("request", (request) => {
-    // A new document starts without the session in memory: its reads before its own sign-in carry no token.
     if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
-      record.document += 1;
+      loading = true;
     }
     const url = bffAddress(origin, request);
     if (url === null) {
@@ -179,6 +182,10 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) {
       record.visited.push(frame.url());
+      if (loading) {
+        loading = false;
+        record.document += 1;
+      }
     }
   });
   await page.addInitScript(() => {
@@ -243,10 +250,11 @@ async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]>
     if (sessions.length > 0) {
       findings.push("header mode: the context holds a homi_session cookie");
     }
-    // The document's session is in memory once a request of it carried the bearer; every later one must too.
+    // The document's session is in memory once a read or an action of it carried the bearer; every later one must
+    // too. A journal beacon is no anchor: a leaving document may still send one.
     const bearer = (request: BffRequest) => /^Bearer \S+$/.test(request.authorization ?? "");
     for (const request of requests) {
-      const first = requests.find((other) => other.document === request.document && bearer(other));
+      const first = requests.find((other) => other.document === request.document && other.path !== "/bff/events" && bearer(other));
       if (first !== undefined && request.at > first.at && !NO_BEARER.test(request.path) && !bearer(request)) {
         findings.push(`header mode: ${request.method} ${request.path} carried no bearer`);
       }

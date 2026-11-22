@@ -143,7 +143,7 @@ async function longList(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`feed continuity (${mode} mode)`, () => {
+  test.describe(`feed continuity (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-063" }] }, () => {
     test("a listing open, 7 h away: one count request; after the close «Показать 3 новых»; a tap reloads from page one", async ({ page }) => {
       await answerNew(page, 3);
       await open(page, mode, { clock: true });
@@ -276,7 +276,7 @@ for (const mode of ["cookie", "header"] as const) {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`feed continuity: the radar sheet (radars on, ${mode} mode)`, () => {
+  test.describe(`feed continuity: the radar sheet (radars on, ${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-063" }] }, () => {
   test("a find opened from the strip and closed leaves the strip and the sheet where they were", async ({ page }) => {
     // A short screen, so the sheet's body has something to scroll.
     await page.setViewportSize({ width: 390, height: 560 });
