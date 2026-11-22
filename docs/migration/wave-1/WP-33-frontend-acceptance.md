@@ -740,8 +740,9 @@ exception: it starts once part 4 is merged and does not wait for steps 14–17 (
 
 The package ships in parts, like WP-82: each part is one PR under the 3 000-line rule. **Part 1** (2026-11-22) is the
 suite's plumbing and the bundle check; part 2 the passes over all addresses with the screen annotations and
-`e2e-coverage.mjs`; part 3 the eight journeys; part 4 the performance specs and budgets. Steps 14–17 are the
-production track's and stay open after the parts merge.
+`e2e-coverage.mjs`; part 3 the eight journeys; part 4 the performance specs and budgets. Steps 14 and 15 are run
+with the production track, step 16 brings what they find back to the development track, and step 17 closes the
+package. They stay open after the parts merge.
 
 Part 1:
 
@@ -922,18 +923,20 @@ built" above says what each part ships and where it left the design.
 
 - `e2e/support/modes.ts` and `e2e/support/scenarios.ts` were not needed: both live in `@homi/testing` ("As built",
   part 1).
-- `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (197 annotations in 54
+- `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (236 annotations in 54
   spec files).
 - `docs/testing/wave-1-telegram-pass.md` was not written (step 6 below).
 
-**Next step: part 4,** one PR. Fetch first and branch from `origin/main`. The earlier parts were on
-`wp-33-acceptance`, `wp-33b-coverage` and `wp-33c-journeys`, so `wp-33d-perf` continues them.
+**Next step: part 4,** one PR. Fetch first and branch from `origin/main`. Rule 3 of the queue names the branch
+`feat/wp-<number>-<slug>`, here `feat/wp-33-perf-budgets`. The earlier parts did not follow it (`wp-33-acceptance`,
+`wp-33b-coverage`, `wp-33c-journeys`).
 
 1. Add the `perf` project and `e2e/perf/{startup,chunks,scroll}.spec.ts` as "Performance budget" lays them out. Its
-   table names the spec of rows 1 to 5, 7 and 9. Rows 6, 8 and 10 name none: choose one and record it in "As built".
+   table names the spec of rows 1, 2, 3, 7 and 9. Rows 4 and 5 use the technique of row 3. Rows 6, 8 and 10 name no
+   spec: choose one and record it in "As built".
 2. Decide how rows 3 to 6 reach a pull request, and record it in "As built". DEC-100 runs them in every pull request
-   as a step of the existing e2e job, without throttling. The `perf` project is throttled and runs only by hand, so
-   these rows cannot live in it alone.
+   as a step of the existing e2e job, and "Performance budget" says they need no throttling. The `perf` project is
+   throttled and runs only by hand, so these rows cannot live in it alone.
 3. Measure on the part-4 branch, which holds `main`, and write `perf-budgets.json`, each limit with its date. Rows 1
    and 2 take the measured value plus 10 %, and row 7 takes it plus 20 %. Row 8 is 2.5 s unless the first run says
    otherwise, and row 9 is under 20 %. Rows 3 to 6 and 10 are absolute. The PR states every value.
@@ -941,17 +944,18 @@ built" above says what each part ships and where it left the design.
    "Tests": a planted oversize measurement fails, and a missing measurement fails. A pull-request run measures rows 3
    to 6 only, so "missing" has to mean a row that the run was meant to measure.
 5. Wire CI: rows 3 to 6 in every pull request; rows 1, 2 and 7 to 10 only in the manual run (`workflow_dispatch`
-   input `full`, DEC-100). `.github/workflows/frontend-e2e.yml` is a shared file, so announce the change in the PR
-   (`docs/handoff/parallel-work.md`).
-6. Add `docs/testing/wave-1-telegram-pass.md` as the empty record of "Pass inside Telegram". Step 15 fills it, and
-   part 4 is the last development PR of the package.
+   input `full`, DEC-100). "Files" above asks to announce the change of `.github/workflows/frontend-e2e.yml` in the
+   PR.
+6. Add `docs/testing/wave-1-telegram-pass.md` as the empty record of "Pass inside Telegram". Step 15 fills it, so it
+   has to exist before the pass.
 7. Go through the route interceptions. Step 5 moves interception-based fakes to scenarios, and nobody re-checked it
    at the handoff: 53 `page.route` or `context.route` calls remain in 24 spec files, and "As built" does not say
    which of them are meant to stay. Record the rule in "As built".
-8. Run the pull-request projects five times in a row on the local stack (`scripts/dev/e2e-local.sh`), on the branch's
-   head once it holds `main`. The checklist asks for it before the package closes. One whole run took 25.3 minutes
-   for 919 tests (reported in #113).
-9. Write part 4 into "As built" and tick the acceptance checklist in the PR (rule 5).
+8. Write part 4 into "As built", and tick in the PR the statements of the checklist that part 4 proves. The
+   statements that need staging, Telegram or the closed package stay open for steps 14 to 17.
+9. After part 4 is merged, run the pull-request projects five times in a row on `main` on the local stack
+   (`scripts/dev/e2e-local.sh`). "Tests" and the checklist ask for it on `main`, before the package is closed. Record
+   the result in the next PR of the queue. One whole run took 25.3 minutes for 919 tests (reported in #113).
 
 **After part 4.** Steps 14 and 15 (staging, the pass inside Telegram) are run with the production track. What they
 find comes back to the development track as step 16, and step 17 closes the package.
@@ -960,9 +964,9 @@ find comes back to the development track as step 16, and step 17 closes the pack
 the queue and "Exit to stage C" would make it wait until this package is `DONE`. A defect that the pass inside
 Telegram finds is fixed ahead of the queue (step 16).
 
-**Decisions.** The developer's are DEC-100 and DEC-101. The choices made while building are the deviations in "As
-built" and the descriptions of #111, #112 and #113.
+**Decisions.** The developer's are DEC-100, DEC-101 and DEC-102. The choices made while building are the deviations
+in "As built" and the descriptions of #111, #112 and #113.
 
-**Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11). On a
-developer machine this runner replaces the run against `https://app.homi.loc` that "Environment" describes (rule 8).
-The gates: `make ci-frontend`, `make bundle-check`, and from `frontend/` `node app/scripts/e2e-coverage.mjs`.
+**Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11, rule 8).
+`make e2e` is the run that "Environment" describes, and the checklist asks for it green. The gates:
+`make ci-frontend`, `make bundle-check`, and from `frontend/` `node app/scripts/e2e-coverage.mjs`.
