@@ -1,4 +1,4 @@
-import { test as base, expect, type BrowserContext, type Locator, type Page } from "@playwright/test";
+import { test as base, expect, type BrowserContext, type Locator, type Page, type Request as SentRequest } from "@playwright/test";
 
 import { installFakeTelegram, resolveFakeTelegramConfig, type FakeTelegramCall, type FakeTelegramOptions, type FakeTelegramWindow } from "./fakeTelegram";
 import { syntheticInitData } from "./initData";
@@ -112,6 +112,40 @@ function withProfile<T extends FakeTelegramOptions>(options: T): T {
  * `Set-Cookie` from the app's `/bff/session` answers. Every launch goes through here — `launchApp`, and a spec that
  * installs the fake with `playwrightTelegram` and loads the page itself — so no spec opts out of its project's mode.
  */
+/** Request headers Node's `fetch` sets itself or that describe a body it re-encodes. */
+const OWN_REQUEST_HEADERS = new Set(["host", "connection", "content-length", "accept-encoding", "cookie"]);
+/** Answer headers that no longer hold for the decoded body, and the refused cookie. */
+const DROPPED_ANSWER_HEADERS = new Set(["set-cookie", "content-encoding", "content-length", "transfer-encoding"]);
+
+/**
+ * One exchange of header mode (WP-33), sent with Node's own `fetch`: it keeps no cookies, so the answer's `Set-Cookie`
+ * reaches neither the browser nor a later exchange, as in a frame that refuses the cookie. `route.fetch` stores the
+ * cookie in the browser's context first, and a request sent before it was cleared carried it and flipped the app to
+ * cookie mode. The browser's other cookies of the address (the stub scenario) go along.
+ */
+async function exchange(page: Page, sent: SentRequest): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(sent.headers())) {
+    if (!name.startsWith(":") && !OWN_REQUEST_HEADERS.has(name.toLowerCase())) {
+      headers[name] = value;
+    }
+  }
+  const cookies = (await page.context().cookies(sent.url())).filter((cookie) => !/^homi_session/.test(cookie.name));
+  if (cookies.length > 0) {
+    headers.cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+  }
+  const data = sent.method() === "GET" || sent.method() === "HEAD" ? null : sent.postDataBuffer();
+  const body = data === null ? undefined : new Uint8Array(data);
+  const response = await fetch(sent.url(), { method: sent.method(), headers, body, redirect: "manual" });
+  const answer: Record<string, string> = {};
+  response.headers.forEach((value, name) => {
+    if (!DROPPED_ANSWER_HEADERS.has(name.toLowerCase())) {
+      answer[name] = value;
+    }
+  });
+  return { status: response.status, headers: answer, body: Buffer.from(await response.arrayBuffer()) };
+}
+
 async function startSessionMode(page: Page, mode: SessionMode, calls: (() => Promise<unknown>) | null): Promise<void> {
   await watchMode(page, mode, test.info().project.use.baseURL ?? "http://localhost:3001", calls);
   if (mode !== "header") {
@@ -134,11 +168,8 @@ async function startSessionMode(page: Page, mode: SessionMode, calls: (() => Pro
     try {
       await trackExchange(
         (async () => {
-          const response = await route.fetch();
-          // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
-          await page.context().clearCookies({ name: /^homi_session/ });
-          const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
-          await route.fulfill({ response, headers });
+          const answer = await exchange(page, route.request());
+          await route.fulfill(answer);
         })(),
       );
     } catch (error) {

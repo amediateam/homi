@@ -25,6 +25,15 @@ test.describe("session-mode checks", { annotation: [{ type: "screen", descriptio
     resetModeRecords();
   });
 
+  test("header mode: a request that carries a planted session cookie is a finding", async ({ page }) => {
+    await signedIn(page, "header");
+    await page.context().addCookies([{ name: "homi_session", value: "planted", url: test.info().project.use.baseURL ?? "http://localhost:3001" }]);
+    await page.evaluate(() => fetch("/bff/reference").then((response) => response.status));
+    expect(await modeFindings(test.info())).toContain("header mode: GET /bff/reference carried the session cookie");
+    resetModeRecords();
+    await page.context().clearCookies({ name: "homi_session" });
+  });
+
   test("cookie mode: a planted Authorization header on a /bff/ read is a finding", async ({ page }) => {
     await signedIn(page, "cookie");
     expect(await modeFindings(test.info())).toEqual([]);

@@ -65,6 +65,8 @@ interface ModeRecord {
   visited: string[];
   calls: (() => Promise<unknown>) | null;
   pending: Promise<unknown>[];
+  /** Header mode: the app's own requests that carried the session cookie (method and path). */
+  cookieCarriers: Promise<string | null>[];
   seq: number;
 }
 
@@ -117,6 +119,7 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
     visited: [],
     calls,
     pending: [],
+    cookieCarriers: [],
     seq: 0,
   };
   records.push(record);
@@ -127,6 +130,16 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
   page.on("request", (request) => {
     if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
       loading = true;
+    }
+    // Header mode: no request of the app may carry the session cookie, whatever answered it (documents, actions, RSC).
+    const own = new URL(request.url());
+    if (mode === "header" && own.origin === origin && !own.pathname.startsWith("/_next/static/")) {
+      record.cookieCarriers.push(
+        request
+          .allHeaders()
+          .then((headers) => (/(?:^|;\s*)homi_session=/.test(headers.cookie ?? "") ? `${request.method()} ${own.pathname}` : null))
+          .catch(() => null),
+      );
     }
     const url = bffAddress(origin, request);
     if (url === null) {
@@ -249,6 +262,12 @@ async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]>
   } else {
     if (sessions.length > 0) {
       findings.push("header mode: the context holds a homi_session cookie");
+    }
+    const unknown = new Promise<null>((resolve) => setTimeout(() => resolve(null), HEADERS_WAIT_MS));
+    for (const carrier of await Promise.all(record.cookieCarriers.map((check) => Promise.race([check, unknown])))) {
+      if (carrier !== null) {
+        findings.push(`header mode: ${carrier} carried the session cookie`);
+      }
     }
     // The document's session is in memory once a read or an action of it carried the bearer; every later one must
     // too. A journal beacon is no anchor: a leaving document may still send one.
