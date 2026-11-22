@@ -923,8 +923,8 @@ built" above says what each part ships and where it left the design.
 
 - `e2e/support/modes.ts` and `e2e/support/scenarios.ts` were not needed: both live in `@homi/testing` ("As built",
   part 1).
-- `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (236 of them in 54 spec
-  files).
+- `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (236 annotations in 54
+  spec files).
 - `docs/testing/wave-1-telegram-pass.md` was not written (step 6 below).
 
 **Next step: part 4,** one PR. Fetch first and branch from `origin/main`. Rule 3 of the queue names the branch
@@ -955,7 +955,7 @@ built" above says what each part ships and where it left the design.
    statements that need staging, Telegram or the closed package stay open for steps 14 to 17.
 9. After part 4 is merged, run the pull-request projects five times in a row on `main` on the local stack
    (`scripts/dev/e2e-local.sh`). "Tests" and the checklist ask for it on `main`, before the package is closed. Record
-   the result in the next PR. One whole run took 25.3 minutes for 919 tests (reported in #113).
+   the result in the next PR of the queue. One whole run took 25.3 minutes for 919 tests (reported in #113).
 
 **After part 4.** Steps 14 and 15 (staging, the pass inside Telegram) are run with the production track. What they
 find comes back to the development track as step 16, and step 17 closes the package.
@@ -964,8 +964,8 @@ find comes back to the development track as step 16, and step 17 closes the pack
 the queue and "Exit to stage C" would make it wait until this package is `DONE`. A defect that the pass inside
 Telegram finds is fixed ahead of the queue (step 16).
 
-**Decisions.** The developer's are DEC-100, DEC-101 and DEC-102. The choices made while building are the deviations in "As
-built" and the descriptions of #111, #112 and #113.
+**Decisions.** The developer's are DEC-100, DEC-101 and DEC-102. The choices made while building are the deviations
+in "As built" and the descriptions of #111, #112 and #113.
 
 **Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11, rule 8).
 `make e2e` is the run that "Environment" describes, and the checklist asks for it green. The gates:
