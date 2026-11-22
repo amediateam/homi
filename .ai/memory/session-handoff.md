@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-22 (the development track changes hands: WP-33 parts 1–3 merged, #113 as a9e8955; part 4 not started; no development branch open)
+updated: 2026-11-22 (the development track changes hands: WP-33 parts 1–3 merged, #113 as a9e8955; part 4 not started; no development branch open; composer update #117)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -11,10 +11,10 @@ Written for whoever continues the **development track**: from 2026-11-22 another
 - 2026-11-09 … 2026-11-20 (verbatim in the earlier handoffs and `docs/migration/decisions/`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6 (fix the spec in the same PR); no new dependencies, staging or production without the first developer; «Удали черновик gmail это не та почта который нужно использовать»; «По релизам, код до WP-31»; «задай все свои вопросы по одному и с вариантами ответа».
 - 2026-11-21, **in force** (rule 8 of `docs/migration/wave-1/README.md`): «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!». DEC-98, DEC-99.
 - 2026-11-22: «продолжай по плану» (several times). DEC-100: «По запросу, без расписания (Рекомендуется)». DEC-101: «Весь набор в каждом PR (Рекомендуется)» (`docs/migration/decisions/2026-11-22-developer-answers.md`).
-- 2026-11-22, the handoff: «Передадим продолжение другому разработчику у нас все закомичено ? он сразу поймет откуда продолжить ?». On the uncommitted PHP 8.6 files: «Запушить веткой, без PR (Рекомендуется)». Then «сливай #114». DEC-102, when WP-40 starts: «Сразу после части 4 (Рекомендуется)».
+- 2026-11-22, the handoff: «Передадим продолжение другому разработчику у нас все закомичено ? он сразу поймет откуда продолжить ?». On the uncommitted PHP 8.6 files: «Запушить веткой, без PR (Рекомендуется)». Then «сливай #114». DEC-102, when WP-40 starts: «Сразу после части 4 (Рекомендуется)». Then «удали worktree deps-update», «удали и ветку chore/deps-update если он не нужен», and on the uncommitted `backend/composer.lock`: «надо все сommit psuh main» — taken as "commit it and bring it to `main`", through a PR, because the rule against a direct push stands.
 
 ## State at handoff
-- `main` holds the last code merge #113 (`a9e8955`) and this handoff (#114 and its follow-up, documents only). No development branch is open; the open PRs are Dependabot's (#5, #57 … #60). `git log --branches --not --remotes` on the previous machine → empty: no commit exists on that disk only.
+- `main` holds the last application-code merge #113 (`a9e8955`), this handoff (#114 … #116, documents only) and the composer update of 2026-11-22 (#117: `backend/composer.lock` and the regenerated registry; `composer.json` unchanged). No development branch is open; the open PRs are Dependabot's (#5, #57 … #60). `git log --branches --not --remotes` on the previous machine → empty: no commit exists on that disk only.
 - **WP-33 parts 1–3 are merged:** #111 `61d78c6` (projects, session-mode checks, scenarios, bundle check), #112 `27142e3` (the passes over all addresses, screen annotations, `e2e-coverage.mjs`), #113 `a9e8955` (the eight journeys, `e2e/journeys/`). #113: `gh pr checks 113` → `ci` pass, `e2e` pass (runs 45002838031, 45002837960).
 - **Next: WP-33 part 4** (step 13 of `docs/migration/wave-1/WP-33-frontend-acceptance.md`): `e2e/perf/`, the `perf` project, `check-budgets.mjs`, `perf-budgets.json`. None of them exists. Fetch, then a new branch from `origin/main` (`feat/wp-33-perf-budgets`, by the pattern of rule 3 of the queue), one PR; the nine steps are in the specification's "Handoff". Steps 14–15 of WP-33 are run with the production track; steps 16–17 come back to this track.
 - **Then WP-40, right after part 4 is merged (DEC-102).** It does not wait for steps 14–17 of WP-33, although rule 1 of the queue would make it wait; a defect that the pass inside Telegram finds is fixed ahead of the queue.
@@ -26,13 +26,14 @@ Written for whoever continues the **development track**: from 2026-11-22 another
 - WP-33 part 2 merged as #112 and part 3 as #113. Part 3, reported in #113 and not re-run here: the full local strict run 919 passed in 25.3 min, journeys `--repeat-each 5` 630 passed, `@radars-off` 20, `@analytics` 8; two review rounds, the second with nothing at medium or above.
 - The handoff (#114 and its follow-up): the queue row of WP-33, the specification's "Handoff", this file, `current-state.md`, and the first steps of `HANDOFF.md`, which sent a new agent to T1. A reader with no context was given the repository alone and named part 4 from `main` as the next task; the places that confused it are fixed in the follow-up.
 - `chore/php-8.6`: nine files that were uncommitted in a worktree, committed as they were and pushed (`git ls-remote --heads origin chore/php-8.6` → `8464516`).
+- Composer update (#117): the developer's `composer update` of 2026-11-22, 28 packages (Laravel 13.42 → 13.43), none added or removed, the lock's `content-hash` unchanged. `make registry-check` → `package registry is current`; `make ci-backend` on PHP 8.6.0 → Vite+ check, `tsc`, Pint, PHPStan pass, Pest 850 passed and 4 skipped; `openapi:check` did not run locally (see "Gotchas"), so the `backend` job of #117, on PHP 8.5, is its proof. Not deployed. The worktree and the branch `chore/deps-update` (#26, merged) are removed.
 
 ## Waiting for the developer (do NOT start on your own)
 1. **The click on the permission prompt of `gh pr merge`** for every merge (Claude Code; rule 8).
 2. **An explicit yes is still needed for:** e2e shards in CI; taking `gh pr merge` out of `ask`; the `/doctor` cleanup.
-3. **Production track:** the WAITING rows of the queue (the regular deploy; `CSP_TILE_HOSTS`, `CSP_PRIVATE_MEDIA_HOSTS`; `OWNER_CABINET_ENABLED` unset on the servers, DEC-81); WP-33 steps 14–15 (what they find comes back to this track as step 16).
+3. **Production track:** the WAITING rows of the queue (the regular deploy, which now carries the composer update #117; `CSP_TILE_HOSTS`, `CSP_PRIVATE_MEDIA_HOSTS`; `OWNER_CABINET_ENABLED` unset on the servers, DEC-81); WP-33 steps 14–15 (what they find comes back to this track as step 16).
 4. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
-5. **On the previous machine only** (nothing to do on a fresh clone): KI-70, narrowed on 2026-11-22: its PHP 8.6.0 now loads `redis` and `imagick` (`class_exists("Redis")` → `true`), while `main` still pins PHP 8.5; a modified `backend/composer.lock` in the working tree, never staged; the worktrees `.worktrees/php-8-6` and `.claude/worktrees/deps-update` (#26, merged), which their owner removes.
+5. **On the previous machine only** (nothing to do on a fresh clone): KI-70, narrowed on 2026-11-22: its PHP 8.6.0 now loads `redis` and `imagick` (`class_exists("Redis")` → `true`), while `main` still pins PHP 8.5; the worktree `.worktrees/php-8-6`, which its owner removes.
 
 ## Gotchas learned this session
 - A new machine: `backend/.env.example` leaves `OWNER_CABINET_ENABLED` empty; set it to `true` in the local `backend/.env` to see the owner cabinet. `e2e-local.sh` and CI set it themselves.
@@ -45,6 +46,7 @@ Written for whoever continues the **development track**: from 2026-11-22 another
 - The stub profile's saved language wins over the address (locale guard): `uz` and `en` are scenarios of `GET /me`.
 - Reviews: start the independent review together with CI; a reviewer reads through `git show <sha>:path` and runs no Vitest while branches are switched (a stale `node_modules/.vitest-cache` breaks `make ci-frontend`; `pnpm exec vitest --clearCache`). Merge when a narrow round finds nothing at medium or above.
 - Stage named paths, never `git add backend`: a developer's own `composer.lock` was swept into WP-80 once.
+- `make ci-backend` ends with `openapi:check`, which reads the PostgreSQL database of `backend/.env`: when that host is unreachable it fails with `SQLSTATE[08006]` after the tests have passed.
 - Next numbers: AM-102, KI-71, ADR 0021, DEC-103.
 
 ## Active subagent work at handoff
