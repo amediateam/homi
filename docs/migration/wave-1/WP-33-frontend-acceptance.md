@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS (part 1 in #111, part 2 in review) |
+| Status | IN PROGRESS (parts 1 and 2 merged in #111 and #112; part 3 in review) |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -178,7 +178,7 @@ New journeys (`e2e/journeys/`), each in both modes:
 | 1 | `first-launch.spec.ts` | `first_launch`, Telegram language `uz` → language page → pick `en` → city page → pick a city → feed | headings in the Telegram language; the address moves to `/en/…` without a document load; one settings Server Action request per pick (the `PATCH /settings` bodies are sent by the server and belong to the unit tests of `updateSettings`); the gates do not come back in this launch although the stub still answers "not chosen"; BackButton hidden on the feed |
 | 2 | `deep-link.spec.ts` | `startParam: 'l_<number>'`; `?listing=`; `?news=pets`; direct load of a listing address | listing over the feed, Back → feed, then no BackButton; `app_launch` and `app_opened` with `entry: 'link'`; filters open on the pets section with «Новое»; a directly loaded layer goes back to its parent |
 | 3 | `search-to-radar.spec.ts` | feed → filters (rooms, price) → «Показать N» → map → lasso → «Своя область» → filters footer «Включить радар» → «Радар» tab → radar sheet → «Изменить условия» → save → switch off with `ask_found` → survey → «Ещё ищу» | the same search parameters on feed and map; chips and collapsed title follow the filters; each toast text; Back order editor → sheet → tab; the survey toast |
-| 4 | `moderation.spec.ts` | listing → «⋯» → hide → «Вернуть»; block author; report fraud; report rented; settings → «Скрытое» → return one → «Показать всё снова» | card leaves and returns; toasts with and without undo; the rented report has no undo; confirm before returning all; «Ничего не скрыто» |
+| 4 | `moderation.spec.ts` | listing → «⋯» → hide → «Вернуть»; block author; report fraud; report rented; settings → «Скрытое» → return one → «Показать всё снова» | card leaves and returns; toasts with and without undo; the rented report offers «Вернуть», which withdraws it (`dev051RentedUndo` is on by default since DEC-58; *corrected by WP-33 part 3*); confirm before returning all; «Ничего не скрыто» |
 | 5 | `locale-currency.spec.ts` | settings → language `uz` → currency UZS (`uz` scenario) → feed → listing | address segment changes, no reload (a value set on `window` survives); tab labels in Uzbek; numbers with a space as thousands separator; amounts the client formats (price presets, market scale) in сум — the stub's server-formatted card prices stay as the fixture has them and are checked in WP-48 |
 | 6 | `session-expiry.spec.ts` | launch → `unauthenticated` → any request → then `auth_expired` on the next sign-in | one silent `POST /bff/session`, the request repeats, the screen continues; then the session-expired screen, «Закрыть» calls the fake `close`, no further request, no BackButton |
 | 7 | `source-unavailable.spec.ts` | `source_unavailable` on feed, map, listing, live count, a save | «Не загрузилось» with «Повторить» and recovery; the map error state; the count label keeps its last value; a failed save plays the error haptic, shows «Не получилось сохранить» and rolls back (`dev016ErrorToastOnFailure` is on by default since DEC-58; *corrected by WP-33 part 2*) |
@@ -857,6 +857,54 @@ Part 2:
   `Partitioned` cookie out, so a real partitioned cookie is caught by the end-of-test check of the context's cookies;
   the self-test plants a plain one. Against `https://app.homi.loc` the runner itself must trust mkcert
   (`NODE_EXTRA_CA_CERTS`). `main` had the same race since #111.
+
+Part 3:
+
+- **The eight journeys** live in `e2e/journeys/`. Each is one `test.describe` tagged `@journey` and names no session
+  mode, so both projects run it in every PR: 63 tests in each project. Each journey names only the screens it
+  asserts, as Part 2's rule asks: the feed by its cards (the `<article>` of `ListingCard`), never by its route root,
+  which also wraps the skeleton and the error state. The two long ones (`moderation`, `search-to-radar`) are split into
+  `test.step`s.
+- **How they were made.** Eight agents drafted one journey each from its row, the feature specs and the app code.
+  An independent reader checked each draft against the code, and the findings were applied before the first run.
+  - The first run, at 60 tests in each project, passed 116 of 120.
+  - `--repeat-each 10` passed 1 197 of 1 200.
+  - The failures were all locators that a kept copy of the listing screen inside one layer made ambiguous. Every
+    lookup inside a listing layer now takes the visible copy, and the three journeys that use them passed 60 of 60
+    at `--repeat-each 6`.
+  - After the review fixes (63 tests in each project, the gates of journey 8 included): `--repeat-each 5` passed
+    630 of 630, and the whole suite 919 in the strict run, with `@radars-off` 20 and `@analytics` 8.
+- **What the stubs cannot show, and where it is proved instead:**
+  - Persistence of any write: stubs store nothing. Stage C's API tests and WP-48 prove it.
+  - The `PATCH /settings` bodies: the app server sends them. The unit tests of `updateSettings` cover them.
+  - The radar just created, on its tab or in its sheet: the stub list does not change.
+  - That a drawn area limits the listings: the stub ignores the polygon, so only the area's parameters are checked.
+  - Card prices in сум: the stub's prices are formatted by the server, as the fixture has them. WP-48 checks them.
+  - The demo marker's absence when a screen's answers are `meta.source = native`: no stub answers `native`, and
+    `tests/shell/demo-marker.test.tsx` proves it.
+- **Two journeys follow the code rather than their row.** Both rows are corrected.
+  - Row 4: the rented report's toast offers «Вернуть», which withdraws the report, because `dev051RentedUndo` is on
+    by default (DEC-58; DEC-68 says what is withdrawn). The cards come back before the undo's answer and the stub
+    stores no write, so the journey tells the undos apart by the `Next-Action` id of their Server Action, kept across
+    the steps. The rented undo is a sixth action, none of the report, the hide, the unhide, the block or the block's
+    undo. That the rented undo is `unreportListing` and the block's is `unblockAuthor` is
+    `tests/listing/useListingActions.test.tsx`'s, and the request `DELETE /listings/{number}/reports` is
+    `tests/actions/reports.test.ts`'s. The
+    branch with the flag off, a toast without an action, is `tests/listing/useListingActions.test.tsx`'s.
+  - Row 7: a failed save shows «Не получилось сохранить», because `dev016ErrorToastOnFailure` is on by default
+    (DEC-58).
+- **The session-expired screen has no `screens.json` identifier.** It is WP-23's: the locale layout draws it in place
+  of its children (`SessionExpired`), not the error boundary, so it is not SCR-045, the crash screen. Journey 6
+  therefore annotates only the screens it asserts: the feed by its cards (twenty, then forty with the first twenty in
+  their order) and the listing by its loaded state with its title row (the title, the heart and «⋯»). It checks the
+  expired screen by `[data-screen="session-expired"]` without an annotation, as `gates.spec.ts` and `feed.spec.ts` do.
+- **Journey 8 covers the gates.** Its direct loads take every entry of the address table, the three gates included:
+  `/welcome/language` (SCR-004), `/welcome/city` (SCR-005) and `/no-access?reason=private` (SCR-003), each with its
+  scenario. Each waits for its entry's element with `SHOWS_TIMEOUT_MS`, as the coverage passes do. The pill shows on
+  the gates as well: the layout's reference and cities reports put it there, and `DemoDataMarker` withholds it only on
+  `/outside`, which has its own test.
+- **Collapsed chrome.** After a scroll of the feed the chrome is mini, and a first tap on a tab or the view toggle only
+  expands it. The journeys expand it before they press, as `feed-continuity.spec.ts` does.
 
 ## Handoff
 
