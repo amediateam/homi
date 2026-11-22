@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS (parts 1 and 2 merged in #111 and #112; part 3 in review) |
+| Status | IN PROGRESS (parts 1 to 3 merged in #111, #112 and #113; part 4 not started: see "Handoff") |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -911,10 +911,9 @@ Part 3:
 Written on 2026-11-22: the package changes hands after part 3 (rule 4 of the queue).
 
 **Finished and merged.** Part 1 (#111, `61d78c6`), part 2 (#112, `27142e3`) and part 3 (#113, `a9e8955`). "As
-built" above says what each part ships and where it left the design. Step 13 is part 4. Steps 14 to 17 are the
-production track's.
+built" above says what each part ships and where it left the design.
 
-**Half-done.** Nothing. No branch is open, and part 4 has no file yet: `frontend/app/e2e/perf/`,
+**Not started.** Part 4 (step 13). No branch is open, and it has no file yet: `frontend/app/e2e/perf/`,
 `frontend/app/scripts/check-budgets.mjs`, `frontend/app/perf-budgets.json` and a `perf` project in
 `frontend/playwright.config.ts` do not exist.
 
@@ -924,33 +923,45 @@ production track's.
   part 1).
 - `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (197 annotations in 54
   spec files).
-- `docs/testing/wave-1-telegram-pass.md` was not written. It is the record of "Pass inside Telegram", which step 15
-  fills. Add the empty record in part 4's PR, the last development PR of the package.
+- `docs/testing/wave-1-telegram-pass.md` was not written (step 6 below).
 
-**Not re-checked at the handoff.** Step 5 moves interception-based fakes to scenarios. 53 `page.route` or
-`context.route` calls remain in 24 spec files, and "As built" does not say which of them are meant to stay. Go
-through them in part 4 and record the rule in "As built".
-
-**Next step: part 4 (step 13),** on a new branch from `main`, one PR.
+**Next step: part 4,** one PR. Fetch first and branch from `origin/main`. The earlier parts were on
+`wp-33-acceptance`, `wp-33b-coverage` and `wp-33c-journeys`, so `wp-33d-perf` continues them.
 
 1. Add the `perf` project and `e2e/perf/{startup,chunks,scroll}.spec.ts` as "Performance budget" lays them out. Its
    table names the spec of rows 1 to 5, 7 and 9. Rows 6, 8 and 10 name none: choose one and record it in "As built".
-2. Measure on `main` and write `perf-budgets.json`: the measured value plus 10 % (plus 20 % for row 7), each with
-   its date. The PR states every value.
-3. Write `check-budgets.mjs`, which compares the JSON of the `perf` project with `perf-budgets.json`. Its two tests
-   are under "Tests": a planted oversize measurement fails, and a missing measurement fails.
-4. Wire CI: rows 3 to 6 in every pull request; rows 1, 2 and 7 to 10 only in the manual run (`workflow_dispatch`
+2. Decide how rows 3 to 6 reach a pull request, and record it in "As built". DEC-100 runs them in every pull request
+   as a step of the existing e2e job, without throttling. The `perf` project is throttled and runs only by hand, so
+   these rows cannot live in it alone.
+3. Measure on the part-4 branch, which holds `main`, and write `perf-budgets.json`, each limit with its date. Rows 1
+   and 2 take the measured value plus 10 %, and row 7 takes it plus 20 %. Row 8 is 2.5 s unless the first run says
+   otherwise, and row 9 is under 20 %. Rows 3 to 6 and 10 are absolute. The PR states every value.
+4. Write `check-budgets.mjs`, which compares the measured JSON with `perf-budgets.json`. Its two tests are under
+   "Tests": a planted oversize measurement fails, and a missing measurement fails. A pull-request run measures rows 3
+   to 6 only, so "missing" has to mean a row that the run was meant to measure.
+5. Wire CI: rows 3 to 6 in every pull request; rows 1, 2 and 7 to 10 only in the manual run (`workflow_dispatch`
    input `full`, DEC-100). `.github/workflows/frontend-e2e.yml` is a shared file, so announce the change in the PR
    (`docs/handoff/parallel-work.md`).
-5. Run the pull-request projects five times in a row on `main` on the local stack (`scripts/dev/e2e-local.sh`); the
-   checklist asks for it before the package closes. One whole run took 25.3 minutes for 919 tests (reported in #113).
-6. Write part 4 into "As built" and tick the acceptance checklist in the PR (rule 5).
+6. Add `docs/testing/wave-1-telegram-pass.md` as the empty record of "Pass inside Telegram". Step 15 fills it, and
+   part 4 is the last development PR of the package.
+7. Go through the route interceptions. Step 5 moves interception-based fakes to scenarios, and nobody re-checked it
+   at the handoff: 53 `page.route` or `context.route` calls remain in 24 spec files, and "As built" does not say
+   which of them are meant to stay. Record the rule in "As built".
+8. Run the pull-request projects five times in a row on the local stack (`scripts/dev/e2e-local.sh`), on the branch's
+   head once it holds `main`. The checklist asks for it before the package closes. One whole run took 25.3 minutes
+   for 919 tests (reported in #113).
+9. Write part 4 into "As built" and tick the acceptance checklist in the PR (rule 5).
 
-**After part 4.** Steps 14 to 17 (staging, the pass inside Telegram) belong to the production track. The queue row
-becomes `WAITING` for them, and the development track goes on to WP-40.
+**After part 4.** Steps 14 and 15 (staging, the pass inside Telegram) are run with the production track. What they
+find comes back to the development track as step 16, and step 17 closes the package.
+
+**Open question for the developer: when does WP-40 start?** Rule 1 of the queue and "Exit to stage C" above make
+WP-40 wait until this package is `DONE`, and that needs steps 14 to 17. Under rule 8 this package itself was built
+while every package it depends on was `WAITING`. Ask the developer before starting WP-40.
 
 **Decisions.** The developer's are DEC-100 and DEC-101. The choices made while building are the deviations in "As
 built" and the descriptions of #111, #112 and #113.
 
-**Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11). The
-gates: `make ci-frontend`, `make bundle-check`, and from `frontend/` `node app/scripts/e2e-coverage.mjs`.
+**Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11). On a
+developer machine this runner replaces the run against `https://app.homi.loc` that "Environment" describes (rule 8).
+The gates: `make ci-frontend`, `make bundle-check`, and from `frontend/` `node app/scripts/e2e-coverage.mjs`.
