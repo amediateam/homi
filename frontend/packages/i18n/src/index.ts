@@ -5,8 +5,8 @@
  */
 export { type LabelTable, labelFor, labelTables } from "./labels";
 export { htmlLang, numberLocale } from "./locale";
+export { createIntlHandlers } from "./handlers";
 export {
-  createIntlHandlers,
   getMessages,
   type MessageKey,
   type Messages,

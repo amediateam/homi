@@ -7,7 +7,15 @@ import { defineConfig } from "@playwright/test";
  * suite runs against that address (for example `https://app.homi.loc` of the local stack). Specs import `test` from
  * `@homi/testing/playwright`, whose guard fails a test that sends a request to an external host.
  *
- * - `miniapp`: the Mini App in a phone-sized Telegram webview.
+ * - The Mini App's projects (WP-33, DEC-44): every launch takes the session mode and Telegram profile of its project
+ *   (`metadata.profile`, read by `launchApp` of `@homi/testing/playwright`) unless the spec names its own.
+ *   - `miniapp-cookie`: every spec, cookie mode, a 390 × 844 touch phone with the fake's default profile.
+ *   - `miniapp-header`: header mode on Telegram Web (`weba`), every test that does not name its mode (DEC-101). A
+ *     spec that is about the modes loops over both and names the mode in the title (`(cookie mode)`, `header mode:`):
+ *     both run in `miniapp-cookie`, so this project leaves them out instead of running them again.
+ *   - Only with `E2E_FULL=1`, the manual run before a pass inside Telegram (DEC-100, `workflow_dispatch`):
+ *     `miniapp-ios` (WebKit; `@smoke`, `@gesture`), `miniapp-desktop` (420 × 720 mouse; `@smoke`), `miniapp-old`
+ *     (Telegram 6.0; `@gates`), `miniapp-locales` and `miniapp-dark` (`@render`).
  * - `landing-desktop`, `landing-phone`: declared, empty until WP-61 adds the specs and the `landing` web server.
  * - Tests tagged `@flaky` are left out of CI runs (`15` §5.5).
  * - Tests tagged `@radars-off` (WP-30, DEC-51) need an API with radars switched off (`RADAR_CREATION_ENABLED=false` in
@@ -24,6 +32,16 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3001";
 const ci = Boolean(process.env.CI);
 const radarsOff = process.env.E2E_RADARS_OFF === "1";
 const analytics = process.env.E2E_ANALYTICS === "1";
+/** The manual run (DEC-100): the projects of other clients. */
+const full = process.env.E2E_FULL === "1";
+/** A test that chose its session mode itself (DEC-101): it runs in `miniapp-cookie` only. */
+const NAMES_ITS_MODE = /\b(?:cookie|header) mode\b/;
+
+/** The tags each run leaves out (`@flaky` on CI only); the special runs keep only their own tags. */
+const grepInvert = radarsOff || analytics ? (ci ? /@flaky/ : undefined) : ci ? /@radars-off|@owner-off|@analytics|@flaky/ : /@radars-off|@owner-off|@analytics/;
+
+const miniapp = { testDir: "./app/e2e" } as const;
+const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: "ru-RU" } as const;
 /** The PostHog host of the `@analytics` build: never resolvable, answered by the specs (`e2e/analytics.spec.ts`). */
 const ANALYTICS_HOST = "https://posthog.e2e.invalid";
 
@@ -59,24 +77,65 @@ export default defineConfig({
   workers: ci ? 1 : undefined,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
   grep: radarsOff ? /@radars-off|@owner-off/ : analytics ? /@analytics/ : undefined,
-  grepInvert: radarsOff || analytics ? (ci ? /@flaky/ : undefined) : ci ? /@radars-off|@owner-off|@analytics|@flaky/ : /@radars-off|@owner-off|@analytics/,
+  grepInvert,
   use: {
     baseURL,
     trace: "retain-on-failure",
   },
   projects: [
     {
-      name: "miniapp",
-      testDir: "./app/e2e",
-      use: {
-        browserName: "chromium",
-        viewport: { width: 390, height: 844 },
-        deviceScaleFactor: 1,
-        isMobile: true,
-        hasTouch: true,
-        locale: "ru-RU",
-      },
+      name: "miniapp-cookie",
+      ...miniapp,
+      use: { browserName: "chromium", ...phone },
+      metadata: { profile: { sessionMode: "cookie" } },
     },
+    {
+      name: "miniapp-header",
+      ...miniapp,
+      // A project's `grepInvert` replaces the config's, so the run's own exclusions come along.
+      grepInvert: grepInvert ? [grepInvert, NAMES_ITS_MODE] : NAMES_ITS_MODE,
+      use: { browserName: "chromium", ...phone },
+      metadata: { profile: { sessionMode: "header", platform: "weba" } },
+    },
+    ...(full && !radarsOff && !analytics
+      ? [
+          {
+            name: "miniapp-ios",
+            ...miniapp,
+            grep: /@smoke|@gesture/,
+            use: { browserName: "webkit" as const, ...phone },
+            metadata: { profile: { sessionMode: "cookie", platform: "ios" } },
+          },
+          {
+            name: "miniapp-desktop",
+            ...miniapp,
+            grep: /@smoke/,
+            use: { browserName: "chromium" as const, viewport: { width: 420, height: 720 }, locale: "ru-RU" },
+            metadata: { profile: { sessionMode: "cookie", platform: "tdesktop" } },
+          },
+          {
+            name: "miniapp-old",
+            ...miniapp,
+            grep: /@gates/,
+            use: { browserName: "chromium" as const, ...phone },
+            metadata: { profile: { sessionMode: "cookie", platform: "android", version: "6.0" } },
+          },
+          {
+            name: "miniapp-locales",
+            ...miniapp,
+            grep: /@render/,
+            use: { browserName: "chromium" as const, ...phone },
+            metadata: { profile: { sessionMode: "cookie", platform: "android" }, locales: ["uz", "en"] },
+          },
+          {
+            name: "miniapp-dark",
+            ...miniapp,
+            grep: /@render/,
+            use: { browserName: "chromium" as const, ...phone, colorScheme: "dark" as const },
+            metadata: { profile: { sessionMode: "cookie", platform: "android", colorScheme: "dark" } },
+          },
+        ]
+      : []),
     {
       name: "landing-desktop",
       testDir: "./landing/e2e",

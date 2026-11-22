@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -100,11 +100,6 @@ async function openMenu(page: Page, number: number): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`/ru/listing/${number}/actions$`));
   await expect(page.getByRole("dialog", { name: "Объявление" })).toBeVisible();
   await expect(sheet(page)).toHaveAttribute("data-step", "menu");
-}
-
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
 }
 
 /** Back on the feed: its address, the feed visible, no listing layer or sheet left. */
@@ -253,12 +248,12 @@ for (const mode of ["cookie", "header"] as const) {
       await onFeed(page);
 
       // The withdrawal fails on the API (`503 source_unavailable`); set right before the tap.
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       const answered = page.waitForResponse((response) => isServerAction(response.request()));
       await appToast(page).getByRole("button", { name: "Вернуть" }).click();
       await answered;
       await expect(appToast(page)).toHaveText("Не получилось сохранить");
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
       await expect(card(page, LISTING)).toHaveCount(0);
       expect(await notifications(app, "error")).toBe(1);
     });
@@ -276,11 +271,11 @@ for (const mode of ["cookie", "header"] as const) {
         await row(page, "report").click();
         await expect(row(page, "agent")).toContainText("Отметим номер как риелторский");
         if (scenario !== null) {
-          await stubScenario(page, scenario);
+          await setScenario(page, scenario);
         }
         await row(page, "agent").click();
         await expect(appToast(page)).toHaveText(text);
-        await page.context().clearCookies({ name: "homi_stub_scenario" });
+        await setScenario(page, null);
         await onListing(page, LISTING);
       }
       expect(actions.map((request) => request.postData() ?? "").filter((body) => body.includes('"reason":"agent"'))).toHaveLength(2);
@@ -295,10 +290,10 @@ for (const mode of ["cookie", "header"] as const) {
       const actions = recordRequests(page, isServerAction);
 
       // The report fails on the API (`503 source_unavailable`); set right before the tap, as it fails every stub read.
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       await row(page, "fraud").click();
       await expect(sheetToast(page)).toHaveText("Не получилось сохранить");
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
       expect(await notifications(app, "error")).toBe(1);
       expect(await notifications(app, "success")).toBe(0);
       await expect(page.getByRole("dialog", { name: "Что не так?" })).toBeVisible();

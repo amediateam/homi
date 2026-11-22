@@ -6,7 +6,7 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-nginx-restart dev-storage registry registry-check ci-backend ci-frontend e2e test-pgsql ai-sync ai-skills ai-hooks-test
+        dev-hosts dev-certs dev-nginx dev-nginx-restart dev-storage registry registry-check ci-backend ci-frontend e2e bundle-check test-pgsql ai-sync ai-skills ai-hooks-test
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -82,6 +82,14 @@ ci-frontend: ## Run the frontend CI gate locally (generated API types, lint, typ
 
 e2e: ## Run the Playwright suite (builds and starts app on :3001 unless E2E_BASE_URL is set)
 	@cd frontend && pnpm test:e2e
+
+# The server-only keys get distinctive values, so row 5 of the check also looks for values (WP-33).
+BUNDLE_CHECK_ENV = NEXT_PUBLIC_APP_ENV=production API_URL=https://api.bundle-check.invalid/api/v1 \
+	CSP_TILE_HOSTS=https://tiles.bundle-check.invalid CSP_PRIVATE_MEDIA_HOSTS=https://media.bundle-check.invalid \
+	CSP_ANALYTICS_HOSTS=https://events.bundle-check.invalid CSP_FRAME_ANCESTORS=https://frame.bundle-check.invalid
+
+bundle-check: ## Production build of the Mini App and the bundle check of WP-33 (replaces app/.next; the e2e run rebuilds)
+	@cd frontend/app && $(BUNDLE_CHECK_ENV) pnpm build && $(BUNDLE_CHECK_ENV) node scripts/check-bundle.mjs
 
 # The pgsql group (backend/tests/Pgsql) needs a database whose name ends with _test: `createdb homi_test` once
 # on the server of backend/.env, whose host and credentials are used; DB_HOST=… etc. on the command line win.

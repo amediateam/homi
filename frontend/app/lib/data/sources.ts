@@ -49,10 +49,17 @@ function enter(pathname: string): void {
   }
 }
 
+/**
+ * What the server rendered: no report ever reaches it (`SourceReporter` reports from an effect), so the marker is
+ * absent from the document. Hydration must start from that, not from the reports of boundaries that hydrated earlier
+ * (WP-33: the marker's own `Suspense` hydrates after the page's, whose reporter has run by then — React error 418).
+ */
+const SERVER_STATE: State = { pathname: null, sources: new Set() };
+
 /** True while an answer of the screen at the current pathname came from a stub. */
 export function useHasStubData(): boolean {
   const pathname = usePathname();
-  const current = useSyncExternalStore(subscribe, () => state, () => state);
+  const current = useSyncExternalStore(subscribe, () => state, () => SERVER_STATE);
   useEffect(() => enter(pathname), [pathname]);
   return current.pathname === pathname && current.sources.has("stub");
 }

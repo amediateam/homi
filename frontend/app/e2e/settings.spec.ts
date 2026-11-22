@@ -1,4 +1,4 @@
-import { expect, launchApp, type LaunchAppOptions, stubMedia, test as base } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchAppOptions, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
@@ -29,10 +29,6 @@ const radio = (page: Page, name: string) => page.getByRole("radio", { name, exac
 const press = (page: Page, eventType: "backButtonClicked") =>
   page.evaluate((type) => (window as unknown as { __homiFakeTelegram: Fake }).__homiFakeTelegram.emit(type), eventType);
 const address = (page: Page) => new URL(page.url()).pathname;
-
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
 
 /** Launches the app on `path` and waits for the session and the settings list. */
 async function open(page: Page, mode: Mode, path = "/settings", options: Omit<LaunchAppOptions, "mode" | "path"> = {}): Promise<void> {
@@ -148,11 +144,11 @@ for (const mode of ["cookie", "header"] as const) {
     });
 
     test("the scenarios card_rich and card_sample_unsent: «Новый» in the row, the failure line", async ({ page }) => {
-      await stubScenario(page, "card_rich");
+      await setScenario(page, "card_rich");
       await open(page, mode);
       await expect(value(page, "cards")).toHaveText("Новый");
 
-      await stubScenario(page, "card_sample_unsent");
+      await setScenario(page, "card_sample_unsent");
       await row(page, "cards").click();
       await onPage(page, "cards", "Вид карточек");
       await page.locator('[data-action="card-sample"]').click();

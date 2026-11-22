@@ -8,6 +8,7 @@
     "./format": "./src/format/index.ts",
     "./brand-words.json": "./brand-words.json"
   },
+  "sideEffects": false,
   "scripts": {
     "import-legacy": "node scripts/import-legacy.mjs",
     "test": "vitest run --config ../../vitest.config.mts --project @homi/i18n",

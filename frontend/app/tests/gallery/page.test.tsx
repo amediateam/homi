@@ -127,14 +127,14 @@ const click = (testId: string) => fireEvent.click(screen.getByTestId(testId));
 const eventLog = () => screen.getByTestId("gallery-sheet-events").textContent;
 
 describe("the primitives gallery (D-E-4)", () => {
-  it.each(["production", "", "preview"])("answers not-found when NEXT_PUBLIC_APP_ENV is %j", (env) => {
+  it.each(["production", "", "preview"])("answers not-found when NEXT_PUBLIC_APP_ENV is %j", async (env) => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", env);
-    expect(() => Page()).toThrow("not found");
+    await expect(Page()).rejects.toThrow("not found");
   });
 
-  it.each(["local", "ci", "staging"])("renders one entry per primitive in %s", (env) => {
+  it.each(["local", "ci", "staging"])("renders one entry per primitive in %s", async (env) => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", env);
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     expect(document.querySelector('[data-route="dev/ui"]')).not.toBeNull();
     for (const id of ENTRIES) {
@@ -142,9 +142,9 @@ describe("the primitives gallery (D-E-4)", () => {
     }
   });
 
-  it("opens and closes a sheet, the stacked sheet and the sub-page", () => {
+  it("opens and closes a sheet, the stacked sheet and the sub-page", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     fireEvent.click(screen.getByTestId("gallery-open-sheet-full"));
     const filters = screen.getByRole("dialog", { name: "Фильтры" });
@@ -167,11 +167,11 @@ describe("the primitives gallery (D-E-4)", () => {
     expect(screen.queryByRole("region", { name: "Тема" })).toBeNull();
   });
 
-  it("the throw button makes a child throw while rendering", () => {
+  it("the throw button makes a child throw while rendering", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
     // React reports the caught error on the console.
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    render(<Boundary>{Page()}</Boundary>, { wrapper: WithIntl });
+    render(<Boundary>{await Page()}</Boundary>, { wrapper: WithIntl });
 
     fireEvent.click(screen.getByTestId("gallery-throw"));
 
@@ -180,9 +180,9 @@ describe("the primitives gallery (D-E-4)", () => {
 });
 
 describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
-  it("shows a plain, a catalogue-key and an action toast through the app's store; the action is logged", () => {
+  it("shows a plain, a catalogue-key and an action toast through the app's store; the action is logged", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     click("gallery-toast-plain");
     expect(currentToast()?.message).toBe("Ссылка скопирована");
@@ -196,10 +196,10 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
     expect(eventLog()).toBe("События: toast action");
   });
 
-  it("replaces the visible toast with a second one, and drops a pending replacement when the page goes", () => {
+  it("replaces the visible toast with a second one, and drops a pending replacement when the page goes", async () => {
     vi.useFakeTimers();
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    const { unmount } = render(Page(), { wrapper: WithIntl });
+    const { unmount } = render(await Page(), { wrapper: WithIntl });
 
     click("gallery-toast-replace");
     const first = currentToast();
@@ -220,7 +220,7 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
   it("logs the answer of the confirm dialog into the event log", async () => {
     fake = fakeTelegram({ version: "6.2", answers: { confirm: false } });
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     await act(async () => click("gallery-confirm-ask"));
     fake.answers.confirm = true;
@@ -234,10 +234,10 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
     expect(eventLog()).toBe("События: confirm true · confirm false");
   });
 
-  it("plays failed() by default, without the toast and with the flag off, and saved()", () => {
+  it("plays failed() by default, without the toast and with the flag off, and saved()", async () => {
     fake = fakeTelegram();
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     click("gallery-feedback-failed");
     expect(currentToast()?.message).toEqual({ key: "common.saveFailed" });
@@ -257,9 +257,9 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
     expect(eventLog()).toBe("События: saved · failed, DEV-016 off · failed, toast: false · failed");
   });
 
-  it("links the three route wrappers through their real addresses", () => {
+  it("links the three route wrappers through their real addresses", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     expect(screen.getByTestId("gallery-route-filters").getAttribute("href")).toBe("/filters");
     expect(screen.getByTestId("gallery-route-settings-theme").getAttribute("href")).toBe("/settings/theme");
@@ -270,9 +270,9 @@ describe("the feedback and route entries of the gallery (WP-23 part B)", () => {
 describe("the card entry of the gallery (WP-24)", () => {
   const entry = (id: string) => screen.getByTestId(`gallery-card-${id}`);
 
-  it("shows each badge of the priority table on its own card", () => {
+  it("shows each badge of the priority table on its own card", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     expect(entry("badge-suspicious").querySelector("[data-badge]")?.textContent).toBe("Подозрительно дёшево");
     expect(entry("badge-check").querySelector("[data-badge]")?.textContent).toBe("Проверьте цену");
@@ -281,9 +281,9 @@ describe("the card entry of the gallery (WP-24)", () => {
     expect(entry("badge-below-market").querySelector("[data-badge]")?.textContent).toBe("Ниже рынка");
   });
 
-  it("shows the price, photo and overlay states with fixture cards linked to their listings", () => {
+  it("shows the price, photo and overlay states with fixture cards linked to their listings", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
-    render(Page(), { wrapper: WithIntl });
+    render(await Page(), { wrapper: WithIntl });
 
     expect(entry("negotiable").querySelector("[data-price]")?.textContent).toBe("Цена договорная");
     expect(entry("down-payment").querySelector("[data-price]")?.textContent).toContain("· первый взнос");

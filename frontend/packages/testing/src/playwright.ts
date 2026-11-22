@@ -2,6 +2,7 @@ import { test as base, expect, type BrowserContext, type Locator, type Page } fr
 
 import { installFakeTelegram, resolveFakeTelegramConfig, type FakeTelegramCall, type FakeTelegramOptions, type FakeTelegramWindow } from "./fakeTelegram";
 import { syntheticInitData } from "./initData";
+import { modeFindings, projectProfile, projectSessionMode, resetModeRecords, trackExchange, watchMode, type SessionMode } from "./modes";
 
 /**
  * Playwright side of `@homi/testing` (WP-03). Specs import `test` and `expect` from here: every test then runs behind
@@ -32,6 +33,8 @@ export interface PlaywrightTelegramOptions extends FakeTelegramOptions {
    * spec does not fulfil are aborted without failing the test; none of them ever leaves the machine.
    */
   allowHosts?: string[];
+  /** The session mode; default: the project's (WP-33). */
+  mode?: SessionMode;
 }
 
 export interface PlaywrightTelegram {
@@ -95,32 +98,91 @@ async function guard(page: Page): Promise<GuardState> {
   return state;
 }
 
+/**
+ * The project's Telegram profile (`metadata.profile` of `frontend/playwright.config.ts`, WP-33) under the options of
+ * the spec: a spec that names a platform, version or scheme keeps it.
+ */
+function withProfile<T extends FakeTelegramOptions>(options: T): T {
+  const { platform, version, colorScheme } = projectProfile(test.info());
+  return { ...(platform && { platform }), ...(version && { version }), ...(colorScheme && { colorScheme }), ...options };
+}
+
+/**
+ * The session mode of a launch (WP-33): the checks of `./modes` after the test, and in header mode the strip of
+ * `Set-Cookie` from the app's `/bff/session` answers. Every launch goes through here — `launchApp`, and a spec that
+ * installs the fake with `playwrightTelegram` and loads the page itself — so no spec opts out of its project's mode.
+ */
+async function startSessionMode(page: Page, mode: SessionMode, calls: (() => Promise<unknown>) | null): Promise<void> {
+  await watchMode(page, mode, test.info().project.use.baseURL ?? "http://localhost:3001", calls);
+  if (mode !== "header") {
+    return;
+  }
+  // A context route runs after every page route, so a spec's own answer of the exchange (a refusal, a delay) wins
+  // whether it was registered before this launch or after; whatever the spec passes on reaches this handler. Another
+  // page of the context keeps its own mode.
+  await page.context().route("**/bff/session", async (route) => {
+    let own = true;
+    try {
+      own = route.request().frame().page() === page;
+    } catch {
+      own = true;
+    }
+    if (!own) {
+      await route.fallback();
+      return;
+    }
+    try {
+      await trackExchange(
+        (async () => {
+          const response = await route.fetch();
+          // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
+          await page.context().clearCookies({ name: /^homi_session/ });
+          const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
+          await route.fulfill({ response, headers });
+        })(),
+      );
+    } catch (error) {
+      // A test that ends with the exchange in flight closes the page under it ("route.fetch: Test ended"), and the
+      // rejection would fail the next test. An answer Playwright disposed before it was fulfilled ("Fetch response has
+      // been disposed", WP-82: a re-read of `GET /me` under a fast run of taps) is one the page no longer waits for —
+      // a page still waiting would fail on its own. Only these ends are forgiven; anything else still fails the test.
+      const ended = page.isClosed() || /Test ended|has been closed|response has been disposed/.test(error instanceof Error ? error.message : String(error));
+      if (!ended) {
+        throw error;
+      }
+    }
+  });
+}
+
 /** Installs the fake Telegram as an init script of `page` (before any page script) and the request guard. */
 export async function playwrightTelegram(page: Page, options: PlaywrightTelegramOptions = {}): Promise<PlaywrightTelegram> {
-  const { allowHosts = [], ...fakeOptions } = options;
+  const { allowHosts = [], mode = projectSessionMode(test.info()), ...fakeOptions } = withProfile(options);
   const state = await guard(page);
   for (const host of allowHosts) {
     state.allowHosts.add(host);
   }
   await page.addInitScript(installFakeTelegram, resolveFakeTelegramConfig(fakeOptions));
+  const calls = () =>
+    page.evaluate(() =>
+      ((window as unknown as FakeTelegramWindow).__homiFakeTelegram?.calls ?? []).map((call) => ({
+        member: call.member,
+        args: call.args.map((arg) => (typeof arg === "function" ? "[function]" : arg)),
+      })),
+    );
+  await startSessionMode(page, mode, calls);
   return {
     blockedRequests: state.blocked,
-    calls: () =>
-      page.evaluate(() =>
-        ((window as unknown as FakeTelegramWindow).__homiFakeTelegram?.calls ?? []).map((call) => ({
-          member: call.member,
-          args: call.args.map((arg) => (typeof arg === "function" ? "[function]" : arg)),
-        })),
-      ),
+    calls,
   };
 }
 
 export interface LaunchAppOptions extends Omit<PlaywrightTelegramOptions, "initData" | "startParam"> {
   /**
-   * `cookie` (default) or `header`: header mode strips `Set-Cookie` from the app's `/bff/session` answers, as the
-   * frame of a browser that refuses the cookie does (DEC-44, RK-30).
+   * `cookie` or `header`; default: the project's (`miniapp-cookie`, `miniapp-header`, WP-33). Header mode strips
+   * `Set-Cookie` from the app's `/bff/session` answers, as the frame of a browser that refuses the cookie does (DEC-44,
+   * RK-30). A spec names a mode only when the test is about that mode.
    */
-  mode?: "cookie" | "header";
+  mode?: SessionMode;
   /** The Telegram user's `language_code`; default `ru`. */
   locale?: string;
   startParam?: string;
@@ -147,11 +209,12 @@ export interface LaunchedApp extends PlaywrightTelegram {
  * parameters in the address fragment, where Telegram puts them.
  */
 export async function launchApp(page: Page, options: LaunchAppOptions = {}): Promise<LaunchedApp> {
-  const { mode = "cookie", locale = "ru", startParam, initData, path = "/", sdk = true, ...telegram } = options;
+  const { mode = projectSessionMode(test.info()), locale = "ru", startParam, initData, path = "/", sdk = true, ...rest } = options;
+  const telegram = withProfile(rest);
   const launchData = initData ?? syntheticInitData({ language_code: locale }, { startParam });
   let installed: PlaywrightTelegram;
   if (sdk) {
-    installed = await playwrightTelegram(page, { ...telegram, initData: launchData });
+    installed = await playwrightTelegram(page, { ...telegram, initData: launchData, mode });
   } else {
     const state = await guard(page);
     await page.route(TELEGRAM_SDK_URL, (route) => route.abort("blockedbyclient"));
@@ -164,25 +227,8 @@ export async function launchApp(page: Page, options: LaunchAppOptions = {}): Pro
     });
     installed = { blockedRequests: state.blocked, calls: async () => [] };
   }
-  if (mode === "header") {
-    await page.route("**/bff/session", async (route) => {
-      try {
-        const response = await route.fetch();
-        // `route.fetch` stores the answer's cookies in the context, so the refused cookie is removed there as well.
-        await page.context().clearCookies({ name: /^homi_session/ });
-        const headers = Object.fromEntries(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
-        await route.fulfill({ response, headers });
-      } catch (error) {
-        // A test that ends with the exchange in flight closes the page under it ("route.fetch: Test ended"), and the
-        // rejection would fail the next test. An answer Playwright disposed before it was fulfilled ("Fetch response has
-        // been disposed", WP-82: a re-read of `GET /me` under a fast run of taps) is one the page no longer waits for —
-        // a page still waiting would fail on its own. Only these ends are forgiven; anything else still fails the test.
-        const ended = page.isClosed() || /Test ended|has been closed|response has been disposed/.test(error instanceof Error ? error.message : String(error));
-        if (!ended) {
-          throw error;
-        }
-      }
-    });
+  if (!sdk) {
+    await startSessionMode(page, mode, null);
   }
   const config = resolveFakeTelegramConfig({ ...telegram, initData: launchData });
   const fragment = new URLSearchParams({ tgWebAppData: launchData, tgWebAppVersion: config.version, tgWebAppPlatform: config.platform });
@@ -220,12 +266,26 @@ export async function stubMedia(page: Page): Promise<readonly string[]> {
   return answered;
 }
 
-export const test = base.extend<{ externalRequestGuard: void }>({
+export const test = base.extend<{ externalRequestGuard: void; sessionModeChecks: void }>({
   externalRequestGuard: [
     async ({ page }, use) => {
       const state = await guard(page);
       await use();
       expect(state.blocked, "requests to external hosts were sent by the page").toEqual([]);
+    },
+    { auto: true },
+  ],
+  // The checks of `./modes` after a test that launched the app and passed (WP-33): they belong to the suite, not to
+  // the spec author.
+  sessionModeChecks: [
+    // It takes `page`, so its teardown runs while the page is still open.
+    async ({ page }, use, info) => {
+      void page;
+      resetModeRecords();
+      await use();
+      if (info.status === "passed") {
+        expect(await modeFindings(info), "the session mode and console checks after the test (@homi/testing modes.ts)").toEqual([]);
+      }
     },
     { auto: true },
   ],
@@ -250,3 +310,8 @@ export { expect };
 
 /** For specs that launch a second Telegram user (WP-21). */
 export { syntheticInitData };
+
+export { allowConsoleErrors, allowCspViolations, projectSessionMode, type SessionMode } from "./modes";
+/** For the checks' own spec (`app/e2e/modes.spec.ts`) only. */
+export { modeFindings, resetModeRecords } from "./modes";
+export { STUB_SCENARIO_COOKIE, setScenario, withScenario } from "./scenarios";

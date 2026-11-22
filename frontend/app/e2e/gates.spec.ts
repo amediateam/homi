@@ -1,4 +1,4 @@
-import { expect, launchApp, test, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, test } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -48,7 +48,7 @@ function recordRequests(page: Page, match: (request: Request) => boolean): Reque
 
 /**
  * Answers the sign-in (`POST /bff/session`) with a refusal of the app server, `times` times (all when omitted), and
- * passes the later ones through — to the header mode of `launchApp` when it is on, which registered its route first.
+ * passes the later ones through — to header mode's context route when it is on, which every page route runs before.
  */
 async function refuseSignIn(page: Page, reason: string, times = Infinity): Promise<() => number> {
   let refused = 0;
@@ -77,11 +77,6 @@ async function returnToApp(page: Page): Promise<void> {
 /** A mark on the window: gone after a document load, kept by every soft navigation. */
 const markWindow = (page: Page) => page.evaluate(() => Object.assign(window, { __homiNoReload: true }));
 const stillMarked = (page: Page) => page.evaluate(() => "__homiNoReload" in window);
-
-/** The next launches sign in as the stub user of `scenario` (WP-11), as the cookie WP-22 forwards says. */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
 
 async function closes(app: LaunchedApp): Promise<number> {
   return (await app.calls()).filter((call) => call.member === "close").length;
@@ -160,7 +155,7 @@ test.describe("gates", () => {
   });
 
   test("paused: «Бот на паузе» and «Вернуться в бот» only, also for a listing link; «Вернуться в бот» closes (DEC-60)", async ({ page }) => {
-    await stubScenario(page, "access_paused");
+    await setScenario(page, "access_paused");
     const app = await launchApp(page, { startParam: "l_123-seo" });
 
     await expect(page).toHaveURL(/\/ru\/no-access\?reason=paused$/);
@@ -178,12 +173,12 @@ test.describe("gates", () => {
   });
 
   test("paused re-checks by itself and leaves for the feed once the access is back", async ({ page }) => {
-    await stubScenario(page, "access_paused");
+    await setScenario(page, "access_paused");
     await launchApp(page);
     await expect(noAccess(page)).toHaveAttribute("data-reason", "paused");
     await expect(visible(page, "[data-checking]")).toBeVisible();
 
-    await page.context().clearCookies({ name: "homi_stub_scenario" });
+    await setScenario(page, null);
 
     await expect(route(page, "feed")).toBeVisible({ timeout: 10_000 });
     await expect(session(page)).toHaveAttribute("data-session", "ready");
@@ -191,7 +186,7 @@ test.describe("gates", () => {
   });
 
   test("a listing link with the SEO source in en offers the bot with s_seo_en (BR-API-194)", async ({ page }) => {
-    await stubScenario(page, "access_private");
+    await setScenario(page, "access_private");
     const app = await launchApp(page, { locale: "en", startParam: "l_123-seo" });
 
     await expect(page).toHaveURL(/\/en\/no-access\?reason=private$/);
@@ -210,7 +205,7 @@ test.describe("gates", () => {
   });
 
   test("a listing link on a first launch: language, then the listing, and the city page after Back; a located pick", async ({ page }) => {
-    await stubScenario(page, "first_launch");
+    await setScenario(page, "first_launch");
     // Near Andijan (the stub reference's town, 40.7821 / 72.3442), for the location row of the city page.
     await launchApp(page, { startParam: "l_42", answers: { location: { latitude: 40.79, longitude: 72.35 } } });
 
@@ -241,7 +236,7 @@ test.describe("gates", () => {
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`gates (${mode} mode)`, () => {
     test("first launch: the language page greets in the Telegram language, «English» switches the address without a reload, the city picks the feed", async ({ page }) => {
-      await stubScenario(page, "first_launch");
+      await setScenario(page, "first_launch");
       const actions = recordRequests(page, isServerAction);
       await launchApp(page, { mode, locale: "en" });
 
@@ -321,8 +316,7 @@ test.describe("session expired", () => {
 
   /**
    * Header mode keeps the token in memory, so its sign-in is repeated when a read is refused (WP-22). The refusal is
-   * registered after the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front
-   * of a route registered before it, and a sign-in refused at launch never reaches a session mode anyway. The read is
+   * registered after the launch, because a sign-in refused at launch never reaches a session mode. The read is
    * the map's points (`GET /listings/map` through `/bff`, WP-27), asked for again when the deal switch of the map's
    * top bar changes the search.
    */

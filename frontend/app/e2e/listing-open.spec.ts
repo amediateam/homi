@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -127,13 +127,6 @@ async function open(page: Page, mode: Mode, path = "/"): Promise<LaunchedApp> {
   await expect(html(page)).toHaveAttribute("data-session", "ready");
   return app;
 }
-
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
-const clearScenario = (page: Page) => page.context().clearCookies({ name: "homi_stub_scenario" });
 
 /** Back on the feed: its address, the feed visible, no listing layer left. */
 async function onFeed(page: Page): Promise<void> {
@@ -308,7 +301,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(cards(page).first()).toBeVisible();
       const number = Number(await cards(page).first().getAttribute("data-listing"));
 
-      await stubScenario(page, "daily_limit");
+      await setScenario(page, "daily_limit");
       await card(page, number).locator("a").click();
       await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "day_limit");
       const limit = layer(page, number).locator('[data-slot="error-state"]');
@@ -318,7 +311,7 @@ for (const mode of ["cookie", "header"] as const) {
       );
       await expect(layer(page, number).locator("[data-hero], [data-cta]")).toHaveCount(0);
 
-      await clearScenario(page);
+      await setScenario(page, null);
       await limit.getByRole("button", { name: "Повторить" }).click();
       await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
       await expect(html(page)).toHaveAttribute("data-session", "ready");
@@ -331,14 +324,14 @@ for (const mode of ["cookie", "header"] as const) {
       const number = Number(await second.getAttribute("data-listing"));
 
       // Set once the session is ready: the scenario fails every stub read, `/me` included.
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       await card(page, number).locator("a").click();
       const failure = layer(page, number).locator('[data-slot="error-state"]');
       await expect(failure).toHaveAttribute("data-kind", "server");
       await expect(failure.locator('[data-slot="error-state-title"]')).toHaveText("Не загрузилось");
       await expect(layer(page, number).locator("[data-hero], [data-cta]")).toHaveCount(0);
 
-      await clearScenario(page);
+      await setScenario(page, null);
       const reads = recordRequests(page, (request) => isListingRead(number)(new URL(request.url())));
       await failure.getByRole("button", { name: "Повторить" }).click();
       await expect(stateOf(page, number)).toHaveAttribute("data-listing-state", "loaded");
@@ -349,7 +342,7 @@ for (const mode of ["cookie", "header"] as const) {
 
     test("in uz the original text translates with one request and toggles back without another", async ({ page }) => {
       // The address's locale survives the sign-in only when `me.locale` agrees: the stub user of the `uz` scenario.
-      await stubScenario(page, "uz");
+      await setScenario(page, "uz");
       await launchApp(page, { mode, locale: "uz", path: `/uz/listing/${LISTING}` });
       await expect(html(page)).toHaveAttribute("data-session", "ready");
       await expect(page).toHaveURL(new RegExp(`/uz/listing/${LISTING}$`));
@@ -381,7 +374,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(text).toContainText("Metro yaqinida yorugʻ kvartira");
       await nothingAsked(page, isServerAction);
       expect(actions).toHaveLength(1);
-      await clearScenario(page);
+      await setScenario(page, null);
     });
 
     test("Telegram's SettingsButton closes the listing and shows the settings", async ({ page }) => {

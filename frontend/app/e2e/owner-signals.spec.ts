@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test } from "@homi/testing/playwright";
+import { expect, launchApp, setScenario, stubMedia, test } from "@homi/testing/playwright";
 import type { Page } from "@playwright/test";
 
 /**
@@ -16,7 +16,7 @@ for (const mode of ["cookie", "header"] as const) {
   test.describe(`owner signals (${mode} mode)`, () => {
     test("the dot and the tab tip; the tip opens the list with the card tip; the requests dismiss both", async ({ page }) => {
       await stubMedia(page);
-      await page.context().addCookies([{ name: "homi_stub_scenario", value: "owner_pending", url: test.info().project.use.baseURL }]);
+      await setScenario(page, "owner_pending");
       await launchApp(page, { mode, path: "/" });
       await expect(page.locator('[data-tab="settings"] [data-tab-dot]')).toHaveAttribute("data-tab-dot", "2");
       const tabTip = visible(page, '[data-request-tip="tab"]');

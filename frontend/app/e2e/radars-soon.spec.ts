@@ -1,5 +1,5 @@
 import { defaultFilters, filtersHash, fromSearchParams } from "@homi/search";
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -98,11 +98,6 @@ async function open(page: Page, mode: Mode, path = "/"): Promise<LaunchedApp> {
   return app;
 }
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 /** Nothing for `ms`: the follow nudge waits 1.8 s, the return banner 1.8 s plus its read, so 3 s covers both. */
 const quietFor = (page: Page, ms: number) => page.waitForTimeout(ms);
 
@@ -156,7 +151,7 @@ for (const mode of ["cookie", "header"] as const) {
 
     test("a short feed (scenario few) shows the few-results note without «Включить радар по этому поиску»", async ({ page }) => {
       // `few` is not a reserved scenario, so the sign-in still works with it; cookie mode's server render needs it.
-      await stubScenario(page, "few");
+      await setScenario(page, "few");
       await open(page, mode);
 
       const note = visible(page, '[data-slot="few-note"]');
@@ -167,7 +162,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(note.locator('[data-few="radar"]')).toHaveCount(0);
       await expect(note.getByText("Включить радар по этому поиску")).toHaveCount(0);
       await expect(feedRadar(page)).toHaveCount(0);
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
     });
 
     test("the filters footer has no «Включить радар»; applying custom filters shows no nudge and reads no flow within 3 s", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request, Route } from "@playwright/test";
 
 /**
@@ -160,11 +160,6 @@ async function open(page: Page, mode: Mode, path = "/"): Promise<LaunchedApp> {
   const app = await launchApp(page, { mode, path });
   await expect(html(page)).toHaveAttribute("data-session", "ready");
   return app;
-}
-
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
 }
 
 /** `401 auth_expired`: the API's answer to launch data that is too old (WP-21, LB-APP-047). */
@@ -375,8 +370,7 @@ test.describe("feed (header mode only)", () => {
 
   /**
    * Header mode keeps the token in memory, so a refused read signs in again (WP-22). The refusals are registered after
-   * the launch: `launchApp`'s header-mode route answers `/bff/session` itself and would sit in front of one registered
-   * before it.
+   * the launch, so the first sign-in goes through.
    */
   test("a page two refused mid-session and the new sign-in refused as too old show the expired screen; «Закрыть» closes", async ({ page }) => {
     const app = await open(page, "header", "/ru");
@@ -510,7 +504,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(actions[1].postData() ?? "").toContain(`{"number":${number},"on":false}`);
 
       // The save fails on the API (`503 source_unavailable` of the stub's PUT); held until the fill is seen.
-      await stubScenario(page, "source_unavailable");
+      await setScenario(page, "source_unavailable");
       const slow = gate();
       await page.route(
         (url) => url.pathname === "/ru",
@@ -537,7 +531,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(host).toHaveAttribute("data-placement", "toggle");
       expect(await host.evaluate((element) => getComputedStyle(element).bottom)).toBe("140px");
       expect(actions).toHaveLength(3);
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
     });
 
     test("a failed page two shows «Не загрузилось — повторить» under the cards; a refused one «Нет доступа — повторить»", async ({ page }) => {

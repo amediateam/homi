@@ -1,5 +1,5 @@
 import { filtersHash, fromSearchParams, type SearchFilters } from "@homi/search";
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp, shownText } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, shownText, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request, Response } from "@playwright/test";
 
 /**
@@ -156,11 +156,6 @@ const noRadars = (page: Page) =>
     (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: [], meta: { source: "stub" } }) }),
   );
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 /** Launches the app as the bot does, in a session mode, and waits for the session and the first cards. */
 async function open(page: Page, mode: Mode, path = "/"): Promise<LaunchedApp> {
   const app = await launchApp(page, { mode, path });
@@ -284,7 +279,7 @@ for (const mode of ["cookie", "header"] as const) {
       await seed(page, { [DEFAULT_HASH]: Date.now() - 7 * HOUR_MS });
       await noRadars(page);
       await watchNudges(page);
-      await stubScenario(page, "new_none");
+      await setScenario(page, "new_none");
       const answer = page.waitForResponse((response) => isNew(new URL(response.url())));
       await open(page, mode);
 
@@ -293,7 +288,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(anyNudge(page)).toHaveCount(0);
       expect(await nudgeLog(page)).toEqual([]);
       expect((await readNudge(page))?.back ?? {}).toEqual({});
-      await page.context().clearCookies({ name: "homi_stub_scenario" });
+      await setScenario(page, null);
     });
 
     test("× hides it and counts one close; with the cooldown over it stays away from these filters for 2 days", async ({ page }) => {

@@ -145,8 +145,8 @@ its row is its place in the queue.
 | [WP-80](WP-80-contract-owner-cabinet.md) | Contract: owner cabinet, contact requests, owner fields of the card | Owner-cabinet plan, WP-13 | WAITING (merged in #104 on 2026-11-21; production track: the regular deploy with `OWNER_CABINET_ENABLED` unset on staging and production, DEC-81) |
 | [WP-81](WP-81-owner-form.md) | Owner form: place picker, questionnaire, photos, phone, contact mode, publish | WP-80, WP-28, WP-36, WP-39 | WAITING (merged in #107 on 2026-11-21; production track: the regular deploy with `CSP_PRIVATE_MEDIA_HOSTS` set and `OWNER_CABINET_ENABLED` unset, DEC-81) |
 | [WP-82](WP-82-owner-lists-signals.md) | Owner lists and signals: the settings group, «Мои объявления», «Отклики», the owner panel, the red dot | WP-81, WP-31, WP-26, WP-39 | WAITING (merged in #108 and #109 on 2026-11-22; production track: the regular deploy with `OWNER_CABINET_ENABLED` unset, DEC-81) |
-| [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | REVIEW |
-| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-39, WP-80 … WP-83 | TODO |
+| [WP-83](WP-83-seeker-contact-request.md) | Seeker side: request sheet, CTA states, verified-owner chip and sheet, owner sections | WP-80, WP-82, WP-26, WP-30, WP-36 | WAITING (merged in #110 on 2026-11-22; production track: the regular deploy with `OWNER_CABINET_ENABLED` unset, DEC-81; the relay of legacy requests is WP-87 and the bot's side WP-89) |
+| [WP-33](WP-33-frontend-acceptance.md) | Frontend acceptance on stubs | WP-24 … WP-32, WP-34 … WP-39, WP-80 … WP-83 | IN PROGRESS (part 1 — the suite's projects, session-mode checks, scenarios and the bundle check — in review; DEC-100, DEC-101) |
 
 ## Stage C — API
 

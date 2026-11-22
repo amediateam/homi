@@ -1,4 +1,4 @@
-import { expect, launchApp, stubMedia, test as base, type LaunchedApp } from "@homi/testing/playwright";
+import { expect, launchApp, type LaunchedApp, setScenario, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Page, Request } from "@playwright/test";
 
 /**
@@ -301,11 +301,6 @@ type MapAnswer = { success: true; data: { points: MapPoint[]; total: number }; m
 const lightHaptics = async (app: LaunchedApp) =>
   (await app.calls()).filter((call) => call.member === "HapticFeedback.impactOccurred" && call.args[0] === "light").length;
 
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
-}
-
 /** Marks the map's screen: a route Next renders fresh has no mark, a route it kept (`<Activity>`) still has it. */
 const markMapScreen = (page: Page) => page.locator("[data-map-screen]").evaluate((node) => node.setAttribute("data-e2e-left", ""));
 
@@ -346,7 +341,7 @@ for (const mode of ["cookie", "header"] as const) {
   test.describe(`map on Leaflet (${mode} mode)`, () => {
     /** WP-37 E2E on Leaflet; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»". */
     test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
-      await stubScenario(page, "map_cut");
+      await setScenario(page, "map_cut");
       await openFeed(page, mode);
       const read = page.waitForResponse((response) => isMapRead(new URL(response.url())));
       await toMap(page);

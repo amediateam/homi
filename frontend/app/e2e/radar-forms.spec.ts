@@ -1,4 +1,4 @@
-import { expect as baseExpect, launchApp, stubMedia, test as base, type LaunchedApp, shownText } from "@homi/testing/playwright";
+import { expect as baseExpect, launchApp, type LaunchedApp, setScenario, shownText, stubMedia, test as base } from "@homi/testing/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 
 /**
@@ -107,11 +107,6 @@ async function holdActions(page: Page): Promise<() => void> {
     await handled.fallback();
   });
   return slow.release;
-}
-
-/** The next requests carry the stub scenario `scenario` (WP-22 forwards the cookie as `X-Stub-Scenario`). */
-async function stubScenario(page: Page, scenario: string): Promise<void> {
-  await page.context().addCookies([{ name: "homi_stub_scenario", value: scenario, url: test.info().project.use.baseURL }]);
 }
 
 /** Silences the nudges before the launch (`homi-nudge`), so none of them shows over the screens these tests tap. */
@@ -299,7 +294,7 @@ for (const mode of ["cookie", "header"] as const) {
     test("a pause on a tile answered ask_found pushes the survey: «Ещё ищу», «Больше не ищу», «Да, через HOMI» → «Готово»", async ({ page }) => {
       const app = await open(page, mode);
       await onTab(page);
-      await stubScenario(page, "ask_found");
+      await setScenario(page, "ask_found");
       const actions = recordRequests(page, isServerAction);
 
       await pauseForSurvey(page, ACTIVE);
@@ -336,7 +331,7 @@ for (const mode of ["cookie", "header"] as const) {
       test.setTimeout(120_000);
       await open(page, mode);
       await onTab(page);
-      await stubScenario(page, "ask_found");
+      await setScenario(page, "ask_found");
       const actions = recordRequests(page, isServerAction);
       const places = [
         ["telegram", "Другой Telegram-канал"],
@@ -372,7 +367,7 @@ for (const mode of ["cookie", "header"] as const) {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, ACTIVE);
-      await stubScenario(page, "ask_found");
+      await setScenario(page, "ask_found");
       const actions = recordRequests(page, isServerAction);
 
       await radarSheet(page, ACTIVE).getByRole("switch").click();
@@ -392,7 +387,7 @@ for (const mode of ["cookie", "header"] as const) {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, DIGEST);
-      await stubScenario(page, "ask_found");
+      await setScenario(page, "ask_found");
       const actions = recordRequests(page, isServerAction);
 
       await radarSheet(page, DIGEST).locator("[data-radar-delete]").click();
