@@ -12,6 +12,6 @@
     "lint": "node ../../app/node_modules/eslint/bin/eslint.js ."
   },
   "devDependencies": {
-    "typescript": "^6"
+    "typescript": "^7"
   }
 }

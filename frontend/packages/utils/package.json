@@ -15,6 +15,6 @@
     "@homi/config": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^6"
+    "typescript": "^7"
   }
 }
