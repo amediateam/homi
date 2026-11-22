@@ -111,7 +111,7 @@ Codex has no HOMI hooks: the hard rules in `AGENTS.md` are followed by hand (det
 2. **[agent]** Every deviation from this runbook becomes a `KI-<next>` row in `.ai/memory/known-issues.md` (open problem with a workaround) or an `AM-<next>` line in the phase document (wrong assumption). Small fixes to this file or to `scripts/dev/*` go into the same PR.
 3. **[you]** Add your GitHub login next to `@amediateam` on each line of `.github/CODEOWNERS`. If you work under the `amediateam` account itself, skip this and record it (AM-38).
 4. **[agent]** Branch `chore/onboarding-second-machine` from the base (A5), commit (Conventional Commits, English), push, open a PR against that base. The first developer reviews it.
-5. Continue with `HANDOFF.md` §4 — T1, plan first, code after the developer's OK.
+5. Continue with the Wave 1 queue (`HANDOFF.md` §4, `docs/migration/wave-1/README.md`): `.ai/memory/session-handoff.md` names the package and the step. Plan first, code after the developer's OK.
 
 ## First message for the agent (A6)
 
@@ -119,5 +119,5 @@ Codex has no HOMI hooks: the hard rules in `AGENTS.md` are followed by hand (det
 Read docs/handoff/setup.md completely, then AGENTS.md (Codex) or CLAUDE.md (Claude Code) and HANDOFF.md.
 Walk me through setup.md from the first unfinished step: tell me each [you] command and wait for my pasted output; run the [agent] steps yourself and show command and output for every check.
 Never run sudo, never read or edit .env files, do not change anything outside setup.md without asking me, and never claim a check you did not run.
-Talk to me in Russian; write repository artifacts in English. When section F is done, propose the plan for task T1 and wait.
+Talk to me in Russian; write repository artifacts in English. When section F is done, read docs/migration/wave-1/README.md and .ai/memory/session-handoff.md, tell me which package and step of the Wave 1 queue you take, and wait.
 ```

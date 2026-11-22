@@ -69,3 +69,7 @@ Options:
 
 Answer: «Сразу после части 4 (Рекомендуется)». Registered as **DEC-102** in
 [`../24-three-wave-strategy.md`](../24-three-wave-strategy.md) §8.1.
+
+The first option's words "as before under rule 8" were loose. Rule 8 says nothing about `WAITING` dependencies. The
+precedent is the queue's practice: the rows WP-24 … WP-32, WP-34 … WP-39 and WP-80 … WP-83 were `WAITING` while
+WP-33 was built.

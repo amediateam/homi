@@ -35,7 +35,7 @@ Rules for working at the same time: [`docs/handoff/parallel-work.md`](docs/hando
    Then open `https://app.homi.loc` and `https://api.homi.loc/up`.
 4. **Read**, in this order: this file → `AGENTS.md` → `CLAUDE.md` → [`docs/handoff/project-context.md`](docs/handoff/project-context.md) → [`docs/handoff/parallel-work.md`](docs/handoff/parallel-work.md) → `.ai/memory/current-state.md` and `known-issues.md` → before each task, the files in its "read first" line.
 5. **Start with T0** — set up your machine and write down what breaks. Then continue the Wave 1 queue (§4): `.ai/memory/session-handoff.md` names the package and the step to take.
-6. **Order:** T0, then the packages of `docs/migration/wave-1/README.md` in its order; §4 maps the tasks T1 … T8 onto them. Tooling tasks T9–T11 fit between features. Anything marked **gate** waits for the first developer's answer.
+6. **Order:** T0, then the packages of `docs/migration/wave-1/README.md` in its order. §4 says what became of each task T1 … T11: done by a package, moved to Wave 2, replaced, or unchanged. The unchanged T4 and the tooling tasks T9–T11 fit between packages. Anything marked **gate** waits for the first developer's answer.
 
 ## 2. Where the project is (2026-11-09)
 
