@@ -10,7 +10,7 @@ Measured on the first developer's machine on 2026-11-09 (`<tool> --version`).
 |---|---|---|
 | macOS / CPU | 27.0.1 / arm64 | Apple Silicon with Homebrew in `/opt/homebrew` is assumed by `scripts/dev/*` and `NGINX_ETC` |
 | Homebrew | 7.0.12 | — |
-| PHP | 8.5.12 + extensions `pdo_pgsql`, `gd`, `intl` (Homebrew) and `redis`, `imagick` (PECL) | `brew install php` (latest 8.5); `make dev-check` compares the minor with `composer.json` `config.platform.php` and fails when any of the five extensions is missing |
+| PHP | 8.6.0 + extensions `pdo_pgsql`, `gd`, `intl` (Homebrew) and `redis`, `imagick` (built from source until PECL releases support 8.6: `phpredis` `release/6.4.0RC1`, `Imagick` `master`; each enabled by its own `conf.d/ext-*.ini`) | `brew install php` (latest 8.6); `make dev-check` compares the minor with `composer.json` `config.platform.php` and fails when any of the five extensions is missing |
 | Composer | 2.11.1 | `brew install composer`; resolution is fixed by `composer.lock` + platform pin |
 | Node / npm | 26.13.0 / 11.20.0 | Node **major** pinned in `.node-version` (26); `dev-check` fails on another major |
 | pnpm | 11.24.0 | `frontend/package.json` `packageManager: pnpm@11.24.0`; `dev-check` checks the major |

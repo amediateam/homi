@@ -36,7 +36,7 @@ brew install php imagemagick pkgconf
 pecl install redis imagick           # accept the defaults
 brew services restart php
 ```
-**[agent] check:** `php -r 'echo PHP_VERSION, PHP_EOL;'` → `8.5.x`; `php -m | grep -cE '^(redis|imagick|gd|intl|pdo_pgsql)$'` → `5`.
+**[agent] check:** `php -r 'echo PHP_VERSION, PHP_EOL;'` → `8.6.x`; `php -m | grep -cE '^(redis|imagick|gd|intl|pdo_pgsql)$'` → `5`.
 
 **B3 PostgreSQL client tools on PATH** (`postgresql@18` is keg-only):
 ```bash

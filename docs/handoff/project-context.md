@@ -24,7 +24,7 @@ Measured on the first developer's machine on 2026-11-09; the two backend rows we
 
 | Layer | Version | Pinned by |
 |---|---|---|
-| PHP / Laravel | 8.5.12 / 13.42.0 | `composer.json` `php ^8.5` + `config.platform.php 8.5.0`, `composer.lock` |
+| PHP / Laravel | 8.6.0 / 13.42.0 | `composer.json` `php ^8.6` + `config.platform.php 8.6.0`, `composer.lock` |
 | Key backend packages | Sanctum 4.4, Horizon 5.51, Pest 5.3, Larastan 3.15 (level 7), Pint 1.32, Boost 2.10.4, Scramble 0.13.53, Intervention Image 4.4.1, flysystem-aws-s3-v3 3.35, Guzzle 8.5, `laravel/ai` 1.4, `laravel/mcp` 1.2 | `composer.lock`; generated registry `docs/backend/package-registry.md` |
 | Node / pnpm | 26.13 / 11.24.0 | `.node-version` (major 26), `frontend/package.json` `packageManager`, `engines` |
 | Next.js / React / TypeScript | 16.4.5 / 19.3.1 / ^6.0.3 (not 7, KI-4) | `frontend/pnpm-lock.yaml` |
@@ -40,7 +40,7 @@ Measured on the first developer's machine on 2026-11-09; the two backend rows we
 | 0001 | One repo: `backend/`, `frontend/`, `infra/`, `docs/`, `.ai/`, scripts at the root; canonical paths | independent toolchains, shared docs and agent config; the mandate's layout adapted to what existed |
 | 0002 | Keep the Inertia/React starter **frozen**, backend = API only | the UIs are the Next apps; removing the starter would break `composer ci:check` and Boost guidelines for nothing |
 | 0003 | Sanctum personal access tokens, Telegram as the only identity (initData / Login Widget), no cookies/CSRF | users sign in with Telegram only; three apps + a bot on sibling hosts; proven in the reference codebase |
-| 0004 | pnpm workspace in `frontend/`, Node 26, PHP 8.5 pinned | reproducible installs; Node 26 is the Active LTS (since 2026-10-28) |
+| 0004 | pnpm workspace in `frontend/`, Node 26, PHP 8.6 pinned | reproducible installs; Node 26 is the Active LTS (since 2026-10-28) |
 | 0005 | Redis for queue and cache, Horizon as the worker; sessions in the database | Redis already runs, Horizon consumes Redis only; the old `database` queue silently never ran jobs (KI-1) |
 | 0006 | UTC storage, `Asia/Tashkent` display; locales ru (default/fallback), uz-Latn, en in `jsonb`; money in minor units with explicit currency, UZS default | product serves Uzbekistan in three languages with USD and UZS prices |
 | 0007 | `/api/v1`, `{success, data, meta}` / `{success:false, message, errors, code}` envelope, Resources only, OpenAPI as the contract → generated TS client | three apps and external collectors on one API need one stable contract |

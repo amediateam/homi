@@ -1,4 +1,4 @@
-# ADR-0004: Toolchain pins — pnpm workspace, Node 26, PHP 8.5
+# ADR-0004: Toolchain pins — pnpm workspace, Node 26, PHP 8.6
 
 - Status: Accepted
 - Date: 2026-11-08
@@ -13,7 +13,7 @@ Both Next.js apps and the backend used npm lockfiles with no version pins. Local
 
 - **Frontend**: one pnpm workspace rooted at `frontend/` (`frontend/pnpm-workspace.yaml`, `frontend/package.json` with `"packageManager": "pnpm@11.24.0"` and `engines.node ">=26 <27"`); members `landing`, `app`, `arm`, `packages/*`; one `frontend/pnpm-lock.yaml`; npm lockfiles removed from the apps.
 - **Node**: `.node-version` = `26` at the repository root (major pin; patch updates follow the LTS line). CI uses `node-version-file: .node-version`.
-- **PHP**: `composer.json` `require.php` = `^8.5`, `config.platform.php` = `8.5.0` so dependency resolution is identical on every machine.
+- **PHP**: `composer.json` `require.php` = `^8.6`, `config.platform.php` = `8.6.0` so dependency resolution is identical on every machine (raised from `^8.5` / `8.5.0` on 2026-11-22, see Amendments).
 - **TypeScript in the Next.js apps**: `^6` (not the `^7` that `create-next-app` 16.4 writes). TypeScript 7.0 is the native (Go) port and `typescript-eslint` 8.x refuses to run with it ("does not support TS 7.0"); TS 6 is the last JS-API release and is what the lint toolchain supports. Revisit when `typescript-eslint` supports TS ≥ 7.1. Every app exposes `lint` and `typecheck` (`tsc --noEmit`) scripts, run by CI.
 - **Backend JS** stays on npm (frozen stack, ADR-0002) — it is not part of the workspace.
 - `dev:check` (Phase 2) compares `node -v`, `pnpm -v`, `php -v` majors against these pins.
@@ -30,3 +30,7 @@ Both Next.js apps and the backend used npm lockfiles with no version pins. Local
 - Stay on npm — rejected: the mandate requires pnpm, and shared packages need a workspace.
 - pnpm without workspace — rejected: `packages/*` would have to be duplicated or published.
 - Exact Node patch pin — rejected: churn for two developers with no benefit; major pin + LTS line is enough.
+
+## Amendments
+
+- **2026-11-22 — PHP pin 8.5 → 8.6** (developer decision). Homebrew `php` moved to 8.6.0 on 2026-11-20 and the developer machines follow it. `require.php` = `^8.6`, `config.platform.php` = `8.6.0`; both CI workflows use `php-version: '8.6'`. Pest 5 / PHPUnit 13 was already in place, and paratest 7.29 allows `~8.6.0`. PECL releases of `redis` (6.3.0) and `imagick` (3.8.1) do not compile on 8.6 yet; until they do, the local builds come from `phpredis` `release/6.4.0RC1` and `Imagick` `master` (see `docs/handoff/environment.md`). Staging and production still serve `php8.5-fpm` (`infra/*/nginx`, `docs/infrastructure/deployment.md`): deploying a lock resolved for 8.6 needs the hosts on 8.6 first — a separate `chore/infra-*` change.

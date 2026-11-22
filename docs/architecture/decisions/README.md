@@ -9,7 +9,7 @@ Format: `NNNN-short-slug.md`, template in `0000-adr-template.md`. Language: Engl
 | [0001](0001-monorepo-layout-and-canonical-paths.md) | Monorepo layout and canonical paths | Accepted |
 | [0002](0002-backend-frozen-inertia-stack.md) | Backend: Inertia/React starter stack kept but frozen | Accepted |
 | [0003](0003-auth-sanctum-bearer-tokens.md) | Authentication: Sanctum bearer tokens, Telegram as identity | Accepted, amended by 0018 |
-| [0004](0004-toolchain-pins-pnpm-node-php.md) | Toolchain pins: pnpm workspace, Node 26, PHP 8.5 | Accepted |
+| [0004](0004-toolchain-pins-pnpm-node-php.md) | Toolchain pins: pnpm workspace, Node 26, PHP 8.6 | Accepted |
 | [0005](0005-redis-queue-cache-horizon.md) | Redis for queue and cache, Horizon as worker | Accepted |
 | [0006](0006-time-locale-i18n-currency.md) | Time, locale, translations and currency defaults | Accepted, amended by 0019 |
 | [0007](0007-api-v1-response-envelope-pagination.md) | API versioning, response envelope, pagination | Accepted, amended by 0017 |
