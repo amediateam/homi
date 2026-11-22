@@ -13,6 +13,8 @@ on:
       - 'frontend/**'
       - '.node-version'
       - '.github/workflows/frontend-e2e.yml'
+      # The screen table the coverage step checks (WP-33): an intake that adds a screen runs the check in its own PR.
+      - 'docs/migration/data/screens.json'
   workflow_dispatch:
     inputs:
       full:

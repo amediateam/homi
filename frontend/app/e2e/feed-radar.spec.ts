@@ -148,7 +148,7 @@ const landed = (page: Page, search: Record<string, string>) =>
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`radar card in the search list (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-047" }] }, () => {
-    test("default feed without a radar: after the 8th card, the rent title, «Настроить радар» → «Новый радар» with entry=feed", async ({ page }) => {
+    test("default feed without a radar: after the 8th card, the rent title, «Настроить радар» → «Новый радар» with entry=feed", { annotation: [{ type: "screen", description: "SCR-030" }] }, async ({ page }) => {
       // One close in a row before: the card's button starts the nudges' streak again.
       await seedNudge(page, { ...QUIET, closed: 1 });
       await noRadars(page);
@@ -188,7 +188,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator('[data-slot="feed-radar"]')).toHaveCount(0);
     });
 
-    test("the scenario few with custom filters: after the 5th card, «Включить радар» turns a radar on with entry feed", async ({ page }) => {
+    test("the scenario few with custom filters: after the 5th card, «Включить радар» turns a radar on with entry feed", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       await seedNudge(page, QUIET);
       await setScenario(page, "few");
       const app = await open(page, mode, "/?rooms_min=2&rooms_max=2");

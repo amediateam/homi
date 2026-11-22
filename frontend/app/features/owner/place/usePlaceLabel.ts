@@ -28,12 +28,6 @@ export async function readPlace(point: GeoPoint, signal?: AbortSignal): Promise<
 export type PlaceLabel = { kind: "reading" } | { kind: "none" } | { kind: "place"; text: string };
 
 /**
- * A read the effect aborted rejects (`bffFetch` rethrows the caller's abort); the effect has moved on, so the rejection
- * is dropped instead of reaching the global error report (WP-33: "signal is aborted without reason").
- */
-function ignoreAbort(): void {}
-
-/**
  * The label under the pin (WP-81, BR-APP-077, DEC-79): `GET /owner/place` 400 ms after each stop of the map, the
  * previous read aborted, only inside the rectangle of Uzbekistan (outside it `none` at once); «…» while it runs; then
  * the district and the city by their reference names, else the city, else `none`. A failed read is `none`.
@@ -51,15 +45,25 @@ export function usePlaceLabel(center: GeoPoint, moving: boolean): PlaceLabel {
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setAnswer({ for: key, label: { kind: "reading" } });
-      void readPlace(center, controller.signal).then((place) => {
-        if (controller.signal.aborted) {
-          return;
+      const show = (label: PlaceLabel) => {
+        if (!controller.signal.aborted) {
+          setAnswer({ for: key, label });
         }
-        const city = findCity(place?.city);
-        const district = city?.districts.find((item) => item.code === place?.district_code);
-        const text = city === null ? null : district === undefined ? city.name : `${district.name} · ${city.name}`;
-        setAnswer({ for: key, label: text === null ? { kind: "none" } : { kind: "place", text } });
-      }, ignoreAbort);
+      };
+      void readPlace(center, controller.signal).then(
+        (place) => {
+          const city = findCity(place?.city);
+          const district = city?.districts.find((item) => item.code === place?.district_code);
+          const text = city === null ? null : district === undefined ? city.name : `${district.name} · ${city.name}`;
+          show(text === null ? { kind: "none" } : { kind: "place", text });
+        },
+        () => {
+          // `bffFetch` rejects only for the abort of its caller, which is dropped: left unhandled it surfaced as an
+          // uncaught page error, which the e2e checks fail on (WP-33: "signal is aborted without reason"). Anything else
+          // (a bug of `readPlace`) is a failed read: `none`.
+          show({ kind: "none" });
+        },
+      );
     }, LABEL_WAIT_MS);
     return () => {
       clearTimeout(timer);

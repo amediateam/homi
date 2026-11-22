@@ -7,15 +7,15 @@ const route = (page: Page, name: string) => page.locator(`[data-route="${name}"]
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked"));
 const ready = (page: Page) => expect(page.locator("html")).toHaveAttribute("data-session", "ready");
 
-test.describe("launch", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-018" }] }, () => {
-  test("a plain launch is ready on the feed and the launch fragment is gone from the address", async ({ page }) => {
+test.describe("launch", () => {
+  test("a plain launch is ready on the feed and the launch fragment is gone from the address", { annotation: [{ type: "screen", description: "SCR-007" }] }, async ({ page }) => {
     await launchApp(page);
     await ready(page);
     await expect(route(page, "feed")).toBeVisible();
     expect(await page.evaluate(() => location.hash)).toBe("");
   });
 
-  test("start_param l_42-web opens the listing over the feed; Back returns to the feed without the fragment", async ({ page }) => {
+  test("start_param l_42-web opens the listing over the feed; Back returns to the feed without the fragment", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
     await launchApp(page, { startParam: "l_42-web" });
     await ready(page);
     await expect(page).toHaveURL(/\/ru\/listing\/42$/);
@@ -70,7 +70,7 @@ test.describe("launch", { annotation: [{ type: "screen", description: "SCR-006" 
     await expect(page).toHaveURL(/\/ru$/);
   });
 
-  test("?news=pets opens the filters address on the pets section", async ({ page }) => {
+  test("?news=pets opens the filters address on the pets section", { annotation: [{ type: "screen", description: "SCR-014" }] }, async ({ page }) => {
     await launchApp(page, { path: "/?news=pets" });
     await ready(page);
     await expect(page).toHaveURL(/\/ru\/filters\?focus=pets$/);

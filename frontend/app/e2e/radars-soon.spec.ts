@@ -122,8 +122,8 @@ async function showsSoon(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`radars switched off (${mode} mode) @radars-off`, { annotation: [{ type: "screen", description: "SCR-026" }] }, () => {
-    test("the «Радар» tab shows «Радар скоро заработает» with its second line, no button and no «+»; a reload too", async ({ page }) => {
+  test.describe(`radars switched off (${mode} mode) @radars-off`, () => {
+    test("the «Радар» tab shows «Радар скоро заработает» with its second line, no button and no «+»; a reload too", { annotation: [{ type: "screen", description: "SCR-026" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
 
@@ -140,7 +140,7 @@ for (const mode of ["cookie", "header"] as const) {
       ["the new-radar sheet", "/radars/new"],
       ["a fixture radar's sheet", `/radars/${FIXTURE_RADAR}`],
     ] as const) {
-      test(`a direct load of ${name} (${path}) ends on /radars with no sheet`, async ({ page }) => {
+      test(`a direct load of ${name} (${path}) ends on /radars with no sheet`, { annotation: [{ type: "screen", description: "SCR-026" }] }, async ({ page }) => {
         await open(page, mode, path);
 
         await showsSoon(page);
@@ -149,7 +149,7 @@ for (const mode of ["cookie", "header"] as const) {
       });
     }
 
-    test("a short feed (scenario few) shows the few-results note without «Включить радар по этому поиску»", async ({ page }) => {
+    test("a short feed (scenario few) shows the few-results note without «Включить радар по этому поиску»", { annotation: [{ type: "screen", description: "SCR-009" }] }, async ({ page }) => {
       // `few` is not a reserved scenario, so the sign-in still works with it; cookie mode's server render needs it.
       await setScenario(page, "few");
       await open(page, mode);
@@ -165,7 +165,7 @@ for (const mode of ["cookie", "header"] as const) {
       await setScenario(page, null);
     });
 
-    test("the filters footer has no «Включить радар»; applying custom filters shows no nudge and reads no flow within 3 s", async ({ page }) => {
+    test("the filters footer has no «Включить радар»; applying custom filters shows no nudge and reads no flow within 3 s", { annotation: [{ type: "screen", description: "SCR-014" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
 

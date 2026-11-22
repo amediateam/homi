@@ -67,7 +67,7 @@ async function posthog(page: Page): Promise<{ requests: Request[]; events: () =>
 
 const screens = (events: Captured[]) => events.filter((event) => event.event === "$pageview").map((event) => String(event.properties.screen));
 
-test.describe("analytics @analytics", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-007" }] }, () => {
+test.describe("analytics @analytics", () => {
   // PostHog sends nothing for a user agent it takes for a bot (headless Chrome's): the phone's own, as in Telegram.
   test.use({ userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 Telegram-Android/11.5.0" });
   test.beforeEach(async ({ page }) => {
@@ -85,7 +85,7 @@ test.describe("analytics @analytics", { annotation: [{ type: "screen", descripti
     });
   });
 
-  test("PostHog loads after the first photo; a journey sends its pageviews; no payload carries launch data, a token, a query or a hash", async ({ page }) => {
+  test("PostHog loads after the first photo; a journey sends its pageviews; no payload carries launch data, a token, a query or a hash", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-015" }, { type: "screen", description: "SCR-018" }] }, async ({ page }) => {
     await stubMedia(page);
     const ph = await posthog(page);
     await launchApp(page, { path: "/" });

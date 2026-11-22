@@ -117,8 +117,8 @@ async function open(page: Page, mode: "cookie" | "header", path: string): Promis
  * the tabs, pull and open a sheet therefore run in both modes; the others read nothing per session and run once.
  */
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`shell (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
-    test("the tab bar: a round trip keeps the search state, the list or map view and the last saved list", async ({ page }) => {
+  test.describe(`shell (${mode} mode)`, () => {
+    test("the tab bar: a round trip keeps the search state, the list or map view and the last saved list", { annotation: [{ type: "screen", description: "SCR-006" }] }, async ({ page }) => {
       const app = await open(page, mode, "/?rooms_min=2&sort=cheap&utm_source=bot");
       await expect(route(page, "feed")).toBeVisible();
       await expect(tab(page, "search")).toHaveAttribute("aria-current", "page");
@@ -167,7 +167,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => backVisible(page)).toBe(false);
     });
 
-    test("a pull on the feed asks for page one again; a short pull and a pull under a sheet do nothing", async ({ page }) => {
+    test("a pull on the feed asks for page one again; a short pull and a pull under a sheet do nothing", { annotation: [{ type: "screen", description: "SCR-010" }] }, async ({ page }) => {
       const app = await open(page, mode, "/");
       await expect(route(page, "feed")).toBeVisible();
       await expect(cards(page).first()).toBeVisible();
@@ -237,8 +237,8 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
-  test("the chrome collapses on scroll, expands on the way up, and the first tap only expands", async ({ page }) => {
+test.describe("shell", () => {
+  test("the chrome collapses on scroll, expands on the way up, and the first tap only expands", { annotation: [{ type: "screen", description: "SCR-006" }] }, async ({ page }) => {
     const app = await open(page, "cookie", "/");
     await expect(route(page, "feed")).toBeVisible();
     // Page one of the stub feed (20 cards) is several screens tall.
@@ -297,7 +297,7 @@ test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }
     await expect(html(page)).not.toHaveClass(MINI);
   });
 
-  test("the view toggle: list → map → list keeps the search; the map bar's lasso, area and filters", async ({ page }) => {
+  test("the view toggle: list → map → list keeps the search; the map bar's lasso, area and filters", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-012" }] }, async ({ page }) => {
     await open(page, "cookie", "/?rooms_min=2");
     await expect(route(page, "feed")).toBeVisible();
     await expect(toggle(page)).toHaveAttribute("data-view-toggle", "list");
@@ -340,7 +340,7 @@ test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }
     await expect(toggle(page)).toHaveText("Карта");
   });
 
-  test("the map with a drawn area: «Своя область» and its × clears the polygon", async ({ page }) => {
+  test("the map with a drawn area: «Своя область» and its × clears the polygon", { annotation: [{ type: "screen", description: "SCR-006" }] }, async ({ page }) => {
     await open(page, "cookie", "/map?polygon=41.31100,69.24000;41.32000,69.26000;41.30000,69.27000&rooms_min=2");
     const mapBar = visible(page, '[data-topbar="map"]');
     await expect(mapBar.locator('[data-slot="area-pill"]')).toContainText("Своя область");
@@ -351,7 +351,7 @@ test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }
     expect(searchOf(page).get("rooms_min")).toBe("2");
   });
 
-  test("the deal switch keeps the districts, resets the rest, and ignores the active deal", async ({ page }) => {
+  test("the deal switch keeps the districts, resets the rest, and ignores the active deal", { annotation: [{ type: "screen", description: "SCR-006" }] }, async ({ page }) => {
     const app = await open(page, "cookie", "/?deal=sale&districts=chilonzor&districts=mirobod&rooms_min=2&sort=ppm");
     await expect(route(page, "feed")).toBeVisible();
     const deals = visible(page, '[data-topbar="search-list"] [data-slot="title-tab"]');
@@ -407,12 +407,12 @@ test.describe("shell", { annotation: [{ type: "screen", description: "SCR-006" }
  * Without the Telegram SDK (WP-36, TMA-047): the SDK tag is aborted, the session signs in from the launch fragment,
  * and Telegram's BackButton cannot be shown, so the listing layer and every sub-page carry the app's own cross.
  */
-test.describe("without the Telegram SDK", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
+test.describe("without the Telegram SDK", () => {
   const cross = (page: Page) => visible(page, "[data-fallback-close]");
   const softNavigate = (page: Page, href: string) =>
     page.evaluate((target) => (window as unknown as { next: { router: { push(href: string): void } } }).next.router.push(target), href);
 
-  test("the listing carries the cross «Закрыть» in its skeleton, content and error states; each closes it", async ({ page }) => {
+  test("the listing carries the cross «Закрыть» in its skeleton, content and error states; each closes it", { annotation: [{ type: "screen", description: "SCR-019" }] }, async ({ page }) => {
     // Header mode: the server render has no session, so the listing reads through `/bff`, held here for the skeleton.
     let release: () => void = () => {};
     const held = new Promise<void>((resolve) => (release = resolve));
@@ -475,7 +475,7 @@ test.describe("without the Telegram SDK", { annotation: [{ type: "screen", descr
   });
 });
 
-test.describe("part B wrappers on the dev gallery", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
+test.describe("part B wrappers on the dev gallery", () => {
   const gallery = (page: Page) => route(page, "dev/ui");
 
   async function openGallery(page: Page): Promise<void> {
@@ -490,7 +490,7 @@ test.describe("part B wrappers on the dev gallery", { annotation: [{ type: "scre
     await expect(visible(page, "[data-layer]")).toHaveCount(0);
   }
 
-  test("toasts: one host above the tab bar; tap closes, the action runs once, a replacement shows the new text", async ({ page }) => {
+  test("toasts: one host above the tab bar; tap closes, the action runs once, a replacement shows the new text", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
     await openGallery(page);
     const host = page.locator('[data-toast-host="app"]');
     const toast = host.locator("[data-toast]");
@@ -567,7 +567,7 @@ test.describe("part B wrappers on the dev gallery", { annotation: [{ type: "scre
   /** From the left edge across most of the 390 px screen: far past a third of the width. */
   const swipeBack = (page: Page) => touchDrag(page, { x: 30, y: 420 }, { x: 370, y: 422 }, 8);
 
-  test.describe("SubPage on iOS", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
+  test.describe("SubPage on iOS", () => {
     test.use({ userAgent: IOS_UA });
 
     test("the gallery's /settings/theme closes by BackButton and by swipe back", async ({ page }) => {
@@ -590,7 +590,7 @@ test.describe("part B wrappers on the dev gallery", { annotation: [{ type: "scre
     });
   });
 
-  test.describe("SubPage on Android", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-010" }] }, () => {
+  test.describe("SubPage on Android", () => {
     test.use({ userAgent: ANDROID_UA });
 
     test("the gallery's /settings/theme has no swipe back; BackButton still closes it", async ({ page }) => {

@@ -289,7 +289,7 @@ async function applyTwoRooms(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`map (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-011" }, { type: "screen", description: "SCR-013" }] }, () => {
+  test.describe(`map (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-011" }] }, () => {
     /** WP-37 E2E; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»" (BR-APP-062). */
     test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
       await setScenario(page, "map_cut");
@@ -353,7 +353,7 @@ for (const mode of ["cookie", "header"] as const) {
      * E1, E2; acceptance "The toggle opens the map", "Listings at one address form a stack …", "a tap opens the
      * listing and Back returns to the same card", "`tiles` empty: OSM raster with «© OpenStreetMap»".
      */
-    test("the toggle opens the map with the stub's stacks and the demo marker; a card opens the listing over the map and Back returns to the same card", async ({ page }) => {
+    test("the toggle opens the map with the stub's stacks and the demo marker; a card opens the listing over the map and Back returns to the same card", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
       await openFeed(page, mode);
       const reads = recordRequests(page, (request) => isMapRead(new URL(request.url())));
       await toMap(page);
@@ -393,13 +393,13 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("map (cookie mode)", { annotation: [{ type: "screen", description: "SCR-011" }, { type: "screen", description: "SCR-013" }] }, () => {
+test.describe("map (cookie mode)", { annotation: [{ type: "screen", description: "SCR-011" }] }, () => {
   /**
    * E3 and the actions "Tap a stack", "Tap a spread pin", "Swipe the card track", "Tap the map background";
    * acceptance "tapping spreads it without overlaps", "A background tap … close the card", "A stack card shows
    * «{n} из {total}» and swipes; only neighbouring previews are requested".
    */
-  test("a stack spreads around a dot; a swipe moves the header to «2 из 11» and the active pin; a background tap closes the card", async ({ page }) => {
+  test("a stack spreads around a dot; a swipe moves the header to «2 из 11» and the active pin; a background tap closes the card", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openMap(page);
     await stacksDrawn(page);
     const previews = recordRequests(page, (request) => isPreview(new URL(request.url())));
@@ -452,7 +452,7 @@ test.describe("map (cookie mode)", { annotation: [{ type: "screen", description:
    * States "Card, single"; the actions "Tap a pin" and "Tap × on the card"; acceptance "× close the card; the active
    * pin is raised above the others", "Locate: … hidden while a card is open".
    */
-  test("a listing alone at its address is a pin: its card has no header and its × closes it", async ({ page }) => {
+  test("a listing alone at its address is a pin: its card has no header and its × closes it", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openFeed(page);
     // One listing of the stub answer moved to the middle of the others, so it stands alone.
     await page.route(
@@ -485,7 +485,7 @@ test.describe("map (cookie mode)", { annotation: [{ type: "screen", description:
     await expect(locateButton(page)).toBeVisible();
   });
 
-  test("the card of a verified owner shows the shield after the price, and no badge (since index-CBlEKxdL.js)", async ({ page }) => {
+  test("the card of a verified owner shows the shield after the price, and no badge (since index-CBlEKxdL.js)", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openFeed(page);
     // The stub 100014 is the verified owner; moved to the middle of the others, so it is a pin of its own.
     await page.route(
@@ -604,7 +604,7 @@ test.describe("map (cookie mode)", { annotation: [{ type: "screen", description:
    * E5; States "Card slot failed" (fix of LB-APP-017); acceptance "A failed preview shows «Не загрузилось —
    * повторить» and recovers"; the action "Tap a spread pin".
    */
-  test("a preview answered 500 shows «Не загрузилось — повторить» in its slot; the retry shows the card", async ({ page }) => {
+  test("a preview answered 500 shows «Не загрузилось — повторить» in its slot; the retry shows the card", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openFeed(page);
     await toMap(page);
     await stacksDrawn(page);

@@ -233,7 +233,7 @@ async function openAndBack(page: Page, number: number, back: RegExp): Promise<vo
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`saved (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-024" }, { type: "screen", description: "SCR-025" }, { type: "screen", description: "SCR-043" }] }, () => {
+  test.describe(`saved (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-024" }, { type: "screen", description: "SCR-025" }] }, () => {
     test("the Heart tab shows 20 favourites, the end adds the last 5 with one request; an un-favourite drops a card, a failed one returns it; the tab entered again re-creates the list", async ({
       page,
     }) => {
@@ -340,7 +340,7 @@ for (const mode of ["cookie", "header"] as const) {
       }
     });
 
-    test("pull-to-refresh asks for page one again; a later page that repeats its cursor ends the list after one request", async ({ page }) => {
+    test("pull-to-refresh asks for page one again; a later page that repeats its cursor ends the list after one request", { annotation: [{ type: "screen", description: "SCR-010" }] }, async ({ page }) => {
       await open(page, mode);
       await enterFavorites(page);
       await expect(cards(page)).toHaveCount(20);
@@ -383,7 +383,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(cards(page)).toHaveCount(25);
     });
 
-    test("«Смотрели» shows history without the eye under «Очистить»; Cancel sends nothing, a failed clear keeps the list, OK empties it and a pull brings it back", async ({
+    test("«Смотрели» shows history without the eye under «Очистить»; Cancel sends nothing, a failed clear keeps the list, OK empties it and a pull brings it back", { annotation: [{ type: "screen", description: "SCR-010" }, { type: "screen", description: "SCR-043" }] }, async ({
       page,
     }) => {
       const app = await open(page, mode);

@@ -13,8 +13,8 @@ import type { Page } from "@playwright/test";
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner entry (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-050" }] }, () => {
-    test("a short feed's end row and an empty feed's line open «Мои объявления» for a full account", async ({ page }) => {
+  test.describe(`owner entry (${mode} mode)`, () => {
+    test("a short feed's end row and an empty feed's line open «Мои объявления» for a full account", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-009" }] }, async ({ page }) => {
       await stubMedia(page);
       await setScenario(page, "few");
       await launchApp(page, { mode, path: "/" });
@@ -28,7 +28,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(visible(page, '[data-owner-entry="empty"]')).toContainText("Разместите бесплатно ›");
     });
 
-    test("a listing offers «Тоже сдаёте квартиру?» by its owner.entry; the user's own listing does not", async ({ page }) => {
+    test("a listing offers «Тоже сдаёте квартиру?» by its owner.entry; the user's own listing does not", { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-059" }] }, async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/listing/10000001" });
       await expect(visible(page, '[data-owner-entry="listing"]')).toHaveText("Тоже сдаёте квартиру? Разместите бесплатно ›");
@@ -38,7 +38,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator('[data-owner-entry="listing"]')).toHaveCount(0);
     });
 
-    test("the survey's «Да, через HOMI» without a bot name and an owners' page shows no landlord block", async ({ page }) => {
+    test("the survey's «Да, через HOMI» without a bot name and an owners' page shows no landlord block", { annotation: [{ type: "screen", description: "SCR-031" }] }, async ({ page }) => {
       // The e2e build sets no NEXT_PUBLIC_TELEGRAM_BOT_USERNAME and WP-61 has not built the owners' page: with neither
       // there is no block (DEC-91's fallback, a default of the integrator); its buttons are component tests
       // (`tests/owner/OwnerEntry.test.tsx`).

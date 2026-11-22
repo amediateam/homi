@@ -92,7 +92,7 @@ async function servedAt(page: Page, path: string): Promise<URL> {
   return new URL(response?.url() ?? page.url());
 }
 
-test.describe("locale redirect", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("locale redirect", () => {
   test("/ goes to /ru and keeps the query and the launch fragment", async ({ page }) => {
     // The adapter removes the fragment once the SDK wait settled (TMA-009, WP-21), so it is read on arrival.
     await page.addInitScript(() => Object.assign(window, { __arrivedHash: location.hash }));
@@ -124,7 +124,7 @@ test.describe("locale redirect", { annotation: [{ type: "screen", description: "
   });
 });
 
-test.describe("addresses", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("addresses", () => {
   for (const locale of LOCALES) {
     test(`every address answers 200 with its placeholder in ${locale}`, async ({ request }) => {
       for (const [path, names] of ADDRESSES) {
@@ -194,7 +194,7 @@ test.describe("addresses", { annotation: [{ type: "screen", description: "SCR-00
   });
 });
 
-test.describe("layers", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("layers", () => {
   test("a sheet opened by navigation shows over the feed, Back closes it, reload shows the direct page", async ({
     page,
   }) => {
@@ -284,7 +284,7 @@ test.describe("layers", { annotation: [{ type: "screen", description: "SCR-006" 
  * On the development gallery: its glass sample and a primary button. Until WP-31 these were the settings placeholder's
  * (WP-20); the settings screen has neither, and no placeholder route is left.
  */
-test.describe("themes and lite", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("themes and lite", () => {
   const background = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const glassFilter = (page: Page) =>
     page.locator("[data-glass-sample]").first().evaluate((element) => getComputedStyle(element).backdropFilter);

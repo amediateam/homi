@@ -214,7 +214,7 @@ function flowLine(flow: { week: number; days: number }): string {
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`follow nudge (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-040" }] }, () => {
-    test("custom filters: the card 1.8 s after the apply, the flow read after the wait; «Включить» turns a radar on with the success toast", async ({ page }) => {
+    test("custom filters: the card 1.8 s after the apply, the flow read after the wait; «Включить» turns a radar on with the success toast", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       await watchNudges(page);
       // One close in a row before: «Включить» starts the streak again.
       await seedNudge(page, { closed: 1 });

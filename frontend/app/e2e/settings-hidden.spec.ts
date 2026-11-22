@@ -35,7 +35,7 @@ async function open(page: Page, mode: "cookie" | "header", confirm = true): Prom
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`settings: hidden (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-039" }] }, () => {
-    test("«Вернуть» on an author and on a listing removes the row; the count follows", async ({ page }) => {
+    test("«Вернуть» on an author and on a listing removes the row; the count follows", { annotation: [{ type: "screen", description: "SCR-032" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(authors(page).first()).toContainText("Номер ·");
       const listingCount = await listings(page).count();
@@ -50,7 +50,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(visible(page, '[data-settings-row="hidden"] [data-settings-value]')).toHaveText(String(listingCount));
     });
 
-    test("«Показать всё снова» asks first; Cancel keeps everything, OK leaves «Ничего не скрыто»", async ({ page }) => {
+    test("«Показать всё снова» asks first; Cancel keeps everything, OK leaves «Ничего не скрыто»", { annotation: [{ type: "screen", description: "SCR-043" }] }, async ({ page }) => {
       await open(page, mode, false);
       await visible(page, "[data-hidden-all]").click();
       await expect(authors(page)).toHaveCount(2);

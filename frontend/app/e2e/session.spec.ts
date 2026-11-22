@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
 const session = (page: Page) => page.locator("html");
 const isSessionPost = (url: string, method: string) => url.endsWith("/bff/session") && method === "POST";
 
-test.describe("session", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("session", () => {
   test("cookie mode: one homi_session cookie with its attributes, and the token nowhere else", async ({ page }) => {
     const signIn = page.waitForResponse((response) => isSessionPost(response.url(), response.request().method()));
     await launchApp(page);

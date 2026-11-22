@@ -83,7 +83,7 @@ test.describe("Back and Settings", { annotation: [{ type: "screen", description:
     await expect.poll(() => backVisible(page)).toBe(false);
   });
 
-  test("SettingsButton from an open sheet shows settings with no layer over it (fix of LB-APP-046)", async ({ page }) => {
+  test("SettingsButton from an open sheet shows settings with no layer over it (fix of LB-APP-046)", { annotation: [{ type: "screen", description: "SCR-032" }] }, async ({ page }) => {
     await launchApp(page);
     await ready(page);
     await filtersChip(page).click();

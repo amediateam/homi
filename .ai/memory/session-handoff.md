@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-22 (WP-81 … WP-83 merged; WP-33 part 1 #111 merges on green CI; part 2 on wp-33b-coverage)
+updated: 2026-11-22 (WP-81 … WP-83 merged; WP-33 part 1 merged as #111 61d78c6; part 2 on wp-33b-coverage, PR after its review)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -13,9 +13,9 @@ Written for whoever continues the **development track**. The production track's 
 - 2026-11-22: «продолжай по плану» (several times). DEC-100: «По запросу, без расписания (Рекомендуется)». DEC-101, asked twice after a wrong estimate: «Весь набор в каждом PR (Рекомендуется)» (`docs/migration/decisions/2026-11-22-developer-answers.md`).
 
 ## State at handoff
-- `main` = `4aa44fb` (#107 WP-81, #108/#109 WP-82, #110 WP-83).
-- **WP-33 part 1** = PR #111 (`wp-33-acceptance`): projects, session-mode checks, scenarios, the bundle check. Two review rounds, the second clean. Merges on green CI.
-- **WP-33 part 2** on `wp-33b-coverage` (stacked on part 1): `e2e/support/pages.ts`, `e2e/coverage/{routes,render,version-gates,brand}.spec.ts`, screen annotations on every describe, `app/scripts/e2e-coverage.mjs` and its CI step, the `en` profile scenario, the owner form's aborted reads. PR after review.
+- `main` = `61d78c6` (#107 WP-81, #108/#109 WP-82, #110 WP-83, #111 WP-33 part 1).
+- **WP-33 part 1** merged as PR #111 (`wp-33-acceptance`, `61d78c6`): projects, session-mode checks, scenarios, the bundle check. Two review rounds, the second clean.
+- **WP-33 part 2** on `wp-33b-coverage` (stacked on part 1): `e2e/support/pages.ts`, `e2e/coverage/{routes,render,version-gates,brand}.spec.ts`, screen annotations per describe (per test where a describe mixes screens), `app/scripts/e2e-coverage.mjs` and its CI step, the `en` profile scenario, the owner form's aborted reads. PR after its review.
 - **Next:** part 3 (the eight journeys, `e2e/journeys/`), part 4 (`e2e/perf/`, `check-budgets.mjs`, `perf-budgets.json`); then WP-40. Steps 14–17 of WP-33 (staging, the pass inside Telegram) are the production track's.
 - Not ours, untouched: `backend/composer.lock` modified in the working tree (never stage it).
 - Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh` (both projects); `make bundle-check`; `node frontend/app/scripts/e2e-coverage.mjs` (from `frontend/`: `node app/scripts/e2e-coverage.mjs`).
@@ -23,7 +23,7 @@ Written for whoever continues the **development track**. The production track's 
 ## Done this session
 - WP-81, WP-82 (two PRs), WP-83 merged after independent reviews and green CI (PR bodies have the verification).
 - WP-33 part 1: the checks found and fixed React error 418 of the demo marker, the raw catalogues of all locales in a client chunk, the gallery chunk and the scenario names in production. Local strict run: 566 passed; `@radars-off` 20; `@analytics` 8 (reported in #111).
-- WP-33 part 2: `e2e-coverage.mjs` → "all 63 screens have an end-to-end test".
+- WP-33 part 2: `e2e-coverage.mjs` → "all 63 screens have an end-to-end test" before the review; re-run it after the review's annotation and `shows` fixes.
 
 ## Waiting for the developer (do NOT start on your own)
 1. **The click on the permission prompt of `gh pr merge`** for every merge.

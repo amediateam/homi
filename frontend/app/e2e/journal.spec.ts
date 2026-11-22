@@ -28,7 +28,7 @@ function journal(page: Page): { events: () => Event[]; requests: Request[] } {
 const names = (events: Event[]) => events.map((event) => event.name);
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`journal (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+  test.describe(`journal (${mode} mode)`, () => {
     test("a launch from the menu sends app_launch then app_opened, both after the session answered; the header mode carries the bearer token", async ({ page }) => {
       const log = journal(page);
       const order: string[] = [];
@@ -68,7 +68,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => log.events().find((event) => event.name === "app_opened")?.props).toMatchObject({ entry: "link", listing_id: 100008 });
     });
 
-    test("«Позвонить» sends contact_call with the listing_id and via; no PostHog host is asked for anything without a key", async ({ page }) => {
+    test("«Позвонить» sends contact_call with the listing_id and via; no PostHog host is asked for anything without a key", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       const posthog: string[] = [];
       page.on("request", (request) => {
         if (isPosthog(request)) {
@@ -90,7 +90,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("journal", { annotation: [{ type: "screen", description: "SCR-006" }] }, () => {
+test.describe("journal", () => {
   test("outside Telegram nothing is sent", async ({ page }) => {
     const log = journal(page);
     await page.goto("/");

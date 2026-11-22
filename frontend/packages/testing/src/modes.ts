@@ -11,7 +11,7 @@ import type { TelegramColorScheme, TelegramPlatform } from "./fakeTelegram";
  * | Mode | Checked after the test |
  * | ---- | ---------------------- |
  * | cookie | the context holds `homi_session` `HttpOnly`, `Secure`, `SameSite=None`, partitioned, once a sign-in answered `200`; no request to `/bff/` carries `Authorization` |
- * | header | no `homi_session` cookie; once a read of a document (from its commit) carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
+ * | header | no `homi_session` cookie, and no request of the app's origin carries one; once a read of a document (from its commit) carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
  * | both | no `securitypolicyviolation`, no console error, no missing catalogue message (`app_error` with `MissingMessage`) |
  *
  * The guard of `./playwright` already fails a request to an external host. The checks run only after a test that
@@ -74,8 +74,9 @@ interface ModeRecord {
 let records: ModeRecord[] = [];
 
 /**
- * Header mode's exchanges still running (`./playwright`): `route.fetch` puts the refused cookie into the context
- * before the handler takes it out again, so the checks read the cookies only after these have ended.
+ * Header mode's exchanges still running (`./playwright`): the page acts on each answer, so the checks read the
+ * requests and the cookies only after these have ended (at most `HEADERS_WAIT_MS`). An exchange of a page that closed
+ * is aborted there, so a later test never waits on it.
  */
 const exchanges = new Set<Promise<unknown>>();
 
@@ -97,6 +98,12 @@ const CSP_LINE = /^\[homi-csp\] |^Refused to /;
 const STATUS_LINE = /^Failed to load resource: /;
 /** A missing catalogue message reaches the journal as `app_error` named `MissingMessage` (WP-32). */
 const MISSING = /"name":"MissingMessage","message":"([^"]*)"/;
+
+/** An address without its fragment: Chromium names a request without it and a committed document with it. */
+function withoutHash(address: string): string {
+  const hash = address.indexOf("#");
+  return hash === -1 ? address : address.slice(0, hash);
+}
 
 function bffAddress(origin: string, request: Request): URL | null {
   const url = new URL(request.url());
@@ -125,11 +132,16 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
   records.push(record);
   // A new document starts without the session in memory: its reads before its own sign-in carry no token. It counts
   // from its commit, not from its navigation request: the old document still sends requests in between (its leave's
-  // `/bff/events` beacon among them), and they are the old document's.
-  let loading = false;
+  // `/bff/events` beacon among them), and they are the old document's. Playwright also reports a same-document
+  // navigation (`pushState`, `replaceState`) as `framenavigated`, so only the commit of the pending navigation counts:
+  // the main frame's last navigation request (each redirect hop replaces it), matched by its address without the
+  // fragment. One that fails or answers 204/205 commits nothing and is dropped. (A `replaceState` of that very address
+  // by the old document while the navigation is pending still counts early: the public API tells the two apart no
+  // further.)
+  let navigation: Request | null = null;
   page.on("request", (request) => {
     if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
-      loading = true;
+      navigation = request;
     }
     // Header mode: no request of the app may carry the session cookie, whatever answered it (documents, actions, RSC).
     const own = new URL(request.url());
@@ -161,8 +173,16 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
       }
     }
   });
+  page.on("requestfailed", (request) => {
+    if (request === navigation) {
+      navigation = null;
+    }
+  });
   page.on("response", (response) => {
     const request = response.request();
+    if (request === navigation && (response.status() === 204 || response.status() === 205)) {
+      navigation = null;
+    }
     const url = bffAddress(origin, request);
     if (url?.pathname === "/bff/session" && request.method() === "POST") {
       record.lastSignIn = response.status();
@@ -195,8 +215,8 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) {
       record.visited.push(frame.url());
-      if (loading) {
-        loading = false;
+      if (navigation !== null && withoutHash(frame.url()) === withoutHash(navigation.url())) {
+        navigation = null;
         record.document += 1;
       }
     }

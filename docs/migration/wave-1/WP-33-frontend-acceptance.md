@@ -181,7 +181,7 @@ New journeys (`e2e/journeys/`), each in both modes:
 | 4 | `moderation.spec.ts` | listing → «⋯» → hide → «Вернуть»; block author; report fraud; report rented; settings → «Скрытое» → return one → «Показать всё снова» | card leaves and returns; toasts with and without undo; the rented report has no undo; confirm before returning all; «Ничего не скрыто» |
 | 5 | `locale-currency.spec.ts` | settings → language `uz` → currency UZS (`uz` scenario) → feed → listing | address segment changes, no reload (a value set on `window` survives); tab labels in Uzbek; numbers with a space as thousands separator; amounts the client formats (price presets, market scale) in сум — the stub's server-formatted card prices stay as the fixture has them and are checked in WP-48 |
 | 6 | `session-expiry.spec.ts` | launch → `unauthenticated` → any request → then `auth_expired` on the next sign-in | one silent `POST /bff/session`, the request repeats, the screen continues; then the session-expired screen, «Закрыть» calls the fake `close`, no further request, no BackButton |
-| 7 | `source-unavailable.spec.ts` | `source_unavailable` on feed, map, listing, live count, a save | «Не загрузилось» with «Повторить» and recovery; the map error state; the count label keeps its last value; a failed save vibrates only (flags off) and rolls back |
+| 7 | `source-unavailable.spec.ts` | `source_unavailable` on feed, map, listing, live count, a save | «Не загрузилось» with «Повторить» and recovery; the map error state; the count label keeps its last value; a failed save plays the error haptic, shows «Не получилось сохранить» and rolls back (`dev016ErrorToastOnFailure` is on by default since DEC-58; *corrected by WP-33 part 2*) |
 | 8 | `demo-marker.spec.ts` | every address of the route tree | marker visible wherever an answer has `meta.source = stub`; absent on `/outside`; absent when the answers of a screen are fulfilled with `meta.source = native` (header mode) |
 
 Passes over all addresses (`e2e/coverage/`):
@@ -792,32 +792,66 @@ Part 1:
 
 Part 2:
 
-- **The address table** `e2e/support/pages.ts` lists 48 addresses. For each it holds the screens, the element that
-  proves it rendered, the parent of a direct load and the scenario its state needs. A probe of every address read
-  their `data-route` names first.
-- **`coverage/routes.spec.ts`:** every address loaded directly shows its content, and Back goes to its parent or is
-  hidden. Opening a layer over its base stays with the feature specs. A pushed page or a layer covers the tab bar, so a
-  tab press always starts from a tab, and "a tab press resets the depth" is `shell.spec.ts`'s round trip.
+- **The address table** `e2e/support/pages.ts` has 48 entries for 46 addresses: the feed and the radar tab have a
+  second entry for their empty state. Each entry holds the screens, the element that proves the state it claims, the
+  parent of a direct load and the scenario its state needs. The element is the loaded state, never a route root that
+  also wraps the loading or the error state: the feed's cards (`[data-card]`), the radar tab's tiles (SCR-026) and
+  `[data-radar-state="empty"]` (SCR-027), `[data-listing-state="loaded"]` and `"not_found"`, the own listing's
+  `[data-owner-panel]`, the owner steps `[data-owner-step="phone|mode|done"]`, the place picker
+  (`[data-owner-picker]`), and `[data-reject-reason]` of the rejection state (`[data-owner-step="rejected"]`) at the rejected listing's `/phone`
+  address (SCR-054). A probe of every
+  address read their `data-route` names first.
+- **`coverage/routes.spec.ts`:** every address loaded directly shows its entry's element, and Back goes to its parent
+  or is hidden. The fake starts with the BackButton hidden, so on a root tab or a gate the test first waits until the
+  app has decided (a `BackButton.hide` call in the fake's log), then asserts that it is hidden. Opening a layer over
+  its base stays with the feature specs. A pushed page or a layer covers the tab bar, so a tab press always starts
+  from a tab, and "a tab press resets the depth" is `shell.spec.ts`'s round trip.
 - **`coverage/render.spec.ts` (`@render`):** every address, with no raw key path in the text, no legacy brand word,
-  and the bottom bar inside the viewport. `miniapp-cookie` and `miniapp-header` render `ru`. In the manual run,
+  and the bottom bar inside the viewport. It reads the text only once no loading state is left, so the checks see the
+  content, not a skeleton. `miniapp-cookie` and `miniapp-header` render `ru`. In the manual run,
   `miniapp-locales` renders `uz` and `en`, and `miniapp-dark` the dark theme.
   - The locale guard follows the stub profile's saved language, so `uz` and `en` need profiles of their own. The `en`
     profile is new: the fixture `me/en.json`, `MeController::SCENARIOS` and WP-11's scenario list.
   - An address whose state needs another scenario keeps the `ru` profile and is checked as rendered.
-- **`coverage/version-gates.spec.ts` (`@gates`):** at 6.0 the feed, a listing and settings call nothing above 6.0,
-  and a confirm falls back to the browser's dialog. The tests name the version themselves, so they run in every
-  project.
+- **`coverage/version-gates.spec.ts` (`@gates`):** at 6.0 the app starts, a card opens its listing and settings
+  loads, and none of them calls a member above 6.0; a confirm falls back to the browser's dialog. The fake's call log
+  belongs to one document, so the first test stays in the one it launched: it reaches settings through Back and the
+  tab bar (6.0 has no SettingsButton), never by a load, and checks that no load happened and that the log still holds
+  the listing's `BackButton.show`. The tests name the version themselves, so they hold in every project that runs
+  `@gates`: `miniapp-cookie`, `miniapp-header` and the manual run's `miniapp-old`. The other projects of the manual run
+  take only `@smoke`, `@gesture` or `@render`.
   - The e2e build has no bot name, so the listing shows no share button. The share link's fallback at 6.0 is the
     unit tests' of `useShareListing` and `lib/telegram/share.ts`.
-- **`coverage/brand.spec.ts`:** the document and every answer of the app's origin hold no pattern of
-  `brand-words.json`, in ru, uz and en.
+  - Deviation: no test asks for the location at 6.0. The browser path below 8.0 is the unit tests' of
+    `lib/telegram/location.ts` (`tests/telegram/location.test.ts`, at 7.10).
+- **`coverage/brand.spec.ts`:** in each of ru, uz and en, the feed, a listing, the map, the radar tab and the owner
+  list. The documents and every answer of the app's origin that they load (scripts, styles, SVG images, the RSC
+  payloads with the messages, the screens' `/bff` reads) hold no pattern of `brand-words.json`.
 - **Found by the render pass and fixed:** an aborted read of the owner form rejected unhandled ("signal is aborted
-  without reason"), and the global error report would send it as an `app_error`. `bffFetch` rethrows the caller's
-  abort, and `usePlaceLabel` and `useDemand` did not catch it. Both now drop it, with a test that fails without the fix.
-- **Screen annotations:** every `test.describe` of the suite names the screens it proves. Describe-level annotations
-  reach each test in `playwright test --list --reporter=json`. `app/scripts/e2e-coverage.mjs` lists with
-  `E2E_LIST_ALL=1`, so the `@radars-off` and `@analytics` tests count, and fails on a screen without a test or on an
-  unknown identifier. It is a step of the e2e job and has a unit test.
+  without reason"). It surfaced as an uncaught page error, which the session-mode checks fail on. The journal never
+  sent it, because `reportsRejection` (`lib/errors/global.ts`) already ignores an `AbortError`. With a PostHog key,
+  `capture_exceptions` would have taken it as an `$exception`. `bffFetch` rethrows the caller's abort, and
+  `usePlaceLabel` and `useDemand` did not catch it. Both now drop the abort and take any other rejection as a failed
+  read (`none`, no demand), as `useCursorFeed` and `useMapPoints` do. `tests/owner/abortedReads.test.tsx` checks that
+  the read is in flight when it is aborted, and it fails without the fix.
+- **Screen annotations** name only screens that a test under them opens and asserts. Most sit on the test that
+  proves the screen, the rest on a `test.describe` that at least one of its tests proves it in. Passing through a
+  screen, waiting for it to be ready, or checking that it is absent does not count. The passes over all addresses
+  annotate each test with its entry's screens; the self-tests of the checks and the brand pass name none. Annotations of both levels reach each test in
+  `playwright test --list --reporter=json`. `app/scripts/e2e-coverage.mjs` lists with `E2E_LIST_ALL=1`, so the
+  `@radars-off` and `@analytics` tests count. It fails on a screen without a test or on an unknown identifier. It is a
+  step of the e2e job, which also runs when `docs/migration/data/screens.json` changes, and it has a unit test.
+- **Found while drafting journey 8 and fixed:** the demo marker showed on `/outside`. The layout's reference read
+  reports `stub` on every pathname, and the screen outside Telegram shows no data. `DemoDataMarker` now renders nothing
+  there, with a unit test.
+- **Header mode's exchange** (found by the passes: header-mode tests flaked). `route.fetch` stores the answer's
+  `Set-Cookie` in the browser's context before the strip clears it, and a request sent in between carried the session
+  cookie: `GET /bff/session` answered "cookie mode" and the app switched modes. The exchange is now sent with Node's
+  `fetch`, which keeps no cookies, with the browser's other cookies of the address. The checks add "no request of the
+  app carries `homi_session`" in header mode. Chromium's snapshot of an intercepted request's headers leaves a
+  `Partitioned` cookie out, so a real partitioned cookie is caught by the end-of-test check of the context's cookies;
+  the self-test plants a plain one. Against `https://app.homi.loc` the runner itself must trust mkcert
+  (`NODE_EXTRA_CA_CERTS`). `main` had the same race since #111.
 
 ## Handoff
 

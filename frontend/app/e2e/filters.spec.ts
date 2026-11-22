@@ -297,7 +297,7 @@ for (const mode of ["cookie", "header"] as const) {
       }
     });
 
-    test("Telegram Back closes the nested city picker first, then the sheet; the draft survives the picker", async ({ page }) => {
+    test("Telegram Back closes the nested city picker first, then the sheet; the draft survives the picker", { annotation: [{ type: "screen", description: "SCR-017" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
       const start = page.url();

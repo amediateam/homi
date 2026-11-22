@@ -63,7 +63,12 @@ describe("check-bundle.mjs (WP-33)", () => {
     expect(checkBundle(app, {})).toEqual([]);
     put(".next/static/chunks/value.js", `const m={found:{${LEGACY}:"Да, через ${LEGACY}²"}};`);
     put(".next/static/chunks/ternary.js", `const v=a?"через ${LEGACY}":"x";`);
-    expect(checkBundle(app, {})).toEqual(["row 7: the legacy brand in .next/static/chunks/ternary.js", "row 7: the legacy brand in .next/static/chunks/value.js"]);
+    put(".next/static/chunks/cyrillic.js", `const v="через ${["ква", "дро"].join("")}";`);
+    expect(checkBundle(app, {})).toEqual([
+      "row 7: the legacy brand in .next/static/chunks/cyrillic.js",
+      "row 7: the legacy brand in .next/static/chunks/ternary.js",
+      "row 7: the legacy brand in .next/static/chunks/value.js",
+    ]);
   });
 
   it("a server-only key or its value in client output fails; a short value does not count", () => {

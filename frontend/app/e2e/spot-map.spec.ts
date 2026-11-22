@@ -251,7 +251,7 @@ async function onListing(page: Page, number: number): Promise<void> {
 
 for (const engine of ENGINES) {
   test.describe(`spot map on ${engine.name} (cookie mode)`, { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
-    test.describe("on a 640 px screen", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
+    test.describe("on a 640 px screen", { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-044" }] }, () => {
       test.use({ viewport: { width: 390, height: 640 } });
 
       /**
@@ -330,7 +330,7 @@ for (const engine of ENGINES) {
      * (depth 0); acceptance "Locate on the fullscreen map: … success with the dot, both points in view and «≈ {km} км
      * от вас — место примерное»", "the spot map works … on a direct load". The dot and the fit are read on Leaflet only.
      */
-    test("a direct load shows the fullscreen map over the listing page; «Где я» finds the user 8,2 km away and sends nothing; Back closes the map, then the listing", async ({ page }) => {
+    test("a direct load shows the fullscreen map over the listing page; «Где я» finds the user 8,2 km away and sends nothing; Back closes the map, then the listing", { annotation: [{ type: "screen", description: "SCR-044" }] }, async ({ page }) => {
       const requests = recordRequests(page, () => true);
       const app = await open(page, engine, `/ru/listing/${LISTING}/location`, { answers: { location: POSITION } });
       await fullscreenReady(page, engine);
@@ -418,7 +418,7 @@ for (const engine of ENGINES) {
      * closing listings repeatedly never logs «Map container is already initialized»". On Leaflet a second map in a
      * container throws inside the engine's create and the map is left `failed`, so every cycle waits for `ready`.
      */
-    test("ten openings of the fullscreen map (× and Back) and two of the listing each make one map, without a console error", async ({ page }) => {
+    test("ten openings of the fullscreen map (× and Back) and two of the listing each make one map, without a console error", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       test.setTimeout(120_000);
       const messages: string[] = [];
       page.on("console", (message) => {
@@ -469,7 +469,7 @@ for (const engine of ENGINES) {
      * the circle drawn at the map's centre is in the middle of the box. Measured: the container is the box's size, and
      * on GL so is MapLibre's canvas.
      */
-    test("the mini map and the fullscreen map fill their boxes", async ({ page }) => {
+    test("the mini map and the fullscreen map fill their boxes", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       const size = (target: Locator) => target.evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }));
       await open(page, engine, `/ru/listing/${LISTING}`);
       await loaded(page, LISTING);
@@ -527,7 +527,7 @@ function paneContext(host: Locator): Promise<string> {
  * fullscreen map over its ×, «Где я», attribution and card. A tap still reached the controls (the map's box takes no
  * pointer events), so the earlier tests passed. Each map's box is now that stacking context (`data-spot-map-frame`).
  */
-test.describe("spot map on leaflet: the controls above the panes", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
+test.describe("spot map on leaflet: the controls above the panes", { annotation: [{ type: "screen", description: "SCR-021" }, { type: "screen", description: "SCR-018" }] }, () => {
   const leaflet = ENGINES.find((engine) => engine.name === "leaflet")!;
 
   test("each map's panes stay inside its own box; the expand chip opens the fullscreen map", async ({ page }) => {
@@ -550,7 +550,7 @@ test.describe("spot map on leaflet: the controls above the panes", { annotation:
 
 test.describe("spot map (cookie mode)", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
   /** S "Locate denied"; acceptance "Locate on the fullscreen map: denied text". Engine-independent: GL, the default. */
-  test("«Где я» without access shows «Нет доступа к геопозиции…» on the card", async ({ page }) => {
+  test("«Где я» without access shows «Нет доступа к геопозиции…» on the card", { annotation: [{ type: "screen", description: "SCR-044" }] }, async ({ page }) => {
     const app = await open(page, ENGINES[0], `/ru/listing/${LISTING}/location`, { answers: { location: null } });
     await fullscreenReady(page, ENGINES[0]);
     await expect(fullscreen(page).locator("[data-spot-line]")).toHaveText(APPROX);
@@ -567,7 +567,7 @@ test.describe("spot map (cookie mode)", { annotation: [{ type: "screen", descrip
    * coordinates: no mini map, no hint". A direct load of its `/location` and a push of it from the listing both land
    * on the listing.
    */
-  test("a listing without coordinates has no mini map and no hint; its /location returns to the listing", async ({ page }) => {
+  test("a listing without coordinates has no mini map and no hint; its /location returns to the listing", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
     await open(page, ENGINES[0], `/ru/listing/${NO_COORDINATES}/location`);
     await onListing(page, NO_COORDINATES);
     // Every visible copy of the listing (the standalone page, and the overlay copy the depth-0 close adds over it).
@@ -602,7 +602,7 @@ test.describe("spot map (cookie mode)", { annotation: [{ type: "screen", descrip
   });
 });
 
-test.describe("spot map (header mode)", { annotation: [{ type: "screen", description: "SCR-021" }] }, () => {
+test.describe("spot map (header mode)", { annotation: [{ type: "screen", description: "SCR-021" }, { type: "screen", description: "SCR-044" }] }, () => {
   /**
    * The core path in header mode, where every listing read is a browser read through `/bff`: a direct load of
    * `/location`, then four listings opened over the feed whose reads are answered with the radii 250, 1 500, 1 501

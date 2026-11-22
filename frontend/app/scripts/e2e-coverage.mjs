@@ -9,9 +9,9 @@
 // The listing takes every tag (`E2E_LIST_ALL=1` in `frontend/playwright.config.ts`), so the screens proved only by
 // the `@radars-off` or `@analytics` runs count too. The functions are exported for `tests/scripts/e2eCoverage.test.ts`.
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const FRONTEND = join(import.meta.dirname, "..", "..");
 const SCREENS = join(FRONTEND, "..", "docs", "migration", "data", "screens.json");
@@ -69,7 +69,18 @@ function listing() {
   return JSON.parse(out.slice(out.indexOf("{")));
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/** Whether this file was started as the script. Node resolves symlinks for the main module, so the started path is
+ * compared by its real path: through a symlinked checkout the guard would otherwise be false, and the script would print
+ * nothing and exit 0. */
+function startedAsScript() {
+  try {
+    return process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (startedAsScript()) {
   const ids = screenIds(JSON.parse(readFileSync(SCREENS, "utf8")));
   const found = annotatedScreens(listing());
   const findings = coverageFindings(ids, found);

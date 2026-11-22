@@ -172,7 +172,7 @@ const bannerTitle = (count: number) => `С вашего прошлого зах�
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`return banner (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-046" }] }, () => {
-    test("default filters, last visit 7 h ago: 1.8 s after the visit «… — N новых» with «Настроить» → «Новый радар» with the search", async ({ page }) => {
+    test("default filters, last visit 7 h ago: 1.8 s after the visit «… — N новых» with «Настроить» → «Новый радар» with the search", { annotation: [{ type: "screen", description: "SCR-030" }] }, async ({ page }) => {
       const visited = Date.now() - 7 * HOUR_MS;
       // One close in a row before: «Настроить» starts the streak again.
       await seed(page, { [DEFAULT_HASH]: visited }, { closed: 1 });
@@ -234,7 +234,7 @@ for (const mode of ["cookie", "header"] as const) {
         .toBe(`Сейчас подходит: ${total}`);
     });
 
-    test("custom filters, last visit 7 h ago: «Включить» turns a radar on with `entry: return` and the success toast", async ({ page }) => {
+    test("custom filters, last visit 7 h ago: «Включить» turns a radar on with `entry: return` and the success toast", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       const visited = Date.now() - 7 * HOUR_MS;
       await seed(page, { [ROOMS_HASH]: visited });
       const checks = recordRequests(page, (request) => isNew(new URL(request.url())));

@@ -2,7 +2,7 @@ import { getMessages, type MessageTree } from "@homi/i18n";
 import brandWords from "@homi/i18n/brand-words.json";
 import { expect, launchApp, setScenario, stubMedia, test } from "@homi/testing/playwright";
 
-import { PAGES, pageName } from "../support/pages";
+import { pageName, PAGES, SHOWS_TIMEOUT_MS } from "../support/pages";
 
 /**
  * Every address rendered in the project's locales and theme (WP-33 `coverage/render.spec.ts`, `@render`): no raw key
@@ -19,6 +19,31 @@ function keyPaths(tree: MessageTree, prefix = ""): string[] {
 const KEYS = new Set(keyPaths(getMessages("ru") as unknown as MessageTree).filter((path) => path.includes(".")));
 const BRAND = brandWords.patterns.map((pattern) => new RegExp(pattern, "iu"));
 
+/**
+ * What a screen shows while it still loads: the skeleton and spinner of `@homi/ui` (`data-slot`), a busy list, and the
+ * loading states the screens name — the listing's skeleton and preview, the owner form, the radar edit sheet, the radar
+ * tab, settings, the owner list and requests, the owner panel and its footer, and the map's engine. Only visible ones
+ * count: pull-to-refresh keeps its spinner hidden in the page.
+ */
+const LOADING = [
+  '[data-slot="skeleton"]',
+  '[data-slot="spinner"]',
+  '[aria-busy="true"]',
+  '[data-state="loading"]',
+  '[data-listing-state="skeleton"]',
+  '[data-listing-state="preview"]',
+  '[data-radar-state="loading"]',
+  '[data-settings-state="loading"]',
+  '[data-owner-list-state="loading"]',
+  '[data-requests-state="loading"]',
+  '[data-owner-panel="loading"]',
+  '[data-owner-footer="loading"]',
+  "[data-map-engine-loading]",
+].join(", ");
+
+/** The first data of a launch: in header mode the first document has no session, so it loads in the browser. */
+const SETTLE_MS = 20_000;
+
 /** The locales a project renders (`metadata.locales` of `frontend/playwright.config.ts`); `ru` by default. */
 const localesOf = () => (test.info().project.metadata as { locales?: string[] }).locales ?? ["ru"];
 
@@ -34,7 +59,9 @@ test.describe("render @render", () => {
         const profile = locale === "ru" ? null : locale;
         await setScenario(tab, page.scenario ?? profile);
         await launchApp(tab, { path: `/${locale}${page.path === "/" ? "" : page.path}`, locale });
-        await expect(tab.locator(page.shows).filter({ visible: true }).first()).toBeVisible();
+        await expect(tab.locator(page.shows).filter({ visible: true }).first()).toBeVisible({ timeout: SHOWS_TIMEOUT_MS });
+        // The checks read the loaded screen, never a skeleton: its text and its bottom bar come with the data.
+        await expect(tab.locator(LOADING).filter({ visible: true }), `${locale} ${page.path}: still loading`).toHaveCount(0, { timeout: SETTLE_MS });
         if (page.scenario === undefined) {
           await expect(tab.locator("html")).toHaveAttribute("lang", locale === "uz" ? /^uz/ : locale);
         }

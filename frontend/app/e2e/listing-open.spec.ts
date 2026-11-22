@@ -136,7 +136,7 @@ async function onFeed(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`listing open (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-019" }, { type: "screen", description: "SCR-022" }] }, () => {
+  test.describe(`listing open (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-019" }] }, () => {
     test("a feed card opens the listing over the feed with its preview at once, then the details; Back keeps the scroll", async ({ page }) => {
       const states = await recordStates(page);
       await open(page, mode);
@@ -377,7 +377,7 @@ for (const mode of ["cookie", "header"] as const) {
       await setScenario(page, null);
     });
 
-    test("Telegram's SettingsButton closes the listing and shows the settings", async ({ page }) => {
+    test("Telegram's SettingsButton closes the listing and shows the settings", { annotation: [{ type: "screen", description: "SCR-032" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
       const number = Number(await cards(page).first().getAttribute("data-listing"));
@@ -392,7 +392,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(html(page)).not.toHaveClass(/(^|\s)listing-open(\s|$)/);
     });
 
-    test("a direct load of the market sheet shows its text; the backdrop closes it to the listing, Back then to the feed", async ({ page }) => {
+    test("a direct load of the market sheet shows its text; the backdrop closes it to the listing, Back then to the feed", { annotation: [{ type: "screen", description: "SCR-022" }] }, async ({ page }) => {
       await open(page, mode, `/ru/listing/${LISTING}/market`);
       const sheet = visible(page, '[data-slot="bottom-sheet"] [data-route="listing/market"]');
       await expect(sheet).toBeVisible();
@@ -417,7 +417,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("listing open: the leave (WP-36)", { annotation: [{ type: "screen", description: "SCR-018" }, { type: "screen", description: "SCR-019" }, { type: "screen", description: "SCR-022" }] }, () => {
+test.describe("listing open: the leave (WP-36)", { annotation: [{ type: "screen", description: "SCR-018" }] }, () => {
   test("the listing enters with its animation; a scrolled listing leaves with its own, the CTA bar at the bottom, then the feed shows", async ({
     page,
   }) => {

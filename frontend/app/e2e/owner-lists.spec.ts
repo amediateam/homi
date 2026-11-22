@@ -28,8 +28,8 @@ function actions(page: Page): Request[] {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner lists (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-049" }, { type: "screen", description: "SCR-057" }, { type: "screen", description: "SCR-058" }] }, () => {
-    test("at the limit «Сдать квартиру» opens the limit sheet; «Мои объявления» opens the list over Settings", async ({ page }) => {
+  test.describe(`owner lists (${mode} mode)`, () => {
+    test("at the limit «Сдать квартиру» opens the limit sheet; «Мои объявления» opens the list over Settings", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-049" }, { type: "screen", description: "SCR-057" }] }, async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/settings" });
       const group = page.locator('[data-settings-group="owner"]');
@@ -47,7 +47,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page).toHaveURL(/\/ru\/settings$/);
     });
 
-    test("the list: the tabs, «Пауза» by a Server Action with its toast, «Отклики» and an answer", async ({ page }) => {
+    test("the list: the tabs, «Пауза» by a Server Action with its toast, «Отклики» and an answer", { annotation: [{ type: "screen", description: "SCR-042" }, { type: "screen", description: "SCR-057" }, { type: "screen", description: "SCR-058" }] }, async ({ page }) => {
       await stubMedia(page);
       const sent = actions(page);
       await launchApp(page, { mode, path: "/settings/owner" });
@@ -78,7 +78,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(card).toBeVisible();
     });
 
-    test("a second «Сдать квартиру» in one launch sends a second create (WP-81's kept copy)", async ({ page }) => {
+    test("a second «Сдать квартиру» in one launch sends a second create (WP-81's kept copy)", { annotation: [{ type: "screen", description: "SCR-032" }] }, async ({ page }) => {
       await stubMedia(page);
       await setScenario(page, "owner_empty");
       const sent = actions(page);

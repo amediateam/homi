@@ -107,23 +107,35 @@ function withProfile<T extends FakeTelegramOptions>(options: T): T {
   return { ...(platform && { platform }), ...(version && { version }), ...(colorScheme && { colorScheme }), ...options };
 }
 
-/**
- * The session mode of a launch (WP-33): the checks of `./modes` after the test, and in header mode the strip of
- * `Set-Cookie` from the app's `/bff/session` answers. Every launch goes through here — `launchApp`, and a spec that
- * installs the fake with `playwrightTelegram` and loads the page itself — so no spec opts out of its project's mode.
- */
 /** Request headers Node's `fetch` sets itself or that describe a body it re-encodes. */
 const OWN_REQUEST_HEADERS = new Set(["host", "connection", "content-length", "accept-encoding", "cookie"]);
 /** Answer headers that no longer hold for the decoded body, and the refused cookie. */
 const DROPPED_ANSWER_HEADERS = new Set(["set-cookie", "content-encoding", "content-length", "transfer-encoding"]);
 
+/** The reason under Node's `fetch failed` (a certificate, a refused connection): `undici` puts it in `cause`. */
+function causeOf(error: unknown): string {
+  const cause = (error as { cause?: unknown } | null)?.cause;
+  if (cause === undefined || cause === null) {
+    return "";
+  }
+  const code = (cause as { code?: unknown }).code;
+  const message = cause instanceof Error ? cause.message : String(cause);
+  return typeof code === "string" && !message.includes(code) ? `: ${message} (${code})` : `: ${message}`;
+}
+
 /**
  * One exchange of header mode (WP-33), sent with Node's own `fetch`: it keeps no cookies, so the answer's `Set-Cookie`
  * reaches neither the browser nor a later exchange, as in a frame that refuses the cookie. `route.fetch` stores the
  * cookie in the browser's context first, and a request sent before it was cleared carried it and flipped the app to
- * cookie mode. The browser's other cookies of the address (the stub scenario) go along.
+ * cookie mode. The browser's other cookies of the address (the stub scenario) go along. `signal` ends it when the page
+ * closes; Node's `fetch` trusts the certificates Node does (`NODE_EXTRA_CA_CERTS`), not the context's
+ * `ignoreHTTPSErrors`, so a refusal names its reason.
  */
-async function exchange(page: Page, sent: SentRequest): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
+async function exchange(
+  page: Page,
+  sent: SentRequest,
+  signal: AbortSignal,
+): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
   const headers: Record<string, string> = {};
   for (const [name, value] of Object.entries(sent.headers())) {
     if (!name.startsWith(":") && !OWN_REQUEST_HEADERS.has(name.toLowerCase())) {
@@ -136,21 +148,41 @@ async function exchange(page: Page, sent: SentRequest): Promise<{ status: number
   }
   const data = sent.method() === "GET" || sent.method() === "HEAD" ? null : sent.postDataBuffer();
   const body = data === null ? undefined : new Uint8Array(data);
-  const response = await fetch(sent.url(), { method: sent.method(), headers, body, redirect: "manual" });
+  let response: Response;
+  let answered: ArrayBuffer;
+  try {
+    response = await fetch(sent.url(), { method: sent.method(), headers, body, redirect: "manual", signal });
+    answered = await response.arrayBuffer();
+  } catch (error) {
+    if (signal.aborted) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`header mode: the exchange ${sent.method()} ${new URL(sent.url()).pathname} failed (${message}${causeOf(error)})`, { cause: error });
+  }
   const answer: Record<string, string> = {};
   response.headers.forEach((value, name) => {
     if (!DROPPED_ANSWER_HEADERS.has(name.toLowerCase())) {
       answer[name] = value;
     }
   });
-  return { status: response.status, headers: answer, body: Buffer.from(await response.arrayBuffer()) };
+  return { status: response.status, headers: answer, body: Buffer.from(answered) };
 }
 
+/**
+ * The session mode of a launch (WP-33): the checks of `./modes` after the test, and in header mode the strip of
+ * `Set-Cookie` from the app's `/bff/session` answers. Every launch goes through here — `launchApp`, and a spec that
+ * installs the fake with `playwrightTelegram` and loads the page itself — so no spec opts out of its project's mode.
+ */
 async function startSessionMode(page: Page, mode: SessionMode, calls: (() => Promise<unknown>) | null): Promise<void> {
   await watchMode(page, mode, test.info().project.use.baseURL ?? "http://localhost:3001", calls);
   if (mode !== "header") {
     return;
   }
+  // An exchange still waiting on the API when the page closes (a test that ended) is aborted, so it neither runs on
+  // for up to the BFF's own timeout nor keeps the next test's checks waiting.
+  const closed = new AbortController();
+  page.once("close", () => closed.abort());
   // A context route runs after every page route, so a spec's own answer of the exchange (a refusal, a delay) wins
   // whether it was registered before this launch or after; whatever the spec passes on reaches this handler. Another
   // page of the context keeps its own mode.
@@ -168,16 +200,19 @@ async function startSessionMode(page: Page, mode: SessionMode, calls: (() => Pro
     try {
       await trackExchange(
         (async () => {
-          const answer = await exchange(page, route.request());
+          const answer = await exchange(page, route.request(), closed.signal);
           await route.fulfill(answer);
         })(),
       );
     } catch (error) {
-      // A test that ends with the exchange in flight closes the page under it ("route.fetch: Test ended"), and the
-      // rejection would fail the next test. An answer Playwright disposed before it was fulfilled ("Fetch response has
-      // been disposed", WP-82: a re-read of `GET /me` under a fast run of taps) is one the page no longer waits for —
-      // a page still waiting would fail on its own. Only these ends are forgiven; anything else still fails the test.
-      const ended = page.isClosed() || /Test ended|has been closed|response has been disposed/.test(error instanceof Error ? error.message : String(error));
+      // A test that ends with the exchange in flight closes the page under it: the exchange is aborted (`AbortError`)
+      // or its late `route.fulfill` meets a closed page ("Test ended", "has been closed"), and the rejection would fail
+      // the next test. An answer Playwright disposed before it was fulfilled ("Fetch response has been disposed",
+      // WP-82: a re-read of `GET /me` under a fast run of taps) is one the page no longer waits for — a page still
+      // waiting would fail on its own. Only these ends are forgiven; anything else still fails the test.
+      const aborted = closed.signal.aborted && (error as { name?: unknown } | null)?.name === "AbortError";
+      const ended =
+        aborted || page.isClosed() || /Test ended|has been closed|response has been disposed/.test(error instanceof Error ? error.message : String(error));
       if (!ended) {
         throw error;
       }
