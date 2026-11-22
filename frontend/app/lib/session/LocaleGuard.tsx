@@ -1,6 +1,6 @@
 "use client";
 
-import { isLocale, type Locale } from "@homi/config";
+import { isLocale, locales, type Locale } from "@homi/config";
 import { useLocale } from "next-intl";
 import { useEffect } from "react";
 
@@ -10,6 +10,9 @@ import { matchRoute } from "@/lib/navigation/routes";
 import { detectLocale, tg } from "@/lib/telegram";
 
 import { useSession } from "./SessionProvider";
+
+/** A leading locale segment of an address, of any supported locale. */
+const LOCALE_PREFIX = new RegExp(`^/(?:${locales.join("|")})(?=/|$)`);
 
 function storedLocale(): string | null {
   const match = document.cookie.split("; ").find((part) => part.startsWith(`${LOCALE_COOKIE}=`));
@@ -41,9 +44,17 @@ export function LocaleGuard(): null {
     } else if (status === "booting" && tg.hasInitData() && storedLocale() === null) {
       wanted = detectLocale(tg.languageCode());
     }
-    if (wanted !== null && wanted !== locale) {
-      router.replace(`${pathname}${window.location.search}`, { locale: wanted });
+    if (wanted === null || wanted === locale) {
+      return;
     }
+    // A move is underway when the address already has the wanted locale but the page's locale has not caught up yet
+    // (a move before sign-in, then `me.locale` after it). The pathname then still holds that locale's segment, which
+    // next-intl strips only for the page's own locale: replacing again gave `/en/en/…` and the not-found screen (WP-33,
+    // the brand pass on CI). So no second move, and never a locale segment in the path handed to the router.
+    if (window.location.pathname.split("/")[1] === wanted) {
+      return;
+    }
+    router.replace(`${pathname.replace(LOCALE_PREFIX, "") || "/"}${window.location.search}`, { locale: wanted });
   }, [status, prepared, me, locale, pathname, router]);
 
   return null;

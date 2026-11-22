@@ -83,7 +83,7 @@ async function closes(app: LaunchedApp): Promise<number> {
 }
 
 test.describe("gates", () => {
-  test("without Telegram: /outside with its one sentence, no button and no request to /bff", async ({ page }) => {
+  test("without Telegram: /outside with its one sentence, no button and no request to /bff", { annotation: [{ type: "screen", description: "SCR-002" }] }, async ({ page }) => {
     const bff = recordRequests(page, isBff);
     await page.goto("/");
 
@@ -96,7 +96,7 @@ test.describe("gates", () => {
     expect(bff.map((request) => request.url())).toEqual([]);
   });
 
-  test("join refused twice: the access screen in the Telegram language with the checking line, then the shell without a reload", async ({ page }) => {
+  test("join refused twice: the access screen in the Telegram language with the checking line, then the shell without a reload", { annotation: [{ type: "screen", description: "SCR-003" }] }, async ({ page }) => {
     const refused = await refuseSignIn(page, "join", 2);
     const app = await launchApp(page, { locale: "en" });
 
@@ -125,7 +125,7 @@ test.describe("gates", () => {
     expect(await closes(app)).toBe(0);
   });
 
-  test("blocked: no checking line and no request for 10 s, one attempt after returning to the app; «Вернуться в бот» closes", async ({ page }) => {
+  test("blocked: no checking line and no request for 10 s, one attempt after returning to the app; «Вернуться в бот» closes", { annotation: [{ type: "screen", description: "SCR-003" }] }, async ({ page }) => {
     test.setTimeout(45_000);
     await refuseSignIn(page, "blocked");
     // A listing link; the main button is «Вернуться в бот», which closes. The rule that `blocked` never gets «Перейти в
@@ -154,7 +154,7 @@ test.describe("gates", () => {
     await expect.poll(() => closes(app)).toBe(1);
   });
 
-  test("paused: «Бот на паузе» and «Вернуться в бот» only, also for a listing link; «Вернуться в бот» closes (DEC-60)", async ({ page }) => {
+  test("paused: «Бот на паузе» and «Вернуться в бот» only, also for a listing link; «Вернуться в бот» closes (DEC-60)", { annotation: [{ type: "screen", description: "SCR-003" }] }, async ({ page }) => {
     await setScenario(page, "access_paused");
     const app = await launchApp(page, { startParam: "l_123-seo" });
 
@@ -172,7 +172,7 @@ test.describe("gates", () => {
     expect((await app.calls()).filter((call) => call.member === "openTelegramLink")).toEqual([]);
   });
 
-  test("paused re-checks by itself and leaves for the feed once the access is back", async ({ page }) => {
+  test("paused re-checks by itself and leaves for the feed once the access is back", { annotation: [{ type: "screen", description: "SCR-003" }] }, async ({ page }) => {
     await setScenario(page, "access_paused");
     await launchApp(page);
     await expect(noAccess(page)).toHaveAttribute("data-reason", "paused");
@@ -185,7 +185,7 @@ test.describe("gates", () => {
     await expect(noAccess(page)).toHaveCount(0);
   });
 
-  test("a listing link with the SEO source in en offers the bot with s_seo_en (BR-API-194)", async ({ page }) => {
+  test("a listing link with the SEO source in en offers the bot with s_seo_en (BR-API-194)", { annotation: [{ type: "screen", description: "SCR-003" }] }, async ({ page }) => {
     await setScenario(page, "access_private");
     const app = await launchApp(page, { locale: "en", startParam: "l_123-seo" });
 
@@ -204,7 +204,7 @@ test.describe("gates", () => {
       .toEqual([expect.stringMatching(/\?start=s_seo_en--l123$/)]);
   });
 
-  test("a listing link on a first launch: language, then the listing, and the city page after Back; a located pick", async ({ page }) => {
+  test("a listing link on a first launch: language, then the listing, and the city page after Back; a located pick", { annotation: [{ type: "screen", description: "SCR-004" }, { type: "screen", description: "SCR-005" }] }, async ({ page }) => {
     await setScenario(page, "first_launch");
     // Near Andijan (the stub reference's town, 40.7821 / 72.3442), for the location row of the city page.
     await launchApp(page, { startParam: "l_42", answers: { location: { latitude: 40.79, longitude: 72.35 } } });
@@ -234,7 +234,7 @@ test.describe("gates", () => {
 
 /** The picks call the settings Server Action (`useAction`), which in header mode carries the token in memory. */
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`gates (${mode} mode)`, () => {
+  test.describe(`gates (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-004" }, { type: "screen", description: "SCR-005" }] }, () => {
     test("first launch: the language page greets in the Telegram language, «English» switches the address without a reload, the city picks the feed", async ({ page }) => {
       await setScenario(page, "first_launch");
       const actions = recordRequests(page, isServerAction);

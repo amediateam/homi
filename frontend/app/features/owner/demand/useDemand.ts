@@ -59,6 +59,12 @@ export function useDemand(form: OwnerForm): Demand | null {
               }
             : null,
         });
+      }, () => {
+        // `bffFetch` rejects only for the abort of its caller, which is dropped: left unhandled it surfaced as an
+        // uncaught page error, which the e2e checks fail on (WP-33). Anything else is a bug, silent like an error: `null`.
+        if (!controller.signal.aborted) {
+          setAnswer({ for: key, demand: null });
+        }
       });
     }, DEMAND_WAIT_MS);
     return () => {

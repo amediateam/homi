@@ -25,6 +25,20 @@ test.describe("session-mode checks", () => {
     resetModeRecords();
   });
 
+  test("header mode: a request that carries a planted session cookie is a finding", async ({ page }) => {
+    await signedIn(page, "header");
+    // A plain cookie: Chromium's snapshot of an intercepted request's headers (every request passes the guard's route)
+    // leaves a `Partitioned` cookie out, so a real partitioned `homi_session` is caught by the end-of-test check of the
+    // context's cookies instead ("the context holds a homi_session cookie"), which this test sees as well.
+    await page.context().addCookies([{ name: "homi_session", value: "planted", url: test.info().project.use.baseURL ?? "http://localhost:3001" }]);
+    await page.evaluate(() => fetch("/bff/reference").then((response) => response.status));
+    const findings = await modeFindings(test.info());
+    expect(findings).toContain("header mode: GET /bff/reference carried the session cookie");
+    expect(findings).toContain("header mode: the context holds a homi_session cookie");
+    resetModeRecords();
+    await page.context().clearCookies({ name: "homi_session" });
+  });
+
   test("cookie mode: a planted Authorization header on a /bff/ read is a finding", async ({ page }) => {
     await signedIn(page, "cookie");
     expect(await modeFindings(test.info())).toEqual([]);

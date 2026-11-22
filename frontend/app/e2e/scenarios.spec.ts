@@ -6,8 +6,8 @@ import { expect, launchApp, projectSessionMode, setScenario, stubMedia, test, wi
  * (`miniapp-cookie`: a reload reads page one on the server with the cookie) and in header mode (`miniapp-header`: the
  * same read goes through `/bff` with the bearer).
  */
-test.describe("stub scenarios", () => {
-  test("«empty» empties the feed of a reloaded document, and clearing it brings the cards back", async ({ page }) => {
+test.describe("stub scenarios", { annotation: [{ type: "screen", description: "SCR-007" }] }, () => {
+  test("«empty» empties the feed of a reloaded document, and clearing it brings the cards back", { annotation: [{ type: "screen", description: "SCR-009" }] }, async ({ page }) => {
     await stubMedia(page);
     await launchApp(page);
     await expect(page.locator("[data-card]").filter({ visible: true }).first()).toBeVisible();
@@ -29,7 +29,7 @@ test.describe("stub scenarios", () => {
     await expect(page.locator("[data-card]").filter({ visible: true }).first()).toBeVisible();
   });
 
-  test("«source_unavailable» refuses a Server Action, and the next save without it goes through", async ({ page }) => {
+  test("«source_unavailable» refuses a Server Action, and the next save without it goes through", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
     await stubMedia(page);
     await launchApp(page);
     const heart = page.locator("[data-card]").filter({ visible: true }).first().locator("[data-fav]");

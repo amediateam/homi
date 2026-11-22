@@ -46,7 +46,7 @@ async function onPage(page: Page, name: string, title: string): Promise<void> {
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`settings (${mode} mode)`, () => {
-    test("the groups and values of the stub; every row opens its page and Back returns to the list", async ({ page }) => {
+    test("the groups and values of the stub; every row opens its page and Back returns to the list", { annotation: [{ type: "screen", description: "SCR-032" }] }, async ({ page }) => {
       await open(page, mode);
 
       // The stub hides listings and blocks authors (`hidden/default.json`), so «Лента» shows; and the stub user has
@@ -79,7 +79,7 @@ for (const mode of ["cookie", "header"] as const) {
       }
     });
 
-    test("a theme pick re-colours the app at once and the row follows; quiet hours and digest show in their rows", async ({ page }) => {
+    test("a theme pick re-colours the app at once and the row follows; quiet hours and digest show in their rows", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-033" }, { type: "screen", description: "SCR-037" }, { type: "screen", description: "SCR-038" }] }, async ({ page }) => {
       await open(page, mode);
 
       await row(page, "theme").click();
@@ -117,7 +117,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(row(page, "theme")).toBeVisible();
     });
 
-    test("«Вид карточек»: a pick shows in the row, the sample lands in the chat", async ({ page }) => {
+    test("«Вид карточек»: a pick shows in the row, the sample lands in the chat", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-048" }] }, async ({ page }) => {
       await open(page, mode);
       await row(page, "cards").click();
       await onPage(page, "cards", "Вид карточек");
@@ -143,7 +143,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator('[data-card-sample="sent"]')).toBeVisible();
     });
 
-    test("the scenarios card_rich and card_sample_unsent: «Новый» in the row, the failure line", async ({ page }) => {
+    test("the scenarios card_rich and card_sample_unsent: «Новый» in the row, the failure line", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-048" }] }, async ({ page }) => {
       await setScenario(page, "card_rich");
       await open(page, mode);
       await expect(value(page, "cards")).toHaveText("Новый");

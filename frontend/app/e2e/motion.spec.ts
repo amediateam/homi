@@ -187,7 +187,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(await leaves(page)).toEqual([]);
     });
 
-    test("«Включить радар»: the spinner, then the tick for 900 ms, then the sheet closes with the toast; the toast leaves on a tap", async ({ page }) => {
+    test("«Включить радар»: the spinner, then the tick for 900 ms, then the sheet closes with the toast; the toast leaves on a tap", { annotation: [{ type: "screen", description: "SCR-014" }, { type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       await open(page, mode, OWN_SEARCH);
       await chip(page, "filters").click();
       await expect(subscribeButton(page)).toBeEnabled();

@@ -201,7 +201,7 @@ async function scrollTheTab(page: Page, mode: Mode): Promise<number> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`radar tab (${mode} mode)`, () => {
+  test.describe(`radar tab (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-026" }, { type: "screen", description: "SCR-028" }] }, () => {
     test("the tab shows the three stub radars from one list read with the previews; no read per radar", async ({ page }) => {
       await open(page, mode, "/");
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
@@ -290,7 +290,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => backVisible(page)).toBe(false);
     });
 
-    test("the paused radar's sheet has no mode rows and offers «Скрыто: 3 · Вернуть»; «Вернуть» says «Скрытое снова показывается»", async ({ page }) => {
+    test("the paused radar's sheet has no mode rows and offers «Скрыто: 3 · Вернуть»; «Вернуть» says «Скрытое снова показывается»", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       const app = await open(page, mode);
       await onTab(page);
       await openSheet(page, PAUSED);
@@ -317,7 +317,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(sheet(page, PAUSED).locator("[data-radar-unhide]")).toHaveCount(0);
     });
 
-    test("the tile's switch pauses the radar at once and resumes it with «Радар снова включён. 2 объявления…»", async ({ page }) => {
+    test("the tile's switch pauses the radar at once and resumes it with «Радар снова включён. 2 объявления…»", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       const app = await open(page, mode);
       await onTab(page);
       const actions = recordRequests(page, isServerAction);
@@ -384,7 +384,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(tile(page, ACTIVE).locator("[data-radar-status]")).toHaveText("≈3 в день · подборкой");
     });
 
-    test("«Удалить радар» asks «Удалить радар «…»?»: Cancel sends nothing; OK deletes, closes the sheet and the tile leaves", async ({ page }) => {
+    test("«Удалить радар» asks «Удалить радар «…»?»: Cancel sends nothing; OK deletes, closes the sheet and the tile leaves", { annotation: [{ type: "screen", description: "SCR-043" }] }, async ({ page }) => {
       const app = await open(page, mode);
       await onTab(page);
       await openSheet(page, ACTIVE);
@@ -415,7 +415,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(appToast(page)).toHaveCount(0);
     });
 
-    test("«Смотреть найденное» opens the radar's feed; Back brings the same sheet without the rise; the search tab keeps the user's search", async ({ page }) => {
+    test("«Смотреть найденное» opens the radar's feed; Back brings the same sheet without the rise; the search tab keeps the user's search", { annotation: [{ type: "screen", description: "SCR-007" }] }, async ({ page }) => {
       await open(page, mode, "/?rooms_min=3&rooms_max=3");
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
       const own = address(page);
@@ -447,7 +447,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
     });
 
-    test("a find opens its listing over the tab; Back brings the radar sheet back, the find no longer «новое»", async ({ page }) => {
+    test("a find opens its listing over the tab; Back brings the radar sheet back, the find no longer «новое»", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, ACTIVE);
@@ -482,7 +482,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(tile(page, ACTIVE)).toBeVisible();
     });
 
-    test("a direct load of /radars/<id>/edit shows «Условия радара» over the radar sheet and the tab", async ({ page }) => {
+    test("a direct load of /radars/<id>/edit shows «Условия радара» over the radar sheet and the tab", { annotation: [{ type: "screen", description: "SCR-029" }] }, async ({ page }) => {
       await open(page, mode, `/radars/${ACTIVE}/edit`);
       await expect(visible(page, '[data-route="radar/edit"]:not([data-state])')).toBeVisible();
       await expect(page.getByRole("dialog", { name: "Условия радара" })).toBeVisible();
@@ -491,7 +491,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator(`[data-radar-tile="${ACTIVE}"]`)).toBeAttached();
     });
 
-    test("the rent radar's editor offers «Площадь, м²» (DEC-62) and «Животные» for long-term rent", async ({ page }) => {
+    test("the rent radar's editor offers «Площадь, м²» (DEC-62) and «Животные» for long-term rent", { annotation: [{ type: "screen", description: "SCR-029" }] }, async ({ page }) => {
       await open(page, mode, `/radars/${ACTIVE}/edit`);
       const editor = page.getByRole("dialog", { name: "Условия радара" });
       await expect(editor).toBeVisible();
@@ -499,14 +499,14 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(editor.locator('[data-section="pets"]')).toHaveCount(1);
     });
 
-    test("a new radar on rent offers «Площадь, м²» (DEC-62)", async ({ page }) => {
+    test("a new radar on rent offers «Площадь, м²» (DEC-62)", { annotation: [{ type: "screen", description: "SCR-030" }] }, async ({ page }) => {
       await open(page, mode, "/radars/new?city=tashkent");
       const create = page.getByRole("dialog", { name: "Новый радар" });
       await expect(create).toBeVisible();
       await expect(create.locator('[data-section="area"]').getByRole("heading")).toHaveText("Площадь, м²");
     });
 
-    test("Back from a directly loaded editor closes it to the radar sheet, then to the tab", async ({ page }) => {
+    test("Back from a directly loaded editor closes it to the radar sheet, then to the tab", { annotation: [{ type: "screen", description: "SCR-029" }] }, async ({ page }) => {
       await open(page, mode, `/radars/${ACTIVE}/edit`);
       await expect(visible(page, '[data-route="radar/edit"]:not([data-state])')).toBeVisible();
 
@@ -537,7 +537,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolled);
     });
 
-    test("«Смотреть найденное» opens the radar's feed at its top, wherever the tab was scrolled", async ({ page }) => {
+    test("«Смотреть найденное» opens the radar's feed at its top, wherever the tab was scrolled", { annotation: [{ type: "screen", description: "SCR-007" }] }, async ({ page }) => {
       await scrollTheTab(page, mode);
       await openSheet(page, DIGEST);
 
@@ -552,7 +552,7 @@ for (const mode of ["cookie", "header"] as const) {
       await onTab(page);
     });
 
-    test("pull-to-refresh reads the list again, with the previews", async ({ page }) => {
+    test("pull-to-refresh reads the list again, with the previews", { annotation: [{ type: "screen", description: "SCR-010" }] }, async ({ page }) => {
       await open(page, mode);
       await onTab(page);
       await page.waitForLoadState("networkidle");
@@ -567,7 +567,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("radar tab (cookie mode only)", () => {
+test.describe("radar tab (cookie mode only)", { annotation: [{ type: "screen", description: "SCR-026" }] }, () => {
   /**
    * The feed's rule for a first launch (WP-24): the list is read once through `/bff`, and the refresh after the
    * sign-in renders with the new cookie. A reload carries the cookie: the server's read is in the document and the

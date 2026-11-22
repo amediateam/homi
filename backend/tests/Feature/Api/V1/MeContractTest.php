@@ -36,6 +36,7 @@ it('answers the first-launch, no-city and Uzbek scenarios', function (string $sc
     'first_launch' => ['first_launch', ['locale_chosen' => false, 'city' => null, 'city_chosen' => false]],
     'no_city' => ['no_city', ['city' => 'tashkent', 'city_chosen' => false, 'locale_chosen' => true]],
     'uz' => ['uz', ['locale' => 'uz', 'currency' => 'UZS']],
+    'en' => ['en', ['locale' => 'en', 'currency' => 'USD']],
     'replay' => ['replay', ['analytics' => ['distinct_id' => '5f0c2b1e-7a36-4c59-9d4e-2f1a6b7c8d90', 'autocapture' => true, 'replay' => true, 'replay_rate' => 1]]],
 ]);
 

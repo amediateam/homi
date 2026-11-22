@@ -141,4 +141,9 @@ describe("DemoDataMarker", () => {
     act(() => root?.unmount());
     container.remove();
   });
+  it("has no pill on the screen outside Telegram, though the layout's reference read reports stub there (WP-33)", () => {
+    navigation.pathname = "/ru/outside";
+    renderMarker(<SourceReporter source="stub" />);
+    expect(screen.queryByText("Демо-данные")).toBeNull();
+  });
 });

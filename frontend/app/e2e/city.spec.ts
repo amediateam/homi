@@ -110,7 +110,7 @@ async function openNestedPicker(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`city (${mode} mode)`, () => {
+  test.describe(`city (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-017" }] }, () => {
     test("header chip: a pick lands on the feed of that city, saves it once, and drops districts and the polygon", async ({ page }) => {
       const app = await open(page, mode, `/?districts=chilonzor&polygon=${POLYGON}&rooms_min=2`);
       await expect(chip(page, "city")).toHaveText("Ташкент");
@@ -144,7 +144,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(await savedCity(page)).toBe("andijan");
     });
 
-    test("filters sheet: a nested pick changes the draft only; closing without «Показать» leaves the city as it was", async ({ page }) => {
+    test("filters sheet: a nested pick changes the draft only; closing without «Показать» leaves the city as it was", { annotation: [{ type: "screen", description: "SCR-014" }] }, async ({ page }) => {
       await open(page, mode);
       const actions = recordRequests(page, isServerAction);
       await openNestedPicker(page);
@@ -166,7 +166,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(await savedCity(page)).toBe("tashkent");
     });
 
-    test("filters sheet: a nested pick, then «Показать», applies and saves the picked city", async ({ page }) => {
+    test("filters sheet: a nested pick, then «Показать», applies and saves the picked city", { annotation: [{ type: "screen", description: "SCR-014" }] }, async ({ page }) => {
       const app = await open(page, mode);
       const actions = recordRequests(page, isServerAction);
       const counts = recordRequests(page, isCount);

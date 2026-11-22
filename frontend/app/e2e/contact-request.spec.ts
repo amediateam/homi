@@ -15,7 +15,7 @@ const isServerAction = (request: Request) => request.method() === "POST" && requ
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`contact request (${mode} mode)`, () => {
-    test("the bars of the request states", async ({ page }) => {
+    test("the bars of the request states", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, path: "/listing/10000002" });
       await expect(bar(page).locator('[data-cta-action="requestSent"]')).toHaveText("Отклик отправлен");
@@ -35,7 +35,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(bar(page).locator('[data-cta-action="request"]')).toHaveText(/Связаться с хозяином/);
     });
 
-    test("«Связаться с хозяином» opens the sheet; a send is one Server Action and closes it", async ({ page }) => {
+    test("«Связаться с хозяином» opens the sheet; a send is one Server Action and closes it", { annotation: [{ type: "screen", description: "SCR-061" }] }, async ({ page }) => {
       await stubMedia(page);
       const sent: Request[] = [];
       page.on("request", (request) => {
@@ -58,7 +58,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(sent.length).toBeGreaterThan(0);
     });
 
-    test("c_<number> opens the listing, then its request sheet", async ({ page }) => {
+    test("c_<number> opens the listing, then its request sheet", { annotation: [{ type: "screen", description: "SCR-061" }] }, async ({ page }) => {
       await stubMedia(page);
       await launchApp(page, { mode, startParam: "c_10000001" });
       await expect(page).toHaveURL(/\/ru\/listing\/10000001\/contact$/);

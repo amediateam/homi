@@ -183,7 +183,7 @@ async function closedTo(page: Page, before: string): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`filters footer (${mode} mode)`, () => {
+  test.describe(`filters footer (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-014" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("a search equal to the active fixture radar shows ✓ «Радар включён»; another draft offers «Включить радар»", async ({ page }) => {
       await open(page, mode, ACTIVE_SEARCH);
       await openFilters(page);
@@ -292,7 +292,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 
-  test.describe(`chat access (${mode} mode)`, () => {
+  test.describe(`chat access (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-044" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("no_chat, write access declined: «Радар не включён — боту нужно разрешение писать вам в чат», no second try", async ({ page }) => {
       const app = await open(page, mode, OWN_SEARCH, { answers: { writeAccess: false } });
       await openFilters(page);
@@ -350,7 +350,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 
-  test.describe(`few-results note (${mode} mode)`, () => {
+  test.describe(`few-results note (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-009" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("«Включить радар по этому поиску» creates the radar with the few toast; «Расширить» widens it; the button leaves once the radar exists", async ({ page }) => {
       // The stub's `few` feed has five listings of the default search: the note shows under them.
       await setScenario(page, "few");

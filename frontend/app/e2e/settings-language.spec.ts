@@ -34,8 +34,8 @@ async function open(page: Page, mode: "cookie" | "header", path = "/settings"): 
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`settings: language and currency (${mode} mode)`, () => {
-    test("ru → en changes the segment and the texts in place; Back lands under the new segment", async ({ page }) => {
+  test.describe(`settings: language and currency (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-032" }] }, () => {
+    test("ru → en changes the segment and the texts in place; Back lands under the new segment", { annotation: [{ type: "screen", description: "SCR-035" }, { type: "screen", description: "SCR-006" }] }, async ({ page }) => {
       const sessions: Request[] = [];
       page.on("request", (request) => {
         if (new URL(request.url()).pathname.endsWith("/bff/session")) {
@@ -66,7 +66,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(await page.evaluate(() => (window as unknown as { __marker?: number }).__marker)).toBe(42);
     });
 
-    test("USD → UZS: the price presets read in сум and the server parts are asked again", async ({ page }) => {
+    test("USD → UZS: the price presets read in сум and the server parts are asked again", { annotation: [{ type: "screen", description: "SCR-036" }, { type: "screen", description: "SCR-015" }] }, async ({ page }) => {
       await open(page, mode);
       const reads: string[] = [];
       page.on("request", (request) => {

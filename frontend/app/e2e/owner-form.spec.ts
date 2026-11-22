@@ -27,15 +27,16 @@ function actions(page: Page): Request[] {
 const back = (page: Page) => page.evaluate(() => (window as unknown as { __homiFakeTelegram: { emit(type: string): void } }).__homiFakeTelegram.emit("backButtonClicked"));
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`owner form (${mode} mode)`, () => {
-    test("a new draft starts at step «where»; «Указать вручную» opens the questionnaire", async ({ page }) => {
+  test.describe(`owner form (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-050" }, { type: "screen", description: "SCR-052" }] }, () => {
+    test("a new draft starts at step «where»; «Указать вручную» opens the questionnaire", { annotation: [{ type: "screen", description: "SCR-051" }] }, async ({ page }) => {
       await stubMedia(page);
       const sent = actions(page);
       await launchApp(page, { mode, path: "/owner/new" });
 
       await expect(page).toHaveURL(new RegExp(`/ru/owner/${UNTOUCHED}/place\\?first=1$`));
       expect(sent.length).toBeGreaterThan(0);
-      await expect(page.locator("[data-owner-picker]")).toBeVisible();
+      // The picker's map is ready: «Готово» is enabled only then (a failed map shows a line in its place).
+      await expect(page.locator('[data-owner-picker] [data-action="pick-done"]')).toBeEnabled({ timeout: 15_000 });
       await page.locator('[data-action="pick-manual"]').click();
 
       await expect(page).toHaveURL(new RegExp(`/ru/owner/${UNTOUCHED}$`));
@@ -43,7 +44,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(page.locator("[data-owner-title]").first()).toHaveText("Сдать квартиру");
     });
 
-    test("the complete draft: an edit is autosaved, «Дальше» opens the phone step, Back returns, Back closes", async ({ page }) => {
+    test("the complete draft: an edit is autosaved, «Дальше» opens the phone step, Back returns, Back closes", { annotation: [{ type: "screen", description: "SCR-053" }] }, async ({ page }) => {
       await stubMedia(page);
       const sent = actions(page);
       await launchApp(page, { mode, path: `/owner/${COMPLETE}` });

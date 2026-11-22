@@ -132,7 +132,7 @@ function watchFeed(page: Page, mode: Mode, min: string, max: string): () => Prom
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`quick filter (${mode} mode)`, () => {
+  test.describe(`quick filter (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-015" }] }, () => {
     test("rooms: closed without «Показать» nothing changes; reopened it starts from the address, 2 applies 2–2 and re-creates the feed", async ({ page }) => {
       const app = await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
@@ -207,7 +207,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 
-  test.describe(`sort (${mode} mode)`, () => {
+  test.describe(`sort (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-016" }] }, () => {
     test("«Сначала дешевле» writes sort=cheap; «Сначала новые» removes it; each pick closes with a light impact", async ({ page }) => {
       const app = await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
@@ -244,7 +244,7 @@ for (const mode of ["cookie", "header"] as const) {
   });
 
   /** The full filters sheet (SCR-014), spec lines 446–452: `FiltersForm` in search mode over the feed or the map. */
-  test.describe(`filters sheet (${mode} mode)`, () => {
+  test.describe(`filters sheet (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-014" }] }, () => {
     test("chip → the sheet over the feed → rooms 2 → one count with the range → «Показать N» applies and re-creates the feed", async ({ page }) => {
       const app = await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
@@ -297,7 +297,7 @@ for (const mode of ["cookie", "header"] as const) {
       }
     });
 
-    test("Telegram Back closes the nested city picker first, then the sheet; the draft survives the picker", async ({ page }) => {
+    test("Telegram Back closes the nested city picker first, then the sheet; the draft survives the picker", { annotation: [{ type: "screen", description: "SCR-017" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
       const start = page.url();

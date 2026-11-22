@@ -183,7 +183,7 @@ async function closedWith(page: Page, text: string, actions: Request[], body: st
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`new radar (${mode} mode)`, () => {
+  test.describe(`new radar (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-030" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("«+» opens «Новый радар» with the last search and «Сейчас подходит»; «Включить радар» closes it with the created toast", async ({ page }) => {
       const app = await open(page, mode, "/?rooms_min=2&rooms_max=2");
       await expect(visible(page, "article[data-listing]").first()).toBeVisible();
@@ -228,7 +228,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 
-  test.describe(`radar editor (${mode} mode)`, () => {
+  test.describe(`radar editor (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-029" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("«Изменить условия» opens «Условия радара» with the radar's filters over the sheet; Back closes the editor, then the sheet", async ({ page }) => {
       await open(page, mode);
       await onTab(page);
@@ -290,7 +290,7 @@ for (const mode of ["cookie", "header"] as const) {
     });
   });
 
-  test.describe(`survey «Нашли жильё?» (${mode} mode)`, () => {
+  test.describe(`survey «Нашли жильё?» (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-031" }, { type: "screen", description: "SCR-042" }] }, () => {
     test("a pause on a tile answered ask_found pushes the survey: «Ещё ищу», «Больше не ищу», «Да, через HOMI» → «Готово»", async ({ page }) => {
       const app = await open(page, mode);
       await onTab(page);
@@ -363,7 +363,7 @@ for (const mode of ["cookie", "header"] as const) {
       }
     });
 
-    test("a pause in the radar sheet replaces it with the survey; Telegram's Back closes the survey to the tab and sends nothing", async ({ page }) => {
+    test("a pause in the radar sheet replaces it with the survey; Telegram's Back closes the survey to the tab and sends nothing", { annotation: [{ type: "screen", description: "SCR-028" }] }, async ({ page }) => {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, ACTIVE);
@@ -383,7 +383,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(actions).toHaveLength(1);
     });
 
-    test("a delete answered ask_found replaces the sheet with the survey of the trigger delete", async ({ page }) => {
+    test("a delete answered ask_found replaces the sheet with the survey of the trigger delete", { annotation: [{ type: "screen", description: "SCR-028" }] }, async ({ page }) => {
       await open(page, mode);
       await onTab(page);
       await openSheet(page, DIGEST);

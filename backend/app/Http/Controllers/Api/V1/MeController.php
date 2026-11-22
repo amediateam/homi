@@ -21,6 +21,7 @@ class MeController extends ApiController
         'first_launch' => 'me/first_launch',
         'no_city' => 'me/no_city',
         'uz' => 'me/uz',
+        'en' => 'me/en',
         'owner_empty' => 'me/owner_empty',
         'owner_waitlisted' => 'me/owner_waitlisted',
         'replay' => 'me/replay',

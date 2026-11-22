@@ -338,7 +338,7 @@ async function applyTwoRooms(page: Page): Promise<void> {
 }
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`map on Leaflet (${mode} mode)`, () => {
+  test.describe(`map on Leaflet (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-011" }] }, () => {
     /** WP-37 E2E on Leaflet; acceptance "A cut answer says «На карте — N самых свежих. Остальные — в списке»". */
     test("a cut answer (stub scenario map_cut) says «На карте — N самых свежих. Остальные — в списке» for 6 s", async ({ page }) => {
       await setScenario(page, "map_cut");
@@ -407,7 +407,7 @@ for (const mode of ["cookie", "header"] as const) {
      * clusters, card … as GL", "Drawing, the Leaflet map … work on a listing opened over the feed"; WP-27 E1, E2 on
      * Leaflet: the toggle, the stack card, the listing over the map and Back to the same card.
      */
-    test("?map=leaflet: the toggle opens the Leaflet map with the stub's stacks and no GL code; a card opens the listing over the map and Back returns to the same card", async ({ page }) => {
+    test("?map=leaflet: the toggle opens the Leaflet map with the stub's stacks and no GL code; a card opens the listing over the map and Back returns to the same card", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
       const workers = recordRequests(page, (request) => isWorker(new URL(request.url())));
       await openFeed(page, mode);
       const reads = recordRequests(page, (request) => isMapRead(new URL(request.url())));
@@ -454,13 +454,13 @@ for (const mode of ["cookie", "header"] as const) {
   });
 }
 
-test.describe("map on Leaflet (cookie mode)", () => {
+test.describe("map on Leaflet (cookie mode)", { annotation: [{ type: "screen", description: "SCR-011" }] }, () => {
   /**
    * WP-27 E3 on Leaflet and the actions "Tap a stack", "Tap a spread pin", "Swipe the card track", "Tap the map
    * background"; WP-28 "Stacks spread on tap with `spreadStackLabels`"; acceptance "Leaflet shows the same … stacks …
    * card … as GL".
    */
-  test("a stack spreads around a dot without overlaps; the header and the active pin follow a swipe and a spread-pin tap; a background tap closes the card", async ({ page }) => {
+  test("a stack spreads around a dot without overlaps; the header and the active pin follow a swipe and a spread-pin tap; a background tap closes the card", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openMap(page);
     await stacksDrawn(page);
     const previews = recordRequests(page, (request) => isPreview(new URL(request.url())));
@@ -513,7 +513,7 @@ test.describe("map on Leaflet (cookie mode)", () => {
    * WP-27 States "Card, single" and the actions "Tap a pin", "Tap × on the card" on Leaflet; acceptance "Leaflet shows
    * the same pins … card … as GL", "Locate: … hidden while a card is open".
    */
-  test("a listing alone at its address is a pin: its card has no header and its × closes it", async ({ page }) => {
+  test("a listing alone at its address is a pin: its card has no header and its × closes it", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     await openFeed(page);
     let number = 0;
     // One listing of the stub answer moved to the middle of the others, so it stands alone in view.
@@ -685,7 +685,7 @@ test.describe("map on Leaflet (cookie mode)", () => {
    * difference "Spread stack on zoom: collapses when the zoom starts". The answer is five stub listings: three at one
    * address (a stack) and two others 10 m apart 78 m north of it, which markercluster joins at the maximum zoom 18.
    */
-  test("at maximum zoom, a cluster tap while a stack is spread collapses the stack and opens the cluster's card; a zoom collapses a spread stack", async ({ page }) => {
+  test("at maximum zoom, a cluster tap while a stack is spread collapses the stack and opens the cluster's card; a zoom collapses a spread stack", { annotation: [{ type: "screen", description: "SCR-013" }] }, async ({ page }) => {
     const stack = { lat: 41.3, lon: 69.28 };
     const near = [
       { lat: 41.3007, lon: 69.28 },

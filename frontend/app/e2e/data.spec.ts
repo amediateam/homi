@@ -58,7 +58,7 @@ async function listReady(page: Page) {
 }
 
 test.describe("data layer", () => {
-  test("cookie mode: the parsed search reaches the map's read and its filters button, then the list's chips; the reference data and the demo marker", async ({ page }) => {
+  test("cookie mode: the parsed search reaches the map's read and its filters button, then the list's chips; the reference data and the demo marker", { annotation: [{ type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-011" }] }, async ({ page }) => {
     const reads = recordRequests(page, isMapRead);
     await launchApp(page, { path: "/ru/map?rooms_min=2" });
     await mapReady(page);
@@ -82,7 +82,7 @@ test.describe("data layer", () => {
     await expect(page.locator("[data-demo-marker]")).toBeVisible();
   });
 
-  test("cookie mode: after a reload the server reads the list's page one for the address with the cookie, and the browser does not", async ({ page }) => {
+  test("cookie mode: after a reload the server reads the list's page one for the address with the cookie, and the browser does not", { annotation: [{ type: "screen", description: "SCR-007" }] }, async ({ page }) => {
     await launchApp(page, { path: "/?rooms_min=2" });
     await listReady(page);
 
@@ -100,7 +100,7 @@ test.describe("data layer", () => {
     await expect(page.locator("[data-demo-marker]")).toBeVisible();
   });
 
-  test("a filter change rewrites the address without a history entry, keeps a reserved parameter, and a reload restores it", async ({ page }) => {
+  test("a filter change rewrites the address without a history entry, keeps a reserved parameter, and a reload restores it", { annotation: [{ type: "screen", description: "SCR-011" }] }, async ({ page }) => {
     await launchApp(page, { path: "/ru/map?from=map" });
     await mapReady(page);
     const entries = await page.evaluate(() => history.length);
@@ -127,7 +127,7 @@ test.describe("data layer", () => {
     await expect(mapBar(page).getByRole("radio", { name: "Продажа" })).toHaveAttribute("data-state", "checked");
   });
 
-  test("header mode: the map's read goes through /bff with the bearer header and no session cookie", async ({ page }) => {
+  test("header mode: the map's read goes through /bff with the bearer header and no session cookie", { annotation: [{ type: "screen", description: "SCR-011" }] }, async ({ page }) => {
     const read = page.waitForRequest(isMapRead);
     await launchApp(page, { mode: "header", path: "/ru/map?rooms_min=2" });
 

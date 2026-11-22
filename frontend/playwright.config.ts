@@ -34,11 +34,21 @@ const radarsOff = process.env.E2E_RADARS_OFF === "1";
 const analytics = process.env.E2E_ANALYTICS === "1";
 /** The manual run (DEC-100): the projects of other clients. */
 const full = process.env.E2E_FULL === "1";
+/** `app/scripts/e2e-coverage.mjs` lists every test of every run, the special runs' tags included (WP-33). */
+const listAll = process.env.E2E_LIST_ALL === "1";
 /** A test that chose its session mode itself (DEC-101): it runs in `miniapp-cookie` only. */
 const NAMES_ITS_MODE = /\b(?:cookie|header) mode\b/;
 
 /** The tags each run leaves out (`@flaky` on CI only); the special runs keep only their own tags. */
-const grepInvert = radarsOff || analytics ? (ci ? /@flaky/ : undefined) : ci ? /@radars-off|@owner-off|@analytics|@flaky/ : /@radars-off|@owner-off|@analytics/;
+const grepInvert = listAll
+  ? undefined
+  : radarsOff || analytics
+    ? ci
+      ? /@flaky/
+      : undefined
+    : ci
+      ? /@radars-off|@owner-off|@analytics|@flaky/
+      : /@radars-off|@owner-off|@analytics/;
 
 const miniapp = { testDir: "./app/e2e" } as const;
 const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: "ru-RU" } as const;
@@ -76,7 +86,7 @@ export default defineConfig({
   retries: 0,
   workers: ci ? 1 : undefined,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
-  grep: radarsOff ? /@radars-off|@owner-off/ : analytics ? /@analytics/ : undefined,
+  grep: listAll ? undefined : radarsOff ? /@radars-off|@owner-off/ : analytics ? /@analytics/ : undefined,
   grepInvert,
   use: {
     baseURL,

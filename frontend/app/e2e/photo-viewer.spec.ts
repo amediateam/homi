@@ -109,7 +109,7 @@ const loaded = (page: Page, number: number) =>
   expect(layer(page, number).locator("[data-listing-state]")).toHaveAttribute("data-listing-state", "loaded");
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`photo viewer (${mode} mode)`, () => {
+  test.describe(`photo viewer (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-020" }] }, () => {
     test("photo 3 of 8 from the hero; paging replaces the address; a double tap zooms and unzooms; a swipe down closes", async ({ page }) => {
       const app = await open(page, mode, `/ru/listing/${LISTING}`);
       await loaded(page, LISTING);

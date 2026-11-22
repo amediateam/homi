@@ -85,7 +85,7 @@ test.describe("analytics @analytics", () => {
     });
   });
 
-  test("PostHog loads after the first photo; a journey sends its pageviews; no payload carries launch data, a token, a query or a hash", async ({ page }) => {
+  test("PostHog loads after the first photo; a journey sends its pageviews; no payload carries launch data, a token, a query or a hash", { annotation: [{ type: "screen", description: "SCR-006" }, { type: "screen", description: "SCR-007" }, { type: "screen", description: "SCR-015" }, { type: "screen", description: "SCR-018" }] }, async ({ page }) => {
     await stubMedia(page);
     const ph = await posthog(page);
     await launchApp(page, { path: "/" });

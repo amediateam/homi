@@ -45,15 +45,25 @@ export function usePlaceLabel(center: GeoPoint, moving: boolean): PlaceLabel {
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setAnswer({ for: key, label: { kind: "reading" } });
-      void readPlace(center, controller.signal).then((place) => {
-        if (controller.signal.aborted) {
-          return;
+      const show = (label: PlaceLabel) => {
+        if (!controller.signal.aborted) {
+          setAnswer({ for: key, label });
         }
-        const city = findCity(place?.city);
-        const district = city?.districts.find((item) => item.code === place?.district_code);
-        const text = city === null ? null : district === undefined ? city.name : `${district.name} · ${city.name}`;
-        setAnswer({ for: key, label: text === null ? { kind: "none" } : { kind: "place", text } });
-      });
+      };
+      void readPlace(center, controller.signal).then(
+        (place) => {
+          const city = findCity(place?.city);
+          const district = city?.districts.find((item) => item.code === place?.district_code);
+          const text = city === null ? null : district === undefined ? city.name : `${district.name} · ${city.name}`;
+          show(text === null ? { kind: "none" } : { kind: "place", text });
+        },
+        () => {
+          // `bffFetch` rejects only for the abort of its caller, which is dropped: left unhandled it surfaced as an
+          // uncaught page error, which the e2e checks fail on (WP-33: "signal is aborted without reason"). Anything else
+          // (a bug of `readPlace`) is a failed read: `none`.
+          show({ kind: "none" });
+        },
+      );
     }, LABEL_WAIT_MS);
     return () => {
       clearTimeout(timer);

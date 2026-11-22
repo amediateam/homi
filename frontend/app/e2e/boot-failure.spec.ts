@@ -11,7 +11,7 @@ interface Boot {
 const updateScreen = (page: Page) => page.locator("[data-boot-screen]");
 const boot = (page: Page) => page.evaluate(() => (window as unknown as { __homiBoot?: Boot }).__homiBoot ?? null);
 
-test.describe("boot failure", () => {
+test.describe("boot failure", { annotation: [{ type: "screen", description: "SCR-001" }] }, () => {
   test("the boot script and the stubs run before the SDK tag", async ({ page }) => {
     await playwrightTelegram(page);
     await page.goto("/ru");

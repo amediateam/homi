@@ -173,7 +173,7 @@ async function refuseAsTooOld(page: Page): Promise<void> {
   });
 }
 
-test.describe("feed (cookie mode only)", () => {
+test.describe("feed (cookie mode only)", { annotation: [{ type: "screen", description: "SCR-007" }] }, () => {
   /**
    * The first launch has no cookie yet: the document shows skeletons, the sign-in sets the cookie and refreshes the
    * router once, and the browser reads page one through `/bff` (the refresh's server read is not adopted, WP-24). A
@@ -309,7 +309,7 @@ test.describe("feed (cookie mode only)", () => {
 });
 
 test.describe("feed (header mode only)", () => {
-  test("page one is asked for through /bff/listings with the bearer token and no session cookie", async ({ page }) => {
+  test("page one is asked for through /bff/listings with the bearer token and no session cookie", { annotation: [{ type: "screen", description: "SCR-007" }] }, async ({ page }) => {
     const firstPages = recordRequests(page, (request) => isPageOne(new URL(request.url())));
     await open(page, "header");
     await expect(cards(page).first()).toBeVisible();
@@ -320,7 +320,7 @@ test.describe("feed (header mode only)", () => {
     await expect(cards(page)).toHaveCount(20);
   });
 
-  test("a slow page one shows three card skeletons until it answers", async ({ page }) => {
+  test("a slow page one shows three card skeletons until it answers", { annotation: [{ type: "screen", description: "SCR-008" }] }, async ({ page }) => {
     const slow = gate();
     let held = 0;
     await page.route(isPageOne, async (handled) => {
@@ -341,7 +341,7 @@ test.describe("feed (header mode only)", () => {
     await expect(list(page)).toHaveAttribute("aria-busy", "false");
   });
 
-  test("page one offline shows «Нет связи»; a refused one «Нет доступа — повторить»; each retry asks again", async ({ page }) => {
+  test("page one offline shows «Нет связи»; a refused one «Нет доступа — повторить»; each retry asks again", { annotation: [{ type: "screen", description: "SCR-008" }] }, async ({ page }) => {
     let failure: "offline" | "forbidden" = "offline";
     await page.route(isPageOne, (handled) => (failure === "offline" ? handled.abort("internetdisconnected") : failWith(handled, 403, "forbidden")));
     await open(page, "header");
@@ -394,7 +394,7 @@ test.describe("feed (header mode only)", () => {
 });
 
 for (const mode of ["cookie", "header"] as const) {
-  test.describe(`feed (${mode} mode)`, () => {
+  test.describe(`feed (${mode} mode)`, { annotation: [{ type: "screen", description: "SCR-007" }] }, () => {
     test("scrolling loads the pages until the stub's last one; every listing shows once", async ({ page }) => {
       const pages = recordPages(page);
       const laterPages = recordRequests(page, (request) => isLaterPage(new URL(request.url())));
@@ -474,7 +474,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect(firstPages.map((request) => new URL(request.url()).searchParams.get("deal"))).toEqual(mode === "cookie" ? [] : ["sale"]);
     });
 
-    test("the heart fills with one Server Action and empties with the next; a failed save returns it with «Не получилось сохранить»", async ({ page }) => {
+    test("the heart fills with one Server Action and empties with the next; a failed save returns it with «Не получилось сохранить»", { annotation: [{ type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       const app = await open(page, mode);
       await expect(cards(page).first()).toBeVisible();
       const first = cards(page).first();
@@ -534,7 +534,7 @@ for (const mode of ["cookie", "header"] as const) {
       await setScenario(page, null);
     });
 
-    test("a failed page two shows «Не загрузилось — повторить» under the cards; a refused one «Нет доступа — повторить»", async ({ page }) => {
+    test("a failed page two shows «Не загрузилось — повторить» under the cards; a refused one «Нет доступа — повторить»", { annotation: [{ type: "screen", description: "SCR-008" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page)).toHaveCount(20);
       let status = 500;
@@ -584,7 +584,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect(card(page, 100023).locator("[data-facts]")).not.toContainText("/9");
     });
 
-    test("pull-to-refresh asks for page one again and starts the list from it", async ({ page }) => {
+    test("pull-to-refresh asks for page one again and starts the list from it", { annotation: [{ type: "screen", description: "SCR-010" }] }, async ({ page }) => {
       await open(page, mode);
       await expect(cards(page)).toHaveCount(20);
       await scrollToEnd(page);

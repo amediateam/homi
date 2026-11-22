@@ -43,7 +43,7 @@ async function seed(page: Page): Promise<void> {
 
 for (const mode of ["cookie", "header"] as const) {
   test.describe(`home-screen offer (${mode} mode)`, () => {
-    test("status missed: the card after 4 s of calm, offered: true", async ({ page }) => {
+    test("status missed: the card after 4 s of calm, offered: true", { annotation: [{ type: "screen", description: "SCR-041" }] }, async ({ page }) => {
       await seed(page);
       await launchApp(page, { mode, version: "8.0", answers: { homeScreenStatus: "missed" } });
       await expect(html(page)).toHaveAttribute("data-session", "ready", { timeout: API_MS });
@@ -63,7 +63,7 @@ for (const mode of ["cookie", "header"] as const) {
       expect((await memory(page))?.offered).toBe(false);
     });
 
-    test("the added event: the toast, and the settings row goes", async ({ page }) => {
+    test("the added event: the toast, and the settings row goes", { annotation: [{ type: "screen", description: "SCR-032" }, { type: "screen", description: "SCR-042" }] }, async ({ page }) => {
       await seed(page);
       await launchApp(page, { mode, version: "8.0", path: "/settings", answers: { homeScreenStatus: "missed" } });
       await expect(html(page)).toHaveAttribute("data-session", "ready", { timeout: API_MS });

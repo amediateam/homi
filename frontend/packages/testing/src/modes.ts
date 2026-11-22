@@ -11,7 +11,7 @@ import type { TelegramColorScheme, TelegramPlatform } from "./fakeTelegram";
  * | Mode | Checked after the test |
  * | ---- | ---------------------- |
  * | cookie | the context holds `homi_session` `HttpOnly`, `Secure`, `SameSite=None`, partitioned, once a sign-in answered `200`; no request to `/bff/` carries `Authorization` |
- * | header | no `homi_session` cookie; once a request of a document carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
+ * | header | no `homi_session` cookie, and no request of the app's origin carries one; once a read of a document (from its commit) carried `Authorization: Bearer`, every later request of it to `/bff/` does too (the exchange `/bff/session` and the boot guard's `/bff/boot-error` aside: a document's reads before its session is in memory carry no token); the token is in neither storage, nor in a DeviceStorage call of the fake, nor in an address the page visited |
  * | both | no `securitypolicyviolation`, no console error, no missing catalogue message (`app_error` with `MissingMessage`) |
  *
  * The guard of `./playwright` already fails a request to an external host. The checks run only after a test that
@@ -65,6 +65,8 @@ interface ModeRecord {
   visited: string[];
   calls: (() => Promise<unknown>) | null;
   pending: Promise<unknown>[];
+  /** Header mode: the app's own requests that carried the session cookie (method and path). */
+  cookieCarriers: Promise<string | null>[];
   seq: number;
 }
 
@@ -72,8 +74,9 @@ interface ModeRecord {
 let records: ModeRecord[] = [];
 
 /**
- * Header mode's exchanges still running (`./playwright`): `route.fetch` puts the refused cookie into the context
- * before the handler takes it out again, so the checks read the cookies only after these have ended.
+ * Header mode's exchanges still running (`./playwright`): the page acts on each answer, so the checks read the
+ * requests and the cookies only after these have ended (at most `HEADERS_WAIT_MS`). An exchange of a page that closed
+ * is aborted there, so a later test never waits on it.
  */
 const exchanges = new Set<Promise<unknown>>();
 
@@ -96,6 +99,12 @@ const STATUS_LINE = /^Failed to load resource: /;
 /** A missing catalogue message reaches the journal as `app_error` named `MissingMessage` (WP-32). */
 const MISSING = /"name":"MissingMessage","message":"([^"]*)"/;
 
+/** An address without its fragment: Chromium names a request without it and a committed document with it. */
+function withoutHash(address: string): string {
+  const hash = address.indexOf("#");
+  return hash === -1 ? address : address.slice(0, hash);
+}
+
 function bffAddress(origin: string, request: Request): URL | null {
   const url = new URL(request.url());
   return url.origin === origin && url.pathname.startsWith("/bff/") ? url : null;
@@ -117,13 +126,32 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
     visited: [],
     calls,
     pending: [],
+    cookieCarriers: [],
     seq: 0,
   };
   records.push(record);
+  // A new document starts without the session in memory: its reads before its own sign-in carry no token. It counts
+  // from its commit, not from its navigation request: the old document still sends requests in between (its leave's
+  // `/bff/events` beacon among them), and they are the old document's. Playwright also reports a same-document
+  // navigation (`pushState`, `replaceState`) as `framenavigated`, so only the commit of the pending navigation counts:
+  // the main frame's last navigation request (each redirect hop replaces it), matched by its address without the
+  // fragment. One that fails or answers 204/205 commits nothing and is dropped. (A `replaceState` of that very address
+  // by the old document while the navigation is pending still counts early: the public API tells the two apart no
+  // further.)
+  let navigation: Request | null = null;
   page.on("request", (request) => {
-    // A new document starts without the session in memory: its reads before its own sign-in carry no token.
     if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
-      record.document += 1;
+      navigation = request;
+    }
+    // Header mode: no request of the app may carry the session cookie, whatever answered it (documents, actions, RSC).
+    const own = new URL(request.url());
+    if (mode === "header" && own.origin === origin && !own.pathname.startsWith("/_next/static/")) {
+      record.cookieCarriers.push(
+        request
+          .allHeaders()
+          .then((headers) => (/(?:^|;\s*)homi_session=/.test(headers.cookie ?? "") ? `${request.method()} ${own.pathname}` : null))
+          .catch(() => null),
+      );
     }
     const url = bffAddress(origin, request);
     if (url === null) {
@@ -145,8 +173,16 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
       }
     }
   });
+  page.on("requestfailed", (request) => {
+    if (request === navigation) {
+      navigation = null;
+    }
+  });
   page.on("response", (response) => {
     const request = response.request();
+    if (request === navigation && (response.status() === 204 || response.status() === 205)) {
+      navigation = null;
+    }
     const url = bffAddress(origin, request);
     if (url?.pathname === "/bff/session" && request.method() === "POST") {
       record.lastSignIn = response.status();
@@ -179,6 +215,10 @@ export async function watchMode(page: Page, mode: SessionMode, baseURL: string, 
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) {
       record.visited.push(frame.url());
+      if (navigation !== null && withoutHash(frame.url()) === withoutHash(navigation.url())) {
+        navigation = null;
+        record.document += 1;
+      }
     }
   });
   await page.addInitScript(() => {
@@ -243,10 +283,17 @@ async function findingsOf(record: ModeRecord, info: TestInfo): Promise<string[]>
     if (sessions.length > 0) {
       findings.push("header mode: the context holds a homi_session cookie");
     }
-    // The document's session is in memory once a request of it carried the bearer; every later one must too.
+    const unknown = new Promise<null>((resolve) => setTimeout(() => resolve(null), HEADERS_WAIT_MS));
+    for (const carrier of await Promise.all(record.cookieCarriers.map((check) => Promise.race([check, unknown])))) {
+      if (carrier !== null) {
+        findings.push(`header mode: ${carrier} carried the session cookie`);
+      }
+    }
+    // The document's session is in memory once a read or an action of it carried the bearer; every later one must
+    // too. A journal beacon is no anchor: a leaving document may still send one.
     const bearer = (request: BffRequest) => /^Bearer \S+$/.test(request.authorization ?? "");
     for (const request of requests) {
-      const first = requests.find((other) => other.document === request.document && bearer(other));
+      const first = requests.find((other) => other.document === request.document && other.path !== "/bff/events" && bearer(other));
       if (first !== undefined && request.at > first.at && !NO_BEARER.test(request.path) && !bearer(request)) {
         findings.push(`header mode: ${request.method} ${request.path} carried no bearer`);
       }

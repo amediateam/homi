@@ -310,7 +310,7 @@ async function areaApplied(page: Page): Promise<string> {
 }
 
 for (const { engine } of ENGINES) {
-  test.describe(`map lasso on ${engine} (cookie mode)`, () => {
+  test.describe(`map lasso on ${engine} (cookie mode)`, { annotation: [{ type: "screen", description: "SCR-012" }] }, () => {
     /**
      * E1; the action "«Обвести на карте» in the filters sheet"; acceptance "«Обвести на карте» in the filters sheet
      * closes the sheet and starts drawing on the map; the BackButton is visible; Back cancels drawing and the map
@@ -522,7 +522,7 @@ for (const { engine } of ENGINES) {
   });
 }
 
-test.describe("map lasso on gl (header mode)", () => {
+test.describe("map lasso on gl (header mode)", { annotation: [{ type: "screen", description: "SCR-012" }] }, () => {
   /** E2 in header mode: the core path, with the feed's first page read in the browser. */
   test("a large loop becomes «Своя область»; the map read and the feed's first page carry the polygon", async ({ page }) => {
     const first = nextRequest(page, isMapRead);

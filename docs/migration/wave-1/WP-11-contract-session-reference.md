@@ -77,8 +77,9 @@ Stub: accepts any valid body, issues a real Sanctum token (abilities `app:read`,
 **stub user** (`users.email = 'stub@homi.invalid'`, created on first use with a fixed `name` and a random
 `password`, because both columns are `NOT NULL` until WP-40), so `auth:sanctum` works unchanged on every other
 route. Nothing is verified. Scenarios: `auth_expired`, `invalid_init_data`, `access_private`, `access_invite`,
-`access_full`, `access_blocked`, `access_join`. *Corrected while executing:* `data.user` follows the scenarios of
-`GET /me` (`first_launch`, `no_city`, `uz`), so one header value gives the same user on both methods. The two `401`
+`access_full`, `access_blocked`, `access_join`. *Corrected while executing:* `data.user` follows the profile
+scenarios of `GET /me` (the one list `MeController::SCENARIOS`, so `en` too since WP-33), so one header value gives
+the same user on both methods. The two `401`
 errors are `App\Exceptions\Identity\{InitDataExpired, InvalidInitData}`, the names WP-40 planned. They are created
 here without WP-40's internal reason.
 
@@ -99,7 +100,7 @@ stays here; `uz_Latn` became `uz`; the gate reason moved from the body `detail` 
 replaces legacy's separate pending call (*added by the owner-cabinet plan*).
 
 Scenarios: `first_launch` (`locale_chosen: false`, `city: null`, `city_chosen: false`), `no_city`
-(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
+(`city_chosen: false` only), `uz` (locale `uz`, currency `UZS`), `en` (locale `en`; *added by WP-33, the render pass in English*), and the six `access_*` (`access_paused` since the intake of `index-CIa0Ldj2.js`).
 
 ### `GET /settings`, `PATCH /settings` — bearer `app:read` / `app:write`; legacy: API-024, API-025
 

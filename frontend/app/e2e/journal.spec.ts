@@ -68,7 +68,7 @@ for (const mode of ["cookie", "header"] as const) {
       await expect.poll(() => log.events().find((event) => event.name === "app_opened")?.props).toMatchObject({ entry: "link", listing_id: 100008 });
     });
 
-    test("«Позвонить» sends contact_call with the listing_id and via; no PostHog host is asked for anything without a key", async ({ page }) => {
+    test("«Позвонить» sends contact_call with the listing_id and via; no PostHog host is asked for anything without a key", { annotation: [{ type: "screen", description: "SCR-018" }] }, async ({ page }) => {
       const posthog: string[] = [];
       page.on("request", (request) => {
         if (isPosthog(request)) {
