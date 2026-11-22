@@ -733,7 +733,8 @@ merged (*added by the intake of `index-YX9bFVws.js`*).
       handoff names WP-40 as next.
 
 Exit to stage C: all statements above, plus every contract gap found during stage B written back into
-WP-11 … WP-13 with regenerated types, and no open defect that blocks a scenario of the checklist.
+WP-11 … WP-13 with regenerated types, and no open defect that blocks a scenario of the checklist. WP-40 is the
+exception: it starts once part 4 is merged and does not wait for steps 14–17 (*changed by DEC-102, 2026-11-22*).
 
 ## As built
 
@@ -955,9 +956,9 @@ built" above says what each part ships and where it left the design.
 **After part 4.** Steps 14 and 15 (staging, the pass inside Telegram) are run with the production track. What they
 find comes back to the development track as step 16, and step 17 closes the package.
 
-**Open question for the developer: when does WP-40 start?** Rule 1 of the queue and "Exit to stage C" above make
-WP-40 wait until this package is `DONE`, and that needs steps 14 to 17. Under rule 8 this package itself was built
-while every package it depends on was `WAITING`. Ask the developer before starting WP-40.
+**WP-40 starts right after part 4 is merged (DEC-102).** It does not wait for steps 14 to 17, although rule 1 of
+the queue and "Exit to stage C" would make it wait until this package is `DONE`. A defect that the pass inside
+Telegram finds is fixed ahead of the queue (step 16).
 
 **Decisions.** The developer's are DEC-100 and DEC-101. The choices made while building are the deviations in "As
 built" and the descriptions of #111, #112 and #113.

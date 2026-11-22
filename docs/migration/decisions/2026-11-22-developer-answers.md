@@ -50,3 +50,22 @@ than a minute; the whole suite in the manual run).
 
 Answer: «Весь набор в каждом PR (Рекомендуется)». It replaces the first answer and is registered as **DEC-101** in
 [`../24-three-wave-strategy.md`](../24-three-wave-strategy.md) §8.1.
+
+## When WP-40 starts (DEC-102)
+
+Question, asked at the handoff of the development track: after part 4 of WP-33 the package waits for the production
+track (steps 14–17: staging and the pass inside Telegram). The next package of the queue, WP-40 (sign-in, users and
+settings on the backend), depends on WP-33. Rule 1 of the queue and "Exit to stage C" of WP-33 make it wait until
+WP-33 is `DONE`. When does the next developer start WP-40?
+
+Options:
+
+- Right after part 4 (recommended). Do not wait for the pass inside Telegram, as before under rule 8: WP-33 itself
+  was built on packages whose rows were `WAITING`. If the pass finds defects, their fixes (step 16) go ahead of the
+  queue.
+- After the pass inside Telegram. By the letter of rule 1 and "Exit to stage C": WP-40 waits until WP-33 is `DONE`,
+  and development stands still until the production track has done steps 14–17.
+- Decide later. The handoff documents keep it as an open question.
+
+Answer: «Сразу после части 4 (Рекомендуется)». Registered as **DEC-102** in
+[`../24-three-wave-strategy.md`](../24-three-wave-strategy.md) §8.1.
