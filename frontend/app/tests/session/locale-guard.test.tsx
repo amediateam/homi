@@ -96,4 +96,19 @@ describe("LocaleGuard (BR-APP-050, 25 §3.4 step 5)", () => {
     render(<LocaleGuard />);
     expect(state.replace).not.toHaveBeenCalled();
   });
+  it("moves once while a move to the wanted locale is underway, and never hands the router a locale segment (WP-33)", () => {
+    fake = fakeTelegram({ initData: syntheticInitData({ language_code: "uz" }) });
+    // The address is already /en/…, the page's locale is still ru, so next-intl leaves the /en segment in the pathname.
+    window.history.replaceState(null, "", "/en/listing/100001");
+    Object.assign(state, { status: "ready", me: { locale: "en" }, locale: "ru", pathname: "/en/listing/100001" });
+    render(<LocaleGuard />);
+    expect(state.replace).not.toHaveBeenCalled();
+
+    cleanup();
+    // Another locale's segment left in the pathname is dropped before the move.
+    window.history.replaceState(null, "", "/ru/listing/100001");
+    Object.assign(state, { status: "ready", me: { locale: "en" }, locale: "uz", pathname: "/ru/listing/100001" });
+    render(<LocaleGuard />);
+    expect(state.replace).toHaveBeenCalledWith("/listing/100001", { locale: "en" });
+  });
 });

@@ -45,7 +45,7 @@ export const REJECTED = "01JF0000000000000000000009";
 export const PAGES: readonly AppPage[] = [
   { path: "/", screens: ["SCR-006", "SCR-007"], shows: inside("feed", '[data-feed="feed"] [data-card]'), parent: null, kind: "tab" },
   { path: "/", screens: ["SCR-009"], shows: inside("feed", '[data-empty="feed"]', '[data-slot="few-note"]'), parent: null, kind: "tab", scenario: "empty" },
-  // The engine's view, not its loading state or a failed view; the points come later (`map.spec`).
+  // The engine's container, present from its first frame on; the map's load, points and states are `map.spec`'s.
   { path: "/map", screens: ["SCR-011"], shows: "[data-map-screen] [data-map-view]", parent: null, kind: "tab" },
   { path: "/saved", screens: ["SCR-024"], shows: inside("saved", '[data-feed="favorites"] [data-card]'), parent: null, kind: "tab" },
   { path: "/saved/history", screens: ["SCR-025"], shows: inside("saved/history", '[data-feed="history"] [data-card]'), parent: null, kind: "tab" },
@@ -85,8 +85,9 @@ export const PAGES: readonly AppPage[] = [
   { path: "/radars/new", screens: ["SCR-030"], shows: inside("radars/new", '[data-section="deal"]'), parent: "/radars", kind: "sheet" },
   { path: "/radars/found?trigger=pause", screens: ["SCR-031"], shows: `${route("radars/found")}[data-step="ask"] [data-found]`, parent: "/radars", kind: "sheet" },
   { path: `/owner/${DRAFT}`, screens: ["SCR-050", "SCR-052"], shows: inside("owner", "[data-owner-questionnaire]"), parent: "/settings", kind: "overlay" },
-  // The picker is portalled to `body`, outside the form's route; its map container, not the failed map.
-  { path: `/owner/${DRAFT}/place`, screens: ["SCR-051"], shows: "[data-owner-picker]", parent: `/owner/${DRAFT}`, kind: "overlay" },
+  // The picker is portalled to `body`, outside the form's route. «Готово» is enabled only once its map is ready, so a map
+  // that failed or still loads does not count.
+  { path: `/owner/${DRAFT}/place`, screens: ["SCR-051"], shows: '[data-owner-picker] [data-action="pick-done"]:enabled', parent: `/owner/${DRAFT}`, kind: "overlay" },
   { path: `/owner/${DRAFT}/phone`, screens: ["SCR-053"], shows: inside("owner", '[data-owner-step="phone"]'), parent: `/owner/${DRAFT}`, kind: "overlay" },
   // The phone step of a rejected listing is `RejectionState`, a step frame of its own (`data-owner-step="rejected"`).
   { path: `/owner/${REJECTED}/phone`, screens: ["SCR-054"], shows: inside("owner", '[data-owner-step="rejected"] [data-reject-reason="denied"]'), parent: `/owner/${REJECTED}`, kind: "overlay" },

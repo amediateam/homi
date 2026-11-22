@@ -35,7 +35,8 @@ for (const mode of ["cookie", "header"] as const) {
 
       await expect(page).toHaveURL(new RegExp(`/ru/owner/${UNTOUCHED}/place\\?first=1$`));
       expect(sent.length).toBeGreaterThan(0);
-      await expect(page.locator("[data-owner-picker]")).toBeVisible();
+      // The picker's map is ready: «Готово» is enabled only then (a failed map shows a line in its place).
+      await expect(page.locator('[data-owner-picker] [data-action="pick-done"]')).toBeEnabled({ timeout: 15_000 });
       await page.locator('[data-action="pick-manual"]').click();
 
       await expect(page).toHaveURL(new RegExp(`/ru/owner/${UNTOUCHED}$`));

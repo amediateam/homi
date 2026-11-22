@@ -35,7 +35,8 @@ test.describe("Telegram 6.0 @gates", () => {
     await pressBack(page);
     await expect(visible(page, '[data-route="listing"]')).toHaveCount(0);
     await visible(page, '[data-tabbar] [data-tab="settings"]').click();
-    await expect(visible(page, '[data-route="settings"]')).toBeVisible();
+    // The settings screen itself, not its server fallback (a spinner under the same route): its rows have mounted.
+    await expect(visible(page, '[data-route="settings"] [data-settings-row="theme"]')).toBeVisible({ timeout: API_MS });
     // The home-screen offer asks `checkHomeScreenStatus` first: none at 6.0, so it never shows.
     await page.waitForTimeout(500);
 

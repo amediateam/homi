@@ -798,7 +798,7 @@ Part 2:
   also wraps the loading or the error state: the feed's cards (`[data-card]`), the radar tab's tiles (SCR-026) and
   `[data-radar-state="empty"]` (SCR-027), `[data-listing-state="loaded"]` and `"not_found"`, the own listing's
   `[data-owner-panel]`, the owner steps `[data-owner-step="phone|mode|done"]`, the place picker
-  (`[data-owner-picker]`), and `[data-reject-reason]` of the rejection state (`[data-owner-step="rejected"]`) at the rejected listing's `/phone`
+  (`[data-owner-picker]` with «Готово» enabled, which needs the map ready), and `[data-reject-reason]` of the rejection state (`[data-owner-step="rejected"]`) at the rejected listing's `/phone`
   address (SCR-054). A probe of every
   address read their `data-route` names first.
 - **`coverage/routes.spec.ts`:** every address loaded directly shows its entry's element, and Back goes to its parent
@@ -841,6 +841,11 @@ Part 2:
   `playwright test --list --reporter=json`. `app/scripts/e2e-coverage.mjs` lists with `E2E_LIST_ALL=1`, so the
   `@radars-off` and `@analytics` tests count. It fails on a screen without a test or on an unknown identifier. It is a
   step of the e2e job, which also runs when `docs/migration/data/screens.json` changes, and it has a unit test.
+- **Found by the brand pass on CI and fixed:** a launch at `/en/…` with an English profile could end on the not-found
+  screen. The locale guard moved the address to `/ru` before sign-in and back to `/en` after it; while the address was
+  already `/en/…` and the page's locale still `ru`, next-intl left the `/en` segment in the pathname and the second
+  move built `/en/en/…`. `LocaleGuard` now makes no second move while one to the wanted locale is underway and drops
+  any locale segment from the path it hands the router, with a test that fails without the fix.
 - **Found while drafting journey 8 and fixed:** the demo marker showed on `/outside`. The layout's reference read
   reports `stub` on every pathname, and the screen outside Telegram shows no data. `DemoDataMarker` now renders nothing
   there, with a unit test.
