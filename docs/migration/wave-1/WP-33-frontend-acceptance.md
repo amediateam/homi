@@ -908,4 +908,35 @@ Part 3:
 
 ## Handoff
 
-Empty.
+Written on 2026-11-22: the package changes hands after part 3 (rule 4 of the queue).
+
+**Finished and merged.** Part 1 (#111, `61d78c6`), part 2 (#112, `27142e3`) and part 3 (#113, `a9e8955`): steps 1
+to 12. "As built" above says what each part ships and where it left the design.
+
+**Half-done.** Nothing. No branch is open, and part 4 has no file yet: `frontend/app/e2e/perf/`,
+`frontend/app/scripts/check-budgets.mjs`, `frontend/app/perf-budgets.json` and a `perf` project in
+`frontend/playwright.config.ts` do not exist.
+
+**Next step: part 4 (step 13),** on a new branch from `main`, one PR.
+
+1. Add the `perf` project and `e2e/perf/{startup,chunks,scroll}.spec.ts` as "Performance budget" lays them out. Its
+   table names the spec of rows 1 to 5, 7 and 9. Rows 6, 8 and 10 name none: choose one and record it in "As built".
+2. Measure on `main` and write `perf-budgets.json`: the measured value plus 10 % (plus 20 % for row 7), each with
+   its date. The PR states every value.
+3. Write `check-budgets.mjs`, which compares the JSON of the `perf` project with `perf-budgets.json`. Its two tests
+   are under "Tests": a planted oversize measurement fails, and a missing measurement fails.
+4. Wire CI: rows 3 to 6 in every pull request; rows 1, 2 and 7 to 10 only in the manual run (`workflow_dispatch`
+   input `full`, DEC-100). `.github/workflows/frontend-e2e.yml` is a shared file, so announce the change in the PR
+   (`docs/handoff/parallel-work.md`).
+5. Run the pull-request projects five times in a row on `main` on the local stack (`scripts/dev/e2e-local.sh`); the
+   checklist asks for it before the package closes. One whole run took 25.3 minutes for 919 tests (reported in #113).
+6. Write part 4 into "As built" and tick the acceptance checklist in the PR (rule 5).
+
+**After part 4.** Steps 14 to 17 (staging, the pass inside Telegram) belong to the production track. The queue row
+becomes `WAITING` for them, and the development track goes on to WP-40.
+
+**Decisions.** The developer's are DEC-100 and DEC-101. The choices made while building are the deviations in "As
+built" and the descriptions of #111, #112 and #113.
+
+**Commands.** A spec before its push: `scripts/dev/e2e-local.sh app/e2e/<spec> --repeat-each 10` (step 11). The
+gates: `make ci-frontend`, `make bundle-check`, and from `frontend/` `node app/scripts/e2e-coverage.mjs`.
