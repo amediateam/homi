@@ -14,9 +14,9 @@ Written for whoever continues the **development track**: from 2026-11-22 another
 - 2026-11-22, the handoff: «Передадим продолжение другому разработчику у нас все закомичено ? он сразу поймет откуда продолжить ?». On the uncommitted PHP 8.6 files: «Запушить веткой, без PR (Рекомендуется)».
 
 ## State at handoff
-- `main` = `a9e8955` (#113). No development branch is open; the open PRs are Dependabot's (#5, #57 … #60) and the one that carries this file. `git log --branches --not --remotes` on the previous machine → empty: no commit exists on that disk only.
+- `main` holds the last code merge #113 (`a9e8955`) and this handoff (#114, documents only). No development branch is open; the open PRs are Dependabot's (#5, #57 … #60). `git log --branches --not --remotes` on the previous machine → empty: no commit exists on that disk only.
 - **WP-33 parts 1–3 are merged:** #111 `61d78c6` (projects, session-mode checks, scenarios, bundle check), #112 `27142e3` (the passes over all addresses, screen annotations, `e2e-coverage.mjs`), #113 `a9e8955` (the eight journeys, `e2e/journeys/`). #113: `gh pr checks 113` → `ci` pass, `e2e` pass (runs 45002838031, 45002837960).
-- **Next: WP-33 part 4** (step 13 of `docs/migration/wave-1/WP-33-frontend-acceptance.md`): `e2e/perf/`, the `perf` project, `check-budgets.mjs`, `perf-budgets.json`. None of them exists. New branch from `main`, one PR; the six steps are in the specification's "Handoff". Then **WP-40**. Steps 14–17 of WP-33 are the production track's.
+- **Next: WP-33 part 4** (step 13 of `docs/migration/wave-1/WP-33-frontend-acceptance.md`): `e2e/perf/`, the `perf` project, `check-budgets.mjs`, `perf-budgets.json`. None of them exists. New branch from `main`, one PR; the six steps are in the specification's "Handoff", with two open points: the missing `docs/testing/wave-1-telegram-pass.md` and the 53 route interceptions of step 5 that were not re-checked. Then **WP-40**. Steps 14–17 of WP-33 are the production track's.
 - Reading order: `CLAUDE.md` (or `AGENTS.md`) → `HANDOFF.md` → `docs/migration/wave-1/README.md` (rules 1–8, the queue) → the WP-33 specification: "Performance budget", "As built", "Handoff".
 - **`chore/php-8.6` (`8464516`) is not the development track's work.** It is a WIP pushed without a PR: the PHP pin 8.5 → 8.6 (`composer.json`, both CI workflows, ADR-0004's amendment, CLAUDE.md, `docs/handoff`). `composer.lock` is not in it, nothing was run on it, and it starts at `ee33352`. The first developer decides on it (toolchain pin).
 - Verify: `make ci-frontend`; `scripts/dev/e2e-local.sh` (both projects); `make bundle-check`; from `frontend/`: `node app/scripts/e2e-coverage.mjs`.
@@ -31,7 +31,7 @@ Written for whoever continues the **development track**: from 2026-11-22 another
 2. **An explicit yes is still needed for:** e2e shards in CI; taking `gh pr merge` out of `ask`; the `/doctor` cleanup.
 3. **Production track:** the WAITING rows of the queue (the regular deploy; `CSP_TILE_HOSTS`, `CSP_PRIVATE_MEDIA_HOSTS`; `OWNER_CABINET_ENABLED` unset on the servers, DEC-81); WP-33 steps 14–17.
 4. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
-5. **On the previous machine only** (nothing to do on a fresh clone): KI-70, its PHP 8.6.0 has no `redis` extension; a modified `backend/composer.lock` in the working tree, never staged; the worktrees `.worktrees/php-8-6` and `.claude/worktrees/deps-update` (#26, merged), which their owner removes.
+5. **On the previous machine only** (nothing to do on a fresh clone): KI-70, narrowed on 2026-11-22: its PHP 8.6.0 now loads `redis` and `imagick` (`class_exists("Redis")` → `true`), while `main` still pins PHP 8.5; a modified `backend/composer.lock` in the working tree, never staged; the worktrees `.worktrees/php-8-6` and `.claude/worktrees/deps-update` (#26, merged), which their owner removes.
 
 ## Gotchas learned this session
 - A new machine: `backend/.env.example` leaves `OWNER_CABINET_ENABLED` empty; set it to `true` in the local `backend/.env` to see the owner cabinet. `e2e-local.sh` and CI set it themselves.

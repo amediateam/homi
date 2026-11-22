@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-22 (main a9e8955: WP-81 #107, WP-82 #108/#109, WP-83 #110, WP-33 parts 1–3 #111/#112/#113 merged; part 4 not started, no development branch open)
+updated: 2026-11-22 (main after #114, the handoff documents; the last code merge is #113 a9e8955: WP-81 #107, WP-82 #108/#109, WP-83 #110, WP-33 parts 1–3 #111/#112/#113 merged; part 4 not started, no development branch open)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 

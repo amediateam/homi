@@ -910,12 +910,26 @@ Part 3:
 
 Written on 2026-11-22: the package changes hands after part 3 (rule 4 of the queue).
 
-**Finished and merged.** Part 1 (#111, `61d78c6`), part 2 (#112, `27142e3`) and part 3 (#113, `a9e8955`): steps 1
-to 12. "As built" above says what each part ships and where it left the design.
+**Finished and merged.** Part 1 (#111, `61d78c6`), part 2 (#112, `27142e3`) and part 3 (#113, `a9e8955`). "As
+built" above says what each part ships and where it left the design. Step 13 is part 4. Steps 14 to 17 are the
+production track's.
 
 **Half-done.** Nothing. No branch is open, and part 4 has no file yet: `frontend/app/e2e/perf/`,
 `frontend/app/scripts/check-budgets.mjs`, `frontend/app/perf-budgets.json` and a `perf` project in
 `frontend/playwright.config.ts` do not exist.
+
+**Other planned files that do not exist** (`ls` on 2026-11-22):
+
+- `e2e/support/modes.ts` and `e2e/support/scenarios.ts` were not needed: both live in `@homi/testing` ("As built",
+  part 1).
+- `e2e/support/annotations.ts` was not written. The tests carry the screen annotation inline (197 annotations in 54
+  spec files).
+- `docs/testing/wave-1-telegram-pass.md` was not written. It is the record of "Pass inside Telegram", which step 15
+  fills. Add the empty record in part 4's PR, the last development PR of the package.
+
+**Not re-checked at the handoff.** Step 5 moves interception-based fakes to scenarios. 53 `page.route` or
+`context.route` calls remain in 24 spec files, and "As built" does not say which of them are meant to stay. Go
+through them in part 4 and record the rule in "As built".
 
 **Next step: part 4 (step 13),** on a new branch from `main`, one PR.
 
