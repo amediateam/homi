@@ -264,7 +264,10 @@ type MapViewProps = {
 ### Warm-up and tile prefetch (`features/map/MapWarmup.tsx`, `tilePrefetch.ts`)
 
 - On the list view, 2.5 s after it settles (timer reset when the address changes, cancelled on leaving): `warmMap()`
-  for the engine `pickEngine` would choose. A pointer-down on «Карта» in the view toggle calls `warmMap()` at once
+  for the engine `pickEngine` would choose. The list has settled once its first content was shown — the first card
+  photo (`lib/analytics/firstContent.ts`), or 8 s without one — and the 2.5 s start then; the timer had started at
+  the list's mount, so on a first launch over slow 4G the map's code went out before the first card (*changed by
+  WP-33 part 4, performance budget rows 2 and 3*). A pointer-down on «Карта» in the view toggle calls `warmMap()` at once
   (`ViewToggle`'s `onIntent`, passed by `AppShell`). Nothing runs with Save-Data or on `2g` / `slow-2g`. With no saved
   fit the view is the city centre at `zoom − 1`, so the data zoom is two below the city's (Tashkent 12 → z10).
 - Tile prefetch only for a `{z}/{x}/{y}` template: once per (template, city centre) per session; view = the saved
@@ -434,7 +437,8 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `MapSelectionCard.test.tsx`: single and stack layouts; a 7-listing stack requests indexes 0 and 1, then 2, 3, 4
   after a swipe to 3, and nothing twice; failed slot retry; external index scroll; both branches of
   `dev013BackClosesMapCard` with `withDevFlags`.
-- `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; cancelled on unmount before 2.5 s;
+- `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; the wait for the list's first content, 8 s
+  at most, under StrictMode and while `<Activity>` hides the list (*WP-33 part 4*); cancelled on unmount before 2.5 s;
   skipped with Save-Data.
 
 **End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium renders
@@ -499,7 +503,8 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] A forced GL failure is reported once and the next map open in the session does not retry GL.
 - [ ] Non-GL profile: `map.unavailable` with a working button back to the list.
 - [ ] `?map=gl`, `?map=leaflet`, `?map=auto` persist and clear the choice across launches.
-- [ ] After 2.5 s on the list the map opens without a chunk request; with Save-Data nothing was preloaded.
+- [ ] 2.5 s after the list's first content the map opens without a chunk request; with Save-Data nothing was preloaded
+      (*the first content added by WP-33 part 4*).
 - [ ] A label containing markup is shown as text; the ESLint rule fails on `innerHTML` in the map folders.
 - [ ] With `dev013BackClosesMapCard` on (test build), Back closes the card; off, Back is unchanged.
 - [ ] Inside Telegram on staging: iOS, Android, Desktop and Web each show the map (on GL or, since WP-28, on Leaflet).

@@ -1826,3 +1826,54 @@ search 245 + 1 todo, testing 95, api-client 16, utils 2) on the code of `78b7a4d
 refresher reports no change on the final tree.
 
 AM: none. Not done here: WP-38, then WP-39 and WP-31 (WP-37 any time); WP-62 and WP-61 at stage E.
+
+## AH. Development track, 2026-11-23 — WP-33 part 4, the performance budget
+
+**Why.** The developer, on 2026-11-23: «обнови гит и продолжим разработку по плану». `main` was fast-forwarded from
+`52dfc73` to `792afbd` (371 commits, `git pull --ff-only`); the queue's next work is part 4 of WP-33 (step 13), on
+`feat/wp-33-perf-budgets` from `origin/main`, PR #121.
+
+**Applied** (the specification's "As built", part 4, has the details):
+- the `perf` Playwright project (manual run only, DEC-100), `e2e/perf/{startup,chunks,scroll}.spec.ts`,
+  `e2e/support/perf.ts`, `app/perf-budgets.json`, `app/scripts/check-budgets.mjs` with its tests, two CI steps in
+  `frontend-e2e.yml`, `make perf`, and the empty record `docs/testing/wave-1-telegram-pass.md`;
+- a fix found by the budget: the map warm-up now waits for the list's first content (8 s at most) before its 2.5 s,
+  because on a throttled first launch it asked for about 313 KB of map code before the first card (WP-27 corrected);
+- the route-interception rule of step 7: 13 of the 22 fakes of an API answer stay by the rule, 9 are left for a
+  follow-up PR; none moved, no backend scenario added.
+
+Own choices (no ADR): markers in response bodies name a package or a screen (see AM-102); one JSON file per
+measurement under `test-results/perf/`, judged only by `check-budgets.mjs`; `samples` per row so a lost mode or
+locale fails; photos of the throttled rows answered by a route with a modelled delay (a fulfilled answer bypasses
+DevTools throttling: 4 ms measured).
+
+**The developer's decision.** DEC-103 (2026-11-23, `docs/migration/decisions/2026-11-23-developer-answers.md`):
+«Позже, перед шагами 14–15» — rows 7 to 9 keep the Mac's limits as `provisional` (reported, not judged) until the
+manual run before the pass inside Telegram; a small PR then writes the runner's values.
+
+ASSUMPTION_MISMATCH AM-102 (2026-11-23):
+- **Assumption.** WP-33 row 3: the chunk files that hold the map packages are taken from `next analyze --output`.
+- **What was found.** `next analyze` does not build the app (its CLI reference says so), and the chunk names in its
+  export are not those of `next build`: 1 of 95 client chunk names matched on the same tree.
+- **Resolution.** The specs look for a marker string per package in each script response's body, and every `@budget`
+  test proves its markers still match (per map engine, per screen, per locale). Corrected in the specification.
+
+ASSUMPTION_MISMATCH AM-103 (2026-11-23):
+- **Assumption.** WP-33 row 9 scrolls five feed pages.
+- **What was found.** The stub feed ends after 45 cards, 20 + 20 + 5 (`StubListingSource`); no scenario gives more.
+- **Resolution.** Row 9 scrolls the whole stub feed; a scenario for more pages would change the contract and was not
+  added. Corrected in the specification.
+
+Verified (from the repository root unless marked; local API on stubs at `HOMI_E2E_API_PORT=8090`, since nginx holds
+8080 on this machine):
+- `scripts/dev/e2e-local.sh app/e2e/perf/chunks.spec.ts --repeat-each 10` → 80 passed; after the review fixes
+  `--repeat-each 5` → 40 passed; `node app/scripts/check-budgets.mjs --runs pr` (in `frontend/app`) → rows 3–6 at 0.
+- `E2E_ANALYTICS=1 … app/e2e/perf/chunks.spec.ts app/e2e/analytics.spec.ts --repeat-each 3` → 30 passed; `--runs
+  analytics` → row 4 with a key at 0.
+- `make perf` → 24 passed and every row within its limit (twice; the second after the review fixes).
+- `… map.spec.ts map-leaflet.spec.ts map-lasso.spec.ts data.spec.ts --repeat-each 2` → 118 passed.
+- `pnpm exec vitest run --project app` → 271 files, 4 378 tests passed; `pnpm --filter app lint` and `typecheck` →
+  exit 0; `node app/scripts/e2e-coverage.mjs` → all 63 screens; `python3 scripts/migration/collect_ids.py --check` →
+  exit 0.
+- Review: two independent reviewers (code; warm-up and docs), no high; the medium findings fixed in `21e3995` and
+  `8a513d2`.
