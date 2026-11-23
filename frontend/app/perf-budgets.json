@@ -1,0 +1,111 @@
+{
+  "about": "The performance budget of the Mini App (WP-33 'Performance budget', docs/migration/wave-1/WP-33-frontend-acceptance.md). Each row: what is measured, the run that measures it (pr: every pull request, unthrottled, both session modes; perf: the manual run's throttled `perf` project, DEC-100; analytics: the analytics run, built with a PostHog key), the unit, how the run's values are taken (max, or p75 with the number of samples), the limit (strict: the value must stay under it), the rule the limit comes from, and the measured value with its date and machine. A timing limit holds only for the machine it was measured on, because the CPU factor is relative to the host. Checked by scripts/check-budgets.mjs after each run.",
+  "rows": {
+    "1": {
+      "budget": "JavaScript asked for until the feed works (first card visible, session ready), session present",
+      "run": "perf",
+      "unit": "bytes",
+      "aggregate": "max",
+      "limit": 301042,
+      "rule": "measured + 10 %",
+      "measured": 273674,
+      "date": "2026-11-23",
+      "where": "local stack (macOS, Apple Silicon), the build of NEXT_PUBLIC_APP_ENV=ci; compressed bytes (gzip of next start), 19 files"
+    },
+    "2": {
+      "budget": "JavaScript asked for until the first card, first launch (shell, sign-in, refresh)",
+      "run": "perf",
+      "unit": "bytes",
+      "aggregate": "max",
+      "limit": 301042,
+      "rule": "measured + 10 %",
+      "measured": 273674,
+      "date": "2026-11-23",
+      "where": "local stack (macOS, Apple Silicon), the build of NEXT_PUBLIC_APP_ENV=ci; compressed bytes, 19 files, no map code"
+    },
+    "3": {
+      "budget": "map code (MapLibre, Leaflet, PMTiles, supercluster, protomaps, the MapLibre worker) within 2 s of the feed's first card",
+      "run": "pr",
+      "unit": "bytes",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    },
+    "4": {
+      "budget": "PostHog code without a key, 9.5 s past the session",
+      "run": "pr",
+      "unit": "bytes",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    },
+    "4-key": {
+      "budget": "PostHog code with a key before the first card photo + 0.5 s",
+      "run": "analytics",
+      "unit": "bytes",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    },
+    "5": {
+      "budget": "code of the photo viewer, the filters and radar forms and the settings pages within 2 s of the feed's first card",
+      "run": "pr",
+      "unit": "files",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    },
+    "6": {
+      "budget": "messages of another locale in what a launch in ru, uz or en is sent",
+      "run": "pr",
+      "unit": "markers",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    },
+    "7": {
+      "budget": "first card photo loaded, relaunch with a session, throttled",
+      "run": "perf",
+      "unit": "ms",
+      "aggregate": "p75",
+      "samples": 20,
+      "limit": 1656,
+      "rule": "measured + 20 %",
+      "measured": 1380,
+      "date": "2026-11-23",
+      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20; provisional until the first manual run on GitHub's runner"
+    },
+    "8": {
+      "budget": "Largest Contentful Paint of the feed, the same relaunch",
+      "run": "perf",
+      "unit": "ms",
+      "aggregate": "p75",
+      "samples": 20,
+      "limit": 2500,
+      "rule": "2.5 s unless the first run says otherwise",
+      "measured": 1644,
+      "date": "2026-11-23",
+      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20, the first card's photo; provisional until the first manual run on GitHub's runner"
+    },
+    "9": {
+      "budget": "share of frame intervals over 28 ms while the whole stub feed (45 cards, three pages) scrolls by touch, CPU x 4, full graphics",
+      "run": "perf",
+      "unit": "share",
+      "aggregate": "max",
+      "limit": 0.2,
+      "strict": true,
+      "rule": "the app's own switch to lite mode (03 section 1.7)",
+      "measured": 0.007,
+      "date": "2026-11-23",
+      "where": "local stack (macOS, Apple Silicon, 10 cores); provisional until the first manual run on GitHub's runner"
+    },
+    "10": {
+      "budget": "map code asked for again when the map opens a second time",
+      "run": "perf",
+      "unit": "files",
+      "aggregate": "max",
+      "limit": 0,
+      "rule": "absolute"
+    }
+  }
+}

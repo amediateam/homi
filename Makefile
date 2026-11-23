@@ -6,7 +6,7 @@ SHELL := /bin/bash
 DEV := scripts/dev
 
 .PHONY: help dev-setup dev-start dev-stop dev-restart dev-status dev-logs dev-check dev-reset \
-        dev-hosts dev-certs dev-nginx dev-nginx-restart dev-storage registry registry-check ci-backend ci-frontend e2e bundle-check test-pgsql ai-sync ai-skills ai-hooks-test
+        dev-hosts dev-certs dev-nginx dev-nginx-restart dev-storage registry registry-check ci-backend ci-frontend e2e perf bundle-check test-pgsql ai-sync ai-skills ai-hooks-test
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -82,6 +82,11 @@ ci-frontend: ## Run the frontend CI gate locally (generated API types, lint, typ
 
 e2e: ## Run the Playwright suite (builds and starts app on :3001 unless E2E_BASE_URL is set)
 	@cd frontend && pnpm test:e2e
+
+# The throttled rows of the performance budget (WP-33, the manual run's `perf` project): an API on stubs of its own and a
+# fresh build, as CI runs them, then the check. Timing limits hold for the machine they were measured on (perf-budgets.json).
+perf: ## The performance budget's throttled project against a local API on stubs, then its check (WP-33; frees :3001 first)
+	@E2E_FULL=1 $(DEV)/e2e-local.sh --project perf && cd frontend/app && node scripts/check-budgets.mjs --runs perf
 
 # The server-only keys get distinctive values, so row 5 of the check also looks for values (WP-33).
 BUNDLE_CHECK_ENV = NEXT_PUBLIC_APP_ENV=production API_URL=https://api.bundle-check.invalid/api/v1 \

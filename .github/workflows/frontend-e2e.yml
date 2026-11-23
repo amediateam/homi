@@ -6,7 +6,8 @@ name: frontend-e2e
 # use the API behind nginx). A second run takes only the `@radars-off` tests, against a second API with radars switched
 # off (WP-30). Every run has two projects (WP-33, `frontend/playwright.config.ts`): cookie mode over every spec and
 # header mode over every test that does not name its mode (DEC-101). The manual run (`workflow_dispatch` with `full`,
-# no schedule: DEC-100) adds WebKit, desktop, Telegram 6.0, the uz/en render and the dark theme.
+# no schedule: DEC-100) adds WebKit, desktop, Telegram 6.0, the uz/en render, the dark theme and the throttled `perf`
+# project of the performance budget; each run is followed by the budget's check (WP-33).
 on:
   pull_request:
     paths:
@@ -18,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       full:
-        description: 'The manual run before a pass inside Telegram (DEC-100): the projects of other clients, the uz/en render and the dark theme'
+        description: 'The manual run before a pass inside Telegram (DEC-100): the projects of other clients, the uz/en render, the dark theme and the throttled performance budget'
         type: boolean
         default: false
 
@@ -123,6 +124,15 @@ jobs:
           # `@homi/testing/playwright` (or a spec's own route) answers them; nothing reaches the tile server.
           CSP_TILE_HOSTS: https://tile.openstreetmap.org
 
+      # The performance budget of WP-33 (`frontend/app/perf-budgets.json`, `frontend/app/scripts/check-budgets.mjs`): what
+      # the run above measured — rows 3 to 6 in every run, and in the manual run also the `perf` project's rows 1, 2 and 7
+      # to 10 — against the limits. Right after that run, because the next one empties `test-results/`. It prints every
+      # value it judged, so a new limit can be read from this step's log.
+      - name: Performance budget
+        env:
+          RUNS: ${{ inputs.full && 'pr,perf' || 'pr' }}
+        run: node app/scripts/check-budgets.mjs --runs "$RUNS"
+
       # Radars switched off (WP-30, DEC-51): `radars_enabled` of `GET /reference` is the API's configuration, not a stub
       # scenario, so a second API on stubs runs with `RADAR_CREATION_ENABLED=false`; the step variable overrides the
       # `true` of `.env`. It answers on another port from the same `.env` and database, and its log goes into the same
@@ -175,6 +185,10 @@ jobs:
           NEXT_PUBLIC_CDN_URL: https://cdn.homi.loc
           NEXT_PUBLIC_APP_ENV: ci
           NEXT_PUBLIC_API_URL: https://api.homi.loc/api/v1
+
+      # Row 4 of the performance budget with a key: no PostHog code before the first card photo plus 0.5 s (WP-33).
+      - name: Performance budget of the analytics build
+        run: node app/scripts/check-budgets.mjs --runs analytics
 
       # The bundle check of WP-33 (DEC-100: a step of this job): a build with `NEXT_PUBLIC_APP_ENV=production` must hold no
       # emulator, test double, gallery, scenario forwarding, server-only key or value, legacy key name, legacy brand or
