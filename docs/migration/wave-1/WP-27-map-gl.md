@@ -437,7 +437,8 @@ the selection, or entering drawing mode closes the card; the map sends no analyt
 - `MapSelectionCard.test.tsx`: single and stack layouts; a 7-listing stack requests indexes 0 and 1, then 2, 3, 4
   after a swipe to 3, and nothing twice; failed slot retry; external index scroll; both branches of
   `dev013BackClosesMapCard` with `withDevFlags`.
-- `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; cancelled on unmount before 2.5 s;
+- `MapWarmup.test.tsx`: nothing during render; one warm-up under StrictMode; the wait for the list's first content, 8 s
+  at most, under StrictMode and while `<Activity>` hides the list (*WP-33 part 4*); cancelled on unmount before 2.5 s;
   skipped with Save-Data.
 
 **End to end (`e2e/map.spec.ts`, fake Telegram, stubs, cookie mode and header mode).** Headless Chromium renders
@@ -502,7 +503,8 @@ Run in ru, uz, en and in light and dark; on a GL-capable profile and on a non-GL
 - [ ] A forced GL failure is reported once and the next map open in the session does not retry GL.
 - [ ] Non-GL profile: `map.unavailable` with a working button back to the list.
 - [ ] `?map=gl`, `?map=leaflet`, `?map=auto` persist and clear the choice across launches.
-- [ ] After 2.5 s on the list the map opens without a chunk request; with Save-Data nothing was preloaded.
+- [ ] 2.5 s after the list's first content the map opens without a chunk request; with Save-Data nothing was preloaded
+      (*the first content added by WP-33 part 4*).
 - [ ] A label containing markup is shown as text; the ESLint rule fails on `innerHTML` in the map folders.
 - [ ] With `dev013BackClosesMapCard` on (test build), Back closes the card; off, Back is unchanged.
 - [ ] Inside Telegram on staging: iOS, Android, Desktop and Web each show the map (on GL or, since WP-28, on Leaflet).

@@ -169,7 +169,8 @@ plan (same file); DEC-89 … DEC-94 on 2026-11-20, in the round of the intake of
 (`decisions/2026-11-20-developer-answers.md`); DEC-95 … DEC-97 on 2026-11-20, in the round of the intake of the
 legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 and DEC-99 on 2026-11-21, asked by WP-32 and
 WP-81 (`decisions/2026-11-21-developer-answers.md`); DEC-100 … DEC-102 on 2026-11-22, asked by WP-33 and at the
-handoff of the development track (`decisions/2026-11-22-developer-answers.md`).
+handoff of the development track (`decisions/2026-11-22-developer-answers.md`); DEC-103 on 2026-11-23, asked by part 4
+of WP-33 (`decisions/2026-11-23-developer-answers.md`).
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -245,6 +246,7 @@ handoff of the development track (`decisions/2026-11-22-developer-answers.md`).
 | DEC-100 | When the extra end-to-end runs of WP-33 start (2026-11-22) | Only by hand, through `workflow_dispatch` of `frontend-e2e.yml`, with no schedule: the projects of other clients (WebKit/iOS, desktop, Telegram 6.0, the uz/en render, the dark theme) and the performance run. Every PR gets only the cheap checks — the bundle check and the chunk rules of the performance budget (rows 3–6) — as steps of the existing e2e job. «По запросу, без расписания (Рекомендуется)» | — | WP-33 |
 | DEC-101 | How header mode runs in CI (2026-11-22) | In every PR, as WP-33's specification asks: the project `miniapp-header` runs every test that does not name its mode (a spec that loops over the two modes names it in the title and runs both in `miniapp-cookie`). Asked twice: the first answer («Полный — вручную, в PR — подмножество») rested on a wrong estimate of the cost, which is about 2 minutes, not a doubling. «Весь набор в каждом PR (Рекомендуется)» | — | WP-33 |
 | DEC-102 | When WP-40 starts, given that WP-33 waits for the production track after its part 4 (2026-11-22) | Right after part 4 of WP-33 is merged. WP-40 does not wait for steps 14–17 of WP-33 (staging, the pass inside Telegram), although rule 1 of the queue and "Exit to stage C" make a package wait for the ones it depends on. A defect that the pass finds is fixed ahead of the queue (step 16). «Сразу после части 4 (Рекомендуется)» | — | WP-33, WP-40 |
+| DEC-103 | Where the timing limits of WP-33's performance budget (rows 7–9) come from (2026-11-23) | From the first manual `full` run on GitHub's runner, done together with the run before the pass inside Telegram (steps 14–15), not from a run of its own; part 4 is merged with the values of the developer's Mac marked provisional, which the check prints but does not fail, and a small PR writes the runner's values. «Позже, перед шагами 14–15» | the manual run before steps 14–15 | WP-33 |
 
 ### 8.2 Questions
 

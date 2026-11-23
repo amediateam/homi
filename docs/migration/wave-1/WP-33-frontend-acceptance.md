@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS (parts 1 to 3 merged in #111, #112 and #113; part 4 not started: see "Handoff") |
+| Status | IN PROGRESS (parts 1 to 3 merged in #111, #112 and #113; part 4 in review, #121; then the manual run of DEC-103 and steps 14 to 17: see "Handoff") |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -292,7 +292,8 @@ New:
 - `frontend/app/e2e/support/{modes,scenarios,annotations,pages}.ts` (`pages.ts`: the list of addresses with the
   scenario each needs, shared by the passes)
 - `frontend/packages/testing/src/scenarios.ts`
-- `frontend/app/scripts/{e2e-coverage,check-bundle,check-budgets}.mjs`, `frontend/app/perf-budgets.json`
+- `frontend/app/scripts/{e2e-coverage,check-bundle,check-budgets}.mjs`, `frontend/app/perf-budgets.json`,
+  `frontend/app/e2e/support/perf.ts`, `frontend/app/tests/scripts/checkBudgets.test.ts` (*part 4*)
 - `docs/testing/wave-1-telegram-pass.md`
 
 Changed:
@@ -302,9 +303,11 @@ Changed:
 - `frontend/app/lib/api/server.ts`, `frontend/app/app/bff/[...path]/route.ts`, `frontend/app/app/bff/session/route.ts`,
   `frontend/app/lib/actions/run.ts` — only where a path does not forward the scenario cookie of WP-22
 - `.github/workflows/frontend-e2e.yml` (stub media, WebKit, the manual run of DEC-100, the check steps), `Makefile`
-  (`e2e`, new `bundle-check`) — shared files: announce them in the PR as `docs/handoff/parallel-work.md` asks
+  (`e2e`, new `bundle-check`, new `perf`) — shared files: announce them in the PR as `docs/handoff/parallel-work.md` asks
 - `docs/testing/verification-log.md`, `docs/migration/wave-1/README.md` (status), the specifications of owning
   packages where the acceptance corrected them
+- part 4's fix: `frontend/app/features/map/MapWarmup.tsx`, `frontend/app/lib/analytics/{firstContent,posthog}.ts`,
+  `frontend/app/tests/map/MapWarmup.test.tsx`, WP-27's warm-up text
 
 ## Steps
 
@@ -909,20 +912,23 @@ Part 3:
 - **Collapsed chrome.** After a scroll of the feed the chrome is mini, and a first tap on a tab or the view toggle only
   expands it. The journeys expand it before they press, as `feed-continuity.spec.ts` does.
 
-Part 4 (2026-11-23):
+Part 4 (2026-11-23; the step numbers below are those of the handoff of 2026-11-22, which this part replaced):
 
 - **The `perf` project** exists only in the manual run (`E2E_FULL=1`, DEC-100): `testDir` `e2e/perf/`, the tests tagged
-  `@perf`, cookie mode, the `android` profile, the 390 × 844 phone. Every other project leaves `@perf` out. Each test
-  throttles its own page through a DevTools session it keeps open: 562.5 ms of latency, 1 474.56 kbit/s down,
-  675 kbit/s up and the CPU four times slower — Lighthouse's mobile "slow 4G" as DevTools applies it to each request
-  (`e2e/support/perf.ts`). The profile is defined there, not measured. Probes on 2026-11-23: the throttling reaches
-  every request the guard's `**/*` route passes on and survives the `/` → `/ru` redirect; a CPU loop ran about 2×
-  slower on a 10-core Mac; Chromium then reports `effectiveType` `3g`.
-- **Where each row lives** (step 1 of the Handoff). `startup.spec.ts`: rows 1, 2, 7 and 8; rows 7 and 8 come from the
+  `@perf`, cookie mode, the `android` profile, the 390 × 844 phone, and no trace recording, which would add work to
+  the timed tests. Every other project leaves `@perf` out.
+  - Each test throttles its own page as its row asks, through a DevTools session it keeps open. Rows 1, 2, 7 and 8
+    take the whole profile: 562.5 ms of latency, 1 474.56 kbit/s down, 675 kbit/s up and the CPU four times slower.
+    That is Lighthouse's mobile "slow 4G" as DevTools applies it to each request (`e2e/support/perf.ts`). Row 9 takes
+    the CPU factor alone, and row 10 nothing.
+  - The profile is defined there, not measured. Probes on 2026-11-23: the throttling reaches every request the guard's
+    `**/*` route passes on and survives the `/` → `/ru` redirect; a CPU loop ran about 2× slower on a 10-core Mac;
+    Chromium then reports `effectiveType` `3g`.
+- **Where each row lives** (step 1). `startup.spec.ts`: rows 1, 2, 7 and 8; rows 7 and 8 come from the
   same 20 relaunches, one test per run, each in a fresh context. `chunks.spec.ts`: rows 3, 4 and 5 from one launch, row
   6 from one launch per locale, row 4 with a key, and row 10. `scroll.spec.ts`: row 9.
 - **How rows 3 to 6 reach a pull request** (step 2). They are `@budget` tests, which run unthrottled in
-  `miniapp-cookie` and `miniapp-header` in every run, so in both session modes. The workflow's step "Performance
+  `miniapp-cookie` and `miniapp-header` in the default run, so in both session modes. The workflow's step "Performance
   budget" runs `check-budgets.mjs --runs pr` right after the e2e run, and `--runs pr,perf` in the manual run. Row 4 with
   a key is an `@analytics` test, so it runs only in the analytics run, whose build has the fake key. The step
   "Performance budget of the analytics build" checks it with `--runs analytics`.
@@ -930,7 +936,11 @@ Part 4 (2026-11-23):
   judges them against `perf-budgets.json`. The check has to run right after each run, because Playwright empties
   `test-results/` at the start of the next one.
   - "Missing" is a row of the runs named by `--runs` that has no measurement (step 4). A row with `samples` also
-    needs that many. A measurement of a row the budget does not name fails.
+    needs that many: 2 for rows 3, 4, 5 and 4 with a key (both modes), 6 for row 6 (three locales in both modes), 20
+    for rows 7 and 8. So a mode or a locale that stops running is caught too. A measurement of a row the budget does
+    not name fails.
+  - A row marked `provisional` is reported, over its limit too, without failing (DEC-103): rows 7 to 9, whose limits
+    come from the developer's Mac until the first manual run on GitHub's runner.
   - The report prints every value, so a new limit can be read from the log of the run. `make perf` runs the
     `perf` project against an API of its own (`scripts/dev/e2e-local.sh`) and then the check.
 - **Deviation: row 3's method.** `next analyze --output` does not build the app, and the chunk names it reports are
@@ -942,7 +952,10 @@ Part 4 (2026-11-23):
   - The MapLibre worker files under `/maplibre/` count as map code. They are public files, not chunks. CSS is not
     scanned, because the first-load stylesheet holds Leaflet's class names.
   - Every `@budget` test proves its markers still find what they name, so a renamed string cannot make it pass empty:
-    - the map's code once the map opens;
+    - the map's code, package by package: once the map opens, the marker of every package of the engine it opened
+      (`maplibre-gl`, `pmtiles`, `supercluster` for GL; `leaflet`, `leaflet.markercluster`, `protomaps-leaflet`,
+      `pmtiles` for Leaflet) must match a chunk, and then the other engine is opened with `?map=` and proved the
+      same way; the worker's path does not count here;
     - each screen's code once its address loads (`/listing/<n>/photos`, `/filters`, `/radars/new`, `/settings`); the
       filters form and the radar forms share `filters-footer`;
     - its own locale's message in the launch's bodies.
@@ -950,7 +963,8 @@ Part 4 (2026-11-23):
   "Requested before the first card is visible" would then be a race with the parser. The moment is the first visible
   card with `html[data-session="ready"]`, so the page is hydrated and the feed works. Row 2's moment, on a first launch,
   is the first card itself, which comes after the sign-in. The page marks both moments with a `MutationObserver` from
-  an init script (`markMoments`).
+  an init script (`markMoments`). A script's send time is the browser's (`request.timing().startTime`), on the same
+  wall clock as the page's moments.
 - **Session present** means a relaunch: a first launch without throttling leaves the cookie, and then the page reloads
   throttled. Playwright turns the HTTP cache off while routes are set, and the guard always sets one, so the relaunch
   downloads every file again, as a cold start does.
@@ -962,6 +976,9 @@ Part 4 (2026-11-23):
   each answer waits the latency plus its bytes at the download rate, which models a CDN on slow 4G. Under the
   throttle the app takes the small photos (`.s.jpg`, about 2.7 KB), as a phone on `3g` would. The LCP element of every
   run was the first card's photo.
+  - A limit of the model: each photo waits as if it had the line to itself, so photos never share the bandwidth with
+    the scripts. With a session the photo is in the server's HTML, so row 7 mostly measures the document and the
+    photo's own transfer. The growth of the scripts shows in rows 1 and 2, not in row 7.
 - **Row 9's feed.** The stubs end after 45 cards (20 + 20 + 5), so the whole stub feed stands in for "five feed pages".
   Adding a scenario for it was left out because it would change the contract.
   - The scroll is real touch gestures (`Input.synthesizeScrollGesture`, 600 px at 1 200 px/s) until `[data-feed-end]`
@@ -972,11 +989,13 @@ Part 4 (2026-11-23):
     in the middle.
 - **Found and fixed: the map warm-up raced a first launch.** On a throttled first launch, the warm-up asked for about
   313 KB of map code (MapLibre's chunk alone is 283 KB compressed) 6.9 s after the navigation, before the first card
-  showed at 7.3 s. `MapWarmup` started its 2.5 s at the list's mount, while WP-27 says "2.5 s after it settles".
-  - It now waits first for the list's first content: the first card photo (`firstContent.ts`), or 8 s without one.
-    Then the 2.5 s start.
-  - The unit tests are in `tests/map/MapWarmup.test.tsx`; the two new timing tests fail on the old code.
-  - Row 2 has no map file since the fix. WP-27's text is corrected.
+  showed at 7.3 s. `MapWarmup` started its 2.5 s at the list's mount, as legacy counts 2.5 s on the list view.
+  - It now waits first for the list's first content: the first card photo (`firstContent.ts`, whose 8 s cap
+    `FIRST_CONTENT_WAIT_MS` the PostHog loader shares), or 8 s without one. Then the 2.5 s start. This changes WP-27's
+    rule, whose text says so.
+  - The unit tests are in `tests/map/MapWarmup.test.tsx`: the wait, the 8 s cap, StrictMode and a list hidden by
+    `<Activity>` while it waits. The timing tests fail on the old code.
+  - Row 2 has no map file since the fix.
 - **The first measurement** (2026-11-23; local stack, macOS on Apple Silicon with 10 cores, the build with
   `NEXT_PUBLIC_APP_ENV=ci`, the whole `perf` project with 24 tests in 2.4 min):
 
@@ -984,18 +1003,21 @@ Part 4 (2026-11-23):
   | --- | -------- | ---------------------------- |
   | 1 | 273 674 bytes (19 files) | 301 042 bytes (+10 %) |
   | 2 | 273 674 bytes (19 files, no map code) | 301 042 bytes (+10 %) |
-  | 3, 4, 5, 6, 10 | 0 in both session modes | 0 |
+  | 3, 4, 5, 6 | 0 in both session modes | 0 |
+  | 4 with a key (the analytics run) | 0: PostHog's files were asked for about 502 ms after the photo | 0 |
+  | 10 | 0 (the `perf` project, cookie mode) | 0 |
   | 7 | p75 1 380 ms of 20 | 1 656 ms (+20 %) |
   | 8 | p75 1 644 ms of 20 | 2 500 ms |
   | 9 | 0.7 % of 1 007 frames | under 20 % |
 
   - The feed's first load is 274 KB compressed. That replaces the 170 KB proposal of `10` §5.12.
-  - Rows 7 to 9 depend on the machine: CPU × 4 is relative to the host. Their values are provisional until the first
-    manual run on GitHub's runner, which judges them. Rows 1 and 2 count bytes of the same build, so they should not
-    depend on the machine.
-- **Route interceptions** (step 7 of the Handoff). On 2026-11-23 the specs have 53 `page.route` calls in 24 files,
-  and none of them is `context.route`. Part 4 adds two, both of class A: the PostHog host in `perf/chunks.spec.ts` and
-  `perfMedia`. The classes:
+  - Rows 7 to 9 depend on the machine: CPU × 4 is relative to the host. Their limits are `provisional` until the
+    first manual run on GitHub's runner, which is done with the run before the pass inside Telegram (DEC-103); a small
+    PR then writes the runner's values and drops the flag. Rows 1 and 2 count bytes of the same build, so they should
+    not depend on the machine.
+- **Route interceptions** (step 7). Before part 4 the specs had 53 `page.route` calls in 24 files (`main` on
+  2026-11-23), and none of them is `context.route`. Part 4 adds two, both of class A: the PostHog host in
+  `perf/chunks.spec.ts` and `perfMedia` in `e2e/support/perf.ts`. The classes:
 
   | Class | What the call does | Calls | Verdict |
   | ----- | ------------------ | ----- | ------- |
@@ -1019,31 +1041,30 @@ Part 4 (2026-11-23):
   mode makes on the server holds only in header mode.
 
   The 22 calls of class D, each with its reason:
-  - **Kept by the rule (10).**
+  - **Kept by the rule (13).**
+    - Rule 2, one refusal among requests a scenario would refuse together: `feed:378` and `gates:328`
+      (`unauthenticated` would also refuse the sign-in), and `feed:541` (a 500 the stub does not send, then one
+      refused page while `forbidden` would refuse every request of the window). `feed:378` and `gates:328` are
+      header-only, and journey 6 proves the same state in both modes.
     - Rule 5, the sign-in's refusals: `feed:167`, `gates:55`, `gates:299`, `session:75`.
     - Rule 6, map geometry: `map:458`, `map:491`, `map-leaflet:520`, `map-leaflet:695`, `map-leaflet:903`.
     - Rule 6, the radar just created: `radar-subscribe:362`.
-  - **Not moved yet (12).** Part 4 added no backend scenario, and none of these could move with its meaning unchanged.
-    - These need a new scenario, which is a contract change:
+  - **Not moved yet (9).** Part 4 added no backend scenario, and none of these could move with its meaning unchanged.
+    - A new scenario, which is a contract change of WP-12 or WP-13 and their fixtures:
       - a "no radars" answer for the radar list alone: `feed-radar:109`, `return-nudge:154`, `radar-subscribe:246`.
-        `empty` also empties the feed, and those tests wait for cards.
-      - an empty map: `map:554`, `map-leaflet:593`;
+        `empty` also empties the feed, and those tests wait for cards;
       - listing radii: `spot-map:626`, which would then also run in cookie mode.
-    - These have a scenario whose answer differs from the fake's:
-      - `new_one` answers 1, while the fake answers 3: `feed-continuity:60`;
-      - `page2_error` answers 503 and `forbidden` refuses every request of the window, while the fake answers 500 and
-        refuses one request: `feed:541`;
-      - `unauthenticated` also refuses the sign-in: `feed:378` and `gates:328`. Both are header-only, and journey 6
-        already proves the same state in both modes.
-    - A `deal=rent_daily` search may give the note's state without a fake, by the code (not run): `map:571`,
-      `map-leaflet:611`.
+    - An existing scenario whose answer differs: `new_one` answers 1 where the fake answers 3 (`feed-continuity:60`);
+      the test's text changes with it, or it reads the stub's default count as `return-nudge.spec.ts` does.
+    - Possibly no fake at all, by the code (not run): a search that matches nothing may give the empty map
+      (`map:554`, `map-leaflet:593`), and a `deal=rent_daily` search the note's state (`map:571`,
+      `map-leaflet:611`).
 
-    These twelve are a small follow-up PR of the development track, with the scenarios added to WP-12 and WP-13 and
-    their fixtures.
+    These nine are a small follow-up PR of the development track.
 - **What part 4 leaves to steps 14 to 17:** the statements that need staging, Telegram or the closed package. Also:
-  - the first manual run on GitHub's runner, which judges rows 7 to 9 and gives their limits;
-  - the five runs in a row on `main` (Handoff step 9).
-- The empty record of the pass inside Telegram is `docs/testing/wave-1-telegram-pass.md` (step 6 of the Handoff).
+  - the first manual run on GitHub's runner, which judges rows 7 to 9 and gives their limits (DEC-103);
+  - the five runs in a row on `main` (step 9).
+- The empty record of the pass inside Telegram is `docs/testing/wave-1-telegram-pass.md` (step 6).
 
 ## Handoff
 
@@ -1061,27 +1082,26 @@ Updated on 2026-11-23, when part 4 was finished.
 inline.
 
 **Next, in this order.**
-1. **Rows 7 to 9 on GitHub's runner.** Their limits were measured on a developer's Mac, and CPU × 4 is relative to the
-   host. One manual run with `full` gives the runner's values (`gh workflow run frontend-e2e.yml --ref <branch> -f
-   full=true`); it spends Actions minutes, so it waits for the developer's word. The step "Performance budget" prints
-   every value. Write the measured value and the rule's limit of rows 7 and 8 into `perf-budgets.json`. Row 9 stays
-   under 20 %. A runner that cannot keep row 9 under 20 % is a finding for the developer, not a limit to raise. Rows 1
-   and 2 should match the local values; a difference means the builds differ.
-2. **Five runs in a row on `main`** after part 4 is merged, of the pull-request projects on the local stack
+1. **Five runs in a row on `main`** after part 4 is merged, of the pull-request projects on the local stack
    (`scripts/dev/e2e-local.sh`; `HOMI_E2E_API_PORT` when 8080 is taken). One whole run took 25.3 minutes for 919
    tests (#113). Record the result in the next PR of the queue.
+2. **Rows 7 to 9 on GitHub's runner** (DEC-103), with the manual run before the pass inside Telegram: `gh workflow
+   run frontend-e2e.yml --ref main -f full=true`. Their limits come from a developer's Mac, and CPU × 4 is relative to
+   the host, so they are `provisional`: the step "Performance budget" prints them without failing. A small PR writes
+   the runner's p75 of rows 7 and 8 with the rule's headroom, keeps row 9 under 20 %, and drops `provisional`. A
+   runner that cannot keep row 9 under 20 % is a finding for the developer, not a limit to raise. Rows 1 and 2 should
+   match the local values; a difference means the builds differ.
 3. **Steps 14 and 15** with the production track: staging, then the pass inside Telegram, recorded in
    `docs/testing/wave-1-telegram-pass.md` and the verification log. What they find comes back as step 16, and step 17
    closes the package.
-4. **The twelve class-D interceptions** of "As built", part 4: a small follow-up PR, which adds their scenarios to
-   WP-12 and WP-13 and the fixtures.
+4. **The nine class-D interceptions** of "As built", part 4: a small follow-up PR.
 
 **WP-40 starts right after part 4 is merged (DEC-102).** It does not wait for steps 14 to 17, although rule 1 of the
 queue and "Exit to stage C" would make it wait until this package is `DONE`. A defect that the pass inside Telegram
 finds is fixed ahead of the queue (step 16).
 
 **Decisions.**
-- The developer's: DEC-100, DEC-101 and DEC-102.
+- The developer's: DEC-100, DEC-101, DEC-102 and DEC-103.
 - The choices made while building: the deviations in "As built" and the descriptions of #111, #112, #113 and part 4's
   PR.
 
