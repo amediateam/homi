@@ -264,7 +264,10 @@ type MapViewProps = {
 ### Warm-up and tile prefetch (`features/map/MapWarmup.tsx`, `tilePrefetch.ts`)
 
 - On the list view, 2.5 s after it settles (timer reset when the address changes, cancelled on leaving): `warmMap()`
-  for the engine `pickEngine` would choose. A pointer-down on «Карта» in the view toggle calls `warmMap()` at once
+  for the engine `pickEngine` would choose. The list has settled once its first content was shown — the first card
+  photo (`lib/analytics/firstContent.ts`), or 8 s without one — and the 2.5 s start then; the timer had started at
+  the list's mount, so on a first launch over slow 4G the map's code went out before the first card (*changed by
+  WP-33 part 4, performance budget rows 2 and 3*). A pointer-down on «Карта» in the view toggle calls `warmMap()` at once
   (`ViewToggle`'s `onIntent`, passed by `AppShell`). Nothing runs with Save-Data or on `2g` / `slow-2g`. With no saved
   fit the view is the city centre at `zoom − 1`, so the data zoom is two below the city's (Tashkent 12 → z10).
 - Tile prefetch only for a `{z}/{x}/{y}` template: once per (template, city centre) per session; view = the saved

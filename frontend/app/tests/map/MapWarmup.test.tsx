@@ -21,7 +21,8 @@ vi.mock("@/features/map/tilePrefetch", async (importOriginal) => ({
   prefetchTiles: state.prefetchTiles,
 }));
 
-import { MapWarmup, WARMUP_DELAY_MS } from "@/features/map/MapWarmup";
+import { FIRST_CONTENT_WAIT_MS, MapWarmup, WARMUP_DELAY_MS } from "@/features/map/MapWarmup";
+import { markFirstContent, resetFirstContent } from "@/lib/analytics/firstContent";
 import { resetReference } from "@/lib/reference/useReference";
 
 import { cityOf, feedReference } from "../helpers/reference";
@@ -36,6 +37,13 @@ function stubConnection(values: { saveData?: boolean; effectiveType?: string }):
 
 const wait = (ms: number) => act(() => vi.advanceTimersByTime(ms));
 
+/** Renders `ui` and lets the wait for the first content settle (it was shown already, unless a test forgets it). */
+async function mount(ui: React.ReactElement) {
+  const view = render(ui);
+  await act(async () => {});
+  return view;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   state.pathname = "/";
@@ -47,12 +55,15 @@ beforeEach(() => {
   state.prefetchTiles.mockResolvedValue({ tiles: 0, bytes: 0 });
   window.localStorage.clear();
   feedReference({ cities: [cityOf(), SAMARKAND] });
+  // The list's first photo has loaded: the 2.5 s run from the mount.
+  markFirstContent();
 });
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   resetReference();
+  resetFirstContent();
   document.documentElement.classList.remove("lite");
   delete (navigator as Navigator & { connection?: unknown }).connection;
 });
@@ -70,7 +81,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
   });
 
   it("warms the engine the map will pick 2.5 s after the list settles, once under StrictMode", async () => {
-    render(
+    await mount(
       <StrictMode>
         <MapWarmup />
       </StrictMode>,
@@ -89,7 +100,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
   });
 
   it("a new search restarts the wait", async () => {
-    const view = render(<MapWarmup />);
+    const view = await mount(<MapWarmup />);
     await wait(2_000);
 
     state.search = "city=tashkent&deal=sale";
@@ -102,7 +113,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
   });
 
   it("leaving the list before 2.5 s cancels it", async () => {
-    const view = render(<MapWarmup />);
+    const view = await mount(<MapWarmup />);
     await wait(2_000);
 
     view.unmount();
@@ -115,7 +126,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
   it.each([{ saveData: true }, { effectiveType: "2g" }, { effectiveType: "slow-2g" }])("does nothing with %o", async (connection) => {
     stubConnection(connection);
     feedReference({ cities: [cityOf()], reference: { map: { tiles_url: TEMPLATE } } });
-    render(<MapWarmup />);
+    await mount(<MapWarmup />);
 
     await wait(10 * WARMUP_DELAY_MS);
 
@@ -125,7 +136,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
 
   it("a failed warm-up is swallowed", async () => {
     state.warmMap.mockRejectedValue(new Error("chunk"));
-    render(<MapWarmup />);
+    await mount(<MapWarmup />);
 
     await wait(WARMUP_DELAY_MS);
     await act(async () => {});
@@ -138,7 +149,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
     feedReference({ cities: [cityOf(), SAMARKAND], reference: { map: { tiles_url: TEMPLATE } } });
     document.documentElement.classList.add("lite");
     stubConnection({ effectiveType: "4g" });
-    const view = render(<MapWarmup />);
+    const view = await mount(<MapWarmup />);
 
     await wait(WARMUP_DELAY_MS);
 
@@ -163,7 +174,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
     ["a .pmtiles file", "https://media.test/basemap.pmtiles"],
   ] as const)("%s tiles warm the code only", async (_name, tiles) => {
     feedReference({ cities: [cityOf()], reference: { map: { tiles_url: tiles } } });
-    render(<MapWarmup />);
+    await mount(<MapWarmup />);
 
     await wait(WARMUP_DELAY_MS);
 
@@ -174,7 +185,7 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
   it("a city reference data does not know prefetches nothing, not Tashkent's tiles", async () => {
     state.search = "city=bukhara";
     feedReference({ cities: [cityOf(), SAMARKAND], reference: { map: { tiles_url: TEMPLATE } } });
-    render(<MapWarmup />);
+    await mount(<MapWarmup />);
 
     await wait(WARMUP_DELAY_MS);
 
@@ -184,11 +195,50 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
 
   it("reference data that did not load prefetches nothing", async () => {
     feedReference({ reference: null });
-    render(<MapWarmup />);
+    await mount(<MapWarmup />);
 
     await wait(WARMUP_DELAY_MS);
 
     expect(state.warmMap).toHaveBeenCalledTimes(1);
     expect(state.prefetchTiles).not.toHaveBeenCalled();
+  });
+
+  it("waits for the list's first content, then 2.5 s", async () => {
+    resetFirstContent();
+    await mount(<MapWarmup />);
+
+    await wait(2 * WARMUP_DELAY_MS);
+    expect(state.warmMap).not.toHaveBeenCalled();
+
+    await act(async () => markFirstContent());
+    await wait(WARMUP_DELAY_MS - 1);
+    expect(state.warmMap).not.toHaveBeenCalled();
+
+    await wait(1);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("a list that shows no first content starts the 2.5 s after 8 s", async () => {
+    resetFirstContent();
+    await mount(<MapWarmup />);
+
+    await wait(FIRST_CONTENT_WAIT_MS);
+    await act(async () => {});
+    await wait(WARMUP_DELAY_MS - 1);
+    expect(state.warmMap).not.toHaveBeenCalled();
+
+    await wait(1);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaving the list while it waits for the first content warms nothing", async () => {
+    resetFirstContent();
+    const view = await mount(<MapWarmup />);
+
+    view.unmount();
+    await act(async () => markFirstContent());
+    await wait(10 * WARMUP_DELAY_MS);
+
+    expect(state.warmMap).not.toHaveBeenCalled();
   });
 });
