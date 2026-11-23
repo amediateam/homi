@@ -1876,4 +1876,9 @@ Verified (from the repository root unless marked; local API on stubs at `HOMI_E2
   exit 0; `node app/scripts/e2e-coverage.mjs` → all 63 screens; `python3 scripts/migration/collect_ids.py --check` →
   exit 0.
 - Review: two independent reviewers (code; warm-up and docs), no high; the medium findings fixed in `21e3995` and
-  `8a513d2`.
+  `8a513d2`. Round 2 over `94a3da7..909fb7f`: nothing at medium or above; its three lows are WP-33 Handoff item 5.
+- CI of `909fb7f`: `ci` pass, `e2e` pass, 927 passed in 26.7 min, "Performance budget" rows 3–6 at 0, the analytics
+  run 10 passed with its budget step (runs 45107265847, 45107265874).
+
+Merged on the developer's word («сливай #121 и все что осталось!») as #121 (`a27b277`, 2026-11-23). The development
+track passes to a colleague; WP-40 is next.

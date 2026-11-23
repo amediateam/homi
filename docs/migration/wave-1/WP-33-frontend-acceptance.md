@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | B |
-| Status | IN PROGRESS (parts 1 to 3 merged in #111, #112 and #113; part 4 in review, #121; then the manual run of DEC-103 and steps 14 to 17: see "Handoff") |
+| Status | WAITING (parts 1 to 4 merged in #111, #112, #113 and #121; the five runs on `main`, the manual run of DEC-103 and steps 14 to 17 remain: see "Handoff") |
 | Depends on | WP-24 … WP-32, WP-34 … WP-39 (WP-39 *added by the intake of `index-YX9bFVws.js`*), WP-80 … WP-83 (*added by the owner-cabinet plan*) |
 | Size | ≈ 2 600 changed lines (specs, fixtures, check scripts, the pass record; product code only as fixes), L |
 | Behaviour reference | `25` §9 (acceptance, test layers, definition of done), §14; `24` §8.3 (RK-27, RK-30, RK-31); `03` §2, §4, §5, §5b and `data/screens.json`; `05` §1, §3.2; the specifications WP-20 … WP-32; task files KV-FE-170 (suite shape, fake Telegram, version matrix), KV-FE-173 (budgets), KV-FE-174 and KV-QA-022 (device pass) — test ideas and constants only. KV-FE-171 (pixel comparison with legacy) and KV-FE-172 (request comparison with the legacy client) are not carried: DEC-46 asks for functional parity and no legacy client ever talks to HOMI |
@@ -994,7 +994,8 @@ Part 4 (2026-11-23; the step numbers below are those of the handoff of 2026-11-2
     `FIRST_CONTENT_WAIT_MS` the PostHog loader shares), or 8 s without one. Then the 2.5 s start. This changes WP-27's
     rule, whose text says so.
   - The unit tests are in `tests/map/MapWarmup.test.tsx`: the wait, the 8 s cap, StrictMode and a list hidden by
-    `<Activity>` while it waits. The timing tests fail on the old code.
+    `<Activity>` while it waits. The tests of the wait and of the 8 s cap fail on the old code; the `<Activity>` and
+    StrictMode tests pin the new code's behaviour and would also pass on the old one.
   - Row 2 has no map file since the fix.
 - **The first measurement** (2026-11-23; local stack, macOS on Apple Silicon with 10 cores, the build with
   `NEXT_PUBLIC_APP_ENV=ci`, the whole `perf` project with 24 tests in 2.4 min):
@@ -1072,9 +1073,10 @@ Updated on 2026-11-23, when part 4 was finished.
 
 **Finished.**
 - Part 1 (#111, `61d78c6`), part 2 (#112, `27142e3`) and part 3 (#113, `a9e8955`) are merged.
-- Part 4 (step 13) is on `feat/wp-33-perf-budgets`: the `perf` project, `e2e/perf/`, `e2e/support/perf.ts`,
-  `perf-budgets.json`, `check-budgets.mjs` with its tests, the CI steps, `make perf`, the warm-up fix and the record of
-  the pass inside Telegram.
+- Part 4 (step 13) is merged as #121 (`a27b277`, 2026-11-23): the `perf` project, `e2e/perf/`,
+  `e2e/support/perf.ts`, `perf-budgets.json`, `check-budgets.mjs` with its tests, the CI steps, `make perf`, the
+  warm-up fix and the record of the pass inside Telegram. CI of its last commit: `ci` pass, `e2e` pass (927 passed;
+  runs 45107265847, 45107265874). Two review rounds; the second found nothing at medium or above.
 - "As built" says what each part ships and where it left the design.
 
 **Planned files that do not exist, on purpose.** `e2e/support/modes.ts` and `e2e/support/scenarios.ts` live in
@@ -1086,8 +1088,9 @@ inline.
    (`scripts/dev/e2e-local.sh`; `HOMI_E2E_API_PORT` when 8080 is taken). One whole run took 25.3 minutes for 919
    tests (#113). Record the result in the next PR of the queue.
 2. **Rows 7 to 9 on GitHub's runner** (DEC-103), with the manual run before the pass inside Telegram: `gh workflow
-   run frontend-e2e.yml --ref main -f full=true`. Their limits come from a developer's Mac, and CPU × 4 is relative to
-   the host, so they are `provisional`: the step "Performance budget" prints them without failing. A small PR writes
+   run frontend-e2e.yml --ref main -f full=true`. The limits of rows 7 and 8 and the measured value of row 9 come from
+   a developer's Mac (row 9's 20 % is the app's own lite rule), and CPU × 4 is relative to the host, so the three rows
+   are `provisional`: the step "Performance budget" prints them without failing. A small PR writes
    the runner's p75 of rows 7 and 8 with the rule's headroom, keeps row 9 under 20 %, and drops `provisional`. A
    runner that cannot keep row 9 under 20 % is a finding for the developer, not a limit to raise. Rows 1 and 2 should
    match the local values; a difference means the builds differ.
@@ -1095,6 +1098,13 @@ inline.
    `docs/testing/wave-1-telegram-pass.md` and the verification log. What they find comes back as step 16, and step 17
    closes the package.
 4. **The nine class-D interceptions** of "As built", part 4: a small follow-up PR.
+5. **The lows of part 4's second review**, for any small PR of the development track:
+   - `scripts/migration/collect_ids.py` matches `DEC-` and `RK-` with two digits only, so DEC-100 … DEC-103 are
+     neither indexed in `ids.csv` nor checked; `\d{2,3}` fixes it (tried on a copy: `--check` exits 0).
+   - `check-budgets.mjs` has no test of its entry point: a guard that evaluated false would exit 0 with no output.
+     A test that runs it through a symlink, or a CI step that requires the `check-budgets:` line, closes it.
+   - The proof of the second map engine in `perf/chunks.spec.ts` counts markers from both launches, so its `pmtiles`
+     is satisfied by the GL chunks; count only the scripts after the relaunch.
 
 **WP-40 starts right after part 4 is merged (DEC-102).** It does not wait for steps 14 to 17, although rule 1 of the
 queue and "Exit to stage C" would make it wait until this package is `DONE`. A defect that the pass inside Telegram
