@@ -1,5 +1,5 @@
 import { act, cleanup, render } from "@testing-library/react";
-import { StrictMode } from "react";
+import { Activity, StrictMode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,8 +21,8 @@ vi.mock("@/features/map/tilePrefetch", async (importOriginal) => ({
   prefetchTiles: state.prefetchTiles,
 }));
 
-import { FIRST_CONTENT_WAIT_MS, MapWarmup, WARMUP_DELAY_MS } from "@/features/map/MapWarmup";
-import { markFirstContent, resetFirstContent } from "@/lib/analytics/firstContent";
+import { MapWarmup, WARMUP_DELAY_MS } from "@/features/map/MapWarmup";
+import { FIRST_CONTENT_WAIT_MS, markFirstContent, resetFirstContent } from "@/lib/analytics/firstContent";
 import { resetReference } from "@/lib/reference/useReference";
 
 import { cityOf, feedReference } from "../helpers/reference";
@@ -231,14 +231,62 @@ describe("MapWarmup (WP-27 'Warm-up and tile prefetch', LB-APP-018)", () => {
     expect(state.warmMap).toHaveBeenCalledTimes(1);
   });
 
-  it("leaving the list while it waits for the first content warms nothing", async () => {
+  it("under StrictMode, a list that waits for its first content warms the map once, 2.5 s after it", async () => {
     resetFirstContent();
-    const view = await mount(<MapWarmup />);
+    await mount(
+      <StrictMode>
+        <MapWarmup />
+      </StrictMode>,
+    );
+    await wait(2 * WARMUP_DELAY_MS);
+    expect(state.warmMap).not.toHaveBeenCalled();
 
-    view.unmount();
+    await act(async () => markFirstContent());
+    await wait(WARMUP_DELAY_MS);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+
+    await wait(10 * WARMUP_DELAY_MS);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("a list hidden while it waits (cacheComponents' Activity) warms nothing; shown again, it waits its 2.5 s", async () => {
+    resetFirstContent();
+    const view = await mount(
+      <Activity mode="visible">
+        <MapWarmup />
+      </Activity>,
+    );
+    view.rerender(
+      <Activity mode="hidden">
+        <MapWarmup />
+      </Activity>,
+    );
     await act(async () => markFirstContent());
     await wait(10 * WARMUP_DELAY_MS);
-
     expect(state.warmMap).not.toHaveBeenCalled();
+
+    view.rerender(
+      <Activity mode="visible">
+        <MapWarmup />
+      </Activity>,
+    );
+    await act(async () => {});
+    await wait(WARMUP_DELAY_MS - 1);
+    expect(state.warmMap).not.toHaveBeenCalled();
+    await wait(1);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("a new search while the list waits for its first content starts no timer of its own", async () => {
+    resetFirstContent();
+    const view = await mount(<MapWarmup />);
+    state.search = "city=tashkent&deal=sale";
+    view.rerender(<MapWarmup />);
+    await wait(2 * WARMUP_DELAY_MS);
+    expect(state.warmMap).not.toHaveBeenCalled();
+
+    await act(async () => markFirstContent());
+    await wait(WARMUP_DELAY_MS);
+    expect(state.warmMap).toHaveBeenCalledTimes(1);
   });
 });

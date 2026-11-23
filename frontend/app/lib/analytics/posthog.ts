@@ -2,7 +2,7 @@ import type { CaptureResult, PostHog, PostHogConfig } from "posthog-js";
 
 import { reportError, setRenderHook } from "@/lib/errors/report";
 
-import { whenFirstContent } from "./firstContent";
+import { FIRST_CONTENT_WAIT_MS, whenFirstContent } from "./firstContent";
 import { scrubText, stripUrl } from "./scrub";
 
 /**
@@ -35,8 +35,8 @@ export type AnalyticsConfig = {
 
 type Connection = { saveData?: boolean; effectiveType?: string };
 
-/** Load 500 ms after the first content, or after 8 s without one. */
-export const FIRST_CONTENT_WAIT_MS = 8000;
+/** Load 500 ms after the first content, or after `FIRST_CONTENT_WAIT_MS` (8 s) without one. */
+export { FIRST_CONTENT_WAIT_MS };
 export const AFTER_CONTENT_MS = 500;
 
 let started = false;

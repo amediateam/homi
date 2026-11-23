@@ -85,7 +85,7 @@ e2e: ## Run the Playwright suite (builds and starts app on :3001 unless E2E_BASE
 
 # The throttled rows of the performance budget (WP-33, the manual run's `perf` project): an API on stubs of its own and a
 # fresh build, as CI runs them, then the check. Timing limits hold for the machine they were measured on (perf-budgets.json).
-perf: ## The performance budget's throttled project against a local API on stubs, then its check (WP-33; frees :3001 first)
+perf: ## The performance budget's throttled project against a local API on stubs, then its check (WP-33; needs :3001 free)
 	@E2E_FULL=1 $(DEV)/e2e-local.sh --project perf && cd frontend/app && node scripts/check-budgets.mjs --runs perf
 
 # The server-only keys get distinctive values, so row 5 of the check also looks for values (WP-33).

@@ -14,6 +14,7 @@ const BUDGETS = {
     "4-key": { budget: "PostHog code before the first content", run: "analytics", unit: "bytes", aggregate: "max", limit: 0 },
     "7": { budget: "first card photo", run: "perf", unit: "ms", aggregate: "p75", limit: 1_500, samples: 4 },
     "9": { budget: "frames over 28 ms", run: "perf", unit: "share", aggregate: "max", limit: 0.2, strict: true },
+    "8": { budget: "largest paint", run: "perf", unit: "ms", aggregate: "max", limit: 2_500, provisional: true },
   },
 };
 
@@ -66,6 +67,7 @@ describe("check-budgets.mjs (WP-33 'Performance budget')", () => {
       measure("7", value);
     }
     measure("1", 900);
+    measure("8", 1_000);
     measure("9", 0.1);
 
     expect(check(["perf"]).findings).toEqual([]);
@@ -74,6 +76,7 @@ describe("check-budgets.mjs (WP-33 'Performance budget')", () => {
     rmSync(join(dir, "perf"), { recursive: true });
     mkdirSync(join(dir, "perf"));
     measure("1", 900);
+    measure("8", 1_000);
     measure("9", 0.1);
     measure("7", 1_000);
     expect(check(["perf"]).findings).toEqual(["row 7 (first card photo): 1 of 4 samples — the perf run takes 4"]);
@@ -81,6 +84,7 @@ describe("check-budgets.mjs (WP-33 'Performance budget')", () => {
 
   it("holds a strict limit as 'under': the limit itself fails", () => {
     measure("1", 900);
+    measure("8", 1_000);
     measure("9", 0.2);
     for (const value of [1, 2, 3, 4]) {
       measure("7", value);
@@ -101,6 +105,21 @@ describe("check-budgets.mjs (WP-33 'Performance budget')", () => {
   it("reads no measurements from a folder a run never wrote", () => {
     expect(readMeasurements(join(dir, "nothing"))).toEqual([]);
     expect(check(["pr"]).findings).toEqual(["row 3 (map code on the feed): missing — the pr run measures it"]);
+  });
+
+  it("reports a provisional row over its limit without failing; a missing one still fails (DEC-103)", () => {
+    measure("1", 900);
+    measure("9", 0.1);
+    for (const value of [1, 2, 3, 4]) {
+      measure("7", value);
+    }
+
+    expect(check(["perf"]).findings).toEqual(["row 8 (largest paint): missing — the perf run measures it"]);
+
+    measure("8", 4_000);
+    const { findings, report } = check(["perf"]);
+    expect(findings).toEqual([]);
+    expect(report).toContain("over row 8 (largest paint): 4000 ms; limit 2500 ms (provisional limit: reported, not judged)");
   });
 
   it("takes the nearest-rank percentile", () => {

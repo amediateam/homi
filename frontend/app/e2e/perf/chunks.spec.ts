@@ -25,6 +25,26 @@ const LISTING = 100001;
 const visible = (page: Page, selector: string) => page.locator(selector).filter({ visible: true });
 const origin = () => new URL(test.info().project.use.baseURL ?? "http://localhost:3001").origin;
 
+type Engine = "gl" | "leaflet";
+/** The packages each map engine loads (`features/map/gl/library.ts`, `leaflet/library.ts`, `useClusterIndex`). */
+const ENGINE_PACKAGES: Record<Engine, string[]> = {
+  gl: ["maplibre-gl", "pmtiles", "supercluster"],
+  leaflet: ["leaflet", "leaflet.markercluster", "protomaps-leaflet", "pmtiles"],
+};
+
+/** Waits until the chunks logged so far hold the marker of every package `engine` loads (not the worker's path). */
+async function expectPackages(log: ReturnType<typeof scriptLog>, engine: Engine): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const found = new Set((await log.scripts()).filter((script) => !script.path.startsWith("/maplibre/")).flatMap((script) => script.map));
+        return ENGINE_PACKAGES[engine].filter((name) => !found.has(name));
+      },
+      { timeout: API_MS, message: `the markers of the ${engine} engine's packages match its chunks` },
+    )
+    .toEqual([]);
+}
+
 /** Launches on the feed and waits for the session and the first card. */
 async function openFeed(page: Page, path = "/", locale?: "ru" | "uz" | "en"): Promise<void> {
   await launchApp(page, { path, ...(locale === undefined ? {} : { locale }) });
@@ -65,10 +85,14 @@ test.describe("first load of the feed @budget", () => {
     );
     recordMeasurement(test.info(), "5", screens.length, { files: screens });
 
-    // The markers still find the map's code: it loads once the map opens.
+    // The markers still find the map's code, package by package: the engine the toggle opens, then the other one.
     await visible(page, "[data-view-toggle]").click();
-    await expect(visible(page, "[data-map-view]")).toBeVisible({ timeout: API_MS });
-    await expect.poll(async () => (await log.scripts()).some((script) => script.map.length > 0), { timeout: API_MS }).toBe(true);
+    const engine = (await visible(page, "[data-map-view]").getAttribute("data-map-view", { timeout: API_MS })) as Engine;
+    await expectPackages(log, engine);
+    const other: Engine = engine === "gl" ? "leaflet" : "gl";
+    await launchApp(page, { path: `/ru/map?map=${other}` });
+    await expect(visible(page, `[data-map-view="${other}"]`)).toBeVisible({ timeout: API_MS });
+    await expectPackages(log, other);
 
     // …and each screen's code once that screen loads.
     const loads = [
@@ -152,7 +176,7 @@ test.describe("PostHog with a key @analytics", () => {
           .map((entry) => ({ path: new URL(entry.name).pathname, at: entry.startTime, bytes: (entry as PerformanceResourceTiming).encodedBodySize })),
       [...posthog],
     );
-    expect(sent.length, "the PostHog files are in the page's resource timing").toBe(posthog.size);
+    expect(new Set(sent.map((entry) => entry.path)).size, "the PostHog files are in the page's resource timing").toBe(posthog.size);
     const early = sent.filter((entry) => entry.at < photo![0] + 500);
     recordMeasurement(
       test.info(),
@@ -170,11 +194,16 @@ test.describe("the map's second opening @perf", () => {
     const log = scriptLog(page, origin());
     await openFeed(page);
 
+    const opened = Date.now();
     await visible(page, "[data-view-toggle]").click();
     await expect(visible(page, "[data-map-view]")).toBeVisible({ timeout: API_MS });
     await expect(visible(page, "[data-marker]").first()).toBeVisible({ timeout: API_MS });
-    const first = (await log.scripts()).filter((script) => script.map.length > 0);
-    expect(first.length, "the first opening loaded the map's code").toBeGreaterThan(0);
+    // The map's code: the packages (warmed up already or not) and every file the first opening asked for.
+    const first = (await log.scripts()).filter((script) => script.map.length > 0 || script.sentAt >= opened);
+    expect(
+      first.filter((script) => script.map.length > 0),
+      "the first opening loaded the map's code",
+    ).not.toHaveLength(0);
 
     await visible(page, "[data-view-toggle]").click();
     await expect(visible(page, "article[data-listing]").first()).toBeVisible({ timeout: API_MS });
@@ -185,6 +214,7 @@ test.describe("the map's second opening @perf", () => {
     await page.waitForTimeout(2_000);
 
     const known = new Set(first.map((script) => script.path));
+    // Turbopack does not fetch a loaded chunk again, so this mostly guards the MapLibre worker's keep-alive.
     const again = (await log.scripts()).filter((script) => script.sentAt >= back && (script.map.length > 0 || known.has(script.path)));
     recordMeasurement(test.info(), "10", again.length, { first: first.map((script) => script.path), again: again.map((script) => script.path) });
   });

@@ -20,7 +20,7 @@ export const CPU_SLOWDOWN = 4;
 
 /**
  * Throttles `page` through its own DevTools session, kept open until the test ends (a detached session drops the
- * throttling). It reaches every request the browser sends, including those the guard of `@homi/testing/playwright`
+ * throttling). Rows 1, 2, 7 and 8 throttle the network and the CPU, row 9 the CPU alone, and row 10 nothing. It reaches every request the browser sends, including those the guard of `@homi/testing/playwright`
  * passes on, but not an answer a route fulfils itself: `perfMedia` delays those by the same numbers.
  */
 export async function throttle(page: Page, { network = true, cpu = true }: { network?: boolean; cpu?: boolean } = {}): Promise<CDPSession> {
@@ -81,7 +81,10 @@ export function mapPackagesIn(body: string): string[] {
 export interface Script {
   /** The address's path. */
   path: string;
-  /** When the browser sent it, by the test runner's clock (`Date.now()`). */
+  /**
+   * When the browser started it, by its wall clock (`request.timing().startTime`), which the page's `Date.now()` of
+   * `markMoments` shares; the runner's clock when the browser gave none.
+   */
   sentAt: number;
   /** The compressed body as it crossed the network (`request.sizes().responseBodySize`). */
   bytes: number;
@@ -102,7 +105,7 @@ export function scriptLog(page: Page, origin: string): { scripts: () => Promise<
     if (url.origin !== origin || !(chunk || MAP_PUBLIC.test(url.pathname))) {
       return;
     }
-    const sentAt = Date.now();
+    const seen = Date.now();
     pending.push(
       (async () => {
         const response = await request.response();
@@ -112,7 +115,8 @@ export function scriptLog(page: Page, origin: string): { scripts: () => Promise<
         const body = await response.text();
         const { responseBodySize } = await request.sizes();
         const map = MAP_PUBLIC.test(url.pathname) ? ["maplibre"] : mapPackagesIn(body);
-        return { path: url.pathname, sentAt, bytes: responseBodySize, body, map };
+        const { startTime } = request.timing();
+        return { path: url.pathname, sentAt: startTime > 0 ? startTime : seen, bytes: responseBodySize, body, map };
       })().catch(() => null),
     );
   });
@@ -191,7 +195,9 @@ const PLACEHOLDERS = join(__dirname, "../../../../backend/resources/fixtures/med
  * Answers the stub photos with the placeholders `php artisan sources:publish-stub-media` publishes (800 × 600 and the
  * 240 × 180 small ones, 13–14 KB and 2.6–2.8 KB), not `stubMedia`'s 8 × 6 image, so a photo decodes and paints like a
  * real one. A fulfilled answer never crosses the throttled network, so while `throttled()` holds it waits what slow 4G
- * would take: the latency and the bytes at the download rate.
+ * would take: the latency and the bytes at the download rate. Each photo waits on its own, as if it had the line to
+ * itself: photos never share the bandwidth with the scripts, so the growth of the scripts shows in rows 1 and 2, not in
+ * row 7.
  */
 export async function perfMedia(page: Page, throttled: () => boolean): Promise<void> {
   const files = new Map<string, Buffer>();

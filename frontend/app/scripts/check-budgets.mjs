@@ -7,11 +7,13 @@
 //   node scripts/check-budgets.mjs --runs analytics       # after the analytics run: row 4 with a key
 //   node scripts/check-budgets.mjs --runs perf --results <dir> --budgets <file>
 //
-// Every row of the named runs must have been measured ("missing" is a row those runs measure and did not), every
-// measured row must be within its limit, and a measurement of a row the budget does not know fails. The report lists
-// every measured value, so the run's log carries the numbers a new limit is taken from. Exit 1 with findings, 2 on a
-// wrong call, else 0. The functions are exported for `tests/scripts/checkBudgets.test.ts`.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+// Every row of the named runs must have been measured ("missing" is a row those runs measure and did not, or measured
+// fewer times than its `samples`), every measured row must be within its limit, and a measurement of a row the budget
+// does not know fails. A row marked `provisional` (a timing limit not yet measured on the machine that judges it,
+// DEC-103) is reported, over its limit too, without failing. The report lists every measured value, so the run's log
+// carries the numbers a new limit is taken from. Exit 1 with findings, 2 on a wrong call, else 0. The functions are
+// exported for `tests/scripts/checkBudgets.test.ts`.
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -73,7 +75,7 @@ const format = (value, unit) => (unit === "share" ? `${(value * 100).toFixed(1)}
 /**
  * Judges `measurements` against `budgets` for a check after the runs `runs`.
  *
- * @param {{ rows: Record<string, { budget?: string, run: string, unit: string, aggregate: string, limit: number, strict?: boolean, samples?: number }> }} budgets
+ * @param {{ rows: Record<string, { budget?: string, run: string, unit: string, aggregate: string, limit: number, strict?: boolean, samples?: number, provisional?: boolean }> }} budgets
  * @param {{ row: string, value: number, file?: string }[]} measurements
  * @param {string[]} runs
  * @returns {{ findings: string[], report: string[] }}
@@ -105,9 +107,12 @@ export function checkBudgets(budgets, measurements, runs) {
     }
     const value = aggregate(values, budget.aggregate);
     const within = budget.strict === true ? value < budget.limit : value <= budget.limit;
+    const provisional = budget.provisional === true;
     const of = values.length === 1 ? "" : `, ${budget.aggregate} of ${values.length}`;
-    report.push(`${within ? "ok  " : "OVER"} ${name}: ${format(value, budget.unit)}${of}; limit ${budget.strict === true ? "under " : ""}${format(budget.limit, budget.unit)}`);
-    if (!within) {
+    const mark = within ? "ok  " : provisional ? "over" : "OVER";
+    const note = provisional ? " (provisional limit: reported, not judged)" : "";
+    report.push(`${mark} ${name}: ${format(value, budget.unit)}${of}; limit ${budget.strict === true ? "under " : ""}${format(budget.limit, budget.unit)}${note}`);
+    if (!within && !provisional) {
       findings.push(`${name}: ${format(value, budget.unit)}${of} is over the limit of ${format(budget.limit, budget.unit)}`);
     }
     if (budget.samples !== undefined && values.length < budget.samples && runs.includes(budget.run)) {
@@ -131,7 +136,16 @@ function options(argv) {
   };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/** Whether this file is the script node runs, also when it was started through a symbolic link. */
+function isMain() {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const { runs, results, budgets } = options(process.argv.slice(2));
   if (runs.length === 0 || runs.some((run) => !RUNS.includes(run))) {
     console.error(`check-budgets: name the runs that measured, from ${RUNS.join(", ")}: --runs pr,perf`);

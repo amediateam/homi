@@ -7,7 +7,8 @@ name: frontend-e2e
 # off (WP-30). Every run has two projects (WP-33, `frontend/playwright.config.ts`): cookie mode over every spec and
 # header mode over every test that does not name its mode (DEC-101). The manual run (`workflow_dispatch` with `full`,
 # no schedule: DEC-100) adds WebKit, desktop, Telegram 6.0, the uz/en render, the dark theme and the throttled `perf`
-# project of the performance budget; each run is followed by the budget's check (WP-33).
+# project of the performance budget; the first run and the analytics run are each followed by the budget's check
+# (WP-33).
 on:
   pull_request:
     paths:

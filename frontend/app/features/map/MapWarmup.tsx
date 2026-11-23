@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 
 import { currentNetwork } from "@/features/feed/images";
-import { whenFirstContent } from "@/lib/analytics/firstContent";
+import { FIRST_CONTENT_WAIT_MS, whenFirstContent } from "@/lib/analytics/firstContent";
 import { routes } from "@/lib/navigation/routes";
 import { useReference } from "@/lib/reference/useReference";
 import { useScreenSearchState } from "@/lib/search/useScreenSearchState";
@@ -15,8 +15,6 @@ import { isTileTemplate } from "./tiles";
 
 /** How long the list must stay at one address before the map is warmed up (KV-FE-062). */
 export const WARMUP_DELAY_MS = 2_500;
-/** The longest wait for the list's first content before the 2.5 s start anyway (a list without photos never shows one). */
-export const FIRST_CONTENT_WAIT_MS = 8_000;
 
 function Warmup() {
   const { href, filters } = useScreenSearchState("feed");

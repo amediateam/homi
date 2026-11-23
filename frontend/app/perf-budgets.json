@@ -1,5 +1,5 @@
 {
-  "about": "The performance budget of the Mini App (WP-33 'Performance budget', docs/migration/wave-1/WP-33-frontend-acceptance.md). Each row: what is measured, the run that measures it (pr: every pull request, unthrottled, both session modes; perf: the manual run's throttled `perf` project, DEC-100; analytics: the analytics run, built with a PostHog key), the unit, how the run's values are taken (max, or p75 with the number of samples), the limit (strict: the value must stay under it), the rule the limit comes from, and the measured value with its date and machine. A timing limit holds only for the machine it was measured on, because the CPU factor is relative to the host. Checked by scripts/check-budgets.mjs after each run.",
+  "about": "The performance budget of the Mini App (WP-33 'Performance budget', docs/migration/wave-1/WP-33-frontend-acceptance.md). Each row: what is measured, the run that measures it (pr: every pull request, unthrottled, both session modes; perf: the manual run's throttled `perf` project, DEC-100; analytics: the analytics run, built with a PostHog key), the unit, how the run's values are taken (max, or p75 with the number of samples), the limit (strict: the value must stay under it), the rule the limit comes from, the measured value with its date and machine, and provisional for a timing limit not yet measured on the machine that judges it, which the check reports without failing (DEC-103). samples is how many measurements the run gives: both session modes, or three locales in both modes, or 20 relaunches. A timing limit holds only for the machine it was measured on, because the CPU factor is relative to the host. Checked by scripts/check-budgets.mjs after each run.",
   "rows": {
     "1": {
       "budget": "JavaScript asked for until the feed works (first card visible, session ready), session present",
@@ -28,6 +28,7 @@
       "run": "pr",
       "unit": "bytes",
       "aggregate": "max",
+      "samples": 2,
       "limit": 0,
       "rule": "absolute"
     },
@@ -36,6 +37,7 @@
       "run": "pr",
       "unit": "bytes",
       "aggregate": "max",
+      "samples": 2,
       "limit": 0,
       "rule": "absolute"
     },
@@ -44,6 +46,7 @@
       "run": "analytics",
       "unit": "bytes",
       "aggregate": "max",
+      "samples": 2,
       "limit": 0,
       "rule": "absolute"
     },
@@ -52,6 +55,7 @@
       "run": "pr",
       "unit": "files",
       "aggregate": "max",
+      "samples": 2,
       "limit": 0,
       "rule": "absolute"
     },
@@ -60,6 +64,7 @@
       "run": "pr",
       "unit": "markers",
       "aggregate": "max",
+      "samples": 6,
       "limit": 0,
       "rule": "absolute"
     },
@@ -70,10 +75,11 @@
       "aggregate": "p75",
       "samples": 20,
       "limit": 1656,
+      "provisional": true,
       "rule": "measured + 20 %",
       "measured": 1380,
       "date": "2026-11-23",
-      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20; provisional until the first manual run on GitHub's runner"
+      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20; provisional until the first manual run on GitHub's runner, which judges it (DEC-103)"
     },
     "8": {
       "budget": "Largest Contentful Paint of the feed, the same relaunch",
@@ -82,10 +88,11 @@
       "aggregate": "p75",
       "samples": 20,
       "limit": 2500,
+      "provisional": true,
       "rule": "2.5 s unless the first run says otherwise",
       "measured": 1644,
       "date": "2026-11-23",
-      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20, the first card's photo; provisional until the first manual run on GitHub's runner"
+      "where": "local stack (macOS, Apple Silicon, 10 cores), p75 of 20, the first card's photo; provisional until the first manual run on GitHub's runner, which judges it (DEC-103)"
     },
     "9": {
       "budget": "share of frame intervals over 28 ms while the whole stub feed (45 cards, three pages) scrolls by touch, CPU x 4, full graphics",
@@ -94,10 +101,11 @@
       "aggregate": "max",
       "limit": 0.2,
       "strict": true,
+      "provisional": true,
       "rule": "the app's own switch to lite mode (03 section 1.7)",
       "measured": 0.007,
       "date": "2026-11-23",
-      "where": "local stack (macOS, Apple Silicon, 10 cores); provisional until the first manual run on GitHub's runner"
+      "where": "local stack (macOS, Apple Silicon, 10 cores); provisional until the first manual run on GitHub's runner, which judges it (DEC-103)"
     },
     "10": {
       "budget": "map code asked for again when the map opens a second time",

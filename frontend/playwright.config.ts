@@ -15,11 +15,11 @@ import { defineConfig } from "@playwright/test";
  *     both run in `miniapp-cookie`, so this project leaves them out instead of running them again.
  *   - Only with `E2E_FULL=1`, the manual run before a pass inside Telegram (DEC-100, `workflow_dispatch`):
  *     `miniapp-ios` (WebKit; `@smoke`, `@gesture`), `miniapp-desktop` (420 × 720 mouse; `@smoke`), `miniapp-old`
- *     (Telegram 6.0; `@gates`), `miniapp-locales` and `miniapp-dark` (`@render`), and `perf`: the throttled tests of the
- *     performance budget (`@perf` in `app/e2e/perf/`, WP-33 rows 1, 2 and 7 to 10). Each throttles its own page
- *     (CPU × 4, slow 4G: `app/e2e/support/perf.ts`); every other project leaves `@perf` out. The unthrottled rows
- *     (`@budget`, rows 3 to 6) run in `miniapp-cookie` and `miniapp-header`. `app/scripts/check-budgets.mjs` judges
- *     what a run measured, right after it.
+ *     (Telegram 6.0; `@gates`), `miniapp-locales` and `miniapp-dark` (`@render`), and `perf`: the manual run's tests
+ *     of the performance budget (`@perf` in `app/e2e/perf/`, WP-33 rows 1, 2 and 7 to 10), each throttling its own
+ *     page as its row asks (CPU × 4 and slow 4G, `app/e2e/support/perf.ts`), with no trace recording to disturb the
+ *     timings; every other project leaves `@perf` out. The unthrottled rows (`@budget`, rows 3 to 6) run in
+ *     `miniapp-cookie` and `miniapp-header`. `app/scripts/check-budgets.mjs` judges what a run measured, right after it.
  * - `landing-desktop`, `landing-phone`: declared, empty until WP-61 adds the specs and the `landing` web server.
  * - Tests tagged `@flaky` are left out of CI runs (`15` §5.5).
  * - Tests tagged `@radars-off` (WP-30, DEC-51) need an API with radars switched off (`RADAR_CREATION_ENABLED=false` in
@@ -155,7 +155,7 @@ export default defineConfig({
             name: "perf",
             testDir: "./app/e2e/perf",
             grep: PERF,
-            use: { browserName: "chromium" as const, ...phone },
+            use: { browserName: "chromium" as const, ...phone, trace: "off" as const },
             metadata: { profile: { sessionMode: "cookie", platform: "android" } },
           },
         ]
