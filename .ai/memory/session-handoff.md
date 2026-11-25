@@ -28,7 +28,7 @@ Written for whoever continues the **development track** — from 2026-11-24 a co
 
 ## Waiting for the developer (do NOT start on your own)
 1. **The manual `full` run before WP-33 steps 14–15** (DEC-103): `gh workflow run frontend-e2e.yml --ref main -f full=true` spends Actions minutes — on the developer's word. The `perf` project has never run on GitHub's runner; rows 1, 2, 10 are enforced there, rows 7–9 are provisional. A failed perf test skips the budget step, so no numbers would be printed.
-2. **Production track:** the WAITING rows of the queue; WP-33 steps 14–15.
+2. **Production track:** the WAITING rows of the queue (the regular deploy now carries the composer updates #117, #119 and #123 — Guzzle 8.6 is the first touch of the S3/MinIO path through `aws/aws-sdk-php`, check media on staging); WP-33 steps 14–15.
 3. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
 
 Development-track work that needs no word (rule 8): WP-40; the five runs in a row on `main` of the PR projects (`scripts/dev/e2e-local.sh`, ~25 min each), recorded in WP-40's PR; WP-33 Handoff items 4–5 (nine interceptions, three lows) as small PRs.
