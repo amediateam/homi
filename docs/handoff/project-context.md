@@ -20,12 +20,12 @@ HOMI (homi.uz) turns housing listings (rent and sale) from public Telegram chann
 
 ## 3. Stack and versions
 
-Measured on the first developer's machine on 2026-11-09; the Laravel and package versions of the two backend rows follow `composer.lock` and were last updated on 2026-11-22 after a `composer update` (the PHP version was not measured again). Pins and how they are enforced: `docs/handoff/environment.md` §1.
+Measured on the first developer's machine on 2026-11-09; the Laravel and package versions of the two backend rows follow `composer.lock` and were last updated on 2026-11-26 after a `composer update` (the PHP version was not measured again). Pins and how they are enforced: `docs/handoff/environment.md` §1.
 
 | Layer | Version | Pinned by |
 |---|---|---|
-| PHP / Laravel | 8.5.12 / 13.43.0 | `composer.json` `php ^8.5` + `config.platform.php 8.5.0`, `composer.lock` |
-| Key backend packages | Sanctum 4.5, Horizon 5.52, Pest 5.3, Larastan 3.15 (level 7), Pint 1.32, Boost 2.10.4, Scramble 0.13.55, Intervention Image 4.4.1, flysystem-aws-s3-v3 3.35, Guzzle 8.5, `laravel/ai` 1.4, `laravel/mcp` 1.2 | `composer.lock`; generated registry `docs/backend/package-registry.md` |
+| PHP / Laravel | 8.5.12 / 13.44.1 | `composer.json` `php ^8.5` + `config.platform.php 8.5.0`, `composer.lock` |
+| Key backend packages | Sanctum 4.5, Horizon 5.52, Pest 5.3, Larastan 3.15 (level 7), Pint 1.32, Boost 2.10.4, Scramble 0.13.55, Intervention Image 4.4.1, flysystem-aws-s3-v3 3.35, Guzzle 8.6, `laravel/ai` 1.4, `laravel/mcp` 1.3 | `composer.lock`; generated registry `docs/backend/package-registry.md` |
 | Node / pnpm | 26.13 / 11.24.0 | `.node-version` (major 26), `frontend/package.json` `packageManager`, `engines` |
 | Next.js / React / TypeScript | 16.4.5 / 19.3.1 / ^6.0.3 (not 7, KI-4) | `frontend/pnpm-lock.yaml` |
 | PostgreSQL / Redis / nginx | 18.6 / 8.10.3 / 1.31.8 (Homebrew) | `dev-check` checks reachability, not versions |
