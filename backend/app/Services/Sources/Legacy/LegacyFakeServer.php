@@ -20,9 +20,11 @@ use LogicException;
  *
  * The listing paths (WP-42) answer without looking at the filters: `GET /api/feed` the first page, with
  * `cursor=FEED_PAGE_2_CURSOR` the last one and with any other cursor an empty one; `/api/feed/count`, `/api/feed/new`,
- * `/api/map`; `/api/feed/flow` with options when the query carries `price_max` (a narrow search); `GET
- * /api/listings/{id}` the card of `CARDS`, with `preview=1` `listing.preview.json` carrying that card's `id` (so the
- * merged `100016` previews as `100001`), and `404` for any other id.
+ * `/api/map`; `/api/feed/flow` with options when the query carries `price_max` (a narrow search). `GET
+ * /api/listings/{id}` knows every listing of the two feed pages: the card fixture of `CARDS`, else the feed item as a
+ * card with the keys a card requires (`photos` = its preview photos, no facts, no sources). With `preview=1` it answers
+ * the listing's own preview under the card's `id` (so the merged `100016` previews as `100001`): `listing.preview.json`
+ * for `100001`, the feed item for the others. Any other id is `404`.
  */
 final class LegacyFakeServer
 {
@@ -37,12 +39,15 @@ final class LegacyFakeServer
         'GET /api/map' => 'map',
     ];
 
+    /** The listing whose preview form `listing.preview.json` is. */
+    public const int PREVIEW_FIXTURE_ID = 100001;
+
     /** The `next_cursor` of `feed.default.json`: the cursor of the second and last feed page. */
     public const string FEED_PAGE_2_CURSOR = 'fixture-cursor-page-2';
 
     /**
-     * The listing cards the fake server knows: id => fixture. `100016` is a merged duplicate that answers with
-     * `100001`; every other id answers `404`.
+     * The card fixtures: id => fixture. `100016` is a merged duplicate that answers with `100001`; the other listings of
+     * the feed pages answer their feed item as a card.
      *
      * @var array<int, string>
      */
@@ -99,23 +104,71 @@ final class LegacyFakeServer
         };
     }
 
-    /** The card of a known id, or its preview form with the card's `id`; `404` for any other id. */
+    /** The card of a known id, or its own preview under the card's `id`; `404` for any other id. */
     private function card(int $id, bool $preview): PromiseInterface
     {
         $fixture = self::CARDS[$id] ?? null;
+        $item = $this->feedItems()[$id] ?? null;
 
-        if ($fixture === null) {
+        if ($fixture === null && $item === null) {
             return $this->respond('errors/not_found', 404);
         }
 
-        if (! $preview) {
+        if (! $preview && $fixture !== null) {
+            // The recorded text, so a number such as `625.0` keeps its JSON type.
             return $this->respond($fixture, 200);
         }
 
-        $answer = $this->decoded('listing.preview');
-        $answer['id'] = $this->decoded($fixture)['id'] ?? $id;
+        $card = $fixture === null ? $item + ['photos' => $item['photos_preview'] ?? [], 'facts' => [], 'sources' => []] : $this->decoded($fixture);
 
-        return Factory::response($answer, 200, ['Content-Type' => 'application/json']);
+        if (! $preview) {
+            return self::json($card);
+        }
+
+        $answered = is_int($card['id'] ?? null) ? $card['id'] : $id;
+        $answer = match (true) {
+            $answered === self::PREVIEW_FIXTURE_ID => $this->decoded('listing.preview'),
+            isset($this->feedItems()[$answered]) => $this->feedItems()[$answered],
+            default => $card,
+        };
+
+        return self::json(['id' => $answered] + $answer);
+    }
+
+    /**
+     * A built answer, its numbers in their recorded JSON types (`5.0` stays a float).
+     *
+     * @param  array<array-key, mixed>  $answer
+     */
+    private static function json(array $answer): PromiseInterface
+    {
+        return Factory::response(
+            json_encode($answer, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            200,
+            ['Content-Type' => 'application/json'],
+        );
+    }
+
+    /**
+     * The items of the two feed pages by id: each listing's own preview.
+     *
+     * @return array<int, array<array-key, mixed>>
+     */
+    private function feedItems(): array
+    {
+        $items = [];
+
+        foreach (['feed.default', 'feed.page2'] as $page) {
+            $listed = $this->decoded($page)['items'] ?? [];
+
+            foreach (is_array($listed) ? $listed : [] as $item) {
+                if (is_array($item) && is_int($item['id'] ?? null)) {
+                    $items[$item['id']] = $item;
+                }
+            }
+        }
+
+        return $items;
     }
 
     /** The legacy language code the request asked for, per `legacy.locale`; `ru` when there is none or it is unknown. */

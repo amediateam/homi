@@ -18,7 +18,9 @@ the merged alias of `100001`). `LegacyFakeServer` answers the listing paths from
 `GET /api/feed` → `feed.default`, `?cursor=fixture-cursor-page-2` → `feed.page2`, any other cursor → `feed.empty`;
 `/api/feed/count` → `count`, `/api/feed/new` → `feed_new`, `/api/feed/flow` → `flow`, or `flow.options` when the
 query carries `price_max` (a narrow search); `/api/map` → `map`; `GET /api/listings/{id}` → the card of that id (table
-below), `?preview=1` → `listing.preview` with the `id` of that card, an unknown id → `404`.
+below), or for a listing of the feed pages without a card file its feed item as a card (`photos` = its preview photos,
+no `facts`, no `sources`); `?preview=1` → the listing's own preview under the `id` of its card (`listing.preview` for
+`100001`, the feed item for the others); an unknown id → `404`.
 
 They describe the legacy release pinned in `docs/migration/wave-1/baseline.md` (`index-YX9bFVws.js`).
 

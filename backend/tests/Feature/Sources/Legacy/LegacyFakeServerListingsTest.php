@@ -64,12 +64,42 @@ it('answers the merged duplicate with the surviving number', function (): void {
     expect(fakeLegacyWithKey()->get('/api/listings/100016')->json('id'))->toBe(100001);
 });
 
-it('answers the preview form with the preview fixture under the id of the card', function (int $asked, int $answered): void {
-    $preview = fakeLegacyWithKey()->get("/api/listings/{$asked}?preview=1")->json();
+/**
+ * The feed items of the two golden pages, by id: each listing's own preview.
+ *
+ * @return array<int, array<array-key, mixed>>
+ */
+function goldenFeedItems(): array
+{
+    $items = [...LegacyFixtures::golden('feed.default')['items'], ...LegacyFixtures::golden('feed.page2')['items']];
 
-    expect($preview)->toBe(['id' => $answered] + LegacyFixtures::golden('listing.preview'))
+    return array_column($items, null, 'id');
+}
+
+it('answers every listing of the catalogue: a card fixture, else its feed item as a card with the required keys', function (): void {
+    foreach (goldenFeedItems() as $id => $item) {
+        $card = fakeLegacyWithKey()->get("/api/listings/{$id}")->json();
+
+        if (isset(LegacyFakeServer::CARDS[$id])) {
+            expect($card)->toBe(LegacyFixtures::golden(LegacyFakeServer::CARDS[$id]));
+
+            continue;
+        }
+
+        expect($card)->toBe($item + ['photos' => $item['photos_preview'], 'facts' => [], 'sources' => []]);
+    }
+
+    expect(goldenFeedItems())->toHaveCount(24);
+});
+
+it('answers each listing\'s own preview: the preview fixture for 100001, else the feed item of the card\'s id', function (int $asked, int $answered): void {
+    $preview = fakeLegacyWithKey()->get("/api/listings/{$asked}?preview=1")->json();
+    $expected = $answered === 100001 ? LegacyFixtures::golden('listing.preview') : goldenFeedItems()[$answered];
+
+    expect($preview)->toBe($expected)
+        ->and($preview['id'])->toBe($answered)
         ->and($preview)->not->toHaveKeys(['photos', 'facts', 'sources']);
-})->with([[100001, 100001], [100005, 100005], [100016, 100001]]);
+})->with([[100001, 100001], [100005, 100005], [100016, 100001], [100002, 100002], [100025, 100025], [100014, 100014]]);
 
 it('answers 404 for an unknown card, its preview and a path that is not a number', function (string $path): void {
     $response = fakeLegacyWithKey()->get($path);
