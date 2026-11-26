@@ -1,7 +1,8 @@
 # Developer's answers of 2026-11-26
 
 Conventions: [`../README.md`](../README.md). The record of the questions asked on 2026-11-26, while WP-40 (sign-in,
-users, settings, access gate, limits) was being built. Answers are quoted in Russian as written or as the option
+users, settings, access gate, limits) was being built, and after its merge on how two development sessions share the
+queue (DEC-109). Answers are quoted in Russian as written or as the option
 chosen.
 
 ## The threshold of the daily cap on opening listings (DEC-104)
@@ -86,3 +87,21 @@ Options:
 
 Answer: «Да, на код бэкенда (Рекомендуется)». Registered as **DEC-108**. Consequence: the eight paths are in
 `pull_request.paths` of `.github/workflows/frontend-e2e.yml` since #124.
+
+## Two development sessions in parallel (DEC-109)
+
+Question (asked in Russian, after #124 was merged): the prompt the second developer was given on 2026-11-22 starts at
+WP-33 part 4 and then WP-40, both merged now; nothing came from that session on GitHub since #122. An agent started
+from it reads `.ai/memory/session-handoff.md`, which names WP-41 next, and would take the package this session is
+about to take. Where should the second session start? Proposed: WP-62 (the Mini App launched with a search filter,
+DEC-95) — it depends only on WP-25 and WP-36, both merged, touches only the frontend, and needs nothing from the
+production track; WP-44 is open too, but it changes the same backend files as WP-41 (`routes/api.php`,
+`config/sources.php`, `docs/api/openapi.json`, the generated types). Update the prompt for that?
+
+Answer: «да, обнови промпт под WP-62», then «Может сюда перенесем …/homi.uz/docs эту …/homi-new-developer-prompt.md»
+(the prompt, kept outside the repository until then). Registered as **DEC-109**. Consequences: an exception to rule 1
+of the queue — the first session keeps the queue's order (WP-41 and the rest of stage C's backend), the second takes
+the package the session handoff assigns to it (WP-62 first) and asks the developer for the next one; the prompt is
+`docs/handoff/second-developer-prompt.md`, in English; the second session does not rewrite
+`.ai/memory/session-handoff.md` (KI-20) and takes its numbers from AM-150, KI-90 and DEC-150 up, because the
+SessionStart hook shows both sessions the same next numbers.
