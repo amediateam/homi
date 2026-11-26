@@ -1,16 +1,13 @@
 {
-  "detail": [
-    {
-      "type": "literal_error",
-      "loc": [
-        "query",
-        "deal"
-      ],
-      "msg": "Input should be 'rent_long', 'rent_daily' or 'sale'",
-      "input": "fixture",
-      "ctx": {
-        "expected": "'rent_long', 'rent_daily' or 'sale'"
-      }
-    }
-  ]
+    "detail": [
+        {
+            "type": "literal_error",
+            "loc": ["query", "deal"],
+            "msg": "Input should be 'rent_long', 'rent_daily' or 'sale'",
+            "input": "fixture",
+            "ctx": {
+                "expected": "'rent_long', 'rent_daily' or 'sale'"
+            }
+        }
+    ]
 }

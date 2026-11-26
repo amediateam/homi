@@ -1,174 +1,151 @@
 {
-  "locale": "ru",
-  "locale_chosen": true,
-  "currency": "USD",
-  "usd_uzs": 12800,
-  "theme": "auto",
-  "city": "tashkent",
-  "city_chosen": true,
-  "analytics": {
-    "key": "phc_fixture_key",
-    "host": "https://events.invalid",
-    "id": "fixture-analytics-id"
-  },
-  "max_subscriptions": 10,
-  "bot_username": "legacy_fixture_bot",
-  "tiles": null,
-  "new_features": [
-    "pets",
-    "cards"
-  ],
-  "districts": [
-    {
-      "code": "bektemir",
-      "name": "Бектемир"
+    "locale": "ru",
+    "locale_chosen": true,
+    "currency": "USD",
+    "usd_uzs": 12800,
+    "theme": "auto",
+    "city": "tashkent",
+    "city_chosen": true,
+    "analytics": {
+        "key": "phc_fixture_key",
+        "host": "https://events.invalid",
+        "id": "fixture-analytics-id"
     },
-    {
-      "code": "chilonzor",
-      "name": "Чиланзар"
-    },
-    {
-      "code": "mirobod",
-      "name": "Мирабад"
-    },
-    {
-      "code": "mirzo_ulugbek",
-      "name": "Мирзо-Улугбек"
-    },
-    {
-      "code": "olmazor",
-      "name": "Алмазар"
-    },
-    {
-      "code": "sergeli",
-      "name": "Сергели"
-    },
-    {
-      "code": "shayxontohur",
-      "name": "Шайхантахур"
-    },
-    {
-      "code": "uchtepa",
-      "name": "Учтепа"
-    },
-    {
-      "code": "yakkasaroy",
-      "name": "Яккасарай"
-    },
-    {
-      "code": "yangihayot",
-      "name": "Янгихаёт"
-    },
-    {
-      "code": "yashnobod",
-      "name": "Яшнабад"
-    },
-    {
-      "code": "yunusobod",
-      "name": "Юнусабад"
-    }
-  ],
-  "zones": [
-    {
-      "code": "center",
-      "name": "Центр (внутри кольца)"
-    },
-    {
-      "code": "near_center",
-      "name": "Ближе к центру"
-    }
-  ],
-  "renovations": {
-    "rent_long": [
-      {
-        "code": "euro",
-        "name": "Евроремонт"
-      },
-      {
-        "code": "cosmetic",
-        "name": "Косметический ремонт"
-      },
-      {
-        "code": "none",
-        "name": "Без ремонта"
-      }
+    "max_subscriptions": 10,
+    "bot_username": "legacy_fixture_bot",
+    "tiles": null,
+    "new_features": ["pets", "cards"],
+    "districts": [
+        {
+            "code": "bektemir",
+            "name": "Бектемир"
+        },
+        {
+            "code": "chilonzor",
+            "name": "Чиланзар"
+        },
+        {
+            "code": "mirobod",
+            "name": "Мирабад"
+        },
+        {
+            "code": "mirzo_ulugbek",
+            "name": "Мирзо-Улугбек"
+        },
+        {
+            "code": "olmazor",
+            "name": "Алмазар"
+        },
+        {
+            "code": "sergeli",
+            "name": "Сергели"
+        },
+        {
+            "code": "shayxontohur",
+            "name": "Шайхантахур"
+        },
+        {
+            "code": "uchtepa",
+            "name": "Учтепа"
+        },
+        {
+            "code": "yakkasaroy",
+            "name": "Яккасарай"
+        },
+        {
+            "code": "yangihayot",
+            "name": "Янгихаёт"
+        },
+        {
+            "code": "yashnobod",
+            "name": "Яшнабад"
+        },
+        {
+            "code": "yunusobod",
+            "name": "Юнусабад"
+        }
     ],
-    "sale": [
-      {
-        "code": "euro",
-        "name": "Евроремонт"
-      },
-      {
-        "code": "cosmetic",
-        "name": "Косметический ремонт"
-      },
-      {
-        "code": "shell",
-        "name": "Черновая отделка"
-      }
+    "zones": [
+        {
+            "code": "center",
+            "name": "Центр (внутри кольца)"
+        },
+        {
+            "code": "near_center",
+            "name": "Ближе к центру"
+        }
     ],
-    "owner": [
-      {
-        "code": "fixture_owner_only",
-        "name": "owner"
-      }
+    "renovations": {
+        "rent_long": [
+            {
+                "code": "euro",
+                "name": "Евроремонт"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Косметический ремонт"
+            },
+            {
+                "code": "none",
+                "name": "Без ремонта"
+            }
+        ],
+        "sale": [
+            {
+                "code": "euro",
+                "name": "Евроремонт"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Косметический ремонт"
+            },
+            {
+                "code": "shell",
+                "name": "Черновая отделка"
+            }
+        ],
+        "owner": [
+            {
+                "code": "fixture_owner_only",
+                "name": "owner"
+            }
+        ]
+    },
+    "appliances": [
+        {
+            "code": "washer",
+            "name": "Стиральная машина"
+        },
+        {
+            "code": "fridge",
+            "name": "Холодильник"
+        },
+        {
+            "code": "air_conditioner",
+            "name": "Кондиционер"
+        }
+    ],
+    "price_presets": {
+        "rent_long": [300, 400, 500, 600, 800, 1000, 1500],
+        "rent_daily": [30, 50, 80, 120],
+        "sale": [40000, 60000, 80000, 100000, 150000, 200000]
+    },
+    "locales": [
+        {
+            "code": "ru",
+            "name": "Русский"
+        },
+        {
+            "code": "uz_Latn",
+            "name": "Oʻzbekcha"
+        },
+        {
+            "code": "en",
+            "name": "English"
+        },
+        {
+            "code": "uz_Cyrl",
+            "name": "Ўзбекча"
+        }
     ]
-  },
-  "appliances": [
-    {
-      "code": "washer",
-      "name": "Стиральная машина"
-    },
-    {
-      "code": "fridge",
-      "name": "Холодильник"
-    },
-    {
-      "code": "air_conditioner",
-      "name": "Кондиционер"
-    }
-  ],
-  "price_presets": {
-    "rent_long": [
-      300,
-      400,
-      500,
-      600,
-      800,
-      1000,
-      1500
-    ],
-    "rent_daily": [
-      30,
-      50,
-      80,
-      120
-    ],
-    "sale": [
-      40000,
-      60000,
-      80000,
-      100000,
-      150000,
-      200000
-    ]
-  },
-  "locales": [
-    {
-      "code": "ru",
-      "name": "Русский"
-    },
-    {
-      "code": "uz_Latn",
-      "name": "Oʻzbekcha"
-    },
-    {
-      "code": "en",
-      "name": "English"
-    },
-    {
-      "code": "uz_Cyrl",
-      "name": "Ўзбекча"
-    }
-  ]
 }
