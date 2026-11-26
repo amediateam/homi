@@ -2065,9 +2065,10 @@ Verified (the counts of the stage reports; the review fixes of stages 4 and 5 ad
 
 Open: the Playwright run on this tree is with the coordinator (its result goes into the PR description); the
 security-reviewer pass over the whole diff (step 10); a real launch value of the dev bot, which the developer checks
-outside the repository. Next ids: AM-113, KI-72, DEC-108.
+outside the repository. Next ids (as of the merge): AM-115, KI-72, DEC-109.
 
 Merged (2026-11-26): #124 as `a987ecd`, #125 as `d650cac` («сливай #124 и #125 после зелёного CI»). CI of `cca81c2`:
 `backend` pass (run 45845272293), `frontend` pass (45845272303), `frontend-e2e` pass on attempt 2 (45845272305:
 927 + 20 + 10; attempt 1 hit KI-63). The developer's answer during the review, DEC-108: the e2e job also runs on the
 backend's code. Not deployed: the production track's items are in the specification.
+Done since the notes above: the Playwright run on the branch (927 + 20), the security-reviewer pass and the final review rounds.

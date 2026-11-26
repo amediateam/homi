@@ -15,14 +15,14 @@ Written for whoever continues the **development track**. The production track's 
 ## State at handoff
 - `main` = `a987ecd` (#124) plus this save's PR; #125 `d650cac`, #123 `cabee17`. `git ls-remote --heads origin` → `main`, `chore/php-8.6`, five Dependabot heads. No worktree besides the main checkout.
 - **WP-40 is WAITING** for the production track (spec "Needs from the production track": three migrations, the env keys of #125, `TRUSTED_PROXIES` = the addresses the Next servers reach the API from, the `show timezone` check, `TELESCOPE_RECORD_ALL` off, the scheduler; then the checks inside Telegram).
-- **Next: WP-41** (legacy driver core, reference data and cities; `docs/migration/wave-1/WP-41-legacy-driver.md`), branch `feat/wp-41-<slug>` from `origin/main`. Also unblocked by WP-40: WP-44, WP-50 (check their other dependencies in the queue).
-- Verify: from `backend/` `php artisan test --compact` (1 362 tests, 1 350 passed, 12 skipped) **and** the same suite on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=shohsanam DB_PASSWORD= php artisan test --compact` (1 362 passed); `DB_HOST=127.0.0.1 DB_USERNAME=shohsanam DB_PASSWORD= make test-pgsql` (12); `make ci-frontend`; `HOMI_E2E_API_PORT=8090 scripts/dev/e2e-local.sh` (927).
+- **Next: WP-41** (legacy driver core, reference data and cities; `docs/migration/wave-1/WP-41-legacy-driver.md`), branch `feat/wp-41-<slug>` from `origin/main`. Also unblocked by WP-40: WP-44; WP-50 also needs WP-43 (the queue's dependency column decides).
+- Verify: from `backend/` `php artisan test --compact` (1 362 tests, 1 350 passed, 12 skipped) **and** the same suite on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan test --compact` (1 362 passed); `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= make test-pgsql` (12); `make ci-frontend`; `HOMI_E2E_API_PORT=8090 scripts/dev/e2e-local.sh` (927).
 
 ## Done this session
 - `git pull --ff-only` 792afbd → f428d15; nothing new from the colleague on GitHub since #122 (`gh pr list`, `gh run list`, repo events).
 - #123: the developer's `composer update` (25 bumps, Laravel 13.44.1, Guzzle 8.6.0), `make ci-backend` exit 0, review clean, merged `cabee17`.
 - WP-33 Handoff item: five runs in a row of `scripts/dev/e2e-local.sh` on `main` `cabee17` → 927 passed ×5 (recorded in #124).
-- WP-40 in five stages, each implemented, checked by an independent reviewer and fixed; whole-package security review (STRIDE, no high) and spec-compliance review; final narrow rounds clean. Local: the counts above; e2e 927 + `@radars-off` 20 on `f958082`. CI of `cca81c2` green (e2e on attempt 2, KI-63). Merged #124 and #125.
+- WP-40 in five stages, each implemented, checked by an independent reviewer and fixed; whole-package security review (STRIDE, no high) and spec-compliance review; final narrow rounds clean (reviews reported by subagents, not re-run). Local: the counts above; e2e 927 + `@radars-off` 20 on `f958082`. CI of `cca81c2` green (e2e on attempt 2, KI-63). Merged #124 and #125.
 
 ## Waiting for the developer (do NOT start on your own)
 1. **The click on the permission prompt of `gh pr merge`** for every merge.
@@ -33,9 +33,9 @@ Written for whoever continues the **development track**. The production track's 
 
 ## Gotchas learned this session
 - CI's backend job runs the Feature suite on **PostgreSQL** (`backend.yml` `ci:check` sets `DB_CONNECTION=pgsql`): a test with an expected-to-fail statement needs a savepoint (`DB::transaction`), and the local run on SQLite does not show it (AM-113).
-- The local PostgreSQL is on Asia/Tashkent; the `pgsql` connection now sets UTC (AM-114). The env file's DB host has no `homi_test`: use `DB_HOST=127.0.0.1 DB_USERNAME=shohsanam DB_PASSWORD=`.
-- `composer openapi:export` needs a migrated database: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=shohsanam DB_PASSWORD= php artisan migrate:fresh --force` first, so the developer's dev database is not migrated by a branch.
-- The guard refuses any read of `backend/.env` (also `grep -o '^[A-Z_]*='`) and creating one in a worktree: a worktree has no env file (tests need `APP_KEY=…` in the environment). Read values with `php artisan config:show`.
+- The local PostgreSQL is on Asia/Tashkent; the `pgsql` connection now sets UTC (AM-114). The env file's DB host has no `homi_test`: use `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD=`.
+- `composer openapi:export` needs a migrated database: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan migrate:fresh --force` first, so the developer's dev database is not migrated by a branch.
+- Reading `backend/.env` is refused (the permission layer denied even `grep -o '^[A-Z_]*='`, which the hook itself allows) and the hook refuses creating one in a worktree: a worktree has no env file (tests need `APP_KEY=…` in the environment). Read values with `php artisan config:show`.
 - `SortedMiddleware` reorders only middleware in the priority list; WP-40 anchors its chain after `Authorize` (`bootstrap/app.php`).
 - zsh does not split `$FILES`: stage with `git status --short | awk '{print $2}' | xargs git add --`.
 - Next numbers: AM-115, KI-72, ADR 0021, DEC-109.

@@ -639,8 +639,8 @@ decided beyond them.
     (25.2 min); `E2E_RADARS_OFF=1` → 20 passed. CI's e2e job is the run on the final tree. Before the branch, five
     runs in a row on `main` `cabee17` (WP-33's "Handoff"): 927 passed each time.
   - `python3 scripts/migration/collect_ids.py --check` → exit 0.
-- **Decisions taken here:** DEC-104 … DEC-107 (`../decisions/2026-11-26-developer-answers.md`); the rest is marked in
-  the sections above or listed in "As built"; the mismatches with the facts are AM-104 … AM-112 in
+- **Decisions taken here:** DEC-104 … DEC-108 (`../decisions/2026-11-26-developer-answers.md`); the rest is marked in
+  the sections above or listed in "As built"; the mismatches with the facts are AM-104 … AM-114 in
   `docs/ai/reports/phase-3-notes.md` §AI.
 - **Merged:** #124 as `a987ecd` and the env keys #125 as `d650cac` on 2026-11-26, on the developer's word «сливай
   #124 и #125 после зелёного CI». CI of `cca81c2`: `backend` pass (run 45845272293), `frontend` pass (45845272303),
