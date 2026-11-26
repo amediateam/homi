@@ -38,6 +38,10 @@
         <env name="RADAR_CREATION_ENABLED" value="true"/>
         <env name="OWNER_CABINET_ENABLED" value="true"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- A synthetic bot token: `Tests\Support\InitDataSigner` signs launch data with it (WP-40). It is no bot's token. -->
+        <env name="TELEGRAM_BOT_TOKEN" value="123456789:TEST-homi-synthetic-token"/>
+        <!-- Stub mode of the native methods off, whatever the local .env says for `make e2e`; a test turns it on. -->
+        <env name="SOURCES_NATIVE_STUBS" value="false"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

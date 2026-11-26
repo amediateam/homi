@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Enums\SourceDriver;
 use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
+use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
@@ -27,7 +28,7 @@ class TelegramAuthController extends ApiController
     {
         $me = $stubs->fixture('me/default', $request, MeController::SCENARIOS, [
             'auth_expired' => fn (): InitDataExpired => new InitDataExpired,
-            'invalid_init_data' => fn (): InvalidInitData => new InvalidInitData,
+            'invalid_init_data' => fn (): InvalidInitData => new InvalidInitData(InvalidInitDataReason::BadSignature),
         ]);
         $expiresAt = now()->addDay();
         $token = StubUser::get()->createToken('miniapp', self::ABILITIES, $expiresAt);

@@ -12,6 +12,8 @@ function actAsSettingsUser(array $abilities = ['app:read', 'app:write']): void
     Sanctum::actingAs(User::factory()->create(), $abilities);
 }
 
+beforeEach(fn () => config(['sources.native_stubs' => true]));
+
 beforeEach(fn () => actAsSettingsUser());
 
 it('answers the settings and their options in the shape of the contract, from the stub', function (): void {

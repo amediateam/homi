@@ -19,6 +19,14 @@ return [
         'username' => env('TELEGRAM_BOT_USERNAME'),
     ],
 
+    // The Mini App's launch data (WP-40, SEC-REQ-001 … 003): `max_age` is the window in seconds in which a signed
+    // `initData` is accepted (a blank or non-positive value means the default); `max_exchanges` is how many times one
+    // value may be exchanged for a token inside that window.
+    'initdata' => [
+        'max_age' => max(0, (int) env('TELEGRAM_INITDATA_MAX_AGE')) ?: 3600,
+        'max_exchanges' => 20,
+    ],
+
     // The public name of HOMI's support account, shown by the Mini App (`GET /api/v1/reference`, WP-11).
     'support' => [
         'username' => env('TELEGRAM_SUPPORT_USERNAME'),

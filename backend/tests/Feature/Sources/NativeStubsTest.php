@@ -1,0 +1,147 @@
+<?php
+
+use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
+use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\ReferenceController;
+use App\Http\Controllers\Api\V1\SettingsController;
+use App\Models\User;
+use App\Providers\SourceServiceProvider;
+use App\Services\Sources\Stub\NativeStubs;
+use App\Services\Sources\Stub\StubUser;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Sanctum;
+use Mockery\MockInterface;
+use Tests\Support\EnvOverride;
+
+/**
+ * The stub mode of the native methods (WP-40): `AnswerNativeStubs` answers the routes of `NativeStubs` while the switch
+ * is on. The two tests that compare a stub with its controller hold only while the controller still has the stub body;
+ * a row goes, with approval, when the package that replaces that body lands.
+ */
+dataset('native stub routes', [
+    'sign-in' => ['POST', '/api/v1/auth/telegram', ['init_data' => 'query_id=AAHomiSyntheticQuery&auth_date=1&hash=00'], TelegramAuthController::class, '__invoke'],
+    'me' => ['GET', '/api/v1/me', [], MeController::class, '__invoke'],
+    'settings' => ['GET', '/api/v1/settings', [], SettingsController::class, 'show'],
+    'settings update' => ['PATCH', '/api/v1/settings', ['currency' => 'UZS', 'quiet_hours' => null], SettingsController::class, 'update'],
+]);
+
+function actAsNativeStubUser(array $abilities = ['app:read', 'app:write']): void
+{
+    Sanctum::actingAs(User::factory()->create(), $abilities);
+}
+
+it('answers a method of the map from its stub body and never reaches the controller while the switch is on', function (string $method, string $uri, array $body, string $controller, string $action): void {
+    actAsNativeStubUser();
+    config(['sources.native_stubs' => true]);
+    $this->mock($controller, fn (MockInterface $mock) => $mock->shouldReceive($action)->never());
+
+    $this->json($method, $uri, $body)->assertOk()->assertJsonPath('success', true)->assertJsonPath('meta.source', 'stub');
+})->with('native stub routes');
+
+it('lets the request reach the controller while the switch is off', function (string $method, string $uri, array $body, string $controller, string $action): void {
+    actAsNativeStubUser();
+    $this->mock($controller, fn (MockInterface $mock) => $mock->shouldReceive($action)->once()->andReturn(response()->json(['answered_by' => 'controller'])));
+
+    $this->json($method, $uri, $body)->assertOk()->assertExactJson(['answered_by' => 'controller']);
+})->with('native stub routes');
+
+it('lets a route outside the map reach its controller while the switch is on', function (): void {
+    config(['sources.native_stubs' => true]);
+    $this->mock(ReferenceController::class, fn (MockInterface $mock) => $mock->shouldReceive('__invoke')->once()->andReturn(response()->json(['answered_by' => 'controller'])));
+
+    $this->getJson('/api/v1/reference')->assertOk()->assertExactJson(['answered_by' => 'controller']);
+});
+
+it('answers byte for byte what the stub controller answered, in the request locale', function (string $method, string $uri, array $body): void {
+    Date::setTestNow('2026-11-26 09:00:00');
+    actAsNativeStubUser();
+    $headers = ['Accept-Language' => 'uz'];
+
+    $controller = $this->json($method, $uri, $body, $headers)->assertOk();
+    config(['sources.native_stubs' => true]);
+    $stub = $this->json($method, $uri, $body, $headers)->assertOk();
+
+    expect($stub->getContent())->toBe($controller->getContent())
+        ->and($stub->headers->get('Content-Language'))->toBe('uz')
+        ->and($stub->headers->get('Content-Type'))->toBe($controller->headers->get('Content-Type'));
+})->with([
+    'me' => ['GET', '/api/v1/me', []],
+    'settings' => ['GET', '/api/v1/settings', []],
+    'settings update' => ['PATCH', '/api/v1/settings', ['currency' => 'UZS', 'quiet_hours' => null, 'digest_hours' => [12, 20]]],
+]);
+
+it('signs in the stub user as the stub controller did, with a token of its own', function (): void {
+    Date::setTestNow('2026-11-26 09:00:00');
+    $body = ['init_data' => 'query_id=AAHomiSyntheticQuery&auth_date=1&hash=00'];
+
+    $controller = $this->postJson('/api/v1/auth/telegram', $body)->assertOk();
+    config(['sources.native_stubs' => true]);
+    $stub = $this->postJson('/api/v1/auth/telegram', $body)->assertOk();
+
+    expect(Arr::except($stub->json(), 'data.token'))->toBe(Arr::except($controller->json(), 'data.token'))
+        ->and($stub->json('data.token'))->not->toBe($controller->json('data.token'))
+        ->and(User::query()->sole()->email)->toBe(StubUser::EMAIL)
+        ->and(User::query()->sole()->tokens()->count())->toBe(2);
+});
+
+it('authenticates and checks the abilities before a stub answers', function (): void {
+    config(['sources.native_stubs' => true]);
+
+    $this->getJson('/api/v1/me')->assertUnauthorized()->assertJsonPath('code', 'unauthenticated');
+
+    actAsNativeStubUser(['media:write']);
+    $this->getJson('/api/v1/me')->assertForbidden()->assertJsonPath('code', 'forbidden');
+    $this->patchJson('/api/v1/settings', ['currency' => 'UZS'])->assertForbidden()->assertJsonPath('code', 'forbidden');
+
+    actAsNativeStubUser(['app:read']);
+    $this->getJson('/api/v1/settings')->assertOk()->assertJsonPath('meta.source', 'stub');
+    $this->patchJson('/api/v1/settings', ['currency' => 'UZS'])->assertForbidden()->assertJsonPath('code', 'forbidden');
+});
+
+it('validates the form request of a stub as the controller did', function (): void {
+    actAsNativeStubUser();
+    config(['sources.native_stubs' => true]);
+
+    $this->patchJson('/api/v1/settings', ['currency' => 'EUR'])->assertUnprocessable()->assertJsonValidationErrors('currency');
+    $this->postJson('/api/v1/auth/telegram', ['init_data' => str_repeat('a', 4097)])->assertUnprocessable()->assertJsonValidationErrors('init_data');
+});
+
+it('names only registered routes in its map', function (): void {
+    $stubs = app(NativeStubs::class);
+
+    expect($stubs->routes())->toBe(['api.v1.auth.telegram', 'api.v1.me.show', 'api.v1.settings.show', 'api.v1.settings.update']);
+    foreach ($stubs->routes() as $name) {
+        expect(Route::has($name))->toBeTrue()->and($stubs->answers($name))->toBeTrue();
+    }
+    expect($stubs->answers('api.v1.reference.show'))->toBeFalse();
+});
+
+it('refuses to boot with the stub mode outside local and testing', function (string $environment): void {
+    config(['sources.native_stubs' => true]);
+    $this->app->instance('env', $environment);
+
+    expect(fn () => (new SourceServiceProvider($this->app))->boot())->toThrow(LogicException::class, 'SOURCES_NATIVE_STUBS');
+
+    $this->app->instance('env', 'testing');
+})->with(['production', 'staging', 'ci']);
+
+it('boots with the stub mode in local and testing, and anywhere with it off', function (string $environment, bool $on): void {
+    config(['sources.native_stubs' => $on]);
+    $this->app->instance('env', $environment);
+
+    expect(fn () => (new SourceServiceProvider($this->app))->boot())->not->toThrow(LogicException::class);
+
+    $this->app->instance('env', 'testing');
+})->with([
+    'local, on' => ['local', true],
+    'testing, on' => ['testing', true],
+    'production, off' => ['production', false],
+]);
+
+it('keeps the stub mode off when SOURCES_NATIVE_STUBS is not set', function (): void {
+    $config = EnvOverride::with('SOURCES_NATIVE_STUBS', null, fn (): array => require config_path('sources.php'));
+
+    expect($config['native_stubs'])->toBeFalse();
+});

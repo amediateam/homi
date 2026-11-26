@@ -6,9 +6,12 @@ use App\Http\DashboardAccess;
 use App\Http\OpenApi\ApiErrorSchema;
 use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
+use App\Services\Identity\TelegramInitDataVerifier;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Config\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -29,6 +32,20 @@ class AppServiceProvider extends ServiceProvider
     {
         // GD is the image driver (app.uz convention); Imagick is also installed if ever needed.
         $this->app->singleton(ImageManager::class, fn (): ImageManager => new ImageManager(new GdDriver));
+
+        // Built on each resolution, so the token and the window are read from the configuration of the moment.
+        $this->app->bind(TelegramInitDataVerifier::class, fn (Application $app): TelegramInitDataVerifier => new TelegramInitDataVerifier(
+            self::configString($app, 'telegram.bot.token'),
+            $app->make(Repository::class)->integer('telegram.initdata.max_age', 3600),
+        ));
+    }
+
+    /** A string value of the configuration, or `''` when it is missing or not a string (an unset env key is null). */
+    private static function configString(Application $app, string $key): string
+    {
+        $value = $app->make(Repository::class)->get($key);
+
+        return is_string($value) ? $value : '';
     }
 
     /**

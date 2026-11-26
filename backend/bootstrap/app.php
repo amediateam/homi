@@ -1,8 +1,13 @@
 <?php
 
 use App\Http\ApiExceptionRenderer;
+use App\Http\Middleware\AnswerNativeStubs;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureOwnerCabinetEnabled;
+use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SetRequestLocale;
+use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,6 +48,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
         ]);
+
+        // The framework sorts only the middleware of its priority list. These follow the end of its list (after
+        // authentication, the limiters and route model binding) in this order, each after the one before: the request
+        // locale, then the route's own checks, and the stub answer of `SOURCES_NATIVE_STUBS` always last (WP-40).
+        $middleware->appendToPriorityList(Authorize::class, SetRequestLocale::class);
+        $middleware->appendToPriorityList(SetRequestLocale::class, CheckForAnyAbility::class);
+        $middleware->appendToPriorityList(CheckForAnyAbility::class, CheckAbilities::class);
+        $middleware->appendToPriorityList(CheckAbilities::class, EnsureRadarsEnabled::class);
+        $middleware->appendToPriorityList(EnsureRadarsEnabled::class, EnsureOwnerCabinetEnabled::class);
+        $middleware->appendToPriorityList(EnsureOwnerCabinetEnabled::class, AnswerNativeStubs::class);
 
         // api/* has no login route. The framework default calls route('login') while building
         // AuthenticationException, so a guest request that does not expect JSON becomes a 500.

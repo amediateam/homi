@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\Radars\RadarController;
 use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Middleware\AnswerNativeStubs;
 use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\SetRequestLocale;
@@ -51,9 +52,11 @@ use Illuminate\Support\Facades\Route;
 | Every route: the request locale (`Accept-Language` → ru|uz|en) and the `api` limiter, which counts per actor:
 | Laravel runs `auth:sanctum` before the limiter on bearer routes (middleware priority). Bearer routes use Sanctum
 | tokens (ADR-0003); abilities gate the actions. WP-40 attaches the named limiters.
+| `AnswerNativeStubs` (WP-40) is sorted after all of them (`bootstrap/app.php`): with `SOURCES_NATIVE_STUBS` on it
+| answers the methods of `NativeStubs` with their stub bodies, after the route's own checks have passed.
 */
 
-Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'throttle:api'])->group(function (): void {
+Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'throttle:api', AnswerNativeStubs::class])->group(function (): void {
     // Public (WP-11): sign-in, and what the no-access screen needs without a session.
     Route::post('auth/telegram', TelegramAuthController::class)->name('auth.telegram');
     Route::get('reference', ReferenceController::class)->name('reference.show');

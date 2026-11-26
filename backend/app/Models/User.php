@@ -3,24 +3,40 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Identity\BotChatState;
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
+ * A HOMI user. Since WP-40 a user is a Telegram user of HOMI's bot: `telegram_user_id` and the launch facts are written
+ * by `App\Services\Identity\UserResolver`, which never stores a name, a username or a photo address; `name`, `email`
+ * and `password` stay null for such a user. `analytics_distinct_id` is a random UUID given on creation.
+ *
  * @property int $id
- * @property string $name
- * @property string $email
- * @property Carbon|null $email_verified_at
- * @property string $password
+ * @property string|null $name
+ * @property string|null $email
+ * @property CarbonImmutable|null $email_verified_at
+ * @property string|null $password
  * @property string|null $remember_token
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property int|null $telegram_user_id
+ * @property bool $is_premium
+ * @property bool $has_username
+ * @property bool $has_photo
+ * @property string|null $language_code
+ * @property BotChatState $bot_chat_state
+ * @property string $analytics_distinct_id
+ * @property bool $is_team
+ * @property string|null $first_start_param
+ * @property CarbonImmutable|null $last_seen_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -28,6 +44,29 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * The column defaults, so a new instance reads as the row it becomes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_premium' => false,
+        'has_username' => false,
+        'has_photo' => false,
+        'bot_chat_state' => BotChatState::Never->value,
+        'is_team' => false,
+    ];
+
+    /** Gives every new user its analytics id, so a factory user and the stub user get one too. */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (blank($user->analytics_distinct_id)) {
+                $user->analytics_distinct_id = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -39,6 +78,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'telegram_user_id' => 'integer',
+            'is_premium' => 'boolean',
+            'has_username' => 'boolean',
+            'has_photo' => 'boolean',
+            'bot_chat_state' => BotChatState::class,
+            'is_team' => 'boolean',
+            'last_seen_at' => 'datetime',
         ];
     }
 }

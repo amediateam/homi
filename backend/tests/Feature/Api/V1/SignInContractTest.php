@@ -15,6 +15,8 @@ function signIn(array $headers = []): TestResponse
     return test()->postJson('/api/v1/auth/telegram', ['init_data' => 'query_id=AAHomiSyntheticQuery&user=%7B%7D&auth_date=1&hash=00'], $headers);
 }
 
+beforeEach(fn () => config(['sources.native_stubs' => true]));
+
 it('issues a bearer token for the stub user in the shape of the contract', function (): void {
     Date::setTestNow('2026-11-15 09:30:00');
 
