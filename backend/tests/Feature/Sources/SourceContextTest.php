@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\Currency;
 use App\Models\Source;
 use App\Models\User;
+use App\Models\UserSetting;
 use App\Services\Sources\SourceContext;
 use Illuminate\Http\Request;
 
@@ -32,8 +34,20 @@ it('takes the locale from the first supported Accept-Language tag', function (?s
     'no header' => [null, 'ru'],
 ]);
 
-it('answers in US dollars until the user settings exist (WP-40)', function (): void {
-    expect(SourceContext::fromRequest(contextRequest())->currency)->toBe('USD');
+it('takes the currency from the signed-in user\'s settings (WP-40)', function (): void {
+    $chosen = UserSetting::factory()->create(['currency' => Currency::Uzs])->user;
+
+    expect(SourceContext::fromRequest(contextRequest(actor: $chosen))->currency)->toBe('UZS');
+});
+
+it('answers in US dollars for a guest, a collector, and a user without a settings row, and writes none', function (): void {
+    $withoutRow = User::factory()->create();
+
+    expect(SourceContext::fromRequest(contextRequest())->currency)->toBe('USD')
+        ->and(SourceContext::fromRequest(contextRequest(actor: new Source))->currency)->toBe('USD')
+        ->and(SourceContext::fromRequest(contextRequest(actor: $withoutRow))->currency)->toBe('USD')
+        ->and(SourceContext::fromRequest(contextRequest(actor: new User))->currency)->toBe('USD')
+        ->and(UserSetting::query()->count())->toBe(0);
 });
 
 it('carries the signed-in user and no collector', function (): void {

@@ -39,7 +39,7 @@ packages that build it are WP-20 … WP-33 of `docs/migration/wave-1/README.md`.
 | `lib/flags.ts` | `devFlags`: the 17 `DEV` switches, all off |
 | `lib/analytics/events.ts`, `lib/errors/report.ts` | `track` and `reportError` facades (no-ops until WP-32) |
 | `lib/analytics/firstContent.ts` | `markFirstContent()`, called by the first card photo that loads, and `firstContentShown()`, which resolves once; WP-32 hangs the analytics loader on it (WP-24) |
-| `lib/api/` | `server.ts` (server-only: one typed function per `/api/v1` method, `serverApi()` with the session, `publicApi()` without), `browser.ts` (`bffFetch`), `errors.ts` (`UiError`, the mapping table), `scenario.ts` (stub scenarios outside production), `bffAllowList.ts` |
+| `lib/api/` | `server.ts` (server-only: one typed function per `/api/v1` method, `serverApi()` with the session, `publicApi()` without), `browser.ts` (`bffFetch`), `errors.ts` (`UiError`, the mapping table), `scenario.ts` (stub scenarios outside production), `forwarded.ts` (server-only: the request's `X-Forwarded-For` on every server-side API call, WP-40), `bffAllowList.ts` |
 | `lib/actions/` | `runAction` (the one shape of a Server Action), `validate.ts`, `useAction`; `settings.ts` (`updateSettings`, the first `'use server'` file, WP-23), `favorites.ts` (`setFavorite`, WP-24); `listing.ts` (`getContact`, `translate`, `prepareShare`), `hidden.ts` (hide, block and their undo) and `reports.ts` (`reportListing`) since WP-26; `history.ts` (`clearHistory`) since WP-29; `radars.ts` (`createRadar`, `replaceRadar`, `patchRadar`, `deleteRadar`, `relaxRadar`) and `surveys.ts` (`sendFound`, `sendFoundWhere`) since WP-30, with `invokeAction`, the form of `useAction` for code outside a component; the other actions arrive with the packages that need them (WP-22 "Server Actions") |
 | `lib/ui/` | `toast.ts` (one toast per scope, 4 s, 6 s with an action), `feedback.ts` (`failed()`, `saved()`), `confirm.ts` (`confirmText`), `shellState.ts` (the launch's memory: the last search and saved addresses of the tabs, the pull handlers, the drawing request; the bottom marks — toggle, sub-page, CTA bar — that place the app's toast, WP-34) |
 | `lib/data/` | `useResource` (the small client data hook; `readResource`, and since WP-30 `seedResource` drops a read in flight and `invalidate` keeps an entry with data but no user as stale), `sessionMaps` (favourites, seen and hidden of this launch), `sources.ts` (which drivers answered the current screen; drives the "demo data" marker), `previewCache` (the last 200 cards opened, for WP-26) |
@@ -66,7 +66,12 @@ layer, and the runtime rules — a missing key renders its path and is reported 
   (`useSession().renewed`) cookie mode refreshes the router once, so Server Components render with the new cookie; a
   launch that confirmed the document's cookie does not. Header mode keeps the token in memory only.
   `html[data-session]` mirrors the status (`booting`, `ready`, `outside`, `denied`, `expired`).
-- The app server calls the API at `API_URL` (server-only), else `NEXT_PUBLIC_API_URL`.
+- The app server calls the API at `API_URL` (server-only), else `NEXT_PUBLIC_API_URL`. Every such call — `serverApi()`,
+  `runAction`, the `/bff/*` handlers — passes the incoming `X-Forwarded-For` on unchanged (`lib/api/forwarded.ts`), so
+  the API's per-address limits count the client; the cached `publicApi()` reads pass none (WP-40). A `429` of
+  `/bff/session` (sign-in or `/me`) reaches the client as `429 rate_limited` with the API's `Retry-After`; the boot
+  retry waits for the first one — at most 60 s, 10 s without one — without counting it among the six failures, and
+  a later counted one waits at least its `Retry-After`, at most 60 s (KI-37).
 
 ## Data
 

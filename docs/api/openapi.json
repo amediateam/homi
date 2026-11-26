@@ -3557,6 +3557,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
                     "429": {
                         "description": "Too many requests",
                         "content": {
@@ -5946,6 +5956,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
                     "429": {
                         "description": "Too many requests",
                         "content": {
@@ -5963,7 +5983,7 @@
             },
             "patch": {
                 "operationId": "v1.settings.update",
-                "summary": "The stub validates and answers the fixture with the sent keys overlaid; nothing is stored",
+                "summary": "Stores only the sent keys and answers the full object; an empty body changes nothing",
                 "tags": [
                     "Settings"
                 ],
@@ -6008,6 +6028,16 @@
                                         "data",
                                         "meta"
                                     ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
                                 }
                             }
                         }
@@ -10214,7 +10244,7 @@
             },
             "TelegramSignInRequest": {
                 "type": "object",
-                "description": "`POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes.",
+                "description": "`POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes. It is read from\nthe JSON body only (SEC-REQ-003, WP-40): a value in the address would reach access logs and the browser history, so\nan `init_data` in the query string is ignored, also beside one in the body.",
                 "properties": {
                     "init_data": {
                         "type": "string",

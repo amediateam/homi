@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { scrubDeep } from "@/lib/analytics/scrub";
 import { isWrite, readTemplate } from "@/lib/api/bffAllowList";
+import { forwardedFor, forwardedForHeaders } from "@/lib/api/forwarded";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
 import { sameOrigin } from "@/lib/security/sameOrigin";
 import { apiBaseUrl, SESSION_COOKIE } from "@/lib/session/server";
@@ -12,7 +13,8 @@ import { apiBaseUrl, SESSION_COOKIE } from "@/lib/session/server";
  * cookie or the bearer header; the query string forwarded as it is (capped at 4 KB) and never logged; the API's
  * status and body passed on unchanged, without its headers — so no `Set-Cookie` — and never cached. The one write is
  * the journal (`POST events`, WP-32): a same-origin JSON body of at most 8 KB, its properties scrubbed again here,
- * forwarded to `POST /events` with the token; its answer is the API's status with no body.
+ * forwarded to `POST /events` with the token; its answer is the API's status with no body. Both pass the request's
+ * `X-Forwarded-For` on to the API (WP-40).
  */
 
 const MAX_QUERY_BYTES = 4096;
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         Authorization: `Bearer ${token}`,
         "X-Request-Id": crypto.randomUUID().replaceAll("-", ""),
         ...stubScenarioHeaders(request.cookies.get(STUB_SCENARIO_COOKIE)?.value),
+        ...forwardedForHeaders(forwardedFor(request.headers)),
       },
       body: JSON.stringify({ name, props: scrubDeep(props ?? {}) }),
       cache: "no-store",
@@ -102,6 +105,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     Accept: "application/json",
     "X-Request-Id": crypto.randomUUID().replaceAll("-", ""),
     ...stubScenarioHeaders(request.cookies.get(STUB_SCENARIO_COOKIE)?.value),
+    ...forwardedForHeaders(forwardedFor(request.headers)),
   };
   const locale = request.headers.get("accept-language");
   if (locale !== null) {

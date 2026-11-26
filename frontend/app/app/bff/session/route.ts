@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { forwardedFor, forwardedForHeaders } from "@/lib/api/forwarded";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
 import { sameOrigin } from "@/lib/security/sameOrigin";
 import { apiBaseUrl, SESSION_COOKIE, SESSION_USER_COOKIE, telegramUserTag } from "@/lib/session/server";
@@ -9,6 +10,9 @@ import { accessReason } from "@/lib/session/types";
  * The session exchange of the Mini App (WP-21, `25` §3.4, ADR-0018). `POST` trades Telegram's launch data for an
  * API token once per launch and sets it as the `homi_session` cookie; `GET` reads `/me` with the cookie or a bearer
  * header and tells the client which mode it is in. Nothing is cached, and no body, header or token is ever logged.
+ * The request's `X-Forwarded-For` goes along to the API (WP-40), so its per-address sign-in limit counts the client.
+ * A `401` of the API ends the session, a `403` is the access refusal, a `429` is passed on as `429 rate_limited` with
+ * the API's `Retry-After` (KI-37), and anything else is `502`.
  */
 
 const MAX_BODY_BYTES = 4096;
@@ -29,13 +33,19 @@ function clearSession(response: NextResponse): NextResponse {
   return response;
 }
 
-type ApiAnswer = { status: number; body: Record<string, unknown> | null } | { status: 0; body: null };
+type ApiAnswer =
+  | { status: number; body: Record<string, unknown> | null; retryAfter: string | null }
+  | { status: 0; body: null; retryAfter: null };
 
 async function callApi(
   path: string,
-  init: { method: "GET" | "POST"; body?: string; token?: string; scenario?: string },
+  init: { method: "GET" | "POST"; body?: string; token?: string; scenario?: string; forwardedFor: string | null },
 ): Promise<ApiAnswer> {
-  const headers: Record<string, string> = { Accept: "application/json", ...stubScenarioHeaders(init.scenario) };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...stubScenarioHeaders(init.scenario),
+    ...forwardedForHeaders(init.forwardedFor),
+  };
   if (init.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -56,9 +66,9 @@ async function callApi(
     } catch {
       body = null;
     }
-    return { status: response.status, body };
+    return { status: response.status, body, retryAfter: response.headers.get("retry-after") };
   } catch {
-    return { status: 0, body: null };
+    return { status: 0, body: null, retryAfter: null };
   }
 }
 
@@ -68,6 +78,14 @@ function refusal(api: ApiAnswer): NextResponse | null {
   }
   if (api.status === 403) {
     return answer({ code: "access_denied", reason: accessReason(api.body?.reason) }, 403);
+  }
+  if (api.status === 429) {
+    // The session stays as it is: the client waits as long as the API asked and tries again (`useBootRetry`).
+    const limited = answer({ code: "rate_limited" }, 429);
+    if (api.retryAfter !== null && api.retryAfter !== "") {
+      limited.headers.set("Retry-After", api.retryAfter);
+    }
+    return limited;
   }
   return null;
 }
@@ -106,6 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     method: "POST",
     body: JSON.stringify({ init_data: initData }),
     scenario: request.cookies.get(STUB_SCENARIO_COOKIE)?.value,
+    forwardedFor: forwardedFor(request.headers),
   });
   const refused = refusal(api);
   if (refused !== null) {
@@ -140,7 +159,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   const mode = cookie !== null ? "cookie" : "header";
 
-  const api = await callApi("/me", { method: "GET", token, scenario: request.cookies.get(STUB_SCENARIO_COOKIE)?.value });
+  const api = await callApi("/me", {
+    method: "GET",
+    token,
+    scenario: request.cookies.get(STUB_SCENARIO_COOKIE)?.value,
+    forwardedFor: forwardedFor(request.headers),
+  });
   const refused = refusal(api);
   if (refused !== null) {
     return api.status === 401 && mode === "cookie" ? clearSession(refused) : refused;

@@ -14,6 +14,8 @@ function actAsAppUser(array $abilities = ['app:read', 'app:write']): User
     return $user;
 }
 
+beforeEach(fn () => config(['sources.native_stubs' => true]));
+
 it('answers the user part in the shape of the contract, from the stub', function (): void {
     actAsAppUser();
 

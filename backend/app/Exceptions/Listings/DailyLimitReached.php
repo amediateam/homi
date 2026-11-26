@@ -6,10 +6,10 @@ use App\Exceptions\ApiException;
 use Throwable;
 
 /**
- * The caller opened too many listings today (legacy release `index-CIa0Ldj2.js`): `429 {"code": "rate_limited",
+ * The caller opened too many listings in 24 hours (legacy release `index-CIa0Ldj2.js`): `429 {"code": "rate_limited",
  * "reason": "daily"}` with `Retry-After`, the seconds until the caller may open a listing again. A `429` without a
- * `reason` is the request limiter. Until the per-user limiter exists only the stub scenario `daily_limit` of
- * `GET /listings/{number}` throws it.
+ * `reason` is a request limiter. Thrown by the daily cap `CountListingOpens` (WP-40) and by the stub scenario
+ * `daily_limit` of `GET /listings/{number}`.
  */
 final class DailyLimitReached extends ApiException
 {

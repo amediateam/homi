@@ -9,10 +9,12 @@ use App\Services\Sources\SourceSelector;
 use App\Services\Sources\Stub\FixtureStore;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pennant\Feature;
+use LogicException;
 
 /**
  * Source drivers of /api/v1 (ADR-0017, `config/sources.php`). Every configured feature is defined in Pennant with a
- * static empty rule: the one stored value of a feature lives in Pennant's global scope.
+ * static empty rule: the one stored value of a feature lives in Pennant's global scope. The stub mode of the native
+ * methods is refused outside `local` and `testing` (WP-40).
  */
 class SourceServiceProvider extends ServiceProvider
 {
@@ -29,8 +31,24 @@ class SourceServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        foreach ($this->app->make(SourceConfig::class)->features() as $feature) {
+        $config = $this->app->make(SourceConfig::class);
+        $this->refuseNativeStubsOutsideDevelopment($config);
+
+        foreach ($config->features() as $feature) {
             Feature::define($feature, []);
+        }
+    }
+
+    /**
+     * The stub mode of the native methods (`SOURCES_NATIVE_STUBS`, WP-40) answers every sign-in with the stub user, so
+     * it may run only in `local` and `testing`: anywhere else the application refuses to boot with it.
+     *
+     * @throws LogicException
+     */
+    private function refuseNativeStubsOutsideDevelopment(SourceConfig $config): void
+    {
+        if ($config->nativeStubs() && ! $this->app->environment(['local', 'testing'])) {
+            throw new LogicException('SOURCES_NATIVE_STUBS is allowed only in the local and testing environments.');
         }
     }
 }

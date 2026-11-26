@@ -23,7 +23,8 @@ const TOKEN = "9|launchtoken";
 const tag = (id: number) => createHash("sha256").update(String(id)).digest("hex");
 const USER = 100_000_001;
 
-type Answer = [number, unknown] | "network";
+/** A status and a body, and the answer's own headers when it has any. */
+type Answer = [number, unknown] | [number, unknown, Record<string, string>] | "network";
 interface Calls {
   get: (string | null)[];
   post: string[];
@@ -52,7 +53,7 @@ function server(handlers: { get?: (bearer: string | null) => Answer | Promise<An
       if (answer === "network") {
         throw new TypeError("Failed to fetch");
       }
-      return new Response(JSON.stringify(answer[1]), { status: answer[0], headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify(answer[1]), { status: answer[0], headers: { "content-type": "application/json", ...answer[2] } });
     }),
   );
 }
@@ -231,6 +232,46 @@ describe("session bootstrap (25 §3.4)", () => {
     expect(session.getSession()).toMatchObject({ status: "ready", error: null });
   });
 
+  it("a 429 keeps the seconds of its Retry-After for the boot retry, from the check or the sign-in (KI-37)", async () => {
+    let get: Answer = [429, { code: "rate_limited" }, { "retry-after": "37" }];
+    let post: Answer = signedIn();
+    server({ get: () => get, post: () => post });
+    const { session } = await load();
+
+    await session.startSession();
+    expect(session.getSession()).toMatchObject({ status: "booting", error: "rate_limited", retryAfter: 37 });
+
+    get = [200, { mode: "none" }];
+    post = [429, { code: "rate_limited" }, { "retry-after": "5" }];
+    await session.retry();
+    expect(session.getSession()).toMatchObject({ status: "booting", error: "rate_limited", retryAfter: 5 });
+
+    post = [429, { code: "rate_limited" }];
+    await session.retry();
+    expect(session.getSession()).toMatchObject({ status: "booting", error: "rate_limited", retryAfter: null });
+
+    post = [502, { code: "bad_gateway" }, { "retry-after": "5" }];
+    await session.retry();
+    expect(session.getSession(), "only a 429 carries a wait").toMatchObject({ status: "booting", error: "server", retryAfter: null });
+
+    get = [200, { mode: "cookie", me, user: tag(USER) }];
+    await session.retry();
+    expect(session.getSession()).toMatchObject({ status: "ready", error: null, retryAfter: null });
+  });
+
+  it("reads Retry-After as seconds or as an HTTP date; anything else is none", async () => {
+    const { session } = await load({ telegram: false });
+    const now = Date.parse("2026-11-26T12:00:00Z");
+
+    expect(session.retryAfterSeconds("37", now)).toBe(37);
+    expect(session.retryAfterSeconds(" 0 ", now)).toBe(0);
+    expect(session.retryAfterSeconds("Thu, 26 Nov 2026 12:00:42 GMT", now)).toBe(42);
+    expect(session.retryAfterSeconds("Thu, 26 Nov 2026 11:59:00 GMT", now)).toBe(0);
+    for (const value of [null, "", "-5", "1.5", "soon"]) {
+      expect(session.retryAfterSeconds(value, now), String(value)).toBeNull();
+    }
+  });
+
   it("startSession runs once for double effects", async () => {
     server({ get: () => [200, { mode: "cookie", me, user: tag(USER) }] });
     const { session } = await load();
@@ -323,10 +364,10 @@ describe("attempts in flight and the re-check of a refusal (WP-23, D-S-2)", () =
     const { session } = await load();
     await session.startSession();
 
-    for (const failure of ["network", [502, { code: "bad_gateway" }], [429, { code: "rate_limited" }]] as Answer[]) {
+    for (const failure of ["network", [502, { code: "bad_gateway" }], [429, { code: "rate_limited" }, { "retry-after": "30" }]] as Answer[]) {
       get = failure;
       await session.retry();
-      expect(session.getSession(), JSON.stringify(failure)).toMatchObject({ status: "denied", reason: "invite", error: null, pending: false });
+      expect(session.getSession(), JSON.stringify(failure)).toMatchObject({ status: "denied", reason: "invite", error: null, retryAfter: null, pending: false });
     }
   });
 

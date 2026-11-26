@@ -124,7 +124,9 @@ Duplicates are stored twice: the log counts presses. There is no client timestam
   user no longer exists drops itself.
 - `config/analytics.php` → `posthog` (host, project key, project id, personal key, timeout 5 s),
   `forward_to_posthog` (`ANALYTICS_FORWARD_TO_POSTHOG`, default false), and the `client` block that `GET /me`
-  reports (`autocapture`, `replay`, `replay_rate`). A boot check refuses to start staging with the production
+  reports (`autocapture`, `replay`, `replay_rate`). *Corrected by WP-40:* the file exists since WP-40 with the
+  `client` block only (`true`, `false`, `0`, no env keys; `MeProfile` reads it leniently); this package adds the
+  other keys, and any env keys of the `client` block, to it. A boot check refuses to start staging with the production
   project id (`analytics.posthog.forbidden_project_ids` per environment).
 
 ### Erasure — the service the bot calls
@@ -228,8 +230,8 @@ The periods are proposals (task `KV-BE-049`, DEC-12 open); changing one is a con
 - `backend/app/Jobs/Analytics/CapturePostHogEvents.php`, `backend/app/Jobs/Privacy/{RequestPostHogPersonDeletion,PurgeLateActionRows}.php`,
   `backend/app/Events/Privacy/UserErased.php`, `backend/app/Listeners/Analytics/RecordContactDisclosure.php`
 - `backend/app/Console/Commands/{Partitions/EnsurePartitions,Partitions/DropExpiredPartitions,Privacy/EraseUser,Privacy/RetryPostHog,Privacy/PurgeOperationalData}.php`
-- `backend/config/{analytics,partitions,erasure,retention}.php`; `backend/routes/console.php`;
-  `backend/app/Http/Controllers/Api/V1/EventController.php`; `backend/app/Providers/AppServiceProvider.php`
+- `backend/config/{analytics,partitions,erasure,retention}.php` (`analytics.php` exists since WP-40 and is extended);
+  `backend/routes/console.php`; `backend/app/Http/Controllers/Api/V1/EventController.php`; `backend/app/Providers/AppServiceProvider.php`
 - `backend/tests/Feature/Analytics/{ActionLoggerTest,ActionLoggerCatalogueTest,EventsTest,PostHogClientTest,ServerEventsTest}.php`,
   `backend/tests/Feature/Privacy/{ErasureServiceTest,ErasureRegistryTest,RetentionRegistryTest,PurgeOperationalDataTest}.php`,
   `backend/tests/Pgsql/ActionLogPartitionTest.php`

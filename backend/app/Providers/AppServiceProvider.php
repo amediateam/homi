@@ -6,9 +6,13 @@ use App\Http\DashboardAccess;
 use App\Http\OpenApi\ApiErrorSchema;
 use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
+use App\Services\Access\RateLimits;
+use App\Services\Identity\TelegramInitDataVerifier;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Config\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -19,6 +23,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +34,20 @@ class AppServiceProvider extends ServiceProvider
     {
         // GD is the image driver (app.uz convention); Imagick is also installed if ever needed.
         $this->app->singleton(ImageManager::class, fn (): ImageManager => new ImageManager(new GdDriver));
+
+        // Built on each resolution, so the token and the window are read from the configuration of the moment.
+        $this->app->bind(TelegramInitDataVerifier::class, fn (Application $app): TelegramInitDataVerifier => new TelegramInitDataVerifier(
+            self::configString($app, 'telegram.bot.token'),
+            $app->make(Repository::class)->integer('telegram.initdata.max_age', 3600),
+        ));
+    }
+
+    /** A string value of the configuration, or `''` when it is missing or not a string (an unset env key is null). */
+    private static function configString(Application $app, string $key): string
+    {
+        $value = $app->make(Repository::class)->get($key);
+
+        return is_string($value) ? $value : '';
     }
 
     /**
@@ -76,12 +95,30 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Named limiters (app.uz catalogue A5, adapted): `api` is attached to the whole /api/v1 group in
-     * routes/api.php; the others are attached per route group.
+     * Named limiters (app.uz catalogue A5, adapted), attached per route in routes/api.php: every /api/v1 route carries
+     * at least one. The `v1-*` limiters read their counts from `config/rate_limits.php` (WP-40, SEC-REQ-027) on every
+     * request. The bearer routes count per actor (`actorKey()`, after authentication), the public ones per client
+     * address. The daily cap on opening full cards is not a limiter: `CountListingOpens` counts only answered cards.
      */
     protected function configureRateLimiting(): void
     {
-        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(120)->by($this->actorKey($request)));
+        RateLimiter::for('v1-auth', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('auth.per_address'))->by((string) $request->ip()));
+        RateLimiter::for('v1-public', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('public.per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('v1-me', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('me.per_minute'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-reads', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('reads.per_minute'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-listing', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('listing.per_minute'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-contact', fn (Request $request): Limit => Limit::perHour(RateLimits::value('contact.per_hour'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-translation', fn (Request $request): Limit => Limit::perHour(RateLimits::value('translation.per_hour'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-share', fn (Request $request): Limit => Limit::perHour(RateLimits::value('share.per_hour'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-lists', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('lists.per_minute'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-reports', fn (Request $request): Limit => Limit::perDay(RateLimits::value('reports.per_day'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-radars', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('radars.per_minute'))->by($this->actorKey($request)));
+        RateLimiter::for('v1-media', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('media.per_minute'))->by($this->actorKey($request)));
+
+        // Analytics events beyond the limit are dropped, not refused (KV-BE-010, API-034): the client never retries them.
+        RateLimiter::for('v1-events', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('events.per_minute'))
+            ->by($this->actorKey($request))
+            ->response(fn (): Response => response()->noContent()));
 
         RateLimiter::for('uploads', fn (Request $request): Limit => Limit::perMinute(30)->by($this->actorKey($request)));
 
@@ -100,14 +137,29 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Rate-limit key: the authenticated model (users and sources do not collide) or the IP.
-     * The key comes from the model because a `Source` is not Authenticatable and has no
-     * `getAuthIdentifier()`.
+     * Rate-limit key: `user:<internal id>` for a HOMI user (never a Telegram id, WP-40), the class and id of any other
+     * authenticated model (a collector's `Source`, which is not Authenticatable and has no `getAuthIdentifier()`; users
+     * and sources do not collide), else the client address.
      */
     private function actorKey(Request $request): string
     {
+        $actor = $this->actor($request);
+
+        return match (true) {
+            $actor instanceof User => 'user:'.$actor->getKey(),
+            $actor instanceof Model => $actor::class.':'.$actor->getKey(),
+            default => (string) $request->ip(),
+        };
+    }
+
+    /**
+     * The authenticated model of the request: Sanctum signs in a HOMI user or a collector's `Source` (the media
+     * routes), although the default guard's provider names only users; null for a guest.
+     */
+    private function actor(Request $request): ?Model
+    {
         $actor = $request->user();
 
-        return $actor instanceof Model ? $actor::class.':'.$actor->getKey() : (string) $request->ip();
+        return $actor instanceof Model ? $actor : null;
     }
 }

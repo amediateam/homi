@@ -8,12 +8,15 @@ use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Exceptions\MissingAbilityException;
+use Symfony\Component\HttpFoundation\Response;
 
 /** The `code` table of WP-10: every error body of /api/v1 carries `code`. */
 it('renders model-not-found as a 404 envelope', function (): void {
@@ -141,6 +144,16 @@ it('leaves an exception that carries its own response to the framework', functio
     $this->getJson('/api/v1/_test/own-response')
         ->assertStatus(202)
         ->assertExactJson(['custom' => true]);
+});
+
+it('leaves a response thrown by a middleware to the framework (the dropped event of v1-events)', function (): void {
+    RateLimiter::for('test-drop', fn (): Limit => Limit::perMinute(1)->by('test')->response(fn (): Response => response()->noContent()));
+    Route::get('api/v1/_test/middleware-response', fn () => response()->json(['answered' => true]))->middleware('throttle:test-drop');
+
+    $this->getJson('/api/v1/_test/middleware-response')->assertOk()->assertExactJson(['answered' => true]);
+    $dropped = $this->getJson('/api/v1/_test/middleware-response')->assertNoContent();
+
+    expect($dropped->getContent())->toBe('');
 });
 
 it('masks unexpected exceptions as a 500 envelope when debug is off', function (): void {

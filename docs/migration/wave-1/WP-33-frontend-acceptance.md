@@ -817,7 +817,8 @@ Part 2:
   content, not a skeleton. `miniapp-cookie` and `miniapp-header` render `ru`. In the manual run,
   `miniapp-locales` renders `uz` and `en`, and `miniapp-dark` the dark theme.
   - The locale guard follows the stub profile's saved language, so `uz` and `en` need profiles of their own. The `en`
-    profile is new: the fixture `me/en.json`, `MeController::SCENARIOS` and WP-11's scenario list.
+    profile is new: the fixture `me/en.json`, `MeController::SCENARIOS` and WP-11's scenario list (*corrected by
+    WP-40:* the list is now `NativeStubs::ME_SCENARIOS`).
   - An address whose state needs another scenario keeps the `ru` profile and is checked as rendered.
 - **`coverage/version-gates.spec.ts` (`@gates`):** at 6.0 the app starts, a card opens its listing and settings
   loads, and none of them calls a member above 6.0; a confirm falls back to the browser's dialog. The fake's call log

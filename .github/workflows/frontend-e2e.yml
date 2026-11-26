@@ -17,6 +17,17 @@ on:
       - '.github/workflows/frontend-e2e.yml'
       # The screen table the coverage step checks (WP-33): an intake that adds a screen runs the check in its own PR.
       - 'docs/migration/data/screens.json'
+      # The API these runs boot comes from the PR's tree, and since WP-40 its boot checks, stub mode and access gate
+      # decide whether the app works at all, so a change of the backend's code runs the suite too (DEC-108).
+      - 'backend/app/**'
+      - 'backend/bootstrap/**'
+      - 'backend/config/**'
+      - 'backend/routes/**'
+      - 'backend/database/migrations/**'
+      - 'backend/resources/fixtures/**'
+      - 'backend/composer.lock'
+      # The API steps copy it as their env file.
+      - 'backend/.env.example'
   workflow_dispatch:
     inputs:
       full:
@@ -92,6 +103,13 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          # WP-40: the signed-in methods answer from the stubs (the synthetic launch data of the specs is not signed with
+          # a bot token), and the access gate, which runs in stub mode too, admits the stub user. The API refuses to boot
+          # with the stubs outside `local` and `testing`, and `composer install` boots it (`package:discover`) before
+          # `.env` exists, when `APP_ENV` would default to `production`: the step pins it.
+          APP_ENV: local
+          SOURCES_NATIVE_STUBS: 'true'
+          ACCESS_MODE: open
           # The owner cabinet is on for the default run (WP-81); the second API keeps it unset for `@owner-off`.
           OWNER_CABINET_ENABLED: 'true'
         run: |
@@ -149,6 +167,10 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          # As in the first API: the stubs boot only in `local`.
+          APP_ENV: local
+          SOURCES_NATIVE_STUBS: 'true'
+          ACCESS_MODE: open
           RADAR_CREATION_ENABLED: 'false'
         run: |
           (cd public && nohup php -S 127.0.0.1:8081 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php >> "$RUNNER_TEMP/api.log" 2>&1 &)

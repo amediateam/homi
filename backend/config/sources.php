@@ -29,6 +29,11 @@ return [
     // Off from WP-48 on production: a rule or default that names `stub` then falls back or answers 503.
     'allow_stub' => (bool) env('SOURCES_ALLOW_STUB', true),
 
+    // Stub mode of the native methods for the end-to-end suite (WP-40): while on, `AnswerNativeStubs` answers the
+    // routes of `App\Services\Sources\Stub\NativeStubs` with their stub bodies. Allowed only in `local` and
+    // `testing`: `SourceServiceProvider` refuses to boot with it anywhere else, so no stub can answer on a server.
+    'native_stubs' => (bool) env('SOURCES_NATIVE_STUBS', false),
+
     'capabilities' => [
         'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class]],
         'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class]],

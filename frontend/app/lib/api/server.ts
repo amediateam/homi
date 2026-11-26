@@ -12,12 +12,13 @@ import {
 } from "@homi/api-client";
 import { isLocale, type Locale } from "@homi/config";
 import { io } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { locale as rootLocale } from "next/root-params";
 
 import { apiBaseUrl, getSessionToken } from "@/lib/session/server";
 
 import { failureOf } from "./errors";
+import { forwardedFor, forwardedForHeaders } from "./forwarded";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "./scenario";
 import type { ApiMeta, ApiResult } from "./types";
 
@@ -48,6 +49,8 @@ export interface ServerApiConfig {
   locale: Locale;
   /** The value of the stub-scenario cookie; `stubScenarioHeaders` decides whether it is forwarded. */
   scenario: string | null;
+  /** The `X-Forwarded-For` of the request being served, passed on as it came (`./forwarded`); `null` for none. */
+  forwardedFor: string | null;
 }
 
 function requestId(): string {
@@ -90,7 +93,7 @@ export function createServerApi(config: ServerApiConfig) {
         body: options.body,
         signal,
         anonymous: config.token === null,
-        headers: { "X-Request-Id": requestId(), ...stubScenarioHeaders(config.scenario) },
+        headers: { "X-Request-Id": requestId(), ...stubScenarioHeaders(config.scenario), ...forwardedForHeaders(config.forwardedFor) },
       });
       return { ok: true, data: answer.data, meta: answer.meta ?? {} };
     } catch (error) {
@@ -194,21 +197,26 @@ export type ServerApi = ReturnType<typeof createServerApi>;
 /**
  * The API as the signed-in user of this request: the token of the `homi_session` cookie, else `auth.token` (header
  * mode, passed by a Server Action). The locale comes from the root parameter in Server Components; Server Actions
- * and Route Handlers pass it, because the getter does not run there (`next-root-params.md`).
+ * and Route Handlers pass it, because the getter does not run there (`next-root-params.md`). The request's
+ * `X-Forwarded-For` goes along (WP-40).
  */
 export async function serverApi(auth?: { token?: string }, locale?: Locale): Promise<ServerApi> {
-  const store = await cookies();
+  const [store, incoming] = await Promise.all([cookies(), headers()]);
   const token = (await getSessionToken()) ?? auth?.token ?? null;
   return createServerApi({
     token,
     locale: locale ?? (await requestLocale()),
     scenario: store.get(STUB_SCENARIO_COOKIE)?.value ?? null,
+    forwardedFor: forwardedFor(incoming),
   });
 }
 
-/** Public methods without a user: no token and no stub scenario, so the answer may be cached (`lib/reference`). */
+/**
+ * Public methods without a user: no token, no stub scenario and no `X-Forwarded-For`, so the answer may be cached
+ * (`lib/reference`) — a cached function cannot read the request, and its answer serves every user.
+ */
 export function publicApi(locale: Locale): ServerApi {
-  return createServerApi({ token: null, locale, scenario: null });
+  return createServerApi({ token: null, locale, scenario: null, forwardedFor: null });
 }
 
 async function requestLocale(): Promise<Locale> {

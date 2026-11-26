@@ -2,8 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const jar = new Map<string, string>();
+/** The headers of the action's request. */
+let incoming = new Headers();
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined) }),
+  headers: async () => incoming,
 }));
 // Server Actions never read the root parameter (`next-root-params.md`); the module only has to load.
 vi.mock("next/root-params", () => ({ locale: async () => "ru" }));
@@ -27,6 +30,7 @@ async function testAction(input: unknown, auth?: { token?: string }, locale?: st
 beforeEach(() => {
   sent = [];
   jar.clear();
+  incoming = new Headers();
   answer = () => Response.json({ success: true, data: { favorite: true }, meta: { source: "native" } });
   vi.stubEnv("API_URL", "https://api.test/api/v1");
   vi.stubGlobal(
@@ -74,6 +78,16 @@ describe("runAction (WP-22)", () => {
     answer = () => new Response(null, { status: 204 });
 
     await expect(testAction(42)).resolves.toEqual({ ok: true, data: null, meta: {} });
+  });
+
+  it("passes the action request's X-Forwarded-For on as it came, and none when it has none (WP-40)", async () => {
+    jar.set("homi_session", "cookie-token");
+    incoming = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" });
+    await testAction(42);
+    incoming = new Headers();
+    await testAction(42);
+
+    expect(sent.map((call) => call.headers["X-Forwarded-For"])).toEqual(["203.0.113.7, 10.0.0.1", undefined]);
   });
 
   it("an unknown locale falls back to ru", async () => {

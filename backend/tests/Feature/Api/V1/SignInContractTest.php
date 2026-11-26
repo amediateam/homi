@@ -15,6 +15,8 @@ function signIn(array $headers = []): TestResponse
     return test()->postJson('/api/v1/auth/telegram', ['init_data' => 'query_id=AAHomiSyntheticQuery&user=%7B%7D&auth_date=1&hash=00'], $headers);
 }
 
+beforeEach(fn () => config(['sources.native_stubs' => true]));
+
 it('issues a bearer token for the stub user in the shape of the contract', function (): void {
     Date::setTestNow('2026-11-15 09:30:00');
 
@@ -74,7 +76,7 @@ it('accepts init_data of exactly 4 096 bytes', function (): void {
 });
 
 it('tells a stale launch apart from a bad one', function (string $scenario, string $code): void {
-    signIn(['X-Stub-Scenario' => $scenario])->assertUnauthorized()->assertJsonPath('code', $code);
+    signIn(['X-Stub-Scenario' => $scenario])->assertUnauthorized()->assertJsonPath('code', $code)->assertJsonMissingPath('reason');
 
     expect(PersonalAccessToken::query()->count())->toBe(0);
 })->with([

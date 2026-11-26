@@ -30,7 +30,26 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Given here too, a random UUID as the model's `creating` hook gives it: the hook does not run under
+            // `WithoutModelEvents` (DatabaseSeeder). Faker's `uuid()` is a name-based version 3 UUID.
+            'analytics_distinct_id' => (string) Str::uuid(),
         ];
+    }
+
+    /**
+     * A user who came through a Telegram sign-in (WP-40): no name, email or password, a unique Telegram id.
+     */
+    public function telegram(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => null,
+            'email' => null,
+            'email_verified_at' => null,
+            'password' => null,
+            'remember_token' => null,
+            'telegram_user_id' => fake()->unique()->numberBetween(100_000_000, 7_999_999_999),
+            'language_code' => 'ru',
+        ]);
     }
 
     /**

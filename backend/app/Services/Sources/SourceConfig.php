@@ -18,6 +18,12 @@ final class SourceConfig
         return (bool) $this->config->get('sources.allow_stub', true);
     }
 
+    /** Whether the native methods answer with their stub bodies (`NativeStubs`, WP-40); read on every call. */
+    public function nativeStubs(): bool
+    {
+        return (bool) $this->config->get('sources.native_stubs', false);
+    }
+
     /** @return list<string> */
     public function features(): array
     {

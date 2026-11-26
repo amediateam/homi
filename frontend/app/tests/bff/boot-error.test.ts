@@ -52,6 +52,14 @@ const ENTRY = {
 };
 
 describe("POST /bff/boot-error (WP-32, TMA-003)", () => {
+  it("passes the request's X-Forwarded-For on to POST /events as it came, and invents none (WP-40)", async () => {
+    await post(JSON.stringify(ENTRY), { cookie: "homi_session=7%7Ctoken", "x-forwarded-for": "203.0.113.7, 198.51.100.2" });
+    await post(JSON.stringify(ENTRY), { cookie: "homi_session=7%7Ctoken" });
+
+    const forwarded = fetch.mock.calls.map(([, init]) => (init.headers as Record<string, string>)["X-Forwarded-For"]);
+    expect(forwarded).toEqual(["203.0.113.7, 198.51.100.2", undefined]);
+  });
+
   it("with the session cookie: one app_error to POST /events with the token; kind and stage forced to boot; extra fields dropped; scrubbed", async () => {
     const response = await post(JSON.stringify(ENTRY), { cookie: "homi_session=7%7Ctoken" });
 

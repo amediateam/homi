@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const jar = new Map<string, string>();
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined) }),
+  headers: async () => new Headers(),
 }));
 vi.mock("next/root-params", () => ({ locale: async () => "ru" }));
 

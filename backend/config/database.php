@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Laravel writes dates as the app's UTC wall time without an offset, and PostgreSQL reads such a value
+            // for a `timestamptz` column in the session's zone: the session must be UTC whatever the server's zone
+            // is, or every instant moves by the server's offset (a server on Asia/Tashkent stores 09:00 as 04:00 UTC).
+            'timezone' => 'UTC',
         ],
 
         'sqlsrv' => [

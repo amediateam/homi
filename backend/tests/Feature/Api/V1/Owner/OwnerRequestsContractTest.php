@@ -9,6 +9,9 @@ beforeEach(function (): void {
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 
+// The owner profiles of `GET /me` below are its stub scenarios, which answer only in the stub mode since WP-40.
+beforeEach(fn () => config(['sources.native_stubs' => true]));
+
 it('lists the requests of a listing as a cursor list, newest first, every flag present', function (): void {
     $response = $this->getJson('/api/v1/owner/listings/01JF0000000000000000000003/requests?limit=3')->assertOk();
 
