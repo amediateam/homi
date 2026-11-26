@@ -24,7 +24,7 @@
             "lon": 69.21402,
             "label": "<b>$350</b> & торг",
             "tone": "suspicious",
-            "priced": true,
+            "priced": false,
             "usd": 350
         },
         {
@@ -170,6 +170,15 @@
             "tone": null,
             "priced": true,
             "usd": 80
+        },
+        {
+            "id": 100007,
+            "lat": null,
+            "lon": null,
+            "label": "$20",
+            "tone": null,
+            "priced": true,
+            "usd": 20
         },
         {
             "id": 100005,

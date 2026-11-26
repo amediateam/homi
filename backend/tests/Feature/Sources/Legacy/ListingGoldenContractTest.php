@@ -20,8 +20,9 @@ use Tests\Support\LegacyFixtures;
  * and a translator that no longer fits fails here, naming the field.
  *
  * The stub has a value in a few places legacy cannot fill (the spec's "Gaps against legacy"; brief rule 12): those
- * may be `null` from legacy, and only those (`LegacyFixtures::PREVIEW_GAPS`, `LegacyFixtures::CARD_GAPS`). Everywhere
- * else the two shapes are equal, types included.
+ * may be `null` from legacy, and only those (`LegacyFixtures::previewGaps()`: `price.usd` and `posted.at` only for an
+ * item without `usd` or `posted_at`; `LegacyFixtures::CARD_GAPS`). Everywhere else the two shapes are equal, types
+ * included. The shapes cannot see a renamed key whose empty value fits the stub's type: the key test at the end can.
  */
 
 beforeEach(function (): void {
@@ -53,6 +54,7 @@ function cardContract(): array
 
 it('translates every feed item into the preview shape of its stub listing', function (): void {
     $translator = LegacyFixtures::summaryTranslator();
+    $legacy = [...LegacyFixtures::golden('feed.default')['items'], ...LegacyFixtures::golden('feed.page2')['items']];
     $items = [
         ...$translator->page(LegacyFixtures::golden('feed.default'))['items'],
         ...$translator->page(LegacyFixtures::golden('feed.page2'))['items'],
@@ -60,12 +62,12 @@ it('translates every feed item into the preview shape of its stub listing', func
 
     expect($items)->toHaveCount(24);
 
-    foreach ($items as $item) {
+    foreach ($items as $index => $item) {
         $stub = stubPreviewOf($item['number']);
 
         JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($item));
         JsonShape::assertSame(ContractShapes::LISTING_PREVIEW, JsonShape::of($item));
-        expect(LegacyFixtures::nullGaps($stub, $item))->each->toBeIn(LegacyFixtures::PREVIEW_GAPS);
+        expect(LegacyFixtures::nullGaps($stub, $item))->each->toBeIn(LegacyFixtures::previewGaps($legacy[$index]));
     }
 });
 
@@ -82,7 +84,7 @@ it('translates the preview form into the preview shape of its stub listing', fun
     $stub = stubPreviewOf(100001);
 
     JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($preview));
-    expect(LegacyFixtures::nullGaps($stub, $preview))->each->toBeIn(LegacyFixtures::PREVIEW_GAPS);
+    expect(LegacyFixtures::nullGaps($stub, $preview))->each->toBeIn(LegacyFixtures::previewGaps(LegacyFixtures::golden('listing.preview')));
 });
 
 it('translates every golden card into the card shape of its stub listing', function (string $fixture, int $number): void {
@@ -214,3 +216,119 @@ it('points every photo of the translated fixtures at HOMI\'s media host in the f
     expect($photos)->not->toBeEmpty()
         ->each->toMatch('~^'.preg_quote(LegacyFixtures::MEDIA, '~').'/\d+/\d+\.jpg\?e=\d+&s=[0-9a-f]{32}$~');
 });
+
+/*
+ * A renamed key passes the shape checks above when the translator's empty value (`''`, `false`, `0`, `null`) fits the
+ * stub's type. So every key a golden fixture carries must matter: deleting it (from every item of a list, `items.*.age`)
+ * must change the translation of at least one fixture of its translator, or fail it with a contract error. A key no
+ * translator reads is listed in `UNREAD_LEGACY_KEYS` with its reason; a legacy release that renames a key re-records
+ * the fixtures, and the new name fails here until a translator reads it.
+ */
+
+/** Keys of the golden fixtures that no translator reads, on purpose. */
+const UNREAD_LEGACY_KEYS = [
+    'favorite', 'viewed', // legacy's flags for the service key: HOMI's overlay writes them (WP-42)
+    'phone', 'phone_display', 'call_url', // never mapped into a card (DEC-52); `phone` only picks the mode of a gate listing
+    'owner_mine', 'owner_listing_id', 'my_request', 'owner_entry', // per user under a service key: the overlay's (DEC-94)
+    'title', 'short_title', // read as a pair: `short_title`, else `title` before « · »; deleted together below
+    'total', 'photos_total', // `FeedPage.total` and `ListingPreview.photos_total`: never read by the client (`08` §1.8)
+];
+
+/** Keys one translator reads only as a bound: on a card `photos` lists every photo, so `photos_count` only caps it. */
+const UNREAD_CARD_KEYS = ['photos_count'];
+
+/**
+ * The golden fixtures of each translator, translated by one closure; a key's deletion must change one of them.
+ *
+ * @return array<string, array{fixtures: list<string>, translate: Closure(array<array-key, mixed>): mixed, unread: list<string>}>
+ */
+function translatorFixtures(): array
+{
+    return [
+        'card' => [
+            'fixtures' => ['listing.rent_apartment', 'listing.daily', 'listing.sale_house', 'listing.commercial', 'listing.land', 'listing.merged', 'listing.no_phone', 'listing.minimal'],
+            'translate' => fn (array $answer): array => LegacyFixtures::detailsTranslator()->translate($answer),
+            'unread' => [...UNREAD_LEGACY_KEYS, ...UNREAD_CARD_KEYS],
+        ],
+        'preview' => [
+            'fixtures' => ['feed.default', 'feed.page2', 'feed.empty', 'listing.preview'],
+            'translate' => fn (array $answer): array => array_key_exists('items', $answer) || array_key_exists('next_cursor', $answer)
+                ? LegacyFixtures::summaryTranslator()->page($answer)
+                : LegacyFixtures::summaryTranslator()->translate($answer, path: ListingDetailsTranslator::PATH),
+            'unread' => UNREAD_LEGACY_KEYS,
+        ],
+        'map' => [
+            'fixtures' => ['map'],
+            'translate' => fn (array $answer): array => MapPointsTranslator::translate($answer, LegacyFixtures::NATIVE_FLOOR),
+            'unread' => [],
+        ],
+        'flow' => [
+            'fixtures' => ['flow', 'flow.options'],
+            'translate' => fn (array $answer): array => FlowTranslator::translate($answer),
+            'unread' => [],
+        ],
+        'count' => [
+            'fixtures' => ['count', 'feed_new'],
+            'translate' => fn (array $answer): int => NewCountTranslator::count($answer),
+            'unread' => [],
+        ],
+    ];
+}
+
+/**
+ * Every (translator, key) of the golden fixtures, the items of a feed page read as previews (`items.*.age` as `age`
+ * of the preview group's universe). The keys of flow filters are `FiltersTranslatorTest`'s, one per filter.
+ *
+ * @return array<string, array{string, string}>
+ */
+function goldenKeys(): array
+{
+    $cases = [];
+
+    foreach (translatorFixtures() as $translator => ['fixtures' => $fixtures, 'unread' => $unread]) {
+        foreach ($fixtures as $fixture) {
+            foreach (LegacyFixtures::keyPaths(LegacyFixtures::golden($fixture)) as $path) {
+                $key = (string) preg_replace('/^items\.\*\./', '', $path);
+
+                if (! in_array(explode('.', $key)[0], $unread, true) && ! str_contains($key, 'filters.')) {
+                    $cases["{$translator}: {$key}"] = [$translator, $key];
+                }
+            }
+        }
+    }
+
+    $cases['card: title with short_title'] = ['card', 'title+short_title'];
+    $cases['preview: title with short_title'] = ['preview', 'title+short_title'];
+
+    return $cases;
+}
+
+it('reads every key of the golden fixtures: deleting one changes a translation or fails it', function (string $translator, string $key): void {
+    ['fixtures' => $fixtures, 'translate' => $translate] = translatorFixtures()[$translator];
+    $changed = false;
+
+    foreach ($fixtures as $fixture) {
+        $answer = LegacyFixtures::golden($fixture);
+        $mutated = $answer;
+
+        foreach (explode('+', $key) as $part) {
+            $mutated = LegacyFixtures::withoutEvery($mutated, array_key_exists('items', $answer) && ! in_array($part, ['items', 'next_cursor'], true) ? "items.*.{$part}" : $part);
+        }
+
+        if ($mutated === $answer) {
+            continue;
+        }
+
+        try {
+            $changed = $translate($mutated) !== $translate($answer);
+        } catch (LegacyContractError) {
+            $changed = true;
+        }
+
+        if ($changed) {
+            break;
+        }
+    }
+
+    expect($changed)->toBeTrue("Deleting \"{$key}\" changes no {$translator} fixture's translation: legacy renamed it, a fixture holds only its empty value, or no translator reads it any more (then list it as unread, with the reason).");
+})->with(goldenKeys());

@@ -129,9 +129,11 @@ it('answers every feed item, the card and the preview in the shape of the stub a
     $ru = ['Accept-Language' => 'ru'];
     $stubCard = $this->getJson('/api/v1/listings/100001', $ru)->assertOk()->json('data');
     $stubPreviews = [];
+    $legacyItems = [];
 
     foreach ([...LegacyFixtures::golden('feed.default')['items'], ...LegacyFixtures::golden('feed.page2')['items']] as $item) {
         $number = (int) $item['id'];
+        $legacyItems[$number] = $item;
         $stubPreviews[$number] = $this->getJson("/api/v1/listings/{$number}?preview=1", $ru)->assertOk()->json('data');
     }
 
@@ -151,7 +153,8 @@ it('answers every feed item, the card and the preview in the shape of the stub a
         $stub = $stubPreviews[$item['number']];
         // The fixture server ignores the filters: a listing of another city keeps its district name, but only the
         // districts of the searched city give a code.
-        $gaps = stubCityOf($item['number']) === 'tashkent' ? LegacyFixtures::PREVIEW_GAPS : [...LegacyFixtures::PREVIEW_GAPS, 'district.code'];
+        $gaps = LegacyFixtures::previewGaps($legacyItems[$item['number']]);
+        $gaps = stubCityOf($item['number']) === 'tashkent' ? $gaps : [...$gaps, 'district.code'];
         JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($item));
         expect(LegacyFixtures::nullGaps($stub, $item))->each->toBeIn($gaps);
     }
@@ -162,7 +165,7 @@ it('answers every feed item, the card and the preview in the shape of the stub a
 
     $preview = $this->getJson('/api/v1/listings/100001?preview=1', $ru)->assertOk()->json('data');
     JsonShape::assertSame(JsonShape::of($stubPreviews[100001]), JsonShape::of($preview));
-    expect(LegacyFixtures::nullGaps($stubPreviews[100001], $preview))->each->toBeIn(LegacyFixtures::PREVIEW_GAPS);
+    expect(LegacyFixtures::nullGaps($stubPreviews[100001], $preview))->each->toBeIn(LegacyFixtures::previewGaps(LegacyFixtures::golden('listing.preview')));
 });
 
 it('answers 404 not_found for a number legacy does not know, and does not ask again for a minute', function (): void {

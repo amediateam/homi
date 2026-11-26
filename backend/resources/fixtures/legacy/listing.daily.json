@@ -69,7 +69,7 @@
             "kind": "park",
             "name": "Парк",
             "km": 0.4,
-            "note": null
+            "note": "через дорогу"
         },
         {
             "kind": "school",
@@ -98,7 +98,7 @@
             "at": "2026-11-13T08:10:00+00:00",
             "channel": "stub_channel_a",
             "url": "https://t.me/stub_channel_a/4005",
-            "text": null,
+            "text": "Снизил цену до $45",
             "kind": "price_down",
             "price_usd": 45,
             "change_pct": -7.4

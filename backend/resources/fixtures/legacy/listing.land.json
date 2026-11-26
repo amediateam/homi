@@ -28,7 +28,7 @@
     "video": null,
     "age": "Опубликовано · вчера",
     "posted_at": "2026-11-13T08:10:00+00:00",
-    "status_text": null,
+    "status_text": "Снято с публикации",
     "market": "Вторичка",
     "median_delta": null,
     "median_tone": null,
@@ -112,7 +112,7 @@
     ],
     "original_text": "Сдаётся участок, 600 м². Чисто, уютно.",
     "original_url": "https://t.me/stub_channel_a/4011",
-    "post_deleted": false,
+    "post_deleted": true,
     "offers": [
         {
             "text": "Торг",

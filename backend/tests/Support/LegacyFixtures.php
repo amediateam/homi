@@ -54,13 +54,29 @@ final class LegacyFixtures
 
     /**
      * The fields that may be `null` on a legacy preview where the stub has a value (WP-42 "Gaps against legacy", brief
-     * rule 12): legacy sends neither a type code nor, on a preview, a deal or a source link; `usd` and `posted_at` are
-     * optional there.
+     * rule 12): legacy sends neither a type code nor, on a preview, a deal or a source link. `price.usd` and
+     * `posted.at` join them only for an item that lacks `usd` (and `price_usd`) or `posted_at`: `previewGaps()`.
      */
-    public const array PREVIEW_GAPS = ['deal', 'type', 'price.usd', 'posted.at', 'source_ref'];
+    public const array PREVIEW_GAPS = ['deal', 'type', 'source_ref'];
 
     /** The fields that may be `null` on a legacy card where the stub has a value: legacy sends no type code. */
     public const array CARD_GAPS = ['type'];
+
+    /**
+     * The gaps a translated legacy preview may have against its stub listing: `PREVIEW_GAPS`, and `price.usd` or
+     * `posted.at` only when the legacy item does not send the key they come from.
+     *
+     * @param  array<array-key, mixed>  $legacyItem
+     * @return list<string>
+     */
+    public static function previewGaps(array $legacyItem): array
+    {
+        return [
+            ...self::PREVIEW_GAPS,
+            ...(($legacyItem['usd'] ?? $legacyItem['price_usd'] ?? null) === null ? ['price.usd'] : []),
+            ...(($legacyItem['posted_at'] ?? null) === null ? ['posted.at'] : []),
+        ];
+    }
 
     /** HOMI's media base of the tests: the photo addresses of the translated fixtures start with it. */
     public const string MEDIA = 'https://media.homi.test/lm';
@@ -132,6 +148,66 @@ final class LegacyFixtures
         $data[$head] = is_array($child) ? self::without($child, $rest) : $child;
 
         return $data;
+    }
+
+    /**
+     * A copy without a dotted key, where `*` stands for every item of a list (`history.*.at`).
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array<array-key, mixed>
+     */
+    public static function withoutEvery(array $data, string $key): array
+    {
+        [$head, $rest] = array_pad(explode('.', $key, 2), 2, null);
+
+        if ($head === '*') {
+            return array_map(fn (mixed $item): mixed => is_array($item) && $rest !== null ? self::withoutEvery($item, $rest) : $item, $data);
+        }
+
+        if ($rest === null) {
+            unset($data[$head]);
+
+            return $data;
+        }
+
+        $child = $data[$head] ?? null;
+        $data[$head] = is_array($child) ? self::withoutEvery($child, $rest) : $child;
+
+        return $data;
+    }
+
+    /**
+     * The dotted keys of a fixture: every key of an object, and the keys of the objects in a list as `<list>.*.<key>`.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return list<string>
+     */
+    public static function keyPaths(array $data, string $prefix = ''): array
+    {
+        $paths = [];
+
+        foreach ($data as $key => $value) {
+            $path = $prefix.$key;
+            $paths[] = $path;
+
+            if (! is_array($value) || $value === []) {
+                continue;
+            }
+
+            if (! array_is_list($value)) {
+                $paths = [...$paths, ...self::keyPaths($value, "{$path}.")];
+
+                continue;
+            }
+
+            foreach ($value as $item) {
+                if (is_array($item) && ! array_is_list($item)) {
+                    $paths = [...$paths, ...self::keyPaths($item, "{$path}.*.")];
+                }
+            }
+        }
+
+        return array_values(array_unique($paths));
     }
 
     /** @return array<array-key, mixed> */

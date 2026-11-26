@@ -53,7 +53,8 @@ it('counts as many listings as the two feed pages reach, and maps the ones with 
     expect(LegacyFixtures::golden('count')['count'])->toBe(count($items))
         ->and($map['total'])->toBe(count($items))
         ->and($map['with_point'])->toBe(count($withCoordinates))
-        ->and(array_map(intval(...), array_column($map['points'], 'id')))->toEqualCanonicalizing(array_column($withCoordinates, 'id'));
+        ->and(array_map(intval(...), array_column(array_filter($map['points'], fn (array $point): bool => $point['lat'] !== null), 'id')))->toEqualCanonicalizing(array_column($withCoordinates, 'id'))
+        ->and(array_map(intval(...), array_column(array_filter($map['points'], fn (array $point): bool => $point['lat'] === null), 'id')))->toBe([100007]);
 });
 
 it('answers the card of a known id and 404 for any other', function (int $id, string $fixture): void {

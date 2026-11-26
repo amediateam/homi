@@ -107,7 +107,7 @@
     },
     "call_url": "https://legacy.invalid/call/fixture-100004?e=1795132800",
     "contact_url": "https://t.me/stub_author_2",
-    "contact_paid": false,
+    "contact_paid": true,
     "summary": "Помещение, 120 м². Тихий район.",
     "sources": [
         {
@@ -121,7 +121,7 @@
     "offers": [
         {
             "text": "Торг",
-            "url": null
+            "url": "https://t.me/stub_author_2"
         }
     ],
     "phone": "+998000000004",
