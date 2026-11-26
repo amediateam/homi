@@ -5,7 +5,8 @@ Plan: [`../25-wave-1-plan.md`](../25-wave-1-plan.md). Strategy and decisions:
 
 This file is the **single ordered queue** of Wave 1. Two full-stack developers, each with agents, work it in relay:
 whoever holds the relay takes the first package that is not `DONE` and continues exactly where the other stopped
-(DEC-45). There is no split by stack and no second queue.
+(DEC-45). There is no split by stack and no second queue; since 2026-11-26 a second development session works the
+same queue at the same time (DEC-109, rule 1).
 
 ## State of the specifications (2026-11-14)
 
@@ -55,7 +56,9 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
 1. **Take the first package that is not `DONE`.** Do not skip ahead. A package marked `WAITING` names what it waits
    for; work then continues with the next package only if that package does not list the waiting one under
    "Depends on". A package in `REVIEW` is finished and waits only for its merge: the next one is taken on a branch
-   from its branch, so it has what it depends on (rule 8).
+   from its branch, so it has what it depends on (rule 8). Since 2026-11-26 a second development session works in
+   parallel (DEC-109): it takes the package `.ai/memory/session-handoff.md` assigns to it (WP-62 first), and this rule
+   holds for the first session (WP-41 next); the second session's prompt is [`docs/handoff/second-developer-prompt.md`](../../handoff/second-developer-prompt.md).
 2. **Read** `25` once, then the package's specification, then only the audit sections the specification cites.
 3. **One package = one branch = one PR**, about 1 500–3 000 changed lines without generated files, reviewed by the
    other developer before merge (DEC-45); while the queue runs under rule 8, an independent review of the diff stands
