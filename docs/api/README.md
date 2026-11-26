@@ -54,7 +54,7 @@ only on `422` and maps each field to its messages.
 | 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
 | 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
-| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is the request limiter. The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week` |
+| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is a request limiter (see "Request limits"). The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week`. `POST /events` never answers `429`: its excess is dropped with `204` |
 | 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
 | 503 | `source_unavailable` | The data source of the method cannot answer; show the "could not load" state |
 | 503 | `translation_unavailable` | `POST /listings/{number}/translation`: the translation service cannot answer |
@@ -112,8 +112,16 @@ Each method lists its scenarios in its specification. Every stub method knows th
 
 Every method that needs a session also knows `access_private`, `access_invite`, `access_full`, `access_blocked`,
 `access_join` and `access_paused`, which answer `403 access_denied` with that `reason`. `paused` says that the whole
-service is on pause (legacy release `index-CIa0Ldj2.js`); only the scenario answers it until the server switch
-exists. Sign-in knows `auth_expired` and `invalid_init_data` as well.
+service is on pause (legacy release `index-CIa0Ldj2.js`); since WP-40 the server switch `ACCESS_PAUSED` answers it
+for real (off by default, DEC-60; team accounts pass it, DEC-106), and the real access gate runs before every stub
+method, so a refused user hears the gate's reason first. Sign-in knows `auth_expired` and `invalid_init_data` as well.
+
+Since WP-40 four methods answer natively, with `meta.source = native`: `POST /auth/telegram`, `GET /me`,
+`GET /settings` and `PATCH /settings`. Their stub answers — and so their scenarios: the profiles of `GET /me`
+(`first_launch`, `uz`, `en`, `owner_*`, …), `card_rich` of the settings and the sign-in's own — answer only while
+`SOURCES_NATIVE_STUBS` is on, which the API allows only in `local` and `testing` (it refuses to boot with it
+anywhere else); the end-to-end suite runs so, with `ACCESS_MODE=open`. Every other method still answers from its
+stub (`meta.source = stub`) until its package lands.
 
 Outside production the Mini App forwards the cookie `homi_stub_scenario` as this header (WP-22). The fixtures live in
 `backend/resources/fixtures/v1/<area>/<name>.json`, in the shape of the data objects and sanitised: no real phones,
@@ -124,13 +132,50 @@ names, addresses or channel names. Frontend tests read the same files through `f
 
 The locale comes from `Accept-Language`: the first supported tag (`ru`, `uz`, `en`; `uz-Latn` and `uz_Latn` are read
 as `uz`), else `ru`. Every answer says it in `Content-Language`. `uz` is the only Uzbek code of this API. The currency
-comes from the user's settings, and until they exist (WP-40) it is `USD`.
+is the user's stored setting (`PATCH /settings`, default `USD`; `USD` for a request without a user, or with a
+collector's token); since WP-40 the request context of every source carries it. The stub sources do not price by it
+(the stub listings stay in `$`); the sources that replace them read it.
 
 ## Session
 
 `POST /auth/telegram` exchanges the raw `initData` of the Mini App launch for a bearer token (abilities `app:read`
 and `app:write`, 24 hours) and the object of `GET /me`. Send the token as `Authorization: Bearer <token>`.
 `GET /reference` and `GET /cities` need no token, so the no-access screen works without a session.
+
+Since WP-40 the sign-in is real. `init_data` is read from the JSON body only (at most 4 096 bytes; a value in the
+query string is ignored) and verified with the bot token of the environment: a malformed or forged value is
+`401 invalid_init_data`, one older than an hour `401 auth_expired`. The same value may be exchanged again inside its
+hour, at most 20 times, then `429 rate_limited`. A user has at most 5 unexpired tokens of the Mini App; a sixth
+sign-in revokes the oldest. The access gate decides before a token is issued: a refusal is `403 access_denied` with
+its `reason` and no token. Every other bearer method passes the same gate first (`POST /events` only refuses
+`blocked` and `paused`); a decision is cached for at most 2 s, and `access:block` drops it at once.
+
+## Request limits
+
+Since WP-40 every `/api/v1` route has a named limiter of its own (counts in `backend/config/rate_limits.php`,
+starting values of SEC-REQ-027, tuned on staging). A bearer route counts per user (`user:<internal id>`, never a
+Telegram id), a public route per client address. The Mini App's server forwards the client's `X-Forwarded-For`, and
+the API believes it only from `TRUSTED_PROXIES`.
+
+| Limiter | Count | Routes |
+| ------- | ----- | ------ |
+| `v1-auth` | 10 a minute per address; inside the sign-in also 5 a minute per verified user | `POST /auth/telegram` |
+| `v1-public` | 60 a minute per address | `GET /reference`, `GET /cities`, `GET /landing/*` |
+| `v1-me` | 30 a minute | `GET /me` |
+| `v1-reads` | 300 a minute | the feed, count, new, flow and map; `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden`; the owner's reads of `/owner/listings` |
+| `v1-listing` | 120 a minute | `GET /listings/{number}`, full card and preview |
+| `listing-opens` | the daily cap (see "Listings"): 100 different full cards in 24 hours | `GET /listings/{number}` without `preview=1` |
+| `v1-contact`, `v1-translation`, `v1-share` | 30, 30 and 20 an hour | `POST /listings/{number}/contact`, `/translation`, `/share` |
+| `v1-lists` | 60 a minute | the writes of favourites, hidden listings and authors, blocked authors, `DELETE /history`, the surveys, `DELETE /listings/{number}/reports`, `POST /listings/{number}/contact-request` |
+| `v1-reports` | 30 a day | `POST /listings/{number}/reports` |
+| `v1-radars` | 30 a minute | the radar writes, `DELETE /radars/{id}`, `PATCH /settings`, `POST /settings/card-sample` |
+| `v1-events` | 60 a minute; the excess is answered `204` and dropped, never `429` | `POST /events` |
+| `v1-media` | 120 a minute | `GET /media/{media}` |
+| `uploads`, `owner-writes`, `owner-publish`, `owner-place`, `owner-demand` | as before WP-40 | the media writes; the owner cabinet's writes, `GET /owner/place`, `GET /owner/demand` |
+
+Over a limit the answer is `429 rate_limited` with `Retry-After` and no `reason`; only the daily cap adds
+`reason: "daily"`. The two limits inside the sign-in — the exchange count of one value and the per-user count —
+answer the same way.
 
 ## Listings
 
@@ -178,8 +223,12 @@ without coordinates, and `with_point` those with coordinates; both are always pr
 limit.
 
 The full card of `GET /listings/{number}` may answer `429 rate_limited` with `reason: "daily"` and `Retry-After`
-when the caller reached the daily limit of opened listings. The per-user limiter is not built yet, so today only the
-stub scenario `daily_limit` answers it; the `preview=1` form answers as usual in that scenario.
+when the caller reached the daily limit of opened listings. Since WP-40 the limit is real (DEC-104 … DEC-107): 100
+different full cards per user in 24 hours (`RATE_LIMIT_LISTING_OPENS_PER_DAY`); the 24 hours start at the first
+counted card, and `Retry-After` is the seconds until the count starts again. A card the user already opened in that
+window opens again for free, also after the limit; only a card answered `200` counts, so a `404` or an error costs
+nothing; the `preview=1` form is never counted or refused. The stub scenario `daily_limit` still answers it too, and
+the `preview=1` form answers as usual in that scenario.
 
 Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `new_none`, `new_one` (new-since);
 `map_cut` (map: the first half of the points, with `with_point` and `total` unchanged); `daily_limit` (the full
@@ -197,9 +246,10 @@ set, carry the floor variants: `100022` is on the ground-level floor (`floor: 0`
 
 The `/api/v1` surface built so far (the first table of `25` §4.2 and the owner cabinet of WP-80): 59 pairs of a
 method and a path. "Public" methods need no token; the others need a bearer token with `app:read` for
-reads and `app:write` for writes. The driver is the Wave 1 target; until the legacy and native packages land every
-method answers from stubs (`meta.source = stub`), and `php artisan sources:list` shows the current driver of each
-source method.
+reads and `app:write` for writes. The driver is the Wave 1 target. Sign-in, `GET /me`, `GET /settings` and
+`PATCH /settings` answer natively since WP-40 (`meta.source = native`; their stubs only behind `SOURCES_NATIVE_STUBS`
+in `local` and `testing`); every other method answers from stubs (`meta.source = stub`) until its legacy or native
+package lands, and `php artisan sources:list` shows the current driver of each source method.
 
 | Method | Route name | Access | Wave 1 driver |
 | ------ | ---------- | ------ | ------------- |

@@ -152,7 +152,7 @@ its row is its place in the queue.
 
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
-| [WP-40](WP-40-identity.md) | Sign-in, users, settings, access gate, limits | WP-33 (its part 4 merged is enough: DEC-102) | TODO |
+| [WP-40](WP-40-identity.md) | Sign-in, users, settings, access gate, limits | WP-33 (its part 4 merged is enough: DEC-102) | REVIEW (#PR-TBD, `feat/wp-40-identity`) |
 | [WP-41](WP-41-legacy-driver.md) | Legacy driver core, reference data and cities | WP-40 | TODO |
 | [WP-42](WP-42-listings-legacy.md) | Listings through legacy: feed, count, flow, map, card, overlay, photos | WP-41 | TODO |
 | [WP-43](WP-43-contact-translation-share.md) | Contact, translation, share | WP-42 | TODO |

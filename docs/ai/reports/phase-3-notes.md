@@ -1882,3 +1882,163 @@ Verified (from the repository root unless marked; local API on stubs at `HOMI_E2
 
 Merged on the developer's word («сливай #121 и все что осталось!») as #121 (`a27b277`, 2026-11-23). The development
 track passes to a colleague; WP-40 is next.
+
+## AI. Development track, 2026-11-26 — WP-40
+
+**Why.** The queue's next package (`docs/migration/wave-1/README.md`): WP-40 starts right after part 4 of WP-33
+(DEC-102), merged as #121. Branch `feat/wp-40-identity` from `origin/main` at `cabee17`, PR #PR-TBD.
+
+**Applied** (the specification's corrections and "As built" have the details):
+- the `initData` verifier (`signature` kept in the data-check-string, sensitive parameters), the Telegram identity
+  columns of `users` with the deletion of WP-11's stub user, `UserResolver`, `TokenIssuer` (5 tokens, 24 h,
+  `sanctum:prune-expired` daily), and the stub mode `SOURCES_NATIVE_STUBS` (`AnswerNativeStubs`, `NativeStubs`, a
+  boot check outside `local` and `testing`) — `7da00ce`;
+- `user_settings`, `SettingsService`, `QuietWindow`, `DigestSchedule`, `LocaleResolver`, `MeProfile`; native
+  `GET /me` and `GET|PATCH /settings`; the currency in the request context — `def500a`;
+- the access gate (`access_grants`, `AccessGate`, `EnsureAccessGranted`, the pause with DEC-106,
+  `access:block|unblock`) and the real sign-in (`TelegramSignIn`: exchange counter, per-user limit, gate) —
+  `96a4053`;
+- 13 named `v1-*` limiters, the `api` limiter removed, the daily cap `CountListingOpens` (DEC-104, DEC-105, DEC-107),
+  `config/trustedproxy.php`, redaction in `dontFlash` and Telescope — `6caf12b`;
+- the Mini App forwards the client's `X-Forwarded-For` on every server-side call and passes a sign-in `429` through
+  (KI-37); the e2e API runs with `SOURCES_NATIVE_STUBS=true` and `ACCESS_MODE=open` — `8f1e2eb`, `13e6ae1`;
+- the regenerated contract and `@homi/types` (`403` of the gate on `me` and settings) — `f958082`;
+- the docs: the specification, the queue row, `docs/api/README.md`, the decisions file, `24` §8.1 and §8.2, the
+  register `20`, KI-37 resolved and KI-71.
+
+Own choices (no ADR): the specification wins over the task files where they disagree (AM-108); the per-user part of
+`v1-auth` runs inside the sign-in once the user is known; `v1-events` answers its `204` through `Limit::response()`,
+so the route keeps a real `throttle:` middleware; the daily cap is a middleware beside `throttle:v1-listing`, not a
+limiter, with a marker per counted card; a launch flag raises `bot_chat_state` only from `never` to `active`;
+`access:unblock` deletes a grant never admitted and restores `admitted` otherwise; every unreadable configuration
+value is its default (`ACCESS_MAX_SEATS` fails closed to `0`); `config/analytics.php` holds the `client` block of
+`GET /me` for WP-47 to extend. Accepted and recorded: the fixed 24-hour window of the daily cap and its bounded
+overshoot, a merged duplicate counted twice, an unblock past `max_seats`, `publicApi()` without the client address,
+the longer boot retry against BR-APP-054.
+
+**The developer's decisions** (2026-11-26, `docs/migration/decisions/2026-11-26-developer-answers.md`): DEC-104
+«100 в сутки» — the daily cap starts at 100 full cards per user, from `RATE_LIMIT_LISTING_OPENS_PER_DAY`; DEC-105
+«Не считать preview (Рекомендуется)»; DEC-106 «Команда проходит паузу (Рекомендуется)» — `is_team` passes
+`ACCESS_PAUSED`, `blocked` still wins; DEC-107 «Разные объявления (Рекомендуется)» — the cap counts distinct listings
+in 24 hours. DEC-104, DEC-105 and DEC-107 answer Q-API-085.
+
+ASSUMPTION_MISMATCH AM-104 (2026-11-26):
+- **Assumption.** WP-40 §Redaction: add `init_data` to the hidden request parameters of
+  `TelescopeServiceProvider::hideSensitiveRequestDetails()`.
+- **What was found.** WP-80 had already added it (`hideRequestParameters(['_token', 'init_data'])`). Not covered:
+  the client's spelling `initData`, the token in the sign-in's answer, and the query string of a recorded request,
+  which Telescope stores whole (`fullUrl()`).
+- **Resolution.** `initData` is hidden too, `data.token` is hidden in recorded responses, and the hidden names are
+  masked in a recorded URI outside `local`. With `TELESCOPE_RECORD_ALL` on, query entries could still show a token's
+  hash, so it stays off on the servers. Corrected in the specification.
+
+ASSUMPTION_MISMATCH AM-105 (2026-11-26):
+- **Assumption.** WP-40 §Redaction: "Add `init_data` to the `dontFlash` list in `bootstrap/app.php`".
+- **What was found.** `bootstrap/app.php` had no `dontFlash` call; the framework's own list holds only
+  `current_password`, `password` and `password_confirmation`.
+- **Resolution.** `withExceptions()` calls `$exceptions->dontFlash(['init_data'])`; a test asserts that no session
+  keeps the value as old input. Corrected in the specification.
+
+ASSUMPTION_MISMATCH AM-106 (2026-11-26):
+- **Assumption.** WP-40's limiter table covers the v1 routes, and its checklist asks for a named limiter on every
+  route and none on `throttle:api`.
+- **What was found.** The table had no row for the owner's reads (`GET /owner/listings`, `/{id}`, `/{id}/requests`),
+  `GET /owner/place` and `/owner/demand`, the owner writes, `GET /media/{media}` and the media writes,
+  `POST /listings/{number}/contact-request`, `DELETE /listings/{number}/reports` and `DELETE /radars/{id}`: all of
+  them counted only under the group's `throttle:api` (120 a minute). The security review's table still names the
+  `api` limiter as existing (`docs/migration/16-security-review.md`, SEC-REQ-027).
+- **Resolution.** The owner's reads → `v1-reads`; place, demand and the owner and media writes keep only their own
+  limiters; `GET /media/{media}` → a new `v1-media` (120 a minute, the value `api` gave it); the contact request and
+  the report withdrawal → `v1-lists` until WP-85 brings the request limits; the radar delete → `v1-radars`;
+  `v1-translation` on the route, per request, until WP-43. The `api` limiter is removed; `ApiRoutesTest` pins the
+  limiters of every route. Corrected in the specification; the line of `16` is left to its next revision.
+
+ASSUMPTION_MISMATCH AM-107 (2026-11-26):
+- **Assumption.** WP-40's production-track row: `TRUSTED_PROXIES` = "the addresses of the nginx that fronts the
+  API", and nginx passes `X-Forwarded-For`.
+- **What was found.** The API's vhost (`infra/production/nginx/api.homi.conf`) hands the request to PHP-FPM through
+  `fastcgi_params`, so PHP sees the connecting address as `REMOTE_ADDR` and no proxy in nginx. The Mini App reaches
+  the API from its Next servers (route handlers, server components, Server Actions), which listen on 127.0.0.1
+  behind an nginx that sets `X-Forwarded-For $proxy_add_x_forwarded_for` (`app.homi.conf`); the Mini App forwarded
+  nothing, so every user would have shared one bucket of `v1-auth` (10 a minute) and `v1-public`. Next fills
+  `x-forwarded-for` from the socket when a request has none.
+- **Resolution.** Every server-side API call of the Mini App forwards the incoming `X-Forwarded-For` as it came
+  (`lib/api/forwarded.ts`), except the cached `publicApi()`; `TRUSTED_PROXIES` lists the addresses the Next servers
+  reach the API from; the production track checks on staging that two clients get two buckets. Corrected in the
+  specification.
+
+ASSUMPTION_MISMATCH AM-108 (2026-11-26):
+- **Assumption.** WP-40 takes "rules, limits, edge cases" from the four task files (`KV-BE-006`, `KV-BE-009`,
+  `KV-BE-010`, `KV-BE-045`), which agree with it.
+- **What was found.** They disagree in places: `KV-BE-006` sets the window to 86 400 s with a second exchange window
+  of 3 600 s and puts the value object under `App\Domain\Identity`; `KV-BE-009` makes `Join` unconditional, always
+  writes a grant in open mode, drops a gated user's events with `204`, flushes the cached decision through model
+  events, and names `App\Enums\Access\AccessState` and `App\Domain\Access\AccessDecision`; `KV-BE-010` sets the
+  trusted proxies through `trustProxies(at: …)`; `KV-BE-045` stores `digest_hours` as `smallint[]` and keeps only the
+  mapped locale, while WP-40 adds `users.language_code`.
+- **Resolution.** The specification wins: one window of 3 600 s (SEC-REQ-002); `Join` only behind `require_chat`; no
+  grant row in open mode without seats; `access:lenient` on events; an explicit `AccessGate::forget()`; the
+  namespaces of the specification's files; `config/trustedproxy.php`; `json` digest hours. `users.language_code` is
+  kept: WP-51 and WP-52 read it for the bot's language fallback. The task files are not changed.
+
+ASSUMPTION_MISMATCH AM-109 (2026-11-26):
+- **Assumption.** WP-40 §Stub mode: `AnswerNativeStubs` is "always attached, after `auth:sanctum` on bearer
+  routes"; the working plan put the new middleware right after `ThrottleRequests` in the priority list.
+- **What was found.** Laravel's `SortedMiddleware` reorders only the middleware of its priority list, whose last
+  entry is `Authorize`; `SetRequestLocale` and the route checks are not in it. Anchored after `ThrottleRequests`,
+  `SetRequestLocale` would have been sorted behind the stub on all 64 v1 routes (a stub answer without a locale or
+  `Content-Language`), and the ability checks ahead of the locale.
+- **Resolution.** `bootstrap/app.php` appends a chain after `Authorize`: `SetRequestLocale` → `EnsureAccessGranted`
+  → `CheckForAnyAbility` → `CheckAbilities` → `EnsureRadarsEnabled` → `EnsureOwnerCabinetEnabled` →
+  `CountListingOpens` → `AnswerNativeStubs`. With the new entries removed, the middleware lists of all 64 routes are
+  unchanged; `ApiRoutesTest` walks every route through `gatherRouteMiddleware()`. Corrected in the specification.
+
+ASSUMPTION_MISMATCH AM-110 (2026-11-26):
+- **Assumption.** Configuration values are read with Laravel's typed getters (`Config::integer()`, `Config::float()`,
+  `Config::boolean()`), which convert them.
+- **What was found.** They throw `InvalidArgumentException` for any value that is not exactly of their type:
+  `analytics.client.replay_rate => 1`, or an env string, turned every `GET /me` and every sign-in into a `500`; a
+  string `rate_limits.auth.per_user` would have done the same to every sign-in.
+- **Resolution.** Lenient readers: `App\Services\Access\RateLimits` for every count, `MeProfile` for the analytics
+  block, and the config files cast or default an unreadable env value. `TelegramSignIn` still reads
+  `telegram.initdata.*` with `Config::integer()`; `config/telegram.php` casts both. Recorded in the specification.
+
+ASSUMPTION_MISMATCH AM-111 (2026-11-26):
+- **Assumption.** WP-40: the users migration deletes the stub user, fills `analytics_distinct_id` for every
+  remaining row and makes it `NOT NULL`; afterwards the stub user is gone.
+- **What was found.** `StubUser::get()` (`firstOrCreate` with an e-mail, a name and a password) and `UserFactory`
+  create users without `analytics_distinct_id`, so both would fail on the `NOT NULL`; in stub mode the stub sign-in
+  creates the stub user again; `DatabaseSeeder` runs `WithoutModelEvents`, so a model hook does not run there, and
+  `db:seed` failed.
+- **Resolution.** A `creating` hook on `User` gives every new user a version 4 UUID; `UserFactory` sets
+  `(string) Str::uuid()` itself (Faker's `uuid()` is version 3), pinned by `DatabaseSeederTest`. The stub user comes
+  back only in `local` and `testing`: the boot check refuses `SOURCES_NATIVE_STUBS` on the servers. Corrected in the
+  specification.
+
+ASSUMPTION_MISMATCH AM-112 (2026-11-26):
+- **Assumption.** WP-40's files list: `InitDataSigner` "signs synthetic values with the test token of
+  `phpunit.xml`".
+- **What was found.** `phpunit.xml` had no `TELEGRAM_BOT_TOKEN`, no `ACCESS_MODE` and no `SOURCES_NATIVE_STUBS`.
+  Without them the verifier fails closed on every value, the gate's default `private` refuses every factory user,
+  and a local env file set for `make e2e` would put the whole suite in stub mode. The e2e API's env has a blank
+  token too (`backend/.env.example`).
+- **Resolution.** `phpunit.xml` gains a synthetic `TELEGRAM_BOT_TOKEN`, `SOURCES_NATIVE_STUBS=false` and
+  `ACCESS_MODE=open` (the gate's tests set the mode themselves; a test proves the default is `private` without the
+  key). The blank token of the e2e API is harmless: the stub answers before the controller. Recorded in the
+  specification.
+
+Verified (the counts of the stage reports; the review fixes of stages 4 and 5 added cases after them):
+- after stage 4, from `backend/`: `php artisan test --compact` → 1 328 tests, 1 317 passed, 11 skipped, 5 974
+  assertions; `vendor/bin/phpstan analyse --memory-limit=1G` → 0 errors; `vendor/bin/pint --test` → passed;
+  `make test-pgsql` (a local PostgreSQL) → 11 passed, 54 assertions; `php artisan route:list --path=api/v1 -v` → 64
+  routes, none on `throttle:api`, none without a named limiter;
+- after stage 5, from `frontend/`: `pnpm --filter app test` → 273 files, 4 403 tests passed; `pnpm -r lint` and
+  `pnpm -r typecheck` → exit 0;
+- `python3 scripts/migration/collect_ids.py --check` → exit 0;
+- review: an independent reviewer per stage; two medium findings (a part of the launch value in the stack traces of
+  the refusals; the strict configuration reads of `MeProfile`), both fixed with a test that failed before the fix;
+  stages 3 to 5 nothing at medium or above; every low fixed or accepted in "As built".
+
+Open: the Playwright run on this tree is with the coordinator (its result goes into the PR description); the
+security-reviewer pass over the whole diff (step 10); a real launch value of the dev bot, which the developer checks
+outside the repository. Next ids: AM-113, KI-72, DEC-108.

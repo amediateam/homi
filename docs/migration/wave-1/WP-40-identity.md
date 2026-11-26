@@ -3,11 +3,11 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | REVIEW (#PR-TBD, `feat/wp-40-identity`) |
 | Depends on | WP-33 (the Mini App runs on the stub contract of WP-11) |
 | Size | about 2 600 changed lines without generated files, L |
 | Behaviour reference | `25` §3.4, §5 (identity, settings); WP-11 (the contract — shapes do not change here); `16` §4.1 (SEC-REQ-001 … SEC-REQ-007), §4.6 (SEC-REQ-027), SEC-REQ-047; `15` §3.1, §3.2; tasks `tasks/backend/KV-BE-006-initdata-verifier.md`, `KV-BE-009-access-gate.md`, `KV-BE-010-legacy-rate-limits.md`, `KV-BE-045-settings.md` (rules, limits, edge cases — not their routes or serializers); ADR-0003, ADR-0018 |
-| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable; new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open`; set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses of the nginx that fronts the API; leave `TELEGRAM_INITDATA_MAX_AGE` and `ACCESS_MAX_SEATS` blank (defaults); leave `ACCESS_PAUSED` unset (the pause switch stays off, DEC-60). 3. Confirm nginx passes `X-Forwarded-For` and that the Laravel scheduler runs (for `sanctum:prune-expired`) |
+| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable (the stub user of WP-11 and its tokens are deleted); new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open` (a missing key means `private`: every user is refused); set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses the Next servers reach the API from — the app host's loopback and/or its public address —, not the nginx of the API, which hands PHP the connecting address through FastCGI (*corrected while executing*: the Mini App's server-side calls are the hop that forwards `X-Forwarded-For`); leave `TELEGRAM_INITDATA_MAX_AGE`, `ACCESS_MAX_SEATS` and `RATE_LIMIT_LISTING_OPENS_PER_DAY` blank (defaults: 3 600 s, no seat limit, 100 cards a day — DEC-104; the last key *added while executing*); leave `ACCESS_PAUSED` unset (the pause switch stays off, DEC-60) and `SOURCES_NATIVE_STUBS` unset (the API refuses to boot with it outside `local` and `testing`); keep `TELESCOPE_RECORD_ALL` off (*added while executing*: its query entries would hold a token's hash). 3. Confirm that the nginx in front of the Next servers sets `X-Forwarded-For` (`infra/production/nginx/app.homi.conf`) and that the Laravel scheduler runs (for `sanctum:prune-expired`). 4. After the deploy, check on staging that two clients on two addresses get two buckets of `v1-auth` and that a forged `X-Forwarded-For` prefix is ignored (*added while executing*) |
 
 ## Goal
 
@@ -33,9 +33,12 @@ Out: the Login Widget (not used by the Mini App); invite admission and `bot_chat
   `HttpOnly` cookie or in memory, never in storage (ADR-0018, SEC-REQ-007).
 - Access is open to everyone, and the gate is built with all its modes (DEC-43).
 - Beside the modes the gate has a pause switch, off by default: the sixth reason `paused` of WP-11 (DEC-60; legacy
-  since `index-CIa0Ldj2.js`).
+  since `index-CIa0Ldj2.js`). Team accounts (`users.is_team`) pass a pause; `blocked` still wins for them (DEC-106,
+  *added while executing*).
 - Opening listings has a per-user daily cap of HOMI's own, answered as `429 rate_limited` with `reason: "daily"`
-  (DEC-59). Its threshold is open (Q-API-085).
+  (DEC-59). Its threshold is open (Q-API-085). *Corrected while executing:* answered on 2026-11-26 — 100 different
+  full cards per user in 24 hours, from configuration (DEC-104); the preview form is not counted (DEC-105); a card
+  already counted in the window opens again for free (DEC-107).
 - No user data comes from legacy (DEC-40): a user starts empty.
 - The contract of WP-11 is binding: same routes, bodies, codes. Only `meta.source` changes, to `native`.
 
@@ -51,25 +54,40 @@ a pure service (SEC-REQ-001):
    integer `id`.
 3. Data-check-string: every pair except `hash`, sorted by key, `key=value` joined by `\n` (a `signature` field, if
    present, is part of it — pin this with a real `initData` of the developer's dev bot, kept out of the repository).
+   *Corrected while executing:* only `hash` is removed; `signature` stays in the string of the `hash` check. The
+   Telegram documentation drops both only for the Ed25519 check of third parties, and four libraries
+   (`@tma.js/init-data`, `@telegram-apps/init-data-node`, aiogram, telegram-webapp-auth) remove only `hash` here.
+   An independent fixture signed by a Python script pins the mechanics; the check with a real value of the dev bot
+   is still open (see "As built").
 4. Secret = HMAC-SHA-256 of the bot token keyed with the string `WebAppData`; expected hash = hex HMAC-SHA-256 of the
-   data-check-string keyed with the secret; compare with `hash_equals`.
+   data-check-string keyed with the secret; compare with `hash_equals`. The signature is checked before `user` is
+   decoded, so a forged value never reaches the JSON parser (*added while executing*).
 5. `auth_date`: older than the window → `InitDataExpired`; more than 60 s in the future → invalid; non-numeric →
-   invalid.
+   invalid. A missing or non-numeric `auth_date` is the internal reason `bad_auth_date` (*added while executing*).
 6. An empty configured token fails every input (fail closed).
+
+The parameters that hold the raw value are marked `#[\SensitiveParameter]` (in the verifier and in
+`TelegramSignIn`), so a stack trace shows none of it (SEC-REQ-047; *added while executing*: the local PHP keeps
+the arguments of a trace, `zend.exception_ignore_args=Off`).
 
 `TelegramInitData` (final readonly, `App\Services\Identity`): `telegramUserId`, `isPremium`, `hasUsername`,
 `hasPhoto`, `allowsWriteToPm`, `languageCode`, `authDate`, `startParam`, `fingerprint` (first 12 hex of SHA-256 of
 `hash`). It never holds a name, a username or a photo address (SEC-REQ-004). The request service of WP-85 reads the
 seeker's first name from the launch data the Mini App sends with a request, verified with this verifier (DEC-76);
 neither `users` nor `TelegramInitData` holds it (*added by the owner-cabinet plan*). Exceptions
-`App\Exceptions\Identity\InvalidInitData` (internal reason enum: `too_large`, `duplicate_key`, `missing_hash`,
-`bad_user`, `bad_signature`, `future_auth_date`) and `InitDataExpired`; neither message contains the raw value. They
-render as `401 invalid_init_data` and `401 auth_expired`.
+`App\Exceptions\Identity\InvalidInitData` (internal reason enum `App\Exceptions\Identity\InvalidInitDataReason`:
+`too_large`, `duplicate_key`, `missing_hash`, `bad_user`, `bad_signature`, `future_auth_date`, and `bad_auth_date`
+*added while executing*) and `InitDataExpired`; neither message contains the raw value, and the reason never reaches
+the body. They render as `401 invalid_init_data` and `401 auth_expired`. *Added while executing:* both, and
+`AccessDenied`, implement `ShouldntReport`, so a refused sign-in writes only the sign-in's own log line, not an error
+entry with a trace.
 
 Configuration in `config/telegram.php`: `initdata.max_age` (`TELEGRAM_INITDATA_MAX_AGE`, default 3 600 s,
 SEC-REQ-002) and `initdata.max_exchanges` (default 20).
 
-**Replay window.** `initData` is accepted only in the JSON body of the sign-in (SEC-REQ-003). The same value may be
+**Replay window.** `initData` is accepted only in the JSON body of the sign-in (SEC-REQ-003). *Corrected while
+executing:* `TelegramSignInRequest::validationData()` returns the JSON body, so an `init_data` in the query string
+(or a form field) is never read; the form request's 4 096-byte rule stays (4 097 → `422`). The same value may be
 exchanged again inside its window — the client does so on a reload and when a token expires — but at most
 `max_exchanges` times, counted in the cache by fingerprint with a TTL equal to the window; beyond that the answer is
 `429 rate_limited`. Logs carry the fingerprint and the internal user id, never the value.
@@ -81,26 +99,44 @@ Migration on `users`: `name`, `email`, `password` become nullable; new columns `
 `language_code` (string 8, nullable), `bot_chat_state` (string 16, default `never`; values `never`, `active`,
 `blocked`), `analytics_distinct_id` (uuid, unique), `is_team` (boolean, default false), `first_start_param`
 (string 64, nullable), `last_seen_at` (`timestampTz`, nullable). The same migration deletes the stub user of WP-11
-and its tokens. `analytics_distinct_id` is added nullable, filled with a random UUID for every remaining row, and
-then changed to `NOT NULL` in the same migration: SQLite, which the tests use, refuses `ADD COLUMN … NOT NULL`
-without a default even on an empty table.
+and its tokens (*added while executing:* the tokens are a morph relation without a foreign key, so they are deleted
+first, by hand; a collector's token that shares the stub user's id is kept). `analytics_distinct_id` is added
+nullable, filled with a random UUID for every remaining row, and then changed to `NOT NULL` in the same migration:
+SQLite, which the tests use, refuses `ADD COLUMN … NOT NULL` without a default even on an empty table. *Added while
+executing:* the model's `creating` hook gives every new user a random UUID, because `StubUser::get()` and the
+factories create users without one; in `local` and `testing` the stub sign-in of `SOURCES_NATIVE_STUBS` creates the
+stub user again on its next call, which it cannot do on the servers.
 
 `App\Services\Identity\UserResolver::fromInitData(TelegramInitData): User` — `createOrFirst` on `telegram_user_id`,
 then update the booleans, `language_code` and `last_seen_at`. On creation: a random `analytics_distinct_id`,
 `first_start_param`, and a `user_settings` row with defaults. `allows_write_to_pm = true` sets `bot_chat_state` to
 `active`; `false` never downgrades it (verify the field name in the current Telegram documentation). Two concurrent
-first sign-ins create one user.
+first sign-ins create one user. *Corrected while executing:* `allows_write_to_pm = true` raises `bot_chat_state`
+only from `never` to `active`; `blocked` is left to the bot's own chat-member updates (WP-52), because a launch flag
+must not undo a block the bot saw. A change of the state calls `AccessGate::forget()`. `first_start_param` keeps
+`start_param` only when it matches `^[A-Za-z0-9_-]{1,64}$`, and `language_code` only a tag of the form
+`^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})?$` of at most 8 characters, else null; a later launch without `language_code`
+keeps the last known value.
 
 `App\Services\Identity\TokenIssuer::issue(User): NewAccessToken` — name `miniapp`, abilities `app:read` and
 `app:write` only (never `media:write`, `intake:write`, `arm:*`), expiry `config('access.token_ttl_minutes')`
 (default 1 440); at most `config('access.max_tokens')` (default 5) unexpired tokens per user, the oldest is revoked.
-`sanctum.token_prefix` already reads `SANCTUM_TOKEN_PREFIX` (`config/sanctum.php`, unchanged). `routes/console.php` schedules `sanctum:prune-expired --hours=24` daily.
+*Corrected while executing:* the cap counts and revokes only the user's unexpired `miniapp` tokens, and the issuer
+locks the user's row while it issues, so two concurrent sign-ins never keep a surplus.
+`sanctum.token_prefix` already reads `SANCTUM_TOKEN_PREFIX` (`config/sanctum.php`, unchanged). `routes/console.php`
+schedules `sanctum:prune-expired --hours=24` daily.
 
 ### Sign-in
 
 `TelegramAuthController` (the class of WP-11, body replaced): limiter → verify → resolve user → gate → issue token →
 `SessionResource` with `meta.source = native`. A gate refusal answers `403 access_denied` with `reason` and issues no
-token.
+token. *Corrected while executing:* `throttle:v1-auth` on the route (10 a minute per address), then the controller
+hands the value to `App\Services\Identity\TelegramSignIn` (result `TelegramSession`): verify → the exchange counter
+by fingerprint (`max_exchanges`, TTL = the window) → resolve the user → the per-user limit (5 a minute, keyed
+`user:<internal id>`, never a Telegram id; applied here because only now is the user known) → the gate →
+`TokenIssuer` → the profile of `GET /me` (`MeProfile`). Both in-body limits answer `429 rate_limited` with
+`Retry-After` and no `reason`. Every attempt writes one log line: on success the fingerprint and the internal user
+id, on a refusal the reason, and once the value is verified also the fingerprint and the user id.
 
 ### Stub mode for the end-to-end suite
 
@@ -119,6 +155,22 @@ deleted. This package moves sign-in (with `StubUser`), `me` and settings. On sta
 and production the switch cannot be on, so no stub code can answer there. If the end-to-end workflow already boots
 the API, set `SOURCES_NATIVE_STUBS=true` in its environment in this PR.
 
+*Corrected while executing:*
+- **Order.** The framework sorts only the middleware of its priority list (`SortedMiddleware`), so "after
+  `auth:sanctum`" is not enough: the stub would run before the request locale and the route's checks.
+  `bootstrap/app.php` anchors a chain after the framework's last entry, `Authorize`, each class after the one before:
+  `SetRequestLocale` → `EnsureAccessGranted` → `CheckForAnyAbility` → `CheckAbilities` → `EnsureRadarsEnabled` →
+  `EnsureOwnerCabinetEnabled` → `CountListingOpens` → `AnswerNativeStubs`. So on every `api.v1.*` route the stub
+  answers last, after authentication (on bearer routes), the limiter, the locale, the gate and the route's checks;
+  `ApiRoutesTest` walks every route through `gatherRouteMiddleware()` and pins this order.
+- **The real gate runs in stub mode too**, so the end-to-end API needs `ACCESS_MODE=open` beside
+  `SOURCES_NATIVE_STUBS=true`: both API env blocks of `.github/workflows/frontend-e2e.yml` and both env lists of
+  `scripts/dev/e2e-local.sh` set them, and the script also pins `APP_ENV=local`, which the boot check needs.
+- `NativeStubs` holds the scenario lists of the moved methods (`NativeStubs::ME_SCENARIOS`, `SETTINGS_SCENARIOS`);
+  `MeController::SCENARIOS`, `SettingsController::SCENARIOS` and `TelegramAuthController::ABILITIES` are deleted
+  (the abilities are `TokenIssuer::ABILITIES`). `OwnerRequestsContractTest` also runs in stub mode, because it reads
+  the `/me` scenarios `owner_waitlisted` and `owner_pending`.
+
 ### Settings
 
 Table `user_settings`: `user_id` (primary key, foreign key, cascade), `locale` (string 2), `locale_chosen_at`,
@@ -135,10 +187,25 @@ null, default `classic`; `classic` or `rich`, since the intake of legacy release
   UserSettingsData` updates only the sent keys in one `UPDATE` per key set, sets `locale_chosen_at` or
   `city_chosen_at` when `locale` or `city` is stored, and dispatches `App\Events\Identity\SettingsChanged` (user id,
   changed keys) after commit. The bot (language of its menu and texts) and the delivery planner (WP-46) listen later.
+  *Corrected while executing:* the event carries the keys that were sent, in the contract's order, and is never
+  dispatched after a rollback; `{}` writes nothing and dispatches nothing; a sent `locale` or `city` sets its chosen
+  time even when the value is unchanged; `get()` creates the default row for a user who has none (factory users, the
+  stub user). One locale rule for the app and the bot is `App\Services\Identity\LocaleResolver` (a case-insensitive
+  "starts with").
 - Value objects `QuietWindow` (`fromHours(?int, ?int)`, `contains()`, `endAfter()`, crossing midnight) and
   `DigestSchedule` (`fromHours(array)`, `nextSlotAtOrAfter()`), both in Asia/Tashkent wall-clock through the zone
   name, never a fixed offset.
-- `SourceContext::fromRequest()` now takes the currency from the user's settings.
+- `SourceContext::fromRequest()` now takes the currency from the user's settings. *Corrected while executing:* the
+  request context carries the stored currency (`USD` for a guest, a collector or a user without a row); no listing
+  source reads it yet (the stub listing source prices in `$`), so the test shows the context changing from `USD` to
+  `UZS`, not a price.
+- The object of `GET /me` is built by `App\Services\Identity\MeProfile`, for `GET /me` and the sign-in alike (*added
+  while executing*): `analytics.distinct_id` = `users.analytics_distinct_id`; `autocapture`, `replay` and `replay_rate`
+  from a new `config/analytics.php` → `client` (`true`, `false`, `0`; no env keys yet; WP-47 extends the file), read
+  leniently (a whole number, an env string such as `"0.5"` or `"1"`; anything unreadable is the default, never a
+  `500`); `team` = `users.is_team`; `owner` = `{pending: 0, has_listings: false, waitlisted: false}`. An
+  authenticated actor that is not a `User` (a collector's token) gets `403 forbidden` on `GET /me` and both settings
+  methods (`ApiController::appUser()`).
 - `PATCH /settings` stores `card_style`; `POST /settings/card-sample` (intake of `index-BnFvC-Ft.js`) is not moved
   here: it stays on its stub until the bot can send the card (WP-53 builds it, WP-57 sends it and replaces the body).
 
@@ -148,14 +215,20 @@ null, default `classic`; `classic` or `rich`, since the intake of legacy release
 closed), `max_seats` (`ACCESS_MAX_SEATS`, null = unlimited), `owner_telegram_ids` (list, from the comma-separated
 `ACCESS_OWNER_TELEGRAM_IDS`, for `private`),
 `require_chat` (default false: in open mode a user who has not started the bot is still let in; radar writes have
-their own `no_chat` check), `paused` (`ACCESS_PAUSED`, boolean, default `false`).
+their own `no_chat` check), `paused` (`ACCESS_PAUSED`, boolean, default `false`). *Corrected while executing:* a
+value that cannot be read is the safe default: an unknown mode is `private`; `ACCESS_MAX_SEATS` blank (or the env
+word `null`) means no limit, `0` admits nobody new, and a set value that is not a whole number ≥ 0 (a word, a
+fraction, a negative number) also means `0`, so a typo fails closed like the mode; `require_chat` has no env key,
+as the env list of this package has none.
 
 **Pause (DEC-60).** When `paused` is on, sign-in and every bearer route answer `403 access_denied` with
 `reason: "paused"` (`AccessReason::Paused`, in the contract since the intake of `index-CIa0Ldj2.js`; `AccessState`
 gains `Paused`); it is checked before the other reasons. The public methods (`GET /reference`, `GET /cities`, the
 landing methods) keep answering, because the no-access screen needs the bot names. The switch is a server setting
 of the production track and is off unless a pause is needed. Open point of this package: whether team accounts
-(`is_team`) pass a pause.
+(`is_team`) pass a pause. *Corrected while executing:* answered by DEC-106 — a team account passes the pause, a
+blocked one does not, and `is_team` gives no other privilege. The pause is read on every call, outside the 2 s cache
+of the decision, so switching it takes effect at once.
 
 Table `access_grants`: `user_id` (primary key, foreign key, cascade), `state` (`admitted`, `blocked`),
 `admitted_via` (`open`, `invite`, `owner`, `operator`), `flagged_at`, `flag_reason`, timestamps.
@@ -167,12 +240,26 @@ with `max_seats` and no seat left → `Full`; mode `open` → `Granted` (with `m
 grant under a lock that counts seats; without it no row is written). The decision is cached per user for 2 s and
 flushed when the grant or `bot_chat_state` changes: `AccessGate::forget(User $user): void` drops the cached
 decision; the grant writers of this package call it, and WP-52 calls it when it changes `bot_chat_state`.
+*Corrected while executing:* the order starts with the pause (unless `is_team`, DEC-106), then `blocked`;
+`AccessState` gains `Paused`; the grant states and admission ways are the enums `App\Enums\Access\AccessGrantState`
+and `AdmittedVia`. The seat count runs under `pg_advisory_xact_lock` inside a transaction on PostgreSQL (a plain
+transaction elsewhere), re-reads the user's grant first, and inserts with `createOrFirst()`, so a block committed
+meanwhile by `access:block` decides instead of a primary-key error. The decision is cached as a scalar under
+`access:decision:<internal id>`.
 
 Middleware `App\Http\Middleware\EnsureAccessGranted`, alias `access`, on every bearer route; `access:lenient` (only
 `blocked` is refused) on `POST /events`. `auth:sanctum` can also authenticate an `App\Models\Source` (a collector
 token; that model uses `HasApiTokens`, and the media routes accept it): the middleware lets every actor that is not
-a `User` pass, and the limiter key for such an actor keeps the form of today's `actorKey()` (class and id). Commands `access:block {user}` and `access:unblock {user}` (internal user
-id; `--by` and `--reason` required; one log line without any Telegram id).
+a `User` pass, and the limiter key for such an actor keeps the form of today's `actorKey()` (class and id). Commands
+`access:block {user}` and `access:unblock {user}` (internal user id; `--by` and `--reason` required; one log line
+without any Telegram id). *Corrected while executing:* `access:lenient` refuses `blocked` and `paused` (the pause
+covers every bearer route, see above); the bearer routes sit in one inner `access` group, `POST /events` outside it
+with `access:lenient`, the media routes inside it (59 of the 64 v1 routes are gated). `access:unblock` deletes a grant
+that was never admitted (`admitted_via` null, a user blocked before any admission; the column is nullable for that)
+and otherwise sets it back to `admitted`; both commands call `AccessGate::forget()` and log `user_id`, `by` and
+`reason`. The task `KV-BE-009` differs in four places, and this specification is followed: `Join` only behind
+`require_chat`; no grant row in open mode without seats; events through `access:lenient` (the task dropped a gated
+user's events with `204`); an explicit `AccessGate::forget()` instead of model events.
 
 ### Rate limits
 
@@ -185,16 +272,18 @@ routes; it never contains a Telegram id.
 | `v1-auth` | 10 per minute per address, 5 per minute per verified Telegram user | `POST /auth/telegram` |
 | `v1-public` | 60 per minute per address | `GET /reference`, `GET /cities`, `GET /landing/*` |
 | `v1-me` | 30 per minute | `GET /me` |
-| `v1-reads` | 300 per minute | feed, count, `GET /listings/new`, flow, map, `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden` |
+| `v1-reads` | 300 per minute | feed, count, `GET /listings/new`, flow, map, `GET /settings`, `GET /radars`, `GET /favorites`, `GET /history`, `GET /hidden`; the owner's reads `GET /owner/listings`, `GET /owner/listings/{id}`, `GET /owner/listings/{id}/requests` (*added while executing*) |
 | `v1-listing` | 120 per minute | `GET /listings/{number}` |
-| `v1-listing-opens` | a number per user per day, from configuration; the threshold is open (Q-API-085) | `GET /listings/{number}`; over it → `429 rate_limited` with `reason: "daily"` and `Retry-After` (`DailyLimitReached` of the contract). Counted per user, never per address. Whether the `preview=1` form counts is part of Q-API-085 (DEC-59) |
+| `v1-listing-opens` | a number per user per day, from configuration; the threshold is open (Q-API-085) | `GET /listings/{number}`; over it → `429 rate_limited` with `reason: "daily"` and `Retry-After` (`DailyLimitReached` of the contract). Counted per user, never per address. Whether the `preview=1` form counts is part of Q-API-085 (DEC-59). *Corrected while executing:* not a named limiter but the middleware `App\Http\Middleware\CountListingOpens` (alias `listing-opens`) beside `throttle:v1-listing`, with `rate_limits.listing_opens_per_day` from `RATE_LIMIT_LISTING_OPENS_PER_DAY` (default 100, DEC-104): the preview passes uncounted (DEC-105); an actor that is not a `User` passes; a card this user already opened in the window passes (a cache marker `listing-opens:user:<id>:<number>` for 24 h, DEC-107); else, when the counter `listing-opens:user:<id>` (decay 86 400 s) is at the cap, `DailyLimitReached` with `Retry-After` = the seconds until the counter starts again; else the request goes on, and only a `200` adds the marker and moves the counter |
 | `v1-contact` | 30 per hour | `POST …/contact` |
-| `v1-translation` | 30 per hour, counted on cache misses inside the service (WP-43) | `POST …/translation` |
+| `v1-translation` | 30 per hour, counted on cache misses inside the service (WP-43) | `POST …/translation` (*corrected while executing:* on the route, per request, until WP-43 moves the count to the cache misses) |
 | `v1-share` | 20 per hour | `POST …/share` |
-| `v1-lists` | 60 per minute | favourites, hidden, blocked authors, `DELETE /history`, surveys |
+| `v1-lists` | 60 per minute | favourites, hidden, blocked authors, `DELETE /history`, surveys (the writes; their `GET` lists are `v1-reads`); `DELETE …/reports` and `POST /listings/{number}/contact-request` until WP-85 brings the request limits of its own (*added while executing*) |
 | `v1-reports` | 30 per day | `POST …/reports` |
-| `v1-radars` | 30 per minute | radar writes, `PATCH /settings` and `POST /settings/card-sample` (a tighter per-user limit of the sample waits for Q-API-067) |
-| `v1-events` | 60 per minute; the excess is answered `204` and dropped | `POST /events` |
+| `v1-radars` | 30 per minute | radar writes (`DELETE /radars/{id}` included), `PATCH /settings` and `POST /settings/card-sample` (a tighter per-user limit of the sample waits for Q-API-067) |
+| `v1-events` | 60 per minute; the excess is answered `204` and dropped | `POST /events` (*corrected while executing:* a normal named limiter whose `Limit::response()` answers the bare `204`, so the route keeps a real `throttle:` middleware) |
+| `v1-media` | 120 per minute (*added while executing:* the value `api` gave it) | `GET /media/{media}` |
+| `uploads`, `owner-writes`, `owner-publish`, `owner-place`, `owner-demand` | unchanged (WP-00, WP-80) | the media writes keep only `uploads`; the owner writes, `GET /owner/place` and `GET /owner/demand` keep only their owner limiters (*added while executing*) |
 
 Notes: `RateLimiter::for('api')` exists today, but `bootstrap/app.php` never calls `throttleApi()`, so check with
 `php artisan route:list -v` which routes carry which limiter before and after. The `throttle:api` that WP-11 put on
@@ -204,6 +293,32 @@ the `v1` group is replaced by the named limiters. The limiter runs after authent
 `config('trustedproxy.proxies')` when `trustProxies(at: …)` was never called (read in the installed framework), so
 nothing is added to `bootstrap/app.php` and the value survives `config:cache`.
 
+*Corrected while executing:*
+- **Every `/api/v1` route carries a named limiter** and the `api` limiter's definition is removed; `ApiRoutesTest`
+  pins the exact limiters of each route, so a new route without one fails. The key is `user:<internal id>` for a
+  `User`, the class-and-id form of `actorKey()` for another actor, the client address for a guest. The per-user part
+  of `v1-auth` is applied inside the sign-in (see "Sign-in"). Every count of `config/rate_limits.php` is read
+  through `App\Services\Access\RateLimits`: a positive whole number or a string of digits is used, anything else
+  (blank, zero, a negative number, a fraction, a word, `true`) is the default of `RateLimits::DEFAULTS`, never an
+  error or a tiny cap. Only the daily cap has an env key; another limit changes with a release.
+- **The proxy hop.** On the servers PHP never sees a proxy in nginx: the API's vhost hands PHP the connecting address
+  through FastCGI. Traffic of the Mini App reaches the API from the Next servers (the BFF and server components),
+  so without the client address every user would share one bucket of `v1-auth`. The nginx in front of Next sets
+  `X-Forwarded-For`, the Mini App forwards it on every server-side API call (below), and `TRUSTED_PROXIES` lists the
+  addresses the Next servers reach the API from. `config/trustedproxy.php` trims the value; blank trusts nobody.
+  Laravel takes the rightmost address that is not a trusted proxy, so a forged prefix is ignored.
+
+### The Mini App's side (*added while executing*)
+
+- Every server-side API call of `frontend/app` — `serverApi()` (`lib/api/server.ts`), `runAction` (Server Actions)
+  and the `/bff` route handlers (`session`, `[...path]`, `boot-error`, the owner photos route) — forwards the
+  incoming `X-Forwarded-For` as it came, through `lib/api/forwarded.ts` (server-only); the browser client never sends
+  it. `publicApi()` forwards none: it runs inside `"use cache"` and its answer serves every user.
+- `/bff/session` passes an API `429` through as `429 {code: "rate_limited"}` with the API's `Retry-After` (KI-37),
+  for the sign-in and for its `GET /me` read. The boot retry (`features/gates/useBootRetry.ts`, BR-APP-054) waits for
+  the first `429` by its `Retry-After` (at most 60 s, 10 s without one) without counting it among the six failures;
+  a later `429` counts on the ladder and waits at least its `Retry-After`.
+
 ### Redaction
 
 `init_data` and `Authorization` never reach a log, Telescope, Pulse or an exception context (SEC-REQ-047): add
@@ -212,6 +327,15 @@ headers need no change: Telescope hides `authorization` by default (`Telescope::
 provider already hides `cookie`. That method returns early in `local`, so nothing is hidden there. Add `init_data`
 to the `dontFlash` list in `bootstrap/app.php`; a test greps the log channel after a failed and a successful sign-in
 and asserts that the three names are in Telescope's hidden lists.
+
+*Corrected while executing:* Telescope already hid `init_data` since WP-80; this package adds `initData` (the
+client's spelling), hides the sign-in's `data.token` in recorded responses, and masks those parameters in the query
+string of a recorded URI outside `local` (Telescope stores the full URI). `bootstrap/app.php` had no `dontFlash`
+list: `withExceptions()` gains `$exceptions->dontFlash(['init_data'])`. The refusals are not reported
+(`ShouldntReport`) and the value's parameters are sensitive (see "Verifier"). `SignInRedactionTest` captures the log
+after every sign-in path — `200`, the `401`s, `422`, `403`, `500` and the three `429`s — and finds neither the value,
+the token nor its hash. Not covered: with `TELESCOPE_RECORD_ALL` on, Telescope's query entries could show a token's
+hash in their bindings, so it stays off on the servers.
 
 ## Files
 
@@ -231,9 +355,18 @@ and asserts that the three names are in Telescope's hidden lists.
   `backend/tests/Feature/Api/V1/Auth/*`, `backend/tests/Feature/Access/*`, `backend/tests/Feature/Api/V1/{MeTest,SettingsTest,RateLimitTest}.php`,
   `backend/tests/Support/InitDataSigner.php` (signs synthetic values with the test token of `phpunit.xml`)
 - `backend/.env.example` (`ACCESS_MODE`, `ACCESS_MAX_SEATS`, `ACCESS_OWNER_TELEGRAM_IDS`, `ACCESS_PAUSED`,
-  `SANCTUM_TOKEN_PREFIX`, `TRUSTED_PROXIES`, `TELEGRAM_INITDATA_MAX_AGE`, `SOURCES_NATIVE_STUBS`) and
-  `docs/infrastructure/environments.md`
+  `SANCTUM_TOKEN_PREFIX`, `TRUSTED_PROXIES`, `TELEGRAM_INITDATA_MAX_AGE`, `SOURCES_NATIVE_STUBS`, and
+  `RATE_LIMIT_LISTING_OPENS_PER_DAY` *added while executing*) and `docs/infrastructure/environments.md`
   (their names) — separate shared-file PR; `docs/api/openapi.json` and generated types (regenerated; expected diff: none in shapes)
+  (*corrected while executing:* the shapes are unchanged; `GET /me`, `GET /settings` and `PATCH /settings` gain a
+  documented `403` — the gate, and a collector's token —, and the summary of `PATCH /settings` and the description of
+  `init_data` change)
+- *Added while executing:* `backend/config/analytics.php` (the `client` block of `GET /me`; WP-47 extends it);
+  `backend/phpunit.xml` (`TELEGRAM_BOT_TOKEN`, `SOURCES_NATIVE_STUBS=false`, `ACCESS_MODE=open`);
+  `.github/workflows/frontend-e2e.yml` and `scripts/dev/e2e-local.sh` (the e2e API's env); `frontend/app`:
+  `lib/api/forwarded.ts` (new), `lib/api/server.ts`, `lib/actions/run.ts`, the four `/bff` route handlers,
+  `lib/session/{bootstrap.ts,SessionProvider.tsx}`, `features/gates/useBootRetry.ts`, with their tests. The other new
+  files are listed in "As built"
 
 ## Steps
 
@@ -309,6 +442,151 @@ and asserts that the three names are in Telescope's hidden lists.
 - [ ] Inside Telegram on staging, then production (iOS, Android, Desktop, Web): the app opens and signs in; language
       and city picks survive a relaunch; cookie mode and header mode both reach the feed.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). The corrections of the design are
+marked *corrected while executing* or *added while executing* in the sections above; this list adds what the code
+decided beyond them.
+
+- **Stages.** Built on `feat/wp-40-identity` from `main` (`cabee17`) in five stages — verifier, users, tokens and
+  stub mode; settings and `me`; the gate and the sign-in; limits, proxies and redaction; the Mini App, which ran
+  beside the backend stages — each implemented, read by an independent reviewer and fixed. Most classes are written by hand;
+  `make:*` made the migrations and the test files.
+- **Files outside the specification's list** (under `backend/`).
+  `app/Services/Identity/{TelegramSignIn,TelegramSession,MeProfile,LocaleResolver}.php`,
+  `app/Exceptions/Identity/InvalidInitDataReason.php`, `app/Enums/Identity/BotChatState.php`,
+  `app/Enums/Access/{AccessGrantState,AdmittedVia}.php`, `app/Console/Commands/Access/AccessCommand.php` (the base of
+  both commands), `app/Services/Access/RateLimits.php`, `app/Http/Middleware/CountListingOpens.php`,
+  `config/analytics.php`, `ApiController::appUser()`; the tests `tests/Feature/Identity/*`,
+  `tests/Feature/Sources/NativeStubsTest.php`, `tests/Feature/Http/TrustedProxyTest.php`,
+  `tests/Feature/Api/V1/Auth/SignInRedactionTest.php`, `tests/Feature/DatabaseSeederTest.php`,
+  `tests/Unit/Identity/LocaleResolverTest.php`, six `tests/Pgsql` races and migrations,
+  `tests/Support/{EnvOverride,LegacyUserRows}.php` and the Python fixture
+  `tests/Fixtures/Telegram/initdata/{make.py,valid.txt}` (`python3 -I make.py` writes `valid.txt` again byte for
+  byte).
+- **The middleware chain** is the one of "Stub mode" above. Anchoring the new middleware after `ThrottleRequests`
+  instead would have sorted `SetRequestLocale` behind the stub on all 64 routes (the stub answering without a locale
+  and without `Content-Language`). A check that removed the new priority entries found no existing
+  middleware moved.
+- **Refusals are not reported.** `InvalidInitData`, `InitDataExpired` and `AccessDenied` implement `ShouldntReport`:
+  a refused client retries every few seconds, and each refusal would otherwise be an error entry with a trace. The
+  log test fails if one is reported.
+- **Sensitive parameters.** Without them a probe showed the `auth_date` of an expired value, the start of a bad
+  `user` JSON and the first 15 bytes of the value in the traces of the refusals. A unit test forces `zend.exception_ignore_args=0` and
+  requires every argument of the verifier's frames to be `null`, an integer or a `SensitiveParameterValue`.
+- **Lenient configuration reads.** A value that cannot be read is its default, never an exception or a `500`:
+  `TELEGRAM_INITDATA_MAX_AGE` blank, zero, negative or a word → 3 600 (a blank value, which the production track is
+  told to leave, would otherwise expire every sign-in); the counts of `rate_limits.*` through `RateLimits`; the
+  `client` block of `config/analytics.php` through `MeProfile` (the strict `Config::float()` / `Config::boolean()`
+  turned `replay_rate => 1` into a `500` of every `GET /me`). `TelegramSignIn` still reads `telegram.initdata.*`
+  with `Config::integer()`; the config file casts both values, so only a string set at run time would throw.
+- **`ACCESS_MAX_SEATS` fails closed.** A set value that is not a whole number means `0` (admit nobody new), in the
+  config and in `AccessGate`; blank and the env word `null` mean no limit, and a test pins both.
+- **The token cap** counts and revokes only unexpired `miniapp` tokens, under a lock of the user's row;
+  `TokenIssuerRaceTest` (pgsql) issues concurrently and keeps exactly the cap. The race tests start their child
+  processes behind a 2 s barrier: without it they passed with the locks removed; with it, by the implementer's
+  report (the reviewer did not reproduce it), removing the advisory lock admits 20 of 20 and removing the row lock
+  keeps 6 tokens. The seat race calls `decide()` in 20 processes, not 20
+  HTTP requests.
+- **The users migration's `down()`** drops the new columns, cannot bring back the stub user or its tokens, and makes
+  `name`, `email` and `password` required again only when no row lacks them (a Telegram user has none). Its pgsql
+  test runs `up()` inside a transaction with legacy rows present, as the Migrator does.
+- **The factory UUID and the seeder.** `UserFactory` gives `analytics_distinct_id` a `(string) Str::uuid()`:
+  `DatabaseSeeder` runs `WithoutModelEvents`, so the model's hook does not fill it there and `db:seed` failed on the
+  `NOT NULL`; Faker's `uuid()` is a version 3 UUID and broke the version 4 check of `UserResolverTest`.
+  `DatabaseSeederTest` pins it. `UserSetting` and `AccessGrant` have factories and no seeders: the settings row is
+  created by `SettingsService` on first contact or first read, and a grant only by the gate or the commands.
+- **Settings semantics chosen here.** `QuietWindow` refuses two equal ends and one end without the other; `endAfter()`
+  is the first end strictly after the moment; an empty `DigestSchedule` is allowed and has no next slot. Every
+  authenticated request that builds a request context reads the settings row once (cached on the user object for the
+  request).
+- **The daily cap.** The window is fixed: it starts at the first counted card and lasts 24 hours (Laravel's
+  `RateLimiter` decay), it does not slide, so around its reset a user can open about twice the cap within minutes;
+  accepted (legacy's text says "in the past 24 hours"). The check runs before the card and the count after its `200`,
+  so parallel requests of a user one below the cap overshoot it by their number, bounded by `v1-listing` (120 a
+  minute); accepted. The marker uses the requested number, so a merged duplicate opened under its old number
+  (`100016`) and then under its survivor (`100001`) counts twice; accepted. The env value reaches `RateLimits` as
+  the environment gives it, so `true`, `1e3` or a word mean 100, not a cap of 1.
+- **`v1-events`** answers its `204` through `Limit::response()`, which throws an `HttpResponseException` from the
+  middleware; `ApiExceptionRenderer` now lets that exception through to the framework (`Route::run()` catches one only
+  from the route's action), else the `204` became a `500`.
+- **`access:unblock` and seats.** Unblocking restores `admitted` without counting seats, so in `open` mode with
+  `ACCESS_MAX_SEATS` an operator's unblock may pass `max_seats` once a newcomer took the freed seat; accepted as an
+  operator's act.
+- **The sign-in budget.** A refused user has no token, so each re-check of the no-access screen is a new sign-in:
+  a launch and its three re-checks use 4 of the 5 sign-ins a minute of one user.
+- **`publicApi()` forwards no `X-Forwarded-For`.** It runs inside `"use cache"`, so the cache misses of
+  `GET /reference` and `GET /cities` count against the app server's own address in `v1-public` (60 a minute); the
+  entries revalidate after 600 s and there are few locales; accepted. The production track should know that this
+  bucket exists. Next fills `x-forwarded-for` from the socket when a request has none, so the API always receives
+  one; that matters for the staging check of `TRUSTED_PROXIES`.
+- **The boot retry and BR-APP-054.** BR-APP-054 allows six attempts in all, about 56 s of waits. A boot whose first
+  answer is a `429` now makes seven attempts: about 116 s of waits when only that first answer is a `429`, and up to
+  about 6 minutes (60 s, then 5 × 60 s) when every attempt answers `429` with a `Retry-After` of a minute, each
+  attempt also spending up to its 15 s timeout. Recorded as a deviation from BR-APP-054. `Retry-After` is read as
+  seconds or as an HTTP date (the API sends seconds). The read pass-through `/bff/[...path]` and the owner photos
+  route pass an API `429` on but drop its `Retry-After`; no client code reads it there.
+- **The end-to-end environment.** The CI workflow and `scripts/dev/e2e-local.sh` run the API with
+  `SOURCES_NATIVE_STUBS=true` and `ACCESS_MODE=open` (and the script with `APP_ENV=local`). A blank
+  `TELEGRAM_BOT_TOKEN` there is harmless: the stub answers before the controller. `make e2e` against the Redis-backed
+  local API signs every launch in from the Next server's one address and meets `v1-auth` (10 a minute) within the
+  first minute: KI-71; use `scripts/dev/e2e-local.sh`. A developer's local env file needs `ACCESS_MODE=open`, and
+  `SOURCES_NATIVE_STUBS=true` for `next dev` with the fake Telegram user.
+- **The `signature` rule against a real value** is still open: the Python fixture builds its string the same way, so
+  it checks the HMAC and the encoding, not the rule. The developer verifies one real launch value of the dev bot with
+  that bot's token, outside the repository, and the result is written here.
+- **Contract.** The four methods keep their shapes; `docs/api/openapi.json` gains the `403` responses of "Files".
+  `POST /events` is now registered first in the bearer group (the export kept its place). `docs/api/README.md`
+  describes the native methods, the limiters and the real `reason: "daily"`.
+- **Existing tests changed.** The contract tests of sign-in, `me` and settings (and `OwnerRequestsContractTest`)
+  run in stub mode; the rows of `NativeStubsTest` compare the stub's answer with the one built from the committed
+  fixture, not with a controller; `MediaOwnershipTest` warms the gate and freezes the clock before its query-count
+  probes (the gate's cache made the first request one query longer) and keeps its 120-reads case on `v1-media`;
+  `ApiRoutesTest` gains the middleware order, the gate on every bearer route and the exact limiters per route; the
+  unit test "a server error or 429 ends in the server kind" of the boot retry is rewritten for the new counting; the
+  `next/headers` mocks of `tests/actions/*` gained a `headers` export, while the two of `tests/reference` have none on
+  purpose, so they fail if the cached reads ever read request headers. Every `401` refusal test asserts that the body
+  has no `reason`.
+- **Edits beyond the files.** Two sentences of `frontend/app/README.md` (the forwarded address, the `429` of
+  `/bff/session`) and the header comment of `scripts/dev/e2e-local.sh` ("the API's rate limiters" instead of "the
+  `api` rate limiter").
+- **PHP 8.6.0.** The developer machine runs PHP 8.6.0 (KI-70); every local run above used it, while `main` and CI pin
+  8.5.
+
 ## Handoff
 
-Empty.
+**2026-11-26, development track (Claude Code).** Branch `feat/wp-40-identity` from `main` at `cabee17`, PR #PR-TBD.
+
+- **Done:** steps 1–9 and the Mini App's side; of step 10 Pint, PHPStan, the pgsql group and an independent review of
+  every stage. The Playwright run on this tree is with the coordinator, and its result goes into the PR description;
+  `make ci-backend` and the e2e job run in the PR's CI.
+- **Commits**, in order: `7da00ce` (verifier, users, tokens, stub mode), `def500a` (settings, `GET /me`,
+  `GET|PATCH /settings`), `96a4053` (gate, sign-in, block and unblock), `8f1e2eb` (the Mini App forwards the client
+  address; KI-37; the e2e env), `13e6ae1` (review of the Mini App stage), `6caf12b` (limiters, the daily cap, trusted
+  proxies, redaction), `f958082` (OpenAPI and `@homi/types`), then this documentation.
+- **Verified** (the counts of the stage reports; the review fixes of stages 4 and 5 added cases after them, so the
+  final numbers are those of the PR description). Baseline: 854 tests, 850 passed, 4 skipped.
+  - After stage 4, from `backend/`: `php artisan test --compact` → 1 328 tests, 1 317 passed, 11 skipped (the pgsql
+    group), 5 974 assertions; `vendor/bin/phpstan analyse --memory-limit=1G` → 0 errors; `vendor/bin/pint --test` →
+    passed; `php artisan route:list --path=api/v1 -v` → 64 routes, none on `throttle:api`, none without a named
+    limiter (at stage 3: all 59 bearer routes behind the gate, `events.store` with `access:lenient`). From the root,
+    `make test-pgsql` on a local PostgreSQL (`DB_HOST=127.0.0.1`) → 11 passed, 54 assertions.
+  - After stage 5, from `frontend/`: `pnpm --filter app test` → 273 files, 4 403 tests passed; `pnpm -r lint` and
+    `pnpm -r typecheck` → exit 0.
+  - `python3 scripts/migration/collect_ids.py --check` → exit 0.
+- **Decisions taken here:** DEC-104 … DEC-107 (`../decisions/2026-11-26-developer-answers.md`); the rest is marked in
+  the sections above or listed in "As built"; the mismatches with the facts are AM-104 … AM-112 in
+  `docs/ai/reports/phase-3-notes.md` §AI.
+- **Next:**
+  1. the security-reviewer agent reads the whole diff (step 10; the checklist's line), then the PR's checks and
+     review, then the merge;
+  2. the shared-file PR from `chore/wp-40-env-keys` (`dfeb11b`): `backend/.env.example` and
+     `docs/infrastructure/environments.md` with the nine keys, opened beside this one;
+  3. both developers add `ACCESS_MODE=open` to their local env file (and `SOURCES_NATIVE_STUBS=true` for `next dev`
+     with the fake user); the agent cannot write it (the committed deny rule `Edit(**/.env)`); the whole local suite
+     runs through `scripts/dev/e2e-local.sh` (KI-71);
+  4. the developer checks one real launch value of the dev bot (see "As built");
+  5. the production track: "Needs from the production track" above — the three migrations, the env keys with
+     `TRUSTED_PROXIES` set to the addresses the Next servers reach the API from, the scheduler, the deploy, the
+     staging check of two buckets —, then the acceptance lines inside Telegram on staging and production;
+  6. set the status to `DONE`.
