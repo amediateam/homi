@@ -28,8 +28,9 @@ use LogicException;
  * `legacy.cache.cities`. Each successful answer is also kept as the last good copy for `legacy.cache.last_good`
  * (RK-25): while legacy fails, that copy is served with a `warning`, so an outage does not empty the directories.
  * Without a copy every failure is `503 source_unavailable` — also a pause or a daily limit of legacy, which are not
- * outcomes of these public methods. One process at a time refreshes a key, and a failed refresh is not tried again
- * for `legacy.cache.after_failure` seconds (see `cached()`). The `v1` in the keys changes when the cached shape does.
+ * outcomes of these public methods. One process at a time refreshes a key (the others serve the last good copy, or
+ * `503` on a cold start), and a failed refresh is not tried again for `legacy.cache.after_failure` seconds (see
+ * `cached()`). The `v1` in the keys changes when the cached shape does.
  */
 final class LegacyReferenceSource implements ReferenceSource
 {
@@ -85,9 +86,9 @@ final class LegacyReferenceSource implements ReferenceSource
      * The fresh copy, else a new answer (kept fresh and as the last good copy), else the last good copy.
      *
      * These are public methods, so an anonymous client must not be able to make them call legacy at will: one process
-     * at a time refreshes a key (a cache lock; the others serve the last good copy while one exists), and after a
-     * failed refresh nobody tries again for `legacy.cache.after_failure` seconds — the last good copy is served as
-     * fresh meanwhile, and without one the key answers `503` at once.
+     * at a time refreshes a key (a cache lock; the others serve the last good copy, and `503` while none exists), and
+     * after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds — the last good copy is served
+     * as fresh meanwhile, and without one the key answers `503` at once.
      *
      * @param  Closure(): array<array-key, mixed>  $fetch
      * @return array<array-key, mixed>
@@ -107,15 +108,14 @@ final class LegacyReferenceSource implements ReferenceSource
             throw new SourceUnavailable;
         }
 
-        $lock = $this->lockProvider()->lock("{$key}:refresh", Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout') + 5);
+        $lock = $this->lockProvider()->lock("{$key}:refresh", self::refreshSeconds());
 
         if (! $lock->get()) {
             $last = $this->cache->get("{$key}:last");
 
-            // Another process is refreshing; without a last good copy this one asks legacy too (a cold start).
-            if (is_array($last)) {
-                return $last;
-            }
+            // Another process is refreshing: its last good copy, or, on a cold start without one, 503 at once rather
+            // than one more call to legacy.
+            return is_array($last) ? $last : throw new SourceUnavailable;
         }
 
         try {
@@ -176,6 +176,19 @@ final class LegacyReferenceSource implements ReferenceSource
         $this->cache->put("{$key}:down", 1, $pause);
 
         throw $failure instanceof SourceUnavailable ? $failure : new SourceUnavailable;
+    }
+
+    /**
+     * How long a refresh may take: two reads (the cities ask for the reference data first), each with every attempt,
+     * its timeouts, the pause and the limiter's waits, plus 5 s.
+     */
+    private static function refreshSeconds(): int
+    {
+        $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
+        $waits = Config::integer('legacy.retry.sleep_ms') + $attempts * Config::integer('legacy.rate.max_wait_ms');
+        $read = $attempts * (Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout')) + (int) ceil($waits / 1000);
+
+        return 2 * $read + 5;
     }
 
     private function lockProvider(): LockProvider

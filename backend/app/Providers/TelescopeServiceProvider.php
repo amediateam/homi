@@ -52,7 +52,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $uri = $entry->content['uri'] ?? null;
         $legacy = parse_url(config()->string('legacy.base_url'), PHP_URL_HOST);
 
-        return is_string($uri) && is_string($legacy) && parse_url($uri, PHP_URL_HOST) === $legacy;
+        $host = is_string($uri) ? parse_url($uri, PHP_URL_HOST) : null;
+
+        // Guzzle writes the request's host in lower case; the configured one may not be.
+        return is_string($host) && is_string($legacy) && strtolower($host) === strtolower($legacy);
     }
 
     /**

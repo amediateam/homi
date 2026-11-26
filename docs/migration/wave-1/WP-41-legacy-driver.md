@@ -279,8 +279,8 @@ the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AJ.
   `GET /cities` are public and their OpenAPI declares `200` and `429` only, so every failure of the client there —
   a pause, the daily limit, a `404`, a contract error, an outage — serves the last good copy with a `warning`, and
   without one answers `503 source_unavailable`. Being public, they must not let an anonymous client make legacy calls
-  at will: one process at a time refreshes a key (a cache lock; the others serve the last good copy while one exists),
-  and after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds (60) — the last good copy is
+  at will: one process at a time refreshes a key (a cache lock sized for two reads with their retries; the others serve
+  the last good copy, and on a cold start without one answer `503` at once), and after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds (60) — the last good copy is
   served as fresh meanwhile, and without one the key answers `503` at once. Their legacy calls ask for `USD` whatever
   the caller's currency, because the cache keys carry the language only.
 - **Caching.** The cache holds the v1-shaped arrays the translators produce, not objects (`serializable_classes` is
@@ -322,6 +322,8 @@ the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AJ.
   legacy bodies, and lows (internal state in the 503 message, the base URL and path, header characters, the currency in
   the cache, a background share of zero, floats and nulls, the `Retry-After` cap). All are fixed above, each with a
   test.
+  A narrow round of both reviews on `849a066` found nothing of medium or higher; its two lows (cold-start callers and
+  the refresh lock's length; the case of the configured host in the Telescope filter) are fixed with tests.
 - **Step 8, locally.** `sources:set source.reference legacy` failed on the developer's local database, which lacks four
   migrations of `main` (`source_flag_changes` of WP-10 and the three of WP-40); the database was not migrated from a
   branch. The same path ran in `php artisan tinker` in `local` (fixtures through the Redis cache: Uzbek names, three

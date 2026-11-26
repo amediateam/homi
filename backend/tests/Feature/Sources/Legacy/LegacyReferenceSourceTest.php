@@ -252,3 +252,16 @@ it('asks legacy for the directories in USD whatever the caller’s currency', fu
 
     Http::assertSent(fn (Request $request): bool => $request->header('X-Currency') === ['USD']);
 });
+
+it('answers 503 at once instead of calling legacy while another process makes the first refresh', function (): void {
+    legacyOverHttp();
+    $refreshing = Cache::lock('legacy:v1:reference:ru:refresh', 30);
+    expect($refreshing->get())->toBeTrue();
+
+    expect(fn () => legacyReference()->reference(SourceContext::system()))->toThrow(SourceUnavailable::class);
+    Http::assertNothingSent();
+
+    $refreshing->release();
+    legacyReference()->reference(SourceContext::system());
+    Http::assertSentCount(1);
+});
