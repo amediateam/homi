@@ -37,7 +37,7 @@ it('takes the short title, else the part of the title before « · »', function
 ]);
 
 it('masks a number in the title', function (): void {
-    expect(translatedItem(['short_title' => 'Квартира, звоните +998 90 123 45 67'])['title'])->toBe('Квартира, звоните +998 ** *** ** 67');
+    expect(translatedItem(['short_title' => 'Квартира, звоните +998 00 123 45 67'])['title'])->toBe('Квартира, звоните +998 ** *** ** 67');
 });
 
 it('splits age into label and when, and keeps a readable posted_at (index-CIa0Ldj2.js)', function (array $item, array $posted): void {

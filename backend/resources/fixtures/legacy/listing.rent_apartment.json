@@ -117,14 +117,14 @@
     "call_url": "https://legacy.invalid/call/fixture-100001?e=1795132800",
     "contact_url": "https://t.me/stub_author_6",
     "contact_paid": false,
-    "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 90 123 45 67",
+    "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 00 123 45 67",
     "sources": [
         {
             "handle": "stub_channel_a",
             "url": "https://t.me/stub_channel_a/4001"
         }
     ],
-    "original_text": "Сдаётся 2-комн. квартира, 54 м². Чисто, уютно. Звоните: +998901234567",
+    "original_text": "Сдаётся 2-комн. квартира, 54 м². Чисто, уютно. Звоните: +998001234567",
     "original_url": "https://t.me/stub_channel_a/4001",
     "post_deleted": false,
     "offers": [
@@ -133,8 +133,8 @@
             "url": null
         }
     ],
-    "phone": "+998901234567",
-    "phone_display": "+998 90 123-45-67",
+    "phone": "+998001234567",
+    "phone_display": "+998 00 123-45-67",
     "owner": "Хозяин",
     "median": true,
     "median_value": 672,

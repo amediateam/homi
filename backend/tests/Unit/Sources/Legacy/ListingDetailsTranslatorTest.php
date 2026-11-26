@@ -46,13 +46,13 @@ it('never maps phone, phone_display or call_url, and has no phone until WP-43', 
 });
 
 it('masks every author-written text of the card (DEC-52)', function (): void {
-    $number = '+998 90 123 45 67';
+    $number = '+998 00 123 45 67';
     $card = translatedCard([
         'summary' => "Тел. {$number}",
         'original_text' => "Звоните {$number}",
         'offers' => [['text' => "Торг, {$number}", 'url' => null]],
         'history' => [['at' => '2026-11-10T07:00:00+00:00', 'channel' => '@stub_channel_a', 'url' => null, 'text' => "Было {$number}", 'kind' => 'published', 'price_usd' => 648, 'change_pct' => null]],
-        'author' => ['kind' => 'phone', 'label' => '+998901234567', 'count' => 3],
+        'author' => ['kind' => 'phone', 'label' => '+998001234567', 'count' => 3],
         'owner_description' => "Мой номер {$number}",
     ]);
     $masked = '+998 ** *** ** 67';
@@ -64,7 +64,7 @@ it('masks every author-written text of the card (DEC-52)', function (): void {
         ->and($card['price_history'][0]['channel'])->toBe('stub_channel_a')
         ->and($card['author']['label'])->toBe($masked)
         ->and($card['owner']['description'])->toBe("Мой номер {$masked}")
-        ->and(json_encode($card, JSON_UNESCAPED_UNICODE))->not->toContain('123 45 67')->not->toContain('901234567');
+        ->and(json_encode($card, JSON_UNESCAPED_UNICODE))->not->toContain('123 45 67')->not->toContain('001234567');
 });
 
 it('masks a masked text to itself, so the cached array and the object agree', function (): void {
@@ -83,9 +83,9 @@ it('keeps an https contact link without a phone number in it, and drops any othe
     expect(translatedCard(['contact_url' => $url])['contact']['contact_url'])->toBe($kept);
 })->with([
     'a chat link' => ['https://t.me/stub_author_6', 'https://t.me/stub_author_6'],
-    'a whatsapp link with the number' => ['https://wa.me/998901234567', null],
-    'a telegram phone link' => ['https://t.me/+998901234567', null],
-    'tel:' => ['tel:+998901234567', null],
+    'a whatsapp link with the number' => ['https://wa.me/998001234567', null],
+    'a telegram phone link' => ['https://t.me/+998001234567', null],
+    'tel:' => ['tel:+998001234567', null],
     'plain http' => ['http://t.me/stub_author_6', null],
     'null' => [null, null],
 ]);

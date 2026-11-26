@@ -27,6 +27,12 @@ final class PhoneMasker
     /** A masked number as this class writes it. */
     public const string MASKED_PATTERN = '/\+(?:998 )?\*\* \*\*\* \*\* \d{2}/';
 
+    /**
+     * No number starts on the two digits that end a masked one (`** NN`), so masking a masked text changes nothing:
+     * without it, `NN` and the digits after it could make a second number.
+     */
+    private const string NOT_AFTER_MASK = '(?<![\d+*\/])(?<!\*\* )';
+
     /** Up to two separators between digit groups, never a line break. */
     private const string SEPARATOR = '[ \t\-._()]{0,2}';
 
@@ -38,9 +44,9 @@ final class PhoneMasker
      */
     public static function mask(string $text, array $codes = self::CODES): string
     {
-        $prefixed = '/(?<![\d+*\/])(?:\+998|998|8)'.self::SEPARATOR.'\d{2}'.self::SEPARATOR.self::SUBSCRIBER.'(?!\d)/u';
-        $foreign = '/(?<![\d+*\/])\+(?!998)\d(?:'.self::SEPARATOR.'\d){9,14}(?!\d)/u';
-        $bare = '/(?<![\d+*\/])\(?(?:'.implode('|', array_map(fn (string $code): string => preg_quote($code, '/'), $codes)).')\)?'
+        $prefixed = '/'.self::NOT_AFTER_MASK.'(?:\+998|998|8)'.self::SEPARATOR.'\d{2}'.self::SEPARATOR.self::SUBSCRIBER.'(?!\d)/u';
+        $foreign = '/'.self::NOT_AFTER_MASK.'\+(?!998)\d(?:'.self::SEPARATOR.'\d){9,14}(?!\d)/u';
+        $bare = '/'.self::NOT_AFTER_MASK.'\(?(?:'.implode('|', array_map(fn (string $code): string => preg_quote($code, '/'), $codes)).')\)?'
             .self::SEPARATOR.self::SUBSCRIBER.'(?!\d)/u';
 
         $text = (string) preg_replace_callback($prefixed, fn (array $match): string => '+998 ** *** ** '.self::lastTwo($match[0]), $text);

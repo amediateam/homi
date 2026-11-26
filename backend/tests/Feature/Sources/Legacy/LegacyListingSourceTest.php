@@ -330,7 +330,7 @@ it('keeps the masked card in the cache, without the phone keys and the per-user 
         ->and($cached['summary'])->toContain('+998 ** *** ** 67')
         ->and($cached['original']['text'])->toContain('+998 ** *** ** 67');
 
-    foreach (['901234567', '90 123 45 67', '90 123-45-67', '123-45-67', '1234567'] as $digits) {
+    foreach (['001234567', '00 123 45 67', '00 123-45-67', '123-45-67', '1234567'] as $digits) {
         expect($serialised)->not->toContain($digits);
     }
 

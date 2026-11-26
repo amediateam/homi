@@ -174,11 +174,11 @@ it('leaves no digit of the author\'s number in a card: the phone keys are droppe
     $details = ListingDetails::fromArray($card);
     $serialised = json_encode([$card, $details], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    expect($legacy['phone'])->toBe('+998901234567')
-        ->and($legacy['summary'])->toContain('+998 90 123 45 67')
-        ->and($legacy['original_text'])->toContain('+998901234567');
+    expect($legacy['phone'])->toBe('+998001234567')
+        ->and($legacy['summary'])->toContain('+998 00 123 45 67')
+        ->and($legacy['original_text'])->toContain('+998001234567');
 
-    foreach (['901234567', '90 123 45 67', '90 123-45-67', '123-45-67', '1234567'] as $digits) {
+    foreach (['001234567', '00 123 45 67', '00 123-45-67', '123-45-67', '1234567'] as $digits) {
         expect($serialised)->not->toContain($digits);
     }
 

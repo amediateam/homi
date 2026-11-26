@@ -1,6 +1,8 @@
 <?php
 
 use App\Services\Listings\PhoneMasker;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 /** The synthetic code `00` joins the masker's codes, so no real operator code appears in a test or a fixture. */
 function maskSynthetic(string $text): string
@@ -68,4 +70,34 @@ it('writes the fixed masked form a client can find', function (): void {
     expect(preg_match(PhoneMasker::MASKED_PATTERN, maskSynthetic('a +998 00 000 00 67 b'), $match))->toBe(1)
         ->and($match[0])->toBe('+998 ** *** ** 67')
         ->and(preg_match(PhoneMasker::MASKED_PATTERN, '+** *** ** 67'))->toBe(1);
+});
+
+it('is idempotent on any text: a masked text masks to itself', function (array $codes): void {
+    $random = new Randomizer(new Mt19937(42));
+    $alphabet = '0123456789999888  +-()*/._';
+    $failures = [];
+
+    for ($i = 0; $i < 20_000 && count($failures) < 5; $i++) {
+        $text = $random->getBytesFromString($alphabet, $random->getInt(8, 40));
+
+        if ($random->getInt(0, 3) === 0) {
+            $text = '+998 ** *** ** '.$random->getInt(10, 99).$text;
+        }
+
+        $once = PhoneMasker::mask($text, $codes);
+
+        if (PhoneMasker::mask($once, $codes) !== $once) {
+            $failures[] = $text;
+        }
+    }
+
+    expect($failures)->toBe([]);
+})->with([
+    'the default codes' => [PhoneMasker::CODES],
+    'with the synthetic 00' => [[...PhoneMasker::CODES, '00']],
+]);
+
+it('starts no number on the last two digits of a masked one', function (): void {
+    expect(PhoneMasker::mask('Тел: 99 123 45 90 1234567 сум'))->toBe(PhoneMasker::mask(PhoneMasker::mask('Тел: 99 123 45 90 1234567 сум')))
+        ->and(PhoneMasker::mask('+998 ** *** ** 62)4999099'))->toBe('+998 ** *** ** 62)4999099');
 });
