@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | WAITING (merged in #128, env keys #129; key pending) |
 | Depends on | WP-40 |
 | Size | about 2 200 changed lines without fixtures, L |
 | Behaviour reference | `25` §4.5; `24` §3, §8.2 (Q-API-059, Q-API-060, Q-API-062), §8.3 (RK-25, RK-26, RK-28); `08` §1.1 … §1.6 and the rows of API-001 and API-002; `10` conflicts CF-006 and CF-017; the answers log of WP-02 (`decisions/<date>-operator-request.md`); WP-11 (the shapes to produce) |
@@ -233,6 +233,113 @@ installing the key.
 - [ ] If the key exists: the production track ran `legacy:ping` on staging and it succeeded; otherwise the status of
       this package notes "merged, key pending" and the queue continues.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). Each one corrects or completes
+the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AJ.
+
+- **The fixture server is a factory of its own, not a global `Http::fake()` registered at boot** (corrects "Fixture
+  server"). `LegacyClient` sends through `LegacyFakeServer::factory()` — an `Illuminate\Http\Client\Factory` whose
+  every request `answer()` serves, with stray requests refused — whenever `legacy.fake` is on, and through the
+  container's factory otherwise. Laravel matches fakes in the order they were registered, so a fake registered at
+  boot would have answered before every test's own `Http::fake()` sequence; and with `legacy.fake` on by default in
+  `testing`, a test that forgot to register the fixtures would have sent a legacy call to the network. Nothing is
+  registered at boot; a test that needs a network double sets `legacy.fake` to `false` and uses `Http::fake()`
+  (AM-115).
+- **Fake mode and the key** (completes step 1 of the client). With `legacy.fake` on and no key, the client sends the
+  placeholder `fake-service-key` in the configured header, so the header path runs against the fixtures too; the fake
+  server answers `401 errors/unauthorized.json` to a request without the header. With `legacy.fake` off and no key:
+  `SourceUnavailable`, no request (AM-116).
+- **A blank env value is the default.** `.env.example` lists the keys blank, and `env()` returns `''` for a blank
+  line, so `config/legacy.php` reads every key through a blank-to-default helper; `LEGACY_FAKE=` keeps the
+  per-environment default, `LEGACY_RATE_PER_SECOND` that is not a whole number above 0 is 5 (AM-117).
+- **`SourceUnavailable` is no longer `final`**, so `LegacyContractError` can extend it as designed; it carries the
+  path template, the problem and the key names, never a value, and whoever catches it logs those (AM-118).
+- **The outcome table, completed.** A `204`, a redirect (never followed), and any status the table does not name
+  (`400`, `405`, `409`, …) are contract errors, like a `422`. A `Retry-After` is read as whole seconds or as an HTTP
+  date (the seconds until it, rounded up); without a readable one the daily limit waits 3 600 s and the breaker
+  opens for `open_for`. The daily-limit warning carries the day's count (`legacy:daily_limit:<date>`).
+- **What the breaker counts.** Failures are `401`, `403` other than `paused`, `5xx`, and a failure in transit — a
+  timeout, a connection error, or a transfer that broke after the headers (Laravel's `RequestException`, whose message
+  quotes the body, and any Guzzle transfer error) — one per call after the retry. Every other answered outcome — a
+  `2xx` (a contract error included), `404`, `422`, a pause, the daily limit — resets the count. Five failures within
+  `window` seconds of the first of them open it (`add` then `increment`, both atomic on Redis); a `429` other than the
+  daily limit opens it at once. Only the probe closes it, so a call already under way when it opened cannot. The
+  probe's lock lives as long as a probe may take (every attempt with its timeouts, the pause and the limiter's waits,
+  plus 5 s), and any exception before an outcome gives it back. The open-until time is read as a number whether the
+  cache returns an int (the array store) or a numeric string (Redis).
+- **Retry.** Two attempts for a `GET`, written by hand (Laravel's `retry()` counts attempts, not retries); each attempt
+  takes its own place in the limiter, and the pause between them is `Sleep`, which the tests fake. When the limiter
+  has no place for the retry, the first attempt's outcome stands (it reaches the breaker and the log).
+- **Limiter.** Buckets per calendar second in the cache (`legacy:out:<second>`, `legacy:out:bg:<second>`, two seconds
+  each), not `RateLimiter`, which reports availability in whole seconds. A user's call that finds the second full
+  sleeps to the next one while its total wait fits in `max_wait_ms`; a background call takes at most
+  `floor(per_second × background_share)` places of a second, at least one, and never waits.
+- **The public methods never answer a legacy refusal** (completes "Last good answer"). `GET /reference` and
+  `GET /cities` are public and their OpenAPI declares `200` and `429` only, so every failure of the client there —
+  a pause, the daily limit, a `404`, a contract error, an outage — serves the last good copy with a `warning`, and
+  without one answers `503 source_unavailable`. Being public, they must not let an anonymous client make legacy calls
+  at will: one process at a time refreshes a key (a cache lock sized for two reads with their retries; the others serve
+  the last good copy, and on a cold start without one answer `503` at once — `LegacyRefreshBusy`, contention, which
+  never marks a directory down, so the cities waiting for a reference refresh under way do not count it as a
+  failure), and after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds (60) — the last good copy is
+  served as fresh meanwhile, and without one the key answers `503` at once. Their legacy calls ask for `USD` whatever
+  the caller's currency, because the cache keys carry the language only.
+- **Caching.** The cache holds the v1-shaped arrays the translators produce, not objects (`serializable_classes` is
+  `false` and Redis serialises): `legacy:v1:reference:<locale>` and `legacy:v1:cities` for ten minutes, each also as
+  `…:last` for a day; the `v1` changes when the cached shape does. The cities answer is one for every language: it
+  carries codes and numbers only; its entries follow the city codes of the reference data of the request's language.
+- **Translators.** `translate()` returns the array of the stub fixture's shape and checks it with the data object's
+  `fromArray()`; `toData()` returns the data object. A missing deal of `renovations`, `price_presets` or `counts` is
+  filled before the check, because `Fields::byDeal()` refuses both an unknown key and a missing deal. The rate is kept
+  as legacy sent it, whole or not. Without cities, Tashkent gets the stub's centre (41.3111, 69.2797), zoom 12, metro
+  and median.
+- **The key goes nowhere else.** Telescope keeps no entry of an outgoing request to the legacy host in any environment
+  (its response bodies will carry phone numbers from WP-42 on, and the watcher's `ignore_hosts` does not cover a failed
+  connection), and it masks the configured auth header besides. The client's key parameters are
+  `#[\SensitiveParameter]`. Every 503 says `SourceUnavailable`'s default message, naming neither legacy, the key, the
+  breaker nor the limiter. A path must start with one slash (an absolute address would take the key to another host);
+  outside `local` and `testing` the key goes only to an `https` base URL; a key, prefix or header name with a character
+  a header cannot carry is refused (a `critical` line) before the HTTP client sees it, whose own error would quote it.
+  `lastOutcome()` tells `legacy:ping` what the call ended with — the HTTP status, a failure in transit, or why it was
+  not sent — so its output tells a refused key from a firewall.
+- **Leniency of the translators.** The contract types its numbers `number`, so a whole number sent as a float
+  (`700.0`: a count, a zoom, a price) is read as the whole number (`Translators\Whole`); a `null` deal of `counts` is
+  `0`, of the presets and typical prices dropped, of `renovations` and `price_presets` `[]`. A fraction is still a
+  contract error. A `Retry-After` above a day is a day. The specification's table names `appliances` among the
+  per-deal maps; it is one list on both sides, and the code treats it so.
+- **Files outside the specification's list:** `Translators/Whole.php` (whole numbers sent as floats),
+  `tests/Feature/Sources/Legacy/{LegacyPingTest,LegacyTelescopeTest}.php`; `config/legacy.php` has one key more than
+  the table, `cache.after_failure` (60 s).
+- **Tests.** 181 in the package — `tests/Unit/Sources/Legacy` (47) and `tests/Feature/Sources/Legacy` (134, with
+  `LegacyPingTest` for `legacy:ping` and the boot check and `LegacyTelescopeTest`, files outside the list); every
+  feature file starts with `Http::preventStrayRequests()`. Three existing tests changed: `ReferenceContractTest` names
+  `native` as the unbound driver, `SourceCommandsTest` lists `stub, legacy`, and `NativeStubsTest` turns `legacy.fake`
+  off for its production boot. The array store of the tests hides how Redis returns numbers, so the breaker has a test
+  that stores its time as a string.
+- **Review.** An independent code review and a security review of the first commit (`6d365a4`) found the breaker inert
+  on Redis (both, high), a transfer broken after the headers escaping as an unmapped `RequestException` with the body
+  in its message (high), a call under way closing an open breaker, a probe lock shorter than a probe, `legacy:ping`
+  unable to tell failures apart, anonymous requests driving legacy calls on the public routes, Telescope keeping
+  legacy bodies, and lows (internal state in the 503 message, the base URL and path, header characters, the currency in
+  the cache, a background share of zero, floats and nulls, the `Retry-After` cap). All are fixed above, each with a
+  test.
+  A narrow round of both reviews on `849a066` found nothing of medium or higher; its two lows (cold-start callers and
+  the refresh lock's length; the case of the configured host in the Telescope filter) are fixed with tests.
+- **Step 8, locally.** `sources:set source.reference legacy` failed on the developer's local database, which lacks four
+  migrations of `main` (`source_flag_changes` of WP-10 and the three of WP-40); the database was not migrated from a
+  branch. The same path ran in `php artisan tinker` in `local` (fixtures through the Redis cache: Uzbek names, three
+  cities) and through the routes in `LegacyReferenceSourceTest`.
+
 ## Handoff
 
-Empty.
+Merged, key pending. The package needs nothing more from the development track. For the production track, when the
+operator has issued the key (WP-02): the env keys of #129 on staging (`LEGACY_API_URL`, an `https`
+address, `LEGACY_SERVICE_KEY`, and the others only if the operator's contract differs from the defaults), outbound
+HTTPS from the API hosts to the legacy host, `php artisan legacy:ping` on staging and its output reported here; then
+production. `LEGACY_FAKE` stays unset on the servers (the boot check refuses it only in production; on staging it would
+answer from the fixtures under the `legacy` label). `zend.exception_ignore_args=On` in the servers' PHP, so a trace of
+a vendor frame never carries a header value. To check the configuration use `php artisan config:show legacy.auth` or
+`legacy:ping` — `config:show legacy` prints the key. No `source.*` flag changes: the defaults stay `stub` until WP-48.
+Proposed for a later package (not in this one's scope): a scheduled warmer of the reference data as a background
+call, so a public request never waits for legacy.

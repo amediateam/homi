@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-26 (WP-40 merged as #124 `a987ecd` and its env keys as #125 `d650cac`, after the composer update #123; the first native package of stage C; WP-41 next)
+updated: 2026-11-26 (WP-41 the legacy driver core on `feat/wp-41-legacy-driver`, env keys on `chore/wp-41-env-keys`; WP-40 merged as #124 `a987ecd`, env #125 `d650cac`; DEC-109 two development sessions)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -84,6 +84,19 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     UTC (AM-114). Local: `php artisan test --compact` → 1 362 tests, 1 350 passed, 12 skipped; the same suite with
     `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1` → 1 362 passed; CI of `cca81c2`: `backend` pass
     (run 45845272293), `frontend` pass, `frontend-e2e` pass on attempt 2 (927 + 20 + 10; attempt 1 hit KI-63).
+
+- **WP-41 (branch `feat/wp-41-legacy-driver`; not merged at the time of writing, not deployed):**
+  - **The legacy driver** of the reference capability is bound (`config/sources.php`); the defaults of
+    `source.reference` and `source.cities` stay `stub` (WP-48 switches). `LegacyReferenceSource` answers both from
+    legacy's `GET /api/meta` and `GET /api/cities` through `ReferenceTranslator` and `CityStatsTranslator`, cached
+    10 min per language, last good copy for a day, one refresh at a time, 60 s pause after a failed refresh.
+  - **`LegacyClient`** (`app/Services/Sources/Legacy`): the service key in `LEGACY_AUTH_HEADER` (default
+    `X-Service-Key`), never anonymous, never logged; `LegacyLimiter` (5 a second, per-second buckets in the cache),
+    `LegacyBreaker` (5 failures in 30 s → 30 s open; `429` → `Retry-After` ≤ 300 s), one retry of a read, the outcome
+    table of WP-41. `php artisan legacy:ping` for the production track.
+  - **Fixtures:** `LEGACY_FAKE` (blank = on in local and testing; the API refuses to boot with it in production) makes
+    the client answer from `resources/fixtures/legacy` through `LegacyFakeServer`'s own HTTP factory. Telescope keeps
+    no entry of a legacy request.
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).

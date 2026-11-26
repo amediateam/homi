@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-26 (WP-40 merged as #124 a987ecd, env keys #125 d650cac; two development sessions since DEC-109: WP-41 here, WP-62 for the second)
+updated: 2026-11-26 (WP-41 legacy driver core in review on `feat/wp-41-legacy-driver`, env keys on `chore/wp-41-env-keys`; DEC-109: a second development session takes WP-62)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -10,37 +10,35 @@ Written for whoever continues the **development track**. The production track's 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-23 (verbatim in earlier handoffs and `docs/migration/decisions/`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6; no new dependencies, staging or production without the first developer; «задай все свои вопросы по одному и с вариантами ответа».
 - 2026-11-21, **in force** (rule 8 of `docs/migration/wave-1/README.md`): «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!».
-- 2026-11-26: «Продолжим где остоновились ?»; on WP-40 «Беру я, начинаю сейчас»; on the lock «Отдельный PR, как #117 (Рекомендуется)»; «продолжай по плану»; «тебе самом сложно проверить .env делай сам не срашивай» (check env values with `php artisan config:show <key>`); «сливай #124 и #125 после зелёного CI»; on the second session «да, обнови промпт под WP-62» and «Может сюда перенесем …/homi.uz/docs эту …/homi-new-developer-prompt.md». DEC-104 … DEC-109 (`docs/migration/decisions/2026-11-26-developer-answers.md`).
+- 2026-11-26: «Продолжим где остоновились ?»; on WP-40 «Беру я, начинаю сейчас»; «продолжай по плану»; «тебе самом сложно проверить .env делай сам не срашивай» (check env values with `php artisan config:show <key>`); «сливай #124 и #125 после зелёного CI»; on the second session «да, обнови промпт под WP-62» and «Может сюда перенесем …/homi.uz/docs эту …/homi-new-developer-prompt.md»; «сливай #127 после ревью»; «продолжай по плану WP-41». DEC-104 … DEC-109 (`docs/migration/decisions/2026-11-26-developer-answers.md`).
 
 ## State at handoff
-- `main` = `60d30dc` (#126, the last save) plus the PR of `docs/second-developer-prompt`; #124 `a987ecd`, #125 `d650cac`, #123 `cabee17`. `git ls-remote --heads origin` → `main`, `chore/php-8.6`, five Dependabot heads. No worktree besides the main checkout.
-- **WP-40 is WAITING** for the production track (spec "Needs from the production track": three migrations, the env keys of #125, `TRUSTED_PROXIES` = the addresses the Next servers reach the API from, the `show timezone` check, `TELESCOPE_RECORD_ALL` off, the scheduler; then the checks inside Telegram).
-- **Two development sessions (DEC-109).** This one: **WP-41** next (legacy driver core, reference data and cities; `docs/migration/wave-1/WP-41-legacy-driver.md`), branch `feat/wp-41-legacy-driver` from `origin/main`, then the rest of stage C's backend in queue order (WP-44 after WP-41, both backend). **The second session: WP-62** (frontend only), started from `docs/handoff/second-developer-prompt.md`; it does not edit this file, merges `main` into its branch, and numbers as `parallel-work.md` §5 says. Read its state from its PR and the "Handoff" of its specification (`gh pr list`).
-- Verify: from `backend/` `php artisan test --compact` (1 362 tests, 1 350 passed, 12 skipped) **and** the same suite on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan test --compact` (1 362 passed); `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= make test-pgsql` (12); `make ci-frontend`; `HOMI_E2E_API_PORT=8090 scripts/dev/e2e-local.sh` (927).
+- `main` = `a93359d` (#127, DEC-109 and `docs/handoff/second-developer-prompt.md`). Open: the WP-41 PR (`feat/wp-41-legacy-driver`) and its env PR (`chore/wp-41-env-keys`, worktree `.worktrees/wp41-env` — remove it after the merge).
+- **Two development sessions (DEC-109).** This one: WP-41, then the rest of stage C's backend in queue order — **WP-42** next (listings through legacy; depends on WP-41), WP-44 after it (both backend). **The second session: WP-62** (frontend only), from `docs/handoff/second-developer-prompt.md`; it does not edit this file, merges `main` into its branch, and numbers as `parallel-work.md` §5 says. Read its state from its PR and the "Handoff" of its specification (`gh pr list`).
+- **WP-41 waits for the production track after its merge:** the key from the operator (WP-02), the env keys on staging, `legacy:ping` (spec "Handoff"). No flag changes.
+- Verify: from `backend/` `php artisan test --compact` (1 546 tests, 1 534 passed, 12 skipped) **and** on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan test --compact` (1 546 passed); `vendor/bin/phpstan analyse` (0 errors); `composer openapi:check` after `migrate:fresh` on `homi_test` (no change).
 
 ## Done this session
-- `git pull --ff-only` 792afbd → f428d15; nothing new from the colleague on GitHub since #122 (`gh pr list`, `gh run list`, repo events).
-- #123: the developer's `composer update` (25 bumps, Laravel 13.44.1, Guzzle 8.6.0), `make ci-backend` exit 0, review clean, merged `cabee17`.
-- WP-33 Handoff item: five runs in a row of `scripts/dev/e2e-local.sh` on `main` `cabee17` → 927 passed ×5 (recorded in #124).
-- The second developer's prompt moved from outside the repository (`~/Documents`, Russian) into `docs/handoff/second-developer-prompt.md` (English), WP-62 instead of the stale WP-33 part 4 → WP-40; DEC-109 recorded.
-- WP-40 in five stages, each implemented, checked by an independent reviewer and fixed; whole-package security review (STRIDE, no high) and spec-compliance review; final narrow rounds clean (reviews reported by subagents, not re-run). Local: the counts above; e2e 927 + `@radars-off` 20 on `f958082`. CI of `cca81c2` green (e2e on attempt 2, KI-63). Merged #124 and #125.
+- #127 merged `a93359d`: the second developer's prompt moved into the repository (English), DEC-109; `~/Documents/homi-new-developer-prompt.md` deleted (old version in the session scratchpad). Review: 3 medium + 5 low fixed, then one low and a nit of the narrow round, fixed (reported by a subagent, not re-run).
+- WP-41 built: client, limiter, breaker, fixture server, golden fixtures, translators, reference source, `legacy:ping`, boot check, Telescope filter. A code review and a security review of `6d365a4` found 2 high (the breaker inert on Redis — AM-119; an unmapped `RequestException` quoting the body) and mediums; all fixed with tests (the reviews are subagent reports; the fixes are verified by the suites above).
+- Step 8 of WP-41 could not run on the developer's database (4 migrations of `main` pending: `php artisan migrate:status`); the same path ran in `tinker` in `local` (fixtures through Redis).
 
 ## Waiting for the developer (do NOT start on your own)
 1. **The click on the permission prompt of `gh pr merge`** for every merge.
-2. **One real `initData` of the dev bot** checked with `php <scratchpad>/wp40/check-initdata.php <file>` (pass/fail only; the script is not in the repo — rewrite it from WP-40's "As built" if the scratchpad is gone). Until then the `signature` rule is pinned by an independent Python fixture only.
-3. **Production track:** WP-40's needs (above); the WAITING rows of the queue; the deploy carries #117, #119, #123.
-4. **Forwarding the prompt** `docs/handoff/second-developer-prompt.md` to the second developer (no mail from the agent).
-5. **CLAUDE.md** still says tests run on SQLite and has no WP-40 sentence: a shared-file PR (proposed, not opened).
+2. **`php artisan migrate` on the local dev database** (`homi_db`, 4 pending migrations of WP-10 and WP-40) — the developer's database, not migrated by an agent.
+3. **One real `initData` of the dev bot** checked with `php <scratchpad>/wp40/check-initdata.php <file>` (pass/fail only).
+4. **Production track:** WP-40's needs; WP-41's key and env keys; the deploy carries #117, #119, #123.
+5. **Forwarding the prompt** `docs/handoff/second-developer-prompt.md` to the second developer; **CLAUDE.md** (tests on PostgreSQL in CI, the WP-40/41 sentences) and a pointer to the prompt in `HANDOFF.md` §7 / `setup.md`: shared-file PRs, proposed, not opened.
 6. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
 
 ## Gotchas learned this session
-- CI's backend job runs the Feature suite on **PostgreSQL** (`backend.yml` `ci:check` sets `DB_CONNECTION=pgsql`): a test with an expected-to-fail statement needs a savepoint (`DB::transaction`), and the local run on SQLite does not show it (AM-113).
-- The local PostgreSQL is on Asia/Tashkent; the `pgsql` connection now sets UTC (AM-114). The env file's DB host has no `homi_test`: use `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD=`.
-- `composer openapi:export` needs a migrated database: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan migrate:fresh --force` first, so the developer's dev database is not migrated by a branch.
-- Reading `backend/.env` is refused (the permission layer denied even `grep -o '^[A-Z_]*='`, which the hook itself allows) and the hook refuses creating one in a worktree: a worktree has no env file (tests need `APP_KEY=…` in the environment). Read values with `php artisan config:show`.
-- `SortedMiddleware` reorders only middleware in the priority list; WP-40 anchors its chain after `Authorize` (`bootstrap/app.php`).
-- zsh does not split `$FILES`: stage with `git status --short | awk '{print $2}' | xargs git add --`.
-- Next numbers: AM-115, KI-72, ADR 0021, DEC-110. The hook shows both sessions the same numbers: before a push grep the second session's open PRs for the ones taken (whoever merges second renumbers its numbers not yet on `main`, DEC included; `collect_ids.py --check` does not see AM, KI or DEC-1xx).
+- **Redis returns a stored number as a numeric string** (the array store of the tests returns the int): read cache numbers with `is_numeric` + cast; `increment()` returns an int on both (AM-119).
+- **Laravel matches HTTP fakes in registration order:** a second `Http::fake()` in a test does not replace the first; drive one fake from a queue (`LegacyBreakerTest`). A fake that throws records no request.
+- `env()` returns `''` for a blank `.env.example` line, not the default: config files map blank to the default (AM-117).
+- CI's backend job runs the Feature suite on **PostgreSQL** (AM-113); the local PostgreSQL is on Asia/Tashkent and the `pgsql` connection sets UTC (AM-114); use `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD=` for `homi_test`.
+- Reading `backend/.env` is refused; read values with `php artisan config:show` (on a server `config:show legacy` would print the service key: use `legacy.auth`).
+- zsh does not split `$FILES`: stage named paths.
+- Next numbers: AM-120, KI-72, ADR 0021, DEC-110. The second session takes the next free numbers too (DEC-109): grep its open PRs before a push.
 
 ## Active subagent work at handoff
 - None running.

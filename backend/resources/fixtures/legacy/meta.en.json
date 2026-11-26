@@ -1,0 +1,260 @@
+{
+    "locale": "en",
+    "locale_chosen": true,
+    "currency": "USD",
+    "usd_uzs": 12800,
+    "theme": "auto",
+    "city": "tashkent",
+    "city_chosen": true,
+    "analytics": {
+        "key": "phc_fixture_key",
+        "host": "https://events.invalid",
+        "id": "fixture-analytics-id"
+    },
+    "max_subscriptions": 10,
+    "bot_username": "legacy_fixture_bot",
+    "tiles": null,
+    "new_features": ["pets", "cards"],
+    "cities": [
+        {
+            "code": "tashkent",
+            "name": "Tashkent",
+            "center": [41.3111, 69.2797],
+            "metro": true,
+            "median": true,
+            "districts": [
+                {
+                    "code": "bektemir",
+                    "name": "Bektemir"
+                },
+                {
+                    "code": "chilonzor",
+                    "name": "Chilanzar"
+                },
+                {
+                    "code": "mirobod",
+                    "name": "Mirabad"
+                },
+                {
+                    "code": "mirzo_ulugbek",
+                    "name": "Mirzo Ulugbek"
+                },
+                {
+                    "code": "olmazor",
+                    "name": "Almazar"
+                },
+                {
+                    "code": "sergeli",
+                    "name": "Sergeli"
+                },
+                {
+                    "code": "shayxontohur",
+                    "name": "Shaykhantahur"
+                },
+                {
+                    "code": "uchtepa",
+                    "name": "Uchtepa"
+                },
+                {
+                    "code": "yakkasaroy",
+                    "name": "Yakkasaray"
+                },
+                {
+                    "code": "yangihayot",
+                    "name": "Yangihayot"
+                },
+                {
+                    "code": "yashnobod",
+                    "name": "Yashnabad"
+                },
+                {
+                    "code": "yunusobod",
+                    "name": "Yunusabad"
+                }
+            ],
+            "zones": [
+                {
+                    "code": "center",
+                    "name": "Centre (inside the ring)"
+                },
+                {
+                    "code": "near_center",
+                    "name": "Near the centre"
+                }
+            ]
+        },
+        {
+            "code": "tashkent_region",
+            "name": "Tashkent Region",
+            "center": [41.2213, 69.8597],
+            "zoom": 9,
+            "metro": false,
+            "median": true,
+            "districts": [
+                {
+                    "code": "chirchiq",
+                    "name": "Chirchiq"
+                },
+                {
+                    "code": "olmaliq",
+                    "name": "Almalyk"
+                },
+                {
+                    "code": "qibray",
+                    "name": "Kibray"
+                },
+                {
+                    "code": "toshkent_tumani",
+                    "name": "Tashkent district"
+                },
+                {
+                    "code": "zangiota",
+                    "name": "Zangiata"
+                }
+            ],
+            "zones": []
+        },
+        {
+            "code": "andijan",
+            "name": "Andijan",
+            "center": [40.7821, 72.3442],
+            "metro": false,
+            "median": false,
+            "districts": [],
+            "zones": []
+        }
+    ],
+    "districts": [
+        {
+            "code": "bektemir",
+            "name": "Bektemir"
+        },
+        {
+            "code": "chilonzor",
+            "name": "Chilanzar"
+        },
+        {
+            "code": "mirobod",
+            "name": "Mirabad"
+        },
+        {
+            "code": "mirzo_ulugbek",
+            "name": "Mirzo Ulugbek"
+        },
+        {
+            "code": "olmazor",
+            "name": "Almazar"
+        },
+        {
+            "code": "sergeli",
+            "name": "Sergeli"
+        },
+        {
+            "code": "shayxontohur",
+            "name": "Shaykhantahur"
+        },
+        {
+            "code": "uchtepa",
+            "name": "Uchtepa"
+        },
+        {
+            "code": "yakkasaroy",
+            "name": "Yakkasaray"
+        },
+        {
+            "code": "yangihayot",
+            "name": "Yangihayot"
+        },
+        {
+            "code": "yashnobod",
+            "name": "Yashnabad"
+        },
+        {
+            "code": "yunusobod",
+            "name": "Yunusabad"
+        }
+    ],
+    "zones": [
+        {
+            "code": "center",
+            "name": "Centre (inside the ring)"
+        },
+        {
+            "code": "near_center",
+            "name": "Near the centre"
+        }
+    ],
+    "renovations": {
+        "rent_long": [
+            {
+                "code": "euro",
+                "name": "Euro-style renovation"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Cosmetic repair"
+            },
+            {
+                "code": "none",
+                "name": "No renovation"
+            }
+        ],
+        "sale": [
+            {
+                "code": "euro",
+                "name": "Euro-style renovation"
+            },
+            {
+                "code": "cosmetic",
+                "name": "Cosmetic repair"
+            },
+            {
+                "code": "shell",
+                "name": "Shell and core"
+            }
+        ],
+        "owner": [
+            {
+                "code": "fixture_owner_only",
+                "name": "owner"
+            }
+        ]
+    },
+    "appliances": [
+        {
+            "code": "washer",
+            "name": "Washing machine"
+        },
+        {
+            "code": "fridge",
+            "name": "Fridge"
+        },
+        {
+            "code": "air_conditioner",
+            "name": "Air conditioner"
+        }
+    ],
+    "price_presets": {
+        "rent_long": [300, 400, 500, 600, 800, 1000, 1500],
+        "rent_daily": [30, 50, 80, 120],
+        "sale": [40000, 60000, 80000, 100000, 150000, 200000]
+    },
+    "locales": [
+        {
+            "code": "ru",
+            "name": "Русский"
+        },
+        {
+            "code": "uz_Latn",
+            "name": "Oʻzbekcha"
+        },
+        {
+            "code": "en",
+            "name": "English"
+        },
+        {
+            "code": "uz_Cyrl",
+            "name": "Ўзбекча"
+        }
+    ]
+}

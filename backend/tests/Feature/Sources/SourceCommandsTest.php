@@ -114,8 +114,8 @@ it('lists every feature with its capability, default, rule and bound drivers', f
         ->expectsTable(
             ['Feature', 'Capability', 'Default here', 'Rule', 'Bound drivers'],
             [
-                ['source.reference', 'reference', 'stub', '(none)', 'stub'],
-                ['source.cities', 'reference', 'stub', '(none)', 'stub'],
+                ['source.reference', 'reference', 'stub', '(none)', 'stub, legacy'],
+                ['source.cities', 'reference', 'stub', '(none)', 'stub, legacy'],
                 ...array_map(
                     fn (string $method): array => ["source.listings.{$method}", 'listings', 'stub', '(none)', 'stub'],
                     ['feed', 'count', 'new', 'flow', 'map', 'card', 'contact', 'translation'],
