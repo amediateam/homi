@@ -848,7 +848,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** The stub validates and answers the fixture with the sent keys overlaid; nothing is stored */
+        /** Stores only the sent keys and answers the full object; an empty body changes nothing */
         patch: operations["v1.settings.update"];
         trace?: never;
     };
@@ -1887,7 +1887,9 @@ export interface components {
         };
         /**
          * TelegramSignInRequest
-         * @description `POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes.
+         * @description `POST /auth/telegram`: the raw `initData` query string of the Mini App launch, at most 4 096 bytes. It is read from
+         *     the JSON body only (SEC-REQ-003, WP-40): a value in the address would reach access logs and the browser history, so
+         *     an `init_data` in the query string is ignored, also beside one in the body.
          */
         TelegramSignInRequest: {
             init_data: string;
@@ -3257,6 +3259,15 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
             /** @description Too many requests */
             429: {
                 headers: {
@@ -4573,6 +4584,15 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
             /** @description Too many requests */
             429: {
                 headers: {
@@ -4614,6 +4634,15 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
             422: components["responses"]["ValidationException"];
             /** @description Too many requests */
             429: {
