@@ -52,6 +52,16 @@ final class LegacyFixtures
         return ReferenceData::fromArray(self::stub("reference/default.{$locale}"));
     }
 
+    /**
+     * The fields that may be `null` on a legacy preview where the stub has a value (WP-42 "Gaps against legacy", brief
+     * rule 12): legacy sends neither a type code nor, on a preview, a deal or a source link; `usd` and `posted_at` are
+     * optional there.
+     */
+    public const array PREVIEW_GAPS = ['deal', 'type', 'price.usd', 'posted.at', 'source_ref'];
+
+    /** The fields that may be `null` on a legacy card where the stub has a value: legacy sends no type code. */
+    public const array CARD_GAPS = ['type'];
+
     /** HOMI's media base of the tests: the photo addresses of the translated fixtures start with it. */
     public const string MEDIA = 'https://media.homi.test/lm';
 

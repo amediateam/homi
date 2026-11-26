@@ -20,8 +20,9 @@
 |   it for its `Retry-After`, at most `open_max`.
 | - `cache`: seconds; `last_good` is how long a last good answer of `GET /reference` and `GET /cities` is served
 |   while legacy fails (RK-25), and `after_failure` how long a failed refresh of either is not tried again. The
-|   listings (WP-42): `card` per number, locale and currency; `count`, `flow` and `map` per filters and locale (0
-|   disables each); `not_found` how long a number legacy answered `404` for is not asked again.
+|   listings (WP-42): `card` per number, locale and currency; `count` per filters and locale, `flow` and `map` per
+|   filters, locale and currency (0 disables each); `not_found` how long a number legacy answered `404` for is not
+|   asked again.
 | - `media`: `public_url` is HOMI's proxy of the legacy photos (`LEGACY_MEDIA_PUBLIC_URL`, for example
 |   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
 |   addresses are rewritten too (a relative `/media/…` address always is): the host of `base_url`.

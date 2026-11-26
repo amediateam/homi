@@ -117,7 +117,7 @@ it('lists every feature with its capability, default, rule and bound drivers', f
                 ['source.reference', 'reference', 'stub', '(none)', 'stub, legacy'],
                 ['source.cities', 'reference', 'stub', '(none)', 'stub, legacy'],
                 ...array_map(
-                    fn (string $method): array => ["source.listings.{$method}", 'listings', 'stub', '(none)', 'stub'],
+                    fn (string $method): array => ["source.listings.{$method}", 'listings', 'stub', '(none)', 'stub, legacy'],
                     ['feed', 'count', 'new', 'flow', 'map', 'card', 'contact', 'translation'],
                 ),
                 ['source.landing.live', 'landing', 'stub', '(none)', 'stub'],

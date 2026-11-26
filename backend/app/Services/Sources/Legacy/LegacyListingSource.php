@@ -1,0 +1,623 @@
+<?php
+
+namespace App\Services\Sources\Legacy;
+
+use App\Exceptions\ApiException;
+use App\Exceptions\Listings\DailyLimitReached;
+use App\Exceptions\Sources\LegacyContractError;
+use App\Exceptions\Sources\SourceNotFound;
+use App\Exceptions\Sources\SourceUnavailable;
+use App\Services\Listings\Contracts\ListingExclusion;
+use App\Services\Listings\ListingNumber;
+use App\Services\Listings\PhotoUrlRewriter;
+use App\Services\Search\ListingQuery;
+use App\Services\Search\SearchFilters;
+use App\Services\Sources\Contracts\ListingSource;
+use App\Services\Sources\Data\Fields;
+use App\Services\Sources\Data\FlowEstimate;
+use App\Services\Sources\Data\FlowOption;
+use App\Services\Sources\Data\ListingContact;
+use App\Services\Sources\Data\ListingDetails;
+use App\Services\Sources\Data\ListingPage;
+use App\Services\Sources\Data\ListingSummary;
+use App\Services\Sources\Data\ListingTranslation;
+use App\Services\Sources\Data\MapPoint;
+use App\Services\Sources\Data\MapPoints;
+use App\Services\Sources\Legacy\Translators\DistrictMatcher;
+use App\Services\Sources\Legacy\Translators\FiltersTranslator;
+use App\Services\Sources\Legacy\Translators\FlowTranslator;
+use App\Services\Sources\Legacy\Translators\ListingDetailsTranslator;
+use App\Services\Sources\Legacy\Translators\ListingSummaryTranslator;
+use App\Services\Sources\Legacy\Translators\MapPointsTranslator;
+use App\Services\Sources\Legacy\Translators\NewCountTranslator;
+use App\Services\Sources\SourceContext;
+use App\Services\Sources\SourceManager;
+use Closure;
+use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
+
+/**
+ * The `legacy` driver of the listing capability (WP-42): the six listing reads of `08` §1.7 and §1.8 through
+ * `LegacyClient` and the translators, answered in the shapes of WP-12. Legacy answers for the service key; what
+ * belongs to the caller (favourite and viewed flags, the owner fields of DEC-94, exclusions) is HOMI's overlay.
+ *
+ * | Method       | Legacy call                         | Cache                                                       |
+ * | ------------ | ----------------------------------- | ----------------------------------------------------------- |
+ * | `feed`       | `GET /api/feed`, pages of 20        | none                                                        |
+ * | `count`      | `GET /api/feed/count`               | `legacy.cache.count` s per filters and language             |
+ * | `newSince`   | `GET /api/feed/new` with `since`    | none                                                        |
+ * | `flow`       | `GET /api/feed/flow`                | `legacy.cache.flow` s per filters, language and currency    |
+ * | `map`        | `GET /api/map`                      | `legacy.cache.map` s per filters, language and currency     |
+ * | `details`    | `GET /api/listings/{n}`             | `legacy.cache.card` s per number, language and currency     |
+ * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
+ * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()` | per item |
+ *
+ * A duration of 0 disables its cache. The cache holds the translated v1 arrays, never an object (the store may
+ * serialise): a card is held as the translators give it — masked (DEC-52), without `phone`, `phone_display` or the
+ * call link, and without the per-user owner fields — and rebuilt with the data object's `fromArray()`; a count as a
+ * number, read back whether the store gives an int or a numeric string. Count asks legacy in `USD` (a number does not
+ * depend on the currency); flow, map and the card carry formatted prices, so their keys carry the currency. An entry
+ * that no longer fits its data object is dropped and read again. A number legacy answered `404` for is not asked again
+ * for `legacy.cache.not_found` s, and a number at or above the native floor is never asked (`404` at once).
+ *
+ * Feed paging (WP-42, "Feed paging and top-up"): one HOMI page reads the legacy page its cursor names, leaves out what
+ * `ListingExclusion` excludes, resumes at the cursor's position and takes up to `limit` items; while fewer than half of
+ * `limit` are collected and legacy has a next page, it reads up to `legacy.feed.top_up_pages` more. The cursor is
+ * `LegacyFeedCursor`: a position counts every item of the legacy page passed over, excluded ones included, so a
+ * listing hidden between two pages never shifts the walk. A cursor the feed did not give ends the list quietly.
+ *
+ * Errors: a call that fails is `503 source_unavailable` and a contract error of the answer the same (logged and counted
+ * here when a translator finds it). The card passes legacy's daily limit on as `429 rate_limited` with `reason:
+ * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
+ * (no user) makes background calls in the limiter. `contact()` and `translation()` are WP-43's: `503` until then.
+ */
+final class LegacyListingSource implements ListingSource
+{
+    /** The page size legacy is always asked for (`25` §4.5). */
+    public const int LEGACY_PAGE = 20;
+
+    /** The `v1` changes when a cached shape does. */
+    private const string PREFIX = 'legacy:v1:listings:';
+
+    public function __construct(
+        private readonly LegacyClient $client,
+        private readonly Repository $cache,
+        private readonly SourceManager $sources,
+        private readonly ListingExclusion $exclusion,
+    ) {}
+
+    public function feed(ListingQuery $query, SourceContext $context): ListingPage
+    {
+        $at = $query->cursor === null ? new LegacyFeedCursor(null, 0) : LegacyFeedCursor::decode($query->cursor);
+
+        if ($at === null) {
+            return new ListingPage([], null);
+        }
+
+        $limit = max(1, $query->limit);
+        $topUps = max(0, Config::integer('legacy.feed.top_up_pages'));
+        $items = [];
+
+        for ($read = 0; ; $read++) {
+            ['items' => $page, 'next_cursor' => $next] = $this->feedPage($query, $at->legacy, $context);
+            $excluded = array_flip($this->exclusion->excluded($page, $query->filters, $context));
+            $position = $at->offset;
+
+            for (; $position < count($page) && count($items) < $limit; $position++) {
+                if (! isset($excluded[$page[$position]->number])) {
+                    $items[] = $page[$position];
+                }
+            }
+
+            if ($position < count($page)) {
+                return new ListingPage($items, $this->cursor(new LegacyFeedCursor($at->legacy, $position)));
+            }
+
+            if ($next === null) {
+                return new ListingPage($items, null);
+            }
+
+            if (count($items) >= $limit / 2 || $read >= $topUps) {
+                return new ListingPage($items, $this->cursor(new LegacyFeedCursor($next, 0)));
+            }
+
+            $at = new LegacyFeedCursor($next, 0);
+        }
+    }
+
+    public function count(SearchFilters $filters, SourceContext $context): int
+    {
+        $query = FiltersTranslator::toQuery($filters);
+        $key = $this->filtersKey('count', $query, $context, false);
+        $seconds = Config::integer('legacy.cache.count');
+        // Redis gives a stored number back as a numeric string, the array store as an int.
+        $cached = $seconds > 0 ? $this->cache->get($key) : null;
+
+        if (is_numeric($cached)) {
+            return (int) $cached;
+        }
+
+        $answer = $this->read(NewCountTranslator::COUNT_PATH, $query, $this->call($context, 'USD'));
+        $count = $this->checked(fn (): int => NewCountTranslator::count($answer, NewCountTranslator::COUNT_PATH));
+
+        if ($seconds > 0) {
+            $this->cache->put($key, $count, $seconds);
+        }
+
+        return $count;
+    }
+
+    public function newSince(SearchFilters $filters, int $since, SourceContext $context): int
+    {
+        $answer = $this->read(NewCountTranslator::PATH, NewCountTranslator::query($filters, $since), $this->call($context, 'USD'));
+
+        return $this->checked(fn (): int => NewCountTranslator::count($answer));
+    }
+
+    public function flow(SearchFilters $filters, SourceContext $context): FlowEstimate
+    {
+        $query = FiltersTranslator::toQuery($filters);
+
+        return $this->cached(
+            $this->filtersKey('flow', $query, $context, true),
+            Config::integer('legacy.cache.flow'),
+            function () use ($query, $context): array {
+                $answer = $this->read(FlowTranslator::PATH, $query, $this->call($context));
+
+                return $this->checked(fn (): array => FlowTranslator::translate($answer));
+            },
+            fn (array $flow): FlowEstimate => new FlowEstimate(
+                Fields::count($flow, 'week'),
+                Fields::int($flow, 'days'),
+                array_map(FlowOption::fromArray(...), Fields::objects($flow, 'options')),
+            ),
+        );
+    }
+
+    public function map(SearchFilters $filters, SourceContext $context): MapPoints
+    {
+        $query = FiltersTranslator::toQuery($filters);
+
+        return $this->cached(
+            $this->filtersKey('map', $query, $context, true),
+            Config::integer('legacy.cache.map'),
+            function () use ($query, $context): array {
+                $answer = $this->read(MapPointsTranslator::PATH, $query, $this->call($context));
+
+                return $this->checked(fn (): array => MapPointsTranslator::translate($answer, ListingNumber::floor()));
+            },
+            fn (array $map): MapPoints => new MapPoints(
+                array_map(MapPoint::fromArray(...), Fields::objects($map, 'points')),
+                Fields::count($map, 'total'),
+                Fields::count($map, 'with_point'),
+            ),
+        );
+    }
+
+    public function details(int $number, SourceContext $context): ListingDetails
+    {
+        self::refuseNative($number);
+
+        return $this->cached(
+            $this->cardKey('card', $number, $context),
+            Config::integer('legacy.cache.card'),
+            fn (): array => $this->fetchCard($number, $context, false),
+            ListingDetails::fromArray(...),
+        );
+    }
+
+    public function preview(int $number, SourceContext $context): ListingSummary
+    {
+        self::refuseNative($number);
+
+        return $this->cachedPreview($number, $context) ?? $this->cached(
+            $this->cardKey('preview', $number, $context),
+            Config::integer('legacy.cache.card'),
+            fn (): array => $this->fetchCard($number, $context, true),
+            ListingSummary::fromArray(...),
+        );
+    }
+
+    /**
+     * The cached ones first; the others read `legacy.previews.concurrency` at a time, each through the breaker, the
+     * limiter and the outcome mapping of `LegacyClient::pool()`. A number legacy does not know is left out (and not
+     * asked again for `legacy.cache.not_found` s); one that failed is left out and logged by count. Only when every
+     * number failed is the whole call `503`.
+     */
+    public function previews(array $numbers, SourceContext $context): array
+    {
+        $asked = array_values(array_unique(array_filter($numbers, fn (int $number): bool => $number >= 1 && ! ListingNumber::isNative($number))));
+        $previews = [];
+        $misses = [];
+
+        foreach ($asked as $number) {
+            if ($this->cache->has($this->goneKey($number))) {
+                continue;
+            }
+
+            $preview = $this->cachedPreview($number, $context);
+
+            if ($preview !== null) {
+                $previews[$number] = $preview;
+            } else {
+                $misses[] = $number;
+            }
+        }
+
+        $failed = $misses === [] ? 0 : $this->withTranslators($context, function (ListingSummaryTranslator $summary) use ($misses, $context, &$previews): int {
+            return $this->fetchPreviews($misses, $summary, $context, $previews);
+        });
+
+        if ($failed > 0) {
+            Log::warning('Legacy previews failed and are left out.', ['failed' => $failed, 'asked' => count($misses)]);
+        }
+
+        if ($failed > 0 && $failed === count($asked)) {
+            throw new SourceUnavailable;
+        }
+
+        $ordered = [];
+
+        foreach ($asked as $number) {
+            if (isset($previews[$number])) {
+                $ordered[$number] = $previews[$number];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /** WP-43 writes the contact method; until then legacy is not asked. */
+    public function contact(int $number, SourceContext $context): ListingContact
+    {
+        throw new SourceUnavailable;
+    }
+
+    /** WP-43 writes the translation method; until then legacy is not asked. */
+    public function translation(int $number, SourceContext $context): ListingTranslation
+    {
+        throw new SourceUnavailable;
+    }
+
+    /**
+     * One legacy feed page, translated.
+     *
+     * @return array{items: list<ListingSummary>, next_cursor: string|null}
+     */
+    private function feedPage(ListingQuery $query, ?string $cursor, SourceContext $context): array
+    {
+        $answer = $this->read(
+            ListingSummaryTranslator::PATH,
+            FiltersTranslator::toQuery($query->filters, $query->sort, $cursor, self::LEGACY_PAGE),
+            $this->call($context),
+        );
+        $page = $this->withTranslators($context, fn (ListingSummaryTranslator $summary): array => $summary->page($answer, $query->filters->city));
+
+        return ['items' => array_map(ListingSummary::fromArray(...), $page['items']), 'next_cursor' => $page['next_cursor']];
+    }
+
+    /** The encoded cursor; one too long for the client to send back ends the list, with an error logged. */
+    private function cursor(LegacyFeedCursor $cursor): ?string
+    {
+        $encoded = $cursor->encode();
+
+        if (strlen($encoded) <= LegacyFeedCursor::MAX_BYTES) {
+            return $encoded;
+        }
+
+        $this->drifted(LegacyContractError::key(ListingSummaryTranslator::PATH, 'next_cursor', 'too long to pass on'));
+
+        return null;
+    }
+
+    /**
+     * A full card or its preview form, translated: what the cache keeps.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws SourceNotFound|SourceUnavailable|DailyLimitReached
+     */
+    private function fetchCard(int $number, SourceContext $context, bool $preview): array
+    {
+        if ($this->cache->has($this->goneKey($number))) {
+            throw new SourceNotFound('Listing not found.');
+        }
+
+        try {
+            // Only the full card has legacy's daily limit (DEC-59); a preview is outside it.
+            $answer = $this->read(self::cardPath($number), $preview ? ['preview' => 1] : [], $this->call($context), daily: ! $preview);
+        } catch (SourceNotFound $missing) {
+            $this->rememberGone($number);
+
+            throw $missing;
+        }
+
+        return $this->withTranslators($context, fn (ListingSummaryTranslator $summary, ListingDetailsTranslator $details): array => $preview
+            ? $summary->translate($answer, null, ListingDetailsTranslator::PATH)
+            : $details->translate($answer));
+    }
+
+    /**
+     * The previews of the numbers no cache holds, read in parallel; each one read is cached and added to `$previews`.
+     *
+     * @param  list<int>  $numbers
+     * @param  array<int, ListingSummary>  $previews
+     * @return int how many failed (unavailable or not fitting the contract)
+     */
+    private function fetchPreviews(array $numbers, ListingSummaryTranslator $summary, SourceContext $context, array &$previews): int
+    {
+        $failed = 0;
+        $seconds = Config::integer('legacy.cache.card');
+
+        foreach (array_chunk($numbers, max(1, Config::integer('legacy.previews.concurrency'))) as $chunk) {
+            $reads = [];
+
+            foreach ($chunk as $number) {
+                $reads[$number] = [self::cardPath($number), ['preview' => 1]];
+            }
+
+            foreach ($this->client->pool($reads, $this->call($context)) as $number => $answer) {
+                if ($answer instanceof SourceNotFound) {
+                    $this->rememberGone((int) $number);
+
+                    continue;
+                }
+
+                if ($answer instanceof ApiException) {
+                    $failed++;
+
+                    continue;
+                }
+
+                try {
+                    $preview = $summary->translate($answer, null, ListingDetailsTranslator::PATH);
+                } catch (LegacyContractError $drift) {
+                    $this->drifted($drift);
+                    $failed++;
+
+                    continue;
+                }
+
+                if ($seconds > 0) {
+                    $this->cache->put($this->cardKey('preview', (int) $number, $context), $preview, $seconds);
+                }
+
+                $previews[(int) $number] = ListingSummary::fromArray($preview);
+            }
+        }
+
+        return $failed;
+    }
+
+    /** The preview from the cached full card, else from the cached preview form; `null` when neither is cached. */
+    private function cachedPreview(int $number, SourceContext $context): ?ListingSummary
+    {
+        foreach (['card', 'preview'] as $kind) {
+            $key = $this->cardKey($kind, $number, $context);
+            $cached = $this->cache->get($key);
+
+            if (! is_array($cached)) {
+                continue;
+            }
+
+            try {
+                return ListingSummary::fromArray($cached);
+            } catch (InvalidArgumentException) {
+                $this->cache->forget($key);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The cached array as its data object, else a fresh one, cached for `$seconds` (0: not cached). An entry that no
+     * longer fits its data object (a shape changed under the same key version) is dropped and read again.
+     *
+     * @template TData
+     *
+     * @param  Closure(): array<array-key, mixed>  $fetch
+     * @param  Closure(array<array-key, mixed>): TData  $build
+     * @return TData
+     */
+    private function cached(string $key, int $seconds, Closure $fetch, Closure $build): mixed
+    {
+        $cached = $seconds > 0 ? $this->cache->get($key) : null;
+
+        if (is_array($cached)) {
+            try {
+                return $build($cached);
+            } catch (InvalidArgumentException) {
+                $this->cache->forget($key);
+            }
+        }
+
+        $value = $fetch();
+
+        if ($seconds > 0) {
+            $this->cache->put($key, $value, $seconds);
+        }
+
+        return $build($value);
+    }
+
+    /**
+     * A legacy read. Legacy's daily limit is passed on only where `$daily` says the method has one (the full card);
+     * elsewhere it is `503`. A contract error the client found is counted (the client has logged it).
+     *
+     * @param  array<string, scalar|list<scalar>|null>  $query
+     * @return array<array-key, mixed>
+     *
+     * @throws SourceUnavailable|SourceNotFound|DailyLimitReached
+     */
+    private function read(string $path, array $query, LegacyCall $call, bool $daily = false): array
+    {
+        try {
+            return $this->client->get($path, $query, $call);
+        } catch (DailyLimitReached $limit) {
+            throw $daily ? $limit : new SourceUnavailable;
+        } catch (LegacyContractError $drift) {
+            $this->counted('contract_errors');
+
+            throw $drift;
+        }
+    }
+
+    /**
+     * The translators of one call: the photo rewriter of `legacy.media`, the district matcher of the context's
+     * reference data and the native floor. Their misses are counted afterwards, and a contract error is logged.
+     *
+     * @template TResult
+     *
+     * @param  Closure(ListingSummaryTranslator, ListingDetailsTranslator): TResult  $translate
+     * @return TResult
+     */
+    private function withTranslators(SourceContext $context, Closure $translate): mixed
+    {
+        $hosts = array_values(array_filter(Config::array('legacy.media.hosts'), is_string(...)));
+        $photos = new PhotoUrlRewriter(Config::string('legacy.media.public_url'), $hosts);
+        $districts = $this->districts($context);
+        $floor = ListingNumber::floor();
+
+        try {
+            return $this->checked(fn (): mixed => $translate(
+                new ListingSummaryTranslator($photos, $districts, $floor),
+                new ListingDetailsTranslator($photos, $districts, $floor),
+            ));
+        } finally {
+            $this->reportMisses($photos, $districts);
+        }
+    }
+
+    /**
+     * The district matcher of the context's language over the reference capability; an unavailable reference source
+     * gives one that matches nothing, so a district code is `null` and never a failed answer.
+     */
+    private function districts(SourceContext $context): DistrictMatcher
+    {
+        try {
+            return DistrictMatcher::fromSource($this->sources->reference('source.reference', $context)->source, $context);
+        } catch (ApiException) {
+            return new DistrictMatcher(null);
+        }
+    }
+
+    /**
+     * A translation, with its contract error logged and counted here.
+     *
+     * @template TValue
+     *
+     * @param  Closure(): TValue  $translate
+     * @return TValue
+     *
+     * @throws LegacyContractError
+     */
+    private function checked(Closure $translate): mixed
+    {
+        try {
+            return $translate();
+        } catch (LegacyContractError $drift) {
+            $this->drifted($drift);
+
+            throw $drift;
+        }
+    }
+
+    private function drifted(LegacyContractError $drift): void
+    {
+        Log::error('A legacy answer does not fit its contract.', $drift->context());
+        $this->counted('contract_errors');
+    }
+
+    /**
+     * Counts what the translators could not place: dropped photo addresses (with a warning at most once a minute) and
+     * district names without a code. Without `legacy.media.public_url` every photo list is empty, and a warning says so
+     * at most once a minute.
+     */
+    private function reportMisses(PhotoUrlRewriter $photos, DistrictMatcher $districts): void
+    {
+        if (! $photos->isConfigured() && $this->cache->add(self::PREFIX.'once:media_unset', 1, 60)) {
+            Log::warning('LEGACY_MEDIA_PUBLIC_URL is not set: the photo lists of legacy listings are empty.');
+        }
+
+        if ($photos->dropped() > 0) {
+            $today = $this->counted('photos_dropped', $photos->dropped());
+
+            if ($this->cache->add(self::PREFIX.'once:photos_dropped', 1, 60)) {
+                Log::warning('Legacy photo addresses of an unknown form were dropped.', ['today' => $today]);
+            }
+        }
+
+        if ($districts->misses() > 0) {
+            $this->counted('district_misses', $districts->misses());
+        }
+    }
+
+    /**
+     * Adds to today's counter of a kind (`legacy:v1:listings:counter:<kind>:<date>`, kept two days) and returns its
+     * total. Redis gives a stored number back as a numeric string.
+     */
+    private function counted(string $kind, int $by = 1): int
+    {
+        $key = self::PREFIX."counter:{$kind}:".now()->format('Y-m-d');
+        $this->cache->add($key, 0, 2 * 86_400);
+        $total = $this->cache->increment($key, $by);
+
+        return is_numeric($total) ? (int) $total : 0;
+    }
+
+    /**
+     * How a call of this context is made: its language, the currency given or its own, and in the background when no
+     * user asks (a queued job, the bot).
+     */
+    private function call(SourceContext $context, ?string $currency = null): LegacyCall
+    {
+        return new LegacyCall($context->locale, $currency ?? $context->currency, $context->user === null);
+    }
+
+    /** @param  array<string, scalar|list<scalar>>  $query */
+    private function filtersKey(string $method, array $query, SourceContext $context, bool $currency): string
+    {
+        $selectors = $currency ? "{$context->locale}:{$context->currency}" : $context->locale;
+
+        return self::PREFIX."{$method}:{$selectors}:".sha1(LegacyClient::queryString($query));
+    }
+
+    private function cardKey(string $kind, int $number, SourceContext $context): string
+    {
+        return self::PREFIX."{$kind}:{$number}:{$context->locale}:{$context->currency}";
+    }
+
+    private function goneKey(int $number): string
+    {
+        return self::PREFIX."gone:{$number}";
+    }
+
+    private function rememberGone(int $number): void
+    {
+        $seconds = Config::integer('legacy.cache.not_found');
+
+        if ($seconds > 0) {
+            $this->cache->put($this->goneKey($number), 1, $seconds);
+        }
+    }
+
+    private static function cardPath(int $number): string
+    {
+        return "/api/listings/{$number}";
+    }
+
+    /**
+     * A number at or above the native floor is HOMI's own (WP-80), never legacy's.
+     *
+     * @throws SourceNotFound
+     */
+    private static function refuseNative(int $number): void
+    {
+        if ($number < 1 || ListingNumber::isNative($number)) {
+            throw new SourceNotFound('Listing not found.');
+        }
+    }
+}

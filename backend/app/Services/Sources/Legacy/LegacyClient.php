@@ -4,6 +4,7 @@ namespace App\Services\Sources\Legacy;
 
 use App\Enums\AccessReason;
 use App\Exceptions\AccessDenied;
+use App\Exceptions\ApiException;
 use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
@@ -15,6 +16,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +45,9 @@ use Throwable;
  * configured header): log lines carry the method, the path template and the status, never a header, a value or a
  * body, and no exception of the HTTP client is chained, because its message quotes the response body. With
  * `legacy.fake` on, the requests go to `LegacyFakeServer` instead of the network.
+ *
+ * `pool()` sends several reads at once (the card previews of WP-42) on the same path: each read is admitted by the
+ * breaker, takes its own place in the limiter, is retried once when it failed in transit, and ends in `settle()`.
  */
 final class LegacyClient
 {
@@ -126,6 +131,155 @@ final class LegacyClient
         }
 
         return $this->settle($response, $method, $path, $probe);
+    }
+
+    /**
+     * Several reads sent together, each the way `get()` sends one: admitted by the breaker (an open breaker refuses each
+     * read), a place in the limiter taken for each read in turn just before the reads go out (a refused place refuses
+     * that read), one more attempt for the reads that failed in transit (each with a new place; without one, the first
+     * outcome stands), and each outcome through `settle()`. The caller sends as many reads as may run in parallel
+     * (`legacy.previews.concurrency`); one failed read never fails the others.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads  the path and
+     *                                                                                                  query of each read
+     * @return array<array-key, array<array-key, mixed>|ApiException> keyed like `$reads`: the decoded JSON, or the
+     *                                                                exception `get()` would have thrown for that read
+     *
+     * @throws SourceUnavailable when no service key is configured: no read is sent
+     */
+    public function pool(array $reads, ?LegacyCall $call = null): array
+    {
+        if ($reads === []) {
+            return [];
+        }
+
+        $call ??= new LegacyCall;
+
+        foreach ($reads as [$path]) {
+            if (! str_starts_with($path, '/') || str_starts_with($path, '//')) {
+                throw new LogicException('A legacy path starts with one slash.');
+            }
+        }
+
+        $this->lastOutcome = null;
+        $key = $this->key();
+        /** @var array<array-key, ApiException> $refused */
+        $refused = [];
+        /** @var array<array-key, Lock|null> $probes */
+        $probes = [];
+
+        foreach (array_keys($reads) as $id) {
+            try {
+                $probes[$id] = $this->breaker->admit();
+            } catch (SourceUnavailable $open) {
+                $refused[$id] = $open;
+            }
+        }
+
+        try {
+            $responses = $this->poolAttempts($reads, array_keys($probes), $call, $key, $refused);
+        } catch (Throwable $before) {
+            foreach ($probes as $probe) {
+                $probe?->release();
+            }
+
+            throw $before;
+        }
+
+        $results = [];
+
+        foreach (array_keys($reads) as $id) {
+            if (isset($refused[$id])) {
+                // Not sent: a probe goes back for another call, as in `call()`.
+                ($probes[$id] ?? null)?->release();
+                $results[$id] = $refused[$id];
+
+                continue;
+            }
+
+            try {
+                $results[$id] = $this->settle($responses[$id], 'GET', $reads[$id][0], $probes[$id] ?? null);
+            } catch (ApiException $outcome) {
+                $results[$id] = $outcome;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * The attempts of the admitted reads of `pool()`: the reads that failed in transit are sent once more.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads
+     * @param  list<array-key>  $admitted
+     * @param  array<array-key, ApiException>  $refused  filled with the reads the limiter refused a first place
+     * @return array<array-key, Response|string> the last outcome of each read that was sent
+     */
+    private function poolAttempts(array $reads, array $admitted, LegacyCall $call, #[\SensitiveParameter] string $key, array &$refused): array
+    {
+        $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
+        $responses = [];
+        $pending = $admitted;
+
+        for ($attempt = 1; $attempt <= $attempts && $pending !== []; $attempt++) {
+            if ($attempt > 1) {
+                Sleep::for(Config::integer('legacy.retry.sleep_ms'))->milliseconds();
+            }
+
+            $sendable = [];
+
+            foreach ($pending as $id) {
+                try {
+                    $this->limiter->acquire($call->background);
+                    $sendable[] = $id;
+                } catch (SourceUnavailable $limited) {
+                    if (! isset($responses[$id])) {
+                        $refused[$id] = $limited;
+                    }
+                }
+            }
+
+            $responses = $this->sendAll($reads, $sendable, $call, $key) + $responses;
+            $pending = array_values(array_filter($sendable, fn (int|string $id): bool => $this->retryable($responses[$id])));
+        }
+
+        return $responses;
+    }
+
+    /**
+     * One round of `pool()`: the reads sent at once through one factory, each answer or the class name of its transport
+     * failure, as `send()` gives them.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads
+     * @param  list<array-key>  $ids
+     * @return array<array-key, Response|string>
+     */
+    private function sendAll(array $reads, array $ids, LegacyCall $call, #[\SensitiveParameter] string $key): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $answers = $this->factory()->createPendingRequest()->pool(function (Pool $pool) use ($reads, $ids, $call, $key): void {
+            foreach ($ids as $index => $id) {
+                [$headers, $query] = $this->selectors($call, $reads[$id][1] ?? []);
+                $this->request($key, $pool->as((string) $index))->withHeaders($headers)->send('GET', self::url($reads[$id][0], $query));
+            }
+        });
+        $responses = [];
+
+        foreach ($ids as $index => $id) {
+            $answer = $answers[$index] ?? null;
+
+            $responses[$id] = match (true) {
+                $answer instanceof Response => $answer,
+                $answer instanceof HttpClientException, $answer instanceof GuzzleException => $answer::class,
+                $answer instanceof Throwable => throw $answer,
+                default => throw new LogicException('A pooled legacy read has no outcome.'),
+            };
+        }
+
+        return $responses;
     }
 
     /**
@@ -223,7 +377,7 @@ final class LegacyClient
     private function send(string $method, string $path, array $query, array $body, LegacyCall $call, #[\SensitiveParameter] string $key): Response|string
     {
         [$headers, $query] = $this->selectors($call, $query);
-        $url = $path.($query === [] ? '' : '?'.self::queryString($query));
+        $url = self::url($path, $query);
         $request = $this->request($key)->withHeaders($headers);
 
         try {
@@ -239,9 +393,12 @@ final class LegacyClient
         }
     }
 
-    private function request(#[\SensitiveParameter] string $key): PendingRequest
+    /**
+     * A request with the base URL, the timeouts, the key and the request id: a new one, or a read of a pool.
+     */
+    private function request(#[\SensitiveParameter] string $key, ?PendingRequest $request = null): PendingRequest
     {
-        $factory = Config::boolean('legacy.fake') ? $this->fake->factory() : $this->http;
+        $request ??= $this->factory()->createPendingRequest();
         $headers = [Config::string('legacy.auth.header') => Config::string('legacy.auth.prefix').$key];
         $requestId = Log::sharedContext()['request_id'] ?? null;
 
@@ -249,13 +406,25 @@ final class LegacyClient
             $headers['X-Request-Id'] = $requestId;
         }
 
-        return $factory->baseUrl(Config::string('legacy.base_url'))
+        return $request->baseUrl(Config::string('legacy.base_url'))
             ->timeout(Config::integer('legacy.timeout'))
             ->connectTimeout(Config::integer('legacy.connect_timeout'))
             ->withoutRedirecting()
             ->accept('application/json')
             ->withUserAgent('homi-api')
             ->withHeaders($headers);
+    }
+
+    /** The fixture server's factory while `legacy.fake` is on, else the application's. */
+    private function factory(): Factory
+    {
+        return Config::boolean('legacy.fake') ? $this->fake->factory() : $this->http;
+    }
+
+    /** @param  array<string, scalar|list<scalar>|null>  $query */
+    private static function url(string $path, array $query): string
+    {
+        return $path.($query === [] ? '' : '?'.self::queryString($query));
     }
 
     /**

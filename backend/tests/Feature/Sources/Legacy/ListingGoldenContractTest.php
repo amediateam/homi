@@ -20,14 +20,9 @@ use Tests\Support\LegacyFixtures;
  * and a translator that no longer fits fails here, naming the field.
  *
  * The stub has a value in a few places legacy cannot fill (the spec's "Gaps against legacy"; brief rule 12): those
- * may be `null` from legacy, and only those. Everywhere else the two shapes are equal, types included.
+ * may be `null` from legacy, and only those (`LegacyFixtures::PREVIEW_GAPS`, `LegacyFixtures::CARD_GAPS`). Everywhere
+ * else the two shapes are equal, types included.
  */
-
-/** May be `null` on a legacy preview where the stub has a value: legacy sends neither a type code nor, on a preview, a deal or a source link; `usd` and `posted_at` are optional there. */
-const LEGACY_PREVIEW_GAPS = ['deal', 'type', 'price.usd', 'posted.at', 'source_ref'];
-
-/** May be `null` on a legacy card where the stub has a value: legacy sends no type code. */
-const LEGACY_CARD_GAPS = ['type'];
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
@@ -70,7 +65,7 @@ it('translates every feed item into the preview shape of its stub listing', func
 
         JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($item));
         JsonShape::assertSame(ContractShapes::LISTING_PREVIEW, JsonShape::of($item));
-        expect(LegacyFixtures::nullGaps($stub, $item))->each->toBeIn(LEGACY_PREVIEW_GAPS);
+        expect(LegacyFixtures::nullGaps($stub, $item))->each->toBeIn(LegacyFixtures::PREVIEW_GAPS);
     }
 });
 
@@ -87,7 +82,7 @@ it('translates the preview form into the preview shape of its stub listing', fun
     $stub = stubPreviewOf(100001);
 
     JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($preview));
-    expect(LegacyFixtures::nullGaps($stub, $preview))->each->toBeIn(LEGACY_PREVIEW_GAPS);
+    expect(LegacyFixtures::nullGaps($stub, $preview))->each->toBeIn(LegacyFixtures::PREVIEW_GAPS);
 });
 
 it('translates every golden card into the card shape of its stub listing', function (string $fixture, int $number): void {
@@ -97,7 +92,7 @@ it('translates every golden card into the card shape of its stub listing', funct
     expect($card['number'])->toBe($number);
     JsonShape::assertSame(JsonShape::of($stub), JsonShape::of($card));
     JsonShape::assertSame(cardContract(), JsonShape::of($card));
-    expect(LegacyFixtures::nullGaps($stub, $card))->each->toBeIn(LEGACY_CARD_GAPS);
+    expect(LegacyFixtures::nullGaps($stub, $card))->each->toBeIn(LegacyFixtures::CARD_GAPS);
 })->with([
     'rent apartment' => ['listing.rent_apartment', 100001],
     'daily, absolute photo addresses' => ['listing.daily', 100005],

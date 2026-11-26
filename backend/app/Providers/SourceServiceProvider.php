@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Listings\Contracts\ListingExclusion;
+use App\Services\Listings\NoListingExclusion;
 use App\Services\Sources\Legacy\LegacyFakeServer;
 use App\Services\Sources\SourceConfig;
 use App\Services\Sources\SourceManager;
@@ -31,6 +33,8 @@ class SourceServiceProvider extends ServiceProvider
         $this->app->singleton(FixtureStore::class, fn (): FixtureStore => new FixtureStore(resource_path('fixtures/v1')));
         // One instance per process, so each legacy fixture is read once.
         $this->app->singleton(LegacyFakeServer::class, fn (): LegacyFakeServer => new LegacyFakeServer(resource_path('fixtures/legacy')));
+        // What the legacy feed leaves out per caller (WP-42): nothing until the overlay of stage C is bound here.
+        $this->app->bind(ListingExclusion::class, NoListingExclusion::class);
     }
 
     public function boot(): void
