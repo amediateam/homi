@@ -1,0 +1,213 @@
+{
+  "points": [
+    {
+      "id": 100018,
+      "lat": 41.47012,
+      "lon": 69.58433,
+      "label": "$400",
+      "tone": null,
+      "priced": true,
+      "usd": 400
+    },
+    {
+      "id": "100001",
+      "lat": 41.36512,
+      "lon": 69.28431,
+      "label": "$600",
+      "tone": "good",
+      "priced": true,
+      "usd": 600
+    },
+    {
+      "id": 100013,
+      "lat": 41.28501,
+      "lon": 69.21402,
+      "label": "<b>$350</b> & торг",
+      "tone": "suspicious",
+      "priced": true,
+      "usd": 350
+    },
+    {
+      "id": 100002,
+      "lat": 41.33872,
+      "lon": 69.33411,
+      "label": "$1 500",
+      "tone": "check",
+      "priced": true,
+      "usd": 1500
+    },
+    {
+      "id": 100025,
+      "lat": 41.36512,
+      "lon": 69.28431,
+      "label": "$450",
+      "tone": "good",
+      "priced": true,
+      "usd": 450
+    },
+    {
+      "id": 100024,
+      "lat": 41.36512,
+      "lon": 69.28431,
+      "label": "$520",
+      "tone": "good",
+      "priced": true,
+      "usd": 520
+    },
+    {
+      "id": 100023,
+      "lat": 41.47121,
+      "lon": 69.57948,
+      "label": "$220",
+      "tone": null,
+      "priced": true,
+      "usd": 220
+    },
+    {
+      "id": 100022,
+      "lat": 41.46893,
+      "lon": 69.58224,
+      "label": "$280",
+      "tone": null,
+      "priced": true,
+      "usd": 280
+    },
+    {
+      "id": 100021,
+      "lat": 41.4631,
+      "lon": 69.5864,
+      "label": "$550",
+      "tone": "high",
+      "priced": true,
+      "usd": 550
+    },
+    {
+      "id": 100020,
+      "lat": 41.47233,
+      "lon": 69.59012,
+      "label": "$480",
+      "tone": "good",
+      "priced": true,
+      "usd": 480
+    },
+    {
+      "id": 100019,
+      "lat": 41.46522,
+      "lon": 69.57811,
+      "label": "$711",
+      "tone": "check",
+      "priced": true,
+      "usd": 711
+    },
+    {
+      "id": 100017,
+      "lat": 40.78201,
+      "lon": 72.34501,
+      "label": "$250",
+      "tone": null,
+      "priced": true,
+      "usd": 250
+    },
+    {
+      "id": 100014,
+      "lat": 41.30552,
+      "lon": 69.27803,
+      "label": "$900",
+      "tone": null,
+      "priced": true,
+      "usd": 900
+    },
+    {
+      "id": 100012,
+      "lat": 41.35012,
+      "lon": 69.28431,
+      "label": "$600",
+      "tone": "good",
+      "priced": true,
+      "usd": 600
+    },
+    {
+      "id": 100011,
+      "lat": 40.78302,
+      "lon": 72.35012,
+      "label": "$30 000",
+      "tone": null,
+      "priced": true,
+      "usd": 30000
+    },
+    {
+      "id": 100010,
+      "lat": 41.35101,
+      "lon": 69.22006,
+      "label": "$220 000",
+      "tone": null,
+      "priced": true,
+      "usd": 220000
+    },
+    {
+      "id": 100009,
+      "lat": 41.39301,
+      "lon": 69.46592,
+      "label": "$150 000",
+      "tone": "check",
+      "priced": true,
+      "usd": 150000
+    },
+    {
+      "id": 100008,
+      "lat": 41.36003,
+      "lon": 69.29104,
+      "label": "$85 000",
+      "tone": "good",
+      "priced": true,
+      "usd": 85000
+    },
+    {
+      "id": 100006,
+      "lat": 41.46851,
+      "lon": 69.58222,
+      "label": "$80",
+      "tone": null,
+      "priced": true,
+      "usd": 80
+    },
+    {
+      "id": 100005,
+      "lat": 41.29321,
+      "lon": 69.25817,
+      "label": "$45",
+      "tone": null,
+      "priced": true,
+      "usd": 45
+    },
+    {
+      "id": 100004,
+      "lat": 41.29871,
+      "lon": 69.27942,
+      "label": "$2 500",
+      "tone": null,
+      "priced": true,
+      "usd": 2500
+    },
+    {
+      "id": 100003,
+      "lat": 41.27551,
+      "lon": 69.20402,
+      "label": "$200",
+      "tone": null,
+      "priced": true,
+      "usd": 200
+    },
+    {
+      "id": 100015,
+      "lat": 41.22351,
+      "lon": 69.21904,
+      "label": "$300",
+      "tone": null,
+      "priced": true,
+      "usd": 300
+    }
+  ],
+  "total": 24,
+  "with_point": 23
+}

@@ -1,14 +1,24 @@
-# Legacy golden fixtures (WP-41)
+# Legacy golden fixtures (WP-41, WP-42)
 
 What the legacy API answers, as its contract describes it, for the `legacy` source driver's tests and for
 `LegacyFakeServer`, which answers from these files while `legacy.fake` is on (`local`, `testing`). A legacy release
-that changes one of these shapes must fail `ReferenceGoldenContractTest`, not a user (RK-26): when the audit of a new
-release changes a shape, these files change in the same PR.
+that changes one of these shapes must fail `ReferenceGoldenContractTest` or `ListingGoldenContractTest`, not a user
+(RK-26): when the audit of a new release changes a shape, these files change in the same PR.
 
 **Rule:** no real phone number, name, address, channel, key or analytics id. The values are HOMI's synthetic stub data
-of WP-11 (`../v1/reference/default.*.json`, `../v1/cities/default.json`) turned into legacy's shape, so a translated
-fixture equals the stub by value; the few legacy-only values (`bot_username`, `analytics`) are invented and end in
-`fixture`, `.invalid` or similar.
+of WP-11 (`../v1/reference/default.*.json`, `../v1/cities/default.json`) and WP-12 (`../v1/listings/catalog.json`,
+`../v1/listings/flow.options.json`) turned into legacy's shape, so a translated fixture has the stub's shape and, for
+the listings, its values; the few legacy-only values (`bot_username`, `analytics`, photo signatures, call links,
+cursors) are invented and end in `fixture`, `.invalid` or similar. Phone numbers are synthetic: `+998 00 000 …` as in
+the stubs, and `+998901234567` / `+998 90 765 43 21` in the two cards that test masking (DEC-52). Photo addresses
+have legacy's form `/media/<listing>/<n>.jpg?e=<midnight UTC>&s=<32 hex>` (RES-001) with invented signatures.
+
+The listing fixtures describe the 24 legacy listings of the stub catalogue (every number below `10000000`; `100016` is
+the merged alias of `100001`). `LegacyFakeServer` answers the listing paths from them without looking at the filters:
+`GET /api/feed` → `feed.default`, `?cursor=fixture-cursor-page-2` → `feed.page2`, any other cursor → `feed.empty`;
+`/api/feed/count` → `count`, `/api/feed/new` → `feed_new`, `/api/feed/flow` → `flow`, or `flow.options` when the
+query carries `price_max` (a narrow search); `/api/map` → `map`; `GET /api/listings/{id}` → the card of that id (table
+below), `?preview=1` → `listing.preview` with the `id` of that card, an unknown id → `404`.
 
 They describe the legacy release pinned in `docs/migration/wave-1/baseline.md` (`index-YX9bFVws.js`).
 
@@ -20,3 +30,20 @@ They describe the legacy release pinned in `docs/migration/wave-1/baseline.md` (
 | `errors/not_found.json` | any unknown path | `08` §1.5 (`404 {"detail": "Not Found"}`) | the fake server's answer to a path it does not know |
 | `errors/validation.json` | a `422` | `08` §1.5 (the Pydantic v2 shape with `literal_error`; `detail` is an array) | a contract error, never shown to a user |
 | `errors/unauthorized.json` | a request without the service key | `08` §1.5 and Q-API-060 (the status for a refused key is the operator's; `401` is the default built without the answer) | the fake server's answer when the auth header is missing |
+| `feed.default.json` | `GET /api/feed` (API-004), page 1 | `08` §1.7, §1.8 (`FeedPage`, `ListingPreview`), API-004 | a full page of 20 with a `next_cursor`; `usd`, `posted_at` and `short_title` on some items only (all optional); `favorite`/`viewed` set by legacy for the service key (ignored); the unread `total` and `photos_total`; `floor: 0` and `-1` (`100022`, `100023`, release `index-CIa0Ldj2.js`), `floor: null`, a video, a cover, an item without coordinates (`100007`) |
+| `feed.page2.json` | `GET /api/feed?cursor=fixture-cursor-page-2` | API-004 (`next_cursor === null` ends the list) | the last page: 4 items and `next_cursor: null`; an item without photos (`100003`) and a withdrawn one (`status_text`, `100015`) |
+| `feed.empty.json` | `GET /api/feed` with nothing to show | API-004 | `items: []`, `next_cursor: null` |
+| `count.json` | `GET /api/feed/count` (API-005) | API-005 (`{"count": number}`) | the 24 items the two feed pages reach |
+| `feed_new.json` | `GET /api/feed/new` (API-035) | API-035 (`count` mandatory, LB-API-055) | `count: 12` |
+| `flow.json` | `GET /api/feed/flow` (API-006) | API-006 (`{week, days, options?}`) | no `options` (becomes `[]`) |
+| `flow.options.json` | `GET /api/feed/flow` of a narrow search | API-006, `08` §1.7 (`SearchFilters`) | two options: one with the old `zone` string (LB-API-028) and a type of another deal (LB-API-006), one whose filters miss four keys (defaults); `count` `null` on one |
+| `map.json` | `GET /api/map` (API-007) | API-007 (`points`, `total`, `with_point` since `index-CIa0Ldj2.js`) | 23 points of the 24 listings, `with_point: 23`; an `id` sent as a string; a label with `<b>` and `&` (LB-API-008); every tone, `high` and `null` included |
+| `listing.rent_apartment.json` | `GET /api/listings/100001` (API-008) | `08` §1.8 (`ListingDetails`), API-008 | the full card; the synthetic `+998901234567` in `phone`, `phone_display`, `summary` and `original_text` (masking, DEC-52); `call_url` (not mapped); a comparison |
+| `listing.daily.json` | `GET /api/listings/100005` | API-008 | daily rent; every photo address absolute on the legacy host (`https://legacy.invalid/media/…`) |
+| `listing.sale_house.json` | `GET /api/listings/100009` | API-008 | sale of a house in the Tashkent region; a comparison by `m2` with `price_per_m2` |
+| `listing.commercial.json` | `GET /api/listings/100004` | API-008, BR-API-156 | long-rent commercial premises with `price_kind: "business"` (release `index-Dbpp463V.js`) |
+| `listing.land.json` | `GET /api/listings/100011` | API-008 | a land plot without a district (`district_name: null`, a `place`) |
+| `listing.preview.json` | `GET /api/listings/{id}?preview=1` | API-008 (the preview minimum, Doc:601-604) | the preview keys of `100001` only, no `usd` |
+| `listing.merged.json` | `GET /api/listings/100016` | API-008 (a merged duplicate answers with the surviving listing) | asked for `100016`, answers `id: 100001` |
+| `listing.no_phone.json` | `GET /api/listings/100024` | `08` §1.8 (the owner keys since `index-CBlEKxdL.js`), BR-API-188, BR-API-189 | a self-placed `gate` listing without `phone`: `owner_self`, `contact_mode`, `response_minutes`, an `owner_description` with a synthetic number, the label «Проверенный хозяин · …» the tier already says; `owner_mine`, `owner_listing_id`, `my_request` and `owner_entry` set for the service key (ignored) |
+| `listing.minimal.json` | `GET /api/listings/100014` | API-008 (the keys the client reads strictly) | only `id`, `photos`, `facts` and `sources`: every other field takes its default |

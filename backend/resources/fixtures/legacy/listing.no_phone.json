@@ -1,0 +1,140 @@
+{
+  "id": 100024,
+  "title": "2-комн. квартира, 47 м² · Юнусабад",
+  "short_title": "2-комн. квартира, 47 м²",
+  "price": "$520/мес (≈ 7,7 млн сум) · депозит $600",
+  "price_kind": null,
+  "favorite": false,
+  "viewed": false,
+  "district_name": "Юнусабад",
+  "place": null,
+  "landmark": "Мегапланет",
+  "metro": "Минор",
+  "metro_km": 0.7,
+  "center_km": 4.2,
+  "area_total": 54,
+  "floor": 3,
+  "floors_total": 9,
+  "rooms": 2,
+  "pets_ok": false,
+  "is_owner": true,
+  "owner_verified": true,
+  "photos_preview": [
+    "/media/100024/1.jpg?e=1795132800&s=1519425429fb492cfb3698d8269e866a",
+    "/media/100024/2.jpg?e=1795132800&s=ed8be86dcd0b167747125a7801f6180a",
+    "/media/100024/3.jpg?e=1795132800&s=f292879d7d415b15f1856178b33fab47"
+  ],
+  "photos_count": 3,
+  "cover": "/media/100024/1.jpg?e=1795132800&s=1519425429fb492cfb3698d8269e866a",
+  "video": null,
+  "age": "Опубликовано · на днях",
+  "posted_at": "2026-11-13T08:10:00+00:00",
+  "status_text": null,
+  "market": "Вторичка",
+  "median_delta": -0.12,
+  "median_tone": "good",
+  "lat": 41.36512,
+  "lon": 69.28431,
+  "deal_type": "rent_long",
+  "market_code": "secondary",
+  "photos": [
+    "/media/100024/1.jpg?e=1795132800&s=1519425429fb492cfb3698d8269e866a",
+    "/media/100024/2.jpg?e=1795132800&s=ed8be86dcd0b167747125a7801f6180a",
+    "/media/100024/3.jpg?e=1795132800&s=f292879d7d415b15f1856178b33fab47"
+  ],
+  "facts": [
+    {
+      "key": "type",
+      "label": "Тип",
+      "value": "Квартира"
+    },
+    {
+      "key": "rooms",
+      "label": "Комнат",
+      "value": "2"
+    },
+    {
+      "key": "area",
+      "label": "Площадь",
+      "value": "54 м²"
+    },
+    {
+      "key": "floor",
+      "label": "Этаж",
+      "value": "3 из 9"
+    }
+  ],
+  "nearby": [
+    {
+      "kind": "park",
+      "name": "Парк",
+      "km": 0.4,
+      "note": null
+    },
+    {
+      "kind": "school",
+      "name": "Школа",
+      "km": 0.9,
+      "note": null
+    }
+  ],
+  "stats": {
+    "days_listed": 3,
+    "publications": 2,
+    "channels": 2,
+    "views": 41
+  },
+  "history": [
+    {
+      "at": "2026-11-13T08:10:00+00:00",
+      "channel": null,
+      "url": null,
+      "text": null,
+      "kind": "published",
+      "price_usd": 520,
+      "change_pct": null
+    }
+  ],
+  "geo_radius_m": 500,
+  "author": {
+    "kind": "phone",
+    "label": "Хозяин",
+    "count": 1
+  },
+  "call_url": null,
+  "contact_url": null,
+  "contact_paid": false,
+  "summary": null,
+  "sources": [],
+  "original_text": null,
+  "original_url": null,
+  "post_deleted": false,
+  "offers": [],
+  "phone": null,
+  "phone_display": null,
+  "owner": "Проверенный хозяин · разместил сам в kvadro²",
+  "median": true,
+  "median_value": 672,
+  "median_own": 600,
+  "median_n": 14,
+  "median_metric": "month",
+  "median_reason": null,
+  "median_scope": "district",
+  "median_rooms": 2,
+  "median_near_class": null,
+  "median_radius_km": null,
+  "median_district": "Юнусабад",
+  "median_place_value": null,
+  "median_note": null,
+  "median_updated": "2026-11-12",
+  "price_per_m2": null,
+  "price_usd": 520,
+  "response_minutes": 15,
+  "owner_description": "Без посредников. Звонить после 18:00: +998 90 765 43 21",
+  "owner_self": true,
+  "owner_mine": true,
+  "owner_listing_id": 77,
+  "contact_mode": "gate",
+  "my_request": "pending",
+  "owner_entry": true
+}

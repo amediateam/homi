@@ -17,6 +17,12 @@ use LogicException;
  * shadowed by it, and a legacy call in fake mode can never reach the network (stray requests are refused). It answers
  * like legacy: `401` without the auth header, `GET /api/meta` in the language the client asked for (`meta.<code>.json`,
  * `ru` when the code is unknown), `GET /api/cities`, and `404 {"detail": "Not Found"}` for any other path.
+ *
+ * The listing paths (WP-42) answer without looking at the filters: `GET /api/feed` the first page, with
+ * `cursor=FEED_PAGE_2_CURSOR` the last one and with any other cursor an empty one; `/api/feed/count`, `/api/feed/new`,
+ * `/api/map`; `/api/feed/flow` with options when the query carries `price_max` (a narrow search); `GET
+ * /api/listings/{id}` the card of `CARDS`, with `preview=1` `listing.preview.json` carrying that card's `id` (so the
+ * merged `100016` previews as `100001`), and `404` for any other id.
  */
 final class LegacyFakeServer
 {
@@ -24,6 +30,31 @@ final class LegacyFakeServer
     private const array ROUTES = [
         'GET /api/meta' => 'meta',
         'GET /api/cities' => 'cities',
+        'GET /api/feed' => 'feed.default',
+        'GET /api/feed/count' => 'count',
+        'GET /api/feed/new' => 'feed_new',
+        'GET /api/feed/flow' => 'flow',
+        'GET /api/map' => 'map',
+    ];
+
+    /** The `next_cursor` of `feed.default.json`: the cursor of the second and last feed page. */
+    public const string FEED_PAGE_2_CURSOR = 'fixture-cursor-page-2';
+
+    /**
+     * The listing cards the fake server knows: id => fixture. `100016` is a merged duplicate that answers with
+     * `100001`; every other id answers `404`.
+     *
+     * @var array<int, string>
+     */
+    public const array CARDS = [
+        100001 => 'listing.rent_apartment',
+        100004 => 'listing.commercial',
+        100005 => 'listing.daily',
+        100009 => 'listing.sale_house',
+        100011 => 'listing.land',
+        100014 => 'listing.minimal',
+        100016 => 'listing.merged',
+        100024 => 'listing.no_phone',
     ];
 
     /** @var array<string, string> fixture path => its JSON text */
@@ -48,13 +79,43 @@ final class LegacyFakeServer
         }
 
         $path = (string) parse_url($request->url(), PHP_URL_PATH);
+
+        if ($request->method() === 'GET' && preg_match('#^/api/listings/(\d{1,18})$#', $path, $id) === 1) {
+            return $this->card((int) $id[1], self::queryValue($request->url(), 'preview') === '1');
+        }
+
         $fixture = self::ROUTES[$request->method().' '.$path] ?? null;
+
+        return match ($fixture) {
+            null => $this->respond('errors/not_found', 404),
+            'meta' => $this->respond("meta.{$this->locale($request)}", 200),
+            'feed.default' => $this->respond(match (self::queryValue($request->url(), 'cursor')) {
+                null => 'feed.default',
+                self::FEED_PAGE_2_CURSOR => 'feed.page2',
+                default => 'feed.empty',
+            }, 200),
+            'flow' => $this->respond(self::queryValue($request->url(), 'price_max') === null ? 'flow' : 'flow.options', 200),
+            default => $this->respond($fixture, 200),
+        };
+    }
+
+    /** The card of a known id, or its preview form with the card's `id`; `404` for any other id. */
+    private function card(int $id, bool $preview): PromiseInterface
+    {
+        $fixture = self::CARDS[$id] ?? null;
 
         if ($fixture === null) {
             return $this->respond('errors/not_found', 404);
         }
 
-        return $this->respond($fixture === 'meta' ? "meta.{$this->locale($request)}" : $fixture, 200);
+        if (! $preview) {
+            return $this->respond($fixture, 200);
+        }
+
+        $answer = $this->decoded('listing.preview');
+        $answer['id'] = $this->decoded($fixture)['id'] ?? $id;
+
+        return Factory::response($answer, 200, ['Content-Type' => 'application/json']);
     }
 
     /** The legacy language code the request asked for, per `legacy.locale`; `ru` when there is none or it is unknown. */
@@ -81,6 +142,14 @@ final class LegacyFakeServer
     private function respond(string $fixture, int $status): PromiseInterface
     {
         return Factory::response($this->read($fixture), $status, ['Content-Type' => 'application/json']);
+    }
+
+    /** @return array<array-key, mixed> */
+    private function decoded(string $fixture): array
+    {
+        $decoded = json_decode($this->read($fixture), true);
+
+        return is_array($decoded) ? $decoded : throw new LogicException("The legacy fixture \"{$fixture}\" is not a JSON object.");
     }
 
     private function read(string $fixture): string
