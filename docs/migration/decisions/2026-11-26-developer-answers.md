@@ -79,10 +79,10 @@ Should the job also run on backend changes? One run is about 30 minutes of Actio
 Options:
 
 - Yes, on the backend's code (recommended): `backend/app`, `bootstrap`, `config`, `routes`, `database/migrations`,
-  `resources/fixtures` and `composer.lock` join the paths; a PR with documentation only does not run it.
+  `resources/fixtures`, `composer.lock` and `.env.example` join the paths; a PR with documentation only does not run it.
 - No, as today: the job stays frontend-only; before a backend PR the agent runs the suite locally
   (`scripts/dev/e2e-local.sh`). Saves Actions minutes, but the protection rests on discipline.
 - All of `backend/**`: any backend change, tests and docs under `backend/` included; simplest, more needless runs.
 
-Answer: «Да, на код бэкенда (Рекомендуется)». Registered as **DEC-108**. Consequence: the seven paths are in
+Answer: «Да, на код бэкенда (Рекомендуется)». Registered as **DEC-108**. Consequence: the eight paths are in
 `pull_request.paths` of `.github/workflows/frontend-e2e.yml` since #124.

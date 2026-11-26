@@ -2045,9 +2045,11 @@ ASSUMPTION_MISMATCH AM-114 (2026-11-26):
   value for a `timestamptz` column in the session's zone. On the developer's PostgreSQL (zone Asia/Tashkent) the new
   `last_seen_at` and `*_chosen_at` came back five hours off; CI's server is on UTC, so CI could not see it.
 - **Resolution.** The `pgsql` connection sets `'timezone' => 'UTC'`. The production track checks `show timezone` of the
-  servers' databases before the deploy: if it is not UTC, the rows already in the `timestamptz` columns of seven
-  earlier tables (media files and references, Telegram updates, sources, source listings, intake requests and
-  events) were stored shifted by that offset.
+  servers' databases before the deploy, as the app's role on the app's database (an `ALTER ROLE` or
+  `ALTER DATABASE` setting overrides the server's default): if it is not UTC, the rows already in the `timestamptz`
+  columns of seven earlier tables (media files and references, Telegram updates, sources, source listings, intake
+  requests and events) were stored shifted by that offset, and `failed_jobs.failed_at` (a `timestamp` filled by the
+  database's default) holds local time in its old rows and UTC in new ones.
 
 Verified (the counts of the stage reports; the review fixes of stages 4 and 5 added cases after them):
 - after stage 4, from `backend/`: `php artisan test --compact` → 1 328 tests, 1 317 passed, 11 skipped, 5 974

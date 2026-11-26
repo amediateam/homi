@@ -26,6 +26,8 @@ on:
       - 'backend/database/migrations/**'
       - 'backend/resources/fixtures/**'
       - 'backend/composer.lock'
+      # The API steps copy it as their env file.
+      - 'backend/.env.example'
   workflow_dispatch:
     inputs:
       full:
