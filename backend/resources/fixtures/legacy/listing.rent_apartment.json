@@ -1,157 +1,157 @@
 {
-  "id": 100001,
-  "title": "2-комн. квартира, 54 м² · Юнусабад",
-  "short_title": "2-комн. квартира, 54 м²",
-  "price": "$600/мес (≈ 7,7 млн сум) · депозит $600",
-  "price_kind": null,
-  "favorite": false,
-  "viewed": false,
-  "district_name": "Юнусабад",
-  "place": null,
-  "landmark": "Мегапланет",
-  "metro": "Минор",
-  "metro_km": 0.7,
-  "center_km": 4.2,
-  "area_total": 54,
-  "floor": 3,
-  "floors_total": 9,
-  "rooms": 2,
-  "pets_ok": false,
-  "is_owner": true,
-  "owner_verified": false,
-  "photos_preview": [
-    "/media/100001/1.jpg?e=1795132800&s=730b7358ab65adf549200082d99c5e9d",
-    "/media/100001/2.jpg?e=1795132800&s=5e4ff1947afde3c4b0db5a83b0fd8470",
-    "/media/100001/3.jpg?e=1795132800&s=635d3f245f0d92468fb75222947af552"
-  ],
-  "photos_count": 8,
-  "video": null,
-  "age": "Опубликовано · сегодня",
-  "posted_at": "2026-11-14T06:40:00+00:00",
-  "status_text": null,
-  "market": "Вторичка",
-  "median_delta": -0.12,
-  "median_tone": "good",
-  "lat": 41.36512,
-  "lon": 69.28431,
-  "deal_type": "rent_long",
-  "market_code": "secondary",
-  "photos": [
-    "/media/100001/1.jpg?e=1795132800&s=730b7358ab65adf549200082d99c5e9d",
-    "/media/100001/2.jpg?e=1795132800&s=5e4ff1947afde3c4b0db5a83b0fd8470",
-    "/media/100001/3.jpg?e=1795132800&s=635d3f245f0d92468fb75222947af552",
-    "/media/100001/4.jpg?e=1795132800&s=bcf7e1af72e2bbc04c111aa9969033eb",
-    "/media/100001/5.jpg?e=1795132800&s=2ae8906392f9cd676742f94e3d67c6bd",
-    "/media/100001/6.jpg?e=1795132800&s=7ee66738f7ffab6308fef8a438fb4f7d",
-    "/media/100001/7.jpg?e=1795132800&s=2d035d023e717bfe5ac7d1cf3abdff03",
-    "/media/100001/8.jpg?e=1795132800&s=698d7e457394afd74b9d17e6b76fe281"
-  ],
-  "facts": [
-    {
-      "key": "type",
-      "label": "Тип",
-      "value": "Квартира"
+    "id": 100001,
+    "title": "2-комн. квартира, 54 м² · Юнусабад",
+    "short_title": "2-комн. квартира, 54 м²",
+    "price": "$600/мес (≈ 7,7 млн сум) · депозит $600",
+    "price_kind": null,
+    "favorite": false,
+    "viewed": false,
+    "district_name": "Юнусабад",
+    "place": null,
+    "landmark": "Мегапланет",
+    "metro": "Минор",
+    "metro_km": 0.7,
+    "center_km": 4.2,
+    "area_total": 54,
+    "floor": 3,
+    "floors_total": 9,
+    "rooms": 2,
+    "pets_ok": false,
+    "is_owner": true,
+    "owner_verified": false,
+    "photos_preview": [
+        "/media/100001/1.jpg?e=1795132800&s=730b7358ab65adf549200082d99c5e9d",
+        "/media/100001/2.jpg?e=1795132800&s=5e4ff1947afde3c4b0db5a83b0fd8470",
+        "/media/100001/3.jpg?e=1795132800&s=635d3f245f0d92468fb75222947af552"
+    ],
+    "photos_count": 8,
+    "video": null,
+    "age": "Опубликовано · сегодня",
+    "posted_at": "2026-11-14T06:40:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": -0.12,
+    "median_tone": "good",
+    "lat": 41.36512,
+    "lon": 69.28431,
+    "deal_type": "rent_long",
+    "market_code": "secondary",
+    "photos": [
+        "/media/100001/1.jpg?e=1795132800&s=730b7358ab65adf549200082d99c5e9d",
+        "/media/100001/2.jpg?e=1795132800&s=5e4ff1947afde3c4b0db5a83b0fd8470",
+        "/media/100001/3.jpg?e=1795132800&s=635d3f245f0d92468fb75222947af552",
+        "/media/100001/4.jpg?e=1795132800&s=bcf7e1af72e2bbc04c111aa9969033eb",
+        "/media/100001/5.jpg?e=1795132800&s=2ae8906392f9cd676742f94e3d67c6bd",
+        "/media/100001/6.jpg?e=1795132800&s=7ee66738f7ffab6308fef8a438fb4f7d",
+        "/media/100001/7.jpg?e=1795132800&s=2d035d023e717bfe5ac7d1cf3abdff03",
+        "/media/100001/8.jpg?e=1795132800&s=698d7e457394afd74b9d17e6b76fe281"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Квартира"
+        },
+        {
+            "key": "rooms",
+            "label": "Комнат",
+            "value": "2"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "54 м²"
+        },
+        {
+            "key": "floor",
+            "label": "Этаж",
+            "value": "3 из 9"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": null
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
     },
-    {
-      "key": "rooms",
-      "label": "Комнат",
-      "value": "2"
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/3979",
+            "text": null,
+            "kind": "published",
+            "price_usd": 648,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-14T06:40:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4001",
+            "text": null,
+            "kind": "price_down",
+            "price_usd": 600,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 67",
+        "count": 3
     },
-    {
-      "key": "area",
-      "label": "Площадь",
-      "value": "54 м²"
-    },
-    {
-      "key": "floor",
-      "label": "Этаж",
-      "value": "3 из 9"
-    }
-  ],
-  "nearby": [
-    {
-      "kind": "park",
-      "name": "Парк",
-      "km": 0.4,
-      "note": null
-    },
-    {
-      "kind": "school",
-      "name": "Школа",
-      "km": 0.9,
-      "note": null
-    }
-  ],
-  "stats": {
-    "days_listed": 3,
-    "publications": 2,
-    "channels": 2,
-    "views": 41
-  },
-  "history": [
-    {
-      "at": "2026-11-10T07:00:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/3979",
-      "text": null,
-      "kind": "published",
-      "price_usd": 648,
-      "change_pct": null
-    },
-    {
-      "at": "2026-11-14T06:40:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4001",
-      "text": null,
-      "kind": "price_down",
-      "price_usd": 600,
-      "change_pct": -7.4
-    }
-  ],
-  "geo_radius_m": 500,
-  "author": {
-    "kind": "phone",
-    "label": "+998 ** *** ** 67",
-    "count": 3
-  },
-  "call_url": "https://legacy.invalid/call/fixture-100001?e=1795132800",
-  "contact_url": "https://t.me/stub_author_6",
-  "contact_paid": false,
-  "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 90 123 45 67",
-  "sources": [
-    {
-      "handle": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4001"
-    }
-  ],
-  "original_text": "Сдаётся 2-комн. квартира, 54 м². Чисто, уютно. Звоните: +998901234567",
-  "original_url": "https://t.me/stub_channel_a/4001",
-  "post_deleted": false,
-  "offers": [
-    {
-      "text": "Торг",
-      "url": null
-    }
-  ],
-  "phone": "+998901234567",
-  "phone_display": "+998 90 123-45-67",
-  "owner": "Хозяин",
-  "median": true,
-  "median_value": 672,
-  "median_own": 600,
-  "median_n": 14,
-  "median_metric": "month",
-  "median_reason": null,
-  "median_scope": "district",
-  "median_rooms": 2,
-  "median_near_class": null,
-  "median_radius_km": null,
-  "median_district": "Юнусабад",
-  "median_place_value": null,
-  "median_note": null,
-  "median_updated": "2026-11-12",
-  "price_per_m2": null,
-  "price_usd": 600,
-  "response_minutes": null,
-  "owner_description": null
+    "call_url": "https://legacy.invalid/call/fixture-100001?e=1795132800",
+    "contact_url": "https://t.me/stub_author_6",
+    "contact_paid": false,
+    "summary": "2-комн. квартира, 54 м². Рядом метро Минор. Тел. +998 90 123 45 67",
+    "sources": [
+        {
+            "handle": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4001"
+        }
+    ],
+    "original_text": "Сдаётся 2-комн. квартира, 54 м². Чисто, уютно. Звоните: +998901234567",
+    "original_url": "https://t.me/stub_channel_a/4001",
+    "post_deleted": false,
+    "offers": [
+        {
+            "text": "Торг",
+            "url": null
+        }
+    ],
+    "phone": "+998901234567",
+    "phone_display": "+998 90 123-45-67",
+    "owner": "Хозяин",
+    "median": true,
+    "median_value": 672,
+    "median_own": 600,
+    "median_n": 14,
+    "median_metric": "month",
+    "median_reason": null,
+    "median_scope": "district",
+    "median_rooms": 2,
+    "median_near_class": null,
+    "median_radius_km": null,
+    "median_district": "Юнусабад",
+    "median_place_value": null,
+    "median_note": null,
+    "median_updated": "2026-11-12",
+    "price_per_m2": null,
+    "price_usd": 600,
+    "response_minutes": null,
+    "owner_description": null
 }

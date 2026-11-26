@@ -1,148 +1,148 @@
 {
-  "id": 100009,
-  "title": "5-комн. дом, 240 м² · Кибрай",
-  "short_title": "5-комн. дом, 240 м²",
-  "price": "$150 000 (≈ 1,9 млрд сум)",
-  "price_kind": null,
-  "favorite": false,
-  "viewed": false,
-  "district_name": "Кибрай",
-  "place": null,
-  "landmark": null,
-  "metro": null,
-  "metro_km": null,
-  "center_km": null,
-  "area_total": 240,
-  "floor": null,
-  "floors_total": 2,
-  "rooms": 5,
-  "pets_ok": false,
-  "is_owner": true,
-  "owner_verified": false,
-  "photos_preview": [
-    "/media/100009/1.jpg?e=1795132800&s=6147ade807ec0091be47250a7cba80c4",
-    "/media/100009/2.jpg?e=1795132800&s=817b49ad1e4e7ff2e7c918a21b07e960",
-    "/media/100009/3.jpg?e=1795132800&s=083c907a17a295cfc6f700ad79868070"
-  ],
-  "photos_count": 4,
-  "video": null,
-  "age": "Опубликовано · вчера",
-  "posted_at": "2026-11-13T08:10:00+00:00",
-  "status_text": null,
-  "market": "Вторичка",
-  "median_delta": 0.11,
-  "median_tone": "check",
-  "lat": 41.39301,
-  "lon": 69.46592,
-  "deal_type": "sale",
-  "market_code": "secondary",
-  "photos": [
-    "/media/100009/1.jpg?e=1795132800&s=6147ade807ec0091be47250a7cba80c4",
-    "/media/100009/2.jpg?e=1795132800&s=817b49ad1e4e7ff2e7c918a21b07e960",
-    "/media/100009/3.jpg?e=1795132800&s=083c907a17a295cfc6f700ad79868070",
-    "/media/100009/4.jpg?e=1795132800&s=99b66e6ee32d15c36be424103d6bd2ad"
-  ],
-  "facts": [
-    {
-      "key": "type",
-      "label": "Тип",
-      "value": "Дом"
+    "id": 100009,
+    "title": "5-комн. дом, 240 м² · Кибрай",
+    "short_title": "5-комн. дом, 240 м²",
+    "price": "$150 000 (≈ 1,9 млрд сум)",
+    "price_kind": null,
+    "favorite": false,
+    "viewed": false,
+    "district_name": "Кибрай",
+    "place": null,
+    "landmark": null,
+    "metro": null,
+    "metro_km": null,
+    "center_km": null,
+    "area_total": 240,
+    "floor": null,
+    "floors_total": 2,
+    "rooms": 5,
+    "pets_ok": false,
+    "is_owner": true,
+    "owner_verified": false,
+    "photos_preview": [
+        "/media/100009/1.jpg?e=1795132800&s=6147ade807ec0091be47250a7cba80c4",
+        "/media/100009/2.jpg?e=1795132800&s=817b49ad1e4e7ff2e7c918a21b07e960",
+        "/media/100009/3.jpg?e=1795132800&s=083c907a17a295cfc6f700ad79868070"
+    ],
+    "photos_count": 4,
+    "video": null,
+    "age": "Опубликовано · вчера",
+    "posted_at": "2026-11-13T08:10:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": 0.11,
+    "median_tone": "check",
+    "lat": 41.39301,
+    "lon": 69.46592,
+    "deal_type": "sale",
+    "market_code": "secondary",
+    "photos": [
+        "/media/100009/1.jpg?e=1795132800&s=6147ade807ec0091be47250a7cba80c4",
+        "/media/100009/2.jpg?e=1795132800&s=817b49ad1e4e7ff2e7c918a21b07e960",
+        "/media/100009/3.jpg?e=1795132800&s=083c907a17a295cfc6f700ad79868070",
+        "/media/100009/4.jpg?e=1795132800&s=99b66e6ee32d15c36be424103d6bd2ad"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Дом"
+        },
+        {
+            "key": "rooms",
+            "label": "Комнат",
+            "value": "5"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "240 м²"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": null
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
     },
-    {
-      "key": "rooms",
-      "label": "Комнат",
-      "value": "5"
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/3987",
+            "text": null,
+            "kind": "published",
+            "price_usd": 162000,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-13T08:10:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4009",
+            "text": null,
+            "kind": "price_down",
+            "price_usd": 150000,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 09",
+        "count": 3
     },
-    {
-      "key": "area",
-      "label": "Площадь",
-      "value": "240 м²"
-    }
-  ],
-  "nearby": [
-    {
-      "kind": "park",
-      "name": "Парк",
-      "km": 0.4,
-      "note": null
-    },
-    {
-      "kind": "school",
-      "name": "Школа",
-      "km": 0.9,
-      "note": null
-    }
-  ],
-  "stats": {
-    "days_listed": 3,
-    "publications": 2,
-    "channels": 2,
-    "views": 41
-  },
-  "history": [
-    {
-      "at": "2026-11-10T07:00:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/3987",
-      "text": null,
-      "kind": "published",
-      "price_usd": 162000,
-      "change_pct": null
-    },
-    {
-      "at": "2026-11-13T08:10:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4009",
-      "text": null,
-      "kind": "price_down",
-      "price_usd": 150000,
-      "change_pct": -7.4
-    }
-  ],
-  "geo_radius_m": 500,
-  "author": {
-    "kind": "phone",
-    "label": "+998 ** *** ** 09",
-    "count": 3
-  },
-  "call_url": "https://legacy.invalid/call/fixture-100009?e=1795132800",
-  "contact_url": "https://t.me/stub_author_0",
-  "contact_paid": false,
-  "summary": "5-комн. дом, 240 м². Тихий район.",
-  "sources": [
-    {
-      "handle": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4009"
-    }
-  ],
-  "original_text": "Сдаётся 5-комн. дом, 240 м². Чисто, уютно.",
-  "original_url": "https://t.me/stub_channel_a/4009",
-  "post_deleted": false,
-  "offers": [
-    {
-      "text": "Торг",
-      "url": null
-    }
-  ],
-  "phone": "+998000000009",
-  "phone_display": "+998 00 000-00-09",
-  "owner": "Хозяин",
-  "median": true,
-  "median_value": 563.06,
-  "median_own": 625.0,
-  "median_n": 14,
-  "median_metric": "m2",
-  "median_reason": null,
-  "median_scope": "district",
-  "median_rooms": 5,
-  "median_near_class": null,
-  "median_radius_km": null,
-  "median_district": "Кибрай",
-  "median_place_value": null,
-  "median_note": null,
-  "median_updated": "2026-11-12",
-  "price_per_m2": 625.0,
-  "price_usd": 150000,
-  "response_minutes": null,
-  "owner_description": null
+    "call_url": "https://legacy.invalid/call/fixture-100009?e=1795132800",
+    "contact_url": "https://t.me/stub_author_0",
+    "contact_paid": false,
+    "summary": "5-комн. дом, 240 м². Тихий район.",
+    "sources": [
+        {
+            "handle": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4009"
+        }
+    ],
+    "original_text": "Сдаётся 5-комн. дом, 240 м². Чисто, уютно.",
+    "original_url": "https://t.me/stub_channel_a/4009",
+    "post_deleted": false,
+    "offers": [
+        {
+            "text": "Торг",
+            "url": null
+        }
+    ],
+    "phone": "+998000000009",
+    "phone_display": "+998 00 000-00-09",
+    "owner": "Хозяин",
+    "median": true,
+    "median_value": 563.06,
+    "median_own": 625.0,
+    "median_n": 14,
+    "median_metric": "m2",
+    "median_reason": null,
+    "median_scope": "district",
+    "median_rooms": 5,
+    "median_near_class": null,
+    "median_radius_km": null,
+    "median_district": "Кибрай",
+    "median_place_value": null,
+    "median_note": null,
+    "median_updated": "2026-11-12",
+    "price_per_m2": 625.0,
+    "price_usd": 150000,
+    "response_minutes": null,
+    "owner_description": null
 }

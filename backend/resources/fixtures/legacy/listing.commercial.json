@@ -1,134 +1,134 @@
 {
-  "id": 100004,
-  "title": "Помещение, 120 м² · Мирабад",
-  "short_title": "Помещение, 120 м²",
-  "price": "$2 500/мес (≈ 32,0 млн сум)",
-  "price_kind": "business",
-  "favorite": false,
-  "viewed": false,
-  "district_name": "Мирабад",
-  "place": null,
-  "landmark": null,
-  "metro": null,
-  "metro_km": null,
-  "center_km": 1.9,
-  "area_total": 120,
-  "floor": 1,
-  "floors_total": 5,
-  "rooms": null,
-  "pets_ok": false,
-  "is_owner": false,
-  "owner_verified": false,
-  "photos_preview": [
-    "/media/100004/1.jpg?e=1795132800&s=8111bcbdb8db7f80d10695bf85a9d8c6",
-    "/media/100004/2.jpg?e=1795132800&s=20f6f799b8ae0edf0086ea67cb47c380",
-    "/media/100004/3.jpg?e=1795132800&s=dd83e81333335c7f66f21b2f9a4d8515"
-  ],
-  "photos_count": 4,
-  "video": null,
-  "age": "Опубликовано · вчера",
-  "posted_at": "2026-11-13T08:10:00+00:00",
-  "status_text": null,
-  "market": "Вторичка",
-  "median_delta": null,
-  "median_tone": null,
-  "lat": 41.29871,
-  "lon": 69.27942,
-  "deal_type": "rent_long",
-  "market_code": "secondary",
-  "photos": [
-    "/media/100004/1.jpg?e=1795132800&s=8111bcbdb8db7f80d10695bf85a9d8c6",
-    "/media/100004/2.jpg?e=1795132800&s=20f6f799b8ae0edf0086ea67cb47c380",
-    "/media/100004/3.jpg?e=1795132800&s=dd83e81333335c7f66f21b2f9a4d8515",
-    "/media/100004/4.jpg?e=1795132800&s=879cc5f42fe62d7737e9be32be1d0de5"
-  ],
-  "facts": [
-    {
-      "key": "type",
-      "label": "Тип",
-      "value": "Помещение"
+    "id": 100004,
+    "title": "Помещение, 120 м² · Мирабад",
+    "short_title": "Помещение, 120 м²",
+    "price": "$2 500/мес (≈ 32,0 млн сум)",
+    "price_kind": "business",
+    "favorite": false,
+    "viewed": false,
+    "district_name": "Мирабад",
+    "place": null,
+    "landmark": null,
+    "metro": null,
+    "metro_km": null,
+    "center_km": 1.9,
+    "area_total": 120,
+    "floor": 1,
+    "floors_total": 5,
+    "rooms": null,
+    "pets_ok": false,
+    "is_owner": false,
+    "owner_verified": false,
+    "photos_preview": [
+        "/media/100004/1.jpg?e=1795132800&s=8111bcbdb8db7f80d10695bf85a9d8c6",
+        "/media/100004/2.jpg?e=1795132800&s=20f6f799b8ae0edf0086ea67cb47c380",
+        "/media/100004/3.jpg?e=1795132800&s=dd83e81333335c7f66f21b2f9a4d8515"
+    ],
+    "photos_count": 4,
+    "video": null,
+    "age": "Опубликовано · вчера",
+    "posted_at": "2026-11-13T08:10:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": null,
+    "median_tone": null,
+    "lat": 41.29871,
+    "lon": 69.27942,
+    "deal_type": "rent_long",
+    "market_code": "secondary",
+    "photos": [
+        "/media/100004/1.jpg?e=1795132800&s=8111bcbdb8db7f80d10695bf85a9d8c6",
+        "/media/100004/2.jpg?e=1795132800&s=20f6f799b8ae0edf0086ea67cb47c380",
+        "/media/100004/3.jpg?e=1795132800&s=dd83e81333335c7f66f21b2f9a4d8515",
+        "/media/100004/4.jpg?e=1795132800&s=879cc5f42fe62d7737e9be32be1d0de5"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Помещение"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "120 м²"
+        },
+        {
+            "key": "floor",
+            "label": "Этаж",
+            "value": "1 из 5"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": null
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
     },
-    {
-      "key": "area",
-      "label": "Площадь",
-      "value": "120 м²"
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/3982",
+            "text": null,
+            "kind": "published",
+            "price_usd": 2700,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-13T08:10:00+00:00",
+            "channel": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/4004",
+            "text": null,
+            "kind": "price_down",
+            "price_usd": 2500,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 04",
+        "count": 3
     },
-    {
-      "key": "floor",
-      "label": "Этаж",
-      "value": "1 из 5"
-    }
-  ],
-  "nearby": [
-    {
-      "kind": "park",
-      "name": "Парк",
-      "km": 0.4,
-      "note": null
-    },
-    {
-      "kind": "school",
-      "name": "Школа",
-      "km": 0.9,
-      "note": null
-    }
-  ],
-  "stats": {
-    "days_listed": 3,
-    "publications": 2,
-    "channels": 2,
-    "views": 41
-  },
-  "history": [
-    {
-      "at": "2026-11-10T07:00:00+00:00",
-      "channel": "stub_channel_b",
-      "url": "https://t.me/stub_channel_b/3982",
-      "text": null,
-      "kind": "published",
-      "price_usd": 2700,
-      "change_pct": null
-    },
-    {
-      "at": "2026-11-13T08:10:00+00:00",
-      "channel": "stub_channel_b",
-      "url": "https://t.me/stub_channel_b/4004",
-      "text": null,
-      "kind": "price_down",
-      "price_usd": 2500,
-      "change_pct": -7.4
-    }
-  ],
-  "geo_radius_m": 500,
-  "author": {
-    "kind": "phone",
-    "label": "+998 ** *** ** 04",
-    "count": 3
-  },
-  "call_url": "https://legacy.invalid/call/fixture-100004?e=1795132800",
-  "contact_url": "https://t.me/stub_author_2",
-  "contact_paid": false,
-  "summary": "Помещение, 120 м². Тихий район.",
-  "sources": [
-    {
-      "handle": "stub_channel_b",
-      "url": "https://t.me/stub_channel_b/4004"
-    }
-  ],
-  "original_text": "Сдаётся помещение, 120 м². Чисто, уютно.",
-  "original_url": "https://t.me/stub_channel_b/4004",
-  "post_deleted": false,
-  "offers": [
-    {
-      "text": "Торг",
-      "url": null
-    }
-  ],
-  "phone": "+998000000004",
-  "phone_display": "+998 00 000-00-04",
-  "owner": "Риелтор",
-  "median": false,
-  "price_usd": 2500,
-  "response_minutes": null,
-  "owner_description": null
+    "call_url": "https://legacy.invalid/call/fixture-100004?e=1795132800",
+    "contact_url": "https://t.me/stub_author_2",
+    "contact_paid": false,
+    "summary": "Помещение, 120 м². Тихий район.",
+    "sources": [
+        {
+            "handle": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/4004"
+        }
+    ],
+    "original_text": "Сдаётся помещение, 120 м². Чисто, уютно.",
+    "original_url": "https://t.me/stub_channel_b/4004",
+    "post_deleted": false,
+    "offers": [
+        {
+            "text": "Торг",
+            "url": null
+        }
+    ],
+    "phone": "+998000000004",
+    "phone_display": "+998 00 000-00-04",
+    "owner": "Риелтор",
+    "median": false,
+    "price_usd": 2500,
+    "response_minutes": null,
+    "owner_description": null
 }

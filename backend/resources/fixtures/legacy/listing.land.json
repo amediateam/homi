@@ -1,129 +1,129 @@
 {
-  "id": 100011,
-  "title": "Участок, 600 м² · центр города",
-  "short_title": "Участок, 600 м²",
-  "price": "$30 000 (≈ 384,0 млн сум)",
-  "price_kind": null,
-  "favorite": false,
-  "viewed": false,
-  "district_name": null,
-  "place": "центр города",
-  "landmark": null,
-  "metro": null,
-  "metro_km": null,
-  "center_km": 3.5,
-  "area_total": 600,
-  "floor": null,
-  "floors_total": null,
-  "rooms": null,
-  "pets_ok": false,
-  "is_owner": true,
-  "owner_verified": false,
-  "photos_preview": [
-    "/media/100011/1.jpg?e=1795132800&s=2e29557599c0200ded02caf655d74cb4",
-    "/media/100011/2.jpg?e=1795132800&s=818a9d7560ffa3fa18d32ca372c5c613",
-    "/media/100011/3.jpg?e=1795132800&s=d2d76e2e63adcc3374a30b90c66aef0a"
-  ],
-  "photos_count": 4,
-  "video": null,
-  "age": "Опубликовано · вчера",
-  "posted_at": "2026-11-13T08:10:00+00:00",
-  "status_text": null,
-  "market": "Вторичка",
-  "median_delta": null,
-  "median_tone": null,
-  "lat": 40.78302,
-  "lon": 72.35012,
-  "deal_type": "sale",
-  "market_code": "secondary",
-  "photos": [
-    "/media/100011/1.jpg?e=1795132800&s=2e29557599c0200ded02caf655d74cb4",
-    "/media/100011/2.jpg?e=1795132800&s=818a9d7560ffa3fa18d32ca372c5c613",
-    "/media/100011/3.jpg?e=1795132800&s=d2d76e2e63adcc3374a30b90c66aef0a",
-    "/media/100011/4.jpg?e=1795132800&s=06de939b967af1e1f72d918048446d2f"
-  ],
-  "facts": [
-    {
-      "key": "type",
-      "label": "Тип",
-      "value": "Участок"
+    "id": 100011,
+    "title": "Участок, 600 м² · центр города",
+    "short_title": "Участок, 600 м²",
+    "price": "$30 000 (≈ 384,0 млн сум)",
+    "price_kind": null,
+    "favorite": false,
+    "viewed": false,
+    "district_name": null,
+    "place": "центр города",
+    "landmark": null,
+    "metro": null,
+    "metro_km": null,
+    "center_km": 3.5,
+    "area_total": 600,
+    "floor": null,
+    "floors_total": null,
+    "rooms": null,
+    "pets_ok": false,
+    "is_owner": true,
+    "owner_verified": false,
+    "photos_preview": [
+        "/media/100011/1.jpg?e=1795132800&s=2e29557599c0200ded02caf655d74cb4",
+        "/media/100011/2.jpg?e=1795132800&s=818a9d7560ffa3fa18d32ca372c5c613",
+        "/media/100011/3.jpg?e=1795132800&s=d2d76e2e63adcc3374a30b90c66aef0a"
+    ],
+    "photos_count": 4,
+    "video": null,
+    "age": "Опубликовано · вчера",
+    "posted_at": "2026-11-13T08:10:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": null,
+    "median_tone": null,
+    "lat": 40.78302,
+    "lon": 72.35012,
+    "deal_type": "sale",
+    "market_code": "secondary",
+    "photos": [
+        "/media/100011/1.jpg?e=1795132800&s=2e29557599c0200ded02caf655d74cb4",
+        "/media/100011/2.jpg?e=1795132800&s=818a9d7560ffa3fa18d32ca372c5c613",
+        "/media/100011/3.jpg?e=1795132800&s=d2d76e2e63adcc3374a30b90c66aef0a",
+        "/media/100011/4.jpg?e=1795132800&s=06de939b967af1e1f72d918048446d2f"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Участок"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "600 м²"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": null
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
     },
-    {
-      "key": "area",
-      "label": "Площадь",
-      "value": "600 м²"
-    }
-  ],
-  "nearby": [
-    {
-      "kind": "park",
-      "name": "Парк",
-      "km": 0.4,
-      "note": null
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/3989",
+            "text": null,
+            "kind": "published",
+            "price_usd": 32400,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-13T08:10:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4011",
+            "text": null,
+            "kind": "price_down",
+            "price_usd": 30000,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 11",
+        "count": 3
     },
-    {
-      "kind": "school",
-      "name": "Школа",
-      "km": 0.9,
-      "note": null
-    }
-  ],
-  "stats": {
-    "days_listed": 3,
-    "publications": 2,
-    "channels": 2,
-    "views": 41
-  },
-  "history": [
-    {
-      "at": "2026-11-10T07:00:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/3989",
-      "text": null,
-      "kind": "published",
-      "price_usd": 32400,
-      "change_pct": null
-    },
-    {
-      "at": "2026-11-13T08:10:00+00:00",
-      "channel": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4011",
-      "text": null,
-      "kind": "price_down",
-      "price_usd": 30000,
-      "change_pct": -7.4
-    }
-  ],
-  "geo_radius_m": 500,
-  "author": {
-    "kind": "phone",
-    "label": "+998 ** *** ** 11",
-    "count": 3
-  },
-  "call_url": "https://legacy.invalid/call/fixture-100011?e=1795132800",
-  "contact_url": "https://t.me/stub_author_2",
-  "contact_paid": false,
-  "summary": "Участок, 600 м². Тихий район.",
-  "sources": [
-    {
-      "handle": "stub_channel_a",
-      "url": "https://t.me/stub_channel_a/4011"
-    }
-  ],
-  "original_text": "Сдаётся участок, 600 м². Чисто, уютно.",
-  "original_url": "https://t.me/stub_channel_a/4011",
-  "post_deleted": false,
-  "offers": [
-    {
-      "text": "Торг",
-      "url": null
-    }
-  ],
-  "phone": "+998000000011",
-  "phone_display": "+998 00 000-00-11",
-  "owner": "Хозяин",
-  "median": false,
-  "price_usd": 30000,
-  "response_minutes": null,
-  "owner_description": null
+    "call_url": "https://legacy.invalid/call/fixture-100011?e=1795132800",
+    "contact_url": "https://t.me/stub_author_2",
+    "contact_paid": false,
+    "summary": "Участок, 600 м². Тихий район.",
+    "sources": [
+        {
+            "handle": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4011"
+        }
+    ],
+    "original_text": "Сдаётся участок, 600 м². Чисто, уютно.",
+    "original_url": "https://t.me/stub_channel_a/4011",
+    "post_deleted": false,
+    "offers": [
+        {
+            "text": "Торг",
+            "url": null
+        }
+    ],
+    "phone": "+998000000011",
+    "phone_display": "+998 00 000-00-11",
+    "owner": "Хозяин",
+    "median": false,
+    "price_usd": 30000,
+    "response_minutes": null,
+    "owner_description": null
 }
