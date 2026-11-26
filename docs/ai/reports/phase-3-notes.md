@@ -2027,6 +2027,28 @@ ASSUMPTION_MISMATCH AM-112 (2026-11-26):
   key). The blank token of the e2e API is harmless: the stub answers before the controller. Recorded in the
   specification.
 
+ASSUMPTION_MISMATCH AM-113 (2026-11-26):
+- **Assumption.** CLAUDE.md ("Tests run on in-memory SQLite") and the comment of `.github/workflows/backend.yml`
+  ("Tests keep using the in-memory SQLite from phpunit.xml").
+- **What was found.** The `composer ci:check` step of `backend.yml` sets `DB_CONNECTION=pgsql` and `DB_DATABASE=homi`
+  (since WP-10), and `phpunit.xml`'s `<env>` entries have no `force`, so CI runs the whole Feature and Unit suite on
+  PostgreSQL. #124's first backend run failed on two cases whose expected-to-fail statements aborted the test's
+  transaction (SQLSTATE 25P02); locally the suite had run on SQLite only.
+- **Resolution.** Those statements run in savepoints; the whole suite also runs locally on PostgreSQL
+  (`DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 … php artisan test`) before a push; the workflow's
+  comment is corrected; CLAUDE.md is corrected in the shared-file PR after the merge.
+
+ASSUMPTION_MISMATCH AM-114 (2026-11-26):
+- **Assumption.** The `pgsql` connection of `config/database.php` reads and writes instants correctly whatever the
+  server's zone.
+- **What was found.** Laravel writes dates as the app's UTC wall time without an offset, and PostgreSQL reads such a
+  value for a `timestamptz` column in the session's zone. On the developer's PostgreSQL (zone Asia/Tashkent) the new
+  `last_seen_at` and `*_chosen_at` came back five hours off; CI's server is on UTC, so CI could not see it.
+- **Resolution.** The `pgsql` connection sets `'timezone' => 'UTC'`. The production track checks `show timezone` of the
+  servers' databases before the deploy: if it is not UTC, the rows already in the `timestamptz` columns of seven
+  earlier tables (media files and references, Telegram updates, sources, source listings, intake requests and
+  events) were stored shifted by that offset.
+
 Verified (the counts of the stage reports; the review fixes of stages 4 and 5 added cases after them):
 - after stage 4, from `backend/`: `php artisan test --compact` → 1 328 tests, 1 317 passed, 11 skipped, 5 974
   assertions; `vendor/bin/phpstan analyse --memory-limit=1G` → 0 errors; `vendor/bin/pint --test` → passed;

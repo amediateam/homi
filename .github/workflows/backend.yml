@@ -29,7 +29,7 @@ jobs:
 
     # `.env.example` defaults to PostgreSQL (ADR-0006/0008), so `composer setup` runs `migrate`
     # against a real PostgreSQL 18 — the same major as staging/production (ADR-0011).
-    # Tests keep using the in-memory SQLite from phpunit.xml.
+    # The tests of `ci:check` run on this PostgreSQL database too: its DB_* variables override phpunit.xml's unforced `<env>`.
     services:
       postgres:
         image: postgres:18

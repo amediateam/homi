@@ -64,6 +64,25 @@ Options:
 - Every request: any open of a full card counts, re-opens and «Повторить» included; simpler (Laravel's standard
   limiter), but an active user reaches the cap sooner.
 
-Answer: «Разные объявления (Рекомендуется)». Registered as **DEC-107**. Consequence: the window is the last 24 hours
-(legacy's English text: "in the past 24 hours"), not the calendar day; only a `200` full card counts, so a missing
-listing or an error does not.
+Answer: «Разные объявления (Рекомендуется)». Registered as **DEC-107**. Consequence: the window is 24 hours, not the
+calendar day (legacy's English text: "in the past 24 hours"); as built it is fixed: it starts at the first counted card,
+lasts 24 hours and does not slide (WP-40 "As built"); only a `200` full card counts, so a missing listing or an error
+does not.
+
+## Whether the end-to-end job runs on backend changes (DEC-108)
+
+Question (asked while #124 was in review): the CI job `frontend-e2e` runs only on changes of `frontend/**`, but it
+boots the API from the PR's tree, and since WP-40 the app depends on the backend's boot checks, stub mode and access
+gate. The next packages of stage C are almost all backend, and without the e2e job they could break the app unseen.
+Should the job also run on backend changes? One run is about 30 minutes of Actions.
+
+Options:
+
+- Yes, on the backend's code (recommended): `backend/app`, `bootstrap`, `config`, `routes`, `database/migrations`,
+  `resources/fixtures` and `composer.lock` join the paths; a PR with documentation only does not run it.
+- No, as today: the job stays frontend-only; before a backend PR the agent runs the suite locally
+  (`scripts/dev/e2e-local.sh`). Saves Actions minutes, but the protection rests on discipline.
+- All of `backend/**`: any backend change, tests and docs under `backend/` included; simplest, more needless runs.
+
+Answer: «Да, на код бэкенда (Рекомендуется)». Registered as **DEC-108**. Consequence: the seven paths are in
+`pull_request.paths` of `.github/workflows/frontend-e2e.yml` since #124.

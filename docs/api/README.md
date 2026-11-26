@@ -54,7 +54,7 @@ only on `422` and maps each field to its messages.
 | 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
 | 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
-| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is a request limiter (see "Request limits"). The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week`. `POST /events` never answers `429`: its excess is dropped with `204` |
+| 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is a request limiter (see "Request limits"). The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week`. `POST /events` never answers `429` from its limiter: the excess is dropped with `204` |
 | 502 | `share_failed` | `POST /listings/{number}/share`: Telegram did not prepare the message; fall back to the `t.me` link |
 | 503 | `source_unavailable` | The data source of the method cannot answer; show the "could not load" state |
 | 503 | `translation_unavailable` | `POST /listings/{number}/translation`: the translation service cannot answer |
@@ -114,7 +114,8 @@ Every method that needs a session also knows `access_private`, `access_invite`, 
 `access_join` and `access_paused`, which answer `403 access_denied` with that `reason`. `paused` says that the whole
 service is on pause (legacy release `index-CIa0Ldj2.js`); since WP-40 the server switch `ACCESS_PAUSED` answers it
 for real (off by default, DEC-60; team accounts pass it, DEC-106), and the real access gate runs before every stub
-method, so a refused user hears the gate's reason first. Sign-in knows `auth_expired` and `invalid_init_data` as well.
+method that needs a session (the stub sign-in is not gated), so a refused user hears the gate's reason first. Sign-in
+knows `auth_expired` and `invalid_init_data` as well.
 
 Since WP-40 four methods answer natively, with `meta.source = native`: `POST /auth/telegram`, `GET /me`,
 `GET /settings` and `PATCH /settings`. Their stub answers — and so their scenarios: the profiles of `GET /me`
@@ -169,7 +170,7 @@ the API believes it only from `TRUSTED_PROXIES`.
 | `v1-lists` | 60 a minute | the writes of favourites, hidden listings and authors, blocked authors, `DELETE /history`, the surveys, `DELETE /listings/{number}/reports`, `POST /listings/{number}/contact-request` |
 | `v1-reports` | 30 a day | `POST /listings/{number}/reports` |
 | `v1-radars` | 30 a minute | the radar writes, `DELETE /radars/{id}`, `PATCH /settings`, `POST /settings/card-sample` |
-| `v1-events` | 60 a minute; the excess is answered `204` and dropped, never `429` | `POST /events` |
+| `v1-events` | 60 a minute; the excess is answered `204` and dropped: never `429` from its limiter | `POST /events` |
 | `v1-media` | 120 a minute | `GET /media/{media}` |
 | `uploads`, `owner-writes`, `owner-publish`, `owner-place`, `owner-demand` | as before WP-40 | the media writes; the owner cabinet's writes, `GET /owner/place`, `GET /owner/demand` |
 

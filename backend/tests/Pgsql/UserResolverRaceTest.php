@@ -10,11 +10,15 @@ use Illuminate\Support\Facades\DB;
 
 /*
  * WP-40: the first sign-ins of one Telegram user race (a reload, two devices). Each child process resolves the same
- * verified launch in its own PostgreSQL connection; each finds no user, and `createOrFirst` on the unique
- * `telegram_user_id` must leave one user with one settings row, and every child must get that user.
+ * verified launch in its own PostgreSQL connection. The children wait for one start time so that their lookups run
+ * together, before any of them has created the user (a child that started later would find the user by the lookup and
+ * take the returning path, and the race would not run): they find no user and go on to `createOrFirst` on the unique
+ * `telegram_user_id`, which must leave one user with one settings row, and every child must get that user.
  */
 it('makes one user when ten first contacts of one Telegram user run at once', function (): void {
-    $resolve = static function (): int {
+    $startAt = microtime(true) + 2.0;
+
+    $resolve = static function () use ($startAt): int {
         $launch = new TelegramInitData(
             telegramUserId: 279058397,
             isPremium: false,
@@ -26,6 +30,10 @@ it('makes one user when ten first contacts of one Telegram user run at once', fu
             startParam: 'flat_100012',
             fingerprint: 'a1b2c3d4e5f6',
         );
+
+        if ($startAt > microtime(true)) {
+            time_sleep_until($startAt);
+        }
 
         return app(UserResolver::class)->fromInitData($launch)->id;
     };

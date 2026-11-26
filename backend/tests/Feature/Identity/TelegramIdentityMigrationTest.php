@@ -7,8 +7,10 @@ use Illuminate\Support\Str;
 use Tests\Support\LegacyUserRows;
 
 /*
- * The users migration of WP-40 over the rows of the schema before it (SQLite; the pgsql group runs the same over
- * PostgreSQL): `down()` first, the old rows, then `up()` again.
+ * The users migration of WP-40 over the rows of the schema before it: `down()` first, the old rows, then `up()` again.
+ * The suite runs on SQLite locally and on PostgreSQL in the backend CI (`.github/workflows/backend.yml`), inside the
+ * transaction of `RefreshDatabase`; a failing statement would abort that transaction on PostgreSQL, so each statement
+ * expected to fail runs in its own savepoint (`DB::transaction()`), which rolls back to the savepoint and rethrows.
  */
 
 it('deletes the stub user and its tokens and gives every other user its own analytics id', function (): void {
@@ -30,9 +32,9 @@ it('deletes the stub user and its tokens and gives every other user its own anal
 it('requires a unique analytics id and lets a user go without a name, an email or a password', function (): void {
     DB::table('users')->insert(['analytics_distinct_id' => '5f0c2b1e-7a36-4c59-9d4e-2f1a6b7c8d90', 'telegram_user_id' => 279058397]);
 
-    expect(fn () => DB::table('users')->insert(['telegram_user_id' => 279058398]))->toThrow(QueryException::class)
-        ->and(fn () => DB::table('users')->insert(['analytics_distinct_id' => '5f0c2b1e-7a36-4c59-9d4e-2f1a6b7c8d90', 'telegram_user_id' => 279058398]))->toThrow(QueryException::class)
-        ->and(fn () => DB::table('users')->insert(['analytics_distinct_id' => (string) Str::uuid(), 'telegram_user_id' => 279058397]))->toThrow(QueryException::class)
+    expect(fn () => DB::transaction(fn () => DB::table('users')->insert(['telegram_user_id' => 279058398])))->toThrow(QueryException::class)
+        ->and(fn () => DB::transaction(fn () => DB::table('users')->insert(['analytics_distinct_id' => '5f0c2b1e-7a36-4c59-9d4e-2f1a6b7c8d90', 'telegram_user_id' => 279058398])))->toThrow(QueryException::class)
+        ->and(fn () => DB::transaction(fn () => DB::table('users')->insert(['analytics_distinct_id' => (string) Str::uuid(), 'telegram_user_id' => 279058397])))->toThrow(QueryException::class)
         ->and(DB::table('users')->count())->toBe(1);
 });
 
@@ -41,7 +43,7 @@ it('drops the new columns and makes the old ones required again when every row h
 
     expect(Schema::hasColumns('users', ['telegram_user_id', 'analytics_distinct_id', 'last_seen_at']))->toBeFalse()
         ->and(Schema::hasColumns('users', ['name', 'email', 'password']))->toBeTrue()
-        ->and(fn () => DB::table('users')->insert(['email' => 'nameless@example.com', 'password' => 'x']))->toThrow(QueryException::class);
+        ->and(fn () => DB::transaction(fn () => DB::table('users')->insert(['email' => 'nameless@example.com', 'password' => 'x'])))->toThrow(QueryException::class);
 
     LegacyUserRows::migration()->up();
 });

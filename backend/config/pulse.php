@@ -151,6 +151,9 @@ return [
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
+                // The framework's `throttle` middleware keys every limit as `md5($limiterName.$limit->key)` — one key
+                // per user or address — and the rate limiter adds a `:timer` twin: one record for all of them.
+                '/^[0-9a-f]{32}(:timer)?$/' => 'throttle:*',
                 // '/:\d+/' => ':*',
             ],
         ],

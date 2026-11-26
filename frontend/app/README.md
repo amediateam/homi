@@ -71,7 +71,7 @@ layer, and the runtime rules — a missing key renders its path and is reported 
   the API's per-address limits count the client; the cached `publicApi()` reads pass none (WP-40). A `429` of
   `/bff/session` (sign-in or `/me`) reaches the client as `429 rate_limited` with the API's `Retry-After`; the boot
   retry waits for the first one — at most 60 s, 10 s without one — without counting it among the six failures, and
-  a later counted one never retries sooner than its `Retry-After` (KI-37).
+  a later counted one waits at least its `Retry-After`, at most 60 s (KI-37).
 
 ## Data
 

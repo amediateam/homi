@@ -17,6 +17,15 @@ on:
       - '.github/workflows/frontend-e2e.yml'
       # The screen table the coverage step checks (WP-33): an intake that adds a screen runs the check in its own PR.
       - 'docs/migration/data/screens.json'
+      # The API these runs boot comes from the PR's tree, and since WP-40 its boot checks, stub mode and access gate
+      # decide whether the app works at all, so a change of the backend's code runs the suite too (DEC-108).
+      - 'backend/app/**'
+      - 'backend/bootstrap/**'
+      - 'backend/config/**'
+      - 'backend/routes/**'
+      - 'backend/database/migrations/**'
+      - 'backend/resources/fixtures/**'
+      - 'backend/composer.lock'
   workflow_dispatch:
     inputs:
       full:

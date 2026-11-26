@@ -7,8 +7,9 @@ use Illuminate\Support\Str;
 use Tests\Support\LegacyUserRows;
 
 /*
- * The users migration of WP-40 over the rows of the schema before it, on PostgreSQL (the feature suite runs the same
- * on SQLite): `down()` first, the old rows, then `up()` again, which leaves the schema as the group found it. `up()`
+ * The users migration of WP-40 over the rows of the schema before it, on PostgreSQL without the transaction of
+ * `RefreshDatabase` (the feature suite runs the same inside it, on SQLite locally and on PostgreSQL in the backend CI):
+ * `down()` first, the old rows, then `up()` again, which leaves the schema as the group found it. `up()`
  * runs inside one transaction, as the Migrator runs a migration on PostgreSQL (its grammar supports transactional
  * schema changes), so the deletes and the fill run in the same transaction as the column changes around them.
  */
