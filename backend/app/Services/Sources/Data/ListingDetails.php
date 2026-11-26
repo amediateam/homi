@@ -11,7 +11,8 @@ use App\Services\Listings\PhoneMasker;
  * with a number.
  *
  * `fromArray()` is the one way a driver builds it; it masks `summary`, `original.text`, `offers[].text`,
- * `price_history[].text` and `owner.description` (and, through `ListingSummary`, `title`). Since WP-80 it carries the
+ * `price_history[].text`, `author.label`, `owner_label` and `owner.description` (and, through `ListingSummary`,
+ * `title`). Since WP-80 it carries the
  * owner part (`owner`) and the two contact keys of a self-placed listing (`contactMode`, `contactRequest`).
  */
 final readonly class ListingDetails
@@ -66,6 +67,7 @@ final readonly class ListingDetails
         $summary = Fields::nullableString($data, 'summary');
         $originalText = Fields::nullableString($original, 'text');
         $mode = Fields::nullableString($contact, 'mode');
+        $ownerLabel = Fields::nullableString($data, 'owner_label');
         $request = Fields::nullableObject($contact, 'request');
 
         return new self(
@@ -83,7 +85,7 @@ final readonly class ListingDetails
             authorKind: $author === null ? null : Fields::string($author, 'kind'),
             authorLabel: $author === null ? null : PhoneMasker::mask(Fields::string($author, 'label')),
             authorCount: $author === null ? null : Fields::count($author, 'count'),
-            ownerLabel: Fields::nullableString($data, 'owner_label'),
+            ownerLabel: $ownerLabel === null ? null : PhoneMasker::mask($ownerLabel),
             hasPhone: Fields::bool($contact, 'has_phone'),
             contactUrl: Fields::nullableString($contact, 'contact_url'),
             contactPaid: Fields::bool($contact, 'contact_paid'),

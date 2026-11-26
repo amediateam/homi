@@ -12,7 +12,9 @@ use InvalidArgumentException;
  *
  * Required: `week` (a whole number ≥ 0) and `days` (a number below 1 is 1, else a whole number). `options` is `[]`
  * when absent; each option needs `code`, `label`, `rate` and its `filters`, read by `FiltersTranslator::fromLegacy()`;
- * its `count` is a number or `null`.
+ * its `count` is a whole number ≥ 0 or `null`. An option that does not fit (a key missing, a filter legacy's contract
+ * does not allow) is left out and noted in the answer's `Coercions` under its place (`options.0.filters.tenant`), as is
+ * an `options` that is not a list: one bad option never fails the estimate.
  */
 final class FlowTranslator
 {
@@ -25,9 +27,9 @@ final class FlowTranslator
      *
      * @throws LegacyContractError
      */
-    public static function toData(array $answer): FlowEstimate
+    public static function toData(array $answer, ?Coercions $seen = null): FlowEstimate
     {
-        $flow = self::translate($answer);
+        $flow = self::translate($answer, $seen);
 
         return new FlowEstimate($flow['week'], $flow['days'], array_map(FlowOption::fromArray(...), $flow['options']));
     }
@@ -36,11 +38,12 @@ final class FlowTranslator
      * The answer in the array shape of `data` of the stub's `GET /listings/flow`, checked by the data objects.
      *
      * @param  array<array-key, mixed>  $answer
+     * @param  Coercions|null  $seen  collects the keys whose values could not be used as sent
      * @return array{week: int, days: int, options: list<array<string, mixed>>}
      *
      * @throws LegacyContractError
      */
-    public static function translate(array $answer): array
+    public static function translate(array $answer, ?Coercions $seen = null): array
     {
         $week = Whole::of($answer['week'] ?? null);
         $days = $answer['days'] ?? null;
@@ -56,8 +59,20 @@ final class FlowTranslator
 
         $options = [];
 
-        foreach (LegacyValue::objects($answer, 'options', self::PATH) as $index => $option) {
-            $options[] = self::option($option, "options.{$index}.");
+        foreach (LegacyValue::objects($answer, 'options', $seen) as $index => $option) {
+            $prefix = "options.{$index}.";
+
+            try {
+                $entry = self::option($option, $prefix, $seen?->at($prefix));
+            } catch (LegacyContractError $unfit) {
+                $seen?->note($unfit->keys[0] ?? "options.{$index}");
+
+                continue;
+            }
+
+            if (LegacyValue::fits(FlowOption::fromArray(...), $entry, $prefix, $seen)) {
+                $options[] = $entry;
+            }
         }
 
         $flow = ['week' => $week, 'days' => $days, 'options' => $options];
@@ -74,8 +89,10 @@ final class FlowTranslator
     /**
      * @param  array<array-key, mixed>  $option
      * @return array<string, mixed>
+     *
+     * @throws LegacyContractError naming the key, placed by `$prefix`, when the option does not fit
      */
-    private static function option(array $option, string $prefix): array
+    private static function option(array $option, string $prefix, ?Coercions $seen): array
     {
         foreach (['code', 'label', 'rate'] as $key) {
             if (! is_string($option[$key] ?? null)) {
@@ -91,7 +108,7 @@ final class FlowTranslator
             'code' => $option['code'],
             'label' => $option['label'],
             'rate' => $option['rate'],
-            'count' => LegacyValue::int($option, 'count'),
+            'count' => LegacyValue::count($option, 'count', $seen),
             'filters' => FiltersTranslator::fromLegacy($option['filters'], self::PATH, "{$prefix}filters.")->toArray(),
         ];
     }

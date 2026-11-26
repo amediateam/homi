@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Sources\LegacyContractError;
 use App\Models\User;
 use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Search\ListingQuery;
@@ -236,6 +237,7 @@ it('ends the list quietly on a cursor it did not give, without asking legacy', f
     'o missing' => base64Cursor('{"c":"p2"}'),
     'nested' => base64Cursor('{"c":{"a":1},"o":0}'),
     'longer than 512 bytes' => base64Cursor('{"c":"'.str_repeat('p', 400).'","o":0}'),
+    'c longer than 256 bytes' => base64Cursor('{"c":"'.str_repeat('p', 257).'","o":0}'),
 ]);
 
 it('takes back the cursors it gives', function (?string $legacy, int $offset): void {
@@ -247,11 +249,29 @@ it('takes back the cursors it gives', function (?string $legacy, int $offset): v
     'first page' => [null, 0],
     'inside the first page' => [null, 13],
     'a legacy cursor with every character' => ['a/b+c=d?e&f é "g"', 99],
+    'the longest legacy cursor, within 512 bytes' => [str_repeat('c', LegacyFeedCursor::MAX_LEGACY_BYTES), 99],
 ]);
 
-it('ends the list with an error logged when legacy\'s cursor is too long to pass on', function (): void {
+it('refuses a legacy cursor over 256 bytes as a contract error naming next_cursor', function (): void {
     LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/feed'
-        ? Http::response(['items' => array_map(fn (int $i): array => ['id' => $i, 'photos_preview' => []], range(1, 20)), 'next_cursor' => str_repeat('c', 400)])
+        ? Http::response(['items' => array_map(fn (int $i): array => ['id' => $i, 'photos_preview' => []], range(1, 20)), 'next_cursor' => str_repeat('c', 257)])
+        : null);
+
+    try {
+        feedPage();
+    } catch (LegacyContractError $error) {
+        expect($error->keys)->toBe(['next_cursor'])
+            ->and($error->path)->toBe('/api/feed');
+
+        return;
+    }
+
+    throw new LogicException('A legacy cursor of 257 bytes was passed on.');
+});
+
+it('ends the list with an error logged when a legacy cursor of 256 bytes encodes past 512', function (): void {
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/feed'
+        ? Http::response(['items' => array_map(fn (int $i): array => ['id' => $i, 'photos_preview' => []], range(1, 20)), 'next_cursor' => str_repeat('"', 256)])
         : null);
     $errors = new ArrayObject;
     Log::listen(function (MessageLogged $entry) use ($errors): void {
@@ -262,7 +282,8 @@ it('ends the list with an error logged when legacy\'s cursor is too long to pass
 
     $page = feedPage();
 
-    expect($page->items)->toHaveCount(20)
+    expect(strlen((new LegacyFeedCursor(str_repeat('"', 256), 0))->encode()))->toBeGreaterThan(LegacyFeedCursor::MAX_BYTES)
+        ->and($page->items)->toHaveCount(20)
         ->and($page->nextCursor)->toBeNull()
         ->and($errors->getArrayCopy())->toBe([['path' => '/api/feed', 'problem' => 'too long to pass on', 'keys' => ['next_cursor']]]);
 });

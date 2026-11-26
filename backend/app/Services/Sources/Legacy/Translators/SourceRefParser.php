@@ -2,12 +2,14 @@
 
 namespace App\Services\Sources\Legacy\Translators;
 
+use App\Services\Listings\LinkGuard;
 use App\Services\Sources\Data\SourceRef;
 
 /**
  * Where a legacy listing was published (`source_ref`, `25` §5, Q-API-063): the channel and post of a public Telegram
  * post link, `https://t.me/<channel>/<post id>` or `https://t.me/s/<channel>/<post id>`. A private link
- * (`t.me/c/<id>/…`), an invite or a link without a post id has none. Pure.
+ * (`t.me/c/<id>/…`), an invite or a link without a post id has none. The channel is lower-cased: Telegram's names are
+ * case-insensitive, and the personal tables of WP-44 compare them. Pure.
  */
 final class SourceRefParser
 {
@@ -34,22 +36,35 @@ final class SourceRefParser
             return null;
         }
 
-        return ['channel' => $match[1], 'post_id' => (int) $match[2]];
+        return ['channel' => strtolower($match[1]), 'post_id' => (int) $match[2]];
     }
 
     /**
-     * The source of a legacy item or card: its `original_url`, else the first `sources[].url`; `null` when neither is a
-     * post link (a preview carries neither).
+     * The source of a legacy item or card: its `original_url`, else the first `sources[].url`, each only when the card
+     * may carry it (`LinkGuard`: a link that could hold a phone number is never parsed); `null` when neither is a post
+     * link (a preview carries neither).
      *
      * @param  array<array-key, mixed>  $item
      * @return array{channel: string, post_id: int}|null
      */
     public static function fromCard(array $item): ?array
     {
-        $parts = self::parts(LegacyValue::string($item, 'original_url'));
-        $sources = $item['sources'] ?? null;
-        $first = is_array($sources) && array_is_list($sources) && is_array($sources[0] ?? null) ? $sources[0] : [];
+        $original = self::parts(LinkGuard::safe(LegacyValue::string($item, 'original_url')));
 
-        return $parts ?? self::parts(LegacyValue::string($first, 'url'));
+        if ($original !== null) {
+            return $original;
+        }
+
+        $sources = $item['sources'] ?? null;
+
+        foreach (is_array($sources) && array_is_list($sources) ? $sources : [] as $source) {
+            $url = is_array($source) ? LinkGuard::safe(LegacyValue::string($source, 'url')) : null;
+
+            if ($url !== null) {
+                return self::parts($url);
+            }
+        }
+
+        return null;
     }
 }

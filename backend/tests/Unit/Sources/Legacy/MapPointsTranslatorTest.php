@@ -2,6 +2,7 @@
 
 use App\Exceptions\Sources\LegacyContractError;
 use App\Services\Sources\Data\MapPoints;
+use App\Services\Sources\Legacy\Translators\Coercions;
 use App\Services\Sources\Legacy\Translators\MapPointsTranslator;
 use Tests\Support\LegacyFixtures;
 
@@ -94,3 +95,20 @@ it('refuses an answer that does not fit, naming the key', function (array $answe
     'total below with_point' => [['points' => [legacyPoint()], 'with_point' => 5, 'total' => 3], 'total'],
     'total negative' => [['points' => [], 'total' => -1], 'total'],
 ]);
+
+it('notes the point values it could not use as sent, by their place, and nothing for the golden map', function (): void {
+    $seen = Coercions::collect();
+    $map = MapPointsTranslator::translate(['points' => [
+        legacyPoint(),
+        legacyPoint(['id' => 100002, 'tone' => 'cheap', 'label' => ['$600'], 'priced' => 'no', 'usd' => '600']),
+        legacyPoint(['id' => 100003, 'lat' => '41.3']),
+    ]], LegacyFixtures::NATIVE_FLOOR, $seen);
+
+    expect($map['points'][1])->toMatchArray(['tone' => null, 'label' => '', 'priced' => true, 'usd' => null])
+        ->and(count($map['points']))->toBe(2)
+        ->and($seen->keys())->toBe(['points.1.priced', 'points.1.tone', 'points.1.label', 'points.1.usd', 'points.2.lat']);
+
+    $golden = Coercions::collect();
+    MapPointsTranslator::translate(LegacyFixtures::golden('map'), LegacyFixtures::NATIVE_FLOOR, $golden);
+    expect($golden->keys())->toBe([]);
+});

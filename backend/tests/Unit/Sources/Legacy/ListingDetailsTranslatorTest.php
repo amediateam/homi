@@ -4,6 +4,7 @@ use App\Enums\ContactMode;
 use App\Enums\OwnerTier;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Services\Sources\Data\ListingDetails;
+use App\Services\Sources\Legacy\Translators\Coercions;
 use Tests\Support\LegacyFixtures;
 
 /**
@@ -84,7 +85,14 @@ it('keeps an https contact link without a phone number in it, and drops any othe
 })->with([
     'a chat link' => ['https://t.me/stub_author_6', 'https://t.me/stub_author_6'],
     'a whatsapp link with the number' => ['https://wa.me/998001234567', null],
+    'a whatsapp link with separators' => ['https://wa.me/+998-00-765-43-21', null],
+    'a whatsapp link without digits' => ['https://wa.me/', null],
+    'an encoded whatsapp send link' => ['https://api.whatsapp.com/send?phone=%2B998%2000%20765%2043%2021', null],
     'a telegram phone link' => ['https://t.me/+998001234567', null],
+    'an encoded telegram phone link' => ['https://t.me/+998%2000%20765%2043%2021', null],
+    'a telegram phone link with an encoded plus' => ['https://t.me/%2B998007654321', null],
+    'nine digits with separators on any host' => ['https://example.invalid/agent?tel=00.765.43.21', null],
+    'a post link with digits in the channel and the post' => ['https://t.me/chan_2024/1234567', 'https://t.me/chan_2024/1234567'],
     'tel:' => ['tel:+998001234567', null],
     'plain http' => ['http://t.me/stub_author_6', null],
     'null' => [null, null],
@@ -199,10 +207,66 @@ it('refuses a card that does not fit, naming the key', function (array $override
     'photos not a list' => [['photos' => 'x'], 'photos'],
     'facts null' => [['facts' => null], 'facts'],
     'sources not a list' => [['sources' => ['a' => 1]], 'sources'],
-    'a source not an object' => [['sources' => ['x']], 'sources.0'],
-    'a source without a url' => [['sources' => [['handle' => 'stub_channel_a']]], 'url'],
-    'a fact without a label' => [['facts' => [['key' => 'rooms', 'value' => '2']]], 'label'],
-    'history not a list' => [['history' => 'x'], 'history'],
-    'an event without at' => [['history' => [['kind' => 'published']]], 'at'],
-    'author not an object' => [['author' => 'Иван'], 'author'],
 ]);
+
+it('leaves out a part that does not fit and notes it under its place, never failing the card', function (array $overrides, string $field, mixed $kept, array $noted): void {
+    $seen = Coercions::collect();
+    $card = LegacyFixtures::detailsTranslator()->translate(legacyCard(overrides: $overrides), $seen);
+
+    expect(data_get($card, $field))->toBe($kept)
+        ->and($seen->keys())->toBe($noted);
+})->with([
+    'a source not an object' => [['sources' => ['x', ['handle' => 'stub_channel_a', 'url' => 'https://t.me/stub_channel_a/4001']]], 'sources.0.handle', 'stub_channel_a', ['sources.0']],
+    'a source without a url' => [['sources' => [['handle' => 'stub_channel_a']]], 'sources', [], ['sources.0.url']],
+    'a fact without a label' => [['facts' => [['key' => 'rooms', 'value' => '2'], ['key' => 'area', 'label' => 'Площадь', 'value' => '54 м²']]], 'facts', [['key' => 'area', 'label' => 'Площадь', 'value' => '54 м²']], ['facts.0.label']],
+    'a fact not an object' => [['facts' => ['Комнат: 2']], 'facts', [], ['facts.0']],
+    'history not a list' => [['history' => 'x'], 'price_history', [], ['history']],
+    'an event without at' => [['history' => [['kind' => 'published'], ['at' => '2026-11-10T07:00:00+00:00', 'kind' => 'published']]], 'price_history.0.at', '2026-11-10T07:00:00+00:00', ['history.0.at']],
+    'author not an object' => [['author' => 'Иван'], 'author', null, ['author']],
+    'author without a label' => [['author' => ['kind' => 'phone', 'count' => 1]], 'author', null, ['author.label']],
+    'a negative stat' => [['stats' => ['days_listed' => -1, 'publications' => 2, 'channels' => 2, 'views' => 41]], 'stats', ['days_listed' => 0, 'publications' => 2, 'channels' => 2, 'views' => 41], ['stats.days_listed']],
+    'stats not an object' => [['stats' => 7], 'stats.days_listed', 0, ['stats']],
+    'a place without a name' => [['nearby' => [['kind' => 'park', 'km' => 0.4]]], 'nearby', [], ['nearby.0.name']],
+    'a place of another kind' => [['nearby' => [['kind' => 'metro', 'name' => 'Минор', 'km' => 0.7]]], 'nearby', [], ['nearby.0.kind']],
+    'an offer without a text' => [['offers' => [['url' => 'https://t.me/stub_author_6']]], 'offers', [], ['offers.0.text']],
+    'an unknown contact mode' => [['contact_mode' => 'private'], 'contact.mode', null, ['contact_mode']],
+    'a flag of another type' => [['post_deleted' => 'yes'], 'original.deleted', false, ['post_deleted']],
+]);
+
+it('notes nothing for the golden cards', function (string $fixture): void {
+    $seen = Coercions::collect();
+    LegacyFixtures::detailsTranslator()->translate(LegacyFixtures::golden($fixture), $seen);
+
+    expect($seen->keys())->toBe([]);
+})->with(['listing.rent_apartment', 'listing.daily', 'listing.sale_house', 'listing.commercial', 'listing.land', 'listing.merged', 'listing.no_phone', 'listing.minimal']);
+
+it('masks a number in the owner label, in the translator and in the data object', function (): void {
+    $card = translatedCard(['owner' => 'Риелтор +998 00 765 43 21']);
+
+    expect($card['owner_label'])->toBe('Риелтор +998 ** *** ** 21')
+        ->and(ListingDetails::fromArray([...$card, 'owner_label' => 'Риелтор 998007654321'])->ownerLabel)->toBe('Риелтор +998 ** *** ** 21');
+});
+
+it('drops an author link that could carry a phone number from the original, the sources and the history, keeping plain post links', function (): void {
+    $phone = 'https://wa.me/+998-00-765-43-21';
+    $card = translatedCard([
+        'original_url' => $phone,
+        'sources' => [['handle' => 'agent', 'url' => $phone], ['handle' => 'stub_channel_b', 'url' => 'https://t.me/stub_channel_b/9']],
+        'history' => [['at' => '2026-11-10T07:00:00+00:00', 'channel' => 'stub_channel_a', 'url' => 'https://t.me/%2B998007654321', 'kind' => 'published', 'price_usd' => 648, 'change_pct' => null]],
+        'offers' => [['text' => 'Торг', 'url' => 'https://api.whatsapp.com/send?phone=%2B998%2000%20765%2043%2021']],
+    ]);
+
+    expect($card['original']['url'])->toBeNull()
+        ->and($card['sources'])->toBe([['handle' => 'stub_channel_b', 'url' => 'https://t.me/stub_channel_b/9']])
+        ->and($card['source_ref'])->toBe(['channel' => 'stub_channel_b', 'post_id' => 9])
+        ->and($card['price_history'][0]['url'])->toBeNull()
+        ->and($card['offers'][0]['url'])->toBeNull()
+        ->and(json_encode($card))->not->toContain('765');
+});
+
+it('counts the card\'s photos at most as the addresses it keeps, and 0 without a media base', function (): void {
+    $legacy = legacyCard(overrides: ['photos_count' => 8, 'photos' => [...array_slice(legacyCard()['photos'], 0, 5), 'https://elsewhere.invalid/x.jpg']]);
+
+    expect(LegacyFixtures::detailsTranslator()->translate($legacy)['photos']['count'])->toBe(5)
+        ->and(LegacyFixtures::detailsTranslator('')->translate(legacyCard())['photos'])->toBe(['preview' => [], 'count' => 0, 'cover' => null, 'items' => []]);
+});

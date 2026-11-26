@@ -2,6 +2,7 @@
 
 use App\Exceptions\Sources\LegacyContractError;
 use App\Services\Sources\Data\FlowEstimate;
+use App\Services\Sources\Legacy\Translators\Coercions;
 use App\Services\Sources\Legacy\Translators\FlowTranslator;
 use Tests\Support\FilterArrays;
 use Tests\Support\LegacyFixtures;
@@ -43,17 +44,48 @@ it('refuses what the contract requires, naming the key', function (array $answer
 
     throw new LogicException("{$key} was accepted.");
 })->with(function (): array {
-    $option = LegacyFixtures::golden('flow.options')['options'][0];
-    unset($option['label']);
-
     return [
         'week missing' => [['days' => 7], 'week'],
         'week negative' => [['week' => -1, 'days' => 7], 'week'],
         'days missing' => [['week' => 1], 'days'],
         'days a fraction' => [['week' => 1, 'days' => 6.5], 'days'],
-        'options not a list' => [['week' => 1, 'days' => 7, 'options' => 'none'], 'options'],
-        'an option without a label' => [['week' => 1, 'days' => 7, 'options' => [$option]], 'options.0.label'],
-        'an option without filters' => [['week' => 1, 'days' => 7, 'options' => [['code' => 'x', 'label' => 'x', 'rate' => 'x']]], 'options.0.filters'],
-        'an option with a bad deal' => [['week' => 1, 'days' => 7, 'options' => [['code' => 'x', 'label' => 'x', 'rate' => 'x', 'filters' => ['deal' => 'rent']]]], 'options.0.filters.deal'],
     ];
+});
+
+it('leaves out an option that does not fit and notes it under its place, keeping the others', function (mixed $options, array $noted): void {
+    $good = LegacyFixtures::golden('flow.options')['options'][1];
+    $seen = Coercions::collect();
+    $flow = FlowTranslator::translate(['week' => 1, 'days' => 7, 'options' => is_array($options) ? [...$options, $good] : $options], $seen);
+
+    expect(array_column($flow['options'], 'code'))->toBe(is_array($options) ? [$good['code']] : [])
+        ->and($seen->keys())->toBe($noted);
+})->with(function (): array {
+    $option = LegacyFixtures::golden('flow.options')['options'][0];
+    $withoutLabel = $option;
+    unset($withoutLabel['label']);
+
+    return [
+        'options not a list' => ['none', ['options']],
+        'an option without a label' => [[$withoutLabel], ['options.0.label']],
+        'an option without filters' => [[['code' => 'x', 'label' => 'x', 'rate' => 'x']], ['options.0.filters']],
+        'an option with a bad deal' => [[['code' => 'x', 'label' => 'x', 'rate' => 'x', 'filters' => ['deal' => 'rent']]], ['options.0.filters.deal']],
+        'an option with a tenant legacy does not have' => [[[...$option, 'filters' => [...$option['filters'], 'tenant' => 'students']]], ['options.0.filters.tenant']],
+        'an option that is not an object' => [['x'], ['options.0']],
+    ];
+});
+
+it('notes nothing for the golden flows', function (string $fixture): void {
+    $seen = Coercions::collect();
+    FlowTranslator::translate(LegacyFixtures::golden($fixture), $seen);
+
+    expect($seen->keys())->toBe([]);
+})->with(['flow', 'flow.options']);
+
+it('notes an option count of another type, and rounds a fraction with a note', function (): void {
+    $option = LegacyFixtures::golden('flow.options')['options'][1];
+    $seen = Coercions::collect();
+    $flow = FlowTranslator::translate(['week' => 1, 'days' => 7, 'options' => [[...$option, 'count' => '12'], [...$option, 'count' => 11.6]]], $seen);
+
+    expect(array_column($flow['options'], 'count'))->toBe([null, 12])
+        ->and($seen->keys())->toBe(['options.0.count', 'options.1.count']);
 });

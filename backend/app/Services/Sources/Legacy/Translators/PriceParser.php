@@ -56,6 +56,24 @@ final class PriceParser
         ];
     }
 
+    /**
+     * The USD amount of a key per `usd()`; a value present that is not one (a string, a negative amount) is noted. A
+     * fraction is rounded without a note: legacy computes USD amounts, so a fraction is a valid value there.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    public static function usdOf(array $data, string $key, ?Coercions $seen = null): ?int
+    {
+        $value = $data[$key] ?? null;
+        $usd = self::usd($value);
+
+        if ($value !== null && $usd === null) {
+            $seen?->note($key);
+        }
+
+        return $usd;
+    }
+
     /** A JSON number ≥ 0 as whole USD; anything else (a string, a negative amount) is `null`. */
     public static function usd(mixed $usd): ?int
     {

@@ -16,7 +16,9 @@ use InvalidArgumentException;
  * LB-API-008), whose whitespace is collapsed as `MapPoint` does; a `tone` outside `MapPoint::TONES` is `null`;
  * `priced` is `false` only when legacy says so; `usd` a number or `null`. `with_point` is legacy's (since
  * `index-CIa0Ldj2.js`), else the number of points legacy sent; `total` is legacy's, else `with_point`. A `with_point`
- * below the points kept, or a `total` below `with_point`, is a contract error.
+ * below the points kept, or a `total` below `with_point`, is a contract error, as is a point that is not an object or
+ * has no valid `id` (`points.3.id`). A coordinate, label, tone, `priced` or `usd` of another type is read as its
+ * empty value (a coordinate drops the point) and noted in the answer's `Coercions` (`points.3.tone`).
  */
 final class MapPointsTranslator
 {
@@ -29,9 +31,9 @@ final class MapPointsTranslator
      *
      * @throws LegacyContractError
      */
-    public static function toData(array $answer, int $nativeFloor): MapPoints
+    public static function toData(array $answer, int $nativeFloor, ?Coercions $seen = null): MapPoints
     {
-        $map = self::translate($answer, $nativeFloor);
+        $map = self::translate($answer, $nativeFloor, $seen);
 
         return new MapPoints(array_map(MapPoint::fromArray(...), $map['points']), $map['total'], $map['with_point']);
     }
@@ -42,11 +44,12 @@ final class MapPointsTranslator
      * @param  array<array-key, mixed>  $answer
      * @param  int  $nativeFloor  the first number of HOMI's own listings (`ListingNumber::floor()`); a legacy id at or
      *                            above it would collide with one
+     * @param  Coercions|null  $seen  collects the keys whose values could not be used as sent
      * @return array{points: list<array<string, mixed>>, total: int, with_point: int}
      *
      * @throws LegacyContractError
      */
-    public static function translate(array $answer, int $nativeFloor): array
+    public static function translate(array $answer, int $nativeFloor, ?Coercions $seen = null): array
     {
         $sent = LegacyValue::requiredList($answer, 'points', self::PATH);
         $points = [];
@@ -56,23 +59,39 @@ final class MapPointsTranslator
                 throw LegacyContractError::key(self::PATH, "points.{$index}", 'not an object');
             }
 
-            $lat = LegacyValue::number($point, 'lat');
-            $lon = LegacyValue::number($point, 'lon');
+            $at = $seen?->at("points.{$index}.");
+            $lat = LegacyValue::number($point, 'lat', $at);
+            $lon = LegacyValue::number($point, 'lon', $at);
 
             if ($lat === null || $lon === null) {
                 continue;
             }
 
-            $points[] = [
+            $tone = $point['tone'] ?? null;
+            $priced = LegacyValue::bool($point, 'priced', $at);
+
+            if ($tone !== null && ! in_array($tone, MapPoint::TONES, true)) {
+                $at?->note('tone');
+            }
+
+            $entry = [
                 'number' => self::number($point, $index, $nativeFloor),
                 'origin' => ListingOrigin::Legacy->value,
                 'lat' => $lat,
                 'lon' => $lon,
-                'label' => self::label($point['label'] ?? null),
-                'tone' => in_array($point['tone'] ?? null, MapPoint::TONES, true) ? $point['tone'] : null,
-                'priced' => ($point['priced'] ?? null) !== false,
-                'usd' => PriceParser::usd($point['usd'] ?? null),
+                'label' => self::label($point['label'] ?? null, $at),
+                'tone' => in_array($tone, MapPoint::TONES, true) ? $tone : null,
+                'priced' => $priced !== false,
+                'usd' => PriceParser::usdOf($point, 'usd', $at),
             ];
+
+            try {
+                MapPoint::fromArray($entry);
+            } catch (InvalidArgumentException $invalid) {
+                throw LegacyValue::refused(self::PATH, $invalid, "points.{$index}.");
+            }
+
+            $points[] = $entry;
         }
 
         $withPoint = self::optionalCount($answer, 'with_point') ?? count($sent);
@@ -84,12 +103,6 @@ final class MapPointsTranslator
 
         if ($total < $withPoint) {
             throw LegacyContractError::key(self::PATH, 'total', 'below with_point');
-        }
-
-        try {
-            array_map(MapPoint::fromArray(...), $points);
-        } catch (InvalidArgumentException $invalid) {
-            throw LegacyValue::refused(self::PATH, $invalid);
         }
 
         return ['points' => $points, 'total' => $total, 'with_point' => $withPoint];
@@ -108,9 +121,13 @@ final class MapPointsTranslator
         return $id < $nativeFloor ? $id : throw LegacyContractError::key(self::PATH, "points.{$index}.id", 'at or above the native number floor');
     }
 
-    /** Plain text, as `MapPoint` keeps it: no `<` or `&`, whitespace collapsed. */
-    private static function label(mixed $label): string
+    /** Plain text, as `MapPoint` keeps it: no `<` or `&`, whitespace collapsed; a label of another type is `''`, noted. */
+    private static function label(mixed $label, ?Coercions $seen): string
     {
+        if ($label !== null && ! is_string($label) && ! is_int($label) && ! is_float($label)) {
+            $seen?->note('label');
+        }
+
         $text = is_string($label) ? $label : (is_int($label) || is_float($label) ? (string) $label : '');
 
         return trim((string) preg_replace('/\s+/u', ' ', str_replace(['<', '&'], '', $text)));
