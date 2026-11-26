@@ -5,6 +5,7 @@ use App\Services\Sources\Legacy\LegacyReferenceSource;
 use App\Services\Sources\SourceContext;
 use Illuminate\Http\Client\Request;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
@@ -196,4 +197,58 @@ it('logs a translation that does not fit the contract once, at error, with key n
 
     expect(fn () => legacyReference()->reference(SourceContext::system()))->toThrow(SourceUnavailable::class);
     expect($errors->getArrayCopy())->toBe([['path' => '/api/meta', 'problem' => 'missing, not a number or not above zero', 'keys' => ['usd_uzs']]]);
+});
+
+it('does not ask legacy again for a minute after a failed refresh, with or without a last good copy', function (bool $withLastGood): void {
+    legacyOverHttp();
+
+    if ($withLastGood) {
+        legacyReference()->reference(SourceContext::system());
+        $this->travel(11)->minutes();
+    }
+
+    $GLOBALS['legacyFailWith'] = 500;
+    $before = Http::recorded()->count();
+    $attempt = function (): void {
+        try {
+            legacyReference()->reference(SourceContext::system());
+        } catch (SourceUnavailable) {
+            // Without a last good copy the failure is the answer.
+        }
+    };
+
+    $attempt();
+    $afterFirst = Http::recorded()->count();
+    $attempt();
+    $attempt();
+    expect(Http::recorded()->count())->toBe($afterFirst)
+        ->and($afterFirst)->toBeGreaterThan($before);
+
+    $this->travel(61)->seconds();
+    $attempt();
+    expect(Http::recorded()->count())->toBeGreaterThan($afterFirst);
+})->with(['with a last good copy' => true, 'without one' => false]);
+
+it('lets one process refresh a key while the others serve the last good copy', function (): void {
+    legacyOverHttp();
+    legacyReference()->reference(SourceContext::system());
+    $this->travel(11)->minutes();
+    $refreshing = Cache::lock('legacy:v1:reference:ru:refresh', 30);
+    expect($refreshing->get())->toBeTrue();
+
+    legacyReference()->reference(SourceContext::system());
+
+    Http::assertSentCount(1);
+    $refreshing->release();
+    legacyReference()->reference(SourceContext::system());
+    Http::assertSentCount(2);
+});
+
+it('asks legacy for the directories in USD whatever the caller’s currency', function (): void {
+    legacyOverHttp();
+    config(['legacy.currency.via' => 'header', 'legacy.currency.name' => 'X-Currency']);
+
+    legacyReference()->reference(new SourceContext('ru', 'UZS'));
+
+    Http::assertSent(fn (Request $request): bool => $request->header('X-Currency') === ['USD']);
 });

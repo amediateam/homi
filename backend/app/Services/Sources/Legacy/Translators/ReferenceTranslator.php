@@ -19,8 +19,9 @@ use InvalidArgumentException;
  * - `cities[]`: `center` `[lat, lon]` → an object, `zoom` 12 when absent, `is_region` = zoom below 11, `has_metro` =
  *   `metro === true`, `has_median` = `median !== false`, `districts` and `zones` `[]` when absent. Without cities,
  *   one city `tashkent` from the top-level `districts` and `zones` (the legacy client's rule).
- * - `renovations` and `price_presets` keep the three deals, a missing one as `[]`; any other key (legacy's `owner`)
- *   is dropped — the cabinet's renovations are HOMI's configuration (WP-80).
+ * - `renovations` and `price_presets` keep the three deals, a missing or `null` one as `[]`; any other key (legacy's
+ *   `owner`) is dropped — the cabinet's renovations are HOMI's configuration (WP-80). A whole number sent as a float
+ *   (a zoom, a price preset) is read as the whole number. `appliances` is one list, as in v1.
  * - Ignored: the user part (`locale`, `currency`, `theme`, `city`, `analytics`, `*_chosen`), `bot_username`,
  *   `max_subscriptions`. Required: `usd_uzs`, `renovations`, `appliances`, `price_presets`, and `cities` or
  *   `districts`; extra keys are ignored.
@@ -173,7 +174,7 @@ final class ReferenceTranslator
         $translated = [];
 
         foreach ($cities as $index => $city) {
-            $zoom = $city['zoom'] ?? self::DEFAULT_ZOOM;
+            $zoom = Whole::of($city['zoom'] ?? self::DEFAULT_ZOOM);
 
             if (! is_int($zoom)) {
                 throw LegacyContractError::key(self::PATH, "cities.{$index}.zoom", 'not a whole number');
@@ -233,7 +234,7 @@ final class ReferenceTranslator
         $values = [];
 
         foreach (Deal::values() as $deal) {
-            $values[$deal] = $object[$deal] ?? [];
+            $values[$deal] = Whole::of($object[$deal] ?? []);
         }
 
         return $values;

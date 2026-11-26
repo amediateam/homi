@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\DashboardAccess;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Laravel\Telescope\EntryType;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\TelescopeApplicationServiceProvider;
@@ -23,6 +24,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
+            if (self::isLegacyCall($entry)) {
+                return false;
+            }
+
             return $isLocal ||
                    (bool) config('telescope.record_all') ||
                    $entry->isReportableException() ||
@@ -31,6 +36,23 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
+    }
+
+    /**
+     * An outgoing request to the legacy API (WP-41): never kept, in any environment. Its response bodies will carry
+     * phone numbers (the card and the contact of WP-42 and WP-43), and the watcher's `ignore_hosts` option does not
+     * cover a failed connection, whose entry keeps the request's payload.
+     */
+    private static function isLegacyCall(IncomingEntry $entry): bool
+    {
+        if ($entry->type !== EntryType::CLIENT_REQUEST) {
+            return false;
+        }
+
+        $uri = $entry->content['uri'] ?? null;
+        $legacy = parse_url(config()->string('legacy.base_url'), PHP_URL_HOST);
+
+        return is_string($uri) && is_string($legacy) && parse_url($uri, PHP_URL_HOST) === $legacy;
     }
 
     /**

@@ -13,9 +13,11 @@ use App\Services\Sources\Legacy\Translators\CityStatsTranslator;
 use App\Services\Sources\Legacy\Translators\ReferenceTranslator;
 use App\Services\Sources\SourceContext;
 use Closure;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use LogicException;
 
 /**
  * The `legacy` driver of the reference capability (WP-41): `GET /reference` from legacy's `GET /api/meta` and
@@ -26,7 +28,8 @@ use Illuminate\Support\Facades\Log;
  * `legacy.cache.cities`. Each successful answer is also kept as the last good copy for `legacy.cache.last_good`
  * (RK-25): while legacy fails, that copy is served with a `warning`, so an outage does not empty the directories.
  * Without a copy every failure is `503 source_unavailable` — also a pause or a daily limit of legacy, which are not
- * outcomes of these public methods. The `v1` in the keys changes when the cached shape does.
+ * outcomes of these public methods. One process at a time refreshes a key, and a failed refresh is not tried again
+ * for `legacy.cache.after_failure` seconds (see `cached()`). The `v1` in the keys changes when the cached shape does.
  */
 final class LegacyReferenceSource implements ReferenceSource
 {
@@ -46,7 +49,7 @@ final class LegacyReferenceSource implements ReferenceSource
     {
         $cities = $this->cached('cities', Config::integer('legacy.cache.cities'), function () use ($context): array {
             $codes = array_map(fn (CityData $city): string => $city->code, $this->reference($context)->cities);
-            $answer = $this->client->get(CityStatsTranslator::PATH, [], LegacyCall::for($context));
+            $answer = $this->client->get(CityStatsTranslator::PATH, [], self::call($context));
 
             return self::translated(fn (): array => CityStatsTranslator::translate($answer, $codes));
         });
@@ -62,7 +65,7 @@ final class LegacyReferenceSource implements ReferenceSource
             "reference:{$context->locale}",
             Config::integer('legacy.cache.reference'),
             function () use ($context): array {
-                $answer = $this->client->get(ReferenceTranslator::PATH, [], LegacyCall::for($context));
+                $answer = $this->client->get(ReferenceTranslator::PATH, [], self::call($context));
 
                 return self::translated(fn (): array => ReferenceTranslator::translate($answer, $context->locale));
             },
@@ -70,7 +73,21 @@ final class LegacyReferenceSource implements ReferenceSource
     }
 
     /**
+     * The call of a directory read: the request's language, always `USD` (the directories do not depend on the
+     * caller's currency, and the cache keys carry the language only).
+     */
+    private static function call(SourceContext $context): LegacyCall
+    {
+        return new LegacyCall($context->locale);
+    }
+
+    /**
      * The fresh copy, else a new answer (kept fresh and as the last good copy), else the last good copy.
+     *
+     * These are public methods, so an anonymous client must not be able to make them call legacy at will: one process
+     * at a time refreshes a key (a cache lock; the others serve the last good copy while one exists), and after a
+     * failed refresh nobody tries again for `legacy.cache.after_failure` seconds — the last good copy is served as
+     * fresh meanwhile, and without one the key answers `503` at once.
      *
      * @param  Closure(): array<array-key, mixed>  $fetch
      * @return array<array-key, mixed>
@@ -86,10 +103,27 @@ final class LegacyReferenceSource implements ReferenceSource
             return $fresh;
         }
 
+        if ($this->cache->has("{$key}:down")) {
+            throw new SourceUnavailable;
+        }
+
+        $lock = $this->lockProvider()->lock("{$key}:refresh", Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout') + 5);
+
+        if (! $lock->get()) {
+            $last = $this->cache->get("{$key}:last");
+
+            // Another process is refreshing; without a last good copy this one asks legacy too (a cold start).
+            if (is_array($last)) {
+                return $last;
+            }
+        }
+
         try {
             $value = $fetch();
         } catch (ApiException $failure) {
-            return $this->lastGood($key, $failure);
+            return $this->afterFailure($key, $failure);
+        } finally {
+            $lock->release();
         }
 
         $this->cache->put($key, $value, $seconds);
@@ -120,20 +154,34 @@ final class LegacyReferenceSource implements ReferenceSource
     }
 
     /**
+     * A failed refresh: the last good copy, kept as fresh for `after_failure` seconds; without one, the key answers
+     * `503` for that long.
+     *
      * @return array<array-key, mixed>
      *
      * @throws SourceUnavailable
      */
-    private function lastGood(string $key, ApiException $failure): array
+    private function afterFailure(string $key, ApiException $failure): array
     {
+        $pause = Config::integer('legacy.cache.after_failure');
         $last = $this->cache->get("{$key}:last");
 
         if (is_array($last)) {
+            $this->cache->put($key, $last, $pause);
             Log::warning('Serving the last good legacy answer.', ['key' => $key, 'because' => $failure->errorCode]);
 
             return $last;
         }
 
-        throw $failure instanceof SourceUnavailable ? $failure : new SourceUnavailable('The legacy reference data is unavailable.');
+        $this->cache->put("{$key}:down", 1, $pause);
+
+        throw $failure instanceof SourceUnavailable ? $failure : new SourceUnavailable;
+    }
+
+    private function lockProvider(): LockProvider
+    {
+        $store = $this->cache->getStore();
+
+        return $store instanceof LockProvider ? $store : throw new LogicException('The cache store of the legacy source cannot lock.');
     }
 }

@@ -9,7 +9,11 @@ use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Services\Sources\Legacy\LegacyCall;
 use App\Services\Sources\Legacy\LegacyClient;
+use Carbon\CarbonImmutable;
+use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -241,6 +245,7 @@ it('passes the daily limit on with the seconds of Retry-After, or an hour withou
     'an HTTP date' => [fn (): array => ['Retry-After' => now()->addSeconds(90)->format(DATE_RFC7231)], 90],
     'none' => [[], 3600],
     'garbage' => [['Retry-After' => 'soon'], 3600],
+    'more than a day' => [['Retry-After' => '99999999999999999999'], 86400],
 ]);
 
 it('logs a refused key as critical, a pause and the daily limit as warnings, and a contract error as error', function (int $status, array $body, string $level, string $message): void {
@@ -312,4 +317,104 @@ it('uses the fixtures with a placeholder key in fake mode, and sends nothing to 
         ->and(legacyFailure(fn () => legacyClient()->get('/api/unknown')))->toBeInstanceOf(SourceNotFound::class);
     Http::assertNothingSent();
     expect(Cache::get('legacy:breaker:open_until'))->toBeNull();
+});
+
+it('refuses a path that is not relative to the base URL, so the key never goes to another host', function (string $path): void {
+    Http::fake();
+
+    expect(fn () => legacyClient()->get($path))->toThrow(LogicException::class);
+    Http::assertNothingSent();
+})->with(['https://elsewhere.test/api/meta', '//elsewhere.test/api/meta', 'api/meta']);
+
+it('sends the key only to an https base URL outside local and testing', function (): void {
+    config(['legacy.base_url' => 'http://legacy.test']);
+    Http::fake();
+    $this->app->instance('env', 'staging');
+
+    $logs = legacyLogs(fn () => legacyClient()->get('/api/cities'));
+
+    $this->app->instance('env', 'testing');
+    Http::assertNothingSent();
+    expect(collect($logs)->firstWhere('message', 'The legacy base URL is not https; the service key is not sent.')['level'] ?? null)->toBe('critical');
+});
+
+it('refuses a key, a prefix or a header name a header cannot carry, before the HTTP client sees it', function (array $settings): void {
+    config($settings);
+    Http::fake();
+
+    $logs = legacyLogs(fn () => legacyClient()->get('/api/cities'));
+
+    Http::assertNothingSent();
+    expect(collect($logs)->pluck('level')->all())->toBe(['critical'])
+        ->and(json_encode($logs, JSON_THROW_ON_ERROR))->not->toContain('line-break');
+})->with([
+    'a key with a line break' => [['legacy.service_key' => "svc-key\r\nline-break"]],
+    'a key ending in a line break' => [['legacy.service_key' => "svc-key-line-break\n"]],
+    'a key with a space' => [['legacy.service_key' => 'svc key line-break']],
+    'a prefix with a line break' => [['legacy.auth.prefix' => "Bearer\nline-break "]],
+    'a header name with a space' => [['legacy.auth.header' => 'X Service Key']],
+]);
+
+it('treats any transport error of the HTTP client like a timeout', function (): void {
+    Http::fake(['legacy.test/*' => fn () => throw new TransferException('transfer +998901234567', new GuzzleHttp\Psr7\Request('GET', 'https://legacy.test/api/cities'))]);
+
+    $logs = legacyLogs(fn () => legacyClient()->get('/api/cities'));
+
+    Http::assertSentCount(2);
+    expect(collect($logs)->firstWhere('message', 'A legacy call failed in transit.'))->not->toBeNull()
+        ->and(json_encode($logs, JSON_THROW_ON_ERROR))->not->toContain('+998901234567');
+});
+
+it('answers the generic 503 message, naming neither the key nor legacy', function (callable $answer): void {
+    Http::fake(['legacy.test/*' => $answer]);
+
+    expect(legacyFailure(fn () => legacyClient()->get('/api/listings/5'))->getMessage())->toBe('The data source is unavailable.');
+})->with([
+    'a refused key' => [fn () => Http::response([], 401)],
+    'a server error' => [fn () => Http::response([], 500)],
+    'a contract error' => [fn () => Http::response('', 200)],
+]);
+
+it('treats a transfer that broke after the headers as a failure in transit, never passing its body on', function (): void {
+    $broken = new RequestException(new Illuminate\Http\Client\Response(new Response(500, [], '{"detail":"call +998901234567"}')));
+    Http::fake(['legacy.test/*' => fn () => throw $broken]);
+
+    $failure = null;
+    $logs = legacyLogs(function () use (&$failure): void {
+        $failure = legacyFailure(fn () => legacyClient()->get('/api/cities'));
+    });
+
+    expect($failure)->toBeInstanceOf(SourceUnavailable::class)
+        ->and($failure?->getPrevious())->toBeNull()
+        ->and(json_encode([$logs, (string) $failure], JSON_THROW_ON_ERROR))->not->toContain('+998901234567')
+        ->and(Cache::get('legacy:breaker:failures'))->toBe(1);
+    // A fake that throws records no request; the one pause shows the read was tried twice.
+    Sleep::assertSleptTimes(1);
+});
+
+it('keeps the first failure as the outcome when the limiter has no place for the retry', function (): void {
+    config(['legacy.rate.per_second' => 1]);
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-11-26 12:00:00.900'));
+    Http::fake(['legacy.test/*' => Http::response([], 503)]);
+
+    $logs = legacyLogs(fn () => legacyClient()->get('/api/cities'));
+
+    Http::assertSentCount(1);
+    expect(collect($logs)->pluck('message'))->toContain('Legacy answered a server error.')
+        ->and(Cache::get('legacy:breaker:failures'))->toBe(1);
+});
+
+it('tells legacy:ping what the last call ended with', function (): void {
+    Http::fake(['legacy.test/*' => Http::sequence()->push([], 401)->push(['ok' => true])]);
+    $client = legacyClient();
+
+    legacyFailure(fn () => $client->get('/api/cities'));
+    expect($client->lastOutcome())->toBe('HTTP 401');
+
+    $client->get('/api/cities');
+    expect($client->lastOutcome())->toBe('HTTP 200');
+
+    config(['legacy.service_key' => '']);
+    legacyFailure(fn () => $client->get('/api/cities'));
+    expect($client->lastOutcome())->toBe('refused before sending: no service key is configured');
 });

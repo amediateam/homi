@@ -14,7 +14,7 @@ use Illuminate\Support\Sleep;
  * A user's call takes a place in the current second's bucket; when it is full, the call sleeps to the next second
  * and tries that bucket, as long as its total wait stays within `max_wait_ms`; otherwise it fails at once with
  * `SourceUnavailable`, so nothing queues behind legacy. A background call (`LegacyCall::$background`) may fill only
- * `background_share` of a bucket and never waits. `RateLimiter` is not used: it reports availability in whole
+ * `background_share` of a bucket, at least one place, and never waits. `RateLimiter` is not used: it reports availability in whole
  * seconds, and this limiter waits in milliseconds.
  */
 final class LegacyLimiter
@@ -28,7 +28,7 @@ final class LegacyLimiter
     {
         if ($background) {
             if (! $this->takeBackground($this->second())) {
-                throw new SourceUnavailable('The legacy limiter has no place for a background call.');
+                throw new SourceUnavailable;
             }
 
             return;
@@ -46,7 +46,7 @@ final class LegacyLimiter
             $wait = 1000 - $now % 1000;
 
             if ($wait > $budget) {
-                throw new SourceUnavailable('The legacy limiter has no place within the wait a request may spend.');
+                throw new SourceUnavailable;
             }
 
             $budget -= $wait;
@@ -61,7 +61,8 @@ final class LegacyLimiter
 
     private function takeBackground(int $second): bool
     {
-        $share = (int) floor(Config::integer('legacy.rate.per_second') * Config::float('legacy.rate.background_share'));
+        // At least one place, so a low rate does not lock the background callers out.
+        $share = max(1, (int) floor(Config::integer('legacy.rate.per_second') * Config::float('legacy.rate.background_share')));
 
         return $this->count(self::PREFIX.'bg:'.$second) <= $share && $this->take($second);
     }

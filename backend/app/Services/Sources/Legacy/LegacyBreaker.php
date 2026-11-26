@@ -14,11 +14,12 @@ use LogicException;
  * The circuit breaker of the legacy client (`25` §4.5): when legacy keeps failing, calls answer `source_unavailable`
  * at once instead of waiting 15 s each.
  *
- * `legacy.breaker.failures` consecutive failures, each within `window` seconds of the previous one, open it for
+ * `legacy.breaker.failures` consecutive failures within `window` seconds of the first of them open it for
  * `open_for` seconds; a `429` opens it for its `Retry-After`, at most `open_max`. Once that time has passed, one
  * caller, chosen by a cache lock, sends a probe while every other caller still fails at once; the probe's success
- * closes the breaker, its failure opens it again. What counts as a failure is the client's decision: an answered call
- * that is not one (a `2xx`, a `404`, a contract error, a pause, the daily limit) resets the count. State changes are
+ * closes the breaker, its failure opens it again; only the probe closes it, so a call that was already under way when
+ * it opened cannot. What counts as a failure is the client's decision: an answered call that is not one (a `2xx`, a
+ * `404`, a contract error, a pause, the daily limit) resets the count. State changes are
  * logged at `warning`. The state lives in the cache, so every PHP process shares it.
  */
 final class LegacyBreaker
@@ -42,36 +43,38 @@ final class LegacyBreaker
      */
     public function admit(): ?Lock
     {
+        // Redis gives a stored number back as a numeric string, the array store as an int.
         $openUntil = $this->cache->get(self::OPEN_UNTIL);
 
-        if (! is_int($openUntil)) {
+        if (! is_numeric($openUntil)) {
             return null;
         }
 
-        if (now()->getTimestamp() < $openUntil) {
-            throw new SourceUnavailable('The legacy breaker is open.');
+        if (now()->getTimestamp() < (int) $openUntil) {
+            throw new SourceUnavailable;
         }
 
-        $lock = $this->lockProvider()->lock(self::PROBE, Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout') + 5);
+        $lock = $this->lockProvider()->lock(self::PROBE, self::probeSeconds());
 
         if (! $lock->get()) {
-            throw new SourceUnavailable('The legacy breaker is open; another call is probing it.');
+            throw new SourceUnavailable;
         }
 
         return $lock;
     }
 
-    /** An answered call that is not a failure: the count starts again and a probing breaker closes. */
+    /** An answered call that is not a failure: the count starts again, and the probe's success closes the breaker. */
     public function succeeded(?Lock $probe): void
     {
         $this->cache->forget(self::FAILURES);
 
-        if ($this->cache->get(self::OPEN_UNTIL) !== null) {
-            $this->cache->forget(self::OPEN_UNTIL);
-            Log::warning('The legacy breaker closed.');
+        if ($probe === null) {
+            return;
         }
 
-        $probe?->release();
+        $this->cache->forget(self::OPEN_UNTIL);
+        Log::warning('The legacy breaker closed.');
+        $probe->release();
     }
 
     /** A failure: counted, and the breaker opens at the threshold or when the probe failed. */
@@ -86,8 +89,6 @@ final class LegacyBreaker
 
         $this->cache->add(self::FAILURES, 0, Config::integer('legacy.breaker.window'));
         $failures = (int) $this->cache->increment(self::FAILURES);
-        // Each failure gives the count another window, so only failures closer together than that add up.
-        $this->cache->put(self::FAILURES, $failures, Config::integer('legacy.breaker.window'));
 
         if ($failures >= Config::integer('legacy.breaker.failures')) {
             $this->open(Config::integer('legacy.breaker.open_for'), "{$failures} failures in a row");
@@ -99,6 +100,15 @@ final class LegacyBreaker
     {
         $this->open(max(1, min($retryAfter, Config::integer('legacy.breaker.open_max'))), 'legacy answered 429');
         $probe?->release();
+    }
+
+    /** How long a probe may take: every attempt with its timeouts, the pause between them and the limiter's waits. */
+    private static function probeSeconds(): int
+    {
+        $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
+        $waits = Config::integer('legacy.retry.sleep_ms') + $attempts * Config::integer('legacy.rate.max_wait_ms');
+
+        return $attempts * (Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout')) + (int) ceil($waits / 1000) + 5;
     }
 
     private function open(int $seconds, string $why): void

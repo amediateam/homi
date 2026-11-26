@@ -19,7 +19,7 @@
 | - `breaker`: `failures` consecutive failures inside `window` seconds open it for `open_for` seconds; a `429` opens
 |   it for its `Retry-After`, at most `open_max`.
 | - `cache`: seconds; `last_good` is how long a last good answer of `GET /reference` and `GET /cities` is served
-|   while legacy fails (RK-25).
+|   while legacy fails (RK-25), and `after_failure` how long a failed refresh of either is not tried again.
 | - `fake`: answer from `resources/fixtures/legacy` instead of the network. On by default in `local` and `testing`,
 |   off elsewhere; `SourceServiceProvider` refuses to boot with it in production.
 |
@@ -81,6 +81,7 @@ return [
         'cities' => 600,
         'card' => 60,
         'last_good' => 86_400,
+        'after_failure' => 60,
     ],
 
     'fake' => $fake === null

@@ -2072,3 +2072,62 @@ Merged (2026-11-26): #124 as `a987ecd`, #125 as `d650cac` («сливай #124 �
 927 + 20 + 10; attempt 1 hit KI-63). The developer's answer during the review, DEC-108: the e2e job also runs on the
 backend's code. Not deployed: the production track's items are in the specification.
 Done since the notes above: the Playwright run on the branch (927 + 20), the security-reviewer pass and the final review rounds.
+
+## AJ. Development track, 2026-11-26 — WP-41
+
+WP-41 (legacy driver core, reference data and cities) on `feat/wp-41-legacy-driver` from `main` (`a93359d`), taken in
+queue order by the first development session (DEC-109). Applied: `config/legacy.php`; `LegacyClient` with
+`LegacyLimiter`, `LegacyBreaker` and the error mapping; `LegacyFakeServer` with the golden fixtures of
+`resources/fixtures/legacy`; `ReferenceTranslator`, `CityStatsTranslator` and `LegacyReferenceSource`, bound as the
+`legacy` driver of the reference capability (the defaults stay `stub`); `legacy:ping`; the production boot check and
+the Telescope mask. The env keys go in a separate PR. Not applied: the key itself and `legacy:ping` on staging (the
+production track, after the operator's answer, WP-02). The integrator's choices — per-second buckets instead of
+`RateLimiter`, a hand-written retry loop, the cached array shape — are in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-115 (2026-11-26):
+- **Assumption.** WP-41 "Fixture server": `LegacyFakeServer::register()` installs an `Http::fake()` handler for
+  `base_url`, tests register it explicitly, and `local` registers it at boot.
+- **What was found.** Laravel matches HTTP fakes in the order they were registered, so a handler registered at boot
+  answers before every later `Http::fake()` sequence of a test; and `legacy.fake` is on by default in `testing`, so a
+  test that forgot to register the handler would send a legacy call to the network (only `Http::preventStrayRequests()`
+  in the file would stop it).
+- **Resolution.** `LegacyFakeServer::factory()` is an HTTP client factory of its own (every request answered from the
+  fixtures, stray requests refused) that `LegacyClient` uses while `legacy.fake` is on; nothing is registered at boot.
+  Corrected in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-116 (2026-11-26):
+- **Assumption.** WP-41: "No key configured → `SourceUnavailable`", and in `local` a developer sets a flag to `legacy`
+  and sees the translated fixtures.
+- **What was found.** Locally the key is blank by design (DEC-33), so the first rule refuses every call before the
+  fixtures could answer.
+- **Resolution.** In fake mode a blank key is replaced by the placeholder `fake-service-key`, sent in the configured
+  header; the fake server answers `401` without it. With fake mode off a blank key still sends nothing.
+
+ASSUMPTION_MISMATCH AM-117 (2026-11-26):
+- **Assumption.** WP-41's configuration table: `env('LEGACY_…', <default>)`, and `.env.example` lists the key names
+  blank.
+- **What was found.** `env()` returns `''` for a blank line, not the default: a copied `.env.example` would have sent
+  an empty auth header name, an empty locale header, a rate of 0, and `LEGACY_FAKE=` would have switched the fixtures
+  off on every machine.
+- **Resolution.** `config/legacy.php` reads every key through a blank-to-default helper; `LEGACY_FAKE` blank keeps the
+  per-environment default; a rate that is not a whole number above 0 is 5.
+
+ASSUMPTION_MISMATCH AM-118 (2026-11-26):
+- **Assumption.** WP-41: `LegacyContractError extends SourceUnavailable`; the public `GET /reference` and `GET /cities`
+  pass on whatever the client maps (`AccessDenied` for a pause, `DailyLimitReached` for the daily limit).
+- **What was found.** `SourceUnavailable` was `final`. The two routes are public and their OpenAPI declares `200` and
+  `429` only; a pause or a daily limit of the service key is no outcome of a directory read.
+- **Resolution.** `SourceUnavailable` is not final. On the two routes every client failure serves the last good copy
+  or answers `503 source_unavailable`.
+
+ASSUMPTION_MISMATCH AM-119 (2026-11-26):
+- **Assumption.** A number put into the cache comes back as the same type (`LegacyBreaker` checked `is_int()` on the
+  open-until time it stored).
+- **What was found.** `RedisStore` stores a numeric value unserialised and returns it as a numeric string; the array
+  store of the tests returns the int. On Redis — staging and production — the breaker never refused a call, and every
+  test was green. Found by both reviews of `6d365a4`.
+- **Resolution.** The breaker reads any numeric value and casts it; a test stores the time as a string. Counters are
+  safe: `increment()` returns an int on both stores. Recorded in the session handoff's gotchas for later packages.
+
+The two reviews of `6d365a4` (code and security) and their fixes are listed in the specification's "As built"
+("Review"); nothing of medium or higher is open. Next ids: AM-120, KI-72, DEC-110.

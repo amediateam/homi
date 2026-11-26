@@ -32,7 +32,7 @@ it('fails with the v1 error of a refused key', function (): void {
     Http::fake(['legacy.test/*' => Http::response(['detail' => 'Unauthorized'], 401)]);
 
     $this->artisan('legacy:ping')
-        ->expectsOutputToContain('503 source_unavailable')
+        ->expectsOutputToContain('HTTP 401, answered as 503 source_unavailable')
         ->doesntExpectOutputToContain('ping-secret-key')
         ->assertFailed();
 });

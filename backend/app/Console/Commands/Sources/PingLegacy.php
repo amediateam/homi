@@ -35,7 +35,8 @@ class PingLegacy extends Command
             $cities = $client->get('/api/cities', [], new LegacyCall);
         } catch (ApiException $failure) {
             $reason = $failure instanceof AccessDenied ? " ({$failure->reason->value})" : '';
-            $this->components->error("Legacy: {$failure->status} {$failure->errorCode}{$reason} after {$this->elapsed($started)} ms.");
+            $outcome = $client->lastOutcome() ?? 'unknown';
+            $this->components->error("Legacy: {$outcome}, answered as {$failure->status} {$failure->errorCode}{$reason}, after {$this->elapsed($started)} ms.");
 
             return self::FAILURE;
         }

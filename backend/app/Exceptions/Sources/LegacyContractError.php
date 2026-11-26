@@ -8,14 +8,15 @@ namespace App\Exceptions\Sources;
  * and in the golden contract test, not in a user's hands (RK-26): the user sees `503 source_unavailable`.
  *
  * It carries the path template and the names of the offending keys, never a value: whoever catches it logs those
- * at `error`. It never chains the HTTP client's exception, whose message quotes the response body.
+ * at `error`. Its message is `SourceUnavailable`'s default, so the public body says nothing about legacy. It never
+ * chains the HTTP client's exception, whose message quotes the response body.
  */
 final class LegacyContractError extends SourceUnavailable
 {
     /** @param  list<string>  $keys  the offending key names, dotted (`cities.0.center`) */
     public function __construct(public readonly string $path, public readonly string $problem, public readonly array $keys = [])
     {
-        parent::__construct('The legacy answer does not fit its contract.');
+        parent::__construct();
     }
 
     /** A required key is missing or has the wrong type. */

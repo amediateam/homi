@@ -60,3 +60,18 @@ it('fails with a contract error on a broken answer', function (array $legacy, st
     'a negative count' => [[['code' => 'x', 'counts' => ['sale' => -1]]], ''],
     'a count as text' => [[['code' => 'x', 'counts' => ['sale' => '5']]], ''],
 ]);
+
+it('reads whole numbers sent as floats and drops null deals', function (): void {
+    $legacy = [['code' => 'x', 'counts' => ['rent_long' => 12.0, 'sale' => null], 'presets' => ['rent_long' => [300.0, 400], 'sale' => null], 'typical' => ['rent_long' => 700.0, 'sale' => null]]];
+
+    expect(CityStatsTranslator::translate($legacy, ['x'])[0])->toBe([
+        'code' => 'x',
+        'counts' => ['rent_long' => 12, 'rent_daily' => 0, 'sale' => 0],
+        'price_presets' => ['rent_long' => [300, 400]],
+        'typical_price' => ['rent_long' => 700],
+    ]);
+});
+
+it('still refuses a count with a fraction', function (): void {
+    expect(fn () => CityStatsTranslator::translate([['code' => 'x', 'counts' => ['sale' => 1.5]]], ['x']))->toThrow(LegacyContractError::class);
+});

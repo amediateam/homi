@@ -137,3 +137,13 @@ it('fails with a contract error when a field has the wrong type deeper down', fu
 
     expect(fn () => ReferenceTranslator::translate($meta, 'ru'))->toThrow(LegacyContractError::class);
 });
+
+it('reads a zoom and price presets sent as whole floats, and a null deal as empty', function (): void {
+    $meta = ['cities' => [['code' => 'x', 'name' => 'X', 'center' => [41.5, 69], 'zoom' => 9.0]], 'price_presets' => ['rent_long' => [300.0, 400], 'sale' => null]] + legacyMeta();
+
+    $data = ReferenceTranslator::translate($meta, 'ru');
+
+    expect($data['cities'][0]['zoom'])->toBe(9)
+        ->and($data['cities'][0]['is_region'])->toBeTrue()
+        ->and($data['price_presets'])->toBe(['rent_long' => [300, 400], 'rent_daily' => [], 'sale' => []]);
+});

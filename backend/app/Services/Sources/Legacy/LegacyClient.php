@@ -9,15 +9,17 @@ use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use Carbon\CarbonImmutable;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
+use LogicException;
 use Throwable;
 
 /**
@@ -52,6 +54,12 @@ final class LegacyClient
 
     /** Statuses after which a read is tried once more. */
     private const array RETRY_STATUSES = [502, 503, 504];
+
+    /** The longest `Retry-After` taken from legacy, in seconds; the breaker caps its own at `open_max`. */
+    private const int RETRY_AFTER_MAX_SECONDS = 86_400;
+
+    /** What the last call of this instance ended with, for `legacy:ping`: never a value, a header or a body. */
+    private ?string $lastOutcome = null;
 
     public function __construct(
         private readonly Factory $http,
@@ -92,49 +100,118 @@ final class LegacyClient
      */
     private function call(string $method, string $path, array $query, array $body, LegacyCall $call): array
     {
+        // An absolute address would take the key to another host: every path is relative to the base URL.
+        if (! str_starts_with($path, '/') || str_starts_with($path, '//')) {
+            throw new LogicException('A legacy path starts with one slash.');
+        }
+
+        $this->lastOutcome = null;
         $key = $this->key();
-        $probe = $this->breaker->admit();
-        $attempts = $method === 'GET' ? 1 + max(0, Config::integer('legacy.retry.times')) : 1;
 
         try {
-            for ($attempt = 1; ; $attempt++) {
-                $this->limiter->acquire($call->background);
-                $response = $this->send($method, $path, $query, $body, $call, $key);
+            $probe = $this->breaker->admit();
+        } catch (SourceUnavailable $open) {
+            $this->lastOutcome = 'refused before sending: the breaker is open';
 
-                if ($attempt >= $attempts || ! $this->retryable($response)) {
-                    break;
-                }
+            throw $open;
+        }
 
-                Sleep::for(Config::integer('legacy.retry.sleep_ms'))->milliseconds();
-            }
-        } catch (SourceUnavailable $limited) {
-            // The limiter refused before an outcome: the probe is given back for another call.
+        try {
+            $response = $this->attempts($method, $path, $query, $body, $call, $key);
+        } catch (Throwable $before) {
+            // No outcome reached the breaker: the probe is given back for another call.
             $probe?->release();
 
-            throw $limited;
+            throw $before;
         }
 
         return $this->settle($response, $method, $path, $probe);
     }
 
     /**
-     * The configured key, the placeholder in fake mode, or `SourceUnavailable`.
+     * The request, and once more for a read that failed in transit. Each attempt takes its own place in the limiter;
+     * when the retry finds none, the first attempt's outcome stands.
+     *
+     * @param  array<string, scalar|list<scalar>|null>  $query
+     * @param  array<string, mixed>  $body
+     *
+     * @throws SourceUnavailable when the limiter refuses the first attempt
+     */
+    private function attempts(string $method, string $path, array $query, array $body, LegacyCall $call, #[\SensitiveParameter] string $key): Response|string
+    {
+        $attempts = $method === 'GET' ? 1 + max(0, Config::integer('legacy.retry.times')) : 1;
+        $response = null;
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            if ($response !== null) {
+                Sleep::for(Config::integer('legacy.retry.sleep_ms'))->milliseconds();
+            }
+
+            try {
+                $this->limiter->acquire($call->background);
+            } catch (SourceUnavailable $limited) {
+                if ($response !== null) {
+                    return $response;
+                }
+
+                $this->lastOutcome = 'refused before sending: no place in the outbound limiter';
+
+                throw $limited;
+            }
+
+            $response = $this->send($method, $path, $query, $body, $call, $key);
+
+            if (! $this->retryable($response)) {
+                return $response;
+            }
+        }
+
+        return $response;
+    }
+
+    /** What the last call of this instance ended with: the HTTP status, a transport failure or the reason it was not sent. */
+    public function lastOutcome(): ?string
+    {
+        return $this->lastOutcome;
+    }
+
+    /**
+     * The configured key, the placeholder in fake mode, or `SourceUnavailable`. Outside `local` and `testing` the key
+     * goes only to an `https` base URL; a key, prefix or header name with a character a header cannot carry is
+     * refused before the HTTP client sees it, so its error, which quotes the value, never happens.
      *
      * @throws SourceUnavailable
      */
     private function key(): string
     {
         $key = Config::string('legacy.service_key');
+        $fake = Config::boolean('legacy.fake');
 
-        if ($key !== '') {
-            return $key;
+        if ($key === '' && ! $fake) {
+            $this->lastOutcome = 'refused before sending: no service key is configured';
+
+            throw new SourceUnavailable;
         }
 
-        if (Config::boolean('legacy.fake')) {
-            return self::FAKE_KEY;
+        if (! $fake && ! str_starts_with(Config::string('legacy.base_url'), 'https://') && ! app()->environment(['local', 'testing'])) {
+            Log::critical('The legacy base URL is not https; the service key is not sent.');
+            $this->lastOutcome = 'refused before sending: the base URL is not https';
+
+            throw new SourceUnavailable;
         }
 
-        throw new SourceUnavailable('No legacy service key is configured.');
+        $key = $key === '' ? self::FAKE_KEY : $key;
+
+        if (preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/D', Config::string('legacy.auth.header')) !== 1
+            || preg_match('/^[\x21-\x7E]+$/D', $key) !== 1
+            || preg_match('/^[\x20-\x7E]*$/D', Config::string('legacy.auth.prefix')) !== 1) {
+            Log::critical('The legacy service key, its prefix or its header name has a character a header cannot carry.');
+            $this->lastOutcome = 'refused before sending: the key, its prefix or its header name is malformed';
+
+            throw new SourceUnavailable;
+        }
+
+        return $key;
     }
 
     /**
@@ -155,7 +232,9 @@ final class LegacyClient
             }
 
             return $request->send($method, $url);
-        } catch (ConnectionException $failure) {
+        } catch (HttpClientException|GuzzleException $failure) {
+            // A connection error, a timeout, or a transfer that broke after the headers (Laravel wraps the last in a
+            // `RequestException`, whose message quotes the body): a failure in transit, never passed on.
             return $failure::class;
         }
     }
@@ -241,11 +320,13 @@ final class LegacyClient
     {
         $where = ['method' => $method, 'path' => self::template($path)];
 
+        $this->lastOutcome = is_string($response) ? 'failed in transit: '.class_basename($response) : "HTTP {$response->status()}";
+
         if (is_string($response)) {
             $this->breaker->failed($probe);
             Log::warning('A legacy call failed in transit.', $where + ['failure' => class_basename($response)]);
 
-            throw new SourceUnavailable('The legacy API did not answer.');
+            throw new SourceUnavailable;
         }
 
         $status = $response->status();
@@ -280,7 +361,7 @@ final class LegacyClient
             $this->breaker->failed($probe);
             Log::critical('Legacy refused the service key.', $where);
 
-            throw new SourceUnavailable('The legacy API refused the service key.');
+            throw new SourceUnavailable;
         }
 
         if ($status === 429 && $detail === 'too many today') {
@@ -294,14 +375,14 @@ final class LegacyClient
             $this->breaker->throttled(self::retryAfter($response) ?? Config::integer('legacy.breaker.open_for'), $probe);
             Log::warning('Legacy asked HOMI to slow down.', $where);
 
-            throw new SourceUnavailable('The legacy API is limiting HOMI.');
+            throw new SourceUnavailable;
         }
 
         if ($status >= 500) {
             $this->breaker->failed($probe);
             Log::warning('Legacy answered a server error.', $where);
 
-            throw new SourceUnavailable('The legacy API failed.');
+            throw new SourceUnavailable;
         }
 
         $this->breaker->succeeded($probe);
@@ -355,7 +436,7 @@ final class LegacyClient
         }
 
         if (ctype_digit($value)) {
-            return (int) $value;
+            return strlen($value) > 6 ? self::RETRY_AFTER_MAX_SECONDS : min((int) $value, self::RETRY_AFTER_MAX_SECONDS);
         }
 
         try {
@@ -365,7 +446,7 @@ final class LegacyClient
         }
 
         // Rounded up: a retry never comes before the time legacy named.
-        return $at instanceof CarbonImmutable ? max(0, (int) ceil(now()->diffInSeconds($at, false))) : null;
+        return $at instanceof CarbonImmutable ? max(0, min((int) ceil(now()->diffInSeconds($at, false)), self::RETRY_AFTER_MAX_SECONDS)) : null;
     }
 
     /** The path with its numbers replaced (`/api/listings/{n}`), for log lines. */

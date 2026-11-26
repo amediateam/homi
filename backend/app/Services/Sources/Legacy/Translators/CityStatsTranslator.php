@@ -11,9 +11,11 @@ use InvalidArgumentException;
  * Legacy's `GET /api/cities` (`08` API-002) as the city statistics of `GET /cities` (WP-11): one entry per city of
  * the reference data, in its order. Pure, like `ReferenceTranslator`.
  *
- * `counts` keeps the three deals, a missing one as `0`; `presets` → `price_presets` and `typical` → `typical_price`,
- * deal keys only, `{}` when absent. A city of the reference that legacy omits gets zeros and empty objects; a city
- * legacy knows and the reference does not is dropped; unread keys (`name`, `center`) are ignored.
+ * `counts` keeps the three deals, a missing or `null` one as `0`; `presets` → `price_presets` and `typical` →
+ * `typical_price`, deal keys only, a `null` deal dropped, `{}` when absent. A whole number legacy sends as a float
+ * (`700.0`; the contract types them `number`) is read as the whole number. A city of the reference that legacy omits
+ * gets zeros and empty objects; a city legacy knows and the reference does not is dropped; unread keys (`name`,
+ * `center`) are ignored.
  */
 final class CityStatsTranslator
 {
@@ -80,14 +82,14 @@ final class CityStatsTranslator
         return $translated;
     }
 
-    /** @return array<string, mixed> every deal, a missing one as 0 */
+    /** @return array<string, mixed> every deal, a missing or `null` one as 0 */
     private static function counts(mixed $counts, string $code): array
     {
         $object = self::object($counts, $code, 'counts');
         $values = [];
 
         foreach (Deal::values() as $deal) {
-            $values[$deal] = $object[$deal] ?? 0;
+            $values[$deal] = Whole::of($object[$deal] ?? 0);
         }
 
         return $values;
@@ -96,7 +98,9 @@ final class CityStatsTranslator
     /** @return array<string, mixed> only the deals legacy sent */
     private static function deals(mixed $values, string $code, string $key): array
     {
-        return array_intersect_key(self::object($values, $code, $key), array_flip(Deal::values()));
+        $deals = array_intersect_key(self::object($values, $code, $key), array_flip(Deal::values()));
+
+        return array_map(Whole::of(...), array_filter($deals, fn (mixed $value): bool => $value !== null));
     }
 
     /** @return array<array-key, mixed> */

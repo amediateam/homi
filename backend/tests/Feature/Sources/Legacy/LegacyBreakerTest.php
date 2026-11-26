@@ -4,6 +4,7 @@ use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
 use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\SourceUnavailable;
+use App\Services\Sources\Legacy\LegacyBreaker;
 use App\Services\Sources\Legacy\LegacyClient;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
@@ -205,4 +206,47 @@ it('logs when it opens and when it closes', function (): void {
 
     expect($lines)->toContain(['warning', 'The legacy breaker opened.'])
         ->toContain(['warning', 'The legacy breaker closed.']);
+});
+
+it('stays open when the cache gives the stored time back as a numeric string, as Redis does', function (): void {
+    Cache::put('legacy:breaker:open_until', (string) (now()->getTimestamp() + 30), 120);
+    answerWith(200, ['ok' => true]);
+
+    expect(breakerCall())->toBeInstanceOf(SourceUnavailable::class);
+    Http::assertNothingSent();
+
+    $this->travel(31)->seconds();
+    expect(breakerCall())->toBeNull();
+});
+
+it('answers the generic 503 message while open, naming neither legacy nor the breaker', function (): void {
+    answerWith(500);
+    failTimes(5);
+
+    expect(breakerCall()?->getMessage())->toBe('The data source is unavailable.');
+});
+
+it('holds the probe lock while the probe is under way', function (): void {
+    answerWith(500);
+    failTimes(5);
+    $this->travel(31)->seconds();
+    $lockedDuringProbe = null;
+    answerInTurn([function () use (&$lockedDuringProbe) {
+        $lockedDuringProbe = ! Cache::lock('legacy:breaker:probe', 1)->get();
+
+        return Http::response(['ok' => true]);
+    }]);
+
+    expect(breakerCall())->toBeNull()
+        ->and($lockedDuringProbe)->toBeTrue();
+});
+
+it('is closed by its probe only, not by a call that was already under way when it opened', function (): void {
+    answerWith(429, ['detail' => 'slow down'], ['Retry-After' => '120']);
+    breakerCall();
+
+    app(LegacyBreaker::class)->succeeded(null);
+
+    expect(breakerCall())->toBeInstanceOf(SourceUnavailable::class);
+    Http::assertSentCount(1);
 });

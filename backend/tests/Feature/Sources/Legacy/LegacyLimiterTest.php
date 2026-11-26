@@ -98,3 +98,10 @@ it('answers unavailable through the client without sending when no place is free
     expect(fn () => app(LegacyClient::class)->get('/api/cities', [], new LegacyCall(background: true)))->toThrow(SourceUnavailable::class);
     Http::assertSentCount(5);
 });
+
+it('gives background calls at least one place when the rate is low', function (): void {
+    config(['legacy.rate.per_second' => 2]);
+    atMillisecond(100);
+
+    expect([place(true), place(true)])->toBe([true, false]);
+});
