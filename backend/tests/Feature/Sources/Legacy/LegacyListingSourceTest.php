@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ListingSort;
+use App\Exceptions\AccessDenied;
 use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
@@ -21,6 +22,7 @@ use Illuminate\Support\Sleep;
 use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
+use Tests\Support\EnvOverride;
 use Tests\Support\FilterArrays;
 use Tests\Support\JsonShape;
 use Tests\Support\LegacyFixtures;
@@ -487,18 +489,59 @@ it('serves cached previews without asking, and asks for the others in one round'
         ->and(LegacyListingsHttp::sent('/api/listings/100005'))->toHaveCount(1);
 });
 
-it('leaves an unavailable preview out with a warning, and is unavailable only when every preview is', function (): void {
+it('makes the whole batch unavailable when one preview fails for a reason other than 404, after caching the others (DEC-110)', function (): void {
     LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100004' ? Http::response(['detail' => 'down'], 500) : null);
 
-    $lines = logLinesOf(function () use (&$previews): void {
-        $previews = legacyListings()->previews([100001, 100004], userContext());
+    $lines = logLinesOf(function (): void {
+        expect(fn () => legacyListings()->previews([100001, 100004, 999999], userContext()))->toThrow(SourceUnavailable::class);
     });
+    $warning = array_values(array_filter($lines, fn (array $line): bool => $line['message'] === 'Legacy previews failed: the batch is unavailable.'));
 
-    expect(array_keys($previews))->toBe([100001])
-        ->and(array_column($lines, 'message'))->toContain('Legacy previews failed and are left out.');
+    expect($warning)->toHaveCount(1)
+        ->and($warning[0]['context'])->toBe(['failed' => 1, 'asked' => 3, 'outcomes' => ['SourceUnavailable']])
+        ->and(Cache::has('legacy:v1:listings:preview:100001:ru:USD'))->toBeTrue()
+        ->and(Cache::has('legacy:v1:listings:gone:999999'))->toBeTrue();
 
-    LegacyListingsHttp::answer(fn (): mixed => Http::response(['detail' => 'down'], 500));
-    expect(fn () => legacyListings()->previews([100005, 100009], userContext()))->toThrow(SourceUnavailable::class);
+    LegacyListingsHttp::answer(null);
+    expect(array_keys(legacyListings()->previews([100001, 100004, 999999], userContext())))->toBe([100001, 100004])
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1)
+        ->and(LegacyListingsHttp::sent('/api/listings/999999'))->toHaveCount(1);
+});
+
+it('makes the batch unavailable for a preview that does not fit its contract, and lets legacy\'s pause through', function (): void {
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100004' ? Http::response(['id' => 100004]) : null);
+    expect(fn () => legacyListings()->previews([100001, 100004], userContext()))->toThrow(SourceUnavailable::class);
+
+    LegacyListingsHttp::answer(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100005' ? Http::response(['detail' => 'paused'], 403) : null);
+    expect(fn () => legacyListings()->previews([100009, 100005], userContext()))->toThrow(AccessDenied::class);
+});
+
+it('reads a cold batch of 20 previews at 5 a second inside the batch\'s wait of 4 s, leaving out only a 404 (DEC-110)', function (): void {
+    config(['legacy.rate.per_second' => 5]);
+    Sleep::fake(syncWithCarbon: true);
+    $this->travelTo(now()->startOfSecond()->addMilliseconds(700));
+    $start = now();
+    $numbers = [...array_slice(array_column([...LegacyFixtures::golden('feed.default')['items'], ...LegacyFixtures::golden('feed.page2')['items']], 'id'), 0, 19), 999999];
+
+    $previews = legacyListings()->previews($numbers, userContext());
+
+    expect(config('legacy.previews.max_wait_ms'))->toBe(4000)
+        ->and(array_keys($previews))->toBe(array_slice($numbers, 0, 19))
+        ->and($start->diffInMilliseconds(now()))->toBeLessThanOrEqual(4000)->toBeGreaterThan(2000);
+    Sleep::assertSlept(fn ($duration): bool => true, 3);
+});
+
+it('makes the batch unavailable once its wait is spent, keeping the previews read before', function (): void {
+    config(['legacy.rate.per_second' => 5, 'legacy.previews.max_wait_ms' => 1500]);
+    Sleep::fake(syncWithCarbon: true);
+    $this->travelTo(now()->startOfSecond()->addMilliseconds(700));
+    $numbers = array_slice(array_column([...LegacyFixtures::golden('feed.default')['items'], ...LegacyFixtures::golden('feed.page2')['items']], 'id'), 0, 20);
+    LegacyListingsHttp::fake();
+
+    expect(fn () => legacyListings()->previews($numbers, userContext()))->toThrow(SourceUnavailable::class);
+
+    $cached = array_values(array_filter($numbers, fn (int $number): bool => Cache::has("legacy:v1:listings:preview:{$number}:ru:USD")));
+    expect($cached)->toBe(array_slice($numbers, 0, 15));
 });
 
 it('retries a preview that failed in transit once, like a single read', function (): void {
@@ -629,6 +672,78 @@ it('reads previews on the fixture server too', function (): void {
 
     expect(array_keys($previews))->toBe([100001, 100004])
         ->and($previews[100001]->photosPreview)->not->toBeEmpty();
+});
+
+it('logs the keys an answer could not use as sent once per answer, with the path and the names, never a value', function (): void {
+    LegacyListingsHttp::fake(fn (Request $request): mixed => match (LegacyListingsHttp::path($request)) {
+        '/api/feed' => Http::response(['items' => [
+            [...LegacyFixtures::golden('feed.default')['items'][1], 'floor' => 2.5, 'rooms' => '+998 00 765 43 21'],
+            LegacyFixtures::golden('feed.default')['items'][2],
+        ], 'next_cursor' => null]),
+        '/api/listings/100001' => Http::response([...LegacyFixtures::golden('listing.rent_apartment'), 'stats' => ['days_listed' => -1]]),
+        default => null,
+    });
+    $counter = 'legacy:v1:listings:counter:coerced:'.now()->format('Y-m-d');
+
+    $lines = logLinesOf(function (): void {
+        legacyListings()->feed(new ListingQuery(defaultFilters()), userContext());
+        legacyListings()->details(100001, userContext());
+        legacyListings()->details(100001, userContext());
+    });
+    $warnings = array_values(array_filter($lines, fn (array $line): bool => $line['message'] === 'A legacy answer has values HOMI could not use as sent.'));
+
+    expect($warnings)->toHaveCount(2)
+        ->and(array_column($warnings, 'level'))->toBe(['warning', 'warning'])
+        ->and($warnings[0]['context'])->toBe(['path' => '/api/feed', 'keys' => ['items.0.rooms', 'items.0.floor'], 'count' => 2])
+        ->and($warnings[1]['context'])->toBe(['path' => '/api/listings/{n}', 'keys' => ['stats.days_listed'], 'count' => 1])
+        ->and(json_encode(array_column($warnings, 'context')))->not->toContain('765')->not->toContain('2.5')
+        ->and((int) Cache::get($counter))->toBe(2);
+});
+
+it('logs nothing as coerced for the golden answers', function (): void {
+    $lines = logLinesOf(function (): void {
+        legacyListings()->feed(new ListingQuery(defaultFilters()), userContext());
+        legacyListings()->details(100024, userContext());
+        legacyListings()->map(defaultFilters(), userContext());
+    });
+
+    expect(array_column($lines, 'message'))->not->toContain('A legacy answer has values HOMI could not use as sent.');
+});
+
+it('counts the dropped photos and the district misses of each answer, never carrying one answer\'s count into the next', function (): void {
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100009'
+        ? Http::response([...LegacyFixtures::golden('listing.sale_house'), 'district_name' => 'Нигде'])
+        : null);
+    config(['legacy.media.hosts' => []]);
+    $photos = 'legacy:v1:listings:counter:photos_dropped:'.now()->format('Y-m-d');
+    $misses = 'legacy:v1:listings:counter:district_misses:'.now()->format('Y-m-d');
+    $daily = LegacyFixtures::golden('listing.daily');
+    $dropped = count($daily['photos']) + count($daily['photos_preview'] ?? []) + (isset($daily['cover']) ? 1 : 0);
+
+    legacyListings()->details(100005, userContext());
+    expect((int) Cache::get($photos))->toBe($dropped);
+
+    legacyListings()->details(100001, userContext());
+    legacyListings()->details(100009, userContext());
+    legacyListings()->details(100004, userContext());
+
+    expect((int) Cache::get($photos))->toBe($dropped)
+        ->and((int) Cache::get($misses))->toBe(1);
+});
+
+it('reads the legacy media hosts and the previews wait from the environment, a blank value as the default', function (): void {
+    $hosts = fn (?string $value): array => EnvOverride::with('LEGACY_MEDIA_HOSTS', $value, fn (): array => require config_path('legacy.php'))['media']['hosts'];
+    $wait = fn (?string $value): mixed => EnvOverride::with('LEGACY_PREVIEWS_MAX_WAIT_MS', $value, fn (): array => require config_path('legacy.php'))['previews']['max_wait_ms'];
+    $baseHost = parse_url((require config_path('legacy.php'))['base_url'], PHP_URL_HOST);
+
+    expect($hosts(null))->toBe([$baseHost])
+        ->and($hosts('  '))->toBe([$baseHost])
+        ->and($hosts('cdn.legacy.invalid, Legacy.Invalid ,'))->toBe(['cdn.legacy.invalid', 'legacy.invalid'])
+        ->and($wait(null))->toBe(4000)
+        ->and($wait(''))->toBe(4000)
+        ->and($wait('2500'))->toBe(2500)
+        ->and($wait('soon'))->toBe(4000)
+        ->and($wait('-5'))->toBe(4000);
 });
 
 it('reads the district codes without the caller\'s stub scenario', function (string $scenario): void {

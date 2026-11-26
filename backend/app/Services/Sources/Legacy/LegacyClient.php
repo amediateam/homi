@@ -138,7 +138,8 @@ final class LegacyClient
      * read), a place in the limiter taken for each read in turn just before the reads go out (a refused place refuses
      * that read), one more attempt for the reads that failed in transit (each with a new place; without one, the first
      * outcome stands), and each outcome through `settle()`. The caller sends as many reads as may run in parallel
-     * (`legacy.previews.concurrency`); one failed read never fails the others.
+     * (`legacy.previews.concurrency`); one failed read never fails the others. With `$wait`, every place is taken from
+     * that shared wait (DEC-110) instead of each read's own `legacy.rate.max_wait_ms`.
      *
      * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads  the path and
      *                                                                                                  query of each read
@@ -147,7 +148,7 @@ final class LegacyClient
      *
      * @throws SourceUnavailable when no service key is configured: no read is sent
      */
-    public function pool(array $reads, ?LegacyCall $call = null): array
+    public function pool(array $reads, ?LegacyCall $call = null, ?LegacyWaitBudget $wait = null): array
     {
         if ($reads === []) {
             return [];
@@ -177,7 +178,7 @@ final class LegacyClient
         }
 
         try {
-            $responses = $this->poolAttempts($reads, array_keys($probes), $call, $key, $refused);
+            $responses = $this->poolAttempts($reads, array_keys($probes), $call, $key, $refused, $wait);
         } catch (Throwable $before) {
             foreach ($probes as $probe) {
                 $probe?->release();
@@ -215,7 +216,7 @@ final class LegacyClient
      * @param  array<array-key, ApiException>  $refused  filled with the reads the limiter refused a first place
      * @return array<array-key, Response|string> the last outcome of each read that was sent
      */
-    private function poolAttempts(array $reads, array $admitted, LegacyCall $call, #[\SensitiveParameter] string $key, array &$refused): array
+    private function poolAttempts(array $reads, array $admitted, LegacyCall $call, #[\SensitiveParameter] string $key, array &$refused, ?LegacyWaitBudget $wait): array
     {
         $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
         $responses = [];
@@ -230,7 +231,7 @@ final class LegacyClient
 
             foreach ($pending as $id) {
                 try {
-                    $this->limiter->acquire($call->background);
+                    $this->limiter->acquire($call->background, $wait);
                     $sendable[] = $id;
                 } catch (SourceUnavailable $limited) {
                     if (! isset($responses[$id])) {

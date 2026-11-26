@@ -12,8 +12,9 @@ use Illuminate\Support\Sleep;
  * second, counted in the cache so every PHP process shares it.
  *
  * A user's call takes a place in the current second's bucket; when it is full, the call sleeps to the next second
- * and tries that bucket, as long as its total wait stays within `max_wait_ms`; otherwise it fails at once with
- * `SourceUnavailable`, so nothing queues behind legacy. A background call (`LegacyCall::$background`) may fill only
+ * and tries that bucket, as long as its total wait stays within `max_wait_ms` (or within what is left of a
+ * `LegacyWaitBudget` several calls share, DEC-110); otherwise it fails at once with `SourceUnavailable`, so nothing
+ * queues behind legacy. A background call (`LegacyCall::$background`) may fill only
  * `background_share` of a bucket, at least one place, and never waits. `RateLimiter` is not used: it reports availability in whole
  * seconds, and this limiter waits in milliseconds.
  */
@@ -23,8 +24,12 @@ final class LegacyLimiter
 
     public function __construct(private readonly Repository $cache) {}
 
-    /** @throws SourceUnavailable when no place is free within the wait the caller may spend */
-    public function acquire(bool $background): void
+    /**
+     * @param  LegacyWaitBudget|null  $shared  the wait a batch of calls shares; without one, each call may wait `max_wait_ms`
+     *
+     * @throws SourceUnavailable when no place is free within the wait the caller may spend
+     */
+    public function acquire(bool $background, ?LegacyWaitBudget $shared = null): void
     {
         if ($background) {
             if (! $this->takeBackground($this->second())) {
@@ -34,7 +39,7 @@ final class LegacyLimiter
             return;
         }
 
-        $budget = Config::integer('legacy.rate.max_wait_ms');
+        $budget = $shared?->remaining() ?? Config::integer('legacy.rate.max_wait_ms');
 
         while (true) {
             $now = $this->nowMs();
@@ -50,6 +55,7 @@ final class LegacyLimiter
             }
 
             $budget -= $wait;
+            $shared?->spend($wait);
             Sleep::for($wait)->milliseconds();
         }
     }

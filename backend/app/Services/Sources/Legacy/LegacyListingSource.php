@@ -2,6 +2,7 @@
 
 namespace App\Services\Sources\Legacy;
 
+use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
 use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\LegacyContractError;
@@ -23,6 +24,7 @@ use App\Services\Sources\Data\ListingSummary;
 use App\Services\Sources\Data\ListingTranslation;
 use App\Services\Sources\Data\MapPoint;
 use App\Services\Sources\Data\MapPoints;
+use App\Services\Sources\Legacy\Translators\Coercions;
 use App\Services\Sources\Legacy\Translators\DistrictMatcher;
 use App\Services\Sources\Legacy\Translators\FiltersTranslator;
 use App\Services\Sources\Legacy\Translators\FlowTranslator;
@@ -52,7 +54,7 @@ use InvalidArgumentException;
  * | `map`        | `GET /api/map`                      | `legacy.cache.map` s per filters, language and currency     |
  * | `details`    | `GET /api/listings/{n}`             | `legacy.cache.card` s per number, language and currency     |
  * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
- * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()` | per item |
+ * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` for the batch | per item |
  *
  * A duration of 0 disables its cache. The cache holds the translated v1 arrays, never an object (the store may
  * serialise): a card is held as the translators give it — masked (DEC-52), without `phone`, `phone_display` or the
@@ -69,7 +71,10 @@ use InvalidArgumentException;
  * listing hidden between two pages never shifts the walk. A cursor the feed did not give ends the list quietly.
  *
  * Errors: a call that fails is `503 source_unavailable` and a contract error of the answer the same (logged and counted
- * here when a translator finds it). The card passes legacy's daily limit on as `429 rate_limited` with `reason:
+ * here when a translator finds it). The keys of an answer whose values a translator could not use as sent
+ * (`Coercions`: another type, a fraction, an unknown code, a part left out) are logged once per answer as a warning
+ * with the path template and the key names, never a value, and counted (`coerced`). The photo rewriter and the
+ * district matcher are made for each answer, so their counts are that answer's. The card passes legacy's daily limit on as `429 rate_limited` with `reason:
  * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
  * (no user) makes background calls in the limiter. `contact()` and `translation()` are WP-43's: `503` until then.
  */
@@ -166,7 +171,7 @@ final class LegacyListingSource implements ListingSource
             function () use ($query, $context): array {
                 $answer = $this->read(FlowTranslator::PATH, $query, $this->call($context));
 
-                return $this->checked(fn (): array => FlowTranslator::translate($answer));
+                return $this->checked(fn (): array => $this->noted(FlowTranslator::PATH, fn (Coercions $seen): array => FlowTranslator::translate($answer, $seen)));
             },
             fn (array $flow): FlowEstimate => new FlowEstimate(
                 Fields::count($flow, 'week'),
@@ -186,7 +191,10 @@ final class LegacyListingSource implements ListingSource
             function () use ($query, $context): array {
                 $answer = $this->read(MapPointsTranslator::PATH, $query, $this->call($context));
 
-                return $this->checked(fn (): array => MapPointsTranslator::translate($answer, ListingNumber::floor()));
+                return $this->checked(fn (): array => $this->noted(
+                    MapPointsTranslator::PATH,
+                    fn (Coercions $seen): array => MapPointsTranslator::translate($answer, ListingNumber::floor(), $seen),
+                ));
             },
             fn (array $map): MapPoints => new MapPoints(
                 array_map(MapPoint::fromArray(...), Fields::objects($map, 'points')),
@@ -221,10 +229,13 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * The cached ones first; the others read `legacy.previews.concurrency` at a time, each through the breaker, the
-     * limiter and the outcome mapping of `LegacyClient::pool()`. A number legacy does not know is left out (and not
-     * asked again for `legacy.cache.not_found` s); one that failed is left out and logged by count. Only when every
-     * number failed is the whole call `503`.
+     * The cached ones first; the others read `legacy.previews.concurrency` at a time through `LegacyClient::pool()`,
+     * each through the breaker, the limiter and the outcome mapping of a single read, the whole batch sharing one
+     * limiter wait of `legacy.previews.max_wait_ms` (DEC-110). A number legacy does not know (`404`) is left out and
+     * not asked again for `legacy.cache.not_found` s. Any other preview legacy did not give — unavailable, refused by
+     * the breaker or the limiter, legacy's daily limit, an answer that does not fit — makes the whole call `503`
+     * (legacy's pause stays `403 paused`), after the previews read so far are cached: a personal list never loses an
+     * item silently.
      */
     public function previews(array $numbers, SourceContext $context): array
     {
@@ -246,16 +257,10 @@ final class LegacyListingSource implements ListingSource
             }
         }
 
-        $failed = $misses === [] ? 0 : $this->withTranslators($context, function (ListingSummaryTranslator $summary) use ($misses, $context, &$previews): int {
-            return $this->fetchPreviews($misses, $summary, $context, $previews);
-        });
-
-        if ($failed > 0) {
-            Log::warning('Legacy previews failed and are left out.', ['failed' => $failed, 'asked' => count($misses)]);
-        }
-
-        if ($failed > 0 && $failed === count($asked)) {
-            throw new SourceUnavailable;
+        if ($misses !== []) {
+            $this->withTranslators($context, function (ListingSummaryTranslator $summary) use ($misses, $context, &$previews): void {
+                $this->fetchPreviews($misses, $summary, $context, $previews);
+            });
         }
 
         $ordered = [];
@@ -293,7 +298,10 @@ final class LegacyListingSource implements ListingSource
             FiltersTranslator::toQuery($query->filters, $query->sort, $cursor, self::LEGACY_PAGE),
             $this->call($context),
         );
-        $page = $this->withTranslators($context, fn (ListingSummaryTranslator $summary): array => $summary->page($answer, $query->filters->city));
+        $page = $this->withTranslators($context, fn (ListingSummaryTranslator $summary): array => $this->noted(
+            ListingSummaryTranslator::PATH,
+            fn (Coercions $seen): array => $summary->page($answer, $query->filters->city, $seen),
+        ));
 
         return ['items' => array_map(ListingSummary::fromArray(...), $page['items']), 'next_cursor' => $page['next_cursor']];
     }
@@ -334,31 +342,38 @@ final class LegacyListingSource implements ListingSource
             throw $missing;
         }
 
-        return $this->withTranslators($context, fn (ListingSummaryTranslator $summary, ListingDetailsTranslator $details): array => $preview
-            ? $summary->translate($answer, null, ListingDetailsTranslator::PATH)
-            : $details->translate($answer));
+        return $this->withTranslators($context, fn (ListingSummaryTranslator $summary, ListingDetailsTranslator $details): array => $this->noted(
+            ListingDetailsTranslator::PATH,
+            fn (Coercions $seen): array => $preview
+                ? $summary->translate($answer, null, ListingDetailsTranslator::PATH, '', $seen)
+                : $details->translate($answer, $seen),
+        ));
     }
 
     /**
-     * The previews of the numbers no cache holds, read in parallel; each one read is cached and added to `$previews`.
+     * The previews of the numbers no cache holds, read in parallel rounds that share one limiter wait; each one read is
+     * cached and added to `$previews`. A round with a failure other than `404` ends the batch once its good previews
+     * are cached.
      *
      * @param  list<int>  $numbers
      * @param  array<int, ListingSummary>  $previews
-     * @return int how many failed (unavailable or not fitting the contract)
+     *
+     * @throws SourceUnavailable|AccessDenied
      */
-    private function fetchPreviews(array $numbers, ListingSummaryTranslator $summary, SourceContext $context, array &$previews): int
+    private function fetchPreviews(array $numbers, ListingSummaryTranslator $summary, SourceContext $context, array &$previews): void
     {
-        $failed = 0;
         $seconds = Config::integer('legacy.cache.card');
+        $wait = new LegacyWaitBudget(max(0, Config::integer('legacy.previews.max_wait_ms')));
 
         foreach (array_chunk($numbers, max(1, Config::integer('legacy.previews.concurrency'))) as $chunk) {
             $reads = [];
+            $failed = [];
 
             foreach ($chunk as $number) {
                 $reads[$number] = [self::cardPath($number), ['preview' => 1]];
             }
 
-            foreach ($this->client->pool($reads, $this->call($context)) as $number => $answer) {
+            foreach ($this->client->pool($reads, $this->call($context), $wait) as $number => $answer) {
                 if ($answer instanceof SourceNotFound) {
                     $this->rememberGone((int) $number);
 
@@ -366,16 +381,19 @@ final class LegacyListingSource implements ListingSource
                 }
 
                 if ($answer instanceof ApiException) {
-                    $failed++;
+                    $failed[] = $answer;
 
                     continue;
                 }
 
                 try {
-                    $preview = $summary->translate($answer, null, ListingDetailsTranslator::PATH);
+                    $preview = $this->noted(
+                        ListingDetailsTranslator::PATH,
+                        fn (Coercions $seen): array => $summary->translate($answer, null, ListingDetailsTranslator::PATH, '', $seen),
+                    );
                 } catch (LegacyContractError $drift) {
                     $this->drifted($drift);
-                    $failed++;
+                    $failed[] = $drift;
 
                     continue;
                 }
@@ -386,9 +404,23 @@ final class LegacyListingSource implements ListingSource
 
                 $previews[(int) $number] = ListingSummary::fromArray($preview);
             }
-        }
 
-        return $failed;
+            if ($failed !== []) {
+                Log::warning('Legacy previews failed: the batch is unavailable.', [
+                    'failed' => count($failed),
+                    'asked' => count($numbers),
+                    'outcomes' => array_values(array_unique(array_map(fn (ApiException $failure): string => class_basename($failure), $failed))),
+                ]);
+
+                foreach ($failed as $failure) {
+                    if ($failure instanceof AccessDenied) {
+                        throw $failure;
+                    }
+                }
+
+                throw new SourceUnavailable;
+            }
+        }
     }
 
     /** The preview from the cached full card, else from the cached preview form; `null` when neither is cached. */
@@ -504,6 +536,29 @@ final class LegacyListingSource implements ListingSource
             return DistrictMatcher::fromSource($this->sources->reference('source.reference', $own)->source, $own);
         } catch (ApiException) {
             return new DistrictMatcher(null);
+        }
+    }
+
+    /**
+     * The translation of one answer with its own `Coercions`, logged afterwards (also when it fails): one warning with
+     * the path template and the key names, never a value, and the counter `coerced`.
+     *
+     * @template TValue
+     *
+     * @param  Closure(Coercions): TValue  $translate
+     * @return TValue
+     */
+    private function noted(string $path, Closure $translate): mixed
+    {
+        $seen = Coercions::collect();
+
+        try {
+            return $translate($seen);
+        } finally {
+            if ($seen->count() > 0) {
+                Log::warning('A legacy answer has values HOMI could not use as sent.', ['path' => $path, 'keys' => $seen->keys(), 'count' => $seen->count()]);
+                $this->counted('coerced');
+            }
         }
     }
 

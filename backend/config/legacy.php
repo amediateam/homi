@@ -25,11 +25,14 @@
 |   asked again.
 | - `media`: `public_url` is HOMI's proxy of the legacy photos (`LEGACY_MEDIA_PUBLIC_URL`, for example
 |   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
-|   addresses are rewritten too (a relative `/media/…` address always is): the host of `base_url`.
+|   addresses are rewritten too (a relative `/media/…` address always is): `LEGACY_MEDIA_HOSTS`, comma-separated,
+|   else the host of `base_url`.
 | - `fields.author_key`: the name of the card field that carries a stable author key, once the operator offers one
 |   (WP-02 point 6); blank means none.
-| - `previews.concurrency`: card previews read in parallel; `feed.top_up_pages`: extra legacy pages one feed page may
-|   read when HOMI's own exclusions shrink it below half.
+| - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the
+|   limiter wait one batch of previews may spend in all (DEC-110: a personal list of 20 waits for every preview rather
+|   than losing some); `feed.top_up_pages`: extra legacy pages one feed page may read when HOMI's own exclusions shrink
+|   it below half.
 | - `fake`: answer from `resources/fixtures/legacy` instead of the network. On by default in `local` and `testing`,
 |   off elsewhere; `SourceServiceProvider` refuses to boot with it in production.
 |
@@ -46,6 +49,8 @@ $fake = $value('LEGACY_FAKE', null);
 $ratePerSecond = $value('LEGACY_RATE_PER_SECOND', 5);
 $baseUrl = rtrim((string) $value('LEGACY_API_URL', 'https://legacy.invalid'), '/');
 $baseHost = parse_url($baseUrl, PHP_URL_HOST);
+$mediaHosts = $value('LEGACY_MEDIA_HOSTS', null);
+$previewsWait = $value('LEGACY_PREVIEWS_MAX_WAIT_MS', 4000);
 
 return [
     'base_url' => $baseUrl,
@@ -102,7 +107,9 @@ return [
 
     'media' => [
         'public_url' => rtrim((string) $value('LEGACY_MEDIA_PUBLIC_URL', ''), '/'),
-        'hosts' => is_string($baseHost) && $baseHost !== '' ? [strtolower($baseHost)] : [],
+        'hosts' => is_string($mediaHosts)
+            ? array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $mediaHosts)), fn (string $host): bool => $host !== ''))
+            : (is_string($baseHost) && $baseHost !== '' ? [strtolower($baseHost)] : []),
     ],
 
     'fields' => [
@@ -111,6 +118,7 @@ return [
 
     'previews' => [
         'concurrency' => 5,
+        'max_wait_ms' => is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $previewsWait : 4000,
     ],
 
     'feed' => [
