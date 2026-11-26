@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # dev:e2e-local — Playwright against an API of its own, the way the CI job runs it (.github/workflows/frontend-e2e.yml):
 # the API on stubs behind PHP's built-in server, on SQLite with the array cache. It needs neither nginx nor the
-# database of the backend's env file, and the `api` rate limiter never accumulates (KI-32), so one spec — or the whole
+# database of the backend's env file, and the API's rate limiters never accumulate (KI-32), so one spec — or the whole
 # suite — behaves as in CI. The API lives for the run only; its database is a temporary file outside the checkout.
 #
 #   scripts/dev/e2e-local.sh app/e2e/feed.spec.ts                         # one spec (paths relative to frontend/)
@@ -68,7 +68,7 @@ trap 'exit 130' INT TERM
 api_env() {
     env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= PULSE_DB_CONNECTION=sqlite CACHE_STORE=array \
         QUEUE_CONNECTION=sync SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false SOURCES_ALLOW_STUB=true \
-        RADAR_CREATION_ENABLED="$radars" OWNER_CABINET_ENABLED="$owner" "$@"
+        SOURCES_NATIVE_STUBS=true ACCESS_MODE=open RADAR_CREATION_ENABLED="$radars" OWNER_CABINET_ENABLED="$owner" "$@"
 }
 
 : > "$database"
@@ -94,8 +94,8 @@ fi
 # Laravel's router script takes the public directory from the working directory, as `artisan serve` does.
 (cd backend/public && exec env DB_CONNECTION=sqlite DB_DATABASE="$database" DB_URL= PULSE_DB_CONNECTION=sqlite \
     CACHE_STORE=array QUEUE_CONNECTION=sync SESSION_DRIVER=array TELESCOPE_ENABLED=false PULSE_ENABLED=false \
-    SOURCES_ALLOW_STUB=true RADAR_CREATION_ENABLED="$radars" OWNER_CABINET_ENABLED="$owner" \
-    php -S "127.0.0.1:$api_port" ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php) > "$api_log" 2>&1 &
+    SOURCES_ALLOW_STUB=true SOURCES_NATIVE_STUBS=true ACCESS_MODE=open RADAR_CREATION_ENABLED="$radars" \
+    OWNER_CABINET_ENABLED="$owner" php -S "127.0.0.1:$api_port" ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php) > "$api_log" 2>&1 &
 api_pid=$!
 
 reference=""

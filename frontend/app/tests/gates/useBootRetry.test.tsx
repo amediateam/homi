@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   status: "booting" as string,
   error: null as string | null,
+  /** The seconds of the `Retry-After` of a `429` (`SessionState.retryAfter`). */
+  retryAfter: null as number | null,
   pending: false,
   reason: null as string | null,
   /** Resolves the attempt in flight: the outcome is written to the state first. */
@@ -11,11 +13,19 @@ const state = vi.hoisted(() => ({
   retry: vi.fn(),
 }));
 vi.mock("@/lib/session/SessionProvider", () => ({
-  useSession: () => ({ status: state.status, error: state.error, pending: state.pending, reason: state.reason, retry: state.retry }),
+  useSession: () => ({ status: state.status, error: state.error, retryAfter: state.retryAfter, pending: state.pending, reason: state.reason, retry: state.retry }),
 }));
 
 import { bootFailureKind, resetBootRetry, retryBoot, useBootRetryState } from "@/features/gates/bootRetryStore";
-import { BOOT_RETRY_DELAYS_MS, RECHECK_COUNT, RECHECK_DELAY_MS, useBootRetry } from "@/features/gates/useBootRetry";
+import {
+  BOOT_RETRY_DELAYS_MS,
+  RATE_LIMIT_WAIT_DEFAULT_MS,
+  RATE_LIMIT_WAIT_MAX_MS,
+  rateLimitWaitMs,
+  RECHECK_COUNT,
+  RECHECK_DELAY_MS,
+  useBootRetry,
+} from "@/features/gates/useBootRetry";
 
 /** The one instance and a reader of what it publishes, as the shell and the gate pages read it. */
 function Probe() {
@@ -39,8 +49,8 @@ function mount(change: Partial<typeof state> = {}) {
 }
 
 /** The attempt in flight ends with `change` (the session's outcome), then the hook renders again. */
-async function outcome(change: Partial<Pick<typeof state, "status" | "error" | "reason">>) {
-  Object.assign(state, change, { pending: false });
+async function outcome(change: Partial<Pick<typeof state, "status" | "error" | "retryAfter" | "reason">>) {
+  Object.assign(state, { retryAfter: null }, change, { pending: false });
   const settle = state.settle;
   state.settle = null;
   await act(async () => {
@@ -57,7 +67,7 @@ function visible() {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  Object.assign(state, { status: "booting", error: null, pending: false, reason: null, settle: null });
+  Object.assign(state, { status: "booting", error: null, retryAfter: null, pending: false, reason: null, settle: null });
   state.retry.mockReset();
   state.retry.mockImplementation(
     () =>
@@ -98,18 +108,13 @@ describe("useBootRetry (BR-APP-054, D-S-3)", () => {
     expect(state.retry).toHaveBeenCalledTimes(5);
   });
 
-  it("a server error or 429 ends in the server kind", async () => {
-    for (const last of ["server", "rate_limited"] as const) {
-      const view = mount({ error: "offline" });
-      for (const [index, delay] of BOOT_RETRY_DELAYS_MS.entries()) {
-        act(() => vi.advanceTimersByTime(delay));
-        await outcome({ error: index === BOOT_RETRY_DELAYS_MS.length - 1 ? last : "server" });
-      }
-      expect(shown(), last).toMatchObject({ failed: true, kind: "server" });
-      view.unmount();
-      resetBootRetry();
-      Object.assign(state, { error: null, settle: null });
+  it("a server error ends in the server kind", async () => {
+    mount({ error: "offline" });
+    for (const delay of BOOT_RETRY_DELAYS_MS) {
+      act(() => vi.advanceTimersByTime(delay));
+      await outcome({ error: "server" });
     }
+    expect(shown()).toMatchObject({ failed: true, kind: "server" });
   });
 
   it("maps the outcome of the last attempt to the ErrorState kind (D-S-1)", () => {
@@ -196,6 +201,125 @@ describe("useBootRetry (BR-APP-054, D-S-3)", () => {
     mount({ status: "denied", reason: "paused" });
     visible();
     expect(state.retry).toHaveBeenCalledTimes(1);
+  });
+
+  describe("a 429 sign-in (KI-37)", () => {
+    it("pins the wait: Retry-After capped at 60 s, 10 s without one", () => {
+      expect(RATE_LIMIT_WAIT_MAX_MS).toBe(60_000);
+      expect(RATE_LIMIT_WAIT_DEFAULT_MS).toBe(10_000);
+      expect(rateLimitWaitMs(37)).toBe(37_000);
+      expect(rateLimitWaitMs(60)).toBe(60_000);
+      expect(rateLimitWaitMs(3_600)).toBe(60_000);
+      expect(rateLimitWaitMs(0)).toBe(0);
+      expect(rateLimitWaitMs(null)).toBe(10_000);
+    });
+
+    it("the first one waits for its Retry-After and is not one of the six failures", async () => {
+      mount({ error: "rate_limited", retryAfter: 20 });
+      act(() => vi.advanceTimersByTime(19_999));
+      expect(state.retry).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.retry).toHaveBeenCalledTimes(1);
+      expect(shown().failed).toBe(false);
+
+      // Six counted failures still follow: the first one now, then the five waits of BR-APP-054.
+      await outcome({ error: "offline" });
+      for (const [index, delay] of BOOT_RETRY_DELAYS_MS.entries()) {
+        act(() => vi.advanceTimersByTime(delay - 1));
+        expect(state.retry).toHaveBeenCalledTimes(index + 1);
+        act(() => vi.advanceTimersByTime(1));
+        expect(state.retry).toHaveBeenCalledTimes(index + 2);
+        expect(shown().failed).toBe(false);
+        await outcome({ error: "offline" });
+      }
+      expect(shown()).toMatchObject({ failed: true, kind: "offline" });
+      expect(state.retry).toHaveBeenCalledTimes(6);
+    });
+
+    it("waits at most 60 s, and 10 s without Retry-After", async () => {
+      const view = mount({ error: "rate_limited", retryAfter: 3_600 });
+      act(() => vi.advanceTimersByTime(59_999));
+      expect(state.retry).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.retry).toHaveBeenCalledTimes(1);
+      view.unmount();
+
+      state.retry.mockClear();
+      Object.assign(state, { error: "rate_limited", retryAfter: null, pending: false, settle: null });
+      mount();
+      act(() => vi.advanceTimersByTime(9_999));
+      expect(state.retry).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.retry).toHaveBeenCalledTimes(1);
+    });
+
+    it("another 429 after that wait counts as an ordinary failure and ends in the server kind", async () => {
+      mount({ error: "rate_limited", retryAfter: 5 });
+      act(() => vi.advanceTimersByTime(5_000));
+      expect(state.retry).toHaveBeenCalledTimes(1);
+
+      for (const [index, delay] of BOOT_RETRY_DELAYS_MS.entries()) {
+        await outcome({ error: "rate_limited", retryAfter: 5 });
+        act(() => vi.advanceTimersByTime(delay - 1));
+        expect(state.retry, `failure ${index + 1} waits ${delay} ms`).toHaveBeenCalledTimes(index + 1);
+        act(() => vi.advanceTimersByTime(1));
+        expect(state.retry).toHaveBeenCalledTimes(index + 2);
+      }
+      await outcome({ error: "rate_limited", retryAfter: 5 });
+
+      expect(shown()).toMatchObject({ failed: true, kind: "server" });
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("«Повторить» allows the wait again", async () => {
+      mount({ error: "rate_limited", retryAfter: 1 });
+      act(() => vi.advanceTimersByTime(1_000));
+      for (const delay of BOOT_RETRY_DELAYS_MS) {
+        await outcome({ error: "server" });
+        act(() => vi.advanceTimersByTime(delay));
+      }
+      await outcome({ error: "server" });
+      expect(shown().failed).toBe(true);
+      expect(state.retry).toHaveBeenCalledTimes(6);
+
+      act(() => document.querySelector("button")!.click());
+      expect(state.retry).toHaveBeenCalledTimes(7);
+      await outcome({ error: "rate_limited", retryAfter: 20 });
+      act(() => vi.advanceTimersByTime(19_999));
+      expect(state.retry).toHaveBeenCalledTimes(7);
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.retry).toHaveBeenCalledTimes(8);
+      expect(shown().failed).toBe(false);
+    });
+
+    it("returning to the app tries at once and allows the wait again", async () => {
+      mount({ error: "rate_limited", retryAfter: 5 });
+      act(() => vi.advanceTimersByTime(5_000));
+      await outcome({ error: "rate_limited", retryAfter: 5 });
+      expect(state.retry).toHaveBeenCalledTimes(1);
+
+      visible();
+      expect(state.retry).toHaveBeenCalledTimes(2);
+      await outcome({ error: "rate_limited", retryAfter: 20 });
+      act(() => vi.advanceTimersByTime(19_999));
+      expect(state.retry).toHaveBeenCalledTimes(2);
+      act(() => vi.advanceTimersByTime(1));
+      expect(state.retry).toHaveBeenCalledTimes(3);
+    });
+
+    it("an attempt after the wait that ends refused follows the re-check rules", async () => {
+      mount({ error: "rate_limited", retryAfter: 5 });
+      act(() => vi.advanceTimersByTime(5_000));
+      await outcome({ status: "denied", reason: "join", error: null });
+      expect(shown().checking).toBe(true);
+      act(() => vi.advanceTimersByTime(RECHECK_DELAY_MS));
+      expect(state.retry).toHaveBeenCalledTimes(2);
+
+      await outcome({ status: "denied", reason: "blocked", error: null });
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(state.retry).toHaveBeenCalledTimes(2);
+      expect(shown().checking).toBe(false);
+    });
   });
 
   it("never re-checks blocked, and shows no checking line for it", () => {

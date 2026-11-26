@@ -92,6 +92,10 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          # WP-40: the signed-in methods answer from the stubs (the synthetic launch data of the specs is not signed with
+          # a bot token), and the access gate, which runs in stub mode too, admits the stub user.
+          SOURCES_NATIVE_STUBS: 'true'
+          ACCESS_MODE: open
           # The owner cabinet is on for the default run (WP-81); the second API keeps it unset for `@owner-off`.
           OWNER_CABINET_ENABLED: 'true'
         run: |
@@ -149,6 +153,8 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          SOURCES_NATIVE_STUBS: 'true'
+          ACCESS_MODE: open
           RADAR_CREATION_ENABLED: 'false'
         run: |
           (cd public && nohup php -S 127.0.0.1:8081 ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php >> "$RUNNER_TEMP/api.log" 2>&1 &)

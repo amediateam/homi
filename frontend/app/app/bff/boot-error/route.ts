@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { forwardedFor, forwardedForHeaders } from "@/lib/api/forwarded";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
 import { cleanSource, limit, MESSAGE_MAX, NAME_MAX, PLATFORM_MAX, SCREEN_MAX, TG_MAX } from "@/lib/errors/sanitize";
 import { scrubText } from "@/lib/analytics/scrub";
@@ -13,7 +14,8 @@ import { apiBaseUrl, SESSION_COOKIE } from "@/lib/session/server";
  * screen, tg, platform}` are kept, `kind` and `stage` forced to `boot`, the limits and scrubbers of the browser applied
  * again. With the session cookie it goes on as `app_error` to `POST /events` (the answer ignored); without one — a
  * first launch, header mode, an engine below the floor, which never gets a session — one log line with `v`, `name`,
- * `tg` and `platform` only: no message, no source, no address, nothing stored (SEC-REQ-047).
+ * `tg` and `platform` only: no message, no source, no address, nothing stored (SEC-REQ-047). The forwarded report
+ * carries the request's `X-Forwarded-For` to the API (WP-40).
  */
 
 const MAX_BYTES = 2048;
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         Authorization: `Bearer ${token}`,
         "X-Request-Id": crypto.randomUUID().replaceAll("-", ""),
         ...stubScenarioHeaders(request.cookies.get(STUB_SCENARIO_COOKIE)?.value),
+        ...forwardedForHeaders(forwardedFor(request.headers)),
       },
       body: JSON.stringify({ name: "app_error", props: report }),
       cache: "no-store",

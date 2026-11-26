@@ -40,6 +40,11 @@ export interface SessionState {
   /** The outcome of the last attempt that failed without an answer of the API; set only while `booting`. */
   error: SessionError | null;
   /**
+   * With `error: 'rate_limited'`: the seconds the `Retry-After` of that `429` asked to wait, `null` when it gave none
+   * or one that could not be read (KI-37; `useBootRetry` waits for it once). `null` with any other `error`.
+   */
+  retryAfter: number | null;
+  /**
    * An attempt (the first one, a `retry()`, the start after a late SDK) is in flight. A re-check of a refusal keeps
    * `status: 'denied'` and its `reason` meanwhile, so the access screen can say it is checking (WP-23).
    */
@@ -55,7 +60,17 @@ export interface SessionState {
 const REQUEST_TIMEOUT_MS = 15_000;
 /** `v` of `app_launch`: the app build; empty until WP-32 sets the build version. */
 
-const initial: SessionState = { status: "booting", prepared: false, mode: null, me: null, reason: null, error: null, pending: false, renewed: false };
+const initial: SessionState = {
+  status: "booting",
+  prepared: false,
+  mode: null,
+  me: null,
+  reason: null,
+  error: null,
+  retryAfter: null,
+  pending: false,
+  renewed: false,
+};
 let state: SessionState = initial;
 const listeners = new Set<() => void>();
 
@@ -75,8 +90,26 @@ function update(change: Partial<SessionState>): void {
   }
 }
 
-/** `status` 0 with `error` when the request never completed. */
-type Http = { status: number; body: Record<string, unknown> | null; error: SessionError | null };
+/** `status` 0 with `error` when the request never completed; `retryAfter` only for a `429`. */
+type Http = { status: number; body: Record<string, unknown> | null; error: SessionError | null; retryAfter: number | null };
+
+/** A failed attempt: its kind, and for `rate_limited` the wait the answer asked for (`SessionState.retryAfter`). */
+type Failure = { error: SessionError; retryAfter: number | null };
+
+const SERVER: Failure = { error: "server", retryAfter: null };
+
+/**
+ * `Retry-After` in seconds: the delay form, or an HTTP date (it starts with the day's name) as the seconds from now,
+ * `0` for a date passed; `null` when absent or unreadable.
+ */
+export function retryAfterSeconds(value: string | null, now = Date.now()): number | null {
+  const text = value?.trim() ?? "";
+  if (/^\d{1,9}$/.test(text)) {
+    return Number(text);
+  }
+  const date = /^[A-Za-z]{3}/.test(text) ? Date.parse(text) : Number.NaN;
+  return Number.isNaN(date) ? null : Math.max(0, Math.ceil((date - now) / 1000));
+}
 
 async function call(method: "GET" | "POST", options: { token?: string; body?: string } = {}): Promise<Http> {
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -101,17 +134,18 @@ async function call(method: "GET" | "POST", options: { token?: string; body?: st
     } catch {
       body = null;
     }
-    return { status: response.status, body, error: null };
+    const retryAfter = response.status === 429 ? retryAfterSeconds(response.headers.get("retry-after")) : null;
+    return { status: response.status, body, error: null, retryAfter };
   } catch (error) {
-    return { status: 0, body: null, error: error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "offline" };
+    return { status: 0, body: null, error: error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "offline", retryAfter: null };
   }
 }
 
-function failure(http: Http): SessionError {
+function failure(http: Http): Failure {
   if (http.error !== null) {
-    return http.error;
+    return { error: http.error, retryAfter: null };
   }
-  return http.status === 429 ? "rate_limited" : "server";
+  return http.status === 429 ? { error: "rate_limited", retryAfter: http.retryAfter } : SERVER;
 }
 
 type Read =
@@ -119,7 +153,7 @@ type Read =
   | { kind: "none" }
   | { kind: "unauthorized" }
   | { kind: "denied"; reason: AccessReason }
-  | { kind: "failed"; error: SessionError };
+  | { kind: "failed"; failure: Failure };
 
 async function readSession(token?: string): Promise<Read> {
   const http = await call("GET", { token });
@@ -138,7 +172,7 @@ async function readSession(token?: string): Promise<Read> {
   if (http.status === 403) {
     return { kind: "denied", reason: accessReason(http.body?.reason) };
   }
-  return { kind: "failed", error: failure(http) };
+  return { kind: "failed", failure: failure(http) };
 }
 
 async function sha256(text: string): Promise<string> {
@@ -169,7 +203,7 @@ let renewed = false;
 function ready(mode: SessionMode, me: Me): "ready" {
   const merged = { ...me, ...patches };
   setThemePreference(merged.theme);
-  update({ status: "ready", mode, me: merged, reason: null, error: null, renewed });
+  update({ status: "ready", mode, me: merged, reason: null, error: null, retryAfter: null, renewed });
   if (!opened && launch !== null) {
     opened = true;
     const ms = Math.round(performance.now());
@@ -179,15 +213,15 @@ function ready(mode: SessionMode, me: Me): "ready" {
 }
 
 /** Step 4 of `25` §3.4: sign in with this launch's data, then find out whether the cookie came back. */
-async function establish(): Promise<"ready" | "expired" | "denied" | SessionError> {
+async function establish(): Promise<"ready" | "expired" | "denied" | Failure> {
   const http = await call("POST", { body: JSON.stringify({ initData: tg.initData() }) });
   if (http.status === 401) {
     clearAuth();
-    update({ status: "expired", mode: null, error: null });
+    update({ status: "expired", mode: null, error: null, retryAfter: null });
     return "expired";
   }
   if (http.status === 403) {
-    update({ status: "denied", reason: accessReason(http.body?.reason), error: null });
+    update({ status: "denied", reason: accessReason(http.body?.reason), error: null, retryAfter: null });
     return "denied";
   }
   const token = http.status === 200 ? http.body?.token : undefined;
@@ -202,7 +236,7 @@ async function establish(): Promise<"ready" | "expired" | "denied" | SessionErro
     return ready("cookie", check.me);
   }
   if (check.kind !== "none") {
-    return check.kind === "failed" ? check.error : "server";
+    return check.kind === "failed" ? check.failure : SERVER;
   }
   // The frame refused the cookie: header mode, the token in memory only.
   setHeaderAuth(token, expiresAt);
@@ -211,10 +245,10 @@ async function establish(): Promise<"ready" | "expired" | "denied" | SessionErro
     return ready("header", withHeader.me);
   }
   if (withHeader.kind === "denied") {
-    update({ status: "denied", reason: withHeader.reason, error: null });
+    update({ status: "denied", reason: withHeader.reason, error: null, retryAfter: null });
     return "denied";
   }
-  return withHeader.kind === "failed" ? withHeader.error : "server";
+  return withHeader.kind === "failed" ? withHeader.failure : SERVER;
 }
 
 let prepared: Promise<SdkOutcome> | null = null;
@@ -271,10 +305,11 @@ async function run(): Promise<void> {
     });
   }
   const recheck = state.status === "denied";
-  update(recheck ? { prepared: true, error: null } : { status: "booting", prepared: true, error: null });
-  const failed = (error: SessionError): void => {
+  update(recheck ? { prepared: true, error: null, retryAfter: null } : { status: "booting", prepared: true, error: null, retryAfter: null });
+  // One update with both, so `useBootRetry` never sees a `rate_limited` without its wait.
+  const failed = ({ error, retryAfter }: Failure): void => {
     if (!recheck) {
-      update({ status: "booting", error });
+      update({ status: "booting", error, retryAfter: error === "rate_limited" ? retryAfter : null });
     }
   };
 
@@ -285,17 +320,17 @@ async function run(): Promise<void> {
     return;
   }
   if (current.kind === "denied") {
-    update({ status: "denied", reason: current.reason, error: null });
+    update({ status: "denied", reason: current.reason, error: null, retryAfter: null });
     return;
   }
   if (current.kind === "failed") {
-    failed(current.error);
+    failed(current.failure);
     return;
   }
   // A sign-in may set the cookie even when its attempt fails later: a retry that then confirms it still renews.
   renewed = true;
   const result = await establish();
-  if (result !== "ready" && result !== "expired" && result !== "denied") {
+  if (typeof result === "object") {
     failed(result);
   }
 }
@@ -393,7 +428,7 @@ export function refresh(): Promise<void> {
  */
 export function onForbidden(reason?: unknown): void {
   if (state.status === "ready") {
-    update({ status: "denied", reason: accessReason(reason), error: null });
+    update({ status: "denied", reason: accessReason(reason), error: null, retryAfter: null });
   }
 }
 

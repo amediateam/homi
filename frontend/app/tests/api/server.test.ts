@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const jar = new Map<string, string>();
+/** The headers of the request being served. */
+let incoming = new Headers();
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined) }),
+  headers: async () => incoming,
 }));
 vi.mock("next/root-params", () => ({ locale: async () => "uz" }));
 
@@ -16,6 +19,7 @@ beforeEach(() => {
   sent = [];
   answer = () => Response.json({ success: true, data: { id: 1 }, meta: { source: "stub" } });
   jar.clear();
+  incoming = new Headers();
   vi.stubEnv("API_URL", "https://api.test/api/v1");
   vi.stubEnv("NEXT_PUBLIC_APP_ENV", "ci");
   vi.stubGlobal(
@@ -155,6 +159,24 @@ describe("serverApi (WP-22)", () => {
     expect(API_TIMEOUT_MS).toBe(15_000);
   });
 
+  describe("X-Forwarded-For (WP-40)", () => {
+    it("passes the request's value on exactly as it came, the chain of nginx included", async () => {
+      incoming = new Headers({ "x-forwarded-for": "203.0.113.7, 198.51.100.2" });
+
+      await (await serverApi()).me();
+
+      expect(sent[0].headers["X-Forwarded-For"]).toBe("203.0.113.7, 198.51.100.2");
+    });
+
+    it("invents none when the request has none, or an empty one", async () => {
+      await (await serverApi()).me();
+      incoming = new Headers({ "x-forwarded-for": "" });
+      await (await serverApi()).me();
+
+      expect(sent.map((call) => Object.keys(call.headers).filter((name) => name.toLowerCase() === "x-forwarded-for"))).toEqual([[], []]);
+    });
+  });
+
   describe("stub scenarios", () => {
     it("copies the homi_stub_scenario cookie into X-Stub-Scenario outside production", async () => {
       jar.set("homi_stub_scenario", "empty_feed");
@@ -194,5 +216,13 @@ describe("publicApi (WP-22)", () => {
     expect(sent[0].headers.Authorization).toBeUndefined();
     expect(sent[0].headers["X-Stub-Scenario"]).toBeUndefined();
     expect(sent[0].headers["Accept-Language"]).toBe("ru");
+  });
+
+  it("sends no X-Forwarded-For: its cached answer serves every user", async () => {
+    incoming = new Headers({ "x-forwarded-for": "203.0.113.7" });
+
+    await publicApi("ru").cities();
+
+    expect(sent[0].headers["X-Forwarded-For"]).toBeUndefined();
   });
 });

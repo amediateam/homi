@@ -14,10 +14,10 @@ const session = { token: TOKEN, token_type: "Bearer", expires_at: "2026-11-16T12
 const launch = syntheticInitData({ id: 4242 });
 const userTag = createHash("sha256").update("4242").digest("hex");
 
-function apiAnswers(...answers: [number, unknown][]) {
-  const fetch = vi.fn(async () => {
-    const [status, body] = answers.shift() ?? [500, {}];
-    return new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+function apiAnswers(...answers: ([number, unknown] | [number, unknown, Record<string, string>])[]) {
+  const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => {
+    const [status, body, headers = {}] = answers.shift() ?? [500, {}];
+    return new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
   });
   vi.stubGlobal("fetch", fetch);
   return fetch;
@@ -105,6 +105,37 @@ describe("POST /bff/session", () => {
     expect(await (await POST(post({ initData: launch }))).json()).toEqual({ code: "access_denied", reason: "private" });
   });
 
+  it("passes a 429 on as rate_limited with the API's Retry-After, and keeps the cookies (KI-37)", async () => {
+    apiAnswers([429, { success: false, code: "rate_limited", message: "Too Many Attempts." }, { "retry-after": "37" }]);
+
+    const response = await POST(post({ initData: launch }, { cookie: `homi_session=${encodeURIComponent(TOKEN)}; homi_session_user=${userTag}` }));
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ code: "rate_limited" });
+    expect(response.headers.get("retry-after")).toBe("37");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  it("a 429 without Retry-After is passed on without one", async () => {
+    apiAnswers([429, { success: false, code: "rate_limited" }]);
+
+    const response = await POST(post({ initData: launch }));
+
+    expect([response.status, await response.json()]).toEqual([429, { code: "rate_limited" }]);
+    expect(response.headers.has("retry-after")).toBe(false);
+  });
+
+  it("passes the request's X-Forwarded-For on to the API as it came, and invents none (WP-40)", async () => {
+    const fetch = apiAnswers([200, { success: true, data: session, meta: { source: "native" } }], [200, { success: true, data: session, meta: { source: "native" } }]);
+
+    await POST(post({ initData: launch }, { "x-forwarded-for": "203.0.113.7, 198.51.100.2" }));
+    await POST(post({ initData: launch }));
+
+    const forwarded = fetch.mock.calls.map(([, init]) => (init.headers as Record<string, string>)["X-Forwarded-For"]);
+    expect(forwarded).toEqual(["203.0.113.7, 198.51.100.2", undefined]);
+  });
+
   it("answers 502 for anything else: a 500, an unreadable body, a network error", async () => {
     apiAnswers([500, { success: false, code: "server_error" }], [200, "<html>"], [200, { success: true, data: { token: 1 } }]);
     expect((await POST(post({ initData: launch }))).status).toBe(502);
@@ -145,6 +176,24 @@ describe("GET /bff/session", () => {
     expect([refused.status, await refused.json()]).toEqual([401, { code: "unauthenticated" }]);
     const denied = await GET(get({ authorization: `Bearer ${TOKEN}` }));
     expect([denied.status, await denied.json()]).toEqual([403, { code: "access_denied", reason: "blocked" }]);
+  });
+
+  it("passes a 429 of /me on as rate_limited with its Retry-After; the cookie stays (KI-37)", async () => {
+    apiAnswers([429, { success: false, code: "rate_limited" }, { "retry-after": "12" }]);
+
+    const response = await GET(get({ cookie: `homi_session=${encodeURIComponent(TOKEN)}` }));
+
+    expect([response.status, await response.json()]).toEqual([429, { code: "rate_limited" }]);
+    expect(response.headers.get("retry-after")).toBe("12");
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  it("passes the request's X-Forwarded-For on to GET /me as it came (WP-40)", async () => {
+    const fetch = apiAnswers([200, { success: true, data: me, meta: { source: "native" } }]);
+
+    await GET(get({ cookie: `homi_session=${TOKEN}`, "x-forwarded-for": "203.0.113.7" }));
+
+    expect((fetch.mock.calls[0]![1].headers as Record<string, string>)["X-Forwarded-For"]).toBe("203.0.113.7");
   });
 
   it("refuses a cross-site request", async () => {

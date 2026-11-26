@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { forwardedFor, forwardedForHeaders } from "@/lib/api/forwarded";
 import { STUB_SCENARIO_COOKIE, stubScenarioHeaders } from "@/lib/api/scenario";
 import { sameOrigin } from "@/lib/security/sameOrigin";
 import { apiBaseUrl, SESSION_COOKIE } from "@/lib/session/server";
@@ -10,7 +11,7 @@ import { apiBaseUrl, SESSION_COOKIE } from "@/lib/session/server";
  * of `/bff` besides the journal (it amends WP-22's rule and `25` §3.5 for this method): same-origin only; the token
  * from the cookie or the bearer header, so both session modes work; a ULID id; a multipart body of at most 4 MB
  * holding one `file`, forwarded as `file` named `photo.jpg` to `POST /owner/listings/{id}/photos`; the API's status
- * and JSON passed on unchanged, without its headers, never cached.
+ * and JSON passed on unchanged, without its headers, never cached. The request's `X-Forwarded-For` goes along (WP-40).
  */
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         "X-Request-Id": crypto.randomUUID().replaceAll("-", ""),
         ...(request.headers.get("accept-language") ? { "Accept-Language": request.headers.get("accept-language")! } : {}),
         ...stubScenarioHeaders(request.cookies.get(STUB_SCENARIO_COOKIE)?.value),
+        ...forwardedForHeaders(forwardedFor(request.headers)),
       },
       body,
       cache: "no-store",

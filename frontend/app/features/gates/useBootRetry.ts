@@ -14,12 +14,29 @@ export const BOOT_RETRY_DELAYS_MS = [1_000, 3_000, 7_000, 15_000, 30_000] as con
 export const RECHECK_COUNT = 3;
 export const RECHECK_DELAY_MS = 2_500;
 
-type Seen = Pick<Session, "status" | "error" | "pending" | "reason">;
+/**
+ * KI-37: the one wait of a `429` sign-in — its `Retry-After`, at most a minute; this long when it gave none. It is
+ * not one of the six failures.
+ */
+export const RATE_LIMIT_WAIT_MAX_MS = 60_000;
+export const RATE_LIMIT_WAIT_DEFAULT_MS = 10_000;
+
+/** The wait before the attempt after a `429`: `Retry-After` (seconds) capped at a minute, else the default. */
+export function rateLimitWaitMs(retryAfter: number | null): number {
+  if (retryAfter === null || !Number.isFinite(retryAfter) || retryAfter < 0) {
+    return RATE_LIMIT_WAIT_DEFAULT_MS;
+  }
+  return Math.min(retryAfter * 1000, RATE_LIMIT_WAIT_MAX_MS);
+}
+
+type Seen = Pick<Session, "status" | "error" | "retryAfter" | "pending" | "reason">;
 
 /** The bookkeeping of the one instance; touched only from effects, timers and handlers. */
 interface Memory {
   failures: number;
   rechecks: number;
+  /** The one uncounted wait of a `429` was spent since the counters were last reset. */
+  rateLimitWaited: boolean;
   timer: ReturnType<typeof setTimeout> | null;
   /** An attempt this hook started has not settled yet. */
   running: boolean;
@@ -46,17 +63,24 @@ function start(memory: Memory, retry: () => Promise<void>, settled: () => void):
     });
 }
 
+function resetCounters(memory: Memory): void {
+  memory.failures = 0;
+  memory.rechecks = 0;
+  memory.rateLimitWaited = false;
+}
+
 /**
  * Reacts to the outcome of an attempt: a sign-in failure waits for the next delay, and after the sixth publishes
- * `failed`; a refusal other than `blocked` is checked again up to three times; `ready`, `expired` and `outside` stop
- * everything. Idempotent: while a timer waits or an attempt is in flight nothing is counted twice.
+ * `failed`; the first `429` since the counters were reset waits for its `Retry-After` instead and is not counted (a
+ * later one is an ordinary failure); a refusal other than `blocked` is checked again up to three times; `ready`,
+ * `expired` and `outside` stop everything. Idempotent: while a timer waits or an attempt is in flight nothing is
+ * counted twice.
  */
 function observe(memory: Memory, attempt: () => void): void {
-  const { status, error, pending, reason } = memory.seen;
+  const { status, error, retryAfter, pending, reason } = memory.seen;
   if (status === "ready" || status === "expired" || status === "outside") {
     clearTimer(memory);
-    memory.failures = 0;
-    memory.rechecks = 0;
+    resetCounters(memory);
     publishBootRetry(BOOT_RETRY_IDLE);
     return;
   }
@@ -79,6 +103,14 @@ function observe(memory: Memory, attempt: () => void): void {
   if (error === null) {
     return;
   }
+  if (error === "rate_limited" && !memory.rateLimitWaited) {
+    memory.rateLimitWaited = true;
+    memory.timer = setTimeout(() => {
+      memory.timer = null;
+      attempt();
+    }, rateLimitWaitMs(retryAfter));
+    return;
+  }
   memory.failures += 1;
   const delay = BOOT_RETRY_DELAYS_MS[memory.failures - 1];
   if (delay === undefined) {
@@ -99,21 +131,30 @@ function observe(memory: Memory, attempt: () => void): void {
  * - A sign-in that failed without an answer (network, timeout, server, `429`) is tried again after 1, 3, 7, 15 and
  *   30 s — six attempts in all; after the sixth failure the content area shows `ErrorState` with «Повторить», which
  *   resets the counter and tries at once.
+ * - The first `429` (KI-37) is tried again after its `Retry-After` — at most 60 s, 10 s without one — and is not
+ *   counted; another `429` after that counts as above. «Повторить» and returning to the app allow that wait again.
  * - A refusal is checked again 3 times at 2.5 s, never for `blocked`.
  * - Returning to the app (`tg.onVisible`) resets both counters and tries at once — also for `blocked` — while the
  *   session is booting after a failure or refused; while an attempt is in flight it starts nothing.
  * - `expired` and `outside` schedule nothing; `ready` clears whatever was scheduled.
  */
 export function useBootRetry(): void {
-  const { status, error, pending, reason, retry } = useSession();
+  const { status, error, retryAfter, pending, reason, retry } = useSession();
   const [settled, setSettled] = useState(0);
-  const memory = useRef<Memory>({ failures: 0, rechecks: 0, timer: null, running: false, seen: { status, error, pending, reason } });
+  const memory = useRef<Memory>({
+    failures: 0,
+    rechecks: 0,
+    rateLimitWaited: false,
+    timer: null,
+    running: false,
+    seen: { status, error, retryAfter, pending, reason },
+  });
 
   useEffect(() => {
     const current = memory.current;
-    current.seen = { status, error, pending, reason };
+    current.seen = { status, error, retryAfter, pending, reason };
     observe(current, () => start(current, retry, () => setSettled((count) => count + 1)));
-  }, [status, error, pending, reason, retry, settled]);
+  }, [status, error, retryAfter, pending, reason, retry, settled]);
 
   useEffect(() => {
     const current = memory.current;
@@ -122,8 +163,7 @@ export function useBootRetry(): void {
       if (inFlight || current.running || !(now === "denied" || (now === "booting" && failure !== null))) {
         return;
       }
-      current.failures = 0;
-      current.rechecks = 0;
+      resetCounters(current);
       publishBootRetry({ ...BOOT_RETRY_IDLE, checking: now === "denied" && why !== "blocked" });
       start(current, retry, () => setSettled((count) => count + 1));
     };

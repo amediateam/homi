@@ -145,6 +145,15 @@ describe("GET /bff/[...path]", () => {
     expect(headers["X-Stub-Scenario"]).toBe("empty_list");
   });
 
+  it("passes the request's X-Forwarded-For on as it came, and invents none (WP-40)", async () => {
+    const fetch = apiAnswer();
+    await read("me", { cookie: `homi_session=${TOKEN}`, "x-forwarded-for": "203.0.113.7, 198.51.100.2" });
+    await read("me", { cookie: `homi_session=${TOKEN}` });
+
+    const forwarded = fetch.mock.calls.map(([, init]) => (init.headers as Record<string, string>)["X-Forwarded-For"]);
+    expect(forwarded).toEqual(["203.0.113.7, 198.51.100.2", undefined]);
+  });
+
   it("refuses a query string over 4 KB", async () => {
     const fetch = apiAnswer();
 
@@ -215,6 +224,15 @@ describe("the journal's write (WP-32): POST /bff/events", () => {
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
     expect(JSON.parse(String(init.body))).toEqual({ name: "app_error", props: { error: { message: "call +998***" } } });
+  });
+
+  it("passes the request's X-Forwarded-For on to POST /events, and invents none (WP-40)", async () => {
+    const fetch = apiAnswer(202);
+    await write("events", JSON.stringify({ name: "follow_prompt_shown" }), { authorization: `Bearer ${TOKEN}`, "x-forwarded-for": "203.0.113.7" });
+    await write("events", JSON.stringify({ name: "follow_prompt_shown" }), { authorization: `Bearer ${TOKEN}` });
+
+    const forwarded = fetch.mock.calls.map(([, init]) => (init.headers as Record<string, string>)["X-Forwarded-For"]);
+    expect(forwarded).toEqual(["203.0.113.7", undefined]);
   });
 
   it("takes the token from the cookie in cookie mode", async () => {

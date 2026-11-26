@@ -1,9 +1,10 @@
 import "server-only";
 
 import { isLocale, type Locale } from "@homi/config";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { failureOf } from "@/lib/api/errors";
+import { forwardedFor } from "@/lib/api/forwarded";
 import { STUB_SCENARIO_COOKIE } from "@/lib/api/scenario";
 import { createServerApi, type ServerApi } from "@/lib/api/server";
 import type { ApiResult } from "@/lib/api/types";
@@ -14,7 +15,8 @@ import { getSessionToken } from "@/lib/session/server";
  * `(input, auth?: { token?: string }, locale?)`, validates its input (`./validate`) and returns
  * `runAction(auth, locale, (api) => …)`. The token is the cookie's (cookie mode), else the argument's (header mode,
  * sent by `useAction` in the action's request body, never in an address); without one nothing is requested. Each
- * action re-reads the session itself, and nothing per-user is cached, so no action revalidates.
+ * action re-reads the session itself, and nothing per-user is cached, so no action revalidates. The action request's
+ * `X-Forwarded-For` goes along to the API (WP-40).
  */
 export type ActionResult<T> = ApiResult<T>;
 export type ActionAuth = { token?: string } | undefined;
@@ -24,11 +26,12 @@ export async function runAction<T>(auth: ActionAuth, locale: string | undefined,
   if (token === null) {
     return failureOf({ method: "ACTION", path: "session" }, { status: 401, code: "unauthenticated" });
   }
-  const store = await cookies();
+  const [store, incoming] = await Promise.all([cookies(), headers()]);
   const api = createServerApi({
     token,
     locale: typeof locale === "string" && isLocale(locale) ? (locale as Locale) : "ru",
     scenario: store.get(STUB_SCENARIO_COOKIE)?.value ?? null,
+    forwardedFor: forwardedFor(incoming),
   });
   return fn(api);
 }
