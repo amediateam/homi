@@ -5,7 +5,8 @@ Plan: [`../25-wave-1-plan.md`](../25-wave-1-plan.md). Strategy and decisions:
 
 This file is the **single ordered queue** of Wave 1. Two full-stack developers, each with agents, work it in relay:
 whoever holds the relay takes the first package that is not `DONE` and continues exactly where the other stopped
-(DEC-45). There is no split by stack and no second queue.
+(DEC-45). There is no split by stack and no second queue; since 2026-11-26 a second development session works the
+same queue at the same time (DEC-109, rule 1).
 
 ## State of the specifications (2026-11-14)
 
@@ -57,7 +58,7 @@ the code, those win, and the specification is corrected in the same PR (rule 6 b
    "Depends on". A package in `REVIEW` is finished and waits only for its merge: the next one is taken on a branch
    from its branch, so it has what it depends on (rule 8). Since 2026-11-26 a second development session works in
    parallel (DEC-109): it takes the package `.ai/memory/session-handoff.md` assigns to it (WP-62 first), and this rule
-   holds for the first session; its prompt is [`docs/handoff/second-developer-prompt.md`](../../handoff/second-developer-prompt.md).
+   holds for the first session (WP-41 next); the second session's prompt is [`docs/handoff/second-developer-prompt.md`](../../handoff/second-developer-prompt.md).
 2. **Read** `25` once, then the package's specification, then only the audit sections the specification cites.
 3. **One package = one branch = one PR**, about 1 500–3 000 changed lines without generated files, reviewed by the
    other developer before merge (DEC-45); while the queue runs under rule 8, an independent review of the diff stands
@@ -155,7 +156,7 @@ its row is its place in the queue.
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
 | [WP-40](WP-40-identity.md) | Sign-in, users, settings, access gate, limits | WP-33 (its part 4 merged is enough: DEC-102) | WAITING (merged in #124 on 2026-11-26; production track: env keys of #125, three migrations, the timezone check, then the checks inside Telegram) |
-| [WP-41](WP-41-legacy-driver.md) | Legacy driver core, reference data and cities | WP-40 | IN_PROGRESS (feat/wp-41-legacy-driver) |
+| [WP-41](WP-41-legacy-driver.md) | Legacy driver core, reference data and cities | WP-40 | TODO |
 | [WP-42](WP-42-listings-legacy.md) | Listings through legacy: feed, count, flow, map, card, overlay, photos | WP-41 | TODO |
 | [WP-43](WP-43-contact-translation-share.md) | Contact, translation, share | WP-42 | TODO |
 | [WP-44](WP-44-personal-lists.md) | Personal lists, reports, surveys | WP-40 | TODO |
@@ -190,7 +191,7 @@ its row is its place in the queue.
 | Package | Title | Depends on | Status |
 | ------- | ----- | ---------- | ------ |
 | [WP-60](WP-60-landing-data.md) | Landing data | WP-41 | TODO |
-| [WP-62](WP-62-launch-with-filter.md) | Mini App launch with a search filter (the landing showcase's links, DEC-95) | WP-25, WP-36 | TODO (the second development session, DEC-109) |
+| [WP-62](WP-62-launch-with-filter.md) | Mini App launch with a search filter (the landing showcase's links, DEC-95) | WP-25, WP-36 | TODO |
 | [WP-61](WP-61-landing-pages.md) | Landing pages | WP-60, WP-20, WP-62 | TODO |
 
 ## Stage F — Launch

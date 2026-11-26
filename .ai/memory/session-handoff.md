@@ -15,7 +15,7 @@ Written for whoever continues the **development track**. The production track's 
 ## State at handoff
 - `main` = `60d30dc` (#126, the last save) plus the PR of `docs/second-developer-prompt`; #124 `a987ecd`, #125 `d650cac`, #123 `cabee17`. `git ls-remote --heads origin` → `main`, `chore/php-8.6`, five Dependabot heads. No worktree besides the main checkout.
 - **WP-40 is WAITING** for the production track (spec "Needs from the production track": three migrations, the env keys of #125, `TRUSTED_PROXIES` = the addresses the Next servers reach the API from, the `show timezone` check, `TELESCOPE_RECORD_ALL` off, the scheduler; then the checks inside Telegram).
-- **Two development sessions (DEC-109).** This one: **WP-41** next (legacy driver core, reference data and cities; `docs/migration/wave-1/WP-41-legacy-driver.md`), branch `feat/wp-41-legacy-driver` from `origin/main`, then the rest of stage C's backend in queue order (WP-44 after WP-41: same backend files). **The second session: WP-62** (frontend only), started from `docs/handoff/second-developer-prompt.md`; it does not edit this file and numbers from AM-150, KI-90, DEC-150 up. Read its state from its PR and the "Handoff" of its specification (`gh pr list`).
+- **Two development sessions (DEC-109).** This one: **WP-41** next (legacy driver core, reference data and cities; `docs/migration/wave-1/WP-41-legacy-driver.md`), branch `feat/wp-41-legacy-driver` from `origin/main`, then the rest of stage C's backend in queue order (WP-44 after WP-41, both backend). **The second session: WP-62** (frontend only), started from `docs/handoff/second-developer-prompt.md`; it does not edit this file, merges `main` into its branch, and numbers as `parallel-work.md` §5 says. Read its state from its PR and the "Handoff" of its specification (`gh pr list`).
 - Verify: from `backend/` `php artisan test --compact` (1 362 tests, 1 350 passed, 12 skipped) **and** the same suite on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan test --compact` (1 362 passed); `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= make test-pgsql` (12); `make ci-frontend`; `HOMI_E2E_API_PORT=8090 scripts/dev/e2e-local.sh` (927).
 
 ## Done this session
@@ -40,7 +40,7 @@ Written for whoever continues the **development track**. The production track's 
 - Reading `backend/.env` is refused (the permission layer denied even `grep -o '^[A-Z_]*='`, which the hook itself allows) and the hook refuses creating one in a worktree: a worktree has no env file (tests need `APP_KEY=…` in the environment). Read values with `php artisan config:show`.
 - `SortedMiddleware` reorders only middleware in the priority list; WP-40 anchors its chain after `Authorize` (`bootstrap/app.php`).
 - zsh does not split `$FILES`: stage with `git status --short | awk '{print $2}' | xargs git add --`.
-- Next numbers of this session: AM-115, KI-72, ADR 0021, DEC-110 (the second session: AM-150, KI-90, DEC-150 up).
+- Next numbers: AM-115, KI-72, ADR 0021, DEC-110. The hook shows both sessions the same numbers: before a push grep the second session's open PRs for the ones taken (whoever merges second renumbers; `collect_ids.py --check` does not see AM, KI or DEC-1xx).
 
 ## Active subagent work at handoff
 - None running.

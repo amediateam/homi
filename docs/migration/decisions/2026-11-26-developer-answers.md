@@ -95,13 +95,14 @@ WP-33 part 4 and then WP-40, both merged now; nothing came from that session on 
 from it reads `.ai/memory/session-handoff.md`, which names WP-41 next, and would take the package this session is
 about to take. Where should the second session start? Proposed: WP-62 (the Mini App launched with a search filter,
 DEC-95) — it depends only on WP-25 and WP-36, both merged, touches only the frontend, and needs nothing from the
-production track; WP-44 is open too, but it changes the same backend files as WP-41 (`routes/api.php`,
-`config/sources.php`, `docs/api/openapi.json`, the generated types). Update the prompt for that?
+production track; WP-44 is open too, but it is backend work like WP-41, so the two sessions would work the same part of
+the code. Update the prompt for that?
 
 Answer: «да, обнови промпт под WP-62», then «Может сюда перенесем …/homi.uz/docs эту …/homi-new-developer-prompt.md»
 (the prompt, kept outside the repository until then). Registered as **DEC-109**. Consequences: an exception to rule 1
 of the queue — the first session keeps the queue's order (WP-41 and the rest of stage C's backend), the second takes
 the package the session handoff assigns to it (WP-62 first) and asks the developer for the next one; the prompt is
 `docs/handoff/second-developer-prompt.md`, in English; the second session does not rewrite
-`.ai/memory/session-handoff.md` (KI-20) and takes its numbers from AM-150, KI-90 and DEC-150 up, because the
-SessionStart hook shows both sessions the same next numbers.
+`.ai/memory/session-handoff.md` (KI-20), merges `main` into its branch instead of rebasing, and takes numbers as
+`docs/handoff/parallel-work.md` §5 says (the next free one; whoever merges second renumbers), checking the other
+session's open PRs first, because the SessionStart hook shows both sessions the same next numbers.
