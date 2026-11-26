@@ -253,12 +253,13 @@ describe("useBootRetry (BR-APP-054, D-S-3)", () => {
       expect(state.retry).toHaveBeenCalledTimes(1);
     });
 
-    it("another 429 after that wait counts as an ordinary failure and ends in the server kind", async () => {
+    it("another 429 after that wait counts as a failure, never retries before its Retry-After, and ends in the server kind", async () => {
       mount({ error: "rate_limited", retryAfter: 5 });
       act(() => vi.advanceTimersByTime(5_000));
       expect(state.retry).toHaveBeenCalledTimes(1);
 
-      for (const [index, delay] of BOOT_RETRY_DELAYS_MS.entries()) {
+      for (const [index, ladder] of BOOT_RETRY_DELAYS_MS.entries()) {
+        const delay = Math.max(ladder, 5_000);
         await outcome({ error: "rate_limited", retryAfter: 5 });
         act(() => vi.advanceTimersByTime(delay - 1));
         expect(state.retry, `failure ${index + 1} waits ${delay} ms`).toHaveBeenCalledTimes(index + 1);

@@ -68,9 +68,10 @@ layer, and the runtime rules — a missing key renders its path and is reported 
   `html[data-session]` mirrors the status (`booting`, `ready`, `outside`, `denied`, `expired`).
 - The app server calls the API at `API_URL` (server-only), else `NEXT_PUBLIC_API_URL`. Every such call — `serverApi()`,
   `runAction`, the `/bff/*` handlers — passes the incoming `X-Forwarded-For` on unchanged (`lib/api/forwarded.ts`), so
-  the API's per-address limits count the client; the cached `publicApi()` reads pass none (WP-40). A `429` of a
-  sign-in reaches the client as `429 rate_limited` with the API's `Retry-After`; the boot retry waits for it once —
-  at most 60 s, 10 s without one — without counting it among the six failures (KI-37).
+  the API's per-address limits count the client; the cached `publicApi()` reads pass none (WP-40). A `429` of
+  `/bff/session` (sign-in or `/me`) reaches the client as `429 rate_limited` with the API's `Retry-After`; the boot
+  retry waits for the first one — at most 60 s, 10 s without one — without counting it among the six failures, and
+  a later counted one never retries sooner than its `Retry-After` (KI-37).
 
 ## Data
 

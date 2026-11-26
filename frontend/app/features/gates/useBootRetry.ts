@@ -112,7 +112,9 @@ function observe(memory: Memory, attempt: () => void): void {
     return;
   }
   memory.failures += 1;
-  const delay = BOOT_RETRY_DELAYS_MS[memory.failures - 1];
+  const ladder = BOOT_RETRY_DELAYS_MS[memory.failures - 1];
+  // A counted `429` still never retries inside the window the API named.
+  const delay = ladder === undefined || error !== "rate_limited" ? ladder : Math.max(ladder, rateLimitWaitMs(retryAfter));
   if (delay === undefined) {
     publishBootRetry({ failed: true, kind: bootFailureKind(error), checking: false });
     return;
@@ -132,7 +134,7 @@ function observe(memory: Memory, attempt: () => void): void {
  *   30 s — six attempts in all; after the sixth failure the content area shows `ErrorState` with «Повторить», which
  *   resets the counter and tries at once.
  * - The first `429` (KI-37) is tried again after its `Retry-After` — at most 60 s, 10 s without one — and is not
- *   counted; another `429` after that counts as above. «Повторить» and returning to the app allow that wait again.
+ *   counted; another `429` after that counts as above, and waits at least its `Retry-After` (same cap). «Повторить» and returning to the app allow that wait again.
  * - A refusal is checked again 3 times at 2.5 s, never for `blocked`.
  * - Returning to the app (`tg.onVisible`) resets both counters and tries at once — also for `blocked` — while the
  *   session is booting after a failure or refused; while an attempt is in flight it starts nothing.
