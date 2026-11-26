@@ -10,7 +10,9 @@ use App\Services\Access\AccessGate;
 use App\Services\Identity\TelegramInitData;
 use App\Services\Identity\UserResolver;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\EnvOverride;
 
 /** The access gate's decision (WP-40, `25` §3.4, KV-BE-009): every rule, the pause, the seats, the cache. */
@@ -113,6 +115,34 @@ it('counts only admitted grants as seats', function (): void {
 it('admits nobody new with no seats', function (): void {
     expect(gateDecides(gatedUser(['max_seats' => 0])))->toBe(AccessState::Full)
         ->and(AccessGrant::query()->count())->toBe(0);
+});
+
+it('fails closed on a seat limit it cannot read, and reads a blank one as no limit', function (mixed $seats, AccessState $expected, int $rows): void {
+    expect(gateDecides(gatedUser(['max_seats' => $seats])))->toBe($expected)
+        ->and(AccessGrant::query()->count())->toBe($rows);
+})->with([
+    'a word' => ['many', AccessState::Full, 0],
+    'a negative number' => [-1, AccessState::Full, 0],
+    'a fraction' => ['2.5', AccessState::Full, 0],
+    'a switch' => [true, AccessState::Full, 0],
+    'digits with spaces' => [' 3 ', AccessState::Granted, 1],
+    'a blank string' => ['  ', AccessState::Granted, 0],
+]);
+
+it('lets the stored grant decide when a block lands between the seat count and the admission', function (): void {
+    $user = gatedUser(['max_seats' => 5]);
+    $raced = false;
+    // `access:block` of another process writes its grant without the seat lock: here right after the seats are counted.
+    DB::listen(function (QueryExecuted $query) use ($user, &$raced): void {
+        if (! $raced && str_contains($query->sql, 'count(*)') && str_contains($query->sql, 'access_grants')) {
+            $raced = true;
+            AccessGrant::factory()->for($user)->blocked()->create();
+        }
+    });
+
+    expect(gateDecides($user))->toBe(AccessState::Blocked)
+        ->and($raced)->toBeTrue()
+        ->and(AccessGrant::query()->sole()->state)->toBe(AccessGrantState::Blocked);
 });
 
 it('refuses everyone with paused during a pause, a blocked user and an owner too', function (?AccessGrantState $grant, array $access): void {
@@ -231,7 +261,11 @@ it('reads the access keys of the environment', function (string $key, ?string $v
     'a seat limit' => ['ACCESS_MAX_SEATS', '200', 'max_seats', 200],
     'no seats' => ['ACCESS_MAX_SEATS', '0', 'max_seats', 0],
     'a blank seat limit' => ['ACCESS_MAX_SEATS', '', 'max_seats', null],
-    'a seat limit that is no number' => ['ACCESS_MAX_SEATS', 'many', 'max_seats', null],
+    'a seat limit that is no number' => ['ACCESS_MAX_SEATS', 'many', 'max_seats', 0],
+    'a negative seat limit' => ['ACCESS_MAX_SEATS', '-5', 'max_seats', 0],
+    'a seat limit read as a switch' => ['ACCESS_MAX_SEATS', 'true', 'max_seats', 0],
+    'a seat limit with spaces' => ['ACCESS_MAX_SEATS', ' 7 ', 'max_seats', 7],
+    'a seat limit of null' => ['ACCESS_MAX_SEATS', 'null', 'max_seats', null],
     'the owners' => ['ACCESS_OWNER_TELEGRAM_IDS', '279058397, 100000001,,x,0,-5', 'owner_telegram_ids', [279058397, 100000001]],
     'the pause on' => ['ACCESS_PAUSED', 'true', 'paused', true],
     'the pause as 1' => ['ACCESS_PAUSED', '1', 'paused', true],

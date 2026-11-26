@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Exceptions\ApiException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +21,9 @@ use Throwable;
  * (`Illuminate\Foundation\Exceptions\Handler::prepareException()`): a `ModelNotFoundException` arrives as a
  * `NotFoundHttpException`, an `AuthorizationException` (Sanctum's `MissingAbilityException` too) as an
  * `AccessDeniedHttpException` or an `HttpException` with its own status. Those codes are therefore chosen by the
- * status of the HTTP exception. An exception with its own `render()` method (`MediaException`) never gets here.
+ * status of the HTTP exception. An exception with its own `render()` method (`MediaException`) never gets here. An
+ * `HttpResponseException` carries its finished response (the `204` of a dropped event, `v1-events`) and is left to the
+ * framework, which answers with it.
  */
 final class ApiExceptionRenderer
 {
@@ -34,7 +37,7 @@ final class ApiExceptionRenderer
 
     public static function render(Throwable $e, Request $request): ?JsonResponse
     {
-        if (! self::isApiRequest($request)) {
+        if (! self::isApiRequest($request) || $e instanceof HttpResponseException) {
             return null;
         }
 

@@ -7,6 +7,7 @@ use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
 use App\Models\User;
 use App\Services\Access\AccessGate;
+use App\Services\Access\RateLimits;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
@@ -25,8 +26,8 @@ use LogicException;
  *    expired token), counted by its fingerprint for the length of the window (SEC-REQ-003); beyond that
  *    `429 rate_limited`;
  * 3. the launch becomes a HOMI user (`UserResolver`);
- * 4. one user signs in at most `rate_limits.auth.per_user` times a minute (default 5, SEC-REQ-027), counted by the
- *    internal user id; beyond that `429 rate_limited`;
+ * 4. one user signs in at most `rate_limits.auth.per_user` times a minute (default 5, SEC-REQ-027, read leniently by
+ *    `RateLimits`), counted by the internal user id; beyond that `429 rate_limited`;
  * 5. the access gate decides; a refusal answers `403 access_denied` with its reason and issues no token;
  * 6. `TokenIssuer` issues the token.
  *
@@ -36,8 +37,6 @@ use LogicException;
  */
 final readonly class TelegramSignIn
 {
-    public const int DEFAULT_PER_USER_PER_MINUTE = 5;
-
     public function __construct(
         private TelegramInitDataVerifier $verifier,
         private UserResolver $users,
@@ -111,9 +110,7 @@ final readonly class TelegramSignIn
     private function limitUser(TelegramInitData $launch, User $user): void
     {
         $key = 'auth:user:'.$user->id;
-        $limit = max(1, Config::integer('rate_limits.auth.per_user', self::DEFAULT_PER_USER_PER_MINUTE));
-
-        $this->throttle($key, $limit, 60, 'too_many_sign_ins', $launch, $user);
+        $this->throttle($key, RateLimits::value('auth.per_user'), 60, 'too_many_sign_ins', $launch, $user);
     }
 
     /**

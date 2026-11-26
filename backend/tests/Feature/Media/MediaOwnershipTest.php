@@ -143,6 +143,8 @@ it('answers foreign and unknown ids with identical status, body and query count'
     $media = ownedMedia(User::factory()->create());
     $user = actAsMediaUser(User::factory()->create());
     // The access gate caches its decision for two seconds (WP-40): decided before the probes, it costs neither a query.
+    // The clock stands still, so a slow run cannot outlive the cached decision between the two probes.
+    $this->freezeTime();
     app(AccessGate::class)->decide($user);
 
     $probe = function (string $id) use ($method): array {

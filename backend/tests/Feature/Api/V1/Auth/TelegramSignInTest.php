@@ -120,7 +120,7 @@ it('refuses a value older than the window with 401 auth_expired, without a reaso
 });
 
 it('exchanges one value twenty times and refuses the 21st with 429 rate_limited and Retry-After', function (): void {
-    config(['rate_limits.auth.per_user' => 100]);
+    config(['rate_limits.auth.per_user' => 100, 'rate_limits.auth.per_address' => 100]);
     $value = signedLaunch();
 
     foreach (range(1, 20) as $exchange) {
@@ -167,6 +167,22 @@ it('refuses a sixth sign-in of one user within a minute, lets other users in, an
     $this->travel(61)->seconds();
     postSignIn(signedLaunch(['query_id' => 'AAHomiQuery7']))->assertOk();
 });
+
+it('reads the per-user limit leniently: digits as a number, anything else as the default of 5', function (mixed $value, int $allowed): void {
+    config(['rate_limits.auth.per_user' => $value]);
+
+    foreach (range(1, $allowed) as $attempt) {
+        postSignIn(signedLaunch(['query_id' => "AAHomiQuery{$attempt}"]))->assertOk();
+    }
+
+    postSignIn(signedLaunch(['query_id' => 'AAHomiQueryOver']))->assertTooManyRequests()->assertJsonPath('code', 'rate_limited');
+})->with([
+    'a string of digits' => ['2', 2],
+    'a word' => ['many', 5],
+    'a blank string' => ['', 5],
+    'zero' => [0, 5],
+    'a fraction' => [2.5, 5],
+]);
 
 it('reads init_data from the JSON body only and ignores the query string', function (string $query, ?string $body, int $status): void {
     $values = ['valid' => signedLaunch(), 'forged' => InitDataSigner::tamper(signedLaunch(), 'auth_date', (string) (now()->getTimestamp() - 1))];

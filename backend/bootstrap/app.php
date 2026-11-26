@@ -3,6 +3,7 @@
 use App\Http\ApiExceptionRenderer;
 use App\Http\Middleware\AnswerNativeStubs;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\CountListingOpens;
 use App\Http\Middleware\EnsureAccessGranted;
 use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
@@ -49,19 +50,22 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
             'access' => EnsureAccessGranted::class,
+            'listing-opens' => CountListingOpens::class,
         ]);
 
         // The framework sorts only the middleware of its priority list. These follow the end of its list (after
         // authentication, the limiters and route model binding) in this order, each after the one before: the request
-        // locale, the access gate (so a refused user hears its reason on every route), then the route's own checks,
-        // and the stub answer of `SOURCES_NATIVE_STUBS` always last (WP-40).
+        // locale, the access gate (so a refused user hears its reason on every route), then the route's own checks, the
+        // daily cap on opening full cards (it counts only a card that is answered), and the stub answer of
+        // `SOURCES_NATIVE_STUBS` always last (WP-40).
         $middleware->appendToPriorityList(Authorize::class, SetRequestLocale::class);
         $middleware->appendToPriorityList(SetRequestLocale::class, EnsureAccessGranted::class);
         $middleware->appendToPriorityList(EnsureAccessGranted::class, CheckForAnyAbility::class);
         $middleware->appendToPriorityList(CheckForAnyAbility::class, CheckAbilities::class);
         $middleware->appendToPriorityList(CheckAbilities::class, EnsureRadarsEnabled::class);
         $middleware->appendToPriorityList(EnsureRadarsEnabled::class, EnsureOwnerCabinetEnabled::class);
-        $middleware->appendToPriorityList(EnsureOwnerCabinetEnabled::class, AnswerNativeStubs::class);
+        $middleware->appendToPriorityList(EnsureOwnerCabinetEnabled::class, CountListingOpens::class);
+        $middleware->appendToPriorityList(CountListingOpens::class, AnswerNativeStubs::class);
 
         // api/* has no login route. The framework default calls route('login') while building
         // AuthenticationException, so a guest request that does not expect JSON becomes a 500.
@@ -70,6 +74,9 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // The Telegram launch data never reaches the session's old input (SEC-REQ-047).
+        $exceptions->dontFlash(['init_data']);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->is('telegram/*') || $request->expectsJson(),
         );

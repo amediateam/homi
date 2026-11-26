@@ -90,7 +90,10 @@ final class AccessGate
     /**
      * `open` mode: everyone passes without a row, unless `max_seats` is set. Then the first pass admits the user: under
      * the seat lock his grant is read again (a concurrent request of his may have written it), the admitted grants are
-     * counted, and the grant is written while a seat is left.
+     * counted, and the grant is written while a seat is left. `access:block` writes its grant without the seat lock;
+     * when its row lands between that read and the insert, the insert finds the user's key taken, and the stored grant
+     * decides (`createOrFirst` inserts under a savepoint, so the failed insert does not abort the transaction on
+     * PostgreSQL).
      */
     private function admitToOpen(User $user): AccessState
     {
@@ -115,13 +118,12 @@ final class AccessGate
                 return AccessState::Full;
             }
 
-            AccessGrant::query()->create([
-                'user_id' => $user->id,
-                'state' => AccessGrantState::Admitted,
-                'admitted_via' => AdmittedVia::Open,
-            ]);
+            $stored = AccessGrant::query()->createOrFirst(
+                ['user_id' => $user->id],
+                ['state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Open],
+            );
 
-            return AccessState::Granted;
+            return $stored->state === AccessGrantState::Admitted ? AccessState::Granted : AccessState::Blocked;
         });
     }
 
@@ -149,15 +151,19 @@ final class AccessGate
         return is_string($mode) ? strtolower(trim($mode)) : 'private';
     }
 
-    /** The seat limit of `open` mode: a whole number, or null for none. */
+    /**
+     * The seat limit of `open` mode: null (or a blank string) for none, a whole number as it is, and `0` for any value
+     * it cannot read, so a mistyped limit admits nobody new instead of everyone.
+     */
     private function maxSeats(): ?int
     {
         $seats = Config::get('access.max_seats');
 
         return match (true) {
-            is_int($seats) => $seats >= 0 ? $seats : null,
-            is_string($seats) && ctype_digit($seats) => (int) $seats,
-            default => null,
+            $seats === null, is_string($seats) && trim($seats) === '' => null,
+            is_int($seats) && $seats >= 0 => $seats,
+            is_string($seats) && ctype_digit(trim($seats)) => (int) trim($seats),
+            default => 0,
         };
     }
 

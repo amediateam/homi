@@ -14,8 +14,8 @@
 |   (everyone). A missing or unknown value is `private`, so a server without the key fails closed (DEC-43: the
 |   servers set `open`).
 | - `max_seats`: in `open` mode, how many users may be admitted; each first admission writes a grant under a lock
-|   that counts the admitted grants. Blank (or anything but a whole number) means no limit, and then no grant row is
-|   written; `0` admits nobody new.
+|   that counts the admitted grants. Blank means no limit, and then no grant row is written; `0` admits nobody new,
+|   and so does any other value that is not a whole number (a mistyped limit fails closed).
 | - `owner_telegram_ids`: the Telegram ids that always pass (`private` mode lets in only them), comma-separated.
 | - `require_chat`: refuse with `join` a user whose chat with the bot is not active. Off: radar writes have their own
 |   `no_chat` check.
@@ -34,7 +34,11 @@ return [
 
     'mode' => env('ACCESS_MODE', 'private'),
 
-    'max_seats' => is_string($seats) && ctype_digit(trim($seats)) ? (int) trim($seats) : null,
+    'max_seats' => match (true) {
+        $seats === null, is_string($seats) && trim($seats) === '' => null,
+        is_string($seats) && ctype_digit(trim($seats)) => (int) trim($seats),
+        default => 0,
+    },
 
     'owner_telegram_ids' => array_values(array_map(
         intval(...),
