@@ -4,6 +4,7 @@ namespace App\Services\Sources\Legacy;
 
 use App\Exceptions\ApiException;
 use App\Exceptions\Sources\LegacyContractError;
+use App\Exceptions\Sources\LegacyRefreshBusy;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Services\Sources\Contracts\ReferenceSource;
 use App\Services\Sources\Data\CityData;
@@ -115,11 +116,16 @@ final class LegacyReferenceSource implements ReferenceSource
 
             // Another process is refreshing: its last good copy, or, on a cold start without one, 503 at once rather
             // than one more call to legacy.
-            return is_array($last) ? $last : throw new SourceUnavailable;
+            return is_array($last) ? $last : throw new LegacyRefreshBusy;
         }
 
         try {
             $value = $fetch();
+        } catch (LegacyRefreshBusy $busy) {
+            // The cities wait for a reference refresh under way in another process: not a failure of legacy.
+            $last = $this->cache->get("{$key}:last");
+
+            return is_array($last) ? $last : throw $busy;
         } catch (ApiException $failure) {
             return $this->afterFailure($key, $failure);
         } finally {
