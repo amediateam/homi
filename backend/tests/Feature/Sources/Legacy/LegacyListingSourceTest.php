@@ -620,3 +620,20 @@ it('refuses every pooled read while the breaker is open, and sends none without 
     expect(fn () => app(LegacyClient::class)->pool([1 => ['/api/listings/100001']]))->toThrow(SourceUnavailable::class);
     Http::assertNothingSent();
 });
+
+it('reads previews on the fixture server too', function (): void {
+    $previews = legacyListings()->previews([100001, 999999, 100004], userContext());
+
+    expect(array_keys($previews))->toBe([100001, 100004])
+        ->and($previews[100001]->photosPreview)->not->toBeEmpty();
+});
+
+it('reads the district codes without the caller\'s stub scenario', function (string $scenario): void {
+    Sanctum::actingAs(User::factory()->create(), ['app:read']);
+    onLegacyListings();
+
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru', 'X-Stub-Scenario' => $scenario])
+        ->assertOk()
+        ->assertJsonPath('meta.source', 'legacy')
+        ->assertJsonPath('data.district.code', LegacyFixtures::stubListing(100001)['district']['code']);
+})->with(['rate_limited', 'forbidden', 'unauthenticated', 'source_unavailable']);

@@ -493,12 +493,15 @@ final class LegacyListingSource implements ListingSource
 
     /**
      * The district matcher of the context's language over the reference capability; an unavailable reference source
-     * gives one that matches nothing, so a district code is `null` and never a failed answer.
+     * gives one that matches nothing, so a district code is `null` and never a failed answer. The read is HOMI's own,
+     * so it goes without the caller's stub scenario, which names the outcome of the caller's method only.
      */
     private function districts(SourceContext $context): DistrictMatcher
     {
+        $own = new SourceContext($context->locale, $context->currency, $context->user);
+
         try {
-            return DistrictMatcher::fromSource($this->sources->reference('source.reference', $context)->source, $context);
+            return DistrictMatcher::fromSource($this->sources->reference('source.reference', $own)->source, $own);
         } catch (ApiException) {
             return new DistrictMatcher(null);
         }
