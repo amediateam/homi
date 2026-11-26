@@ -280,7 +280,9 @@ the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AJ.
   a pause, the daily limit, a `404`, a contract error, an outage — serves the last good copy with a `warning`, and
   without one answers `503 source_unavailable`. Being public, they must not let an anonymous client make legacy calls
   at will: one process at a time refreshes a key (a cache lock sized for two reads with their retries; the others serve
-  the last good copy, and on a cold start without one answer `503` at once), and after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds (60) — the last good copy is
+  the last good copy, and on a cold start without one answer `503` at once — `LegacyRefreshBusy`, contention, which
+  never marks a directory down, so the cities waiting for a reference refresh under way do not count it as a
+  failure), and after a failed refresh nobody tries again for `legacy.cache.after_failure` seconds (60) — the last good copy is
   served as fresh meanwhile, and without one the key answers `503` at once. Their legacy calls ask for `USD` whatever
   the caller's currency, because the cache keys carry the language only.
 - **Caching.** The cache holds the v1-shaped arrays the translators produce, not objects (`serializable_classes` is

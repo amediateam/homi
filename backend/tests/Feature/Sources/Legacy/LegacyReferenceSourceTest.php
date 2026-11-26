@@ -265,3 +265,15 @@ it('answers 503 at once instead of calling legacy while another process makes th
     legacyReference()->reference(SourceContext::system());
     Http::assertSentCount(1);
 });
+
+it('does not mark the cities down while another process makes the first refresh of the reference data', function (): void {
+    legacyOverHttp();
+    $refreshing = Cache::lock('legacy:v1:reference:ru:refresh', 30);
+    expect($refreshing->get())->toBeTrue();
+
+    expect(fn () => legacyReference()->cities(SourceContext::system()))->toThrow(SourceUnavailable::class);
+    Http::assertNothingSent();
+
+    $refreshing->release();
+    expect(legacyReference()->cities(SourceContext::system()))->toHaveCount(3);
+});
