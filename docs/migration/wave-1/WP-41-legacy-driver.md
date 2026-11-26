@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | WAITING (merged; key pending) |
+| Status | WAITING (merged in #128, env keys #129; key pending) |
 | Depends on | WP-40 |
 | Size | about 2 200 changed lines without fixtures, L |
 | Behaviour reference | `25` §4.5; `24` §3, §8.2 (Q-API-059, Q-API-060, Q-API-062), §8.3 (RK-25, RK-26, RK-28); `08` §1.1 … §1.6 and the rows of API-001 and API-002; `10` conflicts CF-006 and CF-017; the answers log of WP-02 (`decisions/<date>-operator-request.md`); WP-11 (the shapes to produce) |
@@ -330,7 +330,7 @@ the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AJ.
 ## Handoff
 
 Merged, key pending. The package needs nothing more from the development track. For the production track, when the
-operator has issued the key (WP-02): the env keys of the separate env PR on staging (`LEGACY_API_URL`, an `https`
+operator has issued the key (WP-02): the env keys of #129 on staging (`LEGACY_API_URL`, an `https`
 address, `LEGACY_SERVICE_KEY`, and the others only if the operator's contract differs from the defaults), outbound
 HTTPS from the API hosts to the legacy host, `php artisan legacy:ping` on staging and its output reported here; then
 production. `LEGACY_FAKE` stays unset on the servers (the boot check refuses it only in production; on staging it would
