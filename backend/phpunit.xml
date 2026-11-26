@@ -42,6 +42,8 @@
         <env name="TELEGRAM_BOT_TOKEN" value="123456789:TEST-homi-synthetic-token"/>
         <!-- Stub mode of the native methods off, whatever the local .env says for `make e2e`; a test turns it on. -->
         <env name="SOURCES_NATIVE_STUBS" value="false"/>
+        <!-- The access gate lets everyone in, as on the servers (DEC-43); the gate's own tests set the mode they test. -->
+        <env name="ACCESS_MODE" value="open"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

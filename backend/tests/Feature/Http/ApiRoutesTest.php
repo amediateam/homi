@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AnswerNativeStubs;
+use App\Http\Middleware\EnsureAccessGranted;
 use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\SetRequestLocale;
@@ -36,11 +37,30 @@ it('keeps the public routes public', function (string $name): void {
     expect(middlewareOf($name))->not->toContain('Illuminate\Auth\Middleware\Authenticate:sanctum');
 })->with(['api.v1.reference.show', 'api.v1.cities.index']);
 
+it('puts the access gate on every bearer route and on no public one, lenient only on POST /events', function (): void {
+    $names = collect(Router::getRoutes()->getRoutesByName())->keys()->filter(fn (string $name): bool => str_starts_with($name, 'api.v1.'));
+
+    foreach ($names as $name) {
+        $middleware = middlewareOf($name);
+        $gates = array_values(array_filter($middleware, fn (string $entry): bool => explode(':', $entry)[0] === EnsureAccessGranted::class));
+        $expected = match (true) {
+            ! in_array('Illuminate\Auth\Middleware\Authenticate:sanctum', $middleware, true) => [],
+            $name === 'api.v1.events.store' => [EnsureAccessGranted::class.':'.EnsureAccessGranted::LENIENT],
+            default => [EnsureAccessGranted::class],
+        };
+
+        expect($gates)->toBe($expected, "The access gate of {$name} is wrong.");
+    }
+
+    expect(middlewareOf('api.v1.auth.telegram'))->not->toContain(EnsureAccessGranted::class);
+});
+
 it('runs the checks of every v1 route in one order and the stub answer last', function (): void {
     $order = [
         'Illuminate\Auth\Middleware\Authenticate',
         'Illuminate\Routing\Middleware\ThrottleRequests',
         SetRequestLocale::class,
+        EnsureAccessGranted::class,
         'Laravel\Sanctum\Http\Middleware\CheckForAnyAbility',
         'Laravel\Sanctum\Http\Middleware\CheckAbilities',
         EnsureRadarsEnabled::class,

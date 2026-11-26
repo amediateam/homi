@@ -76,7 +76,7 @@ it('accepts init_data of exactly 4 096 bytes', function (): void {
 });
 
 it('tells a stale launch apart from a bad one', function (string $scenario, string $code): void {
-    signIn(['X-Stub-Scenario' => $scenario])->assertUnauthorized()->assertJsonPath('code', $code);
+    signIn(['X-Stub-Scenario' => $scenario])->assertUnauthorized()->assertJsonPath('code', $code)->assertJsonMissingPath('reason');
 
     expect(PersonalAccessToken::query()->count())->toBe(0);
 })->with([

@@ -4,6 +4,7 @@ use App\Enums\Currency;
 use App\Enums\Locale;
 use App\Enums\Theme;
 use App\Events\Identity\SettingsChanged;
+use App\Models\Source;
 use App\Models\User;
 use App\Models\UserSetting;
 use App\Services\Search\SearchFilters;
@@ -98,6 +99,7 @@ it('treats an empty body and unknown keys as a no-op that announces nothing', fu
     $before = $this->getJson('/api/v1/settings')->json('data');
     $updatedAt = UserSetting::query()->sole()->updated_at;
     Event::fake([SettingsChanged::class]);
+    $this->travel(5)->seconds();
 
     $this->patchJson('/api/v1/settings', $body)->assertOk()->assertJsonPath('meta.source', 'native')->assertJsonPath('data', $before);
 
@@ -151,7 +153,7 @@ it('never shows or changes the settings of another user', function (): void {
 });
 
 it('reads the listings in the currency the user stored', function (): void {
-    actAsSettingsOwner();
+    $user = actAsSettingsOwner();
     $currencies = [];
     $listings = Mockery::mock(ListingSource::class);
     $listings->shouldReceive('count')->andReturnUsing(function (SearchFilters $filters, SourceContext $context) use (&$currencies): int {
@@ -163,6 +165,8 @@ it('reads the listings in the currency the user stored', function (): void {
 
     $this->getJson('/api/v1/listings/count?city=tashkent&deal=rent_long')->assertOk()->assertJsonPath('data.count', 7);
     $this->patchJson('/api/v1/settings', ['currency' => 'UZS'])->assertOk();
+    // A new request loads the user afresh; the instance of the first requests may hold their settings.
+    Sanctum::actingAs($user->fresh() ?? $user, ['app:read', 'app:write']);
     $this->getJson('/api/v1/listings/count?city=tashkent&deal=rent_long')->assertOk();
 
     expect($currencies)->toBe(['USD', 'UZS']);
@@ -176,4 +180,13 @@ it('reads with app:read and writes with app:write', function (): void {
     $this->getJson('/api/v1/settings')->assertOk();
     $this->patchJson('/api/v1/settings', ['theme' => 'dark'])->assertForbidden()->assertJsonPath('code', 'forbidden');
     expect(UserSetting::query()->sole()->theme)->toBe(Theme::Auto);
+});
+
+it('refuses a collector token that carries the app abilities and writes no settings row', function (): void {
+    $token = Source::factory()->create()->createToken('collector', ['app:read', 'app:write'])->plainTextToken;
+
+    $this->withToken($token)->getJson('/api/v1/settings')->assertForbidden()->assertJsonPath('code', 'forbidden');
+    $this->withToken($token)->patchJson('/api/v1/settings', ['theme' => 'dark'])->assertForbidden()->assertJsonPath('code', 'forbidden');
+
+    expect(UserSetting::query()->count())->toBe(0);
 });

@@ -4,6 +4,7 @@ namespace App\Services\Identity;
 
 use App\Enums\Identity\BotChatState;
 use App\Models\User;
+use App\Services\Access\AccessGate;
 use Carbon\CarbonImmutable;
 
 /**
@@ -14,12 +15,13 @@ use Carbon\CarbonImmutable;
  *
  * `allows_write_to_pm` only raises `bot_chat_state` from `never` to `active`: a launch without it never downgrades the
  * state, and a launch with it never undoes a `blocked` that the bot saw in its own chat-member updates (WP-52), which
- * alone maintain that state. A launch without a language tag keeps the last one known. Nothing of the user's name,
+ * alone maintain that state; a raise drops the access gate's cached decision (`AccessGate::forget()`), because the
+ * gate's `join` reads it. A launch without a language tag keeps the last one known. Nothing of the user's name,
  * username or photo is stored (SEC-REQ-004).
  */
 final class UserResolver
 {
-    public function __construct(private readonly SettingsService $settings) {}
+    public function __construct(private readonly SettingsService $settings, private readonly AccessGate $gate) {}
 
     public function fromInitData(TelegramInitData $data): User
     {
@@ -51,6 +53,10 @@ final class UserResolver
         }
 
         $user->save();
+
+        if ($user->wasChanged('bot_chat_state')) {
+            $this->gate->forget($user);
+        }
 
         return $user;
     }

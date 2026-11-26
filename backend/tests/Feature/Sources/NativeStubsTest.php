@@ -9,21 +9,22 @@ use App\Http\Resources\Api\V1\SettingsResource;
 use App\Models\User;
 use App\Models\UserSetting;
 use App\Providers\SourceServiceProvider;
+use App\Services\Identity\TokenIssuer;
 use App\Services\Sources\Stub\NativeStubs;
 use App\Services\Sources\Stub\StubUser;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Mockery\MockInterface;
 use Tests\Support\EnvOverride;
 
 /**
  * The stub mode of the native methods (WP-40): `AnswerNativeStubs` answers the routes of `NativeStubs` while the switch
- * is on. A stub keeps answering what its method answered on stubs (WP-11): `me` and settings are compared with the
- * committed fixtures through their resources, since their controllers are native; sign-in is compared with its
- * controller while that one still has the stub body (until WP-40 replaces it).
+ * is on. A stub keeps answering what its method answered on stubs (WP-11): each is compared with the committed
+ * fixtures through its resources, since the controllers are native.
  */
 dataset('native stub routes', [
     'sign-in' => ['POST', '/api/v1/auth/telegram', ['init_data' => 'query_id=AAHomiSyntheticQuery&auth_date=1&hash=00'], TelegramAuthController::class, '__invoke'],
@@ -103,16 +104,27 @@ it('answers the stub scenarios of WP-11', function (): void {
         ->and($this->getJson('/api/v1/settings', ['X-Stub-Scenario' => 'card_rich'])->assertOk()->json())->toBe(committedStubAnswer(SettingsResource::class, 'settings/card_rich'));
 });
 
-it('signs in the stub user as the stub controller did, with a token of its own', function (): void {
+it('signs in the stub user as the stub of WP-11 did, from the committed fixture, with a token of its own each time', function (): void {
     Date::setTestNow('2026-11-26 09:00:00');
+    config(['sources.native_stubs' => true]);
     $body = ['init_data' => 'query_id=AAHomiSyntheticQuery&auth_date=1&hash=00'];
 
-    $controller = $this->postJson('/api/v1/auth/telegram', $body)->assertOk();
-    config(['sources.native_stubs' => true]);
-    $stub = $this->postJson('/api/v1/auth/telegram', $body)->assertOk();
+    $first = $this->postJson('/api/v1/auth/telegram', $body, ['Accept-Language' => 'uz'])->assertOk();
+    $second = $this->postJson('/api/v1/auth/telegram', $body)->assertOk();
 
-    expect(Arr::except($stub->json(), 'data.token'))->toBe(Arr::except($controller->json(), 'data.token'))
-        ->and($stub->json('data.token'))->not->toBe($controller->json('data.token'))
+    app()->setLocale('uz');
+    expect(Arr::except($first->json(), 'data.token'))->toBe([
+        'success' => true,
+        'data' => [
+            'token_type' => 'Bearer',
+            'expires_at' => '2026-11-27T09:00:00+00:00',
+            'user' => committedStubAnswer(MeResource::class, 'me/default')['data'],
+        ],
+        'meta' => ['source' => 'stub'],
+    ])
+        ->and($first->headers->get('Content-Language'))->toBe('uz')
+        ->and($second->json('data.token'))->toBeString()->not->toBe($first->json('data.token'))
+        ->and(PersonalAccessToken::findToken($first->json('data.token'))?->abilities)->toBe(TokenIssuer::ABILITIES)
         ->and(User::query()->sole()->email)->toBe(StubUser::EMAIL)
         ->and(User::query()->sole()->tokens()->count())->toBe(2);
 });

@@ -3,6 +3,7 @@
 use App\Http\ApiExceptionRenderer;
 use App\Http\Middleware\AnswerNativeStubs;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureAccessGranted;
 use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -47,13 +48,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
+            'access' => EnsureAccessGranted::class,
         ]);
 
         // The framework sorts only the middleware of its priority list. These follow the end of its list (after
         // authentication, the limiters and route model binding) in this order, each after the one before: the request
-        // locale, then the route's own checks, and the stub answer of `SOURCES_NATIVE_STUBS` always last (WP-40).
+        // locale, the access gate (so a refused user hears its reason on every route), then the route's own checks,
+        // and the stub answer of `SOURCES_NATIVE_STUBS` always last (WP-40).
         $middleware->appendToPriorityList(Authorize::class, SetRequestLocale::class);
-        $middleware->appendToPriorityList(SetRequestLocale::class, CheckForAnyAbility::class);
+        $middleware->appendToPriorityList(SetRequestLocale::class, EnsureAccessGranted::class);
+        $middleware->appendToPriorityList(EnsureAccessGranted::class, CheckForAnyAbility::class);
         $middleware->appendToPriorityList(CheckForAnyAbility::class, CheckAbilities::class);
         $middleware->appendToPriorityList(CheckAbilities::class, EnsureRadarsEnabled::class);
         $middleware->appendToPriorityList(EnsureRadarsEnabled::class, EnsureOwnerCabinetEnabled::class);

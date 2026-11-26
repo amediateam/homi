@@ -133,6 +133,7 @@ abstract class ApiController extends Controller
      * that reached such a method anyway is refused as `403 forbidden`.
      *
      * @throws AuthenticationException
+     * @throws AccessDeniedHttpException
      */
     protected function appUser(Request $request): User
     {

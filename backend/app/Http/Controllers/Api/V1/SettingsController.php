@@ -21,7 +21,7 @@ class SettingsController extends ApiController
         return $this->sourced(new SettingsResource($settings->get($this->appUser($request))->toArray()), SourceDriver::Native);
     }
 
-    /** Stores only the sent keys and answers the full object; an empty body changes nothing */
+    /** Stores only the sent keys and answers the full object; an empty body changes nothing. */
     public function update(UpdateSettingsRequest $request, SettingsService $settings): JsonResponse
     {
         $changed = $settings->patch($this->appUser($request), $request->validated());

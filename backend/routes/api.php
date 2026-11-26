@@ -51,7 +51,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Every route: the request locale (`Accept-Language` → ru|uz|en) and the `api` limiter, which counts per actor:
 | Laravel runs `auth:sanctum` before the limiter on bearer routes (middleware priority). Bearer routes use Sanctum
-| tokens (ADR-0003); abilities gate the actions. WP-40 attaches the named limiters.
+| tokens (ADR-0003); the access gate (`access`, WP-40) decides before the abilities gate the actions. WP-40 attaches
+| the named limiters.
 | `AnswerNativeStubs` (WP-40) is sorted after all of them (`bootstrap/app.php`): with `SOURCES_NATIVE_STUBS` on it
 | answers the methods of `NativeStubs` with their stub bodies, after the route's own checks have passed.
 */
@@ -66,93 +67,99 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, 'thro
     Route::get('landing/pins', LandingPinsController::class)->name('landing.pins');
 
     Route::middleware('auth:sanctum')->group(function (): void {
-        // The Mini App session (WP-11): abilities app:read and app:write.
-        Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
-        Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
-        Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
-        Route::post('settings/card-sample', CardSampleController::class)->middleware('ability:app:write')->name('settings.card-sample');
-        Route::post('events', EventController::class)->middleware('ability:app:write')->name('events.store');
+        // Events (WP-11) pass the lenient access gate (WP-40): the no-access screen still sends them, and only a block
+        // or the pause refuses them.
+        Route::post('events', EventController::class)->middleware(['access:lenient', 'ability:app:write'])->name('events.store');
 
-        // Listings (WP-12): the static paths come before `listings/{number}`.
-        Route::prefix('listings')->name('listings.')->middleware('ability:app:read')->group(function (): void {
-            Route::get('/', [ListingController::class, 'index'])->name('index');
-            Route::get('count', ListingCountController::class)->name('count');
-            Route::get('new', ListingNewController::class)->name('new');
-            Route::get('flow', ListingFlowController::class)->name('flow');
-            Route::get('map', ListingMapController::class)->name('map');
-            Route::get('{number}', [ListingController::class, 'show'])->whereNumber('number')->name('show');
-            Route::post('{number}/contact', ListingContactController::class)->whereNumber('number')->name('contact');
-            Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->name('translation');
-            Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->name('share');
-        });
+        // Every other bearer route sits behind the access gate (WP-40), the media routes too (a collector's token passes it).
+        Route::middleware('access')->group(function (): void {
+            // The Mini App session (WP-11): abilities app:read and app:write.
+            Route::get('me', MeController::class)->middleware('ability:app:read')->name('me.show');
+            Route::get('settings', [SettingsController::class, 'show'])->middleware('ability:app:read')->name('settings.show');
+            Route::patch('settings', [SettingsController::class, 'update'])->middleware('ability:app:write')->name('settings.update');
+            Route::post('settings/card-sample', CardSampleController::class)->middleware('ability:app:write')->name('settings.card-sample');
 
-        // Personal lists (WP-13): native, stubs until WP-44; `app:read` to list, `app:write` to change.
-        Route::get('favorites', [FavoriteController::class, 'index'])->middleware('ability:app:read')->name('favorites.index');
-        Route::put('favorites/{number}', [FavoriteController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.update');
-        Route::delete('favorites/{number}', [FavoriteController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.destroy');
-        Route::get('history', [HistoryController::class, 'index'])->middleware('ability:app:read')->name('history.index');
-        Route::delete('history', [HistoryController::class, 'destroy'])->middleware('ability:app:write')->name('history.destroy');
-        Route::put('hidden/listings/{number}', [HiddenListingController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.update');
-        Route::delete('hidden/listings/{number}', [HiddenListingController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.destroy');
-        Route::put('listings/{number}/blocked-author', [BlockedAuthorController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.update');
-        Route::delete('listings/{number}/blocked-author', [BlockedAuthorController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.destroy');
-        Route::get('hidden', [HiddenController::class, 'index'])->middleware('ability:app:read')->name('hidden.index');
-        Route::delete('hidden/authors/{id}', [HiddenController::class, 'destroyAuthor'])->whereUlid('id')->middleware('ability:app:write')->name('hidden.authors.destroy');
-        Route::delete('hidden', [HiddenController::class, 'destroy'])->middleware('ability:app:write')->name('hidden.destroy');
-        Route::post('listings/{number}/reports', [ReportController::class, 'store'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
-        Route::delete('listings/{number}/reports', [ReportController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.destroy');
-        Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware('ability:app:write')->name('surveys.found.store');
-        Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware('ability:app:write')->name('surveys.found.where');
+            // Listings (WP-12): the static paths come before `listings/{number}`.
+            Route::prefix('listings')->name('listings.')->middleware('ability:app:read')->group(function (): void {
+                Route::get('/', [ListingController::class, 'index'])->name('index');
+                Route::get('count', ListingCountController::class)->name('count');
+                Route::get('new', ListingNewController::class)->name('new');
+                Route::get('flow', ListingFlowController::class)->name('flow');
+                Route::get('map', ListingMapController::class)->name('map');
+                Route::get('{number}', [ListingController::class, 'show'])->whereNumber('number')->name('show');
+                Route::post('{number}/contact', ListingContactController::class)->whereNumber('number')->name('contact');
+                Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->name('translation');
+                Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->name('share');
+            });
 
-        // Radars (WP-13): native, stubs until WP-45. The four writes sit behind the switch (DEC-51).
-        Route::get('radars', [RadarController::class, 'index'])->middleware('ability:app:read')->name('radars.index');
-        Route::delete('radars/{id}', [RadarController::class, 'destroy'])->whereUlid('id')->middleware('ability:app:write')->name('radars.destroy');
-        Route::middleware(['ability:app:write', EnsureRadarsEnabled::class])->group(function (): void {
-            Route::post('radars', [RadarController::class, 'store'])->name('radars.store');
-            Route::put('radars/{id}', [RadarController::class, 'update'])->whereUlid('id')->name('radars.update');
-            Route::patch('radars/{id}', [RadarController::class, 'patch'])->whereUlid('id')->name('radars.patch');
-            Route::post('radars/{id}/relax', RadarRelaxController::class)->whereUlid('id')->name('radars.relax');
-        });
+            // Personal lists (WP-13): native, stubs until WP-44; `app:read` to list, `app:write` to change.
+            Route::get('favorites', [FavoriteController::class, 'index'])->middleware('ability:app:read')->name('favorites.index');
+            Route::put('favorites/{number}', [FavoriteController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.update');
+            Route::delete('favorites/{number}', [FavoriteController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('favorites.destroy');
+            Route::get('history', [HistoryController::class, 'index'])->middleware('ability:app:read')->name('history.index');
+            Route::delete('history', [HistoryController::class, 'destroy'])->middleware('ability:app:write')->name('history.destroy');
+            Route::put('hidden/listings/{number}', [HiddenListingController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.update');
+            Route::delete('hidden/listings/{number}', [HiddenListingController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('hidden.listings.destroy');
+            Route::put('listings/{number}/blocked-author', [BlockedAuthorController::class, 'update'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.update');
+            Route::delete('listings/{number}/blocked-author', [BlockedAuthorController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.blocked-author.destroy');
+            Route::get('hidden', [HiddenController::class, 'index'])->middleware('ability:app:read')->name('hidden.index');
+            Route::delete('hidden/authors/{id}', [HiddenController::class, 'destroyAuthor'])->whereUlid('id')->middleware('ability:app:write')->name('hidden.authors.destroy');
+            Route::delete('hidden', [HiddenController::class, 'destroy'])->middleware('ability:app:write')->name('hidden.destroy');
+            Route::post('listings/{number}/reports', [ReportController::class, 'store'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.store');
+            Route::delete('listings/{number}/reports', [ReportController::class, 'destroy'])->whereNumber('number')->middleware('ability:app:write')->name('listings.reports.destroy');
+            Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware('ability:app:write')->name('surveys.found.store');
+            Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware('ability:app:write')->name('surveys.found.where');
 
-        // The owner cabinet (WP-80): stubs until WP-84 and WP-85. The routes that change content or create or resume a
-        // listing sit behind the switch (DEC-81); reads, the ways down and the answers to requests stay open.
-        Route::prefix('owner')->name('owner.')->group(function (): void {
-            Route::get('listings', [OwnerListingController::class, 'index'])->middleware('ability:app:read')->name('listings.index');
-            Route::get('listings/{id}', [OwnerListingController::class, 'show'])->whereUlid('id')->middleware('ability:app:read')->name('listings.show');
-            Route::get('listings/{id}/requests', [OwnerRequestController::class, 'index'])->whereUlid('id')->middleware('ability:app:read')->name('listings.requests.index');
-            Route::get('place', OwnerPlaceController::class)->middleware(['ability:app:read', 'throttle:owner-place'])->name('place');
-            Route::get('demand', OwnerDemandController::class)->middleware(['ability:app:read', 'throttle:owner-demand'])->name('demand');
+            // Radars (WP-13): native, stubs until WP-45. The four writes sit behind the switch (DEC-51).
+            Route::get('radars', [RadarController::class, 'index'])->middleware('ability:app:read')->name('radars.index');
+            Route::delete('radars/{id}', [RadarController::class, 'destroy'])->whereUlid('id')->middleware('ability:app:write')->name('radars.destroy');
+            Route::middleware(['ability:app:write', EnsureRadarsEnabled::class])->group(function (): void {
+                Route::post('radars', [RadarController::class, 'store'])->name('radars.store');
+                Route::put('radars/{id}', [RadarController::class, 'update'])->whereUlid('id')->name('radars.update');
+                Route::patch('radars/{id}', [RadarController::class, 'patch'])->whereUlid('id')->name('radars.patch');
+                Route::post('radars/{id}/relax', RadarRelaxController::class)->whereUlid('id')->name('radars.relax');
+            });
 
-            Route::middleware(['ability:app:write', 'throttle:owner-writes'])->group(function (): void {
-                Route::delete('listings/{id}', [OwnerListingController::class, 'destroy'])->whereUlid('id')->name('listings.destroy');
-                Route::put('listings/{id}/status', OwnerStatusController::class)->whereUlid('id')->name('listings.status');
-                Route::post('requests/{id}/answer', [OwnerRequestController::class, 'answer'])->whereUlid('id')->name('requests.answer');
-                Route::put('waitlist', OwnerWaitlistController::class)->name('waitlist.update');
+            // The owner cabinet (WP-80): stubs until WP-84 and WP-85. The routes that change content or create or resume a
+            // listing sit behind the switch (DEC-81); reads, the ways down and the answers to requests stay open.
+            Route::prefix('owner')->name('owner.')->group(function (): void {
+                Route::get('listings', [OwnerListingController::class, 'index'])->middleware('ability:app:read')->name('listings.index');
+                Route::get('listings/{id}', [OwnerListingController::class, 'show'])->whereUlid('id')->middleware('ability:app:read')->name('listings.show');
+                Route::get('listings/{id}/requests', [OwnerRequestController::class, 'index'])->whereUlid('id')->middleware('ability:app:read')->name('listings.requests.index');
+                Route::get('place', OwnerPlaceController::class)->middleware(['ability:app:read', 'throttle:owner-place'])->name('place');
+                Route::get('demand', OwnerDemandController::class)->middleware(['ability:app:read', 'throttle:owner-demand'])->name('demand');
 
-                Route::middleware(EnsureOwnerCabinetEnabled::class)->group(function (): void {
-                    Route::post('listings', [OwnerListingController::class, 'store'])->name('listings.store');
-                    Route::patch('listings/{id}', [OwnerListingController::class, 'update'])->whereUlid('id')->name('listings.update');
-                    Route::post('listings/{id}/photos', [OwnerPhotoController::class, 'store'])->whereUlid('id')->middleware('throttle:uploads')->name('listings.photos.store');
-                    Route::delete('listings/{id}/photos/{photo}', [OwnerPhotoController::class, 'destroy'])->whereUlid('id')->whereUlid('photo')->name('listings.photos.destroy');
-                    Route::put('listings/{id}/photos/order', [OwnerPhotoController::class, 'order'])->whereUlid('id')->name('listings.photos.order');
-                    Route::put('listings/{id}/contact-mode', OwnerContactModeController::class)->whereUlid('id')->name('listings.contact-mode');
-                    Route::post('listings/{id}/phone-request', OwnerPhoneRequestController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.phone-request');
-                    Route::post('listings/{id}/publish', OwnerPublishController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.publish');
+                Route::middleware(['ability:app:write', 'throttle:owner-writes'])->group(function (): void {
+                    Route::delete('listings/{id}', [OwnerListingController::class, 'destroy'])->whereUlid('id')->name('listings.destroy');
+                    Route::put('listings/{id}/status', OwnerStatusController::class)->whereUlid('id')->name('listings.status');
+                    Route::post('requests/{id}/answer', [OwnerRequestController::class, 'answer'])->whereUlid('id')->name('requests.answer');
+                    Route::put('waitlist', OwnerWaitlistController::class)->name('waitlist.update');
+
+                    Route::middleware(EnsureOwnerCabinetEnabled::class)->group(function (): void {
+                        Route::post('listings', [OwnerListingController::class, 'store'])->name('listings.store');
+                        Route::patch('listings/{id}', [OwnerListingController::class, 'update'])->whereUlid('id')->name('listings.update');
+                        Route::post('listings/{id}/photos', [OwnerPhotoController::class, 'store'])->whereUlid('id')->middleware('throttle:uploads')->name('listings.photos.store');
+                        Route::delete('listings/{id}/photos/{photo}', [OwnerPhotoController::class, 'destroy'])->whereUlid('id')->whereUlid('photo')->name('listings.photos.destroy');
+                        Route::put('listings/{id}/photos/order', [OwnerPhotoController::class, 'order'])->whereUlid('id')->name('listings.photos.order');
+                        Route::put('listings/{id}/contact-mode', OwnerContactModeController::class)->whereUlid('id')->name('listings.contact-mode');
+                        Route::post('listings/{id}/phone-request', OwnerPhoneRequestController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.phone-request');
+                        Route::post('listings/{id}/publish', OwnerPublishController::class)->whereUlid('id')->middleware('throttle:owner-publish')->name('listings.publish');
+                    });
                 });
             });
-        });
 
-        // The seeker's request (WP-80, API-054): outside the `listings` group, whose middleware is `app:read`.
-        Route::post('listings/{number}/contact-request', ListingContactRequestController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.contact-request.store');
+            // The seeker's request (WP-80, API-054): outside the `listings` group, whose middleware is `app:read`.
+            Route::post('listings/{number}/contact-request', ListingContactRequestController::class)->whereNumber('number')->middleware('ability:app:write')->name('listings.contact-request.store');
 
-        // Media (master prompt §7); a malformed id answers 404 without a query.
-        Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
+            // Media (master prompt §7); a malformed id answers 404 without a query.
+            Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->name('media.show');
 
-        Route::middleware(['ability:media:write', 'throttle:uploads'])->group(function (): void {
-            Route::post('media', [MediaController::class, 'store'])->name('media.store');
-            Route::post('media/presign', [PresignController::class, 'store'])->name('media.presign');
-            Route::post('media/register', [PresignController::class, 'register'])->name('media.register');
-            Route::delete('media/{media}', [MediaController::class, 'destroy'])->whereUlid('media')->name('media.destroy');
+            Route::middleware(['ability:media:write', 'throttle:uploads'])->group(function (): void {
+                Route::post('media', [MediaController::class, 'store'])->name('media.store');
+                Route::post('media/presign', [PresignController::class, 'store'])->name('media.presign');
+                Route::post('media/register', [PresignController::class, 'register'])->name('media.register');
+                Route::delete('media/{media}', [MediaController::class, 'destroy'])->whereUlid('media')->name('media.destroy');
+            });
         });
     });
 });

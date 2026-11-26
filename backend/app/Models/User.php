@@ -39,6 +39,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read UserSetting|null $settings
+ * @property-read AccessGrant|null $accessGrant
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -79,6 +80,17 @@ class User extends Authenticatable
     public function settings(): HasOne
     {
         return $this->hasOne(UserSetting::class);
+    }
+
+    /**
+     * The user's standing at the access gate (WP-40), if any; `App\Services\Access\AccessGate` reads it fresh on each
+     * decision instead of through this relation, whose loaded value would outlive a change.
+     *
+     * @return HasOne<AccessGrant, $this>
+     */
+    public function accessGrant(): HasOne
+    {
+        return $this->hasOne(AccessGrant::class);
     }
 
     /**

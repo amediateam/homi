@@ -12,7 +12,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * The object of `GET /me`, also `data.user` of a sign-in (WP-11): the user's choices and the per-user analytics
  * settings (`null` when analytics is off). The directories, the rate, the bot name and the limits are in
- * `GET /reference`. Built from a decoded fixture today; every field is read strictly.
+ * `GET /reference`. Built from the array of `App\Services\Identity\MeProfile` (or a decoded fixture on stubs); every
+ * field is read strictly.
  *
  * @property-read array<array-key, mixed> $resource
  */

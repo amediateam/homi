@@ -3,36 +3,34 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Enums\SourceDriver;
+use App\Exceptions\AccessDenied;
 use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
-use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Resources\Api\V1\SessionResource;
-use App\Services\Sources\Stub\NativeStubs;
-use App\Services\Sources\Stub\StubResponder;
-use App\Services\Sources\Stub\StubUser;
+use App\Services\Identity\MeProfile;
+use App\Services\Identity\TelegramSignIn;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 
 /**
- * `POST /auth/telegram` on stubs (WP-11): any valid body signs in the stub user; nothing is verified. The token is a
- * real Sanctum token (abilities `app:read`, `app:write`, 24 hours), so `auth:sanctum` works unchanged. WP-40 replaces
- * the body with the real verification and keeps this one for the end-to-end suite.
+ * `POST /auth/telegram` (WP-11; native since WP-40): exchanges the Telegram launch value for a bearer token of the
+ * signed-in user and answers it with his `GET /me` object. `TelegramSignIn` verifies, counts, resolves the user, asks
+ * the access gate and issues the token. Its stub body answers from `NativeStubs` while `SOURCES_NATIVE_STUBS` is on.
  */
 class TelegramAuthController extends ApiController
 {
-    /** @var list<string> */
-    public const array ABILITIES = ['app:read', 'app:write'];
-
-    public function __invoke(TelegramSignInRequest $request, StubResponder $stubs): JsonResponse
+    /**
+     * @throws InvalidInitData
+     * @throws InitDataExpired
+     * @throws ThrottleRequestsException
+     * @throws AccessDenied
+     */
+    public function __invoke(TelegramSignInRequest $request, TelegramSignIn $signIn, MeProfile $profile): JsonResponse
     {
-        $me = $stubs->fixture('me/default', $request, NativeStubs::ME_SCENARIOS, [
-            'auth_expired' => fn (): InitDataExpired => new InitDataExpired,
-            'invalid_init_data' => fn (): InvalidInitData => new InvalidInitData(InvalidInitDataReason::BadSignature),
-        ]);
-        $expiresAt = now()->addDay();
-        $token = StubUser::get()->createToken('miniapp', self::ABILITIES, $expiresAt);
+        $session = $signIn->exchange($request->initData());
 
-        return $this->sourced(new SessionResource($token, $expiresAt, $me), SourceDriver::Stub);
+        return $this->sourced(new SessionResource($session->token, $session->expiresAt, $profile->for($session->user)), SourceDriver::Native);
     }
 }
