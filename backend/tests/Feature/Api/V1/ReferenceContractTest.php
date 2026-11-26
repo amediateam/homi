@@ -61,7 +61,8 @@ it('answers without a bot name in the no_bot scenario', function (): void {
 });
 
 it('answers 503 source_unavailable when the flag names an unbound driver', function (): void {
-    Feature::globally()->activate('source.reference', ['everyone' => 'legacy']);
+    // `legacy` is bound since WP-41; `native` is not.
+    Feature::globally()->activate('source.reference', ['everyone' => 'native']);
 
     $this->getJson('/api/v1/reference')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
 });

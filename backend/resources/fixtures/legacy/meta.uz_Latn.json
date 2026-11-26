@@ -1,0 +1,292 @@
+{
+  "locale": "uz_Latn",
+  "locale_chosen": true,
+  "currency": "USD",
+  "usd_uzs": 12800,
+  "theme": "auto",
+  "city": "tashkent",
+  "city_chosen": true,
+  "analytics": {
+    "key": "phc_fixture_key",
+    "host": "https://events.invalid",
+    "id": "fixture-analytics-id"
+  },
+  "max_subscriptions": 10,
+  "bot_username": "legacy_fixture_bot",
+  "tiles": null,
+  "new_features": [
+    "pets",
+    "cards"
+  ],
+  "cities": [
+    {
+      "code": "tashkent",
+      "name": "Toshkent",
+      "center": [
+        41.3111,
+        69.2797
+      ],
+      "metro": true,
+      "median": true,
+      "districts": [
+        {
+          "code": "bektemir",
+          "name": "Bektemir"
+        },
+        {
+          "code": "chilonzor",
+          "name": "Chilonzor"
+        },
+        {
+          "code": "mirobod",
+          "name": "Mirobod"
+        },
+        {
+          "code": "mirzo_ulugbek",
+          "name": "Mirzo Ulugʻbek"
+        },
+        {
+          "code": "olmazor",
+          "name": "Olmazor"
+        },
+        {
+          "code": "sergeli",
+          "name": "Sergeli"
+        },
+        {
+          "code": "shayxontohur",
+          "name": "Shayxontohur"
+        },
+        {
+          "code": "uchtepa",
+          "name": "Uchtepa"
+        },
+        {
+          "code": "yakkasaroy",
+          "name": "Yakkasaroy"
+        },
+        {
+          "code": "yangihayot",
+          "name": "Yangihayot"
+        },
+        {
+          "code": "yashnobod",
+          "name": "Yashnobod"
+        },
+        {
+          "code": "yunusobod",
+          "name": "Yunusobod"
+        }
+      ],
+      "zones": [
+        {
+          "code": "center",
+          "name": "Markaz (halqa ichida)"
+        },
+        {
+          "code": "near_center",
+          "name": "Markazga yaqin"
+        }
+      ]
+    },
+    {
+      "code": "tashkent_region",
+      "name": "Toshkent viloyati",
+      "center": [
+        41.2213,
+        69.8597
+      ],
+      "zoom": 9,
+      "metro": false,
+      "median": true,
+      "districts": [
+        {
+          "code": "chirchiq",
+          "name": "Chirchiq"
+        },
+        {
+          "code": "olmaliq",
+          "name": "Olmaliq"
+        },
+        {
+          "code": "qibray",
+          "name": "Qibray"
+        },
+        {
+          "code": "toshkent_tumani",
+          "name": "Toshkent tumani"
+        },
+        {
+          "code": "zangiota",
+          "name": "Zangiota"
+        }
+      ],
+      "zones": []
+    },
+    {
+      "code": "andijan",
+      "name": "Andijon",
+      "center": [
+        40.7821,
+        72.3442
+      ],
+      "metro": false,
+      "median": false,
+      "districts": [],
+      "zones": []
+    }
+  ],
+  "districts": [
+    {
+      "code": "bektemir",
+      "name": "Bektemir"
+    },
+    {
+      "code": "chilonzor",
+      "name": "Chilonzor"
+    },
+    {
+      "code": "mirobod",
+      "name": "Mirobod"
+    },
+    {
+      "code": "mirzo_ulugbek",
+      "name": "Mirzo Ulugʻbek"
+    },
+    {
+      "code": "olmazor",
+      "name": "Olmazor"
+    },
+    {
+      "code": "sergeli",
+      "name": "Sergeli"
+    },
+    {
+      "code": "shayxontohur",
+      "name": "Shayxontohur"
+    },
+    {
+      "code": "uchtepa",
+      "name": "Uchtepa"
+    },
+    {
+      "code": "yakkasaroy",
+      "name": "Yakkasaroy"
+    },
+    {
+      "code": "yangihayot",
+      "name": "Yangihayot"
+    },
+    {
+      "code": "yashnobod",
+      "name": "Yashnobod"
+    },
+    {
+      "code": "yunusobod",
+      "name": "Yunusobod"
+    }
+  ],
+  "zones": [
+    {
+      "code": "center",
+      "name": "Markaz (halqa ichida)"
+    },
+    {
+      "code": "near_center",
+      "name": "Markazga yaqin"
+    }
+  ],
+  "renovations": {
+    "rent_long": [
+      {
+        "code": "euro",
+        "name": "Yevroremont"
+      },
+      {
+        "code": "cosmetic",
+        "name": "Kosmetik taʼmir"
+      },
+      {
+        "code": "none",
+        "name": "Taʼmirsiz"
+      }
+    ],
+    "sale": [
+      {
+        "code": "euro",
+        "name": "Yevroremont"
+      },
+      {
+        "code": "cosmetic",
+        "name": "Kosmetik taʼmir"
+      },
+      {
+        "code": "shell",
+        "name": "Qora suvoq"
+      }
+    ],
+    "owner": [
+      {
+        "code": "fixture_owner_only",
+        "name": "owner"
+      }
+    ]
+  },
+  "appliances": [
+    {
+      "code": "washer",
+      "name": "Kir yuvish mashinasi"
+    },
+    {
+      "code": "fridge",
+      "name": "Muzlatgich"
+    },
+    {
+      "code": "air_conditioner",
+      "name": "Konditsioner"
+    }
+  ],
+  "price_presets": {
+    "rent_long": [
+      300,
+      400,
+      500,
+      600,
+      800,
+      1000,
+      1500
+    ],
+    "rent_daily": [
+      30,
+      50,
+      80,
+      120
+    ],
+    "sale": [
+      40000,
+      60000,
+      80000,
+      100000,
+      150000,
+      200000
+    ]
+  },
+  "locales": [
+    {
+      "code": "ru",
+      "name": "Русский"
+    },
+    {
+      "code": "uz_Latn",
+      "name": "Oʻzbekcha"
+    },
+    {
+      "code": "en",
+      "name": "English"
+    },
+    {
+      "code": "uz_Cyrl",
+      "name": "Ўзбекча"
+    }
+  ]
+}

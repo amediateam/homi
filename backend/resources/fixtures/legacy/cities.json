@@ -1,0 +1,91 @@
+[
+  {
+    "code": "tashkent",
+    "name": "tashkent",
+    "counts": {
+      "rent_long": 4120,
+      "rent_daily": 310,
+      "sale": 2890
+    },
+    "presets": {
+      "rent_long": [
+        300,
+        400,
+        500,
+        600,
+        800,
+        1000,
+        1500
+      ],
+      "rent_daily": [
+        30,
+        50,
+        80,
+        120
+      ],
+      "sale": [
+        40000,
+        60000,
+        80000,
+        100000,
+        150000,
+        200000
+      ]
+    },
+    "typical": {
+      "rent_long": 700,
+      "sale": 94000
+    }
+  },
+  {
+    "code": "tashkent_region",
+    "name": "tashkent_region",
+    "counts": {
+      "rent_long": 640,
+      "rent_daily": 25,
+      "sale": 980
+    },
+    "presets": {
+      "rent_long": [
+        200,
+        250,
+        300,
+        450
+      ]
+    },
+    "typical": {
+      "rent_long": 250
+    }
+  },
+  {
+    "code": "andijan",
+    "name": "andijan",
+    "counts": {
+      "rent_long": 210,
+      "rent_daily": 12,
+      "sale": 430
+    },
+    "presets": {
+      "rent_long": [
+        200,
+        300,
+        350,
+        500
+      ]
+    },
+    "typical": {
+      "rent_long": 300
+    }
+  },
+  {
+    "code": "fixture_unknown_city",
+    "name": "not in meta",
+    "counts": {
+      "rent_long": 1,
+      "rent_daily": 0,
+      "sale": 0
+    },
+    "presets": {},
+    "typical": {}
+  }
+]

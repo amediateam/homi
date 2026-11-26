@@ -38,6 +38,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function hideSensitiveRequestDetails(): void
     {
+        // The legacy service key travels in a configurable header of an outgoing request (WP-41); Telescope's client
+        // request watcher masks the request headers named here. In every environment, local included.
+        Telescope::hideRequestHeaders([strtolower(config()->string('legacy.auth.header'))]);
+
         if ($this->app->environment('local')) {
             return;
         }

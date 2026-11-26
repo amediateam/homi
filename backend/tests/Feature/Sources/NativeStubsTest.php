@@ -171,7 +171,8 @@ it('refuses to boot with the stub mode outside local and testing', function (str
 })->with(['production', 'staging', 'ci']);
 
 it('boots with the stub mode in local and testing, and anywhere with it off', function (string $environment, bool $on): void {
-    config(['sources.native_stubs' => $on]);
+    // The legacy fixtures, on in testing, would stop a production boot on their own (WP-41).
+    config(['sources.native_stubs' => $on, 'legacy.fake' => false]);
     $this->app->instance('env', $environment);
 
     expect(fn () => (new SourceServiceProvider($this->app))->boot())->not->toThrow(LogicException::class);

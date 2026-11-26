@@ -3,6 +3,7 @@
 use App\Services\Sources\Contracts\LandingSource;
 use App\Services\Sources\Contracts\ListingSource;
 use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Legacy\LegacyReferenceSource;
 use App\Services\Sources\Stub\StubLandingSource;
 use App\Services\Sources\Stub\StubListingSource;
 use App\Services\Sources\Stub\StubReferenceSource;
@@ -35,7 +36,8 @@ return [
     'native_stubs' => (bool) env('SOURCES_NATIVE_STUBS', false),
 
     'capabilities' => [
-        'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class]],
+        // WP-41: the legacy driver of `GET /reference` and `GET /cities`; the defaults stay `stub` until WP-48.
+        'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class, 'legacy' => LegacyReferenceSource::class]],
         'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class]],
         'landing' => ['contract' => LandingSource::class, 'drivers' => ['stub' => StubLandingSource::class]],
     ],
