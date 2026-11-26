@@ -8,9 +8,11 @@ use App\Services\Access\AccessGate;
 use Carbon\CarbonImmutable;
 
 /**
- * Turns a verified Telegram launch into a HOMI user (WP-40). The first contact creates the user — race-safe through
- * `createOrFirst` on the unique `telegram_user_id`, so two concurrent first sign-ins make one user — with its launch
- * facts and `first_start_param`, and its settings row with the defaults for the launch's language; every later
+ * Turns a verified Telegram launch into a HOMI user (WP-40). A known user is looked up first, so a returning sign-in
+ * runs no INSERT: one that fails on the unique `telegram_user_id` makes PostgreSQL log the Telegram id on the database
+ * host (SEC-REQ-047). The first contact creates the user — race-safe through `createOrFirst` on that unique column, so
+ * two concurrent first sign-ins make one user (only the loser of such a race still runs the failing INSERT) — with its
+ * launch facts and `first_start_param`, and its settings row with the defaults for the launch's language; every later
  * contact updates the flags, the language and `last_seen_at` in one save.
  *
  * `allows_write_to_pm` only raises `bot_chat_state` from `never` to `active`: a launch without it never downgrades the
@@ -27,15 +29,16 @@ final class UserResolver
     {
         $now = CarbonImmutable::now();
 
-        $user = User::unguarded(fn (): User => User::query()->createOrFirst(
-            ['telegram_user_id' => $data->telegramUserId],
-            [
-                ...$this->launchFacts($data, $now),
-                'language_code' => $data->languageCode,
-                'bot_chat_state' => $data->allowsWriteToPm ? BotChatState::Active : BotChatState::Never,
-                'first_start_param' => $data->startParam,
-            ],
-        ));
+        $user = User::query()->where('telegram_user_id', $data->telegramUserId)->first()
+            ?? User::unguarded(fn (): User => User::query()->createOrFirst(
+                ['telegram_user_id' => $data->telegramUserId],
+                [
+                    ...$this->launchFacts($data, $now),
+                    'language_code' => $data->languageCode,
+                    'bot_chat_state' => $data->allowsWriteToPm ? BotChatState::Active : BotChatState::Never,
+                    'first_start_param' => $data->startParam,
+                ],
+            ));
 
         if ($user->wasRecentlyCreated) {
             $this->firstContact($user, $data);

@@ -93,7 +93,10 @@ jobs:
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
           # WP-40: the signed-in methods answer from the stubs (the synthetic launch data of the specs is not signed with
-          # a bot token), and the access gate, which runs in stub mode too, admits the stub user.
+          # a bot token), and the access gate, which runs in stub mode too, admits the stub user. The API refuses to boot
+          # with the stubs outside `local` and `testing`, and `composer install` boots it (`package:discover`) before
+          # `.env` exists, when `APP_ENV` would default to `production`: the step pins it.
+          APP_ENV: local
           SOURCES_NATIVE_STUBS: 'true'
           ACCESS_MODE: open
           # The owner cabinet is on for the default run (WP-81); the second API keeps it unset for `@owner-off`.
@@ -153,6 +156,8 @@ jobs:
           TELESCOPE_ENABLED: 'false'
           PULSE_ENABLED: 'false'
           SOURCES_ALLOW_STUB: 'true'
+          # As in the first API: the stubs boot only in `local`.
+          APP_ENV: local
           SOURCES_NATIVE_STUBS: 'true'
           ACCESS_MODE: open
           RADAR_CREATION_ENABLED: 'false'

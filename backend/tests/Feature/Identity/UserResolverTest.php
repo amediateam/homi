@@ -9,6 +9,7 @@ use App\Services\Identity\TelegramInitData;
 use App\Services\Identity\UserResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /** A verified launch of Telegram user 279058397 (WP-40). */
@@ -75,6 +76,27 @@ it('finds the same user on the next contact and updates what the launch says', f
         ->and($row->first_start_param)->toBe('flat_100012')
         ->and($row->analytics_distinct_id)->toBe($distinctId)
         ->and($row->last_seen_at?->toIso8601String())->toBe('2026-11-27T18:30:00+00:00');
+});
+
+/**
+ * A returning user is looked up before any write: an INSERT that fails on the unique `telegram_user_id` would put the
+ * Telegram id into the database server's log (SEC-REQ-047). `beforeExecuting` also sees a statement that fails, which
+ * `DB::listen` does not.
+ */
+it('runs no insert into users when a known user returns', function (): void {
+    $inserts = 0;
+    DB::connection()->beforeExecuting(function (string $query) use (&$inserts): void {
+        if (preg_match('/^insert into "users"/i', $query) === 1) {
+            $inserts++;
+        }
+    });
+
+    resolveTelegramUser();
+    expect($inserts)->toBe(1);
+
+    resolveTelegramUser(['isPremium' => true]);
+    expect($inserts)->toBe(1)
+        ->and(User::query()->sole()->is_premium)->toBeTrue();
 });
 
 it('creates the settings row with the defaults for the language of the first launch', function (?string $languageCode, Locale $locale): void {

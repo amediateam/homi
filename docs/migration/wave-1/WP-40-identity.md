@@ -7,7 +7,7 @@
 | Depends on | WP-33 (the Mini App runs on the stub contract of WP-11) |
 | Size | about 2 600 changed lines without generated files, L |
 | Behaviour reference | `25` §3.4, §5 (identity, settings); WP-11 (the contract — shapes do not change here); `16` §4.1 (SEC-REQ-001 … SEC-REQ-007), §4.6 (SEC-REQ-027), SEC-REQ-047; `15` §3.1, §3.2; tasks `tasks/backend/KV-BE-006-initdata-verifier.md`, `KV-BE-009-access-gate.md`, `KV-BE-010-legacy-rate-limits.md`, `KV-BE-045-settings.md` (rules, limits, edge cases — not their routes or serializers); ADR-0003, ADR-0018 |
-| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable (the stub user of WP-11 and its tokens are deleted); new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open` (a missing key means `private`: every user is refused); set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses the Next servers reach the API from — the app host's loopback and/or its public address —, not the nginx of the API, which hands PHP the connecting address through FastCGI (*corrected while executing*: the Mini App's server-side calls are the hop that forwards `X-Forwarded-For`); leave `TELEGRAM_INITDATA_MAX_AGE`, `ACCESS_MAX_SEATS` and `RATE_LIMIT_LISTING_OPENS_PER_DAY` blank (defaults: 3 600 s, no seat limit, 100 cards a day — DEC-104; the last key *added while executing*); leave `ACCESS_PAUSED` unset (the pause switch stays off, DEC-60) and `SOURCES_NATIVE_STUBS` unset (the API refuses to boot with it outside `local` and `testing`); keep `TELESCOPE_RECORD_ALL` off (*added while executing*: its query entries would hold a token's hash). 3. Confirm that the nginx in front of the Next servers sets `X-Forwarded-For` (`infra/production/nginx/app.homi.conf`) and that the Laravel scheduler runs (for `sanctum:prune-expired`). 4. After the deploy, check on staging that two clients on two addresses get two buckets of `v1-auth` and that a forged `X-Forwarded-For` prefix is ignored (*added while executing*) |
+| Needs from the production track | 1. Approve three migrations on production: `users` gains columns and three columns become nullable (the stub user of WP-11 and its tokens are deleted); new `user_settings`; new `access_grants`. 2. Server env on staging and production: confirm `TELEGRAM_BOT_TOKEN` is the token of that environment's HOMI bot; set `ACCESS_MODE=open` (a missing key means `private`: every user is refused); set `SANCTUM_TOKEN_PREFIX=homi_`; set `TRUSTED_PROXIES` to the addresses the Next servers reach the API from — the app host's loopback and/or its public address —, not the nginx of the API, which hands PHP the connecting address through FastCGI (*corrected while executing*: the Mini App's server-side calls are the hop that forwards `X-Forwarded-For`; *added while executing*: unset, every sign-in counts in one `v1-auth` bucket of 10 a minute, because the Mini App signs in from its server, and `*` or `**` is read as unset); leave `TELEGRAM_INITDATA_MAX_AGE`, `ACCESS_MAX_SEATS` and `RATE_LIMIT_LISTING_OPENS_PER_DAY` blank (defaults: 3 600 s, no seat limit, 100 cards a day — DEC-104; the last key *added while executing*); leave `ACCESS_PAUSED` unset (the pause switch stays off, DEC-60) and `SOURCES_NATIVE_STUBS` unset (the API refuses to boot with it outside `local` and `testing`); keep `TELESCOPE_RECORD_ALL` off (*added while executing*: its query entries would hold a token's hash). 3. Confirm that the nginx in front of the Next servers sets `X-Forwarded-For` (`infra/production/nginx/app.homi.conf`) and that the Laravel scheduler runs (for `sanctum:prune-expired`). 4. After the deploy, check on staging that two clients on two addresses get two buckets of `v1-auth` through `/bff/session`, that a forged `X-Forwarded-For` prefix is ignored, and that a forged `X-Forwarded-For` sent straight to `api.*` is ignored (*added while executing*). 5. Go-live conditions, not blockers of the merge, for the developer and the production track (*added while executing*: the security review; ЗРУ-547, SEC-REQ-050, Q-SEC-005): this package is the first to store real Telegram identities, so before sign-in goes live on production confirm that the app host and the database host are in Uzbekistan and register the database in the State Register; revisit `DB_SSLMODE=disable` (`require`, better `verify-full`) before the WP-40 migrations run on production |
 
 ## Goal
 
@@ -111,7 +111,9 @@ stub user again on its next call, which it cannot do on the servers.
 then update the booleans, `language_code` and `last_seen_at`. On creation: a random `analytics_distinct_id`,
 `first_start_param`, and a `user_settings` row with defaults. `allows_write_to_pm = true` sets `bot_chat_state` to
 `active`; `false` never downgrades it (verify the field name in the current Telegram documentation). Two concurrent
-first sign-ins create one user. *Corrected while executing:* `allows_write_to_pm = true` raises `bot_chat_state`
+first sign-ins create one user. *Corrected while executing:* a known user is looked up first, and `createOrFirst`
+runs only when there is none, so a returning sign-in runs no INSERT that fails (see "As built");
+`allows_write_to_pm = true` raises `bot_chat_state`
 only from `never` to `active`; `blocked` is left to the bot's own chat-member updates (WP-52), because a launch flag
 must not undo a block the bot saw. A change of the state calls `AccessGate::forget()`. `first_start_param` keeps
 `start_param` only when it matches `^[A-Za-z0-9_-]{1,64}$`, and `language_code` only a tag of the form
@@ -165,7 +167,8 @@ the API, set `SOURCES_NATIVE_STUBS=true` in its environment in this PR.
   `ApiRoutesTest` walks every route through `gatherRouteMiddleware()` and pins this order.
 - **The real gate runs in stub mode too**, so the end-to-end API needs `ACCESS_MODE=open` beside
   `SOURCES_NATIVE_STUBS=true`: both API env blocks of `.github/workflows/frontend-e2e.yml` and both env lists of
-  `scripts/dev/e2e-local.sh` set them, and the script also pins `APP_ENV=local`, which the boot check needs.
+  `scripts/dev/e2e-local.sh` set them, and both also pin `APP_ENV=local`, which the boot check needs
+  (*corrected while executing*: the workflow's two API steps too).
 - `NativeStubs` holds the scenario lists of the moved methods (`NativeStubs::ME_SCENARIOS`, `SETTINGS_SCENARIOS`);
   `MeController::SCENARIOS`, `SettingsController::SCENARIOS` and `TelegramAuthController::ABILITIES` are deleted
   (the abilities are `TokenIssuer::ABILITIES`). `OwnerRequestsContractTest` also runs in stub mode, because it reads
@@ -305,7 +308,8 @@ nothing is added to `bootstrap/app.php` and the value survives `config:cache`.
   through FastCGI. Traffic of the Mini App reaches the API from the Next servers (the BFF and server components),
   so without the client address every user would share one bucket of `v1-auth`. The nginx in front of Next sets
   `X-Forwarded-For`, the Mini App forwards it on every server-side API call (below), and `TRUSTED_PROXIES` lists the
-  addresses the Next servers reach the API from. `config/trustedproxy.php` trims the value; blank trusts nobody.
+  addresses the Next servers reach the API from. `config/trustedproxy.php` trims the value; blank, `*` and `**`
+  trust nobody (the framework reads both wildcards as every caller).
   Laravel takes the rightmost address that is not a trusted proxy, so a forged prefix is ignored.
 
 ### The Mini App's side (*added while executing*)
@@ -457,7 +461,8 @@ decided beyond them.
   `app/Exceptions/Identity/InvalidInitDataReason.php`, `app/Enums/Identity/BotChatState.php`,
   `app/Enums/Access/{AccessGrantState,AdmittedVia}.php`, `app/Console/Commands/Access/AccessCommand.php` (the base of
   both commands), `app/Services/Access/RateLimits.php`, `app/Http/Middleware/CountListingOpens.php`,
-  `config/analytics.php`, `ApiController::appUser()`; the tests `tests/Feature/Identity/*`,
+  `config/analytics.php`, `ApiController::appUser()`, `database/seeders/UserSettingSeeder.php`; the tests
+  `tests/Feature/Identity/*`, `tests/Feature/Http/PulseCacheKeysTest.php`,
   `tests/Feature/Sources/NativeStubsTest.php`, `tests/Feature/Http/TrustedProxyTest.php`,
   `tests/Feature/Api/V1/Auth/SignInRedactionTest.php`, `tests/Feature/DatabaseSeederTest.php`,
   `tests/Unit/Identity/LocaleResolverTest.php`, six `tests/Pgsql` races and migrations,
@@ -494,8 +499,10 @@ decided beyond them.
 - **The factory UUID and the seeder.** `UserFactory` gives `analytics_distinct_id` a `(string) Str::uuid()`:
   `DatabaseSeeder` runs `WithoutModelEvents`, so the model's hook does not fill it there and `db:seed` failed on the
   `NOT NULL`; Faker's `uuid()` is a version 3 UUID and broke the version 4 check of `UserResolverTest`.
-  `DatabaseSeederTest` pins it. `UserSetting` and `AccessGrant` have factories and no seeders: the settings row is
-  created by `SettingsService` on first contact or first read, and a grant only by the gate or the commands.
+  `DatabaseSeederTest` pins it. `UserSettingSeeder`, called by `DatabaseSeeder` after the users, gives every user
+  without a settings row the defaults of `SettingsService::createDefaults` for his last known language and leaves an
+  existing row alone. `AccessGrant` has a factory and no seeder: a grant is written only by the gate and the operator
+  commands (`access:block`, `access:unblock`), so a seeded grant would be an admission no gate made.
 - **Settings semantics chosen here.** `QuietWindow` refuses two equal ends and one end without the other; `endAfter()`
   is the first end strictly after the moment; an empty `DigestSchedule` is allowed and has no next slot. Every
   authenticated request that builds a request context reads the settings row once (cached on the user object for the
@@ -527,7 +534,10 @@ decided beyond them.
   seconds or as an HTTP date (the API sends seconds). The read pass-through `/bff/[...path]` and the owner photos
   route pass an API `429` on but drop its `Retry-After`; no client code reads it there.
 - **The end-to-end environment.** The CI workflow and `scripts/dev/e2e-local.sh` run the API with
-  `SOURCES_NATIVE_STUBS=true` and `ACCESS_MODE=open` (and the script with `APP_ENV=local`). A blank
+  `SOURCES_NATIVE_STUBS=true`, `ACCESS_MODE=open` and `APP_ENV=local`. The API refuses to boot with the stubs
+  outside `local` and `testing`, and the workflow's `composer install` runs `package:discover` before `.env` exists,
+  when `APP_ENV` defaults to `production`: without the pinned value that first step failed in `package:discover`
+  (found by the final review); the second API step is pinned to match. A blank
   `TELEGRAM_BOT_TOKEN` there is harmless: the stub answers before the controller. `make e2e` against the Redis-backed
   local API signs every launch in from the Next server's one address and meets `v1-auth` (10 a minute) within the
   first minute: KI-71; use `scripts/dev/e2e-local.sh`. A developer's local env file needs `ACCESS_MODE=open`, and
@@ -550,6 +560,41 @@ decided beyond them.
 - **Edits beyond the files.** Two sentences of `frontend/app/README.md` (the forwarded address, the `429` of
   `/bff/session`) and the header comment of `scripts/dev/e2e-local.sh` ("the API's rate limiters" instead of "the
   `api` rate limiter").
+- **A returning user is looked up first.** `UserResolver` reads the user by `telegram_user_id` and calls
+  `createOrFirst` only when there is none: an INSERT that fails on the unique column made PostgreSQL write the
+  Telegram id (`DETAIL: Key (telegram_user_id)=…`) to the database server's log on every returning sign-in
+  (SEC-REQ-047). Only the loser of a race between two first contacts still runs that INSERT. `UserResolverTest`
+  counts the INSERTs through `beforeExecuting`, which also sees a failing statement; a pgsql test checks that the id
+  sequence does not move.
+- **Wildcard proxies trust nobody.** `TRUSTED_PROXIES=*` or `**` is read as unset: the framework would believe every
+  caller's `X-Forwarded-For`, so any direct caller of `api.*` could name its own address and get fresh per-address
+  buckets. The list entries `REMOTE_ADDR`, `0.0.0.0/0` and `::/0` have the same effect; the config's comment names
+  them, the code does not refuse them.
+- **Pulse ignores the keys that name a user.** Its cache recorder stores every key it sees: `config/pulse.php`
+  ignores `listing-opens:*` (which cards a user opened), `access:decision:*` and `auth:*` (the sign-in counters and
+  the exchange counter of a value), with their `:timer` twins. `PulseCacheKeysTest` captures the keys of a real
+  sign-in and card open and judges them with the recorder's own rule.
+- **One sign-in bucket per address.** `v1-auth` (10 a minute) counts every sign-in, successful ones too, by client
+  address. The Mini App signs in from its server, so unless `TRUSTED_PROXIES` names the addresses the Next servers
+  reach the API from, every user shares one bucket; users behind one carrier NAT share one too. The production
+  track sets it ("Needs from the production track", item 2).
+- **Exception messages carry bindings.** A `QueryException` message holds its SQL with the values (a Telegram id, a
+  token hash) and reaches the log and Telescope; framework behaviour, not changed here.
+- **The user row is written before the decision.** As the design orders it, the sign-in creates or updates the user
+  before the gate decides, so a person the gate refuses (`private` or `invite` mode, a pause) keeps a row and each
+  retry updates `last_seen_at`; retention and erasure are WP-47's.
+- **A block leaves one log line.** `access:block` and `access:unblock` record who and why in one notice log line
+  only; `flagged_at` and `flag_reason` of `access_grants` stay unused until a flagging package.
+- **The sign-in's own counters check before they count.** The 20 exchanges of a value and the 5 sign-ins a minute of
+  a user are checked, then counted, so parallel requests pass by their number; bounded like the daily cap, and the
+  token cap (5 unexpired) bounds what is kept.
+- **A spent value ends in the error state.** A value whose 20 exchanges are spent answers `429` with a `Retry-After`
+  of up to the window (3 600 s), like the per-minute `429`s and without a `reason`; the boot retry waits at most
+  60 s an attempt and ends in its `ErrorState`. «Reopen the app» comes from `auth_expired` only. A refused user's
+  re-checks of the no-access screen spend exchanges of the same value too.
+- **Go-live conditions and checks after the deploy.** The security review's conditions of ЗРУ-547 (the hosts'
+  location, the database's registration, `DB_SSLMODE`) and its staging checks of the client address are items 4 and
+  5 of "Needs from the production track"; neither blocks the merge.
 - **PHP 8.6.0.** The developer machine runs PHP 8.6.0 (KI-70); every local run above used it, while `main` and CI pin
   8.5.
 
@@ -557,34 +602,36 @@ decided beyond them.
 
 **2026-11-26, development track (Claude Code).** Branch `feat/wp-40-identity` from `main` at `cabee17`, PR #PR-TBD.
 
-- **Done:** steps 1–9 and the Mini App's side; of step 10 Pint, PHPStan, the pgsql group and an independent review of
-  every stage. The Playwright run on this tree is with the coordinator, and its result goes into the PR description;
-  `make ci-backend` and the e2e job run in the PR's CI.
+- **Done:** steps 1–10 of the specification and the Mini App's side: Pint, PHPStan, the pgsql group, an independent
+  review of every stage, the security-reviewer pass over the whole diff (STRIDE; no high, its two mediums verified
+  down to low and fixed or recorded in "As built") and a spec-compliance review (its one high, the e2e job's
+  `APP_ENV`, fixed). The PR's CI runs `make ci-backend`'s gates and the e2e job.
 - **Commits**, in order: `7da00ce` (verifier, users, tokens, stub mode), `def500a` (settings, `GET /me`,
   `GET|PATCH /settings`), `96a4053` (gate, sign-in, block and unblock), `8f1e2eb` (the Mini App forwards the client
   address; KI-37; the e2e env), `13e6ae1` (review of the Mini App stage), `6caf12b` (limiters, the daily cap, trusted
-  proxies, redaction), `f958082` (OpenAPI and `@homi/types`), then this documentation.
-- **Verified** (the counts of the stage reports; the review fixes of stages 4 and 5 added cases after them, so the
-  final numbers are those of the PR description). Baseline: 854 tests, 850 passed, 4 skipped.
-  - After stage 4, from `backend/`: `php artisan test --compact` → 1 328 tests, 1 317 passed, 11 skipped (the pgsql
-    group), 5 974 assertions; `vendor/bin/phpstan analyse --memory-limit=1G` → 0 errors; `vendor/bin/pint --test` →
-    passed; `php artisan route:list --path=api/v1 -v` → 64 routes, none on `throttle:api`, none without a named
-    limiter (at stage 3: all 59 bearer routes behind the gate, `events.store` with `access:lenient`). From the root,
-    `make test-pgsql` on a local PostgreSQL (`DB_HOST=127.0.0.1`) → 11 passed, 54 assertions.
-  - After stage 5, from `frontend/`: `pnpm --filter app test` → 273 files, 4 403 tests passed; `pnpm -r lint` and
-    `pnpm -r typecheck` → exit 0.
+  proxies, redaction), `f958082` (OpenAPI and `@homi/types`), `f121fc8` (this documentation), then the fixes of the
+  whole-package review.
+- **Verified** on the final tree (baseline on `cabee17`: 854 tests, 850 passed, 4 skipped):
+  - from `backend/`: `php artisan test --compact` → 1 354 tests, 1 342 passed, 12 skipped (the pgsql group),
+    6 191 assertions; `vendor/bin/phpstan analyse --memory-limit=1G` → 0 errors; `vendor/bin/pint --test` → passed;
+    `php artisan route:list --path=api/v1 -v` → 64 routes, none on `throttle:api`, none without a named limiter, all
+    59 bearer routes behind the gate, `events.store` with `access:lenient`. From the root, `make test-pgsql` on a
+    local PostgreSQL (`DB_HOST=127.0.0.1`) → 12 passed.
+  - from `frontend/`: `pnpm --filter app test` → 273 files, 4 403 tests passed; `pnpm -r lint`, `pnpm -r typecheck`
+    and `pnpm types:check` → exit 0.
+  - Playwright through `scripts/dev/e2e-local.sh` on `f958082`: 927 passed (25.2 min); `E2E_RADARS_OFF=1` → 20
+    passed. Before the branch, five runs in a row on `main` `cabee17` (WP-33's "Handoff"): 927 passed each time.
   - `python3 scripts/migration/collect_ids.py --check` → exit 0.
 - **Decisions taken here:** DEC-104 … DEC-107 (`../decisions/2026-11-26-developer-answers.md`); the rest is marked in
   the sections above or listed in "As built"; the mismatches with the facts are AM-104 … AM-112 in
   `docs/ai/reports/phase-3-notes.md` §AI.
 - **Next:**
-  1. the security-reviewer agent reads the whole diff (step 10; the checklist's line), then the PR's checks and
-     review, then the merge;
+  1. the PR's checks and its review, then the merge;
   2. the shared-file PR from `chore/wp-40-env-keys` (`dfeb11b`): `backend/.env.example` and
      `docs/infrastructure/environments.md` with the nine keys, opened beside this one;
-  3. both developers add `ACCESS_MODE=open` to their local env file (and `SOURCES_NATIVE_STUBS=true` for `next dev`
-     with the fake user); the agent cannot write it (the committed deny rule `Edit(**/.env)`); the whole local suite
-     runs through `scripts/dev/e2e-local.sh` (KI-71);
+  3. every developer's local env file needs `ACCESS_MODE=open` and `SOURCES_NATIVE_STUBS=true` (the first developer's
+     has both since 2026-11-26: `php artisan config:show access.mode` → `open`, `sources.native_stubs` → `true`); the
+     whole local suite runs through `scripts/dev/e2e-local.sh` (KI-71);
   4. the developer checks one real launch value of the dev bot (see "As built");
   5. the production track: "Needs from the production track" above — the three migrations, the env keys with
      `TRUSTED_PROXIES` set to the addresses the Next servers reach the API from, the scheduler, the deploy, the

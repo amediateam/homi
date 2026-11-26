@@ -30,7 +30,7 @@ and the switch can be reversed within minutes before the point of no return.
 2. Edge rules (Cloudflare kept): cache rules per `17` §7 in the zone, tested on a staging zone or a test sub-host first;
    a purge-only API token in the vault (`CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_API_TOKEN` names, used by the backend's
    takedown and purge jobs). Cloudflare dropped: nginx `proxy_cache` rules on the web host replicate the same table.
-3. Server `.env` `TRUSTED_PROXIES` = the edge's published ranges (Cloudflare) or empty (direct nginx); verify after GO
+3. Server `.env` `TRUSTED_PROXIES` = the addresses the Next servers reach the API from (WP-40: the Mini App calls the API server-side and forwards the user's `X-Forwarded-For`), plus the edge's published ranges (Cloudflare) when an edge fronts the API; verify after GO
    that two client IPs land in two limiter buckets and a forged `X-Forwarded-For` from outside the list is ignored.
 4. GO: switch the origin / records to HOMI's web host; purge both zones; run the smoke tests of `18` §5.2 (GO + 2 min).
 5. Rollback before the point of no return: restore the exported records / origin, purge, follow `18` §8.1.

@@ -196,8 +196,11 @@ refused with the documented answer, another key is unaffected. The rows it must 
 
 A limiter keyed by IP must see the client address, not nginx's. The servers call PHP-FPM from nginx through
 FastCGI, so `REMOTE_ADDR` already is the client; `backend/bootstrap/app.php` configures no trusted proxies today,
-and WP-40 adds `config/trustedproxy.php` with `TRUSTED_PROXIES`, which stays unset on these servers. The test
-asserts that with no trusted proxy a forged `X-Forwarded-For` header does not change the key.
+and WP-40 adds `config/trustedproxy.php` with `TRUSTED_PROXIES`. *Corrected by WP-40 (2026-11-26):* the Mini App
+calls the API server-side, so for PHP the connecting client is the Next server, not the user; `TRUSTED_PROXIES` is set
+on these servers to the addresses the Next servers reach the API from, and the Mini App forwards the user's
+`X-Forwarded-For` (WP-40 decision 7). The test asserts that a forged `X-Forwarded-For` from any other caller does not
+change the key.
 
 ### IDOR matrix
 

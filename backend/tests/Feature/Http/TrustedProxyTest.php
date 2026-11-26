@@ -53,7 +53,7 @@ it('counts the sign-in per client address behind a trusted proxy', function (): 
     $this->postJson('/api/v1/auth/telegram', ['init_data' => 'a'], ['X-Forwarded-For' => '203.0.113.10'])->assertTooManyRequests();
 });
 
-it('reads TRUSTED_PROXIES as a trimmed list, and a blank or missing one as nobody', function (?string $value, ?string $expected): void {
+it('reads TRUSTED_PROXIES as a trimmed list, and a blank, missing or wildcard one as nobody', function (?string $value, ?string $expected): void {
     $config = EnvOverride::with('TRUSTED_PROXIES', $value, fn (): array => require config_path('trustedproxy.php'));
 
     expect($config['proxies'])->toBe($expected);
@@ -61,4 +61,15 @@ it('reads TRUSTED_PROXIES as a trimmed list, and a blank or missing one as nobod
     'unset' => [null, null],
     'blank' => ['  ', null],
     'a list' => [' 10.0.0.5, 10.0.1.0/24 ', '10.0.0.5, 10.0.1.0/24'],
+    'every caller' => ['*', null],
+    'every caller, padded' => [' * ', null],
+    'every caller, the other spelling' => ['**', null],
 ]);
+
+it('ignores a forwarded address from any caller when TRUSTED_PROXIES is a wildcard', function (): void {
+    $config = EnvOverride::with('TRUSTED_PROXIES', '*', fn (): array => require config_path('trustedproxy.php'));
+    config(['trustedproxy.proxies' => $config['proxies']]);
+
+    referenceFrom('198.51.100.7', '203.0.113.10')->assertOk();
+    referenceFrom('198.51.100.7', '203.0.113.11')->assertTooManyRequests();
+});

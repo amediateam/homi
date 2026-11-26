@@ -142,6 +142,12 @@ return [
             'sample_rate' => env('PULSE_CACHE_INTERACTIONS_SAMPLE_RATE', 1),
             'ignore' => [
                 ...Pulse::defaultVendorCacheKeys(),
+                // WP-40 (SEC-REQ-047): keys that name a user by his internal id would keep a per-user record in
+                // Pulse — which cards he opened (`listing-opens:user:<id>:<number>`), his access decision, his
+                // sign-in counters and the exchange counter of a launch value — and the `:timer` twin of each.
+                '/^listing-opens:/',
+                '/^access:decision:/',
+                '/^auth:/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
