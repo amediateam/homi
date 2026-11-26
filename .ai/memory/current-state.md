@@ -1,12 +1,12 @@
 ---
-updated: 2026-11-26 (the composer update of 2026-11-26 in #123 — Laravel 13.44.1, Guzzle 8.6.0; before it main = f428d15 after #121, WP-33 part 4, and its session save #122; WP-40 next)
+updated: 2026-11-26 (WP-40 merged as #124 `a987ecd` and its env keys as #125 `d650cac`, after the composer update #123; the first native package of stage C; WP-41 next)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
 # Current state (facts only)
 
 ## Repository
-- Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. PRs #6–#8 merged later the same day. On 2026-11-14 `main` is at `596d0db` (last merge PR #24); PR #9 (`docs/migration/` + `scripts/migration/`, the kvadro² audit and migration plan) is merged as `b583d3d`. Open (`gh pr list`, 2026-11-14): Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4); PR #25 (`docs/three-wave-plan`: the three-wave strategy and the Wave 1 plan — not on `main` yet). No branch protection (free GitHub plan) and no local push guard yet (KI-19). On 2026-11-22 `main` holds the handoff documents (#114 … #116) and the composer updates #117 and #119 (`backend/composer.lock` and the regenerated registry; `composer.json` unchanged) above the last application-code merge #113 `a9e8955`; open (`gh pr list`): Dependabot #5 and #57 … #60; pushed without a PR: `chore/php-8.6` (`8464516`, the PHP pin 8.5 → 8.6, nothing run on it). Later on 2026-11-22 every branch already merged into `main` was deleted, locally and on GitHub: GitHub holds `main`, `chore/php-8.6` and the five Dependabot heads (`git ls-remote --heads origin`), the only checkout is the main one (`git worktree list`), and the branch names in older reports and specifications are history whose commits are in `main`. On 2026-11-26 #123 adds a third composer update the same way (25 bumps, Laravel 13.44.1, Guzzle 8.6.0).
+- Branches: `main` holds everything — the phase stack (phase-0 … phase-4) was merged on 2026-11-09 through PRs #1–#4 with merge commits (last `834d69d`); the `chore/phase-*` branches are history. PRs #6–#8 merged later the same day. On 2026-11-14 `main` is at `596d0db` (last merge PR #24); PR #9 (`docs/migration/` + `scripts/migration/`, the kvadro² audit and migration plan) is merged as `b583d3d`. Open (`gh pr list`, 2026-11-14): Dependabot PR #5 (TypeScript 7 — not to be merged, KI-4); PR #25 (`docs/three-wave-plan`: the three-wave strategy and the Wave 1 plan — not on `main` yet). No branch protection (free GitHub plan) and no local push guard yet (KI-19). On 2026-11-22 `main` holds the handoff documents (#114 … #116) and the composer updates #117 and #119 (`backend/composer.lock` and the regenerated registry; `composer.json` unchanged) above the last application-code merge #113 `a9e8955`; open (`gh pr list`): Dependabot #5 and #57 … #60; pushed without a PR: `chore/php-8.6` (`8464516`, the PHP pin 8.5 → 8.6, nothing run on it). Later on 2026-11-22 every branch already merged into `main` was deleted, locally and on GitHub: GitHub holds `main`, `chore/php-8.6` and the five Dependabot heads (`git ls-remote --heads origin`), the only checkout is the main one (`git worktree list`), and the branch names in older reports and specifications are history whose commits are in `main`. On 2026-11-26 #123 adds a third composer update the same way (25 bumps, Laravel 13.44.1, Guzzle 8.6.0), then WP-40 is merged as #124 (`a987ecd`) and its env keys as #125 (`d650cac`); both branches deleted (`git ls-remote --heads origin` → `main`, `chore/php-8.6`, five Dependabot heads).
 - Two tracks since 2026-11-09: development (second developer, Codex) and production (first developer) — `HANDOFF.md`, `docs/handoff/parallel-work.md`.
 - Tracked: backend baseline, frontend pnpm workspace (landing, app, arm, packages/*), `infra/local/nginx`, `scripts/dev`, `Makefile`, docs, ADRs 0001–0013 and 0015 (Accepted), 0016–0020 (merged 2026-11-15 with `Status: Proposed`, waiting for the first developer's acceptance), `scripts/packages/registry`, root CI workflows, CODEOWNERS, `HANDOFF.md`, `AGENTS.md`, `docs/handoff/`.
 - Gitignored machine files: `infra/local/certs/`, `infra/local/nginx/snippets/paths.conf`, `infra/local/{run,logs}/`, `.ai/local.env`, `backend/.env`, `frontend/*/.env.local`.
@@ -66,6 +66,24 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Stubs:** personal fixtures hold listing numbers resolved through the card source (`StubListingRefs`);
     `StubCursor` ends every stub list quietly on a foreign cursor (the feed included); `StubRadars`;
     `StubLandingSource` and the features `source.landing.live`, `source.landing.pins`.
+- **Since WP-40 (#124, merged 2026-11-26 as `a987ecd`; staging and production do not run it yet):**
+  - **Native:** `POST /auth/telegram` verifies `initData` (`App\Services\Identity\TelegramInitDataVerifier`,
+    `signature` inside the data-check-string, 1 h window, 20 exchanges per value), resolves a Telegram user
+    (`UserResolver`; the users migration deleted the WP-11 stub user), runs the gate and issues a `miniapp` token
+    (`TokenIssuer`: `app:read` + `app:write`, 24 h, at most 5); `GET /me`, `GET|PATCH /settings` read and write
+    `user_settings` (`SettingsService`). All four answer `meta.source = native`; every other method is still a stub.
+  - **Stub mode:** `SOURCES_NATIVE_STUBS=true` (only with `APP_ENV` local/testing — the API refuses to boot
+    otherwise) answers those four from `App\Services\Sources\Stub\NativeStubs` through `AnswerNativeStubs`;
+    the e2e suite and the first developer's local env run so (`php artisan config:show sources.native_stubs` →
+    `true`, `access.mode` → `open`, 2026-11-26).
+  - **Gate:** `config/access.php` (`ACCESS_MODE` blank = `private`), `access_grants`, `AccessGate`,
+    `EnsureAccessGranted` on the 59 bearer routes (`access:lenient` on `POST /events`), `access:block|unblock`.
+  - **Limits:** 13 named `v1-*` limiters (`config/rate_limits.php`; `throttle:api` and the `api` limiter are gone),
+    the daily cap `CountListingOpens` (DEC-104 … DEC-107), `config/trustedproxy.php` (`TRUSTED_PROXIES`).
+  - **Tests:** CI's `ci:check` runs the Feature suite on PostgreSQL (AM-113); the `pgsql` connection's session zone is
+    UTC (AM-114). Local: `php artisan test --compact` → 1 362 tests, 1 350 passed, 12 skipped; the same suite with
+    `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1` → 1 362 passed; CI of `cca81c2`: `backend` pass
+    (run 45845272293), `frontend` pass, `frontend-e2e` pass on attempt 2 (927 + 20 + 10; attempt 1 hit KI-63).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).
@@ -357,6 +375,11 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
 - **WP-33 part 1 (merged #111 61d78c6):** Playwright projects `miniapp-cookie` (every spec) and `miniapp-header` (every test that names no mode, DEC-101); the other clients' projects only with `E2E_FULL=1` (manual run, DEC-100). `@homi/testing` `modes.ts` checks the session mode, console errors, CSP violations and missing messages after every passed test; `setScenario`/`withScenario`; `app/scripts/check-bundle.mjs` (`make bundle-check`, a CI step). Verified: local strict run 566 passed, `@radars-off` 20.
 - **WP-33 part 2 (merged #112 27142e3):** `e2e/support/pages.ts` (the list of addresses with the scenario each needs), `e2e/coverage/{routes,render,version-gates,brand}.spec.ts`, a screen annotation on every describe, and `app/scripts/e2e-coverage.mjs` with its CI step "Screens without an end-to-end test" (`.github/workflows/frontend-e2e.yml`).
 - **WP-33 part 3 (merged #113 a9e8955):** the eight journeys in `e2e/journeys/` (`first-launch`, `deep-link`, `search-to-radar`, `moderation`, `locale-currency`, `session-expiry`, `source-unavailable`, `demo-marker`), tagged `@journey` and run by both pull-request projects. CI of #113: `gh pr checks 113` → `ci` pass, `e2e` pass (runs 45002838031 and 45002837960). Reported in #113, not re-run: the full local strict run 919 passed in 25.3 min, `@radars-off` 20, `@analytics` 8.
+- **WP-40's Mini App side (merged #124 `a987ecd`):** `lib/api/forwarded.ts` — every server-side API call forwards
+  the incoming `X-Forwarded-For` (`publicApi()`, a cached shared read, forwards none); `/bff/session` passes a `429`
+  through with `Retry-After` and the boot retry waits once for it (KI-37 resolved); `frontend-e2e.yml` and
+  `scripts/dev/e2e-local.sh` boot the API with `APP_ENV=local`, `SOURCES_NATIVE_STUBS=true`, `ACCESS_MODE=open`, and
+  the e2e job also runs on the backend's code (DEC-108).
 - **WP-33 part 4 (merged #121 a27b277):** the `perf` project (only with `E2E_FULL=1`), `e2e/perf/{startup,chunks,scroll}.spec.ts` (`@budget` rows 3–6 in both PR projects, `@analytics` row 4 with a key, `@perf` rows 1, 2, 7–10), `e2e/support/perf.ts`, `app/perf-budgets.json` (rows 7–9 `provisional`, DEC-103), `app/scripts/check-budgets.mjs` (CI steps after the e2e run and the analytics run; `make perf`), `docs/testing/wave-1-telegram-pass.md` (empty). `MapWarmup` waits for the list's first content (`FIRST_CONTENT_WAIT_MS` 8 s in `lib/analytics/firstContent.ts`) before its 2.5 s. Verified locally: `make perf` → 24 passed, all rows within limits; `chunks.spec.ts --repeat-each 10` → 80 passed. CI of #121: `e2e` 927 passed, budget rows 3–6 at 0 (run 45107265874). The `perf` project has not run on GitHub's runner yet (DEC-103).
 - `next.config.ts`: next-intl plugin (WP-20); `allowedDevOrigins` for the `.homi.loc` hosts; `images.remotePatterns` for `cdn.homi.loc`, `cdn.staging.homi.uz`, `cdn.homi.uz`. `.env.example` per app; `.env.local` present locally.
 

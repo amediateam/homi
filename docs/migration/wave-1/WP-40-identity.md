@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | REVIEW (#124, `feat/wp-40-identity`) |
+| Status | WAITING (merged in #124 on 2026-11-26 as `a987ecd`, env keys #125 `d650cac`; production track: the items of "Needs from the production track", then the checks inside Telegram) |
 | Depends on | WP-33 (the Mini App runs on the stub contract of WP-11) |
 | Size | about 2 600 changed lines without generated files, L |
 | Behaviour reference | `25` §3.4, §5 (identity, settings); WP-11 (the contract — shapes do not change here); `16` §4.1 (SEC-REQ-001 … SEC-REQ-007), §4.6 (SEC-REQ-027), SEC-REQ-047; `15` §3.1, §3.2; tasks `tasks/backend/KV-BE-006-initdata-verifier.md`, `KV-BE-009-access-gate.md`, `KV-BE-010-legacy-rate-limits.md`, `KV-BE-045-settings.md` (rules, limits, edge cases — not their routes or serializers); ADR-0003, ADR-0018 |
@@ -642,15 +642,16 @@ decided beyond them.
 - **Decisions taken here:** DEC-104 … DEC-107 (`../decisions/2026-11-26-developer-answers.md`); the rest is marked in
   the sections above or listed in "As built"; the mismatches with the facts are AM-104 … AM-112 in
   `docs/ai/reports/phase-3-notes.md` §AI.
+- **Merged:** #124 as `a987ecd` and the env keys #125 as `d650cac` on 2026-11-26, on the developer's word «сливай
+  #124 и #125 после зелёного CI». CI of `cca81c2`: `backend` pass (run 45845272293), `frontend` pass (45845272303),
+  `frontend-e2e` pass on attempt 2 (45845272305: 927 + 20 + 10; attempt 1 failed once on the known flake KI-63).
 - **Next:**
-  1. the PR's checks and its review, then the merge;
-  2. the shared-file PR #125 from `chore/wp-40-env-keys` (`dfeb11b`): `backend/.env.example` and
-     `docs/infrastructure/environments.md` with the nine keys, opened beside this one;
-  3. every developer's local env file needs `ACCESS_MODE=open` and `SOURCES_NATIVE_STUBS=true` (the first developer's
+  1. every developer's local env file needs `ACCESS_MODE=open` and `SOURCES_NATIVE_STUBS=true` (the first developer's
      has both since 2026-11-26: `php artisan config:show access.mode` → `open`, `sources.native_stubs` → `true`); the
      whole local suite runs through `scripts/dev/e2e-local.sh` (KI-71);
-  4. the developer checks one real launch value of the dev bot (see "As built");
-  5. the production track: "Needs from the production track" above — the three migrations, the env keys with
-     `TRUSTED_PROXIES` set to the addresses the Next servers reach the API from, the scheduler, the deploy, the
-     staging check of two buckets —, then the acceptance lines inside Telegram on staging and production;
-  6. set the status to `DONE`.
+  2. the developer checks one real launch value of the dev bot (see "As built");
+  3. the production track: "Needs from the production track" above — the three migrations, the env keys of #125 with
+     `TRUSTED_PROXIES` set to the addresses the Next servers reach the API from, the timezone check, the scheduler,
+     the deploy, the staging check of two buckets —, then the acceptance lines inside Telegram on staging and
+     production;
+  4. set the status to `DONE`.
