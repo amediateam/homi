@@ -1886,7 +1886,7 @@ track passes to a colleague; WP-40 is next.
 ## AI. Development track, 2026-11-26 — WP-40
 
 **Why.** The queue's next package (`docs/migration/wave-1/README.md`): WP-40 starts right after part 4 of WP-33
-(DEC-102), merged as #121. Branch `feat/wp-40-identity` from `origin/main` at `cabee17`, PR #PR-TBD.
+(DEC-102), merged as #121. Branch `feat/wp-40-identity` from `origin/main` at `cabee17`, PR #124.
 
 **Applied** (the specification's corrections and "As built" have the details):
 - the `initData` verifier (`signature` kept in the data-check-string, sensitive parameters), the Telegram identity

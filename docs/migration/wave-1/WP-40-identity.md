@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | REVIEW (#PR-TBD, `feat/wp-40-identity`) |
+| Status | REVIEW (#124, `feat/wp-40-identity`) |
 | Depends on | WP-33 (the Mini App runs on the stub contract of WP-11) |
 | Size | about 2 600 changed lines without generated files, L |
 | Behaviour reference | `25` §3.4, §5 (identity, settings); WP-11 (the contract — shapes do not change here); `16` §4.1 (SEC-REQ-001 … SEC-REQ-007), §4.6 (SEC-REQ-027), SEC-REQ-047; `15` §3.1, §3.2; tasks `tasks/backend/KV-BE-006-initdata-verifier.md`, `KV-BE-009-access-gate.md`, `KV-BE-010-legacy-rate-limits.md`, `KV-BE-045-settings.md` (rules, limits, edge cases — not their routes or serializers); ADR-0003, ADR-0018 |
@@ -600,7 +600,7 @@ decided beyond them.
 
 ## Handoff
 
-**2026-11-26, development track (Claude Code).** Branch `feat/wp-40-identity` from `main` at `cabee17`, PR #PR-TBD.
+**2026-11-26, development track (Claude Code).** Branch `feat/wp-40-identity` from `main` at `cabee17`, PR #124.
 
 - **Done:** steps 1–10 of the specification and the Mini App's side: Pint, PHPStan, the pgsql group, an independent
   review of every stage, the security-reviewer pass over the whole diff (STRIDE; no high, its two mediums verified
@@ -627,7 +627,7 @@ decided beyond them.
   `docs/ai/reports/phase-3-notes.md` §AI.
 - **Next:**
   1. the PR's checks and its review, then the merge;
-  2. the shared-file PR from `chore/wp-40-env-keys` (`dfeb11b`): `backend/.env.example` and
+  2. the shared-file PR #125 from `chore/wp-40-env-keys` (`dfeb11b`): `backend/.env.example` and
      `docs/infrastructure/environments.md` with the nine keys, opened beside this one;
   3. every developer's local env file needs `ACCESS_MODE=open` and `SOURCES_NATIVE_STUBS=true` (the first developer's
      has both since 2026-11-26: `php artisan config:show access.mode` → `open`, `sources.native_stubs` → `true`); the
