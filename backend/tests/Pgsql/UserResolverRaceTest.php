@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\Locale;
 use App\Models\User;
+use App\Models\UserSetting;
 use App\Services\Identity\TelegramInitData;
 use App\Services\Identity\UserResolver;
 use Carbon\CarbonImmutable;
@@ -8,7 +10,7 @@ use Carbon\CarbonImmutable;
 /*
  * WP-40: the first sign-ins of one Telegram user race (a reload, two devices). Each child process resolves the same
  * verified launch in its own PostgreSQL connection; `createOrFirst` on the unique `telegram_user_id` must leave one
- * user, and every child must get that user.
+ * user with one settings row, and every child must get that user.
  */
 it('makes one user when ten first contacts of one Telegram user run at once', function (): void {
     $resolve = static function (): int {
@@ -32,5 +34,7 @@ it('makes one user when ten first contacts of one Telegram user run at once', fu
     $user = User::query()->sole();
     expect(array_unique($ids))->toBe([$user->id])
         ->and($user->telegram_user_id)->toBe(279058397)
-        ->and($user->first_start_param)->toBe('flat_100012');
+        ->and($user->first_start_param)->toBe('flat_100012')
+        ->and(UserSetting::query()->sole()->user_id)->toBe($user->id)
+        ->and(UserSetting::query()->sole()->locale)->toBe(Locale::Uz);
 });

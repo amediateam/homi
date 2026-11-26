@@ -35,18 +35,20 @@ final readonly class SourceContext
     }
 
     /**
-     * The locale is the first supported `Accept-Language` tag by weight, else `ru`. The currency is `USD` until the
-     * user settings exist (WP-40). A scenario that is not a snake_case word of at most 64 characters is dropped.
+     * The locale is the first supported `Accept-Language` tag by weight, else `ru`. The currency is the signed-in
+     * user's (WP-40), read from his settings row and never written: `USD` for a guest, a collector, or a user without
+     * a row yet. A scenario that is not a snake_case word of at most 64 characters is dropped.
      */
     public static function fromRequest(Request $request): self
     {
         $actor = $request->user();
+        $user = $actor instanceof User ? $actor : null;
         $scenario = $request->header(self::SCENARIO_HEADER);
 
         return new self(
             locale: self::localeOf($request),
-            currency: 'USD',
-            user: $actor instanceof User ? $actor : null,
+            currency: $user?->settings?->currency->value ?? 'USD',
+            user: $user,
             scenario: is_string($scenario) && preg_match('/^[a-z0-9_]{1,64}$/', $scenario) === 1 ? $scenario : null,
         );
     }

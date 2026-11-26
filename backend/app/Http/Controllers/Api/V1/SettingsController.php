@@ -5,29 +5,27 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\SourceDriver;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Http\Resources\Api\V1\SettingsResource;
-use App\Services\Sources\Stub\StubResponder;
+use App\Services\Identity\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * `GET /settings`, `PATCH /settings` on stubs (WP-11; native from WP-40). The scenario `card_rich` answers the
- * settings of a user who chose the `rich` card style.
+ * `GET /settings`, `PATCH /settings` (WP-11; native since WP-40): the signed-in user's settings row, read and written
+ * by `SettingsService`; `PATCH` stores only the sent keys and answers the full object. The stub bodies answer from
+ * `NativeStubs` while `SOURCES_NATIVE_STUBS` is on.
  */
 class SettingsController extends ApiController
 {
-    /** @var array<string, string> */
-    private const array SCENARIOS = ['card_rich' => 'settings/card_rich'];
-
-    public function show(Request $request, StubResponder $stubs): JsonResponse
+    public function show(Request $request, SettingsService $settings): JsonResponse
     {
-        return $this->sourced(new SettingsResource($stubs->fixture('settings/default', $request, self::SCENARIOS)), SourceDriver::Stub);
+        return $this->sourced(new SettingsResource($settings->get($this->appUser($request))->toArray()), SourceDriver::Native);
     }
 
-    /** The stub validates and answers the fixture with the sent keys overlaid; nothing is stored. */
-    public function update(UpdateSettingsRequest $request, StubResponder $stubs): JsonResponse
+    /** Stores only the sent keys and answers the full object; an empty body changes nothing */
+    public function update(UpdateSettingsRequest $request, SettingsService $settings): JsonResponse
     {
-        $settings = array_replace($stubs->fixture('settings/default', $request, self::SCENARIOS), $request->validated());
+        $changed = $settings->patch($this->appUser($request), $request->validated());
 
-        return $this->sourced(new SettingsResource($settings), SourceDriver::Stub);
+        return $this->sourced(new SettingsResource($changed->toArray()), SourceDriver::Native);
     }
 }

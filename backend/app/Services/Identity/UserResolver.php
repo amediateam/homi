@@ -9,14 +9,18 @@ use Carbon\CarbonImmutable;
 /**
  * Turns a verified Telegram launch into a HOMI user (WP-40). The first contact creates the user — race-safe through
  * `createOrFirst` on the unique `telegram_user_id`, so two concurrent first sign-ins make one user — with its launch
- * facts and `first_start_param`; every later contact updates the flags, the language and `last_seen_at` in one save.
+ * facts and `first_start_param`, and its settings row with the defaults for the launch's language; every later
+ * contact updates the flags, the language and `last_seen_at` in one save.
  *
- * `allows_write_to_pm` only ever raises `bot_chat_state` to `active`: a launch without it never downgrades the state,
- * which the bot's own updates maintain (WP-52). A launch without a language tag keeps the last one known. Nothing of
- * the user's name, username or photo is stored (SEC-REQ-004).
+ * `allows_write_to_pm` only raises `bot_chat_state` from `never` to `active`: a launch without it never downgrades the
+ * state, and a launch with it never undoes a `blocked` that the bot saw in its own chat-member updates (WP-52), which
+ * alone maintain that state. A launch without a language tag keeps the last one known. Nothing of the user's name,
+ * username or photo is stored (SEC-REQ-004).
  */
 final class UserResolver
 {
+    public function __construct(private readonly SettingsService $settings) {}
+
     public function fromInitData(TelegramInitData $data): User
     {
         $now = CarbonImmutable::now();
@@ -42,7 +46,7 @@ final class UserResolver
             'language_code' => $data->languageCode ?? $user->language_code,
         ]);
 
-        if ($data->allowsWriteToPm) {
+        if ($data->allowsWriteToPm && $user->bot_chat_state === BotChatState::Never) {
             $user->bot_chat_state = BotChatState::Active;
         }
 
@@ -62,9 +66,9 @@ final class UserResolver
         ];
     }
 
-    /**
-     * Seam of WP-40 stage 2: the first contact creates the user's settings row with the defaults for the launch's
-     * language (`SettingsService::createDefaults($user, $data->languageCode)`). Until then a user has no row.
-     */
-    private function firstContact(User $user, TelegramInitData $data): void {}
+    /** The first contact creates the user's settings row with the defaults for the launch's language. */
+    private function firstContact(User $user, TelegramInitData $data): void
+    {
+        $this->settings->createDefaults($user, $data->languageCode);
+    }
 }

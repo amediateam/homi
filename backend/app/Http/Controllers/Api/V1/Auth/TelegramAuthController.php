@@ -7,9 +7,9 @@ use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Http\Controllers\Api\V1\ApiController;
-use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Resources\Api\V1\SessionResource;
+use App\Services\Sources\Stub\NativeStubs;
 use App\Services\Sources\Stub\StubResponder;
 use App\Services\Sources\Stub\StubUser;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +26,7 @@ class TelegramAuthController extends ApiController
 
     public function __invoke(TelegramSignInRequest $request, StubResponder $stubs): JsonResponse
     {
-        $me = $stubs->fixture('me/default', $request, MeController::SCENARIOS, [
+        $me = $stubs->fixture('me/default', $request, NativeStubs::ME_SCENARIOS, [
             'auth_expired' => fn (): InitDataExpired => new InitDataExpired,
             'invalid_init_data' => fn (): InvalidInitData => new InvalidInitData(InvalidInitDataReason::BadSignature),
         ]);

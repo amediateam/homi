@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\SourceDriver;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Base controller for /api/v1: the response envelope of ADR-0007.
@@ -124,5 +126,18 @@ abstract class ApiController extends Controller
         }
 
         return $actor;
+    }
+
+    /**
+     * The signed-in HOMI user of a Mini App method. A collector (`Source`) token never carries the app abilities; one
+     * that reached such a method anyway is refused as `403 forbidden`.
+     *
+     * @throws AuthenticationException
+     */
+    protected function appUser(Request $request): User
+    {
+        $actor = $this->actor($request);
+
+        return $actor instanceof User ? $actor : throw new AccessDeniedHttpException('This method is for users of the app.');
     }
 }

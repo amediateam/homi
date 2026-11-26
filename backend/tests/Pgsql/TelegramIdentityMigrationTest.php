@@ -8,7 +8,9 @@ use Tests\Support\LegacyUserRows;
 
 /*
  * The users migration of WP-40 over the rows of the schema before it, on PostgreSQL (the feature suite runs the same
- * on SQLite): `down()` first, the old rows, then `up()` again, which leaves the schema as the group found it.
+ * on SQLite): `down()` first, the old rows, then `up()` again, which leaves the schema as the group found it. `up()`
+ * runs inside one transaction, as the Migrator runs a migration on PostgreSQL (its grammar supports transactional
+ * schema changes), so the deletes and the fill run in the same transaction as the column changes around them.
  */
 it('deletes the stub user and its tokens and gives every other user its own analytics id on PostgreSQL', function (): void {
     $migration = LegacyUserRows::migration();
@@ -16,7 +18,7 @@ it('deletes the stub user and its tokens and gives every other user its own anal
     $rows = LegacyUserRows::insert();
     expect(fn () => DB::table('users')->insert(['email' => 'nameless@example.com', 'password' => 'x']))->toThrow(QueryException::class);
 
-    $migration->up();
+    DB::transaction(fn () => $migration->up());
 
     $distinctIds = DB::table('users')->orderBy('id')->pluck('analytics_distinct_id', 'id');
     expect($distinctIds->keys()->all())->toBe([$rows['first'], $rows['second']])

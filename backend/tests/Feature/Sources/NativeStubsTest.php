@@ -4,10 +4,14 @@ use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Resources\Api\V1\MeResource;
+use App\Http\Resources\Api\V1\SettingsResource;
 use App\Models\User;
+use App\Models\UserSetting;
 use App\Providers\SourceServiceProvider;
 use App\Services\Sources\Stub\NativeStubs;
 use App\Services\Sources\Stub\StubUser;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
@@ -17,8 +21,9 @@ use Tests\Support\EnvOverride;
 
 /**
  * The stub mode of the native methods (WP-40): `AnswerNativeStubs` answers the routes of `NativeStubs` while the switch
- * is on. The two tests that compare a stub with its controller hold only while the controller still has the stub body;
- * a row goes, with approval, when the package that replaces that body lands.
+ * is on. A stub keeps answering what its method answered on stubs (WP-11): `me` and settings are compared with the
+ * committed fixtures through their resources, since their controllers are native; sign-in is compared with its
+ * controller while that one still has the stub body (until WP-40 replaces it).
  */
 dataset('native stub routes', [
     'sign-in' => ['POST', '/api/v1/auth/telegram', ['init_data' => 'query_id=AAHomiSyntheticQuery&auth_date=1&hash=00'], TelegramAuthController::class, '__invoke'],
@@ -54,23 +59,49 @@ it('lets a route outside the map reach its controller while the switch is on', f
     $this->getJson('/api/v1/reference')->assertOk()->assertExactJson(['answered_by' => 'controller']);
 });
 
-it('answers byte for byte what the stub controller answered, in the request locale', function (string $method, string $uri, array $body): void {
-    Date::setTestNow('2026-11-26 09:00:00');
+/**
+ * The answer of a stub method of WP-11 built from its committed fixture, `$overlay` laid over it, in the stub envelope;
+ * through JSON, as a client reads it.
+ *
+ * @param  class-string<JsonResource>  $resource
+ * @param  array<string, mixed>  $overlay
+ * @return array<string, mixed>
+ */
+function committedStubAnswer(string $resource, string $fixture, array $overlay = []): array
+{
+    $data = json_decode((string) file_get_contents(resource_path("fixtures/v1/{$fixture}.json")), true, flags: JSON_THROW_ON_ERROR);
+
+    return json_decode((string) json_encode([
+        'success' => true,
+        'data' => (new $resource(array_replace($data, $overlay)))->resolve(request()),
+        'meta' => ['source' => 'stub'],
+    ]), true, flags: JSON_THROW_ON_ERROR);
+}
+
+it('answers what the stub of WP-11 answered from the committed fixtures, in the request locale', function (string $method, string $uri, array $body, string $resource, string $fixture): void {
     actAsNativeStubUser();
-    $headers = ['Accept-Language' => 'uz'];
-
-    $controller = $this->json($method, $uri, $body, $headers)->assertOk();
     config(['sources.native_stubs' => true]);
-    $stub = $this->json($method, $uri, $body, $headers)->assertOk();
 
-    expect($stub->getContent())->toBe($controller->getContent())
+    $stub = $this->json($method, $uri, $body, ['Accept-Language' => 'uz'])->assertOk();
+
+    app()->setLocale('uz');
+    expect($stub->json())->toBe(committedStubAnswer($resource, $fixture, $method === 'PATCH' ? $body : []))
         ->and($stub->headers->get('Content-Language'))->toBe('uz')
-        ->and($stub->headers->get('Content-Type'))->toBe($controller->headers->get('Content-Type'));
+        ->and($stub->headers->get('Content-Type'))->toBe('application/json')
+        ->and(UserSetting::query()->count())->toBe(0);
 })->with([
-    'me' => ['GET', '/api/v1/me', []],
-    'settings' => ['GET', '/api/v1/settings', []],
-    'settings update' => ['PATCH', '/api/v1/settings', ['currency' => 'UZS', 'quiet_hours' => null, 'digest_hours' => [12, 20]]],
+    'me' => ['GET', '/api/v1/me', [], MeResource::class, 'me/default'],
+    'settings' => ['GET', '/api/v1/settings', [], SettingsResource::class, 'settings/default'],
+    'settings update' => ['PATCH', '/api/v1/settings', ['currency' => 'UZS', 'quiet_hours' => null, 'digest_hours' => [12, 20]], SettingsResource::class, 'settings/default'],
 ]);
+
+it('answers the stub scenarios of WP-11', function (): void {
+    actAsNativeStubUser();
+    config(['sources.native_stubs' => true]);
+
+    expect($this->getJson('/api/v1/me', ['X-Stub-Scenario' => 'first_launch'])->assertOk()->json())->toBe(committedStubAnswer(MeResource::class, 'me/first_launch'))
+        ->and($this->getJson('/api/v1/settings', ['X-Stub-Scenario' => 'card_rich'])->assertOk()->json())->toBe(committedStubAnswer(SettingsResource::class, 'settings/card_rich'));
+});
 
 it('signs in the stub user as the stub controller did, with a token of its own', function (): void {
     Date::setTestNow('2026-11-26 09:00:00');

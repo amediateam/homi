@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property CarbonImmutable|null $last_seen_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
+ * @property-read UserSetting|null $settings
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -66,6 +68,17 @@ class User extends Authenticatable
                 $user->analytics_distinct_id = (string) Str::uuid();
             }
         });
+    }
+
+    /**
+     * The user's settings row (WP-40); read and write it through `App\Services\Identity\SettingsService`, which
+     * creates it with the defaults when it is missing.
+     *
+     * @return HasOne<UserSetting, $this>
+     */
+    public function settings(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
     }
 
     /**

@@ -1,7 +1,10 @@
 <?php
 
 use App\Enums\Identity\BotChatState;
+use App\Enums\Locale;
+use App\Enums\Theme;
 use App\Models\User;
+use App\Models\UserSetting;
 use App\Services\Identity\TelegramInitData;
 use App\Services\Identity\UserResolver;
 use Carbon\CarbonImmutable;
@@ -74,6 +77,34 @@ it('finds the same user on the next contact and updates what the launch says', f
         ->and($row->last_seen_at?->toIso8601String())->toBe('2026-11-27T18:30:00+00:00');
 });
 
+it('creates the settings row with the defaults for the language of the first launch', function (?string $languageCode, Locale $locale): void {
+    $user = resolveTelegramUser(['languageCode' => $languageCode]);
+
+    $settings = UserSetting::query()->sole();
+    expect($settings->user_id)->toBe($user->id)
+        ->and($settings->locale)->toBe($locale)
+        ->and($settings->locale_chosen_at)->toBeNull()
+        ->and($settings->city)->toBeNull()
+        ->and($settings->city_chosen_at)->toBeNull()
+        ->and($user->settings?->is($settings))->toBeTrue();
+})->with([
+    'Uzbek' => ['uz', Locale::Uz],
+    'English' => ['en-GB', Locale::En],
+    'Kazakh' => ['kk', Locale::Ru],
+    'none' => [null, Locale::Ru],
+]);
+
+it('leaves the settings alone on a later contact in another language', function (): void {
+    $user = resolveTelegramUser(['languageCode' => 'uz']);
+    UserSetting::query()->whereKey($user->id)->update(['theme' => 'dark']);
+
+    resolveTelegramUser(['languageCode' => 'en']);
+
+    $settings = UserSetting::query()->sole();
+    expect($settings->locale)->toBe(Locale::Uz)
+        ->and($settings->theme)->toBe(Theme::Dark);
+});
+
 it('keeps the last language known when a launch sends none', function (): void {
     resolveTelegramUser(['languageCode' => 'uz']);
 
@@ -96,23 +127,23 @@ it('marks the bot chat active when the launch allows writing, and never downgrad
     expect(User::query()->sole()->bot_chat_state)->toBe(BotChatState::Active);
 });
 
-it('marks the bot chat active on a later launch that allows writing', function (BotChatState $before): void {
+it('marks a chat that never started active on a later launch that allows writing', function (): void {
     $user = resolveTelegramUser();
-    $user->forceFill(['bot_chat_state' => $before])->save();
+    expect($user->bot_chat_state)->toBe(BotChatState::Never);
 
     resolveTelegramUser(['allowsWriteToPm' => true]);
 
     expect($user->fresh()?->bot_chat_state)->toBe(BotChatState::Active);
-})->with([BotChatState::Never, BotChatState::Blocked]);
+});
 
-it('leaves a blocked chat blocked when the launch does not allow writing', function (): void {
+it('leaves a chat the bot saw blocked blocked, whatever the launch allows (decision 15)', function (bool $allowsWriteToPm): void {
     $user = resolveTelegramUser();
     $user->forceFill(['bot_chat_state' => BotChatState::Blocked])->save();
 
-    resolveTelegramUser(['allowsWriteToPm' => false]);
+    resolveTelegramUser(['allowsWriteToPm' => $allowsWriteToPm]);
 
     expect($user->fresh()?->bot_chat_state)->toBe(BotChatState::Blocked);
-});
+})->with(['a launch that allows writing' => true, 'a launch that does not' => false]);
 
 it('keeps two Telegram users apart', function (): void {
     $first = resolveTelegramUser();
