@@ -40,7 +40,7 @@ Written for whoever continues the **development track**. The production track's 
 - Reading `backend/.env` is refused (the permission layer denied even `grep -o '^[A-Z_]*='`, which the hook itself allows) and the hook refuses creating one in a worktree: a worktree has no env file (tests need `APP_KEY=…` in the environment). Read values with `php artisan config:show`.
 - `SortedMiddleware` reorders only middleware in the priority list; WP-40 anchors its chain after `Authorize` (`bootstrap/app.php`).
 - zsh does not split `$FILES`: stage with `git status --short | awk '{print $2}' | xargs git add --`.
-- Next numbers: AM-115, KI-72, ADR 0021, DEC-110. The hook shows both sessions the same numbers: before a push grep the second session's open PRs for the ones taken (whoever merges second renumbers; `collect_ids.py --check` does not see AM, KI or DEC-1xx).
+- Next numbers: AM-115, KI-72, ADR 0021, DEC-110. The hook shows both sessions the same numbers: before a push grep the second session's open PRs for the ones taken (whoever merges second renumbers its numbers not yet on `main`, DEC included; `collect_ids.py --check` does not see AM, KI or DEC-1xx).
 
 ## Active subagent work at handoff
 - None running.
