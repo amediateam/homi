@@ -24,7 +24,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
-            if (self::isLegacyCall($entry) || self::isCallPage($entry)) {
+            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isTranslationCache($entry)) {
                 return false;
             }
 
@@ -59,6 +59,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     }
 
     /**
+     * A cache event of a listing's translation (WP-43, `TranslationService`, `<driver>:translation:<number>:<locale>`):
+     * never kept, in any environment, since the cache watcher keeps the value written — the translated text, which
+     * never reaches a log (SEC-REQ-047).
+     */
+    private static function isTranslationCache(IncomingEntry $entry): bool
+    {
+        $key = $entry->content['key'] ?? null;
+
+        return $entry->type === EntryType::CACHE && is_string($key) && preg_match('/^[a-z]+:translation:/', $key) === 1;
+    }
+
+    /**
      * A request of HOMI's call page (WP-43, `GET /call/{token}`): never kept, in any environment. Its address holds the
      * call token, a credential for the author's number, and its answer shows that number (SEC-REQ-026, SEC-REQ-047).
      */
@@ -81,6 +93,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         // The answer of `POST /listings/{number}/contact` (WP-43) is the one disclosure of an author's number, and its
         // `call_url` carries a call token: none of the three is kept, in every environment, local included.
         Telescope::hideResponseParameters(['data.phone', 'data.phone_display', 'data.call_url']);
+
+        // The answer of `POST /listings/{number}/translation` (WP-43) is a translated text, which never reaches a log:
+        // its `data.text` is not kept either, in every environment.
+        Telescope::hideResponseParameters(['data.text']);
 
         if ($this->app->environment('local')) {
             return;

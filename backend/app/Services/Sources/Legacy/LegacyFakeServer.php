@@ -26,6 +26,9 @@ use LogicException;
  * the listing's own preview under the card's `id` (so the merged `100016` previews as `100001`): `listing.preview.json`
  * for `100001`, the feed item for the others. Any other id is `404`. `GET /api/listings/{id}/call` (API-009, WP-43)
  * answers `call.json` (a relative link) for a listing whose card has a `phone` or a `call_url`, and `404` otherwise.
+ * `POST /api/listings/{id}/translate` (API-010, WP-43) answers `translate.uz_Latn.json` or `translate.en.json` in the
+ * language the request names per `legacy.translation.via` for a listing whose card has an `original_text`, `422` in
+ * any other language and `404` for a listing without one.
  */
 final class LegacyFakeServer
 {
@@ -39,6 +42,9 @@ final class LegacyFakeServer
         'GET /api/feed/flow' => 'flow',
         'GET /api/map' => 'map',
     ];
+
+    /** The legacy languages with a translation fixture (`translate.<code>.json`, WP-43). */
+    public const array TRANSLATIONS = ['uz_Latn', 'en'];
 
     /** The listing whose preview form `listing.preview.json` is. */
     public const int PREVIEW_FIXTURE_ID = 100001;
@@ -93,6 +99,10 @@ final class LegacyFakeServer
 
         if ($request->method() === 'GET' && preg_match('#^/api/listings/(\d{1,18})/call$#', $path, $id) === 1) {
             return $this->callLink((int) $id[1]);
+        }
+
+        if ($request->method() === 'POST' && preg_match('#^/api/listings/(\d{1,18})/translate$#', $path, $id) === 1) {
+            return $this->translation((int) $id[1], $request);
         }
 
         $fixture = self::ROUTES[$request->method().' '.$path] ?? null;
@@ -152,6 +162,30 @@ final class LegacyFakeServer
         return is_array($card) && (($card['phone'] ?? null) !== null || ($card['call_url'] ?? null) !== null)
             ? $this->respond('call', 200)
             : $this->respond('errors/not_found', 404);
+    }
+
+    /**
+     * The translation of a listing whose card has an `original_text`, in the language the request names per
+     * `legacy.translation.via` (`translate.uz_Latn` or `translate.en`, whatever the listing); `422` for any other
+     * language (`ru` among them) and `404` for a listing without an original text.
+     */
+    private function translation(int $id, Request $request): PromiseInterface
+    {
+        $fixture = self::CARDS[$id] ?? null;
+        $card = $fixture === null ? ($this->feedItems()[$id] ?? null) : $this->decoded($fixture);
+
+        if (! is_array($card) || ! is_string($card['original_text'] ?? null) || trim($card['original_text']) === '') {
+            return $this->respond('errors/not_found', 404);
+        }
+
+        $name = Config::string('legacy.translation.name');
+        $code = match (Config::string('legacy.translation.via')) {
+            'query' => self::queryValue($request->url(), $name),
+            'body' => $request->data()[$name] ?? null,
+            default => $this->locale($request),
+        };
+
+        return in_array($code, self::TRANSLATIONS, true) ? $this->respond("translate.{$code}", 200) : $this->respond('errors/validation', 422);
     }
 
     /**

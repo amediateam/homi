@@ -14,13 +14,14 @@
 | - `public`: `GET /reference`, `GET /cities`, `GET /landing/*` (`v1-public`).
 | - `me`: `GET /me` (`v1-me`).
 | - `reads`: the feed, count, new, flow and map, `GET /settings`, the radar list, the personal lists, the owner's
-|   reads (`v1-reads`).
+|   reads and the translation of a listing (`v1-reads`).
 | - `listing`: `GET /listings/{number}`, the full card and the preview (`v1-listing`).
 | - `listing_opens_per_day`: how many different full cards one user opens in 24 hours (`CountListingOpens`; DEC-104,
 |   DEC-105: the preview is not counted, DEC-107: a card counted in the window opens again for free); over it
 |   `429 rate_limited` with `reason: "daily"`. `RATE_LIMIT_LISTING_OPENS_PER_DAY`, kept as the environment gives it
 |   (`RateLimits` reads it: a switch, a fraction, a word or a blank means the default, never a small cap).
-| - `contact`, `translation`, `share`: the three card actions, per hour.
+| - `contact`, `translation`, `share`: the three card actions, per hour (`v1-contact`, `v1-share`); `translation`
+|   counts only the cache misses, inside `TranslationService` (WP-43), and the route itself is read under `v1-reads`.
 | - `lists`: the writes of the personal lists, the surveys and the seeker's request (`v1-lists`).
 | - `reports`: `POST …/reports`, per day.
 | - `radars`: the radar writes, `PATCH /settings` and `POST /settings/card-sample` (`v1-radars`).

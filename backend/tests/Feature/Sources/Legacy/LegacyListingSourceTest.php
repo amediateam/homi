@@ -209,7 +209,7 @@ it('answers 503 source_unavailable on every read while legacy is down', function
     'preview' => '/api/v1/listings/100001?preview=1',
 ]);
 
-it('answers the contact through legacy (WP-43) and 503 for the translation until WP-43 stage B writes it', function (): void {
+it('answers the contact and the translation through legacy (WP-43)', function (): void {
     LegacyListingsHttp::fake();
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
     onLegacyListings();
@@ -217,8 +217,12 @@ it('answers the contact through legacy (WP-43) and 503 for the translation until
     $this->postJson('/api/v1/listings/100001/contact')->assertOk()->assertJsonPath('meta.source', 'legacy')->assertJsonPath('data.phone', '+998001234567');
     expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
 
-    $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
-    expect(Http::recorded())->toHaveCount(1);
+    $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertOk()
+        ->assertJsonPath('meta.source', 'legacy')
+        ->assertJsonPath('data.locale', 'uz')
+        ->assertJsonPath('data.text', 'Ijaraga 2 xonali kvartira, 54 m². Toza, shinam. Qoʻngʻiroq qiling: +998 ** *** ** 67');
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
+        ->and(Http::recorded())->toHaveCount(2);
 });
 
 it('passes legacy\'s daily limit of the card on as 429 rate_limited with reason daily, and as 503 elsewhere', function (): void {

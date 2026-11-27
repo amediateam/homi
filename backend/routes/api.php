@@ -96,8 +96,9 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, Answe
                 // The card: the request limiter, and the daily cap on full cards (DEC-104 … DEC-107).
                 Route::get('{number}', [ListingController::class, 'show'])->whereNumber('number')->middleware(['throttle:v1-listing', 'listing-opens'])->name('show');
                 Route::post('{number}/contact', ListingContactController::class)->whereNumber('number')->middleware('throttle:v1-contact')->name('contact');
-                // Counted per request until WP-43 counts only the cache misses of the translation service.
-                Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->middleware('throttle:v1-translation')->name('translation');
+                // WP-43: `v1-translation` counts only the cache misses, inside `TranslationService`; the route itself is
+                // read under `v1-reads`, as a translation that is cached is a read.
+                Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->middleware('throttle:v1-reads')->name('translation');
                 Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->middleware('throttle:v1-share')->name('share');
             });
 

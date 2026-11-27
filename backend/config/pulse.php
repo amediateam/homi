@@ -148,8 +148,10 @@ return [
                 '/^listing-opens:/',
                 '/^access:decision:/',
                 '/^auth:/',
-                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock.
+                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock, and
+                // a user's count of translation misses (`v1-translation:user:<id>`).
                 '/^contact:/',
+                '/^v1-translation:/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',

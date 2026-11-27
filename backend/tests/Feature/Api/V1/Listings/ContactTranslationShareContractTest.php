@@ -54,6 +54,16 @@ it('translates the original text into the request locale, masked', function (): 
     $this->postJson('/api/v1/listings/100012/translation', [], ['Accept-Language' => 'en'])->assertOk()->assertJsonPath('data.locale', 'en');
 });
 
+it('translates through the stub fixtures of WP-12 while the native stubs are on (the e2e suite)', function (): void {
+    config(['sources.native_stubs' => true]);
+
+    $response = $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertOk();
+
+    JsonShape::assertSame(['success' => 'bool', 'data' => ['text' => 'string', 'locale' => 'string'], 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
+    $response->assertJsonPath('data.text', 'Metro yaqinida yorugʻ kvartira. Qoʻngʻiroq qiling: +998 ** *** ** 67')->assertJsonPath('meta.source', 'stub');
+    $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'ru'])->assertStatus(422)->assertJsonPath('code', 'translation_not_needed');
+});
+
 it('prepares a share message', function (): void {
     $response = $this->postJson('/api/v1/listings/100012/share')->assertOk();
 

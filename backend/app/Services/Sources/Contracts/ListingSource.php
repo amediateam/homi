@@ -72,7 +72,8 @@ interface ListingSource
     public function contact(int $number, SourceContext $context): ListingContact;
 
     /**
-     * The original text in the context's locale.
+     * The original text in the context's locale, uncached: `TranslationService` keeps it per listing and locale
+     * (WP-43); only the stub answer of the native stubs (`NativeStubs`) asks a source directly.
      *
      * @throws SourceNotFound when the number is unknown or the listing has no original text
      * @throws TranslationUnavailable

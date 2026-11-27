@@ -45,10 +45,11 @@ function expectedLimiters(): array
             'settings.show', 'listings.index', 'listings.count', 'listings.new', 'listings.flow', 'listings.map',
             'favorites.index', 'history.index', 'hidden.index', 'radars.index',
             'owner.listings.index', 'owner.listings.show', 'owner.listings.requests.index',
+            // WP-43: a cached translation is a read; `v1-translation` counts the misses inside `TranslationService`.
+            'listings.translation',
         ],
         'v1-listing' => ['listings.show'],
         'v1-contact' => ['listings.contact'],
-        'v1-translation' => ['listings.translation'],
         'v1-share' => ['listings.share'],
         'v1-lists' => [
             'favorites.update', 'favorites.destroy', 'history.destroy', 'hidden.listings.update', 'hidden.listings.destroy',

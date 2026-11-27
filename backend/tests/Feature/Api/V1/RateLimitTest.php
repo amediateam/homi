@@ -73,7 +73,9 @@ it('limits each route class at its configured count, per period, and names no re
     'v1-reads' => ['reads.per_minute', true, 'GET', 'favorites', [], 60, 200],
     'v1-listing' => ['listing.per_minute', true, 'GET', 'listings/100001?preview=1', [], 60, 200],
     'v1-contact' => ['contact.per_hour', true, 'POST', 'listings/100001/contact', [], 3600, 200],
-    'v1-translation' => ['translation.per_hour', true, 'POST', 'listings/100001/translation', [], 3600, 200],
+    // WP-43: `v1-translation` counts only the misses of `TranslationService` (`TranslationTest`); the route is read
+    // under `v1-reads`, so a cached translation is counted there.
+    'v1-reads, a translation' => ['reads.per_minute', true, 'POST', 'listings/100001/translation', [], 60, 200],
     'v1-share' => ['share.per_hour', true, 'POST', 'listings/100001/share', [], 3600, 200],
     'v1-lists' => ['lists.per_minute', true, 'PUT', 'favorites/100001', [], 60, 200],
     'v1-reports' => ['reports.per_day', true, 'POST', 'listings/100001/reports', ['reason' => 'rented'], 86400, 200],

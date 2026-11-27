@@ -6,6 +6,7 @@ use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
 use App\Exceptions\Listings\ContactUnavailable;
 use App\Exceptions\Listings\DailyLimitReached;
+use App\Exceptions\Listings\TranslationUnavailable;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
@@ -65,6 +66,7 @@ use LogicException;
  * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
  * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
  * | `contact`    | variant A: the contact entry, else `GET /api/listings/{n}` again; variant B: `GET /api/listings/{n}/call` | the contact entry per number, `legacy.cache.card` s |
+ * | `translation`| `POST /api/listings/{n}/translate`, the language per `legacy.translation.via` (WP-43)         | none here: `TranslationService` keeps it per number and locale |
  *
  * Every cache here is shared between users, so a cold key is filled once (single-flight, WP-42 review M2): the first
  * caller takes the lock `{key}:fill` (held at most as long as one read may take) and reads legacy; a caller that finds
@@ -98,7 +100,7 @@ use LogicException;
  * (`items.3.floor` counts as `items.*.floor`) — and every such answer is counted (`coerced`). The photo rewriter and the
  * district matcher are made for each answer, so their counts are that answer's. The card passes legacy's daily limit on as `429 rate_limited` with `reason:
  * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
- * (no user) makes background calls in the limiter. `translation()` is WP-43's stage B: `503` until then.
+ * (no user) makes background calls in the limiter.
  *
  * The contact (WP-43, Q-API-062). Every full card read from legacy also files its author's contact (`LegacyContact`:
  * the phone in E.164 when it reads as one number, legacy's `phone_display`, whether a call link exists) in a second
@@ -130,6 +132,9 @@ final class LegacyListingSource implements ListingSource
 
     /** The path template of legacy's call link (API-009). */
     private const string CALL_PATH = '/api/listings/{n}/call';
+
+    /** The path template of legacy's translation (API-010). */
+    private const string TRANSLATE_PATH = '/api/listings/{n}/translate';
 
     /** The longest call link taken from legacy. */
     private const int MAX_CALL_URL = 2048;
@@ -351,10 +356,50 @@ final class LegacyListingSource implements ListingSource
         };
     }
 
-    /** WP-43 writes the translation method; until then legacy is not asked. */
+    /**
+     * The original text in the context's language, machine-translated by legacy (API-010): `POST
+     * /api/listings/{n}/translate` with the target language per `legacy.translation.via`, never retried, within the
+     * client's `legacy.timeout` (15 s). Nothing is cached here: `TranslationService` keeps the answer per listing and
+     * locale. Legacy's `404` (an unknown listing, or one without an original text) is `404 not_found`, and the number
+     * is not marked gone, since its card may still answer; `unsupported`, an empty text, an answer that does not fit
+     * (logged as a contract error naming `text`) and every other failure, legacy's daily limit included, are `503
+     * translation_unavailable`; legacy's pause stays `403 paused`, as on every legacy method.
+     *
+     * @throws SourceNotFound|TranslationUnavailable|AccessDenied
+     */
     public function translation(int $number, SourceContext $context): ListingTranslation
     {
-        throw new SourceUnavailable;
+        self::refuseNative($number);
+
+        $via = Config::string('legacy.translation.via');
+
+        if ($via === 'unsupported') {
+            throw new TranslationUnavailable;
+        }
+
+        if ($this->cache->has($this->goneKey($number))) {
+            throw new SourceNotFound('Listing not found.');
+        }
+
+        $language = [Config::string('legacy.translation.name') => LegacyLocale::toLegacy($context->locale)];
+
+        try {
+            $answer = $this->client->post(self::cardPath($number).'/translate', $via === 'body' ? $language : [], $this->call($context), $via === 'query' ? $language : []);
+        } catch (SourceNotFound|AccessDenied $passed) {
+            throw $passed;
+        } catch (ApiException $failure) {
+            $this->failure($failure);
+
+            throw new TranslationUnavailable;
+        }
+
+        try {
+            $text = $this->checked(fn (): string => self::translatedText($answer));
+        } catch (LegacyContractError) {
+            throw new TranslationUnavailable;
+        }
+
+        return ListingTranslation::fromArray(['text' => $text, 'locale' => $context->locale]);
     }
 
     /**
@@ -554,6 +599,24 @@ final class LegacyListingSource implements ListingSource
         }
 
         return $url;
+    }
+
+    /**
+     * The `text` of legacy's translation answer (`{"text": string}`); a text that is blank is no translation.
+     *
+     * @param  array<array-key, mixed>  $answer
+     *
+     * @throws LegacyContractError|TranslationUnavailable
+     */
+    private static function translatedText(#[\SensitiveParameter] array $answer): string
+    {
+        $text = $answer['text'] ?? null;
+
+        if (! is_string($text)) {
+            throw LegacyContractError::key(self::TRANSLATE_PATH, 'text', 'not a text');
+        }
+
+        return trim($text) === '' ? throw new TranslationUnavailable : $text;
     }
 
     /**

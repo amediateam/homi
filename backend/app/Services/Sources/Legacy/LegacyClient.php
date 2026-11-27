@@ -87,16 +87,19 @@ final class LegacyClient
     }
 
     /**
-     * Never retried. Without a body, no body and no `Content-Type` are sent, as the legacy client does.
+     * Never retried. Without a body, no body and no `Content-Type` are sent, as the legacy client does. `$query` is
+     * added to the address as `get()` adds it (WP-43: the translation's language when `legacy.translation.via` is
+     * `query`).
      *
      * @param  array<string, mixed>  $body
+     * @param  array<string, scalar|list<scalar>|null>  $query
      * @return array<array-key, mixed> the decoded JSON
      *
      * @throws SourceUnavailable|SourceNotFound|AccessDenied|DailyLimitReached
      */
-    public function post(string $path, array $body = [], ?LegacyCall $call = null): array
+    public function post(string $path, array $body = [], ?LegacyCall $call = null, array $query = []): array
     {
-        return $this->call('POST', $path, [], $body, $call ?? new LegacyCall);
+        return $this->call('POST', $path, $query, $body, $call ?? new LegacyCall);
     }
 
     /**

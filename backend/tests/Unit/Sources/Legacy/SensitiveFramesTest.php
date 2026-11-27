@@ -9,6 +9,7 @@ use App\Services\Listings\ContactDisclosure;
 use App\Services\Listings\ContactService;
 use App\Services\Listings\LinkGuard;
 use App\Services\Listings\PhoneMasker;
+use App\Services\Listings\TranslationService;
 use App\Services\Sources\Legacy\LegacyContact;
 use App\Services\Sources\Legacy\LegacyListingSource;
 
@@ -25,7 +26,8 @@ use App\Services\Sources\Legacy\LegacyListingSource;
  * `$raw`, `$part`, `$value`, `$facts`, `$sources`, `$phone`, `$text`, `$name`, `$link`, `$url` and `$secret`
  * (`$event` and `$raw` name no parameter yet; a later one must carry the attribute). WP-43 adds `$token` (a call
  * token) and `$display` (the display of an author's number), and the classes of the contact: `LegacyContact`,
- * `ContactService`, `ContactDisclosure`, `CallLinkService`, `CallLink`, `CallLinkClaims` and `CallPageController`.
+ * `ContactService`, `ContactDisclosure`, `CallLinkService`, `CallLink`, `CallLinkClaims` and `CallPageController`;
+ * its stage B the class of the translation, `TranslationService`.
  * Left out by name: `$number`,
  * `$path`, `$key`, `$city` and the like, which are listing numbers, path templates, field names and codes; and by
  * type: a parameter that takes an object (`SourceManager $sources`). A data object's `fromArray()` takes the
@@ -54,7 +56,7 @@ function sensitiveFrameClasses(): array
     $classes = [
         ...$translators, AuthorKey::class, LinkGuard::class, PhoneMasker::class, LegacyListingSource::class,
         LegacyContact::class, ContactService::class, ContactDisclosure::class, CallLinkService::class, CallLink::class,
-        CallLinkClaims::class, CallPageController::class,
+        CallLinkClaims::class, CallPageController::class, TranslationService::class,
     ];
 
     return $classes;
@@ -115,6 +117,7 @@ it('finds the translators and the masking classes, and enough frames to mean som
             'CallLinkService::sign($secret)',
             'CallLink::__construct($url)',
             'CallPageController::__invoke($token)',
+            'LegacyListingSource::translatedText($answer)',
         )
         ->and($frames)->not->toContain('LegacyListingSource::__construct($sources)');
 });

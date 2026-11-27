@@ -6,12 +6,14 @@ use App\Enums\SourceDriver;
 use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
+use App\Exceptions\Listings\TranslationNotNeeded;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Http\Resources\Api\V1\ContactResource;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
+use App\Http\Resources\Api\V1\TranslationResource;
 use App\Services\Identity\TokenIssuer;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
@@ -35,7 +37,8 @@ use LogicException;
  * `GET /me`, `GET /settings` and `PATCH /settings`. WP-43 moved here `POST /listings/{number}/contact`: the contact of
  * the method's driver as it answered before (on the stub driver the stub's number and its link
  * `{APP_URL}/call/stub-token-<number>`), with `meta.source` that driver — no disclosure quota, no HOMI call link, no
- * `ContactDisclosed`.
+ * `ContactDisclosed`; and `POST /listings/{number}/translation`: the translation of the method's driver, uncached
+ * and without the limit of misses, `ru` answering `422`.
  */
 final readonly class NativeStubs
 {
@@ -72,6 +75,7 @@ final readonly class NativeStubs
         'api.v1.settings.show' => 'settings',
         'api.v1.settings.update' => 'updateSettings',
         'api.v1.listings.contact' => 'contact',
+        'api.v1.listings.translation' => 'translation',
     ];
 
     public function __construct(private Container $container) {}
@@ -139,6 +143,24 @@ final readonly class NativeStubs
         $resolved = $sources->listings('source.listings.contact', $context);
 
         return $this->sourced(new ContactResource($resolved->source->contact(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
+    }
+
+    /**
+     * `POST /listings/{number}/translation` as WP-12 answered it (the controller body before WP-43): the translation of
+     * the driver of `source.listings.translation`, neither cached nor limited per miss.
+     */
+    public function translation(Request $request, SourceManager $sources): JsonResponse
+    {
+        $number = $request->route('number');
+        $context = SourceContext::fromRequest($request);
+
+        if ($context->locale === 'ru') {
+            throw new TranslationNotNeeded;
+        }
+
+        $resolved = $sources->listings('source.listings.translation', $context);
+
+        return $this->sourced(new TranslationResource($resolved->source->translation(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
     }
 
     /** The envelope of `ApiController::sourced()` for a stub answer without extra meta. */
