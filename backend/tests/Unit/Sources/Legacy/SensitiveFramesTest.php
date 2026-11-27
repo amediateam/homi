@@ -35,7 +35,9 @@ use App\Services\Telegram\TelegramClient;
  * its stage B the classes of the translation and the share: `TranslationService`, `ListingTranslation` (whose
  * `fromArray()` takes legacy's translated text before it is masked), `TelegramClient` (`$token`, the bot token),
  * `TelegramException`, `ShareService` and `PreparedShare`, and the name `$telegramId` (a caller's Telegram id, which
- * no log line or trace shows).
+ * no log line or trace shows); the re-review the name `$params` (the body of a Bot API call: a Telegram id and a
+ * listing's text). `TelegramClient::result()`'s `$response` takes an object, so `ShareServiceTest` checks it by what a
+ * trace of it would show.
  * Left out by name: `$number`,
  * `$path`, `$key`, `$city` and the like, which are listing numbers, path templates, field names and codes; and by
  * type: a parameter that takes an object (`SourceManager $sources`). A data object's `fromArray()` takes the
@@ -45,7 +47,7 @@ use App\Services\Telegram\TelegramClient;
 /** The parameter names that hold raw legacy data, an unmasked text or a secret. */
 const SENSITIVE_NAMES = [
     'card', 'legacyCard', 'answer', 'item', 'event', 'point', 'option', 'data', 'raw', 'part', 'value', 'facts', 'sources',
-    'phone', 'text', 'name', 'link', 'url', 'secret', 'token', 'display', 'telegramId',
+    'phone', 'text', 'name', 'link', 'url', 'secret', 'token', 'display', 'telegramId', 'params',
 ];
 
 /**
@@ -128,6 +130,7 @@ it('finds the translators and the masking classes, and enough frames to mean som
             'CallPageController::__invoke($token)',
             'LegacyListingSource::translatedText($answer)',
             'TelegramClient::result($token)',
+            'TelegramClient::call($params)',
             'TelegramClient::path($token)',
             'ShareService::message($telegramId)',
             'TelegramException::scrub($text)',

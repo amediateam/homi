@@ -31,18 +31,29 @@ final readonly class TelegramClient
     /** A token as Telegram issues it: the bot id, a colon and the secret. */
     private const string TOKEN_FORMAT = '/^\d+:[A-Za-z0-9_-]+$/D';
 
+    /**
+     * A byte of the Bot API address outside printable ASCII (`\x21`…`\x7e`): a space, a control character, and every
+     * byte of a non-ASCII character (a non-breaking space, a Cyrillic letter, a full-width dot) or of invalid UTF-8.
+     * Byte-wise, without `/u`, so a value that is not UTF-8 matches instead of failing the match.
+     */
+    private const string NOT_PRINTABLE_ASCII = '/[^\x21-\x7e]/';
+
+    /** The whitespace trimmed from both ends of the configured address: ASCII only (PHP's `trim()` default). */
+    private const string ASCII_WHITESPACE = " \t\n\r\0\x0B";
+
     public function __construct(private Factory $http) {}
 
     /**
      * Calls a Bot API method and answers its `result` object.
      *
-     * @param  array<string, mixed>  $params  sent as the JSON body
+     * @param  array<string, mixed>  $params  sent as the JSON body: a Telegram user id and a listing's text, so it is
+     *                                        `#[\SensitiveParameter]` and no stack trace shows it
      * @return array<array-key, mixed> the `result` of the answer
      *
      * @throws TelegramException when the call is not configured, not answered, or answered with `ok: false`, a status
      *                           that is not `2xx`, or a `result` that is not an object
      */
-    public function call(string $method, array $params): array
+    public function call(string $method, #[\SensitiveParameter] array $params): array
     {
         if (preg_match('/^[A-Za-z]+$/D', $method) !== 1) {
             throw new LogicException('A Bot API method is a word.');
@@ -75,11 +86,12 @@ final readonly class TelegramClient
 
     /**
      * The `result` of a successful answer; anything else as a `TelegramException` with Telegram's error code (else the
-     * HTTP status), its description without the token, and `parameters.retry_after` when Telegram names one.
+     * HTTP status), its description without the token, and `parameters.retry_after` when Telegram names one. The
+     * response is `#[\SensitiveParameter]`: its effective address and transfer stats hold the token, its body may.
      *
      * @return array<array-key, mixed>
      */
-    private function result(Response $response, string $method, #[\SensitiveParameter] string $token): array
+    private function result(#[\SensitiveParameter] Response $response, string $method, #[\SensitiveParameter] string $token): array
     {
         try {
             $answer = json_decode($response->body(), true, 512, JSON_THROW_ON_ERROR);
@@ -120,14 +132,16 @@ final readonly class TelegramClient
     }
 
     /**
-     * The host of the Bot API address, trimmed and lower-cased as the HTTP client writes it, or `null` when the
-     * address has none; `TelescopeServiceProvider` keeps no request to it.
+     * The host of the Bot API address, lower-cased as the HTTP client writes it, or `null` when the address has none
+     * or has a byte outside printable ASCII (`problem()` refuses it, so no call goes there); the address is trimmed of
+     * ASCII whitespace only, before that check. `TelescopeServiceProvider` keeps no request to it.
      */
     public static function host(): ?string
     {
-        $host = parse_url(self::configuredBaseUrl(), PHP_URL_HOST);
+        $base = self::configuredBaseUrl();
+        $host = preg_match(self::NOT_PRINTABLE_ASCII, $base) === 0 ? parse_url($base, PHP_URL_HOST) : null;
 
-        return is_string($host) && trim($host) !== '' ? strtolower(trim($host)) : null;
+        return is_string($host) && $host !== '' ? strtolower($host) : null;
     }
 
     /** The configured bot token, trimmed (`problem()` checks its form). */
@@ -138,24 +152,26 @@ final readonly class TelegramClient
         return is_string($token) ? trim($token) : '';
     }
 
-    /** The configured Bot API address, trimmed, else Telegram's own. */
+    /** The configured Bot API address, trimmed of ASCII whitespace at both ends, else Telegram's own. */
     private static function configuredBaseUrl(): string
     {
         $configured = Config::get('telegram.http.base_url');
+        $configured = is_string($configured) ? trim($configured, self::ASCII_WHITESPACE) : '';
 
-        return is_string($configured) && trim($configured) !== '' ? trim($configured) : self::DEFAULT_BASE_URL;
+        return $configured !== '' ? $configured : self::DEFAULT_BASE_URL;
     }
 
     /**
      * Why the Bot API address is not usable, or `null`: it must be a bare origin — `https` (plain `http` only in
      * `local` and `testing`), a host, no user or password, no query or fragment, a port 1…65535 when one is given, no
-     * path but `/`, and no space, control character or backslash — since the token travels in its path. A port over
-     * 65 535 is no address to `parse_url()` already.
+     * path but `/`, and no backslash and no byte outside printable ASCII (`NOT_PRINTABLE_ASCII`: a space, a control
+     * character, any non-ASCII character such as a non-breaking space) once ASCII whitespace is trimmed from both ends —
+     * since the token travels in its path. A port over 65 535 is no address to `parse_url()` already.
      */
     private static function baseUrlProblem(): ?string
     {
         $base = self::configuredBaseUrl();
-        $parts = preg_match('/[\x00-\x20\x7f\\\\]/', $base) === 1 ? false : parse_url($base);
+        $parts = preg_match(self::NOT_PRINTABLE_ASCII, $base) !== 0 || str_contains($base, '\\') ? false : parse_url($base);
         $scheme = is_array($parts) ? strtolower($parts['scheme'] ?? '') : '';
 
         if (! is_array($parts)

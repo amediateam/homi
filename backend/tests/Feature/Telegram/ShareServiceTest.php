@@ -14,6 +14,7 @@ use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\Response;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
@@ -344,6 +345,22 @@ it('fails closed without a request for a Bot API address that is not a bare orig
     'no scheme' => ['api.telegram.org'],
 ]);
 
+it('refuses a Bot API address with any character outside printable ASCII, and names no host for it', function (string $base): void {
+    fakeBotApi();
+    config(['telegram.http.base_url' => $base]);
+
+    expect(TelegramClient::problem())->toBe('TELEGRAM_API_BASE_URL is not a Bot API address')
+        ->and(TelegramClient::host())->toBeNull()
+        ->and(fn () => shareFor($this->user, 100012))->toThrow(ShareFailed::class)
+        ->and(botRequests())->toBe([]);
+})->with([
+    'a non-breaking space after the host' => ["https://api.telegram.org\u{00a0}"],
+    'a non-breaking space before the scheme' => ["\u{00a0}https://api.telegram.org"],
+    'a Cyrillic letter in the host' => ["https://\u{0430}pi.telegram.org"],
+    'a full-width dot' => ["https://api\u{ff0e}telegram.org"],
+    'a byte that is not UTF-8' => ["https://api.telegram.org\xff"],
+]);
+
 it('sends to a bare origin, with a port or a trailing slash, and to plain http in testing', function (string $base, string $url): void {
     $seen = new ArrayObject;
     config(['telegram.http.base_url' => $base]);
@@ -360,6 +377,7 @@ it('sends to a bare origin, with a port or a trailing slash, and to plain http i
     'a trailing slash' => ['https://api.telegram.org/', 'https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe'],
     'a port' => ['https://bot-api.internal.example:8443', 'https://bot-api.internal.example:8443/bot'.SHARE_TOKEN.'/getMe'],
     'plain http in testing' => ['http://127.0.0.1:8081', 'http://127.0.0.1:8081/bot'.SHARE_TOKEN.'/getMe'],
+    'ASCII whitespace around it' => [" \t https://api.telegram.org\n", 'https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe'],
 ]);
 
 it('takes the timeouts of telegram.http, and their defaults when they are blank', function (mixed $timeout, int $expected): void {
@@ -409,42 +427,75 @@ it('never puts the bot token into an exception, its description or a log line', 
     'a connection error that quotes the address' => [fn (): never => throw new ConnectionException('cURL error 7: failed to connect to https://api.telegram.org/bot'.SHARE_TOKEN.'/savePreparedInlineMessage')],
 ]);
 
-it('keeps the bot token out of the arguments of every frame of every TelegramException', function (Closure $arrange): void {
+it('keeps the bot token, the Telegram id and the text out of the arguments of every frame of every TelegramException', function (Closure $arrange, bool $answered): void {
     $ignored = ini_get('zend.exception_ignore_args');
     ini_set('zend.exception_ignore_args', '0');
     $arrange();
     fakeBotApi();
+    $params = ['user_id' => 987654321, 'result' => ['input_message_content' => ['message_text' => 'SENTINEL-TEXT']]];
 
     try {
-        app(TelegramClient::class)->call(ShareService::METHOD, ['user_id' => 1]);
+        app(TelegramClient::class)->call(ShareService::METHOD, $params);
         $this->fail('The call did not fail.');
     } catch (TelegramException $failure) {
         $frames = $failure->getTrace();
-        $encoded = array_map(fn (array $frame): string => (string) json_encode($frame['args'] ?? [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR), $frames);
-        $called = array_values(array_filter($frames, fn (array $frame): bool => ($frame['class'] ?? null) === TelegramClient::class && $frame['function'] === 'call'));
+        $of = fn (string $function): array => array_values(array_filter($frames, fn (array $frame): bool => ($frame['class'] ?? null) === TelegramClient::class && $frame['function'] === $function));
 
-        $leaking = array_map(
-            fn (int $index): string => ($frames[$index]['class'] ?? '').'::'.$frames[$index]['function'],
-            array_keys(array_filter($encoded, fn (string $args): bool => str_contains($args, 'TEST-homi-synthetic-token'))),
-        );
+        /*
+         * What a trace printer or an error tracker could read from a frame's arguments: their JSON, and of a response
+         * its effective address, the address and body of its transfer stats' request, and its own body (none of
+         * which `json_encode()` shows). A `SensitiveParameterValue` shows nothing and is never opened.
+         */
+        $readable = function (array $frame): string {
+            $parts = [];
 
-        expect($called)->toHaveCount(1)
-            ->and($called[0]['args'] ?? [])->toBe([ShareService::METHOD, ['user_id' => 1]])
-            ->and($leaking)->toBe([])
+            foreach ($frame['args'] ?? [] as $argument) {
+                if ($argument instanceof Response) {
+                    $stats = $argument->transferStats;
+                    $parts[] = (string) $argument->effectiveUri();
+                    $parts[] = (string) $stats?->getEffectiveUri();
+                    $parts[] = (string) $stats?->getRequest()->getUri();
+                    $parts[] = (string) $stats?->getRequest()->getBody();
+                    $parts[] = $argument->body();
+                } else {
+                    $parts[] = (string) json_encode($argument, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+                }
+            }
+
+            return implode(' ', $parts);
+        };
+
+        $leaking = array_values(array_map(
+            fn (array $frame): string => ($frame['class'] ?? '').'::'.$frame['function'],
+            array_filter($frames, fn (array $frame): bool => (bool) preg_match('/TEST-homi-synthetic-token|987654321|SENTINEL-TEXT/', $readable($frame))),
+        ));
+        $called = $of('call');
+        $results = $of('result');
+
+        expect($leaking)->toBe([])
+            ->and($called)->toHaveCount(1)
+            ->and($called[0]['args'][0] ?? null)->toBe(ShareService::METHOD)
+            ->and($called[0]['args'][1] ?? null)->toBeInstanceOf(SensitiveParameterValue::class)
+            ->and($results)->toHaveCount($answered ? 1 : 0)
             ->and($failure->getMessage())->not->toContain('TEST-homi-synthetic-token')
             ->and($failure->getPrevious())->toBeNull();
+
+        if ($answered) {
+            expect($results[0]['args'][0] ?? null)->toBeInstanceOf(SensitiveParameterValue::class)
+                ->and($results[0]['args'][2] ?? null)->toBeInstanceOf(SensitiveParameterValue::class);
+        }
     } finally {
         ini_set('zend.exception_ignore_args', (string) $ignored);
     }
 })->with([
-    'a description that quotes the token' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 401, 'description' => 'Unauthorized: bot'.SHARE_TOKEN], 401)],
-    'an answer that is no Bot API object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response('<html>'.SHARE_TOKEN.'</html>', 502)],
-    'a result that is no object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => true, 'result' => SHARE_TOKEN])],
-    'a connection error that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new ConnectionException('cURL error 7: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe')],
-    'another exception that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new InvalidArgumentException('Unable to parse URI: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe')],
-    'a malformed token' => [fn () => config(['telegram.bot.token' => SHARE_TOKEN.'/../getMe'])],
-    'a malformed Bot API address' => [fn () => config(['telegram.http.base_url' => 'https:///api.telegram.org'])],
-    'a port out of range' => [fn () => config(['telegram.http.base_url' => 'https://api.telegram.org:99999'])],
+    'a description that quotes the token' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 401, 'description' => 'Unauthorized: bot'.SHARE_TOKEN], 401), true],
+    'an answer that is no Bot API object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response('<html>'.SHARE_TOKEN.'</html>', 502), true],
+    'a result that is no object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => true, 'result' => SHARE_TOKEN]), true],
+    'a connection error that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new ConnectionException('cURL error 7: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe'), false],
+    'another exception that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new InvalidArgumentException('Unable to parse URI: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe'), false],
+    'a malformed token' => [fn () => config(['telegram.bot.token' => SHARE_TOKEN.'/../getMe']), false],
+    'a malformed Bot API address' => [fn () => config(['telegram.http.base_url' => 'https:///api.telegram.org']), false],
+    'a port out of range' => [fn () => config(['telegram.http.base_url' => 'https://api.telegram.org:99999']), false],
 ]);
 
 it('scrubs any token form to bot***', function (): void {
